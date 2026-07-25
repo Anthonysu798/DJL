@@ -1571,12 +1571,27 @@ async function measureUserRow(options: {
   );
 
   let row: HTMLElement | null = null;
+  let searchOffsetPx = 0;
+  let targetScrollOffsetPx = 0;
   await vi.waitFor(
     async () => {
-      scrollContainer.scrollTop = 0;
+      scrollContainer.scrollTop = searchOffsetPx;
       scrollContainer.dispatchEvent(new Event("scroll"));
       await waitForLayout();
       row = host.querySelector<HTMLElement>(rowSelector);
+      if (row) {
+        targetScrollOffsetPx = scrollContainer.scrollTop;
+      } else {
+        const maxScrollOffsetPx = Math.max(
+          0,
+          scrollContainer.scrollHeight - scrollContainer.clientHeight,
+        );
+        const searchStepPx = Math.max(1, Math.floor(scrollContainer.clientHeight * 0.75));
+        searchOffsetPx =
+          searchOffsetPx >= maxScrollOffsetPx
+            ? 0
+            : Math.min(maxScrollOffsetPx, searchOffsetPx + searchStepPx);
+      }
       expect(row, "Unable to locate targeted user message row.").toBeTruthy();
     },
     {
@@ -1586,7 +1601,7 @@ async function measureUserRow(options: {
   );
 
   await waitForImagesToLoad(row!);
-  scrollContainer.scrollTop = 0;
+  scrollContainer.scrollTop = targetScrollOffsetPx;
   scrollContainer.dispatchEvent(new Event("scroll"));
   await nextFrame();
 
@@ -1595,7 +1610,7 @@ async function measureUserRow(options: {
   let renderedInVirtualizedRegion = false;
   await vi.waitFor(
     async () => {
-      scrollContainer.scrollTop = 0;
+      scrollContainer.scrollTop = targetScrollOffsetPx;
       scrollContainer.dispatchEvent(new Event("scroll"));
       await nextFrame();
       const measuredRow = host.querySelector<HTMLElement>(rowSelector);
