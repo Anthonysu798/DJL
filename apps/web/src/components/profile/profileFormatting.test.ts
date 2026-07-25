@@ -11,8 +11,18 @@ describe("profileFormatting", () => {
   });
 
   it("keeps a UTC heatmap day stable in the St. John's timezone", () => {
-    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe("America/St_Johns");
-    expect(formatShortDate("2026-04-03", "en")).toBe("Apr 3");
-    expect(formatShortDate("2026-04-03", "fr")).toBe("3 avr.");
+    const originalTimeZone = process.env.TZ;
+    process.env.TZ = "America/St_Johns";
+    try {
+      expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe("America/St_Johns");
+      expect(formatShortDate("2026-04-03", "en")).toBe("Apr 3");
+      expect(formatShortDate("2026-04-03", "fr")).toBe("3 avr.");
+    } finally {
+      if (originalTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimeZone;
+      }
+    }
   });
 });
