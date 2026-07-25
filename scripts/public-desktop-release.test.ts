@@ -316,6 +316,14 @@ describe("public desktop release preparation", () => {
     }
   });
 
+  it("preserves markdown headings in the release notes it writes into the tag", () => {
+    const shipScript = readFileSync(resolve(REPOSITORY_ROOT, "scripts/ship-release.ts"), "utf8");
+
+    // git treats '#' lines in a tag message as comments and drops them. Release notes are markdown,
+    // so without --cleanup=verbatim every '### Added' heading disappears from the published body.
+    assert.match(shipScript, /"tag",\s*"-a",\s*"--cleanup=verbatim"/);
+  });
+
   it("keeps desktop CI and fail-closed production publication scoped and pinned", () => {
     const ciWorkflow = readFileSync(
       resolve(REPOSITORY_ROOT, ".github/workflows/desktop-ci.yml"),
