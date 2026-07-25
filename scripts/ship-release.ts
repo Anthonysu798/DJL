@@ -227,7 +227,9 @@ async function main(argv: readonly string[]): Promise<void> {
     return;
   }
 
-  run("git", ["tag", "-a", tag, "-m", notes, commit]);
+  // --cleanup=verbatim: git otherwise treats '#' lines as comments and silently deletes every
+  // markdown heading from the notes, which is exactly what the release body is written in.
+  run("git", ["tag", "-a", "--cleanup=verbatim", tag, "-m", notes, commit]);
   try {
     run("git", ["push", "origin", `refs/tags/${tag}`]);
   } catch (cause) {
