@@ -301,6 +301,12 @@ Both Mac manifests are merged into one architecture-complete feed. `SHA256SUMS` 
 
 ## Failure recovery
 
+> [!WARNING]
+> Never `PATCH` a draft release without also sending `tag_name`. GitHub silently rewrites the draft's
+> tag to `untagged-<hash>`, which breaks every later `gh release upload`/`download`/`edit` in the run
+> with a misleading `release not found`. Release notes are edited by retagging, not by editing the
+> draft: the tag annotation is the source of the body. This cost one v0.5.6 attempt.
+
 The workflow deliberately has no automatic draft deletion.
 
 - **Preflight failure:** fix the repository setting, feed, credential, version, or tag. If the tag
