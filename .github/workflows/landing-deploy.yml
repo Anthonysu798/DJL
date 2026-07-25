@@ -66,8 +66,18 @@ jobs:
             exit 0
           fi
 
+          # Authenticate through gh's credential helper rather than embedding the token in the
+          # remote URL: it keeps the token out of every remote/log line, and it works for both
+          # fine-grained PATs and app tokens, which disagree on the accepted URL username.
+          export GH_TOKEN="$MIRROR_TOKEN"
+          if ! gh api "repos/$DEPLOYMENT_REPOSITORY" --jq '.permissions.push' | grep -qx true; then
+            echo "::error::LANDING_MIRROR_TOKEN cannot push to $DEPLOYMENT_REPOSITORY. It needs Contents: read and write on that repository."
+            exit 1
+          fi
+          gh auth setup-git --hostname github.com
+
           git clone --depth 1 \
-            "https://x-access-token:$MIRROR_TOKEN@github.com/$DEPLOYMENT_REPOSITORY.git" \
+            "https://github.com/$DEPLOYMENT_REPOSITORY.git" \
             deployment-repository
 
           # --delete keeps the mirror an exact copy: files removed here are removed there too.

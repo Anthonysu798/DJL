@@ -36,6 +36,9 @@ Ship the current `main` as a production release.
 
 ## Notes
 
+- Never edit the draft release's body through the API to fix notes. A `PATCH` without `tag_name`
+  resets the draft's tag to `untagged-<hash>` and every subsequent upload fails with
+  `release not found`. Fix notes by deleting the tag and retagging.
 - The landing page's Download buttons resolve the newest release automatically, so no site change is
   needed after shipping.
 - If a release fails midway, delete the draft release and the tag before retrying — the preflight
