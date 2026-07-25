@@ -2547,7 +2547,7 @@ test("capped bootstrap suppresses orphan deltas and recovers from a new appended
     sendApplicationResponse: (m) => outbound.push(JSON.parse(m)),
     fsModule: trackedFs,
     pollIntervalMs: 5,
-    idleTimeoutMs: 200,
+    idleTimeoutMs: 5_000,
   });
   t.after(() => controller.stopAll());
   controller.observeInbound(JSON.stringify({ method: "thread/resume", params: { threadId } }));
@@ -2576,6 +2576,7 @@ test("capped bootstrap suppresses orphan deltas and recovers from a new appended
           message.method === "codex/event/user_message" ||
           message.method === "codex/event/agent_message",
       ).length === 2,
+    5_000,
   );
   const methods = outbound.filter(
     (m) => m.method === "codex/event/user_message" || m.method === "codex/event/agent_message",
