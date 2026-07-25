@@ -71,3 +71,26 @@ When the user says "ship it" (optionally "ship it minor|major|rc"):
 
 The annotated tag message becomes the published release body, so the notes you write in step 1 are
 what users read. The landing page resolves the newest release automatically; it needs no edit.
+
+### Hard rules — these are not suggestions
+
+1. **Green or stop.** Never tag, publish, or promote anything while a required check is red,
+   pending, or skipped. If `bun run ship` refuses, fix the cause; never work around the refusal.
+2. **Never touch a release out of band.** Do not `PATCH` a draft release, do not upload or delete
+   assets by hand, do not publish from the GitHub UI. A body-only `PATCH` silently rewrites a
+   draft's `tag_name` to `untagged-<hash>` and every later upload fails with a misleading
+   `release not found`. Release notes live in the tag annotation — to change them, retag.
+3. **Recover by retagging, never by patching.** When a release fails: diagnose first, then delete
+   the draft *and* the tag, fix the cause, and create the tag again. Never leave a half-uploaded
+   draft and never hand-finish one.
+4. **Tag `git tag -a --cleanup=verbatim`.** Without it git treats `#` lines as comments and deletes
+   every markdown heading from the release body.
+5. **A check that only runs in `desktop-release.yml` is unproven.** Release-only verification is not
+   exercised until a real release, which costs ~20 minutes and an Apple notarization round-trip to
+   discover. Mirror any new verification into the CI package-smoke jobs so it runs on every push.
+6. **Grep `file -b`, never `file`.** `file` prints the path alongside the description, so a
+   directory named `.../linux_arm64/...` satisfies a grep for `arm64` no matter what the binary is.
+   That defect made the release architecture check impossible to pass on Intel while passing on
+   ARM64 for the wrong reason.
+7. **Report evidence, not expectation.** "CI is green" means you read the conclusion. "The release
+   published" means you fetched it. Never infer a result you did not observe.
