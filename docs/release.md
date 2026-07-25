@@ -10,8 +10,9 @@ embedded in DJL.
 
 ## Release invariants
 
-- Production releases are manually dispatched from the current protected `main` commit.
-- The only workflow input is `version`, using `X.Y.Z` or `X.Y.Z-prerelease`.
+- Production releases start only when an annotated `vX.Y.Z` or `vX.Y.Z-prerelease` tag is pushed.
+- The tagged commit must already be contained in protected `main` and have a successful full
+  Desktop CI run.
 - Both macOS builds are Developer ID signed, notarized, stapled, and verified.
 - Windows x64 is intentionally unsigned; `Get-AuthenticodeSignature` must return `NotSigned`.
 - A private draft exists before native builds start.
@@ -25,11 +26,24 @@ embedded in DJL.
 
 ```mermaid
 flowchart TD
-  PR["Pull request"] --> Checks["Desktop checks on Ubuntu"]
-  Main["Push to main or manual validation"] --> Checks
-  Checks --> Packages["Unsigned package smokes<br/>macOS ARM64, macOS Intel, Windows x64"]
+  PR["Pull request"] --> Quality["Quality"]
+  PR --> Tests["Desktop unit/contracts"]
+  PR --> Renderer["Chromium renderer"]
+  PR --> Audit["Release/security/public-source audit"]
+  PR --> Runtime["Desktop runtime smoke"]
+  Quality --> Aggregate["desktop-ci aggregate"]
+  Tests --> Aggregate
+  Renderer --> Aggregate
+  Audit --> Aggregate
+  Runtime --> Aggregate
+  Main["Push to main or manual full validation"] --> Quality
+  Main --> Tests
+  Main --> Renderer
+  Main --> Audit
+  Main --> Runtime
+  Aggregate --> Packages["Unsigned package smokes<br/>macOS ARM64, macOS Intel, Windows x64"]
   Packages --> Validated["Exact commit has full Desktop CI success"]
-  Dispatch["Manual version input"] --> Preflight["Protected-main, version, feed, credential preflight"]
+  Tag["Push annotated semantic-version tag"] --> Preflight["Tag, protected-main, version, feed, credential preflight"]
   Validated --> Preflight
   Preflight --> Draft["Create private draft release"]
   Draft --> MacArm["Build, sign, notarize<br/>macOS ARM64"]
@@ -50,19 +64,19 @@ flowchart TD
 
 ## Desktop CI
 
-`.github/workflows/desktop-ci.yml` runs `Desktop checks` on every pull request:
+`.github/workflows/desktop-ci.yml` runs five independent Ubuntu lanes on every pull request:
 
-1. frozen Bun installation with lifecycle scripts allowed only for trusted `node-pty`;
-2. scoped format and lint checks;
-3. typechecking for the Electron shell, renderer, bundled backend, contracts/shared libraries,
-   local gateway/protocol, `effect-acp`, and release scripts;
-4. unit tests for that same closure;
-5. release-helper and public-source tests;
-6. Chromium renderer tests;
-7. `node-pty` load/spawn smoke;
-8. desktop/server/web build and preload verification;
-9. Electron startup smoke under Xvfb;
-10. build and launch of the pinned OpenCode binary that DJL embeds.
+1. **Quality:** frozen installation, scoped formatting, linting, and typechecking.
+2. **Desktop unit and contracts:** tests for the Electron shell, renderer unit layer, bundled
+   backend, contracts/shared libraries, local gateway/protocol, and `effect-acp`.
+3. **Chromium renderer:** browser installation and renderer browser tests.
+4. **Release/security/public source:** release helpers, credential/path audit, retained license
+   checks, and brand verification.
+5. **Desktop runtime smoke:** `node-pty`, desktop build, preload verification, Electron startup
+   under Xvfb, and the pinned OpenCode runtime embedded in DJL.
+
+The small `desktop-ci` job depends on all five lanes and fails closed if any lane fails, is
+cancelled, or is skipped. It is the only status required by branch protection.
 
 Pushes to `main` and manual CI dispatches additionally build unsigned package smokes on:
 
@@ -97,7 +111,7 @@ Create a ruleset for `main` that:
 
 - blocks deletion and force pushes;
 - requires a pull request for non-bypass actors;
-- requires the `Desktop checks` status;
+- requires the `desktop-ci` status;
 - requires branches to be up to date before merge;
 - uses zero required approving reviews so a solo maintainer is not deadlocked;
 - allows Anthony Su to bypass when an emergency direct fix is required.
@@ -106,7 +120,7 @@ Create a ruleset for `main` that:
 
 Create an environment named `production`:
 
-- allow deployments only from `main`;
+- allow deployments only from tags matching `v*.*.*`;
 - add Anthony Su as the required reviewer;
 - leave “Prevent self-review” disabled so the solo maintainer can approve;
 - do not store build secrets in this environment, because Mac builds occur before promotion.
@@ -148,13 +162,20 @@ unsigned.
 
 ## Release preflight
 
-Dispatch **Desktop Release** from `main` with one version. Preflight fails unless:
+Push a strict annotated release tag only after its tested commit is on `main`, for example:
+
+```bash
+git tag -a v0.5.6 -m "DJL v0.5.6"
+git push origin v0.5.6
+```
+
+The tag push starts **Desktop Release**. Preflight fails unless:
 
 - `GITHUB_REPOSITORY` is exactly `Anthonysu798/DJL`;
-- the dispatch SHA is the current protected `main` SHA;
+- the tag is annotated and its name exactly matches supported semantic-version syntax;
+- the peeled tag commit is contained in the protected `main` branch;
 - full Desktop CI succeeded for that exact SHA through a `push` or manual validation run;
-- the version has strict supported semantic-version syntax;
-- the tag and release do not already exist;
+- no release or duplicate non-canonical version tag exists;
 - every Apple credential is present;
 - the version is newer than every semantic release in the canonical and legacy repositories;
 - the version is newer than both live VPS manifests:
@@ -232,11 +253,12 @@ Both Mac manifests are merged into one architecture-complete feed. `SHA256SUMS` 
 
 The workflow deliberately has no automatic draft deletion.
 
-- **Preflight failure:** fix the repository setting, feed, credential, or version; no release exists.
-- **Build/upload failure:** retain the private draft for inspection. Delete that draft and its tag
-  manually only after diagnosing the failure, then rerun the same version from the same commit.
+- **Preflight failure:** fix the repository setting, feed, credential, version, or tag. If the tag
+  itself is wrong, delete only that unpublished tag, create a corrected annotated tag, and push it.
+- **Build/upload failure:** retain the private draft for inspection. Delete that draft only after
+  diagnosing the failure, then re-run the existing tag workflow from GitHub Actions.
 - **Receipt/finalization failure:** do not upload manifests manually. Fix the release helper or
-  native output, delete the invalid draft/tag, and rerun.
+  native output, delete the invalid draft, and create a strictly newer tag for changed code.
 - **Promotion approval expires or is rejected:** the verified draft remains private. Re-run only
   after confirming the one-day metadata artifacts still exist; otherwise rebuild.
 - **Post-publication failure:** never replace bytes under an existing tag. Re-draft the broken

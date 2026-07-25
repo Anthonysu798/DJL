@@ -325,13 +325,41 @@ describe("public desktop release preparation", () => {
       resolve(REPOSITORY_ROOT, ".github/workflows/desktop-release.yml"),
       "utf8",
     );
+    const setupAction = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/actions/setup-desktop/action.yml"),
+      "utf8",
+    );
     const workflows = readdirSync(resolve(REPOSITORY_ROOT, ".github/workflows")).toSorted();
     assert.deepStrictEqual(workflows, ["desktop-ci.yml", "desktop-release.yml"]);
 
     assert.match(ciWorkflow, /pull_request:/);
     assert.match(ciWorkflow, /push:\n    branches:\n      - main/);
     assert.match(ciWorkflow, /workflow_dispatch:/);
-    assert.match(ciWorkflow, /if: github\.event_name != 'pull_request'/);
+    assert.match(
+      ciWorkflow,
+      /if: github\.event_name == 'push' \|\| github\.event_name == 'workflow_dispatch'/,
+    );
+    assert.match(ciWorkflow, /quality:\n    name: Quality/);
+    assert.match(ciWorkflow, /desktop-tests:\n    name: Desktop unit and contract tests/);
+    assert.match(ciWorkflow, /renderer-tests:\n    name: Chromium renderer tests/);
+    assert.match(
+      ciWorkflow,
+      /release-audit:\n    name: Release, security, and public-source audits/,
+    );
+    assert.match(ciWorkflow, /runtime-smoke:\n    name: Desktop runtime smoke/);
+    assert.match(
+      ciWorkflow,
+      /desktop-ci:\n    name: desktop-ci\n    if: always\(\)\n    needs:[\s\S]*- runtime-smoke/,
+    );
+    assert.match(ciWorkflow, /package-smoke:[\s\S]*needs: desktop-ci/);
+    assert.equal(ciWorkflow.includes("secrets."), false);
+    assert.equal(ciWorkflow.includes("pull_request_target"), false);
+    assert.match(ciWorkflow, /cancel-in-progress: true/);
+    assert.match(setupAction, /bun install --frozen-lockfile/);
+    assert.match(
+      setupAction,
+      /key: bun-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('bun\.lock', 'package\.json'\) \}\}/,
+    );
     for (const runner of ["macos-14", "macos-15-intel", "windows-2022"]) {
       assert.match(ciWorkflow, new RegExp(`runner: ${runner}`));
       assert.match(releaseWorkflow, new RegExp(`runner: ${runner}`));
@@ -353,10 +381,13 @@ describe("public desktop release preparation", () => {
     }
 
     assert.match(releaseWorkflow, /RELEASE_REPOSITORY: Anthonysu798\/DJL/);
-    assert.match(
-      releaseWorkflow,
-      /workflow_dispatch:\n    inputs:\n      version:[\s\S]*required: true/,
-    );
+    assert.match(releaseWorkflow, /push:\n    tags:\n      - "v\*\.\*\.\*"/);
+    assert.equal(releaseWorkflow.includes("workflow_dispatch:"), false);
+    assert.match(releaseWorkflow, /Release tag \$RELEASE_TAG must be annotated/);
+    assert.match(releaseWorkflow, /refs\/tags\/\$RELEASE_TAG\^\{\}/);
+    assert.match(releaseWorkflow, /Tagged commit \$RELEASE_COMMIT is not contained in main/);
+    assert.match(releaseWorkflow, /generate_release_notes: true/);
+    assert.match(releaseWorkflow, /cancel-in-progress: false/);
     assert.equal(releaseWorkflow.includes("pull_request_target"), false);
     assert.equal(releaseWorkflow.includes(["DJL", "RELEASES", "TOKEN"].join("_")), false);
     assert.match(releaseWorkflow, /permissions:\n  contents: read/);
@@ -392,7 +423,7 @@ describe("public desktop release preparation", () => {
         releaseWorkflow.indexOf("environment: production"),
     );
 
-    for (const workflow of [ciWorkflow, releaseWorkflow]) {
+    for (const workflow of [ciWorkflow, releaseWorkflow, setupAction]) {
       const actionReferences = [...workflow.matchAll(/uses:\s+[^@\s]+@([^\s]+)/g)].map(
         (match) => match[1],
       );
