@@ -2569,7 +2569,14 @@ test("capped bootstrap suppresses orphan deltas and recovers from a new appended
     taskStarted("turn-recovered"),
     agentMessage("Recovered assistant"),
   ]);
-  await wait(50);
+  await waitUntil(
+    () =>
+      outbound.filter(
+        (message) =>
+          message.method === "codex/event/user_message" ||
+          message.method === "codex/event/agent_message",
+      ).length === 2,
+  );
   const methods = outbound.filter(
     (m) => m.method === "codex/event/user_message" || m.method === "codex/event/agent_message",
   );
@@ -2600,6 +2607,16 @@ function createTemporaryRolloutHome({ threadId, originator, source, lines }) {
 
 function appendRolloutLines(rolloutPath, lines) {
   fs.appendFileSync(rolloutPath, `${lines.join("\n")}\n`);
+}
+
+async function waitUntil(predicate, timeoutMs = 1_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Condition was not met within ${timeoutMs}ms`);
+    }
+    await wait(10);
+  }
 }
 
 function taskStarted(turnId) {
