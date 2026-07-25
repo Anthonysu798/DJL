@@ -1,0 +1,87 @@
+name: Landing Deploy
+
+# The landing site is served by Vercel from Anthonysu798/DJL_landing_website, but this monorepo is
+# where it is edited. This workflow keeps that deployment repository a mirror of apps/landing so a
+# merge to main is all it takes to ship the site. It is deliberately separate from Desktop CI, which
+# must keep testing only the desktop product.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/landing/**"
+      - ".github/workflows/landing-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: landing-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  DEPLOYMENT_REPOSITORY: Anthonysu798/DJL_landing_website
+
+jobs:
+  deploy:
+    name: Verify and mirror landing site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install frozen dependencies
+        uses: ./.github/actions/setup-desktop
+
+      # `next build` type-checks the whole app, so a broken site never reaches the deployment
+      # repository. ESLint is intentionally not a gate here: the landing config pulls
+      # eslint-plugin-react 7.x, which crashes on the ESLint 10 this workspace hoists.
+      - name: Test landing routes
+        run: bunx vitest run --root apps/landing
+
+      - name: Build landing site
+        run: bun run --cwd apps/landing build
+
+      - name: Mirror apps/landing to the deployment repository
+        env:
+          MIRROR_TOKEN: ${{ secrets.LANDING_MIRROR_TOKEN }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MIRROR_TOKEN:-}" ]]; then
+            echo "::warning::LANDING_MIRROR_TOKEN is not configured, so the landing site was verified but not deployed."
+            {
+              echo "### Landing site not deployed"
+              echo
+              echo "The build and tests passed, but \`LANDING_MIRROR_TOKEN\` is missing so"
+              echo "\`$DEPLOYMENT_REPOSITORY\` was not updated. Add a fine-grained token with"
+              echo "Contents: read and write on that repository to enable automatic deploys."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git clone --depth 1 \
+            "https://x-access-token:$MIRROR_TOKEN@github.com/$DEPLOYMENT_REPOSITORY.git" \
+            deployment-repository
+
+          # --delete keeps the mirror an exact copy: files removed here are removed there too.
+          rsync --archive --delete --exclude '.git/' apps/landing/ deployment-repository/
+
+          cd deployment-repository
+          git config user.name "djl-landing-mirror[bot]"
+          git config user.email "djl-landing-mirror@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "Deployment repository already matches apps/landing."
+            exit 0
+          fi
+          git commit --message "chore: mirror apps/landing from $SOURCE_COMMIT"
+          git push origin HEAD:main
+          echo "Mirrored apps/landing to $DEPLOYMENT_REPOSITORY; Vercel will deploy it." \
+            >> "$GITHUB_STEP_SUMMARY"

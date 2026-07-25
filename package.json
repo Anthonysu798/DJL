@@ -63,6 +63,8 @@
     "dist:desktop:dmg:x64": "node scripts/build-desktop-artifact.ts --platform mac --target dmg --arch x64",
     "dist:desktop:linux": "node scripts/build-desktop-artifact.ts --platform linux --target AppImage --arch x64",
     "dist:desktop:win": "node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64",
+    "ship": "node scripts/ship-release.ts",
+    "release:protect-main": "bash scripts/setup-release-branch-protection.sh",
     "release:vps": "bash scripts/release-to-vps.sh",
     "release:publish-vps": "bash scripts/publish-desktop-release-to-vps.sh",
     "release:configure-downloads": "bash scripts/configure-vps-download-endpoints.sh",

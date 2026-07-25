@@ -156,9 +156,59 @@ Optional repository variable:
 | --- | --- |
 | `DJL_REMOTE_RELAY_URL` | Credential-free production `wss://.../relay` endpoint embedded in desktop metadata |
 
+Optional secret for the landing mirror:
+
+| Name | Purpose |
+| --- | --- |
+| `LANDING_MIRROR_TOKEN` | Fine-grained token with Contents: read and write on `Anthonysu798/DJL_landing_website`, used only by `landing-deploy.yml` |
+
+Without `LANDING_MIRROR_TOKEN` the landing workflow still builds and tests the site; it just reports
+that it could not deploy instead of failing.
+
 Normal publication uses the workflow-scoped `GITHUB_TOKEN`. There is no steady-state
 cross-repository release token and no Azure/Windows signing credential while Windows remains
 unsigned.
+
+## Shipping a release
+
+`bun run ship` is the supported way to cut a release. It refuses to tag unless the working tree is
+clean, the branch is `main`, local matches `origin/main`, `main` is protected, the exact commit has a
+successful full Desktop CI run, and the version is unused and newer than every live feed.
+
+```bash
+bun run ship --dry-run                       # show the computed version, tag nothing
+bun run ship --notes-file notes.md           # next patch
+bun run ship minor --notes-file notes.md     # next minor
+bun run ship major --notes-file notes.md     # next major
+bun run ship rc --notes-file notes.md        # next release candidate
+```
+
+The version is derived from the highest version observed across canonical releases, the legacy
+release repository, and both live VPS manifests — never from a file in the tree, so it cannot drift.
+
+The annotated tag message becomes the published release body, followed by the standing install and
+verification guidance and GitHub's generated changelog. Write the notes for someone deciding whether
+to update; `.claude/commands/ship.md` carries the full agent SOP.
+
+Branch protection itself is codified in `scripts/setup-release-branch-protection.sh`
+(`bun run release:protect-main`), so the setting the preflight depends on is reviewable rather than a
+one-off click.
+
+## Landing site deploys
+
+The landing site is edited in `apps/landing` and served by Vercel from
+`Anthonysu798/DJL_landing_website`. `.github/workflows/landing-deploy.yml` runs on pushes to `main`
+that touch `apps/landing/**`: it runs the landing route tests and a production `next build`, then
+mirrors `apps/landing` into the deployment repository, which triggers Vercel.
+
+Download buttons are resolved at request time from the newest GitHub release, matching installer
+assets by shape (`DJL-<version>-<arch>.<ext>`) rather than a pinned filename, so a new release
+changes the site with no code edit. The response is revalidated every ten minutes, and any GitHub
+API failure falls back to the VPS mirror so a download button is never dead.
+
+The landing app is excluded from Desktop CI on purpose. ESLint is also not a gate in the landing
+workflow: the landing config pulls `eslint-plugin-react` 7.x, which crashes on the ESLint 10 that
+this workspace hoists. `next build` type-checks the app, which is the gate that matters for a deploy.
 
 ## Release preflight
 

@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import { Mouse } from "lucide-react";
 import type { Content } from "../content";
+import { RobotLab } from "../robot-lab/RobotLab";
 import "./demo-hero.css";
 
 gsap.registerPlugin(ScrollToPlugin);
 
 /* Light "neobot" hero ported from Demo/. A self-contained client island: a boot
-   screen that reveals the DJL logo then fades into the scene, a Spline robot
+   screen that reveals the DJL logo then fades into the scene, a local DJL robot
    stage on a light blueprint backdrop, drifting data particles, a pointer light
    + 3D tilt, a glass nav, a bottom glass copy bar and a MODEL / STATE HUD.
    All effects honour prefers-reduced-motion and clean up on unmount. */
-
-const SPLINE_SRC = "https://my.spline.design/nexbotrobotcharacterconcept-iupgrmPA7dwDJtRLY7VIMaZF/";
 
 type Particle = {
   x: number;
@@ -31,15 +31,21 @@ export function DjlHero({ t }: { t: Content }) {
   const bootRef = useRef<HTMLDivElement>(null);
   // true while the boot reveal plays; locks scrolling so the intro is seen first
   const [booting, setBooting] = useState(true);
-  const [splineMounted, setSplineMounted] = useState(false);
+  const [robotReady, setRobotReady] = useState(false);
+  const robotMounted = !booting;
+  const handleRobotReady = useCallback(() => setRobotReady(true), []);
 
-  // Always open at the hero on (re)load. Browsers restore the previous scroll
-  // position by default, which left a refresh stuck mid-page; disable that and
-  // jump to the top before paint so the boot reveal plays over the hero.
+  // Site.tsx owns the full-reload reset. Keep scroll restoration manual here as
+  // a fallback, while allowing fresh capability deep links to skip the intro.
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
+    const resumeInteractiveSection =
+      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone)
+      || window.location.hash === "#start"
+      || window.location.hash.startsWith("#capability-");
+    if (resumeInteractiveSection) return;
     window.scrollTo(0, 0);
   }, []);
 
@@ -51,16 +57,20 @@ export function DjlHero({ t }: { t: Content }) {
     window.dispatchEvent(new Event("djl:intro-done"));
   }, [booting]);
 
-  useEffect(() => {
-    if (booting) return;
-    const timer = window.setTimeout(() => setSplineMounted(true), 220);
-    return () => window.clearTimeout(timer);
-  }, [booting]);
-
   // Hold the page on the hero until the boot reveal finishes. React owns the
   // lock/unlock via the `booting` flag, so it stays correct under StrictMode.
   useEffect(() => {
     if (!booting) return;
+    const resumeInteractiveSection =
+      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone)
+      || window.location.hash === "#start"
+      || window.location.hash.startsWith("#capability-");
+    if (resumeInteractiveSection) {
+      const resumeTimer = window.setTimeout(() => {
+        setBooting(false);
+      }, 0);
+      return () => window.clearTimeout(resumeTimer);
+    }
     const html = document.documentElement;
     const body = document.body;
     const prevHtml = html.style.overflow;
@@ -72,7 +82,15 @@ export function DjlHero({ t }: { t: Content }) {
     // overflow:hidden only blocks the scrollbar; also swallow the actual scroll
     // input (wheel / touch / scroll keys) so nothing moves during the intro.
     const prevent = (event: Event) => event.preventDefault();
-    const scrollKeys = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
+    const scrollKeys = new Set([
+      " ",
+      "PageDown",
+      "PageUp",
+      "ArrowDown",
+      "ArrowUp",
+      "Home",
+      "End",
+    ]);
     const preventKey = (event: KeyboardEvent) => {
       if (scrollKeys.has(event.key)) event.preventDefault();
     };
@@ -84,7 +102,10 @@ export function DjlHero({ t }: { t: Content }) {
     // scroll lock after the reveal has played (~2.6s + buffer). Reduced motion
     // skips the intro, so it unlocks on the next tick instead.
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const unlockTimer = window.setTimeout(() => setBooting(false), reduce ? 0 : 2900);
+    const unlockTimer = window.setTimeout(
+      () => setBooting(false),
+      reduce ? 0 : 2900,
+    );
     return () => {
       window.clearTimeout(unlockTimer);
       window.removeEventListener("wheel", prevent);
@@ -242,7 +263,11 @@ export function DjlHero({ t }: { t: Content }) {
           scale: 1,
           duration: 0.85,
         })
-        .to(boot.querySelector(".dh-boot-scan"), { x: "115%", duration: 0.95 }, "-=0.35")
+        .to(
+          boot.querySelector(".dh-boot-scan"),
+          { x: "115%", duration: 0.95 },
+          "-=0.35",
+        )
         .to(
           boot.querySelector(".dh-boot-logo"),
           {
@@ -276,8 +301,33 @@ export function DjlHero({ t }: { t: Content }) {
         },
       });
       scrollTl
-        .to(root.querySelector(".dh-motion"), { y: -120, opacity: 0.32 }, 0)
-        .to(root.querySelector(".dh-giant"), { y: -120, opacity: 0.2 }, 0);
+        .to(
+          root.querySelector(".dh-motion"),
+          {
+            y: -150,
+            scale: 1.24,
+            opacity: 0.08,
+            filter: "blur(7px)",
+            duration: 1,
+          },
+          0,
+        )
+        .to(
+          root.querySelector(".dh-giant"),
+          { y: -150, opacity: 0, duration: 1 },
+          0,
+        )
+        .fromTo(
+          root.querySelector(".dh-transfer-flare"),
+          { autoAlpha: 0, scaleX: 0.22, scaleY: 0.56 },
+          {
+            autoAlpha: 1,
+            scaleX: 1.8,
+            scaleY: 1.35,
+            duration: 0.46,
+          },
+          0.5,
+        );
       if (scrollTl.scrollTrigger) triggers.push(scrollTl.scrollTrigger);
     }
 
@@ -293,32 +343,6 @@ export function DjlHero({ t }: { t: Content }) {
     };
   }, []);
 
-  // When the hero scrolls back into view (e.g. clicking "Open workspace" jumps
-  // up from the footer), the Spline embed can be left at a stale canvas size and
-  // render stretched, especially on tablet/landscape where the browser throttled
-  // it off-screen. Nudge the iframe's width so the embed re-measures and re-fits.
-  useEffect(() => {
-    const root = rootRef.current;
-    const frame = root?.querySelector<HTMLIFrameElement>(".dh-frame iframe");
-    if (!root || !frame) return;
-    const refit = () => {
-      frame.style.width = "99.9%";
-      requestAnimationFrame(() => {
-        frame.style.width = "100%";
-      });
-    };
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) refit();
-        }
-      },
-      { threshold: 0.25 },
-    );
-    io.observe(root);
-    return () => io.disconnect();
-  }, [splineMounted]);
-
   return (
     <div className="djl-hero" id="top" ref={rootRef}>
       <div
@@ -333,25 +357,21 @@ export function DjlHero({ t }: { t: Content }) {
       </div>
 
       <canvas className="dh-particles" ref={canvasRef} aria-hidden="true" />
+      <div className="dh-transfer-flare" aria-hidden="true" />
 
       <div className="dh-scene" aria-hidden="true">
         <div className="dh-giant">DJL</div>
         <div className="dh-glow" />
         <div className="dh-motion">
           <div className="dh-frame">
-            {splineMounted ? (
-              <iframe
-                title="DJL AI 3D assistant"
-                src={SPLINE_SRC}
-                loading="lazy"
-                allow="autoplay; fullscreen; xr-spatial-tracking"
-                tabIndex={-1}
-              />
-            ) : (
+            {robotMounted ? (
+              <RobotLab embedded onReady={handleRobotReady} />
+            ) : null}
+            {!robotMounted || !robotReady ? (
               <div className="dh-spline-placeholder" aria-hidden="true">
                 <span />
               </div>
-            )}
+            ) : null}
           </div>
         </div>
         <div className="dh-vignette" />
@@ -369,6 +389,10 @@ export function DjlHero({ t }: { t: Content }) {
             <span>{t.hero.hud.state}</span>
             <strong>{t.hero.hud.stateValue}</strong>
           </div>
+        </div>
+        <div className="dh-auto-scroll-hint" aria-hidden="true">
+          <Mouse size={15} strokeWidth={1.65} />
+          <span>{t.htmlLang.startsWith("zh") ? "轻滑一次 · 自动穿越" : "One flick · Auto transfer"}</span>
         </div>
       </section>
     </div>

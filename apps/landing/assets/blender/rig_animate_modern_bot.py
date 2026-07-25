@@ -4,7 +4,9 @@ import os
 from mathutils import Vector
 
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+# Resolve alongside this script so the rig build works from any checkout. Override with
+# DJL_BLENDER_ASSET_ROOT to read and write the .blend and renders somewhere else.
+ROOT = os.environ.get("DJL_BLENDER_ASSET_ROOT", os.path.dirname(os.path.abspath(__file__)))
 BLEND_PATH = os.path.join(ROOT, "DJL_Enterprise_Bot_Animated.blend")
 GLB_PATH = os.path.join(ROOT, "DJL_Enterprise_Bot_Animated.glb")
 HERO_PATH = os.path.join(ROOT, "DJL_Enterprise_Bot_Animated_Hero.png")
