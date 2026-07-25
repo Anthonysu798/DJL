@@ -1,9 +1,14 @@
 // FILE: effectRpcWebSocketMock.ts
 // Purpose: Tiny browser-test adapter for Effect RPC's JSON WebSocket frames.
 // Layer: Web test utility
-// Exports: helpers for request parsing plus Exit/Chunk/Pong responses.
+// Exports: helpers for request parsing, subscription detection, plus Exit/Chunk/Pong responses.
 
-import type { OrchestrationReadModel, OrchestrationShellSnapshot } from "@synara/contracts";
+import {
+  ORCHESTRATION_WS_METHODS,
+  WS_METHODS,
+  type OrchestrationReadModel,
+  type OrchestrationShellSnapshot,
+} from "@synara/contracts";
 
 export interface EffectRpcWebSocketClient {
   readonly send: (data: string) => void;
@@ -62,6 +67,20 @@ export function readEffectRpcClientMessage(
   }
 
   return { kind: "ignored" };
+}
+
+// Subscription RPCs return streams that stay open for the life of the socket. Replying to
+// one with an Exit looks like a dropped subscription to the transport, which reconnects the
+// whole socket 500ms later; any request issued during that window never reaches the fixture
+// and its promise never settles. Fixtures must leave these requests open instead.
+const OPEN_SUBSCRIPTION_METHODS: ReadonlySet<string> = new Set<string>(
+  [...Object.entries(WS_METHODS), ...Object.entries(ORCHESTRATION_WS_METHODS)]
+    .filter(([key]) => key.startsWith("subscribe"))
+    .map(([, method]) => method),
+);
+
+export function isEffectRpcSubscriptionMethod(method: string): boolean {
+  return OPEN_SUBSCRIPTION_METHODS.has(method);
 }
 
 export function sendEffectRpcExit(
