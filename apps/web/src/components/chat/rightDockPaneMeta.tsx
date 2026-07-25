@@ -1,0 +1,92 @@
+// FILE: rightDockPaneMeta.tsx
+// Purpose: Shared semantic metadata (icon + label) for right-dock pane kinds.
+// Layer: Chat right-dock UI primitives
+// Exports: per-kind meta map, ordered add-menu kinds, and pane label/icon resolvers.
+
+import type { ReactNode } from "react";
+
+import type { LucideIcon } from "~/lib/icons";
+import {
+  DiffIcon,
+  FileIcon,
+  FoldersIcon,
+  GitCommitIcon,
+  GlobeIcon,
+  InfoIcon,
+  MessageCircleIcon,
+  TerminalIcon,
+} from "~/lib/icons";
+import {
+  RIGHT_DOCK_PANE_KINDS,
+  type RightDockPane,
+  type RightDockPaneKind,
+} from "~/rightDockStore.logic";
+import { CHAT_SURFACE_CHIP_ICON_CLASS_NAME, SurfaceChipIcon } from "./chatHeaderControls";
+import { FileEntryIcon } from "./FileEntryIcon";
+
+export interface RightDockPaneMeta {
+  labelKey: string;
+  Icon: LucideIcon;
+}
+
+export const RIGHT_DOCK_PANE_META: Record<RightDockPaneKind, RightDockPaneMeta> = {
+  browser: { labelKey: "panels.names.browser", Icon: GlobeIcon },
+  diff: { labelKey: "panels.names.diff", Icon: DiffIcon },
+  explorer: { labelKey: "panels.names.explorer", Icon: FoldersIcon },
+  file: { labelKey: "panels.names.file", Icon: FileIcon },
+  terminal: { labelKey: "panels.names.terminal", Icon: TerminalIcon },
+  sidechat: { labelKey: "panels.names.side", Icon: MessageCircleIcon },
+  git: { labelKey: "panels.names.git", Icon: GitCommitIcon },
+};
+
+// Neutral fallback for any pane kind we no longer recognize (e.g. stale
+// persisted state). Persisted dock state is sanitized on rehydrate, so this is
+// only a defensive guard to keep a single bad pane from crashing render.
+const FALLBACK_RIGHT_DOCK_PANE_META: RightDockPaneMeta = {
+  labelKey: "panels.names.panel",
+  Icon: InfoIcon,
+};
+
+// Always resolve pane meta through this helper instead of indexing the map
+// directly, so an unknown kind degrades gracefully rather than throwing.
+export function getRightDockPaneMeta(kind: RightDockPaneKind): RightDockPaneMeta {
+  return RIGHT_DOCK_PANE_META[kind] ?? FALLBACK_RIGHT_DOCK_PANE_META;
+}
+
+// Add-menu / quick triggers follow the canonical kind order from the single
+// source of truth, so they stay in sync as kinds are added or removed. The
+// "file" kind is intentionally excluded: single-file preview tabs are opened by
+// clicking a file reference in chat, while the add menu offers the richer
+// "explorer" pane (file tree + search + viewer) in its place.
+export const RIGHT_DOCK_ADD_MENU_KINDS: readonly RightDockPaneKind[] = RIGHT_DOCK_PANE_KINDS.filter(
+  (kind) => kind !== "file",
+);
+
+// Resolves a tab label, preferring caller-provided per-pane overrides (e.g. the
+// embedded sidechat thread title) before falling back to the kind label.
+export function resolveRightDockPaneLabel(
+  pane: RightDockPane,
+  overrides?: Record<string, string | undefined>,
+  translate: (key: string) => string = (key) => key,
+): string {
+  return overrides?.[pane.id] ?? translate(getRightDockPaneMeta(pane.kind).labelKey);
+}
+
+// Resolves a tab glyph: file panes show the per-file-type icon (matching the
+// pane header and explorer rows), every other pane uses its kind icon. The file
+// glyph inherits the tab's muted foreground color (colorMode="inherit") instead
+// of its extension color, so dock tabs read like the changed-file rows rather
+// than carrying a loud per-type tint.
+export function resolveRightDockPaneIcon(pane: RightDockPane): ReactNode {
+  if (pane.kind === "file" && pane.filePath) {
+    return (
+      <FileEntryIcon
+        pathValue={pane.filePath}
+        kind="file"
+        colorMode="inherit"
+        className={CHAT_SURFACE_CHIP_ICON_CLASS_NAME}
+      />
+    );
+  }
+  return <SurfaceChipIcon icon={getRightDockPaneMeta(pane.kind).Icon} />;
+}

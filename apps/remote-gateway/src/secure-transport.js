@@ -1,0 +1,1012 @@
+// FILE: secure-transport.js
+// Purpose: Owns the bridge-side E2EE handshake, envelope crypto, and reconnect catch-up buffer.
+// Layer: CLI helper
+// Exports: createBridgeSecureTransport, SECURE_PROTOCOL_VERSION, PAIRING_QR_VERSION
+// Depends on: crypto, ./secure-device-state
+
+const {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  diffieHellman,
+  generateKeyPairSync,
+  hkdfSync,
+  randomBytes,
+  sign,
+  verify,
+} = require("crypto");
+const {
+  DJL_CLIENT_AUTH_LABEL,
+  DJL_MAX_REPLAY_BYTES,
+  DJL_MAX_REPLAY_MESSAGES,
+  DJL_PAIRING_QR_VERSION,
+  DJL_PAIRING_TTL_MS,
+  DJL_SECURE_HANDSHAKE_TAG,
+  DJL_SECURE_PROTOCOL_VERSION,
+  buildHandshakeTranscript,
+  secureNonce,
+} = require("@synara/remote-protocol");
+const { getTrustedPhonePublicKey, rememberTrustedPhone } = require("./secure-device-state");
+
+const PAIRING_QR_VERSION = DJL_PAIRING_QR_VERSION;
+const SECURE_PROTOCOL_VERSION = DJL_SECURE_PROTOCOL_VERSION;
+const HANDSHAKE_TAG = DJL_SECURE_HANDSHAKE_TAG;
+const HANDSHAKE_MODE_QR_BOOTSTRAP = "qr_bootstrap";
+const HANDSHAKE_MODE_TRUSTED_RECONNECT = "trusted_reconnect";
+const SECURE_SENDER_MAC = "mac";
+const SECURE_SENDER_IPHONE = "iphone";
+const MAX_PAIRING_AGE_MS = DJL_PAIRING_TTL_MS;
+const MAX_BRIDGE_OUTBOUND_MESSAGES = DJL_MAX_REPLAY_MESSAGES;
+const MAX_BRIDGE_OUTBOUND_BYTES = DJL_MAX_REPLAY_BYTES;
+
+function createBridgeSecureTransport({
+  sessionId,
+  relayUrl,
+  deviceState,
+  displayName = "",
+  onTrustedPhoneUpdate = null,
+  onSecureSessionReady = null,
+  persistTrustedPhone = true,
+  diagnostics = false,
+}) {
+  let currentDeviceState = deviceState;
+  const bridgeDisplayName = normalizeNonEmptyString(displayName);
+  let pendingHandshake = null;
+  let activeSession = null;
+  let liveSendWireMessage = null;
+  // Tracks the highest bridge seq the phone has definitely acked, so replay
+  // decisions never depend on best-effort local socket writes.
+  let lastRelayedBridgeOutboundSeq = 0;
+  let currentPairingExpiresAt = Date.now() + MAX_PAIRING_AGE_MS;
+  let nextKeyEpoch = 1;
+  // Sequence numbers restart at 1 with each bridge process. Namespace them so
+  // a phone never mistakes new-process seq 1 for old-process seq 1.
+  const bridgeReplayEpoch = randomBytes(16).toString("hex");
+  let nextBridgeOutboundSeq = 1;
+  let outboundBufferBytes = 0;
+  const outboundBuffer = [];
+
+  function logDiagnostic(stage) {
+    if (diagnostics) {
+      console.warn(`[djl-electron-bridge] secure-stage=${stage}`);
+    }
+  }
+
+  function createPairingPayload() {
+    currentPairingExpiresAt = Date.now() + MAX_PAIRING_AGE_MS;
+    return {
+      v: PAIRING_QR_VERSION,
+      relay: relayUrl,
+      sessionId,
+      macDeviceId: currentDeviceState.macDeviceId,
+      macIdentityPublicKey: currentDeviceState.macIdentityPublicKey,
+      expiresAt: currentPairingExpiresAt,
+      displayName: bridgeDisplayName,
+    };
+  }
+
+  function handleIncomingWireMessage(rawMessage, { sendControlMessage, onApplicationMessage }) {
+    const parsed = safeParseJSON(rawMessage);
+    if (!parsed || typeof parsed !== "object") {
+      return false;
+    }
+
+    const kind = normalizeNonEmptyString(parsed.kind);
+    if (!kind) {
+      if (parsed.method || parsed.id != null) {
+        sendControlMessage(
+          createSecureError({
+            code: "update_required",
+            message: "This bridge requires the latest DJL iPhone app for secure pairing.",
+          }),
+        );
+        return true;
+      }
+      return false;
+    }
+
+    switch (kind) {
+      case "clientHello":
+        logDiagnostic("client-hello");
+        handleClientHello(parsed, sendControlMessage);
+        return true;
+      case "clientAuth":
+        logDiagnostic("client-auth");
+        handleClientAuth(parsed, sendControlMessage);
+        return true;
+      case "resumeState":
+        logDiagnostic("resume-state");
+        handleResumeState(parsed);
+        return true;
+      case "encryptedEnvelope":
+        logDiagnostic("encrypted-envelope");
+        return handleEncryptedEnvelope(parsed, sendControlMessage, onApplicationMessage);
+      default:
+        return false;
+    }
+  }
+
+  function queueOutboundApplicationMessage(payloadText, sendWireMessage) {
+    const normalizedPayload = normalizeNonEmptyString(payloadText);
+    if (!normalizedPayload) {
+      return;
+    }
+
+    const bufferEntry = {
+      bridgeOutboundSeq: nextBridgeOutboundSeq,
+      payloadText: normalizedPayload,
+      sizeBytes: Buffer.byteLength(normalizedPayload, "utf8"),
+    };
+    nextBridgeOutboundSeq += 1;
+    outboundBuffer.push(bufferEntry);
+    outboundBufferBytes += bufferEntry.sizeBytes;
+    trimOutboundBuffer();
+
+    const liveSessionSender = activeSession?.sendWireMessage;
+    const effectiveSendWireMessage =
+      typeof liveSessionSender === "function" ? liveSessionSender : sendWireMessage;
+    if (activeSession?.isResumed && typeof effectiveSendWireMessage === "function") {
+      sendBufferedEntry(bufferEntry, effectiveSendWireMessage);
+    }
+  }
+
+  function isSecureChannelReady() {
+    return Boolean(activeSession?.isResumed);
+  }
+
+  function handleClientHello(message, sendControlMessage) {
+    const protocolVersion = Number(message.protocolVersion);
+    const incomingSessionId = normalizeNonEmptyString(message.sessionId);
+    const handshakeMode = normalizeNonEmptyString(message.handshakeMode);
+    const phoneDeviceId = normalizeNonEmptyString(message.phoneDeviceId);
+    const phoneIdentityPublicKey = normalizeNonEmptyString(message.phoneIdentityPublicKey);
+    const phoneEphemeralPublicKey = normalizeNonEmptyString(message.phoneEphemeralPublicKey);
+    const clientNonceBase64 = normalizeNonEmptyString(message.clientNonce);
+
+    if (protocolVersion !== SECURE_PROTOCOL_VERSION || incomingSessionId !== sessionId) {
+      sendControlMessage(
+        createSecureError({
+          code: "update_required",
+          message: "The bridge and iPhone are not using the same secure transport version.",
+        }),
+      );
+      return;
+    }
+
+    if (
+      !phoneDeviceId ||
+      !phoneIdentityPublicKey ||
+      !phoneEphemeralPublicKey ||
+      !clientNonceBase64
+    ) {
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_client_hello",
+          message: "The iPhone handshake is missing required secure fields.",
+        }),
+      );
+      return;
+    }
+
+    if (
+      handshakeMode !== HANDSHAKE_MODE_QR_BOOTSTRAP &&
+      handshakeMode !== HANDSHAKE_MODE_TRUSTED_RECONNECT
+    ) {
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_handshake_mode",
+          message: "The iPhone requested an unknown secure pairing mode.",
+        }),
+      );
+      return;
+    }
+
+    if (handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP && Date.now() > currentPairingExpiresAt) {
+      sendControlMessage(
+        createSecureError({
+          code: "pairing_expired",
+          message: "The pairing QR code has expired. Generate a new QR code from the bridge.",
+        }),
+      );
+      return;
+    }
+
+    const trustedPhonePublicKey = getTrustedPhonePublicKey(currentDeviceState, phoneDeviceId);
+    if (handshakeMode === HANDSHAKE_MODE_TRUSTED_RECONNECT) {
+      if (!trustedPhonePublicKey) {
+        sendControlMessage(
+          createSecureError({
+            code: "phone_not_trusted",
+            message:
+              "This iPhone is not trusted by the current bridge session. Scan a fresh QR code to pair again.",
+          }),
+        );
+        return;
+      }
+      if (trustedPhonePublicKey !== phoneIdentityPublicKey) {
+        sendControlMessage(
+          createSecureError({
+            code: "phone_identity_changed",
+            message: "The trusted iPhone identity does not match this reconnect attempt.",
+          }),
+        );
+        return;
+      }
+    }
+
+    const clientNonce = base64ToBuffer(clientNonceBase64);
+    if (!clientNonce || clientNonce.length === 0) {
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_client_nonce",
+          message: "The iPhone secure nonce could not be decoded.",
+        }),
+      );
+      return;
+    }
+
+    const ephemeral = generateKeyPairSync("x25519");
+    const privateJwk = ephemeral.privateKey.export({ format: "jwk" });
+    const publicJwk = ephemeral.publicKey.export({ format: "jwk" });
+    const serverNonce = randomBytes(32);
+    const keyEpoch = nextKeyEpoch;
+    const expiresAtForTranscript =
+      handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP ? currentPairingExpiresAt : 0;
+    const transcriptBytes = buildTranscriptBytes({
+      sessionId,
+      protocolVersion,
+      handshakeMode,
+      keyEpoch,
+      macDeviceId: currentDeviceState.macDeviceId,
+      phoneDeviceId,
+      macIdentityPublicKey: currentDeviceState.macIdentityPublicKey,
+      phoneIdentityPublicKey,
+      macEphemeralPublicKey: base64UrlToBase64(publicJwk.x),
+      phoneEphemeralPublicKey,
+      clientNonce,
+      serverNonce,
+      expiresAtForTranscript,
+    });
+    const macSignature = signTranscript(
+      currentDeviceState.macIdentityPrivateKey,
+      currentDeviceState.macIdentityPublicKey,
+      transcriptBytes,
+    );
+    debugSecureLog(
+      `serverHello mode=${handshakeMode} session=${shortId(sessionId)} keyEpoch=${keyEpoch} ` +
+        `mac=${shortId(currentDeviceState.macDeviceId)} phone=${shortId(phoneDeviceId)} ` +
+        `macKey=${shortFingerprint(currentDeviceState.macIdentityPublicKey)} ` +
+        `phoneKey=${shortFingerprint(phoneIdentityPublicKey)} ` +
+        `transcript=${transcriptDigest(transcriptBytes)}`,
+    );
+
+    pendingHandshake = {
+      sessionId,
+      handshakeMode,
+      keyEpoch,
+      phoneDeviceId,
+      phoneIdentityPublicKey,
+      phoneEphemeralPublicKey,
+      macEphemeralPrivateKey: base64UrlToBase64(privateJwk.d),
+      macEphemeralPublicKey: base64UrlToBase64(publicJwk.x),
+      transcriptBytes,
+      expiresAtForTranscript,
+    };
+    activeSession = null;
+
+    sendControlMessage({
+      kind: "serverHello",
+      protocolVersion: SECURE_PROTOCOL_VERSION,
+      sessionId,
+      handshakeMode,
+      macDeviceId: currentDeviceState.macDeviceId,
+      macIdentityPublicKey: currentDeviceState.macIdentityPublicKey,
+      macEphemeralPublicKey: pendingHandshake.macEphemeralPublicKey,
+      serverNonce: serverNonce.toString("base64"),
+      keyEpoch,
+      bridgeReplayEpoch,
+      expiresAtForTranscript,
+      macSignature,
+      clientNonce: clientNonceBase64,
+      displayName: bridgeDisplayName,
+    });
+  }
+
+  function handleClientAuth(message, sendControlMessage) {
+    if (!pendingHandshake) {
+      sendControlMessage(
+        createSecureError({
+          code: "unexpected_client_auth",
+          message: "The bridge did not have a pending secure handshake to finalize.",
+        }),
+      );
+      return;
+    }
+
+    const incomingSessionId = normalizeNonEmptyString(message.sessionId);
+    const phoneDeviceId = normalizeNonEmptyString(message.phoneDeviceId);
+    const keyEpoch = Number(message.keyEpoch);
+    const phoneSignature = normalizeNonEmptyString(message.phoneSignature);
+    if (
+      incomingSessionId !== pendingHandshake.sessionId ||
+      phoneDeviceId !== pendingHandshake.phoneDeviceId ||
+      keyEpoch !== pendingHandshake.keyEpoch ||
+      !phoneSignature
+    ) {
+      pendingHandshake = null;
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_client_auth",
+          message: "The secure client authentication payload was invalid.",
+        }),
+      );
+      return;
+    }
+
+    const clientAuthTranscript = Buffer.concat([
+      pendingHandshake.transcriptBytes,
+      encodeLengthPrefixedUTF8(DJL_CLIENT_AUTH_LABEL),
+    ]);
+    const phoneVerified = verifyTranscript(
+      pendingHandshake.phoneIdentityPublicKey,
+      clientAuthTranscript,
+      phoneSignature,
+    );
+    if (!phoneVerified) {
+      pendingHandshake = null;
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_phone_signature",
+          message: "The iPhone secure signature could not be verified.",
+        }),
+      );
+      return;
+    }
+
+    const sharedSecret = diffieHellman({
+      privateKey: createPrivateKey({
+        key: {
+          crv: "X25519",
+          d: base64ToBase64Url(pendingHandshake.macEphemeralPrivateKey),
+          kty: "OKP",
+          x: base64ToBase64Url(pendingHandshake.macEphemeralPublicKey),
+        },
+        format: "jwk",
+      }),
+      publicKey: createPublicKey({
+        key: {
+          crv: "X25519",
+          kty: "OKP",
+          x: base64ToBase64Url(pendingHandshake.phoneEphemeralPublicKey),
+        },
+        format: "jwk",
+      }),
+    });
+    const salt = createHash("sha256").update(pendingHandshake.transcriptBytes).digest();
+    const infoPrefix = [
+      HANDSHAKE_TAG,
+      pendingHandshake.sessionId,
+      currentDeviceState.macDeviceId,
+      pendingHandshake.phoneDeviceId,
+      String(pendingHandshake.keyEpoch),
+    ].join("|");
+
+    activeSession = {
+      sessionId: pendingHandshake.sessionId,
+      keyEpoch: pendingHandshake.keyEpoch,
+      phoneDeviceId: pendingHandshake.phoneDeviceId,
+      phoneIdentityPublicKey: pendingHandshake.phoneIdentityPublicKey,
+      phoneToMacKey: deriveAesKey(sharedSecret, salt, `${infoPrefix}|phoneToMac`),
+      macToPhoneKey: deriveAesKey(sharedSecret, salt, `${infoPrefix}|macToPhone`),
+      lastInboundCounter: -1,
+      nextOutboundCounter: 0,
+      isResumed: false,
+      sendWireMessage: liveSendWireMessage,
+      firstOutboundSeq: nextBridgeOutboundSeq,
+    };
+
+    nextKeyEpoch = pendingHandshake.keyEpoch + 1;
+    if (
+      pendingHandshake.handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP ||
+      getTrustedPhonePublicKey(currentDeviceState, pendingHandshake.phoneDeviceId)
+    ) {
+      // Lock the trusted phone identity so later reconnects can be verified cleanly.
+      const previousTrustedPhonePublicKey = getTrustedPhonePublicKey(
+        currentDeviceState,
+        pendingHandshake.phoneDeviceId,
+      );
+      currentDeviceState = rememberTrustedPhone(
+        currentDeviceState,
+        pendingHandshake.phoneDeviceId,
+        pendingHandshake.phoneIdentityPublicKey,
+        { persist: persistTrustedPhone },
+      );
+      if (previousTrustedPhonePublicKey !== pendingHandshake.phoneIdentityPublicKey) {
+        onTrustedPhoneUpdate?.(currentDeviceState, {
+          phoneDeviceId: pendingHandshake.phoneDeviceId,
+          phoneIdentityPublicKey: pendingHandshake.phoneIdentityPublicKey,
+        });
+      }
+    }
+    if (pendingHandshake.handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP) {
+      resetOutboundReplayState();
+      activeSession.firstOutboundSeq = nextBridgeOutboundSeq;
+    }
+
+    const completedHandshakeMode = pendingHandshake.handshakeMode;
+    pendingHandshake = null;
+    onSecureSessionReady?.({
+      phoneDeviceId: activeSession.phoneDeviceId,
+      handshakeMode: completedHandshakeMode,
+      keyEpoch: activeSession.keyEpoch,
+    });
+    sendControlMessage({
+      kind: "secureReady",
+      sessionId,
+      keyEpoch: activeSession.keyEpoch,
+      macDeviceId: currentDeviceState.macDeviceId,
+    });
+  }
+
+  function handleResumeState(message) {
+    if (!activeSession) {
+      return;
+    }
+
+    const incomingSessionId = normalizeNonEmptyString(message.sessionId);
+    const keyEpoch = Number(message.keyEpoch);
+    if (incomingSessionId !== sessionId || keyEpoch !== activeSession.keyEpoch) {
+      return;
+    }
+
+    const lastAppliedBridgeOutboundSeq = Number(message.lastAppliedBridgeOutboundSeq) || 0;
+    const phoneReplayEpoch = normalizeNonEmptyString(message.bridgeReplayEpoch);
+    let effectiveReplayCursor = lastAppliedBridgeOutboundSeq;
+    activeSession.isResumed = true;
+    if (
+      phoneReplayEpoch !== bridgeReplayEpoch ||
+      lastAppliedBridgeOutboundSeq >= nextBridgeOutboundSeq
+    ) {
+      // Sequence numbers are process-local. A trusted phone can reconnect after
+      // the bridge restarted with any cursor from the previous process; the
+      // explicit epoch catches overlap that numeric comparison cannot detect.
+      effectiveReplayCursor = Math.max(0, activeSession.firstOutboundSeq - 1);
+      sendBufferedReplayResetMarker(
+        activeSession.sendWireMessage,
+        effectiveReplayCursor,
+        bridgeReplayEpoch,
+      );
+    }
+    lastRelayedBridgeOutboundSeq = effectiveReplayCursor;
+    let missingEntries = replayableOutboundEntries(effectiveReplayCursor, {
+      includeCurrentSessionEntries: true,
+    });
+    const replayGap = bufferedReplayGapAfter(effectiveReplayCursor);
+    if (replayGap) {
+      // A partial historical tail is worse than no replay: item-scoped maps no
+      // longer exist after relaunch, so applying it can bind deltas/artifacts to
+      // unrelated rows. Tell the phone to advance past the discarded history;
+      // canonical thread history will rebuild it deterministically.
+      sendBufferedReplayGapMarker(activeSession.sendWireMessage, replayGap);
+      sendBufferedReplayCompleteMarker(activeSession.sendWireMessage);
+      missingEntries = missingEntries.filter(
+        (entry) => entry.bridgeOutboundSeq > replayGap.lastDiscardedBridgeOutboundSeq,
+      );
+    }
+    let replayedHistoricalBacklog = false;
+    for (const entry of missingEntries) {
+      const outboundEntry = replayTaggedEntryIfHistorical(entry);
+      if (!sendBufferedEntry(outboundEntry, activeSession.sendWireMessage)) {
+        return;
+      }
+      if (outboundEntry !== entry) {
+        replayedHistoricalBacklog = true;
+      }
+    }
+    if (replayedHistoricalBacklog) {
+      sendBufferedReplayCompleteMarker(activeSession.sendWireMessage);
+    }
+  }
+
+  function handleEncryptedEnvelope(message, sendControlMessage, onApplicationMessage) {
+    if (!activeSession) {
+      sendControlMessage(
+        createSecureError({
+          code: "secure_channel_unavailable",
+          message: "The secure channel is not ready yet on the bridge.",
+        }),
+      );
+      return true;
+    }
+
+    const incomingSessionId = normalizeNonEmptyString(message.sessionId);
+    const keyEpoch = Number(message.keyEpoch);
+    const sender = normalizeNonEmptyString(message.sender);
+    const counter = Number(message.counter);
+    if (
+      incomingSessionId !== sessionId ||
+      keyEpoch !== activeSession.keyEpoch ||
+      sender !== SECURE_SENDER_IPHONE ||
+      !Number.isInteger(counter) ||
+      counter <= activeSession.lastInboundCounter
+    ) {
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_envelope",
+          message: "The bridge rejected an invalid or replayed secure envelope.",
+        }),
+      );
+      return true;
+    }
+
+    const plaintextBuffer = decryptEnvelopeBuffer(
+      message,
+      activeSession.phoneToMacKey,
+      SECURE_SENDER_IPHONE,
+      counter,
+    );
+    if (!plaintextBuffer) {
+      sendControlMessage(
+        createSecureError({
+          code: "decrypt_failed",
+          message: "The bridge could not decrypt the iPhone secure payload.",
+        }),
+      );
+      return true;
+    }
+
+    activeSession.lastInboundCounter = counter;
+    const payloadObject = safeParseJSON(plaintextBuffer.toString("utf8"));
+    const payloadText = normalizeNonEmptyString(payloadObject?.payloadText);
+    if (!payloadText) {
+      sendControlMessage(
+        createSecureError({
+          code: "invalid_payload",
+          message: "The secure payload did not contain a usable application message.",
+        }),
+      );
+      return true;
+    }
+
+    const applicationMessage = safeParseJSON(payloadText);
+    const applicationMethod = normalizeNonEmptyString(applicationMessage?.method);
+    if (applicationMethod) {
+      logDiagnostic(`application-method=${applicationMethod}`);
+    }
+    onApplicationMessage(payloadText);
+    return true;
+  }
+
+  function bindLiveSendWireMessage(sendWireMessage) {
+    liveSendWireMessage = sendWireMessage;
+    if (activeSession) {
+      activeSession.sendWireMessage = sendWireMessage;
+      replayBufferedOutboundMessages();
+    }
+  }
+
+  function trimOutboundBuffer() {
+    let removeCount = 0;
+    let removedBytes = 0;
+    while (
+      outboundBuffer.length - removeCount > MAX_BRIDGE_OUTBOUND_MESSAGES ||
+      outboundBufferBytes - removedBytes > MAX_BRIDGE_OUTBOUND_BYTES
+    ) {
+      const entry = outboundBuffer[removeCount];
+      if (!entry) {
+        break;
+      }
+      removedBytes += entry.sizeBytes;
+      removeCount += 1;
+    }
+    if (removeCount > 0) {
+      outboundBuffer.splice(0, removeCount);
+      outboundBufferBytes = Math.max(0, outboundBufferBytes - removedBytes);
+    }
+  }
+
+  // Starts each fresh QR bootstrap with a clean catch-up window for the single trusted phone.
+  function resetOutboundReplayState() {
+    outboundBuffer.length = 0;
+    outboundBufferBytes = 0;
+    lastRelayedBridgeOutboundSeq = 0;
+    nextBridgeOutboundSeq = 1;
+  }
+
+  function sendBufferedEntry(entry, sendWireMessage) {
+    if (!activeSession?.isResumed || typeof sendWireMessage !== "function") {
+      return false;
+    }
+
+    const envelope = encryptEnvelopePayload(
+      {
+        bridgeOutboundSeq: entry.bridgeOutboundSeq,
+        payloadText: entry.payloadText,
+      },
+      activeSession.macToPhoneKey,
+      SECURE_SENDER_MAC,
+      activeSession.nextOutboundCounter,
+      sessionId,
+      activeSession.keyEpoch,
+    );
+    activeSession.nextOutboundCounter += 1;
+    return sendWireMessage(JSON.stringify(envelope)) !== false;
+  }
+
+  function replayableOutboundEntries(
+    lastAppliedBridgeOutboundSeq,
+    { includeCurrentSessionEntries = false } = {},
+  ) {
+    return outboundBuffer.filter((entry) => {
+      if (entry.bridgeOutboundSeq > lastAppliedBridgeOutboundSeq) {
+        return true;
+      }
+
+      // Stale cursors from a previous Mac/session must not suppress responses
+      // produced after this secure channel became active, including initialize.
+      return (
+        includeCurrentSessionEntries &&
+        activeSession &&
+        entry.bridgeOutboundSeq >= activeSession.firstOutboundSeq
+      );
+    });
+  }
+
+  // Replays from the last phone ack instead of local socket writes, so a relay
+  // flap cannot make the bridge skip output the phone never actually received.
+  function replayBufferedOutboundMessages() {
+    if (!activeSession?.isResumed || typeof activeSession.sendWireMessage !== "function") {
+      return;
+    }
+
+    let replayEntries = replayableOutboundEntries(lastRelayedBridgeOutboundSeq);
+    const replayGap = bufferedReplayGapAfter(lastRelayedBridgeOutboundSeq);
+    if (replayGap) {
+      sendBufferedReplayGapMarker(activeSession.sendWireMessage, replayGap);
+      sendBufferedReplayCompleteMarker(activeSession.sendWireMessage);
+      replayEntries = replayEntries.filter(
+        (entry) => entry.bridgeOutboundSeq > replayGap.lastDiscardedBridgeOutboundSeq,
+      );
+    }
+
+    let replayedHistoricalBacklog = false;
+    for (const entry of replayEntries) {
+      const outboundEntry = replayTaggedEntryIfHistorical(entry);
+      if (!sendBufferedEntry(outboundEntry, activeSession.sendWireMessage)) {
+        return;
+      }
+      if (outboundEntry !== entry) {
+        replayedHistoricalBacklog = true;
+      }
+    }
+    if (replayedHistoricalBacklog) {
+      sendBufferedReplayCompleteMarker(activeSession.sendWireMessage);
+    }
+  }
+
+  function bufferedReplayGapAfter(lastAppliedBridgeOutboundSeq) {
+    const firstUnappliedEntry = outboundBuffer.find(
+      (entry) => entry.bridgeOutboundSeq > lastAppliedBridgeOutboundSeq,
+    );
+    if (
+      !firstUnappliedEntry ||
+      firstUnappliedEntry.bridgeOutboundSeq <= lastAppliedBridgeOutboundSeq + 1
+    ) {
+      return null;
+    }
+
+    const lastAvailableBridgeOutboundSeq =
+      outboundBuffer[outboundBuffer.length - 1]?.bridgeOutboundSeq ||
+      firstUnappliedEntry.bridgeOutboundSeq;
+    const historicalBoundary =
+      (activeSession?.firstOutboundSeq || firstUnappliedEntry.bridgeOutboundSeq) - 1;
+    const lastDiscardedBridgeOutboundSeq =
+      firstUnappliedEntry.bridgeOutboundSeq <= historicalBoundary
+        ? historicalBoundary
+        : lastAvailableBridgeOutboundSeq;
+    return {
+      expectedBridgeOutboundSeq: lastAppliedBridgeOutboundSeq + 1,
+      firstAvailableBridgeOutboundSeq: firstUnappliedEntry.bridgeOutboundSeq,
+      lastDiscardedBridgeOutboundSeq: Math.max(
+        lastAppliedBridgeOutboundSeq,
+        lastDiscardedBridgeOutboundSeq,
+      ),
+    };
+  }
+
+  function sendBufferedReplayGapMarker(sendWireMessage, replayGap) {
+    if (!activeSession?.isResumed || typeof sendWireMessage !== "function" || !replayGap) {
+      return;
+    }
+
+    const envelope = encryptEnvelopePayload(
+      {
+        payloadText: JSON.stringify({
+          method: "djl/bufferedReplay/gap",
+          params: {
+            djlBufferedReplayGap: true,
+            ...replayGap,
+          },
+        }),
+      },
+      activeSession.macToPhoneKey,
+      SECURE_SENDER_MAC,
+      activeSession.nextOutboundCounter,
+      sessionId,
+      activeSession.keyEpoch,
+    );
+    activeSession.nextOutboundCounter += 1;
+    sendWireMessage(JSON.stringify(envelope));
+  }
+
+  function sendBufferedReplayResetMarker(sendWireMessage, resetBridgeOutboundSeqTo, replayEpoch) {
+    if (!activeSession?.isResumed || typeof sendWireMessage !== "function") {
+      return;
+    }
+
+    const envelope = encryptEnvelopePayload(
+      {
+        payloadText: JSON.stringify({
+          method: "djl/bufferedReplay/reset",
+          params: {
+            djlBufferedReplayReset: true,
+            resetBridgeOutboundSeqTo,
+            bridgeReplayEpoch: replayEpoch,
+          },
+        }),
+      },
+      activeSession.macToPhoneKey,
+      SECURE_SENDER_MAC,
+      activeSession.nextOutboundCounter,
+      sessionId,
+      activeSession.keyEpoch,
+    );
+    activeSession.nextOutboundCounter += 1;
+    sendWireMessage(JSON.stringify(envelope));
+  }
+
+  // Closes a replayed-backlog burst deterministically: the phone batches tagged
+  // catch-up events and settles its timeline once on this marker instead of
+  // waiting out a debounce. Sent transiently (no bridgeOutboundSeq, never
+  // buffered) so it cannot occupy replay-buffer space or be replayed itself.
+  function sendBufferedReplayCompleteMarker(sendWireMessage) {
+    if (!activeSession?.isResumed || typeof sendWireMessage !== "function") {
+      return;
+    }
+
+    const envelope = encryptEnvelopePayload(
+      {
+        payloadText: JSON.stringify({
+          method: "djl/bufferedReplay/completed",
+          params: { djlBufferedReplayComplete: true },
+        }),
+      },
+      activeSession.macToPhoneKey,
+      SECURE_SENDER_MAC,
+      activeSession.nextOutboundCounter,
+      sessionId,
+      activeSession.keyEpoch,
+    );
+    activeSession.nextOutboundCounter += 1;
+    sendWireMessage(JSON.stringify(envelope));
+  }
+
+  // Only prior secure-session backlog is catch-up history; same-session retries
+  // may be the phone's first delivery of a still-live turn.
+  function replayTaggedEntryIfHistorical(entry) {
+    if (!activeSession || entry.bridgeOutboundSeq >= activeSession.firstOutboundSeq) {
+      return entry;
+    }
+
+    return replayTaggedEntry(entry);
+  }
+
+  // Marks replayed notifications so the phone applies them as catch-up content
+  // instead of live activity; replay must never revive running/streaming UI.
+  // RPC responses (id-bearing) and non-object params pass through untouched.
+  function replayTaggedEntry(entry) {
+    const parsed = safeParseJSON(entry.payloadText);
+    if (
+      !parsed ||
+      typeof parsed.method !== "string" ||
+      parsed.id !== undefined ||
+      !parsed.params ||
+      typeof parsed.params !== "object" ||
+      Array.isArray(parsed.params)
+    ) {
+      return entry;
+    }
+
+    parsed.params.djlReplayedEvent = true;
+    return {
+      bridgeOutboundSeq: entry.bridgeOutboundSeq,
+      payloadText: JSON.stringify(parsed),
+      sizeBytes: entry.sizeBytes,
+    };
+  }
+
+  return {
+    PAIRING_QR_VERSION,
+    SECURE_PROTOCOL_VERSION,
+    bindLiveSendWireMessage,
+    createPairingPayload,
+    handleIncomingWireMessage,
+    isSecureChannelReady,
+    queueOutboundApplicationMessage,
+  };
+}
+
+function debugSecureLog(message) {
+  console.log(`[djl][secure] ${message}`);
+}
+
+function shortId(value) {
+  const normalized = normalizeNonEmptyString(value);
+  return normalized ? createHash("sha256").update(normalized).digest("hex").slice(0, 8) : "none";
+}
+
+function shortFingerprint(publicKeyBase64) {
+  const bytes = base64ToBuffer(publicKeyBase64);
+  if (!bytes || bytes.length === 0) {
+    return "invalid";
+  }
+  return createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+}
+
+function transcriptDigest(transcriptBytes) {
+  return createHash("sha256").update(transcriptBytes).digest("hex").slice(0, 16);
+}
+
+function encryptEnvelopePayload(payloadObject, key, sender, counter, sessionId, keyEpoch) {
+  const nonce = nonceForDirection(sender, counter);
+  const cipher = createCipheriv("aes-256-gcm", key, nonce);
+  const ciphertext = Buffer.concat([
+    cipher.update(Buffer.from(JSON.stringify(payloadObject), "utf8")),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+
+  return {
+    kind: "encryptedEnvelope",
+    v: SECURE_PROTOCOL_VERSION,
+    sessionId,
+    keyEpoch,
+    sender,
+    counter,
+    ciphertext: ciphertext.toString("base64"),
+    tag: tag.toString("base64"),
+  };
+}
+
+function decryptEnvelopeBuffer(envelope, key, sender, counter) {
+  try {
+    const nonce = nonceForDirection(sender, counter);
+    const decipher = createDecipheriv("aes-256-gcm", key, nonce);
+    decipher.setAuthTag(base64ToBuffer(envelope.tag));
+    return Buffer.concat([decipher.update(base64ToBuffer(envelope.ciphertext)), decipher.final()]);
+  } catch {
+    return null;
+  }
+}
+
+function deriveAesKey(sharedSecret, salt, infoLabel) {
+  return Buffer.from(hkdfSync("sha256", sharedSecret, salt, Buffer.from(infoLabel, "utf8"), 32));
+}
+
+function signTranscript(privateKeyBase64, publicKeyBase64, transcriptBytes) {
+  const signature = sign(
+    null,
+    transcriptBytes,
+    createPrivateKey({
+      key: {
+        crv: "Ed25519",
+        d: base64ToBase64Url(privateKeyBase64),
+        kty: "OKP",
+        x: base64ToBase64Url(publicKeyBase64),
+      },
+      format: "jwk",
+    }),
+  );
+  return signature.toString("base64");
+}
+
+function verifyTranscript(publicKeyBase64, transcriptBytes, signatureBase64) {
+  try {
+    return verify(
+      null,
+      transcriptBytes,
+      createPublicKey({
+        key: {
+          crv: "Ed25519",
+          kty: "OKP",
+          x: base64ToBase64Url(publicKeyBase64),
+        },
+        format: "jwk",
+      }),
+      base64ToBuffer(signatureBase64),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildTranscriptBytes(input) {
+  return Buffer.from(
+    buildHandshakeTranscript({
+      ...input,
+      macIdentityPublicKey: base64ToBuffer(input.macIdentityPublicKey),
+      phoneIdentityPublicKey: base64ToBuffer(input.phoneIdentityPublicKey),
+      macEphemeralPublicKey: base64ToBuffer(input.macEphemeralPublicKey),
+      phoneEphemeralPublicKey: base64ToBuffer(input.phoneEphemeralPublicKey),
+    }),
+  );
+}
+
+function encodeLengthPrefixedUTF8(value) {
+  return encodeLengthPrefixedBuffer(Buffer.from(String(value), "utf8"));
+}
+
+function encodeLengthPrefixedBuffer(buffer) {
+  const lengthBuffer = Buffer.allocUnsafe(4);
+  lengthBuffer.writeUInt32BE(buffer.length, 0);
+  return Buffer.concat([lengthBuffer, buffer]);
+}
+
+function nonceForDirection(sender, counter) {
+  return Buffer.from(secureNonce(sender, counter));
+}
+
+function createSecureError({ code, message }) {
+  return {
+    kind: "secureError",
+    code,
+    message,
+  };
+}
+
+function normalizeNonEmptyString(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
+
+function safeParseJSON(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function base64ToBuffer(value) {
+  try {
+    return Buffer.from(value, "base64");
+  } catch {
+    return null;
+  }
+}
+
+function base64UrlToBase64(value) {
+  const padded = `${value}${"=".repeat((4 - (value.length % 4 || 4)) % 4)}`;
+  return padded.replace(/-/g, "+").replace(/_/g, "/");
+}
+
+function base64ToBase64Url(value) {
+  return value.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+module.exports = {
+  HANDSHAKE_MODE_QR_BOOTSTRAP,
+  HANDSHAKE_MODE_TRUSTED_RECONNECT,
+  PAIRING_QR_VERSION,
+  SECURE_PROTOCOL_VERSION,
+  createBridgeSecureTransport,
+  nonceForDirection,
+};

@@ -1,0 +1,33 @@
+{
+  "name": "@synara/remote-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DJL local end-to-end encrypted iOS remote gateway.",
+  "keywords": [
+    "bridge",
+    "cli",
+    "codex",
+    "djl"
+  ],
+  "license": "Apache-2.0",
+  "author": "Emanuele Di Pietro",
+  "bin": {
+    "djl-remote": "bin/djl.js",
+    "djl-remote-diagnose": "bin/djl-jsonl-diagnose.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node ./bin/djl.js up",
+    "test": "node --test ./test/*.test.js"
+  },
+  "dependencies": {
+    "@synara/remote-protocol": "workspace:*",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.21.0"
+  }
+}

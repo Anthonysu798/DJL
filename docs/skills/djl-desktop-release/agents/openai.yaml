@@ -1,0 +1,4 @@
+interface:
+  display_name: "DJL Desktop Release"
+  short_description: "Build and publish verified DJL desktop releases"
+  default_prompt: "Use $djl-desktop-release to validate and release DJL desktop version X.Y.Z."

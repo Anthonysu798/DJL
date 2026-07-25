@@ -1,0 +1,631 @@
+name: Desktop Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (X.Y.Z or X.Y.Z-prerelease)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-production-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_REPOSITORY: Anthonysu798/DJL
+  LEGACY_RELEASE_REPOSITORY: Anthonysu798/DJL-Releases
+
+jobs:
+  preflight:
+    name: Release preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      commit: ${{ github.sha }}
+    steps:
+      - name: Checkout protected main commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - id: version
+        name: Validate requested version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node --experimental-strip-types --input-type=module - <<'NODE'
+          import { appendFileSync } from "node:fs";
+          import { validatePublicDesktopReleaseVersion } from "./scripts/lib/public-desktop-release.ts";
+
+          const release = validatePublicDesktopReleaseVersion(process.env.RELEASE_VERSION ?? "");
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${release.version}\n`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `tag=${release.tag}\n`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `is_prerelease=${release.isPrerelease}\n`);
+          NODE
+
+      - name: Require canonical repository and protected main HEAD
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == "$RELEASE_REPOSITORY" ]] || {
+            echo "Production releases run only in $RELEASE_REPOSITORY." >&2
+            exit 1
+          }
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
+            echo "Dispatch the production release from main." >&2
+            exit 1
+          }
+          main_sha="$(gh api "repos/$RELEASE_REPOSITORY/commits/main" --jq .sha)"
+          [[ "$GITHUB_SHA" == "$main_sha" ]] || {
+            echo "Release commit $GITHUB_SHA is not current main $main_sha." >&2
+            exit 1
+          }
+          [[ "$(gh api "repos/$RELEASE_REPOSITORY/branches/main" --jq .protected)" == "true" ]] || {
+            echo "The canonical main branch must be protected." >&2
+            exit 1
+          }
+
+      - name: Require full desktop validation for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/$RELEASE_REPOSITORY/actions/workflows/desktop-ci.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=100" \
+            > desktop-ci-runs.json
+          jq -e --arg sha "$GITHUB_SHA" '
+            any(
+              .workflow_runs[];
+              .head_sha == $sha
+              and (.event == "push" or .event == "workflow_dispatch")
+              and .conclusion == "success"
+            )
+          ' desktop-ci-runs.json >/dev/null || {
+            echo "This exact commit has no successful full Desktop CI run." >&2
+            exit 1
+          }
+
+      - name: Require all Apple release credentials
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_CONTENT APPLE_API_KEY_ID APPLE_API_ISSUER
+          do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required Apple release secret: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Reject existing tag or release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists." >&2
+            exit 1
+          fi
+          if gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag $RELEASE_TAG already exists." >&2
+            exit 1
+          fi
+
+      - name: Require a version newer than every live feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$RELEASE_REPOSITORY/releases?per_page=100" > canonical-releases.json
+          gh api "repos/$LEGACY_RELEASE_REPOSITORY/releases?per_page=100" > legacy-releases.json
+          curl --fail --silent --show-error \
+            https://downloads.slcor.com/stable/latest.yml > vps-windows.yml
+          curl --fail --silent --show-error \
+            https://downloads.slcor.com/stable/latest-mac.yml > vps-mac.yml
+
+          jq --arg source "canonical GitHub release" '
+            [
+              .[]
+              | .tag_name as $version
+              | select($version | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"))
+              | { source: $source, version: $version }
+            ]
+          ' canonical-releases.json > canonical-observed.json
+          jq --arg source "legacy GitHub release" '
+            [
+              .[]
+              | .tag_name as $version
+              | select($version | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"))
+              | { source: $source, version: $version }
+            ]
+          ' legacy-releases.json > legacy-observed.json
+
+          windows_version="$(sed -nE "s/^version:[[:space:]]*['\"]?([^'\"]+)['\"]?$/\\1/p" vps-windows.yml | head -1)"
+          mac_version="$(sed -nE "s/^version:[[:space:]]*['\"]?([^'\"]+)['\"]?$/\\1/p" vps-mac.yml | head -1)"
+          [[ -n "$windows_version" && -n "$mac_version" ]] || {
+            echo "Both live VPS manifests must expose a version." >&2
+            exit 1
+          }
+          jq -n \
+            --arg windows "$windows_version" \
+            --arg mac "$mac_version" \
+            '[
+              { source: "Windows VPS manifest", version: $windows },
+              { source: "macOS VPS manifest", version: $mac }
+            ]' > vps-observed.json
+          jq -s 'add' \
+            canonical-observed.json legacy-observed.json vps-observed.json \
+            > observed-versions.json
+          node --experimental-strip-types scripts/check-public-desktop-release-version.ts \
+            "$RELEASE_VERSION" observed-versions.json
+
+  create-draft:
+    name: Create private draft
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.draft.outputs.release_id }}
+    steps:
+      - id: draft
+        name: Create draft before native builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+          RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}
+          IS_PRERELEASE: ${{ needs.preflight.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          payload="$(
+            jq -n \
+              --arg tag "$RELEASE_TAG" \
+              --arg commit "$RELEASE_COMMIT" \
+              --arg name "DJL v$RELEASE_VERSION" \
+              --argjson prerelease "$IS_PRERELEASE" \
+              '{
+                tag_name: $tag,
+                target_commitish: $commit,
+                name: $name,
+                body: "DJL desktop installers for macOS Apple Silicon, macOS Intel, and Windows x64. macOS installers are Developer ID signed, notarized, and stapled. The Windows installer is intentionally unsigned and may trigger Microsoft SmartScreen. Verify SHA256SUMS before installing.",
+                draft: true,
+                prerelease: $prerelease
+              }'
+          )"
+          response="$(gh api --method POST "repos/$RELEASE_REPOSITORY/releases" --input - <<<"$payload")"
+          release_id="$(jq -r .id <<<"$response")"
+          [[ "$release_id" =~ ^[0-9]+$ ]] || {
+            echo "GitHub did not return a draft release ID." >&2
+            exit 1
+          }
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: [preflight, create-draft]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS ARM64
+            runner: macos-14
+            platform: mac
+            target: dmg
+            arch: arm64
+          - label: macOS Intel
+            runner: macos-15-intel
+            platform: mac
+            target: dmg
+            arch: x64
+          - label: Windows x64
+            runner: windows-2022
+            platform: win
+            target: nsis
+            arch: x64
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.preflight.outputs.commit }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Align package versions
+        run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
+
+      - name: Build native release
+        shell: bash
+        env:
+          DJL_REMOTE_RELAY_URL: ${{ vars.DJL_REMOTE_RELAY_URL }}
+          SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          args=(
+            --platform "${{ matrix.platform }}"
+            --target "${{ matrix.target }}"
+            --arch "${{ matrix.arch }}"
+            --build-version "${{ needs.preflight.outputs.version }}"
+            --output-dir release-native
+            --verbose
+          )
+          if [[ "${{ matrix.platform }}" == "mac" ]]; then
+            key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+            printf '%s' "$APPLE_API_KEY_CONTENT" > "$key_path"
+            chmod 600 "$key_path"
+            export APPLE_API_KEY="$key_path"
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+            args+=(--signed)
+          else
+            unset \
+              APPLE_API_KEY APPLE_API_KEY_CONTENT APPLE_API_KEY_ID APPLE_API_ISSUER \
+              CSC_LINK CSC_KEY_PASSWORD \
+              AZURE_TRUSTED_SIGNING_PUBLISHER_NAME \
+              AZURE_TRUSTED_SIGNING_ENDPOINT \
+              AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME \
+              AZURE_TRUSTED_SIGNING_ACCOUNT_NAME \
+              AZURE_TRUSTED_SIGNING_FILE_DIGEST \
+              AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST \
+              AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          bun run dist:desktop:artifact -- "${args[@]}"
+
+      - name: Verify signed, notarized, native macOS release
+        if: matrix.platform == 'mac'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          dmg="release-native/DJL-${RELEASE_VERSION}-${{ matrix.arch }}.dmg"
+          mount_point="$RUNNER_TEMP/djl-release-${{ matrix.arch }}"
+          mkdir "$mount_point"
+          trap 'hdiutil detach "$mount_point" -quiet || true' EXIT
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg"
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point" -quiet
+          app="$mount_point/DJL.app"
+          test -d "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          signature="$(codesign --display --verbose=4 "$app" 2>&1)"
+          grep -F "Authority=Developer ID Application: ANTHONY SU (U76N9JSK4M)" <<<"$signature"
+          grep -F "TeamIdentifier=U76N9JSK4M" <<<"$signature"
+          spctl --assess --type execute --verbose=4 "$app"
+
+          expected_arch="${{ matrix.arch }}"
+          [[ "$expected_arch" == "x64" ]] && expected_arch="x86_64"
+          file "$app/Contents/MacOS/DJL" | grep -F "$expected_arch"
+          native_count=0
+          while IFS= read -r -d '' native; do
+            file "$native" | grep -F "$expected_arch"
+            native_count=$((native_count + 1))
+          done < <(find "$app" -type f -name '*.node' -print0)
+          (( native_count > 0 ))
+          onnx_manifest="$(find "$app" -path '*/onnxruntime-node/package.json' -print -quit)"
+          [[ -n "$onnx_manifest" ]]
+          grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.23\.2"' "$onnx_manifest"
+          grep -F "owner: Anthonysu798" "$app/Contents/Resources/app-update.yml"
+          grep -F "repo: DJL" "$app/Contents/Resources/app-update.yml"
+          [[ "$("$app/Contents/Resources/opencode/opencode" --version)" == "1.17.18" ]]
+
+      - name: Verify intentionally unsigned Windows release
+        if: matrix.platform == 'win'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          $installer = "release-native/DJL-$env:RELEASE_VERSION-x64.exe"
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne "NotSigned") {
+            throw "Windows production installer must be unsigned; received $($signature.Status)."
+          }
+
+      - name: Create receipt and small metadata bundle
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir release-metadata
+          node scripts/create-public-desktop-release-receipt.ts \
+            "$RELEASE_VERSION" \
+            "${{ matrix.platform }}" \
+            "${{ matrix.arch }}" \
+            release-native \
+            "release-metadata/receipt-${{ matrix.platform }}-${{ matrix.arch }}.json"
+          if [[ "${{ matrix.platform }}" == "mac" ]]; then
+            cp release-native/latest-mac.yml \
+              "release-metadata/latest-mac-${{ matrix.arch }}.yml"
+          else
+            cp release-native/latest.yml release-metadata/latest.yml
+          fi
+
+      - name: Upload large payloads directly to private draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.platform }}" == "mac" ]]; then
+            payloads=(
+              "release-native/DJL-${RELEASE_VERSION}-${{ matrix.arch }}.dmg"
+              "release-native/DJL-${RELEASE_VERSION}-${{ matrix.arch }}.dmg.blockmap"
+              "release-native/DJL-${RELEASE_VERSION}-${{ matrix.arch }}.zip"
+            )
+          else
+            payloads=(
+              "release-native/DJL-${RELEASE_VERSION}-x64.exe"
+              "release-native/DJL-${RELEASE_VERSION}-x64.exe.blockmap"
+            )
+          fi
+          gh release upload "$RELEASE_TAG" "${payloads[@]}" --repo "$RELEASE_REPOSITORY"
+
+      - name: Transfer one-day receipts and manifests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-metadata-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release-metadata/*
+          if-no-files-found: error
+          retention-days: 1
+
+  finalize:
+    name: Validate draft and upload metadata last
+    needs: [preflight, create-draft, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.preflight.outputs.commit }}
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - name: Download small receipts and manifests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: release-metadata-*
+          merge-multiple: true
+          path: release-receipts
+
+      - name: Require the original private draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$RELEASE_REPOSITORY/releases/$RELEASE_ID" > draft.json
+          jq -e \
+            --arg tag "$RELEASE_TAG" \
+            '.draft == true and .tag_name == $tag' \
+            draft.json >/dev/null
+
+      - name: Finalize six updater manifests and SHA256SUMS
+        run: |
+          node scripts/finalize-public-desktop-release.ts \
+            "${{ needs.preflight.outputs.version }}" \
+            release-receipts \
+            release-metadata
+
+      - name: Validate direct payload uploads against receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+        run: |
+          set -euo pipefail
+          jq -s '
+            [.[].assets[] | { name, size, digest: ("sha256:" + .sha256) }]
+            | sort_by(.name)
+          ' release-receipts/receipt-*.json > expected-payloads.json
+          gh api "repos/$RELEASE_REPOSITORY/releases/$RELEASE_ID/assets?per_page=100" \
+            | jq '[.[] | { name, size, digest }] | sort_by(.name)' \
+            > actual-payloads.json
+          diff -u expected-payloads.json actual-payloads.json
+
+      - name: Upload checksum before updater manifests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          gh release upload "$RELEASE_TAG" release-metadata/SHA256SUMS \
+            --repo "$RELEASE_REPOSITORY"
+
+      - name: Upload updater manifests last
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mapfile -t manifests < <(find release-metadata -maxdepth 1 -type f -name '*.yml' | sort)
+          [[ "${#manifests[@]}" -eq 6 ]]
+          gh release upload "$RELEASE_TAG" "${manifests[@]}" --repo "$RELEASE_REPOSITORY"
+
+      - name: Verify exact 15-asset draft inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+        run: |
+          gh api "repos/$RELEASE_REPOSITORY/releases/$RELEASE_ID/assets?per_page=100" \
+            > github-assets.json
+          node --experimental-strip-types scripts/verify-public-desktop-release-assets.ts \
+            "${{ needs.preflight.outputs.version }}" \
+            release-receipts \
+            release-metadata \
+            github-assets.json
+
+  promote:
+    name: Promote production release
+    needs: [preflight, create-draft, finalize]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.preflight.outputs.commit }}
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - name: Revalidate private draft immediately before promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir promotion-check
+          gh api "repos/$RELEASE_REPOSITORY/releases/$RELEASE_ID" > promotion-release.json
+          jq -e \
+            --arg tag "$RELEASE_TAG" \
+            '.draft == true and .tag_name == $tag' \
+            promotion-release.json >/dev/null
+          gh api "repos/$RELEASE_REPOSITORY/releases/$RELEASE_ID/assets?per_page=100" \
+            > promotion-assets.json
+          gh release download "$RELEASE_TAG" \
+            --repo "$RELEASE_REPOSITORY" \
+            --pattern SHA256SUMS \
+            --dir promotion-check
+
+          node --experimental-strip-types --input-type=module - <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFileSync } from "node:fs";
+          import { publishedPublicDesktopReleaseAssetNames } from "./scripts/lib/public-desktop-release.ts";
+
+          const version = process.env.RELEASE_VERSION;
+          const assets = JSON.parse(readFileSync("promotion-assets.json", "utf8"));
+          const expectedNames = [...publishedPublicDesktopReleaseAssetNames(version)].sort();
+          const actualNames = assets.map(({ name }) => name).sort();
+          if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+            throw new Error(`Promotion inventory mismatch: ${actualNames.join(", ")}`);
+          }
+          const sumsContents = readFileSync("promotion-check/SHA256SUMS");
+          const sums = new Map(
+            sumsContents
+              .toString("utf8")
+              .trim()
+              .split("\n")
+              .map((line) => {
+                const match = /^([a-f0-9]{64})  ([^/]+)$/.exec(line);
+                if (!match) throw new Error(`Invalid SHA256SUMS line: ${line}`);
+                return [match[2], match[1]];
+              }),
+          );
+          if (sums.size !== 14) throw new Error(`Expected 14 checksum entries, got ${sums.size}.`);
+          for (const asset of assets) {
+            if (!(Number.isSafeInteger(asset.size) && asset.size > 0)) {
+              throw new Error(`Invalid GitHub size for ${asset.name}.`);
+            }
+            const expectedDigest =
+              asset.name === "SHA256SUMS"
+                ? createHash("sha256").update(sumsContents).digest("hex")
+                : sums.get(asset.name);
+            if (!expectedDigest || asset.digest !== `sha256:${expectedDigest}`) {
+              throw new Error(`GitHub digest mismatch for ${asset.name}.`);
+            }
+          }
+          NODE
+
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          IS_PRERELEASE: ${{ needs.preflight.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "$RELEASE_REPOSITORY" \
+              --draft=false \
+              --prerelease
+          else
+            gh release edit "$RELEASE_TAG" \
+              --repo "$RELEASE_REPOSITORY" \
+              --draft=false \
+              --prerelease=false \
+              --latest
+          fi
+
+      - name: Verify final release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          IS_PRERELEASE: ${{ needs.preflight.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$RELEASE_REPOSITORY/releases/tags/$RELEASE_TAG" > published.json
+          [[ "$(jq -r .draft published.json)" == "false" ]]
+          [[ "$(jq -r .prerelease published.json)" == "$IS_PRERELEASE" ]]
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            latest_tag="$(gh api "repos/$RELEASE_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)"
+            [[ "$latest_tag" != "$RELEASE_TAG" ]]
+          else
+            [[ "$(gh api "repos/$RELEASE_REPOSITORY/releases/latest" --jq .tag_name)" == "$RELEASE_TAG" ]]
+          fi
+          jq -r .html_url published.json

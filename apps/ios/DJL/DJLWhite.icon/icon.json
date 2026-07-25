@@ -1,0 +1,31 @@
+{
+  "fill": "system-light",
+  "groups": [
+    {
+      "blur-material": null,
+      "layers": [
+        {
+          "image-name": "Fixed-Roundingwhite.svg",
+          "name": "DJL White",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [0.26439794274210726, -27.3359375]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.05
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
+  }
+}

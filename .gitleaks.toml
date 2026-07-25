@@ -1,0 +1,64 @@
+[extend]
+useDefault = true
+
+# These first-party matches are identifiers or keyboard shortcuts, not stored credentials.
+[[allowlists]]
+description = "DJL credential type names, pairing alphabet, and keybinding fixtures"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^apps/ios/DJL/Services/CodexSecureTransportModels\.swift$''',
+  '''^apps/server/src/auth/Layers/BootstrapCredentialService\.ts$''',
+  '''^apps/server/src/keybindings\.ts$''',
+]
+regexes = [
+  '''phoneEphemeralPrivateKey:\s+Curve25519\.KeyAgreement\.PrivateKey''',
+  '''PAIRING_TOKEN_ALPHABET\s*=''',
+  '''key:\s*"mod\+shift\+arrow(?:left|right|up|down)"''',
+]
+
+# OpenCode retains synthetic secret-detection fixtures and non-secret public client identifiers.
+[[allowlists]]
+description = "Vendored OpenCode documentation and UI fixture identifiers"
+condition = "AND"
+targetRules = ["curl-auth-header", "generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^vendor/opencode/packages/docs/ai-tools/cursor\.mdx$''',
+  '''^vendor/opencode/packages/app/e2e/performance/timeline-stability/context-matrix\.spec\.ts$''',
+  '''^vendor/opencode/packages/app/src/pages/layout\.tsx$''',
+  '''^vendor/opencode/packages/sdk/js/src/v2/gen/sdk\.gen\.ts$''',
+]
+regexes = [
+  '''Authorization:\s+Bearer\s+YOUR_API_KEY''',
+  '''const ids = \["prt_key_01_read"''',
+  '''keybind:\s*"shift\+alt\+arrow(?:up|down)"''',
+  '''key:\s*"questionV2Reply"''',
+]
+
+[[allowlists]]
+description = "Vendored OpenCode recorder tests intentionally contain synthetic secret shapes"
+condition = "AND"
+targetRules = ["gcp-api-key", "generic-api-key"]
+regexTarget = "line"
+paths = ['''^vendor/opencode/packages/http-recorder/test/record-replay\.test\.ts$''']
+regexes = [
+  '''example\.test/path\?key=sk-[0-9]+''',
+  '''nested:\s*"AIza[A-Za-z0-9_-]+"''',
+  '''token:\s*"sk-[0-9]+"''',
+]
+
+[[allowlists]]
+description = "Vendored OpenCode public OAuth and Stripe client identifiers"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^vendor/opencode/packages/console/app/package\.json$''',
+  '''^vendor/opencode/packages/opencode/src/plugin/digitalocean\.ts$''',
+]
+regexes = [
+  '''VITE_STRIPE_PUBLISHABLE_KEY=pk_test_''',
+  '''const DO_OAUTH_CLIENT_ID\s*=''',
+]

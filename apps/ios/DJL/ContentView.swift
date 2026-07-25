@@ -1,0 +1,2303 @@
+// FILE: ContentView.swift
+// Purpose: Root layout orchestrator — navigation shell, sidebar drawer, and top-level state wiring.
+// Layer: View
+// Exports: ContentView
+// Depends on: SidebarView, TurnView, SettingsView, CodexService, ContentViewModel
+
+import SwiftUI
+import UIKit
+
+private enum RootSheetRoute: Identifiable, Equatable {
+    case bridgeUpdate(CodexBridgeUpdatePrompt)
+    case whatsNew(version: String)
+
+    var id: String {
+        switch self {
+        case .bridgeUpdate(let prompt):
+            return "bridge-update-\(prompt.id.uuidString)"
+        case .whatsNew(let version):
+            return "whats-new-\(version)"
+        }
+    }
+}
+
+enum ContentNavigationRoute: Hashable {
+    case newChatDraft(NewChatDraftRoute)
+    case newChatOpening
+    case thread(id: String)
+    case settings
+    case terminal(preferredWorkingDirectory: String?)
+
+    var isTerminalRoute: Bool {
+        if case .terminal = self {
+            return true
+        }
+        return false
+    }
+}
+
+private struct MacContextTransitionSnapshot {
+    let selectedThread: CodexThread?
+    let activeThreadId: String?
+    let suppressAutomaticThreadSelection: Bool
+}
+
+struct ContentView: View {
+    @Environment(CodexService.self) private var codex
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    @State private var viewModel = ContentViewModel()
+    @State private var isSidebarOpen = false
+    @State private var sidebarDragOffset: CGFloat = 0
+    @State private var isSidebarPrewarmed = false
+    @State private var selectedThread: CodexThread?
+    @State private var navigationPath: [ContentNavigationRoute] = []
+    @State private var isShowingManualScanner = false
+    @State private var isShowingMyMacsScanner = false
+    // QR scanning is user-initiated. A clean install lands on the pairing-capable
+    // home screen, which keeps the secure manual-code path usable in Simulator.
+    @State private var hasDismissedAutomaticScanner = true
+    @State private var hasNormalizedInitialPairingScreen = false
+    @State private var scannerCanReturnToOnboarding = false
+    @State private var isShowingManualPairingEntry = false
+    @State private var manualPairingCode = ""
+    @State private var manualPairingErrorMessage: String?
+    @State private var isResolvingManualPairingCode = false
+    @State private var isSearchActive = false
+    @State private var isRetryingBridgeUpdate = false
+    @State private var isPreparingManualScanner = false
+    @State private var macSwitchTask: Task<Void, Never>?
+    @State private var isWakingSavedMacDisplay = false
+    @State private var hasAttemptedAutomaticWakeSavedMacDisplay = false
+    @State private var threadCompletionBannerDismissTask: Task<Void, Never>?
+    @State private var whatsNewPresentationTask: Task<Void, Never>?
+    @State private var suppressAutomaticThreadSelection = false
+    @State private var sidebarPrewarmTask: Task<Void, Never>?
+    @State private var presentedRootSheet: RootSheetRoute?
+    @State private var isWhatsNewPresentationReady = false
+    @State private var sidebarGestureDebugSequence = 0
+    @State private var activeSidebarGestureDebugID: Int?
+    @State private var lastSidebarGestureLogBucket: Int?
+    @State private var sidebarGestureAutoCommitted = false
+    @State private var sidebarSelectionSuppressedUntil: Date?
+    @State private var activeNewChatDraftRoute: NewChatDraftRoute?
+    @State private var isOpeningNewChatFromSidebar = false
+    @State private var pendingQuickAction: DJLQuickAction?
+    @State private var threadIDsAwaitingInitialAssistantResponse: Set<String> = []
+    @State private var pendingAttentionTarget: AttentionNavigationTarget?
+    // Settings is presented as a `fullScreenCover` instead of being pushed
+    // onto `navigationPath` so the gear button works even when the sidebar
+    // header is hosted inside an iOS 26 `safeAreaBar`, whose Liquid Glass
+    // chrome can interfere with navigation-stack pushes from buttons nested
+    // inside the bar.
+    @State private var isShowingSettingsCover = false
+    @State private var isShowingDevicesSettingsSheet = false
+    @State private var displayIslandCoordinator = DJLDisplayIslandCoordinator()
+    // The app now opens directly to its pairing-capable home screen. Keep this
+    // in-memory flag for the existing recovery guards, but never gate a clean
+    // installation behind the retired onboarding flow.
+    @State private var hasSeenOnboarding = true
+    @AppStorage("codex.whatsNew.lastPresentedVersion") private var lastPresentedWhatsNewVersion = ""
+
+    private let sidebarWidth: CGFloat = 330
+    // Lets the drawer gesture start a bit inside the content instead of only on the bezel edge.
+    private let sidebarOpenActivationWidth: CGFloat = 80
+    private let sidebarPrewarmDelayNanoseconds: UInt64 = 700_000_000
+    private let whatsNewPresentationDelayNanoseconds: UInt64 = 30_000_000_000
+    private let sidebarGestureLogBucketWidth: CGFloat = 40
+    private let sidebarSwipeCommitDistance: CGFloat = 30
+    private let sidebarSelectionSuppressionDuration: TimeInterval = 0.35
+    private let whatsNewReleaseVersion = "1.5"
+    private static let sidebarSpring = Animation.spring(response: 0.35, dampingFraction: 0.85)
+    private static var isSidebarDebugLoggingEnabled: Bool { false }
+
+    var body: some View {
+        rootContentWithBannerOverlay
+            .onAppear {
+                normalizeInitialPairingScreenIfNeeded()
+            }
+    }
+
+    // Scene restoration can preserve a previously-open scanner after a fresh
+    // development install. An unpaired app should instead start at the pairing
+    // choice screen, where the authenticated manual-code flow is available.
+    private func normalizeInitialPairingScreenIfNeeded() {
+        guard !hasNormalizedInitialPairingScreen else {
+            return
+        }
+        hasNormalizedInitialPairingScreen = true
+
+        guard !codex.isConnected, !codex.hasReconnectCandidate else {
+            return
+        }
+
+        isShowingManualScanner = false
+        isShowingMyMacsScanner = false
+        hasDismissedAutomaticScanner = true
+        scannerCanReturnToOnboarding = false
+    }
+
+    // Splits lifecycle wiring from presentation modifiers so SwiftUI does not have to type-check one giant body chain.
+    private var rootContentWithLifecycleObservers: some View {
+        rootContent
+            .task {
+                DJLQuickActionCenter.updateShortcutItems(for: codex.threads)
+                routePendingQuickActionIfNeeded()
+            }
+            // Only resume saved-pairing recovery after onboarding is done and the manual scanner is not in control.
+            .task {
+                guard hasSeenOnboarding, !isShowingManualScanner else {
+                    debugSidebarLog("launch task skipped onboardingSeen=\(hasSeenOnboarding) manualScanner=\(isShowingManualScanner)")
+                    return
+                }
+                debugSidebarLog("launch task autoConnect begin connected=\(codex.isConnected) threadCount=\(codex.threads.count)")
+                await viewModel.attemptAutoConnectOnLaunchIfNeeded(codex: codex)
+                scheduleSidebarPrewarmIfNeeded()
+            }
+            .task(id: whatsNewPresentationScheduleFingerprint) {
+                await scheduleWhatsNewPresentationIfNeeded()
+            }
+            .task(id: rootSheetPresentationFingerprint) {
+                syncRootSheetPresentationIfNeeded()
+            }
+            .task(id: codex.externalThreadOpenRequest?.id) {
+                routeExternalThreadOpenIfNeeded()
+            }
+            .onChange(of: isSidebarOpen) { wasOpen, isOpen in
+                debugSidebarLog(
+                    "open-state changed wasOpen=\(wasOpen) isOpen=\(isOpen) prewarmed=\(isSidebarPrewarmed) "
+                        + "dragOffset=\(Int(sidebarDragOffset)) threadCount=\(codex.threads.count)"
+                )
+                guard !wasOpen, isOpen else {
+                    return
+                }
+                requestSidebarFreshSyncIfNeeded()
+            }
+            .onChange(of: navigationPath) { _, _ in
+                debugSidebarLog("navigation path changed count=\(navigationPath.count) sidebarOpen=\(isSidebarOpen)")
+                if isSidebarOpen {
+                    closeSidebar()
+                }
+            }
+            .onChange(of: selectedThread) { previousThread, thread in
+                debugSidebarLog("selectedThread changed from=\(previousThread?.id ?? "nil") to=\(thread?.id ?? "nil")")
+                codex.handleDisplayedThreadChange(
+                    from: previousThread?.id,
+                    to: thread?.id
+                )
+                codex.activeThreadId = thread?.id
+                if let thread {
+                    clearDisplayIslandOutcome(for: thread.id)
+                    syncDisplayIsland()
+                }
+                if thread != nil {
+                    suppressAutomaticThreadSelection = false
+                }
+            }
+            .onChange(of: codex.activeThreadId) { _, activeThreadId in
+                debugSidebarLog("activeThreadId changed to=\(activeThreadId ?? "nil")")
+                guard let activeThreadId,
+                      let matchingThread = codex.threads.first(where: { $0.id == activeThreadId }),
+                      selectedThread?.id != matchingThread.id else {
+                    return
+                }
+                selectedThread = matchingThread
+            }
+            .onChange(of: codex.threads) { _, threads in
+                debugSidebarLog("threads changed count=\(threads.count) sidebarOpen=\(isSidebarOpen) prewarmed=\(isSidebarPrewarmed)")
+                DJLQuickActionCenter.updateShortcutItems(for: threads)
+                syncSelectedThread(with: threads)
+                routeExternalThreadOpenIfNeeded()
+                routePendingQuickActionIfNeeded()
+                scheduleSidebarPrewarmIfNeeded()
+                syncDisplayIsland()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                debugSidebarLog("scenePhase changed phase=\(String(describing: phase))")
+                codex.setForegroundState(phase != .background)
+                syncDisplayIsland()
+                if phase == .active {
+                    DJLQuickActionCenter.updateShortcutItems(for: codex.threads)
+                    routePendingQuickActionIfNeeded()
+                    Task {
+                        guard hasSeenOnboarding, !isShowingManualScanner else {
+                            return
+                        }
+
+                        await codex.probeForegroundConnectionIfNeeded()
+                        await attemptSavedMacReconnectRecoveryIfNeeded()
+                        scheduleSidebarPrewarmIfNeeded()
+                    }
+                } else if phase == .background {
+                    resetSavedMacWakeRecoveryState()
+                    teardownSidebarPrewarm()
+                }
+            }
+            .onChange(of: horizontalSizeClass) { _, _ in
+                routePendingQuickActionIfNeeded()
+            }
+            .onChange(of: codex.shouldAutoReconnectOnForeground) { _, shouldReconnect in
+                guard shouldReconnect else {
+                    return
+                }
+                Task {
+                    await attemptSavedMacReconnectRecoveryIfNeeded()
+                }
+            }
+            .onChange(of: codex.isConnected) { wasConnected, isNowConnected in
+                debugSidebarLog("connection changed wasConnected=\(wasConnected) isConnected=\(isNowConnected)")
+                if !wasConnected, isNowConnected {
+                    resetSavedMacWakeRecoveryState()
+                    Task {
+                        await codex.requestNotificationPermissionOnFirstLaunchIfNeeded()
+                    }
+                    scheduleSidebarPrewarmIfNeeded()
+                }
+            }
+            .onChange(of: codex.normalizedRelaySessionId) { _, _ in
+                resetSavedMacWakeRecoveryState()
+            }
+            .onChange(of: codex.threadCompletionBanner) { _, banner in
+                displayIslandCoordinator.rememberCompletion(from: banner, codex: codex)
+                scheduleThreadCompletionBannerDismiss(for: banner)
+                syncDisplayIsland()
+            }
+            .onChange(of: codex.runningThreadIDs) { _, _ in
+                syncDisplayIsland()
+            }
+            .onChange(of: displayIslandTimelineFingerprint) { _, _ in
+                syncDisplayIsland()
+            }
+            .onChange(of: codex.activeTurnIdByThread) { _, _ in
+                syncDisplayIsland()
+            }
+            .onChange(of: codex.latestTurnTerminalStateByThread) { _, _ in
+                syncDisplayIsland()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: DJLQuickActionCenter.didReceiveQuickAction)) { notification in
+                _ = DJLQuickActionCenter.consumePendingAction()
+                guard let action = notification.userInfo?["action"] as? DJLQuickAction else {
+                    return
+                }
+                pendingQuickAction = action
+                routePendingQuickActionIfNeeded()
+            }
+    }
+
+    // Keeps sheets and alerts out of the lifecycle chain so the compiler can reason about each stage separately.
+    private var rootContentWithPresentations: some View {
+        rootContentWithLifecycleObservers
+            // Presents exactly one root-owned sheet at a time so onboarding, updates,
+            // and delayed announcements cannot race each other into stacked presentations.
+            .sheet(item: presentedRootSheetBinding) { route in
+                switch route {
+                case .bridgeUpdate(let prompt):
+                    bridgeUpdateSheet(prompt: prompt)
+                case .whatsNew(let version):
+                    whatsNewSheet(version: version)
+                }
+            }
+            .alert(
+                "Chat Deleted",
+                isPresented: missingNotificationThreadAlertIsPresented,
+                presenting: codex.missingNotificationThreadPrompt
+            ) { _ in
+                Button("Not Now", role: .cancel) {
+                    codex.missingNotificationThreadPrompt = nil
+                }
+                Button("Start New Chat") {
+                    codex.missingNotificationThreadPrompt = nil
+                    Task {
+                        await startNewThreadFromMissingNotificationAlert()
+                    }
+                }
+            } message: { _ in
+                Text("This chat is no longer available. Start a new chat instead?")
+            }
+            .alert("Pairing Error", isPresented: manualPairingErrorAlertIsPresented) {
+                Button("OK", role: .cancel) {
+                    manualPairingErrorMessage = nil
+                }
+            } message: {
+                Text(manualPairingErrorAlertMessage)
+            }
+            .alert("Enter Pairing Payload", isPresented: $isShowingManualPairingEntry) {
+                TextField("RMX1:… or {…}", text: $manualPairingCode)
+                    // A QR payload contains case-sensitive JSON and a relay URL. Short
+                    // codes are normalized by the validator, but changing a pasted
+                    // payload's case would make first-pairing fail on a Simulator.
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                Button(isResolvingManualPairingCode ? "Connecting..." : "Enter") {
+                    submitManualPairingCode()
+                }
+
+                Button("Cancel", role: .cancel) {
+                    manualPairingCode = ""
+                }
+            } message: {
+                Text("Paste the one-time pairing payload from DJL on your Mac. A short code works after this iPhone already knows the relay.")
+            }
+            // Settings rides on a full-screen cover instead of `navigationPath`
+            // so the gear tap inside the iOS 26 `safeAreaBar` header always
+            // surfaces a destination, even if push routing is being swallowed
+            // by the Liquid Glass bar chrome.
+            .fullScreenCover(isPresented: $isShowingSettingsCover) {
+                settingsCoverContent
+            }
+            .sheet(isPresented: $isShowingDevicesSettingsSheet) {
+                MyDevicesSettingsSheet(
+                    isSwitchingMac: viewModel.isSwitchingMac,
+                    switchingDeviceId: viewModel.switchingMacDeviceId,
+                    switchNotice: viewModel.macSwitchNotice,
+                    onSelectDevice: switchToTrustedMac,
+                    onForgetDevice: forgetTrustedMac,
+                    onAddConnection: presentMyMacsScanner,
+                    onPairWithCode: presentMyMacsPairingCode,
+                    onCancelSwitch: cancelMacSwitch
+                )
+                .environment(codex)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+    }
+
+    private var settingsCoverContent: some View {
+        NavigationStack {
+            SettingsView()
+                .adaptiveNavigationBar()
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") {
+                            isShowingSettingsCover = false
+                        }
+                    }
+                }
+        }
+    }
+
+    private var rootContentWithBannerOverlay: some View {
+        rootContentWithPresentations
+            .overlay {
+                if viewModel.isSwitchingMac {
+                    deviceSwitchingOverlay
+                }
+            }
+            .overlay(alignment: .top) {
+                if let banner = codex.threadCompletionBanner {
+                    ThreadCompletionBannerView(
+                        banner: banner,
+                        onTap: {
+                            openCompletedThreadFromBanner(banner)
+                        },
+                        onDismiss: {
+                            dismissThreadCompletionBanner()
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.88), value: codex.threadCompletionBanner?.id)
+            .animation(.easeInOut(duration: 0.18), value: viewModel.isSwitchingMac)
+    }
+
+    private var deviceSwitchingOverlay: some View {
+        DeviceSwitchingOverlayView(
+            title: "Switching device…",
+            primaryStatus: switchingConnectionPhaseLabel,
+            secondaryStatus: switchingSecureStatusLabel,
+            deviceName: switchingDeviceName,
+            cancelTitle: viewModel.isCancellingMacSwitch ? "Cancelling..." : "Cancel",
+            isCancelDisabled: viewModel.isCancellingMacSwitch,
+            onCancel: cancelMacSwitch
+        )
+    }
+
+    private var switchingConnectionPhaseLabel: String? {
+        let label = codex.connectionPhaseDisplayLabel
+        return label == "Offline" ? nil : label
+    }
+
+    private var switchingSecureStatusLabel: String? {
+        codex.secureConnectionDisplayLabel
+    }
+
+    private var switchingDeviceName: String? {
+        guard let switchingMacDeviceId = viewModel.switchingMacDeviceId,
+              let trustedMac = codex.trustedMacRecord(for: switchingMacDeviceId) else {
+            return nil
+        }
+
+        return MyDevicesPresentation.rowModel(
+            for: trustedMac,
+            codex: codex,
+            switchingDeviceId: switchingMacDeviceId
+        ).primaryName
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if shouldShowQRScanner {
+            qrScannerBody
+        } else {
+            mainAppBody
+        }
+    }
+
+    private func finishOnboardingAndShowScanner() {
+        codex.shouldAutoReconnectOnForeground = false
+        codex.connectionRecoveryState = .idle
+        codex.lastErrorMessage = nil
+        withAnimation {
+            hasSeenOnboarding = true
+            isShowingManualScanner = true
+            hasDismissedAutomaticScanner = false
+            scannerCanReturnToOnboarding = true
+        }
+    }
+
+    // Opens code entry over the last onboarding page; a valid code completes onboarding after resolution.
+    private func finishOnboardingAndShowPairingCode() {
+        codex.shouldAutoReconnectOnForeground = false
+        codex.connectionRecoveryState = .idle
+        codex.lastErrorMessage = nil
+        presentManualPairingEntryAfterStoppingReconnect()
+    }
+
+    // Lets the scanner step back into onboarding on first run, or into the empty state later on.
+    private var scannerBackAction: (() -> Void)? {
+        if scannerCanReturnToOnboarding {
+            return { returnFromScannerToOnboarding() }
+        }
+        return { dismissScannerToHome() }
+    }
+
+    private var qrScannerBody: some View {
+        QRScannerView(
+            onBack: scannerBackAction,
+            onScan: { pairingPayload in
+                Task {
+                    isShowingManualScanner = false
+                    hasDismissedAutomaticScanner = false
+                    scannerCanReturnToOnboarding = false
+                    if isShowingMyMacsScanner {
+                        isShowingMyMacsScanner = false
+                        prepareForMacContextTransition()
+                        startScannedMacSwitch(pairingPayload)
+                    } else {
+                        await viewModel.connectToRelay(
+                            pairingPayload: pairingPayload,
+                            codex: codex
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+    // Lets the drawer expand when search needs room; compact devices normally
+    // use the native sidebar route instead of the drawer presentation.
+    private var shouldUseFullWidthSidebar: Bool {
+        horizontalSizeClass == .compact || isSearchActive
+    }
+
+    private func effectiveSidebarWidth(for availableWidth: CGFloat) -> CGFloat {
+        shouldUseFullWidthSidebar ? availableWidth : min(sidebarWidth, availableWidth)
+    }
+
+    @ViewBuilder
+    private var mainAppBody: some View {
+        if shouldPresentSidebarAsNavigation {
+            nativeNavigationAppBody
+        } else {
+            drawerMainAppBody
+        }
+    }
+
+    // Keeps compact devices on the native NavigationStack path instead of animating
+    // a full-width drawer in the same render tree as the active chat timeline.
+    private var shouldPresentSidebarAsNavigation: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private var nativeNavigationAppBody: some View {
+        ZStack(alignment: .leading) {
+            nativeSidebarNavigationLayer
+
+            PetCompanionStatusSyncView()
+
+            if !navigationPath.isEmpty {
+                PetCompanionOverlay(
+                    isInteractionEnabled: true,
+                    bottomExclusionHeight: 16
+                )
+            }
+        }
+    }
+
+    private var drawerMainAppBody: some View {
+        GeometryReader { proxy in
+            let currentSidebarWidth = effectiveSidebarWidth(for: proxy.size.width)
+            let currentSidebarRevealWidth = sidebarRevealWidth(for: currentSidebarWidth)
+
+            ZStack(alignment: .leading) {
+                if sidebarVisible || isSidebarPrewarmed {
+                    sidebarContent(
+                        showsInlineCloseButton: shouldUseFullWidthSidebar,
+                        isVisible: sidebarVisible,
+                        onClose: { closeSidebar() }
+                    )
+                    .frame(width: currentSidebarWidth)
+                    .animation(.easeInOut(duration: 0.25), value: shouldUseFullWidthSidebar)
+                }
+
+                ZStack(alignment: .leading) {
+                    mainNavigationLayer
+                        .frame(width: proxy.size.width, alignment: .leading)
+
+                    PetCompanionStatusSyncView()
+
+                    PetCompanionOverlay(
+                        isInteractionEnabled: !sidebarVisible,
+                        bottomExclusionHeight: 16
+                    )
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+
+                    if sidebarVisible {
+                        (colorScheme == .dark ? Color.white : Color.black)
+                            .opacity(contentDimOpacity(for: currentSidebarWidth))
+                            .frame(width: proxy.size.width)
+                            .ignoresSafeArea()
+                            .allowsHitTesting(isSidebarOpen)
+                            .onTapGesture { closeSidebar() }
+                    }
+                }
+                .frame(width: proxy.size.width, alignment: .leading)
+                .clipShape(
+                    HorizontalRevealViewportShape(
+                        verticalOverflow: max(proxy.size.height, 400)
+                    )
+                )
+                .offset(x: currentSidebarRevealWidth)
+            }
+        }
+        .simultaneousGesture(edgeDragGesture)
+    }
+
+    // MARK: - Layers
+
+    // Native SwiftUI NavigationStack with the sidebar as the persistent root.
+    // Threads, settings, and terminal are pushed as destinations and use the
+    // system swipe-back gesture for a fluid, reliable pop animation.
+    //
+    // The system navigation bar is hidden on the sidebar root because
+    // `SidebarHeaderView` already supplies the logo, settings, and overflow
+    // actions; pushed destinations keep their own bars (with back button)
+    // by re-enabling visibility via `.toolbar(.visible, for: .navigationBar)`
+    // inside `navigationDestination(for:)`.
+    private var nativeSidebarNavigationLayer: some View {
+        NavigationStack(path: $navigationPath) {
+            sidebarContent(
+                showsInlineCloseButton: false,
+                isVisible: true,
+                onClose: { closeSidebarPresentation() }
+            )
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: ContentNavigationRoute.self) { route in
+                navigationDestination(for: route)
+                    .toolbar(.visible, for: .navigationBar)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var mainNavigationLayer: some View {
+        NavigationStack(path: $navigationPath) {
+            mainContent
+                .adaptiveNavigationBar()
+                .navigationDestination(for: ContentNavigationRoute.self) { route in
+                    navigationDestination(for: route)
+                }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func navigationDestination(for route: ContentNavigationRoute) -> some View {
+        switch route {
+        case .newChatDraft(let draftRoute):
+            newChatDraftDestination(route: draftRoute)
+        case .newChatOpening:
+            NewChatOpeningStateView()
+        case .thread(let threadID):
+            nativeThreadDestination(threadID: threadID)
+        case .settings:
+            SettingsView()
+                .adaptiveNavigationBar()
+        case .terminal(let preferredWorkingDirectory):
+            TerminalScreen(preferredWorkingDirectory: preferredWorkingDirectory)
+                .adaptiveNavigationBar()
+        }
+    }
+
+    private func sidebarContent(
+        showsInlineCloseButton: Bool,
+        isVisible: Bool,
+        onClose: @escaping () -> Void
+    ) -> some View {
+        SidebarView(
+            selectedThread: $selectedThread,
+            isSearchActive: $isSearchActive,
+            showsInlineCloseButton: showsInlineCloseButton,
+            isVisible: isVisible,
+            connectionPhase: homeConnectionPhase,
+            onClose: onClose,
+            onOpenSettings: {
+                openSettingsFromSidebar()
+            },
+            onOpenDevicesSettings: {
+                openDevicesSettingsFromSidebar()
+            },
+            onOpenTerminal: {
+                openTerminalFromSidebar(preferredWorkingDirectory: nil)
+            },
+            onOpenNewChatDraft: { source, preferredProjectPath in
+                openNewChatDraftFromSidebar(source: source, preferredProjectPath: preferredProjectPath)
+            },
+            onNewChatCreationStateChange: { isCreating in
+                setNewChatOpeningState(isCreating)
+            },
+            onOpenThread: { thread in
+                openThreadFromSidebar(thread)
+            },
+            onOpenAttentionItem: { item in
+                openAttentionItemFromSidebar(item)
+            },
+            connectionEmptyStatePanel: {
+                sidebarConnectionEmptyStatePanel
+            },
+            connectionEmptyStateFooter: {
+                sidebarConnectionEmptyStateFooter
+            }
+        )
+    }
+
+    // Builds the connect/reconnect/scan-QR card shown inside the sidebar's
+    // empty state. Lives here so all sheet/scanner state stays owned by the
+    // root view; the sidebar just slots the panel into its centered layout.
+    private var sidebarConnectionEmptyStatePanel: some View {
+        SidebarConnectionEmptyStatePanel(
+            connectionPhase: homeConnectionPhase,
+            trustedPairPresentation: codex.trustedPairPresentation,
+            securityLabel: codex.secureConnectionState.statusLabel,
+            hasReconnectCandidate: codex.hasReconnectCandidate,
+            isWakingSavedMacDisplay: isWakingSavedMacDisplay,
+            shouldOfferWakeAction: shouldOfferWakeSavedMacDisplayAction,
+            isPreparingManualScanner: isPreparingManualScanner,
+            isResolvingManualPairingCode: isResolvingManualPairingCode,
+            offlinePrimaryButtonTitle: codex.hasReconnectCandidate ? "Reconnect" : "Scan QR Code",
+            onPrimaryAction: {
+                if homeConnectionPhase == .offline && !codex.hasReconnectCandidate {
+                    presentAutomaticScanner()
+                    return
+                }
+
+                Task {
+                    await viewModel.toggleConnection(codex: codex)
+                }
+            },
+            onScanNewQR: {
+                presentManualScannerAfterStoppingReconnect()
+            },
+            onPairWithCode: {
+                presentManualPairingEntryAfterStoppingReconnect()
+            },
+            onWakeMacDisplay: {
+                wakeSavedMacDisplay()
+            }
+        )
+    }
+
+    // Pinned footer that surfaces the long status message and the Forget Pair
+    // action just above the bottom action bar, keeping the centered panel
+    // focused on the primary reconnect CTA.
+    private var sidebarConnectionEmptyStateFooter: some View {
+        SidebarConnectionEmptyStateFooter(
+            statusMessage: codex.lastErrorMessage,
+            canForgetPair: codex.hasReconnectCandidate && !codex.isConnected,
+            onForgetPair: {
+                codex.forgetReconnectCandidate()
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func newChatDraftDestination(route: NewChatDraftRoute) -> some View {
+        NewChatDraftView(
+            route: route,
+            leadingControl: .back,
+            onOpenTerminal: { workingDirectory in
+                openTerminal(preferredWorkingDirectory: workingDirectory)
+            },
+            onOpenThread: { thread in
+                openThreadFromNewChatDraft(thread)
+            }
+        )
+        .adaptiveNavigationBar()
+    }
+
+    @ViewBuilder
+    private func nativeThreadDestination(threadID: String) -> some View {
+        if isOpeningNewChatFromSidebar {
+            NewChatOpeningStateView()
+        } else if let thread = (selectedThread?.id == threadID
+                    ? selectedThread
+                    : codex.threads.first(where: { $0.id == threadID })) {
+            TurnView(
+                thread: thread,
+                isWakingMacDisplayRecovery: isWakingSavedMacDisplay,
+                attentionTarget: pendingAttentionTarget?.threadID == thread.id ? pendingAttentionTarget : nil,
+                initiallyAwaitingAssistantResponse: threadIDsAwaitingInitialAssistantResponse.contains(thread.id),
+                onInitialAssistantResponseTrackingConsumed: {
+                    threadIDsAwaitingInitialAssistantResponse.remove(thread.id)
+                },
+                onOpenTerminal: { workingDirectory in
+                    openTerminal(preferredWorkingDirectory: workingDirectory)
+                }
+            )
+            .id(thread.id)
+            .adaptiveNavigationBar()
+            .environment(\.reconnectAction, {
+                Task {
+                    await viewModel.toggleConnection(codex: codex)
+                }
+            })
+            .environment(\.wakeMacDisplayAction, wakeMacDisplayRecoveryAction)
+        } else {
+            HomeEmptyStateView(
+                connectionPhase: homeConnectionPhase,
+                statusMessage: codex.lastErrorMessage,
+                securityLabel: codex.secureConnectionState.statusLabel,
+                trustedPairPresentation: codex.trustedPairPresentation,
+                offlinePrimaryButtonTitle: codex.hasReconnectCandidate ? "Reconnect" : "Scan QR Code",
+                onPrimaryAction: {
+                    if homeConnectionPhase == .offline && !codex.hasReconnectCandidate {
+                        presentAutomaticScanner()
+                        return
+                    }
+
+                    Task {
+                        await viewModel.toggleConnection(codex: codex)
+                    }
+                }
+            ) {
+                if showsInitialManualPairingAction {
+                    initialManualPairingAction
+                }
+            } footer: {
+                EmptyView()
+            }
+            .adaptiveNavigationBar()
+        }
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
+        if let activeNewChatDraftRoute {
+            NewChatDraftView(
+                route: activeNewChatDraftRoute,
+                leadingControl: .hamburger(action: { openSidebarPresentation() }),
+                onOpenTerminal: { workingDirectory in
+                    openTerminal(preferredWorkingDirectory: workingDirectory)
+                },
+                onOpenThread: { thread in
+                    openThreadFromNewChatDraft(thread)
+                }
+            )
+            .id(activeNewChatDraftRoute.id)
+        } else if isOpeningNewChatFromSidebar {
+            NewChatOpeningStateView()
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        hamburgerButton
+                    }
+                }
+        } else if let thread = selectedThread {
+            TurnView(
+                thread: thread,
+                isWakingMacDisplayRecovery: isWakingSavedMacDisplay,
+                attentionTarget: pendingAttentionTarget?.threadID == thread.id ? pendingAttentionTarget : nil,
+                initiallyAwaitingAssistantResponse: threadIDsAwaitingInitialAssistantResponse.contains(thread.id),
+                onInitialAssistantResponseTrackingConsumed: {
+                    threadIDsAwaitingInitialAssistantResponse.remove(thread.id)
+                },
+                onOpenTerminal: { workingDirectory in
+                    openTerminal(preferredWorkingDirectory: workingDirectory)
+                }
+            )
+                .id(thread.id)
+                .environment(\.reconnectAction, {
+                    Task {
+                        await viewModel.toggleConnection(codex: codex)
+                    }
+                })
+                .environment(\.wakeMacDisplayAction, wakeMacDisplayRecoveryAction)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        hamburgerButton
+                    }
+                }
+        } else {
+            HomeEmptyStateView(
+                connectionPhase: homeConnectionPhase,
+                statusMessage: codex.lastErrorMessage,
+                securityLabel: codex.secureConnectionState.statusLabel,
+                trustedPairPresentation: codex.trustedPairPresentation,
+                offlinePrimaryButtonTitle: codex.hasReconnectCandidate ? "Reconnect" : "Scan QR Code",
+                onPrimaryAction: {
+                    if homeConnectionPhase == .offline && !codex.hasReconnectCandidate {
+                        presentAutomaticScanner()
+                        return
+                    }
+
+                    Task {
+                        await viewModel.toggleConnection(codex: codex)
+                    }
+                }
+            ) {
+                if showsInitialManualPairingAction {
+                    initialManualPairingAction
+                }
+
+                if homeConnectionPhase == .connecting || (codex.hasReconnectCandidate && !codex.isConnected) {
+                    if shouldOfferWakeSavedMacDisplayAction {
+                        Button(isWakingSavedMacDisplay ? "Waking Screen..." : "Wake Screen") {
+                            wakeSavedMacDisplay()
+                        }
+                        .font(AppFont.subheadline(weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .buttonStyle(.plain)
+                        .disabled(isPreparingManualScanner || isWakingSavedMacDisplay)
+                    }
+
+                    if codex.hasReconnectCandidate {
+                        reconnectSecondaryActions
+                    }
+                }
+            } footer: {
+                if codex.hasReconnectCandidate && !codex.isConnected {
+                    reconnectFooterAction
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    hamburgerButton
+                }
+            }
+        }
+    }
+
+    private var hamburgerButton: some View {
+        Button {
+            HapticFeedback.shared.triggerImpactFeedback(style: .light)
+            openSidebarPresentation()
+        } label: {
+            TwoLineHamburgerIcon()
+                .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
+                .padding(8)
+                .contentShape(Circle())
+                .adaptiveToolbarItem(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Menu")
+    }
+
+    private var manualPairingErrorAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { manualPairingErrorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    manualPairingErrorMessage = nil
+                }
+            }
+        )
+    }
+
+    private var manualPairingErrorAlertMessage: String {
+        manualPairingErrorMessage ?? "Could not resolve that pairing code."
+    }
+
+    // Offers a one-tap display wake for the best local-style relay we still know about, even if only the trusted record remains.
+    private var canWakeSavedMacDisplay: Bool {
+        homeConnectionPhase == .offline && codex.canWakePreferredMacDisplay
+    }
+
+    // Keep the wake CTA visible whenever the pairing still knows enough to try a display pulse.
+    private var shouldOfferWakeSavedMacDisplayAction: Bool {
+        canWakeSavedMacDisplay
+            && codex.supportsDisplayWake
+            && hasAttemptedAutomaticWakeSavedMacDisplay
+            && !isWakingSavedMacDisplay
+    }
+
+    // Keeps the silent wake fallback automatic exactly once per offline cycle before the user taps manually again.
+    private var shouldAttemptAutomaticWakeSavedMacDisplay: Bool {
+        scenePhase == .active
+            && hasSeenOnboarding
+            && !isShowingManualScanner
+            && !isShowingManualPairingEntry
+            && canWakeSavedMacDisplay
+            && codex.supportsDisplayWake
+            && !hasAttemptedAutomaticWakeSavedMacDisplay
+            && !isWakingSavedMacDisplay
+    }
+
+    private var wakeMacDisplayRecoveryAction: (() -> Void)? {
+        guard shouldOfferWakeSavedMacDisplayAction else {
+            return nil
+        }
+
+        return {
+            wakeSavedMacDisplay()
+        }
+    }
+
+    // Gives the saved local Mac one silent wake attempt before exposing the manual wake affordance.
+    private func attemptAutomaticWakeSavedMacDisplayIfNeeded() async {
+        guard shouldAttemptAutomaticWakeSavedMacDisplay else {
+            return
+        }
+
+        hasAttemptedAutomaticWakeSavedMacDisplay = true
+        await performSavedMacDisplayWakeAttempt(cancelAutoReconnectBeforeWake: false)
+    }
+
+    // Keeps foreground reconnect and the one-shot wake fallback in the same guarded path.
+    private func attemptSavedMacReconnectRecoveryIfNeeded() async {
+        guard scenePhase == .active,
+              hasSeenOnboarding,
+              !isShowingManualScanner,
+              !isShowingManualPairingEntry else {
+            return
+        }
+
+        await attemptAutomaticWakeSavedMacDisplayIfNeeded()
+        await viewModel.attemptAutoReconnectOnForegroundIfNeeded(codex: codex)
+    }
+
+    // Resets the once-per-cycle wake gate after a fresh connection, pairing change, or app background.
+    private func resetSavedMacWakeRecoveryState() {
+        hasAttemptedAutomaticWakeSavedMacDisplay = false
+    }
+
+    // Uses a temporary bridge request to wake display sleep, then unlocks the manual button only if that fails.
+    private func wakeSavedMacDisplay() {
+        Task { @MainActor in
+            await performSavedMacDisplayWakeAttempt(cancelAutoReconnectBeforeWake: true)
+        }
+    }
+
+    // Sends one wake pulse over the best remembered pairing path without hiding the manual wake affordance.
+    private func performSavedMacDisplayWakeAttempt(cancelAutoReconnectBeforeWake: Bool) async {
+        guard codex.supportsDisplayWake, !isWakingSavedMacDisplay else { return }
+        isWakingSavedMacDisplay = true
+
+        defer { isWakingSavedMacDisplay = false }
+
+        do {
+            if cancelAutoReconnectBeforeWake {
+                await viewModel.stopAutoReconnectForManualRetry(codex: codex)
+            }
+            let handoffService = DesktopHandoffService(codex: codex)
+            try await handoffService.wakeDisplay()
+            if codex.isConnected {
+                codex.schedulePostConnectSyncPass(preferredThreadId: codex.activeThreadId)
+            }
+        } catch {
+            // Wake failures are expected when the Mac has already gone past display sleep,
+            // so keep automatic reconnect alive instead of surfacing sticky composer errors.
+        }
+    }
+
+    // MARK: - Sidebar Geometry
+
+    private var sidebarVisible: Bool {
+        isSidebarOpen || sidebarDragOffset > 0
+    }
+
+    private var sidebarRevealWidth: CGFloat {
+        sidebarRevealWidth(for: fallbackSidebarWidth)
+    }
+
+    private var fallbackSidebarWidth: CGFloat {
+        effectiveSidebarWidth(for: UIScreen.main.bounds.width)
+    }
+
+    private func sidebarRevealWidth(for targetWidth: CGFloat) -> CGFloat {
+        if isSidebarOpen {
+            return max(0, targetWidth + sidebarDragOffset)
+        } else {
+            return max(0, sidebarDragOffset)
+        }
+    }
+
+    private func contentDimOpacity(for targetWidth: CGFloat) -> Double {
+        guard targetWidth > 0 else { return 0 }
+        let progress = min(1, sidebarRevealWidth(for: targetWidth) / targetWidth)
+        return 0.08 * progress
+    }
+
+    // MARK: - Gestures
+
+    private var edgeDragGesture: some Gesture {
+        DragGesture(minimumDistance: 15, coordinateSpace: .global)
+            .onChanged { value in
+                guard navigationPath.isEmpty else { return }
+                guard !sidebarGestureAutoCommitted else { return }
+
+                if !isSidebarOpen {
+                    guard value.startLocation.x < sidebarOpenActivationWidth,
+                          isOpeningSidebarGesture(value) else { return }
+                    beginSidebarGestureDebugIfNeeded(kind: "open", startX: value.startLocation.x)
+                    logSidebarGestureProgressIfNeeded(translation: value.translation.width)
+                    guard value.translation.width >= sidebarSwipeCommitDistance else { return }
+                    sidebarGestureAutoCommitted = true
+                    debugSidebarLog(
+                        "gesture #\(activeSidebarGestureDebugID ?? 0) auto-commit kind=open "
+                            + "translation=\(Int(value.translation.width)) commit=\(Int(sidebarSwipeCommitDistance))"
+                    )
+                    finishGesture(open: true)
+                } else {
+                    guard isClosingSidebarGesture(value) else { return }
+                    suppressSidebarSelectionBriefly()
+                    beginSidebarGestureDebugIfNeeded(kind: "close", startX: value.startLocation.x)
+                    logSidebarGestureProgressIfNeeded(translation: -value.translation.width)
+                    guard -value.translation.width >= sidebarSwipeCommitDistance else { return }
+                    sidebarGestureAutoCommitted = true
+                    debugSidebarLog(
+                        "gesture #\(activeSidebarGestureDebugID ?? 0) auto-commit kind=close "
+                            + "translation=\(Int(-value.translation.width)) commit=\(Int(sidebarSwipeCommitDistance))"
+                    )
+                    finishGesture(open: false)
+                }
+            }
+            .onEnded { value in
+                guard navigationPath.isEmpty else { return }
+                if sidebarGestureAutoCommitted {
+                    sidebarGestureAutoCommitted = false
+                    return
+                }
+
+                if !isSidebarOpen {
+                    guard value.startLocation.x < sidebarOpenActivationWidth,
+                          isOpeningSidebarGesture(value) else {
+                        debugSidebarLog("gesture cancelled before open")
+                        sidebarDragOffset = 0
+                        sidebarGestureAutoCommitted = false
+                        resetSidebarGestureDebug()
+                        return
+                    }
+                    debugSidebarLog(
+                        "gesture #\(activeSidebarGestureDebugID ?? 0) end kind=open "
+                            + "translation=\(Int(value.translation.width)) predicted=\(Int(value.predictedEndTranslation.width)) "
+                            + "commit=\(Int(sidebarSwipeCommitDistance)) decision=snap-close"
+                    )
+                    sidebarDragOffset = 0
+                    resetSidebarGestureDebug()
+                } else {
+                    guard isClosingSidebarGesture(value) else {
+                        debugSidebarLog("gesture cancelled before close")
+                        sidebarDragOffset = 0
+                        sidebarGestureAutoCommitted = false
+                        resetSidebarGestureDebug()
+                        return
+                    }
+                    suppressSidebarSelectionBriefly()
+                    debugSidebarLog(
+                        "gesture #\(activeSidebarGestureDebugID ?? 0) end kind=close "
+                            + "translation=\(Int(-value.translation.width)) predicted=\(Int(-value.predictedEndTranslation.width)) "
+                            + "commit=\(Int(sidebarSwipeCommitDistance)) decision=snap-open"
+                    )
+                    sidebarDragOffset = 0
+                    resetSidebarGestureDebug()
+                }
+            }
+    }
+
+    // Keeps the sidebar swipe from claiming mostly vertical drags near the screen edge.
+    private func isOpeningSidebarGesture(_ value: DragGesture.Value) -> Bool {
+        let horizontal = value.translation.width
+        let vertical = value.translation.height
+        return horizontal > 0 && abs(horizontal) > abs(vertical) * 1.15
+    }
+
+    private func isClosingSidebarGesture(_ value: DragGesture.Value) -> Bool {
+        let horizontal = value.translation.width
+        let vertical = value.translation.height
+        return horizontal < 0 && abs(horizontal) > abs(vertical) * 1.15
+    }
+
+    // MARK: - Sidebar Actions
+
+    private func toggleSidebar() {
+        HapticFeedback.shared.triggerImpactFeedback(style: .light)
+        let shouldOpenSidebar = !isSidebarOpen
+        setSidebar(open: shouldOpenSidebar)
+    }
+
+    private func openSidebarPresentation() {
+        if shouldPresentSidebarAsNavigation {
+            requestSidebarFreshSyncIfNeeded()
+            guard !navigationPath.isEmpty else { return }
+            navigationPath.removeAll()
+        } else {
+            toggleSidebar()
+        }
+    }
+
+    private func closeSidebarPresentation() {
+        if shouldPresentSidebarAsNavigation {
+            navigationPath.removeAll()
+        } else {
+            closeSidebar()
+        }
+    }
+
+    private func appendNavigationRoute(_ route: ContentNavigationRoute) {
+        guard navigationPath.last != route else { return }
+        navigationPath.append(route)
+    }
+
+    // Terminal can be opened from several surfaces with different cwd payloads;
+    // replace the active terminal route instead of stacking near-identical pages.
+    private func appendTerminalNavigationRoute(preferredWorkingDirectory: String?) {
+        let route = ContentNavigationRoute.terminal(preferredWorkingDirectory: preferredWorkingDirectory)
+        if navigationPath.last?.isTerminalRoute == true {
+            navigationPath[navigationPath.count - 1] = route
+        } else {
+            appendNavigationRoute(route)
+        }
+    }
+
+    // Keeps the native route and drawer presentations on the same fresh-thread sync path.
+    private func requestSidebarFreshSyncIfNeeded() {
+        if !isSidebarPrewarmed,
+           viewModel.shouldRequestSidebarFreshSync(isConnected: codex.isConnected) {
+            debugSidebarLog("sidebar presentation triggers immediate sync activeThread=\(codex.activeThreadId ?? "nil")")
+            codex.requestImmediateSync(threadId: codex.activeThreadId)
+        } else {
+            debugSidebarLog("sidebar presentation skips immediate sync prewarmed=\(isSidebarPrewarmed) connected=\(codex.isConnected)")
+        }
+    }
+
+    private func closeSidebar() {
+        HapticFeedback.shared.triggerImpactFeedback(style: .light)
+        setSidebar(open: false)
+    }
+
+    private func openThreadFromSidebar(
+        _ thread: CodexThread,
+        attentionTarget: AttentionNavigationTarget? = nil
+    ) {
+        guard !shouldSuppressSidebarSelection() else {
+            debugSidebarLog("openThread suppressed by close swipe id=\(thread.id)")
+            return
+        }
+
+        activeNewChatDraftRoute = nil
+        isOpeningNewChatFromSidebar = false
+        if isSidebarOpen || sidebarDragOffset > 0 {
+            closeSidebar()
+        }
+
+        selectedThread = thread
+        pendingAttentionTarget = attentionTarget
+        codex.activeThreadId = thread.id
+        codex.markThreadAsViewed(thread.id)
+        clearDisplayIslandOutcome(for: thread.id)
+        syncDisplayIsland()
+        if shouldPresentSidebarAsNavigation {
+            navigationPath = [.thread(id: thread.id)]
+        }
+        Task { @MainActor in
+            do {
+                let restoredThread = try await codex.restorePinnedThreadIfNeeded(threadId: thread.id)
+                if let restoredThread {
+                    selectedThread = restoredThread
+                    codex.activeThreadId = restoredThread.id
+                    if shouldPresentSidebarAsNavigation {
+                        navigationPath = [.thread(id: restoredThread.id)]
+                    }
+                }
+            } catch {
+                codex.lastErrorMessage = codex.userFacingTurnErrorMessageForFooter(from: error)
+            }
+
+            codex.requestImmediateActiveThreadSync(threadId: thread.id, forceHistoryRefresh: true)
+        }
+    }
+
+    private func openAttentionItemFromSidebar(_ item: SidebarAttentionItem) {
+        guard let thread = codex.threads.first(where: { $0.id == item.target.threadID }),
+              thread.syncState != .archivedLocal else {
+            return
+        }
+        openThreadFromSidebar(thread, attentionTarget: item.target)
+    }
+
+    private func routeExternalThreadOpenIfNeeded() {
+        guard let request = codex.externalThreadOpenRequest else {
+            return
+        }
+
+        let threadId = request.threadId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !threadId.isEmpty else {
+            return
+        }
+        let thread: CodexThread
+        if let existingThread = codex.threads.first(where: { $0.id == threadId }) {
+            guard existingThread.syncState != .archivedLocal else {
+                return
+            }
+            thread = existingThread
+        } else {
+            thread = CodexThread(id: threadId, title: CodexThread.defaultDisplayTitle)
+            codex.upsertThread(thread)
+        }
+
+        activeNewChatDraftRoute = nil
+        isOpeningNewChatFromSidebar = false
+        selectedThread = thread
+        pendingAttentionTarget = AttentionNavigationTarget(
+            threadID: thread.id,
+            turnID: request.turnId,
+            itemID: request.itemId,
+            messageID: request.messageId
+        )
+        codex.activeThreadId = thread.id
+        codex.markThreadAsViewed(thread.id)
+        clearDisplayIslandOutcome(for: thread.id)
+        syncDisplayIsland()
+        if shouldPresentSidebarAsNavigation {
+            navigationPath = [.thread(id: thread.id)]
+        }
+        codex.externalThreadOpenRequest = nil
+    }
+
+    private func routePendingQuickActionIfNeeded() {
+        if pendingQuickAction == nil {
+            pendingQuickAction = DJLQuickActionCenter.consumePendingAction()
+        }
+
+        guard let action = pendingQuickAction else {
+            return
+        }
+
+        // Shortcut callbacks can arrive before SwiftUI has resolved the size class.
+        // Routing too early chooses drawer mode on iPhone and leaves the user at the sidebar root.
+        guard horizontalSizeClass != nil else {
+            return
+        }
+
+        pendingQuickAction = nil
+        handleQuickAction(action)
+    }
+
+    private func handleQuickAction(_ action: DJLQuickAction) {
+        switch action {
+        case .newChat:
+            openNewChatDraftFromSidebar(source: .generalChat, preferredProjectPath: nil)
+        case .thread(let threadId):
+            if let thread = codex.threads.first(where: { $0.id == threadId && $0.syncState == .live }) {
+                sidebarSelectionSuppressedUntil = nil
+                openThreadFromSidebar(thread)
+            } else {
+                routeQuickActionThreadPlaceholder(threadId: threadId)
+            }
+        }
+    }
+
+    private func routeQuickActionThreadPlaceholder(threadId: String) {
+        let normalizedThreadId = threadId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedThreadId.isEmpty else {
+            return
+        }
+
+        let thread = codex.threads.first(where: { $0.id == normalizedThreadId })
+            ?? CodexThread(id: normalizedThreadId, title: CodexThread.defaultDisplayTitle)
+        codex.upsertThread(thread)
+        sidebarSelectionSuppressedUntil = nil
+        openThreadFromSidebar(thread)
+    }
+
+    // Keeps sidebar chat creation compose-first while preserving which affordance
+    // opened it, so the draft UI can distinguish general Chat from folder Chat.
+    private func openNewChatDraftFromSidebar(
+        source: NewChatDraftSource,
+        preferredProjectPath: String?
+    ) {
+        let route = NewChatDraftRoute(
+            id: "new-chat-draft-\(UUID().uuidString)",
+            preferredProjectPath: preferredProjectPath,
+            source: source
+        )
+        isOpeningNewChatFromSidebar = false
+        selectedThread = nil
+        codex.activeThreadId = nil
+
+        if shouldPresentSidebarAsNavigation {
+            activeNewChatDraftRoute = nil
+            navigationPath = [.newChatDraft(route)]
+        } else {
+            activeNewChatDraftRoute = route
+            if isSidebarOpen || sidebarDragOffset > 0 {
+                closeSidebar()
+            }
+        }
+    }
+
+    private func openThreadFromNewChatDraft(_ thread: CodexThread) {
+        isOpeningNewChatFromSidebar = false
+        threadIDsAwaitingInitialAssistantResponse.insert(thread.id)
+        selectedThread = thread
+        codex.activeThreadId = thread.id
+        codex.markThreadAsViewed(thread.id)
+        clearDisplayIslandOutcome(for: thread.id)
+        syncDisplayIsland()
+
+        if shouldPresentSidebarAsNavigation {
+            Task { @MainActor in
+                await Task.yield()
+                guard selectedThread?.id == thread.id else { return }
+                navigationPath = [.thread(id: thread.id)]
+            }
+        } else {
+            activeNewChatDraftRoute = nil
+        }
+    }
+
+    private func openTerminal(preferredWorkingDirectory: String?) {
+        appendTerminalNavigationRoute(preferredWorkingDirectory: preferredWorkingDirectory)
+    }
+
+    private func openTerminalFromSidebar(preferredWorkingDirectory: String?) {
+        if shouldPresentSidebarAsNavigation {
+            appendTerminalNavigationRoute(preferredWorkingDirectory: preferredWorkingDirectory)
+        } else {
+            closeSidebar()
+            appendTerminalNavigationRoute(preferredWorkingDirectory: preferredWorkingDirectory)
+        }
+    }
+
+    private func openSettingsFromSidebar() {
+        if !shouldPresentSidebarAsNavigation {
+            closeSidebar()
+        }
+        isShowingSettingsCover = true
+    }
+
+    private func openDevicesSettingsFromSidebar() {
+        if !shouldPresentSidebarAsNavigation {
+            closeSidebar()
+        }
+        isShowingDevicesSettingsSheet = true
+    }
+
+    // Prevents a close-swipe release from also activating whichever sidebar row was under the finger.
+    private func suppressSidebarSelectionBriefly() {
+        sidebarSelectionSuppressedUntil = Date().addingTimeInterval(sidebarSelectionSuppressionDuration)
+    }
+
+    private func shouldSuppressSidebarSelection() -> Bool {
+        guard let suppressedUntil = sidebarSelectionSuppressedUntil else { return false }
+        if Date() < suppressedUntil {
+            return true
+        }
+        sidebarSelectionSuppressedUntil = nil
+        return false
+    }
+
+    // Pushes a real native route before `thread/start` returns so compact sidebar users see progress immediately.
+    private func setNewChatOpeningState(_ isOpening: Bool) {
+        isOpeningNewChatFromSidebar = isOpening
+        if isOpening {
+            activeNewChatDraftRoute = nil
+            selectedThread = nil
+            codex.activeThreadId = nil
+            if shouldPresentSidebarAsNavigation {
+                navigationPath = [.newChatOpening]
+            }
+        } else if shouldPresentSidebarAsNavigation,
+                  navigationPath.last == .newChatOpening {
+            navigationPath.removeLast()
+        }
+    }
+
+    // QR scanning is opt-in so first-run users can choose either a camera scan
+    // or the secure manual pairing-code flow.
+    private var shouldShowQRScanner: Bool {
+        guard !codex.isConnected else {
+            return false
+        }
+
+        if isShowingManualScanner {
+            return true
+        }
+
+        if viewModel.isAttemptingAutoReconnect || shouldShowReconnectShell || isPreparingManualScanner {
+            return false
+        }
+
+        return !codex.hasReconnectCandidate && !hasDismissedAutomaticScanner
+    }
+
+    // Shows the remembered pairing shell while a saved pairing can still be retried.
+    private var shouldShowReconnectShell: Bool {
+        codex.hasReconnectCandidate
+            && !isShowingManualScanner
+            && (codex.isConnecting
+                || viewModel.isAttemptingManualReconnect
+                || viewModel.isAttemptingAutoReconnect
+                || codex.shouldAutoReconnectOnForeground
+                || isRetryingSavedPairing
+                || hasIdleSavedPairingRecovery)
+    }
+
+    // Keeps home status honest during reconnect loops while letting post-connect sync show separately.
+    private var homeConnectionPhase: CodexConnectionPhase {
+        // Only manual reconnect should force a busy shell here; background auto-retry can sit in backoff
+        // while the Mac is asleep, and that should still read as offline until a real connect starts.
+        if viewModel.isAttemptingManualReconnect && !codex.isConnected {
+            return .connecting
+        }
+        return codex.connectionPhase
+    }
+
+    private var isRetryingSavedPairing: Bool {
+        if case .retrying = codex.connectionRecoveryState {
+            return true
+        }
+        return false
+    }
+
+    // Keeps the reconnect CTA visible after retries stop, unless the pairing must be replaced.
+    private var hasIdleSavedPairingRecovery: Bool {
+        guard codex.hasReconnectCandidate,
+              !codex.isConnected,
+              codex.secureConnectionState != .rePairRequired else {
+            return false
+        }
+
+        return !codex.isConnecting
+            && !viewModel.isAttemptingAutoReconnect
+            && !codex.shouldAutoReconnectOnForeground
+            && !isRetryingSavedPairing
+    }
+
+    private func finishGesture(open: Bool) {
+        HapticFeedback.shared.triggerImpactFeedback(style: .light)
+        debugSidebarLog("finishGesture open=\(open)")
+        setSidebar(open: open)
+    }
+
+    // Forces UIKit-backed inputs like the composer/search text views to resign before the drawer moves.
+    private func setSidebar(open: Bool) {
+        debugSidebarLog(
+            "setSidebar open=\(open) prewarmed=\(isSidebarPrewarmed) "
+                + "visible=\(sidebarVisible) revealWidth=\(Int(sidebarRevealWidth))"
+        )
+        if !open {
+            isSearchActive = false
+        }
+        dismissActiveKeyboard()
+        withAnimation(Self.sidebarSpring) {
+            isSidebarOpen = open
+            sidebarDragOffset = 0
+        }
+        sidebarGestureAutoCommitted = false
+        resetSidebarGestureDebug()
+    }
+
+    // Warms the sidebar view tree offscreen after launch/reconnect so the first drawer gesture
+    // doesn't pay the full mount/grouping cost in the animation frame budget.
+    private func scheduleSidebarPrewarmIfNeeded() {
+        guard scenePhase == .active,
+              hasSeenOnboarding,
+              !isShowingManualScanner,
+              !shouldPresentSidebarAsNavigation,
+              !isSidebarPrewarmed,
+              sidebarPrewarmTask == nil,
+              (codex.isConnected || !codex.threads.isEmpty) else {
+            debugSidebarLog(
+                "prewarm skipped phase=\(String(describing: scenePhase)) onboarding=\(hasSeenOnboarding) "
+                    + "scanner=\(isShowingManualScanner) prewarmed=\(isSidebarPrewarmed) taskActive=\(sidebarPrewarmTask != nil) "
+                    + "connected=\(codex.isConnected) threadCount=\(codex.threads.count)"
+            )
+            return
+        }
+
+        debugSidebarLog("prewarm scheduled delayMs=\(sidebarPrewarmDelayNanoseconds / 1_000_000)")
+        sidebarPrewarmTask = Task { @MainActor in
+            defer { sidebarPrewarmTask = nil }
+            try? await Task.sleep(nanoseconds: sidebarPrewarmDelayNanoseconds)
+            guard !Task.isCancelled,
+                  scenePhase == .active,
+                  hasSeenOnboarding,
+                  !isShowingManualScanner,
+                  !isSidebarOpen,
+                  sidebarDragOffset == 0,
+                  (codex.isConnected || !codex.threads.isEmpty) else {
+                debugSidebarLog("prewarm cancelled before completion")
+                return
+            }
+            isSidebarPrewarmed = true
+            debugSidebarLog("prewarm completed threadCount=\(codex.threads.count)")
+        }
+    }
+
+    private func teardownSidebarPrewarm() {
+        debugSidebarLog("prewarm teardown requested sidebarOpen=\(isSidebarOpen) dragOffset=\(Int(sidebarDragOffset))")
+        sidebarPrewarmTask?.cancel()
+        sidebarPrewarmTask = nil
+        if !isSidebarOpen, sidebarDragOffset == 0 {
+            isSidebarPrewarmed = false
+            debugSidebarLog("prewarm cleared")
+        }
+    }
+
+    private func beginSidebarGestureDebugIfNeeded(kind: String, startX: CGFloat) {
+        guard Self.isSidebarDebugLoggingEnabled else { return }
+        guard activeSidebarGestureDebugID == nil else { return }
+        sidebarGestureDebugSequence += 1
+        activeSidebarGestureDebugID = sidebarGestureDebugSequence
+        lastSidebarGestureLogBucket = nil
+        debugSidebarLog(
+            "gesture #\(sidebarGestureDebugSequence) begin kind=\(kind) "
+                + "startX=\(Int(startX)) sidebarOpen=\(isSidebarOpen) prewarmed=\(isSidebarPrewarmed)"
+        )
+    }
+
+    private func logSidebarGestureProgressIfNeeded(translation: CGFloat) {
+        guard Self.isSidebarDebugLoggingEnabled else { return }
+        guard let gestureID = activeSidebarGestureDebugID else { return }
+        let bucket = max(0, Int(translation / sidebarGestureLogBucketWidth))
+        guard bucket != lastSidebarGestureLogBucket else { return }
+        lastSidebarGestureLogBucket = bucket
+        debugSidebarLog(
+            "gesture #\(gestureID) progress translation=\(Int(translation)) "
+                + "bucket=\(bucket) revealWidth=\(Int(sidebarRevealWidth))"
+        )
+    }
+
+    private func resetSidebarGestureDebug() {
+        activeSidebarGestureDebugID = nil
+        lastSidebarGestureLogBucket = nil
+    }
+
+    // Gesture and lifecycle logs are lazy so release builds do not build strings on hot paths.
+    private func debugSidebarLog(_ message: @autoclosure () -> String) {
+        #if DEBUG
+        guard Self.isSidebarDebugLoggingEnabled else { return }
+        print("[SidebarDebug] \(message())")
+        #endif
+    }
+
+    // Uses the responder chain instead of per-view bindings so mixed SwiftUI/UIKit inputs all close together.
+    private func dismissActiveKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    // Keeps SwiftUI's sheet binding in sync with the route we last chose to present.
+    private var presentedRootSheetBinding: Binding<RootSheetRoute?> {
+        Binding(
+            get: { presentedRootSheet },
+            set: { nextValue in
+                guard nextValue?.id != presentedRootSheet?.id else {
+                    presentedRootSheet = nextValue
+                    return
+                }
+
+                if nextValue == nil {
+                    dismissPresentedRootSheet()
+                } else {
+                    presentedRootSheet = nextValue
+                }
+            }
+        )
+    }
+
+    private var missingNotificationThreadAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { codex.missingNotificationThreadPrompt != nil },
+            set: { isPresented in
+                if !isPresented {
+                    codex.missingNotificationThreadPrompt = nil
+                }
+            }
+        )
+    }
+
+    // Serializes root-owned sheets under one priority list instead of letting each feature present itself.
+    private func syncRootSheetPresentationIfNeeded() {
+        if case .bridgeUpdate = presentedRootSheet,
+           codex.bridgeUpdatePrompt == nil {
+            dismissPresentedRootSheet()
+            return
+        }
+
+        guard let desiredRoute = desiredRootSheetRoute else {
+            return
+        }
+
+        // Let bridge recovery take over immediately without marking What's New as already seen.
+        if case .whatsNew = presentedRootSheet,
+           case .bridgeUpdate = desiredRoute {
+            presentedRootSheet = desiredRoute
+            return
+        }
+
+        // Refresh an already-visible bridge sheet when the prompt changes underneath it.
+        if case .bridgeUpdate = presentedRootSheet,
+           case .bridgeUpdate = desiredRoute,
+           presentedRootSheet?.id != desiredRoute.id {
+            presentedRootSheet = desiredRoute
+            return
+        }
+
+        guard presentedRootSheet == nil else {
+            return
+        }
+
+        presentedRootSheet = desiredRoute
+    }
+
+    private var desiredRootSheetRoute: RootSheetRoute? {
+        guard canPresentDeferredRootSheet else {
+            return nil
+        }
+
+        if let prompt = codex.bridgeUpdatePrompt {
+            return .bridgeUpdate(prompt)
+        }
+
+        if let whatsNewVersion = pendingWhatsNewVersion {
+            return .whatsNew(version: whatsNewVersion)
+        }
+
+        return nil
+    }
+
+    // Blocks lower-priority sheets while onboarding, pairing, or root alerts own the screen.
+    private var canPresentDeferredRootSheet: Bool {
+        scenePhase == .active
+            && hasSeenOnboarding
+            && !isShowingManualScanner
+            && !shouldShowQRScanner
+            && !isShowingManualPairingEntry
+            && manualPairingErrorMessage == nil
+            && codex.missingNotificationThreadPrompt == nil
+    }
+
+    // Shows What's New only once per version and only after the root has been calm for a while.
+    private var pendingWhatsNewVersion: String? {
+        guard isWhatsNewPresentationReady,
+              lastPresentedWhatsNewVersion != whatsNewReleaseVersion else {
+            return nil
+        }
+
+        return whatsNewReleaseVersion
+    }
+
+    private var whatsNewPresentationScheduleFingerprint: String {
+        [
+            String(scenePhase == .active),
+            String(hasSeenOnboarding),
+            String(isShowingManualScanner),
+            String(shouldShowQRScanner),
+            String(isShowingManualPairingEntry),
+            String(manualPairingErrorMessage != nil),
+            String(codex.missingNotificationThreadPrompt != nil),
+            String(codex.bridgeUpdatePrompt != nil),
+            whatsNewReleaseVersion,
+            lastPresentedWhatsNewVersion,
+        ].joined(separator: "|")
+    }
+
+    private var rootSheetPresentationFingerprint: String {
+        [
+            String(canPresentDeferredRootSheet),
+            codex.bridgeUpdatePrompt?.id.uuidString ?? "nil",
+            pendingWhatsNewVersion ?? "nil",
+            presentedRootSheet?.id ?? "nil",
+        ].joined(separator: "|")
+    }
+
+    private func scheduleWhatsNewPresentationIfNeeded() async {
+        whatsNewPresentationTask?.cancel()
+        whatsNewPresentationTask = nil
+        isWhatsNewPresentationReady = false
+
+        guard shouldScheduleWhatsNewPresentation else {
+            return
+        }
+
+        let task = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: whatsNewPresentationDelayNanoseconds)
+            guard !Task.isCancelled,
+                  shouldScheduleWhatsNewPresentation else {
+                return
+            }
+
+            isWhatsNewPresentationReady = true
+            syncRootSheetPresentationIfNeeded()
+        }
+
+        whatsNewPresentationTask = task
+    }
+
+    private var shouldScheduleWhatsNewPresentation: Bool {
+        canPresentDeferredRootSheet
+            && codex.bridgeUpdatePrompt == nil
+            && pendingWhatsNewVersion == nil
+    }
+
+    private func handleDismissedRootSheet(_ route: RootSheetRoute) {
+        switch route {
+        case .bridgeUpdate:
+            dismissBridgeUpdatePrompt()
+        case .whatsNew(let version):
+            dismissWhatsNewSheet(version: version)
+        }
+
+        syncRootSheetPresentationIfNeeded()
+    }
+
+    private func dismissPresentedRootSheet() {
+        guard let dismissedRoute = presentedRootSheet else {
+            return
+        }
+
+        presentedRootSheet = nil
+        handleDismissedRootSheet(dismissedRoute)
+    }
+
+    private func dismissBridgeUpdatePrompt() {
+        codex.bridgeUpdatePrompt = nil
+        isRetryingBridgeUpdate = false
+    }
+
+    private func dismissWhatsNewSheet(version: String) {
+        lastPresentedWhatsNewVersion = version
+        isWhatsNewPresentationReady = false
+    }
+
+    private func bridgeUpdateSheet(prompt: CodexBridgeUpdatePrompt) -> some View {
+        BridgeUpdateSheet(
+            prompt: prompt,
+            isRetrying: isRetryingBridgeUpdate,
+            onRetry: {
+                retryBridgeConnectionAfterUpdate()
+            },
+            onScanNewQR: {
+                presentManualScannerForBridgeRecovery()
+            },
+            onDismiss: {
+                dismissPresentedRootSheet()
+            }
+        )
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func whatsNewSheet(version: String) -> some View {
+        WhatsNewSheet(
+            version: version,
+            onDismiss: {
+                dismissPresentedRootSheet()
+            }
+        )
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    // Re-tries the saved relay session after the user updates the Mac package.
+    private func retryBridgeConnectionAfterUpdate() {
+        guard !isRetryingBridgeUpdate else {
+            return
+        }
+
+        isRetryingBridgeUpdate = true
+
+        Task {
+            await viewModel.toggleConnection(codex: codex)
+            await MainActor.run {
+                isRetryingBridgeUpdate = false
+            }
+        }
+    }
+
+    // Switches the user back to the QR path when the old relay session is no longer useful.
+    private func presentManualScannerForBridgeRecovery() {
+        guard !isShowingManualScanner else {
+            return
+        }
+
+        hasDismissedAutomaticScanner = false
+        scannerCanReturnToOnboarding = false
+        isShowingManualScanner = true
+        dismissPresentedRootSheet()
+
+        Task {
+            await viewModel.stopAutoReconnectForManualScan(codex: codex)
+        }
+    }
+
+    // Shows pairing recovery immediately and tears down any stale reconnect in the background.
+    private func presentManualScannerAfterStoppingReconnect() {
+        guard !isShowingManualScanner else {
+            return
+        }
+
+        hasDismissedAutomaticScanner = false
+        scannerCanReturnToOnboarding = false
+        isShowingManualScanner = true
+
+        Task {
+            await viewModel.stopAutoReconnectForManualScan(codex: codex)
+        }
+    }
+
+    private func presentMyMacsScanner() {
+        hasDismissedAutomaticScanner = true
+        isShowingMyMacsScanner = true
+        presentManualScannerAfterStoppingReconnect()
+    }
+
+    private func presentMyMacsPairingCode() {
+        hasDismissedAutomaticScanner = true
+        isShowingMyMacsScanner = true
+        presentManualPairingEntryAfterStoppingReconnect()
+    }
+
+    // Re-opens the scanner after the user backed out to the empty state without a saved pairing.
+    private func presentAutomaticScanner() {
+        withAnimation {
+            hasDismissedAutomaticScanner = false
+        }
+    }
+
+    // Hides the scanner without forcing the user straight back into the camera on the next render pass.
+    private func dismissScannerToHome() {
+        withAnimation {
+            isShowingManualScanner = false
+            isShowingMyMacsScanner = false
+            hasDismissedAutomaticScanner = true
+            scannerCanReturnToOnboarding = false
+        }
+    }
+
+    // Lets first-run pairing step back into onboarding without changing later recovery flows.
+    private func returnFromScannerToOnboarding() {
+        codex.shouldAutoReconnectOnForeground = false
+        codex.connectionRecoveryState = .idle
+        codex.lastErrorMessage = nil
+
+        withAnimation {
+            isShowingManualScanner = false
+            isShowingMyMacsScanner = false
+            hasDismissedAutomaticScanner = false
+            scannerCanReturnToOnboarding = false
+            hasSeenOnboarding = false
+        }
+    }
+
+    // Keeps QR and code recovery as one quiet secondary row under the main reconnect CTA.
+    private var reconnectSecondaryActions: some View {
+        HStack(spacing: 10) {
+            secondaryReconnectActionButton("New QR Code") {
+                presentManualScannerAfterStoppingReconnect()
+            }
+            .disabled(isPreparingManualScanner)
+
+            secondaryReconnectActionButton("Pair with Code") {
+                presentManualPairingEntryAfterStoppingReconnect()
+            }
+            .disabled(isPreparingManualScanner || isResolvingManualPairingCode)
+        }
+    }
+
+    // First-run Simulator pairing cannot rely on a camera, so preserve the
+    // relay-backed code entry beside the primary QR path.
+    private var initialManualPairingAction: some View {
+        secondaryReconnectActionButton("Pair with Code") {
+            presentManualPairingEntryAfterStoppingReconnect()
+        }
+        .disabled(isPreparingManualScanner || isResolvingManualPairingCode)
+    }
+
+    private var showsInitialManualPairingAction: Bool {
+        // The surrounding empty state is already limited to offline pairing.
+        // Always provide the secure manual-code alternative to QR scanning.
+        true
+    }
+
+    // Keeps the destructive saved-pair action visually separate from the reconnect controls.
+    private var reconnectFooterAction: some View {
+        Button("Forget Pair") {
+            codex.forgetReconnectCandidate()
+        }
+        .font(AppFont.caption(weight: .semibold))
+        .foregroundStyle(.secondary)
+        .buttonStyle(.plain)
+    }
+
+    // Mirrors the reconnect button corner language in a lighter outline-only treatment.
+    private func secondaryReconnectActionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(AppFont.subheadline(weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+        }
+        .foregroundStyle(.primary)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(0.14), lineWidth: 1)
+        )
+        .buttonStyle(.plain)
+    }
+
+    // Opens manual code entry directly from the home state so the scanner stays QR-only.
+    private func presentManualPairingEntryAfterStoppingReconnect() {
+        guard !isResolvingManualPairingCode else {
+            return
+        }
+
+        manualPairingErrorMessage = nil
+        let clipboardString = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !clipboardString.isEmpty {
+            manualPairingCode = clipboardString
+        }
+        isShowingManualPairingEntry = true
+
+        Task {
+            await viewModel.stopAutoReconnectForManualScan(codex: codex)
+        }
+    }
+
+    private func submitManualPairingCode() {
+        guard !isResolvingManualPairingCode else {
+            return
+        }
+
+        let pendingCode = manualPairingCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !pendingCode.isEmpty else {
+            manualPairingErrorMessage = "Enter a valid pairing code."
+            return
+        }
+        isResolvingManualPairingCode = true
+        manualPairingErrorMessage = nil
+
+        Task { @MainActor in
+            defer { isResolvingManualPairingCode = false }
+
+            await viewModel.stopAutoReconnectForManualScan(codex: codex)
+
+            do {
+                let pairingPayload: CodexPairingQRPayload
+                switch validatePairingQRCode(pendingCode) {
+                case .success(let payload):
+                    pairingPayload = payload
+                case .shortCode(let code):
+                    pairingPayload = try await codex.resolvePairingCode(code)
+                case .scanError(let message):
+                    throw CodexSecureTransportError.invalidQR(message)
+                case .bridgeUpdateRequired(let prompt):
+                    codex.bridgeUpdatePrompt = prompt
+                    return
+                }
+
+                isShowingManualPairingEntry = false
+                manualPairingCode = ""
+                withAnimation {
+                    hasSeenOnboarding = true
+                    isShowingManualScanner = false
+                    hasDismissedAutomaticScanner = true
+                    scannerCanReturnToOnboarding = false
+                }
+                if isShowingMyMacsScanner {
+                    isShowingMyMacsScanner = false
+                    prepareForMacContextTransition()
+                    startScannedMacSwitch(pairingPayload)
+                    return
+                }
+                await viewModel.connectToRelay(
+                    pairingPayload: pairingPayload,
+                    codex: codex
+                )
+            } catch {
+                manualPairingErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func startNewThreadFromMissingNotificationAlert() async {
+        do {
+            let thread = try await codex.startThread()
+            selectedThread = thread
+        } catch {
+            codex.lastErrorMessage = codex.userFacingTurnErrorMessage(from: error)
+        }
+    }
+
+    // Auto-hides the banner unless the user taps through to the finished chat first.
+    private func scheduleThreadCompletionBannerDismiss(for banner: CodexThreadCompletionBanner?) {
+        threadCompletionBannerDismissTask?.cancel()
+
+        guard let banner else {
+            threadCompletionBannerDismissTask = nil
+            return
+        }
+
+        threadCompletionBannerDismissTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                if codex.threadCompletionBanner?.id == banner.id {
+                    codex.threadCompletionBanner = nil
+                }
+            }
+        }
+    }
+
+    // Lets the user jump straight to the chat that produced the ready sidebar badge.
+    private func openCompletedThreadFromBanner(_ banner: CodexThreadCompletionBanner) {
+        threadCompletionBannerDismissTask?.cancel()
+        codex.threadCompletionBanner = nil
+        clearDisplayIslandOutcome(for: banner.threadId)
+        syncDisplayIsland()
+
+        guard let thread = codex.threads.first(where: { $0.id == banner.threadId }) else {
+            return
+        }
+
+        openThreadFromSidebar(thread)
+    }
+
+    private func dismissThreadCompletionBanner() {
+        if let banner = codex.threadCompletionBanner {
+            clearDisplayIslandOutcome(for: banner.threadId)
+        }
+        threadCompletionBannerDismissTask?.cancel()
+        codex.threadCompletionBanner = nil
+        syncDisplayIsland()
+    }
+
+    private func clearDisplayIslandOutcome(for threadId: String) {
+        displayIslandCoordinator.clearOutcome(
+            for: threadId,
+            terminalState: codex.latestTurnTerminalState(for: threadId)
+        )
+    }
+
+    private func syncDisplayIsland() {
+        displayIslandCoordinator.sync(codex: codex)
+    }
+
+    private var displayIslandTimelineFingerprint: String {
+        displayIslandCoordinator.timelineFingerprint(codex: codex)
+    }
+
+    // Keeps selected thread coherent with server list updates.
+    private func syncSelectedThread(with threads: [CodexThread]) {
+        guard !isOpeningNewChatFromSidebar else { return }
+
+        if let selected = selectedThread,
+           !threads.contains(where: { $0.id == selected.id }) {
+            if codex.activeThreadId == selected.id {
+                return
+            }
+            selectedThread = codex.pendingNotificationOpenThreadID == nil ? threads.first : nil
+            return
+        }
+
+        if let selected = selectedThread,
+           let refreshed = threads.first(where: { $0.id == selected.id }) {
+            selectedThread = refreshed
+            return
+        }
+
+        if selectedThread == nil,
+           codex.activeThreadId == nil,
+           !suppressAutomaticThreadSelection,
+           codex.pendingNotificationOpenThreadID == nil,
+           let first = threads.first {
+            selectedThread = first
+        }
+    }
+
+    private func prepareForMacContextTransition() {
+        hasDismissedAutomaticScanner = true
+        suppressAutomaticThreadSelection = true
+        selectedThread = nil
+        codex.activeThreadId = nil
+        if isSidebarOpen {
+            closeSidebar()
+        }
+    }
+
+    private func captureMacContextTransitionSnapshot() -> MacContextTransitionSnapshot {
+        MacContextTransitionSnapshot(
+            selectedThread: selectedThread,
+            activeThreadId: codex.activeThreadId,
+            suppressAutomaticThreadSelection: suppressAutomaticThreadSelection
+        )
+    }
+
+    // Restores the chat selection only when the service kept an existing Mac alive after a failed saved-device switch.
+    private func restoreMacContextTransitionSnapshotIfStillConnected(_ snapshot: MacContextTransitionSnapshot) {
+        guard codex.isConnected || codex.isInitialized else {
+            return
+        }
+
+        if let selectedThread = snapshot.selectedThread {
+            self.selectedThread = codex.threads.first(where: { $0.id == selectedThread.id }) ?? selectedThread
+        } else {
+            self.selectedThread = nil
+        }
+        codex.activeThreadId = snapshot.activeThreadId
+        suppressAutomaticThreadSelection = snapshot.suppressAutomaticThreadSelection
+    }
+
+    private func switchToTrustedMac(_ deviceId: String) {
+        guard !viewModel.isSwitchingMac else {
+            return
+        }
+        let contextTransitionSnapshot = captureMacContextTransitionSnapshot()
+        prepareForMacContextTransition()
+        macSwitchTask = Task {
+            do {
+                try await viewModel.switchToTrustedMac(deviceId: deviceId, codex: codex)
+                await MainActor.run {
+                    navigationPath.removeAll()
+                }
+            } catch {
+                await MainActor.run {
+                    restoreMacContextTransitionSnapshotIfStillConnected(contextTransitionSnapshot)
+                }
+            }
+            await MainActor.run {
+                macSwitchTask = nil
+            }
+        }
+    }
+
+    private func startScannedMacSwitch(_ pairingPayload: CodexPairingQRPayload) {
+        guard !viewModel.isSwitchingMac else {
+            return
+        }
+
+        macSwitchTask = Task {
+            do {
+                try await viewModel.switchToScannedMac(
+                    pairingPayload: pairingPayload,
+                    codex: codex
+                )
+                await MainActor.run {
+                    navigationPath.removeAll()
+                }
+            } catch {
+                // Error is already exposed through CodexService state.
+            }
+            await MainActor.run {
+                macSwitchTask = nil
+            }
+        }
+    }
+
+    private func cancelMacSwitch() {
+        guard let macSwitchTask else {
+            return
+        }
+
+        macSwitchTask.cancel()
+        Task {
+            await viewModel.requestMacSwitchCancellation(codex: codex)
+        }
+    }
+
+    private func forgetTrustedMac(_ deviceId: String) {
+        let isCurrentTrustedMac = codex.normalizedCurrentTrustedMacDeviceId == deviceId
+        if isCurrentTrustedMac {
+            prepareForMacContextTransition()
+            Task {
+                await codex.disconnect()
+                codex.forgetTrustedMac(deviceId: deviceId)
+            }
+            return
+        }
+
+        codex.forgetTrustedMac(deviceId: deviceId)
+    }
+}
+
+private struct NewChatOpeningStateView: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .controlSize(.regular)
+
+            VStack(spacing: 4) {
+                Text("Starting new chat...")
+                    .font(AppFont.headline())
+                    .foregroundStyle(.primary)
+
+                Text("Preparing an empty conversation.")
+                    .font(AppFont.caption())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
+        .navigationTitle("New Chat")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct TwoLineHamburgerIcon: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            RoundedRectangle(cornerRadius: 1)
+                .frame(width: 20, height: 2)
+
+            RoundedRectangle(cornerRadius: 1)
+                .frame(width: 10, height: 2)
+        }
+        .frame(width: 20, height: 14, alignment: .leading)
+    }
+}
+
+private struct HorizontalRevealViewportShape: Shape {
+    let verticalOverflow: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let expandedRect = CGRect(
+            x: rect.minX,
+            y: rect.minY - verticalOverflow,
+            width: rect.width,
+            height: rect.height + (verticalOverflow * 2)
+        )
+        return Path(expandedRect)
+    }
+}
+
+#Preview {
+    ContentView()
+        .environment(CodexService())
+}

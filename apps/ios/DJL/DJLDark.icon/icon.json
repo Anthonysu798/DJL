@@ -1,0 +1,33 @@
+{
+  "fill": "system-light",
+  "groups": [
+    {
+      "blend-mode": "normal",
+      "blur-material": null,
+      "layers": [
+        {
+          "image-name": "Fixed-Rounding 2.svg",
+          "name": "DJL Dark",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [0.26439794274210726, -27.3359375]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.4
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
+  }
+}
