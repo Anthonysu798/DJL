@@ -1,12 +1,9 @@
 name: Desktop Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Release version (X.Y.Z or X.Y.Z-prerelease)
-        required: true
-        type: string
+  push:
+    tags:
+      - "v*.*.*"
 
 permissions:
   contents: read
@@ -31,9 +28,9 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
-      commit: ${{ github.sha }}
+      commit: ${{ steps.version.outputs.commit }}
     steps:
-      - name: Checkout protected main commit
+      - name: Checkout annotated release tag
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
@@ -45,36 +42,52 @@ jobs:
           node-version-file: package.json
 
       - id: version
-        name: Validate requested version
+        name: Validate annotated semantic-version tag
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF" == "refs/tags/$RELEASE_TAG" ]] || {
+            echo "Production releases run only from a pushed tag." >&2
+            exit 1
+          }
+          [[ "$(git cat-file -t "refs/tags/$RELEASE_TAG")" == "tag" ]] || {
+            echo "Release tag $RELEASE_TAG must be annotated, not lightweight." >&2
+            exit 1
+          }
+          release_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{}")"
+          git cat-file -e "$release_commit^{commit}"
+          echo "commit=$release_commit" >> "$GITHUB_OUTPUT"
+
           node --experimental-strip-types --input-type=module - <<'NODE'
           import { appendFileSync } from "node:fs";
           import { validatePublicDesktopReleaseVersion } from "./scripts/lib/public-desktop-release.ts";
 
-          const release = validatePublicDesktopReleaseVersion(process.env.RELEASE_VERSION ?? "");
+          const releaseTag = process.env.RELEASE_TAG ?? "";
+          const release = validatePublicDesktopReleaseVersion(releaseTag.replace(/^v/, ""));
+          if (release.tag !== releaseTag) {
+            throw new Error(`Release tag must be exactly ${release.tag}.`);
+          }
           appendFileSync(process.env.GITHUB_OUTPUT, `version=${release.version}\n`);
           appendFileSync(process.env.GITHUB_OUTPUT, `tag=${release.tag}\n`);
           appendFileSync(process.env.GITHUB_OUTPUT, `is_prerelease=${release.isPrerelease}\n`);
           NODE
 
-      - name: Require canonical repository and protected main HEAD
+      - name: Require canonical repository and protected main membership
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.commit }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_REPOSITORY" == "$RELEASE_REPOSITORY" ]] || {
             echo "Production releases run only in $RELEASE_REPOSITORY." >&2
             exit 1
           }
-          [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
-            echo "Dispatch the production release from main." >&2
-            exit 1
-          }
-          main_sha="$(gh api "repos/$RELEASE_REPOSITORY/commits/main" --jq .sha)"
-          [[ "$GITHUB_SHA" == "$main_sha" ]] || {
-            echo "Release commit $GITHUB_SHA is not current main $main_sha." >&2
+          compare_status="$(
+            gh api "repos/$RELEASE_REPOSITORY/compare/$RELEASE_COMMIT...main" --jq .status
+          )"
+          [[ "$compare_status" == "ahead" || "$compare_status" == "identical" ]] || {
+            echo "Tagged commit $RELEASE_COMMIT is not contained in main." >&2
             exit 1
           }
           [[ "$(gh api "repos/$RELEASE_REPOSITORY/branches/main" --jq .protected)" == "true" ]] || {
@@ -85,12 +98,13 @@ jobs:
       - name: Require full desktop validation for this commit
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.commit }}
         run: |
           set -euo pipefail
           gh api \
-            "repos/$RELEASE_REPOSITORY/actions/workflows/desktop-ci.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=100" \
+            "repos/$RELEASE_REPOSITORY/actions/workflows/desktop-ci.yml/runs?head_sha=$RELEASE_COMMIT&status=completed&per_page=100" \
             > desktop-ci-runs.json
-          jq -e --arg sha "$GITHUB_SHA" '
+          jq -e --arg sha "$RELEASE_COMMIT" '
             any(
               .workflow_runs[];
               .head_sha == $sha
@@ -122,18 +136,19 @@ jobs:
             exit 1
           fi
 
-      - name: Reject existing tag or release
+      - name: Reject an existing release or duplicate version tag
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $RELEASE_TAG already exists." >&2
             exit 1
           fi
-          if gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Tag $RELEASE_TAG already exists." >&2
+          if gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "A duplicate non-canonical tag named $RELEASE_VERSION already exists." >&2
             exit 1
           fi
 
@@ -217,6 +232,7 @@ jobs:
                 target_commitish: $commit,
                 name: $name,
                 body: "DJL desktop installers for macOS Apple Silicon, macOS Intel, and Windows x64. macOS installers are Developer ID signed, notarized, and stapled. The Windows installer is intentionally unsigned and may trigger Microsoft SmartScreen. Verify SHA256SUMS before installing.",
+                generate_release_notes: true,
                 draft: true,
                 prerelease: $prerelease
               }'
@@ -262,18 +278,8 @@ jobs:
           ref: ${{ needs.preflight.outputs.commit }}
           persist-credentials: false
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-
-      - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version-file: package.json
-
       - name: Install frozen dependencies
-        run: bun install --frozen-lockfile
+        uses: ./.github/actions/setup-desktop
 
       - name: Align package versions
         run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
