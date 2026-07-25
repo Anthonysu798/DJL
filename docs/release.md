@@ -8,6 +8,30 @@ The workflows do not test or release iOS, the remote relay, landing site, market
 installers, npm packages, or standalone OpenCode. OpenCode is verified only as the pinned runtime
 embedded in DJL.
 
+## Release discipline
+
+Rules learned from real failures. Each one cost a release attempt.
+
+- **Green or stop.** A release is tagged only from a commit whose full Desktop CI run — every lane
+  plus all three native package smokes — concluded `success`. `bun run ship` enforces this; do not
+  bypass a refusal.
+- **The tag is the only input.** Release notes come from the annotated tag message. Never `PATCH` a
+  draft release to adjust them: GitHub rewrites an edited draft's `tag_name` to `untagged-<hash>`,
+  which breaks every subsequent `gh release upload`/`download`/`edit` with a misleading
+  `release not found`.
+- **Never hand-finish a release.** No manual asset uploads, no publishing from the UI. If a run
+  fails, delete the draft and the tag, fix the cause, retag.
+- **Tag with `--cleanup=verbatim`.** Git otherwise strips every `#` markdown heading from the body.
+- **Release-only checks are unproven checks.** Verification that exists solely in
+  `desktop-release.yml` first executes during an actual release, after signing and notarization have
+  already been paid for. Mirror new verification into the CI package-smoke jobs. The macOS
+  architecture sweep shipped broken for exactly this reason: it passed on ARM64 only because `file`
+  prints the path, so `.../koffi/linux_arm64/...` satisfied a grep for `arm64`, and it could never
+  have passed on Intel, where those paths read `x64` and `file` reports `x86-64`.
+- **Bundled `.node` files are not all macOS.** koffi, onnxruntime-node and node-pty ship prebuilt
+  slices for FreeBSD, Linux, OpenBSD, LoongArch, RISC-V and Windows. Any check over them must select
+  Mach-O slices for the target architecture rather than requiring every file to match.
+
 ## Release invariants
 
 - Production releases start only when an annotated `vX.Y.Z` or `vX.Y.Z-prerelease` tag is pushed.
