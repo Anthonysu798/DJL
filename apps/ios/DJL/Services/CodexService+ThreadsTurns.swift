@@ -1,0 +1,3440 @@
+// FILE: CodexService+ThreadsTurns.swift
+// Purpose: Thread/turn operations exposed to the UI.
+// Layer: Service
+// Exports: CodexService thread+turn APIs
+// Depends on: CodexThread, JSONValue
+
+import Foundation
+
+enum ThreadTurnStateSnapshotPolicy {
+    static let recentTurnLimit = 8
+    static let requestTimeoutNanoseconds: UInt64 = 30_000_000_000
+}
+
+private enum ThreadListHydrationPolicy {
+    static let requestTimeoutNanoseconds: UInt64 = 12_000_000_000
+}
+
+private enum StaleInterruptResolution: Equatable {
+    case none
+    case completed
+    case terminalUnknown
+    case startingWithoutTurnID
+
+    var shouldClearRunningState: Bool {
+        switch self {
+        case .completed, .terminalUnknown:
+            return true
+        case .none, .startingWithoutTurnID:
+            return false
+        }
+    }
+}
+
+struct CodexPreAppendedTurnMessage: Sendable {
+    let messageID: String
+    let automaticTitleSeed: String?
+}
+
+extension CodexService {
+    // Sidebar loads stay capped so reconnect/bootstrap cannot pull an entire local history at once.
+    var recentActiveThreadListLimit: Int { 70 }
+
+    // Encodes manual approval replies using the app-server decision object shape.
+    func approvalDecisionResult(_ decision: String) -> JSONValue {
+        .object(["decision": .string(decision)])
+    }
+
+    // New permission prompts use a grant payload, unlike command/file approval decisions.
+    func permissionApprovalResult(for request: CodexApprovalRequest, grantsRequestedPermissions: Bool) -> JSONValue {
+        let requestedPermissions = request.params?.objectValue?["permissions"] ?? .object([:])
+        return .object([
+            "permissions": grantsRequestedPermissions ? requestedPermissions : .object([:]),
+            "scope": .string("turn"),
+        ])
+    }
+
+    func approvalResponseResult(
+        for request: CodexApprovalRequest,
+        decision: String,
+        forSession: Bool = false
+    ) -> JSONValue {
+        let normalizedMethod = request.method.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalizedMethod == "item/permissions/requestApproval" {
+            return permissionApprovalResult(for: request, grantsRequestedPermissions: decision == "accept")
+        }
+
+        let isCommandApproval = normalizedMethod == "item/commandExecution/requestApproval"
+            || normalizedMethod == "item/command_execution/request_approval"
+        let resolvedDecision = (decision == "accept" && forSession && isCommandApproval) ? "acceptForSession" : decision
+        return approvalDecisionResult(resolvedDecision)
+    }
+
+    // Returns the next pending approval for a specific thread, falling back to thread-less requests.
+    func pendingApproval(for threadId: String? = nil) -> CodexApprovalRequest? {
+        guard let normalizedThreadID = normalizedApprovalThreadIdentifier(threadId) else {
+            return pendingApprovals.first
+        }
+
+        return pendingApprovals.first(where: { $0.threadId == normalizedThreadID })
+            ?? pendingApprovals.first(where: { $0.threadId == nil })
+    }
+
+    // Preserves arrival order while replacing retried copies of the same request id.
+    func enqueuePendingApproval(_ request: CodexApprovalRequest) {
+        if let existingIndex = pendingApprovals.firstIndex(where: { $0.id == request.id }) {
+            pendingApprovals[existingIndex] = request
+            return
+        }
+
+        pendingApprovals.append(request)
+    }
+
+    // Removes the exact resolved approval request when the server confirms it is gone.
+    @discardableResult
+    func removePendingApproval(requestID: JSONValue) -> CodexApprovalRequest? {
+        let requestKey = idKey(from: requestID)
+        return removePendingApproval(id: requestKey)
+    }
+
+    // Clears all volatile approval prompts on disconnect or server switch.
+    func clearPendingApprovals() {
+        pendingApprovals.removeAll()
+        autoApprovalRetryReviewIDsInFlight.removeAll()
+        autoApprovalRetryTokensByReviewKey.removeAll()
+    }
+
+    func listThreads(limit: Int? = nil) async throws {
+        isLoadingThreads = true
+        defer {
+            isLoadingThreads = false
+            flushPendingRuntimeOptionRefreshIfPossible()
+        }
+
+        let activeLimit = limit ?? recentActiveThreadListLimit
+
+        let activeThreads = try await fetchCoalescedServerThreads(limit: activeLimit)
+        reconcileLocalThreadsWithServer(activeThreads)
+
+        if activeThreadId == nil, pendingNotificationOpenThreadID == nil {
+            activeThreadId = firstLiveThreadID()
+        }
+    }
+
+    // Preserves the older startThread symbol used by most call sites and incremental builds.
+    func startThread(
+        preferredProjectPath: String? = nil,
+        runtimeOverride: CodexThreadRuntimeOverride? = nil
+    ) async throws -> CodexThread {
+        try await startThreadImpl(
+            preferredProjectPath: preferredProjectPath,
+            pendingComposerAction: nil,
+            runtimeOverride: runtimeOverride
+        )
+    }
+
+    // Starts a new thread and seeds a one-shot composer action for the destination thread.
+    func startThread(
+        preferredProjectPath: String? = nil,
+        pendingComposerAction: CodexPendingThreadComposerAction,
+        runtimeOverride: CodexThreadRuntimeOverride? = nil
+    ) async throws -> CodexThread {
+        try await startThreadImpl(
+            preferredProjectPath: preferredProjectPath,
+            pendingComposerAction: pendingComposerAction,
+            runtimeOverride: runtimeOverride
+        )
+    }
+
+    // Starts a new thread and stores it in local state.
+    private func startThreadImpl(
+        preferredProjectPath: String? = nil,
+        pendingComposerAction: CodexPendingThreadComposerAction? = nil,
+        runtimeOverride: CodexThreadRuntimeOverride? = nil
+    ) async throws -> CodexThread {
+        let normalizedPreferredProjectPath = CodexThreadStartProjectBinding.normalizedProjectPath(preferredProjectPath)
+        let runtimeOverrideModel = runtimeOverride?.modelId.flatMap { modelId in
+            availableModels.first { $0.id == modelId || $0.model == modelId }
+        }
+        let explicitModelIdentifier = runtimeOverride?.overridesModel == true
+            ? (runtimeOverrideModel?.model ?? runtimeOverride?.modelId)
+            : runtimeModelIdentifierForTurn()
+        // Brand-new chats start from app defaults; per-chat overrides are inherited only on continuation.
+        let explicitServiceTier: String? = {
+            guard runtimeOverride?.overridesServiceTier == true else {
+                return runtimeServiceTierForTurn()
+            }
+            guard let requestedTier = runtimeOverride?.serviceTier else {
+                return nil
+            }
+            let model = runtimeOverrideModel ?? selectedModelOption()
+            return model?.supportsServiceTier(requestedTier) == false ? nil : requestedTier.rawValue
+        }()
+        var includesServiceTier = explicitServiceTier != nil
+        let accessConfiguration = RuntimeAccessConfiguration(
+            mode: runtimeOverride?.accessMode ?? selectedAccessMode
+        )
+
+        while true {
+            let params = CodexThreadStartProjectBinding.makeThreadStartParams(
+                modelIdentifier: explicitModelIdentifier,
+                preferredProjectPath: normalizedPreferredProjectPath,
+                serviceTier: includesServiceTier ? explicitServiceTier : nil
+            )
+
+            do {
+                let response = try await sendRequestWithSandboxFallback(
+                    method: "thread/start",
+                    baseParams: params,
+                    accessConfiguration: accessConfiguration
+                )
+                try validateAppliedAccessConfiguration(
+                    in: response,
+                    expected: accessConfiguration,
+                    context: "thread/start"
+                )
+
+                guard let result = response.result,
+                      let resultObject = result.objectValue,
+                      let threadValue = resultObject["thread"],
+                      let decodedThread = decodeModel(CodexThread.self, from: threadValue) else {
+                    throw CodexServiceError.invalidResponse("thread/start response missing thread")
+                }
+
+                let thread = CodexThreadStartProjectBinding.applyPreferredProjectBinding(
+                    to: decodedThread,
+                    preferredProjectPath: normalizedPreferredProjectPath
+                )
+                if let pendingComposerAction {
+                    queuePendingComposerAction(pendingComposerAction, for: thread.id)
+                }
+                if let runtimeOverride, !runtimeOverride.isEmpty {
+                    applyThreadRuntimeOverride(runtimeOverride, to: thread.id)
+                }
+                // Mark the fresh thread as resumed before publishing it so the first
+                // render can skip the transient loading state while the empty composer
+                // is already the right answer.
+                resumedThreadIDs.insert(thread.id)
+                hydratedThreadIDs.insert(thread.id)
+                initialTurnsLoadedByThreadID.insert(thread.id)
+                upsertThread(thread, treatAsServerState: true)
+                if let normalizedPreferredProjectPath,
+                   decodedThread.normalizedProjectPath != normalizedPreferredProjectPath {
+                    beginAuthoritativeProjectPathTransition(
+                        threadId: thread.id,
+                        projectPath: normalizedPreferredProjectPath
+                    )
+                }
+                if let normalizedProjectPath = thread.normalizedProjectPath,
+                   CodexThread.projectIconSystemName(for: normalizedProjectPath) == "arrow.triangle.branch" {
+                    rememberAssociatedManagedWorktreePath(normalizedProjectPath, for: thread.id)
+                }
+                activeThreadId = thread.id
+                return thread
+            } catch {
+                guard consumeUnsupportedServiceTier(error, includesServiceTier: &includesServiceTier) else {
+                    throw error
+                }
+            }
+        }
+    }
+
+    // Stores one-shot composer setup so a newly created thread can open in the requested mode.
+    func queuePendingComposerAction(_ action: CodexPendingThreadComposerAction, for threadId: String) {
+        pendingComposerActionByThreadID[threadId] = action
+    }
+
+    // Consumes the pending composer setup once the destination thread view appears.
+    func consumePendingComposerAction(for threadId: String) -> CodexPendingThreadComposerAction? {
+        pendingComposerActionByThreadID.removeValue(forKey: threadId)
+    }
+
+    // Reads an unsent local composer draft for the requested thread.
+    func composerDraft(for threadId: String) -> TurnComposerLocalDraft? {
+        composerDraftsByThreadID[threadId]
+    }
+
+    // Returns the draft mutation revision used to reject stale async attachment merges.
+    func composerDraftMergeRevision(for threadId: String) -> Int {
+        composerDraftMergeRevisionByThreadID[threadId] ?? 0
+    }
+
+    // Stores loading attachment IDs that are still allowed to complete into a saved draft.
+    func setComposerDraftPendingAttachmentIDs(_ ids: Set<String>, for threadId: String) {
+        composerDraftPendingAttachmentIDsByThreadID[threadId] = ids
+    }
+
+    func canMergePendingComposerAttachment(id attachmentID: String, for threadId: String) -> Bool {
+        guard let pendingAttachmentIDs = composerDraftPendingAttachmentIDsByThreadID[threadId] else {
+            return true
+        }
+
+        return pendingAttachmentIDs.contains(attachmentID)
+    }
+
+    func markPendingComposerAttachmentMerged(id attachmentID: String, for threadId: String) {
+        guard var pendingAttachmentIDs = composerDraftPendingAttachmentIDsByThreadID[threadId] else {
+            return
+        }
+
+        pendingAttachmentIDs.remove(attachmentID)
+        setComposerDraftPendingAttachmentIDs(pendingAttachmentIDs, for: threadId)
+    }
+
+    // Stores or clears an unsent composer draft, optionally flushing it to local disk.
+    func setComposerDraft(
+        _ draft: TurnComposerLocalDraft?,
+        for threadId: String,
+        persistToDisk: Bool = false,
+        advancesAttachmentMergeRevision: Bool = true
+    ) {
+        if let draft, !draft.isEmpty {
+            composerDraftsByThreadID[threadId] = draft
+        } else {
+            composerDraftsByThreadID.removeValue(forKey: threadId)
+            composerDraftPendingAttachmentIDsByThreadID.removeValue(forKey: threadId)
+        }
+        if advancesAttachmentMergeRevision {
+            composerDraftMergeRevisionByThreadID[threadId, default: 0] += 1
+        }
+
+        if persistToDisk {
+            persistComposerDrafts()
+        }
+    }
+
+    func persistComposerDrafts() {
+        guard !suspendAutomaticMacScopedPersistence else {
+            return
+        }
+
+        composerDraftPersistence.save(
+            composerDraftsByThreadID,
+            macDeviceId: currentMacScopedPersistenceDeviceId
+        )
+    }
+
+    // Sends user input as a new turn against an existing (or newly created) thread.
+    func startTurn(
+        userInput: String,
+        threadId: String?,
+        attachments: [CodexImageAttachment] = [],
+        skillMentions: [CodexTurnSkillMention] = [],
+        mentionMentions: [CodexTurnMention] = [],
+        fileMentions: [String] = [],
+        shouldAppendUserMessage: Bool = true,
+        preAppendedUserMessageID: String? = nil,
+        automaticTitleSeedOverride: String? = nil,
+        collaborationMode: CodexCollaborationModeKind? = nil,
+        preservePlanSessionState: Bool = false
+    ) async throws {
+        let trimmedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedInput.isEmpty
+                || !attachments.isEmpty
+                || hasRenderableStructuredMentions(skillMentions: skillMentions, mentionMentions: mentionMentions) else {
+            throw CodexServiceError.invalidInput("User input, images, and mentions cannot all be empty")
+        }
+
+        let initialThreadId = try await resolveThreadID(threadId)
+        let effectiveCollaborationMode = collaborationModeForOutgoingTurn(
+            threadId: initialThreadId,
+            requestedMode: collaborationMode,
+            preserveExisting: preservePlanSessionState
+        )
+        preparePlanSessionForStart(
+            threadId: initialThreadId,
+            collaborationMode: effectiveCollaborationMode,
+            preserveExisting: preservePlanSessionState
+        )
+        let outgoingDisplayText = displayTextForOutgoingTurn(
+            userInput: trimmedInput,
+            skillMentions: skillMentions,
+            mentionMentions: mentionMentions
+        )
+        let normalizedPreAppendedUserMessageID = normalizedInterruptIdentifier(preAppendedUserMessageID)
+        let shouldAppendOnContinuation = shouldAppendUserMessage || normalizedPreAppendedUserMessageID != nil
+        let preResumeTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: automaticTitleSeedOverride,
+            shouldEvaluate: shouldAppendUserMessage && normalizedPreAppendedUserMessageID == nil,
+            userInput: outgoingDisplayText,
+            attachments: attachments,
+            threadId: initialThreadId
+        )
+        // Put the user's bubble in the timeline before any resume/network work so
+        // sends feel instant while the runtime catches up in the background.
+        let preResumePendingMessageId: String
+        if let normalizedPreAppendedUserMessageID {
+            preResumePendingMessageId = normalizedPreAppendedUserMessageID
+        } else if shouldAppendUserMessage {
+            preResumePendingMessageId = appendUserMessage(
+                threadId: initialThreadId,
+                text: outgoingDisplayText,
+                attachments: attachments,
+                fileMentions: fileMentions,
+                skillMentions: skillMentions.compactMap {
+                    let rawName = $0.name ?? $0.id
+                    let normalized = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return normalized.isEmpty ? nil : normalized
+                },
+                pluginMentions: mentionMentions.compactMap {
+                    let normalized = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return normalized.isEmpty ? nil : normalized
+                }
+            )
+        } else {
+            preResumePendingMessageId = ""
+        }
+
+        do {
+            try await ensureThreadResumed(threadId: initialThreadId)
+        } catch {
+            if shouldTreatAsThreadNotFound(error) {
+                if shouldAppendUserMessage || !preResumePendingMessageId.isEmpty {
+                    removePreResumePendingUserMessage(
+                        threadId: initialThreadId,
+                        messageId: preResumePendingMessageId,
+                        matchingText: trimmedInput,
+                        matchingAttachments: attachments
+                    )
+                }
+                handleMissingThread(initialThreadId)
+
+                let continuationThread = try await createContinuationThread(from: initialThreadId)
+                migratePlanSessionState(from: initialThreadId, to: continuationThread.id)
+                try await ensureThreadResumed(threadId: continuationThread.id)
+                try await sendTurnStart(
+                    trimmedInput,
+                    attachments: attachments,
+                    skillMentions: skillMentions,
+                    mentionMentions: mentionMentions,
+                    fileMentions: fileMentions,
+                    to: continuationThread.id,
+                    shouldAppendUserMessage: shouldAppendOnContinuation,
+                    collaborationMode: effectiveCollaborationMode
+                )
+                activeThreadId = continuationThread.id
+                lastErrorMessage = nil
+                return
+            }
+        }
+
+        do {
+            try await sendTurnStart(
+                trimmedInput,
+                attachments: attachments,
+                skillMentions: skillMentions,
+                mentionMentions: mentionMentions,
+                fileMentions: fileMentions,
+                to: initialThreadId,
+                shouldAppendUserMessage: false,
+                collaborationMode: effectiveCollaborationMode,
+                preAppendedUserMessageID: preResumePendingMessageId,
+                automaticTitleSeedOverride: preResumeTitleSeed
+            )
+        } catch {
+            if shouldTreatAsThreadNotFound(error) {
+                // If turn/start explicitly says "thread not found", treat it as authoritative.
+                // Some server states can make thread/read flaky, so we avoid blocking on a second check.
+                if shouldAppendUserMessage || !preResumePendingMessageId.isEmpty {
+                    removePreResumePendingUserMessage(
+                        threadId: initialThreadId,
+                        messageId: preResumePendingMessageId,
+                        matchingText: trimmedInput,
+                        matchingAttachments: attachments
+                    )
+                }
+                handleMissingThread(initialThreadId)
+
+                let continuationThread = try await createContinuationThread(from: initialThreadId)
+                migratePlanSessionState(from: initialThreadId, to: continuationThread.id)
+                try await sendTurnStart(
+                    trimmedInput,
+                    attachments: attachments,
+                    skillMentions: skillMentions,
+                    mentionMentions: mentionMentions,
+                    fileMentions: fileMentions,
+                    to: continuationThread.id,
+                    shouldAppendUserMessage: shouldAppendOnContinuation,
+                    collaborationMode: effectiveCollaborationMode
+                )
+                activeThreadId = continuationThread.id
+                lastErrorMessage = nil
+                return
+            }
+            throw error
+        }
+
+        activeThreadId = initialThreadId
+    }
+
+    // Lets the New Chat handoff publish the first user row before the real
+    // TurnView appears, while `startTurn` still owns the single `turn/start`.
+    func preAppendOutgoingUserMessage(
+        userInput: String,
+        threadId: String,
+        attachments: [CodexImageAttachment] = [],
+        skillMentions: [CodexTurnSkillMention] = [],
+        mentionMentions: [CodexTurnMention] = [],
+        fileMentions: [String] = []
+    ) -> CodexPreAppendedTurnMessage? {
+        let normalizedThreadID = normalizedInterruptIdentifier(threadId) ?? threadId
+        let outgoingDisplayText = displayTextForOutgoingTurn(
+            userInput: userInput.trimmingCharacters(in: .whitespacesAndNewlines),
+            skillMentions: skillMentions,
+            mentionMentions: mentionMentions
+        )
+        let automaticTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: nil,
+            shouldEvaluate: true,
+            userInput: outgoingDisplayText,
+            attachments: attachments,
+            threadId: normalizedThreadID
+        )
+        let messageID = appendUserMessage(
+            threadId: normalizedThreadID,
+            text: outgoingDisplayText,
+            attachments: attachments,
+            fileMentions: fileMentions,
+            skillMentions: skillMentions.compactMap {
+                let rawName = $0.name ?? $0.id
+                let normalized = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+                return normalized.isEmpty ? nil : normalized
+            },
+            pluginMentions: mentionMentions.compactMap {
+                let normalized = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                return normalized.isEmpty ? nil : normalized
+            }
+        )
+
+        guard !messageID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return CodexPreAppendedTurnMessage(
+            messageID: messageID,
+            automaticTitleSeed: automaticTitleSeed
+        )
+    }
+
+    // Carries a draft-thread pending row into the real thread created by thread/start.
+    func movePreAppendedOutgoingUserMessage(
+        _ preAppendedMessage: CodexPreAppendedTurnMessage?,
+        from sourceThreadID: String,
+        to targetThreadID: String
+    ) -> CodexPreAppendedTurnMessage? {
+        guard let preAppendedMessage,
+              let messageID = normalizedInterruptIdentifier(preAppendedMessage.messageID),
+              let normalizedSourceThreadID = normalizedInterruptIdentifier(sourceThreadID),
+              let normalizedTargetThreadID = normalizedInterruptIdentifier(targetThreadID) else {
+            return nil
+        }
+        guard normalizedSourceThreadID != normalizedTargetThreadID else {
+            return preAppendedMessage
+        }
+        guard var sourceMessages = messagesByThread[normalizedSourceThreadID],
+              let sourceIndex = sourceMessages.firstIndex(where: { $0.id == messageID }),
+              sourceMessages[sourceIndex].role == .user else {
+            return nil
+        }
+
+        let sourceMessage = sourceMessages.remove(at: sourceIndex)
+        let automaticTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: preAppendedMessage.automaticTitleSeed,
+            shouldEvaluate: true,
+            userInput: sourceMessage.text,
+            attachments: sourceMessage.attachments,
+            threadId: normalizedTargetThreadID
+        )
+        let movedMessage = CodexMessage(
+            id: sourceMessage.id,
+            threadId: normalizedTargetThreadID,
+            role: sourceMessage.role,
+            kind: sourceMessage.kind,
+            assistantPhase: sourceMessage.assistantPhase,
+            text: sourceMessage.text,
+            fileMentions: sourceMessage.fileMentions,
+            skillMentions: sourceMessage.skillMentions,
+            pluginMentions: sourceMessage.pluginMentions,
+            createdAt: sourceMessage.createdAt,
+            turnId: sourceMessage.turnId,
+            itemId: sourceMessage.itemId,
+            isStreaming: sourceMessage.isStreaming,
+            deliveryState: sourceMessage.deliveryState,
+            attachments: sourceMessage.attachments,
+            planState: sourceMessage.planState,
+            planPresentation: sourceMessage.planPresentation,
+            proposedPlan: sourceMessage.proposedPlan,
+            subagentAction: sourceMessage.subagentAction,
+            structuredUserInputRequest: sourceMessage.structuredUserInputRequest,
+            orderIndex: sourceMessage.orderIndex
+        )
+
+        if sourceMessages.isEmpty {
+            messagesByThread.removeValue(forKey: normalizedSourceThreadID)
+        } else {
+            messagesByThread[normalizedSourceThreadID] = sourceMessages
+        }
+
+        var targetMessages = messagesByThread[normalizedTargetThreadID] ?? []
+        targetMessages.removeAll { $0.id == movedMessage.id }
+        targetMessages.append(movedMessage)
+        targetMessages.sort(by: { $0.orderIndex < $1.orderIndex })
+        messagesByThread[normalizedTargetThreadID] = targetMessages
+        messageIndexCacheByThread[normalizedSourceThreadID] = nil
+        messageIndexCacheByThread[normalizedTargetThreadID] = nil
+        persistMessages()
+        updateCurrentOutput(for: normalizedSourceThreadID)
+        updateCurrentOutput(for: normalizedTargetThreadID)
+        return CodexPreAppendedTurnMessage(
+            messageID: messageID,
+            automaticTitleSeed: automaticTitleSeed
+        )
+    }
+
+    // Removes the optimistic row by id first because structured mention-only rows may not match raw composer text.
+    private func removePreResumePendingUserMessage(
+        threadId: String,
+        messageId: String,
+        matchingText: String,
+        matchingAttachments: [CodexImageAttachment]
+    ) {
+        if removeUserMessage(threadId: threadId, messageId: messageId) {
+            return
+        }
+
+        markMessageDeliveryState(threadId: threadId, messageId: messageId, state: .failed)
+        removeLatestFailedUserMessage(
+            threadId: threadId,
+            matchingText: matchingText,
+            matchingAttachments: matchingAttachments
+        )
+    }
+
+    // Requests interruption for the active turn.
+    func interruptTurn(turnId: String?, threadId: String? = nil) async throws {
+        let normalizedThreadID = normalizedInterruptIdentifier(threadId)
+            ?? normalizedInterruptIdentifier(activeThreadId)
+
+        var normalizedTurnID = normalizedInterruptIdentifier(turnId)
+        if normalizedTurnID == nil,
+           let normalizedThreadID {
+            normalizedTurnID = normalizedInterruptIdentifier(activeTurnIdByThread[normalizedThreadID])
+        }
+        if normalizedTurnID == nil {
+            normalizedTurnID = normalizedInterruptIdentifier(activeTurnId)
+        }
+        if normalizedTurnID == nil,
+           let normalizedThreadID {
+            do {
+                normalizedTurnID = try await resolveInFlightTurnID(threadId: normalizedThreadID)
+            } catch {
+                if let serviceError = error as? CodexServiceError,
+                   case .invalidInput(_) = serviceError,
+                   protectedRunningFallbackThreadIDs.contains(normalizedThreadID),
+                   activeTurnID(for: normalizedThreadID) == nil {
+                    demoteVisibleRunningStateToProtectedFallback(for: normalizedThreadID)
+                }
+                lastErrorMessage = userFacingTurnErrorMessageForFooter(from: error)
+                throw error
+            }
+        }
+
+        // A synthetic placeholder id would be rejected by the app-server; resolve
+        // the real in-flight turn id first and keep the placeholder only as a
+        // last resort (the refresh-retry below still covers that path).
+        if let placeholderTurnID = normalizedTurnID,
+           Self.isSyntheticPlaceholderTurnID(placeholderTurnID),
+           let placeholderThreadID = normalizedThreadID
+                ?? threadIdByTurnID[placeholderTurnID]
+                ?? normalizedInterruptIdentifier(activeThreadId),
+           let refreshedTurnID = try? await resolveInFlightTurnID(threadId: placeholderThreadID),
+           let refreshedNormalizedTurnID = normalizedInterruptIdentifier(refreshedTurnID),
+           !Self.isSyntheticPlaceholderTurnID(refreshedNormalizedTurnID) {
+            normalizedTurnID = refreshedNormalizedTurnID
+            setActiveTurnID(refreshedNormalizedTurnID, for: placeholderThreadID)
+        }
+
+        guard let normalizedTurnID else {
+            throw CodexServiceError.invalidInput("turn/interrupt requires a non-empty turnId")
+        }
+        var latestAttemptedTurnID = normalizedTurnID
+
+        let resolvedThreadID = normalizedThreadID
+            ?? threadIdByTurnID[normalizedTurnID]
+            ?? normalizedInterruptIdentifier(activeThreadId)
+        if let resolvedThreadID {
+            threadIdByTurnID[normalizedTurnID] = resolvedThreadID
+        }
+
+        do {
+            try await sendInterruptRequest(
+                turnId: normalizedTurnID,
+                threadId: resolvedThreadID,
+                useSnakeCaseParams: false
+            )
+            lastErrorMessage = nil
+            return
+        } catch {
+            var finalError: Error = error
+
+            if shouldRetryInterruptWithSnakeCaseParams(error) {
+                do {
+                    try await sendInterruptRequest(
+                        turnId: normalizedTurnID,
+                        threadId: resolvedThreadID,
+                        useSnakeCaseParams: true
+                    )
+                    lastErrorMessage = nil
+                    return
+                } catch {
+                    finalError = error
+                }
+            }
+
+            if let resolvedThreadID,
+               shouldRetryInterruptWithRefreshedTurnID(finalError) {
+                do {
+                    if let refreshedTurnID = try await resolveInFlightTurnID(threadId: resolvedThreadID),
+                       refreshedTurnID != normalizedTurnID {
+                        latestAttemptedTurnID = refreshedTurnID
+                        do {
+                            try await sendInterruptRequest(
+                                turnId: refreshedTurnID,
+                                threadId: resolvedThreadID,
+                                useSnakeCaseParams: false
+                            )
+                            setActiveTurnID(refreshedTurnID, for: resolvedThreadID)
+                            threadIdByTurnID[refreshedTurnID] = resolvedThreadID
+                            lastErrorMessage = nil
+                            return
+                        } catch {
+                            finalError = error
+                            if shouldRetryInterruptWithSnakeCaseParams(error) {
+                                do {
+                                    try await sendInterruptRequest(
+                                        turnId: refreshedTurnID,
+                                        threadId: resolvedThreadID,
+                                        useSnakeCaseParams: true
+                                    )
+                                    setActiveTurnID(refreshedTurnID, for: resolvedThreadID)
+                                    threadIdByTurnID[refreshedTurnID] = resolvedThreadID
+                                    lastErrorMessage = nil
+                                    return
+                                } catch {
+                                    finalError = error
+                                }
+                            }
+                        }
+                    }
+                } catch {
+                    let refreshResolution = staleInterruptResolution(for: error)
+                    if refreshResolution == .startingWithoutTurnID {
+                        preserveStartingRunAfterStaleInterrupt(
+                            threadId: resolvedThreadID,
+                            staleTurnId: latestAttemptedTurnID
+                        )
+                        lastErrorMessage = userFacingTurnErrorMessageForFooter(from: error)
+                        throw error
+                    }
+                    if staleInterruptResolution(for: finalError) == .none {
+                        finalError = error
+                    }
+                }
+            }
+
+            let staleResolution = staleInterruptResolution(for: finalError)
+            if let resolvedThreadID,
+               staleResolution.shouldClearRunningState {
+                clearRunningStateAfterStaleInterrupt(
+                    threadId: resolvedThreadID,
+                    turnId: latestAttemptedTurnID,
+                    resolution: staleResolution
+                )
+                lastErrorMessage = nil
+                return
+            }
+
+            lastErrorMessage = userFacingTurnErrorMessageForFooter(from: finalError)
+            throw finalError
+        }
+    }
+
+    // Interrupts every active or protected run before switching to a different Mac context.
+    func interruptAllRunningTurnsBeforeMacSwitch() async throws {
+        let candidateThreadIDs = runningThreadIDs
+            .union(protectedRunningFallbackThreadIDs)
+            .union(activeTurnIdByThread.keys)
+            .sorted()
+
+        for threadID in candidateThreadIDs {
+            try await interruptTurn(turnId: nil, threadId: threadID)
+        }
+    }
+
+    // Queries server-side fuzzy file search using stable RPC (non-experimental).
+    func fuzzyFileSearch(
+        query: String,
+        roots: [String],
+        cancellationToken: String?
+    ) async throws -> [CodexFuzzyFileMatch] {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
+            return []
+        }
+
+        let normalizedRoots = roots
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !normalizedRoots.isEmpty else {
+            return []
+        }
+
+        let normalizedToken = cancellationToken?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let tokenValue = (normalizedToken?.isEmpty == false) ? normalizedToken : nil
+
+        let params: JSONValue = .object([
+            "query": .string(normalizedQuery),
+            "roots": .array(normalizedRoots.map { .string($0) }),
+            "cancellationToken": tokenValue.map(JSONValue.string) ?? .null,
+        ])
+
+        let response = try await sendRequest(method: "fuzzyFileSearch", params: params)
+
+        guard let decodedFiles = decodeFuzzyFileMatches(from: response.result) else {
+            throw CodexServiceError.invalidResponse("fuzzyFileSearch response missing result.files")
+        }
+
+        return decodedFiles.map { match in
+            let normalizedPath = normalizeFuzzyFilePath(path: match.path, root: match.root)
+            return CodexFuzzyFileMatch(
+                root: match.root,
+                path: normalizedPath,
+                fileName: match.fileName,
+                score: match.score,
+                indices: match.indices
+            )
+        }
+    }
+
+    // Loads available skills for one or more roots with shape-fallback compatibility.
+    func listSkills(
+        cwds: [String]?,
+        forceReload: Bool = false
+    ) async throws -> [CodexSkillMetadata] {
+        let normalizedCwds = (cwds ?? [])
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        var paramsObject: RPCObject = [:]
+        if !normalizedCwds.isEmpty {
+            paramsObject["cwds"] = .array(normalizedCwds.map { .string($0) })
+        }
+        if forceReload {
+            paramsObject["forceReload"] = .bool(true)
+        }
+
+        let response: RPCMessage
+        do {
+            response = try await sendRequest(method: "skills/list", params: .object(paramsObject))
+        } catch {
+            guard !normalizedCwds.isEmpty,
+                  shouldRetrySkillsListWithCwdFallback(error) else {
+                throw error
+            }
+
+            var fallbackParams: RPCObject = ["cwd": .string(normalizedCwds[0])]
+            if forceReload {
+                fallbackParams["forceReload"] = .bool(true)
+            }
+            response = try await sendRequest(method: "skills/list", params: .object(fallbackParams))
+        }
+
+        guard let decodedSkills = decodeSkillMetadata(from: response.result) else {
+            throw CodexServiceError.invalidResponse("skills/list response missing result.data[].skills")
+        }
+
+        var allSkills = decodedSkills
+        if !normalizedCwds.isEmpty {
+            var globalParams: RPCObject = [:]
+            if forceReload {
+                globalParams["forceReload"] = .bool(true)
+            }
+            // Some runtimes return only cwd-scoped skills when `cwds` is present; merge the
+            // global list so personal skills remain discoverable from project threads.
+            if let globalResponse = try? await sendRequest(method: "skills/list", params: .object(globalParams)),
+               let globalSkills = decodeSkillMetadata(from: globalResponse.result) {
+                allSkills.append(contentsOf: globalSkills)
+            }
+        }
+
+        let dedupedByName = Dictionary(grouping: allSkills) { $0.normalizedName }
+            .compactMap { _, bucket -> CodexSkillMetadata? in
+                bucket.first(where: { $0.enabled }) ?? bucket.first
+            }
+            .filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        return dedupedByName
+    }
+
+    // Loads Codex app-server plugins and returns entries usable as `@plugin` mentions.
+    func listPlugins(
+        cwds: [String]?,
+        forceReload: Bool = false
+    ) async throws -> [CodexPluginMetadata] {
+        let normalizedCwds = (cwds ?? [])
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        var paramsObject: RPCObject = [:]
+        if !normalizedCwds.isEmpty {
+            paramsObject["cwds"] = .array(normalizedCwds.map { .string($0) })
+        }
+        if forceReload {
+            paramsObject["forceReload"] = .bool(true)
+        }
+
+        let response = try await sendRequest(method: "plugin/list", params: .object(paramsObject))
+
+        guard let decodedPlugins = decodePluginMetadata(from: response.result) else {
+            throw CodexServiceError.invalidResponse("plugin/list response missing result.marketplaces[].plugins")
+        }
+
+        let mentionablePlugins = decodedPlugins.filter(\.isAvailableForMention)
+        let dedupedByPath = Dictionary(grouping: mentionablePlugins) { $0.mentionPath }
+            .compactMap { _, bucket -> CodexPluginMetadata? in
+                bucket.first
+            }
+            .filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .sorted { $0.displayTitle.localizedCaseInsensitiveCompare($1.displayTitle) == .orderedAscending }
+
+        return dedupedByPath
+    }
+
+    // Accepts the latest pending approval request.
+    func approvePendingRequest(_ request: CodexApprovalRequest, forSession: Bool = false) async throws {
+        let requestKey = request.id
+        guard pendingApprovals.contains(where: { $0.id == requestKey }) else {
+            throw CodexServiceError.noPendingApproval
+        }
+
+        try await sendResponse(
+            id: request.requestID,
+            result: approvalResponseResult(for: request, decision: "accept", forSession: forSession)
+        )
+        removePendingApproval(requestID: request.requestID)
+    }
+
+    // Accepts the next pending approval request, optionally scoped to a thread.
+    func approvePendingRequest(forThread threadId: String? = nil, forSession: Bool = false) async throws {
+        guard let request = pendingApproval(for: threadId) else {
+            throw CodexServiceError.noPendingApproval
+        }
+
+        try await approvePendingRequest(request, forSession: forSession)
+    }
+
+    // Declines the latest pending approval request.
+    func declinePendingRequest(_ request: CodexApprovalRequest) async throws {
+        let requestKey = request.id
+        guard pendingApprovals.contains(where: { $0.id == requestKey }) else {
+            throw CodexServiceError.noPendingApproval
+        }
+
+        try await sendResponse(
+            id: request.requestID,
+            result: approvalResponseResult(for: request, decision: "decline")
+        )
+        removePendingApproval(requestID: request.requestID)
+    }
+
+    // Declines the next pending approval request, optionally scoped to a thread.
+    func declinePendingRequest(forThread threadId: String? = nil) async throws {
+        guard let request = pendingApproval(for: threadId) else {
+            throw CodexServiceError.noPendingApproval
+        }
+
+        try await declinePendingRequest(request)
+    }
+
+    // Responds to item/tool/requestUserInput using the exact app-server answer envelope.
+    func respondToStructuredUserInput(
+        requestID: JSONValue,
+        answersByQuestionID: [String: [String]]
+    ) async throws {
+        try await sendResponse(
+            id: requestID,
+            result: buildStructuredUserInputResponse(answersByQuestionID: answersByQuestionID)
+        )
+    }
+
+    func buildStructuredUserInputResponse(
+        answersByQuestionID: [String: [String]]
+    ) -> JSONValue {
+        let answersObject = answersByQuestionID.reduce(into: RPCObject()) { result, entry in
+            let filteredAnswers = entry.value
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            result[entry.key] = .object([
+                "answers": .array(filteredAnswers.map(JSONValue.string)),
+            ])
+        }
+
+        return .object([
+            "answers": .object(answersObject),
+        ])
+    }
+
+    // Interrupts the active plan turn, only tearing down local prompt/session state once it is safe.
+    func cancelStructuredPlanSession(
+        requestID _: JSONValue,
+        turnId: String?,
+        threadId: String
+    ) async throws {
+        do {
+            try await interruptTurn(turnId: turnId, threadId: threadId)
+            removeAllStructuredUserInputPrompts(threadId: threadId)
+            resetPlanSessionState(for: threadId)
+        } catch let error as CodexServiceError {
+            if case .invalidInput = error {
+                removeAllStructuredUserInputPrompts(threadId: threadId)
+                resetPlanSessionState(for: threadId)
+                return
+            }
+            throw error
+        }
+    }
+
+    // Falls back to a normal plan-mode user reply when the runtime asked clarifying
+    // questions in plain text instead of emitting `item/tool/requestUserInput`.
+    func submitInferredPlanQuestionnaireResponse(
+        threadId: String,
+        questions: [CodexStructuredUserInputQuestion],
+        answersByQuestionID: [String: [String]]
+    ) async throws {
+        let userInput = inferredPlanQuestionnaireResponseText(
+            questions: questions,
+            answersByQuestionID: answersByQuestionID
+        )
+        guard !userInput.isEmpty else {
+            throw CodexServiceError.invalidInput("Questionnaire answers cannot be empty")
+        }
+
+        let normalizedThreadID = normalizedInterruptIdentifier(threadId) ?? threadId
+        if shouldCommitInferredPlanQuestionnaireFallback(for: normalizedThreadID) {
+            markCompatibilityPlanFallback(for: normalizedThreadID)
+        }
+
+        var expectedTurnID = activeTurnID(for: normalizedThreadID)
+        if expectedTurnID == nil {
+            do {
+                expectedTurnID = try await resolveInFlightTurnID(threadId: normalizedThreadID)
+            } catch {
+                if let serviceError = error as? CodexServiceError,
+                   case .invalidInput(_) = serviceError {
+                    expectedTurnID = nil
+                } else {
+                    throw error
+                }
+            }
+        }
+
+        if let expectedTurnID {
+            try await steerTurn(
+                userInput: userInput,
+                threadId: normalizedThreadID,
+                expectedTurnId: expectedTurnID,
+                shouldAppendUserMessage: true,
+                collaborationMode: .plan
+            )
+            return
+        }
+
+        try await startTurn(
+            userInput: userInput,
+            threadId: normalizedThreadID,
+            shouldAppendUserMessage: true,
+            collaborationMode: .plan,
+            preservePlanSessionState: true
+        )
+    }
+
+    func inferredPlanQuestionnaireResponseText(
+        questions: [CodexStructuredUserInputQuestion],
+        answersByQuestionID: [String: [String]]
+    ) -> String {
+        let sections = questions.enumerated().compactMap { index, question -> String? in
+            let answers = (answersByQuestionID[question.id] ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            guard !answers.isEmpty else {
+                return nil
+            }
+
+            let prompt = question.trimmedPrompt
+            if answers.count == 1 {
+                return "\(index + 1). \(prompt)\n\(answers[0])"
+            }
+
+            let answerLines = answers.map { "- \($0)" }.joined(separator: "\n")
+            return "\(index + 1). \(prompt)\n\(answerLines)"
+        }
+
+        guard !sections.isEmpty else {
+            return ""
+        }
+
+        return """
+        Answers:
+
+        \(sections.joined(separator: "\n\n"))
+        """
+    }
+}
+
+private extension CodexService {
+    @discardableResult
+    func removePendingApproval(id requestID: String) -> CodexApprovalRequest? {
+        guard let exactIndex = pendingApprovals.firstIndex(where: { $0.id == requestID }) else {
+            return nil
+        }
+
+        return pendingApprovals.remove(at: exactIndex)
+    }
+
+    func normalizedApprovalThreadIdentifier(_ rawValue: String?) -> String? {
+        guard let rawValue else {
+            return nil
+        }
+
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+enum CodexThreadStartProjectBinding {
+    // Normalizes project paths before sending them to thread/start.
+    static func normalizedProjectPath(_ rawValue: String?) -> String? {
+        CodexThread.normalizedFilesystemProjectPath(rawValue)
+    }
+
+    static func makeThreadStartParams(
+        modelIdentifier: String?,
+        preferredProjectPath: String?,
+        serviceTier: String?
+    ) -> RPCObject {
+        var params: RPCObject = [:]
+
+        if let modelIdentifier {
+            params["model"] = .string(modelIdentifier)
+        }
+
+        if let preferredProjectPath {
+            params["cwd"] = .string(preferredProjectPath)
+        }
+
+        if let serviceTier {
+            params["serviceTier"] = .string(serviceTier)
+        }
+
+        return params
+    }
+
+    // Treats the requested cwd as authoritative for newly-created chats so a
+    // stale app-server process cwd cannot leak into sidebar project grouping.
+    static func applyPreferredProjectBinding(to thread: CodexThread, preferredProjectPath: String?) -> CodexThread {
+        guard let preferredProjectPath,
+              thread.normalizedProjectPath != preferredProjectPath else {
+            return thread
+        }
+
+        var patchedThread = thread
+        patchedThread.cwd = preferredProjectPath
+        return patchedThread
+    }
+
+    static func applyPreferredProjectFallback(to thread: CodexThread, preferredProjectPath: String?) -> CodexThread {
+        applyPreferredProjectBinding(to: thread, preferredProjectPath: preferredProjectPath)
+    }
+}
+
+extension CodexService {
+    // Reuses an in-flight thread/list request for matching caps so launch sync and sidebar refresh share one RPC.
+    func fetchCoalescedServerThreads(limit: Int) async throws -> [CodexThread] {
+        if let existingFetch = threadListFetchTaskByLimit[limit] {
+            return try await existingFetch.task.value
+        }
+
+        let fetchID = UUID()
+        let task = Task { @MainActor in
+            defer {
+                if threadListFetchTaskByLimit[limit]?.id == fetchID {
+                    threadListFetchTaskByLimit[limit] = nil
+                }
+            }
+            return try await fetchServerThreads(limit: limit)
+        }
+        threadListFetchTaskByLimit[limit] = (id: fetchID, task: task)
+
+        return try await task.value
+    }
+
+    func fetchServerThreads(
+        limit: Int? = nil,
+        onPage: ((_ page: [CodexThread], _ accumulatedThreads: [CodexThread]) -> Void)? = nil
+    ) async throws -> [CodexThread] {
+        var allThreads: [CodexThread] = []
+        var nextCursor: JSONValue = .null
+        var hasRequestedFirstPage = false
+
+        repeat {
+            var params: RPCObject = [
+                // Avoid the server's narrower default sourceKinds so multi-project history
+                // includes threads started from the app-server flow as well.
+                "sourceKinds": .array(threadListSourceKinds.map(JSONValue.string)),
+                "cursor": nextCursor,
+            ]
+            if let limit {
+                params["limit"] = .integer(limit)
+            }
+
+            let response = try await sendRequest(
+                method: "thread/list",
+                params: .object(params),
+                timeoutNanoseconds: ThreadListHydrationPolicy.requestTimeoutNanoseconds,
+                timeoutMessage: "thread/list timed out while syncing chats."
+            )
+
+            guard let resultObject = response.result?.objectValue else {
+                throw CodexServiceError.invalidResponse("thread/list response missing payload")
+            }
+
+            let page =
+                resultObject["data"]?.arrayValue
+                ?? resultObject["items"]?.arrayValue
+                ?? resultObject["threads"]?.arrayValue
+            guard let page else {
+                throw CodexServiceError.invalidResponse("thread/list response missing data array")
+            }
+
+            let decodedPage = page.compactMap { decodeModel(CodexThread.self, from: $0) }
+            allThreads.append(contentsOf: decodedPage)
+            onPage?(decodedPage, allThreads)
+            nextCursor = nextThreadListCursor(from: resultObject)
+            hasRequestedFirstPage = true
+        } while shouldContinueThreadListPagination(
+            nextCursor: nextCursor,
+            limit: limit,
+            hasRequestedFirstPage: hasRequestedFirstPage
+        )
+
+        return allThreads
+    }
+
+    // Requests all user-facing thread sources instead of relying on the server default.
+    private var threadListSourceKinds: [String] {
+        [
+            "cli",
+            "vscode",
+            "appServer",
+            "exec",
+            "unknown",
+        ]
+    }
+
+    // Accepts both modern and legacy cursor field names from thread/list responses.
+    private func nextThreadListCursor(from resultObject: RPCObject) -> JSONValue {
+        if let nextCursor = resultObject["nextCursor"] {
+            return nextCursor
+        }
+        if let nextCursor = resultObject["next_cursor"] {
+            return nextCursor
+        }
+        return .null
+    }
+
+    // Paginates until the server reports no cursor or the caller requested a capped page.
+    private func shouldContinueThreadListPagination(
+        nextCursor: JSONValue,
+        limit: Int?,
+        hasRequestedFirstPage: Bool
+    ) -> Bool {
+        guard hasRequestedFirstPage, limit == nil else {
+            return false
+        }
+
+        switch nextCursor {
+        case .null:
+            return false
+        case let .string(value):
+            return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        default:
+            return true
+        }
+    }
+
+    func createContinuationThread(from archivedThreadId: String) async throws -> CodexThread {
+        let continuationRuntimeOverride = threadRuntimeOverride(for: archivedThreadId)
+        let continuationThread = try await startThread(runtimeOverride: continuationRuntimeOverride)
+        appendSystemMessage(
+            threadId: continuationThread.id,
+            text: "Continued from archived thread `\(archivedThreadId)`"
+        )
+        return continuationThread
+    }
+
+    @discardableResult
+    func ensureThreadResumed(
+        threadId: String,
+        force: Bool = false,
+        preferredProjectPath: String? = nil,
+        modelIdentifierOverride: String? = nil,
+        accessConfigurationOverride: RuntimeAccessConfiguration? = nil
+    ) async throws -> CodexThread? {
+        guard !threadId.isEmpty else {
+            return nil
+        }
+
+        if force {
+            forcedResumeEscalationThreadIDs.insert(threadId)
+        }
+        if !force, resumedThreadIDs.contains(threadId) {
+            return thread(for: threadId)
+        }
+        let requestedSignature = CodexThreadResumeRequestSignature(
+            projectPath: CodexThreadStartProjectBinding.normalizedProjectPath(preferredProjectPath)
+                ?? thread(for: threadId)?.gitWorkingDirectory,
+            modelIdentifier: modelIdentifierOverride ?? runtimeModelIdentifierForTurn(threadId: threadId),
+            accessConfiguration: accessConfigurationOverride ?? runtimeAccessConfiguration(threadId: threadId)
+        )
+        let refreshGeneration = currentPerThreadRefreshGeneration(for: threadId)
+        if let existingTask = threadResumeTaskByThreadID[threadId] {
+            if threadResumeRequestSignatureByThreadID[threadId] == requestedSignature {
+                return try await existingTask.value
+            }
+
+            _ = try await existingTask.value
+            return try await ensureThreadResumed(
+                threadId: threadId,
+                force: force,
+                preferredProjectPath: preferredProjectPath,
+                modelIdentifierOverride: modelIdentifierOverride,
+                accessConfigurationOverride: accessConfigurationOverride
+            )
+        }
+
+        let task = Task<CodexThread?, Error> { @MainActor in
+            defer {
+                // Ignore stale refreshes so an older task cannot clear newer state.
+                if isPerThreadRefreshCurrent(for: threadId, generation: refreshGeneration) {
+                    threadResumeTaskByThreadID.removeValue(forKey: threadId)
+                    threadResumeRequestSignatureByThreadID.removeValue(forKey: threadId)
+                    forcedResumeEscalationThreadIDs.remove(threadId)
+                }
+            }
+
+            var params: RPCObject = [
+                "threadId": .string(threadId),
+            ]
+            let resolvedProjectPath = requestedSignature.projectPath
+            if let workingDirectory = resolvedProjectPath {
+                params["cwd"] = .string(workingDirectory)
+            }
+            if let modelIdentifier = requestedSignature.modelIdentifier {
+                params["model"] = .string(modelIdentifier)
+            }
+            if supportsTurnPagination {
+                params["excludeTurns"] = .bool(true)
+            }
+            var didRequestExcludedTurns = params["excludeTurns"] != nil
+            let response: RPCMessage
+            do {
+                response = try await sendRequestWithSandboxFallback(
+                    method: "thread/resume",
+                    baseParams: params,
+                    accessConfiguration: requestedSignature.accessConfiguration
+                )
+            } catch {
+                guard didRequestExcludedTurns, consumeUnsupportedTurnPagination(error) else {
+                    throw error
+                }
+
+                params.removeValue(forKey: "excludeTurns")
+                didRequestExcludedTurns = false
+                response = try await sendRequestWithSandboxFallback(
+                    method: "thread/resume",
+                    baseParams: params,
+                    accessConfiguration: requestedSignature.accessConfiguration
+                )
+            }
+            try validateAppliedAccessConfiguration(
+                in: response,
+                expected: requestedSignature.accessConfiguration,
+                context: "thread/resume"
+            )
+            guard !Task.isCancelled,
+                  isPerThreadRefreshCurrent(for: threadId, generation: refreshGeneration) else {
+                throw CancellationError()
+            }
+
+            guard let resultObject = response.result?.objectValue else {
+                resumedThreadIDs.insert(threadId)
+                return nil
+            }
+
+            var resumedThread: CodexThread?
+            var didReceiveEmbeddedHistory = false
+            if let threadValue = resultObject["thread"],
+               var decodedThread = decodeModel(CodexThread.self, from: threadValue) {
+                decodedThread.syncState = .live
+                upsertThread(decodedThread, treatAsServerState: true)
+                resumedThread = decodedThread
+
+                if let threadObject = threadValue.objectValue {
+                    if didRequestExcludedTurns,
+                       threadObject["turns"]?.arrayValue?.isEmpty == false {
+                        markTurnPaginationUnsupportedForCurrentRuntime()
+                        didRequestExcludedTurns = false
+                    }
+                    let historyMessages = decodeMessagesFromThreadRead(threadId: threadId, threadObject: threadObject)
+                    registerSubagentThreads(from: historyMessages, parentThreadId: threadId)
+                    if !historyMessages.isEmpty {
+                        didReceiveEmbeddedHistory = true
+                        initialTurnsLoadedByThreadID.insert(threadId)
+                        updateThreadTimelineProjectionForEmbeddedHistory(
+                            threadId: threadId,
+                            decodedMessageCount: historyMessages.count
+                        )
+                        let existingMessages = messagesByThread[threadId] ?? []
+                        let activeThreadIDs = Set(activeTurnIdByThread.keys)
+                        let activeTurnIDs = Set(activeTurnIdByThread.values)
+                        let runningIDs = runningThreadIDs
+                        let usedRecentWindow = threadHasActiveOrRunningTurn(threadId)
+                            && Self.shouldPreferRecentHistoryWindow(
+                                existingCount: existingMessages.count,
+                                historyCount: historyMessages.count
+                            )
+                        if !usedRecentWindow {
+                            markThreadLocalHistoryStartAuthoritative(threadId, clearRemoteCursor: true)
+                        }
+                        if usedRecentWindow {
+                            markThreadNeedingCanonicalHistoryReconcile(threadId)
+                        }
+                        let merged = try await mergeHistoryMessagesOffMainActor(
+                            existing: existingMessages,
+                            history: historyMessages,
+                            activeThreadIDs: activeThreadIDs,
+                            activeTurnIDs: activeTurnIDs,
+                            runningThreadIDs: runningIDs,
+                            preferRecentWindow: usedRecentWindow
+                        )
+                        guard !Task.isCancelled,
+                              isPerThreadRefreshCurrent(for: threadId, generation: refreshGeneration) else {
+                            throw CancellationError()
+                        }
+                        let shouldForceMerge = force || forcedResumeEscalationThreadIDs.contains(threadId)
+                        // Forced resumes are used when reopening a running thread, so merge the
+                        // latest snapshot even mid-run and let mergeHistoryMessages preserve
+                        // existing streaming rows instead of waiting for the final block.
+                        if (shouldForceMerge || !threadHasActiveOrRunningTurn(threadId) || existingMessages.isEmpty)
+                            && merged != existingMessages {
+                            messagesByThread[threadId] = merged
+                            persistMessages()
+                            updateCurrentOutput(for: threadId)
+                        }
+                        if usedRecentWindow, !threadHasActiveOrRunningTurn(threadId) {
+                            scheduleCanonicalHistoryReconcileIfNeeded(for: threadId)
+                        } else if !threadHasActiveOrRunningTurn(threadId) {
+                            markThreadCanonicalHistoryReconciled(threadId)
+                        }
+                    }
+                }
+            } else if let index = threadIndex(for: threadId) {
+                threads[index].syncState = .live
+            }
+
+            guard !Task.isCancelled,
+                  isPerThreadRefreshCurrent(for: threadId, generation: refreshGeneration) else {
+                throw CancellationError()
+            }
+            if !didRequestExcludedTurns || didReceiveEmbeddedHistory {
+                hydratedThreadIDs.insert(threadId)
+                if !supportsTurnPagination {
+                    initialTurnsLoadedByThreadID.insert(threadId)
+                }
+            }
+            resumedThreadIDs.insert(threadId)
+            return resumedThread
+        }
+
+        threadResumeTaskByThreadID[threadId] = task
+        threadResumeRequestSignatureByThreadID[threadId] = requestedSignature
+        return try await task.value
+    }
+
+    func isThreadMissingOnServer(_ threadId: String) async -> Bool {
+        let params: JSONValue = .object([
+            "threadId": .string(threadId),
+            "includeTurns": .bool(false),
+        ])
+
+        do {
+            _ = try await sendRequest(method: "thread/read", params: params)
+            return false
+        } catch {
+            return shouldTreatAsThreadNotFound(error)
+        }
+    }
+
+    // Rebuilds active turn/running state from server truth after reconnect/background transitions.
+    // Returns false when the snapshot could not be refreshed, so callers can fall back to history sync.
+    func refreshInFlightTurnState(threadId: String) async -> Bool {
+        let normalizedThreadID = normalizedInterruptIdentifier(threadId)
+        guard let normalizedThreadID,
+              isConnected,
+              isInitialized else {
+            return false
+        }
+
+        let refreshGeneration = currentPerThreadRefreshGeneration(for: normalizedThreadID)
+        if let existingTask = turnStateRefreshTaskByThreadID[normalizedThreadID] {
+            return await existingTask.value
+        }
+
+        let task = Task<Bool, Never> { @MainActor in
+            defer {
+                if isPerThreadRefreshCurrent(for: normalizedThreadID, generation: refreshGeneration) {
+                    turnStateRefreshTaskByThreadID.removeValue(forKey: normalizedThreadID)
+                }
+            }
+
+            do {
+                let snapshot = try await readThreadTurnStateSnapshot(threadId: normalizedThreadID)
+                guard !Task.isCancelled,
+                      isPerThreadRefreshCurrent(for: normalizedThreadID, generation: refreshGeneration) else {
+                    return false
+                }
+
+                if let runningTurnID = snapshot.interruptibleTurnID,
+                   turnTerminalState(for: runningTurnID, threadId: normalizedThreadID) != nil {
+                    let currentActiveTurnID = activeTurnID(for: normalizedThreadID)
+                    let isStaleDesktopCandidateForDifferentActiveTurn = currentActiveTurnID != nil
+                        && currentActiveTurnID != runningTurnID
+                        && (CodexSyntheticIdentifiers.isProjectedDesktopTurnID(runningTurnID)
+                            || isDesktopMirroredRunning(normalizedThreadID))
+                    // A stale Litter/app-server probe can still report completed A
+                    // after live mirroring has already promoted B. Recognizing A as
+                    // terminal must not tear down the different, newer active turn.
+                    if isStaleDesktopCandidateForDifferentActiveTurn {
+                        return true
+                    }
+                    clearRunningState(for: normalizedThreadID)
+                    setProtectedRunningFallback(false, for: normalizedThreadID)
+                    if let existingTurnID = currentActiveTurnID {
+                        setActiveTurnID(nil, for: normalizedThreadID)
+                        if threadIdByTurnID[existingTurnID] == normalizedThreadID {
+                            threadIdByTurnID.removeValue(forKey: existingTurnID)
+                        }
+                        if activeTurnId == existingTurnID {
+                            activeTurnId = nil
+                        }
+                    }
+                    return true
+                }
+
+                if let runningTurnID = snapshot.interruptibleTurnID {
+                    markThreadAsRunning(normalizedThreadID)
+                    noteDesktopMirroredRunningActivity(for: normalizedThreadID)
+                    setProtectedRunningFallback(false, for: normalizedThreadID)
+                    setActiveTurnID(runningTurnID, for: normalizedThreadID)
+                    threadIdByTurnID[runningTurnID] = normalizedThreadID
+                    activeTurnId = runningTurnID
+                    return true
+                }
+
+                if snapshot.hasInterruptibleTurnWithoutID {
+                    markThreadAsRunning(normalizedThreadID)
+                    noteDesktopMirroredRunningActivity(for: normalizedThreadID)
+                    setProtectedRunningFallback(true, for: normalizedThreadID)
+                } else {
+                    let existingTurnID = activeTurnID(for: normalizedThreadID)
+                    let latestTurnClosesExistingRun = existingTurnID != nil
+                        && snapshot.latestTurnID == existingTurnID
+                    if latestTurnClosesExistingRun {
+                        clearRunningState(for: normalizedThreadID)
+                    } else if isDesktopMirroredRunning(normalizedThreadID),
+                       threadHasActiveOrRunningTurn(normalizedThreadID),
+                       shouldPreserveDesktopMirroredRunningAfterStaleSnapshot(for: normalizedThreadID) {
+                        markThreadAsRunning(normalizedThreadID)
+                        if let existingTurnID {
+                            setProtectedRunningFallback(false, for: normalizedThreadID)
+                            threadIdByTurnID[existingTurnID] = normalizedThreadID
+                            activeTurnId = existingTurnID
+                        } else {
+                            setProtectedRunningFallback(true, for: normalizedThreadID)
+                        }
+                        return true
+                    }
+                    clearRunningState(for: normalizedThreadID)
+                }
+
+                if let existingTurnID = activeTurnID(for: normalizedThreadID) {
+                    setActiveTurnID(nil, for: normalizedThreadID)
+                    if threadIdByTurnID[existingTurnID] == normalizedThreadID {
+                        threadIdByTurnID.removeValue(forKey: existingTurnID)
+                    }
+                    if activeTurnId == existingTurnID {
+                        activeTurnId = nil
+                    }
+                }
+                return true
+            } catch {
+                debugSyncLog("in-flight turn refresh failed thread=\(normalizedThreadID): \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        turnStateRefreshTaskByThreadID[normalizedThreadID] = task
+        return await task.value
+    }
+
+    func sendTurnStart(
+        _ userInput: String,
+        attachments: [CodexImageAttachment] = [],
+        skillMentions: [CodexTurnSkillMention] = [],
+        mentionMentions: [CodexTurnMention] = [],
+        fileMentions: [String] = [],
+        to threadId: String,
+        shouldAppendUserMessage: Bool = true,
+        collaborationMode: CodexCollaborationModeKind? = nil,
+        preAppendedUserMessageID: String? = nil,
+        automaticTitleSeedOverride: String? = nil
+    ) async throws {
+        let outgoingDisplayText = displayTextForOutgoingTurn(
+            userInput: userInput,
+            skillMentions: skillMentions,
+            mentionMentions: mentionMentions
+        )
+        let automaticTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: automaticTitleSeedOverride,
+            shouldEvaluate: shouldAppendUserMessage,
+            userInput: outgoingDisplayText,
+            attachments: attachments,
+            threadId: threadId
+        )
+        let pendingMessageId: String
+        if let preAppendedUserMessageID,
+           !preAppendedUserMessageID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            pendingMessageId = preAppendedUserMessageID
+        } else if shouldAppendUserMessage {
+            pendingMessageId = appendUserMessage(
+                threadId: threadId,
+                text: outgoingDisplayText,
+                attachments: attachments,
+                fileMentions: fileMentions,
+                skillMentions: skillMentions.compactMap {
+                    let rawName = $0.name ?? $0.id
+                    let normalized = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return normalized.isEmpty ? nil : normalized
+                },
+                pluginMentions: mentionMentions.compactMap {
+                    let normalized = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return normalized.isEmpty ? nil : normalized
+                }
+            )
+        } else {
+            pendingMessageId = ""
+        }
+        activeThreadId = threadId
+        markThreadAsRunning(threadId)
+        setProtectedRunningFallback(true, for: threadId)
+        let messageStartCheckpointTask = scheduleMessageStartWorkspaceCheckpointIfPossible(
+            threadId: threadId,
+            messageId: pendingMessageId
+        )
+
+        var includeStructuredSkillItems = supportsStructuredSkillInput && !skillMentions.isEmpty
+        var includeStructuredMentionItems = supportsStructuredMentionInput && !mentionMentions.isEmpty
+        var imageURLKey = "url"
+        var effectiveCollaborationMode = supportsTurnCollaborationMode ? collaborationMode : nil
+        var didDowngradePlanModeForRuntime = false
+        var includesServiceTier = runtimeServiceTierForTurn(threadId: threadId) != nil
+        let accessConfiguration = runtimeAccessConfiguration(threadId: threadId)
+
+        if collaborationMode != nil, effectiveCollaborationMode == nil {
+            debugRuntimeLog(
+                "turn/start dropping collaborationMode requested=\(collaborationMode?.rawValue ?? "") thread=\(threadId) supportsTurnCollaborationMode=\(supportsTurnCollaborationMode)"
+            )
+        }
+
+        while true {
+            do {
+                let requestParams = try buildTurnStartRequestParams(
+                    threadId: threadId,
+                    userInput: userInput,
+                    attachments: attachments,
+                    skillMentions: skillMentions,
+                    mentionMentions: mentionMentions,
+                    imageURLKey: imageURLKey,
+                    includeStructuredSkillItems: includeStructuredSkillItems,
+                    includeStructuredMentionItems: includeStructuredMentionItems,
+                    collaborationMode: effectiveCollaborationMode,
+                    includeServiceTier: includesServiceTier
+                )
+                // The pre-turn snapshot must settle before the runtime can mutate files.
+                if let messageStartCheckpointTask {
+                    await messageStartCheckpointTask.value
+                }
+                let response = try await sendRequestWithSandboxFallback(
+                    method: "turn/start",
+                    baseParams: requestParams,
+                    accessConfiguration: accessConfiguration
+                )
+                let resolvedTurnID = handleSuccessfulTurnStartResponse(
+                    response,
+                    pendingMessageId: pendingMessageId,
+                    threadId: threadId
+                )
+                if let resolvedTurnID {
+                    scheduleMessageStartWorkspaceCheckpointCopyIfPossible(
+                        threadId: threadId,
+                        messageId: pendingMessageId,
+                        turnId: resolvedTurnID
+                    )
+                }
+                scheduleAutomaticThreadTitleGenerationIfNeeded(
+                    seed: automaticTitleSeed,
+                    threadId: threadId,
+                    attachments: attachments
+                )
+                if didDowngradePlanModeForRuntime {
+                    appendSystemMessage(
+                        threadId: threadId,
+                        text: "Plan mode is not supported by this runtime. Sent as a normal turn instead."
+                    )
+                }
+                return
+            } catch {
+                if includeStructuredSkillItems,
+                   shouldRetryTurnStartWithoutSkillItems(error) {
+                    // Disable structured skill input for this runtime after first incompatibility signal.
+                    supportsStructuredSkillInput = false
+                    includeStructuredSkillItems = false
+                    continue
+                }
+
+                if includeStructuredMentionItems,
+                   shouldRetryTurnStartWithoutMentionItems(error) {
+                    supportsStructuredMentionInput = false
+                    includeStructuredMentionItems = false
+                    continue
+                }
+
+                if imageURLKey == "url",
+                   !attachments.isEmpty,
+                   shouldRetryTurnStartWithImageURLField(error) {
+                    imageURLKey = "image_url"
+                    continue
+                }
+
+                if effectiveCollaborationMode != nil,
+                   shouldRetryTurnStartWithoutCollaborationMode(error) {
+                    // Remember the runtime limitation so future plan-mode sends skip the rejected field.
+                    supportsTurnCollaborationMode = false
+                    clearPlanSessionIfRuntimeDowngraded(
+                        threadId: threadId,
+                        collaborationMode: effectiveCollaborationMode
+                    )
+                    effectiveCollaborationMode = nil
+                    didDowngradePlanModeForRuntime = true
+                    continue
+                }
+
+                if consumeUnsupportedServiceTier(error, includesServiceTier: &includesServiceTier) {
+                    continue
+                }
+
+                try handleTurnStartFailure(
+                    error,
+                    pendingMessageId: pendingMessageId,
+                    threadId: threadId
+                )
+                return
+            }
+        }
+    }
+
+    // Starts the app-server's manual context compaction turn for the selected thread.
+    func compactThread(_ threadId: String) async throws {
+        activeThreadId = threadId
+        markThreadAsRunning(threadId)
+        setProtectedRunningFallback(true, for: threadId)
+
+        do {
+            _ = try await sendRequest(
+                method: "thread/compact/start",
+                params: .object(["threadId": .string(threadId)])
+            )
+            lastErrorMessage = nil
+        } catch {
+            clearRunningState(for: threadId)
+            let errorMessage = userFacingTurnErrorMessage(from: error)
+            lastErrorMessage = errorMessage
+            appendSystemMessage(threadId: threadId, text: "Compact error: \(errorMessage)")
+            throw error
+        }
+    }
+
+    // Generates a compact first-turn title without blocking turn/start or overwriting user renames.
+    private func scheduleAutomaticThreadTitleGenerationIfNeeded(
+        seed: String?,
+        threadId: String,
+        attachments: [CodexImageAttachment]
+    ) {
+        guard let seed,
+              !seed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        let fallbackTitle = fallbackThreadTitle(from: seed)
+        let allowedTitles: Set<String> = [
+            CodexThread.defaultDisplayTitle,
+            "Conversation",
+            fallbackTitle,
+        ]
+        applyAutomaticThreadTitle(fallbackTitle, for: threadId, replacing: allowedTitles)
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard let generatedTitle = await self.generatedThreadTitleOrNil(
+                seed: seed,
+                threadId: threadId,
+                attachmentCount: attachments.count
+            ) else {
+                return
+            }
+
+            self.applyAutomaticThreadTitle(
+                generatedTitle,
+                for: threadId,
+                replacing: allowedTitles
+            )
+        }
+    }
+
+    private func generatedThreadTitleOrNil(
+        seed: String,
+        threadId: String,
+        attachmentCount: Int
+    ) async -> String? {
+        var params: [String: JSONValue] = [
+            "message": .string(seed),
+            "attachmentCount": .integer(attachmentCount),
+        ]
+        if let model = gitWriterModelIdentifier(),
+           !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            params["model"] = .string(model)
+        }
+        if let workingDirectory = thread(for: threadId)?.gitWorkingDirectory,
+           !workingDirectory.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            params["cwd"] = .string(workingDirectory)
+        }
+
+        do {
+            let response = try await sendRequest(method: "thread/generateTitle", params: .object(params))
+            let title = response.result?.objectValue?["title"]?.stringValue?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return title?.isEmpty == false ? title : nil
+        } catch {
+            return nil
+        }
+    }
+
+    // Centralizes first-message title seeding so optimistic rows, moved draft rows,
+    // and direct turn starts all preserve the same overwrite rules.
+    private func resolvedAutomaticThreadTitleSeed(
+        override: String?,
+        shouldEvaluate: Bool,
+        userInput: String,
+        attachments: [CodexImageAttachment],
+        threadId: String
+    ) -> String? {
+        if let override {
+            return override
+        }
+        guard shouldEvaluate else {
+            return nil
+        }
+        return automaticThreadTitleSeedIfNeeded(
+            userInput: userInput,
+            attachments: attachments,
+            threadId: threadId
+        )
+    }
+
+    private func automaticThreadTitleSeedIfNeeded(
+        userInput: String,
+        attachments: [CodexImageAttachment],
+        threadId: String
+    ) -> String? {
+        guard persistedThreadRename(for: threadId) == nil,
+              let thread = thread(for: threadId),
+              CodexThread.isGenericPlaceholderTitle(thread.title) || thread.displayTitle == CodexThread.defaultDisplayTitle,
+              !hasExistingUserChatMessage(threadId: threadId) else {
+            return nil
+        }
+
+        let trimmedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedInput.isEmpty {
+            return trimmedInput
+        }
+        return attachments.isEmpty ? nil : "Image request"
+    }
+
+    private func hasExistingUserChatMessage(threadId: String) -> Bool {
+        (messagesByThread[threadId] ?? []).contains { message in
+            message.role == .user && message.kind == .chat
+        }
+    }
+
+    private func fallbackThreadTitle(from seed: String) -> String {
+        let words = seed
+            .components(separatedBy: .whitespacesAndNewlines)
+            .map { word in
+                word.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+            }
+            .filter { !$0.isEmpty }
+            .prefix(4)
+        let title = words.joined(separator: " ")
+        guard !title.isEmpty else {
+            return CodexThread.defaultDisplayTitle
+        }
+        return title.prefix(1).uppercased() + title.dropFirst()
+    }
+
+    // Steers an active turn using the same mixed input-item encoding as turn/start.
+    func steerTurn(
+        userInput: String,
+        threadId: String,
+        expectedTurnId: String?,
+        attachments: [CodexImageAttachment] = [],
+        skillMentions: [CodexTurnSkillMention] = [],
+        mentionMentions: [CodexTurnMention] = [],
+        fileMentions: [String] = [],
+        shouldAppendUserMessage: Bool = true,
+        preAppendedUserMessageID: String? = nil,
+        collaborationMode: CodexCollaborationModeKind? = nil
+    ) async throws {
+        let normalizedThreadID = normalizedInterruptIdentifier(threadId) ?? threadId
+        let effectiveRequestedCollaborationMode = collaborationModeForOutgoingTurn(
+            threadId: normalizedThreadID,
+            requestedMode: collaborationMode
+        )
+        preparePlanSessionForSteer(
+            threadId: normalizedThreadID,
+            collaborationMode: effectiveRequestedCollaborationMode
+        )
+        let normalizedPreAppendedUserMessageID = normalizedInterruptIdentifier(preAppendedUserMessageID)
+        let pendingMessageId: String
+        if let normalizedPreAppendedUserMessageID {
+            pendingMessageId = normalizedPreAppendedUserMessageID
+        } else if shouldAppendUserMessage {
+            pendingMessageId = appendUserMessage(
+                threadId: normalizedThreadID,
+                text: displayTextForOutgoingTurn(
+                    userInput: userInput,
+                    skillMentions: skillMentions,
+                    mentionMentions: mentionMentions
+                ),
+                attachments: attachments,
+                fileMentions: fileMentions,
+                skillMentions: skillMentions.compactMap {
+                    let rawName = $0.name ?? $0.id
+                    let normalized = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return normalized.isEmpty ? nil : normalized
+                },
+                pluginMentions: mentionMentions.compactMap {
+                    let normalized = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return normalized.isEmpty ? nil : normalized
+                }
+            )
+        } else {
+            pendingMessageId = ""
+        }
+        var resolvedExpectedTurnID = normalizedInterruptIdentifier(expectedTurnId)
+        // Bridge-synthesized placeholder ids are not valid expectedTurnId values;
+        // resolve the real in-flight turn just like the missing-id path (the
+        // refresh-retry below stays as the fallback if resolution fails).
+        if let placeholderTurnID = resolvedExpectedTurnID,
+           Self.isSyntheticPlaceholderTurnID(placeholderTurnID) {
+            if let refreshedTurnID = try? await resolveInFlightTurnID(threadId: normalizedThreadID),
+               let refreshedNormalizedTurnID = normalizedInterruptIdentifier(refreshedTurnID),
+               !Self.isSyntheticPlaceholderTurnID(refreshedNormalizedTurnID) {
+                resolvedExpectedTurnID = refreshedNormalizedTurnID
+                setActiveTurnID(refreshedNormalizedTurnID, for: normalizedThreadID)
+            }
+        }
+        if resolvedExpectedTurnID == nil {
+            do {
+                resolvedExpectedTurnID = try await resolveInFlightTurnID(threadId: normalizedThreadID)
+            } catch {
+                handleSteerFailure(error, pendingMessageId: pendingMessageId, threadId: normalizedThreadID)
+                throw error
+            }
+        }
+
+        guard let initialTurnID = resolvedExpectedTurnID else {
+            let error = CodexServiceError.invalidInput("No active turn available to steer")
+            handleSteerFailure(error, pendingMessageId: pendingMessageId, threadId: normalizedThreadID)
+            throw error
+        }
+
+        var includeStructuredSkillItems = supportsStructuredSkillInput && !skillMentions.isEmpty
+        var includeStructuredMentionItems = supportsStructuredMentionInput && !mentionMentions.isEmpty
+        var imageURLKey = "url"
+        var effectiveCollaborationMode = supportsTurnCollaborationMode ? effectiveRequestedCollaborationMode : nil
+        var currentExpectedTurnID = initialTurnID
+        var didRetryWithRefreshedTurnID = false
+
+        if effectiveRequestedCollaborationMode != nil, effectiveCollaborationMode == nil {
+            debugRuntimeLog(
+                "turn/steer dropping collaborationMode requested=\(effectiveRequestedCollaborationMode?.rawValue ?? "") thread=\(normalizedThreadID) supportsTurnCollaborationMode=\(supportsTurnCollaborationMode)"
+            )
+        }
+
+        while true {
+            var params: RPCObject = [
+                "threadId": .string(normalizedThreadID),
+                "expectedTurnId": .string(currentExpectedTurnID),
+                "input": .array(
+                    makeTurnInputPayload(
+                        userInput: userInput,
+                        attachments: attachments,
+                        imageURLKey: imageURLKey,
+                        skillMentions: skillMentions,
+                        mentionMentions: mentionMentions,
+                        includeStructuredSkillItems: includeStructuredSkillItems,
+                        includeStructuredMentionItems: includeStructuredMentionItems
+                    )
+                ),
+            ]
+            if let collaborationModePayload = try buildCollaborationModePayload(
+                for: effectiveCollaborationMode,
+                threadId: normalizedThreadID
+            ) {
+                params["collaborationMode"] = collaborationModePayload
+            }
+
+            do {
+                let response = try await sendRequest(method: "turn/steer", params: .object(params))
+                let resolvedTurnID = extractTurnID(from: response.result) ?? currentExpectedTurnID
+                markMessageDeliveryState(
+                    threadId: normalizedThreadID,
+                    messageId: pendingMessageId,
+                    state: .confirmed,
+                    turnId: resolvedTurnID
+                )
+                activeTurnId = resolvedTurnID
+                setActiveTurnID(resolvedTurnID, for: normalizedThreadID)
+                threadIdByTurnID[resolvedTurnID] = normalizedThreadID
+                markThreadAsRunning(normalizedThreadID)
+                setProtectedRunningFallback(false, for: normalizedThreadID)
+                return
+            } catch {
+                if includeStructuredSkillItems,
+                   shouldRetryTurnStartWithoutSkillItems(error) {
+                    supportsStructuredSkillInput = false
+                    includeStructuredSkillItems = false
+                    continue
+                }
+
+                if includeStructuredMentionItems,
+                   shouldRetryTurnStartWithoutMentionItems(error) {
+                    supportsStructuredMentionInput = false
+                    includeStructuredMentionItems = false
+                    continue
+                }
+
+                if imageURLKey == "url",
+                   !attachments.isEmpty,
+                   shouldRetryTurnStartWithImageURLField(error) {
+                    imageURLKey = "image_url"
+                    continue
+                }
+
+                if effectiveCollaborationMode != nil,
+                   shouldRetryTurnStartWithoutCollaborationMode(error) {
+                    // Keep steer compatible with runtimes that only support plain turns.
+                    supportsTurnCollaborationMode = false
+                    clearPlanSessionIfRuntimeDowngraded(
+                        threadId: normalizedThreadID,
+                        collaborationMode: effectiveCollaborationMode
+                    )
+                    effectiveCollaborationMode = nil
+                    continue
+                }
+
+                if !didRetryWithRefreshedTurnID,
+                   shouldRetrySteerWithRefreshedTurnID(error) {
+                    do {
+                        if let refreshedTurnID = try await resolveInFlightTurnID(threadId: normalizedThreadID),
+                           refreshedTurnID != currentExpectedTurnID {
+                            didRetryWithRefreshedTurnID = true
+                            currentExpectedTurnID = refreshedTurnID
+                            activeTurnId = refreshedTurnID
+                            setActiveTurnID(refreshedTurnID, for: normalizedThreadID)
+                            threadIdByTurnID[refreshedTurnID] = normalizedThreadID
+                            continue
+                        }
+                    } catch {
+                        handleSteerFailure(error, pendingMessageId: pendingMessageId, threadId: normalizedThreadID)
+                        throw error
+                    }
+                }
+
+                handleSteerFailure(error, pendingMessageId: pendingMessageId, threadId: normalizedThreadID)
+                throw error
+            }
+        }
+    }
+
+    func userFacingTurnErrorMessage(from error: Error) -> String {
+        if isCancellationLikeError(error) {
+            return ""
+        }
+
+        if shouldTreatSendFailureAsDisconnect(error)
+            || isRetryableSavedSessionConnectError(error)
+            || isRecoverableTransientConnectionError(error)
+            || isBenignBackgroundDisconnect(error) {
+            return userFacingConnectFailureMessage(error)
+        }
+
+        if let serviceError = error as? CodexServiceError {
+            switch serviceError {
+            case .rpcError(let rpcError):
+                if let mappedMessage = userFacingRuntimeMessage(for: rpcError.message) {
+                    return mappedMessage
+                }
+                let trimmed = rpcError.message.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? serviceError.localizedDescription : trimmed
+            default:
+                let trimmed = serviceError.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? "Error while sending message" : trimmed
+            }
+        }
+
+        let trimmed = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Error while sending message" : trimmed
+    }
+
+    // Returns nil for internal/transient runtime noise that should not occupy the red footer.
+    func userFacingTurnErrorMessageForFooter(from error: Error) -> String? {
+        if isCancellationLikeError(error) || shouldSuppressRuntimeErrorInChat(error) {
+            return nil
+        }
+
+        let message = userFacingTurnErrorMessage(from: error)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? nil : message
+    }
+
+    // Converts raw app-server/runtime text into short user-facing copy.
+    func userFacingRuntimeMessage(for rawMessage: String) -> String? {
+        let normalizedMessage = rawMessage
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard !normalizedMessage.isEmpty else {
+            return nil
+        }
+
+        if isRuntimeMaterializationMessage(normalizedMessage) {
+            return "The run is still starting. Try again in a moment."
+        }
+
+        if isStaleTurnRuntimeMessage(normalizedMessage) {
+            return "That run already finished."
+        }
+
+        if isInternalRuntimeCompatibilityMessage(normalizedMessage) {
+            return "The paired runtime rejected this request. Reconnect and try again."
+        }
+
+        return nil
+    }
+
+    // Hides compatibility/materialization internals from chat history and footer surfaces.
+    func shouldSuppressRuntimeErrorInChat(_ error: Error) -> Bool {
+        if isCancellationLikeError(error) {
+            return true
+        }
+
+        guard let rawMessage = rawRPCMessage(from: error) else {
+            return false
+        }
+
+        return shouldSuppressRuntimeMessageInChat(rawMessage)
+    }
+
+    func shouldSuppressRuntimeMessageInChat(_ rawMessage: String) -> Bool {
+        let normalizedMessage = rawMessage.lowercased()
+        return isRuntimeMaterializationMessage(normalizedMessage)
+            || isInternalRuntimeCompatibilityMessage(normalizedMessage)
+    }
+
+    func rawRPCMessage(from error: Error) -> String? {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return nil
+        }
+
+        let trimmedMessage = rpcError.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedMessage.isEmpty ? nil : trimmedMessage
+    }
+
+    func isCancellationLikeError(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
+
+    func isRuntimeMaterializationMessage(_ normalizedMessage: String) -> Bool {
+        normalizedMessage.contains("not materialized")
+            || normalizedMessage.contains("not yet materialized")
+    }
+
+    func isStaleTurnRuntimeMessage(_ normalizedMessage: String) -> Bool {
+        normalizedMessage.contains("turn already completed")
+            || normalizedMessage.contains("already completed")
+            || normalizedMessage.contains("already finished")
+            || normalizedMessage.contains("turn not found")
+            || normalizedMessage.contains("no active turn")
+            || normalizedMessage.contains("not in progress")
+            || normalizedMessage.contains("not running")
+            || normalizedMessage.contains("not active")
+    }
+
+    // Classifies stale Stop outcomes so cleanup does not invent success for generic terminal messages.
+    private func staleInterruptResolution(for error: Error) -> StaleInterruptResolution {
+        if let serviceError = error as? CodexServiceError,
+           case .invalidInput(let message) = serviceError,
+           message.lowercased().contains("not published an interruptible turn id") {
+            return .startingWithoutTurnID
+        }
+
+        guard let normalizedMessage = rawRPCMessage(from: error)?.lowercased() else {
+            return .none
+        }
+
+        if normalizedMessage.contains("already completed") {
+            return .completed
+        }
+        if isStaleTurnRuntimeMessage(normalizedMessage) {
+            return .terminalUnknown
+        }
+        return .none
+    }
+
+    // Drops the stale turn id while keeping the thread marked as starting/running.
+    func preserveStartingRunAfterStaleInterrupt(threadId: String, staleTurnId: String?) {
+        if let staleTurnId,
+           activeTurnID(for: threadId) == staleTurnId {
+            setActiveTurnID(nil, for: threadId)
+        }
+        if let staleTurnId,
+           threadIdByTurnID[staleTurnId] == threadId {
+            threadIdByTurnID.removeValue(forKey: staleTurnId)
+        }
+        if activeTurnId == staleTurnId {
+            activeTurnId = nil
+        }
+        setProtectedRunningFallback(true, for: threadId)
+        demoteVisibleRunningStateToProtectedFallback(for: threadId)
+    }
+
+    // Collapses a stale Stop attempt without showing an error after the runtime says the run ended.
+    private func clearRunningStateAfterStaleInterrupt(
+        threadId: String,
+        turnId: String?,
+        resolution: StaleInterruptResolution
+    ) {
+        if resolution == .completed {
+            recordTurnTerminalState(threadId: threadId, turnId: turnId, state: .completed)
+        }
+        noteTurnFinished(threadId: threadId, turnId: turnId)
+        markTurnCompleted(threadId: threadId, turnId: turnId)
+    }
+
+    func isInternalRuntimeCompatibilityMessage(_ normalizedMessage: String) -> Bool {
+        if normalizedMessage.contains("method not found")
+            || normalizedMessage.contains("unknown method")
+            || normalizedMessage.contains("unknown field")
+            || normalizedMessage.contains("unrecognized field") {
+            return true
+        }
+
+        return normalizedMessage.contains("thread/turns/list")
+            && (
+                normalizedMessage.contains("unavailable")
+                    || normalizedMessage.contains("unsupported")
+                    || normalizedMessage.contains("not found")
+            )
+    }
+
+    // Normalizes outgoing turn input so we can support mixed text + image messages.
+    func makeTurnInputPayload(
+        userInput: String,
+        attachments: [CodexImageAttachment],
+        imageURLKey: String,
+        skillMentions: [CodexTurnSkillMention] = [],
+        mentionMentions: [CodexTurnMention] = [],
+        includeStructuredSkillItems: Bool = true,
+        includeStructuredMentionItems: Bool = true
+    ) -> [JSONValue] {
+        var inputItems: [JSONValue] = []
+
+        for attachment in attachments {
+            guard let payloadDataURL = attachment.payloadDataURL,
+                  !payloadDataURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                continue
+            }
+
+            inputItems.append(
+                .object([
+                    "type": .string("image"),
+                    imageURLKey: .string(payloadDataURL),
+                ])
+            )
+        }
+
+        let trimmedText = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedText.isEmpty {
+            let fallbackText = legacyTextForStructuredMentions(
+                skillMentions: skillMentions,
+                mentionMentions: mentionMentions
+            )
+            inputItems.append(
+                .object([
+                    "type": .string("text"),
+                    "text": .string(appendingMissingLegacyMentionTokens(fallbackText, to: trimmedText)),
+                ])
+            )
+        } else {
+            let fallbackText = legacyTextForStructuredMentions(
+                skillMentions: skillMentions,
+                mentionMentions: mentionMentions
+            )
+            if !fallbackText.isEmpty {
+                inputItems.append(
+                    .object([
+                        "type": .string("text"),
+                        "text": .string(fallbackText),
+                    ])
+                )
+            }
+        }
+
+        if includeStructuredSkillItems {
+            for mention in skillMentions {
+                let normalizedSkillID = mention.id.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !normalizedSkillID.isEmpty else {
+                    continue
+                }
+
+                var payload: RPCObject = [
+                    "type": .string("skill"),
+                    "id": .string(normalizedSkillID),
+                ]
+
+                if let name = mention.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !name.isEmpty {
+                    payload["name"] = .string(name)
+                }
+
+                if let path = mention.path?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !path.isEmpty {
+                    payload["path"] = .string(path)
+                }
+
+                inputItems.append(.object(payload))
+            }
+        }
+
+        if includeStructuredMentionItems {
+            for mention in mentionMentions {
+                let normalizedName = mention.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                let normalizedPath = mention.path.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !normalizedName.isEmpty, !normalizedPath.isEmpty else {
+                    continue
+                }
+
+                inputItems.append(
+                    .object([
+                        "type": .string("mention"),
+                        "name": .string(normalizedName),
+                        "path": .string(normalizedPath),
+                    ])
+                )
+            }
+        }
+
+        return inputItems
+    }
+
+    // Keeps canonical skill tokens in the local bubble for inline rendering; the
+    // turn/start payload still carries the same legacy text and structured mentions.
+    private func displayTextForOutgoingTurn(
+        userInput: String,
+        skillMentions _: [CodexTurnSkillMention],
+        mentionMentions: [CodexTurnMention]
+    ) -> String {
+        var trimmedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        var humanTextProbe = trimmedInput
+
+        for mention in mentionMentions {
+            let normalizedName = mention.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalizedName.isEmpty else { continue }
+            humanTextProbe = Self.removeBoundedMentionToken("@\(normalizedName)", from: humanTextProbe)
+            trimmedInput = Self.removeBoundedMentionToken("@\(normalizedName)", from: trimmedInput)
+        }
+
+        guard !humanTextProbe.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return ""
+        }
+
+        trimmedInput = trimmedInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedInput
+    }
+
+    nonisolated static func displayNameForMentionToken(_ rawName: String) -> String {
+        let parts = rawName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(omittingEmptySubsequences: true) { $0 == "-" || $0 == "_" }
+            .map { part -> String in
+                let token = String(part)
+                return token.prefix(1).uppercased() + token.dropFirst().lowercased()
+            }
+        return parts.isEmpty ? rawName : parts.joined(separator: " ")
+    }
+
+    nonisolated static func replacingBoundedMentionToken(_ token: String, with replacement: String, in text: String) -> String {
+        let escaped = NSRegularExpression.escapedPattern(for: token)
+        guard let regex = try? NSRegularExpression(
+            pattern: "(?<!\\S)" + escaped + "(?=[\\s,.;:!?)\\]}>]|$)",
+            options: [.caseInsensitive]
+        ) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.stringByReplacingMatches(
+            in: text,
+            options: [],
+            range: range,
+            withTemplate: NSRegularExpression.escapedTemplate(for: replacement)
+        )
+    }
+
+    nonisolated static func removeBoundedMentionToken(_ token: String, from text: String) -> String {
+        let escaped = NSRegularExpression.escapedPattern(for: token)
+        guard let regex = try? NSRegularExpression(
+            pattern: "(?<!\\S)" + escaped + "(?:[\\s,.;:!?)\\]}>]|$)",
+            options: [.caseInsensitive]
+        ) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range) else {
+            return text
+        }
+
+        var result = text
+        let matchRange = Range(match.range, in: text)!
+        result.replaceSubrange(matchRange, with: "")
+        return result
+    }
+
+    private func appendingMissingLegacyMentionTokens(_ legacyText: String, to text: String) -> String {
+        let trimmedLegacyText = legacyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedLegacyText.isEmpty else {
+            return text
+        }
+
+        let missingTokens = trimmedLegacyText
+            .split(separator: " ")
+            .map(String.init)
+            .filter { token in
+                !textContainsLegacyMentionToken(text, token: token)
+            }
+        guard !missingTokens.isEmpty else {
+            return text
+        }
+
+        return "\(text)\n\n\(missingTokens.joined(separator: " "))"
+    }
+
+    private func textContainsLegacyMentionToken(_ text: String, token: String) -> Bool {
+        if text.localizedCaseInsensitiveContains(token) {
+            return true
+        }
+
+        if token.hasPrefix("$") {
+            let slashToken = "/" + token.dropFirst()
+            return text.localizedCaseInsensitiveContains(slashToken)
+        }
+
+        return false
+    }
+
+    private func legacyTextForStructuredMentions(
+        skillMentions: [CodexTurnSkillMention],
+        mentionMentions: [CodexTurnMention]
+    ) -> String {
+        var tokens: [String] = []
+
+        for mention in skillMentions {
+            let rawName = mention.name ?? mention.id
+            let normalizedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalizedName.isEmpty {
+                tokens.append("$\(normalizedName)")
+            }
+        }
+
+        for mention in mentionMentions {
+            let normalizedName = mention.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalizedName.isEmpty {
+                tokens.append("@\(normalizedName)")
+            }
+        }
+
+        return tokens.joined(separator: " ")
+    }
+
+    private func hasRenderableStructuredMentions(
+        skillMentions: [CodexTurnSkillMention],
+        mentionMentions: [CodexTurnMention]
+    ) -> Bool {
+        !legacyTextForStructuredMentions(
+            skillMentions: skillMentions,
+            mentionMentions: mentionMentions
+        ).isEmpty
+    }
+
+    // Builds turn/start params so retries can switch only the input-item encoding.
+    func buildTurnStartRequestParams(
+        threadId: String,
+        userInput: String,
+        attachments: [CodexImageAttachment],
+        skillMentions: [CodexTurnSkillMention],
+        mentionMentions: [CodexTurnMention],
+        imageURLKey: String,
+        includeStructuredSkillItems: Bool,
+        includeStructuredMentionItems: Bool,
+        collaborationMode: CodexCollaborationModeKind?,
+        includeServiceTier: Bool
+    ) throws -> RPCObject {
+        var params: RPCObject = [
+            "threadId": .string(threadId),
+            "input": .array(
+                makeTurnInputPayload(
+                    userInput: userInput,
+                    attachments: attachments,
+                    imageURLKey: imageURLKey,
+                    skillMentions: skillMentions,
+                    mentionMentions: mentionMentions,
+                    includeStructuredSkillItems: includeStructuredSkillItems,
+                    includeStructuredMentionItems: includeStructuredMentionItems
+                )
+            ),
+        ]
+        // Keep the legacy top-level fields populated so plan-mode turns still honor
+        // the user's selected model on runtimes that do not read collaboration settings.
+        if let modelIdentifier = runtimeModelIdentifierForTurn(threadId: threadId) {
+            params["model"] = .string(modelIdentifier)
+        }
+        if let effort = selectedReasoningEffortForSelectedModel(threadId: threadId) {
+            params["effort"] = .string(effort)
+        }
+        if includeServiceTier,
+           let serviceTier = runtimeServiceTierForTurn(threadId: threadId) {
+            params["serviceTier"] = .string(serviceTier)
+        }
+        if let collaborationModePayload = try buildCollaborationModePayload(
+            for: collaborationMode,
+            threadId: threadId
+        ) {
+            params["collaborationMode"] = collaborationModePayload
+        }
+        return params
+    }
+
+    // Encodes collaborationMode while allowing the selected mode to supply built-in instructions.
+    func buildCollaborationModePayload(
+        for mode: CodexCollaborationModeKind?,
+        threadId: String?
+    ) throws -> JSONValue? {
+        guard let mode else {
+            return nil
+        }
+
+        let resolvedModel = runtimeModelIdentifierForTurn(threadId: threadId)
+            ?? selectedModelOption(threadId: threadId)?.model
+            ?? availableModels.first?.model
+            ?? selectedModelId
+        guard let resolvedModel,
+              !resolvedModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CodexServiceError.invalidResponse(
+                "Plan mode requires an available model before starting a plan turn."
+            )
+        }
+        let developerInstructionsValue: JSONValue = {
+            guard mode == .plan,
+                  let threadId,
+                  currentPlanSessionSource(for: threadId) == .compatibilityFallback,
+                  let instructions = developerInstructions(for: mode)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !instructions.isEmpty else {
+                return .null
+            }
+            return .string(instructions)
+        }()
+
+        return .object([
+            "mode": .string(mode.rawValue),
+            "settings": .object([
+                "model": .string(resolvedModel),
+                "reasoning_effort": selectedReasoningEffortForSelectedModel(
+                    threadId: threadId
+                ).map(JSONValue.string) ?? .null,
+                // Stay native-first by default, but allow a compatibility override after fallback.
+                "developer_instructions": developerInstructionsValue,
+            ]),
+        ])
+    }
+
+    func implementProposedPlan(
+        threadId: String,
+        proposedPlan: CodexProposedPlan
+    ) async throws {
+        let normalizedThreadID = normalizedInterruptIdentifier(threadId) ?? threadId
+        let planBody = proposedPlan.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !planBody.isEmpty else {
+            throw CodexServiceError.invalidInput("Proposed plan cannot be empty")
+        }
+
+        // The approved plan is already part of the thread history, so keep the
+        // handoff prompt minimal instead of replaying the full plan body.
+        let userInput = "Implement plan."
+
+        var expectedTurnID = activeTurnID(for: normalizedThreadID)
+        if expectedTurnID == nil {
+            do {
+                expectedTurnID = try await resolveInFlightTurnID(threadId: normalizedThreadID)
+            } catch {
+                if let serviceError = error as? CodexServiceError,
+                   case .invalidInput(_) = serviceError {
+                    expectedTurnID = nil
+                } else {
+                    throw error
+                }
+            }
+        }
+
+        if let expectedTurnID {
+            try await steerTurn(
+                userInput: userInput,
+                threadId: normalizedThreadID,
+                expectedTurnId: expectedTurnID,
+                shouldAppendUserMessage: true,
+                // Exiting plan mode needs to be explicit for runtimes that keep the
+                // current collaboration mode when turn/steer omits the field.
+                collaborationMode: .default
+            )
+            return
+        }
+
+        try await startTurn(
+            userInput: userInput,
+            threadId: normalizedThreadID,
+            shouldAppendUserMessage: true,
+            collaborationMode: .default
+        )
+    }
+
+    func currentPlanSessionSource(for threadId: String) -> CodexPlanSessionSource? {
+        planSessionSourceByThread[threadId]
+    }
+
+    func allowsInferredPlanQuestionnaireFallback(for threadId: String) -> Bool {
+        currentPlanSessionSource(for: threadId) == .compatibilityFallback
+    }
+
+    // Plain-text questionnaire recovery belongs only to explicit compatibility mode.
+    func allowsAssistantPlanFallbackRecovery(for threadId: String) -> Bool {
+        currentPlanSessionSource(for: threadId) == .compatibilityFallback
+    }
+
+    // Native/requested plan threads should rely on official requestUserInput events,
+    // not on heuristics over assistant prose.
+    func allowsAssistantPlanFallbackRecovery(for threadId: String, turnId: String?) -> Bool {
+        let _ = turnId
+        return currentPlanSessionSource(for: threadId) == .compatibilityFallback
+    }
+
+    func markRequestedPlanSession(for threadId: String) {
+        planSessionSourceByThread[threadId] = .requested
+    }
+
+    func migratePlanSessionState(from sourceThreadId: String, to destinationThreadId: String) {
+        guard sourceThreadId != destinationThreadId,
+              let source = planSessionSourceByThread.removeValue(forKey: sourceThreadId) else {
+            return
+        }
+        planSessionSourceByThread[destinationThreadId] = source
+    }
+
+    func markNativePlanSession(for threadId: String) {
+        planSessionSourceByThread[threadId] = preferredNativePlanSessionSource()
+    }
+
+    func markCompatibilityPlanFallback(for threadId: String) {
+        planSessionSourceByThread[threadId] = .compatibilityFallback
+    }
+
+    func resetPlanSessionState(for threadId: String) {
+        planSessionSourceByThread.removeValue(forKey: threadId)
+    }
+
+    func reconcileNativePlanSessionSources(
+        previousTransportMode: CodexRuntimeTransportMode,
+        nextTransportMode: CodexRuntimeTransportMode
+    ) {
+        guard previousTransportMode != nextTransportMode else {
+            return
+        }
+
+        let preferredSource = preferredNativePlanSessionSource()
+        for (threadId, source) in planSessionSourceByThread where source.isNative {
+            planSessionSourceByThread[threadId] = preferredSource
+        }
+    }
+
+    private func preferredNativePlanSessionSource() -> CodexPlanSessionSource {
+        switch codexTransportMode {
+        case .websocket:
+            return .nativeDesktopEndpoint
+        case .spawn, .unknown:
+            return .nativeAppServer
+        }
+    }
+
+    private func shouldCommitInferredPlanQuestionnaireFallback(for threadId: String) -> Bool {
+        currentPlanSessionSource(for: threadId) == .compatibilityFallback
+    }
+
+    // App-server keeps collaboration mode sticky when the field is omitted, so
+    // a normal send from an active plan thread must explicitly restore default.
+    private func collaborationModeForOutgoingTurn(
+        threadId: String,
+        requestedMode: CodexCollaborationModeKind?,
+        preserveExisting: Bool = false
+    ) -> CodexCollaborationModeKind? {
+        if let requestedMode {
+            return requestedMode
+        }
+
+        guard !preserveExisting,
+              supportsTurnCollaborationMode,
+              currentPlanSessionSource(for: threadId) != nil else {
+            return nil
+        }
+
+        return .default
+    }
+
+    func developerInstructions(for mode: CodexCollaborationModeKind) -> String? {
+        switch mode {
+        case .plan:
+            Self.compatibilityPlanModeDeveloperInstructions
+        case .default:
+            nil
+        }
+    }
+
+    private static let compatibilityPlanModeDeveloperInstructions = """
+    You are in plan mode.
+
+    Strongly prefer the native structured question flow when you need clarification:
+    - use request_user_input instead of writing a numbered questionnaire in plain text
+    - keep the conversation in a one-question-at-a-time flow when possible
+    - ask one material question at a time when possible
+    - keep each tool prompt short and decision-oriented
+    - Never write multiple-choice questions as plain assistant text.
+
+    When you reach a final implementation proposal, wrap it in exactly one <proposed_plan> block with Markdown inside.
+    """
+
+    private func preparePlanSessionForStart(
+        threadId: String,
+        collaborationMode: CodexCollaborationModeKind?,
+        preserveExisting: Bool
+    ) {
+        guard !preserveExisting else {
+            return
+        }
+
+        if collaborationMode == .plan,
+           currentPlanSessionSource(for: threadId) != nil {
+            return
+        }
+
+        if shouldTrackRequestedPlanSession(for: collaborationMode) {
+            resetPlanSessionState(for: threadId)
+            markRequestedPlanSession(for: threadId)
+        } else {
+            resetPlanSessionState(for: threadId)
+        }
+    }
+
+    private func preparePlanSessionForSteer(
+        threadId: String,
+        collaborationMode: CodexCollaborationModeKind?
+    ) {
+        if shouldTrackRequestedPlanSession(for: collaborationMode) {
+            if currentPlanSessionSource(for: threadId) == nil {
+                markRequestedPlanSession(for: threadId)
+            }
+        } else {
+            resetPlanSessionState(for: threadId)
+        }
+    }
+
+    private func clearPlanSessionIfRuntimeDowngraded(
+        threadId: String,
+        collaborationMode: CodexCollaborationModeKind?
+    ) {
+        guard collaborationMode == .plan else {
+            return
+        }
+
+        resetPlanSessionState(for: threadId)
+    }
+
+    private func shouldTrackRequestedPlanSession(
+        for collaborationMode: CodexCollaborationModeKind?
+    ) -> Bool {
+        collaborationMode == .plan && supportsTurnCollaborationMode
+    }
+
+    // Applies common failure bookkeeping for turn/start primary and fallback attempts.
+    func handleTurnStartFailure(
+        _ error: Error,
+        pendingMessageId: String,
+        threadId: String
+    ) throws {
+        markMessageDeliveryState(threadId: threadId, messageId: pendingMessageId, state: .failed)
+        clearRunningState(for: threadId)
+        if shouldTreatAsThreadNotFound(error) {
+            throw error
+        }
+
+        if let footerMessage = userFacingTurnErrorMessageForFooter(from: error) {
+            lastErrorMessage = footerMessage
+        } else {
+            lastErrorMessage = nil
+        }
+        if !shouldSuppressRuntimeErrorInChat(error),
+           let errorMessage = userFacingTurnErrorMessageForFooter(from: error) {
+            appendSystemMessage(threadId: threadId, text: "Send error: \(errorMessage)")
+        }
+        throw error
+    }
+
+    // Handles successful turn/start bookkeeping for both primary and fallback payload schemas.
+    @discardableResult
+    func handleSuccessfulTurnStartResponse(
+        _ response: RPCMessage,
+        pendingMessageId: String,
+        threadId: String
+    ) -> String? {
+        let turnID = extractTurnID(from: response.result)
+        let resolvedTurnID = turnID ?? activeTurnIdByThread[threadId]
+        let deliveryState: CodexMessageDeliveryState = (resolvedTurnID == nil) ? .pending : .confirmed
+        markMessageDeliveryState(
+            threadId: threadId,
+            messageId: pendingMessageId,
+            state: deliveryState,
+            turnId: resolvedTurnID
+        )
+
+        if let turnID = resolvedTurnID {
+            activeTurnId = turnID
+            setActiveTurnID(turnID, for: threadId)
+            threadIdByTurnID[turnID] = threadId
+            setProtectedRunningFallback(false, for: threadId)
+            beginAssistantMessage(threadId: threadId, turnId: turnID)
+        }
+
+        lastErrorMessage = nil
+
+        if let index = threadIndex(for: threadId) {
+            threads[index].updatedAt = Date()
+            threads[index].syncState = .live
+            threads = sortThreads(threads)
+        }
+
+        return resolvedTurnID
+    }
+
+    // Applies steer failure bookkeeping for optimistic user rows without adding an extra system error card.
+    func handleSteerFailure(
+        _ error: Error,
+        pendingMessageId: String,
+        threadId: String
+    ) {
+        markMessageDeliveryState(threadId: threadId, messageId: pendingMessageId, state: .failed)
+        lastErrorMessage = userFacingTurnErrorMessageForFooter(from: error)
+    }
+
+    // Some server versions expect `image_url` instead of `url` for image items.
+    func shouldRetryTurnStartWithImageURLField(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        guard message.contains("image_url") else {
+            return false
+        }
+
+        return message.contains("missing")
+            || message.contains("unknown field")
+            || message.contains("expected")
+            || message.contains("invalid")
+    }
+
+    // Detects legacy servers that reject input items with `type: "skill"`.
+    func shouldRetryTurnStartWithoutSkillItems(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        guard message.contains("skill") || isGenericStructuredInputItemRejection(message) else {
+            return false
+        }
+
+        return message.contains("unknown")
+            || message.contains("unsupported")
+            || message.contains("invalid")
+            || message.contains("expected")
+            || message.contains("unrecognized")
+            || message.contains("type")
+            || message.contains("field")
+    }
+
+    // Detects legacy runtimes that reject input items with `type: "mention"`.
+    func shouldRetryTurnStartWithoutMentionItems(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        guard message.contains("mention") || isGenericStructuredInputItemRejection(message) else {
+            return false
+        }
+
+        return message.contains("unknown")
+            || message.contains("unsupported")
+            || message.contains("invalid")
+            || message.contains("expected")
+            || message.contains("unrecognized")
+            || message.contains("type")
+            || message.contains("field")
+    }
+
+    private func isGenericStructuredInputItemRejection(_ message: String) -> Bool {
+        let mentionsInputShape = message.contains("input")
+            && (message.contains("item") || message.contains("type") || message.contains("array") || message.contains("schema"))
+        let rejectsShape = message.contains("unknown")
+            || message.contains("unsupported")
+            || message.contains("invalid")
+            || message.contains("expected")
+            || message.contains("unrecognized")
+            || message.contains("field")
+        return mentionsInputShape && rejectsShape
+    }
+
+    // Detects runtimes that reject plan-mode `collaborationMode` without `experimentalApi`.
+    func shouldRetryTurnStartWithoutCollaborationMode(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        guard message.contains("collaborationmode") || message.contains("collaboration_mode") else {
+            return false
+        }
+
+        return message.contains("experimentalapi")
+            || message.contains("unsupported")
+            || message.contains("unknown")
+            || message.contains("unexpected")
+            || message.contains("unrecognized")
+            || message.contains("invalid")
+            || message.contains("field")
+            || message.contains("mode")
+    }
+
+    // Parses `result.files` so tests can validate decoding without transport wiring.
+    func decodeFuzzyFileMatches(from result: JSONValue?) -> [CodexFuzzyFileMatch]? {
+        guard let resultObject = result?.objectValue,
+              let filesValue = resultObject["files"] else {
+            return nil
+        }
+
+        return decodeModel([CodexFuzzyFileMatch].self, from: filesValue)
+    }
+
+    // Parses skills/list payloads from both bucketed and flat server response shapes.
+    func decodeSkillMetadata(from result: JSONValue?) -> [CodexSkillMetadata]? {
+        guard let resultObject = result?.objectValue else {
+            return nil
+        }
+
+        var collectedSkills: [CodexSkillMetadata] = []
+        var hasSkillContainer = false
+
+        if let dataItems = resultObject["data"]?.arrayValue {
+            hasSkillContainer = true
+            for item in dataItems {
+                guard let itemObject = item.objectValue else {
+                    continue
+                }
+                if let skillsValue = itemObject["skills"],
+                   let decodedSkills = decodeModel([CodexSkillMetadata].self, from: skillsValue) {
+                    collectedSkills.append(contentsOf: decodedSkills)
+                }
+            }
+
+            if collectedSkills.isEmpty,
+               let decodedSkills = decodeModel([CodexSkillMetadata].self, from: .array(dataItems)) {
+                collectedSkills.append(contentsOf: decodedSkills)
+            }
+        }
+
+        if collectedSkills.isEmpty,
+           let skillsValue = resultObject["skills"],
+           let decodedSkills = decodeModel([CodexSkillMetadata].self, from: skillsValue) {
+            hasSkillContainer = true
+            collectedSkills.append(contentsOf: decodedSkills)
+        } else if resultObject["skills"] != nil {
+            hasSkillContainer = true
+        }
+
+        return hasSkillContainer ? collectedSkills : nil
+    }
+
+    // Parses Codex app-server plugin/list marketplace payloads.
+    func decodePluginMetadata(from result: JSONValue?) -> [CodexPluginMetadata]? {
+        guard let resultObject = result?.objectValue,
+              let response = decodeModel(CodexPluginListResponse.self, from: .object(resultObject)) else {
+            return nil
+        }
+
+        var plugins: [CodexPluginMetadata] = []
+        for marketplace in response.marketplaces {
+            let marketplaceName = marketplace.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !marketplaceName.isEmpty else {
+                continue
+            }
+
+            for plugin in marketplace.plugins {
+                let pluginName = plugin.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !pluginName.isEmpty else {
+                    continue
+                }
+
+                plugins.append(
+                    CodexPluginMetadata(
+                        id: plugin.id,
+                        name: pluginName,
+                        marketplaceName: marketplaceName,
+                        marketplacePath: marketplace.path,
+                        displayName: plugin.interface?.displayName,
+                        shortDescription: plugin.interface?.shortDescription,
+                        installed: plugin.installed,
+                        enabled: plugin.enabled,
+                        installPolicy: plugin.installPolicy
+                    )
+                )
+            }
+        }
+
+        return plugins
+    }
+
+    func shouldRetrySkillsListWithCwdFallback(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        guard rpcError.code == -32600 || rpcError.code == -32602 else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        return message.contains("invalid")
+            || message.contains("unknown field")
+            || message.contains("unrecognized field")
+            || message.contains("missing field")
+            || message.contains("expected")
+            || message.contains("cwds")
+    }
+
+    // Sends turn interruption request with camelCase or snake_case param keys for compatibility.
+    func sendInterruptRequest(
+        turnId: String,
+        threadId: String?,
+        useSnakeCaseParams: Bool
+    ) async throws {
+        var params: RPCObject = [:]
+        params[useSnakeCaseParams ? "turn_id" : "turnId"] = .string(turnId)
+        if let threadId {
+            params[useSnakeCaseParams ? "thread_id" : "threadId"] = .string(threadId)
+        }
+        _ = try await sendRequest(method: "turn/interrupt", params: .object(params))
+    }
+
+    // Normalizes ids coming from UI/runtime state before RPC usage.
+    func normalizedInterruptIdentifier(_ rawValue: String?) -> String? {
+        guard let rawValue else { return nil }
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    // Bridge-synthesized placeholder turn ids group history rows and keep
+    // running state visible, but they are not real app-server turn ids:
+    // acting with one gets rejected ("expected active turn id … but found …").
+    nonisolated static func isSyntheticPlaceholderTurnID(_ turnId: String) -> Bool {
+        CodexSyntheticIdentifiers.isBridgeMintedTurnID(turnId)
+    }
+
+    // Resolves the currently interruptible turn id from the latest turn page when local state is stale.
+    // If the runtime reports "running" without an id yet, surface that instead of falling
+    // back to the latest completed turn and interrupting the wrong run.
+    func resolveInFlightTurnID(threadId: String) async throws -> String? {
+        let maxAttempts = 3
+        for attempt in 0..<maxAttempts {
+            let snapshot = try await readThreadTurnStateSnapshot(threadId: threadId)
+            if let interruptibleTurnID = snapshot.interruptibleTurnID {
+                return interruptibleTurnID
+            }
+            if snapshot.hasInterruptibleTurnWithoutID {
+                if attempt < (maxAttempts - 1) {
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    continue
+                }
+                throw CodexServiceError.invalidInput(
+                    "The active run has not published an interruptible turn ID yet. Please try again in a moment."
+                )
+            }
+            return nil
+        }
+        return nil
+    }
+
+    // Parses turn status values from app-server turn objects.
+    func normalizedInterruptTurnStatus(from turnObject: [String: JSONValue]) -> String? {
+        let status = turnObject["status"]?.stringValue
+            ?? turnObject["turnStatus"]?.stringValue
+            ?? turnObject["turn_status"]?.stringValue
+
+        guard let status else { return nil }
+
+        let trimmed = status.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        return trimmed
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .lowercased()
+    }
+
+    // Marks statuses that can still accept turn/interrupt.
+    func isInterruptibleTurnStatus(_ normalizedStatus: String?) -> Bool {
+        guard let normalizedStatus else {
+            return true
+        }
+
+        if normalizedStatus.contains("inprogress")
+            || normalizedStatus.contains("running")
+            || normalizedStatus.contains("pending")
+            || normalizedStatus.contains("started") {
+            return true
+        }
+
+        if normalizedStatus.contains("complete")
+            || normalizedStatus.contains("failed")
+            || normalizedStatus.contains("error")
+            || normalizedStatus.contains("interrupt")
+            || normalizedStatus.contains("cancel")
+            || normalizedStatus.contains("stopped") {
+            return false
+        }
+
+        return true
+    }
+
+    // Retries with snake_case params for strict or legacy server parsers.
+    func shouldRetryInterruptWithSnakeCaseParams(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        guard rpcError.code == -32600 || rpcError.code == -32602 else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        let hints = ["turnid", "threadid", "turn_id", "thread_id", "unknown field", "missing field", "invalid"]
+        return hints.contains { message.contains($0) }
+    }
+
+    // Reads only the latest turn page when supported, then falls back for older runtimes.
+    func readThreadTurnStateSnapshot(threadId: String) async throws -> (
+        interruptibleTurnID: String?,
+        hasInterruptibleTurnWithoutID: Bool,
+        latestTurnID: String?
+    ) {
+        if supportsTurnPagination {
+            do {
+                let response = try await sendRequest(
+                    method: "thread/turns/list",
+                    params: .object([
+                        "threadId": .string(threadId),
+                        "limit": .integer(ThreadTurnStateSnapshotPolicy.recentTurnLimit),
+                        "sortDirection": .string("desc"),
+                    ]),
+                    timeoutNanoseconds: ThreadTurnStateSnapshotPolicy.requestTimeoutNanoseconds
+                )
+
+                guard let resultObject = response.result?.objectValue else {
+                    return (nil, false, nil)
+                }
+
+                let turnObjects = (
+                    resultObject["data"]?.arrayValue
+                        ?? resultObject["items"]?.arrayValue
+                        ?? resultObject["turns"]?.arrayValue
+                        ?? []
+                ).compactMap { $0.objectValue }
+                return turnStateSnapshot(from: turnObjects, newestFirst: true)
+            } catch {
+                if shouldFallbackTurnSnapshotToThreadRead(error) {
+                    debugSyncLog("thread/turns/list unavailable for fresh thread=\(threadId); resolving stop state via thread/read")
+                } else {
+                    guard consumeUnsupportedTurnPagination(error, attemptedMethod: "thread/turns/list") else {
+                        throw error
+                    }
+                }
+            }
+        }
+
+        let response: RPCMessage
+        do {
+            response = try await sendRequest(
+                method: "thread/read",
+                params: .object([
+                    "threadId": .string(threadId),
+                    "includeTurns": .bool(true),
+                ]),
+                timeoutNanoseconds: ThreadTurnStateSnapshotPolicy.requestTimeoutNanoseconds
+            )
+        } catch {
+            guard shouldRetryThreadReadTurnSnapshotWithSnakeCase(error) else {
+                throw error
+            }
+
+            response = try await sendRequest(
+                method: "thread/read",
+                params: .object([
+                    "thread_id": .string(threadId),
+                    "include_turns": .bool(true),
+                ]),
+                timeoutNanoseconds: ThreadTurnStateSnapshotPolicy.requestTimeoutNanoseconds
+            )
+        }
+
+        let turnObjects = response.result?.objectValue?["thread"]?.objectValue?["turns"]?.arrayValue?
+            .compactMap { $0.objectValue } ?? []
+        return turnStateSnapshot(from: turnObjects, newestFirst: false)
+    }
+
+    // Freshly-created chats can reject thread/turns/list until the first user turn is materialized.
+    func shouldFallbackTurnSnapshotToThreadRead(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        return isRuntimeMaterializationMessage(message)
+    }
+
+    // Parses latest/running turn metadata from either descending pages or chronological legacy arrays.
+    func turnStateSnapshot(
+        from turnObjects: [RPCObject],
+        newestFirst: Bool
+    ) -> (
+        interruptibleTurnID: String?,
+        hasInterruptibleTurnWithoutID: Bool,
+        latestTurnID: String?
+    ) {
+        guard !turnObjects.isEmpty else {
+            return (nil, false, nil)
+        }
+
+        let newestTurnObjects = newestFirst ? turnObjects : Array(turnObjects.reversed())
+        let latestTurnID = newestTurnObjects.compactMap { turnObject -> String? in
+            guard let turnID = normalizedInterruptIdentifier(
+                turnObject["id"]?.stringValue
+                    ?? turnObject["turnId"]?.stringValue
+                    ?? turnObject["turn_id"]?.stringValue
+            ), !CodexSyntheticIdentifiers.isHistoryCompactionMarkerTurnID(turnID) else {
+                return nil
+            }
+            return turnID
+        }.first
+
+        // Newest-first scanning trusts the latest real turn as the active-state boundary.
+        // If it is terminal, older stale in-progress rows cannot still be interruptible.
+        var hasInterruptibleTurnWithoutID = false
+        for turnObject in newestTurnObjects {
+            // The bridge's compaction banner ships without a real turn status
+            // (older bridges omit it entirely); reading it as interruptible
+            // flagged idle heavy threads as running.
+            if let turnID = normalizedInterruptIdentifier(
+                turnObject["id"]?.stringValue
+                    ?? turnObject["turnId"]?.stringValue
+                    ?? turnObject["turn_id"]?.stringValue
+            ), CodexSyntheticIdentifiers.isHistoryCompactionMarkerTurnID(turnID) {
+                continue
+            }
+            let turnStatus = normalizedInterruptTurnStatus(from: turnObject)
+            if !isInterruptibleTurnStatus(turnStatus) {
+                break
+            }
+
+            if let interruptibleTurnID = normalizedInterruptIdentifier(
+                turnObject["id"]?.stringValue
+                    ?? turnObject["turnId"]?.stringValue
+                    ?? turnObject["turn_id"]?.stringValue
+            ) {
+                return (interruptibleTurnID, false, latestTurnID)
+            }
+
+            hasInterruptibleTurnWithoutID = true
+            break
+        }
+
+        return (nil, hasInterruptibleTurnWithoutID, latestTurnID)
+    }
+
+    // Keeps stop recovery compatible with runtimes that only accept snake_case thread/read params.
+    func shouldRetryThreadReadTurnSnapshotWithSnakeCase(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        guard rpcError.code == -32600 || rpcError.code == -32602 else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        let hints = ["threadid", "includeturns", "thread_id", "include_turns", "unknown field", "missing field", "invalid"]
+        return hints.contains { message.contains($0) }
+    }
+
+    // Retries after refreshing turn id when local activeTurn cache is stale.
+    func shouldRetryInterruptWithRefreshedTurnID(_ error: Error) -> Bool {
+        guard let serviceError = error as? CodexServiceError,
+              case .rpcError(let rpcError) = serviceError else {
+            return false
+        }
+
+        let message = rpcError.message.lowercased()
+        let hints = [
+            "turn not found",
+            "no active turn",
+            "not in progress",
+            "not running",
+            "already completed",
+            "already finished",
+            "invalid turn",
+            "no such turn",
+            "not active",
+            "does not exist",
+            "cannot interrupt",
+            // Codex rejects actions whose turn id does not match the live turn
+            // (e.g. a stale or bridge-synthesized placeholder id):
+            // "expected active turn id <x> but found <y>".
+            "expected active turn"
+        ]
+        return hints.contains { message.contains($0) }
+    }
+
+    // Retries steer once after refreshing the active turn id when the server rejects the precondition.
+    func shouldRetrySteerWithRefreshedTurnID(_ error: Error) -> Bool {
+        shouldRetryInterruptWithRefreshedTurnID(error)
+    }
+
+    // Converts absolute match paths to root-relative output when older servers return full paths.
+    func normalizeFuzzyFilePath(path: String, root: String) -> String {
+        let trimmedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPath.isEmpty else {
+            return path
+        }
+
+        let normalizedRoot = normalizedFuzzyRootPath(root)
+        guard !normalizedRoot.isEmpty else {
+            return trimmedPath
+        }
+
+        if normalizedRoot == "/" {
+            return trimmedPath.hasPrefix("/") ? String(trimmedPath.dropFirst()) : trimmedPath
+        }
+
+        let rootPrefix = normalizedRoot.hasSuffix("/") ? normalizedRoot : "\(normalizedRoot)/"
+        if trimmedPath.hasPrefix(rootPrefix) {
+            return String(trimmedPath.dropFirst(rootPrefix.count))
+        }
+
+        return trimmedPath
+    }
+
+    private func normalizedFuzzyRootPath(_ root: String) -> String {
+        var normalized = root.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            return ""
+        }
+
+        if normalized == "/" {
+            return normalized
+        }
+
+        while normalized.hasSuffix("/") {
+            normalized.removeLast()
+        }
+
+        return normalized.isEmpty ? "/" : normalized
+    }
+}

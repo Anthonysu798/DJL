@@ -1,0 +1,7 @@
+// Shared public defaults for open-source builds.
+// Real private endpoints belong in the ignored PrivateOverrides.xcconfig file.
+
+DJL_CHATGPT_CALLBACK_SCHEME = djl
+DJL_DEFAULT_RELAY_URL =
+
+#include? "PrivateOverrides.xcconfig"

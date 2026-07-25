@@ -1,0 +1,1054 @@
+// FILE: TurnComposerSendAvailabilityTests.swift
+// Purpose: Locks send-button enable/disable truth table after composer refactor.
+// Layer: Unit Test
+// Exports: TurnComposerSendAvailabilityTests
+// Depends on: XCTest, DJL
+
+import XCTest
+@testable import DJL
+
+@MainActor
+final class TurnComposerSendAvailabilityTests: XCTestCase {
+    private static var retainedServices: [CodexService] = []
+
+    func testSendDisabledWhenDisconnected() {
+        let state = makeState(isConnected: false)
+        XCTAssertTrue(state.isSendDisabled)
+    }
+
+    func testSendDisabledWhenSendingInFlight() {
+        let state = makeState(isSending: true)
+        XCTAssertTrue(state.isSendDisabled)
+    }
+
+    func testSendEnabledWhenActiveTurnExistsAndPayloadIsValid() {
+        let state = makeState(trimmedInput: "queue this")
+        XCTAssertFalse(state.isSendDisabled)
+    }
+
+    func testSendDisabledWhenInputAndImagesAreEmpty() {
+        let state = makeState(trimmedInput: "", hasReadyImages: false)
+        XCTAssertTrue(state.isSendDisabled)
+    }
+
+    func testSendDisabledWhenAttachmentStateIsBlocking() {
+        let state = makeState(hasBlockingAttachmentState: true)
+        XCTAssertTrue(state.isSendDisabled)
+    }
+
+    func testSendEnabledWhenConnectedAndPayloadIsValid() {
+        let textState = makeState(trimmedInput: "Ship it", hasReadyImages: false)
+        XCTAssertFalse(textState.isSendDisabled)
+
+        let imageState = makeState(trimmedInput: "", hasReadyImages: true)
+        XCTAssertFalse(imageState.isSendDisabled)
+    }
+
+    func testSendEnabledWhenReviewSelectionIsPresentWithoutText() {
+        let reviewState = makeState(trimmedInput: "", hasReadyImages: false, hasReviewSelection: true)
+        XCTAssertFalse(reviewState.isSendDisabled)
+    }
+
+    func testSendEnabledWhenSubagentsSelectionIsPresentWithoutText() {
+        let subagentsState = makeState(trimmedInput: "", hasReadyImages: false, hasSubagentsSelection: true)
+        XCTAssertFalse(subagentsState.isSendDisabled)
+    }
+
+    func testSendEnabledWhenOnlyStructuredMentionIsSelected() {
+        let skillState = makeState(trimmedInput: "", hasReadyImages: false, hasSkillSelection: true)
+        XCTAssertFalse(skillState.isSendDisabled)
+
+        let pluginState = makeState(trimmedInput: "", hasReadyImages: false, hasPluginSelection: true)
+        XCTAssertFalse(pluginState.isSendDisabled)
+    }
+
+    func testSendDisabledWhileReviewSelectionIsWaitingForTarget() {
+        let reviewState = makeState(
+            trimmedInput: "follow up",
+            hasReadyImages: false,
+            hasReviewSelection: false,
+            hasPendingReviewSelection: true
+        )
+        XCTAssertTrue(reviewState.isSendDisabled)
+    }
+
+    func testRunningComposerSendButtonContentPredicate() {
+        XCTAssertFalse(makeAccessoryState().hasSendableContent(input: ""))
+        XCTAssertFalse(makeAccessoryState().hasSendableContent(input: "   "))
+
+        XCTAssertTrue(makeAccessoryState().hasSendableContent(input: "follow up"))
+        XCTAssertTrue(makeAccessoryState(hasAttachment: true).hasSendableContent(input: ""))
+        XCTAssertTrue(makeAccessoryState(hasSkillSelection: true).hasSendableContent(input: ""))
+    }
+
+    func testSendTurnRestoresRawDraftWhenStartTurnFails() async {
+        let service = makeService()
+        service.isConnected = true
+
+        let viewModel = TurnViewModel()
+        let rawInput = "Please update @TurnView.swift"
+        let rawMention = TurnComposerMentionedFile(
+            fileName: "TurnView.swift",
+            path: "Views/Turn/TurnView.swift"
+        )
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+
+        viewModel.input = rawInput
+        viewModel.composerMentionedFiles = [rawMention]
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-1", state: .ready(attachment))
+        ]
+
+        viewModel.sendTurn(codex: service, threadID: "thread-send-failure")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertFalse(viewModel.isSending)
+        XCTAssertEqual(viewModel.input, rawInput)
+        XCTAssertEqual(viewModel.composerMentionedFiles, [rawMention])
+        XCTAssertEqual(viewModel.readyComposerAttachments, [attachment])
+        XCTAssertEqual(viewModel.composerAttachments.count, 1)
+    }
+
+    func testSendNewThreadPreAppendsFirstMessageBeforeOpeningThread() async {
+        let service = makeService()
+        service.isConnected = true
+        service.isInitialized = true
+
+        var recordedMethods: [String] = []
+        var openedThreadID: String?
+        var openedThreadMessageText: String?
+        var didOpenBeforeTurnStart = false
+        let titleExpectation = expectation(description: "New thread automatic title generation completes")
+        service.requestTransportOverride = { method, params in
+            recordedMethods.append(method)
+            switch method {
+            case "thread/start":
+                return RPCMessage(
+                    id: .string(UUID().uuidString),
+                    result: .object([
+                        "thread": .object([
+                            "id": .string("thread-new"),
+                            "title": .string(CodexThread.defaultDisplayTitle),
+                            "cwd": .string("/tmp/djl-local"),
+                        ]),
+                    ]),
+                    includeJSONRPC: false
+                )
+            case "workspace/checkpointCapture":
+                return self.workspaceCheckpointResponse(kind: "messageStart")
+            case "workspace/checkpointCopy":
+                return self.workspaceCheckpointResponse(kind: "turnStart", copied: true)
+            case "turn/start":
+                return RPCMessage(
+                    id: .string(UUID().uuidString),
+                    result: .object(["turnId": .string("turn-new")]),
+                    includeJSONRPC: false
+                )
+            case "thread/generateTitle":
+                XCTAssertEqual(params?.objectValue?["message"]?.stringValue, "First message")
+                titleExpectation.fulfill()
+                return RPCMessage(
+                    id: .string(UUID().uuidString),
+                    result: .object(["title": .string("First message")]),
+                    includeJSONRPC: false
+                )
+            default:
+                XCTFail("Unexpected method \(method)")
+                return RPCMessage(id: .string(UUID().uuidString), result: .object([:]), includeJSONRPC: false)
+            }
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "First message"
+
+        let didStart = viewModel.sendNewThread(
+            codex: service,
+            draftThreadID: "draft-thread",
+            preferredProjectPath: "/tmp/djl-local"
+        ) { thread in
+            openedThreadID = thread.id
+            didOpenBeforeTurnStart = !recordedMethods.contains("turn/start")
+            openedThreadMessageText = service.messages(for: thread.id).first?.text
+        }
+        let immediateDraftMessage = service.messages(for: "draft-thread").first
+        await waitForSendCompletion(viewModel)
+        await fulfillment(of: [titleExpectation], timeout: 2.0)
+
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(immediateDraftMessage?.text, "First message")
+        XCTAssertEqual(immediateDraftMessage?.deliveryState, .pending)
+        XCTAssertEqual(openedThreadID, "thread-new")
+        XCTAssertTrue(didOpenBeforeTurnStart)
+        XCTAssertEqual(openedThreadMessageText, "First message")
+        XCTAssertTrue(service.messages(for: "draft-thread").isEmpty)
+        XCTAssertEqual(recordedMethods.filter { $0 == "thread/start" }.count, 1)
+        XCTAssertEqual(recordedMethods.filter { $0 == "turn/start" }.count, 1)
+        XCTAssertEqual(recordedMethods.filter { $0 == "thread/generateTitle" }.count, 1)
+        XCTAssertEqual(service.messages(for: "thread-new").filter { $0.role == .user }.count, 1)
+        XCTAssertEqual(service.messages(for: "thread-new").first?.turnId, "turn-new")
+        XCTAssertEqual(service.thread(for: "thread-new")?.displayTitle, "First message")
+    }
+
+    func testLocalDraftRestoresComposerStateForSameThread() {
+        let service = makeService()
+        let firstViewModel = TurnViewModel()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+
+        firstViewModel.input = "Draft with @TurnView.swift"
+        firstViewModel.composerMentionedFiles = [
+            TurnComposerMentionedFile(fileName: "TurnView.swift", path: "Views/Turn/TurnView.swift")
+        ]
+        firstViewModel.composerMentionedSkills = [
+            TurnComposerMentionedSkill(name: "check-code", path: "/skills/check-code/SKILL.md", description: "Review")
+        ]
+        firstViewModel.composerMentionedPlugins = [
+            TurnComposerMentionedPlugin(name: "github", path: "plugin://github", displayName: "GitHub")
+        ]
+        firstViewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-1", state: .ready(attachment))
+        ]
+        firstViewModel.isPlanModeArmed = true
+        firstViewModel.isSubagentsSelectionArmed = true
+        firstViewModel.saveLocalDraft(codex: service, threadID: "thread-draft")
+
+        let secondViewModel = TurnViewModel()
+        secondViewModel.restoreSavedLocalDraftIfNeeded(codex: service, threadID: "thread-draft")
+
+        XCTAssertEqual(secondViewModel.input, firstViewModel.input)
+        XCTAssertEqual(secondViewModel.composerMentionedFiles, firstViewModel.composerMentionedFiles)
+        XCTAssertEqual(secondViewModel.composerMentionedSkills, firstViewModel.composerMentionedSkills)
+        XCTAssertEqual(secondViewModel.composerMentionedPlugins, firstViewModel.composerMentionedPlugins)
+        XCTAssertEqual(secondViewModel.readyComposerAttachments, [attachment])
+        XCTAssertTrue(secondViewModel.isPlanModeArmed)
+        XCTAssertTrue(secondViewModel.isSubagentsSelectionArmed)
+    }
+
+    func testLocalDraftReflectsRemovedAttachment() {
+        let service = makeService()
+        let viewModel = TurnViewModel()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+
+        viewModel.input = "Keep the text only"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-1", state: .ready(attachment))
+        ]
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-draft-removal")
+
+        viewModel.removeComposerAttachment(id: "attachment-1")
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-draft-removal")
+
+        XCTAssertEqual(service.composerDraft(for: "thread-draft-removal")?.input, "Keep the text only")
+        XCTAssertEqual(service.composerDraft(for: "thread-draft-removal")?.attachments, [])
+    }
+
+    func testLocalDraftClearsAfterSuccessfulSend() async {
+        let service = makeService()
+        service.isConnected = true
+        service.requestTransportOverride = { method, _ in
+            XCTAssertEqual(method, "turn/start")
+            return RPCMessage(
+                id: .string(UUID().uuidString),
+                result: .object(["turnId": .string("turn-sent")]),
+                includeJSONRPC: false
+            )
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "Send this"
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-draft-clear")
+
+        viewModel.sendTurn(codex: service, threadID: "thread-draft-clear")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertNil(service.composerDraft(for: "thread-draft-clear"))
+    }
+
+    func testAttachmentLoadCompletionUpdatesLiveLoadingTile() {
+        let service = makeService()
+        let viewModel = TurnViewModel()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-live", state: .loading)
+        ]
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-live-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-live-attachment")
+        service.setComposerDraft(nil, for: "thread-live-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-live",
+            viewModel: viewModel,
+            expectedDraftMergeRevision: expectedRevision,
+            codex: service,
+            threadID: "thread-live-attachment"
+        )
+
+        XCTAssertEqual(viewModel.readyComposerAttachments, [attachment])
+        XCTAssertFalse(viewModel.hasBlockingAttachmentState)
+    }
+
+    func testLateAttachmentLoadMergesOnlyWhenDraftRevisionIsUnchanged() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let preservingViewModel = TurnViewModel()
+        preservingViewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-preserve", state: .loading)
+        ]
+        preservingViewModel.saveLocalDraft(codex: service, threadID: "thread-preserve-attachment")
+        let preservingRevision = service.composerDraftMergeRevision(for: "thread-preserve-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-preserve",
+            viewModel: nil,
+            expectedDraftMergeRevision: preservingRevision,
+            codex: service,
+            threadID: "thread-preserve-attachment"
+        )
+
+        XCTAssertEqual(service.composerDraft(for: "thread-preserve-attachment")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-preserve", state: .ready(attachment))
+        ])
+
+        let staleViewModel = TurnViewModel()
+        staleViewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-stale", state: .loading)
+        ]
+        staleViewModel.saveLocalDraft(codex: service, threadID: "thread-stale-attachment")
+        let staleRevision = service.composerDraftMergeRevision(for: "thread-stale-attachment")
+        service.setComposerDraft(nil, for: "thread-stale-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-stale",
+            viewModel: nil,
+            expectedDraftMergeRevision: staleRevision,
+            codex: service,
+            threadID: "thread-stale-attachment"
+        )
+
+        XCTAssertNil(service.composerDraft(for: "thread-stale-attachment"))
+    }
+
+    func testLateAttachmentLoadDoesNotMergeAfterMacScopedDraftsReset() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let viewModel = TurnViewModel()
+        let threadID = "thread-mac-scope-attachment"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-mac-scope", state: .loading)
+        ]
+        viewModel.saveLocalDraft(codex: service, threadID: threadID)
+
+        let expectedRevision = service.composerDraftMergeRevision(for: threadID)
+        let expectedEpoch = service.composerDraftMergeEpoch
+        service.clearInMemoryMacScopedState()
+
+        XCTAssertEqual(service.composerDraftMergeRevision(for: threadID), expectedRevision)
+        XCTAssertNotEqual(service.composerDraftMergeEpoch, expectedEpoch)
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-mac-scope",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            expectedDraftMergeEpoch: expectedEpoch,
+            attachmentOrder: ["attachment-mac-scope"],
+            codex: service,
+            threadID: threadID
+        )
+
+        XCTAssertNil(service.composerDraft(for: threadID))
+    }
+
+    func testLifecycleDraftSaveDoesNotBlockLateAttachmentMerge() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-navigation", state: .loading)
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-navigation-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-navigation-attachment")
+        viewModel.saveLifecycleLocalDraft(codex: service, threadID: "thread-navigation-attachment")
+
+        XCTAssertEqual(
+            service.composerDraftMergeRevision(for: "thread-navigation-attachment"),
+            expectedRevision
+        )
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-navigation",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            codex: service,
+            threadID: "thread-navigation-attachment"
+        )
+
+        XCTAssertEqual(service.composerDraft(for: "thread-navigation-attachment")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-navigation", state: .ready(attachment))
+        ])
+    }
+
+    func testDetachedAttachmentLoadMergesWithoutMutatingDisappearedView() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.input = "Use this image"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-detached", state: .loading)
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-detached-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-detached-attachment")
+        viewModel.saveLifecycleLocalDraft(codex: service, threadID: "thread-detached-attachment")
+        viewModel.cancelTransientTasks()
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-detached",
+            viewModel: viewModel,
+            expectedDraftMergeRevision: expectedRevision,
+            codex: service,
+            threadID: "thread-detached-attachment"
+        )
+
+        XCTAssertEqual(viewModel.composerAttachments, [
+            TurnComposerImageAttachment(id: "attachment-detached", state: .loading)
+        ])
+        XCTAssertEqual(viewModel.input, "Use this image")
+        XCTAssertEqual(service.composerDraft(for: "thread-detached-attachment")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-detached", state: .ready(attachment))
+        ])
+
+        viewModel.restoreSavedLocalDraftIfNeeded(codex: service, threadID: "thread-detached-attachment")
+
+        XCTAssertEqual(viewModel.input, "Use this image")
+        XCTAssertEqual(viewModel.composerAttachments, [
+            TurnComposerImageAttachment(id: "attachment-detached", state: .ready(attachment))
+        ])
+        XCTAssertFalse(viewModel.hasBlockingAttachmentState)
+    }
+
+    func testReappearedDetachedAttachmentLoadUpdatesLiveTile() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.input = "Use this image"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-reappeared", state: .loading)
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-reappeared-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-reappeared-attachment")
+        viewModel.saveLifecycleLocalDraft(codex: service, threadID: "thread-reappeared-attachment")
+        viewModel.cancelTransientTasks()
+        viewModel.restoreSavedLocalDraftIfNeeded(codex: service, threadID: "thread-reappeared-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-reappeared",
+            viewModel: viewModel,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: ["attachment-reappeared"],
+            codex: service,
+            threadID: "thread-reappeared-attachment"
+        )
+
+        XCTAssertEqual(viewModel.composerAttachments, [
+            TurnComposerImageAttachment(id: "attachment-reappeared", state: .ready(attachment))
+        ])
+        XCTAssertEqual(service.composerDraft(for: "thread-reappeared-attachment")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-reappeared", state: .ready(attachment))
+        ])
+        XCTAssertFalse(viewModel.hasBlockingAttachmentState)
+    }
+
+    func testDetachedFailedAttachmentLoadUpdatesRetainedTile() {
+        let service = makeService()
+        let viewModel = TurnViewModel()
+        viewModel.input = "Use this image"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-failed", state: .loading)
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-failed-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-failed-attachment")
+        viewModel.saveLifecycleLocalDraft(codex: service, threadID: "thread-failed-attachment")
+        viewModel.cancelTransientTasks()
+
+        TurnViewModel.completeAttachmentLoad(
+            .failed,
+            id: "attachment-failed",
+            viewModel: viewModel,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: ["attachment-failed"],
+            codex: service,
+            threadID: "thread-failed-attachment"
+        )
+
+        XCTAssertEqual(viewModel.composerAttachments, [
+            TurnComposerImageAttachment(id: "attachment-failed", state: .failed)
+        ])
+        XCTAssertTrue(viewModel.hasBlockingAttachmentState)
+        XCTAssertEqual(service.composerDraft(for: "thread-failed-attachment")?.attachments, [])
+    }
+
+    func testDetachedAttachmentLoadPreservesSelectedOrder() {
+        let service = makeService()
+        let firstAttachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "first-thumb",
+            payloadDataURL: "data:image/jpeg;base64,FIRST"
+        )
+        let secondAttachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "second-thumb",
+            payloadDataURL: "data:image/jpeg;base64,SECOND"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-first", state: .loading),
+            TurnComposerImageAttachment(id: "attachment-second", state: .loading),
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-ordered-attachments")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-ordered-attachments")
+        let attachmentOrder = ["attachment-first", "attachment-second"]
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(secondAttachment),
+            id: "attachment-second",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: attachmentOrder,
+            codex: service,
+            threadID: "thread-ordered-attachments"
+        )
+        TurnViewModel.completeAttachmentLoad(
+            .ready(firstAttachment),
+            id: "attachment-first",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: attachmentOrder,
+            codex: service,
+            threadID: "thread-ordered-attachments"
+        )
+
+        XCTAssertEqual(service.composerDraft(for: "thread-ordered-attachments")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-first", state: .ready(firstAttachment)),
+            TurnComposerImageAttachment(id: "attachment-second", state: .ready(secondAttachment)),
+        ])
+    }
+
+    func testPartialDetachedAttachmentRestoreKeepsRemainingLoadingTiles() {
+        let service = makeService()
+        let firstAttachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "first-thumb",
+            payloadDataURL: "data:image/jpeg;base64,FIRST"
+        )
+        let secondAttachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "second-thumb",
+            payloadDataURL: "data:image/jpeg;base64,SECOND"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.input = "Compare these"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-first", state: .loading),
+            TurnComposerImageAttachment(id: "attachment-second", state: .loading),
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-partial-restore")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-partial-restore")
+        let attachmentOrder = ["attachment-first", "attachment-second"]
+        viewModel.saveLifecycleLocalDraft(codex: service, threadID: "thread-partial-restore")
+        viewModel.cancelTransientTasks()
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(firstAttachment),
+            id: "attachment-first",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: attachmentOrder,
+            codex: service,
+            threadID: "thread-partial-restore"
+        )
+
+        viewModel.restoreSavedLocalDraftIfNeeded(codex: service, threadID: "thread-partial-restore")
+
+        XCTAssertEqual(viewModel.composerAttachments, [
+            TurnComposerImageAttachment(id: "attachment-first", state: .ready(firstAttachment)),
+            TurnComposerImageAttachment(id: "attachment-second", state: .loading),
+        ])
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(secondAttachment),
+            id: "attachment-second",
+            viewModel: viewModel,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: attachmentOrder,
+            codex: service,
+            threadID: "thread-partial-restore"
+        )
+
+        XCTAssertEqual(service.composerDraft(for: "thread-partial-restore")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-first", state: .ready(firstAttachment)),
+            TurnComposerImageAttachment(id: "attachment-second", state: .ready(secondAttachment)),
+        ])
+        XCTAssertFalse(viewModel.hasBlockingAttachmentState)
+    }
+
+    func testDraftEditsDoNotBlockPendingAttachmentMerge() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.input = "Describe this"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-edited", state: .loading)
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-edited-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-edited-attachment")
+        viewModel.input = "Describe this in detail"
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-edited-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-edited",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: ["attachment-edited"],
+            codex: service,
+            threadID: "thread-edited-attachment"
+        )
+
+        XCTAssertEqual(service.composerDraftMergeRevision(for: "thread-edited-attachment"), expectedRevision)
+        XCTAssertEqual(service.composerDraft(for: "thread-edited-attachment")?.input, "Describe this in detail")
+        XCTAssertEqual(service.composerDraft(for: "thread-edited-attachment")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-edited", state: .ready(attachment))
+        ])
+    }
+
+    func testRemovedPendingAttachmentDoesNotMergeAfterLateCompletion() {
+        let service = makeService()
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-removed", state: .loading)
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-removed-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-removed-attachment")
+        viewModel.removeComposerAttachment(id: "attachment-removed")
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-removed-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(attachment),
+            id: "attachment-removed",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: ["attachment-removed"],
+            codex: service,
+            threadID: "thread-removed-attachment"
+        )
+
+        XCTAssertNil(service.composerDraft(for: "thread-removed-attachment"))
+    }
+
+    func testRemovedOnePendingAttachmentDoesNotMergeWhileSiblingStillLoads() {
+        let service = makeService()
+        let removedAttachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "removed-thumb",
+            payloadDataURL: "data:image/jpeg;base64,REMOVED"
+        )
+        let keptAttachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "kept-thumb",
+            payloadDataURL: "data:image/jpeg;base64,KEPT"
+        )
+        let viewModel = TurnViewModel()
+        viewModel.input = "Use one image"
+        viewModel.composerAttachments = [
+            TurnComposerImageAttachment(id: "attachment-removed", state: .loading),
+            TurnComposerImageAttachment(id: "attachment-kept", state: .loading),
+        ]
+
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-remove-one-attachment")
+        let expectedRevision = service.composerDraftMergeRevision(for: "thread-remove-one-attachment")
+        let attachmentOrder = ["attachment-removed", "attachment-kept"]
+        viewModel.removeComposerAttachment(id: "attachment-removed")
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-remove-one-attachment")
+
+        TurnViewModel.completeAttachmentLoad(
+            .ready(removedAttachment),
+            id: "attachment-removed",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: attachmentOrder,
+            codex: service,
+            threadID: "thread-remove-one-attachment"
+        )
+        TurnViewModel.completeAttachmentLoad(
+            .ready(keptAttachment),
+            id: "attachment-kept",
+            viewModel: nil,
+            expectedDraftMergeRevision: expectedRevision,
+            attachmentOrder: attachmentOrder,
+            codex: service,
+            threadID: "thread-remove-one-attachment"
+        )
+
+        XCTAssertEqual(service.composerDraft(for: "thread-remove-one-attachment")?.attachments, [
+            TurnComposerImageAttachment(id: "attachment-kept", state: .ready(keptAttachment))
+        ])
+    }
+
+    func testDetachedPastedAttachmentLoadFinishesIntoSavedDraft() async {
+        let service = makeService()
+        let viewModel = TurnViewModel()
+        let threadID = "thread-detached-paste"
+
+        viewModel.enqueuePastedImageData([Self.onePixelPNGData], codex: service, threadID: threadID)
+        guard let attachmentID = viewModel.composerAttachments.first?.id else {
+            XCTFail("Expected pasted image to create a loading attachment")
+            return
+        }
+        let expectedRevision = service.composerDraftMergeRevision(for: threadID)
+
+        viewModel.saveLifecycleLocalDraft(codex: service, threadID: threadID)
+        viewModel.cancelTransientTasks()
+
+        let savedAttachment = await waitForDraftAttachment(
+            in: service,
+            threadID: threadID,
+            attachmentID: attachmentID
+        )
+
+        XCTAssertNotNil(savedAttachment)
+        XCTAssertEqual(viewModel.composerAttachments, [
+            TurnComposerImageAttachment(id: attachmentID, state: .loading)
+        ])
+        XCTAssertEqual(service.composerDraftMergeRevision(for: threadID), expectedRevision)
+    }
+
+    func testLocalDraftSurvivesFailedSend() async {
+        let service = makeService()
+        service.isConnected = true
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "Retry this later"
+        viewModel.saveLocalDraft(codex: service, threadID: "thread-draft-failure")
+
+        viewModel.sendTurn(codex: service, threadID: "thread-draft-failure")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertEqual(service.composerDraft(for: "thread-draft-failure")?.input, "Retry this later")
+        XCTAssertEqual(viewModel.input, "Retry this later")
+    }
+
+    func testSendTurnUsesCannedPromptWhenSubagentsChipIsSelected() async {
+        let service = makeService()
+        service.isConnected = true
+
+        var capturedParams: JSONValue?
+        service.requestTransportOverride = { method, params in
+            XCTAssertEqual(method, "turn/start")
+            capturedParams = params
+            return RPCMessage(
+                id: .string(UUID().uuidString),
+                result: .object(["turnId": .string("turn-subagents")]),
+                includeJSONRPC: false
+            )
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "/sub"
+        viewModel.slashCommandPanelState = .commands(query: "sub")
+        viewModel.onSelectSlashCommand(.subagents)
+
+        viewModel.sendTurn(codex: service, threadID: "thread-subagents")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertEqual(
+            textInput(from: capturedParams),
+            "Run subagents for different tasks. Delegate distinct work in parallel when helpful and then synthesize the results."
+        )
+    }
+
+    func testSendTurnPrefixesDraftTextWhenSubagentsChipIsSelected() async {
+        let service = makeService()
+        service.isConnected = true
+
+        var capturedParams: JSONValue?
+        service.requestTransportOverride = { method, params in
+            XCTAssertEqual(method, "turn/start")
+            capturedParams = params
+            return RPCMessage(
+                id: .string(UUID().uuidString),
+                result: .object(["turnId": .string("turn-literal-subagents")]),
+                includeJSONRPC: false
+            )
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "/sub"
+        viewModel.slashCommandPanelState = .commands(query: "sub")
+        viewModel.onSelectSlashCommand(.subagents)
+
+        viewModel.input = "Please explain what /subagents does."
+
+        viewModel.sendTurn(codex: service, threadID: "thread-literal-subagents")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertEqual(
+            textInput(from: capturedParams),
+            "Run subagents for different tasks. Delegate distinct work in parallel when helpful and then synthesize the results.\n\nPlease explain what /subagents does."
+        )
+    }
+
+    func testSendTurnPrefixesPromptBeforeOrdinaryDraftText() async {
+        let service = makeService()
+        service.isConnected = true
+
+        var capturedParams: JSONValue?
+        service.requestTransportOverride = { method, params in
+            XCTAssertEqual(method, "turn/start")
+            capturedParams = params
+            return RPCMessage(
+                id: .string(UUID().uuidString),
+                result: .object(["turnId": .string("turn-shifted-subagents")]),
+                includeJSONRPC: false
+            )
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "Please explain /subagents too."
+        viewModel.isSubagentsSelectionArmed = true
+
+        viewModel.sendTurn(codex: service, threadID: "thread-shifted-subagents")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertEqual(
+            textInput(from: capturedParams),
+            "Run subagents for different tasks. Delegate distinct work in parallel when helpful and then synthesize the results.\n\nPlease explain /subagents too."
+        )
+    }
+
+    func testSendTurnTrimsLeadingWhitespaceBeforeApplyingSubagentsPrompt() async {
+        let service = makeService()
+        service.isConnected = true
+
+        var capturedParams: JSONValue?
+        service.requestTransportOverride = { method, params in
+            XCTAssertEqual(method, "turn/start")
+            capturedParams = params
+            return RPCMessage(
+                id: .string(UUID().uuidString),
+                result: .object(["turnId": .string("turn-trimmed-subagents")]),
+                includeJSONRPC: false
+            )
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "   follow up"
+        viewModel.isSubagentsSelectionArmed = true
+
+        viewModel.sendTurn(codex: service, threadID: "thread-trimmed-subagents")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertEqual(
+            textInput(from: capturedParams),
+            "Run subagents for different tasks. Delegate distinct work in parallel when helpful and then synthesize the results.\n\nfollow up"
+        )
+    }
+
+    func testSendTurnPrefixesPromptAfterFileMentionRewrite() async {
+        let service = makeService()
+        service.isConnected = true
+
+        var capturedParams: JSONValue?
+        service.requestTransportOverride = { method, params in
+            XCTAssertEqual(method, "turn/start")
+            capturedParams = params
+            return RPCMessage(
+                id: .string(UUID().uuidString),
+                result: .object(["turnId": .string("turn-file-mention-subagents")]),
+                includeJSONRPC: false
+            )
+        }
+
+        let viewModel = TurnViewModel()
+        viewModel.input = "@TurnView.swift /sub"
+        viewModel.composerMentionedFiles = [
+            TurnComposerMentionedFile(
+                fileName: "TurnView.swift",
+                path: "Views/Turn/TurnView.swift"
+            )
+        ]
+        viewModel.slashCommandPanelState = .commands(query: "sub")
+        viewModel.onSelectSlashCommand(.subagents)
+
+        viewModel.sendTurn(codex: service, threadID: "thread-file-mention-subagents")
+        await waitForSendCompletion(viewModel)
+
+        XCTAssertEqual(
+            textInput(from: capturedParams),
+            "Run subagents for different tasks. Delegate distinct work in parallel when helpful and then synthesize the results.\n\n@Views/Turn/TurnView.swift"
+        )
+    }
+
+    private func makeState(
+        isSending: Bool = false,
+        isConnected: Bool = true,
+        trimmedInput: String = "hello",
+        hasReadyImages: Bool = false,
+        hasBlockingAttachmentState: Bool = false,
+        hasSkillSelection: Bool = false,
+        hasPluginSelection: Bool = false,
+        hasReviewSelection: Bool = false,
+        hasPendingReviewSelection: Bool = false,
+        hasSubagentsSelection: Bool = false
+    ) -> TurnComposerSendAvailability {
+        TurnComposerSendAvailability(
+            isSending: isSending,
+            isConnected: isConnected,
+            trimmedInput: trimmedInput,
+            hasReadyImages: hasReadyImages,
+            hasBlockingAttachmentState: hasBlockingAttachmentState,
+            hasSkillSelection: hasSkillSelection,
+            hasPluginSelection: hasPluginSelection,
+            hasReviewSelection: hasReviewSelection,
+            hasPendingReviewSelection: hasPendingReviewSelection,
+            hasSubagentsSelection: hasSubagentsSelection
+        )
+    }
+
+    private func makeAccessoryState(
+        hasAttachment: Bool = false,
+        hasSkillSelection: Bool = false
+    ) -> TurnComposerAccessoryState {
+        let attachment = CodexImageAttachment(
+            thumbnailBase64JPEG: "thumb",
+            payloadDataURL: "data:image/jpeg;base64,AAAA"
+        )
+
+        return TurnComposerAccessoryState(
+            queuedDrafts: [],
+            canSteerQueuedDrafts: false,
+            canRestoreQueuedDrafts: false,
+            steeringDraftID: nil,
+            composerAttachments: hasAttachment ? [
+                TurnComposerImageAttachment(id: "attachment-1", state: .ready(attachment))
+            ] : [],
+            composerMentionedFiles: [],
+            composerMentionedSkills: hasSkillSelection ? [
+                TurnComposerMentionedSkill(name: "check-code", path: "/skills/check-code/SKILL.md", description: "Review")
+            ] : [],
+            composerMentionedPlugins: [],
+            composerReviewSelection: nil,
+            isSubagentsSelectionArmed: false,
+            isPlanModeArmed: false,
+            isVoiceRecording: false,
+            voiceAudioLevels: [],
+            voiceRecordingDuration: 0
+        )
+    }
+
+    private func waitForSendCompletion(_ viewModel: TurnViewModel, maxPollCount: Int = 120) async {
+        for _ in 0..<maxPollCount where viewModel.isSending {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+    }
+
+    private static let onePixelPNGData = Data(base64Encoded:
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+    )!
+
+    private func waitForDraftAttachment(
+        in service: CodexService,
+        threadID: String,
+        attachmentID: String,
+        maxPollCount: Int = 120
+    ) async -> TurnComposerImageAttachment? {
+        for _ in 0..<maxPollCount {
+            if let attachment = service.composerDraft(for: threadID)?.attachments.first(where: { $0.id == attachmentID }) {
+                return attachment
+            }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        return service.composerDraft(for: threadID)?.attachments.first(where: { $0.id == attachmentID })
+    }
+
+    private func textInput(from params: JSONValue?) -> String? {
+        params?
+            .objectValue?["input"]?
+            .arrayValue?
+            .compactMap(\.objectValue)
+            .first(where: { $0["type"]?.stringValue == "text" })?["text"]?
+            .stringValue
+    }
+
+    private func workspaceCheckpointResponse(kind: String, copied: Bool? = nil) -> RPCMessage {
+        var result: RPCObject = [
+            "repoRoot": .string("/tmp/djl-local"),
+            "checkpointRef": .string("refs/djl/checkpoints/test"),
+            "checkpointKind": .string(kind),
+            "threadId": .string("thread-new"),
+        ]
+        if let copied {
+            result["copied"] = .bool(copied)
+        }
+        return RPCMessage(
+            id: .string(UUID().uuidString),
+            result: .object(result),
+            includeJSONRPC: false
+        )
+    }
+
+    private func makeService() -> CodexService {
+        let suiteName = "TurnComposerSendAvailabilityTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+        defaults.removePersistentDomain(forName: suiteName)
+        let service = CodexService(defaults: defaults)
+        service.messagesByThread = [:]
+        service.composerDraftsByThreadID = [:]
+
+        // CodexService currently crashes while deallocating in unit-test environment.
+        // Keep instances alive for process lifetime so assertions remain deterministic.
+        Self.retainedServices.append(service)
+        return service
+    }
+}

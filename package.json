@@ -1,0 +1,99 @@
+{
+  "name": "@synara/monorepo",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*",
+      "scripts"
+    ],
+    "catalog": {
+      "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@8881a9b",
+      "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@8881a9b",
+      "@effect/openapi-generator": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/openapi-generator@8881a9b",
+      "@effect/sql-sqlite-bun": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/sql-sqlite-bun@8881a9b",
+      "@effect/vitest": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/vitest@8881a9b",
+      "@effect/language-service": "0.75.1",
+      "@types/bun": "^1.3.9",
+      "@types/node": "^24.10.13",
+      "tsdown": "^0.20.3",
+      "typescript": "^5.7.3",
+      "vitest": "^4.0.0"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-runner.ts dev",
+    "postinstall": "node scripts/fix-node-pty-permissions.mjs",
+    "dev:server": "node scripts/dev-runner.ts dev:server",
+    "dev:web": "node scripts/dev-runner.ts dev:web",
+    "dev:marketing": "turbo run dev --filter=@synara/marketing",
+    "dev:desktop": "node scripts/dev-runner.ts dev:desktop",
+    "electron": "bun run start:desktop",
+    "electron:dev": "node scripts/dev-runner.ts dev:desktop --home-dir ./.djl/electron-dev",
+    "start": "turbo run start --filter=@synara/cli",
+    "start:desktop": "turbo run start --filter=@synara/desktop",
+    "start:marketing": "turbo run preview --filter=@synara/marketing",
+    "build": "turbo run build",
+    "build:marketing": "turbo run build --filter=@synara/marketing",
+    "build:desktop": "turbo run build --filter=@synara/desktop --filter=@synara/cli",
+    "brand:generate": "node --experimental-strip-types scripts/generate-djl-brand-assets.ts",
+    "typecheck": "turbo run typecheck",
+    "lint": "oxlint --disable-nested-config --report-unused-disable-directives",
+    "test": "turbo run test",
+    "brand:check": "node scripts/check-brand-identity.ts",
+    "public-source:check": "node scripts/check-public-source.ts",
+    "i18n:check": "node --experimental-strip-types scripts/check-i18n.ts",
+    "test:desktop-smoke": "turbo run smoke-test --filter=@synara/desktop",
+    "ci:desktop:format": "oxfmt --check apps/desktop apps/server apps/web apps/remote-gateway packages/contracts packages/shared packages/remote-protocol packages/effect-acp scripts package.json",
+    "ci:desktop:lint": "oxlint --quiet --disable-nested-config --report-unused-disable-directives apps/desktop apps/server apps/web apps/remote-gateway packages/contracts packages/shared packages/remote-protocol packages/effect-acp scripts",
+    "ci:desktop:typecheck": "turbo run typecheck --filter=@synara/desktop --filter=@synara/cli --filter=@synara/web --filter=@synara/contracts --filter=@synara/shared --filter=@synara/remote-protocol --filter=effect-acp --filter=@synara/scripts",
+    "ci:desktop:test": "turbo run test --filter=@synara/desktop --filter=@synara/cli --filter=@synara/web --filter=@synara/contracts --filter=@synara/shared --filter=@synara/remote-protocol --filter=effect-acp && bun run --cwd apps/remote-gateway test",
+    "ci:desktop:release-tests": "bun run --cwd scripts test -- public-desktop-release.test.ts release-update-policy.test.ts release-to-vps.test.ts apple-notarization.test.ts mac-dmg-finalize.test.ts mac-update-zip.test.ts merge-mac-update-manifests.test.ts desktop-stage-native-dependencies.test.ts desktop-stage-dependency-overrides.test.ts build-desktop-artifact-mac-config.test.ts desktop-runtime-dependencies.test.ts vendored-opencode.test.ts check-brand-identity.test.ts check-public-source.test.ts env-bool.test.ts lib/desktop-publish-config.test.ts",
+    "ci:desktop:browser": "bun run --cwd apps/web test:browser",
+    "ci:desktop:node-pty": "node scripts/node-pty-smoke.mjs",
+    "ci:desktop:preload": "node scripts/verify-desktop-build.mjs",
+    "ci:desktop:embedded-runtime": "node scripts/embedded-opencode-smoke.ts",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "build:contracts": "turbo run build --filter=@synara/contracts",
+    "dist:desktop:artifact": "node scripts/build-desktop-artifact.ts",
+    "dist:desktop:dmg": "node scripts/build-desktop-artifact.ts --platform mac --target dmg",
+    "dist:desktop:dmg:arm64": "node scripts/build-desktop-artifact.ts --platform mac --target dmg --arch arm64",
+    "dist:desktop:dmg:x64": "node scripts/build-desktop-artifact.ts --platform mac --target dmg --arch x64",
+    "dist:desktop:linux": "node scripts/build-desktop-artifact.ts --platform linux --target AppImage --arch x64",
+    "dist:desktop:win": "node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64",
+    "release:vps": "bash scripts/release-to-vps.sh",
+    "release:publish-vps": "bash scripts/publish-desktop-release-to-vps.sh",
+    "release:configure-downloads": "bash scripts/configure-vps-download-endpoints.sh",
+    "release:smoke": "node scripts/release-smoke.ts",
+    "release:smoke:mac-update": "node scripts/smoke-mac-update-artifact.ts",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules scripts/node_modules apps/*/dist apps/*/dist-electron packages/*/dist .turbo apps/*/.turbo packages/*/.turbo"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "oxfmt": "^0.40.0",
+    "oxlint": "^1.55.0",
+    "turbo": "^2.3.3",
+    "vitest": "catalog:"
+  },
+  "overrides": {
+    "vite": "^8.0.0"
+  },
+  "engines": {
+    "bun": "^1.3.9",
+    "node": "^24.13.1"
+  },
+  "packageManager": "bun@1.3.12",
+  "msw": {
+    "workerDirectory": [
+      "apps/web/public"
+    ]
+  },
+  "patchedDependencies": {
+    "@effect/platform-node-shared@https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node-shared@8881a9b606d84a6f5eb6615279138322984f5368": "patches/@effect%2Fplatform-node-shared@8881a9b.patch"
+  },
+  "trustedDependencies": [
+    "node-pty"
+  ]
+}

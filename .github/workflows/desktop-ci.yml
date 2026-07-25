@@ -1,0 +1,203 @@
+name: Desktop CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  FORCE_COLOR: "1"
+
+jobs:
+  desktop-checks:
+    name: Desktop checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - name: Cache Bun downloads
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check scoped formatting
+        run: bun run ci:desktop:format
+
+      - name: Lint desktop closure
+        run: bun run ci:desktop:lint
+
+      - name: Typecheck desktop closure
+        run: bun run ci:desktop:typecheck
+
+      - name: Run desktop unit tests
+        run: bun run ci:desktop:test
+
+      - name: Run release helper tests
+        run: bun run ci:desktop:release-tests
+
+      - name: Audit public source and branding
+        run: |
+          bun run public-source:check
+          bun run brand:check
+
+      - name: Install Chromium
+        run: bun run --cwd apps/web test:browser:install
+
+      - name: Run Chromium renderer tests
+        run: bun run ci:desktop:browser
+
+      - name: Verify node-pty
+        run: bun run ci:desktop:node-pty
+
+      - name: Build desktop application
+        run: bun run build:desktop
+
+      - name: Verify built preload
+        run: bun run ci:desktop:preload
+
+      - name: Smoke-test Electron
+        run: xvfb-run -a bun run test:desktop-smoke
+
+      - name: Verify embedded OpenCode runtime
+        run: bun run ci:desktop:embedded-runtime
+
+  package-smoke:
+    name: Package smoke (${{ matrix.label }})
+    if: github.event_name != 'pull_request'
+    needs: desktop-checks
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS ARM64
+            runner: macos-14
+            platform: mac
+            target: dmg
+            arch: arm64
+          - label: macOS Intel
+            runner: macos-15-intel
+            platform: mac
+            target: dmg
+            arch: x64
+          - label: Windows x64
+            runner: windows-2022
+            platform: win
+            target: nsis
+            arch: x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - name: Cache Bun downloads
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build unsigned native package
+        shell: bash
+        env:
+          SMOKE_VERSION: 0.0.0-ci.${{ github.run_number }}
+          SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
+        run: |
+          set -euo pipefail
+          unset \
+            APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER \
+            CSC_LINK CSC_KEY_PASSWORD \
+            AZURE_TRUSTED_SIGNING_PUBLISHER_NAME \
+            AZURE_TRUSTED_SIGNING_ENDPOINT \
+            AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME \
+            AZURE_TRUSTED_SIGNING_ACCOUNT_NAME \
+            AZURE_TRUSTED_SIGNING_FILE_DIGEST \
+            AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST \
+            AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161
+          export CSC_IDENTITY_AUTO_DISCOVERY=false
+          bun run dist:desktop:artifact -- \
+            --platform "${{ matrix.platform }}" \
+            --target "${{ matrix.target }}" \
+            --arch "${{ matrix.arch }}" \
+            --build-version "$SMOKE_VERSION" \
+            --output-dir package-smoke \
+            --verbose
+
+      - name: Verify unsigned macOS package smoke
+        if: matrix.platform == 'mac'
+        shell: bash
+        env:
+          SMOKE_VERSION: 0.0.0-ci.${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          dmg="package-smoke/DJL-${SMOKE_VERSION}-${{ matrix.arch }}.dmg"
+          test -s "$dmg"
+          mount_point="$RUNNER_TEMP/djl-package-smoke-${{ matrix.arch }}"
+          mkdir "$mount_point"
+          trap 'hdiutil detach "$mount_point" -quiet || true' EXIT
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point" -quiet
+          app="$mount_point/DJL.app"
+          test -d "$app"
+          expected_arch="${{ matrix.arch }}"
+          [[ "$expected_arch" == "x64" ]] && expected_arch="x86_64"
+          file "$app/Contents/MacOS/DJL" | grep -F "$expected_arch"
+          grep -F "owner: Anthonysu798" "$app/Contents/Resources/app-update.yml"
+          grep -F "repo: DJL" "$app/Contents/Resources/app-update.yml"
+          "$app/Contents/Resources/opencode/opencode" --version
+
+      - name: Verify unsigned Windows package smoke
+        if: matrix.platform == 'win'
+        shell: pwsh
+        env:
+          SMOKE_VERSION: 0.0.0-ci.${{ github.run_number }}
+        run: |
+          $installer = "package-smoke/DJL-$env:SMOKE_VERSION-x64.exe"
+          if (-not (Test-Path $installer)) {
+            throw "Missing Windows installer: $installer"
+          }
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne "NotSigned") {
+            throw "Windows package smoke must be unsigned; received $($signature.Status)."
+          }

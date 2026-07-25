@@ -1,0 +1,408 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   HeroStage - the DJL hero centrepiece (deep-red cinematic).
+   Full-bleed red stage: ONE vivid red glow, slow drifting smoke, a bold
+   solid "DJL" wordmark recessed behind a centred Spline robot (read as black
+   with red environment light), a bright red laser horizon at the robot's
+   base, a glossy floor reflection + contact glow, and legibility scrims.
+   Decorative backdrop only: pointer-events are off so it never traps scroll
+   or clicks. All classes are prefixed `hs-`.
+   Z order inside the stage: backdrop 0, watermark 1, robot+reflection 2,
+   scrims 3.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hs-root {
+  /* local red palette (globals.css only ships amber) */
+  --hs-red: #ff2230;
+  --hs-red-bright: #ff3a44;
+  --hs-red-deep: #160205;
+  --hs-red-black: #0c0103;
+  --hs-red-wordmark: #c8121d;
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background: var(--hs-red-black);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── z0 :: backdrop - red stage glow, core, vignette (+ smoke child) ───────
+   First gradient listed is the topmost layer; the deep red anchors the base. */
+.hs-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transform-origin: 50% 42%;
+  background:
+    /* vivid red stage glow, slightly above centre */
+    radial-gradient(58% 50% at 50% 42%, rgba(255, 34, 48, 0.5), transparent 70%),
+    /* hotter core where the robot stands */
+    radial-gradient(26% 30% at 50% 56%, rgba(255, 58, 68, 0.38), transparent 72%),
+    /* edge vignette - fall to near-black-red at the corners */
+    radial-gradient(
+        132% 96% at 50% 45%,
+        transparent 38%,
+        var(--hs-red-deep) 86%,
+        var(--hs-red-black) 100%
+      ),
+    var(--hs-red-deep);
+}
+
+/* ── drifting red smoke / fog ─────────────────────────────────────────────
+   Soft red radial blobs that screen-blend over the stage. Drift runs only
+   when the stage is live and motion is allowed (gated below + reduced-motion). */
+.hs-fog {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.hs-fog-blob {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  filter: blur(46px);
+  will-change: transform;
+}
+.hs-fog-a {
+  left: 6%;
+  top: 26%;
+  width: 50vw;
+  height: 50vw;
+  opacity: 0.5;
+  background: radial-gradient(closest-side, rgba(255, 34, 48, 0.5), transparent 70%);
+}
+.hs-fog-b {
+  right: 4%;
+  top: 38%;
+  width: 42vw;
+  height: 42vw;
+  opacity: 0.45;
+  background: radial-gradient(closest-side, rgba(255, 58, 68, 0.42), transparent 70%);
+}
+.hs-fog-c {
+  left: 28%;
+  bottom: 2%;
+  width: 56vw;
+  height: 34vw;
+  opacity: 0.42;
+  background: radial-gradient(closest-side, rgba(200, 18, 29, 0.46), transparent 72%);
+}
+.hs-root[data-live="true"] .hs-fog-a {
+  animation: hs-drift-a 44s ease-in-out infinite;
+}
+.hs-root[data-live="true"] .hs-fog-b {
+  animation: hs-drift-b 54s ease-in-out infinite;
+}
+.hs-root[data-live="true"] .hs-fog-c {
+  animation: hs-drift-c 38s ease-in-out infinite;
+}
+@keyframes hs-drift-a {
+  0% {
+    transform: translate3d(-6%, 2%, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(7%, -5%, 0) scale(1.2);
+  }
+  100% {
+    transform: translate3d(-6%, 2%, 0) scale(1.05);
+  }
+}
+@keyframes hs-drift-b {
+  0% {
+    transform: translate3d(5%, -3%, 0) scale(1.12);
+  }
+  50% {
+    transform: translate3d(-7%, 4%, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(5%, -3%, 0) scale(1.12);
+  }
+}
+@keyframes hs-drift-c {
+  0% {
+    transform: translate3d(-4%, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, -3%, 0) scale(1.16);
+  }
+  100% {
+    transform: translate3d(-4%, 0, 0) scale(1);
+  }
+}
+
+/* ── z1 :: monumental solid wordmark "DJL" ────────────────────────────────
+   Bold, clearly-readable red - a vertical red gradient fills the glyphs and
+   nearly spans the width. Centred container; inner span carries the entrance. */
+.hs-watermark {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: max-content;
+}
+.hs-watermark-text {
+  display: block;
+  transform-origin: 50% 50%;
+  white-space: nowrap;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 900;
+  font-size: clamp(8rem, 39vw, 30rem);
+  line-height: 0.7;
+  letter-spacing: -0.045em;
+  /* solid red wordmark with a subtle vertical gradient */
+  background: linear-gradient(
+    180deg,
+    var(--hs-red-bright) 0%,
+    var(--hs-red-wordmark) 56%,
+    #7c0a12 120%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* glow respects glyph alpha even with transparent fill */
+  filter: drop-shadow(0 0 50px rgba(255, 34, 48, 0.28));
+}
+
+/* ── z2 :: robot layer (floor, laser, glow, robot) ────────────────────────
+   The layer sits at z2; children stack internally so the floor sits under
+   the robot, the laser crosses at its base, and the rim glow sits behind it. */
+.hs-robotlayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+/* soft red rim halo so the robot is lit by the signature colour */
+.hs-robot-glow {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(640px, 72vw);
+  height: min(640px, 80vh);
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 58, 68, 0.4),
+    rgba(255, 34, 48, 0.14) 46%,
+    transparent 72%
+  );
+  filter: blur(34px);
+}
+
+/* signature: a bright red laser horizon across the floor at the robot base */
+.hs-laser {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  top: 61%;
+  height: 2px;
+  z-index: 3;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--hs-red) 14%,
+    var(--hs-red-bright) 38%,
+    #ffd9d2 50%,
+    var(--hs-red-bright) 62%,
+    var(--hs-red) 86%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 8px 2px rgba(255, 58, 68, 0.9),
+    0 0 30px 6px rgba(255, 34, 48, 0.7),
+    0 0 72px 18px rgba(255, 34, 48, 0.36);
+}
+/* wide soft bloom above and below the laser core */
+.hs-laser::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 150px;
+  transform: translateY(-50%);
+  background: radial-gradient(ellipse 58% 100% at 50% 50%, rgba(255, 34, 48, 0.3), transparent 70%);
+  filter: blur(16px);
+}
+
+/* CSS-fallback floor mirror (for non-WebKit, alongside -webkit-box-reflect) */
+.hs-reflection {
+  position: absolute;
+  left: 50%;
+  top: 63%;
+  width: min(360px, 42vw);
+  height: min(300px, 32vh);
+  transform: translate(-50%, 0) scaleY(-1);
+  z-index: 2;
+  background: radial-gradient(ellipse 42% 60% at 50% 18%, rgba(255, 58, 68, 0.18), transparent 70%);
+  filter: blur(7px);
+  opacity: 0.7;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 72%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 72%);
+}
+
+/* red ground glow + a darker contact shadow so the robot reads grounded */
+.hs-contact {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  width: min(440px, 48vw);
+  height: 78px;
+  transform: translate(-50%, 0);
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 50% 60% at 50% 50%, rgba(255, 34, 48, 0.3), transparent 72%),
+    radial-gradient(ellipse 32% 52% at 50% 60%, rgba(0, 0, 0, 0.7), transparent 76%);
+  filter: blur(9px);
+}
+
+/* centring + floor reflection wrapper (NOT transformed by Motion) */
+.hs-robotwrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(1180px, 116vw);
+  height: 100%;
+  transform: translate(-50%, -52%);
+  z-index: 5;
+  /* Chrome/WebKit floor reflection (macOS target) */
+  -webkit-box-reflect: below 2px linear-gradient(transparent 36%, rgba(255, 255, 255, 0.14));
+}
+
+/* inner element Motion animates (scale + entrance blur) */
+.hs-robot-anim {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 46%;
+}
+
+.hs-robot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  /* multiply folds the Spline studio backdrop into the red stage: the black
+     metal stays black, the light-grey studio becomes red, and the glossy
+     highlights pick up the red environment light - matching the reference. */
+  mix-blend-mode: multiply;
+  filter: brightness(1.12) contrast(1.32) saturate(1.1);
+  /* elliptical mask: show only the robot, hide Spline canvas edges + logo */
+  -webkit-mask-image: radial-gradient(
+    ellipse 33% 82% at 50% 45%,
+    #000 0 66%,
+    rgba(0, 0, 0, 0.6) 74%,
+    transparent 84%
+  );
+  mask-image: radial-gradient(
+    ellipse 33% 82% at 50% 45%,
+    #000 0 66%,
+    rgba(0, 0, 0, 0.6) 74%,
+    transparent 84%
+  );
+}
+
+/* ── z3 :: legibility scrims (top header + gentle bottom copy) ─────────────
+   Bottom scrim grounds the very bottom for copy without washing the red. */
+.hs-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.hs-scrim-top {
+  top: 0;
+  height: 140px;
+  background: linear-gradient(
+    180deg,
+    var(--hs-red-black) 0%,
+    rgba(12, 1, 3, 0.5) 42%,
+    transparent 100%
+  );
+}
+.hs-scrim-bottom {
+  bottom: 0;
+  height: 40%;
+  background: linear-gradient(
+    0deg,
+    rgba(10, 1, 2, 0.94) 0%,
+    rgba(10, 1, 2, 0.6) 30%,
+    rgba(10, 1, 2, 0.22) 62%,
+    transparent 100%
+  );
+}
+
+/* ── small screens ─────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .hs-watermark {
+    top: 46%;
+  }
+  .hs-watermark-text {
+    font-size: clamp(6rem, 46vw, 14rem);
+    letter-spacing: -0.05em;
+  }
+  /* glow a touch tighter so it does not wash the small stage */
+  .hs-backdrop {
+    background:
+      radial-gradient(64% 46% at 50% 40%, rgba(255, 34, 48, 0.46), transparent 72%),
+      radial-gradient(30% 26% at 50% 56%, rgba(255, 58, 68, 0.32), transparent 74%),
+      radial-gradient(
+        138% 98% at 50% 44%,
+        transparent 36%,
+        var(--hs-red-deep) 84%,
+        var(--hs-red-black) 100%
+      ),
+      var(--hs-red-deep);
+  }
+  /* narrower + taller robot crop so the figure stays whole on a tall stage */
+  .hs-robotwrap {
+    width: min(760px, 150vw);
+    transform: translate(-50%, -50%);
+  }
+  .hs-robot {
+    -webkit-mask-image: radial-gradient(
+      ellipse 26% 82% at 50% 46%,
+      #000 0 60%,
+      rgba(0, 0, 0, 0.6) 70%,
+      transparent 82%
+    );
+    mask-image: radial-gradient(
+      ellipse 26% 82% at 50% 46%,
+      #000 0 60%,
+      rgba(0, 0, 0, 0.6) 70%,
+      transparent 82%
+    );
+  }
+  .hs-robot-glow {
+    width: min(440px, 80vw);
+    height: min(440px, 60vh);
+  }
+}
+
+/* ── reduced motion safety :: collapse to the final static state ──────────
+   Motion is JS-gated too, but this guarantees no residual transition state
+   and freezes the ambient smoke drift. */
+@media (prefers-reduced-motion: reduce) {
+  .hs-backdrop,
+  .hs-watermark-text,
+  .hs-robot-anim {
+    opacity: 1 !important;
+    transition: none !important;
+  }
+  .hs-robot-anim {
+    filter: none;
+  }
+  .hs-fog-a,
+  .hs-fog-b,
+  .hs-fog-c {
+    animation: none !important;
+  }
+}

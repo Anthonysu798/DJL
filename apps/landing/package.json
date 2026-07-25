@@ -1,0 +1,37 @@
+{
+  "name": "djl-agent-landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "clsx": "^2.1.1",
+    "gsap": "^3.15.0",
+    "lucide-react": "1.21.0",
+    "motion": "^12.40.0",
+    "next": "16.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.481",
+    "@remotion/transitions": "^4.0.481",
+    "@tailwindcss/postcss": "4.3.1",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/three": "^0.184.1",
+    "eslint": "latest",
+    "eslint-config-next": "16.2.9",
+    "remotion": "^4.0.481",
+    "tailwindcss": "4.3.1",
+    "typescript": "^5.7.3"
+  }
+}

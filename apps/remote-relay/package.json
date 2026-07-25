@@ -1,0 +1,22 @@
+{
+  "name": "@synara/remote-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@synara/remote-protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260718.1",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "^4.112.0"
+  }
+}

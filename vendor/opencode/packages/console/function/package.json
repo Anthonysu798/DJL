@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@opencode-ai/console-function",
+  "version": "1.17.18",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "3.0.82",
+    "@ai-sdk/openai": "3.0.48",
+    "@ai-sdk/openai-compatible": "2.0.37",
+    "@openauthjs/openauth": "0.0.0-20250322224806",
+    "@opencode-ai/console-core": "workspace:*",
+    "@opencode-ai/console-resource": "workspace:*",
+    "ai": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@tsconfig/node22": "22.0.2",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "openai": "5.11.0",
+    "typescript": "catalog:"
+  }
+}

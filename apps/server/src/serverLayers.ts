@@ -1,0 +1,174 @@
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { Layer } from "effect";
+
+import { AutomationRunReactorLive } from "./automation/Layers/AutomationRunReactor";
+import { AutomationSchedulerLive } from "./automation/Layers/AutomationScheduler";
+import { AutomationServiceLive } from "./automation/Layers/AutomationService";
+import { CheckpointDiffQueryLive } from "./checkpointing/Layers/CheckpointDiffQuery";
+import { CheckpointStoreLive } from "./checkpointing/Layers/CheckpointStore";
+import { CheckpointReactorLive } from "./orchestration/Layers/CheckpointReactor";
+import { OrchestrationReactorLive } from "./orchestration/Layers/OrchestrationReactor";
+import { StudioOutputReactorLive } from "./orchestration/Layers/StudioOutputReactor";
+import { WorkPreparationQueueLive } from "./orchestration/Layers/WorkPreparationQueue";
+import { ProviderCommandReactorLive } from "./orchestration/Layers/ProviderCommandReactor";
+import { ProviderRuntimeIngestionLive } from "./orchestration/Layers/ProviderRuntimeIngestion";
+import { RuntimeReceiptBusLive } from "./orchestration/Layers/RuntimeReceiptBus";
+import { ThreadDeletionReactorLive } from "./orchestration/Layers/ThreadDeletionReactor";
+import { OrchestrationLayerLive } from "./orchestration/runtimeLayer";
+
+import { DevServerManagerLive } from "./devServerManager";
+import { KeybindingsLive } from "./keybindings";
+import { GitCoreLive } from "./git/Layers/GitCore";
+import { GitLayerLive, TextGenerationLayerLive } from "./git/runtimeLayer";
+import { TerminalLayerLive } from "./terminal/runtimeLayer";
+import { AuthControlPlaneLive } from "./auth/Layers/AuthControlPlane";
+import { BootstrapCredentialServiceLive } from "./auth/Layers/BootstrapCredentialService";
+import { ServerAuthLive } from "./auth/Layers/ServerAuth";
+import { ServerAuthPolicyLive } from "./auth/Layers/ServerAuthPolicy";
+import { ServerSecretStoreLive } from "./auth/Layers/ServerSecretStore";
+import { SessionCredentialServiceLive } from "./auth/Layers/SessionCredentialService";
+import { ProfileStatsQueryLive } from "./profileStats";
+import { ProfileStatsArchiveLive } from "./profileStatsArchive";
+import { ServerLifecycleEventsLive } from "./serverLifecycleEvents";
+import { ServerRuntimeStartupLive } from "./serverRuntimeStartup";
+import { ServerSettingsLive } from "./serverSettings";
+import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
+import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
+import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
+import { AutomationRepositoryLive } from "./persistence/Layers/AutomationRepository";
+import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
+import { WorkPreparationRepositoryLive } from "./persistence/Layers/WorkPreparationRepository";
+import { DocumentIntelligenceLive } from "./work/Layers/DocumentIntelligence";
+import { DocumentRendererLive } from "./work/Layers/DocumentRenderer";
+import { ProjectMemoryLive } from "./memory/Layers/ProjectMemory";
+import { MemoryReactorLive } from "./orchestration/Layers/MemoryReactor";
+import { AiDetectorServiceLive } from "./aiDetector/Layers/AiDetectorService";
+
+export { makeServerProviderLayer } from "./provider/runtimeLayer";
+
+export function makeServerRuntimeServicesLayer() {
+  const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
+
+  const checkpointDiffQueryLayer = CheckpointDiffQueryLive.pipe(
+    Layer.provideMerge(OrchestrationLayerLive),
+    Layer.provideMerge(checkpointStoreLayer),
+  );
+
+  const runtimeServicesLayer = Layer.mergeAll(
+    OrchestrationLayerLive,
+    checkpointStoreLayer,
+    checkpointDiffQueryLayer,
+    RuntimeReceiptBusLive,
+  );
+  const runtimeIngestionLayer = ProviderRuntimeIngestionLive.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+  );
+  const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+  );
+  const projectMemoryLayer = ProjectMemoryLive;
+  const workPreparationQueueLayer = WorkPreparationQueueLive.pipe(
+    Layer.provideMerge(WorkPreparationRepositoryLive),
+    Layer.provideMerge(runtimeServicesLayer),
+    Layer.provideMerge(DocumentIntelligenceLive),
+    Layer.provideMerge(projectMemoryLayer),
+  );
+  const memoryReactorLayer = MemoryReactorLive.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+    Layer.provideMerge(projectMemoryLayer),
+  );
+  const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+    Layer.provideMerge(studioOutputReactorLayer),
+    Layer.provideMerge(workPreparationQueueLayer),
+    Layer.provideMerge(GitCoreLive),
+    Layer.provideMerge(TextGenerationLayerLive),
+    Layer.provideMerge(ServerSettingsLive),
+  );
+  const checkpointReactorLayer = CheckpointReactorLive.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+  );
+  const profileStatsArchiveLayer = ProfileStatsArchiveLive.pipe(
+    Layer.provideMerge(checkpointStoreLayer),
+  );
+  const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
+    Layer.provideMerge(runtimeIngestionLayer),
+    Layer.provideMerge(providerCommandReactorLayer),
+    Layer.provideMerge(checkpointReactorLayer),
+    Layer.provideMerge(studioOutputReactorLayer),
+    Layer.provideMerge(workPreparationQueueLayer),
+    Layer.provideMerge(memoryReactorLayer),
+  );
+  const threadDeletionReactorLayer = ThreadDeletionReactorLive.pipe(
+    Layer.provideMerge(profileStatsArchiveLayer),
+    Layer.provideMerge(OrchestrationLayerLive),
+    Layer.provideMerge(TerminalLayerLive),
+  );
+  // Shares the single memoized TerminalManager with the top-level TerminalLayerLive.
+  const devServerManagerLayer = DevServerManagerLive.pipe(Layer.provide(TerminalLayerLive));
+  const sessionCredentialLayer = SessionCredentialServiceLive.pipe(
+    Layer.provide(ServerSecretStoreLive),
+  );
+  const authControlPlaneLayer = AuthControlPlaneLive.pipe(
+    Layer.provide(BootstrapCredentialServiceLive),
+    Layer.provide(sessionCredentialLayer),
+  );
+  const serverAuthLayer = ServerAuthLive.pipe(
+    Layer.provide(ServerAuthPolicyLive),
+    Layer.provide(BootstrapCredentialServiceLive),
+    Layer.provide(sessionCredentialLayer),
+    Layer.provide(authControlPlaneLayer),
+  );
+  const authServicesLayer = Layer.mergeAll(
+    ServerAuthPolicyLive,
+    ServerSecretStoreLive,
+    BootstrapCredentialServiceLive,
+    sessionCredentialLayer,
+    authControlPlaneLayer,
+    serverAuthLayer,
+  );
+  const automationServiceLayer = AutomationServiceLive.pipe(
+    Layer.provideMerge(AutomationRepositoryLive),
+    Layer.provideMerge(ProjectionTurnRepositoryLive),
+    Layer.provideMerge(GitCoreLive),
+    Layer.provideMerge(TextGenerationLayerLive),
+    Layer.provideMerge(ServerSettingsLive),
+    Layer.provideMerge(runtimeServicesLayer),
+  );
+  const automationSchedulerLayer = AutomationSchedulerLive.pipe(
+    Layer.provideMerge(automationServiceLayer),
+    Layer.provideMerge(AutomationRepositoryLive),
+  );
+  const automationRunReactorLayer = AutomationRunReactorLive.pipe(
+    Layer.provideMerge(automationServiceLayer),
+  );
+
+  return Layer.mergeAll(
+    automationServiceLayer,
+    automationSchedulerLayer,
+    automationRunReactorLayer,
+    AutomationRepositoryLive,
+    WorkPreparationRepositoryLive,
+    DocumentIntelligenceLive,
+    DocumentRendererLive,
+    AiDetectorServiceLive,
+    projectMemoryLayer,
+    memoryReactorLayer,
+    workPreparationQueueLayer,
+    orchestrationReactorLayer,
+    threadDeletionReactorLayer,
+    devServerManagerLayer,
+    GitLayerLive,
+    TextGenerationLayerLive,
+    TerminalLayerLive,
+    KeybindingsLive,
+    ServerSettingsLive,
+    ServerEnvironmentLive,
+    ProfileStatsQueryLive,
+    authServicesLayer,
+    ServerLifecycleEventsLive,
+    ServerRuntimeStartupLive,
+    WorkspaceLayerLive,
+    ProjectFaviconResolverLive,
+  ).pipe(Layer.provideMerge(NodeServices.layer));
+}

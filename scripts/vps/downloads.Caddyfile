@@ -1,0 +1,80 @@
+downloads.slcor.com {
+	root * /srv/djl-releases
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		X-Robots-Tag "noindex"
+	}
+
+	@macArm64Download {
+		path /download/mac /download/mac/arm64
+		file {
+			try_files /stable/current-mac-arm64.dmg
+		}
+	}
+	handle @macArm64Download {
+		rewrite * /stable/current-mac-arm64.dmg
+		header Cache-Control "no-store"
+		header Content-Disposition "attachment; filename=\"DJL-macOS-arm64.dmg\""
+		file_server
+	}
+
+	@macArm64Unavailable path /download/mac /download/mac/arm64
+	handle @macArm64Unavailable {
+		header Cache-Control "no-store"
+		header Content-Type "text/plain; charset=utf-8"
+		respond "DJL for Apple Silicon is temporarily unavailable. Please try again shortly." 404
+	}
+
+	@macX64Download {
+		path /download/mac/x64
+		file {
+			try_files /stable/current-mac-x64.dmg
+		}
+	}
+	handle @macX64Download {
+		rewrite * /stable/current-mac-x64.dmg
+		header Cache-Control "no-store"
+		header Content-Disposition "attachment; filename=\"DJL-macOS-x64.dmg\""
+		file_server
+	}
+
+	@macX64Unavailable path /download/mac/x64
+	handle @macX64Unavailable {
+		header Cache-Control "no-store"
+		header Content-Type "text/plain; charset=utf-8"
+		respond "DJL for Intel Mac is temporarily unavailable. Please try again shortly." 404
+	}
+
+	@windowsDownload {
+		path /download/windows
+		file {
+			try_files /stable/current-windows.exe
+		}
+	}
+	handle @windowsDownload {
+		rewrite * /stable/current-windows.exe
+		header Cache-Control "no-store"
+		header Content-Disposition "attachment; filename=\"DJL-Windows-x64.exe\""
+		file_server
+	}
+
+	@windowsUnavailable path /download/windows
+	handle @windowsUnavailable {
+		header Cache-Control "no-store"
+		header Content-Type "text/plain; charset=utf-8"
+		respond "DJL for Windows is temporarily unavailable. Please try again shortly." 404
+	}
+
+	@versionedInstaller path_regexp versionedInstaller ^/releases/[^/]+/(mac/|windows/)?[^/]+\.(dmg|exe)$
+	header @versionedInstaller Cache-Control "public, max-age=31536000, immutable"
+	header @versionedInstaller Content-Disposition "attachment"
+
+	@stableAsset path /stable/*
+	header @stableAsset Cache-Control "no-cache"
+
+	file_server
+}

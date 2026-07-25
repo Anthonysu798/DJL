@@ -1,0 +1,95 @@
+// FILE: GPTVoiceSetupSheet.swift
+// Purpose: Shows a compact info sheet that explains how DJL voice uses paired-computer ChatGPT auth.
+// Layer: View
+// Exports: GPTVoiceSetupSheet
+// Depends on: SwiftUI, AppFont
+
+import SwiftUI
+
+struct GPTVoiceSetupSheet: View {
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top, spacing: 12) {
+                        DJLIcon.image(systemName: "mic.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle()
+                                    .fill(Color.primary.opacity(0.08))
+                            )
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("GPT voice uses ChatGPT on your device")
+                                .font(AppFont.subheadline(weight: .semibold))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("DJL does not keep a separate GPT voice secret on the iPhone. It uses the ChatGPT session already active on your paired device.")
+                                .font(AppFont.caption())
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        infoStep(
+                            number: "1",
+                            title: "You speak on the iPhone",
+                            detail: "DJL records the voice clip locally on the phone when you hold to talk."
+                        )
+                        infoStep(
+                            number: "2",
+                            title: "The phone checks your paired device",
+                            detail: "DJL asks the paired device bridge for the active ChatGPT session available there."
+                        )
+                        infoStep(
+                            number: "3",
+                            title: "GPT transcribes the clip",
+                            detail: "The voice clip is sent through the paired device bridge so ChatGPT can turn it into text."
+                        )
+                        infoStep(
+                            number: "4",
+                            title: "The text comes back to DJL",
+                            detail: "The transcript returns to the app and gets dropped into your message composer."
+                        )
+                    }
+
+                    Text("In short: iPhone voice in, device ChatGPT session for transcription, transcript back to the iPhone.")
+                        .font(AppFont.caption())
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+            }
+            .presentationDragIndicator(.visible)
+            .navigationTitle("How GPT Voice Works")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    // Keeps the voice flow easy to scan in a compact informational sheet.
+    private func infoStep(number: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(number)
+                .font(AppFont.caption(weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(AppFont.subheadline(weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(detail)
+                    .font(AppFont.caption())
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}

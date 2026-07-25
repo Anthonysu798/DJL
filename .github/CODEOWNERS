@@ -1,0 +1,10 @@
+* @Anthonysu798
+
+/.github/workflows/ @Anthonysu798
+/scripts/*release* @Anthonysu798
+/scripts/lib/public-desktop-release.ts @Anthonysu798
+/scripts/lib/release-update-policy.ts @Anthonysu798
+/docs/release.md @Anthonysu798
+/docs/skills/djl-desktop-release/ @Anthonysu798
+/apps/desktop/resources/entitlements.mac.plist @Anthonysu798
+/apps/desktop/resources/entitlements.mac.inherit.plist @Anthonysu798

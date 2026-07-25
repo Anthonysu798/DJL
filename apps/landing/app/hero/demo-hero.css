@@ -1,0 +1,484 @@
+/* demo-hero.css - light "neobot" hero ported from Demo/ (index.html + styles.css).
+   Scoped under .djl-hero so it never collides with the dark site globals.
+   A light theme island: boot DJL-logo reveal, Spline robot stage, giant outline
+   "DJL", blueprint grid, drifting particles, pointer light + tilt, glass nav,
+   hero glass bar and MODEL / STATE HUD. */
+
+.djl-hero {
+  --dh-bg: #f4f6f8;
+  --dh-ink: #0b1118;
+  --dh-muted: rgba(20, 31, 42, 0.68);
+  --dh-cyan: #1684c7;
+  --dh-blue: #247bff;
+  --dh-mx: 50%;
+  --dh-my: 45%;
+  --dh-tilt-x: 0deg;
+  --dh-tilt-y: 0deg;
+  --dh-far-x: 0px;
+  --dh-far-y: 0px;
+  --dh-mid-x: 0px;
+  --dh-mid-y: 0px;
+  --dh-near-x: 0px;
+  --dh-near-y: 0px;
+
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--dh-ink);
+  font-family: var(--font-body), Inter, ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(
+      circle at var(--dh-mx) var(--dh-my),
+      rgba(93, 170, 255, 0.18),
+      transparent 30rem
+    ),
+    linear-gradient(180deg, #f7f8fa 0%, #eef3f7 48%, #ffffff 100%);
+}
+
+/* blueprint grid overlay */
+.djl-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(36, 123, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36, 123, 255, 0.04) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(circle at 50% 35%, black, transparent 72%);
+  mask-image: radial-gradient(circle at 50% 35%, black, transparent 72%);
+  opacity: 0.32;
+  transform: translate3d(var(--dh-far-x), var(--dh-far-y), 0);
+  will-change: transform;
+}
+
+/* drifting data particles */
+.dh-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.82;
+}
+
+/* ── boot screen: DJL logo reveal (fixed, fades out, then hides) ── */
+.dh-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+  opacity: 1;
+  transition: opacity 0.7s ease;
+}
+/* React flips this once the intro has played; fade out and stop blocking */
+.dh-boot[data-done="true"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.dh-boot-logo {
+  width: min(32vw, 320px);
+  filter: invert(1) drop-shadow(0 0 24px rgba(95, 174, 255, 0.42));
+  opacity: 0;
+  transform: scale(0.82);
+}
+.dh-boot-scan {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(130, 217, 255, 0.16) 48%,
+    transparent 56%
+  );
+  transform: translateX(-110%);
+}
+
+/* ── scene (light robot stage) ── */
+.dh-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  perspective: 1600px;
+}
+.dh-giant {
+  position: absolute;
+  inset: auto auto 4vh 50%;
+  transform: translate3d(calc(-50% + var(--dh-far-x)), var(--dh-far-y), 0);
+  z-index: 0;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(36, 66, 92, 0.12);
+  font-family: var(--font-display), Inter, sans-serif;
+  font-size: clamp(160px, 34vw, 520px);
+  line-height: 0.78;
+  font-weight: 800;
+  letter-spacing: 0;
+  opacity: 0.42;
+  user-select: none;
+  will-change: transform, opacity;
+}
+.dh-glow {
+  position: absolute;
+  inset: -18% auto auto 50%;
+  z-index: 1;
+  width: 86vw;
+  height: 86vw;
+  transform: translate3d(calc(-50% + var(--dh-mid-x)), var(--dh-mid-y), 0);
+  background:
+    radial-gradient(circle at 45% 45%, rgba(95, 168, 255, 0.22), transparent 34%),
+    radial-gradient(circle at 62% 38%, rgba(255, 255, 255, 0.56), transparent 32%);
+  filter: blur(18px);
+  opacity: 0.64;
+  pointer-events: none;
+}
+.dh-motion {
+  position: absolute;
+  inset: -9vh -10vw -8vh -10vw;
+  z-index: 2;
+  transform: translateY(48px) scale(1.08);
+  transform-origin: 50% 46%;
+  will-change: transform, opacity, filter;
+}
+.dh-frame {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(var(--dh-mid-x), var(--dh-mid-y), 0) rotateX(var(--dh-tilt-x))
+    rotateY(var(--dh-tilt-y));
+  transform-style: preserve-3d;
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+.dh-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: auto;
+  filter: contrast(1.02) saturate(1) brightness(1);
+}
+.dh-spline-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(12, 18, 26, 0.16), transparent 12%),
+    radial-gradient(ellipse at 50% 48%, rgba(8, 14, 20, 0.24), transparent 28%),
+    radial-gradient(ellipse at 50% 70%, rgba(8, 14, 20, 0.12), transparent 30%);
+  opacity: 0.58;
+}
+.dh-spline-placeholder span {
+  width: min(28vw, 280px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(20, 45, 68, 0.08);
+  background: radial-gradient(circle at 50% 42%, rgba(9, 15, 22, 0.16), transparent 58%);
+  filter: blur(0.4px);
+}
+.dh-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 50% 44%,
+      rgba(255, 255, 255, 0) 0 30%,
+      rgba(255, 255, 255, 0.08) 58%,
+      rgba(255, 255, 255, 0.26) 100%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.28));
+}
+.dh-pointer {
+  position: absolute;
+  left: var(--dh-mx);
+  top: var(--dh-my);
+  z-index: 5;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(61, 143, 255, 0.18),
+    rgba(116, 196, 255, 0.1) 38%,
+    transparent 68%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  transform: translate3d(calc(-50% + var(--dh-near-x)), calc(-50% + var(--dh-near-y)), 0);
+}
+
+/* ── header (logo + glass nav) ── */
+.dh-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px clamp(20px, 5vw, 72px);
+  pointer-events: none;
+}
+.dh-brand,
+.dh-nav {
+  pointer-events: auto;
+}
+.dh-brand img {
+  display: block;
+  width: 72px;
+  height: auto;
+  filter: drop-shadow(0 8px 18px rgba(27, 39, 52, 0.16));
+}
+.dh-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px;
+  border: 1px solid rgba(19, 39, 55, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.dh-nav a {
+  min-width: 80px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: rgba(12, 22, 31, 0.72);
+  font-size: 13px;
+  text-align: center;
+  transition:
+    color 180ms ease,
+    background 180ms ease;
+}
+.dh-nav a:hover {
+  color: #061017;
+  background: rgba(36, 123, 255, 0.1);
+}
+
+/* nav + language switch cluster on the right */
+.dh-nav-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+/* EN / 中文 language toggle — same glass pill language as the nav */
+.dh-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid rgba(19, 39, 55, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.dh-lang a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: rgba(12, 22, 31, 0.66);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    color 180ms ease,
+    background 180ms ease;
+}
+.dh-lang a:hover {
+  color: #061017;
+}
+.dh-lang a.active {
+  color: #061017;
+  background: rgba(36, 123, 255, 0.12);
+}
+
+/* ── hero content (HUD + bottom glass bar) ── */
+.dh-content {
+  position: relative;
+  z-index: 10;
+  min-height: 100svh;
+  display: grid;
+  align-items: end;
+  padding: 118px clamp(20px, 6vw, 88px) clamp(34px, 8vh, 78px);
+  /* let the cursor reach the Spline iframe below so the robot can follow it;
+     the only content here (the HUD) is decorative/aria-hidden */
+  pointer-events: none;
+}
+.dh-hud {
+  position: absolute;
+  right: clamp(20px, 5vw, 68px);
+  top: 28vh;
+  z-index: 11;
+  width: min(300px, 28vw);
+  display: grid;
+  gap: 12px;
+  transform: translate3d(var(--dh-near-x), var(--dh-near-y), 0);
+  will-change: transform;
+}
+.dh-hud-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(22, 132, 199, 0.46), transparent);
+  box-shadow: 0 0 24px rgba(124, 215, 255, 0.28);
+}
+.dh-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(25, 50, 70, 0.14);
+  font-size: 12px;
+}
+.dh-metric span {
+  color: rgba(19, 34, 46, 0.52);
+}
+.dh-metric strong {
+  color: #09131d;
+  letter-spacing: 0.08em;
+}
+.dh-copy {
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(30, 58, 82, 0.14);
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46));
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.dh-lede {
+  margin: 0;
+  color: var(--dh-muted);
+  font-size: 14px;
+  line-height: 1.58;
+}
+.dh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dh-primary,
+.dh-secondary {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 180ms ease;
+}
+.dh-primary {
+  color: #061017;
+  background: linear-gradient(135deg, #f8fbff, #84dfff 52%, #4c8dff);
+  box-shadow: 0 14px 34px rgba(74, 152, 255, 0.22);
+}
+.dh-secondary {
+  border: 1px solid rgba(14, 31, 45, 0.18);
+  color: rgba(8, 18, 27, 0.88);
+  background: rgba(255, 255, 255, 0.5);
+}
+.dh-primary:hover,
+.dh-secondary:hover {
+  transform: translateY(-2px);
+}
+
+/* ── responsive ── */
+@media (max-width: 900px) {
+  .dh-header {
+    padding: 16px 18px;
+  }
+  .dh-brand img {
+    width: 60px;
+  }
+  .dh-nav {
+    gap: 2px;
+  }
+  .dh-nav a {
+    min-width: auto;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+  .dh-nav-cluster {
+    gap: 6px;
+  }
+  .dh-lang a {
+    min-width: auto;
+    padding: 8px 9px;
+    font-size: 12px;
+  }
+  /* fit the whole robot inside the viewport instead of over-zooming the
+     frame to ~2x viewport width (which clipped it to the upper body) */
+  .dh-motion {
+    top: 7vh;
+    right: -4vw;
+    bottom: 5vh;
+    left: -4vw;
+    transform: translateY(0) scale(1);
+    transform-origin: 50% 42%;
+  }
+  .dh-giant {
+    font-size: clamp(110px, 38vw, 280px);
+    bottom: 8vh;
+  }
+  .dh-content {
+    padding: 104px 20px 10vh;
+  }
+  .dh-copy {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+  .dh-actions {
+    justify-content: flex-start;
+  }
+  .dh-hud {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /* keep the iframe full-bleed (edges off-screen) so the Spline scene's grey
+     background and watermark never show as a "card" */
+  .dh-motion {
+    top: 9vh;
+    right: -8vw;
+    bottom: 6vh;
+    left: -8vw;
+    transform: translateY(0) scale(1);
+    transform-origin: 50% 40%;
+  }
+  .dh-giant {
+    font-size: clamp(96px, 44vw, 220px);
+    bottom: 10vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dh-frame {
+    transition: none;
+  }
+}

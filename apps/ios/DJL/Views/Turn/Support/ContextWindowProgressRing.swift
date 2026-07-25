@@ -1,0 +1,119 @@
+// FILE: ContextWindowProgressRing.swift
+// Purpose: Compact progress indicator for context window token usage in composer/meta rows.
+// Layer: View Component
+// Exports: ContextWindowProgressRing
+// Depends on: SwiftUI, HapticFeedback, UsageStatusSummaryContent
+
+import SwiftUI
+
+struct ContextWindowProgressRing: View {
+    let usage: ContextWindowUsage?
+    let rateLimitBuckets: [CodexRateLimitBucket]
+    let isLoadingRateLimits: Bool
+    let rateLimitsErrorMessage: String?
+    let shouldAutoRefreshStatus: Bool
+    var showsGlassBackground: Bool = true
+    var progressColorOverride: Color?
+    // Callers sitting in tight rows (composer bottom bar) can shrink the tap
+    // target so the ring's built-in air doesn't inflate visual gaps.
+    var tapTargetSize: CGFloat = 34
+    let onRefreshStatus: (() async -> Void)?
+    @State private var isShowingPopover = false
+    @State private var isRefreshing = false
+
+    private let ringSize: CGFloat = 16
+    private let lineWidth: CGFloat = 2.75
+
+    var body: some View {
+        let displayUsage = usage ?? .zero
+
+        Button {
+            HapticFeedback.shared.triggerImpactFeedback(style: .light)
+            isShowingPopover = true
+        } label: {
+            ZStack {
+                Circle()
+                    .stroke(Color(.systemGray5), lineWidth: lineWidth)
+
+                Circle()
+                    .trim(from: 0, to: displayUsage.fractionUsed)
+                    .stroke(ringColor(for: displayUsage), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: ringSize, height: ringSize)
+            .frame(width: tapTargetSize, height: tapTargetSize)
+            .modifier(ContextWindowProgressRingChrome(showsGlassBackground: showsGlassBackground))
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Context window")
+        .accessibilityValue(usageAccessibilityValue)
+        .popover(isPresented: $isShowingPopover) {
+            popoverContent
+                .presentationCompactAdaptation(.popover)
+        }
+        .onChange(of: isShowingPopover) { _, isPresented in
+            guard isPresented, shouldAutoRefreshStatus else { return }
+            refreshStatus(triggerHaptic: false)
+        }
+    }
+
+    private var popoverContent: some View {
+        UsageStatusSummaryContent(
+            contextWindowUsage: usage ?? .zero,
+            rateLimitBuckets: rateLimitBuckets,
+            isLoadingRateLimits: isLoadingRateLimits,
+            rateLimitsErrorMessage: rateLimitsErrorMessage,
+            contextPlacement: .bottom,
+            refreshControl: onRefreshStatus.map { _ in
+                UsageStatusRefreshControl(
+                    title: "Refresh",
+                    isRefreshing: isRefreshing,
+                    action: { refreshStatus() }
+                )
+            }
+        )
+        .padding()
+        .frame(minWidth: 260)
+    }
+
+    private var usageAccessibilityValue: String {
+        "\(usage?.percentUsed ?? 0) percent used"
+    }
+
+    private func ringColor(for usage: ContextWindowUsage) -> Color {
+        if let progressColorOverride {
+            return progressColorOverride
+        }
+
+        return .primary
+    }
+
+    // Refreshes both thread context usage and account windows for the compact status popover.
+    private struct ContextWindowProgressRingChrome: ViewModifier {
+        let showsGlassBackground: Bool
+
+        func body(content: Content) -> some View {
+            if showsGlassBackground {
+                content.adaptiveGlass(.regular, in: Circle())
+            } else {
+                content
+            }
+        }
+    }
+
+    private func refreshStatus(triggerHaptic: Bool = true) {
+        guard !isRefreshing, let onRefreshStatus else { return }
+        if triggerHaptic {
+            HapticFeedback.shared.triggerImpactFeedback(style: .light)
+        }
+        isRefreshing = true
+
+        Task {
+            await onRefreshStatus()
+            await MainActor.run {
+                isRefreshing = false
+            }
+        }
+    }
+}

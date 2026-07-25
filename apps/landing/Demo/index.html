@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DJL AI</title>
+    <link rel="stylesheet" href="styles.css?v=light-3" />
+  </head>
+  <body>
+    <canvas class="particle-canvas" id="particleCanvas" aria-hidden="true"></canvas>
+
+    <div class="boot-screen" id="bootScreen" aria-hidden="true">
+      <img src="assets/djl-logo-transparent.png" alt="" class="boot-logo" />
+      <div class="boot-scan"></div>
+    </div>
+
+    <div class="scene-stage" id="sceneStage" aria-hidden="true">
+      <div class="giant-word" id="giantWord">DJL</div>
+      <div class="scene-glow"></div>
+      <div class="scene-motion" id="sceneMotion">
+        <div class="scene-frame" id="sceneFrame">
+          <iframe
+            title="DJL AI 3D assistant"
+            src="https://my.spline.design/nexbotrobotcharacterconcept-U3jcSXtjiPR0cpbSW9TTxBQc/"
+            frameborder="0"
+            loading="eager"
+            allow="autoplay; fullscreen; xr-spatial-tracking"
+          ></iframe>
+        </div>
+      </div>
+      <div class="scene-vignette"></div>
+      <div class="pointer-light" id="pointerLight"></div>
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="DJL AI 首页">
+        <img src="assets/djl-logo-transparent.png" alt="DJL" />
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#vision">Vision</a>
+        <a href="#system">System</a>
+        <a href="#contact">Launch</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero scroll-panel" data-panel="0">
+        <div class="hero-copy parallax-layer" data-depth="0.12">
+          <p class="hero-lede">
+            一个面向企业与创作者的 AI
+            智能入口，把知识、自动化、数据分析和多模态交互组织成可执行的数字助理。
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#vision">进入系统</a>
+            <a class="secondary-action" href="#system">查看能力</a>
+          </div>
+        </div>
+
+        <div class="hero-hud parallax-layer" data-depth="0.2" aria-hidden="true">
+          <div class="hud-line"></div>
+          <div class="hud-metric">
+            <span>MODEL</span>
+            <strong>DJL-CORE</strong>
+          </div>
+          <div class="hud-metric">
+            <span>STATE</span>
+            <strong>AWAKE</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="intro-section scroll-panel" id="vision" data-panel="1">
+        <div class="section-copy reveal">
+          <p class="eyebrow">PROJECT INTRODUCTION</p>
+          <h2>DJL 是正在上线的 AI 智能中枢。</h2>
+          <p>
+            这不是普通的产品宣传页，而是一个有“启动感”的入口：机器人模型固定在背景里，页面滚动时文字、扫描线、数据层和光效分层移动，像是在进入一套正在上线的智能中枢。
+          </p>
+        </div>
+        <div class="signal-stack parallax-layer" data-depth="0.18" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </section>
+
+      <section class="capabilities-section scroll-panel" id="system" data-panel="2">
+        <div class="section-copy reveal">
+          <p class="eyebrow">DJL CAPABILITIES</p>
+          <h2>让 AI 不只回答问题，而是理解、执行、沉淀。</h2>
+        </div>
+        <div class="capability-grid">
+          <article class="capability-card reveal">
+            <span>01</span>
+            <h3>知识中枢</h3>
+            <p>整合内部文档、业务流程和项目资料，让团队可以直接向系统提问并获得上下文答案。</p>
+          </article>
+          <article class="capability-card reveal">
+            <span>02</span>
+            <h3>自动化执行</h3>
+            <p>把重复工作交给 AI 代理处理，从信息整理、任务流转到跨工具操作，减少人工切换。</p>
+          </article>
+          <article class="capability-card reveal">
+            <span>03</span>
+            <h3>多模态交互</h3>
+            <p>支持文字、图像、语音和可视化内容，让 AI 成为一个能看、能说、能分析的界面。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="flow-section scroll-panel" data-panel="3">
+        <div class="flow-rail" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="section-copy reveal">
+          <p class="eyebrow">SYSTEM FLOW</p>
+          <h2>用户进入 DJL，系统开始接管复杂度。</h2>
+          <p>
+            首页的滚动节奏对应产品本身的体验：唤醒、识别、连接、执行。每一次视觉推进都在说明 DJL
+            的核心价值。
+          </p>
+        </div>
+      </section>
+
+      <section class="cta-section scroll-panel" id="contact" data-panel="4">
+        <div class="cta-content reveal">
+          <p class="eyebrow">READY FOR LAUNCH</p>
+          <h2>DJL AI is online.</h2>
+          <p>下一步可以接入真实产品模块：登录、AI 助手对话、案例展示、团队介绍或预约咨询。</p>
+          <a class="primary-action" href="#top">重新唤醒</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="script.js?v=light-3"></script>
+  </body>
+</html>

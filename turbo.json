@@ -1,0 +1,56 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "PORT",
+    "VITE_WS_URL",
+    "VITE_DEV_SERVER_URL",
+    "ELECTRON_RENDERER_PORT",
+    "SYNARA_HOME",
+    "DJL_HOME",
+    "DJL_REMOTE_RELAY_URL",
+    "DJL_RELAY",
+    "SYNARA_DESKTOP_WS_URL",
+    "SYNARA_DESKTOP_USER_DATA_DIR",
+    "DJL_DESKTOP_USER_DATA_DIR",
+    "SYNARA_DESKTOP_DISPLAY_NAME",
+    "SYNARA_BROWSER_USE_PIPE_PATH",
+    "SYNARA_BROWSER_PERF",
+    "SYNARA_PROVIDER_RUNTIME_IDLE_STOP_MS",
+    "SYNARA_GROK_ACP_DEBUG",
+    "SYNARA_WEB_SOURCEMAP",
+    "SYNARA_SERVER_SOURCEMAP",
+    "SYNARA_DESKTOP_SOURCEMAP",
+    "SYNARA_MODE",
+    "SYNARA_PORT",
+    "SYNARA_NO_BROWSER",
+    "SYNARA_AUTH_TOKEN",
+    "SYNARA_LOG_WS_EVENTS",
+    "SYNARA_HOST",
+    "SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+    "DJL_DOCUMENT_RENDERER_BINARY_PATH",
+    "DJL_DOCUMENT_RENDERER_VERSION",
+    "DJL_DOCUMENT_RENDERER_MANIFEST_URL",
+    "DJL_DOCUMENT_RENDERER_MANIFEST_PUBLIC_KEY_PEM",
+    "DJL_DOCUMENT_RENDERER_DOWNLOAD_SIZE_BYTES"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [],
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": []
+    }
+  }
+}

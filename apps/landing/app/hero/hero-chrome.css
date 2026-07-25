@@ -1,0 +1,248 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   hero-chrome.css
+   Self-contained styles for the cinematic hero CAROUSEL chrome (.hc-*):
+   prev/next circle arrows at the vertical-center screen edges, a bottom bar
+   with an eyebrow + bold uppercase statement that cycles through slides, a
+   segmented progress indicator (white = seen, red = active, gray = upcoming),
+   and a pause/play autoplay toggle bottom-right.
+   Dark theme only. ONE accent: DEEP RED (--hc-red). Glass = backdrop-blur + a
+   1px inner border + a subtle inset top highlight, with a solid-ish fallback
+   when backdrop-filter is unsupported. Neutral values come from globals.css.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* No z-index on the root: children carry z-index (arrows 10, bar/toggle 12)
+   so they live in the hero-section stacking context and the copy layer (z20)
+   still wins. */
+.hc-root {
+  --hc-red: #ff2a36;
+  --hc-red-line: rgba(255, 42, 54, 0.5);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ───────────────────────── side carousel arrows ───────────────────────── */
+.hc-arrow {
+  position: absolute;
+  top: 50%;
+  /* center vertically without transform so Motion owns transform */
+  margin-top: -23px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(236, 237, 244, 0.04);
+  border: 1px solid var(--hc-red-line);
+  box-shadow:
+    inset 0 1px 0 rgba(236, 237, 244, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  color: var(--paper);
+  pointer-events: auto;
+  transition:
+    background 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
+}
+.hc-arrow:hover {
+  background: rgba(255, 42, 54, 0.12);
+  border-color: var(--hc-red);
+  box-shadow:
+    inset 0 1px 0 rgba(236, 237, 244, 0.08),
+    0 0 24px rgba(255, 42, 54, 0.4),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.hc-arrow-left {
+  left: clamp(12px, 3vw, 34px);
+}
+.hc-arrow-right {
+  right: clamp(12px, 3vw, 34px);
+}
+.hc-arrow-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ───────────────────────── bottom carousel bar ───────────────────────── */
+.hc-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(18px, 4.5vh, 40px);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 0 72px;
+  /* container is inert; only the segments take pointer events */
+  pointer-events: none;
+}
+
+.hc-bar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(52px, 9vh, 84px);
+}
+
+.hc-bar-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hc-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.hc-title {
+  margin-top: 10px;
+  max-width: min(90vw, 720px);
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(18px, 2.4vw, 30px);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: #ffffff;
+}
+
+/* ── segmented progress ── */
+.hc-segs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+.hc-seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* generous tap target around a thin bar */
+  padding: 8px 2px;
+  border: 0;
+  background: transparent;
+}
+.hc-seg-bar {
+  display: block;
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18); /* upcoming: dim */
+  transition:
+    width 0.45s var(--ease-expo),
+    background 0.35s var(--ease-out),
+    box-shadow 0.35s var(--ease-out);
+}
+.hc-seg.seen .hc-seg-bar {
+  background: rgba(255, 255, 255, 0.72); /* already seen: whitish */
+}
+.hc-seg:hover .hc-seg-bar {
+  background: rgba(255, 255, 255, 0.9);
+}
+.hc-seg.active .hc-seg-bar {
+  width: 34px;
+  background: var(--hc-red); /* active: bright red, wider */
+  box-shadow: 0 0 12px rgba(255, 42, 54, 0.55);
+}
+.hc-seg.active:hover .hc-seg-bar {
+  background: var(--hc-red);
+}
+
+/* ───────────────────────── play / pause toggle ───────────────────────── */
+.hc-playpause {
+  position: absolute;
+  right: clamp(14px, 3vw, 40px);
+  bottom: clamp(16px, 4vh, 38px);
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(236, 237, 244, 0.05);
+  border: 1px solid var(--line-2);
+  box-shadow:
+    inset 0 1px 0 rgba(236, 237, 244, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  color: var(--paper-dim);
+  pointer-events: auto;
+  transition:
+    background 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
+}
+.hc-playpause:hover {
+  border-color: var(--hc-red);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(236, 237, 244, 0.1),
+    0 0 20px rgba(255, 42, 54, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.hc-playpause:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.hc-playpause:disabled:hover {
+  border-color: var(--line-2);
+  color: var(--paper-dim);
+  box-shadow:
+    inset 0 1px 0 rgba(236, 237, 244, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.hc-playpause-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ───────────────────────── solid-ish glass fallback ───────────────────────── */
+@supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))) {
+  .hc-arrow,
+  .hc-playpause {
+    background: rgba(15, 17, 25, 0.92);
+  }
+}
+
+/* ───────────────────────── responsive ───────────────────────── */
+@media (max-width: 600px) {
+  .hc-arrow {
+    display: none;
+  }
+  .hc-bar {
+    padding: 0 16px;
+  }
+}
+@media (max-width: 480px) {
+  .hc-bar {
+    bottom: clamp(14px, 3.5vh, 26px);
+  }
+}
+
+/* ───────────────────────── reduced motion safety ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .hc-arrow,
+  .hc-playpause,
+  .hc-seg-bar {
+    transition-duration: 0.001ms !important;
+  }
+}

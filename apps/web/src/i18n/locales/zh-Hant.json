@@ -1,0 +1,4252 @@
+{
+  "chat": {
+    "a11y": {
+      "closeImage": "關閉圖片預覽",
+      "djlLogo": "DJL 標誌",
+      "expandedImage": "展開的圖片預覽",
+      "nextImage": "下一張圖片",
+      "previousImage": "上一張圖片",
+      "temporary": "暫時聊天"
+    },
+    "activity": {
+      "agents": "代理程式",
+      "open": "打開",
+      "prompt": "提示",
+      "reasoningTrace": "推理痕跡",
+      "result": "結果",
+      "title": "活動",
+      "updateCount_one": "{{count}} 更新",
+      "updateCount_other": "{{count}} 更新",
+      "updateCountWithPreview_one": "{{count}} 更新 - {{preview}}",
+      "updateCountWithPreview_other": "{{count}} 更新 - {{preview}}"
+    },
+    "approval": {
+      "actions": {
+        "alwaysAllow": {
+          "description": "此工作階段不再詢問",
+          "label": "此工作階段一律允許"
+        },
+        "approveOnce": {
+          "description": "只允許此要求",
+          "label": "僅核准一次"
+        },
+        "cancelTurn": {
+          "description": "停止目前回合",
+          "label": "取消目前回合"
+        },
+        "decline": {
+          "description": "拒絕並讓代理程式繼續",
+          "label": "拒絕"
+        }
+      },
+      "prompt": {
+        "command": "核准此指令？",
+        "fileChange": "核准此檔案變更？",
+        "fileRead": "核准讀取此檔案？",
+        "tool": "核准此工具請求？"
+      },
+      "review": "請檢查要求以繼續。"
+    },
+    "attachments": {
+      "answerBeforeFiles": "回答计划问题后附加文件。",
+      "answerBeforeImages": "回答计划问题后附上图像。",
+      "draftWarningDescription": "草稿附件保存在記憶體中，可能會在導航時遺失。",
+      "draftWarningLabel": "草稿附件可能不會保留",
+      "pasted": {
+        "charCount_one": "{{count}} 個字元",
+        "charCount_other": "{{count}} 個字元",
+        "count_one": "{{count}} 粘贴的文本",
+        "count_other": "{{count}} 条粘贴文本",
+        "hide": "隐藏文字",
+        "lineCount_one": "{{count}}行",
+        "lineCount_other": "{{count}} 行",
+        "remove": "刪除貼上的文字 ({{countLabel}})",
+        "show": "顯示文字",
+        "showInField": "在文字欄位中顯示",
+        "title": "貼上的文字"
+      },
+      "previewNamed": "預覽 {{name}}",
+      "remove": "刪除附件",
+      "removeNamed": "刪除{{name}}",
+      "unknownType": "未知型別"
+    },
+    "automation": {
+      "cancelSetup": "取消自動化設定",
+      "chatRequired": "需要聊天",
+      "chatRequiredDescription": "在創建聊天綁定自動化之前打開聊天。",
+      "createChatFailed": "無法建立聊天",
+      "createChatFailedDescription": "在儲存自動化之前，DJL 無法推廣此草案。",
+      "created": "創建自動化",
+      "createdSummary": "建立自動化:{{name}} -{{cadence}}",
+      "createFailed": "無法創建自動化",
+      "createFailedFallback": "DJL 無法儲存自動化。",
+      "needsDetail": "自動化需要更多細節",
+      "needsDetailFallback": "加上它應該做什麼, 以及多久一次, 例如:“每個工作日早上9點,",
+      "open": "打開",
+      "settingUp": "正在設定自動化",
+      "threadNoteFailed": "未新增主題註釋",
+      "threadNoteFailedDescription": "自動化已創建，但 DJL 無法新增活動註釋。",
+      "updated": "自動化更新"
+    },
+    "commandMenu": {
+      "browseFolders": "瀏覽資料夾",
+      "files": "文件",
+      "fork": {
+        "local": "分岔到本地",
+        "localThreadDescription": "在當前本地線程中繼續",
+        "localWorktreeDescription": "在此本地工作樹中繼續",
+        "newWorktree": "分岔到新的工作樹中",
+        "newWorktreeDescription": "在新的工作樹中繼續"
+      },
+      "groups": {
+        "builtIn": "內建",
+        "local": "本地",
+        "plugins": "外掛",
+        "provider": "提供者",
+        "skills": "技能",
+        "subagents": "子代理"
+      },
+      "loadingCommands": "正在裝入命令...",
+      "loadingSkills": "正在裝入技能...",
+      "noMatchingCommand": "無匹配命令 。",
+      "noMatchingMention": "沒有匹配的外掛或檔案 。",
+      "noMatchingSkill": "沒有匹配的技能。",
+      "review": {
+        "base": "針對基地分支的審查",
+        "baseDescription": "檢查目前分支與其基礎的差異",
+        "changes": "審查未提交的更改",
+        "changesDescription": "查看本地未提交的更改"
+      },
+      "runNativeCommand": "執行 {{provider}} 原生命令",
+      "searchFilesHint": "鍵入以搜尋文件",
+      "searchingMentions": "搜尋中提及..."
+    },
+    "composer": {
+      "actions": {
+        "connecting": "正在連線",
+        "implement": "執行",
+        "implementationActions": "執行動作",
+        "implementNewThread": "在新討論串中執行",
+        "nextQuestion": "下一題",
+        "preparingWorktree": "正在準備工作樹",
+        "refine": "完善",
+        "send": "傳送訊息",
+        "sending": "正在傳送...",
+        "stop": "停止生成",
+        "stopHint": "停止目前回覆。在 Mac 上按 Ctrl+C 可中斷。",
+        "submitAnswers": "提交答案",
+        "submitting": "正在提交...",
+        "transcribing": "正在轉錄語音筆記"
+      },
+      "addFiles": "新增檔案",
+      "extras": "編輯器附加項目",
+      "localFoldersUnavailable": "沒有本地資料夾",
+      "mode": {
+        "build": "建置",
+        "label": "模式",
+        "plan": "計畫模式"
+      },
+      "moreControls": "更多編輯器控制項",
+      "placeholder": {
+        "answer": "請輸入答案以繼續",
+        "approval": "請先處理此核准要求",
+        "configureModel": "請先在設定中配置模型",
+        "default": "輸入問題、用 @ 標記檔案/資料夾，或輸入 / 查看可用指令",
+        "followUp": "提出後續修改",
+        "followUpAttachments": "提出後續修改或附加圖片",
+        "ownAnswer": "輸入自己的答案，或留空以使用所選選項",
+        "planFeedback": "新增意見以完善計畫，或留空以執行計畫",
+        "readOnly": "此歷史任務為唯讀"
+      },
+      "plan": {
+        "details": "計劃詳情",
+        "emptyDescription": "產生計劃後會顯示在這裡。",
+        "emptyTitle": "目前沒有進行中的計劃。",
+        "hideNamed": "隱藏{{name}}",
+        "hideSidebar": "隱藏 {{name}} 側邊欄",
+        "label": "計畫",
+        "modeHint": "計畫模式 — 點擊返回一般建置模式",
+        "proposed": "建議的計畫",
+        "ready": "計畫已就緒",
+        "showSidebar": "顯示 {{name}} 側邊欄",
+        "tasks": "任務"
+      }
+    },
+    "confirmations": {
+      "revertCheckpoint": "把這個線索還給檢查點{{count}}?\n這將丟棄新的信件, 並在此線索中轉換 diff 。\n這一行動不能取消。",
+      "undoFileChanges": "撤消此卡中顯示的最新檔案更改嗎 ?\n先前的檔案更改將保留以撤銷 。\n信件和提供者的對話歷史將保留。\n這一行動不能取消。"
+    },
+    "context": {
+      "ariaLabel": "上下文視窗，已使用 {{usage}}",
+      "autoCompact": "需要時會自動壓縮上下文。",
+      "currentSession": "目前工作階段：{{window}}",
+      "modelWindow": "模型視窗：{{tokens}} 個詞元",
+      "nextTurn": "下一回合：{{window}}",
+      "sessionCost": "工作階段費用：{{cost}}",
+      "title": "上下文視窗",
+      "tokensUsed": "目前已使用 {{tokens}} 個詞元",
+      "totalProcessed": "總計處理：{{tokens}} 個詞元",
+      "unknown": "未知",
+      "used": "上下文已使用",
+      "usedWithMaximum": "已使用 {{maximum}} 上下文",
+      "windowTransition": "目前會話：{{current}}。下一回合：{{next}}。"
+    },
+    "copy": {
+      "copied": "複製了！",
+      "failed": "複製失敗",
+      "message": "複製訊息",
+      "toClipboard": "複製到剪貼簿"
+    },
+    "dock": {
+      "clickFile": "點擊聊天中的檔案即可在此預覽。",
+      "selectFile": "從檔案樹選擇檔案以查看。"
+    },
+    "draft": {
+      "newTerminal": "新增終端機",
+      "newThread": "新增執行緒"
+    },
+    "empty": {
+      "noActiveThread": "沒有使用中的討論串",
+      "selectOrCreate": "選擇一個討論串或新建討論串以開始。",
+      "thisFolder": "這個資料夾",
+      "title": "一起開始建置",
+      "whatShouldWeDoIn": "我們應該做什麼",
+      "whatShouldWeWorkOn": "我們該做什麼工作？"
+    },
+    "environment": {
+      "automations": "自動化",
+      "changes": "變化",
+      "editAutomation": "編輯自動化 {{name}}",
+      "editor": {
+        "open": "在編輯器中開啟",
+        "openIn": "在 {{editor}} 中開啟",
+        "title": "編輯",
+        "view": "編輯器視圖"
+      },
+      "items": {
+        "label": "標籤",
+        "markDone": "標記完成",
+        "markNotDone": "標記未完成"
+      },
+      "localServers": {
+        "none": "沒有伺服器在運行",
+        "noneDescription": "本地開發伺服器將出現在這裡。",
+        "refresh": "刷新本地伺服器",
+        "refreshShort": "重新整理",
+        "runningCount_one": "{{count}} 個伺服器正在執行",
+        "runningCount_other": "{{count}} 個伺服器正在執行",
+        "scanFailed": "無法掃描本機連接埠",
+        "scanFailedDescription": "掃描失敗。嘗試清爽一下。",
+        "scanning": "掃描本機連接埠",
+        "scanningPorts": "掃描連接埠...",
+        "stop": "停止{{name}}",
+        "title": "本地伺服器"
+      },
+      "markers": {
+        "createFailed": "無法建立標記。",
+        "jumpAria": "跳到標記。按 F2 重新命名。",
+        "jumpHint": "點選跳轉·雙擊或按F2重命名",
+        "messageNotFound": "找不到所選的訊息。",
+        "remove": "刪除標記",
+        "removeFailed": "無法刪除標記。",
+        "renameFailed": "無法重命名標記。",
+        "selectUnique": "選擇一個獨特的短語來標記它。",
+        "selectUniqueDescription": "嘗試添加更多單詞，以便 DJL 可以找到確切的位置。",
+        "title": "標記",
+        "unavailableAria": "標記不可用。按 Enter 重新命名。",
+        "unavailableHint": "來源文字已變更或不可用",
+        "unavailableLabel": "{{label}}（不可用）",
+        "updateFailed": "無法更新標記。"
+      },
+      "notepad": "記事本",
+      "notes": {
+        "saveFailed": "儲存筆記失敗",
+        "saveFailedFallback": "無法儲存註解變更。"
+      },
+      "notesPlaceholder": "在此輸入",
+      "output": "輸出",
+      "paused": "已暫停",
+      "pinned": {
+        "jumpAria": "跳到固定訊息。按 F2 重新命名。",
+        "jumpHint": "點選跳轉·雙擊或按F2重命名",
+        "limitDescription_one": "您最多可以在话题中保留 {{count}} 条固定消息。",
+        "limitDescription_other": "您最多可以在话题中保留 {{count}} 条固定消息。",
+        "limitReached": "已達固定訊息限制",
+        "messageUnavailable": "（無法留言）",
+        "renameHint": "按一下或按 Enter 命名",
+        "title": "已固定",
+        "unavailableAria": "固定訊息不可用。按 Enter 重新命名。",
+        "unpin": "取消固定",
+        "unpinMessage": "取消固定訊息",
+        "updateFailed": "無法更新固定訊息",
+        "updateFailedFallback": "無法儲存固定訊息變更。"
+      },
+      "projectInstructions": {
+        "added": "項目說明已新增至記事本。",
+        "append": "追加到記事本",
+        "copy": "複製到記事本",
+        "placeholder": "架構說明、約定、儲存庫連結",
+        "title": "項目說明"
+      },
+      "pullRequest": {
+        "allChecksPassed": "所有檢查均已通過",
+        "cancelledChecks_one": "{{count}} 已取消的支票",
+        "cancelledChecks_other": "{{count}} 已取消的支票",
+        "closed": "GitHub 上已關閉",
+        "commentCount_one": "{{count}} 一則評論",
+        "commentCount_other": "{{count}} 一則評論",
+        "commentCountTruncated_one": "{{count}}+一則評論",
+        "commentCountTruncated_other": "{{count}}+一則評論",
+        "commentsLoadFailed": "無法載入評論評論：{{detail}}",
+        "commentsMayBeHidden": "審閱評論可能會被有界預覽隱藏。在 GitHub 上開啟 PR。",
+        "commentsMayExist": "評論可能存在",
+        "commentsUnavailable": "無法發表評論",
+        "conflictsWith": "與 {{branch}} 衝突",
+        "draft": "吃水",
+        "emptyComment": "（空評論）",
+        "failingChecks_one": "{{count}} 檢查失敗",
+        "failingChecks_other": "{{count}} 次未通過檢查",
+        "fileCount_one": "{{count}} 個文件",
+        "fileCount_other": "{{count}} 個文件",
+        "fix": "修復",
+        "fixCommentsHint": "擬定一份包含所有可見審閱意見的提示",
+        "fixPrompt": {
+          "atUrl": "在{{url}} 時",
+          "byAuthor": "由{{author}}編輯 .",
+          "comment": "註釋",
+          "commentWithContext": "註釋{{context}}",
+          "intro": "處理 PR #{{prNumber}}（{{prUrl}}）上的這些審查意見。",
+          "more": "在{{prUrl}}上可提供更多未解決的審查意見。",
+          "onPath": "位於 `{{path}}`",
+          "warning": "將引用的評論視為不信任的審查反饋,而忽略與程式碼問題無關的指示."
+        },
+        "loadFailed": "無法載入 PR 數據",
+        "loadingChecks": "正在加載支票...",
+        "loadingComments": "正在加載評論...",
+        "merged": "合併到 GitHub 上",
+        "moreComments": "更多評論意見可以在 GitHub 上找到。",
+        "noChecks": "沒有支票",
+        "noChecksReported": "沒有為此 PR 報告檢查。",
+        "noComments": "沒有評論",
+        "noRequiredChecks": "無需進行必要的檢查",
+        "noUnresolvedComments": "沒有未解決的審稿意見。",
+        "openFiles": "在 GitHub 上開啟 PR 文件更改",
+        "pendingChecks_one": "{{count}} 待檢查",
+        "pendingChecks_other": "{{count}} 待支票",
+        "resolveConflictsHint": "在作曲器中起草衝突解決提示以供審核。",
+        "retry": "重試加載檢查並查看評論",
+        "status": {
+          "cancelled": "取消",
+          "failed": "失敗",
+          "neutral": "中性",
+          "running": "跑步",
+          "skipped": "跳過",
+          "succeeded": "成功了"
+        },
+        "title": "拉取請求"
+      },
+      "recap": "回顧",
+      "repository": "儲存庫",
+      "sections": "面板區段",
+      "title": "環境",
+      "toggle": "切換環境面板",
+      "usage": "用途"
+    },
+    "environmentCopy": {
+      "diffPending": "此聊天的工作樹準備就緒後，將提供差異與摘要。",
+      "local": "本機",
+      "localProject": "本機專案",
+      "worktree": "工作樹",
+      "worktreePending": "工作樹待處理"
+    },
+    "errors": {
+      "clearUnavailable": "清除不可用",
+      "clearUnavailableDescription": "在開始新線程之前打開一個項目。",
+      "createHandoff": "無法建立切換線程",
+      "createHandoffFallback": "創建切換線程時發生錯誤。",
+      "createProjectFailed": "建立選中工程失敗 。",
+      "createThreadFallback": "創建新線程時發生錯誤。",
+      "dismiss": "消除錯誤",
+      "editLatestOnly": "只能編輯最新的可回滾的用戶訊息。",
+      "editMessageFailed": "編輯信件失敗 。",
+      "generic": "發生錯誤。",
+      "hideTechnicalDetails": "隱藏技術詳細資料",
+      "interruptBeforeRevert": "在恢復檢查點之前中斷當前回合。",
+      "interruptBeforeUndo": "在撤銷檔案變更之前中斷目前回合。",
+      "openProject": "無法開啟項目",
+      "openProjectFallback": "該項目無法打開。",
+      "openRepository": "無法開啟儲存庫",
+      "openRepositoryFallback": "應用程式內瀏覽器無法開啟 GitHub。",
+      "providerFailure": {
+        "authentication": {
+          "action": "登入或更新提供者憑證，然後再試一次。",
+          "title": "需要登入提供者"
+        },
+        "commandMissing": {
+          "action": "安裝或設定提供者指令，然後再試一次。",
+          "title": "找不到提供者指令"
+        },
+        "connection": {
+          "action": "檢查提供者服務或網路，然後再試一次。",
+          "title": "提供者連線已中斷"
+        },
+        "generic": {
+          "action": "重新嘗試此任務。如果再次失敗，請檢查提供者設定。",
+          "title": "任務已停止"
+        },
+        "permission": {
+          "action": "檢查提供者的檔案權限，然後再試一次。",
+          "title": "提供者存取遭封鎖"
+        },
+        "rateLimit": {
+          "action": "等待限制重設或切換提供者，然後再試一次。",
+          "title": "已達提供者限制"
+        }
+      },
+      "renameThreadFailed": "重命名線程失敗",
+      "revertThreadFailed": "返回執行緒狀態失敗 。",
+      "runScriptFailed": "執行指令碼\"{{name}}\"失敗.",
+      "selectBaseBranch": "在新工作樹模式下發送之前選擇一個基本分支。",
+      "sendMessageFailed": "傳送訊息失敗 。",
+      "sendPlanFollowUpFailed": "傳送計劃後續失敗 。",
+      "showTechnicalDetails": "顯示技術詳細資料",
+      "sideUnavailable": "側面不可用",
+      "sideUnavailableDescription": "在啟動 Side 之前開啟伺服器支援的主執行緒。",
+      "startImplementationThread": "無法啟動執行緒",
+      "startSide": "無法啟動側面",
+      "startSideFallback": "建立 Side 時出錯。",
+      "submitApprovalFailed": "未提交批准決定。",
+      "submitUserInputFailed": "提交使用者輸入失敗 。",
+      "threadTitleEmpty": "話題標題不能為空",
+      "undoFilesFailed": "撤消檔案更改失敗 。",
+      "updateAccessMode": "無法更新訪問模式",
+      "updatePlanMode": "無法更新計劃模式",
+      "waitBeforeEdit": "等待目前發送開始後再進行編輯。"
+    },
+    "fileComment": {
+      "placeholder": "要求變更",
+      "submit": "評論",
+      "target": "評論 {{line}}",
+      "title": "本機評論"
+    },
+    "files": {
+      "askWhy": "詢問為何發生此變更",
+      "collapseFolder": "折 {{name}}",
+      "emptyDirectory": "這裡沒有檔案或資料夾 。",
+      "expandFolder": "展開{{name}}",
+      "goUpDirectory": "上一級目錄",
+      "homeUnavailable": "主目錄無法使用。",
+      "loadDirectoryError": "無法裝入目錄 。",
+      "loadFoldersError": "無法載入資料夾。",
+      "loading": "加載中...",
+      "loadingDirectory": "正在載入目錄...",
+      "loadingEntries": "正在載入項目…",
+      "loadingFolders": "正在載入資料夾…",
+      "loadingLocal": "正在載入本機檔案...",
+      "markdownView": "Markdown 檢視",
+      "matchesDeeper": "匹配更深",
+      "moreActions": "更多行動",
+      "noFolders": "找不到資料夾",
+      "noHome": "找不到主目錄",
+      "noMatches": "沒有相符的檔案。",
+      "noWorkspace": "沒有工作區。",
+      "path": "檔案路徑",
+      "preview": "預覽",
+      "previewDescription": "渲染預覽 - 瀏覽和切換任務列表",
+      "referenceInChat": "在聊天中引用",
+      "search": "搜尋檔案",
+      "searchError": "無法搜尋檔案。",
+      "searchHint": "依名稱或路徑搜尋檔案。",
+      "searchingNested": "正在搜尋嵌套檔案...",
+      "searchPlaceholder": "搜尋檔案...",
+      "shownPartially": "部分顯示",
+      "source": "來源",
+      "sourceDescription": "來源視圖 — 選擇文字以引用聊天中的確切行",
+      "startFromFolder": "從資料夾開始聊天",
+      "topMatches": "顯示熱門比賽。繼續輸入以縮小範圍。",
+      "truncated": "正在顯示最相符的結果。請縮小搜尋範圍。",
+      "useFolder": "使用此資料夾",
+      "waitingForHome": "正在等待來自伺服器的主目錄..."
+    },
+    "git": {
+      "changes": "變更",
+      "close": "關閉原始碼控制",
+      "loading": "正在載入變更...",
+      "noChanges": "工作樹中沒有變更。",
+      "noStaged": "沒有已暫存的變更。",
+      "noUnstaged": "沒有未暫存的變更。",
+      "refresh": "重新整理變更",
+      "selectFile": "選擇檔案以查看差異。",
+      "stageAll": "全部暫存",
+      "staged": "已暫存",
+      "stageFile": "暫存檔案",
+      "title": "原始碼控制",
+      "unavailable": "此討論串無法使用原始碼控制。",
+      "unstageAll": "全部取消暫存",
+      "unstageFile": "取消暫存檔案"
+    },
+    "handoff": {
+      "actionCreate": "建立交接執行緒",
+      "actionExisting": "手脫線"
+    },
+    "header": {
+      "changeThread": "更換執行緒",
+      "chatNumber": "聊天 {{number}}",
+      "closeNamed": "關閉 {{name}}",
+      "closeSelectedSide": "關閉選定的側聊",
+      "closeTerminal": "關閉終端機",
+      "desktopAppRequired": "需要桌面應用程式",
+      "expandChat": "展開此聊天",
+      "gitRepositoryRequired": "需要 Git 儲存器",
+      "handoff": "移交",
+      "handoffTo": "移交給 {{provider}}",
+      "history": "聊天記錄",
+      "new": "新增",
+      "newChat": "新增聊天",
+      "newItem": "新增編輯器列項目",
+      "newTerminal": "新增終端機",
+      "noChats": "此專案中還沒有聊天",
+      "panelsMenu": "開啟面板選單",
+      "splitChat": "分割聊天",
+      "terminal": "終端機"
+    },
+    "health": {
+      "dismissProvider": "略過提供者狀態",
+      "dismissRateLimit": "略過速率限制狀態",
+      "limited": "{{provider}} 提供者的可用性受限。",
+      "providerNeedsAttention": "{{provider}} 需要處理",
+      "providerStatus": "{{provider}} 提供者狀態",
+      "rateLimit": {
+        "approaching": "接近速率限制{{utilization}}。 {{reset}}",
+        "reached": "已達到速率限制。 {{reset}}",
+        "resetsAt": " 於 {{time}} 重設。",
+        "resetsMinutes_one": " {{count}} 分鐘後重設。",
+        "resetsMinutes_other": " {{count}} 分鐘後重設。",
+        "resetsSeconds_one": " 在 {{count}} 秒內重設。",
+        "resetsSeconds_other": " 在 {{count}} 秒內重設。",
+        "utilization": " （已使用 {{percent}}%）"
+      },
+      "unavailable": "{{provider}} 提供者無法使用。"
+    },
+    "image": {
+      "download": "下載產生的圖片",
+      "downloadError": "無法下載產生的圖片",
+      "expand": "展開產生的圖片",
+      "expandAction": "展開",
+      "generated": "產生的圖片"
+    },
+    "liveChanges": {
+      "changedCount_one": "{{count}} 檔案已更改",
+      "changedCount_other": "{{count}} 檔案已更改",
+      "filesChanged": "檔案已更改"
+    },
+    "markdown": {
+      "copied": "已拷貝",
+      "copyCode": "拷貝程式碼",
+      "disableSoftWrap": "關閉自動換行",
+      "enableSoftWrap": "開啟自動換行"
+    },
+    "model": {
+      "availability": {
+        "checking": "檢查",
+        "comingSoon": "即將推出",
+        "signIn": "登入",
+        "unavailable": "不可用"
+      },
+      "change": "變更模型",
+      "changeReasoning": "變更模型與推理",
+      "configure": "設定模型",
+      "loading": "正在載入模型",
+      "noMatches": "沒有相符項目",
+      "noPiModels": "找不到 Pi 模型",
+      "search": "搜尋模型或提供者"
+    },
+    "models": {
+      "addFavorite": "在最愛中新增{{name}}",
+      "cloud": "雲頭",
+      "favourites": "收藏",
+      "local": "在裝置上",
+      "removeFavorite": "從最愛中刪除{{name}}"
+    },
+    "openIn": {
+      "label": "在編輯器中開啟",
+      "noEditors": "找不到已安裝的編輯器",
+      "open": "開啟",
+      "options": "編輯器選項"
+    },
+    "panels": {
+      "add": "新增面板",
+      "close": "關閉面板",
+      "closeNamed": "關閉{{name}}",
+      "collapse": "折疊面板",
+      "comingSoon": "{{panel}} 面板即將推出。",
+      "loadingBrowser": "正在載入瀏覽器...",
+      "loadingDiff": "正在加載差異檢視器...",
+      "loadingExplorer": "正在載入檔案瀏覽器...",
+      "loadingFile": "正在載入檔案...",
+      "loadingGit": "正在載入 Git...",
+      "loadingTerminal": "正在載入終端機...",
+      "menu": "面板",
+      "names": {
+        "browser": "瀏覽器",
+        "diff": "差異",
+        "explorer": "探險家",
+        "file": "文件",
+        "git": "Git",
+        "panel": "面板",
+        "side": "Side",
+        "terminal": "終端"
+      },
+      "sleepingTerminal": "終端機正在休眠，即將恢復。"
+    },
+    "plan": {
+      "collapse": "摺疊計劃",
+      "expand": "擴充套件計劃"
+    },
+    "planActions": {
+      "copied": "計劃複製為降價",
+      "copy": "複製為降價形式",
+      "copyFailed": "無法複製計劃",
+      "download": "下載到 .plan 資料夾",
+      "downloaded": "計劃已下載",
+      "downloadFailed": "無法下載計劃",
+      "export": "匯出降價文件",
+      "exported": "匯出計劃",
+      "exportFailed": "無法匯出計劃",
+      "exportUnavailable": "無法匯出",
+      "exportUnavailableDescription": "導出計劃需要桌面應用程式。",
+      "workspaceUnavailable": "工作空間路徑不可用",
+      "workspaceUnavailableDescription": "該執行緒沒有可供下載的工作空間路徑。"
+    },
+    "projectPicker": {
+      "addingProject": "正在新增工程...",
+      "chat": {
+        "activeGroup": "活動資料夾",
+        "chooseFolder": "新增新工程",
+        "managed": "不要在專案中工作",
+        "search": "搜尋專案",
+        "trigger": "專案工作"
+      },
+      "developerProject": "開發者專案",
+      "folder": "資料夾",
+      "loadingFolders": "正在裝入資料夾...",
+      "newProject": "新專案",
+      "noFolders": "未找到資料夾",
+      "noMatches": "無匹配",
+      "openingFolderPicker": "開啟資料夾拾取器...",
+      "updateFailed": "無法更新專案 。",
+      "work": {
+        "activeGroup": "專案和最近資料夾",
+        "chooseFolder": "選擇另一個資料夾",
+        "managed": "管理的工作資料夾",
+        "managedDetail": "此任務的私人資料夾",
+        "search": "搜尋地點",
+        "trigger": "管理的工作資料夾"
+      }
+    },
+    "projectScripts": {
+      "deleted": "已刪除操作“{{name}}”",
+      "deleteFailed": "無法刪除操作"
+    },
+    "queue": {
+      "actions": "佇列後續要求動作",
+      "deleteFollowUp": "刪除佇列中的後續要求",
+      "deletePrompt": "刪除佇列提示",
+      "editPrompt": "編輯佇列提示",
+      "fileNamed": "文件：{{name}}",
+      "followUp": "排隊跟進",
+      "imageNamed": "圖：{{name}}",
+      "steer": "引導"
+    },
+    "references": {
+      "browserAttachFailed": "無法附加目前瀏覽器上下文。",
+      "browserAttachFailedTitle": "無法附加應用程式內瀏覽器上下文",
+      "browserFindingCount_one": "{{count}} 瀏覽器發現",
+      "browserFindingCount_other": "{{count}} 個瀏覽器發現結果",
+      "browserNoActiveTab": "應用程式內瀏覽器還沒有可擷取的活動標籤。",
+      "browserOpenFirst": "首先開啟應用程式內瀏覽器，然後重試。",
+      "browserScreenshotSkipped": "目前瀏覽器螢幕截圖已被跳過，因為此郵件已達到附件限制。",
+      "browserTooLarge": "瀏覽器螢幕截圖超出了 {{limit}} 附件限制。",
+      "commentCount_one": "{{count}} 一則評論",
+      "commentCount_other": "{{count}} 一則評論",
+      "editBrowserFinding": "編輯瀏覽器找結果 {{number}}",
+      "limit_one": "每個訊息最多可以附加 {{count}} 個參考資訊。",
+      "limit_other": "每個訊息最多可以附加 {{count}} 個引用。",
+      "previewBrowserFinding": "預覽瀏覽器發現 {{number}}",
+      "removeBrowserFinding": "刪除瀏覽器發現的 {{number}}",
+      "removeComments": "刪除評論",
+      "removeSelections": "刪除選擇",
+      "selectionCount_one": "{{count}} 個選擇",
+      "selectionCount_other": "{{count}} 個選擇",
+      "selectionTooLong": "選擇最多可達 {{count}} 個字元。"
+    },
+    "slash": {
+      "compact": {
+        "failed": "無法壓縮執行緒",
+        "failedFallback": "壓縮內容時發生錯誤。",
+        "unavailable": "無法使用壓縮",
+        "unavailableDescription": "請先開啟受支援的作用中伺服器執行緒，再壓縮內容。"
+      },
+      "descriptions": {
+        "automation": "依此提示建立排程自動化",
+        "clear": "啟動新執行緒並清除目前對話內容",
+        "compact": "壓縮目前執行緒內容以釋放空間",
+        "default": "將此執行緒切換回一般聊天模式",
+        "export": "將此執行緒下載為 ZIP 封存（thread.json + transcript.md）",
+        "fast": "開啟或關閉此執行緒的快速模式",
+        "fork": "將此執行緒分支至本機或新工作樹",
+        "model": "切換此執行緒的回應模型",
+        "plan": "將此執行緒切換至計畫模式",
+        "review": "開始檢閱目前的程式碼變更",
+        "side": "從此執行緒開啟受保護的 Side",
+        "status": "顯示內容用量與速率限制狀態",
+        "subagents": "插入提示，要求助理委派工作"
+      },
+      "export": {
+        "failed": "無法匯出執行緒",
+        "failedFallback": "匯出執行緒時發生錯誤。",
+        "unavailable": "無法使用匯出",
+        "unavailableDescription": "請開啟伺服器支援的執行緒，並等待目前回合結束後再匯出。"
+      },
+      "fast": {
+        "checkFailed": "無法檢查快速模式",
+        "claudeUnavailableDescription": "Claude 未向此帳戶或環境提供 /fast。",
+        "disabled": "快速模式已關閉",
+        "discoveryFailed": "Claude 指令探索失敗。請再試一次。",
+        "discoveryUnavailable": "Claude 指令探索目前無法使用。",
+        "enabled": "快速模式已開啟",
+        "invalid": "無效的 /fast 指令",
+        "invalidDescription": "請使用 /fast、/fast on、/fast off 或 /fast status。",
+        "off": "關閉",
+        "on": "開啟",
+        "status": "快速模式已{{status}}",
+        "unavailable": "快速模式無法使用",
+        "unavailableDescription": "所選模型不支援快速模式。"
+      },
+      "fork": {
+        "failed": "無法分支執行緒",
+        "failedFallback": "建立分支執行緒時發生錯誤。",
+        "invalid": "無效的 /fork 指令",
+        "invalidDescription": "請使用 /fork，然後選擇本機或新工作樹。",
+        "unavailable": "無法使用分支",
+        "unavailableDescription": "目前只能分支現有的伺服器支援執行緒。"
+      },
+      "review": {
+        "baseUnavailable": "基礎分支無法使用",
+        "baseUnavailableDescription": "請在開始檢閱前選擇或偵測基礎分支。",
+        "failed": "無法開始檢閱",
+        "failedFallback": "開始檢閱時發生錯誤。",
+        "invalid": "無效的 /review 指令",
+        "invalidDescription": "請使用 /review，然後選擇檢閱目標。",
+        "title": "{{title}} 檢閱",
+        "unavailable": "檢閱無法使用",
+        "unavailableDescription": "請先開啟專案執行緒，再開始原生檢閱。"
+      },
+      "side": {
+        "failed": "無法啟動 Side",
+        "failedFallback": "建立 Side 時發生錯誤。",
+        "title": "Side 聊天：{{title}}",
+        "unavailable": "Side 無法使用",
+        "unavailableDescription": "請先開啟伺服器支援的主要執行緒，再啟動 Side。"
+      }
+    },
+    "split": {
+      "chooseChat": "選擇聊天",
+      "description": "選擇要顯示在目前分割窗格中的聊天。",
+      "projectFallback": "專案",
+      "selectChat": "選擇聊天"
+    },
+    "status": {
+      "branch": "分支",
+      "contextDescription": "使用中討論串回報的最新使用情況。",
+      "cost": "費用",
+      "description": "使用中編輯器的執行階段控制項和本機討論串狀態。",
+      "environment": {
+        "local": "本地",
+        "pendingWorktree": "新工作樹（待定）",
+        "worktree": "工作樹"
+      },
+      "fastMode": "快速模式",
+      "mode": "模式",
+      "model": "模型",
+      "noContext": "此討論串尚未回報上下文使用情況。",
+      "noRateLimit": "此討論串沒有使用中的速率限制警告。",
+      "notAvailable": "無法使用",
+      "off": "關閉",
+      "on": "開啟",
+      "rateLimits": "速率限制",
+      "reasoning": "推理",
+      "remaining": "剩餘",
+      "title": "工作階段狀態",
+      "used": "已使用",
+      "window": "視窗"
+    },
+    "subagent": {
+      "status": {
+        "closed": "已關閉",
+        "connecting": "正在連線",
+        "error": "錯誤",
+        "idle": "閒置",
+        "running": "正在執行"
+      }
+    },
+    "tasks": {
+      "backgroundAgentCount_one": "{{count}} 後台代理",
+      "backgroundAgentCount_other": "{{count}} 個後台代理",
+      "collapse": "收合任務橫幅",
+      "expand": "展開任務橫幅",
+      "nothingToRetry": "沒有什麼好重試的",
+      "openSidebar": "開啟任務側邊欄",
+      "originalRequestMissing": "DJL 找不到原始任務請求。",
+      "progress": "已完成 {{completed}}/{{total}} 個任務",
+      "updateFailed": "無法更新任務",
+      "updateFailedFallback": "任務狀態沒有改變。"
+    },
+    "temporary": {
+      "activeHint": "暫時聊天 — 離開時將刪除。點擊可保留。",
+      "inactiveHint": "設為暫時聊天（離開時刪除）",
+      "label": "暫時"
+    },
+    "terminalContext": {
+      "expired": "終端上下文過期 。 刪除並重新新增{{label}} 以包含在您的訊息中 。",
+      "expiredNotSent_one": "不會傳送已過期的終端機內容",
+      "expiredNotSent_other": "不會傳送已過期的終端機內容",
+      "expiredNotSentDescription": "請將其移除或重新加入，以包含終端機輸出。",
+      "expiredOmitted_one": "訊息中已省略過期的終端機內容",
+      "expiredOmitted_other": "訊息中已省略過期的終端機內容",
+      "expiredOmittedDescription": "如需包含該終端機輸出，請重新加入。"
+    },
+    "timeline": {
+      "collapseChangedFiles": "摺疊已更改的檔案列表",
+      "details": "細節",
+      "emptyResponse": "(空反應)",
+      "expandChangedFiles": "擴充套件已更改的檔案列表",
+      "failedSuffix": " 失敗",
+      "moreToolCalls_one": "{{count}} 更多工具呼叫",
+      "moreToolCalls_other": "{{count}} 更多工具呼叫",
+      "pinToPanel": "釘入面板",
+      "showLess": "顯示更少",
+      "showMore": "顯示更多",
+      "showMoreCount_one": "顯示{{count}} 更多",
+      "showMoreCount_other": "顯示{{count}} 更多",
+      "showMoreFiles_one": "顯示{{count}} 更多檔案",
+      "showMoreFiles_other": "顯示 {{count}} 更多檔案",
+      "unpinFromPanel": "從面板中撤消",
+      "workedFor": "為{{duration}}工作"
+    },
+    "tool": {
+      "commandDescription": "已擷取此工具呼叫的指令內容。",
+      "editDescription": "已擷取此工具呼叫的編輯內容。",
+      "exitCode": "結束代碼 {{code}}",
+      "noDetails": "此工具呼叫沒有詳細內容。",
+      "sections": {
+        "after": "之後",
+        "before": "之前",
+        "diff": "差異",
+        "edits": "編輯",
+        "files": "檔案",
+        "output": "輸出",
+        "stderr": "標準錯誤",
+        "stdout": "標準輸出",
+        "writtenContent": "寫入內容"
+      },
+      "title": "工具呼叫",
+      "truncated": "已截斷"
+    },
+    "traits": {
+      "agent": "代理商",
+      "change": "變更工作量、上下文和速度",
+      "default": "預設",
+      "defaultSuffix": " （預設）",
+      "effort": "努力",
+      "fast": "快速",
+      "mode": "模式",
+      "off": "關閉",
+      "on": "開啟",
+      "onDefault": "開啟（預設）",
+      "options": "選項",
+      "removeUltrathink": "從改變努力的提示中刪除 Ultrathink。",
+      "speed": "速度",
+      "thinking": "思考",
+      "thinkingState": "思考{{state}}",
+      "ultrathink": "超思維",
+      "variant": "變體"
+    },
+    "transcript": {
+      "addToChat": "新增至聊天",
+      "editAndResend": "編輯並重新發送",
+      "edited": "已編輯",
+      "editedFileCount_one": "已編輯 {{count}} 個文件",
+      "editedFileCount_other": "已編輯 {{count}} 個文件",
+      "editMessage": "編輯訊息",
+      "highlight": "醒目提示",
+      "latest": "最新",
+      "messageNavigation": "訊息導覽",
+      "messagePreview": "訊息 {{number}}：{{preview}}",
+      "moreCount_one": "+{{count}} 多",
+      "moreCount_other": "+{{count}} 多",
+      "moreCountParenthetical": "（另有 {{count}} 個）",
+      "openThread": "打開執行緒",
+      "preparingWorktree": "正在準備工作樹...",
+      "rawCall": "原始調用",
+      "revertMessage": "回覆此訊息",
+      "scrollBottom": "捲動到底部",
+      "selectionActions": "選取動作",
+      "sentViaAutomation": "透過自動化發送",
+      "startConversation": "發送訊息以開始對話。",
+      "steering": "駕駛對話",
+      "summary": "總結",
+      "thinking": "思考",
+      "threads": "討論串",
+      "underline": "底線",
+      "undo": "撤銷",
+      "workingFor": "工作於"
+    },
+    "userInput": {
+      "nextQuestion": "下一題",
+      "previousQuestion": "上一題",
+      "progress": "第 {{current}} 題，共 {{total}} 題",
+      "selectMany": "請選擇一個或多個選項。"
+    },
+    "voice": {
+      "answerQuestionsFirst": "在录制语音笔记之前回答计划问题。",
+      "cancel": "取消語音註釋",
+      "noAudio": "没有捕获任何音频。",
+      "record": "記錄語音符",
+      "refreshStatus": "刷新状态",
+      "send": "傳送語音符",
+      "sessionRejected": "语音转录使用 Codex 中的 ChatGPT 会话。该会话被拒绝，因此请再次登录并重试。",
+      "sessionRequired": "语音注释需要经过 ChatGPT 验证的 Codex 会话。",
+      "signInAgain": "再次登录 ChatGPT",
+      "signInRequired": "使用语音注释之前，请先登录 Codex 中的 ChatGPT。",
+      "startFailed": "无法开始录音",
+      "stop": "停止語音符{{duration}}",
+      "transcribing": "轉錄語音註釋",
+      "transcriptionFailed": "语音转录失败",
+      "transcriptionFailedFallback": "语音注释无法转录。",
+      "unavailable": "目前无法使用语音转录。"
+    },
+    "worktreeSetup": {
+      "creating": "正在建立分支與工作樹",
+      "linking": "正在連結執行緒工作區",
+      "running": "正在執行設定動作",
+      "runningNamed": "正在執行設定動作：{{name}}",
+      "starting": "正在啟動工作階段"
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "新增",
+      "archive": "封存",
+      "back": "返回",
+      "cancel": "取消",
+      "close": "關閉",
+      "configure": "設定",
+      "copy": "複製",
+      "delete": "刪除",
+      "dismiss": "略過",
+      "download": "下載",
+      "edit": "編輯",
+      "next": "下一步",
+      "open": "開啟",
+      "previous": "上一步",
+      "refresh": "重新整理",
+      "remove": "移除",
+      "rename": "重新命名",
+      "retry": "重試",
+      "save": "儲存",
+      "saving": "正在儲存...",
+      "search": "搜尋",
+      "send": "傳送",
+      "settings": "設定",
+      "showLess": "收合",
+      "showMore": "顯示更多",
+      "stop": "停止",
+      "submit": "提交"
+    },
+    "hardening": {
+      "addProjectFailed": "加入專案時發生錯誤。",
+      "attachments": " 附件：{{items}}。",
+      "contextPercent": "內容視窗已使用 {{usage}}",
+      "contextTokens": "內容視窗已使用 {{usage}} 個權杖",
+      "customBinary": "{{provider}} 在此應用程式中使用自訂本機二進位路徑。啟動工作階段時將確認可用性。",
+      "diffFailed": "無法剖析修補程式。正在顯示原始修補程式。",
+      "diffUnsupported": "不支援的差異格式。正在顯示原始修補程式。",
+      "home": "首頁",
+      "homeUnavailable": "主資料夾尚無法使用。",
+      "newChatFailed": "無法準備新聊天。",
+      "providerRefreshFailed": "無法重新整理提供者狀態",
+      "providerRefreshFallback": "重新整理提供者狀態時發生未知錯誤。",
+      "subagent": "子代理",
+      "terminal": "終端機",
+      "terminalNumber": "終端機 {{number}}",
+      "userInputSubmitted": "已提交使用者輸入"
+    },
+    "loading": "載入中",
+    "time": {
+      "hour": "小時",
+      "minute": "分鐘"
+    },
+    "unknown": "未知"
+  },
+  "notifications": {
+    "actions": {
+      "open": "開啟"
+    },
+    "approval": {
+      "command": "要求核准指令。",
+      "fileChange": "要求核准變更檔案。",
+      "fileRead": "要求核准讀取檔案。",
+      "title": "需要核准",
+      "tool": "要求核准使用工具。"
+    },
+    "bodyWithDetail": "{{label}}：{{detail}}",
+    "copy": {
+      "failedFallback": "發生錯誤。",
+      "pathCopied": "已複製路徑",
+      "pathFailed": "無法複製路徑",
+      "threadIdCopied": "已複製執行緒 ID",
+      "threadIdFailed": "無法複製執行緒 ID"
+    },
+    "input": {
+      "requested": "要求使用者輸入。",
+      "title": "需要輸入"
+    },
+    "task": {
+      "completeTitle": "工作已完成",
+      "finishedWorking": "工作完成。"
+    },
+    "taskComplete": "工作已完成",
+    "terminal": {
+      "completeTitle": "終端工作已完成",
+      "finishedBody": "{{terminal}} 已完成工作。",
+      "inputBody": "{{terminal}} 需要你的注意。",
+      "inputTitle": "終端需要輸入",
+      "label": "終端"
+    },
+    "toast": {
+      "archivedIn": "或在此檢視已封存的聊天：",
+      "copied": "已複製",
+      "copiedError": "已複製錯誤訊息",
+      "copyError": "複製錯誤訊息",
+      "dismiss": "關閉通知",
+      "undo": "復原"
+    },
+    "untitledThread": "未命名對話"
+  },
+  "settings": {
+    "actions": {
+      "resetAriaLabel": "將{{label}}重設為預設值",
+      "resetToDefault": "重設為預設值",
+      "restoreDefaults": "還原預設值"
+    },
+    "appearance": {
+      "baseFontSize": {
+        "ariaLabel": "基本字型大小（像素）",
+        "description": "以像素調整應用程式文字基準；聊天與介面文字會依比例縮放。",
+        "resetLabel": "基本字型大小",
+        "title": "基本字型大小"
+      },
+      "density": {
+        "ariaLabel": "介面密度",
+        "description": "調整側邊欄、輸入框、聊天邊距與設定列的間距，不改變字型大小。",
+        "options": {
+          "comfortable": "舒適",
+          "compact": "緊湊",
+          "spacious": "寬鬆"
+        },
+        "resetLabel": "介面密度",
+        "title": "介面密度"
+      },
+      "fontSmoothing": {
+        "ariaLabel": "啟用字型平滑",
+        "description": "使用 macOS 風格的反鋸齒，讓文字更輕盈清晰。",
+        "resetLabel": "字型平滑",
+        "title": "字型平滑"
+      },
+      "language": {
+        "ariaLabel": "應用程式語言",
+        "description": "選擇設定與 DJL 其他已本地化部分使用的語言。",
+        "options": {
+          "system": "依系統設定"
+        },
+        "resetLabel": "應用程式語言",
+        "title": "應用程式語言"
+      },
+      "languageRegion": {
+        "title": "語言與地區"
+      },
+      "terminalFont": {
+        "ariaLabel": "終端機字型系列",
+        "description": "使用裝置上安裝的任何等寬字型；留空則使用預設字型。",
+        "empty": "找不到相符的建議字型。",
+        "placeholder": "預設（JetBrains Mono）",
+        "resetLabel": "終端機字型",
+        "title": "終端機字型"
+      },
+      "terminalFontSize": {
+        "ariaLabel": "終端機字型大小（像素）",
+        "description": "單獨調整終端機文字，不影響應用程式與聊天字型大小。",
+        "resetLabel": "終端機字型大小",
+        "title": "終端機字型大小"
+      },
+      "theme": {
+        "ariaLabel": "主題偏好",
+        "description": "選擇 DJL 在整個應用程式中的外觀。",
+        "options": {
+          "dark": "深色",
+          "light": "淺色",
+          "system": "依系統設定"
+        },
+        "resetLabel": "主題",
+        "title": "主題"
+      },
+      "themeEditor": {
+        "actions": {
+          "cancel": "取消",
+          "copy": "複製",
+          "import": "匯入",
+          "reset": "重設"
+        },
+        "aria": {
+          "accentColor": "{{variant}}的強調色",
+          "backgroundColor": "{{variant}}的背景色",
+          "codeFont": "{{variant}}的程式碼字型",
+          "codeTheme": "{{variant}}的程式碼主題",
+          "contrast": "{{variant}}的對比度",
+          "foregroundColor": "{{variant}}的前景色",
+          "hexValue": "{{label}}的十六進位值",
+          "resetColor": "重設{{label}}",
+          "translucentSidebar": "{{variant}}的半透明側邊欄",
+          "uiFont": "{{variant}}的介面字型"
+        },
+        "dialog": {
+          "description": "貼上 {{prefix}} 分享字串。內含的主題變體必須與目前主題相符，且所選程式碼主題必須可用。",
+          "error": "無法匯入該主題字串。請確認它與目前主題相符後再試一次。",
+          "importedDescription": "已更新{{variant}}。",
+          "importedTitle": "主題已匯入",
+          "shareStringAriaLabel": "主題分享字串",
+          "title": "匯入{{variant}}"
+        },
+        "modes": {
+          "system": "系統主題"
+        },
+        "resetToDefault": "還原預設值",
+        "rows": {
+          "accent": "強調色",
+          "background": "背景色",
+          "codeFont": "程式碼字型",
+          "contrast": "對比度",
+          "foreground": "前景色",
+          "translucentSidebar": "半透明側邊欄",
+          "uiFont": "介面字型"
+        },
+        "status": {
+          "active": "這是目前啟用的主題。",
+          "lockedInactive": "應用程式鎖定為{{mode}}時不啟用。",
+          "systemActive": "系統目前正在使用此{{variant}}。",
+          "systemInactive": "系統切換至此{{variant}}時使用。"
+        },
+        "systemDefault": "依系統設定",
+        "toast": {
+          "copiedDescription": "已複製{{variant}}分享字串。",
+          "copiedTitle": "主題已複製",
+          "copyFailedDescription": "無法複製主題分享字串。",
+          "copyFailedTitle": "複製失敗"
+        },
+        "variants": {
+          "dark": "深色主題",
+          "light": "淺色主題"
+        }
+      },
+      "themeTypography": {
+        "title": "主題與字型"
+      },
+      "timeFormat": {
+        "ariaLabel": "時間格式",
+        "description": "依系統設定時，會採用瀏覽器或作業系統的時鐘偏好。",
+        "options": {
+          "12hour": "12 小時制",
+          "24hour": "24 小時制",
+          "system": "依系統設定"
+        },
+        "resetLabel": "時間格式",
+        "title": "時間格式"
+      }
+    },
+    "localModels": {
+      "bestFit": "最佳選擇",
+      "checking": "正在檢查本機模型執行階段…",
+      "connectedOn": "已安全連線到 {{endpoint}}",
+      "desktopOnly": "本機模型管理僅在 DJL 桌面應用程式中可用。",
+      "downloadsTitle": "下載",
+      "getRuntime": "取得 {{runtime}}",
+      "installAnotherTitle": "安裝其他模型",
+      "installed": "已安裝",
+      "installedEmpty": "尚未安裝本機模型。請啟動執行階段並選擇上方推薦。",
+      "installedModelsTitle": "已安裝模型",
+      "installHint": "使用 Ollama 標籤、LM Studio 目錄 ID 或完整 Hugging Face 模型網址。",
+      "installingOllama": "正在安裝 Ollama…",
+      "installingOllamaProgress": "正在安裝 Ollama {{progress}}%",
+      "installingRuntime": "正在安裝 {{runtime}}…",
+      "installingRuntimeProgress": "正在安裝 {{runtime}} {{progress}}%",
+      "installModel": "安裝模型",
+      "installOllama": "安裝並啟動 Ollama",
+      "installRuntime": "安裝並啟動 {{runtime}}",
+      "installWith": "使用 {{runtime}} 安裝",
+      "lmStudioDescription": "安裝一次 LM Studio，之後 DJL 即可啟動並管理其本機伺服器。",
+      "manageLmStudio": "在 LM Studio 中管理",
+      "memoryTier": "{{size}} 記憶體級別",
+      "networkPrivacy": "DJL 僅連線固定迴路位址（127.0.0.1），不會向網路公開執行階段、上傳本機推論流量或自動切換所選模型。",
+      "ollamaDescription": "DJL 會為你安裝、啟動並連線 Ollama，無需終端或管理員密碼。",
+      "privacyDescription": "模型推論留在此電腦上。提示、程式碼內容與輸出不會傳送給託管模型供應商；獲准工具可另外存取網路。",
+      "privacyTitle": "以隱私為本",
+      "quick": {
+        "chooseAnother": "選擇其他安裝方式",
+        "description": "DJL 將安裝 {{runtime}} 並下載 {{model}}（約 {{size}}）。不需要終端機或管理員密碼。",
+        "download": "下載 {{model}}（約 {{size}}）",
+        "insufficientDisk": "至少需要 {{size}} 可用磁碟空間。",
+        "readyDescription": "{{model}} 已透過 {{runtime}} 安裝，可直接在聊天中使用。",
+        "readyTitle": "{{runtime}} 已準備就緒",
+        "retry": "重試設定",
+        "runtimeLabel": "選擇本機執行階段",
+        "setup": "一鍵設定本機 AI · {{model}}（約 {{size}}）",
+        "title": "一鍵設定 {{runtime}}",
+        "useInChat": "在聊天中使用"
+      },
+      "recommendations": {
+        "gpt-oss-20b": {
+          "description": "適合配備 16 GB 或更多記憶體裝置的高效能本機程式設計模型。"
+        },
+        "granite-4.1-3b": {
+          "description": "適用於配備 8 GB 記憶體的 Mac 和 PC 的精巧程式設計模型。"
+        },
+        "qwen3-coder-30b": {
+          "description": "專為配備 32 GB 記憶體裝置挑選的高效能程式設計模型。"
+        }
+      },
+      "recommendedTitle": "為此電腦推薦",
+      "removeAriaLabel": "移除 {{model}}",
+      "removeConfirmation": "從 Ollama 移除 {{model}}？",
+      "retryInstall": "重試安裝",
+      "runtimeAriaLabel": "本機模型執行階段",
+      "runtimeDetails": {
+        "error": "{{runtime}} 需要處理。請查看下方詳細資訊。",
+        "notInstalled": "尚未安裝 {{runtime}}。",
+        "stopped": "{{runtime}} 已安裝，但本機伺服器尚未啟動。",
+        "updateRequired": "使用 {{runtime}} 前需要更新。"
+      },
+      "runtimeStates": {
+        "error": "需要處理",
+        "notInstalled": "未安裝",
+        "running": "執行中",
+        "stopped": "可啟動",
+        "updateRequired": "需要更新"
+      },
+      "runtimeStatusDescription": "重新檢查 localhost 服務，並與 DJL 同步已安裝模型。",
+      "runtimeStatusTitle": "執行階段狀態",
+      "runtimesTitle": "本機執行階段",
+      "sizeUnavailable": "大小無法使用",
+      "startFirst": "請先啟動 {{runtime}}",
+      "startServer": "啟動伺服器",
+      "statusUnavailable": "本機模型狀態無法使用。",
+      "toasts": {
+        "actionFailed": "本機模型操作失敗",
+        "actionFailedWithDetail": "本機模型操作失敗。{{detail}}",
+        "downloadStarted": "模型下載已開始",
+        "openLinkFailed": "無法開啟連結",
+        "removed": "本機模型已移除",
+        "runtimeReady": "{{runtime}} 已安裝並執行",
+        "runtimeRejected": "本機執行階段拒絕了要求。"
+      },
+      "updateRuntime": "更新"
+    },
+    "localModelsStatusUnavailableDetail": "本機執行環境未提供診斷詳情。",
+    "models": {
+      "accessTitle": "模型存取",
+      "addKeyPrompt": "新增 API 金鑰以選擇模型",
+      "chooseModel": "選擇模型",
+      "configuredTitle": "已設定模型",
+      "configureFirst": "請先設定模型",
+      "disconnect": "中斷連線",
+      "generationDefaultsTitle": "生成預設值",
+      "gitWritingAriaLabel": "Git 寫作模型",
+      "gitWritingDescription": "用於提交訊息、提取要求標題與分支名稱。",
+      "gitWritingTitle": "Git 寫作模型",
+      "keyAriaLabel": "{{provider}} API 金鑰",
+      "keyPlaceholder": "輸入 API 金鑰",
+      "keyPrivacy": "金鑰由 DJL 安全儲存，絕不會返回介面。",
+      "modelCount_one": "{{count}} 個模型可用",
+      "modelCount_other": "{{count}} 個模型可用",
+      "notConnected": "未連線",
+      "providerCount_one": "{{count}} 個供應商",
+      "providerCount_other": "{{count}} 個供應商",
+      "replace": "替換",
+      "replacementKeyPlaceholder": "輸入替換 API 金鑰",
+      "runtimeUnavailable": "DJL 無法啟動模型執行階段。",
+      "test": "測試",
+      "toasts": {
+        "connectionRefreshed": "已重新整理 {{provider}} 連線",
+        "disconnected": "供應商已中斷",
+        "keyRejected": "DJL 拒絕了該憑證。",
+        "keySaved": "API 金鑰已儲存",
+        "keySaveFailed": "無法儲存 API 金鑰",
+        "keySaveFailedWithDetail": "無法儲存 API 金鑰。{{detail}}"
+      }
+    },
+    "modelsRuntimeUnavailableDetail": "執行環境未提供診斷詳情。",
+    "navigation": {
+      "groups": {
+        "app": "應用程式",
+        "djl": "DJL"
+      },
+      "items": {
+        "advanced": {
+          "description": "按鍵綁定、復原工具與版本資訊。",
+          "eyebrow": "系統工具",
+          "label": "進階"
+        },
+        "appearance": {
+          "description": "語言、主題、字型與時間格式。",
+          "eyebrow": "視覺風格",
+          "label": "外觀"
+        },
+        "archived": {
+          "description": "檢視與還原已封存的對話。",
+          "eyebrow": "對話管理",
+          "label": "已封存"
+        },
+        "behavior": {
+          "description": "串流輸出、差異處理與破壞性操作確認。",
+          "eyebrow": "互動規則",
+          "label": "行為"
+        },
+        "general": {
+          "description": "對話模式與側邊欄配置。",
+          "eyebrow": "工作流程預設值",
+          "label": "一般"
+        },
+        "localModels": {
+          "description": "透過 DJL 使用 Ollama 或 LM Studio 執行私有模型。",
+          "eyebrow": "私有推論",
+          "label": "本機模型"
+        },
+        "models": {
+          "description": "連接模型供應商並選擇已驗證的 DJL 模型。",
+          "eyebrow": "AI 設定",
+          "label": "模型與 API 金鑰"
+        },
+        "notifications": {
+          "description": "應用程式內提示與桌面通知。",
+          "eyebrow": "提醒",
+          "label": "通知"
+        },
+        "profile": {
+          "description": "本機活動、連續紀錄與可分享的統計卡片。",
+          "eyebrow": "你的統計",
+          "label": "個人檔案"
+        },
+        "remote": {
+          "description": "從任何地方使用 iPhone 安全控制 DJL。",
+          "eyebrow": "安全夥伴",
+          "label": "遠端"
+        },
+        "shortcuts": {
+          "description": "依使用情境分類的所有 DJL 快速鍵。",
+          "eyebrow": "按鍵綁定",
+          "label": "鍵盤快速鍵"
+        },
+        "skills": {
+          "description": "瀏覽各供應商的技能並控制是否可用。",
+          "eyebrow": "代理技能",
+          "label": "技能"
+        },
+        "usage": {
+          "description": "查看各已登入供應商的剩餘配額與點數。",
+          "eyebrow": "配額與點數",
+          "label": "用量"
+        },
+        "worktrees": {
+          "description": "檢視並清理 DJL 建立的工作樹。",
+          "eyebrow": "工作區管理",
+          "label": "工作樹"
+        }
+      },
+      "sectionsAriaLabel": "設定區段"
+    },
+    "notifications": {
+      "activity": {
+        "ariaLabel": "活動提示通知",
+        "description": "聊天或受管理的終端代理完成或需要輸入時顯示應用程式內提示。",
+        "resetLabel": "活動提示",
+        "sectionTitle": "活動提醒",
+        "title": "活動提示"
+      },
+      "desktop": {
+        "ariaLabel": "桌面活動通知",
+        "description": "聊天或終端代理在背景完成或需要輸入時顯示系統通知。",
+        "resetLabel": "桌面通知",
+        "support": {
+          "default": "允許瀏覽器通知，以便聊天或終端代理在背景完成或需要輸入時收到提醒。",
+          "denied": "瀏覽器通知已被封鎖。請在瀏覽器網站設定中重新啟用。",
+          "desktop": "桌面應用程式通知會使用作業系統的通知中心。",
+          "granted": "已為此應用程式啟用瀏覽器通知。",
+          "insecure": "瀏覽器通知需要安全內容。localhost 可用，一般 HTTP 不可用。",
+          "unsupported": "此瀏覽器不支援桌面通知。"
+        },
+        "test": "測試通知",
+        "testAriaLabel": "傳送測試桌面通知",
+        "testNotificationBody": "聊天與終端代理通知測試。",
+        "testNotificationTitle": "活動通知",
+        "testSentBrowserDescription": "瀏覽器應會顯示通知。",
+        "testSentDesktopDescription": "作業系統應會顯示通知。",
+        "testSentTitle": "已傳送測試通知",
+        "title": "桌面通知",
+        "unavailableShortTitle": "通知無法使用",
+        "unavailableTitle": "桌面通知無法使用",
+        "unsupportedDeviceDescription": "此裝置不支援桌面通知。"
+      }
+    },
+    "profile": {
+      "actions": {
+        "edit": "編輯",
+        "share": "分享"
+      },
+      "activity": {
+        "heading": "活動",
+        "title": "活動洞察"
+      },
+      "edit": {
+        "avatarAriaLabel": "編輯頭像",
+        "colorHint": "未設定照片時會套用顏色。",
+        "displayName": "顯示名稱",
+        "imageError": "無法處理該圖片。",
+        "imageErrorWithDetail": "無法處理該圖片。{{detail}}",
+        "namePlaceholder": "你的姓名",
+        "processing": "處理中…",
+        "replacePhoto": "更換照片",
+        "title": "編輯個人資料",
+        "uploadPhoto": "上傳照片",
+        "useColor": "使用 {{color}}",
+        "username": "使用者名稱",
+        "usernamePlaceholder": "使用者名稱"
+      },
+      "errors": {
+        "load": "無法載入你的本機統計資料。"
+      },
+      "insights": {
+        "mostActiveHour": "最活躍時段",
+        "mostUsedProvider": "最常用供應商",
+        "mostUsedReasoning": "最常用推理",
+        "mostWorkedProject": "工作最多的專案",
+        "projectPrompts_one": "{{project}} · {{count}} 則提示",
+        "projectPrompts_other": "{{project}} · {{count}} 則提示",
+        "skillsExplored": "探索的技能",
+        "totalSkillsUsed": "使用的技能總數",
+        "totalThreads": "對話總數"
+      },
+      "models": {
+        "empty": "尚無模型活動。",
+        "title": "模型用量"
+      },
+      "plugins": {
+        "empty": "尚未使用技能或代理。",
+        "runCount_one": "執行 {{count}} 次",
+        "runCount_other": "執行 {{count}} 次",
+        "title": "最常用外掛"
+      },
+      "share": {
+        "copyAriaLabel": "複製統計卡片",
+        "saveAriaLabel": "儲存統計卡片",
+        "shareTo": "分享到 {{target}}",
+        "status": {
+          "copy": {
+            "clipboard-unavailable": "無法複製圖片，請改用儲存。",
+            "copied": "圖片已複製到剪貼簿。",
+            "render-failed": "無法呈現圖片。"
+          },
+          "renderFailed": "無法呈現圖片。",
+          "saved": "PNG 已儲存到下載資料夾。",
+          "share": {
+            "clipboard-unavailable": "發佈視窗已開啟；無法複製圖片，請改用儲存。",
+            "copied": "圖片已複製，請貼到貼文中。",
+            "render-failed": "發佈視窗已開啟，請儲存後附加圖片。"
+          }
+        },
+        "title": "分享你的活動"
+      },
+      "stats": {
+        "currentStreak": "目前連續天數",
+        "dayCount_one": "{{count}} 天",
+        "dayCount_other": "{{count}} 天",
+        "lifetimeTokens": "累計權杖",
+        "longestStreak": "最長連續天數",
+        "peakDay": "尖峰日",
+        "topProvider": "首選供應商",
+        "totalPrompts": "提示總數"
+      }
+    },
+    "profileActivity": {
+      "tooltipCount": "{{date}}有 {{value}} 個{{unit}}",
+      "tooltipNone": "{{date}}沒有{{unit}}",
+      "units": {
+        "prompts_one": "提示詞",
+        "prompts_other": "提示詞",
+        "tokens_one": "權杖",
+        "tokens_other": "權杖"
+      }
+    },
+    "profileAvatarErrors": {
+      "noPixels": "該圖片沒有像素。",
+      "notImage": "請選擇圖片檔案。",
+      "readFailed": "無法讀取所選檔案。",
+      "tooLarge": "該圖片壓縮後仍然過大。",
+      "unreadable": "該檔案不是可讀取的圖片。",
+      "unsupported": "此瀏覽器不支援圖片壓縮。"
+    },
+    "profileShareSocial": {
+      "redditTitle": "我的 DJL 開發統計",
+      "text": "來看看我的 DJL 開發統計。"
+    },
+    "providerUsageShared": {
+      "noLocal": "尚未找到本機用量資料。",
+      "noLocalProvider": "尚未找到所選供應商的本機用量資料。",
+      "noRateLimitData": "尚無速率限制資料。",
+      "scanningLocal": "正在掃描所選供應商的本機用量資料。"
+    },
+    "remote": {
+      "access": {
+        "description": "DJL 執行時保持加密的 iPhone 橋接可用。",
+        "sectionTitle": "遠端存取",
+        "title": "iPhone 遠端存取",
+        "toggleAriaLabel": "啟用 iPhone 遠端存取"
+      },
+      "actions": {
+        "disconnecting": "正在中斷連線…",
+        "pairAnother": "配對另一台 iPhone",
+        "refresh": "產生新配對碼",
+        "refreshing": "正在產生…"
+      },
+      "pairing": {
+        "codeLabel": "一次性配對碼",
+        "connectedDescription": "此 iPhone 可透過加密橋接安全控制 DJL。",
+        "connectedTitle": "iPhone 已連線",
+        "description": "使用 iPhone 上的 DJL 掃描 QR Code，或輸入一次性配對碼。",
+        "expired": "此配對碼已過期。請產生新配對碼以繼續。",
+        "fingerprint": "裝置指紋：{{fingerprint}}",
+        "manualPayloadAriaLabel": "手動配對資料",
+        "manualPayloadDescription": "在沒有相機的模擬器中，將此一次性 QR 資料貼到 DJL iOS → 使用配對碼。請妥善保管；它會隨本次配對工作階段過期。",
+        "manualPayloadHide": "隱藏手動配對資料",
+        "manualPayloadShow": "顯示手動配對資料",
+        "phoneConnected": "你的 iPhone 已連線",
+        "preparing": "正在準備安全配對工作階段…",
+        "qrAlt": "DJL iPhone 配對 QR Code",
+        "sectionTitle": "配對",
+        "securityNote": "中繼只轉送端對端加密資料，無法讀取你的聊天內容。",
+        "title": "配對你的 iPhone"
+      },
+      "reset": {
+        "confirm": "中斷此 iPhone 並產生新的配對工作階段？"
+      },
+      "status": {
+        "connected": "已連線",
+        "disabled": "已停用",
+        "error": "錯誤",
+        "offline": "離線",
+        "ready": "可配對",
+        "starting": "正在啟動…",
+        "unavailable": "無法使用"
+      },
+      "unavailable": "此桌面版本未設定遠端存取。"
+    },
+    "route": {
+      "advanced": {
+        "keybindings": {
+          "description": "開啟持久化的 keybindings.json 檔案，直接編輯進階按鍵繫結。",
+          "editorHint": "將在偏好的編輯器中開啟。",
+          "openFile": "開啟檔案",
+          "opening": "正在開啟...",
+          "resolvingPath": "正在解析按鍵繫結路徑..."
+        },
+        "recovery": {
+          "description": "當本機狀態不同步時重建本機專案索引，而不清除現有聊天。",
+          "expandedDescription": "重建本機專案索引並刷新專案快照。現有聊天會保留。",
+          "hiddenStatus": "僅在還原操作相關時自動顯示。",
+          "relevantStatus": "由於專案存在但目前沒有可用聊天記錄，此工具可見。",
+          "repair": "修複狀態",
+          "repairing": "正在修複...",
+          "successDescription": "專案索引已重建，現有聊天未被清除。",
+          "successTitle": "本機狀態已修複",
+          "whatThisDoes": "此操作的作用"
+        },
+        "releaseHistory": {
+          "description": "按時间倒序記錄每次更新。內容與更新後顯示的指示相同，保留在此以便随時查看。",
+          "view": "查看版本紀錄"
+        },
+        "sections": {
+          "about": "關于",
+          "developerTools": "開發人員工具"
+        },
+        "version": {
+          "description": "目前應用程式版本。"
+        }
+      },
+      "archived": {
+        "actions": {
+          "delete": "刪除",
+          "restore": "還原"
+        },
+        "archivedAt": "封存于{{time}}",
+        "deletedDescription": "已封存討論串已被永久移除。",
+        "deletedTitle": "討論串已刪除",
+        "emptyDescription": "已封存討論串會顯示在這里，並可還原到側邊欄。",
+        "emptyTitle": "沒有已封存討論串",
+        "restoredDescription": "討論串已移回側邊欄。",
+        "restoredTitle": "討論串已還原",
+        "unknownProject": "未知專案"
+      },
+      "behavior": {
+        "archiveConfirmation": {
+          "description": "封存討論串前詢問。"
+        },
+        "assistantOutput": {
+          "description": "在回應進行時逐標記顯示輸出。"
+        },
+        "deleteConfirmation": {
+          "description": "刪除討論串及其聊天記錄前詢問。"
+        },
+        "diffWrapping": {
+          "description": "設定差異面板開啟時的預設換行狀態。面板内的換行開關僅影響目前差異會话。"
+        },
+        "sections": {
+          "confirmations": "安全確認",
+          "runtime": "執行時行為"
+        },
+        "terminalCloseConfirmation": {
+          "description": "關閉終端機分頁並清除其歷史記錄前詢問。"
+        },
+        "toggleAriaLabel": "切換{{setting}}"
+      },
+      "changedSettings": {
+        "chatsSection": "聊天區段",
+        "providerInstalls": "供應商安裝",
+        "providerOrder": "供應商順序",
+        "providerUpdateChecks": "供應商更新檢查",
+        "providerVisibility": "供應商可見性",
+        "themePack": "{{theme}}主題包",
+        "workSection": "工作區段",
+        "workspaceSection": "工作區區段"
+      },
+      "confirmations": {
+        "deleteArchivedThread": {
+          "description": "這將永久移除該討論串及其對話歷史。",
+          "title": "永久刪除“{{title}}”？"
+        },
+        "deleteWorktree": {
+          "activeImpact": "刪除後，這些聊天可能無法在同一工作區中重新開啟。",
+          "archivedImpact": "將先刪除已封存對話。",
+          "linkedSummary_one": "此工作樹關聯了 {{activeCount}} 個使用中對話和 {{archivedCount}} 個已封存對話。",
+          "linkedSummary_other": "此工作樹關聯了 {{activeCount}} 個使用中對話和 {{archivedCount}} 個已封存對話。",
+          "question": "仍要刪除工作樹嗎？",
+          "title": "刪除工作樹“{{name}}”？",
+          "unlinkedDescription": "這會從磁碟中移除 Git 工作樹。"
+        },
+        "repairState": {
+          "rebuildDescription": "此操作會重建本機專案索引並刷新專案快照。",
+          "safetyDescription": "現有聊天會保留，但修複可能需要一些時间。",
+          "title": "修複本機狀態？"
+        },
+        "restoreDefaults": {
+          "description": "這將重置：{{settings}}。",
+          "title": "還原預設設定？"
+        }
+      },
+      "errors": {
+        "deleteThread": {
+          "summary": "DJL 無法永久刪除已封存討論串。請再試一次。",
+          "title": "無法刪除討論串"
+        },
+        "deleteWorktree": {
+          "summary": "DJL 無法移除工作樹。請查看下方診斷詳細資料後再試一次。",
+          "title": "無法刪除工作樹"
+        },
+        "keybindings": {
+          "noEditors": "未找到可用的編輯器。",
+          "summary": "DJL 無法開啟按鍵繫結檔案。",
+          "unknownDetail": "沒有其他診斷詳細資料。"
+        },
+        "loadWorktrees": {
+          "summary": "DJL 無法載入受管理的工作樹。請重新連線後再試一次。"
+        },
+        "providerUpdate": {
+          "recovery": "請複制下方指令並在終端機中手動更新。",
+          "summary": "供應商更新未能完成。",
+          "title": "無法更新 {{provider}}"
+        },
+        "repairState": {
+          "summary": "DJL 無法修複本機狀態。請在應用程式重新連線後再試一次。",
+          "title": "修複失敗"
+        },
+        "restoreThread": {
+          "summary": "DJL 無法還原已封存討論串。請再試一次。",
+          "title": "無法還原討論串"
+        },
+        "worktreeVerification": {
+          "recovery": "請在應用程式重新連線伺服器後再試一次。",
+          "title": "無法驗證關聯對話"
+        }
+      },
+      "general": {
+        "defaultProvider": {
+          "description": "DJL 為每個新任務提供支援。"
+        },
+        "environment": {
+          "defaultOpen": {
+            "ariaLabel": "在普通討論串中預設開啟環境面板",
+            "description": "在普通討論串中自動開啟聊天環境面板。關閉後，面板會保持關閉，直到你主動開啟。最後一次開啟或關閉操作也會更新此偏好。"
+          },
+          "editor": {
+            "description": "在聊天環境面板中顯示編輯器區段（應用程式内編輯器檢視和“在編輯器中開啟”選擇器）。"
+          },
+          "instructions": {
+            "description": "在環境面板中顯示專案級指示。",
+            "title": "專案指示"
+          },
+          "markers": {
+            "description": "在環境面板中顯示醒目標示和加底線的會话文字。"
+          },
+          "notepad": {
+            "description": "在環境面板中顯示每個討論串的記事本。"
+          },
+          "pinned": {
+            "description": "在環境面板中顯示釘選訊息清單。"
+          },
+          "pullRequest": {
+            "description": "在聊天環境面板中顯示目前分支的開放提取要求（CI 檢查和審查留言）。"
+          },
+          "recap": {
+            "description": "在環境面板中顯示自動產生的聊天回顧。"
+          },
+          "repository": {
+            "description": "在聊天環境面板中顯示 GitHub 儲存庫連結。Git 區塊（變更、工作樹、分支、提交和推送）始終可見。"
+          },
+          "showAriaLabel": "在環境面板中顯示{{section}}",
+          "usage": {
+            "description": "在聊天環境面板中顯示供應商用量行。"
+          }
+        },
+        "newThreads": {
+          "description": "選擇新增草稿討論串的預設工作區模式。"
+        },
+        "projectOrder": {
+          "description": "控制專案在主側邊欄中的排列方式。"
+        },
+        "sections": {
+          "coreDefaults": "核心預設設定",
+          "environmentPanel": "環境面板",
+          "sidebarOrganization": "側邊欄組織方式",
+          "sidebarSections": "側邊欄區段"
+        },
+        "sidebar": {
+          "chats": {
+            "description": "在側邊欄底部顯示獨立聊天列表（不屬于任何專案的聊天）。"
+          },
+          "showAriaLabel": "在側邊欄中顯示{{section}}區段",
+          "work": {
+            "description": "顯示用於非技術性、任務導向工作的“工作”分頁。"
+          },
+          "workspace": {
+            "description": "在側邊欄切換器中顯示“工作區”分頁。“討論串”分頁始終可見。"
+          }
+        },
+        "sortOptions": {
+          "manual": "手動排序",
+          "newestFirst": "最新優先",
+          "recentlyActive": "最近使用中",
+          "recentlyAdded": "最近新增"
+        },
+        "threadModes": {
+          "local": "本機",
+          "worktree": "新增工作樹"
+        },
+        "threadOrder": {
+          "description": "控制每個專案内討論串在主側邊欄中的排列方式。"
+        }
+      },
+      "models": {
+        "customModels": {
+          "add": "新增",
+          "description": "為支援的供應商新增自訂模型識別碼。",
+          "errors": {
+            "builtIn": "該模型已內建。",
+            "duplicate": "該自訂模型已儲存。",
+            "required": "請輸入模型識別碼。",
+            "tooLong": "模型識別碼不得超過 {{count}} 個字元。"
+          },
+          "providerAriaLabel": "自訂模型供應商",
+          "removeAriaLabel": "移除 {{model}}",
+          "resetLabel": "自訂模型",
+          "savedTitle": "已儲存的模型識別碼",
+          "showLess": "收起",
+          "showMore_one": "再顯示 {{count}} 個",
+          "showMore_other": "再顯示 {{count}} 個",
+          "title": "自訂模型"
+        },
+        "gitWriting": {
+          "ariaLabel": "Git 文字產生模型",
+          "description": "用於產生提交訊息、PR 標題和分支名稱。",
+          "resetLabel": "Git 寫作模型"
+        },
+        "sections": {
+          "generationDefaults": "產生預設設定"
+        }
+      },
+      "providers": {
+        "picker": {
+          "allVisible": "所有供應商均可見",
+          "customOrder": "自訂順序",
+          "description": "拖曳供應商以設定選擇器順序，並隱藏不使用的供應商。討論串目前使用的供應商始終可見。",
+          "hiddenCount_one": "已隱藏 {{count}} 個供應商",
+          "hiddenCount_other": "已隱藏 {{count}} 個供應商",
+          "resetLabel": "供應商選擇器",
+          "sectionTitle": "供應商選擇器",
+          "title": "可見供應商"
+        },
+        "tools": {
+          "binaryDescription": "留空即可使用 PATH 中的 {{command}}。",
+          "binaryPathLabel": "{{provider}} 二進位檔檔案路徑",
+          "binaryPathPlaceholder": "{{provider}} 二進位檔檔案路徑",
+          "cliDocs": "CLI 說明文件",
+          "codexHomeDescription": "選用的自訂 Codex 主目錄和設定目錄。",
+          "commandLabel": "指令：",
+          "cursorApiEndpointDescription": "傳遞给 cursor-agent -e 的選用 Cursor API 端點覆寫值。",
+          "cursorApiEndpointLabel": "Cursor API 端點",
+          "cursorBinaryDescription": "留空即可使用 PATH 中的 {{command}}。也接受 Cursor 編輯器 CLI 路徑。",
+          "custom": "自訂",
+          "description": "查看供應商版本並更新工具。僅在需要覆寫二進位檔檔案路徑時開啟相應行。",
+          "docs": {
+            "config": "設定",
+            "headless": "無介面模式",
+            "install": "安裝",
+            "quickstart": "快速入門",
+            "update": "更新"
+          },
+          "noSafeUpdateCommand": "有新版本可用，但 DJL 無法為此安裝識別安全的一鍵更新指令。",
+          "pathLabel": "{{name}} 路徑",
+          "piAgentDirectoryDescription": "用於驗證、模型、技能和指令的選用自訂 Pi 代理程式目錄。",
+          "piAgentDirectoryLabel": "Pi 代理程式目錄",
+          "piAgentDirectoryPlaceholder": "Pi 代理程式目錄",
+          "resetLabel": "供應商工具",
+          "sectionTitle": "供應商工具",
+          "serverPasswordDescription": "外部管理的 {{provider}} 伺服器的選用密碼。",
+          "serverPasswordLabel": "{{provider}} 伺服器密碼",
+          "serverPasswordPlaceholder": "{{provider}} 伺服器密碼",
+          "serverUrlDescription": "選用的現有 {{provider}} 伺服器 URL。留空即可启動本機伺服器。",
+          "serverUrlLabel": "{{provider}} 伺服器 URL",
+          "title": "已安裝的 CLI",
+          "webSocketsDescription": "為受管理的本機伺服器使用 DJL 的實驗性 OpenAI 回應 WebSocket 傳輸。",
+          "webSocketsLabel": "OpenAI 回應 WebSocket"
+        },
+        "updates": {
+          "automaticAriaLabel": "自動檢查 CLI 更新",
+          "automaticDescription": "在背景檢查 Codex、Claude 和其他供應商 CLI 的新版本。",
+          "automaticResetLabel": "CLI 更新檢查",
+          "automaticTitle": "自動檢查 CLI 更新",
+          "availableCount_one": "有 {{count}} 個更新可用",
+          "availableCount_other": "有 {{count}} 個更新可用",
+          "checksOff": "自動檢查已關閉",
+          "description": "查看 DJL 可安全更新的已安裝供應商工具。",
+          "finishedDescription": "新會话將使用更新後的供應商。",
+          "finishedTitle": "{{provider}} 更新完成",
+          "manual": "手動更新",
+          "none": "未偵測到供應商更新",
+          "runCommand": "執行 {{command}}",
+          "sectionTitle": "更新",
+          "status": {
+            "current": "目前版本 {{version}}",
+            "failed": "更新失敗",
+            "latest": "最新版本 {{version}}",
+            "queued": "更新已排入佇列",
+            "stillOutdated": "仍為舊版本",
+            "updated": "已更新",
+            "updating": "正在更新",
+            "versionTransition": "版本從 {{current}} 更新至 {{latest}}"
+          },
+          "title": "供應商更新",
+          "update": "更新",
+          "updating": "正在更新"
+        }
+      },
+      "providerVisibility": {
+        "reorderAriaLabel": "重新排列 {{provider}}",
+        "showAriaLabel": "在供應商選擇器中顯示 {{provider}}"
+      },
+      "worktrees": {
+        "conversations": "對話",
+        "delete": "刪除",
+        "deleteConfirmationHint": "存在關聯對話。刪除時會要求確認。",
+        "deletedTitle": "工作樹已刪除",
+        "empty": "尚未找到由應用程式管理的工作樹。",
+        "loading": "正在載入受管理的工作樹...",
+        "noLinkedConversations": "此工作樹沒有關聯的對話。",
+        "removed": "已移除 {{name}}。",
+        "removedWithArchived_one": "已移除 {{name}}，並刪除了 {{count}} 個已封存對話。",
+        "removedWithArchived_other": "已移除 {{name}}，並刪除了 {{count}} 個已封存對話。",
+        "worktree": "工作樹"
+      }
+    },
+    "search": {
+      "ariaLabel": "搜尋設定",
+      "back": "返回應用程式",
+      "empty": "找不到相符的設定。",
+      "entries": {
+        "advanced": {
+          "keybindings": {
+            "keywords": "keybindings json 快速鍵 檔案",
+            "title": "按鍵綁定"
+          },
+          "recovery-tools": {
+            "keywords": "重建 專案 索引 本機狀態",
+            "title": "復原工具"
+          },
+          "release-history": {
+            "keywords": "更新 最新功能 變更記錄",
+            "title": "版本歷史"
+          },
+          "version": {
+            "keywords": "應用程式版本 關於",
+            "title": "版本"
+          }
+        },
+        "appearance": {
+          "base-font-size": {
+            "keywords": "應用程式 聊天 文字 字型 像素",
+            "title": "基本字型大小"
+          },
+          "font-smoothing": {
+            "keywords": "macOS 反鋸齒 清晰 文字",
+            "title": "字型平滑"
+          },
+          "language": {
+            "keywords": "語言 地區 系統 英文 中文 日文 韓文 西班牙文 法文",
+            "title": "應用程式語言"
+          },
+          "terminal-font": {
+            "keywords": "等寬 字型 系統",
+            "title": "終端機字型"
+          },
+          "terminal-font-size": {
+            "keywords": "終端機 文字 像素",
+            "title": "終端機字型大小"
+          },
+          "theme": {
+            "keywords": "深色 淺色 系統 顏色",
+            "title": "主題"
+          },
+          "time-format": {
+            "keywords": "時鐘 12小時 24小時 系統",
+            "title": "時間格式"
+          },
+          "ui-density": {
+            "keywords": "間距 緊湊 舒適 寬鬆",
+            "title": "介面密度"
+          }
+        },
+        "archived": {
+          "archived-threads": {
+            "keywords": "還原 取消封存 歷史",
+            "title": "已封存對話"
+          }
+        },
+        "behavior": {
+          "archive-confirmation": {
+            "keywords": "詢問 安全 封存",
+            "title": "封存確認"
+          },
+          "assistant-output": {
+            "keywords": "串流 逐字 回覆",
+            "title": "助理輸出"
+          },
+          "delete-confirmation": {
+            "keywords": "詢問 安全 對話 歷史",
+            "title": "刪除確認"
+          },
+          "diff-line-wrapping": {
+            "keywords": "自動換行 差異面板",
+            "title": "差異行換行"
+          },
+          "terminal-close-confirmation": {
+            "keywords": "詢問 終端機 分頁 歷史",
+            "title": "終端機關閉確認"
+          }
+        },
+        "general": {
+          "chats-section": {
+            "keywords": "獨立聊天 側邊欄 區段",
+            "title": "聊天"
+          },
+          "default-provider": {
+            "keywords": "供應商 新對話 代理 DJL",
+            "title": "預設供應商"
+          },
+          "environment-default-open": {
+            "keywords": "環境面板 開啟 關閉",
+            "title": "預設開啟"
+          },
+          "environment-editor": {
+            "keywords": "內建編輯器 開啟",
+            "title": "編輯器"
+          },
+          "environment-markers": {
+            "keywords": "醒目提示 底線 對話",
+            "title": "文字標記"
+          },
+          "environment-notepad": {
+            "keywords": "對話 筆記 環境",
+            "title": "記事本"
+          },
+          "environment-pinned": {
+            "keywords": "釘選 清單 環境",
+            "title": "已釘選訊息"
+          },
+          "environment-pull-request": {
+            "keywords": "PR CI 檢查 審查 GitHub",
+            "title": "提取要求"
+          },
+          "environment-recap": {
+            "keywords": "自動 聊天 摘要 環境",
+            "title": "摘要"
+          },
+          "environment-repository": {
+            "keywords": "GitHub git 變更 工作樹",
+            "title": "程式碼儲存庫"
+          },
+          "environment-usage": {
+            "keywords": "供應商 環境面板",
+            "title": "用量"
+          },
+          "new-threads": {
+            "keywords": "工作區 本機 工作樹 環境",
+            "title": "新對話"
+          },
+          "project-order": {
+            "keywords": "側邊欄 排序 最近 手動",
+            "title": "專案順序"
+          },
+          "studio-section": {
+            "keywords": "任務 文件 側邊欄",
+            "title": "工作"
+          },
+          "thread-order": {
+            "keywords": "側邊欄 排序 最近 建立",
+            "title": "對話順序"
+          },
+          "workspace-section": {
+            "keywords": "分頁 對話 側邊欄",
+            "title": "工作區"
+          }
+        },
+        "local-models": {
+          "recommended": {
+            "keywords": "Granite GPT OSS Qwen 記憶體 下載",
+            "title": "推薦的本機模型"
+          },
+          "runtimes": {
+            "keywords": "Ollama LM Studio 私有 伺服器",
+            "title": "本機執行環境"
+          }
+        },
+        "models": {
+          "configured-models": {
+            "keywords": "API 金鑰 供應商 DJL",
+            "title": "已設定模型"
+          },
+          "git-writing-model": {
+            "keywords": "提交訊息 PR 標題 分支",
+            "title": "Git 撰寫模型"
+          }
+        },
+        "notifications": {
+          "activity-toasts": {
+            "keywords": "應用程式 完成 需要輸入 提醒",
+            "title": "活動提示"
+          },
+          "desktop-notifications": {
+            "keywords": "系統 背景 完成 提醒",
+            "title": "桌面通知"
+          }
+        },
+        "remote": {
+          "remote-access": {
+            "keywords": "iPhone 手機 QR Code 配對 安全通道 遠端控制",
+            "title": "iPhone 遠端存取"
+          }
+        },
+        "shortcuts": {
+          "keyboard-shortcuts": {
+            "keywords": "按鍵 指令 參考",
+            "title": "鍵盤快速鍵"
+          }
+        },
+        "skills": {
+          "skills": {
+            "keywords": "供應商 代理 可用",
+            "title": "技能"
+          }
+        },
+        "usage": {
+          "usage": {
+            "keywords": "配額 點數 限額 供應商",
+            "title": "用量與帳單"
+          }
+        },
+        "worktrees": {
+          "managed-worktrees": {
+            "keywords": "git 分支 清理 刪除",
+            "title": "受管理的工作樹"
+          }
+        }
+      },
+      "placeholder": "搜尋設定…",
+      "resultsAriaLabel": "設定搜尋結果"
+    },
+    "shortcuts": {
+      "commandColumn": "指令",
+      "empty": "沒有符合「{{query}}」的快速鍵。",
+      "keybindingColumn": "按鍵綁定",
+      "searchAriaLabel": "搜尋快速鍵",
+      "searchPlaceholder": "搜尋快速鍵…"
+    },
+    "skills": {
+      "emptyDescription": "請將含 SKILL.md 的資料夾加入 DJL 技能資料夾，或為支援的供應商安裝技能。",
+      "emptyTitle": "找不到技能",
+      "enableAriaLabel": "啟用 {{skill}} 技能",
+      "enabledCount_one": "已啟用 {{enabled}}/{{count}} 項技能",
+      "enabledCount_other": "已啟用 {{enabled}}/{{count}} 項技能",
+      "errors": {
+        "discoveryDescription": "DJL 無法掃描技能資料夾。請確認伺服器運作後重試。",
+        "discoveryTitle": "技能探索失敗"
+      },
+      "noDescription": "沒有說明。",
+      "origins": {
+        "personal": "個人",
+        "project": "專案",
+        "shared": "共用（.agents）"
+      },
+      "portable": {
+        "description": "放在這裡的技能適用於所有供應商。若供應商自帶副本則優先使用，否則使用 DJL 的副本。",
+        "sectionTitle": "可攜式技能",
+        "title": "DJL 技能資料夾"
+      },
+      "providerCopies_one": "供應商副本：{{providers}}",
+      "providerCopies_other": "供應商副本：{{providers}}",
+      "scanning": "掃描中…",
+      "sections": {
+        "from": "來自 {{origin}}",
+        "shared": "共用技能"
+      },
+      "title": "技能"
+    },
+    "title": "設定",
+    "usage": {
+      "learnMore": "深入瞭解",
+      "left": "剩餘 {{remaining}}",
+      "loading": "正在載入供應商用量…",
+      "menuTitle": "{{provider}} 用量",
+      "noData": "尚未回報用量資料。",
+      "pace": {
+        "ariaLabel": "用量進度：{{status}}",
+        "durationDaysHours": "{{days}} 天 {{hours}} 小時",
+        "durationHoursMinutes": "{{hours}} 小時 {{minutes}} 分鐘",
+        "durationLessThanMinute": "不到 1 分鐘",
+        "durationMinutes": "{{minutes}} 分鐘",
+        "inDeficit": "超出進度 {{percent}}",
+        "inReserve": "餘量 {{percent}}",
+        "lastsUntilReset": "可用至重設",
+        "limitReached": "已達到限制",
+        "runsOutIn": "將在 {{duration}} 後用盡",
+        "status": {
+          "ahead": "進度領先",
+          "behind": "進度落後",
+          "on-track": "符合進度"
+        }
+      },
+      "privacyDescription": "用量會從各供應商 CLI 儲存於本機的憑證讀取，並直接向供應商取得。OAuth 供應商可能透過官方權杖端點更新短期權杖；若顯示「未登入」，請使用其 CLI 重新驗證。",
+      "rateLimits": {
+        "current": "目前",
+        "fiveHours": "5 小時",
+        "resetsInDaysHours": "{{days}} 天 {{hours}} 小時後重設",
+        "resetsInHoursMinutes": "{{hours}} 小時 {{minutes}} 分鐘後重設",
+        "resetsInMinutes": "{{minutes}} 分鐘後重設",
+        "resetsSoon": "即將重設",
+        "weekly": "每週"
+      },
+      "rateLimitsRemaining": "剩餘速率限制",
+      "remainingAriaLabel": "{{label}}：剩餘 {{remaining}}",
+      "status": {
+        "notSignedIn": "未登入",
+        "unavailable": "無法使用",
+        "unsupported": "不支援"
+      },
+      "title": "供應商用量",
+      "unavailableWithDetail": "用量無法使用。{{detail}}"
+    }
+  },
+  "shell": {
+    "error": {
+      "hideDetails": "隱藏錯誤詳情",
+      "noDetails": "沒有其他錯誤詳情。",
+      "reload": "重新載入應用程式",
+      "showDetails": "顯示錯誤詳情",
+      "summary": "DJL 無法載入此畫面。您可以重試或檢查下面的技術細節。",
+      "title": "發生問題。",
+      "tryAgain": "再試一次",
+      "unexpected": "發生未預期的路由錯誤。"
+    },
+    "handoff": {
+      "action": "移交",
+      "busy": "正在移交...",
+      "description": "從目前分支建立獨立工作樹，以便平行繼續工作。",
+      "name": "工作樹名稱",
+      "title": "移交至工作樹"
+    },
+    "keybindings": {
+      "invalid": "無效的鍵綁定配置",
+      "openFailed": "無法開啟鍵綁定文件",
+      "openFailedFallback": "開啟檔案時出現未知錯誤。",
+      "openFile": "打開 keybindings.json"
+    },
+    "keyboard": {
+      "control": "控制元件",
+      "enter": "輸入",
+      "shift": "移動"
+    },
+    "maintenance": {
+      "threadRetention": {
+        "complete": "隱藏舊聊天",
+        "completedCount_one": "{{count}} 隱藏在應用程式裡的舊聊天",
+        "completedCount_other": "{{count}} 隱藏在應用程式中的舊聊天.",
+        "none": "沒有舊的聊天需要隱藏。",
+        "paused": "聊天維護暫停",
+        "preparing": "準備背景維護 。",
+        "progress_one": "{{count}}聊天隱藏.",
+        "progress_other": "{{count}}聊天隱藏.",
+        "progressOf_one": "{{total}}的{{count}}隱藏.",
+        "progressOf_other": "{{total}}的{{count}}隱藏聊天.",
+        "retryLater": "舊時的聊天會稍後再審.",
+        "running": "隱藏舊的聊天..."
+      }
+    },
+    "navigation": {
+      "back": "返回",
+      "backWithShortcut": "返回（{{shortcut}}）",
+      "forward": "前進",
+      "forwardWithShortcut": "前進（{{shortcut}}）",
+      "maximize": "最大化",
+      "minimize": "最小化",
+      "mobileSidebar": "側邊欄",
+      "mobileSidebarDescription": "顯示行動版側邊欄。",
+      "resizeSidebar": "調整側邊欄大小",
+      "resizeSidebarDescription": "拖曳以調整側邊欄大小",
+      "restore": "還原",
+      "settings": "設定",
+      "toggleSidebar": "切換討論串側邊欄"
+    },
+    "pluginLibrary": {
+      "hero": "依你的方式使用 {{provider}}",
+      "installedPluginsOnly": "此檢視只顯示 Codex 設定中已有的外掛程式。",
+      "noDescription": "暫無說明。",
+      "noInstalledPlugins": "找不到已安裝的外掛程式",
+      "noSkills": "找不到技能",
+      "noSkillsMatch": "沒有符合此搜尋的技能。",
+      "pluginDiscoveryUnavailable": "此提供者不支援探索外掛程式。",
+      "plugins": "外掛程式",
+      "pluginsUnavailable": "{{provider}} 無法使用外掛程式",
+      "searchPlugins": "搜尋外掛程式",
+      "searchSkills": "搜尋技能",
+      "skillDiscoveryUnavailable": "此提供者不支援探索技能。",
+      "skills": "技能",
+      "skillsUnavailable": "{{provider}} 無法使用技能",
+      "workspaceRequired": "技能需要工作區路徑。請先開啟專案或聊天。"
+    },
+    "providerUpdates": {
+      "availableAdditional_one": "{{provider}}和{{count}} 更多供應商有更新版本可供使用.",
+      "availableAdditional_other": "{{provider}} 和{{count}} 更多供應商擁有更新版本.",
+      "availableCount_one": "{{count}} 提供者更新可用",
+      "availableCount_other": "{{count}} 提供者更新可用",
+      "availableNamed": "{{provider}} 更新可用",
+      "availableNamedDescription": "{{provider}}有較新的版本可用.",
+      "errors": {
+        "commandIncomplete": "更新命令未成功完成 。",
+        "requestFailed": "更新請求失敗 。",
+        "requestStartFailed": "提供者更新請求無法啟動 。",
+        "stillOutdated": "供應商在更新後仍然顯得過時。"
+      },
+      "failedAll": "提供者更新失敗",
+      "failedSome": "一些提供者更新失敗",
+      "manualCommands_one": "複製下面的命令在終端中手動更新 。",
+      "manualCommands_other": "複製下面的命令,以便在終端中手動更新 。",
+      "refreshedDescription": "新會話將使用更新的提供者工具。",
+      "review": "審查最新情況",
+      "updateAll": "全部更新",
+      "updatedCount_one": "{{count}} 提供者更新",
+      "updatedCount_other": "{{count}} 提供者更新",
+      "updatedNamed": "{{provider}} 更新",
+      "updating": "正在更新提供者...",
+      "updatingCount_one": "正在更新 {{count}} 提供者。",
+      "updatingCount_other": "正在更新 {{count}} 個提供者。",
+      "updatingNamed": "正在更新{{provider}}。"
+    },
+    "recentViews": {
+      "appSettings": "應用程式設定",
+      "ariaLabel": "最近的檢視",
+      "chat": "聊天",
+      "count_one": "{{count}} 個最近的檢視",
+      "count_other": "{{count}} 個最近的檢視",
+      "current": "目前",
+      "newChat": "新增聊天",
+      "pinned": "已釘選",
+      "plugins": "外掛程式",
+      "pluginsSubtitle": "擴充功能與整合",
+      "settings": "設定",
+      "settingsSections": {
+        "appearance": "外觀",
+        "general": "一般",
+        "keybindings": "鍵盤快速鍵",
+        "providers": "提供者"
+      },
+      "split": "分割",
+      "splitView": "分割檢視",
+      "terminal": "終端機",
+      "terminalWorkspace": "終端機工作區",
+      "workspace": "工作區"
+    },
+    "recovery": {
+      "retry": "重試"
+    },
+    "shortcuts": {
+      "description": "顯示目前情境中生效的按鍵設定。",
+      "noMatches": "沒有與「{{query}}」相符的快速鍵。",
+      "searchAriaLabel": "搜尋快速鍵",
+      "searchPlaceholder": "搜尋快速鍵...",
+      "title": "鍵盤快速鍵"
+    },
+    "shortcutSheet": {
+      "entries": {
+        "addProject": {
+          "description": "導入本地項目。",
+          "label": "新增項目"
+        },
+        "closeWorkspacePanel": {
+          "description": "關閉活動面板。",
+          "label": "關閉活動工作區面板"
+        },
+        "focusChat": {
+          "description": "切換到聊天標籤。",
+          "label": "焦點聊天選項卡"
+        },
+        "focusComposer": {
+          "description": "聚焦或模糊作曲家。",
+          "label": "焦點作曲家"
+        },
+        "focusTerminal": {
+          "description": "切換到終端選項卡。",
+          "label": "焦點終端選項卡"
+        },
+        "importThread": {
+          "description": "恢復現有對話。",
+          "label": "導入執行緒"
+        },
+        "jumpVisible": {
+          "description": "直接聚焦可見線程。",
+          "label": "跳到可見線程 {{number}}"
+        },
+        "modelPicker": {
+          "description": "開啟模型選擇器。",
+          "label": "模型選擇器"
+        },
+        "newChat": {
+          "description": "開啟聊天登陸視圖。",
+          "label": "新聊天"
+        },
+        "newClaude": {
+          "description": "從選擇克勞德開始。",
+          "label": "新克勞德線程"
+        },
+        "newCodex": {
+          "description": "從所選的 Codex 開始。",
+          "label": "新法典線程"
+        },
+        "newCursor": {
+          "description": "從選定的遊標開始。",
+          "label": "新遊標線程"
+        },
+        "newGemini": {
+          "description": "從選擇雙子座開始。",
+          "label": "新雙子座線程"
+        },
+        "newLatestProject": {
+          "description": "從最新的項目開始。",
+          "label": "最新專案中的新線程"
+        },
+        "newTerminal": {
+          "description": "以終端模式啟動。",
+          "label": "新的終端線程"
+        },
+        "newThread": {
+          "description": "開始一個新的線程。",
+          "label": "新話題"
+        },
+        "nextModel": {
+          "description": "選擇下一個型號。",
+          "label": "下一個型號"
+        },
+        "nextRecent": {
+          "description": "向前循環查看最近的視圖。",
+          "label": "下一個最近視圖"
+        },
+        "nextVisible": {
+          "description": "選擇下一個可見線程。",
+          "label": "下一個可見線程"
+        },
+        "openFavoriteEditor": {
+          "description": "在編輯器中開啟目前目標。",
+          "label": "在最喜歡的編輯器中打開"
+        },
+        "openWorkspace": {
+          "description": "展開到終端機工作區。",
+          "label": "打開全角終端機工作區"
+        },
+        "previousModel": {
+          "description": "選擇之前的型號。",
+          "label": "以前的型號"
+        },
+        "previousRecent": {
+          "description": "向後循環瀏覽最近的視圖。",
+          "label": "上一頁 最近查看"
+        },
+        "previousVisible": {
+          "description": "選擇上一個可見線程。",
+          "label": "上一個可見線程"
+        },
+        "search": {
+          "description": "打開側邊欄搜尋。",
+          "label": "搜尋項目和主題"
+        },
+        "show": {
+          "description": "從任何地方開啟此工作表。",
+          "label": "顯示鍵盤快速鍵"
+        },
+        "split": {
+          "description": "開啟第二個窗格。",
+          "label": "分割聊天"
+        },
+        "toggleBrowser": {
+          "description": "顯示瀏覽器面板。",
+          "label": "切換瀏覽器"
+        },
+        "toggleDiff": {
+          "description": "開啟或關閉差異。",
+          "label": "切換差異"
+        },
+        "toggleSidebar": {
+          "description": "折疊或顯示側邊欄。",
+          "label": "切換側邊欄"
+        },
+        "toggleTerminal": {
+          "description": "顯示或隱藏終端。",
+          "label": "切換終端"
+        },
+        "traitsPicker": {
+          "description": "開放推理控制。",
+          "label": "推理選擇器"
+        }
+      },
+      "projectScript": {
+        "runDescription": "運行該專案腳本。",
+        "setupDescription": "運行安裝腳本。",
+        "setupLabel": "{{name}} 設定腳本"
+      },
+      "sections": {
+        "alternate": {
+          "insideDescription": "這些綁定適用於工作區模式。",
+          "insideTitle": "在工作區模式下",
+          "outsideDescription": "數字行跳轉回到工作區模式之外。",
+          "outsideTitle": "外部工作區模式"
+        },
+        "available": {
+          "chatDescription": "當前聊天和側邊欄上下文。",
+          "title": "現已上市",
+          "workspaceDescription": "活動工作區終端上下文。"
+        },
+        "projectScripts": {
+          "description": "專案腳本的自訂快捷方式。",
+          "title": "專案腳本"
+        }
+      }
+    },
+    "sidebar": {
+      "actions": {
+        "automations": "自動化",
+        "deleteWorkspace": "刪除工作區",
+        "kanban": "看板",
+        "newTask": "新任務",
+        "newThread": "新話題",
+        "newWorkspace": "新工作區"
+      },
+      "adding": "正在新增...",
+      "addProject": "新增專案",
+      "archive": {
+        "allRunning_one": "這個計劃中唯一的線索是執行. 在歸檔前停止它 。",
+        "allRunning_other": "這個專案的所有{{count}}執行緒都在執行中. 在歸檔前停止它們 。",
+        "archivedCount_one": "線索存檔",
+        "archivedCount_other": "已歸檔的{{count}} 執行緒",
+        "cannot": "無法存檔",
+        "cannotThreads": "無法歸檔線程",
+        "confirmProject_one": "在\"{{project}}\"中存檔{{count}}執行緒?",
+        "confirmProject_other": "存檔{{count}} 執行緒在\"{{project}}\"?",
+        "confirmSelected_one": "存檔{{count}} 執行緒 ?\n存檔的執行緒從側邊欄中隱藏,但可以稍後恢復.",
+        "confirmSelected_other": "存檔{{count}} 執行緒 ?\n存檔的執行緒從側邊欄中隱藏,但可以稍後恢復.",
+        "failed": "無法存檔線程",
+        "failedCount_one": "無法存檔「{{count}}」中的 {{project}} 個執行緒。",
+        "failedCount_other": "無法存檔「{{count}}」中的 {{project}} 個執行緒。",
+        "failedFallback": "無法存檔線程。",
+        "failedResult_one": "歸檔 {{count}} 線索失敗 。",
+        "failedResult_other": "歸檔{{count}} 線索失敗 。",
+        "failedThreads": "無法歸檔線程",
+        "hiddenDescription": "存檔的執行緒從側邊欄中隱藏,但可以稍後恢復.",
+        "nothing": "沒有什麼好存檔的",
+        "noThreads": "“{{project}}”沒有要存檔的線程。",
+        "restoreFailed": "無法恢復線程",
+        "restoreFallback": "無法恢復線程。",
+        "runningSkipped_one": "{{count}} 執行執行緒正在執行, 將被跳過 。",
+        "runningSkipped_other": "{{count}} 執行執行緒正在執行, 將被跳過 。",
+        "skipped_one": "跳過{{count}} 執行執行緒 。",
+        "skipped_other": "跳過{{count}} 執行執行緒 。",
+        "stopRunning": "在歸檔該執行緒之前停止正在執行的會話。",
+        "threadMissing": "該線程不再存在。"
+      },
+      "archiveThread": "封存討論串",
+      "armWarning": {
+        "check": "檢查 ARM 構建更新",
+        "preparing": "正在準備 QQPH0ZX 構建",
+        "title": "英特爾基於蘋果晶片打造",
+        "update": "更新 ARM 構建"
+      },
+      "automationCount_one": "{{count}} 自動化",
+      "automationCount_other": "{{count}} 次自動化",
+      "browse": "瀏覽",
+      "cancelAddProject": "取消新增專案",
+      "chats": "聊天記錄",
+      "confirm": {
+        "archiveThread": "存檔線條 \"{{title}}\"?\n存檔的執行緒從側邊欄中隱藏,但可以稍後恢復.",
+        "deleteThread": "刪除線條“{{title}} ” ?\n這永久地澄清了這個執行緒的對話歷史.",
+        "deleteWorktree": "這個線條是唯一與這個工作樹相連的:{{path}}\n\n也刪除工作樹?"
+      },
+      "createTerminalIn": "在 {{project}} 建立新的終端線程",
+      "createThreadIn": "在 {{project}} 中建立新線程",
+      "delete": {
+        "confirmProject_one": "在“{{project}}”中刪除{{count}} 執行緒 ?\n這永久地澄清了這個執行緒的對話歷史.",
+        "confirmProject_other": "在“{{project}}”中刪除{{count}} 執行緒 ?\n這永久地澄清了這些線索的對話歷史.",
+        "confirmSelected_one": "刪除{{count}} 執行緒 ?\n這永久地澄清了這個執行緒的對話歷史.",
+        "confirmSelected_other": "刪除{{count}} 執行緒 ?\n這永久地澄清了這些線索的對話歷史.",
+        "deletedCount_one": "線索已刪除",
+        "deletedCount_other": "刪除了{{count}} 執行緒",
+        "failedCount_one": "無法刪除「{{count}}」中的 {{project}} 個執行緒。",
+        "failedCount_other": "無法刪除「{{count}}」中的 {{project}} 個執行緒。",
+        "failedResult_one": "刪除 {{count}} 線索失敗 。",
+        "failedResult_other": "刪除{{count}} 線索失敗 。",
+        "failedThreads": "刪除話題失敗",
+        "nothing": "沒有什麼可刪除的",
+        "noThreads": "“{{project}}”沒有要刪除的線程。"
+      },
+      "errors": {
+        "addProject": "無法新增項目",
+        "addProjectFallback": "新增工程時發生錯誤 。",
+        "createHandoff": "無法建立切換線程",
+        "createHandoffFallback": "創建切換線程時發生錯誤。",
+        "generic": "發生意外錯誤。",
+        "linkUnavailable": "連結無法開啟。",
+        "openFinder": "無法在 Finder 中打開",
+        "openFinderFallback": "開啟資料夾時發生未知錯誤。",
+        "openFolderPicker": "無法開啟資料夾選擇器",
+        "openFolderPickerFallback": "無法開啟資料夾拾取器 。",
+        "openPr": "無法打開 PR 鏈接",
+        "openTerminal": "無法打開終端",
+        "openTerminalFallback": "無法打開終端。",
+        "pathCopyUnavailable": "該執行緒沒有要複製的工作空間路徑。",
+        "pathOpenUnavailable": "該執行緒沒有要開啟的工作空間路徑。",
+        "pathUnavailable": "路徑不可用",
+        "removeWorktreeFallback": "未知錯誤刪除工作樹 。",
+        "renameThread": "重命名線程失敗",
+        "threadTitleEmpty": "話題標題不能為空",
+        "worktreeRemovalFailed": "執行緒已刪除，但工作樹刪除失敗",
+        "worktreeRemovalFailedDescription": "無法刪除 {{path}}。 {{detail}}"
+      },
+      "forkedThread": "分叉螺紋",
+      "loadingProjects": "正在載入專案",
+      "menu": {
+        "archiveCount": "檔案 ({{count}})",
+        "clearNotification": "清除通知",
+        "copyPath": "複製路徑",
+        "copyThreadId": "複製線程 ID",
+        "deleteCount": "刪除 ({{count}})",
+        "handoffTo": "移交給{{provider}}",
+        "markUnread": "標記為未讀",
+        "markUnreadCount": "標記為未讀 ({{count}})",
+        "openPathInTerminal": "在終端機中打開路徑",
+        "renameThread": "重命名線程"
+      },
+      "newChat": "新建聊天",
+      "newChatShortcut": "新建聊天( {{shortcut}})",
+      "newTerminal": "新建終端執行緒",
+      "newTerminalShortcut": "新建終端執行緒( {{shortcut}})",
+      "newThread": "新執行緒",
+      "newThreadShortcut": "新執行緒( {{shortcut}})",
+      "noChats": "還沒有聊天記錄",
+      "noProjects": "還沒有項目",
+      "opening": "開啟...",
+      "openNewChatHome": "開啟新的聊天主頁",
+      "palette": {
+        "addHint": "增加工程的{{enter}}",
+        "addingProject": "正在新增工程...",
+        "browseHint": "鍵入路徑, QQ以導航資料夾 。",
+        "createAndAdd": "建立並新增",
+        "createProjectHint": "按 Enter 建立 {{path}} 並將其新增為專案。",
+        "errors": {
+          "addProject": "新增專案失敗。",
+          "enterPath": "請輸入資料夾路徑。",
+          "importThread": "匯入討論串失敗。",
+          "relativePath": "不支援相對路徑。請使用絕對路徑或以 ~/ 開頭。",
+          "windowsPath": "此平台不支援 Windows 路徑。"
+        },
+        "goUpHint": "按 {{enter}} 返回上一層",
+        "import": "匯入",
+        "importDescription": "建立本機應用程式討論串，並從現有提供者 ID 繼續。",
+        "importedSessionTitle": "匯入的 {{provider}} 會話 {{suffix}}",
+        "importedThreadTitle": "已匯入{{provider}} 執行緒{{suffix}}",
+        "importing": "正在匯入...",
+        "importTitle": "從提供者匯入討論串",
+        "modifiedEnter": "{{modifier}}{{enter}}",
+        "noImportProviders": "此版本中沒有已連線的提供者支援匯入聊天。",
+        "noMatchingFolders": "沒有匹配的資料夾。",
+        "openOrAddHint": "按 {{enter}} 開啟 · 按 {{modifier}}+{{enter}} 新增",
+        "pasteSession": "貼上 {{provider}} 工作階段 ID",
+        "pasteThread": "貼上 {{provider}} 討論串 ID",
+        "projectPathPlaceholder": "輸入專案路徑（例如 ~/projects/my-app）",
+        "provider": "提供者",
+        "recent": "最近",
+        "resumeSession": "{{provider}} 會透過工作階段 ID 恢復已儲存的工作階段。",
+        "resumeThread": "{{provider}} 會透過討論串 ID 恢復已儲存的討論串。",
+        "searchPlaceholder": "搜尋專案、討論串和動作",
+        "sessionId": "工作階段 ID",
+        "submit": "{{action}}({{enter}})",
+        "submitHighlightedFolder": "{{action}} 突出顯示資料夾{{modifier}}{{enter}}",
+        "theme": {
+          "codeDescription": "應用於目前的 {{theme}} 主題槽。",
+          "dark": "切換到深色主題",
+          "darkDescription": "始終使用深色主題。",
+          "darkGroup": "黑暗主題",
+          "light": "切換到淺色主題",
+          "lightDescription": "始終使用淺色主題。",
+          "lightGroup": "輕主題",
+          "names": {
+            "dark": "黑暗",
+            "light": "光"
+          },
+          "system": "切換到系統主題",
+          "systemDescription": "匹配您的作業系統外觀設定。"
+        },
+        "threadId": "討論串 ID",
+        "threads": "討論串",
+        "unknownProject": "未知專案",
+        "untitledProject": "無標題工程",
+        "untitledThread": "無標題執行緒"
+      },
+      "paletteActions": {
+        "addProject": {
+          "description": "在側邊欄中開啟儲存庫或資料夾。",
+          "label": "新增項目"
+        },
+        "importThread": {
+          "description": "將本機執行緒附加到現有提供者會話。",
+          "label": "從...導入線程"
+        },
+        "newChat": {
+          "description": "開啟新的聊天登陸畫面。",
+          "label": "新聊天"
+        },
+        "newThread": {
+          "description": "在目前專案中啟動一個新執行緒。",
+          "label": "新話題"
+        },
+        "settings": {
+          "description": "打開應用程式設定。",
+          "label": "設定"
+        },
+        "usage": {
+          "description": "開放提供者的使用情況和剩餘積分。",
+          "label": "使用設定"
+        }
+      },
+      "pendingApproval": "等待核准",
+      "pinned": "已釘選",
+      "pr": {
+        "closed": "PR 已關閉",
+        "conflicts": "PR 發生衝突",
+        "draft": "PR 草稿",
+        "merged": "PR 已合併",
+        "open": "PR 已開啟"
+      },
+      "project": "專案",
+      "projectActions": {
+        "confirmRemove": "刪除專案“{{project}} ” ?",
+        "confirmRemoveWithThreads_one": "刪除專案“{{project}} ” ?\n這將刪除此資料夾中的{{count}} 線索並刪除工程 。",
+        "confirmRemoveWithThreads_other": "刪除專案“{{project}} ” ?\n這將刪除此資料夾中的{{count}} 線索並刪除工程 。",
+        "pinFailed": "無法固定項目",
+        "pinLimit": "已達項目 pin 限制",
+        "pinLimitDescription_one": "您最多可以固定 {{count}} 個項目。",
+        "pinLimitDescription_other": "您最多可以固定 {{count}} 個項目。",
+        "removed": "刪除了“{{project}}”",
+        "removedDescription": "專案被刪除。",
+        "removedWithThreads_one": "刪除{{count}} 執行緒並刪除工程.",
+        "removedWithThreads_other": "刪除了{{count}} 執行緒並刪除了工程.",
+        "removeFailed": "無法刪除“{{project}}”",
+        "removeFallback": "未知錯誤刪除工程 。",
+        "unpinFailed": "無法取消固定項目"
+      },
+      "projectCleared": "\"{{project}}\"清場.",
+      "projectFallback": "專案",
+      "projectMenu": {
+        "archiveThreads": "封存討論串",
+        "copyPath": "複製路徑",
+        "deleteThreads": "刪除討論串",
+        "devCommandPlaceholder": "例如 npm run dev",
+        "devRunning": "開發伺服器正在執行",
+        "editName": "編輯名稱",
+        "editProject": "編輯專案",
+        "openDevServer": "開啟開發伺服器",
+        "openFinder": "在 Finder 中開啟",
+        "openKanban": "在看板中開啟",
+        "remove": "移除",
+        "startDev": "啟動開發服務",
+        "stopDev": "停止開發服務"
+      },
+      "projects": {
+        "collapseAll": "摺疊所有專案",
+        "collapseExceptActive": "摺疊除活動專案外的所有專案",
+        "collapseExceptActiveChat": "摺疊除活動聊天專案外的所有專案",
+        "expandAll": "擴充套件所有專案"
+      },
+      "projectStatus": "專案狀況:{{status}}",
+      "renameProject": {
+        "description": "名稱請保持簡短且易於辨識。",
+        "title": "重新命名專案"
+      },
+      "renameThread": {
+        "description": "名稱請保持簡短且易於辨識。",
+        "title": "重新命名聊天"
+      },
+      "run": {
+        "failed": "無法運行“{{project}}”",
+        "failedFallback": "無法啟動運行命令。",
+        "openFailed": "無法開啟{{server}}",
+        "openFailedFallback": "無法開啟本機伺服器。",
+        "stopFailed": "停止運行失敗",
+        "stopFailedFallback": "無法停止開發伺服器。"
+      },
+      "runDialog": {
+        "command": "命令",
+        "required": "輸入要運行的命令。",
+        "run": "運行"
+      },
+      "search": {
+        "ariaLabel": "搜尋聊天和專案",
+        "chatHitCount_one": "聊天比賽",
+        "chatHitCount_other": "{{count}} 次聊天點擊",
+        "configure": "設定",
+        "hint": "跳至討論串、專案、動作或外觀設定。",
+        "noMatches": "沒有相符項目。",
+        "openHint": "按 Enter 開啟",
+        "placeholder": "搜尋聊天和專案...",
+        "projectMatch": "項目匹配",
+        "projects": "專案",
+        "suggested": "建議"
+      },
+      "settings": "設定",
+      "sort": {
+        "createdAt": "建立於",
+        "lastUserMessage": "最後使用者訊息",
+        "manual": "手動"
+      },
+      "sortChats": "排序聊天",
+      "sortProjects": "對項目進行排序",
+      "sortThreads": "對主題進行排序",
+      "status": {
+        "awaitingInput": "等待輸入",
+        "completed": "已完成",
+        "connecting": "正在連線",
+        "paused": "已暫停",
+        "pending": "待定",
+        "pendingApproval": "等待核准",
+        "planReady": "計畫已就緒",
+        "terminalInputNeeded": "需要終端輸入",
+        "terminalProcessRunning": "終端進程運行",
+        "terminalTaskCompleted": "終端任務完成",
+        "working": "工作中"
+      },
+      "studio": {
+        "loading": "正在裝入工作...",
+        "noTasks": "還沒有任務"
+      },
+      "temporaryChat": "暫時聊天",
+      "terminalOpen": "終端開放",
+      "terminalOpenCount_one": "{{count}} 終端機打開",
+      "terminalOpenCount_other": "{{count}} 個終端開放",
+      "threadActions": {
+        "pinFailed": "無法連線線索",
+        "unpinFailed": "無法取消執行緒"
+      },
+      "threadCount_one": "{{count}} 個討論串",
+      "threadCount_other": "{{count}} 個討論串",
+      "typePath": "輸入路徑",
+      "update": {
+        "alreadyCurrent": "已經是最新的了",
+        "available": "可用",
+        "availableTitle": "可更新",
+        "checkFailed": "無法檢查更新",
+        "current": "您是最新的",
+        "currentDescription": "DJL {{version}} 已經是最新版本。",
+        "downloadFailed": "無法下載更新",
+        "downloading": "DJL 正在背景下載更新。",
+        "downloadManually": "手動下載",
+        "downloadManuallyTitle": "手動下載更新",
+        "downloadStartFailed": "無法開始更新下載",
+        "finishFailed": "無法完成更新",
+        "installFailed": "無法安裝更新",
+        "manualAfterFailures_one": "自動安裝失敗{{count}} 時間 。 手動下載{{version}}完成更新.",
+        "manualAfterFailures_other": "自動安裝失敗{{count}} 次 。 手動下載{{version}}完成更新.",
+        "manualFallback": "應用中的更新無法完成 。 你可以手動下載.",
+        "preparing": "準備更新",
+        "preparingVersion": "DJL 正在後台準備版本 {{version}}。",
+        "ready": "更新準備就緒",
+        "readyDescription": "當您準備好重新啟動並安裝它時，請點擊更新。",
+        "theUpdate": "更新"
+      },
+      "updateButton": {
+        "action": "更新",
+        "check": "檢查更新",
+        "checking": "正在檢查...",
+        "preparingAction": "正在準備",
+        "retry": "重試",
+        "updating": "正在更新..."
+      },
+      "views": {
+        "projects": "專案",
+        "work": "工作",
+        "workspace": "工作空間"
+      },
+      "workspace": "工作區",
+      "workTaskStatus": {
+        "aria": "任務狀態：{{status}}",
+        "cancelled": "取消",
+        "complete": "完成",
+        "failed": "失敗",
+        "needs_input": "需要輸入",
+        "needs_review": "需要審查",
+        "planning": "規劃",
+        "working": "工作"
+      }
+    },
+    "startup": {
+      "connecting": "正在連接到 {{app}} 伺服器..."
+    },
+    "terminal": {
+      "title": "終端"
+    },
+    "worldCup": {
+      "ball": "足球",
+      "drag": "拖曳並投擲足球",
+      "reset": "將足球重設至中央",
+      "spinClockwise": "順時針旋轉",
+      "spinCounterClockwise": "逆時針旋轉",
+      "title": "2026 世界盃"
+    }
+  },
+  "whatsNew": {
+    "actions": {
+      "backAriaLabel": "返回最新功能",
+      "close": "關閉",
+      "gotIt": "知道了",
+      "viewChangelog": "檢視變更記錄"
+    },
+    "currentRelease": {
+      "features": {
+        "claude-context-and-resume": {
+          "description": "Claude 工作階段現在會即時回報內容用量、在壓縮前警告、原地切換模型與內容設定，並在恢復時保留防護措施。",
+          "details": "轉接器將 SDK 內容控制與累積權杖用量結合，在回應之間保留有效內容視窗，讓備援路由固定至你選擇其他模型，並儲存恢復狀態而無需不必要地重啟供應商。",
+          "title": "Claude 更妥善地控制內容"
+        },
+        "codex-stream-reliability": {
+          "description": "Codex 推理摘要、內容壓縮、工作更新與嘈雜的應用伺服器輸出獲得更可靠的處理，讓長時間工作中的即時記錄更清楚。",
+          "details": "應用伺服器橋接現在會安全忽略非通訊協定輸出、保留供應商撰寫的推理摘要、正規化執行階段事件，並強化恢復與擷取路徑，避免串流更新之間遺失進度。",
+          "title": "Codex 推理與串流更可靠"
+        },
+        "faster-recovery": {
+          "description": "聊天面板會按需載入，已刪除專案保留為安全的用戶端標記，瀏覽器設定檔移轉則以交易方式修復資料庫附屬檔案。",
+          "details": "聊天路由在延後次要面板時測量 LCP；專案刪除與桌面設定檔修復則在重新載入、重試與移轉中斷時維持可預期的本機狀態。",
+          "title": "聊天啟動與復原更輕快"
+        },
+        "provider-task-progress": {
+          "description": "Claude 工作工具與 Codex 工作事件現在透過同一進度串流顯示，讓可恢復工作更容易追蹤。",
+          "details": "Claude 的 TaskCreate、TaskUpdate、TaskGet、TaskList 與 TodoWrite 結果會正規化到共用執行階段工作清單並保存於恢復游標。Codex 工作事件與供應商摘要使用相同投影，並涵蓋重新連線與恢復。",
+          "title": "代理工作進度持續可見"
+        },
+        "safer-release-updates": {
+          "description": "發行自動化現在會驗證相容性摘要，並保護封裝後的桌面應用程式，避免更新與啟動期間出現不安全的套件交換。",
+          "details": "發行工作流程會驗證固定更新管道、避免乾淨版本進入相容管道、修復更新來源中繼資料，並在偵測到 app.asar 交換時強化桌面啟動。",
+          "title": "桌面更新擁有更強防護"
+        },
+        "synara-identity": {
+          "description": "從桌面安裝、命令列到套件、設定、診斷與發行成品，應用程式現在處處使用一致的識別。",
+          "details": "桌面套件現為 com.emanueledipietro.synara，CLI 為 @synara/cli 並使用 synara 指令；所有第一方執行階段識別碼皆使用 DJL 命名空間。0.4.2 橋接版本會在來源變更期間保留轉譯器狀態。",
+          "title": "全面統一為 DJL"
+        }
+      }
+    },
+    "history": {
+      "completeTitle": "完整變更記錄",
+      "description": "所有精選版本，最新版本優先。",
+      "empty": "目前沒有版本說明，請在下次更新後再查看。",
+      "olderEntriesNotice": "較舊的版本說明僅提供英文。",
+      "releaseTitle": "版本歷史",
+      "updateCount_one": "{{count}} 項更新",
+      "updateCount_other": "{{count}} 項更新",
+      "version": "版本 {{version}}"
+    },
+    "popout": {
+      "dismissAriaLabel": "關閉最新功能提示",
+      "findOutMore": "查看最新功能",
+      "heroAlt": "v{{version}} 最新功能",
+      "newVersion": "新版本 · v{{version}}",
+      "openAriaLabel": "開啟 v{{version}} 最新功能"
+    },
+    "title": "最新功能",
+    "titleQuestion": "有哪些新功能？"
+  },
+  "work": {
+    "aiDetector": {
+      "actions": {
+        "analyze": "開始檢測",
+        "cancelAnalysis": "取消檢測",
+        "cancelInstall": "取消安裝",
+        "clearCache": "清除快取",
+        "installModel": "安裝模型",
+        "newCheck": "新增檢測",
+        "removeModel": "移除模型",
+        "retryInstall": "重試安裝"
+      },
+      "before": {
+        "description": "比例只根據可分析正文，而非整個檔案。",
+        "itemCoverage": "引文、程式碼、表格、參考文獻、中繼資料及不支援的語言會被排除。",
+        "itemEstimate": "結果是機率提示，無法證明作者身分。",
+        "itemLocal": "您的檔案不會離開此裝置。",
+        "title": "檢測範圍"
+      },
+      "betaBadge": "測試版",
+      "cache": {
+        "status_one": "{{count}} 筆快取結果 · {{size}}",
+        "status_other": "{{count}} 筆快取結果 · {{size}}"
+      },
+      "description": "估算可分析正文中疑似 AI 與疑似人工寫作的比例。英文及簡體中文模型只在此裝置執行。",
+      "errors": {
+        "cancelled": "檢測已取消。",
+        "empty": "請先加入文字或選擇文件。",
+        "file": {
+          "size": "請選擇不超過 20 MB 的非空檔案。",
+          "type": "請選擇 TXT、DOCX 或文字型 PDF 檔案。"
+        },
+        "server": {
+          "analysisFailed": "本機檢測失敗。請重試或更換檔案。",
+          "invalidInput": "檔案中沒有可讀文字，或無法讀取該檔案。",
+          "localOnly": "AI 寫作檢測僅可在執行 DJL 的此裝置上使用，確保檔案不會透過網路傳送。",
+          "modelInstallFailed": "本機模型安裝或驗證失敗。",
+          "modelNotInstalled": "請先安裝所需的本機模型，然後重新檢測。",
+          "ocrRequired": "此 PDF 沒有可讀文字。暫不支援掃描件和 OCR。",
+          "unsafeDocument": "檔案不安全或超出處理限制，DJL 已拒絕讀取。",
+          "unsupportedFormat": "AI 寫作檢測支援貼上文字、TXT、DOCX 和文字型 PDF。"
+        }
+      },
+      "export": {
+        "html": "HTML 網頁報告",
+        "includeText": "在匯出內容中包含檢測文字",
+        "json": "JSON 資料報告"
+      },
+      "input": {
+        "accepted": "TXT、DOCX 或文字型 PDF · 上限 20 MB",
+        "characterCount_one": "{{count}} 個字元",
+        "characterCount_other": "{{count}} 個字元",
+        "chooseFile": "選擇檔案",
+        "dropNow": "放開以加入文件",
+        "fileCount": "已選擇 {{size}}",
+        "placeholder": "貼上論文、文章、報告或其他正文…",
+        "removeFile": "移除檔案",
+        "textLabel": "待檢測文字"
+      },
+      "language": {
+        "auto": "自動識別",
+        "en": "英文",
+        "label": "檢測語言",
+        "zh-Hans": "簡體中文"
+      },
+      "models": {
+        "description": "安裝一次後即可離線檢測。下載檔案會先核對固定版本及雜湊值。",
+        "installProgress": "正在安裝{{language}}",
+        "installRequired": "請先安裝此文字所需的本機模型。",
+        "language": {
+          "en": "英文檢測模型",
+          "zh-Hans": "簡體中文檢測模型"
+        },
+        "loading": "正在檢查本機模型…",
+        "state": {
+          "downloading": "正在下載",
+          "error": "需要處理",
+          "not-installed": "未安裝",
+          "ready": "可用",
+          "verifying": "正在驗證"
+        },
+        "title": "本機檢測模型"
+      },
+      "nav": "AI 寫作檢測",
+      "privacyBadge": "僅在本機執行",
+      "progress": {
+        "aggregating": "正在建立報告",
+        "complete": "已完成",
+        "extracting": "正在讀取文件",
+        "normalizing": "正在整理正文",
+        "routing": "正在識別語言",
+        "scoring": "正在評估段落"
+      },
+      "results": {
+        "assessment": {
+          "insufficient": "可分析正文太少，無法提供可靠的全文評估。",
+          "likely-ai": "大部分可分析正文與模型學到的 AI 生成文字特徵相似。",
+          "likely-human": "大部分可分析正文與模型學到的人工寫作特徵相似。",
+          "mixed": "可分析正文包含混合或不確定訊號。",
+          "unsupported": "找不到可分析的英文或簡體中文正文。"
+        },
+        "confidence": "可信度",
+        "confidenceLevel": {
+          "high": "高",
+          "low": "低",
+          "medium": "中"
+        },
+        "digest": "內容摘要",
+        "disclaimer": "AI 寫作檢測可能出錯。本結果不能證明作者身分，也不得作為學術、聘僱、紀律、法律或其他重大決定的唯一依據。",
+        "disclaimerTitle": "請謹慎使用此結果",
+        "eligible": "可分析字元",
+        "evidence": "段落依據",
+        "excluded": "排除字元",
+        "exclusion": {
+          "blank": "空白",
+          "code": "程式碼",
+          "heading": "標題",
+          "list": "短清單",
+          "metadata": "中繼資料或短片段",
+          "other-language": "不屬於所選語言",
+          "quotation": "引文",
+          "references": "參考文獻",
+          "table": "表格",
+          "unsupported-language": "不支援的語言"
+        },
+        "likelyAi": "AI 寫作特徵覆蓋率",
+        "likelyHuman": "可能為人工寫作的覆蓋率",
+        "notes": "檢閱提示",
+        "preprocessing": "前處理",
+        "region": {
+          "excluded": "未參與檢測",
+          "likely-ai": "可能由 AI 生成",
+          "likely-human": "可能由人工撰寫",
+          "uncertain": "無法確定"
+        },
+        "segmentation": "分段",
+        "technicalDetails": "模型與技術詳情",
+        "title": "寫作評估",
+        "uncertain": "不確定覆蓋率",
+        "warning": {
+          "document-extraction-warning": "DJL 已忽略無法安全分析的文件功能。",
+          "external-relationships-ignored": "已忽略 Office 文件中的外部連結，且未存取這些連結。",
+          "insufficient-prose": "可分析正文太少，無法提供可靠的全文評估。",
+          "unsupported-language": "未分析到支援的英文或簡體中文正文。"
+        }
+      },
+      "title": "AI 寫作檢測"
+    },
+    "automations": {
+      "actions": {
+        "cancelRun": "取消執行",
+        "delete": "刪除自動化",
+        "markRead": "標示為已讀",
+        "markUnread": "標示為未讀",
+        "pause": "暫停",
+        "resume": "繼續",
+        "runNow": "立即執行",
+        "unarchive": "取消封存"
+      },
+      "approval": {
+        "approve": "核准",
+        "approveAndRun": "核准並立即執行",
+        "description": "此自動化需要您核准一次，DJL 才能儲存變更。當警告阻止手動執行時，核准前「立即執行」將保持停用。",
+        "title": "需要核准"
+      },
+      "detail": {
+        "approveFirst": "請先核准自動化",
+        "archiveWorktreeNote": "封存不會移除產生的工作樹或分支。",
+        "back": "返回自動化",
+        "deleteConfirm": "刪除「{{name}}」？",
+        "details": "詳細資料",
+        "never": "永不",
+        "noRuns": "尚無執行。",
+        "notFound": "找不到自動化。",
+        "previousRuns": "先前的執行",
+        "runsInDescription": "自動化的執行位置：工作樹、本機簽出或自動",
+        "threadUnavailable": "討論串無法使用",
+        "unknownProject": "未知專案"
+      },
+      "dialog": {
+        "aboutDescription": "自動化會依排程執行此提示，並將結果開啟為討論串。",
+        "aboutLabel": "關於自動化",
+        "create": "建立",
+        "edit": "編輯自動化",
+        "new": "新增自動化",
+        "noProjectThreads": "此專案中沒有討論串",
+        "promptLabel": "自動化提示",
+        "promptPlaceholder": "加入提示，例如在 $sentry 中尋找當機",
+        "selectProject": "選擇專案",
+        "stopWhenPlaceholder": "PR 已可合併",
+        "titlePlaceholder": "自動化標題",
+        "useTemplate": "使用範本"
+      },
+      "errors": {
+        "archive": "無法更新執行封存。",
+        "cancelRun": "無法取消執行。",
+        "create": "無法建立自動化。",
+        "delete": "無法刪除自動化。",
+        "markRead": "無法更新執行的已讀狀態。",
+        "runNow": "無法執行自動化。",
+        "update": "無法更新自動化。"
+      },
+      "fields": {
+        "createdFrom": "建立來源",
+        "cron": "Cron 運算式",
+        "day": "日期",
+        "every": "每隔",
+        "lastRan": "上次執行",
+        "maxIterations": "最大反覆次數",
+        "mode": "模式",
+        "model": "模型",
+        "nextRun": "下次執行",
+        "permissions": "權限",
+        "project": "專案",
+        "repeats": "重複",
+        "runAt": "執行時間",
+        "runMode": "執行模式",
+        "runsIn": "執行位置",
+        "schedule": "排程",
+        "status": "狀態",
+        "stopOnError": "發生錯誤時停止",
+        "stopWhen": "停止條件",
+        "targetThread": "目標討論串",
+        "thread": "討論串",
+        "time": "時間",
+        "timezone": "時區"
+      },
+      "intent": {
+        "chatAutomation": "聊天自動化",
+        "cron": "Cron 運算式 {{expression}}",
+        "dailyAt": "每天 {{time}}",
+        "everyCompact": "每 {{amount}}{{unit}}",
+        "inCompact": "{{amount}}{{unit}}後",
+        "manual": "手動",
+        "onceAt": "於 {{date}} 執行一次",
+        "units": {
+          "dayCompact": "天",
+          "hourCompact": "小時",
+          "minuteCompact": "分",
+          "secondCompact": "秒"
+        },
+        "weekdaysAt": "工作日 {{time}}",
+        "weeklyAt": "每週 {{time}}",
+        "weeklyOnAt": "{{day}} {{time}}"
+      },
+      "interval": {
+        "everyMinutes": "每 {{count}} 分鐘",
+        "everySeconds": "每 {{count}} 秒"
+      },
+      "intervalPresets": {
+        "h1": "每小時",
+        "h12": "每 12 小時",
+        "h2": "每 2 小時",
+        "h24": "每 24 小時",
+        "h6": "每 6 小時",
+        "m15": "每 15 分鐘",
+        "m30": "每 30 分鐘"
+      },
+      "lifecycle": {
+        "active": "使用中",
+        "done": "已完成",
+        "paused": "已暫停",
+        "scheduled": "已排程"
+      },
+      "list": {
+        "allCount": "全部 {{count}}",
+        "automationRun": "自動化執行",
+        "current": "目前",
+        "emptyDescription": "安排提示自行執行，或循環喚醒現有討論串。",
+        "emptyTitle": "尚無自動化",
+        "fromThread": " · 來自 {{thread}}",
+        "heartbeatTarget": "心跳 · {{target}}{{suffix}}",
+        "loading": "正在載入自動化...",
+        "needsReview": "需要檢查",
+        "newResult": "新結果",
+        "noUnread": "沒有未讀執行。",
+        "savedRun": "已儲存的執行",
+        "unreadCount": "未讀 {{count}}"
+      },
+      "maxIterations": {
+        "runs_one": "{{count}} 次執行",
+        "runs_other": "{{count}} 次執行",
+        "unlimited": "無限制"
+      },
+      "mode": {
+        "heartbeat": "心跳",
+        "standalone": "獨立"
+      },
+      "permissions": {
+        "approvalRequired": "需要核准",
+        "fullAccess": "完整存取"
+      },
+      "relative": {
+        "days": "{{count}} 天",
+        "hours": "{{count}} 小時",
+        "minutes": "{{count}} 分鐘",
+        "months": "{{count}} 個月",
+        "now": "剛剛",
+        "weeks": "{{count}} 週"
+      },
+      "result": {
+        "changedFiles": "已變更檔案",
+        "completedOpenThread": "已完成；開啟討論串查看回覆",
+        "findings": "發現需要檢查的內容",
+        "needsAttention": "需要注意",
+        "noFindings": "沒有發現"
+      },
+      "runStatus": {
+        "cancelled": "已取消",
+        "claimed": "正在啟動",
+        "failed": "失敗",
+        "interrupted": "已中斷",
+        "pending": "已排入佇列",
+        "running": "正在執行",
+        "skipped": "已略過",
+        "succeeded": "已完成",
+        "waitingForApproval": "等待核准"
+      },
+      "schedule": {
+        "hourly": "每小時",
+        "manual": "手動",
+        "notScheduled": "未排程"
+      },
+      "scheduleDisplay": {
+        "cron": "Cron 排程：{{expression}}（{{timezone}}）",
+        "daily": "每天 {{time}}{{timezone}}",
+        "once": "{{date}} 執行一次",
+        "weekdays": "工作日 {{time}}{{timezone}}",
+        "weekly": "每週 {{day}} {{time}}{{timezone}}"
+      },
+      "scheduleKinds": {
+        "cron": "Cron 排程",
+        "custom": "自訂",
+        "daily": "每天",
+        "hourly": "每小時",
+        "manual": "手動",
+        "once": "一次",
+        "weekdays": "工作日",
+        "weekly": "每週"
+      },
+      "templates": {
+        "crashes": {
+          "label": "分類新當機",
+          "name": "分類當機",
+          "prompt": "在 $sentry 中尋找新當機，並為影響最大的一項建立修復 PR。"
+        },
+        "dependencies": {
+          "label": "更新相依套件",
+          "name": "更新相依套件",
+          "prompt": "檢查過時的相依套件，升級安全的次版本與修補版本，然後執行測試。"
+        },
+        "summary": {
+          "label": "每日站會摘要",
+          "name": "每日摘要",
+          "prompt": "將主分支過去 24 小時的變更摘要為簡短的站會更新。"
+        }
+      },
+      "timestamps": {
+        "today": "今天 {{time}}",
+        "tomorrow": "明天 {{time}}",
+        "yesterday": "昨天 {{time}}"
+      },
+      "title": "自動化",
+      "toggle": {
+        "off": "關",
+        "on": "開"
+      },
+      "validation": {
+        "fastInterval": "少於一分鐘的間隔需要將最大反覆次數設為 {{count}} 次或更少。"
+      },
+      "warnings": {
+        "cleanup": {
+          "detail": "封存後，產生的工作樹或分支會保留，直到您將其移除。",
+          "title": "工作樹清理"
+        },
+        "context": {
+          "detail": "排程執行不會重播附件、供應商提及、貼上的內容及終端機片段。",
+          "title": "編輯器內容不會保留"
+        },
+        "fastLoop": {
+          "detail": "少於一分鐘的間隔可能產生過多的無人值守執行。",
+          "title": "快速重複迴圈"
+        },
+        "fullAccess": {
+          "detail": "排程的完整存取執行可在無需逐步核准的情況下變更內容。",
+          "title": "完整存取"
+        },
+        "generated": {
+          "detail": "DJL 對解析出的自動化欄位並非完全確定。",
+          "title": "檢查產生的欄位"
+        },
+        "localCheckout": {
+          "autoDetail": "若 DJL 無法建立工作樹，執行可能改為編輯使用中的專案簽出。",
+          "autoTitle": "自動備援可能使用本機簽出",
+          "detail": "執行可能編輯使用中專案簽出內的檔案。",
+          "title": "本機簽出"
+        },
+        "schedule": {
+          "detail": "建立前請選擇此自動化的執行時間。",
+          "title": "需要檢查排程"
+        },
+        "skill": {
+          "detail": "除非所選供應商能在執行時解析技能標記，否則它們會保留為提示文字。",
+          "title": "技能參照保留在提示中"
+        }
+      },
+      "weekdays": {
+        "fri": "週五",
+        "mon": "週一",
+        "sat": "週六",
+        "sun": "週日",
+        "thu": "週四",
+        "tue": "週二",
+        "wed": "週三"
+      },
+      "worktreeMode": {
+        "auto": "自動",
+        "local": "本機",
+        "worktree": "工作樹"
+      }
+    },
+    "documentReader": {
+      "actions": {
+        "install": "安裝本機讀取器",
+        "installing": "正在安裝…",
+        "repair": "修復本機讀取器",
+        "repairing": "正在修復…"
+      },
+      "error": {
+        "check": "無法檢查本機文件讀取器。",
+        "install": "無法安裝本機文件讀取器。",
+        "repair": "無法修復本機文件讀取器。",
+        "summary": "無法更新本機文件讀取器。"
+      },
+      "privacy": "它在此裝置上執行。未經明確同意或管理員政策授權，DJL 絕不會將文件傳送到雲端 OCR。",
+      "status": {
+        "checking": "正在檢查本機文件讀取器…",
+        "needsRepair": "本機文件讀取器需要修復",
+        "notInstalled": "此掃描需要本機文件讀取器",
+        "ready": "本機文件讀取器已就緒",
+        "unavailable": "此版本無法使用本機文件讀取功能"
+      }
+    },
+    "documents": {
+      "confidence": "信賴度 {{percent}}%",
+      "errors": {
+        "loadPreviews": "無法載入文件預覽。",
+        "openFile": "無法開啟此檔案。"
+      },
+      "loadingPreviews": "正在載入已準備的文件預覽…",
+      "locator": {
+        "cells": "儲存格 {{range}}",
+        "extractedContent": "已擷取內容",
+        "page": "第 {{number}} 頁",
+        "paragraph": "第 {{number}} 段",
+        "sheet": "工作表 {{name}}",
+        "slide": "第 {{number}} 張投影片"
+      },
+      "moreExcerpts_one": "還有 {{count}} 個摘錄可供任務使用。",
+      "moreExcerpts_other": "還有 {{count}} 個摘錄可供任務使用。",
+      "noReadableText": "未在此文件中找到可讀文字。",
+      "openNamed": "開啟 {{name}}",
+      "prepared": {
+        "title": "已準備的文件"
+      },
+      "previewLabel": "文件預覽",
+      "reviewRecommended": "建議檢查",
+      "reviewRecommendedDetail": "建議檢查：部分擷取區域可能不準確。"
+    },
+    "empty": {
+      "title": "尚無工作"
+    },
+    "errors": {
+      "desktopConnecting": "DJL 仍在連線至桌面端。",
+      "localServiceConnecting": "DJL 仍在連線至本機服務。"
+    },
+    "kanban": {
+      "actions": {
+        "backToProjects": "返回所有專案",
+        "dropToSend": "拖放以傳送",
+        "newTask": "新增任務",
+        "newTaskIn": "在 {{project}} 中新增任務"
+      },
+      "card": {
+        "attachedReferences": "已附加參照",
+        "forkedThread": "已分支討論串",
+        "newThread": "新討論串",
+        "pinned": "已釘選",
+        "starting": "正在啟動…",
+        "terminal": "終端機",
+        "workedFor": "已工作 {{duration}}"
+      },
+      "columns": {
+        "done": "已完成",
+        "draft": "草稿",
+        "inProgress": "進行中"
+      },
+      "commandCenter": {
+        "drafts_one": "有 {{count}} 個草稿可傳送。",
+        "drafts_other": "有 {{count}} 個草稿可傳送。",
+        "hideTechnicalDetails": "隱藏技術詳細資料",
+        "openFirstStatus": "開啟第一個「{{status}}」任務",
+        "openThread": "開啟任務 {{title}}",
+        "reviewDrafts": "檢視草稿",
+        "showTechnicalDetails": "顯示技術詳細資料",
+        "statuses": {
+          "done": {
+            "empty": "沒有已完成的任務",
+            "explanation": "最近一次執行已成功完成。",
+            "title": "已完成"
+          },
+          "failed": {
+            "empty": "沒有失敗的任務",
+            "explanation": "提供者在任務完成前停止。開啟任務即可重試。",
+            "title": "失敗"
+          },
+          "reviewReady": {
+            "empty": "沒有待審內容",
+            "explanation": "結果或計劃已準備好供你審閱。",
+            "title": "可審閱"
+          },
+          "running": {
+            "empty": "沒有正在執行的任務",
+            "explanation": "代理正在處理這些任務。",
+            "title": "執行中"
+          },
+          "waiting": {
+            "empty": "沒有需要你回覆的內容",
+            "explanation": "需要你的核准或輸入才能繼續。",
+            "title": "等待你處理"
+          }
+        },
+        "summaryLabel": "指揮中心狀態",
+        "viewAll": "檢視全部"
+      },
+      "contextMenu": {
+        "archiveConfirm": "封存討論串「{{title}}」？",
+        "archiveDescription": "已封存討論串會從側邊欄隱藏，但之後可以還原。",
+        "cannotArchive": "無法封存",
+        "copyPath": "複製路徑",
+        "copyThreadId": "複製討論串 ID",
+        "deleteDraft": "刪除草稿",
+        "deleteDraftConfirm": "刪除此草稿？其未傳送的提示將被移除。",
+        "deleteThreadConfirm": "刪除討論串「{{title}}」？",
+        "deleteThreadDescription": "這將永久清除此討論串的對話記錄。",
+        "deleteWorktree": "是否也刪除工作樹？",
+        "onlyWorktree": "此討論串是唯一連結到此工作樹的討論串：",
+        "pin": "釘選討論串",
+        "pinFailed": "無法釘選討論串",
+        "reconnectRename": "請重新連線至伺服器後再重新命名。",
+        "rename": "重新命名討論串",
+        "stopBeforeArchive": "封存此討論串前請停止執行中的工作階段。",
+        "unpin": "取消釘選討論串",
+        "unpinFailed": "無法取消釘選討論串",
+        "worktreeRemovalDetail": "無法移除 {{path}}。{{detail}}",
+        "worktreeRemovalFailed": "討論串已刪除，但移除工作樹失敗"
+      },
+      "derivedDone": {
+        "description": "執行完成後，卡片會移到這裡。",
+        "title": "完成狀態會自動推導"
+      },
+      "dispatch": {
+        "attachedTerminal": "已附加終端機內容",
+        "browserFinding_one": "瀏覽器發現",
+        "browserFinding_other": "瀏覽器發現",
+        "continueInChat": "請在聊天中繼續此任務。",
+        "draftSent": "草稿已傳送",
+        "empty": "尚無可傳送的內容——請在編輯器中撰寫提示。",
+        "failed": "無法傳送草稿",
+        "fileTitle": "檔案：{{name}}",
+        "finishInChat": "在聊天中完成此草稿",
+        "imageTitle": "圖片：{{name}}",
+        "movedBack": "{{title}} 已移回草稿。",
+        "reconnect": "請重新連線至伺服器後再傳送草稿。",
+        "referencedSelection": "已引用助理選取內容",
+        "sendDraftedPromptFailed": "無法傳送草稿提示。",
+        "taskDidNotStart": "任務未啟動",
+        "worktreePending": "請在聊天中透過一般傳送流程建立工作樹。"
+      },
+      "empty": {
+        "description": "草稿提示、執行中的回合和已完成的聊天會自動顯示在這裡。",
+        "title": "看板上尚無內容"
+      },
+      "emptyColumn": "沒有卡片",
+      "environment": {
+        "local": "本機",
+        "worktree": "工作樹"
+      },
+      "errors": {
+        "notConnected": "未連線",
+        "unexpected": "未預期的錯誤。",
+        "unknown": "未知錯誤。"
+      },
+      "imagePreview": {
+        "close": "關閉圖片預覽",
+        "dialogLabel": "展開的圖片預覽",
+        "next": "下一張圖片",
+        "previous": "上一張圖片"
+      },
+      "newTask": {
+        "attachImages": "附加圖片",
+        "create": "建立任務",
+        "creating": "正在建立...",
+        "description": "起草提示並放入看板的「草稿」欄。拖到「進行中」即可傳送。",
+        "imagesOnly": {
+          "manyRejected": "未加入 {{count}} 個檔案。",
+          "oneRejected": "未加入該檔案。",
+          "title": "新任務只能附加圖片。"
+        },
+        "localFoldersUnavailable": "本機資料夾無法使用",
+        "placeholder": "描述任務、@標記檔案/資料夾、貼上圖片，或使用 / 選擇技能",
+        "sendAsDraft": "作為草稿傳送"
+      },
+      "projectPicker": {
+        "label": "選擇此任務的專案",
+        "none": "無專案"
+      },
+      "showMore": "再顯示 {{count}} 個",
+      "submit": {
+        "addedToDrafts": "任務已加入草稿",
+        "failed": "無法啟動任務",
+        "finishInChat": "在聊天中完成此任務",
+        "savedAsDraft": "任務已儲存為草稿。",
+        "savedFallback": "任務已改為儲存到草稿。請開啟並手動傳送。",
+        "started": "任務已啟動",
+        "worktreePending": "工作樹設定仍透過一般編輯器傳送流程進行。"
+      },
+      "taskCount_one": "{{count}} 個任務",
+      "taskCount_other": "{{count}} 個任務",
+      "taskOptions": {
+        "label": "任務選項",
+        "planMode": "計畫模式"
+      },
+      "title": "看板"
+    },
+    "route": {
+      "loadTimeout": "工作載入時間過長——伺服器尚未回報其管理的 Work 資料夾。"
+    },
+    "studio": {
+      "errors": {
+        "folderConflict": "Work 無法使用「{{path}}」，因為另一個專案已使用該資料夾。請移除或移動該專案後重試。",
+        "prepareTask": "無法準備新的 Work 任務。",
+        "syncing": "Work 已建立，但尚未完成同步。請稍後再試。"
+      }
+    },
+    "task": {
+      "actions": {
+        "complete": "完成任務",
+        "provideInput": "提供輸入",
+        "reopen": "重新開啟",
+        "requestChanges": "要求變更"
+      },
+      "activityCount_one": "活動（{{count}}）",
+      "activityCount_other": "活動（{{count}}）",
+      "completionLabel": "任務完成度",
+      "deliverables": "交付項目",
+      "phases": {
+        "complete": "完成",
+        "planning": "規劃",
+        "review": "檢查",
+        "working": "處理"
+      },
+      "phasesLabel": "任務階段",
+      "plan": "計畫",
+      "preparing": "DJL 正在準備此任務",
+      "progressLabel": "任務進度",
+      "status": {
+        "cancelled": "已取消",
+        "complete": "已完成",
+        "failed": "失敗",
+        "needs_input": "需要輸入",
+        "needs_review": "需要檢查",
+        "planning": "正在規劃",
+        "working": "正在處理"
+      }
+    },
+    "title": "工作"
+  },
+  "workspace": {
+    "actions": {
+      "doubleClickRename": "按兩下即可重新命名"
+    },
+    "branch": {
+      "actions": {
+        "createSwitch": "建立並切換",
+        "discarding": "正在捨棄...",
+        "discardStash": "丟棄藏寶",
+        "keepStash": "保留臨時空間",
+        "removeLockRetry": "移除鎖定並重試",
+        "retryStashSwitch": "重試臨時空間並切換",
+        "stashSwitch": "臨時空間和切換"
+      },
+      "alreadyExists": "具有此名稱的分支已存在。",
+      "badges": {
+        "current": "當前",
+        "default": "預設",
+        "remote": "遠程",
+        "worktree": "工作樹"
+      },
+      "changedFiles": "{{count}}個檔案已變更",
+      "continueIn": "繼續位置",
+      "createCheckoutNamed": "建立並結帳{{branch}}",
+      "createCheckoutNew": "建立並簽出新分支",
+      "createDescription": "建立並從目前的磁頭切換。",
+      "createTitle": "建立分支",
+      "currentHead": "目前負責人",
+      "detachedHead": "分離式頭部",
+      "discardDescription": "這會永久丟棄所選藏寶。",
+      "discardTitle": "丟棄藏寶？",
+      "errors": {
+        "cannotSwitch": "無法切換分支",
+        "checkoutFailed": "無法簽出分支。",
+        "createFailed": "無法建立分支。",
+        "dirtyFiles_one": "未提交的檔案：{{files}}",
+        "dirtyFiles_other": "{{count}}個未提交的檔案：{{files}}",
+        "dirtyMany_one": "{{files}}，以及另外{{count}}個未提交的檔案",
+        "dirtyMany_other": "{{files}}，以及另外{{count}}個未提交的檔案",
+        "dirtyTitle": "未提交的更改",
+        "indexLocked": "Git索引已鎖定",
+        "indexLockedDescription": "另一個Git程序可能仍在執行。鎖定檔案：{{path}}",
+        "indexWrite": "無法更新Git索引",
+        "indexWriteDescription": "請檢查儲存庫權限，然後再試一次。",
+        "loadStash": "無法載入臨時空間詳細資訊。",
+        "nativeUnavailable": "無法使用本機Git存取。",
+        "stashConflictDescription": "在切換分支之前解決衝突。",
+        "stashConflictTitle": "藏寶衝突",
+        "stashSwitchFailed": "無法儲存和切換分支。",
+        "uncoveredFiles": "某些檔案無法存放。",
+        "unresolvedConflicts": "在切換分支之前解決合併衝突。"
+      },
+      "fromNamed": "來自{{branch}}",
+      "handoffLocal": "在當地交接",
+      "handoffWorktree": "移交給工作樹",
+      "loadingStash": "正在載入臨時空間詳情...",
+      "local": "本地",
+      "localProject": "當地專案",
+      "name": "分行名稱",
+      "newWorktree": "新工作目錄",
+      "noBranches": "未找到分支。",
+      "noStashFiles": "此藏寶中沒有已變更的檔案。",
+      "permissions": {
+        "acceptEdits": "允許編輯",
+        "acceptEditsTitle": "自動允許檔案編輯",
+        "approveForMe": "替我核准",
+        "approveForMeTitle": "僅在偵測到可能不安全的操作時詢問",
+        "ask": "詢問",
+        "askForApproval": "要求核准",
+        "askForApprovalTitle": "編輯外部檔案和使用網際網路時一律詢問",
+        "askTitle": "執行高風險操作前詢問",
+        "autoApprove": "自動核准",
+        "autoApproveTitle": "自動核准所有操作",
+        "fullAccess": "完整存取權",
+        "fullAccessTitle": "不受限制地存取網際網路和電腦上的任何檔案",
+        "heading": "應如何核准操作？"
+      },
+      "rateLimits": "使用限制",
+      "rateLimitsRemaining": "剩餘{{percent}}",
+      "searchPlaceholder": "搜索分支",
+      "select": "選擇分支",
+      "stash": "臨時空間",
+      "uncommittedFiles": "{{count}}個未提交的檔案",
+      "worktree": "工作樹"
+    },
+    "browser": {
+      "actions": {
+        "back": "返回",
+        "captureScreenshot": "擷取螢幕截圖",
+        "closePanel": "關閉瀏覽器面板",
+        "closeTab": "關閉分頁",
+        "copyLink": "複製連結",
+        "copyScreenshot": "複製螢幕截圖",
+        "forward": "向前走",
+        "menu": "瀏覽器動作",
+        "newTab": "新分頁",
+        "openExternal": "從外部打開",
+        "reload": "重新載入",
+        "selectArea": "選擇區域"
+      },
+      "addressPlaceholder": "搜尋或輸入網址",
+      "annotation": {
+        "adjust": "調整外觀",
+        "comment": "評論",
+        "commentPlaceholder": "說明應變更的內容",
+        "editor": "瀏覽器註解編輯器",
+        "fields": {
+          "alignment": "對齊",
+          "background": "背景",
+          "borderRadius": "邊框半徑",
+          "color": "文字顏色",
+          "fontFamily": "字體系列",
+          "fontSize": "字體大小",
+          "fontWeight": "字體粗細",
+          "gap": "差距",
+          "letterSpacing": "字母間距",
+          "lineHeight": "行高",
+          "margin": "利潤率",
+          "opacity": "阻光度",
+          "padding": "填充",
+          "textContent": "文本內容"
+        },
+        "invalidAdjustments": "輸入有效的CSS調整值。",
+        "newText": "新文字",
+        "reset": "重置",
+        "resetAll": "全部重置",
+        "resetNamed": "重置{{name}}",
+        "saveShortcut": "使用Command/Ctrl + Enter儲存",
+        "selectedArea": "所選區域"
+      },
+      "commenting": "正在留言",
+      "commentingHint": "對元素或區域的評論",
+      "confirmDiscard": "捨棄此未儲存的瀏覽器註解？",
+      "errors": {
+        "action": "無法完成該瀏覽器動作。",
+        "annotation": "瀏覽器註解失敗。",
+        "areaSelection": "無法開始區域選擇。",
+        "attachmentCount": "每則訊息最多可附加{{count}}則推薦語。",
+        "attachmentSize": "“{{name}}”超出了{{limit}}附件限制。",
+        "commentingMode": "無法更改瀏覽器評論模式。",
+        "previewAdjustment": "無法預覽此瀏覽器調整。",
+        "restoreAnnotation": "取消此註解後無法還原頁面。",
+        "saveFinding": "無法儲存此瀏覽器搜尋。"
+      },
+      "linkCopied": "已複製瀏覽器連結",
+      "local": {
+        "checking": "正在檢查本機主機連接埠",
+        "empty": "沒有本機伺服器",
+        "emptyHint": "嘗試其他瀏覽器網址",
+        "refresh": "重新整理本機伺服器",
+        "scanning": "掃描本機伺服器",
+        "title": "本地"
+      },
+      "restoring": "正在還原瀏覽器",
+      "restoringCached": "還原快取的瀏覽器",
+      "screenshotCopied": "已複製瀏覽器螢幕截圖",
+      "sleeping": "瀏覽器正在睡眠",
+      "status": {
+        "noTabs": "沒有開啟的分頁",
+        "restoring": "正在還原索引標籤...",
+        "starting": "正在啟動瀏覽器..."
+      },
+      "suggestions": {
+        "open": "開啟 {{target}}",
+        "search": "在網路上搜尋「{{query}}」"
+      },
+      "unavailable": "瀏覽器無法使用。",
+      "untitled": "未命名"
+    },
+    "diff": {
+      "allTurns": "所有輪次",
+      "askWhyChanged": "詢問變更原因",
+      "checkingRepository": "正在檢查 Git 儲存庫...",
+      "chooseSource": "選擇差異來源",
+      "chooseTurn": "選擇輪次差異",
+      "closeFileView": "關閉檔案檢視",
+      "collapseAll": "收合所有檔案",
+      "copied": "已複製差異",
+      "copy": "複製差異",
+      "copyPath": "複製路徑",
+      "environmentPending": "此聊天環境仍在準備中。工作樹就緒後即可查看差異。",
+      "errors": {
+        "checkRepository": "無法檢查 Git 儲存庫。",
+        "load": "無法載入差異。"
+      },
+      "expandAll": "展開所有檔案",
+      "fileActions": "檔案操作",
+      "fileCount_one": "{{count}} 個檔案",
+      "fileCount_other": "{{count}} 個檔案",
+      "filterFiles": "篩選檔案",
+      "filterFilesPlaceholder": "篩選檔案...",
+      "hideFileTree": "隱藏檔案樹",
+      "ignoreWhitespace": "忽略只有空白字元的變更",
+      "jumpToFile": "跳至檔案",
+      "lastTurn": "上一輪",
+      "loadingCheckpoint": "正在載入檢查點差異...",
+      "loadingScope": "正在載入{{scope}}差異...",
+      "noChangesSource": "所選差異來源沒有變更。",
+      "noFiles": "此差異中沒有檔案。",
+      "noMatchingFiles": "沒有相符的檔案。",
+      "noNetChanges": "此選取項目沒有淨變更。",
+      "noPatch": "此選取項目沒有可用的修補程式。",
+      "notRepository": "此專案不是 Git 儲存庫，因此無法查看輪次差異。",
+      "noTurnDiffs": "目前還沒有輪次差異。",
+      "options": "差異選項",
+      "previewOf": "{{path}} 的預覽",
+      "referenceInChat": "在聊天中引用",
+      "reviewFiles": "檢閱檔案",
+      "scope": {
+        "branch": "分支",
+        "staged": "已暫存",
+        "unstaged": "未暫存",
+        "workingTree": "工作樹"
+      },
+      "selectThread": "選擇討論以查看輪次差異。",
+      "showFileTree": "顯示檔案樹",
+      "showMore": "再顯示 {{count}} 個",
+      "source": "差異來源",
+      "split": "並排",
+      "splitDiff": "並排差異",
+      "stacked": "堆疊",
+      "stackedDiff": "堆疊差異",
+      "turnNumber": "第 {{number}} 輪",
+      "turns": "輪次",
+      "unavailable": "目前沒有可用的儲存庫差異。",
+      "view": "檢視",
+      "viewOptions": "差異檢視選項",
+      "wrapLines": "長行自動換行"
+    },
+    "editor": {
+      "activityBar": "編輯器活動列",
+      "changedFiles": "已變更的檔案",
+      "diff": "差異",
+      "dragResizeChatPanel": "拖曳以調整聊天面板大小",
+      "files": "檔案",
+      "hideChatPanel": "隱藏聊天面板",
+      "hideDiffSidebar": "隱藏差異側邊欄",
+      "hideFilesSidebar": "隱藏檔案側邊欄",
+      "hideSearchSidebar": "隱藏搜尋側邊欄",
+      "loadingChangedFiles": "正在載入已變更的檔案...",
+      "noWorkspace": "沒有工作區",
+      "resizeChatPanel": "調整聊天面板大小",
+      "searchFiles": "搜尋檔案",
+      "showChatPanel": "顯示聊天面板",
+      "switchProject": "切換專案",
+      "switchToChat": "切換至聊天檢視"
+    },
+    "empty": {
+      "noTerminalsSummary": "在主目錄中開啟新的終端機，然後從這裡開始。",
+      "noTerminalsTitle": "此工作區沒有開啟的終端機",
+      "title": "尚未開啟工作區"
+    },
+    "git": {
+      "actions": {
+        "abort": "中止",
+        "checkoutFeatureContinue": "查看功能分支並繼續",
+        "commit": "提交",
+        "commit_push": "承諾並推送",
+        "commit_push_pr": "承諾、推送與公關",
+        "commitNewBranch": "在新分支上提交",
+        "continue": "繼續",
+        "create_pr": "建立公關",
+        "createBranch": "建立分支",
+        "createPr": "建立公關",
+        "pull": "拉",
+        "push": "推送",
+        "pushCreatePr": "推送並建立 PR",
+        "syncBranch": "同步分支",
+        "viewPr": "查看公關"
+      },
+      "branch": "分支",
+      "commitDialog": {
+        "description": "檢查並確認您的承諾。 將訊息留空以自動產生訊息。",
+        "message": "承諾訊息（選填）",
+        "messagePlaceholder": "留空以自動產生",
+        "title": "提交更改"
+      },
+      "commitPush": "承諾和推送",
+      "commitPushUnavailableLabel": "提交和推送不可用；打開Git操作菜單",
+      "commitPushUnavailableTitle": "Commit和Push不可用。 打開以查看更多Git操作。",
+      "createBranch": {
+        "description": "從當前頭部創建並切換到分支。 未來的承諾、推送和公關都會使用它。",
+        "exists": "具有此名稱的分支已存在。",
+        "name": "分行名稱",
+        "title": "建立分支"
+      },
+      "defaultBranch": {
+        "commitPushContinue": "提交並推送至{{branch}}",
+        "commitPushDescription": "此操作將在「{{branch}}」上提交並推送變更。 您可以繼續此處或使用功能分支。",
+        "commitPushTitle": "確認並推送至預設分支？",
+        "fallbackTitle": "在預設分支上執行動作？",
+        "featureCommitPrDescription": "PR不能從“{{branch}}”打開到自身。 將建立、提交、推送圖徵分支，並用於公關。",
+        "featureCommitPrTitle": "要建立圖徵分支、提交與公關嗎？",
+        "featureContinue": "建立圖徵分支並繼續",
+        "featurePrDescription": "PR不能從“{{branch}}”打開到自身。 功能分支將從您的提交建立、推送並用於公關。",
+        "featurePrTitle": "要建立圖徵分支與公關嗎？",
+        "pushContinue": "推送到{{branch}}",
+        "pushDescription": "此操作將推送“{{branch}}”上的本地提交。 您可以繼續此處或使用功能分支。",
+        "pushTitle": "推送到預設分支？"
+      },
+      "detachedHead": "（分離的頭部）",
+      "disabled": {
+        "actionUnavailable": "此操作目前不可用。",
+        "behindCommitPush": "分支機構在上遊後面。 在提交和推送之前拉起/重新定位。",
+        "behindPr": "分支機構在上遊後面。 在創建PR之前拉動/重新基礎。",
+        "behindPush": "分支機構在上遊後面。 推入前拉起/重新底座。",
+        "busy": "Git操作正在進行中。",
+        "changesBeforePush": "在推送之前提交或隱藏本地更改。",
+        "changesPr": "建立公關前，請先提交本機變更。",
+        "clean": "工作樹是乾淨的。在提交前進行變更。",
+        "commit": "提交當前不可用。",
+        "commitPush": "提交和推送目前不可用。",
+        "createPr": "建立公關目前無法使用。",
+        "detachedCommitPush": "分離頭：在提交和推送之前檢查分支。",
+        "detachedPr": "獨立頭像：在建立公關之前查看分支。",
+        "detachedPush": "分離式頭部：在推動前檢查分支。",
+        "noBranchChangesPr": "沒有要包含在PR中的分支更改。",
+        "noChangesPush": "沒有要推送的本地更改或提交。",
+        "noCommitsPr": "沒有要包含在PR中的本地提交。",
+        "noCommitsPush": "沒有要推送的本地提交。",
+        "originCommitPush": "在提交和推送之前添加“origin”遙控器。",
+        "originPr": "建立公關前，請先新增「原點」遙控器。",
+        "originPush": "在推送前新增「原點」遙控器。",
+        "prPreparation": "提取要求討論串準備功能無法使用。",
+        "pull": "提取功能目前無法使用。",
+        "push": "推送功能目前無法使用。",
+        "staging": "暫存功能無法使用。",
+        "statusUnavailable": "Git狀態無法使用。",
+        "unstaging": "取消暫存功能無法使用。",
+        "viewPr": "檢視公關目前無法使用。"
+      },
+      "done": "完成",
+      "errors": {
+        "action": "操作失敗",
+        "createBranch": "無法建立分支",
+        "editorUnavailable": "無法開啟編輯器。",
+        "linkUnavailable": "無法開啟連結。",
+        "noOpenPr": "未找到打開的PR。",
+        "openFile": "無法開啟檔案",
+        "openPr": "無法開啟公關連結",
+        "sync": "同步失敗"
+      },
+      "excluded": "已排除",
+      "files": "文件",
+      "initialize": "初始化Git",
+      "none": "無",
+      "options": "Git動作選項",
+      "progress": {
+        "committing": "正在提交...",
+        "creatingBranch": "正在建立分支...",
+        "creatingPr": "正在建立公關...",
+        "elapsed": "運行{{duration}}",
+        "generatingMessage": "正在生成提交消息...",
+        "initializing": "正在初始化...",
+        "preparingBranch": "正在準備圖徵分支...",
+        "pushing": "正在推送...",
+        "pushingTo": "正在推送至 {{target}}...",
+        "refreshing": "正在重新整理Git狀態...",
+        "running": "正在執行Git動作...",
+        "runningHook": "正在運行{{name}}...",
+        "syncing": "正在與遠端同步...",
+        "waiting": "正在等待Git..."
+      },
+      "selectedFiles": "({{selected}}/{{total}})",
+      "success": {
+        "branchConfirmed": "分行名稱已確認。",
+        "branchCreated": "分支已建立並結帳。",
+        "committed": "已承諾{{sha}}",
+        "createdPr": "已建立公關{{number}}",
+        "done": "完成",
+        "keepingBranch": "保留{{branch}}",
+        "openedPr": "已開啟公關{{number}}",
+        "pushed": "已將{{sha}}推送至{{branch}}",
+        "pushedWithoutBranch": "已推送{{sha}}",
+        "switchedBranch": "已切換至{{branch}}",
+        "synced": "遠端已同步",
+        "synchronized": "{{branch}}已同步。",
+        "updated": "已從{{upstream}}更新{{branch}}",
+        "upToDate": "已是最新"
+      },
+      "title": "Git操作",
+      "upstream": "上遊",
+      "warnings": {
+        "behind": "在上遊後面。先拉/重新底座。",
+        "defaultBranch": "警告：預設分支",
+        "detached": "Detached HEAD ：創建和檢查分支以啟用推送和公關操作。"
+      }
+    },
+    "loading": {
+      "homeDirectory": "正在等待轉譯器解析主目錄。",
+      "title": "正在載入工作區"
+    },
+    "nativeDocument": {
+      "details": {
+        "loading": "正在載入…",
+        "pages": "頁數",
+        "renderer": "呈現器",
+        "textExtraction": "文字擷取",
+        "title": "文件詳細資料",
+        "unavailable": "無法使用"
+      },
+      "errors": {
+        "previewSummary": "無法呈現此文件。",
+        "previewTitle": "預覽無法使用",
+        "readableSummary": "無法從此文件擷取可讀文字。",
+        "readableTitle": "可讀文字無法使用",
+        "viewerSummary": "無法讀取本機文件檢視器的狀態。你仍可使用可讀文字檢視或開啟原始檔案。",
+        "viewerTitle": "文件檢視器無法使用"
+      },
+      "install": {
+        "action": "安裝檢視器",
+        "summary": "Office文件會在本機轉換，因此原始檔案不會離開這部電腦。",
+        "title": "安裝文件檢視器"
+      },
+      "installing": "正在安裝…",
+      "locator": {
+        "page": "第{{number}}頁",
+        "paragraph": "第{{number}}段",
+        "slide": "投影片{{number}}"
+      },
+      "nativePreview": "原生預覽",
+      "preparing": "正在準備文件預覽...",
+      "readableText": "可讀文字",
+      "repair": {
+        "action": "修復檢視器",
+        "title": "文件檢視器需要修復"
+      }
+    },
+    "preview": {
+      "actions": {
+        "closeSearch": "關閉搜尋",
+        "details": "詳細資料",
+        "downloadImage": "下載圖片",
+        "enterFullscreen": "進入全螢幕",
+        "exitFullscreen": "離開全螢幕",
+        "fitPage": "符合頁面",
+        "fitWidth": "符合寬度",
+        "nextPage": "下一頁",
+        "nextResult": "下一個搜尋結果",
+        "previousPage": "上一頁",
+        "previousResult": "上一個搜尋結果",
+        "print": "列印文件",
+        "readableText": "可讀文字",
+        "searchDocument": "搜尋文件",
+        "searchPlaceholder": "在文件中尋找",
+        "zoomIn": "放大",
+        "zoomOut": "縮小"
+      },
+      "comment": "留言",
+      "commentOnLine": "在第 {{number}} 行留言",
+      "currentPage": "目前頁面",
+      "errors": {
+        "document": {
+          "summary": "文件可能已損毀、格式不支援或無法使用。",
+          "title": "無法開啟此文件"
+        },
+        "image": {
+          "downloadFailed": "無法下載圖片",
+          "summary": "檔案可能已移動或無法使用。",
+          "title": "無法開啟此圖片"
+        },
+        "pageRender": "無法呈現頁面",
+        "print": "無法列印此文件。"
+      },
+      "goToPage": "前往第 {{number}} 頁",
+      "grantError": "無法建立安全的本機檔案預覽。",
+      "lineCount_one": "{{count}} 行",
+      "lineCount_other": "{{count}} 行",
+      "loadingFile": "正在載入檔案...",
+      "noWorkspace": "此聊天未連結工作區。",
+      "page": "第 {{number}} 頁",
+      "preparingDocument": "正在準備文件預覽...",
+      "preparingPresentation": "正在準備簡報預覽...",
+      "readFileError": "無法讀取此檔案。",
+      "selectFile": "從檔案總管選擇檔案。",
+      "slide": "投影片 {{number}}",
+      "slidePosition": "第 {{current}} 張，共 {{total}} 張",
+      "slideThumbnails": "投影片縮圖",
+      "warningCount_one": "{{count}} 則文件警告",
+      "warningCount_other": "{{count}} 則文件警告"
+    },
+    "pullRequest": {
+      "branchRange": "#{{number}} · {{head}} 到 {{base}}",
+      "description": "解析 GitHub 提取要求，然後在主要儲存庫或專用工作樹中建立草稿討論。",
+      "errors": {
+        "prepare": "無法準備提取要求討論。",
+        "resolve": "無法解析提取要求。"
+      },
+      "label": "提取要求",
+      "local": "本機簽出",
+      "preparingLocal": "正在準備本機簽出...",
+      "preparingWorktree": "正在準備工作樹...",
+      "resolving": "正在解析提取要求...",
+      "status": {
+        "closed": "已關閉",
+        "merged": "已合併",
+        "open": "開啟"
+      },
+      "title": "簽出提取要求",
+      "validation": {
+        "invalid": "請使用 GitHub 提取要求 URL、123 或 #123。",
+        "required": "請貼上 GitHub 提取要求 URL，或輸入 123 / #123。"
+      },
+      "worktree": "工作樹"
+    },
+    "references": {
+      "location": {
+        "line": "第{{number}}行",
+        "lineColumnRange": "第{{startLine}}行:{{startColumn}}–第{{endLine}}行:{{endColumn}}",
+        "lineColumns": "第{{line}}行:{{columns}}",
+        "lines": "第{{start}}–{{end}}行"
+      },
+      "menu": {
+        "askWhy": "詢問此變更的原因",
+        "askWhyRange": "詢問{{range}}變更的原因",
+        "copyPath": "複製路徑",
+        "reference": "在聊天中引用",
+        "referenceRange": "在聊天中引用{{range}}",
+        "referenceSelection": "在聊天中引用所選內容"
+      },
+      "prompts": {
+        "whyChanged": "為什麼要在{{reference}}中實作這些變更？",
+        "whyFile": "為什麼要這樣實作{{reference}}？如有需要，請檢查Git記錄並說明原因。",
+        "whyLines": "為什麼要這樣實作{{reference}}中的{{location}}？請檢查相關提交的git blame或記錄並說明原因。"
+      }
+    },
+    "scripts": {
+      "add": "新增操作",
+      "chooseIcon": "選擇圖示",
+      "command": "命令",
+      "delete": "刪除操作",
+      "deleteDescription": "此操作無法復原。",
+      "deleteTitle": "刪除操作「{{name}}」？",
+      "description": "操作是專案範圍的命令，可從頂端列或快速鍵執行。",
+      "edit": "編輯操作",
+      "editNamed": "編輯 {{name}}",
+      "icons": {
+        "build": "建置",
+        "configure": "設定",
+        "debug": "偵錯",
+        "lint": "檢查",
+        "play": "執行",
+        "test": "測試"
+      },
+      "keybinding": "按鍵繫結",
+      "name": "名稱",
+      "namePlaceholder": "測試",
+      "pressShortcut": "按下快速鍵",
+      "projectActions": "專案操作",
+      "runNamed": "執行 {{name}}",
+      "runOnWorktreeCreate": "建立工作樹時自動執行",
+      "save": "儲存操作",
+      "saveChanges": "儲存變更",
+      "scriptActions": "指令碼操作",
+      "setupNamed": "{{name}}（設定）",
+      "shortcutHelp": "按下快速鍵。使用 {{key}} 清除。",
+      "validation": {
+        "commandRequired": "命令為必填。",
+        "nameRequired": "名稱為必填。",
+        "saveFailed": "無法儲存操作。"
+      }
+    },
+    "settings": {
+      "description": "選擇 {{workspace}} 中的終端機排列方式。",
+      "immediateChanges": "變更會立即套用至此工作區。額外的終端機仍可在分頁中使用。",
+      "layoutPreset": "版面配置預設集",
+      "paneCount_one": "{{count}} 個窗格",
+      "paneCount_other": "{{count}} 個窗格",
+      "presets": {
+        "left-main": {
+          "description": "左側一個大窗格，右側兩個堆疊窗格。",
+          "title": "左側主窗格"
+        },
+        "quad": {
+          "description": "四個同樣可見的終端機。",
+          "title": "四窗格"
+        },
+        "single": {
+          "description": "一個專注的終端機。",
+          "title": "單一窗格"
+        },
+        "top-main": {
+          "description": "上方一個大型終端機，下方兩個小窗格。",
+          "title": "上方主窗格"
+        },
+        "two-columns": {
+          "description": "兩個終端機並排顯示。",
+          "title": "雙欄"
+        },
+        "two-rows": {
+          "description": "兩個終端機垂直堆疊。",
+          "title": "雙列"
+        }
+      },
+      "title": "工作區設定"
+    },
+    "terminal": {
+      "addToChat": "加入聊天",
+      "chat": "聊天",
+      "close": "關閉終端機",
+      "closeActiveTab": "關閉目前的終端機分頁",
+      "closeNamed": "關閉{{name}}",
+      "closeShortcut": "關閉終端機 ({{shortcut}})",
+      "collapseSidePanel": "收合側面板",
+      "collapseToChat": "將終端機收合至聊天抽屜",
+      "error": "錯誤",
+      "expandToWorkspace": "將終端機展開至工作區",
+      "moveToOwnTab": "移至獨立終端機分頁",
+      "name": "終端機",
+      "new": "新增終端機",
+      "newShortcut": "新增終端機 ({{shortcut}})",
+      "newTab": "新增終端機分頁",
+      "numbered": "終端機 {{number}}",
+      "openSidePanel": "開啟側面板",
+      "scrollToBottom": "捲動到底部",
+      "search": {
+        "close": "關閉搜尋 (Esc)",
+        "matchCase": "區分大小寫",
+        "next": "下一個相符項目 (Enter)",
+        "noResults": "沒有結果",
+        "placeholder": "尋找",
+        "previous": "上一個相符項目 (Shift+Enter)"
+      },
+      "splitDown": "向下分割",
+      "splitDownShortcut": "向下分割 ({{shortcut}})",
+      "splitLimit": "分割終端機（每組最多 {{count}} 個）",
+      "splitRight": "向右分割",
+      "splitRightShortcut": "向右分割 ({{shortcut}})"
+    },
+    "terminalClose": {
+      "confirm": "關閉此終端機？",
+      "confirmNamed": "關閉終端機「{{title}}」？",
+      "history": "這將永久清除此分頁的終端機記錄。",
+      "historyAndThread": "這將永久清除此分頁的終端機記錄，並刪除空的終端機討論串。"
+    },
+    "title": "工作區"
+  }
+}
