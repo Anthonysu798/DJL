@@ -28,11 +28,7 @@
   color: var(--dh-ink);
   font-family: var(--font-body), Inter, ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif;
   background:
-    radial-gradient(
-      circle at var(--dh-mx) var(--dh-my),
-      rgba(93, 170, 255, 0.18),
-      transparent 30rem
-    ),
+    radial-gradient(circle at var(--dh-mx) var(--dh-my), rgba(93, 170, 255, 0.18), transparent 30rem),
     linear-gradient(180deg, #f7f8fa 0%, #eef3f7 48%, #ffffff 100%);
 }
 
@@ -65,6 +61,24 @@
   opacity: 0.82;
 }
 
+.dh-transfer-flare {
+  position: absolute;
+  bottom: -42px;
+  left: 50%;
+  z-index: 14;
+  width: min(54vw, 720px);
+  height: 118px;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse, rgba(255, 255, 255, 0.98) 0 8%, rgba(87, 163, 255, 0.72) 22%, rgba(23, 109, 245, 0.18) 48%, transparent 72%);
+  filter: blur(5px);
+  opacity: 0;
+  transform: translateX(-50%) scale(0.22, 0.56);
+  transform-origin: 50% 50%;
+  box-shadow: 0 0 72px rgba(23, 109, 245, 0.34);
+}
+
 /* ── boot screen: DJL logo reveal (fixed, fades out, then hides) ── */
 .dh-boot {
   position: fixed;
@@ -92,12 +106,7 @@
 .dh-boot-scan {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(130, 217, 255, 0.16) 48%,
-    transparent 56%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgba(130, 217, 255, 0.16) 48%, transparent 56%);
   transform: translateX(-110%);
 }
 
@@ -150,18 +159,19 @@
 .dh-frame {
   position: absolute;
   inset: 0;
-  transform: translate3d(var(--dh-mid-x), var(--dh-mid-y), 0) rotateX(var(--dh-tilt-x))
-    rotateY(var(--dh-tilt-y));
+  transform: translate3d(var(--dh-mid-x), var(--dh-mid-y), 0) rotateX(var(--dh-tilt-x)) rotateY(var(--dh-tilt-y));
   transform-style: preserve-3d;
   transition: transform 180ms ease-out;
   will-change: transform;
 }
-.dh-frame iframe {
+
+.dh-frame iframe,
+.dh-frame .robot-lab {
   width: 100%;
   height: 100%;
   border: 0;
   pointer-events: auto;
-  filter: contrast(1.02) saturate(1) brightness(1);
+  filter: contrast(1.08) saturate(0.96) brightness(0.96);
 }
 .dh-spline-placeholder {
   position: absolute;
@@ -189,13 +199,8 @@
   z-index: 3;
   pointer-events: none;
   background:
-    radial-gradient(
-      circle at 50% 44%,
-      rgba(255, 255, 255, 0) 0 30%,
-      rgba(255, 255, 255, 0.08) 58%,
-      rgba(255, 255, 255, 0.26) 100%
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.28));
+    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0) 0 30%, rgba(255, 255, 255, 0.05) 58%, rgba(255, 255, 255, 0.14) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.14));
 }
 .dh-pointer {
   position: absolute;
@@ -206,12 +211,7 @@
   height: 24rem;
   pointer-events: none;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(61, 143, 255, 0.18),
-    rgba(116, 196, 255, 0.1) 38%,
-    transparent 68%
-  );
+  background: radial-gradient(circle, rgba(61, 143, 255, 0.18), rgba(116, 196, 255, 0.1) 38%, transparent 68%);
   mix-blend-mode: screen;
   opacity: 0.9;
   transform: translate3d(calc(-50% + var(--dh-near-x)), calc(-50% + var(--dh-near-y)), 0);
@@ -258,9 +258,7 @@
   color: rgba(12, 22, 31, 0.72);
   font-size: 13px;
   text-align: center;
-  transition:
-    color 180ms ease,
-    background 180ms ease;
+  transition: color 180ms ease, background 180ms ease;
 }
 .dh-nav a:hover {
   color: #061017;
@@ -298,9 +296,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  transition:
-    color 180ms ease,
-    background 180ms ease;
+  transition: color 180ms ease, background 180ms ease;
 }
 .dh-lang a:hover {
   color: #061017;
@@ -337,6 +333,33 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(22, 132, 199, 0.46), transparent);
   box-shadow: 0 0 24px rgba(124, 215, 255, 0.28);
+}
+.dh-auto-scroll-hint {
+  display: none;
+}
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .dh-auto-scroll-hint {
+    position: absolute;
+    bottom: clamp(22px, 3.4vh, 38px);
+    left: 50%;
+    z-index: 12;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 13px;
+    border: 1px solid rgba(20, 54, 82, 0.14);
+    border-radius: 999px;
+    color: rgba(9, 25, 38, 0.64);
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 12px 34px rgba(28, 77, 118, 0.08);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    transform: translateX(-50%);
+    animation: dh-one-flick-hint 1.8s 3.1s ease-in-out both infinite;
+  }
 }
 .dh-metric {
   display: flex;
@@ -430,8 +453,7 @@
     padding: 8px 9px;
     font-size: 12px;
   }
-  /* fit the whole robot inside the viewport instead of over-zooming the
-     frame to ~2x viewport width (which clipped it to the upper body) */
+  /* Keep the scene broad enough to retain the robot's shoulder silhouette. */
   .dh-motion {
     top: 7vh;
     right: -4vw;
@@ -461,8 +483,7 @@
 }
 
 @media (max-width: 560px) {
-  /* keep the iframe full-bleed (edges off-screen) so the Spline scene's grey
-     background and watermark never show as a "card" */
+  /* Keep the iframe full-bleed on narrow screens. */
   .dh-motion {
     top: 9vh;
     right: -8vw;
@@ -480,5 +501,24 @@
 @media (prefers-reduced-motion: reduce) {
   .dh-frame {
     transition: none;
+  }
+  .dh-auto-scroll-hint {
+    animation: none;
+  }
+}
+
+@keyframes dh-one-flick-hint {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 8px, 0);
+  }
+  34%,
+  74% {
+    opacity: 0.78;
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    opacity: 0.38;
+    transform: translate3d(-50%, 4px, 0);
   }
 }

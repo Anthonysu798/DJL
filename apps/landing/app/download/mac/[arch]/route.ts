@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import {
+  GITHUB_LATEST_RELEASE_CHECKSUMS_URL,
+  resolveGithubDesktopDownload,
+} from "../../../lib/githubDesktopDownloads";
+import {
   resolveVpsDesktopDownload,
   type MacArchitecture,
-  VPS_DOWNLOAD_FALLBACK_URL,
 } from "../../../lib/vpsDesktopDownloads";
 
 type RouteContext = {
@@ -16,9 +19,11 @@ function isMacArchitecture(value: string): value is MacArchitecture {
 export async function GET(_request: Request, { params }: RouteContext) {
   const { arch } = await params;
   if (!isMacArchitecture(arch)) {
-    return NextResponse.redirect(VPS_DOWNLOAD_FALLBACK_URL, 307);
+    return NextResponse.redirect(GITHUB_LATEST_RELEASE_CHECKSUMS_URL, 307);
   }
 
-  const destination = resolveVpsDesktopDownload({ platform: "mac", arch });
+  const target = { platform: "mac", arch } as const;
+  const destination =
+    (await resolveGithubDesktopDownload(target)) ?? resolveVpsDesktopDownload(target);
   return NextResponse.redirect(destination, 307);
 }

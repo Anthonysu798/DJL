@@ -52,3 +52,22 @@ For multi-step tasks, state a brief plan:
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
 These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+---
+
+## Shipping a production release
+
+When the user says "ship it" (optionally "ship it minor|major|rc"):
+
+1. Write user-facing release notes to a scratch file from the commits since the last `v*` tag.
+   Group as `### Added` / `### Fixed` / `### Changed`, skip internal churn, never invent changes.
+2. Run `bun run ship [minor|major|rc] --notes-file <path>` (default bump is patch). Add `--dry-run`
+   first to show the computed version.
+3. The script fails closed: clean tree, on `main`, synced with `origin/main`, `main` protected, a
+   successful full Desktop CI run for that exact commit, and an unused version newer than every live
+   feed. Fix the cause of a refusal; never bypass it.
+4. The pushed tag triggers `.github/workflows/desktop-release.yml`. Tell the user to approve the
+   `production` environment — nothing is published until they do, and a failed run leaves a private
+   draft rather than a partial updater feed.
+
+The annotated tag message becomes the published release body, so the notes you write in step 1 are
+what users read. The landing page resolves the newest release automatically; it needs no edit.

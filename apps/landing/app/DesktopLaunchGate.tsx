@@ -26,6 +26,7 @@ import {
   type RefObject,
 } from "react";
 import type { Content } from "./content";
+import { GITHUB_LATEST_RELEASE_CHECKSUMS_URL } from "./lib/githubDesktopDownloads";
 import { AnimatedBeam } from "./ui/animated-beam";
 import "./desktop-launch-gate.css";
 
@@ -37,7 +38,7 @@ const releaseUrls: Record<Platform, string | undefined> = {
   windows: "/download/windows",
 };
 
-const PUBLIC_RELEASES_URL = "https://downloads.slcor.com/stable/SHA256SUMS";
+const PUBLIC_RELEASES_URL = GITHUB_LATEST_RELEASE_CHECKSUMS_URL;
 
 const launchCopy = {
   zh: {

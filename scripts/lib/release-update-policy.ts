@@ -98,6 +98,50 @@ export function assertReleaseVersionIsNewer(
   return requested;
 }
 
+export type ReleaseBumpLevel = "patch" | "minor" | "major" | "rc";
+
+// Picks the version that `ship` will tag next. A prerelease resolves to its own release line first
+// (0.6.0-rc.1 -> 0.6.0 on patch) so a finished candidate ships as the stable build it was testing,
+// rather than skipping ahead to an unrelated version.
+export function nextReleaseVersion(rawCurrentVersion: string, level: ReleaseBumpLevel): string {
+  const current = parseReleaseVersion(normalizeObservedVersion(rawCurrentVersion));
+  const isPrerelease = current.prerelease.length > 0;
+
+  if (level === "rc") {
+    if (isPrerelease && current.prerelease[0] === "rc") {
+      const counter = Number(current.prerelease[1]);
+      const next = Number.isSafeInteger(counter) ? counter + 1 : 1;
+      return `${current.major}.${current.minor}.${current.patch}-rc.${next}`;
+    }
+    // A stable release becomes the candidate for the following patch line.
+    return `${current.major}.${current.minor}.${current.patch + 1}-rc.1`;
+  }
+
+  if (level === "major") {
+    return `${current.major + 1}.0.0`;
+  }
+  if (level === "minor") {
+    return `${current.major}.${current.minor + 1}.0`;
+  }
+  return isPrerelease
+    ? `${current.major}.${current.minor}.${current.patch}`
+    : `${current.major}.${current.minor}.${current.patch + 1}`;
+}
+
+export function highestReleaseVersion(
+  observedVersions: readonly ObservedReleaseVersion[],
+): string | null {
+  let highest: string | null = null;
+  for (const observed of observedVersions) {
+    const version = normalizeObservedVersion(observed.version);
+    parseReleaseVersion(version);
+    if (highest === null || compareReleaseVersions(version, highest) > 0) {
+      highest = version;
+    }
+  }
+  return highest;
+}
+
 export function selectBridgeVersion(
   rawObservedVersions: readonly string[],
   preferredVersion = "0.5.5",

@@ -329,8 +329,25 @@ describe("public desktop release preparation", () => {
       resolve(REPOSITORY_ROOT, ".github/actions/setup-desktop/action.yml"),
       "utf8",
     );
+    const landingWorkflow = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/workflows/landing-deploy.yml"),
+      "utf8",
+    );
     const workflows = readdirSync(resolve(REPOSITORY_ROOT, ".github/workflows")).toSorted();
-    assert.deepStrictEqual(workflows, ["desktop-ci.yml", "desktop-release.yml"]);
+    assert.deepStrictEqual(workflows, [
+      "desktop-ci.yml",
+      "desktop-release.yml",
+      "landing-deploy.yml",
+    ]);
+
+    // The landing mirror deploys the marketing site only. It must never grow into a second desktop
+    // pipeline, never run for fork pull requests, and never hold write access to this repository.
+    assert.match(landingWorkflow, /paths:\n      - "apps\/landing\/\*\*"/);
+    assert.match(landingWorkflow, /permissions:\n  contents: read/);
+    assert.match(landingWorkflow, /persist-credentials: false/);
+    assert.equal(landingWorkflow.includes("pull_request"), false);
+    assert.equal(landingWorkflow.includes("build:desktop"), false);
+    assert.equal(landingWorkflow.includes("dist:desktop:artifact"), false);
 
     assert.match(ciWorkflow, /pull_request:/);
     assert.match(ciWorkflow, /push:\n    branches:\n      - main/);

@@ -3,8 +3,47 @@ import { describe, expect, it } from "vitest";
 import {
   assertReleaseVersionIsNewer,
   compareReleaseVersions,
+  highestReleaseVersion,
+  nextReleaseVersion,
   selectBridgeVersion,
 } from "./lib/release-update-policy";
+
+describe("ship version selection", () => {
+  it("picks the highest version across every observed feed", () => {
+    expect(
+      highestReleaseVersion([
+        { source: "canonical GitHub release", version: "0.5.2" },
+        { source: "legacy GitHub release", version: "v0.5.1" },
+        { source: "Windows VPS manifest", version: "0.5.3" },
+        { source: "macOS VPS manifest", version: "0.5.4" },
+      ]),
+    ).toBe("0.5.4");
+    expect(highestReleaseVersion([])).toBeNull();
+  });
+
+  it.each([
+    ["0.5.6", "patch", "0.5.7"],
+    ["0.5.6", "minor", "0.6.0"],
+    ["0.5.6", "major", "1.0.0"],
+    ["0.5.6", "rc", "0.5.7-rc.1"],
+    ["v0.5.6", "patch", "0.5.7"],
+  ] as const)("bumps %s by %s to %s", (current, level, expected) => {
+    expect(nextReleaseVersion(current, level)).toBe(expected);
+  });
+
+  it("promotes a release candidate to the version it was testing", () => {
+    expect(nextReleaseVersion("0.6.0-rc.2", "patch")).toBe("0.6.0");
+    expect(nextReleaseVersion("0.6.0-rc.2", "rc")).toBe("0.6.0-rc.3");
+  });
+
+  it("always produces a version newer than the one it bumped from", () => {
+    for (const level of ["patch", "minor", "major", "rc"] as const) {
+      expect(compareReleaseVersions(nextReleaseVersion("0.5.6", level), "0.5.6")).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+});
 
 describe("release update policy", () => {
   it("orders stable and prerelease semantic versions", () => {

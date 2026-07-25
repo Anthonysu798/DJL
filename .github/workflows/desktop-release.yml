@@ -29,6 +29,7 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
       commit: ${{ steps.version.outputs.commit }}
+      notes_base64: ${{ steps.notes.outputs.notes_base64 }}
     steps:
       - name: Checkout annotated release tag
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -72,6 +73,22 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `tag=${release.tag}\n`);
           appendFileSync(process.env.GITHUB_OUTPUT, `is_prerelease=${release.isPrerelease}\n`);
           NODE
+
+      - id: notes
+        name: Read release notes from the annotated tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # The tag annotation is the release body: whoever ships writes the human-readable notes
+          # there, and GitHub appends its generated changelog underneath. Carried as base64 so a
+          # multi-line body survives a single-line job output without any shell interpolation.
+          git tag -l --format='%(contents)' -- "$RELEASE_TAG" > tag-annotation.md
+          if [[ ! -s tag-annotation.md ]]; then
+            echo "Release tag $RELEASE_TAG carries no annotation to publish as release notes." >&2
+            exit 1
+          fi
+          echo "notes_base64=$(base64 -w0 < tag-annotation.md)" >> "$GITHUB_OUTPUT"
 
       - name: Require canonical repository and protected main membership
         env:
@@ -219,19 +236,33 @@ jobs:
           RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
           RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}
           IS_PRERELEASE: ${{ needs.preflight.outputs.is_prerelease }}
+          RELEASE_NOTES_BASE64: ${{ needs.preflight.outputs.notes_base64 }}
         run: |
           set -euo pipefail
+          # Author-written notes first, then the standing install/verification guidance. GitHub
+          # appends its own generated changelog below both.
+          printf '%s' "$RELEASE_NOTES_BASE64" | base64 -d > release-body.md
+          cat >> release-body.md <<'FOOTER'
+
+          ---
+
+          DJL desktop installers for macOS Apple Silicon, macOS Intel, and Windows x64. macOS
+          installers are Developer ID signed, notarized, and stapled. The Windows installer is
+          intentionally unsigned and may trigger Microsoft SmartScreen. Verify `SHA256SUMS` before
+          installing.
+          FOOTER
           payload="$(
             jq -n \
               --arg tag "$RELEASE_TAG" \
               --arg commit "$RELEASE_COMMIT" \
               --arg name "DJL v$RELEASE_VERSION" \
+              --rawfile body release-body.md \
               --argjson prerelease "$IS_PRERELEASE" \
               '{
                 tag_name: $tag,
                 target_commitish: $commit,
                 name: $name,
-                body: "DJL desktop installers for macOS Apple Silicon, macOS Intel, and Windows x64. macOS installers are Developer ID signed, notarized, and stapled. The Windows installer is intentionally unsigned and may trigger Microsoft SmartScreen. Verify SHA256SUMS before installing.",
+                body: $body,
                 generate_release_notes: true,
                 draft: true,
                 prerelease: $prerelease
