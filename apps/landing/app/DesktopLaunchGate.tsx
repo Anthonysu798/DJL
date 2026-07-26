@@ -42,7 +42,7 @@ const PUBLIC_RELEASES_URL = GITHUB_LATEST_RELEASE_CHECKSUMS_URL;
 
 const launchCopy = {
   zh: {
-    eyebrow: "DJL DESKTOP · V1.0.0 ·",
+    eyebrow: "DJL DESKTOP · {version} ·",
     stable: "STABLE",
     title: "选择你的运行环境",
     subtitle: "上下文完整抵达你的设备。现在，",
@@ -88,7 +88,7 @@ const launchCopy = {
     copyStatus: "说明已复制",
   },
   en: {
-    eyebrow: "DJL DESKTOP · V1.0.0 ·",
+    eyebrow: "DJL DESKTOP · {version} ·",
     stable: "STABLE",
     title: "Choose your runtime",
     subtitle: "Your context arrives intact. Now, ",
@@ -151,6 +151,23 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
   const macChoiceRef = useRef<HTMLAnchorElement | null>(null);
   const [activePlatform, setActivePlatform] = useState<Platform | null>(null);
   const [macChooserOpen, setMacChooserOpen] = useState(false);
+  // Read the advertised version from the same release the download buttons serve, so the label can
+  // never claim a version that was never shipped. Null until it resolves, and null forever if the
+  // lookup fails — the eyebrow then omits the version rather than showing a stale guess.
+  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/desktop-version", { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { version?: unknown } | null) => {
+        if (typeof payload?.version === "string") {
+          setDesktopVersion(payload.version);
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [copied, setCopied] = useState(false);
   const [inView, setInView] = useState(false);
@@ -345,7 +362,11 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
         <header className="dl-heading">
           <p className="dl-eyebrow">
             <Sparkles aria-hidden="true" />
-            <span>{copy.eyebrow}</span>
+            <span>
+              {desktopVersion
+                ? copy.eyebrow.replace("{version}", `V${desktopVersion}`)
+                : copy.eyebrow.replace(" {version} ", " ")}
+            </span>
             <strong>{copy.stable}</strong>
           </p>
           <h2 id="desktop-launch-title">{copy.title}</h2>
