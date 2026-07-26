@@ -84,14 +84,24 @@ jobs:
           rsync --archive --delete --exclude '.git/' apps/landing/ deployment-repository/
 
           cd deployment-repository
-          git config user.name "djl-landing-mirror[bot]"
-          git config user.email "djl-landing-mirror@users.noreply.github.com"
+          # Vercel blocks deployments whose git author it cannot link to an account member, so the
+          # mirror must commit as the repository owner. A bot identity here produces a successful
+          # push and a "Deployment was blocked" status, which looks like a build failure but is not.
+          git config user.name "Anthony Su"
+          git config user.email "Anthonysu798@users.noreply.github.com"
           git add --all
+
           if git diff --cached --quiet; then
-            echo "Deployment repository already matches apps/landing."
-            exit 0
+            if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]]; then
+              echo "Deployment repository already matches apps/landing."
+              exit 0
+            fi
+            # Manual dispatch doubles as "redeploy the current site", which is how you recover from
+            # a Vercel-side failure without inventing a content change.
+            git commit --allow-empty --message "chore: redeploy apps/landing from $SOURCE_COMMIT"
+          else
+            git commit --message "chore: mirror apps/landing from $SOURCE_COMMIT"
           fi
-          git commit --message "chore: mirror apps/landing from $SOURCE_COMMIT"
           git push origin HEAD:main
           echo "Mirrored apps/landing to $DEPLOYMENT_REPOSITORY; Vercel will deploy it." \
             >> "$GITHUB_STEP_SUMMARY"
