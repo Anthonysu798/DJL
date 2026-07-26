@@ -420,12 +420,22 @@ jobs:
             cp release-native/latest.yml release-metadata/latest.yml
           fi
 
-      - name: Attest build provenance for the installers
+      # Attested per platform: each build job produces only its own artifacts, and a subject-path
+      # that resolves to no file fails the action. The subjects are what a user's machine actually
+      # executes — the disk image, the updater payload it downloads, and the Windows installer.
+      - name: Attest macOS build provenance
+        if: matrix.platform == 'mac'
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-path: |
-            release-native/DJL-${{ needs.preflight.outputs.version }}-*.dmg
-            release-native/DJL-${{ needs.preflight.outputs.version }}-*.exe
+            release-native/DJL-${{ needs.preflight.outputs.version }}-${{ matrix.arch }}.dmg
+            release-native/DJL-${{ needs.preflight.outputs.version }}-${{ matrix.arch }}.zip
+
+      - name: Attest Windows build provenance
+        if: matrix.platform == 'win'
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: release-native/DJL-${{ needs.preflight.outputs.version }}-x64.exe
 
       - name: Upload large payloads directly to private draft
         shell: bash
