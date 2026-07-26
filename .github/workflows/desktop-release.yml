@@ -283,6 +283,10 @@ jobs:
     timeout-minutes: 360
     permissions:
       contents: write
+      # Sigstore signs the provenance against this job's OIDC identity, which is what makes the
+      # attestation unforgeable by anyone holding only a release token.
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -379,33 +383,10 @@ jobs:
           grep -F "TeamIdentifier=U76N9JSK4M" <<<"$signature"
           spctl --assess --type execute --verbose=4 "$app"
 
-          expected_arch="${{ matrix.arch }}"
-          [[ "$expected_arch" == "x64" ]] && expected_arch="x86_64"
-          file -b "$app/Contents/MacOS/DJL" | grep -qF "$expected_arch"
-
-          # Upstream native packages ship prebuilt slices for every platform they support: koffi
-          # alone carries FreeBSD, Linux, OpenBSD, LoongArch, RISC-V and Windows binaries, and
-          # onnxruntime-node and node-pty add their own. Those can never load on macOS, so
-          # requiring every bundled .node to match this architecture is wrong. Require instead that
-          # the Mach-O slices for this architecture are present and loadable.
-          #
-          # `file -b` omits the path from the output on purpose. With the path included, a
-          # directory named .../koffi/linux_arm64/... satisfies a grep for "arm64" regardless of
-          # what the binary actually is, which is how this check passed on ARM64 while being
-          # incapable of passing on x86_64.
-          native_count=0
-          while IFS= read -r -d '' native; do
-            if file -b "$native" | grep -qF "$expected_arch"; then
-              native_count=$((native_count + 1))
-            fi
-          done < <(find "$app" -type f -name '*.node' -print0)
-          (( native_count > 0 ))
-          onnx_manifest="$(find "$app" -path '*/onnxruntime-node/package.json' -print -quit)"
-          [[ -n "$onnx_manifest" ]]
-          grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.23\.2"' "$onnx_manifest"
-          grep -F "owner: Anthonysu798" "$app/Contents/Resources/app-update.yml"
-          grep -F "repo: DJL" "$app/Contents/Resources/app-update.yml"
-          [[ "$("$app/Contents/Resources/opencode/opencode" --version)" == "1.17.18" ]]
+          # Architecture, native slices, pinned runtimes and updater identity are shared with the
+          # CI package smoke, so the same bundle contract runs on every push to main instead of
+          # first executing here, after notarization has already been paid for.
+          scripts/verify-macos-app-bundle.sh "$app" "${{ matrix.arch }}"
 
       - name: Verify intentionally unsigned Windows release
         if: matrix.platform == 'win'
@@ -438,6 +419,13 @@ jobs:
           else
             cp release-native/latest.yml release-metadata/latest.yml
           fi
+
+      - name: Attest build provenance for the installers
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            release-native/DJL-${{ needs.preflight.outputs.version }}-*.dmg
+            release-native/DJL-${{ needs.preflight.outputs.version }}-*.exe
 
       - name: Upload large payloads directly to private draft
         shell: bash

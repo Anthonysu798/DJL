@@ -24,10 +24,12 @@ Rules learned from real failures. Each one cost a release attempt.
 - **Tag with `--cleanup=verbatim`.** Git otherwise strips every `#` markdown heading from the body.
 - **Release-only checks are unproven checks.** Verification that exists solely in
   `desktop-release.yml` first executes during an actual release, after signing and notarization have
-  already been paid for. Mirror new verification into the CI package-smoke jobs. The macOS
-  architecture sweep shipped broken for exactly this reason: it passed on ARM64 only because `file`
-  prints the path, so `.../koffi/linux_arm64/...` satisfied a grep for `arm64`, and it could never
-  have passed on Intel, where those paths read `x64` and `file` reports `x86-64`.
+  already been paid for. The macOS bundle contract therefore lives in
+  `scripts/verify-macos-app-bundle.sh`, which both the release build and the CI package smoke run —
+  add new bundle checks there, not inline in a workflow. That sweep shipped broken for exactly this
+  reason: it passed on ARM64 only because `file` prints the path, so `.../koffi/linux_arm64/...`
+  satisfied a grep for `arm64`, and it could never have passed on Intel, where those paths read
+  `x64` and `file` reports `x86-64`.
 - **Bundled `.node` files are not all macOS.** koffi, onnxruntime-node and node-pty ship prebuilt
   slices for FreeBSD, Linux, OpenBSD, LoongArch, RISC-V and Windows. Any check over them must select
   Mach-O slices for the target architecture rather than requiring every file to match.
@@ -38,6 +40,8 @@ Rules learned from real failures. Each one cost a release attempt.
 - The tagged commit must already be contained in protected `main` and have a successful full
   Desktop CI run.
 - Both macOS builds are Developer ID signed, notarized, stapled, and verified.
+- Every installer carries Sigstore-signed build provenance, verifiable with
+  `gh attestation verify <installer> --repo Anthonysu798/DJL`.
 - Windows x64 is intentionally unsigned; `Get-AuthenticodeSignature` must return `NotSigned`.
 - A private draft exists before native builds start.
 - Native runners upload large payloads directly to that draft.

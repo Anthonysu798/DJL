@@ -232,14 +232,9 @@ jobs:
           mkdir "$mount_point"
           trap 'hdiutil detach "$mount_point" -quiet || true' EXIT
           hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point" -quiet
-          app="$mount_point/DJL.app"
-          test -d "$app"
-          expected_arch="${{ matrix.arch }}"
-          [[ "$expected_arch" == "x64" ]] && expected_arch="x86_64"
-          file "$app/Contents/MacOS/DJL" | grep -F "$expected_arch"
-          grep -F "owner: Anthonysu798" "$app/Contents/Resources/app-update.yml"
-          grep -F "repo: DJL" "$app/Contents/Resources/app-update.yml"
-          "$app/Contents/Resources/opencode/opencode" --version
+          # Shared with the release workflow so bundle defects are caught here, on every push,
+          # rather than mid-release after notarization has already been paid for.
+          scripts/verify-macos-app-bundle.sh "$mount_point/DJL.app" "${{ matrix.arch }}"
 
       - name: Verify unsigned Windows package smoke
         if: matrix.platform == 'win'
