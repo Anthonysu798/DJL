@@ -1,139 +1,158 @@
 ---
 name: djl-desktop-release
-description: Build, validate, publish, recover, or bridge DJL desktop releases through the canonical GitHub Actions workflow. Use when asked to release, ship, publish, verify, roll back, or diagnose a DJL Windows or macOS desktop version.
+description: Ship, validate, recover, or diagnose a DJL desktop release. Use when asked to ship it, cut a release, publish a version, bump the version, tag a release, or investigate a failed or partial DJL Windows/macOS release.
 ---
 
 # DJL Desktop Release
 
-Use the canonical `Anthonysu798/DJL` GitHub workflow for production desktop releases. Treat
-[the repository release runbook](../../release.md) as authoritative. Use the VPS only for the
-one-time legacy bridge or explicit emergency recovery.
+Ship production desktop releases with `bun run ship`. It computes the next version, refuses to tag
+anything unverified, writes the release notes into the tag, and pushes — the pushed tag is what
+starts `.github/workflows/desktop-release.yml`.
 
-## Scope
+Treat [the release runbook](../../release.md) as authoritative; this skill is the operating
+procedure. Use the VPS only for explicit emergency recovery.
 
-Automate only the DJL desktop product:
+## Ship it
 
-- Electron shell and preload
-- renderer and bundled backend
-- contracts/shared runtime
-- local remote gateway/protocol
-- `effect-acp`
-- release helpers
-- OpenCode only as the embedded DJL dependency
+When the user says "ship it" (optionally "ship it minor", "major", or "rc"):
 
-Never add iOS, remote-relay deployment, landing, marketing, Linux installers, npm publication, or
-standalone OpenCode CI to a desktop release.
+**1. Write the release notes first.** They become the published release body, so write for someone
+deciding whether to update.
+
+```bash
+git log --no-merges --format='- %s' "$(git describe --tags --abbrev=0 --match 'v*')..HEAD"
+```
+
+Write to a scratch file, grouped as `### Added` / `### Fixed` / `### Changed`. Skip internal churn
+(test refactors, CI plumbing) unless behaviour changed. Five useful lines beat twenty mechanical
+ones. Never invent a change; if everything is internal, say "Maintenance and stability release."
+
+**2. Show the computed version, then ship.**
+
+```bash
+bun run ship --dry-run --notes-file NOTES.md     # prints the version, tags nothing
+bun run ship --notes-file NOTES.md               # next patch
+bun run ship minor --notes-file NOTES.md         # next minor
+bun run ship major --notes-file NOTES.md         # next major
+bun run ship rc --notes-file NOTES.md            # next release candidate
+```
+
+**3. Monitor, then hand off the approval.**
+
+```bash
+gh run list --repo Anthonysu798/DJL --workflow desktop-release.yml --limit 1
+```
+
+## How the version is chosen
+
+`ship` never reads a version from the tree. It takes the highest version observed across canonical
+GitHub releases, the legacy `DJL-Releases` repository, and both live VPS manifests, then bumps it:
+
+| Argument | 0.5.6 becomes | Notes |
+| --- | --- | --- |
+| *(none)* | `0.5.7` | default |
+| `minor` | `0.6.0` | |
+| `major` | `1.0.0` | |
+| `rc` | `0.5.7-rc.1` | a further `rc` gives `-rc.2` |
+
+A release candidate resolves to its own line: `0.6.0-rc.2` with no argument becomes `0.6.0`, so a
+finished candidate ships as the version it was testing. Because the highest *live* version is the
+input, the sequence self-corrects even if a release was skipped or published elsewhere.
+
+## What ship refuses
+
+Fail-closed. Fix the cause; never work around a refusal.
+
+- uncommitted changes in the working tree
+- a branch other than `main`, or `main` out of sync with `origin/main`
+- `main` not protected — run `bun run release:protect-main`
+- no successful full **Desktop CI** run for the exact `HEAD` commit
+- a version already tagged or released, or not newer than every live feed
 
 ## Release contract
 
-Require one explicit version in `X.Y.Z` or `X.Y.Z-prerelease` form. Do not choose a production
-version silently.
-
 - Repository and updater origin: `Anthonysu798/DJL`
-- Source: current protected `main` commit
-- macOS: ARM64 on `macos-14`, x64 on `macos-15-intel`
-- Windows: x64 on `windows-2022`
-- macOS policy: Developer ID signed, notarized, stapled, Gatekeeper verified
-- Windows policy: intentionally unsigned; Authenticode status must be `NotSigned`
-- Inventory: exactly 15 release assets
+- Source: a commit contained in protected `main` with full Desktop CI success
+- macOS ARM64 on `macos-14`, macOS x64 on `macos-15-intel`, Windows x64 on `windows-2022`
+- macOS: Developer ID signed, notarized, stapled, Gatekeeper verified
+- Windows: intentionally unsigned; Authenticode must report `NotSigned`
+- Installers carry Sigstore build provenance
+- Inventory: exactly **13** assets — 8 payloads, 4 updater manifests, `SHA256SUMS`
 - Promotion: protected `production` environment
 
-Normal publication uses the same-repository `GITHUB_TOKEN`. Never request or restore a permanent
-cross-repository release token.
+Publication uses the same-repository `GITHUB_TOKEN`. Never request a permanent cross-repository
+release token.
 
-## Before dispatch
+## Pipeline order
 
-1. Read [platform and repository setup](references/platform-setup.md).
-2. Confirm the repository is exactly `Anthonysu798/DJL`.
-3. Confirm the requested commit is current protected `main`.
-4. Confirm full **Desktop CI** succeeded for that exact commit, including all three package smokes.
-5. Confirm the requested version and tag are unused.
-6. Confirm the version is newer than the canonical releases, `DJL-Releases`, and both VPS
-   manifests.
-7. Confirm all five Apple secrets exist. Never print their values.
-8. Confirm the `production` environment requires Anthony Su and allows self-review.
+1. preflight — annotated tag, protected-main membership, CI success, credentials, version, notes
+2. private draft creation
+3. three concurrent native builds, each attesting and uploading its own payloads
+4. finalize — receipts validated against GitHub digests, `SHA256SUMS` then manifests uploaded last
+5. exact 13-asset inventory verification
+6. `production` approval
+7. publication as Latest, or as a prerelease excluded from Latest
 
-Do not bypass a failing preflight by editing workflow conditions or manually creating a tag.
+Approval is the user's to give. Only approve on their behalf when they have explicitly authorized
+it for that release.
 
-## Dispatch and monitor
+## Hard rules
 
-When the user explicitly authorizes the production release, dispatch:
+1. **Green or stop.** Never tag or promote while a required check is red, pending, or skipped.
+2. **Never mutate a release out of band.** No `PATCH` on a draft, no hand-uploaded assets, no
+   publishing from the UI. A body-only `PATCH` silently rewrites a draft's `tag_name` to
+   `untagged-<hash>`, and every later upload fails with a misleading `release not found`.
+3. **Notes live in the tag.** To change them, delete the tag and retag — never edit the draft.
+4. **Tag with `--cleanup=verbatim`.** Git otherwise strips every `#` markdown heading from the body.
+   `ship` does this; a manual `git tag` must too.
+5. **Bundle checks belong in `scripts/verify-macos-app-bundle.sh`**, which both the release build and
+   the CI package smokes run. A check added only to the release workflow is unproven until a real
+   release has already paid for signing and notarization.
+6. **Grep `file -b`, never `file`.** `file` prints the path, so `.../koffi/linux_arm64/...` satisfies
+   a grep for `arm64` whatever the binary is.
+7. **Report evidence, not expectation.** "CI is green" means you read the conclusion.
+
+## Verification after publication
 
 ```bash
-gh workflow run desktop-release.yml \
-  --repo Anthonysu798/DJL \
-  --ref main \
-  -f version=X.Y.Z
+gh release view vX.Y.Z --repo Anthonysu798/DJL --json assets --jq '.assets|length'   # 13
+gh attestation verify DJL-X.Y.Z-x64.exe --repo Anthonysu798/DJL
+curl -sI https://slcor.com/download/windows                                          # 307 to the new version
 ```
 
-Find the resulting run and monitor it through completion. Expect this order:
+Confirm both macOS builds report the Developer ID authority and Team ID `U76N9JSK4M`, Windows
+reports `NotSigned`, three schema-version-1 receipts validated, four manifests uploaded last, and
+stable releases set as Latest.
 
-1. preflight;
-2. private draft creation;
-3. three concurrent native builds;
-4. direct payload upload from native runners;
-5. receipt/manifests finalization;
-6. exact 15-asset draft verification;
-7. human approval on `production`;
-8. stable Latest or prerelease publication.
-
-Leave approval requests for the user. Do not approve on their behalf through another identity.
-
-## Required verification
-
-Require the workflow evidence for:
-
-- Mac signing authority and Team ID `U76N9JSK4M`;
-- notarization, stapling, Gatekeeper, deep signature, architecture, native dependencies, and
-  canonical updater origin on both Macs;
-- `onnxruntime-node` `1.23.2` on Intel;
-- embedded OpenCode launch on both Mac targets;
-- Apple and Azure signing variables absent from Windows;
-- Windows `Get-AuthenticodeSignature` result `NotSigned`;
-- three valid schema-version-1 receipts;
-- GitHub-reported names, positive sizes, and SHA-256 digests;
-- six updater manifests uploaded last;
-- exactly 15 final assets;
-- stable releases set as Latest and prereleases excluded from Latest.
-
-After publication, inspect the GitHub Release and verify `SHA256SUMS` plus both updater manifests.
+The landing site needs no change: its Download buttons resolve the newest release at request time
+and follow automatically.
 
 ## Failure handling
 
-Failures before promotion must leave a private draft. Never publish a partial feed and never
-delete a failed draft automatically.
+A failure before promotion leaves a private draft. Never publish a partial feed.
 
-- Diagnose from the first failed job and preserve the draft for evidence.
-- Do not upload missing updater manifests by hand.
-- Delete a failed draft/tag only after the cause is understood and the user authorizes cleanup.
-- Rerun from the same protected commit only if the one-day receipts still exist; otherwise rebuild.
+- Diagnose from the first failed job; keep the draft as evidence.
+- Never hand-upload a missing manifest or asset.
+- To retry: delete the draft **and** the tag, fix the cause, push the fix, wait for CI, retag.
 - Never overwrite an existing tag or asset.
 
-For a bad public release, stop discovery by returning it to draft only with explicit user approval,
-then publish a strictly newer fixed version. Do not replace bytes under the old version.
+For a bad published release, return it to draft only with explicit user approval, then ship a
+strictly newer fixed version. Never replace bytes under an existing version.
 
-## One-time legacy bridge
+## Scope
 
-Run the bridge only when the user explicitly requests the migration.
+Desktop product only: Electron shell and preload, renderer, bundled backend, contracts/shared
+runtime, local remote gateway/protocol, `effect-acp`, release helpers, and OpenCode as the embedded
+dependency. Never add iOS, remote-relay deployment, marketing, Linux installers, npm publication, or
+standalone OpenCode CI to a desktop release.
 
-1. Prefer `v0.5.5` only if it is unused and newer than canonical, legacy, and both VPS feeds.
-2. Otherwise call `selectBridgeVersion` from `scripts/lib/release-update-policy.ts`.
-3. Publish the bridge through the canonical workflow with updater origin `Anthonysu798/DJL`.
-4. Download and verify the canonical 15 assets.
-5. Mirror those exact bytes to `DJL-Releases` with a temporary fine-grained token.
-6. Revoke the token immediately.
-7. Promote the same bytes to the VPS with explicit legacy environment variables.
-8. Test installed-client updates from every legacy feed.
-9. Archive `DJL-Releases` but retain all release and VPS bytes indefinitely.
+The landing site deploys through its own `landing-deploy.yml` on pushes touching `apps/landing/**`
+and is not part of a desktop release.
 
-Never rebuild for a mirror.
+## Boundaries
 
-## External repository boundary
+Preparing a release does not authorize renaming or creating repositories, changing visibility,
+configuring secrets, or archiving `DJL-Releases`. Do those only on explicit request.
 
-Preparing source does not authorize renaming a repository, creating a GitHub repository, pushing a
-history-free snapshot, changing visibility, configuring secrets, or archiving `DJL-Releases`.
-Perform those actions only when the user explicitly requests them.
-
-Report the source commit, workflow run, version/tag, signing status, unsigned Windows status,
-15-asset verification, updater state, bridge/mirror state when applicable, and any remaining
-limitation.
+Report the source commit, workflow run, version and tag, signing status, unsigned Windows status,
+13-asset verification, provenance, updater state, and any remaining limitation.

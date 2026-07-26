@@ -308,6 +308,29 @@ describe("public desktop release preparation", () => {
     }
   });
 
+  it("keeps the release skill truthful about the shipping workflow", () => {
+    // The skill is what an agent reads before shipping. It drifted once to a 15-asset inventory and
+    // a `gh workflow run desktop-release.yml` dispatch that cannot work, because the release
+    // triggers only on a tag push. Pin the claims that would misdirect a release.
+    const skill = readFileSync(
+      resolve(REPOSITORY_ROOT, "docs/skills/djl-desktop-release/SKILL.md"),
+      "utf8",
+    );
+    const setup = readFileSync(
+      resolve(REPOSITORY_ROOT, "docs/skills/djl-desktop-release/references/platform-setup.md"),
+      "utf8",
+    );
+    const assetCount = publishedPublicDesktopReleaseAssetNames(VERSION).length;
+
+    assert.match(skill, new RegExp(`exactly \\*\\*${assetCount}\\*\\* assets`));
+    assert.match(skill, new RegExp(`${assetCount}-asset inventory verification`));
+    assert.match(skill, /bun run ship/);
+    assert.match(setup, /`desktop-ci`/);
+    assert.match(setup, /`v\*` \(tag\)/);
+    // A dispatch command for the release workflow is always wrong: it has no workflow_dispatch.
+    assert.equal(skill.includes("gh workflow run desktop-release.yml"), false);
+  });
+
   it("preserves markdown headings in the release notes it writes into the tag", () => {
     const shipScript = readFileSync(resolve(REPOSITORY_ROOT, "scripts/ship-release.ts"), "utf8");
 
