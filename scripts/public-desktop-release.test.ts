@@ -137,14 +137,6 @@ describe("public desktop release preparation", () => {
       prepared.find((asset) => asset.name === "latest.yml")?.contents,
       prepared.find((asset) => asset.name === "djl.yml")?.contents,
     );
-    assert.deepStrictEqual(
-      prepared.find((asset) => asset.name === "djl-mac.yml")?.contents,
-      prepared.find((asset) => asset.name === "synara-mac.yml")?.contents,
-    );
-    assert.deepStrictEqual(
-      prepared.find((asset) => asset.name === "djl.yml")?.contents,
-      prepared.find((asset) => asset.name === "synara.yml")?.contents,
-    );
     const sums = Buffer.from(
       prepared.find((asset) => asset.name === "SHA256SUMS")?.contents ?? [],
     ).toString("utf8");
@@ -168,12 +160,12 @@ describe("public desktop release preparation", () => {
     );
     assert.deepStrictEqual(
       metadata.find((asset) => asset.name === "latest.yml")?.contents,
-      metadata.find((asset) => asset.name === "synara.yml")?.contents,
+      metadata.find((asset) => asset.name === "djl.yml")?.contents,
     );
     const sums = Buffer.from(
       metadata.find((asset) => asset.name === "SHA256SUMS")?.contents ?? [],
     ).toString("utf8");
-    assert.equal(sums.trim().split("\n").length, 14);
+    assert.equal(sums.trim().split("\n").length, 12);
     assert.match(sums, /^[a-f0-9]{64}  DJL-1\.2\.3-arm64\.dmg$/m);
   });
 
@@ -214,7 +206,7 @@ describe("public desktop release preparation", () => {
     );
   });
 
-  it("validates GitHub-reported names, sizes, and digests for exactly 15 assets", () => {
+  it("validates GitHub-reported names, sizes, and digests for exactly 13 assets", () => {
     const { receipts, manifests } = receiptFixture();
     const metadata = preparePublicDesktopReleaseMetadata(VERSION, receipts, manifests);
     const remoteAssets = [
@@ -427,7 +419,7 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /onnxruntime-node\/package\.json/);
     assert.match(releaseWorkflow, /This exact commit has no successful full Desktop CI run/);
     assert.match(releaseWorkflow, /The canonical main branch must be protected/);
-    assert.match(releaseWorkflow, /Verify exact 15-asset draft inventory/);
+    assert.match(releaseWorkflow, /Verify exact 13-asset draft inventory/);
     assert.equal(releaseWorkflow.includes("gh release delete"), false);
     assert.equal(releaseWorkflow.includes("if: failure()"), false);
 
@@ -444,7 +436,7 @@ describe("public desktop release preparation", () => {
         releaseWorkflow.indexOf("Upload updater manifests last"),
     );
     assert.ok(
-      releaseWorkflow.indexOf("Verify exact 15-asset draft inventory") <
+      releaseWorkflow.indexOf("Verify exact 13-asset draft inventory") <
         releaseWorkflow.indexOf("environment: production"),
     );
 

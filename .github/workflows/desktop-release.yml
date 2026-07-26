@@ -545,10 +545,10 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t manifests < <(find release-metadata -maxdepth 1 -type f -name '*.yml' | sort)
-          [[ "${#manifests[@]}" -eq 6 ]]
+          [[ "${#manifests[@]}" -eq 4 ]]
           gh release upload "$RELEASE_TAG" "${manifests[@]}" --repo "$RELEASE_REPOSITORY"
 
-      - name: Verify exact 15-asset draft inventory
+      - name: Verify exact 13-asset draft inventory
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
@@ -626,7 +626,7 @@ jobs:
                 return [match[2], match[1]];
               }),
           );
-          if (sums.size !== 14) throw new Error(`Expected 14 checksum entries, got ${sums.size}.`);
+          if (sums.size !== 12) throw new Error(`Expected 12 checksum entries, got ${sums.size}.`);
           for (const asset of assets) {
             if (!(Number.isSafeInteger(asset.size) && asset.size > 0)) {
               throw new Error(`Invalid GitHub size for ${asset.name}.`);

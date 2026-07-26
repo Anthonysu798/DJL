@@ -5,9 +5,6 @@ import { createHash } from "node:crypto";
 
 export const PUBLIC_DESKTOP_RELEASE_REPOSITORY = "Anthonysu798/DJL";
 export const PUBLIC_DESKTOP_UPDATE_CHANNEL = "djl";
-// Temporary read-only aliases let already-shipped 0.5.1 clients reach the first DJL-channel
-// release. Remove these aliases after that transition release has completed its migration window.
-export const LEGACY_PUBLIC_DESKTOP_UPDATE_CHANNEL = "synara";
 
 const VERSION_PATTERN =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?$/;
@@ -109,8 +106,6 @@ export function publishedPublicDesktopReleaseAssetNames(version: string): readon
     "latest.yml",
     `${PUBLIC_DESKTOP_UPDATE_CHANNEL}-mac.yml`,
     `${PUBLIC_DESKTOP_UPDATE_CHANNEL}.yml`,
-    `${LEGACY_PUBLIC_DESKTOP_UPDATE_CHANNEL}-mac.yml`,
-    `${LEGACY_PUBLIC_DESKTOP_UPDATE_CHANNEL}.yml`,
     "SHA256SUMS",
   ].toSorted();
 }
@@ -539,8 +534,6 @@ export function preparePublicDesktopReleaseMetadata(
     { name: "latest.yml", contents: latestWindows },
     { name: `${PUBLIC_DESKTOP_UPDATE_CHANNEL}-mac.yml`, contents: latestMac },
     { name: `${PUBLIC_DESKTOP_UPDATE_CHANNEL}.yml`, contents: latestWindows },
-    { name: `${LEGACY_PUBLIC_DESKTOP_UPDATE_CHANNEL}-mac.yml`, contents: latestMac },
-    { name: `${LEGACY_PUBLIC_DESKTOP_UPDATE_CHANNEL}.yml`, contents: latestWindows },
   ].toSorted((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
   prepared.push({
     name: "SHA256SUMS",

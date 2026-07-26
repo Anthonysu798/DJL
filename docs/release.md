@@ -44,7 +44,7 @@ Rules learned from real failures. Each one cost a release attempt.
 - Only receipts and source manifests use one-day Actions artifacts.
 - Updater manifests upload last. A failed job leaves a private draft, never a partial public feed.
 - The protected `production` environment is the only job allowed to publish the draft.
-- A release contains exactly 15 assets and no Linux payloads.
+- A release contains exactly 13 assets and no Linux payloads.
 
 ## Workflow architecture
 
@@ -81,7 +81,7 @@ flowchart TD
   Windows --> Receipts
   Direct --> Finalize["Validate GitHub size/digest data<br/>merge manifests and create checksums"]
   Receipts --> Finalize
-  Finalize --> Metadata["Upload SHA256SUMS, then six updater manifests last"]
+  Finalize --> Metadata["Upload SHA256SUMS, then four updater manifests last"]
   Metadata --> Gate["production environment approval"]
   Gate --> Publish["Publish stable Latest or prerelease"]
 ```
@@ -354,7 +354,7 @@ updater points to `Anthonysu798/DJL`.
 2. Use stable `v0.5.5` only if it is unused and newer than all four sources. Otherwise use
    `selectBridgeVersion` in `scripts/lib/release-update-policy.ts` to select the next patch.
 3. Build and publish the bridge once through the canonical workflow.
-4. Download the canonical release's exact 15 assets and verify `SHA256SUMS`.
+4. Download the canonical release's exact 13 assets and verify `SHA256SUMS`.
 5. Create the same version in `Anthonysu798/DJL-Releases` using a temporary fine-grained token with
    only release/content write access to that repository. Upload the downloaded bytes; do not
    rebuild. Revoke the token immediately afterward.
@@ -402,7 +402,7 @@ one-day artifact storage. See [GitHub Actions billing](https://docs.github.com/e
 - [ ] The draft reports exactly 15 names, positive sizes, and matching SHA-256 digests.
 - [ ] `latest-mac.yml` contains ARM64 and x64 ZIP/DMG entries.
 - [ ] `latest.yml` references the matching Windows EXE.
-- [ ] All six updater aliases and `SHA256SUMS` match.
+- [ ] All four updater aliases and `SHA256SUMS` match.
 - [ ] Stable releases become GitHub Latest; prereleases do not.
 - [ ] For the bridge only, legacy GitHub and VPS bytes match canonical hashes.
 - [ ] For the bridge only, installed clients update successfully from every legacy feed.
