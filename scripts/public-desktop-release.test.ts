@@ -416,7 +416,20 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /Status -ne "NotSigned"/);
     assert.match(releaseWorkflow, /xcrun stapler validate "\$dmg"/);
     assert.match(releaseWorkflow, /TeamIdentifier=U76N9JSK4M/);
-    assert.match(releaseWorkflow, /onnxruntime-node\/package\.json/);
+    // The bundle contract now lives in one script that both the release build and the CI package
+    // smoke run, so a check can never exist in the release path alone and go unproven until a real
+    // release pays for signing and notarization to discover it.
+    const bundleVerifier = readFileSync(
+      resolve(REPOSITORY_ROOT, "scripts/verify-macos-app-bundle.sh"),
+      "utf8",
+    );
+    assert.match(releaseWorkflow, /scripts\/verify-macos-app-bundle\.sh "\$app"/);
+    assert.match(ciWorkflow, /scripts\/verify-macos-app-bundle\.sh "\$mount_point\/DJL\.app"/);
+    assert.match(bundleVerifier, /onnxruntime-node\/package\.json/);
+    assert.match(bundleVerifier, /app-update\.yml/);
+    // file -b, never file: the path must not be able to satisfy an architecture match.
+    assert.match(bundleVerifier, /file -b/);
+    assert.equal(/\bfile "\$/.test(bundleVerifier), false);
     assert.match(releaseWorkflow, /This exact commit has no successful full Desktop CI run/);
     assert.match(releaseWorkflow, /The canonical main branch must be protected/);
     assert.match(releaseWorkflow, /Verify exact 13-asset draft inventory/);
