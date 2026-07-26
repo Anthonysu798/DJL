@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveGithubDesktopDownload,
   resolveGithubLatestReleasePage,
+  resolveGithubLatestReleaseVersion,
   type ReleaseFetch,
 } from "./githubDesktopDownloads";
 import type { DesktopDownloadTarget } from "./vpsDesktopDownloads";
@@ -126,5 +127,27 @@ describe("resolveGithubLatestReleasePage", () => {
     });
 
     expect(resolved).toBeNull();
+  });
+});
+
+describe("resolveGithubLatestReleaseVersion", () => {
+  it.each([
+    ["v0.5.6", "0.5.6"],
+    ["0.5.6", "0.5.6"],
+    ["v1.2.3-rc.1", "1.2.3-rc.1"],
+  ])("reads %s as %s", async (tag, expected) => {
+    expect(await resolveGithubLatestReleaseVersion(releaseFetch({ tag_name: tag }))).toBe(expected);
+  });
+
+  it.each([["nightly"], ["v1.2"], [""]])("rejects the unusable tag %o", async (tag) => {
+    expect(await resolveGithubLatestReleaseVersion(releaseFetch({ tag_name: tag }))).toBeNull();
+  });
+
+  it("returns null when GitHub is unreachable so the label omits the version", async () => {
+    expect(
+      await resolveGithubLatestReleaseVersion(() => {
+        throw new Error("network down");
+      }),
+    ).toBeNull();
   });
 });

@@ -39,6 +39,7 @@ interface GithubReleaseAsset {
 
 interface GithubRelease {
   readonly html_url?: string;
+  readonly tag_name?: string;
   readonly assets?: readonly GithubReleaseAsset[];
 }
 
@@ -108,4 +109,18 @@ export async function resolveGithubLatestReleasePage(
 ): Promise<string | null> {
   const release = await readLatestRelease(fetchImpl);
   return typeof release?.html_url === "string" ? release.html_url : null;
+}
+
+// The version the site advertises comes from the same release the buttons serve, so the two can
+// never disagree. Returns the bare version ("0.5.6") with the tag's leading "v" removed.
+export async function resolveGithubLatestReleaseVersion(
+  fetchImpl: ReleaseFetch = fetch,
+): Promise<string | null> {
+  const release = await readLatestRelease(fetchImpl);
+  const tag = release?.tag_name;
+  if (typeof tag !== "string") {
+    return null;
+  }
+  const version = tag.replace(/^v/, "");
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ? version : null;
 }
