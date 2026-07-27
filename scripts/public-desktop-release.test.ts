@@ -360,6 +360,7 @@ describe("public desktop release preparation", () => {
     assert.deepStrictEqual(workflows, [
       "desktop-ci.yml",
       "desktop-release.yml",
+      "desktop-signed-update-e2e.yml",
       "landing-deploy.yml",
     ]);
 
@@ -493,6 +494,68 @@ describe("public desktop release preparation", () => {
       ]) {
         assert.equal(workflow.includes(forbidden), false);
       }
+    }
+  });
+
+  it("keeps the signed updater E2E build protected and non-publishing", () => {
+    const workflow = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/workflows/desktop-signed-update-e2e.yml"),
+      "utf8",
+    );
+
+    assert.match(workflow, /workflow_dispatch:/);
+    assert.equal(workflow.includes("pull_request:"), false);
+    assert.equal(workflow.includes("push:"), false);
+    assert.match(workflow, /permissions:\n  contents: read/);
+    assert.match(workflow, /environment: production/);
+    assert.match(
+      workflow,
+      /if: github\.repository == 'Anthonysu798\/DJL' && github\.ref == 'refs\/heads\/main'/,
+    );
+    assert.match(workflow, /baseline_version:[\s\S]*required: true/);
+    assert.match(workflow, /target_version:[\s\S]*required: true/);
+    assert.match(workflow, /RELEASE_REPOSITORY: Anthonysu798\/DJL/);
+    assert.match(workflow, /SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798\/DJL/);
+    assert.match(workflow, /repos\/\$RELEASE_REPOSITORY\/releases\/latest/);
+    assert.match(workflow, /compareReleaseVersions/);
+    assert.match(workflow, /--target dmg --arch arm64/);
+    assert.match(workflow, /--build-version "\$BASELINE_VERSION"/);
+    assert.match(workflow, /--signed/);
+    assert.match(workflow, /Developer ID Application:.*U76N9JSK4M/);
+    assert.match(workflow, /TeamIdentifier=U76N9JSK4M/);
+    assert.match(workflow, /xcrun stapler validate "\$dmg"/);
+    assert.match(
+      workflow,
+      /spctl --assess --type open --context context:primary-signature -v "\$dmg"/,
+    );
+    assert.match(workflow, /scripts\/verify-macos-app-bundle\.sh "\$app"/);
+    assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+    assert.match(workflow, /retention-days: 1/);
+
+    const actionReferences = [...workflow.matchAll(/uses:\s+[^@\s]+@([^\s]+)/g)].map(
+      (match) => match[1],
+    );
+    assert.ok(actionReferences.length > 0);
+    for (const reference of actionReferences) assert.match(reference!, /^[a-f0-9]{40}$/);
+
+    for (const secret of [
+      "CSC_LINK",
+      "CSC_KEY_PASSWORD",
+      "APPLE_API_KEY",
+      "APPLE_API_KEY_ID",
+      "APPLE_API_ISSUER",
+    ]) {
+      assert.match(workflow, new RegExp(`secrets\\.${secret}`));
+    }
+    for (const forbidden of [
+      "contents: write",
+      "gh release create",
+      "gh release upload",
+      "git tag",
+      "downloads.slcor.com",
+      "publish-desktop-release",
+    ]) {
+      assert.equal(workflow.includes(forbidden), false);
     }
   });
 });
