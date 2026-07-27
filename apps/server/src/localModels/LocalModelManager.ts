@@ -244,6 +244,12 @@ export class LocalModelManager {
     if (!recommendation) {
       throw new LocalModelManagerError("startSetup", "No recommended local model is available.");
     }
+    if (recommendation.minimumMemoryBytes > this.#totalMemoryBytes) {
+      throw new LocalModelManagerError(
+        "startSetup",
+        `${recommendation.name} requires at least ${Math.ceil(recommendation.minimumMemoryBytes / GIB)} GB of memory.`,
+      );
+    }
     const source = recommendation.sources.find((candidate) => candidate.runtime === runtime);
     if (!source) {
       throw new LocalModelManagerError(
@@ -252,12 +258,15 @@ export class LocalModelManager {
       );
     }
     const active = [...this.#setupJobs.values()].find(
-      (job) =>
-        job.runtime === runtime &&
-        job.modelId === source.modelId &&
-        !["ready", "failed", "cancelled"].includes(job.state),
+      (job) => !["ready", "failed", "cancelled"].includes(job.state),
     );
-    if (active) return active;
+    if (active) {
+      if (active.runtime === runtime && active.modelId === source.modelId) return active;
+      throw new LocalModelManagerError(
+        "startSetup",
+        "Cannot start another local AI setup while one is already running.",
+      );
+    }
     for (const [jobId, job] of this.#setupJobs) {
       if (this.#setupJobs.size < MAX_RETAINED_SETUP_JOBS) break;
       if (["ready", "failed", "cancelled"].includes(job.state)) this.#setupJobs.delete(jobId);
@@ -294,6 +303,31 @@ export class LocalModelManager {
     const job = this.#setupJobs.get(jobId);
     if (!job) throw new LocalModelManagerError("retrySetup", "The setup job was not found.");
     if (job.state !== "failed" && job.state !== "cancelled") return job;
+    const recommendation = LOCAL_MODEL_RECOMMENDATIONS.find(
+      ({ id }) => id === job.recommendationId,
+    );
+    if (!recommendation) {
+      throw new LocalModelManagerError(
+        "retrySetup",
+        "The selected local AI setup is no longer available.",
+      );
+    }
+    if (recommendation.minimumMemoryBytes > this.#totalMemoryBytes) {
+      throw new LocalModelManagerError(
+        "retrySetup",
+        `${recommendation.name} requires at least ${Math.ceil(recommendation.minimumMemoryBytes / GIB)} GB of memory.`,
+      );
+    }
+    const active = [...this.#setupJobs.values()].find(
+      (candidate) =>
+        candidate.id !== jobId && !["ready", "failed", "cancelled"].includes(candidate.state),
+    );
+    if (active) {
+      throw new LocalModelManagerError(
+        "retrySetup",
+        "Cannot start another local AI setup while one is already running.",
+      );
+    }
     const retried = this.#updateSetupJob(jobId, {
       state: "detecting",
       downloadedBytes: 0,

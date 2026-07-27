@@ -128,8 +128,8 @@ describe("LocalModelManager", () => {
       fetch: fetchMock,
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 20 * 1024 ** 3,
-      platform: "linux",
-      env: { PATH: "" },
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
     });
 
     const started = await manager.startSetup({ runtime: "lmstudio" });
@@ -169,6 +169,142 @@ describe("LocalModelManager", () => {
       expect(job?.message).toContain("free disk space");
     });
     expect(installOllama).not.toHaveBeenCalled();
+  });
+
+  it("rejects one-click setup when the selected model exceeds system memory", async () => {
+    const stateDir = await temporaryRoot();
+    const installOllama = vi.fn();
+    const manager = new LocalModelManager({
+      stateDir,
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      totalMemoryBytes: 8 * 1024 ** 3,
+      freeDiskBytes: 40 * 1024 ** 3,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      installOllama,
+    });
+
+    const outcome = await manager
+      .startSetup({
+        runtime: "ollama",
+        recommendationId: "gpt-oss-20b",
+      })
+      .then(
+        (job) => ({ job }) as const,
+        (error: unknown) => ({ error }) as const,
+      );
+    if ("job" in outcome) await manager.cancelSetup(outcome.job.id);
+
+    expect(outcome).toEqual({ error: expect.any(Error) });
+    expect("error" in outcome ? String(outcome.error) : "").toContain("16 GB");
+    expect(installOllama).not.toHaveBeenCalled();
+    expect((await manager.getSnapshot()).setupJobs).toHaveLength(0);
+  });
+
+  it("reuses the same active setup and rejects a different concurrent setup", async () => {
+    const stateDir = await temporaryRoot();
+    const installOllama = vi.fn(() => new Promise<never>(() => undefined));
+    const manager = new LocalModelManager({
+      stateDir,
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      totalMemoryBytes: 8 * 1024 ** 3,
+      freeDiskBytes: 40 * 1024 ** 3,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      installOllama,
+    });
+
+    const active = await manager.startSetup({
+      runtime: "ollama",
+      recommendationId: "qwen3.5-2b",
+    });
+    await vi.waitFor(async () => {
+      expect(
+        (await manager.getSnapshot()).setupJobs.find(({ id }) => id === active.id)?.state,
+      ).toBe("installing_runtime");
+    });
+
+    const reused = await manager.startSetup({
+      runtime: "ollama",
+      recommendationId: "qwen3.5-2b",
+    });
+    expect(reused.id).toBe(active.id);
+    await expect(
+      manager.startSetup({
+        runtime: "ollama",
+        recommendationId: "granite-4.1-3b",
+      }),
+    ).rejects.toThrow("another local AI setup");
+
+    expect((await manager.cancelSetup(active.id)).state).toBe("cancelled");
+  });
+
+  it("enforces memory and concurrency guards when retrying setup", async () => {
+    const stateDir = await temporaryRoot();
+    await mkdir(join(stateDir, "local-models"), { recursive: true });
+    await writeFile(
+      join(stateDir, "local-models", "setup-state.json"),
+      JSON.stringify({
+        version: 1,
+        jobs: [
+          {
+            id: "failed-oversized",
+            runtime: "ollama",
+            recommendationId: "gpt-oss-20b",
+            modelId: "gpt-oss:20b",
+            state: "failed",
+            downloadedBytes: 0,
+            totalBytes: 13 * 1024 ** 3,
+            message: "Download failed.",
+            startedAt: "2026-07-27T00:00:00.000Z",
+            finishedAt: "2026-07-27T00:01:00.000Z",
+          },
+          {
+            id: "failed-safe",
+            runtime: "ollama",
+            recommendationId: "qwen3.5-2b",
+            modelId: "qwen3.5:2b-q4_K_M",
+            state: "failed",
+            downloadedBytes: 0,
+            totalBytes: 1.9 * 1024 ** 3,
+            message: "Download failed.",
+            startedAt: "2026-07-27T00:02:00.000Z",
+            finishedAt: "2026-07-27T00:03:00.000Z",
+          },
+          {
+            id: "active-safe",
+            runtime: "ollama",
+            recommendationId: "granite-4.1-3b",
+            modelId: "granite4.1:3b",
+            state: "downloading_model",
+            downloadedBytes: 100,
+            totalBytes: 2.1 * 1024 ** 3,
+            message: "Downloading Granite 4.1 3B…",
+            startedAt: "2026-07-27T00:04:00.000Z",
+            finishedAt: null,
+          },
+        ],
+      }),
+    );
+    const manager = new LocalModelManager({
+      stateDir,
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      totalMemoryBytes: 8 * 1024 ** 3,
+      freeDiskBytes: 40 * 1024 ** 3,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      installOllama: vi.fn(() => new Promise<never>(() => undefined)),
+    });
+
+    await expect(manager.retrySetup("failed-oversized")).rejects.toThrow("16 GB");
+    await expect(manager.retrySetup("failed-safe")).rejects.toThrow("another local AI setup");
+    await manager.cancelSetup("active-safe");
   });
 
   it("starts a stopped local runtime on demand before chat", async () => {
