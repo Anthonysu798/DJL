@@ -5,6 +5,21 @@ const estimatedBytes = (gibibytes: number): number => Math.round(gibibytes * GIB
 
 export const LOCAL_MODEL_RECOMMENDATIONS = [
   {
+    id: "qwen3-1.7b",
+    name: "Qwen3 1.7B",
+    description: "A fast chat model for low-memory computers with 4 GB or more.",
+    minimumMemoryBytes: 4 * GIB,
+    sources: [
+      { runtime: "ollama", modelId: "qwen3:1.7b", estimatedDownloadBytes: estimatedBytes(1.4) },
+      {
+        runtime: "lmstudio",
+        modelId: "qwen/qwen3-1.7b",
+        estimatedDownloadBytes: estimatedBytes(1.4),
+        quantization: "Q4_K_M",
+      },
+    ],
+  },
+  {
     id: "granite-4.1-3b",
     name: "Granite 4.1 3B",
     description: "A compact coding model for Macs and PCs with 8 GB of memory.",
@@ -15,6 +30,25 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
         runtime: "lmstudio",
         modelId: "ibm/granite-4.1-3b",
         estimatedDownloadBytes: estimatedBytes(2.3),
+      },
+    ],
+  },
+  {
+    id: "qwen3.5-2b",
+    name: "Qwen3.5 2B",
+    description: "A compact tool-capable chat model tuned for computers with 8 GB of memory.",
+    minimumMemoryBytes: 8 * GIB,
+    sources: [
+      {
+        runtime: "ollama",
+        modelId: "qwen3.5:2b-q4_K_M",
+        estimatedDownloadBytes: estimatedBytes(1.9),
+      },
+      {
+        runtime: "lmstudio",
+        modelId: "qwen/qwen3.5-2b",
+        estimatedDownloadBytes: estimatedBytes(1.9),
+        quantization: "Q4_K_M",
       },
     ],
   },

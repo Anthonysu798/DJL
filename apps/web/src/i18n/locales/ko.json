@@ -1221,8 +1221,14 @@
         "granite-4.1-3b": {
           "description": "8 GB 메모리를 갖춘 Mac 및 PC용 소형 코딩 모델입니다."
         },
+        "qwen3-1.7b": {
+          "description": "4 GB 이상의 메모리를 갖춘 저사양 컴퓨터용 빠른 채팅 모델입니다."
+        },
         "qwen3-coder-30b": {
           "description": "32 GB 메모리 시스템을 위한 가장 강력한 선별 로컬 코딩 모델입니다."
+        },
+        "qwen3.5-2b": {
+          "description": "8 GB 메모리 컴퓨터에 최적화된 도구 호출 지원 소형 채팅 모델입니다."
         }
       },
       "recommendedTitle": "이 컴퓨터에 권장",

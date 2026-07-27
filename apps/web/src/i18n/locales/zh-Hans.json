@@ -1221,8 +1221,14 @@
         "granite-4.1-3b": {
           "description": "适用于配备 8 GB 内存的 Mac 和 PC 的紧凑型编程模型。"
         },
+        "qwen3-1.7b": {
+          "description": "适用于 4 GB 及以上内存低配设备的快速聊天模型。"
+        },
         "qwen3-coder-30b": {
           "description": "面向 32 GB 内存设备的精选高性能编程模型。"
+        },
+        "qwen3.5-2b": {
+          "description": "为 8 GB 内存设备优化的紧凑型工具调用聊天模型。"
         }
       },
       "recommendedTitle": "为此计算机推荐",

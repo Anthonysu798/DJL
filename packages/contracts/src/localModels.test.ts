@@ -52,9 +52,10 @@ describe("local model contracts", () => {
             minimumMemoryBytes: 34_359_738_368,
             sources: [
               {
-                runtime: "ollama",
-                modelId: "qwen3-coder:30b",
-                estimatedDownloadBytes: 19_000_000_000,
+                runtime: "lmstudio",
+                modelId: "qwen/qwen3.5-2b",
+                estimatedDownloadBytes: 2_040_109_466,
+                quantization: "Q4_K_M",
               },
             ],
           },
@@ -68,6 +69,11 @@ describe("local model contracts", () => {
 
     expect(snapshot.runtimes[0]?.runtime).toBe("ollama");
     expect(snapshot.recommendedModelId).toBe("qwen3-coder-large");
+    expect(snapshot.recommendations[0]?.sources[0]).toMatchObject({
+      runtime: "lmstudio",
+      modelId: "qwen/qwen3.5-2b",
+      quantization: "Q4_K_M",
+    });
   });
 
   it("accepts Ollama tags and approved LM Studio catalog or Hugging Face identifiers", async () => {

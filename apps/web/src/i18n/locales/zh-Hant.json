@@ -1221,8 +1221,14 @@
         "granite-4.1-3b": {
           "description": "適用於配備 8 GB 記憶體的 Mac 和 PC 的精巧程式設計模型。"
         },
+        "qwen3-1.7b": {
+          "description": "適用於 4 GB 以上記憶體低階裝置的快速聊天模型。"
+        },
         "qwen3-coder-30b": {
           "description": "專為配備 32 GB 記憶體裝置挑選的高效能程式設計模型。"
+        },
+        "qwen3.5-2b": {
+          "description": "針對 8 GB 記憶體裝置最佳化、支援工具呼叫的精巧聊天模型。"
         }
       },
       "recommendedTitle": "為此電腦推薦",

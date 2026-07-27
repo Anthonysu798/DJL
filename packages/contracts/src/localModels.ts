@@ -54,6 +54,12 @@ export const LocalModelRecommendationSource = Schema.Struct({
   runtime: LocalModelRuntime,
   modelId: ModelIdentifier,
   estimatedDownloadBytes: NonNegativeInt,
+  quantization: Schema.optional(
+    TrimmedNonEmptyString.check(
+      Schema.isMaxLength(64),
+      Schema.isPattern(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
+    ),
+  ),
 });
 export type LocalModelRecommendationSource = typeof LocalModelRecommendationSource.Type;
 

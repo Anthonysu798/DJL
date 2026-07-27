@@ -1221,8 +1221,14 @@
         "granite-4.1-3b": {
           "description": "A compact coding model for Macs and PCs with 8 GB of memory."
         },
+        "qwen3-1.7b": {
+          "description": "A fast chat model for low-memory computers with 4 GB or more."
+        },
         "qwen3-coder-30b": {
           "description": "The strongest curated local coding option, intended for 32 GB systems."
+        },
+        "qwen3.5-2b": {
+          "description": "A compact tool-capable chat model tuned for computers with 8 GB of memory."
         }
       },
       "recommendedTitle": "Recommended for this computer",

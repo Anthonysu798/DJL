@@ -398,10 +398,17 @@ export class LocalModelManager {
         });
         await this.#persistSetupJobs();
         await this.#emitLatestSnapshot();
-        const installJob = await this.installModel({
-          runtime: initial.runtime,
-          modelId: initial.modelId,
-        } as LocalModelInstallInput);
+        const installInput: LocalModelInstallInput =
+          source.runtime === "lmstudio"
+            ? {
+                runtime: "lmstudio",
+                modelId: source.modelId,
+                ...("quantization" in source && source.quantization
+                  ? { quantization: source.quantization }
+                  : {}),
+              }
+            : { runtime: "ollama", modelId: source.modelId };
+        const installJob = await this.installModel(installInput);
         while (!signal.aborted) {
           const currentInstall = this.#jobs.get(installJob.id);
           if (!currentInstall) throw new Error("The model download disappeared.");

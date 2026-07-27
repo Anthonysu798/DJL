@@ -5,7 +5,10 @@ import { buildOpenCodeLocalProviderConfig } from "./openCodeConfig";
 
 describe("local model catalog", () => {
   it("selects the strongest recommendation that fits memory", () => {
-    expect(recommendLocalModel(8 * 1024 ** 3)?.id).toBe("granite-4.1-3b");
+    expect(recommendLocalModel(4 * 1024 ** 3)?.id).toBe("qwen3-1.7b");
+    expect(recommendLocalModel(7 * 1024 ** 3)?.id).toBe("qwen3-1.7b");
+    expect(recommendLocalModel(8 * 1024 ** 3)?.id).toBe("qwen3.5-2b");
+    expect(recommendLocalModel(15 * 1024 ** 3)?.id).toBe("qwen3.5-2b");
     expect(recommendLocalModel(16 * 1024 ** 3)?.id).toBe("gpt-oss-20b");
     expect(recommendLocalModel(32 * 1024 ** 3)?.id).toBe("qwen3-coder-30b");
   });
@@ -23,8 +26,43 @@ describe("local model catalog", () => {
     }
   });
 
+  it("pins low-memory recommendations to the intended runtime models and Q4 builds", () => {
+    const qwen3 = LOCAL_MODEL_RECOMMENDATIONS.find(({ id }) => id === "qwen3-1.7b");
+    const qwen35 = LOCAL_MODEL_RECOMMENDATIONS.find(({ id }) => id === "qwen3.5-2b");
+
+    expect(qwen3?.sources).toEqual([
+      {
+        runtime: "ollama",
+        modelId: "qwen3:1.7b",
+        estimatedDownloadBytes: Math.round(1.4 * 1024 ** 3),
+      },
+      {
+        runtime: "lmstudio",
+        modelId: "qwen/qwen3-1.7b",
+        estimatedDownloadBytes: Math.round(1.4 * 1024 ** 3),
+        quantization: "Q4_K_M",
+      },
+    ]);
+    expect(qwen35?.sources).toEqual([
+      {
+        runtime: "ollama",
+        modelId: "qwen3.5:2b-q4_K_M",
+        estimatedDownloadBytes: Math.round(1.9 * 1024 ** 3),
+      },
+      {
+        runtime: "lmstudio",
+        modelId: "qwen/qwen3.5-2b",
+        estimatedDownloadBytes: Math.round(1.9 * 1024 ** 3),
+        quantization: "Q4_K_M",
+      },
+    ]);
+  });
+
   it("recognizes curated tool-capable runtime model IDs", () => {
-    expect(isCuratedLocalModel("ollama", "qwen3-coder:30b")).toBe(true);
+    expect(isCuratedLocalModel("ollama", "qwen3:1.7b")).toBe(true);
+    expect(isCuratedLocalModel("lmstudio", "qwen/qwen3-1.7b")).toBe(true);
+    expect(isCuratedLocalModel("ollama", "qwen3.5:2b-q4_K_M")).toBe(true);
+    expect(isCuratedLocalModel("lmstudio", "qwen/qwen3.5-2b")).toBe(true);
     expect(isCuratedLocalModel("lmstudio", "publisher/custom-model")).toBe(false);
   });
 });

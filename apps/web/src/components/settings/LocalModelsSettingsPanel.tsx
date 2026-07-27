@@ -54,6 +54,28 @@ export function recommendationSourceForRuntime(
   return recommendation.sources.find((source) => source.runtime === runtime) ?? null;
 }
 
+export function recommendationInstallInputForRuntime(
+  recommendation: LocalModelRecommendation,
+  runtime: LocalModelRuntime,
+): LocalModelInstallInput | null {
+  const source = recommendationSourceForRuntime(recommendation, runtime);
+  if (!source) return null;
+  return source.runtime === "lmstudio"
+    ? {
+        runtime: "lmstudio",
+        modelId: source.modelId,
+        ...(source.quantization ? { quantization: source.quantization } : {}),
+      }
+    : { runtime: "ollama", modelId: source.modelId };
+}
+
+export function isRecommendationBestFit(
+  recommendation: LocalModelRecommendation,
+  snapshot: LocalModelsSnapshot,
+): boolean {
+  return recommendation.id === snapshot.recommendedModelId;
+}
+
 export function installProgressPercent(downloadedBytes: number, totalBytes: number | null) {
   if (!totalBytes || totalBytes <= 0) return null;
   return Math.max(0, Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)));
@@ -667,7 +689,7 @@ export function LocalModelsSettingsPanel() {
 
           <SettingsSection title={t("localModels.recommendedTitle")}>
             {snapshot.recommendations.map((recommendation) => {
-              const recommended = recommendation.id === snapshot.recommendedModelId;
+              const recommended = isRecommendationBestFit(recommendation, snapshot);
               return (
                 <div key={recommendation.id} className="px-4 py-3.5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -694,8 +716,12 @@ export function LocalModelsSettingsPanel() {
                     <div className="flex shrink-0 flex-wrap gap-2">
                       {LOCAL_MODEL_RUNTIMES.map((runtime) => {
                         const source = recommendationSourceForRuntime(recommendation, runtime);
+                        const installInput = recommendationInstallInputForRuntime(
+                          recommendation,
+                          runtime,
+                        );
                         const runtimeStatus = runtimesById.get(runtime);
-                        if (!source || !runtimeStatus) return null;
+                        if (!source || !installInput || !runtimeStatus) return null;
                         const installed = installedKeys.has(`${runtime}:${source.modelId}`);
                         return (
                           <Button
@@ -715,7 +741,7 @@ export function LocalModelsSettingsPanel() {
                             onClick={() =>
                               actionMutation.mutate({
                                 type: "install",
-                                input: source as LocalModelInstallInput,
+                                input: installInput,
                               })
                             }
                           >
