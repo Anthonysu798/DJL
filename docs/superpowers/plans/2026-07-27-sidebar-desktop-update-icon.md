@@ -36,7 +36,7 @@
 - Consumes: `SidebarIconButton`, `DownloadIcon`, and `cn`.
 - Produces: `DesktopUpdateSidebarButton(props: { label: string; disabled: boolean; busy: boolean; onClick: () => void }): ReactElement`.
 
-- [ ] **Step 1: Write the failing component tests**
+- [x] **Step 1: Write the failing component tests**
 
 Create `DesktopUpdateSidebarButton.test.tsx` with two focused cases:
 
@@ -85,7 +85,7 @@ describe("DesktopUpdateSidebarButton", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run:
 
@@ -95,7 +95,7 @@ bun run --cwd apps/web test -- src/components/DesktopUpdateSidebarButton.test.ts
 
 Expected: FAIL because `./DesktopUpdateSidebarButton` does not exist.
 
-- [ ] **Step 3: Implement the minimal component**
+- [x] **Step 3: Implement the minimal component**
 
 Create `DesktopUpdateSidebarButton.tsx`:
 
@@ -131,7 +131,7 @@ export function DesktopUpdateSidebarButton(props: {
 }
 ```
 
-- [ ] **Step 4: Run the focused test and verify GREEN**
+- [x] **Step 4: Run the focused test and verify GREEN**
 
 Run:
 
