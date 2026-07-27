@@ -15,9 +15,7 @@ describe("DesktopUpdateSidebarButton", () => {
     );
 
     expect(markup).toContain('data-testid="desktop-update-button"');
-    expect(markup).toContain(
-      'aria-label="Update 1.1.0 is ready. Click to restart and install."',
-    );
+    expect(markup).toContain('aria-label="Update 1.1.0 is ready. Click to restart and install."');
     expect(markup).toContain("rounded-full");
     expect(markup).toContain("bg-[var(--info)]");
     expect(markup).toContain("<svg");
@@ -27,12 +25,7 @@ describe("DesktopUpdateSidebarButton", () => {
 
   it("is disabled and exposes busy state while the update downloads", () => {
     const markup = renderToStaticMarkup(
-      <DesktopUpdateSidebarButton
-        label="Preparing update (42%)"
-        disabled
-        busy
-        onClick={vi.fn()}
-      />,
+      <DesktopUpdateSidebarButton label="Preparing update (42%)" disabled busy onClick={vi.fn()} />,
     );
 
     expect(markup).toContain("disabled");
