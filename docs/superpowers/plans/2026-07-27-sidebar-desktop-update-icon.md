@@ -141,7 +141,7 @@ bun run --cwd apps/web test -- src/components/DesktopUpdateSidebarButton.test.ts
 
 Expected: 2 tests pass.
 
-- [ ] **Step 5: Commit the tested component**
+- [x] **Step 5: Commit the tested component**
 
 ```bash
 git add apps/web/src/components/DesktopUpdateSidebarButton.tsx apps/web/src/components/DesktopUpdateSidebarButton.test.tsx
@@ -158,7 +158,7 @@ git commit -m "feat: add desktop update sidebar icon"
 - Consumes: `DesktopUpdateSidebarButton`, `shouldShowDesktopUpdateButton`, `isDesktopUpdateButtonDisabled`, `resolveDesktopUpdateButtonAction`, and `getDesktopUpdateButtonTooltip`.
 - Produces: Electron footer behavior where `available`/`downloading` is visible and disabled, `downloaded` is enabled, and clicking the ready control invokes the existing `installUpdate` path.
 
-- [ ] **Step 1: Add the failing sidebar integration audit**
+- [x] **Step 1: Add the failing sidebar integration audit**
 
 Create `Sidebar.desktopUpdateIcon.source-audit.test.ts`:
 
@@ -177,7 +177,7 @@ describe("Sidebar desktop update icon integration", () => {
 });
 ```
 
-- [ ] **Step 2: Run the integration audit and verify RED**
+- [x] **Step 2: Run the integration audit and verify RED**
 
 Run:
 
@@ -187,7 +187,7 @@ bun run --cwd apps/web test -- src/components/Sidebar.desktopUpdateIcon.source-a
 
 Expected: FAIL because `Sidebar.tsx` still renders `desktopUpdateRowButtonClasses` and does not use `DesktopUpdateSidebarButton`.
 
-- [ ] **Step 3: Make the minimal sidebar integration change**
+- [x] **Step 3: Make the minimal sidebar integration change**
 
 In `Sidebar.tsx`:
 
@@ -215,7 +215,7 @@ const desktopUpdateIconBusy =
 
 Keep `handleDesktopUpdateButtonClick` unchanged so the downloaded state continues through `persistAppStateNow()` and `window.desktopBridge.installUpdate()`.
 
-- [ ] **Step 4: Run both focused test files and verify GREEN**
+- [x] **Step 4: Run both focused test files and verify GREEN**
 
 Run:
 
