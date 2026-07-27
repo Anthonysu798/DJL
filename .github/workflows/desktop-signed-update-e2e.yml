@@ -1,0 +1,182 @@
+name: Signed macOS updater E2E baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_version:
+        description: Version to embed in the private signed baseline build
+        required: true
+        type: string
+      target_version:
+        description: Latest public GitHub release the baseline must discover
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: desktop-signed-update-e2e
+  cancel-in-progress: false
+
+env:
+  RELEASE_REPOSITORY: Anthonysu798/DJL
+
+jobs:
+  build:
+    name: Build private signed ARM64 baseline
+    if: github.repository == 'Anthonysu798/DJL' && github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: macos-14
+    timeout-minutes: 360
+    steps:
+      - name: Checkout protected main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install frozen dependencies
+        uses: ./.github/actions/setup-desktop
+
+      - name: Validate protected source and live target
+        shell: bash
+        env:
+          BASELINE_VERSION: ${{ inputs.baseline_version }}
+          GH_TOKEN: ${{ github.token }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == "$RELEASE_REPOSITORY" ]] || {
+            echo "Signed updater E2E builds run only in $RELEASE_REPOSITORY." >&2
+            exit 1
+          }
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
+            echo "Signed updater E2E builds run only from protected main." >&2
+            exit 1
+          }
+          [[ "$(gh api "repos/$RELEASE_REPOSITORY/branches/main" --jq .protected)" == "true" ]] || {
+            echo "The canonical main branch must be protected." >&2
+            exit 1
+          }
+
+          node --experimental-strip-types --input-type=module - <<'NODE'
+          import { compareReleaseVersions } from "./scripts/lib/release-update-policy.ts";
+          import { validatePublicDesktopReleaseVersion } from "./scripts/lib/public-desktop-release.ts";
+
+          const baseline = validatePublicDesktopReleaseVersion(
+            process.env.BASELINE_VERSION ?? "",
+          ).version;
+          const target = validatePublicDesktopReleaseVersion(
+            process.env.TARGET_VERSION ?? "",
+          ).version;
+          if (compareReleaseVersions(baseline, target) >= 0) {
+            throw new Error(`Baseline ${baseline} must be older than target ${target}.`);
+          }
+          NODE
+
+          latest_tag="$(gh api "repos/$RELEASE_REPOSITORY/releases/latest" --jq .tag_name)"
+          [[ "$latest_tag" == "v$TARGET_VERSION" ]] || {
+            echo "Latest public release is $latest_tag, not v$TARGET_VERSION." >&2
+            exit 1
+          }
+
+          gh api \
+            "repos/$RELEASE_REPOSITORY/actions/workflows/desktop-ci.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=100" \
+            > desktop-ci-runs.json
+          jq -e --arg sha "$GITHUB_SHA" '
+            any(
+              .workflow_runs[];
+              .head_sha == $sha
+              and (.event == "push" or .event == "workflow_dispatch")
+              and .conclusion == "success"
+            )
+          ' desktop-ci-runs.json >/dev/null || {
+            echo "This exact main commit has no successful full Desktop CI run." >&2
+            exit 1
+          }
+
+          mkdir target-release
+          gh release download "v$TARGET_VERSION" \
+            --repo "$RELEASE_REPOSITORY" \
+            --pattern djl-mac.yml \
+            --dir target-release
+          grep -Fx "version: $TARGET_VERSION" target-release/djl-mac.yml
+          grep -F "url: DJL-$TARGET_VERSION-arm64.zip" target-release/djl-mac.yml
+
+      - name: Require all Apple signing credentials
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_CONTENT APPLE_API_KEY_ID APPLE_API_ISSUER
+          do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required Apple signing secret: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Build signed and notarized ARM64 baseline
+        shell: bash
+        env:
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          BASELINE_VERSION: ${{ inputs.baseline_version }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          DJL_REMOTE_RELAY_URL: ${{ vars.DJL_REMOTE_RELAY_URL }}
+          SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
+        run: |
+          set -euo pipefail
+          node scripts/update-release-package-versions.ts "$BASELINE_VERSION"
+          key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_KEY_CONTENT" > "$key_path"
+          chmod 600 "$key_path"
+          export APPLE_API_KEY="$key_path"
+          export CSC_IDENTITY_AUTO_DISCOVERY=true
+          bun run dist:desktop:artifact -- --platform mac --target dmg --arch arm64 \
+            --build-version "$BASELINE_VERSION" \
+            --output-dir signed-update-e2e \
+            --verbose \
+            --signed
+
+      - name: Verify signed, notarized baseline and updater identity
+        shell: bash
+        env:
+          BASELINE_VERSION: ${{ inputs.baseline_version }}
+        run: |
+          set -euo pipefail
+          dmg="signed-update-e2e/DJL-${BASELINE_VERSION}-arm64.dmg"
+          mount_point="$RUNNER_TEMP/djl-signed-update-e2e"
+          mkdir "$mount_point"
+          trap 'hdiutil detach "$mount_point" -quiet || true' EXIT
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature -v "$dmg"
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point" -quiet
+          app="$mount_point/DJL.app"
+          test -d "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          signature="$(codesign --display --verbose=4 "$app" 2>&1)"
+          grep -F "Authority=Developer ID Application: ANTHONY SU (U76N9JSK4M)" <<<"$signature"
+          grep -F "TeamIdentifier=U76N9JSK4M" <<<"$signature"
+          spctl --assess --type execute --verbose=4 "$app"
+          [[ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" == "$BASELINE_VERSION" ]]
+          scripts/verify-macos-app-bundle.sh "$app" arm64
+
+      - name: Upload one-day private baseline
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: signed-update-e2e-${{ inputs.baseline_version }}-to-${{ inputs.target_version }}-arm64
+          path: signed-update-e2e/DJL-${{ inputs.baseline_version }}-arm64.dmg
+          if-no-files-found: error
+          retention-days: 1
