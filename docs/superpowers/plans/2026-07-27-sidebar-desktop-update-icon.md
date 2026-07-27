@@ -225,7 +225,7 @@ bun run --cwd apps/web test -- src/components/DesktopUpdateSidebarButton.test.ts
 
 Expected: all focused tests pass.
 
-- [ ] **Step 5: Commit the integration**
+- [x] **Step 5: Commit the integration**
 
 ```bash
 git add apps/web/src/components/Sidebar.tsx apps/web/src/components/Sidebar.desktopUpdateIcon.source-audit.test.ts
@@ -241,7 +241,7 @@ git commit -m "feat: surface ready desktop updates in sidebar"
 - Consumes: the completed icon component and sidebar integration.
 - Produces: fresh evidence that tests, types, formatting, production builds, and live Electron rendering are valid.
 
-- [ ] **Step 1: Run all web tests**
+- [x] **Step 1: Run all web tests**
 
 ```bash
 bun run --cwd apps/web test
@@ -249,7 +249,7 @@ bun run --cwd apps/web test
 
 Expected: exit code 0 with zero failed tests.
 
-- [ ] **Step 2: Run desktop CI typechecks**
+- [x] **Step 2: Run desktop CI typechecks**
 
 ```bash
 bun run ci:desktop:typecheck
@@ -257,7 +257,7 @@ bun run ci:desktop:typecheck
 
 Expected: exit code 0.
 
-- [ ] **Step 3: Run formatting and lint checks**
+- [x] **Step 3: Run formatting and lint checks**
 
 ```bash
 bun run ci:desktop:format
@@ -266,7 +266,7 @@ bun run ci:desktop:lint
 
 Expected: both commands exit 0.
 
-- [ ] **Step 4: Build the web and desktop targets**
+- [x] **Step 4: Build the web and desktop targets**
 
 ```bash
 bun run --cwd apps/web build
@@ -275,7 +275,7 @@ bun run build:desktop
 
 Expected: both commands exit 0.
 
-- [ ] **Step 5: Confirm the canonical release-source regression test**
+- [x] **Step 5: Confirm the canonical release-source regression test**
 
 ```bash
 bun run --cwd scripts test -- lib/desktop-publish-config.test.ts public-desktop-release.test.ts
@@ -283,7 +283,7 @@ bun run --cwd scripts test -- lib/desktop-publish-config.test.ts public-desktop-
 
 Expected: tests confirm `Anthonysu798/DJL`, stable release metadata, and updater manifests.
 
-- [ ] **Step 6: Verify Electron development rendering**
+- [x] **Step 6: Verify Electron development rendering**
 
 Run or reuse:
 
@@ -293,7 +293,7 @@ bun run dev:desktop
 
 Verify the Electron process remains running and the sidebar footer still lays out Settings plus the compact update slot without overflow. If a controlled update-state fixture is available, verify the blue circular download glyph, disabled busy state, tooltip progress, and enabled ready state.
 
-- [ ] **Step 7: Review the final diff**
+- [x] **Step 7: Review the final diff**
 
 ```bash
 git status --short
