@@ -427,6 +427,9 @@ export function LocalModelsSettingsPanel() {
         ) : (
           snapshot.installedModels.map((model) => {
             const removalAction = installedModelRemovalAction(model);
+            const canRemove =
+              removalAction != null &&
+              runtimesById.get(model.runtime)?.capabilities.canDeleteModels === true;
             const removing =
               pendingRemoval?.runtime === model.runtime && pendingRemoval.modelId === model.modelId;
             return (
@@ -444,7 +447,7 @@ export function LocalModelsSettingsPanel() {
                         size="xs"
                         variant="destructive-outline"
                         aria-label={t("localModels.removeAriaLabel", { model: model.name })}
-                        disabled={actionMutation.isPending}
+                        disabled={actionMutation.isPending || !canRemove}
                         onClick={async () => {
                           const confirmed = await ensureNativeApi().dialogs.confirm(
                             t("localModels.removeConfirmation", { model: model.name }),
@@ -457,7 +460,13 @@ export function LocalModelsSettingsPanel() {
                         ) : (
                           <Trash2 className="size-3.5" />
                         )}
-                        {removing ? t("localModels.removing") : t("localModels.removeButton")}
+                        {removing
+                          ? t("localModels.removing")
+                          : canRemove
+                            ? t("localModels.removeButton")
+                            : t("localModels.startFirst", {
+                                runtime: runtimeDisplayName(model.runtime),
+                              })}
                       </Button>
                     ) : (
                       <Button

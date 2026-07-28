@@ -9,6 +9,7 @@ import { createInstance } from "i18next";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 
 import englishCatalog from "../../i18n/locales/en.json";
+import { writeLocalModelsBrowserCache } from "../../lib/localModelsBrowserCache";
 import { LocalModelsSettingsPanel } from "./LocalModelsSettingsPanel";
 
 const mocks = vi.hoisted(() => ({
@@ -108,9 +109,10 @@ function queryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-async function mount() {
-  mocks.getSnapshot.mockResolvedValue(installedSnapshot);
-  mocks.removeModel.mockResolvedValue(installedSnapshot);
+async function mount(snapshot: LocalModelsSnapshot = installedSnapshot) {
+  writeLocalModelsBrowserCache(snapshot);
+  mocks.getSnapshot.mockResolvedValue(snapshot);
+  mocks.removeModel.mockResolvedValue(snapshot);
   const i18n = createInstance();
   await i18n.use(initReactI18next).init({
     defaultNS: "common",
@@ -152,6 +154,32 @@ describe("LocalModelsSettingsPanel installed models", () => {
     await page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true }).click();
 
     expect(mocks.confirm).toHaveBeenCalledWith("Delete Qwen3.5 2B from Ollama?");
+    expect(mocks.removeModel).not.toHaveBeenCalled();
+  });
+
+  it("keeps deletion unavailable while Ollama is stopped", async () => {
+    const stoppedSnapshot = {
+      ...installedSnapshot,
+      runtimes: installedSnapshot.runtimes.map((runtime) =>
+        runtime.runtime === "ollama"
+          ? {
+              ...runtime,
+              state: "stopped" as const,
+              capabilities: { ...runtime.capabilities, canDeleteModels: false },
+            }
+          : runtime,
+      ),
+    } satisfies LocalModelsSnapshot;
+
+    await mount(stoppedSnapshot);
+
+    const deleteButton = page.getByRole("button", {
+      name: "Delete Qwen3.5 2B",
+      exact: true,
+    });
+    await expect.element(deleteButton).toBeDisabled();
+    await expect.element(page.getByText("Start Ollama first", { exact: true })).toBeVisible();
+    expect(mocks.confirm).not.toHaveBeenCalled();
     expect(mocks.removeModel).not.toHaveBeenCalled();
   });
 
