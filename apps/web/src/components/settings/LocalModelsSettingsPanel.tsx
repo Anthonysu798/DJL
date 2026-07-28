@@ -443,7 +443,7 @@ export function LocalModelsSettingsPanel() {
                       <Button
                         size="xs"
                         variant="destructive-outline"
-                        title={t("localModels.removeAriaLabel", { model: model.name })}
+                        aria-label={t("localModels.removeAriaLabel", { model: model.name })}
                         disabled={actionMutation.isPending}
                         onClick={async () => {
                           const confirmed = await ensureNativeApi().dialogs.confirm(

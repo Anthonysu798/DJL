@@ -138,7 +138,10 @@ describe("LocalModelsSettingsPanel installed models", () => {
     await mount();
 
     await expect.element(page.getByRole("heading", { name: "Installed models" })).toBeVisible();
-    await expect.element(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("Delete", { exact: true })).toBeVisible();
     await expect.element(page.getByRole("button", { name: "Manage in LM Studio" })).toBeVisible();
   });
 
@@ -146,7 +149,7 @@ describe("LocalModelsSettingsPanel installed models", () => {
     mocks.confirm.mockResolvedValue(false);
     await mount();
 
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true }).click();
 
     expect(mocks.confirm).toHaveBeenCalledWith("Delete Qwen3.5 2B from Ollama?");
     expect(mocks.removeModel).not.toHaveBeenCalled();
@@ -156,7 +159,7 @@ describe("LocalModelsSettingsPanel installed models", () => {
     mocks.confirm.mockResolvedValue(true);
     await mount();
 
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true }).click();
 
     expect(mocks.removeModel).toHaveBeenCalledWith({
       runtime: "ollama",
@@ -175,11 +178,12 @@ describe("LocalModelsSettingsPanel installed models", () => {
         }),
     );
 
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true }).click();
 
     await vi.waitFor(() => expect(mocks.removeModel).toHaveBeenCalledOnce());
-    const deleting = page.getByRole("button", { name: "Deleting…", exact: true });
+    const deleting = page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true });
     await expect.element(deleting).toBeDisabled();
+    await expect.element(page.getByText("Deleting…", { exact: true })).toBeVisible();
     expect(mocks.removeModel).toHaveBeenCalledOnce();
 
     completeRemoval?.(installedSnapshot);
