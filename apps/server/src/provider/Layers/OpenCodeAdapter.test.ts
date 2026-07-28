@@ -663,6 +663,26 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
 
     expect(providers.map((provider) => provider.id)).toEqual(["ollama", "lmstudio"]);
   });
+
+  it("excludes disconnected localhost provider catalogs", () => {
+    const providers = resolvePreferredOpenCodeModelProviders({
+      inventory: {
+        providerList: {
+          connected: ["ollama"],
+          all: [
+            makeProvider({ id: "ollama", name: "Ollama (local)" }),
+            makeProvider({ id: "lmstudio", name: "LM Studio (local)" }),
+          ],
+        },
+        consoleState: null,
+      },
+      credentialProviderIDs: [],
+      requireCredentials: true,
+    });
+
+    expect(providers.map((provider) => provider.id)).toEqual(["ollama"]);
+  });
+
   it("keeps explicit credential providers and OpenCode-managed providers together", () => {
     const providers = resolvePreferredOpenCodeModelProviders({
       inventory: {

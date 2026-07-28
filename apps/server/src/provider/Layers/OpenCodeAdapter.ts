@@ -1160,9 +1160,11 @@ export function resolvePreferredOpenCodeModelProviders(input: {
   const { inventory } = input;
   if (input.requireCredentials) {
     const credentials = new Set(input.credentialProviderIDs ?? []);
+    const connected = new Set(inventory.providerList.connected);
     return inventory.providerList.all.filter(
       (provider) =>
-        credentials.has(provider.id) || resolveOpenCodeProcessingLocality(provider.id) === "local",
+        credentials.has(provider.id) ||
+        (connected.has(provider.id) && resolveOpenCodeProcessingLocality(provider.id) === "local"),
     );
   }
   const connected = new Set(inventory.providerList.connected);
