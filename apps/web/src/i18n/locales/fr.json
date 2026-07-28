@@ -1236,7 +1236,9 @@
       },
       "recommendedTitle": "Recommandés pour cet ordinateur",
       "removeAriaLabel": "Supprimer {{model}}",
+      "removeButton": "Supprimer",
       "removeConfirmation": "Supprimer {{model}} d’Ollama ?",
+      "removing": "Suppression…",
       "retryInstall": "Réessayer l’installation",
       "runtimeAriaLabel": "Environnement du modèle local",
       "runtimeDetails": {

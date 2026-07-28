@@ -1236,7 +1236,9 @@
       },
       "recommendedTitle": "Recomendados para esta computadora",
       "removeAriaLabel": "Eliminar {{model}}",
+      "removeButton": "Eliminar",
       "removeConfirmation": "¿Eliminar {{model}} de Ollama?",
+      "removing": "Eliminando…",
       "retryInstall": "Reintentar instalación",
       "runtimeAriaLabel": "Entorno del modelo local",
       "runtimeDetails": {

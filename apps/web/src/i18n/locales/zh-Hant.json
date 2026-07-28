@@ -1235,8 +1235,10 @@
         }
       },
       "recommendedTitle": "為此電腦推薦",
-      "removeAriaLabel": "移除 {{model}}",
-      "removeConfirmation": "從 Ollama 移除 {{model}}？",
+      "removeAriaLabel": "刪除 {{model}}",
+      "removeButton": "刪除",
+      "removeConfirmation": "要從 Ollama 刪除 {{model}} 嗎？",
+      "removing": "正在刪除…",
       "retryInstall": "重試安裝",
       "runtimeAriaLabel": "本機模型執行階段",
       "runtimeDetails": {

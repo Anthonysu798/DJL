@@ -1,7 +1,12 @@
-import type { LocalModelRecommendation, LocalModelsSnapshot } from "@synara/contracts";
+import type {
+  LocalInstalledModel,
+  LocalModelRecommendation,
+  LocalModelsSnapshot,
+} from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
+  installedModelRemovalAction,
   isRecommendationBestFit,
   recommendationInstallInputForRuntime,
   recommendationSourceForRuntime,
@@ -23,7 +28,34 @@ const recommendation: LocalModelRecommendation = {
   ],
 };
 
+const ollamaInstalledModel = {
+  runtime: "ollama",
+  modelId: "qwen3.5:2b-q4_K_M",
+  name: "Qwen3.5 2B",
+  sizeBytes: 2_040_109_466,
+  contextWindowTokens: 32_768,
+  supportsToolCalls: true,
+} satisfies LocalInstalledModel;
+
+const lmStudioInstalledModel = {
+  runtime: "lmstudio",
+  modelId: "qwen/qwen3.5-2b",
+  name: "Qwen3.5 2B (LM Studio)",
+  sizeBytes: 2_040_109_466,
+  contextWindowTokens: 32_768,
+  supportsToolCalls: true,
+} satisfies LocalInstalledModel;
+
 describe("LocalModelsSettingsPanel helpers", () => {
+  it("creates an exact removal action for Ollama models only", () => {
+    expect(installedModelRemovalAction(ollamaInstalledModel)).toEqual({
+      type: "remove",
+      runtime: "ollama",
+      modelId: "qwen3.5:2b-q4_K_M",
+    });
+    expect(installedModelRemovalAction(lmStudioInstalledModel)).toBeNull();
+  });
+
   it("resolves the runtime-specific model source", () => {
     expect(recommendationSourceForRuntime(recommendation, "ollama")?.modelId).toBe("granite4.1:3b");
     expect(recommendationSourceForRuntime(recommendation, "lmstudio")?.modelId).toBe(

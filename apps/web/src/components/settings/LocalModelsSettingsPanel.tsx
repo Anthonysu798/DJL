@@ -1,5 +1,6 @@
 import type {
   LocalModelInstallInput,
+  LocalInstalledModel,
   LocalModelRecommendation,
   LocalModelRuntime,
   LocalModelRuntimeStatus,
@@ -152,6 +153,14 @@ type LocalModelAction =
   | { readonly type: "cancel-setup"; readonly jobId: string }
   | { readonly type: "remove"; readonly runtime: LocalModelRuntime; readonly modelId: string };
 
+export function installedModelRemovalAction(
+  model: LocalInstalledModel,
+): Extract<LocalModelAction, { type: "remove" }> | null {
+  return model.runtime === "ollama"
+    ? { type: "remove", runtime: "ollama", modelId: model.modelId }
+    : null;
+}
+
 export function LocalModelsSettingsPanel() {
   const { t } = useTranslation(["settings", "common"]);
   const queryClient = useQueryClient();
@@ -236,6 +245,10 @@ export function LocalModelsSettingsPanel() {
   }, [queryClient]);
 
   const snapshot = snapshotQuery.data;
+  const pendingRemoval =
+    actionMutation.isPending && actionMutation.variables?.type === "remove"
+      ? actionMutation.variables
+      : null;
   const runtimesById = useMemo(
     () => new Map(snapshot?.runtimes.map((runtime) => [runtime.runtime, runtime]) ?? []),
     [snapshot?.runtimes],
@@ -412,18 +425,55 @@ export function LocalModelsSettingsPanel() {
             {t("localModels.installedEmpty")}
           </div>
         ) : (
-          snapshot.installedModels.map((model) => (
-            <SettingsListRow
-              key={`${model.runtime}:${model.modelId}`}
-              title={model.name}
-              description={`${runtimeDisplayName(model.runtime)} · ${formatBytes(model.sizeBytes, t)} · ${model.modelId}`}
-              actions={
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                  {t("localModels.installed")}
-                </span>
-              }
-            />
-          ))
+          snapshot.installedModels.map((model) => {
+            const removalAction = installedModelRemovalAction(model);
+            const removing =
+              pendingRemoval?.runtime === model.runtime && pendingRemoval.modelId === model.modelId;
+            return (
+              <SettingsListRow
+                key={`${model.runtime}:${model.modelId}`}
+                title={model.name}
+                description={`${runtimeDisplayName(model.runtime)} · ${formatBytes(model.sizeBytes, t)} · ${model.modelId}`}
+                actions={
+                  <>
+                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                      {t("localModels.installed")}
+                    </span>
+                    {removalAction ? (
+                      <Button
+                        size="xs"
+                        variant="destructive-outline"
+                        title={t("localModels.removeAriaLabel", { model: model.name })}
+                        disabled={actionMutation.isPending}
+                        onClick={async () => {
+                          const confirmed = await ensureNativeApi().dialogs.confirm(
+                            t("localModels.removeConfirmation", { model: model.name }),
+                          );
+                          if (confirmed) actionMutation.mutate(removalAction);
+                        }}
+                      >
+                        {removing ? (
+                          <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                        {removing ? t("localModels.removing") : t("localModels.removeButton")}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        disabled={actionMutation.isPending}
+                        onClick={() => void openExternal(LM_STUDIO_MANAGE_URL)}
+                      >
+                        {t("localModels.manageLmStudio")}
+                      </Button>
+                    )}
+                  </>
+                }
+              />
+            );
+          })
         )}
       </SettingsSection>
 
@@ -671,54 +721,6 @@ export function LocalModelsSettingsPanel() {
                 {t("localModels.installHint")}
               </p>
             </div>
-          </SettingsSection>
-
-          <SettingsSection title={t("localModels.manageInstalledTitle")}>
-            {snapshot.installedModels.length === 0 ? (
-              <div className="px-4 py-5 text-xs text-muted-foreground">
-                {t("localModels.installedEmpty")}
-              </div>
-            ) : (
-              snapshot.installedModels.map((model) => (
-                <SettingsListRow
-                  key={`${model.runtime}:${model.modelId}`}
-                  title={model.name}
-                  description={`${model.runtime === "ollama" ? "Ollama" : "LM Studio"} · ${formatBytes(model.sizeBytes, t)} · ${model.modelId}`}
-                  actions={
-                    model.runtime === "ollama" ? (
-                      <Button
-                        size="icon-xs"
-                        variant="destructive-outline"
-                        aria-label={t("localModels.removeAriaLabel", { model: model.name })}
-                        disabled={actionMutation.isPending}
-                        onClick={async () => {
-                          const confirmed = await ensureNativeApi().dialogs.confirm(
-                            t("localModels.removeConfirmation", { model: model.name }),
-                          );
-                          if (confirmed) {
-                            actionMutation.mutate({
-                              type: "remove",
-                              runtime: "ollama",
-                              modelId: model.modelId,
-                            });
-                          }
-                        }}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    ) : (
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        onClick={() => void openExternal(LM_STUDIO_MANAGE_URL)}
-                      >
-                        {t("localModels.manageLmStudio")}
-                      </Button>
-                    )
-                  }
-                />
-              ))
-            )}
           </SettingsSection>
 
           <div

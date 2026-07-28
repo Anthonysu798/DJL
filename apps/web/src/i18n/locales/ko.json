@@ -1235,8 +1235,10 @@
         }
       },
       "recommendedTitle": "이 컴퓨터에 권장",
-      "removeAriaLabel": "{{model}} 제거",
-      "removeConfirmation": "Ollama에서 {{model}}을 제거할까요?",
+      "removeAriaLabel": "{{model}} 삭제",
+      "removeButton": "삭제",
+      "removeConfirmation": "Ollama에서 {{model}}을(를) 삭제할까요?",
+      "removing": "삭제 중…",
       "retryInstall": "설치 다시 시도",
       "runtimeAriaLabel": "로컬 모델 런타임",
       "runtimeDetails": {

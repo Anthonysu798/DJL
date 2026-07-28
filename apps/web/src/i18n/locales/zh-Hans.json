@@ -1235,8 +1235,10 @@
         }
       },
       "recommendedTitle": "为此计算机推荐",
-      "removeAriaLabel": "移除 {{model}}",
-      "removeConfirmation": "从 Ollama 移除 {{model}}？",
+      "removeAriaLabel": "删除 {{model}}",
+      "removeButton": "删除",
+      "removeConfirmation": "要从 Ollama 中删除 {{model}} 吗？",
+      "removing": "正在删除…",
       "retryInstall": "重试安装",
       "runtimeAriaLabel": "本地模型运行时",
       "runtimeDetails": {

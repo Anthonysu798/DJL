@@ -1236,7 +1236,9 @@
       },
       "recommendedTitle": "このコンピューターへの推奨",
       "removeAriaLabel": "{{model}} を削除",
+      "removeButton": "削除",
       "removeConfirmation": "{{model}} を Ollama から削除しますか？",
+      "removing": "削除中…",
       "retryInstall": "インストールを再試行",
       "runtimeAriaLabel": "ローカルモデルランタイム",
       "runtimeDetails": {

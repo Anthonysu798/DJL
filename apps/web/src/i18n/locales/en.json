@@ -1235,8 +1235,10 @@
         }
       },
       "recommendedTitle": "Recommended for this computer",
-      "removeAriaLabel": "Remove {{model}}",
-      "removeConfirmation": "Remove {{model}} from Ollama?",
+      "removeAriaLabel": "Delete {{model}}",
+      "removeButton": "Delete",
+      "removeConfirmation": "Delete {{model}} from Ollama?",
+      "removing": "Deleting…",
       "retryInstall": "Retry install",
       "runtimeAriaLabel": "Local model runtime",
       "runtimeDetails": {
