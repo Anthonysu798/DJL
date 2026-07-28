@@ -62,7 +62,7 @@ Ollama and one LM Studio installed model. Mock the native API and verify:
 await expect.element(page.getByRole("button", { name: "Delete" })).toBeVisible();
 await expect.element(page.getByRole("button", { name: "Manage in LM Studio" })).toBeVisible();
 await page.getByRole("button", { name: "Delete" }).click();
-expect(confirm).toHaveBeenCalledWith("Remove Qwen3.5 2B from Ollama?");
+expect(confirm).toHaveBeenCalledWith("Delete Qwen3.5 2B from Ollama?");
 expect(removeModel).toHaveBeenCalledWith({
   runtime: "ollama",
   modelId: "qwen3.5:2b-q4_K_M",
