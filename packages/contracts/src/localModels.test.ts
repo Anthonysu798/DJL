@@ -7,18 +7,43 @@ import { describe, expect, it } from "vitest";
 import {
   LocalModelEvent,
   LocalModelInstallInput,
+  LocalInstalledModel,
   LocalModelSetupInput,
   LocalModelSetupJob,
   LocalModelsSnapshot,
 } from "./localModels";
 
 const decodeSnapshot = Schema.decodeUnknownEffect(LocalModelsSnapshot);
+const decodeInstalledModel = Schema.decodeUnknownEffect(LocalInstalledModel);
 const decodeInstall = Schema.decodeUnknownEffect(LocalModelInstallInput);
 const decodeEvent = Schema.decodeUnknownEffect(LocalModelEvent);
 const decodeSetup = Schema.decodeUnknownEffect(LocalModelSetupInput);
 const decodeSetupJob = Schema.decodeUnknownEffect(LocalModelSetupJob);
 
 describe("local model contracts", () => {
+  it("decodes LM Studio maximum, loaded, and effective context diagnostics", async () => {
+    const model = await Effect.runPromise(
+      decodeInstalledModel({
+        runtime: "lmstudio",
+        modelId: "ibm/granite-4.1-3b",
+        name: "Granite 4.1 3B",
+        sizeBytes: 2_099_546_710,
+        contextWindowTokens: 16_384,
+        maxContextWindowTokens: 131_072,
+        loadedContextWindowTokens: 8_192,
+        toolContextWindowReady: false,
+        supportsToolCalls: false,
+      }),
+    );
+
+    expect(model).toMatchObject({
+      contextWindowTokens: 16_384,
+      maxContextWindowTokens: 131_072,
+      loadedContextWindowTokens: 8_192,
+      toolContextWindowReady: false,
+    });
+  });
+
   it("decodes a bounded desktop runtime snapshot", async () => {
     const snapshot = await Effect.runPromise(
       decodeSnapshot({
@@ -56,6 +81,7 @@ describe("local model contracts", () => {
         recommendations: [
           {
             id: "qwen3-coder-large",
+            supportsToolCalls: true,
             name: "Qwen3 Coder 30B",
             description: "Best local coding quality for larger-memory computers.",
             minimumMemoryBytes: 34_359_738_368,

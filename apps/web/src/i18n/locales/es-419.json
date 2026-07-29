@@ -1182,6 +1182,8 @@
       "chatOnly": "Solo chat",
       "checking": "Comprobando entornos de modelos locales…",
       "connectedOn": "Conectado de forma segura en {{endpoint}}",
+      "contextLoaded": "Contexto cargado: {{loaded}}K / máximo del modelo: {{maximum}}K",
+      "contextTooSmallForTools": "Solo chat con el contexto actual de {{loaded}}K. Vuelve a cargar el modelo con al menos {{required}}K para usar herramientas.",
       "desktopOnly": "La gestión de modelos locales está disponible en la aplicación de escritorio DJL.",
       "downloadsTitle": "Descargas",
       "getRuntime": "Obtener {{runtime}}",

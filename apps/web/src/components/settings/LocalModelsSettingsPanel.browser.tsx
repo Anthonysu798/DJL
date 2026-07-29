@@ -149,6 +149,72 @@ describe("LocalModelsSettingsPanel installed models", () => {
     await expect.element(page.getByRole("button", { name: "Manage in LM Studio" })).toBeVisible();
   });
 
+  it("explains when an external LM Studio context is too small for tools", async () => {
+    const undersizedSnapshot = {
+      ...installedSnapshot,
+      installedModels: installedSnapshot.installedModels.map((model) =>
+        model.runtime === "lmstudio"
+          ? {
+              ...model,
+              modelId: "ibm/granite-4.1-3b",
+              name: "Granite 4.1 3B",
+              contextWindowTokens: 8_192,
+              maxContextWindowTokens: 131_072,
+              loadedContextWindowTokens: 8_192,
+              toolContextWindowReady: false,
+              supportsToolCalls: false,
+            }
+          : model,
+      ),
+    } satisfies LocalModelsSnapshot;
+
+    await mount(undersizedSnapshot);
+
+    await expect
+      .element(page.getByText("Loaded context: 8K / model maximum: 128K", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(
+        page.getByText(
+          "Chat only at the current 8K context. Reload the model with at least 16K to use tools.",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+  });
+
+  it("shows the verified context for a managed LM Studio model", async () => {
+    const readySnapshot = {
+      ...installedSnapshot,
+      runtimes: installedSnapshot.runtimes.map((runtime) =>
+        runtime.runtime === "lmstudio"
+          ? { ...runtime, installationKind: "managed" as const }
+          : runtime,
+      ),
+      installedModels: installedSnapshot.installedModels.map((model) =>
+        model.runtime === "lmstudio"
+          ? {
+              ...model,
+              modelId: "ibm/granite-4.1-3b",
+              name: "Granite 4.1 3B",
+              contextWindowTokens: 16_384,
+              maxContextWindowTokens: 131_072,
+              loadedContextWindowTokens: 16_384,
+              toolContextWindowReady: true,
+              supportsToolCalls: true,
+            }
+          : model,
+      ),
+    } satisfies LocalModelsSnapshot;
+
+    await mount(readySnapshot);
+
+    await expect
+      .element(page.getByText("Loaded context: 16K / model maximum: 128K", { exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("Installed", { exact: true }).nth(1)).toBeVisible();
+  });
+
   it("does not remove an Ollama model when deletion confirmation is cancelled", async () => {
     mocks.confirm.mockResolvedValue(false);
     await mount();

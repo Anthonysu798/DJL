@@ -1182,6 +1182,8 @@
       "chatOnly": "チャットのみ",
       "checking": "ローカルモデルランタイムを確認中…",
       "connectedOn": "{{endpoint}} に安全に接続",
+      "contextLoaded": "読み込み済みコンテキスト：{{loaded}}K / モデル上限：{{maximum}}K",
+      "contextTooSmallForTools": "現在の {{loaded}}K コンテキストではチャット専用です。ツールを使うには、少なくとも {{required}}K でモデルを再読み込みしてください。",
       "desktopOnly": "ローカルモデル管理は DJL デスクトップアプリで利用できます。",
       "downloadsTitle": "ダウンロード",
       "getRuntime": "{{runtime}} を入手",

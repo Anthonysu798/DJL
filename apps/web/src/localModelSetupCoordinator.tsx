@@ -15,6 +15,21 @@ type AutoSelectThread = {
   readonly session: { readonly activeTurnId?: unknown } | null;
 };
 
+export function localModelCatalogFingerprint(snapshot: {
+  readonly runtimes: ReadonlyArray<{ readonly runtime: string; readonly state: string }>;
+  readonly installedModels: ReadonlyArray<{
+    readonly runtime: string;
+    readonly modelId: string;
+  }>;
+}): string {
+  return [
+    ...snapshot.runtimes.map(({ runtime, state }) => `${runtime}:${state}`),
+    ...snapshot.installedModels.map(({ runtime, modelId }) => `${runtime}:${modelId}`),
+  ]
+    .toSorted()
+    .join("|");
+}
+
 export function isLocalModelAutoSelectEligible(input: {
   readonly thread: AutoSelectThread | null;
   readonly draft: ComposerThreadDraftState | undefined;
@@ -59,12 +74,20 @@ export function LocalModelSetupCoordinator() {
   );
   const initialized = useRef(false);
   const seenReadyJobs = useRef(new Set<string>());
+  const modelCatalogFingerprint = useRef("");
 
   useEffect(() => {
     if (!isElectron) return;
     return ensureNativeApi().localModels.onEvent((event) => {
       writeLocalModelsBrowserCache(event.snapshot);
       queryClient.setQueryData(["local-models", "snapshot"], event.snapshot);
+      const nextCatalogFingerprint = localModelCatalogFingerprint(event.snapshot);
+      if (modelCatalogFingerprint.current !== nextCatalogFingerprint) {
+        modelCatalogFingerprint.current = nextCatalogFingerprint;
+        void queryClient.invalidateQueries({
+          queryKey: ["provider-discovery", "models", "opencode"],
+        });
+      }
       const readyJobs = event.snapshot.setupJobs.filter(({ state }) => state === "ready");
       if (!initialized.current) {
         initialized.current = true;

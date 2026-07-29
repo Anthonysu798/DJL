@@ -1182,6 +1182,8 @@
       "chatOnly": "채팅 전용",
       "checking": "로컬 모델 런타임 확인 중…",
       "connectedOn": "{{endpoint}}에 안전하게 연결됨",
+      "contextLoaded": "로드된 컨텍스트: {{loaded}}K / 모델 최대: {{maximum}}K",
+      "contextTooSmallForTools": "현재 {{loaded}}K 컨텍스트에서는 채팅만 사용할 수 있습니다. 도구를 사용하려면 모델을 최소 {{required}}K로 다시 로드하세요.",
       "desktopOnly": "로컬 모델 관리는 DJL 데스크톱 앱에서 사용할 수 있습니다.",
       "downloadsTitle": "다운로드",
       "getRuntime": "{{runtime}} 받기",

@@ -1182,6 +1182,8 @@
       "chatOnly": "仅聊天",
       "checking": "正在检查本地模型运行时…",
       "connectedOn": "已安全连接到 {{endpoint}}",
+      "contextLoaded": "已加载上下文：{{loaded}}K / 模型上限：{{maximum}}K",
+      "contextTooSmallForTools": "当前 {{loaded}}K 上下文仅支持聊天。请至少以 {{required}}K 重新加载模型以使用工具。",
       "desktopOnly": "本地模型管理仅在 DJL 桌面应用中可用。",
       "downloadsTitle": "下载",
       "getRuntime": "获取 {{runtime}}",

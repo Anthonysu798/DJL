@@ -1,7 +1,10 @@
 import type { ComposerThreadDraftState, QueuedComposerTurn } from "./composerDraftStore";
 import { describe, expect, it } from "vitest";
 
-import { isLocalModelAutoSelectEligible } from "./localModelSetupCoordinator";
+import {
+  isLocalModelAutoSelectEligible,
+  localModelCatalogFingerprint,
+} from "./localModelSetupCoordinator";
 
 function emptyDraft(): ComposerThreadDraftState {
   return {
@@ -52,5 +55,25 @@ describe("local model setup coordinator", () => {
         draft: { ...emptyDraft(), queuedTurns: [{} as unknown as QueuedComposerTurn] },
       }),
     ).toBe(false);
+  });
+
+  it("changes its catalog fingerprint when a runtime stops", () => {
+    const snapshot = {
+      runtimes: [
+        { runtime: "ollama", state: "running" },
+        { runtime: "lmstudio", state: "running" },
+      ],
+      installedModels: [
+        { runtime: "ollama", modelId: "qwen2.5:3b" },
+        { runtime: "lmstudio", modelId: "ibm/granite-4.1-3b" },
+      ],
+    };
+
+    expect(localModelCatalogFingerprint(snapshot)).not.toBe(
+      localModelCatalogFingerprint({
+        ...snapshot,
+        runtimes: [snapshot.runtimes[0]!, { ...snapshot.runtimes[1]!, state: "stopped" }],
+      }),
+    );
   });
 });

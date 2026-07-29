@@ -39,15 +39,12 @@ import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toastManager } from "../ui/toast";
-import {
-  installProgressPercent,
-  LocalModelAlternatives,
-  LocalModelHero,
-} from "./LocalModelHero";
+import { installProgressPercent, LocalModelAlternatives, LocalModelHero } from "./LocalModelHero";
 import { SettingsListRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 
 const LOCAL_MODELS_QUERY_KEY = ["local-models", "snapshot"] as const;
 const LM_STUDIO_MANAGE_URL = "https://lmstudio.ai/docs/app/basics/download-model";
+const LM_STUDIO_TOOL_CONTEXT_FLOOR_TOKENS = 16_384;
 
 function runtimeStatusDescription(status: LocalModelRuntimeStatus, t: TFunction): string {
   switch (status.state) {
@@ -74,6 +71,29 @@ function formatBytes(bytes: number, t: TFunction): string {
 
 function runtimeDisplayName(runtime: LocalModelRuntime): string {
   return runtime === "ollama" ? "Ollama" : "LM Studio";
+}
+
+export function localModelContextDiagnostics(model: LocalInstalledModel): {
+  readonly loadedK: number;
+  readonly maximumK: number;
+  readonly requiredK: number;
+  readonly tooSmallForTools: boolean;
+} | null {
+  if (
+    model.runtime !== "lmstudio" ||
+    model.loadedContextWindowTokens == null ||
+    model.maxContextWindowTokens == null
+  ) {
+    return null;
+  }
+  return {
+    loadedK: Math.round(model.loadedContextWindowTokens / 1_024),
+    maximumK: Math.round(model.maxContextWindowTokens / 1_024),
+    requiredK: Math.round(LM_STUDIO_TOOL_CONTEXT_FLOOR_TOKENS / 1_024),
+    tooSmallForTools:
+      model.toolContextWindowReady === false &&
+      model.maxContextWindowTokens >= LM_STUDIO_TOOL_CONTEXT_FLOOR_TOKENS,
+  };
 }
 
 function runtimeStateLabel(state: LocalModelRuntimeStatus["state"], t: TFunction): string {
@@ -389,6 +409,7 @@ export function LocalModelsSettingsPanel() {
         ) : (
           snapshot.installedModels.map((model) => {
             const removalAction = installedModelRemovalAction(model);
+            const contextDiagnostics = localModelContextDiagnostics(model);
             const canRemove =
               removalAction != null &&
               runtimesById.get(model.runtime)?.capabilities.canDeleteModels === true;
@@ -398,15 +419,37 @@ export function LocalModelsSettingsPanel() {
               <SettingsListRow
                 key={`${model.runtime}:${model.modelId}`}
                 title={model.name}
-                description={[
-                  runtimeDisplayName(model.runtime),
-                  formatBytes(model.sizeBytes, t),
-                  // Only present once a warm-up has actually timed this model on this machine.
-                  ...(model.tokensPerSecond
-                    ? [t("localModels.tokensPerSecond", { count: model.tokensPerSecond })]
-                    : []),
-                  model.modelId,
-                ].join(" · ")}
+                description={
+                  <div className="space-y-0.5">
+                    <div>
+                      {[
+                        runtimeDisplayName(model.runtime),
+                        formatBytes(model.sizeBytes, t),
+                        // Only present once a warm-up has actually timed this model on this machine.
+                        ...(model.tokensPerSecond
+                          ? [t("localModels.tokensPerSecond", { count: model.tokensPerSecond })]
+                          : []),
+                        model.modelId,
+                      ].join(" · ")}
+                    </div>
+                    {contextDiagnostics ? (
+                      <div>
+                        {t("localModels.contextLoaded", {
+                          loaded: contextDiagnostics.loadedK,
+                          maximum: contextDiagnostics.maximumK,
+                        })}
+                      </div>
+                    ) : null}
+                    {contextDiagnostics?.tooSmallForTools ? (
+                      <div className="text-amber-700 dark:text-amber-400">
+                        {t("localModels.contextTooSmallForTools", {
+                          loaded: contextDiagnostics.loadedK,
+                          required: contextDiagnostics.requiredK,
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                }
                 actions={
                   <>
                     {model.supportsToolCalls === false ? (

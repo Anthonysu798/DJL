@@ -35,9 +35,9 @@ describe("local model catalog", () => {
   it("gives three machines with the same RAM three different recommendations", () => {
     const totalMemoryBytes = 32 * GIB;
     expect(recommendFor({ acceleration: "apple_unified", totalMemoryBytes })).toBe("gpt-oss-20b");
-    expect(recommendFor({ acceleration: "discrete_gpu", totalMemoryBytes, vramBytes: 8 * GIB })).toBe(
-      "qwen2.5-coder-7b",
-    );
+    expect(
+      recommendFor({ acceleration: "discrete_gpu", totalMemoryBytes, vramBytes: 8 * GIB }),
+    ).toBe("qwen2.5-coder-7b");
     expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes })).toBe("qwen2.5-coder-7b");
   });
 
@@ -57,21 +57,25 @@ describe("local model catalog", () => {
     expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes: 64 * GIB })).not.toBe(
       "qwen3-coder-30b",
     );
-    expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes: 8 * GIB })).toBe("qwen3.5-2b");
+    expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes: 8 * GIB })).toBe(
+      "qwen3.5-2b",
+    );
     expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes: 16 * GIB })).toBe(
       "granite-4.1-3b",
     );
   });
 
   it("falls back to the smallest model when nothing fits the budget", () => {
-    expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes: 4 * GIB })).toBe("qwen3-1.7b");
+    expect(recommendFor({ acceleration: "cpu_only", totalMemoryBytes: 4 * GIB })).toBe(
+      "qwen3-1.7b",
+    );
   });
 
   it("orders the catalog by download size so the fallback is the smallest entry", () => {
     const weights = LOCAL_MODEL_RECOMMENDATIONS.map(
       (recommendation) =>
-        recommendation.sources.find(({ runtime }) => runtime === "ollama")?.estimatedDownloadBytes ??
-        0,
+        recommendation.sources.find(({ runtime }) => runtime === "ollama")
+          ?.estimatedDownloadBytes ?? 0,
     );
     expect(weights).toEqual([...weights].toSorted((left, right) => left - right));
   });
@@ -128,7 +132,6 @@ describe("local model catalog", () => {
       },
     ]);
   });
-
 });
 
 describe("parameter-size tool gating", () => {
@@ -212,7 +215,72 @@ describe("OpenCode local provider config", () => {
     };
     // Without this, OpenCode's `tool_call ?? true` default hands the agent a model that stalls.
     expect(ollama.models["llama3.2:1b"]?.tool_call).toBe(false);
-    expect(ollama.name).toBe("On this computer");
+    expect(ollama.name).toBe("Ollama");
+  });
+
+  it("uses the effective LM Studio context while reserving response headroom", () => {
+    const config = buildOpenCodeLocalProviderConfig({}, [
+      {
+        runtime: "lmstudio",
+        modelId: "ibm/granite-4.1-3b",
+        name: "Granite 4.1 3B",
+        sizeBytes: 2_099_546_710,
+        contextWindowTokens: 16_384,
+        maxContextWindowTokens: 131_072,
+        loadedContextWindowTokens: 16_384,
+        toolContextWindowReady: true,
+        supportsToolCalls: true,
+      },
+    ]);
+    const lmstudio = config.provider.lmstudio as {
+      name: string;
+      models: Record<string, { limit?: { context: number; output: number }; tool_call?: boolean }>;
+    };
+
+    expect(lmstudio.name).toBe("LM Studio");
+    expect(lmstudio.models["ibm/granite-4.1-3b"]).toMatchObject({
+      limit: { context: 16_384, output: 4_096 },
+      tool_call: true,
+    });
+  });
+
+  it("caps local output at 8192 for larger effective contexts", () => {
+    const config = buildOpenCodeLocalProviderConfig({}, [
+      {
+        runtime: "lmstudio",
+        modelId: "ibm/granite-4.1-3b",
+        name: "Granite 4.1 3B",
+        sizeBytes: 2_099_546_710,
+        contextWindowTokens: 32_768,
+        supportsToolCalls: true,
+      },
+    ]);
+    const lmstudio = config.provider.lmstudio as {
+      models: Record<string, { limit?: { context: number; output: number } }>;
+    };
+
+    expect(lmstudio.models["ibm/granite-4.1-3b"]?.limit).toEqual({
+      context: 32_768,
+      output: 8_192,
+    });
+  });
+
+  it("omits limits when the runtime has no effective context", () => {
+    const config = buildOpenCodeLocalProviderConfig({}, [
+      {
+        runtime: "lmstudio",
+        modelId: "qwen/qwen3-1.7b",
+        name: "Qwen3 1.7B",
+        sizeBytes: 1_400_000_000,
+        contextWindowTokens: null,
+        supportsToolCalls: false,
+      },
+    ]);
+    const lmstudio = config.provider.lmstudio as {
+      models: Record<string, { limit?: { context: number; output: number } }>;
+    };
+
+    expect(lmstudio.models["qwen/qwen3-1.7b"]?.limit).toBeUndefined();
   });
 
   it("preserves a stopped runtime that was not inventoried", () => {

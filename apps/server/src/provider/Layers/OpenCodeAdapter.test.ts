@@ -19,9 +19,51 @@ import {
   makeOpenCodeAdapterLive,
   mergeOpenCodeAssistantText,
   normalizeOpenCodeTokenUsage,
+  reconcileOpenCodeLocalModels,
   resolvePreferredOpenCodeModelProviders,
   supportsSimpleOpenCodeApiKey,
 } from "./OpenCodeAdapter.ts";
+
+describe("reconcileOpenCodeLocalModels", () => {
+  it("removes catalog-only local models that the live runtimes cannot serve", () => {
+    const models = reconcileOpenCodeLocalModels(
+      [
+        {
+          slug: "lmstudio/openai/gpt-oss-20b",
+          name: "GPT OSS 20B",
+          upstreamProviderId: "lmstudio",
+        },
+        {
+          slug: "lmstudio/ibm/granite-4.1-3b",
+          name: "Granite 4.1 3B",
+          upstreamProviderId: "lmstudio",
+        },
+        {
+          slug: "ollama/llama3.2:1b",
+          name: "Llama 3.2 1B",
+          upstreamProviderId: "ollama",
+        },
+        {
+          slug: "openai/gpt-5.4",
+          name: "GPT-5.4",
+          upstreamProviderId: "openai",
+        },
+      ],
+      {
+        runtimes: [
+          { runtime: "lmstudio", state: "running" },
+          { runtime: "ollama", state: "stopped" },
+        ],
+        installedModels: [{ runtime: "lmstudio", modelId: "ibm/granite-4.1-3b" }],
+      },
+    );
+
+    expect(models.map(({ slug }) => slug)).toEqual([
+      "lmstudio/ibm/granite-4.1-3b",
+      "openai/gpt-5.4",
+    ]);
+  });
+});
 
 describe("mergeOpenCodeAssistantText", () => {
   it("ignores a partial suffix snapshot already emitted by session.next streaming", () => {
@@ -223,6 +265,8 @@ function createMockOpenCodeRuntime(options?: {
   }>;
   readonly session?: Record<string, unknown>;
   readonly sessionGetError?: Error;
+  readonly onConnect?: () => void;
+  readonly onSessionCreate?: () => void;
 }) {
   const abortCalls: Array<{ sessionID: string }> = [];
   const cliModelCalls: Array<Parameters<OpenCodeRuntimeShape["listOpenCodeCliModels"]>[0]> = [];
@@ -247,6 +291,7 @@ function createMockOpenCodeRuntime(options?: {
     },
     session: {
       create: async (input: Record<string, unknown>) => {
+        options?.onSessionCreate?.();
         createCalls.push(input);
         return { data: { id: "opencode-session-1" } };
       },
@@ -350,6 +395,7 @@ function createMockOpenCodeRuntime(options?: {
     startOpenCodeServerProcess: () => unexpectedOperation("startOpenCodeServerProcess"),
     connectToOpenCodeServer: (input) =>
       Effect.gen(function* () {
+        options?.onConnect?.();
         connectCalls.push(input);
         if (options?.connectError) {
           return yield* options.connectError;
@@ -1624,6 +1670,85 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
 
     expect(runtime.connectCalls).toHaveLength(1);
     expect(runtime.connectCalls[0]).toMatchObject({ cwd });
+  });
+
+  it("prepares a selected local model before OpenCode reads provider config", async () => {
+    const order: string[] = [];
+    const runtime = createMockOpenCodeRuntime({
+      onConnect: () => order.push("connect-opencode"),
+      onSessionCreate: () => order.push("create-session"),
+    });
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId: asThreadId("thread-local-readiness-order"),
+          runtimeMode: "full-access",
+          modelSelection: {
+            provider: "opencode",
+            model: "lmstudio/ibm/granite-4.1-3b",
+          },
+        });
+      }).pipe(
+        Effect.provide(
+          makeOpenCodeAdapterLive({
+            runtime: runtime.runtime,
+            ensureLocalRuntime: (modelSlug) =>
+              Effect.sync(() => {
+                order.push(`ensure:${modelSlug}`);
+              }),
+          }).pipe(
+            Layer.provideMerge(
+              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+            ),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ),
+      ),
+    );
+
+    expect(order).toEqual([
+      "ensure:lmstudio/ibm/granite-4.1-3b",
+      "connect-opencode",
+      "create-session",
+    ]);
+  });
+
+  it("does not start OpenCode when local model preparation fails", async () => {
+    const runtime = createMockOpenCodeRuntime();
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* OpenCodeAdapter;
+          yield* adapter.startSession({
+            provider: "opencode",
+            threadId: asThreadId("thread-local-readiness-failure"),
+            runtimeMode: "full-access",
+            modelSelection: {
+              provider: "opencode",
+              model: "lmstudio/ibm/granite-4.1-3b",
+            },
+          });
+        }).pipe(
+          Effect.provide(
+            makeOpenCodeAdapterLive({
+              runtime: runtime.runtime,
+              ensureLocalRuntime: () =>
+                Effect.fail(new Error("LM Studio context preparation failed")),
+            }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      ),
+    ).rejects.toThrow("LM Studio context preparation failed");
+    expect(runtime.connectCalls).toHaveLength(0);
   });
 
   it("registers the server-owned Work MCP endpoint for OpenCode sessions only", async () => {

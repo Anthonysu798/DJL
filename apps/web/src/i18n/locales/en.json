@@ -1182,6 +1182,8 @@
       "chatOnly": "Chat only",
       "checking": "Checking local model runtimes…",
       "connectedOn": "Connected securely on {{endpoint}}",
+      "contextLoaded": "Loaded context: {{loaded}}K / model maximum: {{maximum}}K",
+      "contextTooSmallForTools": "Chat only at the current {{loaded}}K context. Reload the model with at least {{required}}K to use tools.",
       "desktopOnly": "Local model management is available in the DJL desktop app.",
       "downloadsTitle": "Downloads",
       "getRuntime": "Get {{runtime}}",

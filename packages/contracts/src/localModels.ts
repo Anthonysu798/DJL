@@ -99,6 +99,9 @@ export const LocalInstalledModel = Schema.Struct({
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
   sizeBytes: NonNegativeInt,
   contextWindowTokens: Schema.NullOr(PositiveInt),
+  maxContextWindowTokens: Schema.optional(Schema.NullOr(PositiveInt)),
+  loadedContextWindowTokens: Schema.optional(Schema.NullOr(PositiveInt)),
+  toolContextWindowReady: Schema.optional(Schema.NullOr(Schema.Boolean)),
   supportsToolCalls: Schema.NullOr(Schema.Boolean),
   // Measured during setup on this machine; null until a warm-up run has timed the model.
   tokensPerSecond: Schema.optional(Schema.NullOr(NonNegativeInt)),

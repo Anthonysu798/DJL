@@ -41,6 +41,7 @@ import {
   type LmStudioInstallOptions,
   type LmStudioInstallResult,
 } from "./LmStudioInstaller";
+import { resolveLmStudioContext } from "./lmStudioContext";
 
 const OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
 const LM_STUDIO_ENDPOINT = "http://127.0.0.1:1234";
@@ -49,6 +50,8 @@ const REQUEST_TIMEOUT_MS = 2_500;
 // polling the localhost API so slow cold starts do not invite repeated retries.
 const START_TIMEOUT_MS = 90_000;
 const MAX_RETAINED_INSTALL_JOBS = 32;
+// LM Studio briefly reports `failed` while retrying some interrupted downloads itself.
+const LM_STUDIO_FAILED_STATUS_CONFIRMATIONS = 3;
 // A warm-up generation long enough to time reliably but short enough that setup does not stall.
 const WARM_UP_TOKENS = 48;
 // `num_predict` is a ceiling, not a target, so the prompt has to be one the model will not answer
@@ -71,6 +74,17 @@ interface RuntimeProbe {
   readonly models: ReadonlyArray<LocalInstalledModel> | null;
 }
 
+interface LmStudioRuntimeModel {
+  readonly modelId: string;
+  readonly name: string;
+  readonly managed: boolean;
+  readonly maxContextWindowTokens: number | null;
+  readonly loadedInstanceId: string | null;
+  readonly loadedInstanceIds: ReadonlyArray<string>;
+  readonly loadedContextWindowTokens: number | null;
+  readonly requiredLoadContextWindowTokens: number | null;
+}
+
 export interface LocalModelManagerOptions {
   readonly stateDir: string;
   readonly managedOpenCodeRootDir?: string;
@@ -89,7 +103,7 @@ export interface LocalModelManagerOptions {
     command: string,
     args: string[],
     options: SpawnOptions,
-  ) => { once: (event: "error", listener: (error: Error) => void) => unknown; unref: () => void };
+  ) => Pick<ReturnType<typeof spawn>, "once" | "unref">;
 }
 
 export class LocalModelManagerError extends Error {
@@ -107,6 +121,12 @@ function finiteNonNegative(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? Math.min(Math.floor(value), Number.MAX_SAFE_INTEGER)
     : 0;
+}
+
+function finitePositive(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.min(Math.floor(value), Number.MAX_SAFE_INTEGER)
+    : null;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -181,6 +201,7 @@ export class LocalModelManager {
   readonly #setupControllers = new Map<string, AbortController>();
   readonly #jobControllers = new Map<string, AbortController>();
   readonly #knownModels = new Map<LocalModelRuntime, ReadonlyArray<LocalInstalledModel>>();
+  readonly #availableModels = new Map<LocalModelRuntime, ReadonlyArray<LocalInstalledModel>>();
   // Measured tokens per second keyed by `${runtime}:${modelId}`; runtimes cannot report this.
   // Persisted alongside the setup jobs so a restart does not throw the numbers away.
   readonly #measuredSpeeds = new Map<string, number>();
@@ -194,6 +215,8 @@ export class LocalModelManager {
   readonly #spawnRuntime: NonNullable<LocalModelManagerOptions["spawnRuntime"]>;
   readonly #runtimeInstalls = new Map<LocalModelRuntime, Promise<LocalModelsSnapshot>>();
   readonly #runtimeStarts = new Map<LocalModelRuntime, Promise<LocalModelsSnapshot>>();
+  readonly #lmStudioRuntimeModels = new Map<string, LmStudioRuntimeModel>();
+  readonly #lmStudioContextLoads = new Map<string, Promise<void>>();
   readonly #setupStatePath: string;
   #setupStateWrite = Promise.resolve();
   #initializePromise: Promise<void> | null = null;
@@ -242,9 +265,14 @@ export class LocalModelManager {
     await this.#ensureInitialized();
     const probes = await Promise.all([this.#probeOllama(), this.#probeLmStudio()]);
     for (const probe of probes) {
-      if (probe.models !== null) this.#knownModels.set(probe.status.runtime, probe.models);
+      if (probe.models !== null) {
+        this.#knownModels.set(probe.status.runtime, probe.models);
+        this.#availableModels.set(probe.status.runtime, probe.models);
+      } else {
+        this.#availableModels.delete(probe.status.runtime);
+      }
     }
-    if (options.synchronizeConfig !== false && probes.some(({ models }) => models !== null)) {
+    if (options.synchronizeConfig !== false) {
       await this.#synchronizeOpenCodeConfig();
     }
     const installedModels = [...this.#knownModels.values()].flat();
@@ -306,17 +334,127 @@ export class LocalModelManager {
         ? "lmstudio"
         : null;
     if (!runtime) return;
+    const modelId = modelSlug.slice(runtime.length + 1);
     const snapshot = await this.getSnapshot({ synchronizeConfig: false });
     const status = snapshot.runtimes.find((candidate) => candidate.runtime === runtime);
-    if (!status || status.state === "running") return;
+    if (!status) return;
     if (status.state === "stopped") {
       await this.startRuntime(runtime);
+    } else if (status.state !== "running") {
+      throw new LocalModelManagerError(
+        "ensureRuntimeForModel",
+        status.detail ?? `${status.name} is not ready. Open Local Models settings to repair it.`,
+      );
+    }
+    if (runtime === "lmstudio") {
+      if (!this.#lmStudioRuntimeModels.has(modelId)) {
+        throw new LocalModelManagerError(
+          "ensureRuntimeForModel",
+          `LM Studio cannot serve requested model '${modelId}'. Refresh models, install or load it in LM Studio, or choose another model.`,
+        );
+      }
+      await this.#ensureLmStudioModelContext(modelId);
+    }
+  }
+
+  async #ensureLmStudioModelContext(modelId: string): Promise<void> {
+    const existing = this.#lmStudioContextLoads.get(modelId);
+    if (existing) return existing;
+    const operation = this.#runLmStudioModelContextLoad(modelId);
+    this.#lmStudioContextLoads.set(modelId, operation);
+    try {
+      await operation;
+    } finally {
+      if (this.#lmStudioContextLoads.get(modelId) === operation) {
+        this.#lmStudioContextLoads.delete(modelId);
+      }
+    }
+  }
+
+  async #runLmStudioModelContextLoad(modelId: string): Promise<void> {
+    const model = this.#lmStudioRuntimeModels.get(modelId);
+    if (!model) {
+      throw new LocalModelManagerError(
+        "ensureRuntimeForModel",
+        `LM Studio cannot serve requested model '${modelId}'. Refresh models, install or load it in LM Studio, or choose another model.`,
+      );
+    }
+    const requiredContext = model?.requiredLoadContextWindowTokens ?? null;
+    const exactInstanceLoaded = model.loadedInstanceId === model.modelId;
+    if (!model.managed) {
+      if (!exactInstanceLoaded) {
+        const resolved =
+          model.loadedInstanceIds.length > 0
+            ? `; LM Studio currently exposes '${model.loadedInstanceIds.join("', '")}' instead`
+            : "";
+        throw new LocalModelManagerError(
+          "ensureRuntimeForModel",
+          `LM Studio model '${model.modelId}' is available but not loaded with that API identifier${resolved}. Load it in LM Studio, refresh models, or choose another model.`,
+        );
+      }
       return;
     }
-    throw new LocalModelManagerError(
-      "ensureRuntimeForModel",
-      status.detail ?? `${status.name} is not ready. Open Local Models settings to repair it.`,
-    );
+    if (exactInstanceLoaded && requiredContext === null) return;
+    try {
+      for (const loadedInstanceId of model.loadedInstanceIds) {
+        const unload = await this.#request(`${LM_STUDIO_ENDPOINT}/api/v1/models/unload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instance_id: loadedInstanceId }),
+        });
+        if (!unload.ok) throw new Error(`LM Studio unload returned HTTP ${unload.status}.`);
+      }
+      const load = await this.#request(
+        `${LM_STUDIO_ENDPOINT}/api/v1/models/load`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model.modelId,
+            ...(requiredContext !== null ? { context_length: requiredContext } : {}),
+            echo_load_config: true,
+          }),
+        },
+        WARM_UP_TIMEOUT_MS,
+      );
+      if (!load.ok) throw new Error(`LM Studio load returned HTTP ${load.status}.`);
+      const body = record(await responseJson(load));
+      const appliedContext = finitePositive(record(body?.load_config)?.context_length);
+      const loadedInstanceId = typeof body?.instance_id === "string" ? body.instance_id.trim() : "";
+      if (
+        body?.status !== "loaded" ||
+        loadedInstanceId !== model.modelId ||
+        (requiredContext !== null && (appliedContext === null || appliedContext < requiredContext))
+      ) {
+        if (loadedInstanceId !== model.modelId) {
+          throw new Error(
+            `LM Studio loaded '${loadedInstanceId || "an unknown instance"}' instead of requested model '${model.modelId}'.`,
+          );
+        }
+        throw new Error(
+          `LM Studio loaded ${model.name} with an ${appliedContext ?? "unknown"}-token context; DJL tools require at least ${requiredContext}.`,
+        );
+      }
+      const probe = await this.#probeLmStudio();
+      if (probe.models === null) {
+        throw new Error(`LM Studio stopped responding after loading '${model.modelId}'.`);
+      }
+      this.#knownModels.set("lmstudio", probe.models);
+      this.#availableModels.set("lmstudio", probe.models);
+      if (this.#lmStudioRuntimeModels.get(model.modelId)?.loadedInstanceId !== model.modelId) {
+        throw new Error(
+          `LM Studio did not expose requested model '${model.modelId}' after loading it.`,
+        );
+      }
+      await this.#synchronizeOpenCodeConfig();
+    } catch (cause) {
+      if (cause instanceof LocalModelManagerError) throw cause;
+      throw new LocalModelManagerError(
+        "ensureRuntimeForModel",
+        cause instanceof Error ? cause.message : "LM Studio could not prepare the selected model.",
+        cause,
+      );
+    }
   }
 
   // Brings an already-installed Ollama up at launch. A stopped runtime reports no inventory, so
@@ -910,33 +1048,59 @@ export class LocalModelManager {
       if (managedOllama && env.OLLAMA_MODELS) {
         await mkdir(env.OLLAMA_MODELS, { recursive: true, mode: 0o700 });
       }
-      const commands =
-        runtime === "ollama"
-          ? [["serve"]]
-          : managedLmStudio
-            ? [
-                ["daemon", "up", "--json"],
-                ["server", "start", "--port", "1234"],
-              ]
-            : [["server", "start", "--port", "1234"]];
+      const spawnOptions: SpawnOptions = {
+        // A detached Windows console process creates a new visible console.
+        // With ignored stdio, unref is sufficient for it to outlive DJL.
+        detached: this.#platform !== "win32",
+        env,
+        stdio: "ignore",
+        windowsHide: true,
+      };
+      if (runtime === "lmstudio") {
+        await new Promise<void>((resolve, reject) => {
+          const child = this.#spawnRuntime(command, ["daemon", "up", "--json"], {
+            ...spawnOptions,
+            detached: false,
+          });
+          child.once("error", reject);
+          child.once("exit", (code, signal) => {
+            if (code === 0) {
+              resolve();
+            } else if (code !== null) {
+              reject(new Error(`LM Studio command exited with code ${code}.`));
+            } else {
+              reject(new Error(`LM Studio command exited after signal ${signal ?? "unknown"}.`));
+            }
+          });
+        });
+      }
+      const commands = runtime === "ollama" ? [["serve"]] : [["server", "start", "--port", "1234"]];
       for (const args of commands) {
         const child = this.#spawnRuntime(command, args, {
-          // A detached Windows console process creates a new visible console.
-          // With ignored stdio, unref is sufficient for it to outlive DJL.
-          detached: this.#platform !== "win32",
-          env,
-          stdio: "ignore",
-          windowsHide: true,
+          ...spawnOptions,
         });
         child.once("error", (error) => {
           spawnState.error = error;
+        });
+        child.once("exit", (code, signal) => {
+          if (code !== null && code !== 0) {
+            spawnState.error = new Error(
+              `${runtimeMetadata(runtime).name} command exited with code ${code}.`,
+            );
+          } else if (signal) {
+            spawnState.error = new Error(
+              `${runtimeMetadata(runtime).name} command exited after signal ${signal}.`,
+            );
+          }
         });
         child.unref();
       }
     } catch (cause) {
       throw new LocalModelManagerError(
         "startRuntime",
-        `Failed to start ${runtimeMetadata(runtime).name}.`,
+        `Failed to start ${runtimeMetadata(runtime).name}${
+          cause instanceof Error ? `: ${cause.message}` : "."
+        }`,
         cause,
       );
     }
@@ -1135,6 +1299,7 @@ export class LocalModelManager {
       if (response.status === 404) {
         const legacy = await this.#request(`${LM_STUDIO_ENDPOINT}/api/v0/models`);
         if (legacy.ok) {
+          this.#lmStudioRuntimeModels.clear();
           return {
             status: {
               runtime: "lmstudio",
@@ -1152,37 +1317,85 @@ export class LocalModelManager {
       if (!response.ok) throw new Error(`LM Studio returned HTTP ${response.status}.`);
       const json = record(await responseJson(response));
       const rawModels = Array.isArray(json?.models) ? json.models : [];
+      const installationKind = await this.#runtimeInstallationKind("lmstudio");
+      const managed = installationKind === "managed";
+      const runtimeModels: LmStudioRuntimeModel[] = [];
       const models = rawModels.flatMap((value): LocalInstalledModel[] => {
         const model = record(value);
         const modelId = typeof model?.key === "string" ? model.key : "";
         if (!model || !modelId || model.type === "embedding") return [];
+        const maxContextWindowTokens = finitePositive(model.max_context_length);
+        const loadedInstances = Array.isArray(model.loaded_instances) ? model.loaded_instances : [];
+        const loadedInstanceRecords = loadedInstances.flatMap((instance) => {
+          const parsed = record(instance);
+          return parsed ? [parsed] : [];
+        });
+        const loadedInstanceIds = loadedInstanceRecords.flatMap((instance) =>
+          typeof instance.id === "string" && instance.id.trim().length > 0
+            ? [instance.id.trim()]
+            : [],
+        );
+        const exactInstance = loadedInstanceRecords.find((instance) => instance.id === modelId);
+        const loadedContextWindowTokens = finitePositive(
+          record(exactInstance?.config)?.context_length,
+        );
+        const reportedToolSupport = record(model.capabilities)?.trained_for_tool_use;
+        const intrinsicToolSupport =
+          curatedToolSupport("lmstudio", modelId) ??
+          (typeof reportedToolSupport === "boolean"
+            ? reportedToolSupport
+            : toolCallSupportForParameterSize(model.params_string));
+        const context = resolveLmStudioContext({
+          managed,
+          supportsToolCalls: intrinsicToolSupport,
+          maxContextWindowTokens,
+          loadedContextWindowTokens,
+        });
+        const name =
+          curatedModelDisplayName("lmstudio", modelId) ??
+          (typeof model.display_name === "string" ? model.display_name : modelId);
+        runtimeModels.push({
+          modelId,
+          name,
+          managed,
+          maxContextWindowTokens,
+          loadedInstanceId: typeof exactInstance?.id === "string" ? exactInstance.id : null,
+          loadedInstanceIds,
+          loadedContextWindowTokens,
+          requiredLoadContextWindowTokens: context.requiredLoadContextWindowTokens,
+        });
         return [
           {
             runtime: "lmstudio",
             modelId,
-            name:
-              curatedModelDisplayName("lmstudio", modelId) ??
-              (typeof model.display_name === "string" ? model.display_name : modelId),
+            name,
             sizeBytes: finiteNonNegative(model.size_bytes),
-            contextWindowTokens: null,
-            supportsToolCalls: curatedToolSupport("lmstudio", modelId),
+            contextWindowTokens: context.effectiveContextWindowTokens,
+            maxContextWindowTokens,
+            loadedContextWindowTokens,
+            toolContextWindowReady: intrinsicToolSupport === true ? context.toolsUsable : null,
+            supportsToolCalls:
+              intrinsicToolSupport === true ? context.toolsUsable : intrinsicToolSupport,
             tokensPerSecond: null,
           },
         ];
       });
+      this.#lmStudioRuntimeModels.clear();
+      for (const model of runtimeModels) this.#lmStudioRuntimeModels.set(model.modelId, model);
       return {
         status: {
           runtime: "lmstudio",
           ...metadata,
           state: "running",
           version: null,
-          installationKind: await this.#runtimeInstallationKind("lmstudio"),
+          installationKind,
           detail: null,
           capabilities: runtimeCapabilities("lmstudio", "running"),
         },
         models,
       };
     } catch {
+      this.#lmStudioRuntimeModels.clear();
       const command = await this.#resolveRuntimeCommand("lmstudio");
       const installed = command !== null;
       const state = installed ? "stopped" : "not_installed";
@@ -1317,6 +1530,7 @@ export class LocalModelManager {
         return;
       }
       if (!remoteJobId) throw new Error("LM Studio did not return a download job ID.");
+      let consecutiveFailedStatuses = 0;
       while (!signal.aborted) {
         await new Promise((resolve) => setTimeout(resolve, 750));
         const statusResponse = await this.#request(
@@ -1333,9 +1547,22 @@ export class LocalModelManager {
             status?.downloaded_size_bytes ?? status?.downloaded_bytes,
           ),
           totalBytes: finiteNonNegative(status?.total_size_bytes) || null,
-          message: state === "paused" ? "Paused in LM Studio." : "Downloading in LM Studio…",
+          message:
+            state === "paused"
+              ? "Paused in LM Studio."
+              : state === "failed"
+                ? "LM Studio reported an error; waiting for its automatic retry…"
+                : "Downloading in LM Studio…",
         });
         await this.#emitLatestSnapshot();
+        if (state === "failed") {
+          consecutiveFailedStatuses += 1;
+          if (consecutiveFailedStatuses >= LM_STUDIO_FAILED_STATUS_CONFIRMATIONS) {
+            throw new Error("LM Studio could not download this model.");
+          }
+          continue;
+        }
+        consecutiveFailedStatuses = 0;
         if (state === "completed" || state === "already_downloaded") {
           this.#updateJob(jobId, {
             state: "completed",
@@ -1345,7 +1572,6 @@ export class LocalModelManager {
           await this.#emitLatestSnapshot();
           return;
         }
-        if (state === "failed") throw new Error("LM Studio could not download this model.");
       }
     } catch (cause) {
       if (!signal.aborted) {
@@ -1488,7 +1714,11 @@ export class LocalModelManager {
     await this.#onSnapshot?.(snapshot);
   }
 
-  async #request(url: string, init?: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
+  async #request(
+    url: string,
+    init?: RequestInit,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+  ): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -1508,6 +1738,7 @@ export class LocalModelManager {
     } else {
       const managed = await this.#resolveManagedLmStudioCommand();
       if (managed) return managed;
+      if (!(await this.#hasExternalLmStudioInstallation())) return null;
     }
     const command =
       runtime === "ollama"
@@ -1545,6 +1776,40 @@ export class LocalModelManager {
       }
     }
     return null;
+  }
+
+  async #hasExternalLmStudioInstallation(): Promise<boolean> {
+    const homeDir = this.#env.HOME ?? this.#env.USERPROFILE ?? "";
+    const candidates: string[] = [];
+    try {
+      const marker = JSON.parse(
+        await readFile(
+          join(homeDir, ".lmstudio", ".internal", "app-install-location.json"),
+          "utf8",
+        ),
+      ) as unknown;
+      const markerRecord = record(marker);
+      if (typeof markerRecord?.path === "string") candidates.push(markerRecord.path);
+    } catch {
+      // Older installations may not have written the location marker.
+    }
+    if (this.#platform === "darwin") {
+      candidates.push(
+        "/Applications/LM Studio.app/Contents/MacOS/LM Studio",
+        join(homeDir, "Applications", "LM Studio.app", "Contents", "MacOS", "LM Studio"),
+      );
+    } else if (this.#platform === "win32") {
+      candidates.push(join(this.#env.LOCALAPPDATA ?? "", "Programs", "LM Studio", "LM Studio.exe"));
+    }
+    for (const candidate of candidates.filter(Boolean)) {
+      try {
+        await access(candidate, this.#platform === "win32" ? fsConstants.F_OK : fsConstants.X_OK);
+        return true;
+      } catch {
+        // Try the next known installation location.
+      }
+    }
+    return false;
   }
 
   async #resolveManagedOllamaCommand(): Promise<string | null> {
@@ -1588,12 +1853,14 @@ export class LocalModelManager {
   }
 
   async #synchronizeOpenCodeConfig(): Promise<void> {
-    const models = [...this.#knownModels.values()].flat();
+    const models = [...this.#availableModels.values()].flat();
     this.#configWrite = this.#configWrite
       .catch(() => undefined)
       .then(async () => {
         const inventoryFingerprint = models
-          .map(({ runtime, modelId }) => `${runtime}:${modelId}`)
+          .map(({ runtime, modelId, contextWindowTokens, supportsToolCalls }) =>
+            [runtime, modelId, contextWindowTokens ?? "", supportsToolCalls ?? ""].join(":"),
+          )
           .toSorted()
           .join("|");
         if (inventoryFingerprint === this.#lastSynchronizedInventoryFingerprint) return;
@@ -1615,7 +1882,7 @@ export class LocalModelManager {
         const next = buildOpenCodeLocalProviderConfig(
           current,
           models,
-          new Set(this.#knownModels.keys()),
+          new Set(["ollama", "lmstudio"]),
         );
         await mkdir(dirname(this.#configPath), { recursive: true });
         const temporaryPath = `${this.#configPath}.${process.pid}.${Date.now()}.tmp`;

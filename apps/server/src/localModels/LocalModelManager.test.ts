@@ -31,6 +31,105 @@ function speedOf(snapshot: LocalModelsSnapshot, modelId: string) {
   return snapshot.installedModels.find((model) => model.modelId === modelId)?.tokensPerSecond;
 }
 
+async function managedLmStudioContextHost(options: {
+  readonly initialLoadedContext: number | null;
+  readonly initialLoadedInstanceId?: string;
+  readonly loadEchoContext?: number;
+  readonly modelId?: string;
+  readonly supportsToolCalls?: boolean;
+  readonly waitForLoad?: Promise<void>;
+}) {
+  const stateDir = await temporaryRoot();
+  const command = join(
+    stateDir,
+    "local-models",
+    "runtimes",
+    "lmstudio",
+    "current",
+    ".lmstudio",
+    "bin",
+    "lms.exe",
+  );
+  await mkdir(join(command, ".."), { recursive: true });
+  await writeFile(command, "cli");
+  const modelId = options.modelId ?? "ibm/granite-4.1-3b";
+  let loadedContext = options.initialLoadedContext;
+  let loadedInstanceId =
+    loadedContext === null ? null : (options.initialLoadedInstanceId ?? modelId);
+  const loadBodies: unknown[] = [];
+  const unloadBodies: unknown[] = [];
+  const fetchMock = vi.fn(
+    async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+      const url = String(input);
+      if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
+        throw new Error("Ollama unavailable");
+      }
+      if (url.endsWith("/api/v1/models/unload")) {
+        const body = JSON.parse(String(init?.body)) as unknown;
+        unloadBodies.push(body);
+        loadedContext = null;
+        loadedInstanceId = null;
+        return json({ instance_id: modelId });
+      }
+      if (url.endsWith("/api/v1/models/load")) {
+        const body = JSON.parse(String(init?.body)) as unknown;
+        loadBodies.push(body);
+        await options.waitForLoad;
+        loadedContext = options.loadEchoContext ?? 16_384;
+        loadedInstanceId = modelId;
+        return json({
+          type: "llm",
+          instance_id: modelId,
+          load_time_seconds: 1.2,
+          status: "loaded",
+          load_config: { context_length: loadedContext },
+        });
+      }
+      if (url.endsWith("/api/v1/models")) {
+        return json({
+          models: [
+            {
+              type: "llm",
+              key: modelId,
+              display_name: "Granite 4.1 3B",
+              size_bytes: 2_099_546_710,
+              params_string: "3B",
+              loaded_instances:
+                loadedContext === null || loadedInstanceId === null
+                  ? []
+                  : [
+                      {
+                        id: loadedInstanceId,
+                        config: { context_length: loadedContext },
+                      },
+                    ],
+              max_context_length: 131_072,
+              format: "gguf",
+              capabilities: { trained_for_tool_use: options.supportsToolCalls ?? true },
+            },
+          ],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  );
+  return {
+    stateDir,
+    loadBodies,
+    unloadBodies,
+    fetchMock,
+    setLoadedContext(value: number | null) {
+      loadedContext = value;
+    },
+    manager: new LocalModelManager({
+      stateDir,
+      fetch: fetchMock,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+    }),
+  };
+}
+
 describe("LocalModelManager", () => {
   it("runs the recommended Ollama setup through ready and synchronizes OpenCode", async () => {
     const stateDir = await temporaryRoot();
@@ -262,6 +361,104 @@ describe("LocalModelManager", () => {
       const manager = await managerWithModels();
       expect(await manager.toolSupportForModel("ollama/never-installed:9b")).toBeNull();
     });
+
+    it("uses LM Studio parameter metadata for an uncurated small model", async () => {
+      const stateDir = await temporaryRoot();
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: vi.fn(async (input: string | URL | Request) => {
+          const url = String(input);
+          if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
+            throw new Error("Ollama unavailable");
+          }
+          if (url.endsWith("/api/v1/models")) {
+            return json({
+              models: [
+                {
+                  type: "llm",
+                  key: "community/tiny-chat",
+                  display_name: "Tiny Chat",
+                  size_bytes: 800_000_000,
+                  params_string: "1.1B",
+                  loaded_instances: [],
+                  max_context_length: 8_192,
+                  format: "gguf",
+                },
+              ],
+            });
+          }
+          throw new Error(`Unexpected request: ${url}`);
+        }),
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      });
+
+      await manager.getSnapshot();
+
+      expect(await manager.toolSupportForModel("lmstudio/community/tiny-chat")).toBe(false);
+    });
+
+    it("separates LM Studio maximum, loaded, and managed effective context", async () => {
+      const stateDir = await temporaryRoot();
+      const command = join(
+        stateDir,
+        "local-models",
+        "runtimes",
+        "lmstudio",
+        "current",
+        ".lmstudio",
+        "bin",
+        "lms.exe",
+      );
+      await mkdir(join(command, ".."), { recursive: true });
+      await writeFile(command, "cli");
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: vi.fn(async (input: string | URL | Request) => {
+          const url = String(input);
+          if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
+            throw new Error("Ollama unavailable");
+          }
+          if (url.endsWith("/api/v1/models")) {
+            return json({
+              models: [
+                {
+                  type: "llm",
+                  key: "ibm/granite-4.1-3b",
+                  display_name: "Granite 4.1 3B",
+                  size_bytes: 2_099_546_710,
+                  params_string: "3B",
+                  loaded_instances: [
+                    {
+                      id: "ibm/granite-4.1-3b",
+                      config: { context_length: 8_192 },
+                    },
+                  ],
+                  max_context_length: 131_072,
+                  format: "gguf",
+                  capabilities: { trained_for_tool_use: true },
+                },
+              ],
+            });
+          }
+          throw new Error(`Unexpected request: ${url}`);
+        }),
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      });
+
+      const snapshot = await manager.getSnapshot();
+
+      expect(
+        snapshot.installedModels.find(({ modelId }) => modelId === "ibm/granite-4.1-3b"),
+      ).toMatchObject({
+        contextWindowTokens: 16_384,
+        maxContextWindowTokens: 131_072,
+        loadedContextWindowTokens: 8_192,
+        toolContextWindowReady: true,
+        supportsToolCalls: true,
+      });
+    });
   });
 
   describe("speed verification", () => {
@@ -460,6 +657,292 @@ describe("LocalModelManager", () => {
         snapshot.installedModels.find(({ modelId }) => modelId === "qwen3.5:2b-q4_K_M")
           ?.tokensPerSecond,
       ).toBeNull();
+    });
+  });
+
+  describe("LM Studio context preparation", () => {
+    it("loads an unloaded managed tool model at the agent context floor", async () => {
+      const host = await managedLmStudioContextHost({ initialLoadedContext: null });
+
+      await host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+
+      expect(host.loadBodies).toEqual([
+        {
+          model: "ibm/granite-4.1-3b",
+          context_length: 16_384,
+          echo_load_config: true,
+        },
+      ]);
+      expect(host.unloadBodies).toEqual([]);
+      const config = JSON.parse(
+        await readFile(
+          join(host.stateDir, "opencode", "config", "opencode", "opencode.json"),
+          "utf8",
+        ),
+      );
+      expect(config.provider.lmstudio.models["ibm/granite-4.1-3b"].limit.context).toBe(16_384);
+    });
+
+    it("reloads an undersized managed tool model", async () => {
+      const host = await managedLmStudioContextHost({ initialLoadedContext: 8_192 });
+
+      await host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+
+      expect(host.unloadBodies).toEqual([{ instance_id: "ibm/granite-4.1-3b" }]);
+      expect(host.loadBodies).toHaveLength(1);
+    });
+
+    it("does not shrink a managed model already loaded above the floor", async () => {
+      const host = await managedLmStudioContextHost({ initialLoadedContext: 32_768 });
+
+      await host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+
+      expect(host.unloadBodies).toEqual([]);
+      expect(host.loadBodies).toEqual([]);
+    });
+
+    it("rejects a selected LM Studio model absent from the live inventory", async () => {
+      const host = await managedLmStudioContextHost({ initialLoadedContext: 32_768 });
+
+      await expect(
+        host.manager.ensureRuntimeForModel("lmstudio/openai/gpt-oss-20b"),
+      ).rejects.toThrow(
+        "LM Studio cannot serve requested model 'openai/gpt-oss-20b'. Refresh models, install or load it in LM Studio, or choose another model.",
+      );
+    });
+
+    it("loads an unloaded managed chat-only model with its exact API identifier", async () => {
+      const host = await managedLmStudioContextHost({
+        initialLoadedContext: null,
+        modelId: "qwen/qwen3-1.7b",
+        supportsToolCalls: false,
+      });
+
+      await host.manager.ensureRuntimeForModel("lmstudio/qwen/qwen3-1.7b");
+
+      expect(host.loadBodies).toEqual([
+        {
+          model: "qwen/qwen3-1.7b",
+          echo_load_config: true,
+        },
+      ]);
+    });
+
+    it("reloads a managed model whose loaded instance has a different identifier", async () => {
+      const host = await managedLmStudioContextHost({
+        initialLoadedContext: 32_768,
+        initialLoadedInstanceId: "granite-default",
+      });
+
+      await host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+
+      expect(host.unloadBodies).toEqual([{ instance_id: "granite-default" }]);
+      expect(host.loadBodies).toEqual([
+        {
+          model: "ibm/granite-4.1-3b",
+          context_length: 16_384,
+          echo_load_config: true,
+        },
+      ]);
+    });
+
+    it("removes an unavailable LM Studio runtime from OpenCode without forgetting installs", async () => {
+      const stateDir = await temporaryRoot();
+      const command = join(
+        stateDir,
+        "local-models",
+        "runtimes",
+        "lmstudio",
+        "current",
+        ".lmstudio",
+        "bin",
+        "lms.exe",
+      );
+      await mkdir(join(command, ".."), { recursive: true });
+      await writeFile(command, "cli");
+      let running = true;
+      const manager = new LocalModelManager({
+        stateDir,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        fetch: vi.fn(async (input: string | URL | Request) => {
+          const url = String(input);
+          if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
+            throw new Error("Ollama unavailable");
+          }
+          if (url.endsWith("/api/v1/models")) {
+            if (!running) throw new Error("LM Studio unavailable");
+            return json({
+              models: [
+                {
+                  type: "llm",
+                  key: "ibm/granite-4.1-3b",
+                  display_name: "Granite 4.1 3B",
+                  size_bytes: 2_099_546_710,
+                  params_string: "3B",
+                  loaded_instances: [],
+                  max_context_length: 131_072,
+                  capabilities: { trained_for_tool_use: true },
+                },
+              ],
+            });
+          }
+          throw new Error(`Unexpected request: ${url}`);
+        }),
+      });
+      await manager.getSnapshot();
+      running = false;
+
+      const stopped = await manager.getSnapshot();
+      const config = JSON.parse(
+        await readFile(join(stateDir, "opencode", "config", "opencode", "opencode.json"), "utf8"),
+      );
+
+      expect(stopped.runtimes.find(({ runtime }) => runtime === "lmstudio")?.state).toBe("stopped");
+      expect(stopped.installedModels.some(({ modelId }) => modelId === "ibm/granite-4.1-3b")).toBe(
+        true,
+      );
+      expect(config.provider.lmstudio).toBeUndefined();
+    });
+
+    it("does not evict an undersized external LM Studio instance", async () => {
+      const stateDir = await temporaryRoot();
+      const homeDir = join(stateDir, "home");
+      const command = join(homeDir, ".lmstudio", "bin", "lms");
+      const appCommand = join(stateDir, "LM Studio.app", "Contents", "MacOS", "LM Studio");
+      await mkdir(join(command, ".."), { recursive: true });
+      await mkdir(join(homeDir, ".lmstudio", ".internal"), { recursive: true });
+      await mkdir(join(appCommand, ".."), { recursive: true });
+      await writeFile(command, "cli", { mode: 0o755 });
+      await writeFile(appCommand, "app", { mode: 0o755 });
+      await writeFile(
+        join(homeDir, ".lmstudio", ".internal", "app-install-location.json"),
+        JSON.stringify({ path: appCommand }),
+      );
+      const mutationRequests: string[] = [];
+      const manager = new LocalModelManager({
+        stateDir,
+        platform: "darwin",
+        env: { PATH: "", HOME: homeDir },
+        fetch: vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+          const url = String(input);
+          if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
+            throw new Error("Ollama unavailable");
+          }
+          if (init?.method === "POST") mutationRequests.push(url);
+          if (url.endsWith("/api/v1/models")) {
+            return json({
+              models: [
+                {
+                  type: "llm",
+                  key: "ibm/granite-4.1-3b",
+                  display_name: "Granite 4.1 3B",
+                  size_bytes: 2_099_546_710,
+                  params_string: "3B",
+                  loaded_instances: [
+                    {
+                      id: "ibm/granite-4.1-3b",
+                      config: { context_length: 8_192 },
+                    },
+                  ],
+                  max_context_length: 131_072,
+                  format: "gguf",
+                  capabilities: { trained_for_tool_use: true },
+                },
+              ],
+            });
+          }
+          throw new Error(`Unexpected request: ${url}`);
+        }),
+      });
+
+      await manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+      const snapshot = await manager.getSnapshot();
+
+      expect(mutationRequests).toEqual([]);
+      expect(
+        snapshot.installedModels.find(({ modelId }) => modelId === "ibm/granite-4.1-3b"),
+      ).toMatchObject({
+        loadedContextWindowTokens: 8_192,
+        toolContextWindowReady: false,
+        supportsToolCalls: false,
+      });
+    });
+
+    it("rejects a managed load that does not apply the requested context", async () => {
+      const host = await managedLmStudioContextHost({
+        initialLoadedContext: null,
+        loadEchoContext: 8_192,
+      });
+
+      await expect(
+        host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b"),
+      ).rejects.toThrow(
+        "LM Studio loaded Granite 4.1 3B with an 8192-token context; DJL tools require at least 16384.",
+      );
+    });
+
+    it("deduplicates concurrent context loads for the same managed model", async () => {
+      let releaseLoad!: () => void;
+      const waitForLoad = new Promise<void>((resolve) => {
+        releaseLoad = resolve;
+      });
+      const host = await managedLmStudioContextHost({
+        initialLoadedContext: null,
+        waitForLoad,
+      });
+
+      const first = host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+      const second = host.manager.ensureRuntimeForModel("lmstudio/ibm/granite-4.1-3b");
+      await vi.waitFor(() => expect(host.loadBodies).toHaveLength(1));
+      releaseLoad();
+      await Promise.all([first, second]);
+
+      expect(host.loadBodies).toHaveLength(1);
+    });
+
+    it("does not make LM Studio load calls for an Ollama model", async () => {
+      const stateDir = await temporaryRoot();
+      const lmStudioMutations: string[] = [];
+      const manager = new LocalModelManager({
+        stateDir,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        fetch: vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+          const url = String(input);
+          if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+          if (url.endsWith("/api/tags")) {
+            return json({
+              models: [{ name: "granite4.1:3b", size: 2_000_000_000 }],
+            });
+          }
+          if (url.includes("/api/v1/models") && init?.method === "POST") {
+            lmStudioMutations.push(url);
+          }
+          if (url.endsWith("/api/v1/models")) throw new Error("LM Studio unavailable");
+          throw new Error(`Unexpected request: ${url}`);
+        }),
+      });
+
+      await manager.ensureRuntimeForModel("ollama/granite4.1:3b");
+
+      expect(lmStudioMutations).toEqual([]);
+    });
+
+    it("rewrites OpenCode config when only the effective context changes", async () => {
+      const host = await managedLmStudioContextHost({ initialLoadedContext: 32_768 });
+      await host.manager.getSnapshot();
+      host.setLoadedContext(16_384);
+
+      await host.manager.getSnapshot();
+
+      const config = JSON.parse(
+        await readFile(
+          join(host.stateDir, "opencode", "config", "opencode", "opencode.json"),
+          "utf8",
+        ),
+      );
+      expect(config.provider.lmstudio.models["ibm/granite-4.1-3b"].limit.context).toBe(16_384);
     });
   });
 
@@ -1039,6 +1522,140 @@ describe("LocalModelManager", () => {
     });
   });
 
+  it("does not mistake an orphaned LM Studio CLI for an installed runtime", async () => {
+    const stateDir = await temporaryRoot();
+    const homeDir = join(stateDir, "home");
+    const command = join(homeDir, ".lmstudio", "bin", "lms");
+    await mkdir(join(command, ".."), { recursive: true });
+    await writeFile(command, "stale cli", { mode: 0o755 });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "darwin",
+      env: { PATH: "", HOME: homeDir },
+      fetch: vi.fn(async () => {
+        throw new Error("local runtimes unavailable");
+      }),
+    });
+
+    const snapshot = await manager.getSnapshot();
+
+    expect(snapshot.runtimes.find(({ runtime }) => runtime === "lmstudio")?.state).toBe(
+      "not_installed",
+    );
+  });
+
+  it("starts an external LM Studio daemon before its localhost server", async () => {
+    const stateDir = await temporaryRoot();
+    const homeDir = join(stateDir, "home");
+    const command = join(homeDir, ".lmstudio", "bin", "lms");
+    const appCommand = join(stateDir, "LM Studio.app", "Contents", "MacOS", "LM Studio");
+    await mkdir(join(command, ".."), { recursive: true });
+    await mkdir(join(homeDir, ".lmstudio", ".internal"), { recursive: true });
+    await mkdir(join(appCommand, ".."), { recursive: true });
+    await writeFile(command, "cli", { mode: 0o755 });
+    await writeFile(appCommand, "app", { mode: 0o755 });
+    await writeFile(
+      join(homeDir, ".lmstudio", ".internal", "app-install-location.json"),
+      JSON.stringify({ path: appCommand }),
+    );
+    let running = false;
+    let finishDaemon: ((code: number, signal: null) => void) | undefined;
+    const spawnRuntime = vi.fn((_command: string, args: string[]) => {
+      const child = { once: vi.fn(), unref: vi.fn() };
+      child.once.mockImplementation((event: string, listener: (...args: never[]) => void) => {
+        if (args[0] === "daemon" && event === "exit") {
+          finishDaemon = listener as (code: number, signal: null) => void;
+        }
+        return child;
+      });
+      if (args[0] === "server") running = true;
+      return child;
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "darwin",
+      env: { PATH: "", HOME: homeDir },
+      fetch: vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
+          throw new Error("Ollama unavailable");
+        }
+        if (url.endsWith("/api/v1/models")) {
+          if (!running) throw new Error("LM Studio unavailable");
+          return json({ models: [] });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+      spawnRuntime,
+    });
+
+    const started = manager.startRuntime("lmstudio");
+
+    await vi.waitFor(() => expect(spawnRuntime).toHaveBeenCalledOnce());
+    expect(finishDaemon).toBeTypeOf("function");
+    finishDaemon!(0, null);
+    await started;
+
+    expect(spawnRuntime).toHaveBeenNthCalledWith(
+      1,
+      command,
+      ["daemon", "up", "--json"],
+      expect.any(Object),
+    );
+    expect(spawnRuntime).toHaveBeenNthCalledWith(
+      2,
+      command,
+      ["server", "start", "--port", "1234"],
+      expect.any(Object),
+    );
+  });
+
+  it("reports an LM Studio CLI exit instead of waiting for the readiness timeout", async () => {
+    const stateDir = await temporaryRoot();
+    const homeDir = join(stateDir, "home");
+    const command = join(homeDir, ".lmstudio", "bin", "lms");
+    const appCommand = join(stateDir, "LM Studio.app", "Contents", "MacOS", "LM Studio");
+    await mkdir(join(command, ".."), { recursive: true });
+    await mkdir(join(homeDir, ".lmstudio", ".internal"), { recursive: true });
+    await mkdir(join(appCommand, ".."), { recursive: true });
+    await writeFile(command, "cli", { mode: 0o755 });
+    await writeFile(appCommand, "app", { mode: 0o755 });
+    await writeFile(
+      join(homeDir, ".lmstudio", ".internal", "app-install-location.json"),
+      JSON.stringify({ path: appCommand }),
+    );
+    const dateNow = vi
+      .spyOn(Date, "now")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1)
+      .mockReturnValue(100_000);
+    try {
+      const child = {
+        once: vi.fn(),
+        unref: vi.fn(),
+      };
+      child.once.mockImplementation((event: string, listener: (...args: never[]) => void) => {
+        if (event === "exit") {
+          (listener as (code: number, signal: null) => void)(1, null);
+        }
+        return child;
+      });
+      const manager = new LocalModelManager({
+        stateDir,
+        platform: "darwin",
+        env: { PATH: "", HOME: homeDir },
+        fetch: vi.fn(async () => {
+          throw new Error("local runtimes unavailable");
+        }),
+        spawnRuntime: () => child,
+      });
+
+      await expect(manager.startRuntime("lmstudio")).rejects.toThrow("exited with code 1");
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
+
   it("installs the managed LM Studio engine and starts its localhost server", async () => {
     const stateDir = await temporaryRoot();
     let running = false;
@@ -1057,9 +1674,16 @@ describe("LocalModelManager", () => {
       version: "0.0.19-2",
       homeDir: join(stateDir, "local-models", "runtimes", "lmstudio", "current"),
     }));
-    const spawnRuntime = vi.fn(() => {
-      running = true;
-      return { once: vi.fn(), unref: vi.fn() };
+    const spawnRuntime = vi.fn((_command: string, args: string[]) => {
+      const child = { once: vi.fn(), unref: vi.fn() };
+      child.once.mockImplementation((event: string, listener: (...args: never[]) => void) => {
+        if (args[0] === "daemon" && event === "exit") {
+          (listener as (code: number, signal: null) => void)(0, null);
+        }
+        return child;
+      });
+      if (args[0] === "server") running = true;
+      return child;
     });
     const manager = new LocalModelManager({
       stateDir,
@@ -1306,5 +1930,50 @@ describe("LocalModelManager", () => {
     await expect(manager.cancelInstall(started.id)).rejects.toThrow(
       "LM Studio downloads must be managed in LM Studio",
     );
+  });
+
+  it("keeps tracking when an LM Studio download recovers from a transient failed status", async () => {
+    const stateDir = await temporaryRoot();
+    let statusRequestCount = 0;
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/api/version")) return json({ version: "0.11.0" });
+      if (url.endsWith("/api/tags")) return json({ models: [] });
+      if (url.endsWith("/api/v1/models/download")) {
+        return json({ job_id: "lm-job-retry", status: "downloading", total_size_bytes: 100 });
+      }
+      if (url.endsWith("/api/v1/models/download/status/lm-job-retry")) {
+        statusRequestCount += 1;
+        if (statusRequestCount === 1) {
+          return json({ status: "failed", downloaded_bytes: 40, total_size_bytes: 100 });
+        }
+        if (statusRequestCount === 2) {
+          return json({ status: "downloading", downloaded_bytes: 70, total_size_bytes: 100 });
+        }
+        return json({ status: "completed", downloaded_bytes: 100, total_size_bytes: 100 });
+      }
+      if (url.endsWith("/api/v1/models")) return json({ models: [] });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      fetch: fetchMock,
+      platform: "linux",
+      env: { PATH: "" },
+    });
+
+    const started = await manager.installModel({
+      runtime: "lmstudio",
+      modelId: "ibm/granite-4.1-3b",
+    });
+
+    await vi.waitFor(
+      async () => {
+        const snapshot = await manager.getSnapshot();
+        expect(snapshot.installJobs.find(({ id }) => id === started.id)?.state).toBe("completed");
+      },
+      { timeout: 5_000 },
+    );
+    expect(statusRequestCount).toBe(3);
   });
 });
