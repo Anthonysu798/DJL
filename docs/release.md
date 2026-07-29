@@ -318,14 +318,11 @@ A published `X.Y.Z` release contains exactly:
 10. `latest.yml`
 11. `djl-mac.yml`
 12. `djl.yml`
-13. `synara-mac.yml`
-14. `synara.yml`
-15. `SHA256SUMS`
+13. `SHA256SUMS`
 
-The `synara` aliases remain for older installed clients. Finalization compares GitHub-reported
-names, positive sizes, and SHA-256 digests with all three receipts and locally generated metadata.
-Both Mac manifests are merged into one architecture-complete feed. `SHA256SUMS` covers the other
-14 assets exactly.
+Finalization compares GitHub-reported names, positive sizes, and SHA-256 digests with all three
+receipts and locally generated metadata. Both Mac manifests are merged into one
+architecture-complete feed. `SHA256SUMS` covers the other 12 assets exactly.
 
 ## Failure recovery
 
