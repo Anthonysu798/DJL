@@ -29,8 +29,8 @@ const release = validatePublicDesktopReleaseVersion("9.9.9-smoke.0");
 if (!release.isPrerelease || release.tag !== "v9.9.9-smoke.0") {
   throw new Error("Strict prerelease resolution failed.");
 }
-if (publishedPublicDesktopReleaseAssetNames(release.version).length !== 15) {
-  throw new Error("The public desktop release must contain exactly 15 assets.");
+if (publishedPublicDesktopReleaseAssetNames(release.version).length !== 13) {
+  throw new Error("The public desktop release must contain exactly 13 assets.");
 }
 if (selectBridgeVersion(["0.5.3", "0.5.4"]) !== "0.5.5") {
   throw new Error("The unused bridge default must resolve to 0.5.5.");
@@ -38,7 +38,15 @@ if (selectBridgeVersion(["0.5.3", "0.5.4"]) !== "0.5.5") {
 
 const workflowDirectory = resolve(root, ".github/workflows");
 const workflows = readdirSync(workflowDirectory).toSorted();
-if (JSON.stringify(workflows) !== JSON.stringify(["desktop-ci.yml", "desktop-release.yml"])) {
+if (
+  JSON.stringify(workflows) !==
+  JSON.stringify([
+    "desktop-ci.yml",
+    "desktop-release.yml",
+    "desktop-signed-update-e2e.yml",
+    "landing-deploy.yml",
+  ])
+) {
   throw new Error(`Unexpected workflow inventory: ${workflows.join(", ")}`);
 }
 const ci = readFileSync(resolve(workflowDirectory, "desktop-ci.yml"), "utf8");
@@ -53,7 +61,7 @@ for (const expected of [
   "Upload large payloads directly to private draft",
   "retention-days: 1",
   "Upload updater manifests last",
-  "Verify exact 15-asset draft inventory",
+  "Verify exact 13-asset draft inventory",
   "environment: production",
   "Get-AuthenticodeSignature",
   'Status -ne "NotSigned"',
