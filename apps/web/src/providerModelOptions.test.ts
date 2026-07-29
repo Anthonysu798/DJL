@@ -242,9 +242,19 @@ describe("chat-only local models", () => {
 
   it("sinks models that cannot drive the agent to the bottom of their group", () => {
     const groups = groupProviderModelOptions([
-      { slug: "ollama/qwen2.5-coder:0.5b", name: "a", upstreamProviderName: "On this computer", supportsToolCalls: false },
+      {
+        slug: "ollama/qwen2.5-coder:0.5b",
+        name: "a",
+        upstreamProviderName: "On this computer",
+        supportsToolCalls: false,
+      },
       { slug: "ollama/qwen2.5:7b", name: "b", upstreamProviderName: "On this computer" },
-      { slug: "ollama/llama3.2:1b", name: "c", upstreamProviderName: "On this computer", supportsToolCalls: false },
+      {
+        slug: "ollama/llama3.2:1b",
+        name: "c",
+        upstreamProviderName: "On this computer",
+        supportsToolCalls: false,
+      },
       { slug: "ollama/djl-qwen:3b", name: "d", upstreamProviderName: "On this computer" },
     ]);
 

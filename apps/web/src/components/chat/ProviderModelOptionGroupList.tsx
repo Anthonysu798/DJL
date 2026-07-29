@@ -67,10 +67,10 @@ function ProviderModelRadioItem(
   // legitimate thing to want. The badge marks it here; picking it asks for confirmation.
   const chatOnly = isChatOnlyModel(modelOption);
   const chatOnlyBadge = chatOnly ? (
-      <span className="ms-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 align-middle text-[9px] font-medium text-amber-700 dark:text-amber-400">
-        {t("model.chatOnly")}
-      </span>
-    ) : null;
+    <span className="ms-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 align-middle text-[9px] font-medium text-amber-700 dark:text-amber-400">
+      {t("model.chatOnly")}
+    </span>
+  ) : null;
 
   return (
     <MenuRadioItem

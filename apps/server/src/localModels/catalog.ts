@@ -62,7 +62,11 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     description: "A capable coding model for 16 GB machines and 8 GB graphics cards.",
     minimumMemoryBytes: 16 * GIB,
     sources: [
-      { runtime: "ollama", modelId: "qwen2.5-coder:7b", estimatedDownloadBytes: estimatedBytes(4.36) },
+      {
+        runtime: "ollama",
+        modelId: "qwen2.5-coder:7b",
+        estimatedDownloadBytes: estimatedBytes(4.36),
+      },
       {
         runtime: "lmstudio",
         modelId: "qwen/qwen2.5-coder-7b",

@@ -171,7 +171,8 @@ describe("LocalModelHero", () => {
             state: "ready",
             downloadedBytes: 100,
             totalBytes: 100,
-            message: "Qwen3.5 2B is ready at about 9 tokens per second, which is slower than ideal.",
+            message:
+              "Qwen3.5 2B is ready at about 9 tokens per second, which is slower than ideal.",
             tokensPerSecond: 9,
             suggestedFallbackId: "qwen3-1.7b",
             startedAt: "2026-07-28T00:00:00.000Z",

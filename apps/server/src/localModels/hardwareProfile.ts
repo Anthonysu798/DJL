@@ -162,7 +162,8 @@ export async function detectHardwareProfile(
   const platform = options.platform ?? osPlatform();
   const arch = options.arch ?? osArch();
   const totalMemoryBytes = finiteNonNegative(options.totalMemoryBytes ?? totalmem());
-  const detectedCpus = options.cpuModel === undefined || options.cpuCores === undefined ? cpus() : [];
+  const detectedCpus =
+    options.cpuModel === undefined || options.cpuCores === undefined ? cpus() : [];
   const cpuModel =
     options.cpuModel !== undefined ? options.cpuModel : trimmedOrNull(detectedCpus[0]?.model);
   const cpuCores = finiteNonNegative(options.cpuCores ?? detectedCpus.length);

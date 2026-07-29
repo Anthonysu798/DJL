@@ -30,7 +30,9 @@ describe("usableModelBytes", () => {
       vramBytes: 8 * GIB,
     });
     expect(budget).toBe(Math.floor(8 * GIB * 0.9 * 0.7));
-    expect(budget).toBeLessThan(usableModelBytes({ acceleration: "cpu_only", totalMemoryBytes: 64 * GIB }));
+    expect(budget).toBeLessThan(
+      usableModelBytes({ acceleration: "cpu_only", totalMemoryBytes: 64 * GIB }),
+    );
   });
 
   it("budgets CPU-only machines conservatively", () => {
@@ -41,7 +43,11 @@ describe("usableModelBytes", () => {
 
   it("falls back to the CPU budget when a discrete GPU reports no VRAM", () => {
     expect(
-      usableModelBytes({ acceleration: "discrete_gpu", totalMemoryBytes: 16 * GIB, vramBytes: null }),
+      usableModelBytes({
+        acceleration: "discrete_gpu",
+        totalMemoryBytes: 16 * GIB,
+        vramBytes: null,
+      }),
     ).toBe(usableModelBytes({ acceleration: "cpu_only", totalMemoryBytes: 16 * GIB }));
   });
 
