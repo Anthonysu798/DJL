@@ -221,7 +221,13 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
   };
 });
 
-function resolveTools(input: Pick<PrepareInput, "tools" | "agent" | "permission" | "user">) {
+function resolveTools(
+  input: Pick<PrepareInput, "tools" | "agent" | "permission" | "user" | "model">,
+) {
+  // A model declared unable to call tools is sent none. Local runtimes render tool definitions into
+  // the prompt itself, so a model too small to call them does not ignore them — it echoes them back
+  // as chat text, which reads as DJL being broken rather than the model being too small.
+  if (!input.model.capabilities.toolcall) return {};
   const disabled = Permission.disabled(
     Object.keys(input.tools),
     Permission.merge(input.agent.permission, input.permission ?? []),

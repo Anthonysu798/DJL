@@ -53,6 +53,8 @@ export function makeServerProviderLayer(): Layer.Layer<
       ...(nativeEventLogger ? { nativeEventLogger } : {}),
       workMcpServer,
       ensureLocalRuntime: localModels.ensureRuntimeForModel,
+      localToolSupport: localModels.toolSupportForModel,
+      localModelInventory: () => localModels.refresh,
     });
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(openCodeAdapterLayer),

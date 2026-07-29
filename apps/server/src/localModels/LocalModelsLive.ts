@@ -67,6 +67,14 @@ const make = Effect.gen(function* () {
         );
 
   if (config.mode === "desktop") {
+    // Bring an already-installed Ollama up once at launch, before the polling loop. A stopped
+    // runtime reports no models, so without this the user's local models are missing from the
+    // picker until they discover the start button in settings. Forked so a slow or failed start
+    // never delays startup.
+    yield* run("startInstalledRuntimes", () => manager.startInstalledRuntimes()).pipe(
+      Effect.ignoreCause({ log: true }),
+      Effect.forkScoped,
+    );
     yield* run("backgroundRefresh", refreshManager).pipe(
       Effect.ignoreCause({ log: true }),
       Effect.repeat(Schedule.spaced(Duration.seconds(15))),
@@ -90,6 +98,12 @@ const make = Effect.gen(function* () {
     cancelSetup: ({ jobId }) => desktopOnly("cancelSetup", () => manager.cancelSetup(jobId)),
     ensureRuntimeForModel: (modelSlug) =>
       desktopOnly("ensureRuntimeForModel", () => manager.ensureRuntimeForModel(modelSlug)),
+    // Not desktopOnly: a hosted-only build has no local models, and "unknown" is the right answer
+    // there rather than an error that would block starting a perfectly normal session.
+    toolSupportForModel: (modelSlug) =>
+      config.mode === "desktop"
+        ? run("toolSupportForModel", () => manager.toolSupportForModel(modelSlug))
+        : Effect.succeed(null),
     removeModel: (input) => desktopOnly("removeModel", () => manager.removeModel(input)),
     events: Stream.fromPubSub(events),
   } satisfies LocalModelsServiceShape;

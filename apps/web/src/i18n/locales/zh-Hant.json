@@ -555,11 +555,15 @@
       },
       "change": "變更模型",
       "changeReasoning": "變更模型與推理",
+      "chatOnly": "僅聊天",
+      "chatOnlyConfirm": "{{name}} 太小，無法呼叫工具，不能執行程式設計任務。僅用於聊天嗎？",
+      "chatOnlyHint": "{{name}} 太小，無法呼叫工具，不能執行程式設計任務。",
       "configure": "設定模型",
       "loading": "正在載入模型",
       "noMatches": "沒有相符項目",
       "noPiModels": "找不到 Pi 模型",
-      "search": "搜尋模型或提供者"
+      "search": "搜尋模型或提供者",
+      "setUpLocalAi": "設定本機 AI…"
     },
     "models": {
       "addFavorite": "在最愛中新增{{name}}",
@@ -1175,12 +1179,24 @@
       }
     },
     "localModels": {
-      "bestFit": "最佳選擇",
+      "chatOnly": "僅聊天",
       "checking": "正在檢查本機模型執行階段…",
       "connectedOn": "已安全連線到 {{endpoint}}",
+      "contextLoaded": "已載入上下文：{{loaded}}K / 模型上限：{{maximum}}K",
+      "contextTooSmallForTools": "目前 {{loaded}}K 上下文僅支援聊天。請至少以 {{required}}K 重新載入模型以使用工具。",
       "desktopOnly": "本機模型管理僅在 DJL 桌面應用程式中可用。",
       "downloadsTitle": "下載",
       "getRuntime": "取得 {{runtime}}",
+      "hero": {
+        "alternativesTitle": "其他模型",
+        "detected": "已偵測到：{{processor}} · {{memory}} 記憶體",
+        "detectedWithGpu": "已偵測到：{{processor}} · {{gpu}} · {{memory}} 記憶體",
+        "fastOnYourHardware": "在你的硬體上執行流暢",
+        "readyTitle": "{{model}} 已就緒",
+        "switchToSmaller": "改用 {{model}}",
+        "title": "在這台電腦上私密執行 AI",
+        "unknownProcessor": "這台電腦"
+      },
       "installAnotherTitle": "安裝其他模型",
       "installed": "已安裝",
       "installedEmpty": "尚未安裝本機模型。請啟動執行階段並選擇上方推薦。",
@@ -1193,27 +1209,14 @@
       "installModel": "安裝模型",
       "installOllama": "安裝並啟動 Ollama",
       "installRuntime": "安裝並啟動 {{runtime}}",
-      "installWith": "使用 {{runtime}} 安裝",
       "lmStudioDescription": "安裝一次 LM Studio，之後 DJL 即可啟動並管理其本機伺服器。",
+      "manageInstalledTitle": "管理已安裝的模型",
       "manageLmStudio": "在 LM Studio 中管理",
-      "memoryTier": "{{size}} 記憶體級別",
+      "moreOptions": "顯示其他模型",
       "networkPrivacy": "DJL 僅連線固定迴路位址（127.0.0.1），不會向網路公開執行階段、上傳本機推論流量或自動切換所選模型。",
       "ollamaDescription": "DJL 會為你安裝、啟動並連線 Ollama，無需終端或管理員密碼。",
       "privacyDescription": "模型推論留在此電腦上。提示、程式碼內容與輸出不會傳送給託管模型供應商；獲准工具可另外存取網路。",
       "privacyTitle": "以隱私為本",
-      "quick": {
-        "chooseAnother": "選擇其他安裝方式",
-        "description": "DJL 將安裝 {{runtime}} 並下載 {{model}}（約 {{size}}）。不需要終端機或管理員密碼。",
-        "download": "下載 {{model}}（約 {{size}}）",
-        "insufficientDisk": "至少需要 {{size}} 可用磁碟空間。",
-        "readyDescription": "{{model}} 已透過 {{runtime}} 安裝，可直接在聊天中使用。",
-        "readyTitle": "{{runtime}} 已準備就緒",
-        "retry": "重試設定",
-        "runtimeLabel": "選擇本機執行階段",
-        "setup": "一鍵設定本機 AI · {{model}}（約 {{size}}）",
-        "title": "一鍵設定 {{runtime}}",
-        "useInChat": "在聊天中使用"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "適合配備 16 GB 或更多記憶體裝置的高效能本機程式設計模型。"
@@ -1221,13 +1224,24 @@
         "granite-4.1-3b": {
           "description": "適用於配備 8 GB 記憶體的 Mac 和 PC 的精巧程式設計模型。"
         },
+        "qwen2.5-coder-7b": {
+          "description": "適用於 16 GB 記憶體裝置和 8 GB 顯示卡的高效能程式設計模型。"
+        },
+        "qwen3-1.7b": {
+          "description": "適用於 4 GB 以上記憶體低階裝置的快速聊天模型。"
+        },
         "qwen3-coder-30b": {
           "description": "專為配備 32 GB 記憶體裝置挑選的高效能程式設計模型。"
+        },
+        "qwen3.5-2b": {
+          "description": "針對 8 GB 記憶體裝置最佳化、支援工具呼叫的精巧聊天模型。"
         }
       },
       "recommendedTitle": "為此電腦推薦",
-      "removeAriaLabel": "移除 {{model}}",
-      "removeConfirmation": "從 Ollama 移除 {{model}}？",
+      "removeAriaLabel": "刪除 {{model}}",
+      "removeButton": "刪除",
+      "removeConfirmation": "要從 Ollama 刪除 {{model}} 嗎？",
+      "removing": "正在刪除…",
       "retryInstall": "重試安裝",
       "runtimeAriaLabel": "本機模型執行階段",
       "runtimeDetails": {
@@ -1246,6 +1260,19 @@
       "runtimeStatusDescription": "重新檢查 localhost 服務，並與 DJL 同步已安裝模型。",
       "runtimeStatusTitle": "執行階段狀態",
       "runtimesTitle": "本機執行階段",
+      "shelf": {
+        "downloadSize": "下載 {{size}}",
+        "fixOllama": "檢查 Ollama",
+        "installModel": "安裝模型",
+        "requiresDiskAction": "需要 {{size}} 可用空間",
+        "requiresMemoryAction": "需要 {{size}} 記憶體",
+        "retry": "重試",
+        "setupOllama": "設定 Ollama + 模型",
+        "startChat": "開始聊天",
+        "startOllama": "啟動 Ollama + 安裝",
+        "tooLarge": "此電腦無法執行此模型",
+        "waitForSetup": "另一項設定正在進行"
+      },
       "sizeUnavailable": "大小無法使用",
       "startFirst": "請先啟動 {{runtime}}",
       "startServer": "啟動伺服器",
@@ -1259,6 +1286,7 @@
         "runtimeReady": "{{runtime}} 已安裝並執行",
         "runtimeRejected": "本機執行階段拒絕了要求。"
       },
+      "tokensPerSecond": "約 {{count}} 詞元/秒",
       "updateRuntime": "更新"
     },
     "localModelsStatusUnavailableDetail": "本機執行環境未提供診斷詳情。",

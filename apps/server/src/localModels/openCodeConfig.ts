@@ -10,9 +10,13 @@ const RUNTIME_CONFIG: Record<
   LocalModelRuntime,
   { readonly name: string; readonly baseURL: string }
 > = {
-  ollama: { name: "Ollama (local)", baseURL: "http://127.0.0.1:11434/v1" },
-  lmstudio: { name: "LM Studio (local)", baseURL: "http://127.0.0.1:1234/v1" },
+  ollama: { name: "Ollama", baseURL: "http://127.0.0.1:11434/v1" },
+  lmstudio: { name: "LM Studio", baseURL: "http://127.0.0.1:1234/v1" },
 };
+
+function localOutputLimit(contextWindowTokens: number): number {
+  return Math.min(8_192, Math.max(1_024, Math.floor(contextWindowTokens / 4)));
+}
 
 export function buildOpenCodeLocalProviderConfig(
   current: JsonObject,
@@ -44,7 +48,12 @@ export function buildOpenCodeLocalProviderConfig(
             id: model.modelId,
             name: model.name,
             ...(model.contextWindowTokens
-              ? { limit: { context: model.contextWindowTokens, output: 8_192 } }
+              ? {
+                  limit: {
+                    context: model.contextWindowTokens,
+                    output: localOutputLimit(model.contextWindowTokens),
+                  },
+                }
               : {}),
             ...(model.supportsToolCalls !== null ? { tool_call: model.supportsToolCalls } : {}),
           },

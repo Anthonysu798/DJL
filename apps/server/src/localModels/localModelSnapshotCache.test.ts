@@ -24,6 +24,15 @@ afterEach(async () => {
 
 const snapshot = {
   totalMemoryBytes: 16 * 1024 ** 3,
+  hardware: {
+    totalMemoryBytes: 16 * 1024 ** 3,
+    cpuModel: "Apple M2",
+    cpuCores: 8,
+    acceleration: "apple_unified",
+    gpuName: "Apple M2",
+    vramBytes: null,
+    usableModelBytes: Math.floor(16 * 1024 ** 3 * 0.6 * 0.7),
+  },
   freeDiskBytes: 64 * 1024 ** 3,
   recommendedModelId: "granite-4.1-3b",
   runtimes: [],

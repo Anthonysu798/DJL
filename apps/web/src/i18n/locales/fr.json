@@ -555,11 +555,15 @@
       },
       "change": "Changer de modèle",
       "changeReasoning": "Changer de modèle et de raisonnement",
+      "chatOnly": "Discussion uniquement",
+      "chatOnlyConfirm": "{{name}} est trop petit pour utiliser des outils et ne peut pas exécuter de tâches de code. L'utiliser uniquement pour discuter ?",
+      "chatOnlyHint": "{{name}} est trop petit pour utiliser des outils et ne peut pas effectuer de tâches de code.",
       "configure": "Configurer un modèle",
       "loading": "Chargement des modèles",
       "noMatches": "Aucun résultat",
       "noPiModels": "Aucun modèle Pi trouvé",
-      "search": "Rechercher des modèles ou des fournisseurs"
+      "search": "Rechercher des modèles ou des fournisseurs",
+      "setUpLocalAi": "Configurer l'IA locale…"
     },
     "models": {
       "addFavorite": "Ajouter {{name}} aux favoris",
@@ -1175,12 +1179,24 @@
       }
     },
     "localModels": {
-      "bestFit": "Meilleur choix",
+      "chatOnly": "Discussion uniquement",
       "checking": "Vérification des environnements locaux…",
       "connectedOn": "Connexion sécurisée sur {{endpoint}}",
+      "contextLoaded": "Contexte chargé : {{loaded}}K / maximum du modèle : {{maximum}}K",
+      "contextTooSmallForTools": "Discussion uniquement avec le contexte actuel de {{loaded}}K. Rechargez le modèle avec au moins {{required}}K pour utiliser les outils.",
       "desktopOnly": "La gestion des modèles locaux est disponible dans l’application DJL.",
       "downloadsTitle": "Téléchargements",
       "getRuntime": "Obtenir {{runtime}}",
+      "hero": {
+        "alternativesTitle": "Autres modèles",
+        "detected": "Détecté : {{processor}} · {{memory}} de mémoire",
+        "detectedWithGpu": "Détecté : {{processor}} · {{gpu}} · {{memory}} de mémoire",
+        "fastOnYourHardware": "Rapide sur votre matériel",
+        "readyTitle": "{{model}} est prêt",
+        "switchToSmaller": "Passer à {{model}}",
+        "title": "Exécuter l'IA en privé sur cet ordinateur",
+        "unknownProcessor": "Cet ordinateur"
+      },
       "installAnotherTitle": "Installer un autre modèle",
       "installed": "Installé",
       "installedEmpty": "Aucun modèle local pour le moment. Démarrez un environnement et choisissez une recommandation.",
@@ -1193,27 +1209,14 @@
       "installModel": "Installer le modèle",
       "installOllama": "Installer et démarrer Ollama",
       "installRuntime": "Installer et démarrer {{runtime}}",
-      "installWith": "Installer avec {{runtime}}",
       "lmStudioDescription": "Installez LM Studio une fois ; DJL pourra ensuite démarrer et gérer son serveur local.",
+      "manageInstalledTitle": "Gérer les modèles installés",
       "manageLmStudio": "Gérer dans LM Studio",
-      "memoryTier": "Niveau de mémoire : {{size}}",
+      "moreOptions": "Afficher d'autres modèles",
       "networkPrivacy": "DJL se connecte uniquement aux adresses de bouclage fixes (127.0.0.1). Il n’expose pas les environnements au réseau, ne téléverse pas le trafic d’inférence et ne change pas automatiquement le modèle choisi.",
       "ollamaDescription": "DJL installe, démarre et connecte Ollama pour vous, sans terminal ni mot de passe administrateur.",
       "privacyDescription": "L’inférence reste sur cet ordinateur. Les requêtes, le code et les résultats ne sont pas envoyés à un fournisseur hébergé. Les outils autorisés peuvent accéder au réseau séparément.",
       "privacyTitle": "Confidentiel par conception",
-      "quick": {
-        "chooseAnother": "Choisir une autre configuration",
-        "description": "DJL installera {{runtime}} et téléchargera {{model}} (environ {{size}}). Aucun terminal ni mot de passe administrateur n’est nécessaire.",
-        "download": "Télécharger {{model}} (environ {{size}})",
-        "insufficientDisk": "Au moins {{size}} d’espace disque libre est nécessaire.",
-        "readyDescription": "{{model}} est installé avec {{runtime}} et disponible dans le chat.",
-        "readyTitle": "{{runtime}} est prêt",
-        "retry": "Réessayer la configuration",
-        "runtimeLabel": "Choisir un environnement local",
-        "setup": "Configurer l’IA locale · {{model}} (environ {{size}})",
-        "title": "Configurer {{runtime}} en un clic",
-        "useInChat": "Utiliser dans le chat"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "Un modèle local de programmation performant pour les systèmes avec 16 Go ou plus."
@@ -1221,13 +1224,24 @@
         "granite-4.1-3b": {
           "description": "Un modèle de programmation compact pour Mac et PC avec 8 Go de mémoire."
         },
+        "qwen2.5-coder-7b": {
+          "description": "Un modèle de codage performant pour les machines de 16 Go et les cartes graphiques de 8 Go."
+        },
+        "qwen3-1.7b": {
+          "description": "Un modèle de chat rapide pour les ordinateurs modestes avec au moins 4 Go de mémoire."
+        },
         "qwen3-coder-30b": {
           "description": "L’option locale de programmation sélectionnée la plus puissante, destinée aux systèmes avec 32 Go."
+        },
+        "qwen3.5-2b": {
+          "description": "Un modèle de chat compact avec prise en charge des outils, optimisé pour les ordinateurs dotés de 8 Go de mémoire."
         }
       },
       "recommendedTitle": "Recommandés pour cet ordinateur",
       "removeAriaLabel": "Supprimer {{model}}",
+      "removeButton": "Supprimer",
       "removeConfirmation": "Supprimer {{model}} d’Ollama ?",
+      "removing": "Suppression…",
       "retryInstall": "Réessayer l’installation",
       "runtimeAriaLabel": "Environnement du modèle local",
       "runtimeDetails": {
@@ -1246,6 +1260,19 @@
       "runtimeStatusDescription": "Revérifier les services localhost et synchroniser les modèles avec DJL.",
       "runtimeStatusTitle": "État de l’environnement",
       "runtimesTitle": "Environnements locaux",
+      "shelf": {
+        "downloadSize": "Téléchargement de {{size}}",
+        "fixOllama": "Vérifier Ollama",
+        "installModel": "Installer le modèle",
+        "requiresDiskAction": "Nécessite {{size}} libres",
+        "requiresMemoryAction": "Nécessite {{size}} de mémoire",
+        "retry": "Réessayer",
+        "setupOllama": "Configurer Ollama + modèle",
+        "startChat": "Démarrer une conversation",
+        "startOllama": "Démarrer Ollama + installer",
+        "tooLarge": "Trop volumineux pour cet ordinateur",
+        "waitForSetup": "Une autre configuration est en cours"
+      },
       "sizeUnavailable": "Taille indisponible",
       "startFirst": "Démarrez d’abord {{runtime}}",
       "startServer": "Démarrer le serveur",
@@ -1259,6 +1286,7 @@
         "runtimeReady": "{{runtime}} est installé et actif",
         "runtimeRejected": "L’environnement local a refusé la demande."
       },
+      "tokensPerSecond": "environ {{count}} jetons/s",
       "updateRuntime": "Mettre à jour"
     },
     "localModelsStatusUnavailableDetail": "Aucun détail de diagnostic n’a été fourni par le moteur local.",

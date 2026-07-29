@@ -6,6 +6,7 @@ import { delimiter, dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 
 import type {
+  LocalHardwareProfile,
   LocalInstalledModel,
   LocalModelInstallInput,
   LocalModelInstallJob,
@@ -19,7 +20,15 @@ import type {
   LocalModelsSnapshot,
 } from "@synara/contracts";
 
-import { isCuratedLocalModel, LOCAL_MODEL_RECOMMENDATIONS, recommendLocalModel } from "./catalog";
+import {
+  curatedModelDisplayName,
+  curatedToolSupport,
+  LOCAL_MODEL_RECOMMENDATIONS,
+  nextSmallerRecommendation,
+  recommendLocalModel,
+  toolCallSupportForParameterSize,
+} from "./catalog";
+import { detectHardwareProfile } from "./hardwareProfile";
 import { buildOpenCodeLocalProviderConfig } from "./openCodeConfig";
 import {
   installOllamaRuntime,
@@ -32,6 +41,7 @@ import {
   type LmStudioInstallOptions,
   type LmStudioInstallResult,
 } from "./LmStudioInstaller";
+import { resolveLmStudioContext } from "./lmStudioContext";
 
 const OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
 const LM_STUDIO_ENDPOINT = "http://127.0.0.1:1234";
@@ -40,6 +50,22 @@ const REQUEST_TIMEOUT_MS = 2_500;
 // polling the localhost API so slow cold starts do not invite repeated retries.
 const START_TIMEOUT_MS = 90_000;
 const MAX_RETAINED_INSTALL_JOBS = 32;
+// LM Studio briefly reports `failed` while retrying some interrupted downloads itself.
+const LM_STUDIO_FAILED_STATUS_CONFIRMATIONS = 3;
+// A warm-up generation long enough to time reliably but short enough that setup does not stall.
+const WARM_UP_TOKENS = 48;
+// `num_predict` is a ceiling, not a target, so the prompt has to be one the model will not answer
+// in a word or two. Counting runs to the cap on every model without needing a creative answer.
+const WARM_UP_PROMPT = "Count from 1 to 60, separated by spaces.";
+// Timing a handful of tokens measures call overhead rather than throughput. Measured against a
+// real M1 Max: a 2-token reply reads as 9 tok/s where the true rate is above 90.
+const MINIMUM_TIMEABLE_TOKENS = 16;
+// Loading a cold model into memory dominates this call, so it needs far longer than an API probe.
+const WARM_UP_TIMEOUT_MS = 180_000;
+// Below this a local model feels like waiting; above it, it feels like typing.
+const COMFORTABLE_TOKENS_PER_SECOND = 15;
+// Below this the model is not worth using for real work on this machine.
+const UNUSABLE_TOKENS_PER_SECOND = 5;
 const MAX_RETAINED_SETUP_JOBS = 8;
 const GIB = 1024 ** 3;
 
@@ -48,11 +74,23 @@ interface RuntimeProbe {
   readonly models: ReadonlyArray<LocalInstalledModel> | null;
 }
 
+interface LmStudioRuntimeModel {
+  readonly modelId: string;
+  readonly name: string;
+  readonly managed: boolean;
+  readonly maxContextWindowTokens: number | null;
+  readonly loadedInstanceId: string | null;
+  readonly loadedInstanceIds: ReadonlyArray<string>;
+  readonly loadedContextWindowTokens: number | null;
+  readonly requiredLoadContextWindowTokens: number | null;
+}
+
 export interface LocalModelManagerOptions {
   readonly stateDir: string;
   readonly managedOpenCodeRootDir?: string;
   readonly fetch?: LocalModelFetch;
   readonly totalMemoryBytes?: number;
+  readonly hardwareProfile?: LocalHardwareProfile;
   readonly freeDiskBytes?: number | null;
   readonly platform?: NodeJS.Platform;
   readonly arch?: NodeJS.Architecture;
@@ -65,7 +103,7 @@ export interface LocalModelManagerOptions {
     command: string,
     args: string[],
     options: SpawnOptions,
-  ) => { once: (event: "error", listener: (error: Error) => void) => unknown; unref: () => void };
+  ) => Pick<ReturnType<typeof spawn>, "once" | "unref">;
 }
 
 export class LocalModelManagerError extends Error {
@@ -83,6 +121,12 @@ function finiteNonNegative(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? Math.min(Math.floor(value), Number.MAX_SAFE_INTEGER)
     : 0;
+}
+
+function finitePositive(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.min(Math.floor(value), Number.MAX_SAFE_INTEGER)
+    : null;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -111,6 +155,19 @@ function runtimeCapabilities(runtime: LocalModelRuntime, state: LocalModelRuntim
   };
 }
 
+// Reports the measured speed plainly so a slow machine is told it is slow, rather than left to
+// wonder why the model feels broken.
+function readyMessage(modelName: string, tokensPerSecond: number | null): string {
+  if (tokensPerSecond === null) return `${modelName} is ready to use in chat.`;
+  if (tokensPerSecond < UNUSABLE_TOKENS_PER_SECOND) {
+    return `${modelName} is ready, but at about ${tokensPerSecond} tokens per second it is too slow to use comfortably on this computer. Try a smaller model.`;
+  }
+  if (tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND) {
+    return `${modelName} is ready at about ${tokensPerSecond} tokens per second, which is slower than ideal. A smaller model would feel faster.`;
+  }
+  return `${modelName} is ready to use in chat at about ${tokensPerSecond} tokens per second.`;
+}
+
 function runtimeMetadata(runtime: LocalModelRuntime) {
   return runtime === "ollama"
     ? {
@@ -130,6 +187,8 @@ function runtimeMetadata(runtime: LocalModelRuntime) {
 export class LocalModelManager {
   readonly #fetch: LocalModelFetch;
   readonly #totalMemoryBytes: number;
+  readonly #hardwareProfileOverride: LocalHardwareProfile | undefined;
+  #hardwareProfilePromise: Promise<LocalHardwareProfile> | null = null;
   readonly #configuredFreeDiskBytes: number | null | undefined;
   readonly #platform: NodeJS.Platform;
   readonly #arch: NodeJS.Architecture;
@@ -142,6 +201,13 @@ export class LocalModelManager {
   readonly #setupControllers = new Map<string, AbortController>();
   readonly #jobControllers = new Map<string, AbortController>();
   readonly #knownModels = new Map<LocalModelRuntime, ReadonlyArray<LocalInstalledModel>>();
+  readonly #availableModels = new Map<LocalModelRuntime, ReadonlyArray<LocalInstalledModel>>();
+  // Measured tokens per second keyed by `${runtime}:${modelId}`; runtimes cannot report this.
+  // Persisted alongside the setup jobs so a restart does not throw the numbers away.
+  readonly #measuredSpeeds = new Map<string, number>();
+  // Models already attempted this run, so one that cannot be timed is not retried every tick.
+  readonly #attemptedSpeedKeys = new Set<string>();
+  #residentMeasurement: Promise<void> | null = null;
   readonly #configPath: string;
   readonly #stateDir: string;
   readonly #installOllama: (options: OllamaInstallOptions) => Promise<OllamaInstallResult>;
@@ -149,6 +215,8 @@ export class LocalModelManager {
   readonly #spawnRuntime: NonNullable<LocalModelManagerOptions["spawnRuntime"]>;
   readonly #runtimeInstalls = new Map<LocalModelRuntime, Promise<LocalModelsSnapshot>>();
   readonly #runtimeStarts = new Map<LocalModelRuntime, Promise<LocalModelsSnapshot>>();
+  readonly #lmStudioRuntimeModels = new Map<string, LmStudioRuntimeModel>();
+  readonly #lmStudioContextLoads = new Map<string, Promise<void>>();
   readonly #setupStatePath: string;
   #setupStateWrite = Promise.resolve();
   #initializePromise: Promise<void> | null = null;
@@ -160,6 +228,7 @@ export class LocalModelManager {
   constructor(options: LocalModelManagerOptions) {
     this.#fetch = options.fetch ?? fetch;
     this.#totalMemoryBytes = options.totalMemoryBytes ?? totalmem();
+    this.#hardwareProfileOverride = options.hardwareProfile;
     this.#configuredFreeDiskBytes = options.freeDiskBytes;
     this.#platform = options.platform ?? process.platform;
     this.#arch = options.arch ?? process.arch;
@@ -179,21 +248,39 @@ export class LocalModelManager {
     this.#setupStatePath = join(this.#stateDir, "local-models", "setup-state.json");
   }
 
+  // Hardware does not change while the app runs, and the probes shell out, so detect once.
+  async #getHardwareProfile(): Promise<LocalHardwareProfile> {
+    if (this.#hardwareProfileOverride) return this.#hardwareProfileOverride;
+    this.#hardwareProfilePromise ??= detectHardwareProfile({
+      platform: this.#platform,
+      arch: this.#arch,
+      totalMemoryBytes: this.#totalMemoryBytes,
+    });
+    return this.#hardwareProfilePromise;
+  }
+
   async getSnapshot(
     options: { readonly synchronizeConfig?: boolean } = {},
   ): Promise<LocalModelsSnapshot> {
     await this.#ensureInitialized();
     const probes = await Promise.all([this.#probeOllama(), this.#probeLmStudio()]);
     for (const probe of probes) {
-      if (probe.models !== null) this.#knownModels.set(probe.status.runtime, probe.models);
+      if (probe.models !== null) {
+        this.#knownModels.set(probe.status.runtime, probe.models);
+        this.#availableModels.set(probe.status.runtime, probe.models);
+      } else {
+        this.#availableModels.delete(probe.status.runtime);
+      }
     }
-    if (options.synchronizeConfig !== false && probes.some(({ models }) => models !== null)) {
+    if (options.synchronizeConfig !== false) {
       await this.#synchronizeOpenCodeConfig();
     }
     const installedModels = [...this.#knownModels.values()].flat();
-    const recommended = recommendLocalModel(this.#totalMemoryBytes);
+    const hardware = await this.#getHardwareProfile();
+    const recommended = recommendLocalModel(hardware.usableModelBytes);
     return {
       totalMemoryBytes: finiteNonNegative(this.#totalMemoryBytes),
+      hardware,
       freeDiskBytes: await this.#getFreeDiskBytes(),
       recommendedModelId: recommended?.id ?? null,
       runtimes: probes.map(({ status }) => status),
@@ -212,7 +299,32 @@ export class LocalModelManager {
   async refresh(): Promise<LocalModelsSnapshot> {
     const snapshot = await this.getSnapshot();
     await this.#emitSnapshot(snapshot);
+    if (
+      snapshot.runtimes.some(({ runtime, state }) => runtime === "ollama" && state === "running")
+    ) {
+      // Detached: a warm-up must never delay the caller, and a failure must never break the loop.
+      void this.#measureResidentModel();
+    }
     return snapshot;
+  }
+
+  // Whether a locally-served model is known to be unable to drive tool calls. Only ever returns
+  // false on positive evidence; unknown and hosted models stay null so nothing is withheld on a
+  // guess. Callers use this to avoid handing tools to a model that will only mangle them.
+  async toolSupportForModel(modelSlug: string): Promise<boolean | null> {
+    const runtime: LocalModelRuntime | null = modelSlug.startsWith("ollama/")
+      ? "ollama"
+      : modelSlug.startsWith("lmstudio/")
+        ? "lmstudio"
+        : null;
+    if (!runtime) return null;
+    const modelId = modelSlug.slice(runtime.length + 1);
+    const snapshot = await this.getSnapshot({ synchronizeConfig: false });
+    return (
+      snapshot.installedModels.find(
+        (model) => model.runtime === runtime && model.modelId === modelId,
+      )?.supportsToolCalls ?? null
+    );
   }
 
   async ensureRuntimeForModel(modelSlug: string): Promise<void> {
@@ -222,17 +334,145 @@ export class LocalModelManager {
         ? "lmstudio"
         : null;
     if (!runtime) return;
+    const modelId = modelSlug.slice(runtime.length + 1);
     const snapshot = await this.getSnapshot({ synchronizeConfig: false });
     const status = snapshot.runtimes.find((candidate) => candidate.runtime === runtime);
-    if (!status || status.state === "running") return;
+    if (!status) return;
     if (status.state === "stopped") {
       await this.startRuntime(runtime);
+    } else if (status.state !== "running") {
+      throw new LocalModelManagerError(
+        "ensureRuntimeForModel",
+        status.detail ?? `${status.name} is not ready. Open Local Models settings to repair it.`,
+      );
+    }
+    if (runtime === "lmstudio") {
+      if (!this.#lmStudioRuntimeModels.has(modelId)) {
+        throw new LocalModelManagerError(
+          "ensureRuntimeForModel",
+          `LM Studio cannot serve requested model '${modelId}'. Refresh models, install or load it in LM Studio, or choose another model.`,
+        );
+      }
+      await this.#ensureLmStudioModelContext(modelId);
+    }
+  }
+
+  async #ensureLmStudioModelContext(modelId: string): Promise<void> {
+    const existing = this.#lmStudioContextLoads.get(modelId);
+    if (existing) return existing;
+    const operation = this.#runLmStudioModelContextLoad(modelId);
+    this.#lmStudioContextLoads.set(modelId, operation);
+    try {
+      await operation;
+    } finally {
+      if (this.#lmStudioContextLoads.get(modelId) === operation) {
+        this.#lmStudioContextLoads.delete(modelId);
+      }
+    }
+  }
+
+  async #runLmStudioModelContextLoad(modelId: string): Promise<void> {
+    const model = this.#lmStudioRuntimeModels.get(modelId);
+    if (!model) {
+      throw new LocalModelManagerError(
+        "ensureRuntimeForModel",
+        `LM Studio cannot serve requested model '${modelId}'. Refresh models, install or load it in LM Studio, or choose another model.`,
+      );
+    }
+    const requiredContext = model?.requiredLoadContextWindowTokens ?? null;
+    const exactInstanceLoaded = model.loadedInstanceId === model.modelId;
+    if (!model.managed) {
+      if (!exactInstanceLoaded) {
+        const resolved =
+          model.loadedInstanceIds.length > 0
+            ? `; LM Studio currently exposes '${model.loadedInstanceIds.join("', '")}' instead`
+            : "";
+        throw new LocalModelManagerError(
+          "ensureRuntimeForModel",
+          `LM Studio model '${model.modelId}' is available but not loaded with that API identifier${resolved}. Load it in LM Studio, refresh models, or choose another model.`,
+        );
+      }
       return;
     }
-    throw new LocalModelManagerError(
-      "ensureRuntimeForModel",
-      status.detail ?? `${status.name} is not ready. Open Local Models settings to repair it.`,
-    );
+    if (exactInstanceLoaded && requiredContext === null) return;
+    try {
+      for (const loadedInstanceId of model.loadedInstanceIds) {
+        const unload = await this.#request(`${LM_STUDIO_ENDPOINT}/api/v1/models/unload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instance_id: loadedInstanceId }),
+        });
+        if (!unload.ok) throw new Error(`LM Studio unload returned HTTP ${unload.status}.`);
+      }
+      const load = await this.#request(
+        `${LM_STUDIO_ENDPOINT}/api/v1/models/load`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model.modelId,
+            ...(requiredContext !== null ? { context_length: requiredContext } : {}),
+            echo_load_config: true,
+          }),
+        },
+        WARM_UP_TIMEOUT_MS,
+      );
+      if (!load.ok) throw new Error(`LM Studio load returned HTTP ${load.status}.`);
+      const body = record(await responseJson(load));
+      const appliedContext = finitePositive(record(body?.load_config)?.context_length);
+      const loadedInstanceId = typeof body?.instance_id === "string" ? body.instance_id.trim() : "";
+      if (
+        body?.status !== "loaded" ||
+        loadedInstanceId !== model.modelId ||
+        (requiredContext !== null && (appliedContext === null || appliedContext < requiredContext))
+      ) {
+        if (loadedInstanceId !== model.modelId) {
+          throw new Error(
+            `LM Studio loaded '${loadedInstanceId || "an unknown instance"}' instead of requested model '${model.modelId}'.`,
+          );
+        }
+        throw new Error(
+          `LM Studio loaded ${model.name} with an ${appliedContext ?? "unknown"}-token context; DJL tools require at least ${requiredContext}.`,
+        );
+      }
+      const probe = await this.#probeLmStudio();
+      if (probe.models === null) {
+        throw new Error(`LM Studio stopped responding after loading '${model.modelId}'.`);
+      }
+      this.#knownModels.set("lmstudio", probe.models);
+      this.#availableModels.set("lmstudio", probe.models);
+      if (this.#lmStudioRuntimeModels.get(model.modelId)?.loadedInstanceId !== model.modelId) {
+        throw new Error(
+          `LM Studio did not expose requested model '${model.modelId}' after loading it.`,
+        );
+      }
+      await this.#synchronizeOpenCodeConfig();
+    } catch (cause) {
+      if (cause instanceof LocalModelManagerError) throw cause;
+      throw new LocalModelManagerError(
+        "ensureRuntimeForModel",
+        cause instanceof Error ? cause.message : "LM Studio could not prepare the selected model.",
+        cause,
+      );
+    }
+  }
+
+  // Brings an already-installed Ollama up at launch. A stopped runtime reports no inventory, so
+  // without this the user's installed models are missing from the model picker until they find the
+  // start button in settings — which is exactly the step a non-technical user will not find.
+  //
+  // Only Ollama: it is the runtime DJL installs and manages, it serves on loopback, and it costs
+  // nothing until a model is actually loaded. LM Studio is a user-owned GUI app and is left alone.
+  // Never installs anything, and never rejects — launch must not depend on this succeeding.
+  async startInstalledRuntimes(): Promise<void> {
+    try {
+      const snapshot = await this.getSnapshot({ synchronizeConfig: false });
+      const status = snapshot.runtimes.find(({ runtime }) => runtime === "ollama");
+      if (status?.state !== "stopped") return;
+      await this.startRuntime("ollama");
+    } catch {
+      // Leaves the runtime stopped and the manual start button in settings as the fallback.
+    }
   }
 
   async startSetup(input: LocalModelSetupInput): Promise<LocalModelSetupJob> {
@@ -240,9 +480,15 @@ export class LocalModelManager {
     const runtime = input.runtime ?? "ollama";
     const recommendation = input.recommendationId
       ? LOCAL_MODEL_RECOMMENDATIONS.find(({ id }) => id === input.recommendationId)
-      : recommendLocalModel(this.#totalMemoryBytes);
+      : recommendLocalModel((await this.#getHardwareProfile()).usableModelBytes);
     if (!recommendation) {
       throw new LocalModelManagerError("startSetup", "No recommended local model is available.");
+    }
+    if (recommendation.minimumMemoryBytes > this.#totalMemoryBytes) {
+      throw new LocalModelManagerError(
+        "startSetup",
+        `${recommendation.name} requires at least ${Math.ceil(recommendation.minimumMemoryBytes / GIB)} GB of memory.`,
+      );
     }
     const source = recommendation.sources.find((candidate) => candidate.runtime === runtime);
     if (!source) {
@@ -252,12 +498,15 @@ export class LocalModelManager {
       );
     }
     const active = [...this.#setupJobs.values()].find(
-      (job) =>
-        job.runtime === runtime &&
-        job.modelId === source.modelId &&
-        !["ready", "failed", "cancelled"].includes(job.state),
+      (job) => !["ready", "failed", "cancelled"].includes(job.state),
     );
-    if (active) return active;
+    if (active) {
+      if (active.runtime === runtime && active.modelId === source.modelId) return active;
+      throw new LocalModelManagerError(
+        "startSetup",
+        "Cannot start another local AI setup while one is already running.",
+      );
+    }
     for (const [jobId, job] of this.#setupJobs) {
       if (this.#setupJobs.size < MAX_RETAINED_SETUP_JOBS) break;
       if (["ready", "failed", "cancelled"].includes(job.state)) this.#setupJobs.delete(jobId);
@@ -277,11 +526,13 @@ export class LocalModelManager {
       downloadedBytes: 0,
       totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
       message: "Checking this computer…",
+      tokensPerSecond: null,
+      suggestedFallbackId: null,
       startedAt: this.#now().toISOString(),
       finishedAt: null,
     };
     this.#setupJobs.set(job.id, job);
-    await this.#persistSetupJobs();
+    await this.#persistSetupState();
     const controller = new AbortController();
     this.#setupControllers.set(job.id, controller);
     void this.#runSetup(job.id, controller.signal);
@@ -294,13 +545,40 @@ export class LocalModelManager {
     const job = this.#setupJobs.get(jobId);
     if (!job) throw new LocalModelManagerError("retrySetup", "The setup job was not found.");
     if (job.state !== "failed" && job.state !== "cancelled") return job;
+    const recommendation = LOCAL_MODEL_RECOMMENDATIONS.find(
+      ({ id }) => id === job.recommendationId,
+    );
+    if (!recommendation) {
+      throw new LocalModelManagerError(
+        "retrySetup",
+        "The selected local AI setup is no longer available.",
+      );
+    }
+    if (recommendation.minimumMemoryBytes > this.#totalMemoryBytes) {
+      throw new LocalModelManagerError(
+        "retrySetup",
+        `${recommendation.name} requires at least ${Math.ceil(recommendation.minimumMemoryBytes / GIB)} GB of memory.`,
+      );
+    }
+    const active = [...this.#setupJobs.values()].find(
+      (candidate) =>
+        candidate.id !== jobId && !["ready", "failed", "cancelled"].includes(candidate.state),
+    );
+    if (active) {
+      throw new LocalModelManagerError(
+        "retrySetup",
+        "Cannot start another local AI setup while one is already running.",
+      );
+    }
     const retried = this.#updateSetupJob(jobId, {
       state: "detecting",
       downloadedBytes: 0,
       message: "Checking this computer…",
+      tokensPerSecond: null,
+      suggestedFallbackId: null,
       finishedAt: null,
     });
-    await this.#persistSetupJobs();
+    await this.#persistSetupState();
     const controller = new AbortController();
     this.#setupControllers.set(jobId, controller);
     void this.#runSetup(jobId, controller.signal);
@@ -328,7 +606,7 @@ export class LocalModelManager {
       message: "Setup cancelled.",
       finishedAt: this.#now().toISOString(),
     });
-    await this.#persistSetupJobs();
+    await this.#persistSetupState();
     await this.#emitLatestSnapshot();
     return cancelled;
   }
@@ -370,7 +648,7 @@ export class LocalModelManager {
           state: "installing_runtime",
           message: `Installing ${runtimeMetadata(initial.runtime).name}…`,
         });
-        await this.#persistSetupJobs();
+        await this.#persistSetupState();
         await this.#emitLatestSnapshot();
         snapshot = await this.installRuntime(initial.runtime);
       } else if (runtimeStatus.state === "stopped") {
@@ -378,7 +656,7 @@ export class LocalModelManager {
           state: "starting_runtime",
           message: `Starting ${runtimeMetadata(initial.runtime).name}…`,
         });
-        await this.#persistSetupJobs();
+        await this.#persistSetupState();
         await this.#emitLatestSnapshot();
         snapshot = await this.startRuntime(initial.runtime);
       } else if (runtimeStatus.state !== "running") {
@@ -396,12 +674,19 @@ export class LocalModelManager {
           totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
           message: `Downloading ${recommendation.name}…`,
         });
-        await this.#persistSetupJobs();
+        await this.#persistSetupState();
         await this.#emitLatestSnapshot();
-        const installJob = await this.installModel({
-          runtime: initial.runtime,
-          modelId: initial.modelId,
-        } as LocalModelInstallInput);
+        const installInput: LocalModelInstallInput =
+          source.runtime === "lmstudio"
+            ? {
+                runtime: "lmstudio",
+                modelId: source.modelId,
+                ...("quantization" in source && source.quantization
+                  ? { quantization: source.quantization }
+                  : {}),
+              }
+            : { runtime: "ollama", modelId: source.modelId };
+        const installJob = await this.installModel(installInput);
         while (!signal.aborted) {
           const currentInstall = this.#jobs.get(installJob.id);
           if (!currentInstall) throw new Error("The model download disappeared.");
@@ -420,11 +705,26 @@ export class LocalModelManager {
       }
       if (signal.aborted) return;
 
+      let tokensPerSecond: number | null = null;
+      if (initial.runtime === "ollama") {
+        this.#updateSetupJob(jobId, {
+          state: "verifying",
+          message: `Checking how fast ${recommendation.name} runs here…`,
+        });
+        await this.#persistSetupState();
+        await this.#emitLatestSnapshot();
+        tokensPerSecond = await this.#measureTokensPerSecond(initial.modelId, signal);
+        if (tokensPerSecond !== null) {
+          this.#measuredSpeeds.set(`${initial.runtime}:${initial.modelId}`, tokensPerSecond);
+        }
+      }
+      if (signal.aborted) return;
+
       this.#updateSetupJob(jobId, {
         state: "synchronizing",
         message: "Adding the model to chat…",
       });
-      await this.#persistSetupJobs();
+      await this.#persistSetupState();
       await this.#emitLatestSnapshot();
       snapshot = await this.getSnapshot();
       if (
@@ -434,14 +734,22 @@ export class LocalModelManager {
       ) {
         throw new Error("The runtime finished downloading, but the model is not available yet.");
       }
+      // Only offer a downgrade when the measurement actually disappointed and something smaller
+      // exists. A null measurement is not evidence of slowness.
+      const suggestedFallbackId =
+        tokensPerSecond !== null && tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND
+          ? (nextSmallerRecommendation(recommendation.id)?.id ?? null)
+          : null;
       this.#updateSetupJob(jobId, {
         state: "ready",
         downloadedBytes: finiteNonNegative(source.estimatedDownloadBytes),
         totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
-        message: `${recommendation.name} is ready to use in chat.`,
+        message: readyMessage(recommendation.name, tokensPerSecond),
+        tokensPerSecond,
+        suggestedFallbackId,
         finishedAt: this.#now().toISOString(),
       });
-      await this.#persistSetupJobs();
+      await this.#persistSetupState();
       await this.#emitLatestSnapshot();
     } catch (cause) {
       if (signal.aborted) return;
@@ -450,10 +758,89 @@ export class LocalModelManager {
         message: cause instanceof Error ? cause.message : String(cause),
         finishedAt: this.#now().toISOString(),
       });
-      await this.#persistSetupJobs();
+      await this.#persistSetupState();
       await this.#emitLatestSnapshot();
     } finally {
       this.#setupControllers.delete(jobId);
+    }
+  }
+
+  // Models installed before DJL, or added through the custom model field, never went through a
+  // setup run, so nothing ever timed them. `/api/ps` lists what Ollama already holds in memory:
+  // timing one of those costs a single short generation, where loading a cold model to benchmark
+  // it would evict whatever the user is actually working with. One model per refresh, so a slow
+  // machine never stacks warm-ups, and a model that cannot be timed is not retried every tick.
+  async #measureResidentModel(): Promise<void> {
+    if (this.#residentMeasurement) return;
+    // A setup run does its own timed generation. Two at once would understate both, which is the
+    // false "slower than ideal" alarm this measurement exists to avoid.
+    const setupRunning = [...this.#setupJobs.values()].some(
+      (job) => !["ready", "failed", "cancelled"].includes(job.state),
+    );
+    if (setupRunning) return;
+    this.#residentMeasurement = (async () => {
+      try {
+        const response = await this.#request(`${OLLAMA_ENDPOINT}/api/ps`);
+        if (!response.ok) return;
+        const body = record(await responseJson(response));
+        const resident = Array.isArray(body?.models) ? body.models : [];
+        const modelId = resident
+          .map((value) => {
+            const model = record(value);
+            return typeof model?.name === "string" ? model.name : "";
+          })
+          .find(
+            (name) =>
+              name &&
+              !this.#measuredSpeeds.has(`ollama:${name}`) &&
+              !this.#attemptedSpeedKeys.has(`ollama:${name}`),
+          );
+        if (!modelId) return;
+        this.#attemptedSpeedKeys.add(`ollama:${modelId}`);
+        const tokensPerSecond = await this.#measureTokensPerSecond(modelId);
+        if (tokensPerSecond === null) return;
+        this.#measuredSpeeds.set(`ollama:${modelId}`, tokensPerSecond);
+        await this.#persistSetupState();
+        await this.#emitLatestSnapshot();
+      } catch {
+        // The refresh loop must survive a runtime that disappears mid-measurement.
+      } finally {
+        this.#residentMeasurement = null;
+      }
+    })();
+    await this.#residentMeasurement;
+  }
+
+  // Runs one short generation and times it. This turns "should be fast enough" into a number, and
+  // leaves the model resident so the user's first real message has no cold-start delay.
+  async #measureTokensPerSecond(modelId: string, signal?: AbortSignal): Promise<number | null> {
+    try {
+      const response = await this.#request(
+        `${OLLAMA_ENDPOINT}/api/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: modelId,
+            prompt: WARM_UP_PROMPT,
+            stream: false,
+            options: { num_predict: WARM_UP_TOKENS },
+          }),
+          ...(signal ? { signal } : {}),
+        },
+        WARM_UP_TIMEOUT_MS,
+      );
+      if (!response.ok) return null;
+      const body = record(await responseJson(response));
+      const tokens = finiteNonNegative(body?.eval_count);
+      const nanoseconds = finiteNonNegative(body?.eval_duration);
+      // Too short a sample is worse than no measurement: it understates a fast machine badly
+      // enough to warn the user about a model that is actually running well.
+      if (tokens < MINIMUM_TIMEABLE_TOKENS || nanoseconds <= 0) return null;
+      return Math.round(tokens / (nanoseconds / 1e9));
+    } catch {
+      // A model that cannot be timed still works; the speed label is simply unavailable.
+      return null;
     }
   }
 
@@ -641,10 +1028,14 @@ export class LocalModelManager {
         runtime === "ollama" && command === (await this.#resolveManagedOllamaCommand());
       const managedLmStudio =
         runtime === "lmstudio" && command === (await this.#resolveManagedLmStudioCommand());
+      // Only the model directory is DJL's to decide, because DJL owns that storage. How the model
+      // runs — the context window above all — is left entirely to Ollama's own defaults. DJL is a
+      // UI over the opencode harness, not a tuner of the runtime: pinning OLLAMA_CONTEXT_LENGTH
+      // here capped the window at 8192 where Ollama would have given 32768, which measurably
+      // degraded local models.
       const env = managedOllama
         ? {
             ...this.#env,
-            OLLAMA_CONTEXT_LENGTH: "8192",
             OLLAMA_MODELS: join(this.#stateDir, "local-models", "ollama", "models"),
           }
         : managedLmStudio
@@ -657,33 +1048,59 @@ export class LocalModelManager {
       if (managedOllama && env.OLLAMA_MODELS) {
         await mkdir(env.OLLAMA_MODELS, { recursive: true, mode: 0o700 });
       }
-      const commands =
-        runtime === "ollama"
-          ? [["serve"]]
-          : managedLmStudio
-            ? [
-                ["daemon", "up", "--json"],
-                ["server", "start", "--port", "1234"],
-              ]
-            : [["server", "start", "--port", "1234"]];
+      const spawnOptions: SpawnOptions = {
+        // A detached Windows console process creates a new visible console.
+        // With ignored stdio, unref is sufficient for it to outlive DJL.
+        detached: this.#platform !== "win32",
+        env,
+        stdio: "ignore",
+        windowsHide: true,
+      };
+      if (runtime === "lmstudio") {
+        await new Promise<void>((resolve, reject) => {
+          const child = this.#spawnRuntime(command, ["daemon", "up", "--json"], {
+            ...spawnOptions,
+            detached: false,
+          });
+          child.once("error", reject);
+          child.once("exit", (code, signal) => {
+            if (code === 0) {
+              resolve();
+            } else if (code !== null) {
+              reject(new Error(`LM Studio command exited with code ${code}.`));
+            } else {
+              reject(new Error(`LM Studio command exited after signal ${signal ?? "unknown"}.`));
+            }
+          });
+        });
+      }
+      const commands = runtime === "ollama" ? [["serve"]] : [["server", "start", "--port", "1234"]];
       for (const args of commands) {
         const child = this.#spawnRuntime(command, args, {
-          // A detached Windows console process creates a new visible console.
-          // With ignored stdio, unref is sufficient for it to outlive DJL.
-          detached: this.#platform !== "win32",
-          env,
-          stdio: "ignore",
-          windowsHide: true,
+          ...spawnOptions,
         });
         child.once("error", (error) => {
           spawnState.error = error;
+        });
+        child.once("exit", (code, signal) => {
+          if (code !== null && code !== 0) {
+            spawnState.error = new Error(
+              `${runtimeMetadata(runtime).name} command exited with code ${code}.`,
+            );
+          } else if (signal) {
+            spawnState.error = new Error(
+              `${runtimeMetadata(runtime).name} command exited after signal ${signal}.`,
+            );
+          }
         });
         child.unref();
       }
     } catch (cause) {
       throw new LocalModelManagerError(
         "startRuntime",
-        `Failed to start ${runtimeMetadata(runtime).name}.`,
+        `Failed to start ${runtimeMetadata(runtime).name}${
+          cause instanceof Error ? `: ${cause.message}` : "."
+        }`,
         cause,
       );
     }
@@ -813,14 +1230,19 @@ export class LocalModelManager {
         const model = record(value);
         const modelId = typeof model?.name === "string" ? model.name : "";
         if (!modelId) return [];
+        const details = record(model?.details);
         return [
           {
             runtime: "ollama",
             modelId,
-            name: modelId,
+            name: curatedModelDisplayName("ollama", modelId) ?? modelId,
             sizeBytes: finiteNonNegative(model?.size),
             contextWindowTokens: null,
-            supportsToolCalls: isCuratedLocalModel("ollama", modelId) ? true : null,
+            // Curated tiers carry a measured verdict; anything else falls back to parameter size.
+            supportsToolCalls:
+              curatedToolSupport("ollama", modelId) ??
+              toolCallSupportForParameterSize(details?.parameter_size),
+            tokensPerSecond: this.#measuredSpeeds.get(`ollama:${modelId}`) ?? null,
           },
         ];
       });
@@ -877,6 +1299,7 @@ export class LocalModelManager {
       if (response.status === 404) {
         const legacy = await this.#request(`${LM_STUDIO_ENDPOINT}/api/v0/models`);
         if (legacy.ok) {
+          this.#lmStudioRuntimeModels.clear();
           return {
             status: {
               runtime: "lmstudio",
@@ -894,34 +1317,85 @@ export class LocalModelManager {
       if (!response.ok) throw new Error(`LM Studio returned HTTP ${response.status}.`);
       const json = record(await responseJson(response));
       const rawModels = Array.isArray(json?.models) ? json.models : [];
+      const installationKind = await this.#runtimeInstallationKind("lmstudio");
+      const managed = installationKind === "managed";
+      const runtimeModels: LmStudioRuntimeModel[] = [];
       const models = rawModels.flatMap((value): LocalInstalledModel[] => {
         const model = record(value);
         const modelId = typeof model?.key === "string" ? model.key : "";
         if (!model || !modelId || model.type === "embedding") return [];
+        const maxContextWindowTokens = finitePositive(model.max_context_length);
+        const loadedInstances = Array.isArray(model.loaded_instances) ? model.loaded_instances : [];
+        const loadedInstanceRecords = loadedInstances.flatMap((instance) => {
+          const parsed = record(instance);
+          return parsed ? [parsed] : [];
+        });
+        const loadedInstanceIds = loadedInstanceRecords.flatMap((instance) =>
+          typeof instance.id === "string" && instance.id.trim().length > 0
+            ? [instance.id.trim()]
+            : [],
+        );
+        const exactInstance = loadedInstanceRecords.find((instance) => instance.id === modelId);
+        const loadedContextWindowTokens = finitePositive(
+          record(exactInstance?.config)?.context_length,
+        );
+        const reportedToolSupport = record(model.capabilities)?.trained_for_tool_use;
+        const intrinsicToolSupport =
+          curatedToolSupport("lmstudio", modelId) ??
+          (typeof reportedToolSupport === "boolean"
+            ? reportedToolSupport
+            : toolCallSupportForParameterSize(model.params_string));
+        const context = resolveLmStudioContext({
+          managed,
+          supportsToolCalls: intrinsicToolSupport,
+          maxContextWindowTokens,
+          loadedContextWindowTokens,
+        });
+        const name =
+          curatedModelDisplayName("lmstudio", modelId) ??
+          (typeof model.display_name === "string" ? model.display_name : modelId);
+        runtimeModels.push({
+          modelId,
+          name,
+          managed,
+          maxContextWindowTokens,
+          loadedInstanceId: typeof exactInstance?.id === "string" ? exactInstance.id : null,
+          loadedInstanceIds,
+          loadedContextWindowTokens,
+          requiredLoadContextWindowTokens: context.requiredLoadContextWindowTokens,
+        });
         return [
           {
             runtime: "lmstudio",
             modelId,
-            name: typeof model.display_name === "string" ? model.display_name : modelId,
+            name,
             sizeBytes: finiteNonNegative(model.size_bytes),
-            contextWindowTokens: null,
-            supportsToolCalls: isCuratedLocalModel("lmstudio", modelId) ? true : null,
+            contextWindowTokens: context.effectiveContextWindowTokens,
+            maxContextWindowTokens,
+            loadedContextWindowTokens,
+            toolContextWindowReady: intrinsicToolSupport === true ? context.toolsUsable : null,
+            supportsToolCalls:
+              intrinsicToolSupport === true ? context.toolsUsable : intrinsicToolSupport,
+            tokensPerSecond: null,
           },
         ];
       });
+      this.#lmStudioRuntimeModels.clear();
+      for (const model of runtimeModels) this.#lmStudioRuntimeModels.set(model.modelId, model);
       return {
         status: {
           runtime: "lmstudio",
           ...metadata,
           state: "running",
           version: null,
-          installationKind: await this.#runtimeInstallationKind("lmstudio"),
+          installationKind,
           detail: null,
           capabilities: runtimeCapabilities("lmstudio", "running"),
         },
         models,
       };
     } catch {
+      this.#lmStudioRuntimeModels.clear();
       const command = await this.#resolveRuntimeCommand("lmstudio");
       const installed = command !== null;
       const state = installed ? "stopped" : "not_installed";
@@ -1056,6 +1530,7 @@ export class LocalModelManager {
         return;
       }
       if (!remoteJobId) throw new Error("LM Studio did not return a download job ID.");
+      let consecutiveFailedStatuses = 0;
       while (!signal.aborted) {
         await new Promise((resolve) => setTimeout(resolve, 750));
         const statusResponse = await this.#request(
@@ -1072,9 +1547,22 @@ export class LocalModelManager {
             status?.downloaded_size_bytes ?? status?.downloaded_bytes,
           ),
           totalBytes: finiteNonNegative(status?.total_size_bytes) || null,
-          message: state === "paused" ? "Paused in LM Studio." : "Downloading in LM Studio…",
+          message:
+            state === "paused"
+              ? "Paused in LM Studio."
+              : state === "failed"
+                ? "LM Studio reported an error; waiting for its automatic retry…"
+                : "Downloading in LM Studio…",
         });
         await this.#emitLatestSnapshot();
+        if (state === "failed") {
+          consecutiveFailedStatuses += 1;
+          if (consecutiveFailedStatuses >= LM_STUDIO_FAILED_STATUS_CONFIRMATIONS) {
+            throw new Error("LM Studio could not download this model.");
+          }
+          continue;
+        }
+        consecutiveFailedStatuses = 0;
         if (state === "completed" || state === "already_downloaded") {
           this.#updateJob(jobId, {
             state: "completed",
@@ -1084,7 +1572,6 @@ export class LocalModelManager {
           await this.#emitLatestSnapshot();
           return;
         }
-        if (state === "failed") throw new Error("LM Studio could not download this model.");
       }
     } catch (cause) {
       if (!signal.aborted) {
@@ -1139,6 +1626,13 @@ export class LocalModelManager {
             }
             this.#setupJobs.set(job.id, job as unknown as LocalModelSetupJob);
           }
+          // A speed entry the app cannot trust is dropped on its own; the model is simply
+          // measured again rather than blocking startup.
+          for (const [key, value] of Object.entries(record(root?.speeds) ?? {})) {
+            if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+              this.#measuredSpeeds.set(key, value);
+            }
+          }
         } catch (cause) {
           if ((cause as NodeJS.ErrnoException).code !== "ENOENT") {
             throw new LocalModelManagerError(
@@ -1164,8 +1658,16 @@ export class LocalModelManager {
     await this.#initializePromise;
   }
 
-  async #persistSetupJobs(): Promise<void> {
-    const payload = `${JSON.stringify({ version: 1, jobs: [...this.#setupJobs.values()] }, null, 2)}\n`;
+  async #persistSetupState(): Promise<void> {
+    const payload = `${JSON.stringify(
+      {
+        version: 1,
+        jobs: [...this.#setupJobs.values()],
+        speeds: Object.fromEntries(this.#measuredSpeeds),
+      },
+      null,
+      2,
+    )}\n`;
     this.#setupStateWrite = this.#setupStateWrite
       .catch(() => undefined)
       .then(async () => {
@@ -1212,9 +1714,13 @@ export class LocalModelManager {
     await this.#onSnapshot?.(snapshot);
   }
 
-  async #request(url: string, init?: RequestInit): Promise<Response> {
+  async #request(
+    url: string,
+    init?: RequestInit,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+  ): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const signal = init?.signal
         ? AbortSignal.any([controller.signal, init.signal])
@@ -1232,6 +1738,7 @@ export class LocalModelManager {
     } else {
       const managed = await this.#resolveManagedLmStudioCommand();
       if (managed) return managed;
+      if (!(await this.#hasExternalLmStudioInstallation())) return null;
     }
     const command =
       runtime === "ollama"
@@ -1269,6 +1776,40 @@ export class LocalModelManager {
       }
     }
     return null;
+  }
+
+  async #hasExternalLmStudioInstallation(): Promise<boolean> {
+    const homeDir = this.#env.HOME ?? this.#env.USERPROFILE ?? "";
+    const candidates: string[] = [];
+    try {
+      const marker = JSON.parse(
+        await readFile(
+          join(homeDir, ".lmstudio", ".internal", "app-install-location.json"),
+          "utf8",
+        ),
+      ) as unknown;
+      const markerRecord = record(marker);
+      if (typeof markerRecord?.path === "string") candidates.push(markerRecord.path);
+    } catch {
+      // Older installations may not have written the location marker.
+    }
+    if (this.#platform === "darwin") {
+      candidates.push(
+        "/Applications/LM Studio.app/Contents/MacOS/LM Studio",
+        join(homeDir, "Applications", "LM Studio.app", "Contents", "MacOS", "LM Studio"),
+      );
+    } else if (this.#platform === "win32") {
+      candidates.push(join(this.#env.LOCALAPPDATA ?? "", "Programs", "LM Studio", "LM Studio.exe"));
+    }
+    for (const candidate of candidates.filter(Boolean)) {
+      try {
+        await access(candidate, this.#platform === "win32" ? fsConstants.F_OK : fsConstants.X_OK);
+        return true;
+      } catch {
+        // Try the next known installation location.
+      }
+    }
+    return false;
   }
 
   async #resolveManagedOllamaCommand(): Promise<string | null> {
@@ -1312,12 +1853,14 @@ export class LocalModelManager {
   }
 
   async #synchronizeOpenCodeConfig(): Promise<void> {
-    const models = [...this.#knownModels.values()].flat();
+    const models = [...this.#availableModels.values()].flat();
     this.#configWrite = this.#configWrite
       .catch(() => undefined)
       .then(async () => {
         const inventoryFingerprint = models
-          .map(({ runtime, modelId }) => `${runtime}:${modelId}`)
+          .map(({ runtime, modelId, contextWindowTokens, supportsToolCalls }) =>
+            [runtime, modelId, contextWindowTokens ?? "", supportsToolCalls ?? ""].join(":"),
+          )
           .toSorted()
           .join("|");
         if (inventoryFingerprint === this.#lastSynchronizedInventoryFingerprint) return;
@@ -1339,7 +1882,7 @@ export class LocalModelManager {
         const next = buildOpenCodeLocalProviderConfig(
           current,
           models,
-          new Set(this.#knownModels.keys()),
+          new Set(["ollama", "lmstudio"]),
         );
         await mkdir(dirname(this.#configPath), { recursive: true });
         const temporaryPath = `${this.#configPath}.${process.pid}.${Date.now()}.tmp`;

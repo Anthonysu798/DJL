@@ -555,11 +555,15 @@
       },
       "change": "모델 변경",
       "changeReasoning": "모델 및 추론 변경",
+      "chatOnly": "채팅 전용",
+      "chatOnlyConfirm": "{{name}}은(는) 너무 작아 도구를 사용할 수 없어 코딩 작업을 수행할 수 없습니다. 채팅 전용으로 사용할까요?",
+      "chatOnlyHint": "{{name}}은(는) 너무 작아 도구를 사용할 수 없어 코딩 작업을 수행할 수 없습니다.",
       "configure": "모델 구성",
       "loading": "모델 불러오는 중",
       "noMatches": "일치하는 항목 없음",
       "noPiModels": "Pi 모델을 찾을 수 없음",
-      "search": "모델 또는 제공자 검색"
+      "search": "모델 또는 제공자 검색",
+      "setUpLocalAi": "로컬 AI 설정…"
     },
     "models": {
       "addFavorite": "{{name}}를 즐겨찾기에 추가",
@@ -1175,12 +1179,24 @@
       }
     },
     "localModels": {
-      "bestFit": "최적",
+      "chatOnly": "채팅 전용",
       "checking": "로컬 모델 런타임 확인 중…",
       "connectedOn": "{{endpoint}}에 안전하게 연결됨",
+      "contextLoaded": "로드된 컨텍스트: {{loaded}}K / 모델 최대: {{maximum}}K",
+      "contextTooSmallForTools": "현재 {{loaded}}K 컨텍스트에서는 채팅만 사용할 수 있습니다. 도구를 사용하려면 모델을 최소 {{required}}K로 다시 로드하세요.",
       "desktopOnly": "로컬 모델 관리는 DJL 데스크톱 앱에서 사용할 수 있습니다.",
       "downloadsTitle": "다운로드",
       "getRuntime": "{{runtime}} 받기",
+      "hero": {
+        "alternativesTitle": "다른 모델",
+        "detected": "감지됨: {{processor}} · 메모리 {{memory}}",
+        "detectedWithGpu": "감지됨: {{processor}} · {{gpu}} · 메모리 {{memory}}",
+        "fastOnYourHardware": "이 하드웨어에서 빠름",
+        "readyTitle": "{{model}} 준비 완료",
+        "switchToSmaller": "{{model}}(으)로 전환",
+        "title": "이 컴퓨터에서 AI를 비공개로 실행",
+        "unknownProcessor": "이 컴퓨터"
+      },
       "installAnotherTitle": "다른 모델 설치",
       "installed": "설치됨",
       "installedEmpty": "아직 로컬 모델이 없습니다. 런타임을 시작하고 위의 권장 항목을 선택하세요.",
@@ -1193,27 +1209,14 @@
       "installModel": "모델 설치",
       "installOllama": "Ollama 설치 및 시작",
       "installRuntime": "{{runtime}} 설치 및 시작",
-      "installWith": "{{runtime}}로 설치",
       "lmStudioDescription": "LM Studio를 한 번 설치하면 DJL이 로컬 서버를 시작하고 관리할 수 있습니다.",
+      "manageInstalledTitle": "설치된 모델 관리",
       "manageLmStudio": "LM Studio에서 관리",
-      "memoryTier": "{{size}} 메모리 등급",
+      "moreOptions": "다른 모델 표시",
       "networkPrivacy": "DJL은 고정 루프백 주소(127.0.0.1)에만 연결합니다. 런타임을 네트워크에 공개하거나 로컬 추론 트래픽을 업로드하거나 선택한 모델을 자동으로 바꾸지 않습니다.",
       "ollamaDescription": "DJL이 Ollama를 설치하고 시작하여 연결합니다. 터미널이나 관리자 암호가 필요하지 않습니다.",
       "privacyDescription": "모델 추론은 이 컴퓨터에 남습니다. 프롬프트, 코드 컨텍스트, 출력은 호스팅 모델 제공자에게 전송되지 않습니다. 승인된 도구는 별도로 네트워크에 접근할 수 있습니다.",
       "privacyTitle": "개인정보 보호 설계",
-      "quick": {
-        "chooseAnother": "다른 설정 선택",
-        "description": "DJL이 {{runtime}}을 설치하고 {{model}}(약 {{size}})을 다운로드합니다. 터미널이나 관리자 암호가 필요하지 않습니다.",
-        "download": "{{model}} 다운로드(약 {{size}})",
-        "insufficientDisk": "최소 {{size}}의 여유 디스크 공간이 필요합니다.",
-        "readyDescription": "{{model}}이 {{runtime}}을 통해 설치되어 채팅에서 사용할 수 있습니다.",
-        "readyTitle": "{{runtime}} 준비 완료",
-        "retry": "설정 다시 시도",
-        "runtimeLabel": "로컬 런타임 선택",
-        "setup": "로컬 AI 설정 · {{model}}(약 {{size}})",
-        "title": "원클릭 {{runtime}} 설정",
-        "useInChat": "채팅에서 사용"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "16 GB 이상의 메모리를 갖춘 시스템에 권장하는 강력한 로컬 코딩 모델입니다."
@@ -1221,13 +1224,24 @@
         "granite-4.1-3b": {
           "description": "8 GB 메모리를 갖춘 Mac 및 PC용 소형 코딩 모델입니다."
         },
+        "qwen2.5-coder-7b": {
+          "description": "16GB 컴퓨터와 8GB 그래픽 카드를 위한 고성능 코딩 모델입니다."
+        },
+        "qwen3-1.7b": {
+          "description": "4 GB 이상의 메모리를 갖춘 저사양 컴퓨터용 빠른 채팅 모델입니다."
+        },
         "qwen3-coder-30b": {
           "description": "32 GB 메모리 시스템을 위한 가장 강력한 선별 로컬 코딩 모델입니다."
+        },
+        "qwen3.5-2b": {
+          "description": "8 GB 메모리 컴퓨터에 최적화된 도구 호출 지원 소형 채팅 모델입니다."
         }
       },
       "recommendedTitle": "이 컴퓨터에 권장",
-      "removeAriaLabel": "{{model}} 제거",
-      "removeConfirmation": "Ollama에서 {{model}}을 제거할까요?",
+      "removeAriaLabel": "{{model}} 삭제",
+      "removeButton": "삭제",
+      "removeConfirmation": "Ollama에서 {{model}}을(를) 삭제할까요?",
+      "removing": "삭제 중…",
       "retryInstall": "설치 다시 시도",
       "runtimeAriaLabel": "로컬 모델 런타임",
       "runtimeDetails": {
@@ -1246,6 +1260,19 @@
       "runtimeStatusDescription": "localhost 서비스를 다시 확인하고 설치된 모델을 DJL과 동기화합니다.",
       "runtimeStatusTitle": "런타임 상태",
       "runtimesTitle": "로컬 런타임",
+      "shelf": {
+        "downloadSize": "{{size}} 다운로드",
+        "fixOllama": "Ollama 확인",
+        "installModel": "모델 설치",
+        "requiresDiskAction": "{{size}}의 여유 공간 필요",
+        "requiresMemoryAction": "{{size}} 메모리 필요",
+        "retry": "다시 시도",
+        "setupOllama": "Ollama + 모델 설정",
+        "startChat": "채팅 시작",
+        "startOllama": "Ollama 시작 + 설치",
+        "tooLarge": "이 컴퓨터에서 사용하기에 너무 큼",
+        "waitForSetup": "다른 설정이 진행 중입니다"
+      },
       "sizeUnavailable": "크기 정보 없음",
       "startFirst": "먼저 {{runtime}} 시작",
       "startServer": "서버 시작",
@@ -1259,6 +1286,7 @@
         "runtimeReady": "{{runtime}} 설치 및 실행 완료",
         "runtimeRejected": "로컬 런타임이 요청을 거부했습니다."
       },
+      "tokensPerSecond": "초당 약 {{count}} 토큰",
       "updateRuntime": "업데이트"
     },
     "localModelsStatusUnavailableDetail": "로컬 런타임에서 진단 세부 정보를 제공하지 않았습니다.",

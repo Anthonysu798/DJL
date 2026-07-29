@@ -50,15 +50,42 @@ export const LocalModelRuntimeStatus = Schema.Struct({
 });
 export type LocalModelRuntimeStatus = typeof LocalModelRuntimeStatus.Type;
 
+export const LocalHardwareAcceleration = Schema.Literals([
+  "apple_unified",
+  "discrete_gpu",
+  "cpu_only",
+]);
+export type LocalHardwareAcceleration = typeof LocalHardwareAcceleration.Type;
+
+export const LocalHardwareProfile = Schema.Struct({
+  totalMemoryBytes: NonNegativeInt,
+  cpuModel: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
+  cpuCores: NonNegativeInt,
+  acceleration: LocalHardwareAcceleration,
+  gpuName: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
+  vramBytes: Schema.NullOr(NonNegativeInt),
+  // The byte budget for model weights on this machine, after acceleration and context headroom.
+  usableModelBytes: NonNegativeInt,
+});
+export type LocalHardwareProfile = typeof LocalHardwareProfile.Type;
+
 export const LocalModelRecommendationSource = Schema.Struct({
   runtime: LocalModelRuntime,
   modelId: ModelIdentifier,
   estimatedDownloadBytes: NonNegativeInt,
+  quantization: Schema.optional(
+    TrimmedNonEmptyString.check(
+      Schema.isMaxLength(64),
+      Schema.isPattern(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
+    ),
+  ),
 });
 export type LocalModelRecommendationSource = typeof LocalModelRecommendationSource.Type;
 
 export const LocalModelRecommendation = Schema.Struct({
   id: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+  // Established by running real tool calls against the tier, not inferred from parameter count.
+  supportsToolCalls: Schema.Boolean,
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   description: BoundedDetail,
   minimumMemoryBytes: NonNegativeInt,
@@ -72,7 +99,12 @@ export const LocalInstalledModel = Schema.Struct({
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
   sizeBytes: NonNegativeInt,
   contextWindowTokens: Schema.NullOr(PositiveInt),
+  maxContextWindowTokens: Schema.optional(Schema.NullOr(PositiveInt)),
+  loadedContextWindowTokens: Schema.optional(Schema.NullOr(PositiveInt)),
+  toolContextWindowReady: Schema.optional(Schema.NullOr(Schema.Boolean)),
   supportsToolCalls: Schema.NullOr(Schema.Boolean),
+  // Measured during setup on this machine; null until a warm-up run has timed the model.
+  tokensPerSecond: Schema.optional(Schema.NullOr(NonNegativeInt)),
 });
 export type LocalInstalledModel = typeof LocalInstalledModel.Type;
 
@@ -125,6 +157,7 @@ export const LocalModelSetupJobState = Schema.Literals([
   "installing_runtime",
   "starting_runtime",
   "downloading_model",
+  "verifying",
   "synchronizing",
   "ready",
   "failed",
@@ -141,6 +174,12 @@ export const LocalModelSetupJob = Schema.Struct({
   downloadedBytes: NonNegativeInt,
   totalBytes: Schema.NullOr(NonNegativeInt),
   message: Schema.NullOr(BoundedDetail),
+  // Measured on this machine during the verifying step; null when it could not be timed.
+  tokensPerSecond: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  // Set when the measured speed was disappointing: the next smaller tier to offer instead.
+  suggestedFallbackId: Schema.optional(
+    Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  ),
   startedAt: IsoDateTime,
   finishedAt: Schema.NullOr(IsoDateTime),
 });
@@ -148,6 +187,7 @@ export type LocalModelSetupJob = typeof LocalModelSetupJob.Type;
 
 export const LocalModelsSnapshot = Schema.Struct({
   totalMemoryBytes: NonNegativeInt,
+  hardware: LocalHardwareProfile,
   freeDiskBytes: Schema.NullOr(NonNegativeInt),
   recommendedModelId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
   runtimes: Schema.Array(LocalModelRuntimeStatus).check(Schema.isMaxLength(2)),

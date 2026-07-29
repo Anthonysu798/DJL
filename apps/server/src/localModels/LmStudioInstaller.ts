@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { access, chmod, mkdir, open, rename, rm } from "node:fs/promises";
+import { access, chmod, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 
@@ -111,6 +111,29 @@ async function fetchChecksum(fetchImpl: LocalModelFetch, url: string): Promise<s
     throw new Error("LM Studio did not provide a valid SHA-512 checksum for llmster.");
   }
   return checksum.toLowerCase();
+}
+
+async function relocateBootstrapMetadata(
+  homeDir: string,
+  platform: NodeJS.Platform,
+): Promise<void> {
+  const studioHome = join(homeDir, ".lmstudio");
+  const installDir = join(studioHome, "llmster", LLMSTER_VERSION);
+  const executable = platform === "win32" ? "llmster.exe" : "llmster";
+  await writeFile(join(homeDir, ".lmstudio-home-pointer"), studioHome, { mode: 0o600 });
+  await writeFile(
+    join(studioHome, ".internal", "llmster-install-location.json"),
+    JSON.stringify(
+      {
+        path: join(installDir, executable),
+        argv: [],
+        cwd: installDir,
+      },
+      null,
+      2,
+    ),
+    { mode: 0o600 },
+  );
 }
 
 async function downloadArchive(
@@ -260,7 +283,9 @@ export async function installLmStudioRuntime(
     }
     try {
       await rename(stagingHome, currentHome);
+      await relocateBootstrapMetadata(currentHome, platform);
     } catch (cause) {
+      await rm(currentHome, { recursive: true, force: true });
       if (hadCurrent) await rename(backupHome, currentHome);
       throw cause;
     }
