@@ -181,6 +181,9 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain('aria-label="Search settings"');
     expect(markup).toContain('aria-label="Settings sections"');
     expect(markup).toContain("Back to app");
+    expect(markup).toContain('data-onboarding-target="settings-section-general"');
+    expect(markup).toContain('data-onboarding-target="settings-section-advanced"');
+    expect(markup).not.toContain('data-onboarding-target="settings-section-remote"');
     expect(markup).not.toContain("iPhone remote access");
   });
 

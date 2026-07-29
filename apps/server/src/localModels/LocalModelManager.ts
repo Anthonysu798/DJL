@@ -1,13 +1,15 @@
 import { spawn, type SpawnOptions } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
-import { access, mkdir, readFile, rename, statfs, writeFile } from "node:fs/promises";
-import { totalmem } from "node:os";
+import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { randomUUID } from "node:crypto";
+import { totalmem } from "node:os";
 
 import type {
   LocalHardwareProfile,
   LocalInstalledModel,
+  LocalModelHardwareProfile,
   LocalModelInstallInput,
   LocalModelInstallJob,
   LocalModelRemoveInput,
@@ -23,12 +25,19 @@ import type {
 import {
   curatedModelDisplayName,
   curatedToolSupport,
+  inferChampionUseCase,
+  isChampionRecommendationForUseCase,
+  LOCAL_MODEL_RUNTIME_STORAGE_RESERVE_BYTES,
   LOCAL_MODEL_RECOMMENDATIONS,
+  localModelFallbackChain,
+  localModelOperatingSystemSupported,
+  localModelRecommendationFitsHardware,
   nextSmallerRecommendation,
   recommendLocalModel,
+  recommendLocalModelsByUseCase,
   toolCallSupportForParameterSize,
 } from "./catalog";
-import { detectHardwareProfile } from "./hardwareProfile";
+import { collectHardwareProfile, detectHardwareProfile } from "./hardwareProfile";
 import { buildOpenCodeLocalProviderConfig } from "./openCodeConfig";
 import {
   installOllamaRuntime,
@@ -46,6 +55,9 @@ import { resolveLmStudioContext } from "./lmStudioContext";
 const OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
 const LM_STUDIO_ENDPOINT = "http://127.0.0.1:1234";
 const REQUEST_TIMEOUT_MS = 2_500;
+const DEFAULT_CANARY_REQUEST_TIMEOUT_MS = 120_000;
+const DEFAULT_CANARY_USABILITY_THRESHOLD_MS = 30_000;
+const DEFAULT_HARDWARE_PROFILE_TTL_MS = 15_000;
 // First launch can include Windows Defender scanning and GPU discovery. Keep
 // polling the localhost API so slow cold starts do not invite repeated retries.
 const START_TIMEOUT_MS = 90_000;
@@ -69,6 +81,38 @@ const UNUSABLE_TOKENS_PER_SECOND = 5;
 const MAX_RETAINED_SETUP_JOBS = 8;
 const GIB = 1024 ** 3;
 
+const MANAGED_OLLAMA_DEVICE_OVERRIDE_KEYS = new Set([
+  "CUDA_VISIBLE_DEVICES",
+  "GGML_VK_VISIBLE_DEVICES",
+  "GPU_DEVICE_ORDINAL",
+  "HIP_VISIBLE_DEVICES",
+  "OLLAMA_GPU_OVERHEAD",
+  "OLLAMA_LLM_LIBRARY",
+  "OLLAMA_VULKAN",
+  "ROCR_VISIBLE_DEVICES",
+  "VK_ADD_DRIVER_FILES",
+  "VK_ADD_IMPLICIT_LAYER_PATH",
+  "VK_ADD_LAYER_PATH",
+  "VK_DRIVER_FILES",
+  "VK_ICD_FILENAMES",
+  "VK_IMPLICIT_LAYER_PATH",
+  "VK_INSTANCE_LAYERS",
+  "VK_LAYER_PATH",
+  "VK_LOADER_DRIVERS_DISABLE",
+  "VK_LOADER_DRIVERS_SELECT",
+  "VK_LOADER_LAYERS_ALLOW",
+  "VK_LOADER_LAYERS_DISABLE",
+  "VK_LOADER_LAYERS_ENABLE",
+]);
+
+function managedOllamaBaseEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(
+    Object.entries(source).filter(
+      ([key]) => !MANAGED_OLLAMA_DEVICE_OVERRIDE_KEYS.has(key.toUpperCase()),
+    ),
+  );
+}
+
 interface RuntimeProbe {
   readonly status: LocalModelRuntimeStatus;
   readonly models: ReadonlyArray<LocalInstalledModel> | null;
@@ -85,18 +129,31 @@ interface LmStudioRuntimeModel {
   readonly requiredLoadContextWindowTokens: number | null;
 }
 
+export interface LocalModelInferenceCanaryInput {
+  readonly runtime: LocalModelRuntime;
+  readonly modelId: string;
+  readonly signal: AbortSignal;
+}
+
 export interface LocalModelManagerOptions {
   readonly stateDir: string;
   readonly managedOpenCodeRootDir?: string;
   readonly fetch?: LocalModelFetch;
   readonly totalMemoryBytes?: number;
   readonly hardwareProfile?: LocalHardwareProfile;
+  readonly availableMemoryBytes?: number;
+  readonly cpuLogicalCores?: number;
   readonly freeDiskBytes?: number | null;
   readonly platform?: NodeJS.Platform;
   readonly arch?: NodeJS.Architecture;
+  readonly hardwareProfileTtlMs?: number;
+  readonly canaryRequestTimeoutMs?: number;
+  readonly canaryUsabilityThresholdMs?: number;
   readonly env?: NodeJS.ProcessEnv;
   readonly now?: () => Date;
   readonly onSnapshot?: (snapshot: LocalModelsSnapshot) => void | Promise<void>;
+  readonly hardwareProfileProvider?: () => Promise<LocalModelHardwareProfile>;
+  readonly runInferenceCanary?: (input: LocalModelInferenceCanaryInput) => Promise<void>;
   readonly installOllama?: (options: OllamaInstallOptions) => Promise<OllamaInstallResult>;
   readonly installLmStudio?: (options: LmStudioInstallOptions) => Promise<LmStudioInstallResult>;
   readonly spawnRuntime?: (
@@ -117,6 +174,32 @@ export class LocalModelManagerError extends Error {
   }
 }
 
+function assertSupportedSetupPlatform(
+  profile: LocalModelHardwareProfile,
+  operation: "startSetup" | "retrySetup" | "installRuntime",
+  runtime: LocalModelRuntime,
+): void {
+  if (profile.platform === "win32" && !localModelOperatingSystemSupported(profile)) {
+    throw new LocalModelManagerError(
+      operation,
+      `Local AI requires Windows 10 22H2 or later. This PC is running Windows ${profile.osVersion ?? "an unknown version"}.`,
+    );
+  }
+  if (profile.platform === "darwin" && !localModelOperatingSystemSupported(profile)) {
+    throw new LocalModelManagerError(
+      operation,
+      `Local AI requires macOS 14 or later. This Mac is running macOS ${profile.osVersion ?? "an unknown version"}.`,
+    );
+  }
+  if (profile.platform !== "darwin") return;
+  if (runtime === "lmstudio" && profile.cpuArchitecture === "x64") {
+    throw new LocalModelManagerError(
+      operation,
+      "LM Studio local setup requires Apple Silicon. Choose Ollama for an Intel Mac.",
+    );
+  }
+}
+
 function finiteNonNegative(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? Math.min(Math.floor(value), Number.MAX_SAFE_INTEGER)
@@ -133,6 +216,15 @@ function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function hasNonEmptyText(value: unknown): boolean {
+  if (typeof value === "string") return value.trim().length > 0;
+  if (!Array.isArray(value)) return false;
+  return value.some((part) => {
+    const item = record(part);
+    return hasNonEmptyText(item?.text) || hasNonEmptyText(item?.content);
+  });
 }
 
 async function responseJson(response: Response): Promise<unknown> {
@@ -157,15 +249,15 @@ function runtimeCapabilities(runtime: LocalModelRuntime, state: LocalModelRuntim
 
 // Reports the measured speed plainly so a slow machine is told it is slow, rather than left to
 // wonder why the model feels broken.
-function readyMessage(modelName: string, tokensPerSecond: number | null): string {
-  if (tokensPerSecond === null) return `${modelName} is ready to use in chat.`;
+function readyMessage(tokensPerSecond: number | null): string {
+  if (tokensPerSecond === null) return "Local AI is ready to use in chat.";
   if (tokensPerSecond < UNUSABLE_TOKENS_PER_SECOND) {
-    return `${modelName} is ready, but at about ${tokensPerSecond} tokens per second it is too slow to use comfortably on this computer. Try a smaller model.`;
+    return `Local AI is ready, but at about ${tokensPerSecond} tokens per second it is too slow to use comfortably on this computer. Try a smaller option.`;
   }
   if (tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND) {
-    return `${modelName} is ready at about ${tokensPerSecond} tokens per second, which is slower than ideal. A smaller model would feel faster.`;
+    return `Local AI is ready at about ${tokensPerSecond} tokens per second, which is slower than ideal. A smaller option would feel faster.`;
   }
-  return `${modelName} is ready to use in chat at about ${tokensPerSecond} tokens per second.`;
+  return `Local AI is ready to use in chat at about ${tokensPerSecond} tokens per second.`;
 }
 
 function runtimeMetadata(runtime: LocalModelRuntime) {
@@ -188,11 +280,16 @@ export class LocalModelManager {
   readonly #fetch: LocalModelFetch;
   readonly #totalMemoryBytes: number;
   readonly #hardwareProfileOverride: LocalHardwareProfile | undefined;
-  #hardwareProfilePromise: Promise<LocalHardwareProfile> | null = null;
-  readonly #configuredFreeDiskBytes: number | null | undefined;
+  #hardwareSummaryPromise: Promise<LocalHardwareProfile> | null = null;
+  readonly #hardwareProfileProvider: () => Promise<LocalModelHardwareProfile>;
+  readonly #runInferenceCanary: (input: LocalModelInferenceCanaryInput) => Promise<void>;
   readonly #platform: NodeJS.Platform;
   readonly #arch: NodeJS.Architecture;
+  readonly #processArch: NodeJS.Architecture;
   readonly #env: NodeJS.ProcessEnv;
+  readonly #hardwareProfileTtlMs: number;
+  readonly #canaryRequestTimeoutMs: number;
+  readonly #canaryUsabilityThresholdMs: number;
   readonly #now: () => Date;
   readonly #onSnapshot: ((snapshot: LocalModelsSnapshot) => void | Promise<void>) | undefined;
   readonly #jobs = new Map<string, LocalModelInstallJob>();
@@ -224,21 +321,74 @@ export class LocalModelManager {
   #managedLmStudioCommand: string | null = null;
   #lastSynchronizedInventoryFingerprint: string | null = null;
   #configWrite = Promise.resolve();
+  #hardwareProfilePromise: Promise<LocalModelHardwareProfile> | null = null;
+  #hardwareProfileResolved = false;
+  #hardwareProfileCollectedAtMs = 0;
 
   constructor(options: LocalModelManagerOptions) {
     this.#fetch = options.fetch ?? fetch;
     this.#totalMemoryBytes = options.totalMemoryBytes ?? totalmem();
     this.#hardwareProfileOverride = options.hardwareProfile;
-    this.#configuredFreeDiskBytes = options.freeDiskBytes;
     this.#platform = options.platform ?? process.platform;
-    this.#arch = options.arch ?? process.arch;
     this.#env = options.env ?? process.env;
+    const configuredProcessArch = this.#env.DJL_PROCESS_ARCH;
+    this.#processArch =
+      options.arch ??
+      (configuredProcessArch === "arm64" || configuredProcessArch === "x64"
+        ? configuredProcessArch
+        : process.arch);
+    const configuredHostArch = this.#env.DJL_HOST_ARCH;
+    this.#arch =
+      options.arch ??
+      (configuredHostArch === "arm64" || configuredHostArch === "x64"
+        ? configuredHostArch
+        : process.arch);
+    this.#hardwareProfileTtlMs = Math.max(
+      0,
+      finiteNonNegative(options.hardwareProfileTtlMs ?? DEFAULT_HARDWARE_PROFILE_TTL_MS),
+    );
+    this.#canaryRequestTimeoutMs = Math.max(
+      1,
+      finiteNonNegative(options.canaryRequestTimeoutMs ?? DEFAULT_CANARY_REQUEST_TIMEOUT_MS),
+    );
+    this.#canaryUsabilityThresholdMs = Math.max(
+      1,
+      finiteNonNegative(
+        options.canaryUsabilityThresholdMs ?? DEFAULT_CANARY_USABILITY_THRESHOLD_MS,
+      ),
+    );
     this.#now = options.now ?? (() => new Date());
     this.#onSnapshot = options.onSnapshot;
     this.#stateDir = options.stateDir;
     this.#installOllama = options.installOllama ?? installOllamaRuntime;
     this.#installLmStudio = options.installLmStudio ?? installLmStudioRuntime;
     this.#spawnRuntime = options.spawnRuntime ?? spawn;
+    this.#hardwareProfileProvider =
+      options.hardwareProfileProvider ??
+      (() =>
+        collectHardwareProfile({
+          stateDir: options.stateDir,
+          platform: this.#platform,
+          architecture: this.#arch,
+          processArchitecture: this.#processArch,
+          runningUnderTranslation: this.#env.DJL_RUNNING_UNDER_TRANSLATION === "1",
+          ...(options.totalMemoryBytes === undefined
+            ? {}
+            : { totalMemoryBytes: options.totalMemoryBytes, gpus: [] }),
+          ...(options.availableMemoryBytes !== undefined
+            ? { availableMemoryBytes: options.availableMemoryBytes }
+            : options.totalMemoryBytes === undefined
+              ? {}
+              : { availableMemoryBytes: options.totalMemoryBytes }),
+          ...(options.cpuLogicalCores === undefined
+            ? {}
+            : { cpuLogicalCores: options.cpuLogicalCores }),
+          ...(options.freeDiskBytes === undefined ? {} : { freeDiskBytes: options.freeDiskBytes }),
+          // A total-memory override is retained for deterministic legacy callers and tests.
+          // Real desktop collection has no override and performs Windows GPU discovery.
+        }));
+    this.#runInferenceCanary =
+      options.runInferenceCanary ?? ((input) => this.#runDefaultInferenceCanary(input));
     this.#configPath = join(
       options.managedOpenCodeRootDir ?? join(options.stateDir, "opencode"),
       "config",
@@ -249,14 +399,14 @@ export class LocalModelManager {
   }
 
   // Hardware does not change while the app runs, and the probes shell out, so detect once.
-  async #getHardwareProfile(): Promise<LocalHardwareProfile> {
+  async #getHardwareSummary(): Promise<LocalHardwareProfile> {
     if (this.#hardwareProfileOverride) return this.#hardwareProfileOverride;
-    this.#hardwareProfilePromise ??= detectHardwareProfile({
+    this.#hardwareSummaryPromise ??= detectHardwareProfile({
       platform: this.#platform,
       arch: this.#arch,
       totalMemoryBytes: this.#totalMemoryBytes,
     });
-    return this.#hardwareProfilePromise;
+    return this.#hardwareSummaryPromise;
   }
 
   async getSnapshot(
@@ -276,13 +426,18 @@ export class LocalModelManager {
       await this.#synchronizeOpenCodeConfig();
     }
     const installedModels = [...this.#knownModels.values()].flat();
-    const hardware = await this.#getHardwareProfile();
-    const recommended = recommendLocalModel(hardware.usableModelBytes);
+    const [hardware, hardwareProfile] = await Promise.all([
+      this.#getHardwareSummary(),
+      this.#getHardwareProfile(),
+    ]);
+    const recommendedModelIdsByUseCase = recommendLocalModelsByUseCase(hardwareProfile);
     return {
-      totalMemoryBytes: finiteNonNegative(this.#totalMemoryBytes),
+      totalMemoryBytes: hardwareProfile.totalMemoryBytes,
       hardware,
-      freeDiskBytes: await this.#getFreeDiskBytes(),
-      recommendedModelId: recommended?.id ?? null,
+      freeDiskBytes: hardwareProfile.freeDiskBytes,
+      hardwareProfile,
+      recommendedModelId: recommendedModelIdsByUseCase.general,
+      recommendedModelIdsByUseCase,
       runtimes: probes.map(({ status }) => status),
       recommendations: [...LOCAL_MODEL_RECOMMENDATIONS],
       installedModels,
@@ -478,16 +633,50 @@ export class LocalModelManager {
   async startSetup(input: LocalModelSetupInput): Promise<LocalModelSetupJob> {
     await this.#ensureInitialized();
     const runtime = input.runtime ?? "ollama";
+    const useCase =
+      input.useCase ??
+      (input.recommendationId ? inferChampionUseCase(input.recommendationId) : null) ??
+      "general";
+    const active = this.#activeSetupJob();
+    if (active) {
+      if (active.runtime === runtime && (active.useCase ?? "general") === useCase) return active;
+      throw new LocalModelManagerError(
+        "startSetup",
+        "Another local AI is already being prepared. Let it finish or cancel it first.",
+      );
+    }
+    const hardwareProfile = await this.#getHardwareProfile(true);
+    assertSupportedSetupPlatform(hardwareProfile, "startSetup", runtime);
+    const racedActive = this.#activeSetupJob();
+    if (racedActive) {
+      if (racedActive.runtime === runtime && (racedActive.useCase ?? "general") === useCase) {
+        return racedActive;
+      }
+      throw new LocalModelManagerError(
+        "startSetup",
+        "Another local AI is already being prepared. Let it finish or cancel it first.",
+      );
+    }
     const recommendation = input.recommendationId
       ? LOCAL_MODEL_RECOMMENDATIONS.find(({ id }) => id === input.recommendationId)
-      : recommendLocalModel((await this.#getHardwareProfile()).usableModelBytes);
+      : (recommendLocalModel(hardwareProfile, useCase) ??
+        // Let the setup job surface an actionable disk-space message when hardware
+        // capacity is otherwise sufficient, instead of failing before a job exists.
+        recommendLocalModel({ ...hardwareProfile, freeDiskBytes: null }, useCase));
     if (!recommendation) {
       throw new LocalModelManagerError("startSetup", "No recommended local model is available.");
     }
-    if (recommendation.minimumMemoryBytes > this.#totalMemoryBytes) {
+    if (
+      input.recommendationId &&
+      (!isChampionRecommendationForUseCase(recommendation.id, useCase) ||
+        !localModelRecommendationFitsHardware(recommendation, {
+          ...hardwareProfile,
+          freeDiskBytes: null,
+        }))
+    ) {
       throw new LocalModelManagerError(
         "startSetup",
-        `${recommendation.name} requires at least ${Math.ceil(recommendation.minimumMemoryBytes / GIB)} GB of memory.`,
+        "That local model is not a safe champion for the selected category on this computer.",
       );
     }
     const source = recommendation.sources.find((candidate) => candidate.runtime === runtime);
@@ -495,16 +684,6 @@ export class LocalModelManager {
       throw new LocalModelManagerError(
         "startSetup",
         `${recommendation.name} is not available for ${runtimeMetadata(runtime).name}.`,
-      );
-    }
-    const active = [...this.#setupJobs.values()].find(
-      (job) => !["ready", "failed", "cancelled"].includes(job.state),
-    );
-    if (active) {
-      if (active.runtime === runtime && active.modelId === source.modelId) return active;
-      throw new LocalModelManagerError(
-        "startSetup",
-        "Cannot start another local AI setup while one is already running.",
       );
     }
     for (const [jobId, job] of this.#setupJobs) {
@@ -520,6 +699,7 @@ export class LocalModelManager {
     const job: LocalModelSetupJob = {
       id: randomUUID(),
       runtime,
+      useCase,
       recommendationId: recommendation.id,
       modelId: source.modelId,
       state: "detecting",
@@ -545,34 +725,56 @@ export class LocalModelManager {
     const job = this.#setupJobs.get(jobId);
     if (!job) throw new LocalModelManagerError("retrySetup", "The setup job was not found.");
     if (job.state !== "failed" && job.state !== "cancelled") return job;
-    const recommendation = LOCAL_MODEL_RECOMMENDATIONS.find(
-      ({ id }) => id === job.recommendationId,
-    );
+    const useCase = job.useCase ?? "general";
+    const active = this.#activeSetupJob(jobId);
+    if (active) {
+      if (active.runtime === job.runtime && (active.useCase ?? "general") === useCase)
+        return active;
+      throw new LocalModelManagerError(
+        "retrySetup",
+        "Another local AI is already being prepared. Let it finish or cancel it first.",
+      );
+    }
+    const hardwareProfile = await this.#getHardwareProfile(true);
+    assertSupportedSetupPlatform(hardwareProfile, "retrySetup", job.runtime);
+    const recommendation =
+      recommendLocalModel(hardwareProfile, useCase) ??
+      recommendLocalModel({ ...hardwareProfile, freeDiskBytes: null }, useCase);
     if (!recommendation) {
       throw new LocalModelManagerError(
         "retrySetup",
-        "The selected local AI setup is no longer available.",
+        "No recommended local model is available for this computer right now.",
       );
     }
-    if (recommendation.minimumMemoryBytes > this.#totalMemoryBytes) {
+    const source = recommendation.sources.find(({ runtime }) => runtime === job.runtime);
+    if (!source) {
       throw new LocalModelManagerError(
         "retrySetup",
-        `${recommendation.name} requires at least ${Math.ceil(recommendation.minimumMemoryBytes / GIB)} GB of memory.`,
+        `${recommendation.name} is not available for ${runtimeMetadata(job.runtime).name}.`,
       );
     }
-    const active = [...this.#setupJobs.values()].find(
-      (candidate) =>
-        candidate.id !== jobId && !["ready", "failed", "cancelled"].includes(candidate.state),
-    );
-    if (active) {
+    const latestJob = this.#setupJobs.get(jobId);
+    if (!latestJob) {
+      throw new LocalModelManagerError("retrySetup", "The setup job was not found.");
+    }
+    if (latestJob.state !== "failed" && latestJob.state !== "cancelled") return latestJob;
+    const racedActive = this.#activeSetupJob();
+    if (racedActive) {
+      if (racedActive.id === jobId) return racedActive;
+      if (racedActive.runtime === job.runtime && (racedActive.useCase ?? "general") === useCase) {
+        return racedActive;
+      }
       throw new LocalModelManagerError(
         "retrySetup",
-        "Cannot start another local AI setup while one is already running.",
+        "Another local AI is already being prepared. Let it finish or cancel it first.",
       );
     }
     const retried = this.#updateSetupJob(jobId, {
+      recommendationId: recommendation.id,
+      modelId: source.modelId,
       state: "detecting",
       downloadedBytes: 0,
+      totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
       message: "Checking this computer…",
       tokensPerSecond: null,
       suggestedFallbackId: null,
@@ -616,146 +818,205 @@ export class LocalModelManager {
       let snapshot = await this.getSnapshot();
       const initial = this.#setupJobs.get(jobId);
       if (!initial || signal.aborted) return;
-      const runtimeStatus = snapshot.runtimes.find(({ runtime }) => runtime === initial.runtime);
-      const recommendation = LOCAL_MODEL_RECOMMENDATIONS.find(
-        ({ id }) => id === initial.recommendationId,
+      const fallbacks = localModelFallbackChain(
+        initial.recommendationId,
+        initial.useCase ?? "general",
       );
-      const source = recommendation?.sources.find(({ runtime }) => runtime === initial.runtime);
-      if (!runtimeStatus || !recommendation || !source) {
-        throw new Error("The selected local AI setup is no longer available.");
-      }
+      if (fallbacks.length === 0) throw new Error("Local AI setup is no longer available.");
 
-      const alreadyInstalled = snapshot.installedModels.some(
-        ({ runtime, modelId }) => runtime === initial.runtime && modelId === initial.modelId,
-      );
-      if (!alreadyInstalled) {
-        const runtimeBytes =
-          runtimeStatus.state === "not_installed" ? runtimeStatus.estimatedDownloadBytes : 0;
-        const estimatedBytes = finiteNonNegative(source.estimatedDownloadBytes) + runtimeBytes;
-        const safetyBytes = Math.max(2 * GIB, Math.ceil(estimatedBytes * 0.1));
-        if (
-          snapshot.freeDiskBytes !== null &&
-          snapshot.freeDiskBytes < estimatedBytes + safetyBytes
-        ) {
-          throw new Error(
-            `Not enough free disk space. Free at least ${Math.ceil((estimatedBytes + safetyBytes - snapshot.freeDiskBytes) / GIB)} GB and retry.`,
-          );
-        }
-      }
+      for (let candidateIndex = 0; candidateIndex < fallbacks.length; candidateIndex += 1) {
+        const recommendation = fallbacks[candidateIndex];
+        if (!recommendation) continue;
+        const source = recommendation.sources.find(({ runtime }) => runtime === initial.runtime);
+        if (!source) continue;
+        const runtimeStatus = snapshot.runtimes.find(({ runtime }) => runtime === initial.runtime);
+        if (!runtimeStatus) throw new Error("Local AI setup is no longer available.");
 
-      if (runtimeStatus.state === "not_installed") {
         this.#updateSetupJob(jobId, {
-          state: "installing_runtime",
-          message: `Installing ${runtimeMetadata(initial.runtime).name}…`,
-        });
-        await this.#persistSetupState();
-        await this.#emitLatestSnapshot();
-        snapshot = await this.installRuntime(initial.runtime);
-      } else if (runtimeStatus.state === "stopped") {
-        this.#updateSetupJob(jobId, {
-          state: "starting_runtime",
-          message: `Starting ${runtimeMetadata(initial.runtime).name}…`,
-        });
-        await this.#persistSetupState();
-        await this.#emitLatestSnapshot();
-        snapshot = await this.startRuntime(initial.runtime);
-      } else if (runtimeStatus.state !== "running") {
-        throw new Error(runtimeStatus.detail ?? `${runtimeStatus.name} is not ready.`);
-      }
-      if (signal.aborted) return;
-
-      const installedAfterStart = snapshot.installedModels.some(
-        ({ runtime, modelId }) => runtime === initial.runtime && modelId === initial.modelId,
-      );
-      if (!alreadyInstalled && !installedAfterStart) {
-        this.#updateSetupJob(jobId, {
-          state: "downloading_model",
+          recommendationId: recommendation.id,
+          modelId: source.modelId,
+          state: "detecting",
           downloadedBytes: 0,
           totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
-          message: `Downloading ${recommendation.name}…`,
+          message:
+            candidateIndex === 0
+              ? "Checking this computer…"
+              : "Choosing a more compatible local AI…",
         });
         await this.#persistSetupState();
         await this.#emitLatestSnapshot();
-        const installInput: LocalModelInstallInput =
-          source.runtime === "lmstudio"
-            ? {
-                runtime: "lmstudio",
-                modelId: source.modelId,
-                ...("quantization" in source && source.quantization
-                  ? { quantization: source.quantization }
-                  : {}),
-              }
-            : { runtime: "ollama", modelId: source.modelId };
-        const installJob = await this.installModel(installInput);
-        while (!signal.aborted) {
-          const currentInstall = this.#jobs.get(installJob.id);
-          if (!currentInstall) throw new Error("The model download disappeared.");
-          this.#updateSetupJob(jobId, {
-            downloadedBytes: currentInstall.downloadedBytes,
-            totalBytes:
-              currentInstall.totalBytes ?? finiteNonNegative(source.estimatedDownloadBytes),
-            message: currentInstall.message ?? `Downloading ${recommendation.name}…`,
-          });
-          if (currentInstall.state === "completed") break;
-          if (currentInstall.state === "failed" || currentInstall.state === "cancelled") {
-            throw new Error(currentInstall.message ?? "The model download did not complete.");
-          }
-          await new Promise((resolve) => setTimeout(resolve, 200));
-        }
-      }
-      if (signal.aborted) return;
 
-      let tokensPerSecond: number | null = null;
-      if (initial.runtime === "ollama") {
+        const alreadyInstalled = snapshot.installedModels.some(
+          ({ runtime, modelId }) => runtime === initial.runtime && modelId === source.modelId,
+        );
+        if (!alreadyInstalled) {
+          const runtimeBytes =
+            runtimeStatus.state === "not_installed"
+              ? Math.max(
+                  runtimeStatus.estimatedDownloadBytes,
+                  LOCAL_MODEL_RUNTIME_STORAGE_RESERVE_BYTES,
+                )
+              : 0;
+          const estimatedBytes = finiteNonNegative(source.estimatedDownloadBytes) + runtimeBytes;
+          const safetyBytes = Math.max(2 * GIB, Math.ceil(estimatedBytes * 0.1));
+          if (
+            snapshot.freeDiskBytes !== null &&
+            snapshot.freeDiskBytes < estimatedBytes + safetyBytes
+          ) {
+            throw new Error(
+              `Not enough free disk space. Free at least ${Math.ceil((estimatedBytes + safetyBytes - snapshot.freeDiskBytes) / GIB)} GB and retry.`,
+            );
+          }
+        }
+
+        if (runtimeStatus.state === "not_installed") {
+          this.#updateSetupJob(jobId, {
+            state: "installing_runtime",
+            message: "Preparing local AI…",
+          });
+          await this.#persistSetupState();
+          await this.#emitLatestSnapshot();
+          snapshot = await this.installRuntime(initial.runtime);
+        } else if (runtimeStatus.state === "stopped") {
+          this.#updateSetupJob(jobId, {
+            state: "starting_runtime",
+            message: "Starting local AI…",
+          });
+          await this.#persistSetupState();
+          await this.#emitLatestSnapshot();
+          snapshot = await this.startRuntime(initial.runtime);
+        } else if (runtimeStatus.state !== "running") {
+          throw new Error("Local AI could not be started.");
+        }
+        if (signal.aborted) return;
+
+        const installedAfterStart = snapshot.installedModels.some(
+          ({ runtime, modelId }) => runtime === initial.runtime && modelId === source.modelId,
+        );
+        let downloadedByThisSetup = false;
+        if (!alreadyInstalled && !installedAfterStart) {
+          this.#updateSetupJob(jobId, {
+            state: "downloading_model",
+            downloadedBytes: 0,
+            totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
+            message: "Downloading local AI…",
+          });
+          await this.#persistSetupState();
+          await this.#emitLatestSnapshot();
+          const existingInstall = [...this.#jobs.values()].find(
+            (job) =>
+              job.runtime === initial.runtime &&
+              job.modelId === source.modelId &&
+              (job.state === "queued" || job.state === "downloading"),
+          );
+          const installInput: LocalModelInstallInput =
+            source.runtime === "lmstudio"
+              ? {
+                  runtime: "lmstudio",
+                  modelId: source.modelId,
+                  ...("quantization" in source && source.quantization
+                    ? { quantization: source.quantization }
+                    : {}),
+                }
+              : { runtime: "ollama", modelId: source.modelId };
+          const installJob = await this.installModel(installInput);
+          downloadedByThisSetup = existingInstall === undefined;
+          while (!signal.aborted) {
+            const currentInstall = this.#jobs.get(installJob.id);
+            if (!currentInstall) throw new Error("Local AI download did not complete.");
+            this.#updateSetupJob(jobId, {
+              downloadedBytes: currentInstall.downloadedBytes,
+              totalBytes:
+                currentInstall.totalBytes ?? finiteNonNegative(source.estimatedDownloadBytes),
+              message: "Downloading local AI…",
+            });
+            if (currentInstall.state === "completed") break;
+            if (currentInstall.state === "failed" || currentInstall.state === "cancelled") {
+              throw new Error("Local AI download did not complete.");
+            }
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
+        }
+        if (signal.aborted) return;
+
+        this.#updateSetupJob(jobId, {
+          state: "synchronizing",
+          message: "Verifying local AI…",
+        });
+        await this.#persistSetupState();
+        await this.#emitLatestSnapshot();
+        snapshot = await this.getSnapshot();
+        if (
+          !snapshot.installedModels.some(
+            ({ runtime, modelId }) => runtime === initial.runtime && modelId === source.modelId,
+          )
+        ) {
+          throw new Error("Local AI is not available after download.");
+        }
+
         this.#updateSetupJob(jobId, {
           state: "verifying",
-          message: `Checking how fast ${recommendation.name} runs here…`,
+          message: "Checking that local AI works well here…",
         });
         await this.#persistSetupState();
         await this.#emitLatestSnapshot();
-        tokensPerSecond = await this.#measureTokensPerSecond(initial.modelId, signal);
-        if (tokensPerSecond !== null) {
-          this.#measuredSpeeds.set(`${initial.runtime}:${initial.modelId}`, tokensPerSecond);
-        }
-      }
-      if (signal.aborted) return;
 
-      this.#updateSetupJob(jobId, {
-        state: "synchronizing",
-        message: "Adding the model to chat…",
-      });
-      await this.#persistSetupState();
-      await this.#emitLatestSnapshot();
-      snapshot = await this.getSnapshot();
-      if (
-        !snapshot.installedModels.some(
-          ({ runtime, modelId }) => runtime === initial.runtime && modelId === initial.modelId,
-        )
-      ) {
-        throw new Error("The runtime finished downloading, but the model is not available yet.");
+        try {
+          await this.#runInferenceCanary({
+            runtime: initial.runtime,
+            modelId: source.modelId,
+            signal,
+          });
+        } catch {
+          if (signal.aborted) return;
+          if (candidateIndex + 1 < fallbacks.length) {
+            if (downloadedByThisSetup) {
+              await this.#bestEffortRemoveSetupModel(initial.runtime, source.modelId);
+            }
+            // A failed model load can stop the local runtime. Probe again so the
+            // next, smaller candidate can restart it instead of inheriting stale state.
+            snapshot = await this.getSnapshot();
+            continue;
+          }
+          throw new Error("Local AI could not complete its readiness check.");
+        }
+
+        let tokensPerSecond: number | null = null;
+        if (initial.runtime === "ollama") {
+          tokensPerSecond = await this.#measureTokensPerSecond(source.modelId, signal);
+          if (tokensPerSecond !== null) {
+            this.#measuredSpeeds.set(`${initial.runtime}:${source.modelId}`, tokensPerSecond);
+          }
+        }
+        if (signal.aborted) return;
+        const suggestedFallbackId =
+          tokensPerSecond !== null && tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND
+            ? (fallbacks[candidateIndex + 1]?.id ??
+              nextSmallerRecommendation(recommendation.id)?.id ??
+              null)
+            : null;
+        this.#updateSetupJob(jobId, {
+          state: "ready",
+          downloadedBytes: finiteNonNegative(source.estimatedDownloadBytes),
+          totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
+          message: readyMessage(tokensPerSecond),
+          tokensPerSecond,
+          suggestedFallbackId,
+          finishedAt: this.#now().toISOString(),
+        });
+        await this.#persistSetupState();
+        await this.#emitLatestSnapshot();
+        return;
       }
-      // Only offer a downgrade when the measurement actually disappointed and something smaller
-      // exists. A null measurement is not evidence of slowness.
-      const suggestedFallbackId =
-        tokensPerSecond !== null && tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND
-          ? (nextSmallerRecommendation(recommendation.id)?.id ?? null)
-          : null;
-      this.#updateSetupJob(jobId, {
-        state: "ready",
-        downloadedBytes: finiteNonNegative(source.estimatedDownloadBytes),
-        totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
-        message: readyMessage(recommendation.name, tokensPerSecond),
-        tokensPerSecond,
-        suggestedFallbackId,
-        finishedAt: this.#now().toISOString(),
-      });
-      await this.#persistSetupState();
-      await this.#emitLatestSnapshot();
+      throw new Error("No compatible local AI option is available.");
     } catch (cause) {
       if (signal.aborted) return;
+      const detail = cause instanceof Error ? cause.message : String(cause);
       this.#updateSetupJob(jobId, {
         state: "failed",
-        message: cause instanceof Error ? cause.message : String(cause),
+        message: detail.startsWith("Not enough free disk space")
+          ? detail
+          : "Local AI setup could not be completed. Retry setup.",
         finishedAt: this.#now().toISOString(),
       });
       await this.#persistSetupState();
@@ -844,7 +1105,32 @@ export class LocalModelManager {
     }
   }
 
+  async #bestEffortRemoveSetupModel(runtime: LocalModelRuntime, modelId: string): Promise<void> {
+    // LM Studio does not currently expose a deletion operation that DJL can use safely.
+    if (runtime !== "ollama") return;
+    try {
+      let snapshot = await this.getSnapshot({ synchronizeConfig: false });
+      let status = snapshot.runtimes.find((candidate) => candidate.runtime === runtime);
+      if (status?.state === "stopped") {
+        snapshot = await this.startRuntime(runtime);
+        status = snapshot.runtimes.find((candidate) => candidate.runtime === runtime);
+      }
+      if (status?.state !== "running") return;
+      const response = await this.#request(`${OLLAMA_ENDPOINT}/api/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: modelId }),
+      });
+      if (response.ok) this.#knownModels.delete(runtime);
+    } catch {
+      // Cleanup is best-effort; fallback setup must continue even when deletion fails.
+    }
+  }
+
   async installRuntime(runtime: LocalModelRuntime): Promise<LocalModelsSnapshot> {
+    await this.#ensureInitialized();
+    const hardwareProfile = await this.#getHardwareProfile();
+    assertSupportedSetupPlatform(hardwareProfile, "installRuntime", runtime);
     const existing = this.#runtimeInstalls.get(runtime);
     if (existing) return existing;
 
@@ -1035,8 +1321,11 @@ export class LocalModelManager {
       // degraded local models.
       const env = managedOllama
         ? {
-            ...this.#env,
+            ...managedOllamaBaseEnvironment(this.#env),
             OLLAMA_MODELS: join(this.#stateDir, "local-models", "ollama", "models"),
+            // Keep implicit graphics overlays out of the private inference process. Older
+            // Vulkan loaders may ignore this, which is harmless.
+            VK_LOADER_LAYERS_DISABLE: "~implicit~",
           }
         : managedLmStudio
           ? {
@@ -1258,7 +1547,7 @@ export class LocalModelManager {
         },
         models,
       };
-    } catch (cause) {
+    } catch {
       const command = await this.#resolveRuntimeCommand("ollama");
       const installed = command !== null;
       const state = installed ? "stopped" : "not_installed";
@@ -1604,6 +1893,12 @@ export class LocalModelManager {
     return next;
   }
 
+  #activeSetupJob(excludeJobId?: string): LocalModelSetupJob | undefined {
+    return [...this.#setupJobs.values()].find(
+      (job) => job.id !== excludeJobId && !["ready", "failed", "cancelled"].includes(job.state),
+    );
+  }
+
   async #ensureInitialized(): Promise<void> {
     if (!this.#initializePromise) {
       this.#initializePromise = (async () => {
@@ -1620,7 +1915,9 @@ export class LocalModelManager {
               typeof job.recommendationId !== "string" ||
               typeof job.modelId !== "string" ||
               typeof job.state !== "string" ||
-              typeof job.startedAt !== "string"
+              typeof job.startedAt !== "string" ||
+              (job.useCase !== undefined &&
+                !["general", "document", "reasoning", "coding"].includes(String(job.useCase)))
             ) {
               continue;
             }
@@ -1642,16 +1939,30 @@ export class LocalModelManager {
             );
           }
         }
-        for (const job of this.#setupJobs.values()) {
-          if (["ready", "failed", "cancelled"].includes(job.state)) continue;
-          this.#updateSetupJob(job.id, {
+        const resumableJobs = [...this.#setupJobs.values()]
+          .filter((job) => !["ready", "failed", "cancelled"].includes(job.state))
+          .toSorted(
+            (left, right) =>
+              right.startedAt.localeCompare(left.startedAt) || right.id.localeCompare(left.id),
+          );
+        const jobToResume = resumableJobs[0];
+        for (const staleJob of resumableJobs.slice(1)) {
+          this.#updateSetupJob(staleJob.id, {
+            state: "cancelled",
+            message: "A newer local AI setup was resumed instead.",
+            finishedAt: this.#now().toISOString(),
+          });
+        }
+        if (resumableJobs.length > 1) await this.#persistSetupState();
+        if (jobToResume) {
+          this.#updateSetupJob(jobToResume.id, {
             state: "detecting",
             message: "Resuming local AI setup…",
             finishedAt: null,
           });
           const controller = new AbortController();
-          this.#setupControllers.set(job.id, controller);
-          queueMicrotask(() => void this.#runSetup(job.id, controller.signal));
+          this.#setupControllers.set(jobToResume.id, controller);
+          queueMicrotask(() => void this.#runSetup(jobToResume.id, controller.signal));
         }
       })();
     }
@@ -1661,7 +1972,7 @@ export class LocalModelManager {
   async #persistSetupState(): Promise<void> {
     const payload = `${JSON.stringify(
       {
-        version: 1,
+        version: 2,
         jobs: [...this.#setupJobs.values()],
         speeds: Object.fromEntries(this.#measuredSpeeds),
       },
@@ -1679,18 +1990,68 @@ export class LocalModelManager {
     await this.#setupStateWrite;
   }
 
-  async #getFreeDiskBytes(): Promise<number | null> {
-    if (this.#configuredFreeDiskBytes !== undefined) {
-      return this.#configuredFreeDiskBytes === null
-        ? null
-        : finiteNonNegative(this.#configuredFreeDiskBytes);
+  async #getHardwareProfile(refresh = false): Promise<LocalModelHardwareProfile> {
+    const stale =
+      this.#hardwareProfileResolved &&
+      Date.now() - this.#hardwareProfileCollectedAtMs >= this.#hardwareProfileTtlMs;
+    if (refresh || stale) {
+      this.#hardwareProfilePromise = null;
+      this.#hardwareProfileResolved = false;
     }
+    if (!this.#hardwareProfilePromise) {
+      const pending = this.#hardwareProfileProvider();
+      this.#hardwareProfilePromise = pending;
+      pending.then(
+        () => {
+          if (this.#hardwareProfilePromise !== pending) return;
+          this.#hardwareProfileResolved = true;
+          this.#hardwareProfileCollectedAtMs = Date.now();
+        },
+        () => {
+          if (this.#hardwareProfilePromise !== pending) return;
+          this.#hardwareProfilePromise = null;
+          this.#hardwareProfileResolved = false;
+        },
+      );
+    }
+    return await this.#hardwareProfilePromise;
+  }
+
+  async #runDefaultInferenceCanary(input: LocalModelInferenceCanaryInput): Promise<void> {
+    const controller = new AbortController();
+    const startedAtMs = performance.now();
+    const timeout = setTimeout(() => controller.abort(), this.#canaryRequestTimeoutMs);
     try {
-      await mkdir(this.#stateDir, { recursive: true, mode: 0o700 });
-      const stats = await statfs(this.#stateDir);
-      return finiteNonNegative(Number(stats.bavail) * Number(stats.bsize));
-    } catch {
-      return null;
+      const response = await this.#fetch(
+        `${runtimeMetadata(input.runtime).endpoint}/v1/chat/completions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: input.modelId,
+            messages: [{ role: "user", content: "Reply with READY." }],
+            max_tokens: 32,
+            stream: false,
+          }),
+          signal: AbortSignal.any([controller.signal, input.signal]),
+        },
+      );
+      if (!response.ok) throw new Error("Local inference readiness request failed.");
+      const payload = record(await responseJson(response));
+      if (performance.now() - startedAtMs > this.#canaryUsabilityThresholdMs) {
+        throw new Error("Local inference is too slow for automatic setup.");
+      }
+      const firstChoice = Array.isArray(payload?.choices) ? record(payload.choices[0]) : null;
+      const message = record(firstChoice?.message);
+      if (
+        !hasNonEmptyText(message?.content) &&
+        !hasNonEmptyText(message?.reasoning_content) &&
+        !hasNonEmptyText(firstChoice?.text)
+      ) {
+        throw new Error("Local inference returned an empty response.");
+      }
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

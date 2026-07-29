@@ -100,12 +100,22 @@ describe("AI detector text pipeline", () => {
   });
 
   it("uses inclusive conservative calibration boundaries", () => {
-    expect(calibrateScore("en", 0.35)).toBe("likely-human");
-    expect(calibrateScore("en", 0.351)).toBe("uncertain");
-    expect(calibrateScore("en", 0.9849)).toBe("uncertain");
-    expect(calibrateScore("en", 0.985)).toBe("likely-ai");
-    expect(calibrateScore("zh-Hans", 0.25)).toBe("likely-human");
-    expect(calibrateScore("zh-Hans", 0.8)).toBe("likely-ai");
+    expect(calibrateScore("en", 0.001, 119)).toBe("uncertain");
+    expect(calibrateScore("zh-Hans", 0.999, 119)).toBe("uncertain");
+    expect(calibrateScore("en", 0.35, 800)).toBe("likely-human");
+    expect(calibrateScore("en", 0.351, 800)).toBe("uncertain");
+    expect(calibrateScore("en", 0.9899, 800)).toBe("uncertain");
+    expect(calibrateScore("en", 0.99, 800)).toBe("likely-ai");
+    expect(calibrateScore("en", 0.999, 599)).toBe("uncertain");
+    expect(calibrateScore("en", 0.9899, 1_000)).toBe("uncertain");
+    expect(calibrateScore("en", 0.99, 1_000)).toBe("likely-ai");
+    expect(calibrateScore("zh-Hans", 0.015, 200)).toBe("likely-human");
+    expect(calibrateScore("zh-Hans", 0.799, 200)).toBe("uncertain");
+    expect(calibrateScore("zh-Hans", 0.8, 200)).toBe("likely-ai");
+    expect(calibrateScore("zh-Hans", 0.799, 400)).toBe("uncertain");
+    expect(calibrateScore("zh-Hans", 0.8, 400)).toBe("likely-ai");
+    expect(calibrateScore("zh-Hans", 0.25, 800)).toBe("likely-human");
+    expect(calibrateScore("zh-Hans", 0.8, 800)).toBe("likely-ai");
   });
 
   it("segments deterministically and counts overlap only once", () => {
@@ -203,6 +213,45 @@ describe("AI detector text pipeline", () => {
     expect(aggregateReport({ text, routed, passages }).assessment).toBe("insufficient");
   });
 
+  it("requires 120 eligible characters for each language in a mixed document", () => {
+    const english = "a".repeat(40);
+    const chinese = "中".repeat(90);
+    const text = `${english}${chinese}`;
+    const report = aggregateReport({
+      text,
+      routed: [
+        { start: 0, end: english.length, language: "en" },
+        {
+          start: english.length,
+          end: text.length,
+          language: "zh-Hans",
+        },
+      ],
+      passages: [
+        {
+          id: "short-en",
+          start: 0,
+          end: english.length,
+          language: "en",
+          text: english,
+          aiProbability: 0.5,
+        },
+        {
+          id: "short-zh",
+          start: english.length,
+          end: text.length,
+          language: "zh-Hans",
+          text: chinese,
+          aiProbability: 0.999,
+        },
+      ],
+    });
+
+    expect(report.eligibleCharacters).toBe(130);
+    expect(report.scores).toEqual({ likelyAi: 0, uncertain: 100, likelyHuman: 0 });
+    expect(report.assessment).toBe("inconclusive");
+  });
+
   it("does not label a short single-passage English document as likely AI", () => {
     const text =
       "The community garden opens early each Saturday so neighbors can water seedlings before the afternoon heat. Volunteers record soil conditions, repair shared tools, and explain the planting schedule to new members. The group reviews its routines every month and changes them when a plot becomes difficult to maintain. These practical habits keep the garden welcoming and dependable throughout the growing season.";
@@ -214,9 +263,47 @@ describe("AI detector text pipeline", () => {
     expect(text.length).toBeLessThan(600);
     expect(aggregateReport({ text, routed, passages })).toMatchObject({
       scores: { likelyAi: 0, uncertain: 100, likelyHuman: 0 },
-      assessment: "mixed",
+      assessment: "inconclusive",
       confidence: "low",
     });
+  });
+
+  it("distinguishes inconclusive evidence from conflicting AI and human regions", () => {
+    const text = `${"This is a complete English sentence with stable explanatory prose. ".repeat(25)}\n`;
+    const routed = routeEligibleProse(text, "auto");
+    const passages = segmentPassages(text, routed);
+
+    const inconclusive = aggregateReport({
+      text,
+      routed,
+      passages: passages.map((passage) => Object.assign({}, passage, { aiProbability: 0.8 })),
+    });
+    expect(inconclusive.assessment).toBe("inconclusive");
+
+    const mixedText = "a".repeat(1_400);
+    const mixed = aggregateReport({
+      text: mixedText,
+      routed: [{ start: 0, end: mixedText.length, language: "en" }],
+      passages: [
+        {
+          id: "en-ai-half",
+          start: 0,
+          end: 700,
+          language: "en",
+          text: mixedText.slice(0, 700),
+          aiProbability: 0.999,
+        },
+        {
+          id: "en-human-half",
+          start: 700,
+          end: 1_400,
+          language: "en",
+          text: mixedText.slice(700),
+          aiProbability: 0.01,
+        },
+      ],
+    });
+    expect(mixed.assessment).toBe("mixed");
   });
 
   it("reports no percentages when every span is an unsupported language", () => {

@@ -14,6 +14,23 @@ export interface DetectorModelFile {
   readonly sha256: string;
 }
 
+export interface DetectorCalibrationBand {
+  readonly minimumEligibleCharacters: number;
+  readonly maximumEligibleCharacters: number | null;
+  readonly humanThreshold: number;
+  readonly aiThreshold: number | null;
+}
+
+export type DetectorModelOutputContract =
+  | {
+      readonly probability: "two-logit-softmax";
+      readonly aiLabelIndex: 0 | 1;
+    }
+  | {
+      readonly probability: "single-logit-sigmoid";
+      readonly aiLabelIndex: 0;
+    };
+
 export interface DetectorModelManifest {
   readonly language: DetectorModelLanguage;
   readonly id: string;
@@ -24,6 +41,8 @@ export interface DetectorModelManifest {
   readonly calibrationVersion: string;
   readonly humanThreshold: number;
   readonly aiThreshold: number;
+  readonly calibrationBands: readonly DetectorCalibrationBand[];
+  readonly output: DetectorModelOutputContract;
   readonly files: readonly DetectorModelFile[];
 }
 
@@ -41,9 +60,27 @@ export const AI_DETECTOR_MODELS: Readonly<Record<DetectorModelLanguage, Detector
       license: "MIT",
       licenseUrl:
         "https://huggingface.co/onnx-community/tmr-ai-text-detector-ONNX/blob/b9aa251e5bcda7e429fcc936767d921435945b60/LICENSE",
-      calibrationVersion: "djl-en-hc3-short-evidence-v3",
+      calibrationVersion: "djl-en-conservative-length-bands-v8",
       humanThreshold: 0.35,
-      aiThreshold: 0.985,
+      aiThreshold: 0.99,
+      calibrationBands: [
+        {
+          minimumEligibleCharacters: 0,
+          maximumEligibleCharacters: 599,
+          humanThreshold: 0.35,
+          aiThreshold: null,
+        },
+        {
+          minimumEligibleCharacters: 600,
+          maximumEligibleCharacters: null,
+          humanThreshold: 0.35,
+          aiThreshold: 0.99,
+        },
+      ],
+      output: {
+        probability: "two-logit-softmax",
+        aiLabelIndex: 1,
+      },
       files: [
         {
           path: "config.json",
@@ -78,10 +115,34 @@ export const AI_DETECTOR_MODELS: Readonly<Record<DetectorModelLanguage, Detector
       revision: chineseRevision,
       license: "Apache-2.0",
       licenseUrl:
-        "https://huggingface.co/yuchuantian/AIGC_detector_zhv3/blob/47695ff451b32c225dd938f4f478f7fdc6aa6bb0/LICENSE",
-      calibrationVersion: "djl-zh-hans-conservative-v1",
+        "https://huggingface.co/yuchuantian/AIGC_detector_zhv3/blob/47695ff451b32c225dd938f4f478f7fdc6aa6bb0/README.md",
+      calibrationVersion: "djl-zh-hans-selective-human-v3",
       humanThreshold: 0.25,
       aiThreshold: 0.8,
+      calibrationBands: [
+        {
+          minimumEligibleCharacters: 0,
+          maximumEligibleCharacters: 299,
+          humanThreshold: 0.015,
+          aiThreshold: 0.8,
+        },
+        {
+          minimumEligibleCharacters: 300,
+          maximumEligibleCharacters: 599,
+          humanThreshold: 0.015,
+          aiThreshold: 0.8,
+        },
+        {
+          minimumEligibleCharacters: 600,
+          maximumEligibleCharacters: null,
+          humanThreshold: 0.25,
+          aiThreshold: 0.8,
+        },
+      ],
+      output: {
+        probability: "two-logit-softmax",
+        aiLabelIndex: 1,
+      },
       files: [
         {
           path: "config.json",
@@ -115,6 +176,25 @@ export const AI_DETECTOR_MODEL_HOSTS = new Set(["huggingface.co", "cdn-lfs.huggi
 
 export function getModelManifest(language: DetectorModelLanguage): DetectorModelManifest {
   return AI_DETECTOR_MODELS[language];
+}
+
+export function getCalibrationBand(
+  manifest: DetectorModelManifest,
+  eligibleCharacters: number,
+): DetectorCalibrationBand {
+  const characters = Math.max(0, eligibleCharacters);
+  return (
+    manifest.calibrationBands.find(
+      (band) =>
+        characters >= band.minimumEligibleCharacters &&
+        (band.maximumEligibleCharacters === null || characters <= band.maximumEligibleCharacters),
+    ) ?? {
+      minimumEligibleCharacters: 0,
+      maximumEligibleCharacters: null,
+      humanThreshold: manifest.humanThreshold,
+      aiThreshold: manifest.aiThreshold,
+    }
+  );
 }
 
 export function modelSizeBytes(manifest: DetectorModelManifest): number {

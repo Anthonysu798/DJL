@@ -170,6 +170,42 @@
         "ready": "Plan listo",
         "showSidebar": "Mostrar la barra lateral de {{name}}",
         "tasks": "Tareas"
+      },
+      "zeroConfig": {
+        "action": "Preparar IA local y empezar",
+        "checking": "Comprobando este dispositivo",
+        "device": "Dispositivo detectado: {{summary}}",
+        "deviceSummary": "Memoria disponible {{availableMemory}} / {{totalMemory}} · {{cores}} núcleos lógicos",
+        "download": "Descarga estimada: {{size}}",
+        "failed": "DJL no pudo preparar la IA local",
+        "fallingBack": "Cambiando a un modelo estable más pequeño",
+        "gpuSummary": " · {{name}} · {{vram}} de VRAM",
+        "gpuSummaryAvailable": " · {{name}} · VRAM disponible {{availableVram}} / {{totalVram}}",
+        "placeholder": "¿En qué quieres que te ayude DJL?",
+        "preparing": "Preparando la IA local",
+        "privacy": "Se ejecuta en este dispositivo. Tus instrucciones y archivos permanecen en él.",
+        "recommended": "{{category}} de DJL para este dispositivo: {{model}}",
+        "retry": "Volver a intentar",
+        "testing": "Probando el modelo",
+        "useCaseLabel": "Elige lo que más necesitas",
+        "useCases": {
+          "coding": {
+            "description": "Código, depuración y proyectos",
+            "label": "Campeón de programación"
+          },
+          "document": {
+            "description": "Resúmenes, extracción y documentos largos",
+            "label": "Campeón de documentos"
+          },
+          "general": {
+            "description": "Preguntas, redacción y tareas diarias",
+            "label": "Campeón integral"
+          },
+          "reasoning": {
+            "description": "Análisis, matemáticas y problemas complejos",
+            "label": "Campeón de razonamiento"
+          }
+        }
       }
     },
     "confirmations": {
@@ -1217,12 +1253,47 @@
       "ollamaDescription": "DJL instala, inicia y conecta Ollama por ti, sin terminal ni contraseña de administrador.",
       "privacyDescription": "La inferencia permanece en esta computadora. Los prompts, el código y la salida no se envían a un proveedor alojado. Las herramientas aprobadas pueden acceder a la red por separado.",
       "privacyTitle": "Privacidad desde el diseño",
+      "quick": {
+        "chooseAnother": "Elegir otra configuración",
+        "description": "DJL instalará {{runtime}} y descargará {{model}} (aprox. {{size}}). No necesitas una terminal ni contraseña de administrador.",
+        "download": "Descargar {{model}} (aprox. {{size}})",
+        "insufficientDisk": "Se necesitan al menos {{size}} de espacio libre.",
+        "readyDescription": "{{model}} está instalado mediante {{runtime}} y disponible en el chat.",
+        "readyTitle": "{{runtime}} está listo",
+        "retry": "Reintentar configuración",
+        "runtimeLabel": "Elegir un entorno local",
+        "setup": "Configurar IA local · {{model}} (aprox. {{size}})",
+        "title": "Configurar {{runtime}} con un clic",
+        "useCaseLabel": "Elige en qué debe destacar la IA local",
+        "useCases": {
+          "coding": {
+            "description": "Código, depuración y proyectos",
+            "label": "Campeón de programación"
+          },
+          "document": {
+            "description": "Resúmenes, extracción y documentos largos",
+            "label": "Campeón de documentos"
+          },
+          "general": {
+            "description": "Preguntas, redacción y tareas diarias",
+            "label": "Campeón integral"
+          },
+          "reasoning": {
+            "description": "Análisis, matemáticas y problemas complejos",
+            "label": "Campeón de razonamiento"
+          }
+        },
+        "useInChat": "Usar en el chat"
+      },
       "recommendations": {
         "gpt-oss-20b": {
-          "description": "Un modelo local de programación potente para equipos con 16 GB o más."
+          "description": "Un modelo potente de uso general y razonamiento para equipos con 24 GB o más."
         },
         "granite-4.1-3b": {
-          "description": "Un modelo de programación compacto para Mac y PC con 8 GB de memoria."
+          "description": "Un modelo compacto integral, de documentos y programación para equipos con 8 GB de memoria."
+        },
+        "qwen2.5-coder-14b": {
+          "description": "Un modelo de programación más potente para equipos con 24 GB de memoria."
         },
         "qwen2.5-coder-7b": {
           "description": "Un modelo de programación capaz para equipos de 16 GB y tarjetas gráficas de 8 GB."
@@ -1231,10 +1302,10 @@
           "description": "Un modelo de chat rápido para equipos de bajos recursos con 4 GB de memoria o más."
         },
         "qwen3-coder-30b": {
-          "description": "La opción de programación local seleccionada más potente, pensada para equipos con 32 GB."
+          "description": "La opción de programación local seleccionada más potente, pensada para equipos con 48 GB de memoria."
         },
         "qwen3.5-2b": {
-          "description": "Un modelo de chat compacto con uso de herramientas, optimizado para equipos con 8 GB de memoria."
+          "description": "Un modelo ligero de uso general y programación para equipos con 6 GB de memoria."
         }
       },
       "recommendedTitle": "Recomendados para esta computadora",
@@ -2280,6 +2351,51 @@
       "settings": "Configuración",
       "toggleSidebar": "Alternar la barra lateral de hilos"
     },
+    "onboarding": {
+      "ariaLabel": "Tutorial para nuevos usuarios de DJL",
+      "back": "Atrás",
+      "finish": "Finalizar",
+      "next": "Siguiente",
+      "progress": "{{current}} de {{total}}",
+      "settings": {
+        "action": "Iniciar tutorial",
+        "basicTitle": "Tutorial básico",
+        "description": "Vuelve a ver la guía de Trabajo, Proyectos, recomendaciones de IA local y Configuración.",
+        "section": "Primeros pasos",
+        "title": "Tutorial para nuevos usuarios"
+      },
+      "skip": "Omitir",
+      "steps": {
+        "local-ai-device": {
+          "description": "DJL comprueba la memoria disponible, la memoria de la GPU, la CPU y el disco, y recomienda el modelo más potente que este equipo puede ejecutar de forma estable.",
+          "title": "Una recomendación para este equipo"
+        },
+        "local-ai-prepare": {
+          "description": "DJL descarga, inicia, verifica y selecciona el modelo automáticamente. Si no funciona de forma estable, cambia a uno menor de la misma categoría.",
+          "title": "Prepara la IA local con un clic"
+        },
+        "local-ai-purpose": {
+          "description": "Elige General, Documentos, Razonamiento o Programación. DJL ya seleccionó un campeón para cada nivel seguro de equipo.",
+          "title": "Elige en qué destaca la IA local"
+        },
+        "project-mode": {
+          "description": "Usa Proyectos cuando el trabajo pertenezca a una carpeta o base de código y necesite contexto continuo.",
+          "title": "Modo Proyectos"
+        },
+        "settings": {
+          "description": "Abre Configuración aquí para cambiar el idioma, los modelos, la apariencia y el comportamiento de la aplicación.",
+          "title": "Configuración"
+        },
+        "tutorial-replay": {
+          "description": "Si olvidas dónde está alguna función, abre aquí el tutorial para repetir el recorrido básico o el de Configuración cuando quieras.",
+          "title": "Vuelve a ver los tutoriales cuando quieras"
+        },
+        "work-mode": {
+          "description": "Usa Trabajo para tareas concretas como redacción, investigación y procesamiento de archivos.",
+          "title": "Modo Trabajo"
+        }
+      }
+    },
     "pluginLibrary": {
       "hero": "Haz que {{provider}} funcione a tu manera",
       "installedPluginsOnly": "Esta vista solo muestra los plugins que ya están disponibles en tu configuración de Codex.",
@@ -2351,6 +2467,12 @@
     },
     "recovery": {
       "retry": "Reintentar"
+    },
+    "settingsTour": {
+      "action": "Explorar la configuración",
+      "ariaLabel": "Tutorial de configuración de DJL",
+      "description": "Recorre cada categoría de Configuración y conoce qué controla cada una.",
+      "title": "Tutorial de configuración"
     },
     "shortcuts": {
       "description": "Muestra las teclas activas en el contexto actual.",
@@ -2852,6 +2974,7 @@
         "downloadStartFailed": "No se pudo iniciar la descarga de la actualización",
         "finishFailed": "No pude terminar de actualizar",
         "installFailed": "No se pudo instalar la actualización",
+        "later": "Más tarde",
         "manualAfterFailures_one": "La instalación automática ha fallado la hora {{count}}. Descargar {{version}} manualmente para terminar de actualizar.",
         "manualAfterFailures_other": "La instalación automática ha fallado {{count}} veces. Descargar {{version}} manualmente para terminar de actualizar.",
         "manualFallback": "La actualización de la aplicación no pudo completarse. Puedes descargarlo manualmente.",
@@ -2859,6 +2982,8 @@
         "preparingVersion": "DJL está preparando la versión {{version}} en segundo plano.",
         "ready": "Actualización lista",
         "readyDescription": "Haga clic en Actualizar cuando esté listo para reiniciarlo e instalarlo.",
+        "readyPrompt": "DJL {{version}} está listo. Reinicia ahora para instalar la actualización.",
+        "restartNow": "Reiniciar y actualizar",
         "theUpdate": "la actualización"
       },
       "updateButton": {
@@ -2977,7 +3102,7 @@
       "before": {
         "description": "El porcentaje considera la prosa apta, no todo el archivo.",
         "itemCoverage": "Se excluyen citas, código, tablas, referencias, metadatos e idiomas no compatibles.",
-        "itemEstimate": "Los resultados son indicadores probabilísticos, no prueba de autoría.",
+        "itemEstimate": "Los resultados son indicadores probabilísticos, no una prueba de autoría; un texto humano refinado con IA aún puede parecer humano.",
         "itemLocal": "Tu texto permanece dentro de DJL.",
         "title": "Qué mide esta revisión"
       },
@@ -3057,13 +3182,14 @@
       },
       "results": {
         "assessment": {
+          "inconclusive": "El detector no tiene evidencia suficientemente consistente para distinguir escritura similar a IA de escritura humana.",
           "insufficient": "Hay muy poca prosa apta para una evaluación responsable del documento completo.",
           "likely-ai": "La mayoría de la prosa apta se parece a patrones aprendidos de texto generado por IA.",
           "likely-human": "La mayoría de la prosa apta se parece a patrones aprendidos de escritura humana.",
-          "mixed": "La prosa apta contiene señales mixtas o inciertas.",
+          "mixed": "La prosa apta contiene señales tanto de escritura similar a IA como de escritura humana.",
           "unsupported": "No se encontró prosa en inglés o chino simplificado que se pudiera analizar."
         },
-        "confidence": "Confianza",
+        "confidence": "Solidez de la evidencia",
         "confidenceLevel": {
           "high": "Alta",
           "low": "Baja",

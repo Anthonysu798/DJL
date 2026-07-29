@@ -100,6 +100,7 @@ export const AiDetectorReport = Schema.Struct({
     "likely-ai",
     "mixed",
     "likely-human",
+    "inconclusive",
     "insufficient",
     "unsupported",
   ]),

@@ -34,6 +34,26 @@ export function resolveDesktopRuntimeInfo(
   };
 }
 
+// Update packages continue to follow the running app architecture on Windows. Local AI can use
+// Electron's WOW signal to select the native ARM64 runtime when an x64 DJL build is emulated.
+export function resolveLocalAiRuntimeInfo(
+  input: ResolveDesktopRuntimeInfoInput,
+): DesktopRuntimeInfo {
+  const runtimeInfo = resolveDesktopRuntimeInfo(input);
+  if (
+    input.platform !== "win32" ||
+    runtimeInfo.appArch !== "x64" ||
+    !input.runningUnderArm64Translation
+  ) {
+    return runtimeInfo;
+  }
+  return {
+    hostArch: "arm64",
+    appArch: "x64",
+    runningUnderArm64Translation: true,
+  };
+}
+
 export function isArm64HostRunningIntelBuild(runtimeInfo: DesktopRuntimeInfo): boolean {
   return runtimeInfo.hostArch === "arm64" && runtimeInfo.appArch === "x64";
 }
