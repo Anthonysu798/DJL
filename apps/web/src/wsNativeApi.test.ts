@@ -25,6 +25,8 @@ import {
 } from "@synara/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { hardwareProfileFixture } from "./test/localModelsFixture";
+
 const requestMock = vi.fn<(...args: Array<unknown>) => Promise<unknown>>();
 const showContextMenuFallbackMock =
   vi.fn<
@@ -693,6 +695,7 @@ describe("wsNativeApi", () => {
   it("forwards local model requests and events", async () => {
     const snapshot = {
       totalMemoryBytes: 17_179_869_184,
+      hardware: hardwareProfileFixture({ totalMemoryBytes: 17_179_869_184 }),
       freeDiskBytes: 68_719_476_736,
       recommendedModelId: "gpt-oss-20b",
       runtimes: [],

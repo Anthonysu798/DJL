@@ -234,6 +234,7 @@ export function providerModelsQueryOptions(input: {
       const api = ensureNativeApi();
       const result = await api.provider.listModels({
         provider: input.provider,
+        ...(input.provider === "opencode" ? { forceReload: true } : {}),
         ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
         ...(input.apiEndpoint ? { apiEndpoint: input.apiEndpoint } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),

@@ -7,22 +7,56 @@ import { describe, expect, it } from "vitest";
 import {
   LocalModelEvent,
   LocalModelInstallInput,
+  LocalInstalledModel,
   LocalModelSetupInput,
   LocalModelSetupJob,
   LocalModelsSnapshot,
 } from "./localModels";
 
 const decodeSnapshot = Schema.decodeUnknownEffect(LocalModelsSnapshot);
+const decodeInstalledModel = Schema.decodeUnknownEffect(LocalInstalledModel);
 const decodeInstall = Schema.decodeUnknownEffect(LocalModelInstallInput);
 const decodeEvent = Schema.decodeUnknownEffect(LocalModelEvent);
 const decodeSetup = Schema.decodeUnknownEffect(LocalModelSetupInput);
 const decodeSetupJob = Schema.decodeUnknownEffect(LocalModelSetupJob);
 
 describe("local model contracts", () => {
+  it("decodes LM Studio maximum, loaded, and effective context diagnostics", async () => {
+    const model = await Effect.runPromise(
+      decodeInstalledModel({
+        runtime: "lmstudio",
+        modelId: "ibm/granite-4.1-3b",
+        name: "Granite 4.1 3B",
+        sizeBytes: 2_099_546_710,
+        contextWindowTokens: 16_384,
+        maxContextWindowTokens: 131_072,
+        loadedContextWindowTokens: 8_192,
+        toolContextWindowReady: false,
+        supportsToolCalls: false,
+      }),
+    );
+
+    expect(model).toMatchObject({
+      contextWindowTokens: 16_384,
+      maxContextWindowTokens: 131_072,
+      loadedContextWindowTokens: 8_192,
+      toolContextWindowReady: false,
+    });
+  });
+
   it("decodes a bounded desktop runtime snapshot", async () => {
     const snapshot = await Effect.runPromise(
       decodeSnapshot({
         totalMemoryBytes: 34_359_738_368,
+        hardware: {
+          totalMemoryBytes: 34_359_738_368,
+          cpuModel: "Apple M2 Pro",
+          cpuCores: 10,
+          acceleration: "apple_unified",
+          gpuName: "Apple M2 Pro",
+          vramBytes: null,
+          usableModelBytes: 14_431_090_114,
+        },
         freeDiskBytes: 68_719_476_736,
         recommendedModelId: "qwen3-coder-large",
         runtimes: [
@@ -47,14 +81,16 @@ describe("local model contracts", () => {
         recommendations: [
           {
             id: "qwen3-coder-large",
+            supportsToolCalls: true,
             name: "Qwen3 Coder 30B",
             description: "Best local coding quality for larger-memory computers.",
             minimumMemoryBytes: 34_359_738_368,
             sources: [
               {
-                runtime: "ollama",
-                modelId: "qwen3-coder:30b",
-                estimatedDownloadBytes: 19_000_000_000,
+                runtime: "lmstudio",
+                modelId: "qwen/qwen3.5-2b",
+                estimatedDownloadBytes: 2_040_109_466,
+                quantization: "Q4_K_M",
               },
             ],
           },
@@ -68,6 +104,11 @@ describe("local model contracts", () => {
 
     expect(snapshot.runtimes[0]?.runtime).toBe("ollama");
     expect(snapshot.recommendedModelId).toBe("qwen3-coder-large");
+    expect(snapshot.recommendations[0]?.sources[0]).toMatchObject({
+      runtime: "lmstudio",
+      modelId: "qwen/qwen3.5-2b",
+      quantization: "Q4_K_M",
+    });
   });
 
   it("accepts Ollama tags and approved LM Studio catalog or Hugging Face identifiers", async () => {
@@ -102,6 +143,15 @@ describe("local model contracts", () => {
         type: "snapshot.updated",
         snapshot: {
           totalMemoryBytes: 17_179_869_184,
+          hardware: {
+            totalMemoryBytes: 17_179_869_184,
+            cpuModel: "Apple M2 Pro",
+            cpuCores: 10,
+            acceleration: "apple_unified",
+            gpuName: "Apple M2 Pro",
+            vramBytes: null,
+            usableModelBytes: 14_431_090_114,
+          },
           freeDiskBytes: null,
           recommendedModelId: "gpt-oss-balanced",
           runtimes: [],

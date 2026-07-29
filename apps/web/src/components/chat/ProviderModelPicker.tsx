@@ -37,10 +37,14 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   groupProviderModelOptions,
   groupProviderModelOptionsWithFavorites,
+  isChatOnlyModel,
   shouldUseCollapsibleModelGroups,
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { isElectron } from "~/env";
+import { readLocalModelsBrowserCache } from "~/lib/localModelsBrowserCache";
+import { ensureNativeApi } from "~/nativeApi";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   supportsModelFavorites,
@@ -219,6 +223,13 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
   );
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
   const activeProvider = props.lockedProvider ?? props.provider;
+
+  // The composer is the only place a first-time user looks for a local model, so offer setup here
+  // when none are installed. Read at render rather than memoized: LocalModelSetupCoordinator keeps
+  // this cache current app-wide, and a memo would keep offering setup after the first install. A
+  // missing or stale-schema entry reads as "none installed", which is the right prompt to show.
+  const showLocalModelSetupEntry =
+    isElectron && (readLocalModelsBrowserCache()?.data.installedModels.length ?? 0) === 0;
   const hiddenProviders = props.hiddenProviders;
   const providerOrder = props.providerOrder;
   const hiddenProviderSet = useMemo(
@@ -284,9 +295,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       piFavoriteModelSlugSet,
     ],
   );
-  const handleModelChange = (provider: ProviderKind, value: string) => {
-    if (props.disabled) return;
-    if (!value) return;
+  const commitModelChange = (provider: ProviderKind, value: string) => {
     const resolvedModel = resolveSelectableModel(
       provider,
       value,
@@ -295,6 +304,27 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     if (!resolvedModel) return;
     props.onProviderModelChange(provider, resolvedModel);
     onAfterSelection?.();
+  };
+
+  const handleModelChange = (provider: ProviderKind, value: string) => {
+    if (props.disabled) return;
+    if (!value) return;
+    // A model measured as unable to drive tool calls stays selectable, because chatting with a
+    // small model is legitimate and a silently disabled row explains nothing. Confirming once
+    // makes the limitation impossible to wander into without noticing.
+    const option = props.modelOptionsByProvider[provider]?.find(
+      (candidate) => candidate.slug === value,
+    );
+    if (option && isChatOnlyModel(option) && isElectron) {
+      void (async () => {
+        const confirmed = await ensureNativeApi()
+          .dialogs.confirm(t("model.chatOnlyConfirm", { ns: "chat", name: option.name }))
+          .catch(() => false);
+        if (confirmed) commitModelChange(provider, value);
+      })();
+      return;
+    }
+    commitModelChange(provider, value);
   };
   const toggleFavoriteModel = useCallback(
     (provider: FavoriteModelProvider, slug: string) => {
@@ -357,21 +387,32 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
 
     const content =
       groupedOptions.length > 0 ? (
-        <MenuRadioGroup
-          value={activeProvider === provider ? props.model : ""}
-          onValueChange={(value) => handleModelChange(provider, value)}
-        >
-          <ProviderModelOptionGroupList
-            groupedOptions={groupedOptions}
-            provider={provider}
-            activeModel={props.model}
-            isSearching={normalizedModelSearchQuery.length > 0}
-            favoriteProvider={favoriteProvider}
-            favoriteModelSlugSet={favoriteModelSlugSet}
-            onToggleFavorite={toggleFavoriteModel}
-            {...(onAfterSelection ? { onAfterSelection } : {})}
-          />
-        </MenuRadioGroup>
+        <>
+          <MenuRadioGroup
+            value={activeProvider === provider ? props.model : ""}
+            onValueChange={(value) => handleModelChange(provider, value)}
+          >
+            <ProviderModelOptionGroupList
+              groupedOptions={groupedOptions}
+              provider={provider}
+              activeModel={props.model}
+              isSearching={normalizedModelSearchQuery.length > 0}
+              favoriteProvider={favoriteProvider}
+              favoriteModelSlugSet={favoriteModelSlugSet}
+              onToggleFavorite={toggleFavoriteModel}
+              {...(onAfterSelection ? { onAfterSelection } : {})}
+            />
+          </MenuRadioGroup>
+          {showLocalModelSetupEntry && provider === "opencode" ? (
+            <MenuItem
+              onClick={() => {
+                window.location.assign("/settings?section=local-models");
+              }}
+            >
+              <span>{t("model.setUpLocalAi", { ns: "chat" })}</span>
+            </MenuItem>
+          ) : null}
+        </>
       ) : (
         <div className="px-2 py-2 text-muted-foreground text-sm">
           {provider === "pi" && normalizedModelSearchQuery.length === 0

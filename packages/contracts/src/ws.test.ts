@@ -241,6 +241,15 @@ it.effect("accepts local model snapshot pushes", () =>
         type: "snapshot.updated",
         snapshot: {
           totalMemoryBytes: 17_179_869_184,
+          hardware: {
+            totalMemoryBytes: 17_179_869_184,
+            cpuModel: "Apple M2 Pro",
+            cpuCores: 10,
+            acceleration: "apple_unified",
+            gpuName: "Apple M2 Pro",
+            vramBytes: null,
+            usableModelBytes: 14_431_090_114,
+          },
           freeDiskBytes: null,
           recommendedModelId: "gpt-oss-20b",
           runtimes: [],

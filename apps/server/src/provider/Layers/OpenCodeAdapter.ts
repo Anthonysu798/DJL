@@ -210,6 +210,14 @@ interface OpenCodeMessageSnapshot {
   readonly parts: ReadonlyArray<Part>;
 }
 
+interface LocalModelCatalogSnapshot {
+  readonly runtimes: ReadonlyArray<{ readonly runtime: string; readonly state: string }>;
+  readonly installedModels: ReadonlyArray<{
+    readonly runtime: string;
+    readonly modelId: string;
+  }>;
+}
+
 export interface OpenCodeAdapterLiveOptions {
   readonly nativeEventLogPath?: string;
   readonly nativeEventLogger?: EventNdjsonLogger;
@@ -220,6 +228,8 @@ export interface OpenCodeAdapterLiveOptions {
   readonly promptSubmissionInlineWaitMs?: number;
   readonly workMcpServer?: WorkMcpServerShape;
   readonly ensureLocalRuntime?: (modelSlug: string) => Effect.Effect<void, unknown>;
+  readonly localToolSupport?: (modelSlug: string) => Effect.Effect<boolean | null, unknown>;
+  readonly localModelInventory?: () => Effect.Effect<LocalModelCatalogSnapshot, unknown>;
 }
 
 function nowIso(): string {
@@ -1160,9 +1170,11 @@ export function resolvePreferredOpenCodeModelProviders(input: {
   const { inventory } = input;
   if (input.requireCredentials) {
     const credentials = new Set(input.credentialProviderIDs ?? []);
+    const connected = new Set(inventory.providerList.connected);
     return inventory.providerList.all.filter(
       (provider) =>
-        credentials.has(provider.id) || resolveOpenCodeProcessingLocality(provider.id) === "local",
+        credentials.has(provider.id) ||
+        (connected.has(provider.id) && resolveOpenCodeProcessingLocality(provider.id) === "local"),
     );
   }
   const connected = new Set(inventory.providerList.connected);
@@ -1452,6 +1464,7 @@ function resolveOpenCodeContextWindowSupport(
 }
 
 const LOCAL_OPENCODE_PROVIDER_IDS = new Set(["llama.cpp", "lmstudio", "ollama", "vllm"]);
+const DJL_LOCAL_MODEL_PROVIDER_IDS = new Set(["lmstudio", "ollama"]);
 
 const REMOTE_OPENCODE_PROVIDER_IDS = new Set([
   "amazon-bedrock",
@@ -1470,6 +1483,26 @@ const REMOTE_OPENCODE_PROVIDER_IDS = new Set([
   "vercel-ai-gateway",
   "xai",
 ]);
+
+export function reconcileOpenCodeLocalModels(
+  models: ProviderListModelsResult["models"],
+  snapshot: LocalModelCatalogSnapshot,
+): ProviderListModelsResult["models"] {
+  const runningRuntimes = new Set(
+    snapshot.runtimes.filter(({ state }) => state === "running").map(({ runtime }) => runtime),
+  );
+  const availableModelSlugs = new Set(
+    snapshot.installedModels
+      .filter(({ runtime }) => runningRuntimes.has(runtime))
+      .map(({ runtime, modelId }) => `${runtime}/${modelId}`),
+  );
+  return models.filter(({ slug, upstreamProviderId }) => {
+    const providerId = upstreamProviderId?.trim().toLowerCase();
+    return !providerId || !DJL_LOCAL_MODEL_PROVIDER_IDS.has(providerId)
+      ? true
+      : availableModelSlugs.has(slug);
+  });
+}
 
 function resolveOpenCodeProcessingLocality(providerId: string): "local" | "remote" | "unknown" {
   const normalized = providerId.trim().toLowerCase();
@@ -3819,6 +3852,22 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             sessions.delete(input.threadId);
           }
 
+          if (options?.ensureLocalRuntime && input.modelSelection) {
+            yield* options.ensureLocalRuntime(input.modelSelection.model).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ProviderAdapterValidationError({
+                    provider,
+                    operation: "startSession",
+                    issue:
+                      cause instanceof Error
+                        ? cause.message
+                        : "The selected local model runtime could not be prepared.",
+                  }),
+              ),
+            );
+          }
+
           const resumedSessionId = extractResumeSessionId(input.resumeCursor);
 
           const started = yield* Effect.gen(function* () {
@@ -3841,8 +3890,20 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   cliSpec: adapterConfig.cliSpec,
                   ...sdkServerPasswordOption(server, serverPassword),
                 });
+                // A model measured as unable to drive tool calls does not get DJL's tools. Handing
+                // them over produces invalid calls whose validation errors then surface in the
+                // user's chat as raw developer text — which reads as DJL being broken rather than
+                // the model being too small. Only a definite `false` withholds them.
+                const localToolsUsable =
+                  options?.localToolSupport && initialParsedModel
+                    ? (yield* options
+                        .localToolSupport(
+                          `${initialParsedModel.providerID}/${initialParsedModel.modelID}`,
+                        )
+                        .pipe(Effect.orElseSucceed(() => null))) !== false
+                    : true;
                 const workMcpRegistration: WorkMcpSessionRegistration | null =
-                  provider === "opencode" && workMcpServer
+                  provider === "opencode" && workMcpServer && localToolsUsable
                     ? yield* workMcpServer.registerSession({
                         threadId: input.threadId,
                         authorizedRoot: directory,
@@ -4642,6 +4703,15 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         const freeOnlyProviderID = adapterConfig.provider === "kilo" ? "kilo" : undefined;
         const requireCredentials = adapterConfig.provider === "opencode";
         return Effect.gen(function* () {
+          const reconcileLocalModels = (
+            models: ProviderListModelsResult["models"],
+          ): Effect.Effect<ProviderListModelsResult["models"]> =>
+            options?.localModelInventory
+              ? options.localModelInventory().pipe(
+                  Effect.map((snapshot) => reconcileOpenCodeLocalModels(models, snapshot)),
+                  Effect.orElseSucceed(() => models),
+                )
+              : Effect.succeed(models);
           const cliModelsEffect = requireCredentials
             ? Effect.succeed([] as ReadonlyArray<OpenCodeCliModelDescriptor>)
             : openCodeRuntime
@@ -4688,7 +4758,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             const preferredCliModels = cliModels.filter((model) =>
               preferredProviderIDs.has(model.providerID),
             );
-            const models = requireCredentials
+            const discoveredModels = requireCredentials
               ? inventoryModels
               : mergeOpenCodeCliModelDescriptors({
                   inventory,
@@ -4696,6 +4766,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   cliModels: preferredCliModels.length > 0 ? preferredCliModels : cliModels,
                   ...(freeOnlyProviderID ? { freeOnlyProviderID } : {}),
                 });
+            const models = yield* reconcileLocalModels(discoveredModels);
             yield* Effect.logDebug(`${adapterConfig.displayName} model discovery resolved`, {
               binaryPath,
               connectedProviders: inventory.providerList.connected,
@@ -4718,12 +4789,13 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           // Keep OpenCode's authoritative CLI list usable even if the local server
           // cannot start; otherwise the web picker falls back to one static model.
           if (cliModels.length > 0) {
-            const models = mergeOpenCodeCliModelDescriptors({
+            const discoveredModels = mergeOpenCodeCliModelDescriptors({
               inventory: emptyOpenCodeModelInventory(),
               models: [],
               cliModels,
               ...(freeOnlyProviderID ? { freeOnlyProviderID } : {}),
             });
+            const models = yield* reconcileLocalModels(discoveredModels);
             yield* Effect.logDebug(
               `${adapterConfig.displayName} model discovery resolved from CLI only`,
               {

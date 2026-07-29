@@ -1,117 +1,92 @@
-import type { LocalModelRecommendation, LocalModelsSnapshot } from "@synara/contracts";
+import type { LocalInstalledModel } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
-import {
-  installProgressPercent,
-  quickSetupViewModel,
-  recommendationSourceForRuntime,
-} from "./LocalModelsSettingsPanel";
+import * as localModelsPanel from "./LocalModelsSettingsPanel";
+import { installedModelRemovalAction } from "./LocalModelsSettingsPanel";
+import { installProgressPercent } from "./LocalModelHero";
 
-const recommendation: LocalModelRecommendation = {
-  id: "granite-4.1-3b",
-  name: "Granite 4.1 3B",
-  description: "Compact.",
-  minimumMemoryBytes: 8 * 1024 ** 3,
-  sources: [
-    { runtime: "ollama", modelId: "granite4.1:3b", estimatedDownloadBytes: 2 * 1024 ** 3 },
-    {
-      runtime: "lmstudio",
-      modelId: "ibm/granite-4.1-3b",
-      estimatedDownloadBytes: 2.2 * 1024 ** 3,
-    },
-  ],
-};
+const ollamaInstalledModel = {
+  runtime: "ollama",
+  modelId: "qwen3.5:2b-q4_K_M",
+  name: "Qwen3.5 2B",
+  sizeBytes: 2_040_109_466,
+  contextWindowTokens: 32_768,
+  supportsToolCalls: true,
+} satisfies LocalInstalledModel;
+
+const lmStudioInstalledModel = {
+  runtime: "lmstudio",
+  modelId: "qwen/qwen3.5-2b",
+  name: "Qwen3.5 2B (LM Studio)",
+  sizeBytes: 2_040_109_466,
+  contextWindowTokens: 32_768,
+  supportsToolCalls: true,
+} satisfies LocalInstalledModel;
 
 describe("LocalModelsSettingsPanel helpers", () => {
-  it("resolves the runtime-specific model source", () => {
-    expect(recommendationSourceForRuntime(recommendation, "ollama")?.modelId).toBe("granite4.1:3b");
-    expect(recommendationSourceForRuntime(recommendation, "lmstudio")?.modelId).toBe(
-      "ibm/granite-4.1-3b",
-    );
+  it("derives loaded and maximum context diagnostics for LM Studio", () => {
+    const diagnostics = (
+      localModelsPanel as typeof localModelsPanel & {
+        localModelContextDiagnostics?: (model: LocalInstalledModel) => unknown;
+      }
+    ).localModelContextDiagnostics;
+    const undersized = {
+      ...lmStudioInstalledModel,
+      contextWindowTokens: 8_192,
+      maxContextWindowTokens: 131_072,
+      loadedContextWindowTokens: 8_192,
+      toolContextWindowReady: false,
+      supportsToolCalls: false,
+    } satisfies LocalInstalledModel;
+    const ready = {
+      ...lmStudioInstalledModel,
+      contextWindowTokens: 16_384,
+      maxContextWindowTokens: 131_072,
+      loadedContextWindowTokens: 16_384,
+      toolContextWindowReady: true,
+    } satisfies LocalInstalledModel;
+    const inherentlySmall = {
+      ...lmStudioInstalledModel,
+      contextWindowTokens: 8_192,
+      maxContextWindowTokens: 8_192,
+      loadedContextWindowTokens: 8_192,
+      toolContextWindowReady: false,
+      supportsToolCalls: false,
+    } satisfies LocalInstalledModel;
+
+    expect(diagnostics?.(undersized)).toEqual({
+      loadedK: 8,
+      maximumK: 128,
+      requiredK: 16,
+      tooSmallForTools: true,
+    });
+    expect(diagnostics?.(ready)).toEqual({
+      loadedK: 16,
+      maximumK: 128,
+      requiredK: 16,
+      tooSmallForTools: false,
+    });
+    expect(diagnostics?.(inherentlySmall)).toEqual({
+      loadedK: 8,
+      maximumK: 8,
+      requiredK: 16,
+      tooSmallForTools: false,
+    });
+    expect(diagnostics?.(ollamaInstalledModel)).toBeNull();
+  });
+
+  it("creates an exact removal action for Ollama models only", () => {
+    expect(installedModelRemovalAction(ollamaInstalledModel)).toEqual({
+      type: "remove",
+      runtime: "ollama",
+      modelId: "qwen3.5:2b-q4_K_M",
+    });
+    expect(installedModelRemovalAction(lmStudioInstalledModel)).toBeNull();
   });
 
   it("clamps download progress and handles unknown totals", () => {
     expect(installProgressPercent(50, 100)).toBe(50);
     expect(installProgressPercent(120, 100)).toBe(100);
     expect(installProgressPercent(10, null)).toBeNull();
-  });
-
-  it("offers one-click setup, blocks low disk, and becomes ready when installed", () => {
-    const snapshot: LocalModelsSnapshot = {
-      totalMemoryBytes: 8 * 1024 ** 3,
-      freeDiskBytes: 20 * 1024 ** 3,
-      recommendedModelId: recommendation.id,
-      runtimes: [
-        {
-          runtime: "ollama",
-          name: "Ollama",
-          state: "not_installed",
-          version: null,
-          endpoint: "http://127.0.0.1:11434",
-          installerUrl: "https://ollama.com/download",
-          installationKind: null,
-          estimatedDownloadBytes: 300 * 1024 ** 2,
-          detail: null,
-          capabilities: {
-            canStart: false,
-            canInstallModels: false,
-            canCancelInstall: false,
-            canDeleteModels: false,
-          },
-        },
-        {
-          runtime: "lmstudio",
-          name: "LM Studio",
-          state: "not_installed",
-          version: null,
-          endpoint: "http://127.0.0.1:1234/v1",
-          installerUrl: "https://lmstudio.ai/download",
-          installationKind: null,
-          estimatedDownloadBytes: 300 * 1024 ** 2,
-          detail: null,
-          capabilities: {
-            canStart: false,
-            canInstallModels: false,
-            canCancelInstall: false,
-            canDeleteModels: false,
-          },
-        },
-      ],
-      recommendations: [recommendation],
-      installedModels: [],
-      runtimeInstallJobs: [],
-      installJobs: [],
-      setupJobs: [],
-    };
-
-    expect(quickSetupViewModel(snapshot)).toMatchObject({
-      action: "setup",
-      insufficientDisk: false,
-    });
-    expect(quickSetupViewModel(snapshot, "lmstudio")).toMatchObject({
-      action: "setup",
-      insufficientDisk: false,
-      runtime: { runtime: "lmstudio" },
-      source: { runtime: "lmstudio", modelId: "ibm/granite-4.1-3b" },
-    });
-    expect(quickSetupViewModel({ ...snapshot, freeDiskBytes: 1_024 })).toMatchObject({
-      action: "setup",
-      insufficientDisk: true,
-    });
-    expect(
-      quickSetupViewModel({
-        ...snapshot,
-        installedModels: [
-          {
-            runtime: "ollama",
-            modelId: "granite4.1:3b",
-            name: "Granite 4.1 3B",
-            sizeBytes: 2 * 1024 ** 3,
-            contextWindowTokens: null,
-            supportsToolCalls: true,
-          },
-        ],
-      }),
-    ).toMatchObject({ action: "ready", insufficientDisk: false });
   });
 });
