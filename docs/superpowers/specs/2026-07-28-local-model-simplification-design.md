@@ -186,7 +186,7 @@ Contract additions: `"verifying"` in `LocalModelSetupJobState`; `tokensPerSecond
 DJL fully controls what opencode sees, so these are cheap changes in `openCodeConfig.ts`.
 
 - **Parameter-aware tool gating.** Ollama's `/api/tags` returns `details.parameter_size` and
-  `details.quantization_level`. Verified against a live Ollama 
+  `details.quantization_level`. Verified against a live Ollama
   (`qwen2.5:7b → "7.6B"`, `qwen2.5-coder:0.5b → "494.03M"`) — note the field carries **both `M` and
   `B` suffixes**, so the parser must normalize units, and must tolerate the field being absent on
   models imported from a Modelfile. The current parser reads only `name` and `size`

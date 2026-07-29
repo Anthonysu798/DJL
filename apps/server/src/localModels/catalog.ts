@@ -101,7 +101,6 @@ function ollamaWeightBytes(recommendation: LocalModelRecommendation): number {
     Number.POSITIVE_INFINITY
   );
 }
-
 // Selection is driven by the weight budget from the hardware profile, not by installed RAM. A
 // machine can hold a model it cannot run quickly, and speed is what users judge a local model on.
 export function recommendLocalModel(usableModelBytes: number): LocalModelRecommendation | null {
@@ -166,4 +165,3 @@ export function curatedModelDisplayName(runtime: string, modelId: string): strin
     )?.name ?? null
   );
 }
-
