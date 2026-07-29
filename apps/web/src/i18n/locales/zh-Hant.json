@@ -556,6 +556,7 @@
       "change": "變更模型",
       "changeReasoning": "變更模型與推理",
       "chatOnly": "僅聊天",
+      "chatOnlyHint": "{{name}} 太小，無法呼叫工具，不能執行程式設計任務。",
       "configure": "設定模型",
       "loading": "正在載入模型",
       "noMatches": "沒有相符項目",

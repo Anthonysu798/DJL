@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   curatedModelDisplayName,
+  curatedToolSupport,
   nextSmallerRecommendation,
-  isCuratedLocalModel,
   LOCAL_MODEL_RECOMMENDATIONS,
   parseParameterCount,
   recommendLocalModel,
@@ -129,13 +129,6 @@ describe("local model catalog", () => {
     ]);
   });
 
-  it("recognizes curated tool-capable runtime model IDs", () => {
-    expect(isCuratedLocalModel("ollama", "qwen3:1.7b")).toBe(true);
-    expect(isCuratedLocalModel("lmstudio", "qwen/qwen3-1.7b")).toBe(true);
-    expect(isCuratedLocalModel("ollama", "qwen3.5:2b-q4_K_M")).toBe(true);
-    expect(isCuratedLocalModel("lmstudio", "qwen/qwen3.5-2b")).toBe(true);
-    expect(isCuratedLocalModel("lmstudio", "publisher/custom-model")).toBe(false);
-  });
 });
 
 describe("parameter-size tool gating", () => {
@@ -247,5 +240,32 @@ describe("downgrade target", () => {
 
   it("returns null for an unknown model", () => {
     expect(nextSmallerRecommendation("not-a-model")).toBeNull();
+  });
+});
+
+describe("curated tool capability is measured, not assumed", () => {
+  it("marks the sub-3B tiers as unable to drive tools", () => {
+    // Measured against a real Ollama: qwen3:1.7b (reported 2.0B) produced a valid tool call in
+    // only 1 of 3 runs, and on failure returned empty content after a long thinking block.
+    expect(curatedToolSupport("ollama", "qwen3:1.7b")).toBe(false);
+    expect(curatedToolSupport("ollama", "qwen3.5:2b-q4_K_M")).toBe(false);
+    expect(curatedToolSupport("lmstudio", "qwen/qwen3-1.7b")).toBe(false);
+  });
+
+  it("keeps the 3B-and-larger tiers tool-capable", () => {
+    expect(curatedToolSupport("ollama", "granite4.1:3b")).toBe(true);
+    expect(curatedToolSupport("ollama", "qwen2.5-coder:7b")).toBe(true);
+    expect(curatedToolSupport("ollama", "qwen3-coder:30b")).toBe(true);
+  });
+
+  it("has no opinion about models outside the catalog", () => {
+    expect(curatedToolSupport("ollama", "some-random:8b")).toBeNull();
+  });
+
+  it("never recommends a tool-incapable model as the machine's best fit unless nothing else fits", () => {
+    // A 4 GB machine genuinely cannot run any tool-capable local model. Saying so is the honest
+    // outcome; claiming the 1.7B tier can drive an agent is what shipped a broken experience.
+    const tiny = recommendLocalModel(1 * GIB);
+    expect(tiny && curatedToolSupport("ollama", tiny.sources[0]!.modelId)).toBe(false);
   });
 });

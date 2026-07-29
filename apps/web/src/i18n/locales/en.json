@@ -556,6 +556,7 @@
       "change": "Change model",
       "changeReasoning": "Change model and reasoning",
       "chatOnly": "Chat only",
+      "chatOnlyHint": "{{name}} is too small to use tools, so it cannot do coding tasks.",
       "configure": "Configure a model",
       "loading": "Loading models",
       "noMatches": "No matches",

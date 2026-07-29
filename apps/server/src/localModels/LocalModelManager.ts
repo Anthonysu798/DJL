@@ -22,7 +22,7 @@ import type {
 
 import {
   curatedModelDisplayName,
-  isCuratedLocalModel,
+  curatedToolSupport,
   LOCAL_MODEL_RECOMMENDATIONS,
   nextSmallerRecommendation,
   recommendLocalModel,
@@ -278,6 +278,25 @@ export class LocalModelManager {
       void this.#measureResidentModel();
     }
     return snapshot;
+  }
+
+  // Whether a locally-served model is known to be unable to drive tool calls. Only ever returns
+  // false on positive evidence; unknown and hosted models stay null so nothing is withheld on a
+  // guess. Callers use this to avoid handing tools to a model that will only mangle them.
+  async toolSupportForModel(modelSlug: string): Promise<boolean | null> {
+    const runtime: LocalModelRuntime | null = modelSlug.startsWith("ollama/")
+      ? "ollama"
+      : modelSlug.startsWith("lmstudio/")
+        ? "lmstudio"
+        : null;
+    if (!runtime) return null;
+    const modelId = modelSlug.slice(runtime.length + 1);
+    const snapshot = await this.getSnapshot({ synchronizeConfig: false });
+    return (
+      snapshot.installedModels.find(
+        (model) => model.runtime === runtime && model.modelId === modelId,
+      )?.supportsToolCalls ?? null
+    );
   }
 
   async ensureRuntimeForModel(modelSlug: string): Promise<void> {
@@ -1055,9 +1074,10 @@ export class LocalModelManager {
             name: curatedModelDisplayName("ollama", modelId) ?? modelId,
             sizeBytes: finiteNonNegative(model?.size),
             contextWindowTokens: null,
-            supportsToolCalls: isCuratedLocalModel("ollama", modelId)
-              ? true
-              : toolCallSupportForParameterSize(details?.parameter_size),
+            // Curated tiers carry a measured verdict; anything else falls back to parameter size.
+            supportsToolCalls:
+              curatedToolSupport("ollama", modelId) ??
+              toolCallSupportForParameterSize(details?.parameter_size),
             tokensPerSecond: this.#measuredSpeeds.get(`ollama:${modelId}`) ?? null,
           },
         ];
@@ -1145,7 +1165,7 @@ export class LocalModelManager {
               (typeof model.display_name === "string" ? model.display_name : modelId),
             sizeBytes: finiteNonNegative(model.size_bytes),
             contextWindowTokens: null,
-            supportsToolCalls: isCuratedLocalModel("lmstudio", modelId) ? true : null,
+            supportsToolCalls: curatedToolSupport("lmstudio", modelId),
             tokensPerSecond: null,
           },
         ];

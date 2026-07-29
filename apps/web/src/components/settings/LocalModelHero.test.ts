@@ -13,6 +13,7 @@ const GIB = 1024 ** 3;
 const recommendations = [
   {
     id: "qwen3-1.7b",
+    supportsToolCalls: false,
     name: "Qwen3 1.7B",
     description: "Lightweight chat.",
     minimumMemoryBytes: 4 * GIB,
@@ -20,6 +21,7 @@ const recommendations = [
   },
   {
     id: "granite-4.1-3b",
+    supportsToolCalls: true,
     name: "Granite 4.1 3B",
     description: "Compact coding.",
     minimumMemoryBytes: 8 * GIB,
@@ -27,6 +29,7 @@ const recommendations = [
   },
   {
     id: "qwen3.5-2b",
+    supportsToolCalls: false,
     name: "Qwen3.5 2B",
     description: "Compact chat.",
     minimumMemoryBytes: 8 * GIB,
@@ -36,6 +39,7 @@ const recommendations = [
   },
   {
     id: "gpt-oss-20b",
+    supportsToolCalls: true,
     name: "GPT-OSS 20B",
     description: "Capable coding.",
     minimumMemoryBytes: 16 * GIB,
@@ -43,6 +47,7 @@ const recommendations = [
   },
   {
     id: "qwen3-coder-30b",
+    supportsToolCalls: true,
     name: "Qwen3 Coder 30B",
     description: "Strongest coding.",
     minimumMemoryBytes: 32 * GIB,

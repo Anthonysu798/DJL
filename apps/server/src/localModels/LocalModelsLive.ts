@@ -98,6 +98,12 @@ const make = Effect.gen(function* () {
     cancelSetup: ({ jobId }) => desktopOnly("cancelSetup", () => manager.cancelSetup(jobId)),
     ensureRuntimeForModel: (modelSlug) =>
       desktopOnly("ensureRuntimeForModel", () => manager.ensureRuntimeForModel(modelSlug)),
+    // Not desktopOnly: a hosted-only build has no local models, and "unknown" is the right answer
+    // there rather than an error that would block starting a perfectly normal session.
+    toolSupportForModel: (modelSlug) =>
+      config.mode === "desktop"
+        ? run("toolSupportForModel", () => manager.toolSupportForModel(modelSlug))
+        : Effect.succeed(null),
     removeModel: (input) => desktopOnly("removeModel", () => manager.removeModel(input)),
     events: Stream.fromPubSub(events),
   } satisfies LocalModelsServiceShape;

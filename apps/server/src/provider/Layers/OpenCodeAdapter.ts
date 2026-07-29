@@ -220,6 +220,7 @@ export interface OpenCodeAdapterLiveOptions {
   readonly promptSubmissionInlineWaitMs?: number;
   readonly workMcpServer?: WorkMcpServerShape;
   readonly ensureLocalRuntime?: (modelSlug: string) => Effect.Effect<void, unknown>;
+  readonly localToolSupport?: (modelSlug: string) => Effect.Effect<boolean | null, unknown>;
 }
 
 function nowIso(): string {
@@ -3843,8 +3844,20 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   cliSpec: adapterConfig.cliSpec,
                   ...sdkServerPasswordOption(server, serverPassword),
                 });
+                // A model measured as unable to drive tool calls does not get DJL's tools. Handing
+                // them over produces invalid calls whose validation errors then surface in the
+                // user's chat as raw developer text — which reads as DJL being broken rather than
+                // the model being too small. Only a definite `false` withholds them.
+                const localToolsUsable =
+                  options?.localToolSupport && initialParsedModel
+                    ? (yield* options
+                        .localToolSupport(
+                          `${initialParsedModel.providerID}/${initialParsedModel.modelID}`,
+                        )
+                        .pipe(Effect.orElseSucceed(() => null))) !== false
+                    : true;
                 const workMcpRegistration: WorkMcpSessionRegistration | null =
-                  provider === "opencode" && workMcpServer
+                  provider === "opencode" && workMcpServer && localToolsUsable
                     ? yield* workMcpServer.registerSession({
                         threadId: input.threadId,
                         authorizedRoot: directory,

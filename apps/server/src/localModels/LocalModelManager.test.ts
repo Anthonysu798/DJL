@@ -87,7 +87,9 @@ describe("LocalModelManager", () => {
     const config = JSON.parse(
       await readFile(join(stateDir, "opencode", "config", "opencode", "opencode.json"), "utf8"),
     );
-    expect(config.provider.ollama.models["qwen3.5:2b-q4_K_M"]?.tool_call).toBe(true);
+    // The 2B tier is measured as unable to drive tools, so OpenCode must be told so explicitly
+    // rather than inheriting its `tool_call ?? true` default.
+    expect(config.provider.ollama.models["qwen3.5:2b-q4_K_M"]?.tool_call).toBe(false);
   });
 
   describe("starting an installed runtime at launch", () => {
@@ -209,6 +211,56 @@ describe("LocalModelManager", () => {
       expect(snapshot.runtimes.find(({ runtime }) => runtime === "lmstudio")?.state).not.toBe(
         "running",
       );
+    });
+  });
+
+  describe("tool support lookup", () => {
+    async function managerWithModels() {
+      const stateDir = await temporaryRoot();
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+        if (url.endsWith("/api/tags")) {
+          return json({
+            models: [
+              { name: "llama3.2:1b", size: 100, details: { parameter_size: "1.2B" } },
+              { name: "qwen2.5:7b", size: 100, details: { parameter_size: "7.6B" } },
+            ],
+          });
+        }
+        if (url.endsWith("/api/v1/models")) throw new Error("LM Studio unavailable");
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: fetchMock,
+        totalMemoryBytes: 32 * 1024 ** 3,
+        freeDiskBytes: 200 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      });
+      await manager.getSnapshot();
+      return manager;
+    }
+
+    it("reports a model too small to drive tools", async () => {
+      const manager = await managerWithModels();
+      expect(await manager.toolSupportForModel("ollama/llama3.2:1b")).toBe(false);
+    });
+
+    it("leaves a capable model undecided rather than claiming support", async () => {
+      const manager = await managerWithModels();
+      expect(await manager.toolSupportForModel("ollama/qwen2.5:7b")).toBeNull();
+    });
+
+    it("has no opinion about hosted models", async () => {
+      const manager = await managerWithModels();
+      expect(await manager.toolSupportForModel("anthropic/claude-opus")).toBeNull();
+    });
+
+    it("has no opinion about a local model it has never seen", async () => {
+      const manager = await managerWithModels();
+      expect(await manager.toolSupportForModel("ollama/never-installed:9b")).toBeNull();
     });
   });
 
@@ -1150,14 +1202,15 @@ describe("LocalModelManager", () => {
     expect(snapshot.hardware.acceleration).toBe("cpu_only");
     expect(snapshot.installedModels).toHaveLength(2);
     expect(
-      snapshot.installedModels.every(({ supportsToolCalls }) => supportsToolCalls === true),
+      snapshot.installedModels.every(({ supportsToolCalls }) => supportsToolCalls === false),
     ).toBe(true);
     expect(snapshot.runtimes.every(({ state }) => state === "running")).toBe(true);
     const config = JSON.parse(
       await readFile(join(stateDir, "opencode", "config", "opencode", "opencode.json"), "utf8"),
     );
-    expect(config.provider.ollama.models["qwen3:1.7b"]?.tool_call).toBe(true);
-    expect(config.provider.lmstudio.models["qwen/qwen3.5-2b"]?.tool_call).toBe(true);
+    // Both are sub-3B curated tiers: measured incapable, so reported incapable.
+    expect(config.provider.ollama.models["qwen3:1.7b"]?.tool_call).toBe(false);
+    expect(config.provider.lmstudio.models["qwen/qwen3.5-2b"]?.tool_call).toBe(false);
   });
 
   it("tracks an Ollama pull stream through completion", async () => {

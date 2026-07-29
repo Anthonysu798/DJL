@@ -6,8 +6,9 @@ const estimatedBytes = (gibibytes: number): number => Math.round(gibibytes * GIB
 export const LOCAL_MODEL_RECOMMENDATIONS = [
   {
     id: "qwen3-1.7b",
+    supportsToolCalls: false,
     name: "Qwen3 1.7B",
-    description: "A fast chat model for low-memory computers with 4 GB or more.",
+    description: "A fast chat model for low-memory computers with 4 GB or more. Chat only.",
     minimumMemoryBytes: 4 * GIB,
     sources: [
       { runtime: "ollama", modelId: "qwen3:1.7b", estimatedDownloadBytes: estimatedBytes(1.4) },
@@ -21,8 +22,9 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
   },
   {
     id: "qwen3.5-2b",
+    supportsToolCalls: false,
     name: "Qwen3.5 2B",
-    description: "A compact tool-capable chat model tuned for computers with 8 GB of memory.",
+    description: "A compact chat model for computers with 8 GB of memory. Chat only.",
     minimumMemoryBytes: 8 * GIB,
     sources: [
       {
@@ -40,6 +42,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
   },
   {
     id: "granite-4.1-3b",
+    supportsToolCalls: true,
     name: "Granite 4.1 3B",
     description: "A compact coding model for Macs and PCs with 8 GB of memory.",
     minimumMemoryBytes: 8 * GIB,
@@ -54,6 +57,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
   },
   {
     id: "qwen2.5-coder-7b",
+    supportsToolCalls: true,
     name: "Qwen2.5 Coder 7B",
     description: "A capable coding model for 16 GB machines and 8 GB graphics cards.",
     minimumMemoryBytes: 16 * GIB,
@@ -69,6 +73,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
   },
   {
     id: "gpt-oss-20b",
+    supportsToolCalls: true,
     name: "GPT-OSS 20B",
     description: "A capable local coding model recommended for systems with 16 GB or more.",
     minimumMemoryBytes: 16 * GIB,
@@ -79,6 +84,7 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
   },
   {
     id: "qwen3-coder-30b",
+    supportsToolCalls: true,
     name: "Qwen3 Coder 30B",
     description: "The strongest curated local coding option, intended for 32 GB systems.",
     minimumMemoryBytes: 32 * GIB,
@@ -140,6 +146,17 @@ export function nextSmallerRecommendation(
   return index > 0 ? (LOCAL_MODEL_RECOMMENDATIONS[index - 1] ?? null) : null;
 }
 
+// Whether a curated tier can actually drive the agent, established by running real tool calls
+// against it rather than inferred from its size. Returns null for anything outside the catalog.
+export function curatedToolSupport(runtime: string, modelId: string): boolean | null {
+  const match = LOCAL_MODEL_RECOMMENDATIONS.find((recommendation) =>
+    recommendation.sources.some(
+      (source) => source.runtime === runtime && source.modelId === modelId,
+    ),
+  );
+  return match ? match.supportsToolCalls : null;
+}
+
 export function curatedModelDisplayName(runtime: string, modelId: string): string | null {
   return (
     LOCAL_MODEL_RECOMMENDATIONS.find((recommendation) =>
@@ -150,10 +167,3 @@ export function curatedModelDisplayName(runtime: string, modelId: string): strin
   );
 }
 
-export function isCuratedLocalModel(runtime: string, modelId: string): boolean {
-  return LOCAL_MODEL_RECOMMENDATIONS.some((recommendation) =>
-    recommendation.sources.some(
-      (source) => source.runtime === runtime && source.modelId === modelId,
-    ),
-  );
-}

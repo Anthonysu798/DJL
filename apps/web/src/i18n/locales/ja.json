@@ -556,6 +556,7 @@
       "change": "モデルを変更",
       "changeReasoning": "モデルと推論を変更",
       "chatOnly": "チャットのみ",
+      "chatOnlyHint": "{{name}} は小さすぎてツールを使えないため、コーディング作業はできません。",
       "configure": "モデルを設定",
       "loading": "モデルを読み込み中",
       "noMatches": "一致する項目はありません",

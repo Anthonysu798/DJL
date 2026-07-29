@@ -52,6 +52,9 @@ export interface LocalModelsServiceShape {
   readonly ensureRuntimeForModel: (
     modelSlug: string,
   ) => Effect.Effect<void, LocalModelsServiceError>;
+  readonly toolSupportForModel: (
+    modelSlug: string,
+  ) => Effect.Effect<boolean | null, LocalModelsServiceError>;
   readonly removeModel: (
     input: LocalModelRemoveInput,
   ) => Effect.Effect<LocalModelsSnapshot, LocalModelsServiceError>;

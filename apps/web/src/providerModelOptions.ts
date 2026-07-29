@@ -200,6 +200,13 @@ export function mergeDynamicModelOptions(input: {
   return [...orderedDynamicOptions, ...missingStaticBuiltIns, ...customOnlyModels];
 }
 
+// A model DJL has positive evidence cannot drive tool calls. Such a model cannot do agent work at
+// all: it emits malformed calls whose validation errors surface as raw text in the user's chat.
+// Unknown capability is never treated as incapable — only measured evidence disables a model.
+export function isChatOnlyModel(option: ProviderModelOption): boolean {
+  return option.supportsToolCalls === false;
+}
+
 /** Returns a compact label for provider descriptions that begin with an `Nx` cost multiplier. */
 export function providerModelCostMultiplierLabel(description?: string): string | null {
   const multiplier = description?.trim().match(/^(\d+(?:\.\d+)?)x(?:\s|$)/i)?.[1];

@@ -84,6 +84,8 @@ export type LocalModelRecommendationSource = typeof LocalModelRecommendationSour
 
 export const LocalModelRecommendation = Schema.Struct({
   id: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+  // Established by running real tool calls against the tier, not inferred from parameter count.
+  supportsToolCalls: Schema.Boolean,
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   description: BoundedDetail,
   minimumMemoryBytes: NonNegativeInt,

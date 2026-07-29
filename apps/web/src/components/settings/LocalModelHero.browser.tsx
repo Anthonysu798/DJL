@@ -28,6 +28,8 @@ const recommendations = (
   ([id, name, memory, modelId, download]) =>
     ({
       id,
+      // Mirrors the catalog: only the 3B-and-larger tiers are measured tool-capable.
+      supportsToolCalls: Number(memory) >= 8 && id !== "qwen3.5-2b",
       name,
       description: `${name} description`,
       minimumMemoryBytes: Number(memory) * GIB,

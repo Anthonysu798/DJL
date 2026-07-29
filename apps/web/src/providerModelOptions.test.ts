@@ -9,6 +9,7 @@ import {
   buildProviderOptionPatch,
   formatProviderModelOptionName,
   groupProviderModelOptions,
+  isChatOnlyModel,
   groupProviderModelOptionsWithFavorites,
   mergeDynamicModelOptions,
   providerModelCostMultiplierLabel,
@@ -262,5 +263,26 @@ describe("chat-only local models", () => {
     ]);
 
     expect(groups[0]?.options.map((o) => o.slug)).toEqual(["deepseek/v4-flash", "deepseek/v4-pro"]);
+  });
+});
+
+describe("chat-only models are not selectable for agent work", () => {
+  it("marks a known-incapable model as disabled", () => {
+    const [capable, incapable] = groupProviderModelOptions([
+      { slug: "ollama/qwen2.5:7b", name: "a", upstreamProviderName: "On this computer" },
+      {
+        slug: "ollama/llama3.2:1b",
+        name: "b",
+        upstreamProviderName: "On this computer",
+        supportsToolCalls: false,
+      },
+    ])[0]!.options;
+
+    expect(isChatOnlyModel(capable!)).toBe(false);
+    expect(isChatOnlyModel(incapable!)).toBe(true);
+  });
+
+  it("treats unknown capability as selectable rather than guessing", () => {
+    expect(isChatOnlyModel({ slug: "ollama/mystery:8b", name: "m" })).toBe(false);
   });
 });
