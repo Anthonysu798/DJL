@@ -541,36 +541,54 @@ export class DocumentRenderManager {
 
   async #resumeJob(job: PersistedRenderJob): Promise<void> {
     if (this.#abortControllers.has(job.renderId)) return;
+    const controller = new AbortController();
+    this.#abortControllers.set(job.renderId, controller);
+    let resumableJob = job;
     try {
-      const source = await readFile(job.sourcePath);
+      const persistedJob = await this.#readJob(job.renderId);
+      if (
+        !persistedJob ||
+        (persistedJob.state !== "queued" && persistedJob.state !== "rendering")
+      ) {
+        return;
+      }
+      resumableJob = persistedJob;
+      const source = await readFile(resumableJob.sourcePath);
       const sourceHash = createHash("sha256").update(source).digest("hex");
-      if (sourceHash !== job.sourceHash) {
+      if (sourceHash !== resumableJob.sourceHash) {
         throw new DocumentRendererError(
           "The source document changed before rendering could resume.",
           "invalid_source",
         );
       }
       const renderer =
-        job.sourceType === "pdf"
-          ? { binaryPath: "", version: job.rendererVersion }
+        resumableJob.sourceType === "pdf"
+          ? { binaryPath: "", version: resumableJob.rendererVersion }
           : await this.#renderer();
-      if (renderer.version !== job.rendererVersion) {
+      if (renderer.version !== resumableJob.rendererVersion) {
         throw new DocumentRendererError(
           "The document viewer changed before rendering could resume. Request a new preview.",
           "conversion_failed",
         );
       }
-      const controller = new AbortController();
-      this.#abortControllers.set(job.renderId, controller);
-      await this.#execute({ ...job, state: "queued" }, renderer, source, controller.signal);
+      await this.#execute(
+        { ...resumableJob, state: "queued" },
+        renderer,
+        source,
+        controller.signal,
+      );
     } catch (cause) {
       await this.#writeJob({
-        ...job,
+        ...resumableJob,
         state: "failed",
         error:
           cause instanceof Error ? cause.message.slice(0, 2_000) : String(cause).slice(0, 2_000),
         updatedAt: this.#now().toISOString(),
       });
+    } finally {
+      if (this.#abortControllers.get(job.renderId) === controller) {
+        this.#abortControllers.delete(job.renderId);
+      }
     }
   }
 

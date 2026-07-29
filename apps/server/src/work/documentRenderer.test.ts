@@ -157,6 +157,73 @@ describe("DocumentRenderManager", () => {
     expect(runCommand).toHaveBeenCalledTimes(1);
   });
 
+  it("coalesces concurrent resume attempts after restart", async () => {
+    const root = await temporaryRoot();
+    const sourcePath = path.join(root, "deck.pptx");
+    await writeFile(sourcePath, await docxBytes());
+    let releaseOriginal!: () => void;
+    const originalBlocked = new Promise<void>((resolve) => {
+      releaseOriginal = resolve;
+    });
+    let resolveOriginalReady!: () => void;
+    const originalReady = new Promise<void>((resolve) => {
+      resolveOriginalReady = resolve;
+    });
+    const originalRunCommand = vi.fn<LibreOfficeCommandRunner>(async (_binary, args) => {
+      await originalBlocked;
+      const inputPath = args.at(-1)!;
+      const outputDir = args[args.indexOf("--outdir") + 1]!;
+      await writeFile(path.join(outputDir, `${path.parse(inputPath).name}.pdf`), await pdfBytes(2));
+      return { code: 0, stdout: "", stderr: "" };
+    });
+    const stateRoot = path.join(root, "state");
+    const first = new DocumentRenderManager({
+      stateRoot,
+      renderer: async () => ({ binaryPath: "/test/soffice", version: "test-1" }),
+      runCommand: originalRunCommand,
+      onEvent: (event) => {
+        if (event.state === "ready") resolveOriginalReady();
+      },
+    });
+    const requested = await first.requestRender({
+      threadId: "thread-1" as never,
+      filePath: sourcePath,
+    });
+    await vi.waitFor(() => expect(originalRunCommand).toHaveBeenCalledTimes(1));
+
+    const resumedRunCommand = vi.fn<LibreOfficeCommandRunner>(async (_binary, args) => {
+      const inputPath = args.at(-1)!;
+      const outputDir = args[args.indexOf("--outdir") + 1]!;
+      await writeFile(path.join(outputDir, `${path.parse(inputPath).name}.pdf`), await pdfBytes(2));
+      return { code: 0, stdout: "", stderr: "" };
+    });
+    let resolveResumedReady!: () => void;
+    const resumedReady = new Promise<void>((resolve) => {
+      resolveResumedReady = resolve;
+    });
+    const restarted = new DocumentRenderManager({
+      stateRoot,
+      renderer: async () => ({ binaryPath: "/test/soffice", version: "test-1" }),
+      runCommand: resumedRunCommand,
+      onEvent: (event) => {
+        if (event.state === "ready") resolveResumedReady();
+      },
+    });
+
+    await Promise.all([
+      restarted.getRender({ threadId: "thread-1" as never, renderId: requested.renderId }),
+      restarted.getRender({ threadId: "thread-1" as never, renderId: requested.renderId }),
+    ]);
+    await vi.waitFor(() => expect(resumedRunCommand).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const resumedCallCount = resumedRunCommand.mock.calls.length;
+
+    releaseOriginal();
+    await Promise.all([originalReady, resumedReady]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(resumedCallCount).toBe(1);
+  });
+
   it("rejects macro-enabled Office inputs before conversion", async () => {
     const root = await temporaryRoot();
     const sourcePath = path.join(root, "unsafe.docx");
