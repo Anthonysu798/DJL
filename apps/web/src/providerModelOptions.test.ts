@@ -218,3 +218,49 @@ describe("collapsible model group helpers", () => {
     ).toBe(false);
   });
 });
+
+describe("chat-only local models", () => {
+  it("carries the tool-call capability through from discovery", () => {
+    const merged = mergeDynamicModelOptions({
+      provider: "opencode",
+      staticOptions: [],
+      dynamicModels: [
+        { slug: "ollama/qwen2.5:7b", upstreamProviderName: "On this computer" },
+        {
+          slug: "ollama/llama3.2:1b",
+          upstreamProviderName: "On this computer",
+          supportsToolCalls: false,
+        },
+      ],
+    });
+
+    expect(merged.find((m) => m.slug === "ollama/llama3.2:1b")?.supportsToolCalls).toBe(false);
+    // Unknown must stay undefined rather than collapsing to false.
+    expect(merged.find((m) => m.slug === "ollama/qwen2.5:7b")?.supportsToolCalls).toBeUndefined();
+  });
+
+  it("sinks models that cannot drive the agent to the bottom of their group", () => {
+    const groups = groupProviderModelOptions([
+      { slug: "ollama/qwen2.5-coder:0.5b", name: "a", upstreamProviderName: "On this computer", supportsToolCalls: false },
+      { slug: "ollama/qwen2.5:7b", name: "b", upstreamProviderName: "On this computer" },
+      { slug: "ollama/llama3.2:1b", name: "c", upstreamProviderName: "On this computer", supportsToolCalls: false },
+      { slug: "ollama/djl-qwen:3b", name: "d", upstreamProviderName: "On this computer" },
+    ]);
+
+    expect(groups[0]?.options.map((o) => o.slug)).toEqual([
+      "ollama/qwen2.5:7b",
+      "ollama/djl-qwen:3b",
+      "ollama/qwen2.5-coder:0.5b",
+      "ollama/llama3.2:1b",
+    ]);
+  });
+
+  it("leaves groups without any chat-only model in their original order", () => {
+    const groups = groupProviderModelOptions([
+      { slug: "deepseek/v4-flash", name: "a", upstreamProviderName: "DeepSeek" },
+      { slug: "deepseek/v4-pro", name: "b", upstreamProviderName: "DeepSeek" },
+    ]);
+
+    expect(groups[0]?.options.map((o) => o.slug)).toEqual(["deepseek/v4-flash", "deepseek/v4-pro"]);
+  });
+});

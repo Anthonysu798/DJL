@@ -1,4 +1,5 @@
 import type {
+  LocalHardwareProfile,
   LocalModelRecommendation,
   LocalModelRecommendationSource,
   LocalModelRuntimeStatus,
@@ -10,7 +11,12 @@ import type { TFunction } from "i18next";
 
 import { CheckCircle2Icon, Loader2Icon, SparklesIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import {
+  SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
+  SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
+} from "~/settingsPanelStyles";
 import { Button } from "../ui/button";
+import { SettingsSection } from "./SettingsPanelPrimitives";
 
 const GIB = 1024 ** 3;
 const TERMINAL_SETUP_STATES = new Set(["ready", "failed", "cancelled"]);
@@ -137,66 +143,160 @@ function formatBytes(bytes: number, t: TFunction): string {
   return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }
 
-type LocalModelCardShelfProps = {
-  readonly snapshot: LocalModelsSnapshot;
+// Describes the machine in the words a non-technical user would recognise, so the recommendation
+// below it reads as a decision made for them rather than a menu.
+export function hardwareSummary(hardware: LocalHardwareProfile, t: TFunction): string {
+  const memory = formatBytes(hardware.totalMemoryBytes, t);
+  const processor = hardware.cpuModel ?? t("localModels.hero.unknownProcessor");
+  return hardware.acceleration === "discrete_gpu" && hardware.gpuName
+    ? t("localModels.hero.detectedWithGpu", { processor, gpu: hardware.gpuName, memory })
+    : t("localModels.hero.detected", { processor, memory });
+}
+
+type LocalModelActionCallbacks = {
   readonly actionPending: boolean;
   readonly onStartSetup: (recommendationId: string) => void;
   readonly onRetrySetup: (jobId: string) => void;
   readonly onCancelSetup: (jobId: string) => void;
   readonly onRuntimeAttention: () => void;
+  readonly onStartChat: () => void;
 };
 
-export function LocalModelCardShelf({
-  snapshot,
-  actionPending,
-  onStartSetup,
-  onRetrySetup,
-  onCancelSetup,
-  onRuntimeAttention,
-}: LocalModelCardShelfProps) {
+type LocalModelHeroProps = LocalModelActionCallbacks & {
+  readonly snapshot: LocalModelsSnapshot;
+};
+
+export function LocalModelHero({ snapshot, ...actions }: LocalModelHeroProps) {
   const { t } = useTranslation(["settings", "common"]);
   const cards = buildLocalModelCardViewModels(snapshot);
+  const card = cards[0];
+  if (!card) return null;
+
+  const ready = card.action === "installed";
+  // Set by the server only when the measured speed disappointed and a smaller tier exists.
+  const fallbackId = card.setupJob?.suggestedFallbackId ?? null;
+  const fallback = fallbackId
+    ? (snapshot.recommendations.find(({ id }) => id === fallbackId) ?? null)
+    : null;
+  return (
+    <section
+      aria-labelledby="local-model-hero-title"
+      className="overflow-hidden rounded-xl border bg-card p-5 shadow-xs"
+    >
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          {ready ? (
+            <CheckCircle2Icon className="size-4.5" />
+          ) : card.action === "active" ? (
+            <Loader2Icon className="size-4.5 animate-spin" />
+          ) : (
+            <SparklesIcon className="size-4.5" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 id="local-model-hero-title" className="text-sm font-medium text-foreground">
+            {ready
+              ? t("localModels.hero.readyTitle", { model: card.recommendation.name })
+              : t("localModels.hero.title")}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {hardwareSummary(snapshot.hardware, t)}
+          </p>
+
+          <div className="mt-4 rounded-lg bg-muted/40 px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">
+                {card.recommendation.name}
+              </span>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                {t("localModels.hero.fastOnYourHardware")}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {t(`localModels.recommendations.${card.recommendation.id}.description`, {
+                defaultValue: card.recommendation.description,
+              })}
+            </p>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              {t("localModels.shelf.downloadSize", {
+                size: formatBytes(card.source.estimatedDownloadBytes, t),
+              })}
+            </p>
+          </div>
+
+          {/* Once installed the hero title carries the outcome, so the job message is redundant —
+              except when it is a speed complaint, which is the reason the downgrade button exists. */}
+          {card.setupJob && (!ready || fallback) ? (
+            <div className="mt-3">
+              <p
+                className={cn(
+                  "text-[11px] leading-relaxed",
+                  card.setupJob.state === "failed" ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
+                {card.setupJob.message ?? card.setupJob.state}
+              </p>
+              {card.action === "active" ? (
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn(
+                      "h-full rounded-full bg-primary transition-[width]",
+                      card.progressPercent === null && "w-1/3 animate-pulse",
+                    )}
+                    style={
+                      card.progressPercent === null
+                        ? undefined
+                        : { width: `${card.progressPercent}%` }
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* The verdict text is already rendered above; this only adds the way out, so the user is
+              not left to work out which smaller model to pick. */}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <div className="flex-1">
+              <CardActionButton card={card} {...actions} />
+            </div>
+            {fallback ? (
+              <Button
+                className="sm:w-auto"
+                size="sm"
+                variant="outline"
+                disabled={actions.actionPending}
+                onClick={() => actions.onStartSetup(fallback.id)}
+              >
+                {t("localModels.hero.switchToSmaller", { model: fallback.name })}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type LocalModelAlternativesProps = LocalModelActionCallbacks & {
+  readonly snapshot: LocalModelsSnapshot;
+};
+
+// Everything the hero did not choose. Kept as a plain list so it reads as reference material rather
+// than a second decision competing with the recommendation.
+export function LocalModelAlternatives({ snapshot, ...actions }: LocalModelAlternativesProps) {
+  const { t } = useTranslation(["settings", "common"]);
+  const cards = buildLocalModelCardViewModels(snapshot).slice(1);
+  if (cards.length === 0) return null;
 
   return (
-    <section aria-labelledby="local-model-shelf-title">
-      <div className="mb-3">
-        <h2 id="local-model-shelf-title" className="text-sm font-medium text-foreground">
-          {t("localModels.shelf.title")}
-        </h2>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          {t("localModels.shelf.description")}
-        </p>
-      </div>
-      <div
-        className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3"
-        role="region"
-        aria-label={t("localModels.shelf.ariaLabel")}
-        tabIndex={0}
-      >
-        {cards.map((card) => (
-          <article
-            key={card.recommendation.id}
-            className={cn(
-              "flex min-h-64 w-[16.5rem] shrink-0 snap-start flex-col rounded-xl border bg-card p-4 shadow-xs",
-              card.isBestFit && "border-primary/40 ring-1 ring-primary/10",
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                {card.action === "installed" ? (
-                  <CheckCircle2Icon className="size-4" />
-                ) : card.action === "active" ? (
-                  <Loader2Icon className="size-4 animate-spin" />
-                ) : (
-                  <SparklesIcon className="size-4" />
-                )}
-              </div>
-              <div className="flex flex-wrap justify-end gap-1.5">
-                {card.isBestFit ? (
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                    {t("localModels.bestFit")}
-                  </span>
-                ) : null}
+    <SettingsSection title={t("localModels.hero.alternativesTitle")}>
+      {cards.map((card) => (
+        <div key={card.recommendation.id} className="px-4 py-3.5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>{card.recommendation.name}</div>
                 {card.action === "installed" ? (
                   <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                     {t("localModels.installed")}
@@ -207,71 +307,24 @@ export function LocalModelCardShelf({
                   </span>
                 ) : null}
               </div>
-            </div>
-
-            <h3 className="mt-3 text-sm font-semibold text-foreground">
-              {card.recommendation.name}
-            </h3>
-            <p className="mt-1 min-h-10 text-xs leading-relaxed text-muted-foreground">
-              {t(`localModels.recommendations.${card.recommendation.id}.description`, {
-                defaultValue: card.recommendation.description,
-              })}
-            </p>
-            <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
-              <p>
-                {t("localModels.shelf.requiresMemory", {
-                  size: formatBytes(card.recommendation.minimumMemoryBytes, t),
+              <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
+                {t(`localModels.recommendations.${card.recommendation.id}.description`, {
+                  defaultValue: card.recommendation.description,
                 })}
               </p>
-              <p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
                 {t("localModels.shelf.downloadSize", {
                   size: formatBytes(card.source.estimatedDownloadBytes, t),
                 })}
               </p>
             </div>
-
-            {card.setupJob ? (
-              <div className="mt-3">
-                <p
-                  className={cn(
-                    "line-clamp-2 text-[11px] leading-relaxed",
-                    card.setupJob.state === "failed" ? "text-destructive" : "text-muted-foreground",
-                  )}
-                >
-                  {card.setupJob.message ?? card.setupJob.state}
-                </p>
-                {card.action === "active" ? (
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn(
-                        "h-full rounded-full bg-primary transition-[width]",
-                        card.progressPercent === null && "w-1/3 animate-pulse",
-                      )}
-                      style={
-                        card.progressPercent === null
-                          ? undefined
-                          : { width: `${card.progressPercent}%` }
-                      }
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="mt-auto pt-4">
-              <CardActionButton
-                card={card}
-                actionPending={actionPending}
-                onStartSetup={onStartSetup}
-                onRetrySetup={onRetrySetup}
-                onCancelSetup={onCancelSetup}
-                onRuntimeAttention={onRuntimeAttention}
-              />
+            <div className="shrink-0 sm:w-52">
+              <CardActionButton card={card} {...actions} />
             </div>
-          </article>
-        ))}
-      </div>
-    </section>
+          </div>
+        </div>
+      ))}
+    </SettingsSection>
   );
 }
 
@@ -282,6 +335,7 @@ function CardActionButton({
   onRetrySetup,
   onCancelSetup,
   onRuntimeAttention,
+  onStartChat,
 }: {
   readonly card: LocalModelCardViewModel;
   readonly actionPending: boolean;
@@ -289,6 +343,7 @@ function CardActionButton({
   readonly onRetrySetup: (jobId: string) => void;
   readonly onCancelSetup: (jobId: string) => void;
   readonly onRuntimeAttention: () => void;
+  readonly onStartChat: () => void;
 }) {
   const { t } = useTranslation(["settings", "common"]);
   const memory = formatBytes(card.recommendation.minimumMemoryBytes, t);
@@ -320,9 +375,11 @@ function CardActionButton({
     );
   }
   if (card.action === "installed") {
+    // An installed model is only useful in chat, so say so and go there. Navigation is a callback
+    // like every other action here, which keeps this component presentational and testable.
     return (
-      <Button className="w-full" size="sm" variant="secondary" disabled>
-        {t("localModels.shelf.installedReady")}
+      <Button className="w-full" size="sm" variant="secondary" onClick={onStartChat}>
+        {t("localModels.shelf.startChat")}
       </Button>
     );
   }

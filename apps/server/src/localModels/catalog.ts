@@ -20,20 +20,6 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
     ],
   },
   {
-    id: "granite-4.1-3b",
-    name: "Granite 4.1 3B",
-    description: "A compact coding model for Macs and PCs with 8 GB of memory.",
-    minimumMemoryBytes: 8 * GIB,
-    sources: [
-      { runtime: "ollama", modelId: "granite4.1:3b", estimatedDownloadBytes: estimatedBytes(2.1) },
-      {
-        runtime: "lmstudio",
-        modelId: "ibm/granite-4.1-3b",
-        estimatedDownloadBytes: estimatedBytes(2.3),
-      },
-    ],
-  },
-  {
     id: "qwen3.5-2b",
     name: "Qwen3.5 2B",
     description: "A compact tool-capable chat model tuned for computers with 8 GB of memory.",
@@ -48,6 +34,35 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
         runtime: "lmstudio",
         modelId: "qwen/qwen3.5-2b",
         estimatedDownloadBytes: estimatedBytes(1.9),
+        quantization: "Q4_K_M",
+      },
+    ],
+  },
+  {
+    id: "granite-4.1-3b",
+    name: "Granite 4.1 3B",
+    description: "A compact coding model for Macs and PCs with 8 GB of memory.",
+    minimumMemoryBytes: 8 * GIB,
+    sources: [
+      { runtime: "ollama", modelId: "granite4.1:3b", estimatedDownloadBytes: estimatedBytes(2.1) },
+      {
+        runtime: "lmstudio",
+        modelId: "ibm/granite-4.1-3b",
+        estimatedDownloadBytes: estimatedBytes(2.3),
+      },
+    ],
+  },
+  {
+    id: "qwen2.5-coder-7b",
+    name: "Qwen2.5 Coder 7B",
+    description: "A capable coding model for 16 GB machines and 8 GB graphics cards.",
+    minimumMemoryBytes: 16 * GIB,
+    sources: [
+      { runtime: "ollama", modelId: "qwen2.5-coder:7b", estimatedDownloadBytes: estimatedBytes(4.36) },
+      {
+        runtime: "lmstudio",
+        modelId: "qwen/qwen2.5-coder-7b",
+        estimatedDownloadBytes: estimatedBytes(4.36),
         quantization: "Q4_K_M",
       },
     ],
@@ -74,13 +89,64 @@ export const LOCAL_MODEL_RECOMMENDATIONS = [
   },
 ] as const satisfies ReadonlyArray<LocalModelRecommendation>;
 
-export function recommendLocalModel(totalMemoryBytes: number): LocalModelRecommendation | null {
+function ollamaWeightBytes(recommendation: LocalModelRecommendation): number {
   return (
-    LOCAL_MODEL_RECOMMENDATIONS.filter(
-      (recommendation) => recommendation.minimumMemoryBytes <= totalMemoryBytes,
-    ).at(-1) ??
+    recommendation.sources.find(({ runtime }) => runtime === "ollama")?.estimatedDownloadBytes ??
+    Number.POSITIVE_INFINITY
+  );
+}
+
+// Selection is driven by the weight budget from the hardware profile, not by installed RAM. A
+// machine can hold a model it cannot run quickly, and speed is what users judge a local model on.
+export function recommendLocalModel(usableModelBytes: number): LocalModelRecommendation | null {
+  // The catalog is ordered by ascending weight, so the last entry that fits is the largest one.
+  return (
+    LOCAL_MODEL_RECOMMENDATIONS.findLast(
+      (recommendation) => ollamaWeightBytes(recommendation) <= usableModelBytes,
+    ) ??
     LOCAL_MODEL_RECOMMENDATIONS[0] ??
     null
+  );
+}
+
+// Anything smaller than this cannot hold a tool-calling loop together well enough to drive the
+// agent. Handing such a model tool definitions produces a silent stall, not an error.
+const MINIMUM_TOOL_CALL_PARAMETERS = 3e9;
+
+// Ollama reports `details.parameter_size` as a human string that mixes units: "7.6B", "494.03M".
+export function parseParameterCount(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = /^([\d.]+)\s*([BM])$/iu.exec(value.trim());
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return match[2]?.toUpperCase() === "B" ? amount * 1e9 : amount * 1e6;
+}
+
+// Returns false only when the model is provably too small. Unknown stays null so DJL never claims
+// a capability it has not established either way.
+export function toolCallSupportForParameterSize(value: unknown): boolean | null {
+  const parameters = parseParameterCount(value);
+  if (parameters === null) return null;
+  return parameters < MINIMUM_TOOL_CALL_PARAMETERS ? false : null;
+}
+
+// The tier one step down from a model that turned out too slow here. The catalog is weight-ascending,
+// so "smaller" is simply the preceding entry.
+export function nextSmallerRecommendation(
+  recommendationId: string,
+): LocalModelRecommendation | null {
+  const index = LOCAL_MODEL_RECOMMENDATIONS.findIndex(({ id }) => id === recommendationId);
+  return index > 0 ? (LOCAL_MODEL_RECOMMENDATIONS[index - 1] ?? null) : null;
+}
+
+export function curatedModelDisplayName(runtime: string, modelId: string): string | null {
+  return (
+    LOCAL_MODEL_RECOMMENDATIONS.find((recommendation) =>
+      recommendation.sources.some(
+        (source) => source.runtime === runtime && source.modelId === modelId,
+      ),
+    )?.name ?? null
   );
 }
 

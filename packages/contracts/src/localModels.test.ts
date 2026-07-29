@@ -23,6 +23,15 @@ describe("local model contracts", () => {
     const snapshot = await Effect.runPromise(
       decodeSnapshot({
         totalMemoryBytes: 34_359_738_368,
+        hardware: {
+          totalMemoryBytes: 34_359_738_368,
+          cpuModel: "Apple M2 Pro",
+          cpuCores: 10,
+          acceleration: "apple_unified",
+          gpuName: "Apple M2 Pro",
+          vramBytes: null,
+          usableModelBytes: 14_431_090_114,
+        },
         freeDiskBytes: 68_719_476_736,
         recommendedModelId: "qwen3-coder-large",
         runtimes: [
@@ -108,6 +117,15 @@ describe("local model contracts", () => {
         type: "snapshot.updated",
         snapshot: {
           totalMemoryBytes: 17_179_869_184,
+          hardware: {
+            totalMemoryBytes: 17_179_869_184,
+            cpuModel: "Apple M2 Pro",
+            cpuCores: 10,
+            acceleration: "apple_unified",
+            gpuName: "Apple M2 Pro",
+            vramBytes: null,
+            usableModelBytes: 14_431_090_114,
+          },
           freeDiskBytes: null,
           recommendedModelId: "gpt-oss-balanced",
           runtimes: [],

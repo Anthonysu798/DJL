@@ -67,6 +67,14 @@ const make = Effect.gen(function* () {
         );
 
   if (config.mode === "desktop") {
+    // Bring an already-installed Ollama up once at launch, before the polling loop. A stopped
+    // runtime reports no models, so without this the user's local models are missing from the
+    // picker until they discover the start button in settings. Forked so a slow or failed start
+    // never delays startup.
+    yield* run("startInstalledRuntimes", () => manager.startInstalledRuntimes()).pipe(
+      Effect.ignoreCause({ log: true }),
+      Effect.forkScoped,
+    );
     yield* run("backgroundRefresh", refreshManager).pipe(
       Effect.ignoreCause({ log: true }),
       Effect.repeat(Schedule.spaced(Duration.seconds(15))),

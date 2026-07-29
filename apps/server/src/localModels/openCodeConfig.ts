@@ -10,8 +10,10 @@ const RUNTIME_CONFIG: Record<
   LocalModelRuntime,
   { readonly name: string; readonly baseURL: string }
 > = {
-  ollama: { name: "Ollama (local)", baseURL: "http://127.0.0.1:11434/v1" },
-  lmstudio: { name: "LM Studio (local)", baseURL: "http://127.0.0.1:1234/v1" },
+  // The group heading users read in the model picker. "On this computer" says what matters —
+  // where inference runs — without making them learn which runtime is which.
+  ollama: { name: "On this computer", baseURL: "http://127.0.0.1:11434/v1" },
+  lmstudio: { name: "On this computer (LM Studio)", baseURL: "http://127.0.0.1:1234/v1" },
 };
 
 export function buildOpenCodeLocalProviderConfig(

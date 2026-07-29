@@ -41,6 +41,8 @@ import {
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { isElectron } from "~/env";
+import { readLocalModelsBrowserCache } from "~/lib/localModelsBrowserCache";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   supportsModelFavorites,
@@ -219,6 +221,13 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
   );
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
   const activeProvider = props.lockedProvider ?? props.provider;
+
+  // The composer is the only place a first-time user looks for a local model, so offer setup here
+  // when none are installed. Read at render rather than memoized: LocalModelSetupCoordinator keeps
+  // this cache current app-wide, and a memo would keep offering setup after the first install. A
+  // missing or stale-schema entry reads as "none installed", which is the right prompt to show.
+  const showLocalModelSetupEntry =
+    isElectron && (readLocalModelsBrowserCache()?.data.installedModels.length ?? 0) === 0;
   const hiddenProviders = props.hiddenProviders;
   const providerOrder = props.providerOrder;
   const hiddenProviderSet = useMemo(
@@ -357,21 +366,32 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
 
     const content =
       groupedOptions.length > 0 ? (
-        <MenuRadioGroup
-          value={activeProvider === provider ? props.model : ""}
-          onValueChange={(value) => handleModelChange(provider, value)}
-        >
-          <ProviderModelOptionGroupList
-            groupedOptions={groupedOptions}
-            provider={provider}
-            activeModel={props.model}
-            isSearching={normalizedModelSearchQuery.length > 0}
-            favoriteProvider={favoriteProvider}
-            favoriteModelSlugSet={favoriteModelSlugSet}
-            onToggleFavorite={toggleFavoriteModel}
-            {...(onAfterSelection ? { onAfterSelection } : {})}
-          />
-        </MenuRadioGroup>
+        <>
+          <MenuRadioGroup
+            value={activeProvider === provider ? props.model : ""}
+            onValueChange={(value) => handleModelChange(provider, value)}
+          >
+            <ProviderModelOptionGroupList
+              groupedOptions={groupedOptions}
+              provider={provider}
+              activeModel={props.model}
+              isSearching={normalizedModelSearchQuery.length > 0}
+              favoriteProvider={favoriteProvider}
+              favoriteModelSlugSet={favoriteModelSlugSet}
+              onToggleFavorite={toggleFavoriteModel}
+              {...(onAfterSelection ? { onAfterSelection } : {})}
+            />
+          </MenuRadioGroup>
+          {showLocalModelSetupEntry && provider === "opencode" ? (
+            <MenuItem
+              onClick={() => {
+                window.location.assign("/settings?section=local-models");
+              }}
+            >
+              <span>{t("model.setUpLocalAi", { ns: "chat" })}</span>
+            </MenuItem>
+          ) : null}
+        </>
       ) : (
         <div className="px-2 py-2 text-muted-foreground text-sm">
           {provider === "pi" && normalizedModelSearchQuery.length === 0

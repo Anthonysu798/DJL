@@ -50,6 +50,25 @@ export const LocalModelRuntimeStatus = Schema.Struct({
 });
 export type LocalModelRuntimeStatus = typeof LocalModelRuntimeStatus.Type;
 
+export const LocalHardwareAcceleration = Schema.Literals([
+  "apple_unified",
+  "discrete_gpu",
+  "cpu_only",
+]);
+export type LocalHardwareAcceleration = typeof LocalHardwareAcceleration.Type;
+
+export const LocalHardwareProfile = Schema.Struct({
+  totalMemoryBytes: NonNegativeInt,
+  cpuModel: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
+  cpuCores: NonNegativeInt,
+  acceleration: LocalHardwareAcceleration,
+  gpuName: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
+  vramBytes: Schema.NullOr(NonNegativeInt),
+  // The byte budget for model weights on this machine, after acceleration and context headroom.
+  usableModelBytes: NonNegativeInt,
+});
+export type LocalHardwareProfile = typeof LocalHardwareProfile.Type;
+
 export const LocalModelRecommendationSource = Schema.Struct({
   runtime: LocalModelRuntime,
   modelId: ModelIdentifier,
@@ -79,6 +98,8 @@ export const LocalInstalledModel = Schema.Struct({
   sizeBytes: NonNegativeInt,
   contextWindowTokens: Schema.NullOr(PositiveInt),
   supportsToolCalls: Schema.NullOr(Schema.Boolean),
+  // Measured during setup on this machine; null until a warm-up run has timed the model.
+  tokensPerSecond: Schema.optional(Schema.NullOr(NonNegativeInt)),
 });
 export type LocalInstalledModel = typeof LocalInstalledModel.Type;
 
@@ -131,6 +152,7 @@ export const LocalModelSetupJobState = Schema.Literals([
   "installing_runtime",
   "starting_runtime",
   "downloading_model",
+  "verifying",
   "synchronizing",
   "ready",
   "failed",
@@ -147,6 +169,12 @@ export const LocalModelSetupJob = Schema.Struct({
   downloadedBytes: NonNegativeInt,
   totalBytes: Schema.NullOr(NonNegativeInt),
   message: Schema.NullOr(BoundedDetail),
+  // Measured on this machine during the verifying step; null when it could not be timed.
+  tokensPerSecond: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  // Set when the measured speed was disappointing: the next smaller tier to offer instead.
+  suggestedFallbackId: Schema.optional(
+    Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  ),
   startedAt: IsoDateTime,
   finishedAt: Schema.NullOr(IsoDateTime),
 });
@@ -154,6 +182,7 @@ export type LocalModelSetupJob = typeof LocalModelSetupJob.Type;
 
 export const LocalModelsSnapshot = Schema.Struct({
   totalMemoryBytes: NonNegativeInt,
+  hardware: LocalHardwareProfile,
   freeDiskBytes: Schema.NullOr(NonNegativeInt),
   recommendedModelId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
   runtimes: Schema.Array(LocalModelRuntimeStatus).check(Schema.isMaxLength(2)),

@@ -61,6 +61,14 @@ function ProviderModelRadioItem(
   const costMultiplierLabel =
     provider === "droid" ? providerModelCostMultiplierLabel(modelOption.description) : null;
   const preserveChildLayout = supportsFavorites || costMultiplierLabel !== null;
+  // Marks a model too small to drive tool calls at the moment of choice. The setup page says the
+  // same thing, but this dropdown is where users actually pick, so it has to be said here too.
+  const chatOnlyBadge =
+    modelOption.supportsToolCalls === false ? (
+      <span className="ms-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 align-middle text-[9px] font-medium text-amber-700 dark:text-amber-400">
+        {t("model.chatOnly")}
+      </span>
+    ) : null;
 
   return (
     <MenuRadioItem
@@ -119,9 +127,13 @@ function ProviderModelRadioItem(
           )}
         >
           {modelOption.name}
+          {chatOnlyBadge}
         </span>
       ) : (
-        modelOption.name
+        <>
+          {modelOption.name}
+          {chatOnlyBadge}
+        </>
       )}
     </MenuRadioItem>
   );

@@ -10,6 +10,7 @@ import { I18nextProvider, initReactI18next } from "react-i18next";
 
 import englishCatalog from "../../i18n/locales/en.json";
 import { writeLocalModelsBrowserCache } from "../../lib/localModelsBrowserCache";
+import { hardwareProfileFixture } from "../../test/localModelsFixture";
 import { LocalModelsSettingsPanel } from "./LocalModelsSettingsPanel";
 
 const mocks = vi.hoisted(() => ({
@@ -43,6 +44,7 @@ vi.mock("~/nativeApi", () => ({
 
 const installedSnapshot = {
   totalMemoryBytes: 16 * 1024 ** 3,
+  hardware: hardwareProfileFixture({ totalMemoryBytes: 16 * 1024 ** 3 }),
   freeDiskBytes: 40 * 1024 ** 3,
   recommendedModelId: null,
   runtimes: [
@@ -220,7 +222,7 @@ describe("LocalModelsSettingsPanel installed models", () => {
   it("does not duplicate the installed-model manager inside More options", async () => {
     await mount();
 
-    await page.getByRole("button", { name: "More options" }).click();
+    await page.getByRole("button", { name: "Show other models" }).click();
 
     await expect
       .element(page.getByText("Manage installed models", { exact: true }))

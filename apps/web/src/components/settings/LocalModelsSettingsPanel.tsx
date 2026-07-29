@@ -1,16 +1,15 @@
 import type {
   LocalModelInstallInput,
   LocalInstalledModel,
-  LocalModelRecommendation,
   LocalModelRuntime,
   LocalModelRuntimeStatus,
-  LocalModelsSnapshot,
 } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 
+import { appHistory } from "~/appNavigation";
 import { isElectron } from "~/env";
 import {
   ChevronRightIcon,
@@ -40,50 +39,15 @@ import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toastManager } from "../ui/toast";
-import { installProgressPercent, LocalModelCardShelf } from "./LocalModelCardShelf";
+import {
+  installProgressPercent,
+  LocalModelAlternatives,
+  LocalModelHero,
+} from "./LocalModelHero";
 import { SettingsListRow, SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
 
 const LOCAL_MODELS_QUERY_KEY = ["local-models", "snapshot"] as const;
 const LM_STUDIO_MANAGE_URL = "https://lmstudio.ai/docs/app/basics/download-model";
-
-export function recommendationSourceForRuntime(
-  recommendation: LocalModelRecommendation,
-  runtime: LocalModelRuntime,
-) {
-  return recommendation.sources.find((source) => source.runtime === runtime) ?? null;
-}
-
-export function recommendationInstallInputForRuntime(
-  recommendation: LocalModelRecommendation,
-  runtime: LocalModelRuntime,
-): LocalModelInstallInput | null {
-  const source = recommendationSourceForRuntime(recommendation, runtime);
-  if (!source) return null;
-  return source.runtime === "lmstudio"
-    ? {
-        runtime: "lmstudio",
-        modelId: source.modelId,
-        ...(source.quantization ? { quantization: source.quantization } : {}),
-      }
-    : { runtime: "ollama", modelId: source.modelId };
-}
-
-export function isRecommendationBestFit(
-  recommendation: LocalModelRecommendation,
-  snapshot: LocalModelsSnapshot,
-): boolean {
-  return recommendation.id === snapshot.recommendedModelId;
-}
-
-function localizedRecommendationDescription(
-  recommendation: LocalModelRecommendation,
-  t: TFunction,
-) {
-  return t(`localModels.recommendations.${recommendation.id}.description`, {
-    defaultValue: recommendation.description,
-    ns: "settings",
-  });
-}
 
 function runtimeStatusDescription(status: LocalModelRuntimeStatus, t: TFunction): string {
   switch (status.state) {
@@ -253,11 +217,6 @@ export function LocalModelsSettingsPanel() {
     () => new Map(snapshot?.runtimes.map((runtime) => [runtime.runtime, runtime]) ?? []),
     [snapshot?.runtimes],
   );
-  const installedKeys = useMemo(
-    () =>
-      new Set(snapshot?.installedModels.map((model) => `${model.runtime}:${model.modelId}`) ?? []),
-    [snapshot?.installedModels],
-  );
   const currentInventoryFingerprint = useMemo(
     () =>
       snapshot?.installedModels
@@ -276,6 +235,18 @@ export function LocalModelsSettingsPanel() {
     }
     inventoryFingerprint.current = currentInventoryFingerprint;
   }, [currentInventoryFingerprint, queryClient]);
+
+  const localModelActions = {
+    actionPending: actionMutation.isPending,
+    onStartSetup: (recommendationId: string) =>
+      actionMutation.mutate({ type: "start-setup", recommendationId }),
+    onRetrySetup: (jobId: string) => actionMutation.mutate({ type: "retry-setup", jobId }),
+    onCancelSetup: (jobId: string) => actionMutation.mutate({ type: "cancel-setup", jobId }),
+    onRuntimeAttention: () => setAdvancedOpen(true),
+    // Leaves settings for the chat view. The router is built on this history (see main.tsx), so
+    // pushing it navigates without needing a router context this panel does not always have.
+    onStartChat: () => appHistory.push("/"),
+  };
 
   const openExternal = async (url: string) => {
     try {
@@ -354,16 +325,7 @@ export function LocalModelsSettingsPanel() {
         </div>
       </div>
 
-      <LocalModelCardShelf
-        snapshot={snapshot}
-        actionPending={actionMutation.isPending}
-        onStartSetup={(recommendationId) =>
-          actionMutation.mutate({ type: "start-setup", recommendationId })
-        }
-        onRetrySetup={(jobId) => actionMutation.mutate({ type: "retry-setup", jobId })}
-        onCancelSetup={(jobId) => actionMutation.mutate({ type: "cancel-setup", jobId })}
-        onRuntimeAttention={() => setAdvancedOpen(true)}
-      />
+      <LocalModelHero snapshot={snapshot} {...localModelActions} />
 
       {snapshot.installJobs.length > 0 ? (
         <SettingsSection title={t("localModels.downloadsTitle")}>
@@ -436,12 +398,26 @@ export function LocalModelsSettingsPanel() {
               <SettingsListRow
                 key={`${model.runtime}:${model.modelId}`}
                 title={model.name}
-                description={`${runtimeDisplayName(model.runtime)} · ${formatBytes(model.sizeBytes, t)} · ${model.modelId}`}
+                description={[
+                  runtimeDisplayName(model.runtime),
+                  formatBytes(model.sizeBytes, t),
+                  // Only present once a warm-up has actually timed this model on this machine.
+                  ...(model.tokensPerSecond
+                    ? [t("localModels.tokensPerSecond", { count: model.tokensPerSecond })]
+                    : []),
+                  model.modelId,
+                ].join(" · ")}
                 actions={
                   <>
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                      {t("localModels.installed")}
-                    </span>
+                    {model.supportsToolCalls === false ? (
+                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                        {t("localModels.chatOnly")}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                        {t("localModels.installed")}
+                      </span>
+                    )}
                     {removalAction ? (
                       <Button
                         size="xs"
@@ -499,6 +475,8 @@ export function LocalModelsSettingsPanel() {
 
       <DisclosureRegion open={advancedOpen}>
         <div className="space-y-6 pt-1">
+          <LocalModelAlternatives snapshot={snapshot} {...localModelActions} />
+
           <SettingsSection title={t("localModels.runtimesTitle")}>
             {snapshot.runtimes.map((status) => {
               const runtimeInstall = snapshot.runtimeInstallJobs.find(
@@ -618,68 +596,6 @@ export function LocalModelsSettingsPanel() {
                 </Button>
               }
             />
-          </SettingsSection>
-
-          <SettingsSection title={t("localModels.lmStudioModelsTitle")}>
-            {snapshot.recommendations.map((recommendation) => {
-              const recommended = isRecommendationBestFit(recommendation, snapshot);
-              const source = recommendationSourceForRuntime(recommendation, "lmstudio");
-              const installInput = recommendationInstallInputForRuntime(recommendation, "lmstudio");
-              const runtimeStatus = runtimesById.get("lmstudio");
-              if (!source || !installInput || !runtimeStatus) return null;
-              const installed = installedKeys.has(`lmstudio:${source.modelId}`);
-              return (
-                <div key={recommendation.id} className="px-4 py-3.5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>
-                          {recommendation.name}
-                        </div>
-                        {recommended ? (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            {t("localModels.bestFit")}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
-                        {localizedRecommendationDescription(recommendation, t)}
-                      </p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {t("localModels.memoryTier", {
-                          size: formatBytes(recommendation.minimumMemoryBytes, t),
-                        })}
-                      </p>
-                    </div>
-                    <Button
-                      className="shrink-0"
-                      size="xs"
-                      variant="outline"
-                      disabled={
-                        installed ||
-                        !runtimeStatus.capabilities.canInstallModels ||
-                        actionMutation.isPending
-                      }
-                      title={
-                        runtimeStatus.state !== "running"
-                          ? t("localModels.startFirst", { runtime: runtimeStatus.name })
-                          : source.modelId
-                      }
-                      onClick={() =>
-                        actionMutation.mutate({
-                          type: "install",
-                          input: installInput,
-                        })
-                      }
-                    >
-                      {installed
-                        ? t("localModels.installed")
-                        : t("localModels.installWith", { runtime: runtimeStatus.name })}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
           </SettingsSection>
 
           <SettingsSection title={t("localModels.installAnotherTitle")}>

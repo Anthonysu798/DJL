@@ -5,7 +5,8 @@ import type {
 } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
-import { buildLocalModelCardViewModels } from "./LocalModelCardShelf";
+import { hardwareProfileFixture } from "../../test/localModelsFixture";
+import { buildLocalModelCardViewModels } from "./LocalModelHero";
 
 const GIB = 1024 ** 3;
 
@@ -77,6 +78,7 @@ function snapshot(
 ): LocalModelsSnapshot {
   return {
     totalMemoryBytes: 8 * GIB,
+    hardware: hardwareProfileFixture({ totalMemoryBytes: 8 * GIB }),
     freeDiskBytes: 40 * GIB,
     recommendedModelId: "qwen3.5-2b",
     runtimes: [ollamaStatus(runtimeState)],

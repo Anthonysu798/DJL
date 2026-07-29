@@ -2,8 +2,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { LocalModelsSnapshot } from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { usableModelBytes } from "./hardwareProfile";
 import { LocalModelManager } from "./LocalModelManager";
 
 const roots: string[] = [];
@@ -23,6 +25,10 @@ function json(value: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function speedOf(snapshot: LocalModelsSnapshot, modelId: string) {
+  return snapshot.installedModels.find((model) => model.modelId === modelId)?.tokensPerSecond;
 }
 
 describe("LocalModelManager", () => {
@@ -82,6 +88,498 @@ describe("LocalModelManager", () => {
       await readFile(join(stateDir, "opencode", "config", "opencode", "opencode.json"), "utf8"),
     );
     expect(config.provider.ollama.models["qwen3.5:2b-q4_K_M"]?.tool_call).toBe(true);
+  });
+
+  describe("starting an installed runtime at launch", () => {
+    // A stopped Ollama reports no inventory, so without this the user's installed models silently
+    // disappear from the chat picker until they find the start button in settings.
+    function ollamaHost(options: { readonly installedCommand: boolean }) {
+      const state = { running: false, spawned: 0 };
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) {
+          if (!state.running) throw new Error("not running");
+          return json({ version: "0.32.0" });
+        }
+        if (url.endsWith("/api/tags")) {
+          if (!state.running) throw new Error("not running");
+          return json({
+            models: [{ name: "qwen2.5:7b", size: 100, details: { parameter_size: "7.6B" } }],
+          });
+        }
+        if (url.endsWith("/api/v1/models")) throw new Error("LM Studio unavailable");
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      return {
+        state,
+        fetchMock,
+        spawnRuntime: () => {
+          state.spawned += 1;
+          if (options.installedCommand) state.running = true;
+          return { once: vi.fn(), unref: vi.fn() };
+        },
+      };
+    }
+
+    // win32 with a sandboxed env: the posix resolver falls back to /usr/local/bin/ollama, which
+    // exists on developer Macs and would make "not installed" depend on the test host.
+    async function managerWith(host: ReturnType<typeof ollamaHost>, ollamaOnPath: boolean) {
+      const stateDir = await temporaryRoot();
+      const binDir = join(stateDir, "bin");
+      if (ollamaOnPath) {
+        await mkdir(binDir, { recursive: true });
+        await writeFile(join(binDir, "ollama.exe"), "", { mode: 0o755 });
+      }
+      return new LocalModelManager({
+        stateDir,
+        fetch: host.fetchMock,
+        totalMemoryBytes: 32 * 1024 ** 3,
+        freeDiskBytes: 200 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: ollamaOnPath ? binDir : "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        spawnRuntime: host.spawnRuntime,
+      });
+    }
+
+    it("starts a stopped Ollama and surfaces its models", async () => {
+      const host = ollamaHost({ installedCommand: true });
+      const manager = await managerWith(host, true);
+
+      const before = await manager.getSnapshot();
+      expect(before.runtimes.find(({ runtime }) => runtime === "ollama")?.state).toBe("stopped");
+      expect(before.installedModels).toHaveLength(0);
+
+      await manager.startInstalledRuntimes();
+
+      expect(host.state.spawned).toBeGreaterThan(0);
+      const after = await manager.getSnapshot();
+      expect(after.runtimes.find(({ runtime }) => runtime === "ollama")?.state).toBe("running");
+      expect(after.installedModels.map(({ modelId }) => modelId)).toContain("qwen2.5:7b");
+    });
+
+    it("does not try to start Ollama when it is not installed", async () => {
+      const host = ollamaHost({ installedCommand: false });
+      const manager = await managerWith(host, false);
+
+      await manager.startInstalledRuntimes();
+
+      expect(host.state.spawned).toBe(0);
+    });
+
+    it("does not respawn a runtime that is already running", async () => {
+      const host = ollamaHost({ installedCommand: true });
+      host.state.running = true;
+      const manager = await managerWith(host, true);
+
+      await manager.startInstalledRuntimes();
+
+      expect(host.state.spawned).toBe(0);
+    });
+
+    it("never throws when the runtime refuses to start", async () => {
+      const host = ollamaHost({ installedCommand: false });
+      const stateDir = await temporaryRoot();
+      const binDir = join(stateDir, "bin");
+      await mkdir(binDir, { recursive: true });
+      await writeFile(join(binDir, "ollama.exe"), "", { mode: 0o755 });
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: host.fetchMock,
+        totalMemoryBytes: 32 * 1024 ** 3,
+        freeDiskBytes: 200 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: binDir, LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        // Fails immediately rather than letting the 90s readiness poll run in the test.
+        spawnRuntime: () => {
+          throw new Error("spawn refused");
+        },
+      });
+
+      // Launch must not be blocked or crashed by a runtime that will not come up.
+      await expect(manager.startInstalledRuntimes()).resolves.toBeUndefined();
+    });
+
+    it("leaves LM Studio alone", async () => {
+      const host = ollamaHost({ installedCommand: true });
+      const manager = await managerWith(host, true);
+
+      await manager.startInstalledRuntimes();
+
+      const snapshot = await manager.getSnapshot();
+      expect(snapshot.runtimes.find(({ runtime }) => runtime === "lmstudio")?.state).not.toBe(
+        "running",
+      );
+    });
+  });
+
+  describe("speed verification", () => {
+    // Builds a manager whose Ollama warm-up returns a fixed tokens-per-second measurement.
+    async function setupWithSpeed(tokensPerSecond: number) {
+      const stateDir = await temporaryRoot();
+      let running = false;
+      let installed = false;
+      const evalCount = 48;
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) {
+          if (!running) throw new Error("not running");
+          return json({ version: "0.32.0" });
+        }
+        if (url.endsWith("/api/tags")) {
+          return json({ models: installed ? [{ name: "qwen3.5:2b-q4_K_M", size: 100 }] : [] });
+        }
+        if (url.endsWith("/api/v1/models")) return json({ models: [] });
+        if (url.endsWith("/api/pull")) {
+          installed = true;
+          return new Response(
+            new TextEncoder().encode('{"status":"success","completed":100,"total":100}\n'),
+          );
+        }
+        if (url.endsWith("/api/generate")) {
+          return json({
+            eval_count: evalCount,
+            eval_duration: Math.round((evalCount / tokensPerSecond) * 1e9),
+          });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: fetchMock,
+        totalMemoryBytes: 8 * 1024 ** 3,
+        freeDiskBytes: 20 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        installOllama: vi.fn(async () => ({
+          command: join(stateDir, "local-models", "runtimes", "ollama", "current", "ollama"),
+          version: "v0.32.0",
+        })),
+        spawnRuntime: () => {
+          running = true;
+          return { once: vi.fn(), unref: vi.fn() };
+        },
+      });
+      const started = await manager.startSetup({ runtime: "ollama" });
+      await vi.waitFor(async () => {
+        const snapshot = await manager.getSnapshot();
+        expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
+      });
+      const snapshot = await manager.getSnapshot();
+      return {
+        job: snapshot.setupJobs.find(({ id }) => id === started.id)!,
+        snapshot,
+        fetchMock,
+      };
+    }
+
+    it("times a warm-up run and reports the measured speed", async () => {
+      const { job, snapshot, fetchMock } = await setupWithSpeed(28);
+
+      expect(job.message).toContain("28");
+      expect(
+        snapshot.installedModels.find(({ modelId }) => modelId === "qwen3.5:2b-q4_K_M")
+          ?.tokensPerSecond,
+      ).toBe(28);
+      const generate = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/api/generate"));
+      expect(generate).toBeDefined();
+      // Fast enough: nothing to suggest.
+      expect(job.tokensPerSecond).toBe(28);
+      expect(job.suggestedFallbackId).toBeNull();
+    });
+
+    it("warns when the model runs slower than comfortable and offers a smaller tier", async () => {
+      const { job } = await setupWithSpeed(9);
+      expect(job.message).toContain("slower");
+      expect(job.suggestedFallbackId).toBe("qwen3-1.7b");
+    });
+
+    it("calls out a model that is too slow to use on this computer", async () => {
+      const { job } = await setupWithSpeed(3);
+      expect(job.message).toContain("too slow");
+      expect(job.suggestedFallbackId).toBe("qwen3-1.7b");
+    });
+
+    it("reports no speed when the model stops before generating enough to time", async () => {
+      const stateDir = await temporaryRoot();
+      let running = false;
+      let installed = false;
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) {
+          if (!running) throw new Error("not running");
+          return json({ version: "0.32.0" });
+        }
+        if (url.endsWith("/api/tags")) {
+          return json({ models: installed ? [{ name: "qwen3.5:2b-q4_K_M", size: 100 }] : [] });
+        }
+        if (url.endsWith("/api/v1/models")) return json({ models: [] });
+        if (url.endsWith("/api/pull")) {
+          installed = true;
+          return new Response(
+            new TextEncoder().encode('{"status":"success","completed":100,"total":100}\n'),
+          );
+        }
+        if (url.endsWith("/api/generate")) {
+          // A model that hits its stop token after two tokens. Dividing by that sample yields a
+          // number dominated by call overhead, not throughput — so it must not be reported.
+          return json({ eval_count: 2, eval_duration: 211_850_583 });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: fetchMock,
+        totalMemoryBytes: 8 * 1024 ** 3,
+        freeDiskBytes: 20 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        installOllama: vi.fn(async () => ({
+          command: join(stateDir, "local-models", "runtimes", "ollama", "current", "ollama"),
+          version: "v0.32.0",
+        })),
+        spawnRuntime: () => {
+          running = true;
+          return { once: vi.fn(), unref: vi.fn() };
+        },
+      });
+
+      const started = await manager.startSetup({ runtime: "ollama" });
+      await vi.waitFor(async () => {
+        const snapshot = await manager.getSnapshot();
+        expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
+      });
+      const snapshot = await manager.getSnapshot();
+      const job = snapshot.setupJobs.find(({ id }) => id === started.id);
+      expect(job?.message).not.toContain("slower");
+      expect(job?.message).not.toContain("too slow");
+      expect(
+        snapshot.installedModels.find(({ modelId }) => modelId === "qwen3.5:2b-q4_K_M")
+          ?.tokensPerSecond,
+      ).toBeNull();
+    });
+
+    it("still reaches ready when the warm-up cannot be timed", async () => {
+      const stateDir = await temporaryRoot();
+      let running = false;
+      let installed = false;
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) {
+          if (!running) throw new Error("not running");
+          return json({ version: "0.32.0" });
+        }
+        if (url.endsWith("/api/tags")) {
+          return json({ models: installed ? [{ name: "qwen3.5:2b-q4_K_M", size: 100 }] : [] });
+        }
+        if (url.endsWith("/api/v1/models")) return json({ models: [] });
+        if (url.endsWith("/api/pull")) {
+          installed = true;
+          return new Response(
+            new TextEncoder().encode('{"status":"success","completed":100,"total":100}\n'),
+          );
+        }
+        if (url.endsWith("/api/generate")) throw new Error("generate exploded");
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: fetchMock,
+        totalMemoryBytes: 8 * 1024 ** 3,
+        freeDiskBytes: 20 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        installOllama: vi.fn(async () => ({
+          command: join(stateDir, "local-models", "runtimes", "ollama", "current", "ollama"),
+          version: "v0.32.0",
+        })),
+        spawnRuntime: () => {
+          running = true;
+          return { once: vi.fn(), unref: vi.fn() };
+        },
+      });
+
+      const started = await manager.startSetup({ runtime: "ollama" });
+      await vi.waitFor(async () => {
+        const snapshot = await manager.getSnapshot();
+        expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
+      });
+      const snapshot = await manager.getSnapshot();
+      expect(
+        snapshot.installedModels.find(({ modelId }) => modelId === "qwen3.5:2b-q4_K_M")
+          ?.tokensPerSecond,
+      ).toBeNull();
+    });
+  });
+
+  describe("measuring models that no setup installed", () => {
+    // Ollama's /api/ps lists the models already resident in memory. Timing one of those costs a
+    // single short generation; loading a cold 13 GB model to benchmark it would evict whatever the
+    // user is actually working with, so only resident models are ever measured.
+    function ollamaHost(options: {
+      readonly tags: readonly string[];
+      readonly resident: readonly string[];
+      readonly generate?: () => Response;
+      readonly hangingPull?: boolean;
+    }) {
+      const generated: string[] = [];
+      const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+        if (url.endsWith("/api/pull") && options.hangingPull) {
+          return new Promise<never>(() => undefined);
+        }
+        if (url.endsWith("/api/tags")) {
+          return json({ models: options.tags.map((name) => ({ name, size: 100 })) });
+        }
+        if (url.endsWith("/api/ps")) {
+          return json({ models: options.resident.map((name) => ({ name, size_vram: 100 })) });
+        }
+        if (url.endsWith("/api/generate")) {
+          const body = JSON.parse(String(init?.body)) as { model?: string };
+          generated.push(String(body.model));
+          if (options.generate) return options.generate();
+          return json({ eval_count: 48, eval_duration: (48 / 40) * 1e9 });
+        }
+        if (url.endsWith("/api/v1/models")) throw new Error("LM Studio unavailable");
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      return { fetchMock, generated };
+    }
+
+    // win32 with a sandboxed env: the posix resolver falls back to /usr/local/bin/ollama, which
+    // exists on developer Macs and would make runtime detection depend on the test host.
+    function managerFor(stateDir: string, host: ReturnType<typeof ollamaHost>) {
+      return new LocalModelManager({
+        stateDir,
+        fetch: host.fetchMock,
+        totalMemoryBytes: 32 * 1024 ** 3,
+        freeDiskBytes: 200 * 1024 ** 3,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      });
+    }
+
+    it("measures a resident model no setup installed and keeps it across a restart", async () => {
+      const stateDir = await temporaryRoot();
+      const host = ollamaHost({ tags: ["qwen2.5:7b"], resident: ["qwen2.5:7b"] });
+      const manager = managerFor(stateDir, host);
+
+      await manager.refresh();
+      await vi.waitFor(async () => {
+        expect(speedOf(await manager.getSnapshot(), "qwen2.5:7b")).toBe(40);
+      });
+      expect(host.generated).toEqual(["qwen2.5:7b"]);
+      await vi.waitFor(async () => {
+        const saved = JSON.parse(
+          await readFile(join(stateDir, "local-models", "setup-state.json"), "utf8"),
+        ) as { speeds?: unknown };
+        expect(saved.speeds).toEqual({ "ollama:qwen2.5:7b": 40 });
+      });
+
+      const restartedHost = ollamaHost({ tags: ["qwen2.5:7b"], resident: ["qwen2.5:7b"] });
+      const restarted = managerFor(stateDir, restartedHost);
+
+      expect(speedOf(await restarted.getSnapshot(), "qwen2.5:7b")).toBe(40);
+      expect(restartedHost.generated).toEqual([]);
+    });
+
+    it("measures at most one resident model per refresh", async () => {
+      const stateDir = await temporaryRoot();
+      const models = ["qwen3:1.7b", "qwen2.5:7b"];
+      const host = ollamaHost({ tags: models, resident: models });
+      const manager = managerFor(stateDir, host);
+
+      await manager.refresh();
+      await vi.waitFor(async () => {
+        expect(speedOf(await manager.getSnapshot(), "qwen3:1.7b")).toBe(40);
+      });
+      expect(host.generated).toEqual(["qwen3:1.7b"]);
+
+      await vi.waitFor(async () => {
+        await manager.refresh();
+        expect(host.generated).toEqual(["qwen3:1.7b", "qwen2.5:7b"]);
+      });
+    });
+
+    it("never measures a model that is not resident in memory", async () => {
+      const stateDir = await temporaryRoot();
+      const host = ollamaHost({ tags: ["gpt-oss:20b"], resident: [] });
+      const manager = managerFor(stateDir, host);
+
+      await manager.refresh();
+      await manager.refresh();
+
+      // Loading a 13 GB model just to benchmark it would evict whatever the user is using.
+      expect(host.generated).toEqual([]);
+      expect(speedOf(await manager.getSnapshot(), "gpt-oss:20b")).toBeNull();
+    });
+
+    it("does not measure while a setup run is timing its own model", async () => {
+      const stateDir = await temporaryRoot();
+      const host = ollamaHost({
+        tags: ["qwen2.5:7b"],
+        resident: ["qwen2.5:7b"],
+        hangingPull: true,
+      });
+      const manager = managerFor(stateDir, host);
+
+      const started = await manager.startSetup({ runtime: "ollama" });
+      await vi.waitFor(async () => {
+        const snapshot = await manager.getSnapshot();
+        expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe(
+          "downloading_model",
+        );
+      });
+
+      await manager.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Two timed generations at once understate both — the false "slower than ideal" alarm.
+      expect(host.generated).toEqual([]);
+      await manager.cancelSetup(started.id);
+    });
+
+    it("never lets a failed measurement break the refresh loop", async () => {
+      const stateDir = await temporaryRoot();
+      const host = ollamaHost({
+        tags: ["qwen2.5:7b"],
+        resident: ["qwen2.5:7b"],
+        generate: () => {
+          throw new Error("generate exploded");
+        },
+      });
+      const manager = managerFor(stateDir, host);
+
+      await expect(manager.refresh()).resolves.toBeDefined();
+      await vi.waitFor(() => {
+        expect(host.generated).toEqual(["qwen2.5:7b"]);
+      });
+
+      // Retrying every refresh tick would hammer the runtime for a model that cannot be timed.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await manager.refresh();
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(host.generated).toEqual(["qwen2.5:7b"]);
+      expect(speedOf(await manager.getSnapshot(), "qwen2.5:7b")).toBeNull();
+    });
+
+    it("starts normally when the persisted speeds are malformed", async () => {
+      const stateDir = await temporaryRoot();
+      await mkdir(join(stateDir, "local-models"), { recursive: true });
+      await writeFile(
+        join(stateDir, "local-models", "setup-state.json"),
+        JSON.stringify({
+          version: 1,
+          jobs: [],
+          speeds: { "ollama:qwen2.5:7b": "fast", "ollama:qwen3:1.7b": null },
+        }),
+      );
+      const host = ollamaHost({ tags: ["qwen2.5:7b"], resident: [] });
+      const manager = managerFor(stateDir, host);
+
+      expect(speedOf(await manager.getSnapshot(), "qwen2.5:7b")).toBeNull();
+    });
   });
 
   it("forwards the curated Q4 quantization during recommended LM Studio setup", async () => {
@@ -620,13 +1118,28 @@ describe("LocalModelManager", () => {
       stateDir,
       fetch: fetchMock,
       totalMemoryBytes: 16 * 1024 ** 3,
+      // Pinned so the recommendation does not depend on whether the test host has a GPU.
+      hardwareProfile: {
+        totalMemoryBytes: 16 * 1024 ** 3,
+        cpuModel: "Test CPU",
+        cpuCores: 8,
+        acceleration: "cpu_only",
+        gpuName: null,
+        vramBytes: null,
+        usableModelBytes: usableModelBytes({
+          acceleration: "cpu_only",
+          totalMemoryBytes: 16 * 1024 ** 3,
+        }),
+      },
       platform: "linux",
       env: { PATH: "" },
     });
 
     const snapshot = await manager.getSnapshot();
 
-    expect(snapshot.recommendedModelId).toBe("gpt-oss-20b");
+    // 16 GB of system RAM with no GPU cannot run a 13 GB model at usable speed.
+    expect(snapshot.recommendedModelId).toBe("granite-4.1-3b");
+    expect(snapshot.hardware.acceleration).toBe("cpu_only");
     expect(snapshot.installedModels).toHaveLength(2);
     expect(
       snapshot.installedModels.every(({ supportsToolCalls }) => supportsToolCalls === true),

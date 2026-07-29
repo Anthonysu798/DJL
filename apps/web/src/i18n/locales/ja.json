@@ -555,11 +555,13 @@
       },
       "change": "モデルを変更",
       "changeReasoning": "モデルと推論を変更",
+      "chatOnly": "チャットのみ",
       "configure": "モデルを設定",
       "loading": "モデルを読み込み中",
       "noMatches": "一致する項目はありません",
       "noPiModels": "Pi モデルが見つかりません",
-      "search": "モデルまたはプロバイダーを検索"
+      "search": "モデルまたはプロバイダーを検索",
+      "setUpLocalAi": "ローカル AI を設定…"
     },
     "models": {
       "addFavorite": "{{name}}をお気に入りに追加",
@@ -1175,12 +1177,22 @@
       }
     },
     "localModels": {
-      "bestFit": "最適",
+      "chatOnly": "チャットのみ",
       "checking": "ローカルモデルランタイムを確認中…",
       "connectedOn": "{{endpoint}} に安全に接続",
       "desktopOnly": "ローカルモデル管理は DJL デスクトップアプリで利用できます。",
       "downloadsTitle": "ダウンロード",
       "getRuntime": "{{runtime}} を入手",
+      "hero": {
+        "alternativesTitle": "その他のモデル",
+        "detected": "検出: {{processor}} · メモリ {{memory}}",
+        "detectedWithGpu": "検出: {{processor}} · {{gpu}} · メモリ {{memory}}",
+        "fastOnYourHardware": "このハードウェアで高速",
+        "readyTitle": "{{model}} の準備ができました",
+        "switchToSmaller": "{{model}} に切り替える",
+        "title": "このコンピュータで AI をプライベートに実行",
+        "unknownProcessor": "このコンピュータ"
+      },
       "installAnotherTitle": "別のモデルをインストール",
       "installed": "インストール済み",
       "installedEmpty": "ローカルモデルはまだありません。ランタイムを起動して推奨モデルを選んでください。",
@@ -1193,36 +1205,23 @@
       "installModel": "モデルをインストール",
       "installOllama": "Ollama をインストールして起動",
       "installRuntime": "{{runtime}} をインストールして起動",
-      "installWith": "{{runtime}} でインストール",
       "lmStudioDescription": "LM Studio を一度インストールすると、DJL がローカルサーバーを起動・管理できます。",
-      "lmStudioModelsTitle": "LM Studio モデル",
       "manageInstalledTitle": "インストール済みモデルを管理",
       "manageLmStudio": "LM Studio で管理",
-      "memoryTier": "メモリ目安 {{size}}",
-      "moreOptions": "その他のオプション",
+      "moreOptions": "その他のモデルを表示",
       "networkPrivacy": "DJL は固定ループバックアドレス（127.0.0.1）のみに接続します。ランタイムをネットワークへ公開したり、推論通信をアップロードしたり、選択モデルを自動変更したりしません。",
       "ollamaDescription": "DJL が Ollama をインストール、起動、接続します。ターミナルや管理者パスワードは不要です。",
       "privacyDescription": "モデル推論はこのコンピューター内で行われます。プロンプト、コード、出力はホスト型モデルへ送信されません。許可したツールは別途ネットワークへアクセスできます。",
       "privacyTitle": "プライバシーを重視",
-      "quick": {
-        "chooseAnother": "別のセットアップを選ぶ",
-        "description": "DJL が {{runtime}} をインストールし、{{model}}（約 {{size}}）をダウンロードします。ターミナルや管理者パスワードは不要です。",
-        "download": "{{model}} をダウンロード（約 {{size}}）",
-        "insufficientDisk": "{{size}} 以上の空き容量が必要です。",
-        "readyDescription": "{{model}} は {{runtime}} 経由でインストールされ、チャットで使用できます。",
-        "readyTitle": "{{runtime}} の準備ができました",
-        "retry": "セットアップを再試行",
-        "runtimeLabel": "ローカルランタイムを選択",
-        "setup": "ローカル AI をセットアップ · {{model}}（約 {{size}}）",
-        "title": "{{runtime}} をワンクリックでセットアップ",
-        "useInChat": "チャットで使用"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "16 GB 以上のメモリを搭載したシステム向けの高性能なローカルコーディングモデルです。"
         },
         "granite-4.1-3b": {
           "description": "8 GB メモリを搭載した Mac と PC 向けのコンパクトなコーディングモデルです。"
+        },
+        "qwen2.5-coder-7b": {
+          "description": "16 GB のマシンと 8 GB のグラフィックスカード向けの高性能コーディングモデル。"
         },
         "qwen3-1.7b": {
           "description": "4 GB 以上のメモリを搭載した低スペック端末向けの高速チャットモデルです。"
@@ -1258,19 +1257,15 @@
       "runtimeStatusTitle": "ランタイムの状態",
       "runtimesTitle": "ローカルランタイム",
       "shelf": {
-        "ariaLabel": "利用可能なローカルモデル",
-        "description": "モデルを選ぶと、DJL が Ollama をセットアップしてダウンロードし、チャットで使えるようにします。",
         "downloadSize": "{{size}} のダウンロード",
         "fixOllama": "Ollama を確認",
-        "installedReady": "インストール済み · チャットで使用可能",
         "installModel": "モデルをインストール",
         "requiresDiskAction": "{{size}} の空き容量が必要",
-        "requiresMemory": "{{size}} のメモリが必要",
         "requiresMemoryAction": "{{size}} のメモリが必要",
         "retry": "再試行",
         "setupOllama": "Ollama + モデルをセットアップ",
+        "startChat": "チャットを開始",
         "startOllama": "Ollama を起動 + インストール",
-        "title": "ローカルモデルを選択",
         "tooLarge": "このコンピューターには大きすぎます",
         "waitForSetup": "別のセットアップが実行中です"
       },
@@ -1287,6 +1282,7 @@
         "runtimeReady": "{{runtime}} をインストールして起動しました",
         "runtimeRejected": "ローカルランタイムが要求を拒否しました。"
       },
+      "tokensPerSecond": "毎秒約 {{count}} トークン",
       "updateRuntime": "更新"
     },
     "localModelsStatusUnavailableDetail": "ローカルランタイムから診断の詳細が提供されませんでした。",

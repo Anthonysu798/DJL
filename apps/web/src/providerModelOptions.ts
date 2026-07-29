@@ -39,6 +39,8 @@ export interface ProviderModelOption {
   processingLocality?: "local" | "remote" | "unknown";
   supportsVision?: boolean;
   supportsPdf?: boolean;
+  // False only when the model is known too small to drive tool calls. Undefined means unknown.
+  supportsToolCalls?: boolean;
 }
 
 export interface ProviderModelOptionGroup {
@@ -119,6 +121,7 @@ export function mergeDynamicModelOptions(input: {
     processingLocality?: "local" | "remote" | "unknown" | undefined;
     supportsVision?: boolean | undefined;
     supportsPdf?: boolean | undefined;
+    supportsToolCalls?: boolean | undefined;
   }>;
 }): ReadonlyArray<ProviderModelOption & { isCustom?: boolean }> {
   const staticNameBySlug = new Map(input.staticOptions.map((model) => [model.slug, model.name]));
@@ -170,6 +173,9 @@ export function mergeDynamicModelOptions(input: {
         : {}),
       ...(typeof dynamicModel.supportsPdf === "boolean"
         ? { supportsPdf: dynamicModel.supportsPdf }
+        : {}),
+      ...(typeof dynamicModel.supportsToolCalls === "boolean"
+        ? { supportsToolCalls: dynamicModel.supportsToolCalls }
         : {}),
     });
   }
@@ -231,6 +237,16 @@ export function groupProviderModelOptions(
       label: groupLabel,
       options: [option],
     });
+  }
+
+  // Models known too small to drive tool calls sink to the bottom of their group. They stay
+  // selectable for plain chat, but never sit above a model that can actually do the work.
+  for (const group of groupedOptions) {
+    if (!group.options.some((option) => option.supportsToolCalls === false)) continue;
+    group.options = [
+      ...group.options.filter((option) => option.supportsToolCalls !== false),
+      ...group.options.filter((option) => option.supportsToolCalls === false),
+    ];
   }
 
   return groupedOptions;

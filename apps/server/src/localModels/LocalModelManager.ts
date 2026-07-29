@@ -6,6 +6,7 @@ import { delimiter, dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 
 import type {
+  LocalHardwareProfile,
   LocalInstalledModel,
   LocalModelInstallInput,
   LocalModelInstallJob,
@@ -19,7 +20,15 @@ import type {
   LocalModelsSnapshot,
 } from "@synara/contracts";
 
-import { isCuratedLocalModel, LOCAL_MODEL_RECOMMENDATIONS, recommendLocalModel } from "./catalog";
+import {
+  curatedModelDisplayName,
+  isCuratedLocalModel,
+  LOCAL_MODEL_RECOMMENDATIONS,
+  nextSmallerRecommendation,
+  recommendLocalModel,
+  toolCallSupportForParameterSize,
+} from "./catalog";
+import { detectHardwareProfile } from "./hardwareProfile";
 import { buildOpenCodeLocalProviderConfig } from "./openCodeConfig";
 import {
   installOllamaRuntime,
@@ -40,6 +49,20 @@ const REQUEST_TIMEOUT_MS = 2_500;
 // polling the localhost API so slow cold starts do not invite repeated retries.
 const START_TIMEOUT_MS = 90_000;
 const MAX_RETAINED_INSTALL_JOBS = 32;
+// A warm-up generation long enough to time reliably but short enough that setup does not stall.
+const WARM_UP_TOKENS = 48;
+// `num_predict` is a ceiling, not a target, so the prompt has to be one the model will not answer
+// in a word or two. Counting runs to the cap on every model without needing a creative answer.
+const WARM_UP_PROMPT = "Count from 1 to 60, separated by spaces.";
+// Timing a handful of tokens measures call overhead rather than throughput. Measured against a
+// real M1 Max: a 2-token reply reads as 9 tok/s where the true rate is above 90.
+const MINIMUM_TIMEABLE_TOKENS = 16;
+// Loading a cold model into memory dominates this call, so it needs far longer than an API probe.
+const WARM_UP_TIMEOUT_MS = 180_000;
+// Below this a local model feels like waiting; above it, it feels like typing.
+const COMFORTABLE_TOKENS_PER_SECOND = 15;
+// Below this the model is not worth using for real work on this machine.
+const UNUSABLE_TOKENS_PER_SECOND = 5;
 const MAX_RETAINED_SETUP_JOBS = 8;
 const GIB = 1024 ** 3;
 
@@ -53,6 +76,7 @@ export interface LocalModelManagerOptions {
   readonly managedOpenCodeRootDir?: string;
   readonly fetch?: LocalModelFetch;
   readonly totalMemoryBytes?: number;
+  readonly hardwareProfile?: LocalHardwareProfile;
   readonly freeDiskBytes?: number | null;
   readonly platform?: NodeJS.Platform;
   readonly arch?: NodeJS.Architecture;
@@ -111,6 +135,19 @@ function runtimeCapabilities(runtime: LocalModelRuntime, state: LocalModelRuntim
   };
 }
 
+// Reports the measured speed plainly so a slow machine is told it is slow, rather than left to
+// wonder why the model feels broken.
+function readyMessage(modelName: string, tokensPerSecond: number | null): string {
+  if (tokensPerSecond === null) return `${modelName} is ready to use in chat.`;
+  if (tokensPerSecond < UNUSABLE_TOKENS_PER_SECOND) {
+    return `${modelName} is ready, but at about ${tokensPerSecond} tokens per second it is too slow to use comfortably on this computer. Try a smaller model.`;
+  }
+  if (tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND) {
+    return `${modelName} is ready at about ${tokensPerSecond} tokens per second, which is slower than ideal. A smaller model would feel faster.`;
+  }
+  return `${modelName} is ready to use in chat at about ${tokensPerSecond} tokens per second.`;
+}
+
 function runtimeMetadata(runtime: LocalModelRuntime) {
   return runtime === "ollama"
     ? {
@@ -130,6 +167,8 @@ function runtimeMetadata(runtime: LocalModelRuntime) {
 export class LocalModelManager {
   readonly #fetch: LocalModelFetch;
   readonly #totalMemoryBytes: number;
+  readonly #hardwareProfileOverride: LocalHardwareProfile | undefined;
+  #hardwareProfilePromise: Promise<LocalHardwareProfile> | null = null;
   readonly #configuredFreeDiskBytes: number | null | undefined;
   readonly #platform: NodeJS.Platform;
   readonly #arch: NodeJS.Architecture;
@@ -142,6 +181,12 @@ export class LocalModelManager {
   readonly #setupControllers = new Map<string, AbortController>();
   readonly #jobControllers = new Map<string, AbortController>();
   readonly #knownModels = new Map<LocalModelRuntime, ReadonlyArray<LocalInstalledModel>>();
+  // Measured tokens per second keyed by `${runtime}:${modelId}`; runtimes cannot report this.
+  // Persisted alongside the setup jobs so a restart does not throw the numbers away.
+  readonly #measuredSpeeds = new Map<string, number>();
+  // Models already attempted this run, so one that cannot be timed is not retried every tick.
+  readonly #attemptedSpeedKeys = new Set<string>();
+  #residentMeasurement: Promise<void> | null = null;
   readonly #configPath: string;
   readonly #stateDir: string;
   readonly #installOllama: (options: OllamaInstallOptions) => Promise<OllamaInstallResult>;
@@ -160,6 +205,7 @@ export class LocalModelManager {
   constructor(options: LocalModelManagerOptions) {
     this.#fetch = options.fetch ?? fetch;
     this.#totalMemoryBytes = options.totalMemoryBytes ?? totalmem();
+    this.#hardwareProfileOverride = options.hardwareProfile;
     this.#configuredFreeDiskBytes = options.freeDiskBytes;
     this.#platform = options.platform ?? process.platform;
     this.#arch = options.arch ?? process.arch;
@@ -179,6 +225,17 @@ export class LocalModelManager {
     this.#setupStatePath = join(this.#stateDir, "local-models", "setup-state.json");
   }
 
+  // Hardware does not change while the app runs, and the probes shell out, so detect once.
+  async #getHardwareProfile(): Promise<LocalHardwareProfile> {
+    if (this.#hardwareProfileOverride) return this.#hardwareProfileOverride;
+    this.#hardwareProfilePromise ??= detectHardwareProfile({
+      platform: this.#platform,
+      arch: this.#arch,
+      totalMemoryBytes: this.#totalMemoryBytes,
+    });
+    return this.#hardwareProfilePromise;
+  }
+
   async getSnapshot(
     options: { readonly synchronizeConfig?: boolean } = {},
   ): Promise<LocalModelsSnapshot> {
@@ -191,9 +248,11 @@ export class LocalModelManager {
       await this.#synchronizeOpenCodeConfig();
     }
     const installedModels = [...this.#knownModels.values()].flat();
-    const recommended = recommendLocalModel(this.#totalMemoryBytes);
+    const hardware = await this.#getHardwareProfile();
+    const recommended = recommendLocalModel(hardware.usableModelBytes);
     return {
       totalMemoryBytes: finiteNonNegative(this.#totalMemoryBytes),
+      hardware,
       freeDiskBytes: await this.#getFreeDiskBytes(),
       recommendedModelId: recommended?.id ?? null,
       runtimes: probes.map(({ status }) => status),
@@ -212,6 +271,12 @@ export class LocalModelManager {
   async refresh(): Promise<LocalModelsSnapshot> {
     const snapshot = await this.getSnapshot();
     await this.#emitSnapshot(snapshot);
+    if (
+      snapshot.runtimes.some(({ runtime, state }) => runtime === "ollama" && state === "running")
+    ) {
+      // Detached: a warm-up must never delay the caller, and a failure must never break the loop.
+      void this.#measureResidentModel();
+    }
     return snapshot;
   }
 
@@ -235,12 +300,30 @@ export class LocalModelManager {
     );
   }
 
+  // Brings an already-installed Ollama up at launch. A stopped runtime reports no inventory, so
+  // without this the user's installed models are missing from the model picker until they find the
+  // start button in settings — which is exactly the step a non-technical user will not find.
+  //
+  // Only Ollama: it is the runtime DJL installs and manages, it serves on loopback, and it costs
+  // nothing until a model is actually loaded. LM Studio is a user-owned GUI app and is left alone.
+  // Never installs anything, and never rejects — launch must not depend on this succeeding.
+  async startInstalledRuntimes(): Promise<void> {
+    try {
+      const snapshot = await this.getSnapshot({ synchronizeConfig: false });
+      const status = snapshot.runtimes.find(({ runtime }) => runtime === "ollama");
+      if (status?.state !== "stopped") return;
+      await this.startRuntime("ollama");
+    } catch {
+      // Leaves the runtime stopped and the manual start button in settings as the fallback.
+    }
+  }
+
   async startSetup(input: LocalModelSetupInput): Promise<LocalModelSetupJob> {
     await this.#ensureInitialized();
     const runtime = input.runtime ?? "ollama";
     const recommendation = input.recommendationId
       ? LOCAL_MODEL_RECOMMENDATIONS.find(({ id }) => id === input.recommendationId)
-      : recommendLocalModel(this.#totalMemoryBytes);
+      : recommendLocalModel((await this.#getHardwareProfile()).usableModelBytes);
     if (!recommendation) {
       throw new LocalModelManagerError("startSetup", "No recommended local model is available.");
     }
@@ -286,11 +369,13 @@ export class LocalModelManager {
       downloadedBytes: 0,
       totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
       message: "Checking this computer…",
+      tokensPerSecond: null,
+      suggestedFallbackId: null,
       startedAt: this.#now().toISOString(),
       finishedAt: null,
     };
     this.#setupJobs.set(job.id, job);
-    await this.#persistSetupJobs();
+    await this.#persistSetupState();
     const controller = new AbortController();
     this.#setupControllers.set(job.id, controller);
     void this.#runSetup(job.id, controller.signal);
@@ -332,9 +417,11 @@ export class LocalModelManager {
       state: "detecting",
       downloadedBytes: 0,
       message: "Checking this computer…",
+      tokensPerSecond: null,
+      suggestedFallbackId: null,
       finishedAt: null,
     });
-    await this.#persistSetupJobs();
+    await this.#persistSetupState();
     const controller = new AbortController();
     this.#setupControllers.set(jobId, controller);
     void this.#runSetup(jobId, controller.signal);
@@ -362,7 +449,7 @@ export class LocalModelManager {
       message: "Setup cancelled.",
       finishedAt: this.#now().toISOString(),
     });
-    await this.#persistSetupJobs();
+    await this.#persistSetupState();
     await this.#emitLatestSnapshot();
     return cancelled;
   }
@@ -404,7 +491,7 @@ export class LocalModelManager {
           state: "installing_runtime",
           message: `Installing ${runtimeMetadata(initial.runtime).name}…`,
         });
-        await this.#persistSetupJobs();
+        await this.#persistSetupState();
         await this.#emitLatestSnapshot();
         snapshot = await this.installRuntime(initial.runtime);
       } else if (runtimeStatus.state === "stopped") {
@@ -412,7 +499,7 @@ export class LocalModelManager {
           state: "starting_runtime",
           message: `Starting ${runtimeMetadata(initial.runtime).name}…`,
         });
-        await this.#persistSetupJobs();
+        await this.#persistSetupState();
         await this.#emitLatestSnapshot();
         snapshot = await this.startRuntime(initial.runtime);
       } else if (runtimeStatus.state !== "running") {
@@ -430,7 +517,7 @@ export class LocalModelManager {
           totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
           message: `Downloading ${recommendation.name}…`,
         });
-        await this.#persistSetupJobs();
+        await this.#persistSetupState();
         await this.#emitLatestSnapshot();
         const installInput: LocalModelInstallInput =
           source.runtime === "lmstudio"
@@ -461,11 +548,26 @@ export class LocalModelManager {
       }
       if (signal.aborted) return;
 
+      let tokensPerSecond: number | null = null;
+      if (initial.runtime === "ollama") {
+        this.#updateSetupJob(jobId, {
+          state: "verifying",
+          message: `Checking how fast ${recommendation.name} runs here…`,
+        });
+        await this.#persistSetupState();
+        await this.#emitLatestSnapshot();
+        tokensPerSecond = await this.#measureTokensPerSecond(initial.modelId, signal);
+        if (tokensPerSecond !== null) {
+          this.#measuredSpeeds.set(`${initial.runtime}:${initial.modelId}`, tokensPerSecond);
+        }
+      }
+      if (signal.aborted) return;
+
       this.#updateSetupJob(jobId, {
         state: "synchronizing",
         message: "Adding the model to chat…",
       });
-      await this.#persistSetupJobs();
+      await this.#persistSetupState();
       await this.#emitLatestSnapshot();
       snapshot = await this.getSnapshot();
       if (
@@ -475,14 +577,22 @@ export class LocalModelManager {
       ) {
         throw new Error("The runtime finished downloading, but the model is not available yet.");
       }
+      // Only offer a downgrade when the measurement actually disappointed and something smaller
+      // exists. A null measurement is not evidence of slowness.
+      const suggestedFallbackId =
+        tokensPerSecond !== null && tokensPerSecond < COMFORTABLE_TOKENS_PER_SECOND
+          ? (nextSmallerRecommendation(recommendation.id)?.id ?? null)
+          : null;
       this.#updateSetupJob(jobId, {
         state: "ready",
         downloadedBytes: finiteNonNegative(source.estimatedDownloadBytes),
         totalBytes: finiteNonNegative(source.estimatedDownloadBytes),
-        message: `${recommendation.name} is ready to use in chat.`,
+        message: readyMessage(recommendation.name, tokensPerSecond),
+        tokensPerSecond,
+        suggestedFallbackId,
         finishedAt: this.#now().toISOString(),
       });
-      await this.#persistSetupJobs();
+      await this.#persistSetupState();
       await this.#emitLatestSnapshot();
     } catch (cause) {
       if (signal.aborted) return;
@@ -491,10 +601,89 @@ export class LocalModelManager {
         message: cause instanceof Error ? cause.message : String(cause),
         finishedAt: this.#now().toISOString(),
       });
-      await this.#persistSetupJobs();
+      await this.#persistSetupState();
       await this.#emitLatestSnapshot();
     } finally {
       this.#setupControllers.delete(jobId);
+    }
+  }
+
+  // Models installed before DJL, or added through the custom model field, never went through a
+  // setup run, so nothing ever timed them. `/api/ps` lists what Ollama already holds in memory:
+  // timing one of those costs a single short generation, where loading a cold model to benchmark
+  // it would evict whatever the user is actually working with. One model per refresh, so a slow
+  // machine never stacks warm-ups, and a model that cannot be timed is not retried every tick.
+  async #measureResidentModel(): Promise<void> {
+    if (this.#residentMeasurement) return;
+    // A setup run does its own timed generation. Two at once would understate both, which is the
+    // false "slower than ideal" alarm this measurement exists to avoid.
+    const setupRunning = [...this.#setupJobs.values()].some(
+      (job) => !["ready", "failed", "cancelled"].includes(job.state),
+    );
+    if (setupRunning) return;
+    this.#residentMeasurement = (async () => {
+      try {
+        const response = await this.#request(`${OLLAMA_ENDPOINT}/api/ps`);
+        if (!response.ok) return;
+        const body = record(await responseJson(response));
+        const resident = Array.isArray(body?.models) ? body.models : [];
+        const modelId = resident
+          .map((value) => {
+            const model = record(value);
+            return typeof model?.name === "string" ? model.name : "";
+          })
+          .find(
+            (name) =>
+              name &&
+              !this.#measuredSpeeds.has(`ollama:${name}`) &&
+              !this.#attemptedSpeedKeys.has(`ollama:${name}`),
+          );
+        if (!modelId) return;
+        this.#attemptedSpeedKeys.add(`ollama:${modelId}`);
+        const tokensPerSecond = await this.#measureTokensPerSecond(modelId);
+        if (tokensPerSecond === null) return;
+        this.#measuredSpeeds.set(`ollama:${modelId}`, tokensPerSecond);
+        await this.#persistSetupState();
+        await this.#emitLatestSnapshot();
+      } catch {
+        // The refresh loop must survive a runtime that disappears mid-measurement.
+      } finally {
+        this.#residentMeasurement = null;
+      }
+    })();
+    await this.#residentMeasurement;
+  }
+
+  // Runs one short generation and times it. This turns "should be fast enough" into a number, and
+  // leaves the model resident so the user's first real message has no cold-start delay.
+  async #measureTokensPerSecond(modelId: string, signal?: AbortSignal): Promise<number | null> {
+    try {
+      const response = await this.#request(
+        `${OLLAMA_ENDPOINT}/api/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: modelId,
+            prompt: WARM_UP_PROMPT,
+            stream: false,
+            options: { num_predict: WARM_UP_TOKENS },
+          }),
+          ...(signal ? { signal } : {}),
+        },
+        WARM_UP_TIMEOUT_MS,
+      );
+      if (!response.ok) return null;
+      const body = record(await responseJson(response));
+      const tokens = finiteNonNegative(body?.eval_count);
+      const nanoseconds = finiteNonNegative(body?.eval_duration);
+      // Too short a sample is worse than no measurement: it understates a fast machine badly
+      // enough to warn the user about a model that is actually running well.
+      if (tokens < MINIMUM_TIMEABLE_TOKENS || nanoseconds <= 0) return null;
+      return Math.round(tokens / (nanoseconds / 1e9));
+    } catch {
+      // A model that cannot be timed still works; the speed label is simply unavailable.
+      return null;
     }
   }
 
@@ -854,14 +1043,18 @@ export class LocalModelManager {
         const model = record(value);
         const modelId = typeof model?.name === "string" ? model.name : "";
         if (!modelId) return [];
+        const details = record(model?.details);
         return [
           {
             runtime: "ollama",
             modelId,
-            name: modelId,
+            name: curatedModelDisplayName("ollama", modelId) ?? modelId,
             sizeBytes: finiteNonNegative(model?.size),
             contextWindowTokens: null,
-            supportsToolCalls: isCuratedLocalModel("ollama", modelId) ? true : null,
+            supportsToolCalls: isCuratedLocalModel("ollama", modelId)
+              ? true
+              : toolCallSupportForParameterSize(details?.parameter_size),
+            tokensPerSecond: this.#measuredSpeeds.get(`ollama:${modelId}`) ?? null,
           },
         ];
       });
@@ -943,10 +1136,13 @@ export class LocalModelManager {
           {
             runtime: "lmstudio",
             modelId,
-            name: typeof model.display_name === "string" ? model.display_name : modelId,
+            name:
+              curatedModelDisplayName("lmstudio", modelId) ??
+              (typeof model.display_name === "string" ? model.display_name : modelId),
             sizeBytes: finiteNonNegative(model.size_bytes),
             contextWindowTokens: null,
             supportsToolCalls: isCuratedLocalModel("lmstudio", modelId) ? true : null,
+            tokensPerSecond: null,
           },
         ];
       });
@@ -1180,6 +1376,13 @@ export class LocalModelManager {
             }
             this.#setupJobs.set(job.id, job as unknown as LocalModelSetupJob);
           }
+          // A speed entry the app cannot trust is dropped on its own; the model is simply
+          // measured again rather than blocking startup.
+          for (const [key, value] of Object.entries(record(root?.speeds) ?? {})) {
+            if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+              this.#measuredSpeeds.set(key, value);
+            }
+          }
         } catch (cause) {
           if ((cause as NodeJS.ErrnoException).code !== "ENOENT") {
             throw new LocalModelManagerError(
@@ -1205,8 +1408,16 @@ export class LocalModelManager {
     await this.#initializePromise;
   }
 
-  async #persistSetupJobs(): Promise<void> {
-    const payload = `${JSON.stringify({ version: 1, jobs: [...this.#setupJobs.values()] }, null, 2)}\n`;
+  async #persistSetupState(): Promise<void> {
+    const payload = `${JSON.stringify(
+      {
+        version: 1,
+        jobs: [...this.#setupJobs.values()],
+        speeds: Object.fromEntries(this.#measuredSpeeds),
+      },
+      null,
+      2,
+    )}\n`;
     this.#setupStateWrite = this.#setupStateWrite
       .catch(() => undefined)
       .then(async () => {
@@ -1253,9 +1464,9 @@ export class LocalModelManager {
     await this.#onSnapshot?.(snapshot);
   }
 
-  async #request(url: string, init?: RequestInit): Promise<Response> {
+  async #request(url: string, init?: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const signal = init?.signal
         ? AbortSignal.any([controller.signal, init.signal])

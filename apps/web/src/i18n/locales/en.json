@@ -555,11 +555,13 @@
       },
       "change": "Change model",
       "changeReasoning": "Change model and reasoning",
+      "chatOnly": "Chat only",
       "configure": "Configure a model",
       "loading": "Loading models",
       "noMatches": "No matches",
       "noPiModels": "No Pi models found",
-      "search": "Search models or providers"
+      "search": "Search models or providers",
+      "setUpLocalAi": "Set up local AI…"
     },
     "models": {
       "addFavorite": "Add {{name}} to favourites",
@@ -1175,12 +1177,22 @@
       }
     },
     "localModels": {
-      "bestFit": "Best fit",
+      "chatOnly": "Chat only",
       "checking": "Checking local model runtimes…",
       "connectedOn": "Connected securely on {{endpoint}}",
       "desktopOnly": "Local model management is available in the DJL desktop app.",
       "downloadsTitle": "Downloads",
       "getRuntime": "Get {{runtime}}",
+      "hero": {
+        "alternativesTitle": "Other models",
+        "detected": "Detected: {{processor}} · {{memory}} memory",
+        "detectedWithGpu": "Detected: {{processor}} · {{gpu}} · {{memory}} memory",
+        "fastOnYourHardware": "Fast on your hardware",
+        "readyTitle": "{{model}} is ready",
+        "switchToSmaller": "Switch to {{model}}",
+        "title": "Run AI privately on this computer",
+        "unknownProcessor": "This computer"
+      },
       "installAnotherTitle": "Install another model",
       "installed": "Installed",
       "installedEmpty": "No local models are installed yet. Start a runtime and choose a recommendation above.",
@@ -1193,36 +1205,23 @@
       "installModel": "Install model",
       "installOllama": "Install & start Ollama",
       "installRuntime": "Install & start {{runtime}}",
-      "installWith": "Install with {{runtime}}",
       "lmStudioDescription": "Install LM Studio once, then DJL can start and manage its local server.",
-      "lmStudioModelsTitle": "LM Studio models",
       "manageInstalledTitle": "Manage installed models",
       "manageLmStudio": "Manage in LM Studio",
-      "memoryTier": "{{size}} memory tier",
-      "moreOptions": "More options",
+      "moreOptions": "Show other models",
       "networkPrivacy": "DJL connects only to fixed loopback addresses (127.0.0.1). It does not expose either runtime to your network, upload local inference traffic, or automatically switch your selected model.",
       "ollamaDescription": "DJL installs, starts, and connects Ollama for you. No terminal or admin password needed.",
       "privacyDescription": "Model inference stays on this computer. Prompts, code context, and output are not sent to a hosted model provider. Approved tools can access the network separately.",
       "privacyTitle": "Private by design",
-      "quick": {
-        "chooseAnother": "Choose another setup",
-        "description": "DJL will install {{runtime}} and download {{model}} (about {{size}}). No terminal or administrator password needed.",
-        "download": "Download {{model}} (about {{size}})",
-        "insufficientDisk": "At least {{size}} of free disk space is required.",
-        "readyDescription": "{{model}} is installed through {{runtime}} and available in chat.",
-        "readyTitle": "{{runtime}} is ready",
-        "retry": "Retry setup",
-        "runtimeLabel": "Choose a local runtime",
-        "setup": "Set up local AI · {{model}} (about {{size}})",
-        "title": "One-click {{runtime}} setup",
-        "useInChat": "Use in chat"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "A capable local coding model recommended for systems with 16 GB or more."
         },
         "granite-4.1-3b": {
           "description": "A compact coding model for Macs and PCs with 8 GB of memory."
+        },
+        "qwen2.5-coder-7b": {
+          "description": "A capable coding model for 16 GB machines and 8 GB graphics cards."
         },
         "qwen3-1.7b": {
           "description": "A fast chat model for low-memory computers with 4 GB or more."
@@ -1258,19 +1257,15 @@
       "runtimeStatusTitle": "Runtime status",
       "runtimesTitle": "Local runtimes",
       "shelf": {
-        "ariaLabel": "Available local models",
-        "description": "Choose a model and DJL will set up Ollama, download it, and make it ready in chat.",
         "downloadSize": "{{size}} download",
         "fixOllama": "Check Ollama",
-        "installedReady": "Installed · Ready in chat",
         "installModel": "Install model",
         "requiresDiskAction": "Requires {{size}} free",
-        "requiresMemory": "Requires {{size}} memory",
         "requiresMemoryAction": "Requires {{size}} memory",
         "retry": "Retry",
         "setupOllama": "Set up Ollama + model",
+        "startChat": "Start a chat",
         "startOllama": "Start Ollama + install",
-        "title": "Choose a local model",
         "tooLarge": "Too large for this computer",
         "waitForSetup": "Another setup is running"
       },
@@ -1287,6 +1282,7 @@
         "runtimeReady": "{{runtime}} is installed and running",
         "runtimeRejected": "The local runtime rejected the request."
       },
+      "tokensPerSecond": "about {{count}} tokens/sec",
       "updateRuntime": "Update"
     },
     "localModelsStatusUnavailableDetail": "No local runtime diagnostic detail was provided.",
