@@ -964,10 +964,18 @@ describe("LocalModelManager", () => {
       expect.stringMatching(/local-models[\\/]runtimes[\\/]ollama[\\/]current[\\/]ollama$/u),
       ["serve"],
       expect.objectContaining({
-        env: expect.objectContaining({
-          OLLAMA_CONTEXT_LENGTH: "8192",
-          OLLAMA_MODELS: expect.any(String),
-        }),
+        // Only the model directory is DJL's to decide. Everything about how the model runs is
+        // Ollama's default: DJL is a UI over the opencode harness, not a tuner of the runtime.
+        // Ollama's own default context is far larger than the 8192 DJL used to force, so pinning
+        // it actively shrank the window and made local models worse.
+        env: expect.objectContaining({ OLLAMA_MODELS: expect.any(String) }),
+      }),
+    );
+    expect(spawnRuntime).toHaveBeenCalledWith(
+      expect.any(String),
+      ["serve"],
+      expect.objectContaining({
+        env: expect.not.objectContaining({ OLLAMA_CONTEXT_LENGTH: expect.anything() }),
       }),
     );
     expect(snapshot.runtimes.find(({ runtime }) => runtime === "ollama")?.state).toBe("running");

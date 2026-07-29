@@ -871,10 +871,14 @@ export class LocalModelManager {
         runtime === "ollama" && command === (await this.#resolveManagedOllamaCommand());
       const managedLmStudio =
         runtime === "lmstudio" && command === (await this.#resolveManagedLmStudioCommand());
+      // Only the model directory is DJL's to decide, because DJL owns that storage. How the model
+      // runs — the context window above all — is left entirely to Ollama's own defaults. DJL is a
+      // UI over the opencode harness, not a tuner of the runtime: pinning OLLAMA_CONTEXT_LENGTH
+      // here capped the window at 8192 where Ollama would have given 32768, which measurably
+      // degraded local models.
       const env = managedOllama
         ? {
             ...this.#env,
-            OLLAMA_CONTEXT_LENGTH: "8192",
             OLLAMA_MODELS: join(this.#stateDir, "local-models", "ollama", "models"),
           }
         : managedLmStudio
