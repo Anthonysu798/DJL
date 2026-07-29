@@ -37,12 +37,14 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   groupProviderModelOptions,
   groupProviderModelOptionsWithFavorites,
+  isChatOnlyModel,
   shouldUseCollapsibleModelGroups,
   type ProviderModelOption,
 } from "../../providerModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { isElectron } from "~/env";
 import { readLocalModelsBrowserCache } from "~/lib/localModelsBrowserCache";
+import { ensureNativeApi } from "~/nativeApi";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   supportsModelFavorites,
@@ -293,9 +295,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       piFavoriteModelSlugSet,
     ],
   );
-  const handleModelChange = (provider: ProviderKind, value: string) => {
-    if (props.disabled) return;
-    if (!value) return;
+  const commitModelChange = (provider: ProviderKind, value: string) => {
     const resolvedModel = resolveSelectableModel(
       provider,
       value,
@@ -304,6 +304,27 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     if (!resolvedModel) return;
     props.onProviderModelChange(provider, resolvedModel);
     onAfterSelection?.();
+  };
+
+  const handleModelChange = (provider: ProviderKind, value: string) => {
+    if (props.disabled) return;
+    if (!value) return;
+    // A model measured as unable to drive tool calls stays selectable, because chatting with a
+    // small model is legitimate and a silently disabled row explains nothing. Confirming once
+    // makes the limitation impossible to wander into without noticing.
+    const option = props.modelOptionsByProvider[provider]?.find(
+      (candidate) => candidate.slug === value,
+    );
+    if (option && isChatOnlyModel(option) && isElectron) {
+      void (async () => {
+        const confirmed = await ensureNativeApi()
+          .dialogs.confirm(t("model.chatOnlyConfirm", { ns: "chat", name: option.name }))
+          .catch(() => false);
+        if (confirmed) commitModelChange(provider, value);
+      })();
+      return;
+    }
+    commitModelChange(provider, value);
   };
   const toggleFavoriteModel = useCallback(
     (provider: FavoriteModelProvider, slug: string) => {

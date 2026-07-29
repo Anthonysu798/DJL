@@ -62,9 +62,9 @@ function ProviderModelRadioItem(
   const costMultiplierLabel =
     provider === "droid" ? providerModelCostMultiplierLabel(modelOption.description) : null;
   const preserveChildLayout = supportsFavorites || costMultiplierLabel !== null;
-  // Measured as unable to drive tool calls: still listed and explained, but not selectable. A label
-  // alone was not enough — a labelled model still gets picked, and the agent then fails in a way
-  // that reads as DJL being broken rather than the model being too small.
+  // Measured as unable to drive tool calls. Still fully selectable — a greyed-out row with no
+  // explanation is more confusing than the limitation itself, and chatting with a small model is a
+  // legitimate thing to want. The badge marks it here; picking it asks for confirmation.
   const chatOnly = isChatOnlyModel(modelOption);
   const chatOnlyBadge = chatOnly ? (
       <span className="ms-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 align-middle text-[9px] font-medium text-amber-700 dark:text-amber-400">
@@ -76,7 +76,6 @@ function ProviderModelRadioItem(
     <MenuRadioItem
       key={`${provider}:${modelOption.slug}`}
       value={modelOption.slug}
-      disabled={chatOnly}
       title={chatOnly ? t("model.chatOnlyHint", { name: modelOption.name }) : undefined}
       preserveChildLayout={preserveChildLayout}
       className={costMultiplierLabel ? "grid-cols-[minmax(0,1fr)_auto]" : undefined}

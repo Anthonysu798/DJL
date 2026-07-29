@@ -556,6 +556,7 @@
       "change": "Changer de modèle",
       "changeReasoning": "Changer de modèle et de raisonnement",
       "chatOnly": "Discussion uniquement",
+      "chatOnlyConfirm": "{{name}} est trop petit pour utiliser des outils et ne peut pas exécuter de tâches de code. L'utiliser uniquement pour discuter ?",
       "chatOnlyHint": "{{name}} est trop petit pour utiliser des outils et ne peut pas effectuer de tâches de code.",
       "configure": "Configurer un modèle",
       "loading": "Chargement des modèles",

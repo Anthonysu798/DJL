@@ -266,8 +266,8 @@ describe("chat-only local models", () => {
   });
 });
 
-describe("chat-only models are not selectable for agent work", () => {
-  it("marks a known-incapable model as disabled", () => {
+describe("chat-only models are flagged but stay selectable", () => {
+  it("identifies a known-incapable model without removing the choice", () => {
     const [capable, incapable] = groupProviderModelOptions([
       { slug: "ollama/qwen2.5:7b", name: "a", upstreamProviderName: "On this computer" },
       {
@@ -282,7 +282,7 @@ describe("chat-only models are not selectable for agent work", () => {
     expect(isChatOnlyModel(incapable!)).toBe(true);
   });
 
-  it("treats unknown capability as selectable rather than guessing", () => {
+  it("treats unknown capability as ordinary rather than guessing", () => {
     expect(isChatOnlyModel({ slug: "ollama/mystery:8b", name: "m" })).toBe(false);
   });
 });
