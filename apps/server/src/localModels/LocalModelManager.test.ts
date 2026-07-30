@@ -515,6 +515,7 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 8 * 1024 ** 3,
         freeDiskBytes: 20 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
         runInferenceCanary: vi.fn(async () => undefined),
         installOllama: vi.fn(async () => ({
@@ -602,6 +603,7 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 8 * 1024 ** 3,
         freeDiskBytes: 20 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
         runInferenceCanary: vi.fn(async () => undefined),
         installOllama: vi.fn(async () => ({
@@ -661,6 +663,7 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 8 * 1024 ** 3,
         freeDiskBytes: 20 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
         runInferenceCanary: vi.fn(async () => undefined),
         installOllama: vi.fn(async () => ({
@@ -1019,6 +1022,7 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 32 * 1024 ** 3,
         freeDiskBytes: 200 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       });
     }
@@ -1191,6 +1195,7 @@ describe("LocalModelManager", () => {
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 20 * 1024 ** 3,
       platform: "win32",
+      osVersion: "10.0.19045",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       runInferenceCanary: vi.fn(async () => undefined),
     });
@@ -1248,6 +1253,7 @@ describe("LocalModelManager", () => {
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 40 * 1024 ** 3,
       platform: "win32",
+      osVersion: "10.0.19045",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       installOllama,
     });
@@ -1282,6 +1288,7 @@ describe("LocalModelManager", () => {
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 40 * 1024 ** 3,
       platform: "win32",
+      osVersion: "10.0.19045",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       installOllama,
     });
@@ -2688,6 +2695,7 @@ describe("LocalModelManager", () => {
         }),
       },
       platform: "linux",
+      freeDiskBytes: 200 * 1024 ** 3,
       env: { PATH: "" },
     });
 

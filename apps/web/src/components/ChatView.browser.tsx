@@ -36,6 +36,7 @@ import {
 } from "../lib/terminalContext";
 import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
+import { FIRST_RUN_TOUR_STORAGE_KEY, FIRST_RUN_TOUR_VERSION } from "../onboarding/firstRunTour";
 import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
 import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
 import { getRouter } from "../router";
@@ -1043,6 +1044,23 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
         }
       : { models: [], source: "empty", cached: false };
   }
+  if (tag === WS_METHODS.openCodeListModelProviders) {
+    return {
+      providers: [
+        {
+          id: "openai",
+          name: "OpenAI",
+          supportsApiKey: true,
+          connected: true,
+          modelCount: 1,
+        },
+      ],
+      configuredProviderCount: 1,
+      modelCount: 1,
+      source: "opencode",
+      cached: false,
+    };
+  }
   if (tag === WS_METHODS.providerListAgents) {
     return { agents: [], source: "opencode", cached: false };
   }
@@ -1745,6 +1763,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await setViewport(DEFAULT_VIEWPORT);
     attachmentResponseDelayMs = 0;
     localStorage.clear();
+    localStorage.setItem(
+      FIRST_RUN_TOUR_STORAGE_KEY,
+      JSON.stringify({ seenVersion: FIRST_RUN_TOUR_VERSION }),
+    );
     document.body.innerHTML = "";
     wsRequests.length = 0;
     useComposerDraftStore.setState({

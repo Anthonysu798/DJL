@@ -170,7 +170,7 @@ jobs:
       matrix:
         include:
           - label: macOS ARM64
-            runner: macos-15
+            runner: macos-14
             platform: mac
             target: dmg
             arch: arm64

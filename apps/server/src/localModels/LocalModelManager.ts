@@ -146,6 +146,7 @@ export interface LocalModelManagerOptions {
   readonly freeDiskBytes?: number | null;
   readonly platform?: NodeJS.Platform;
   readonly arch?: NodeJS.Architecture;
+  readonly osVersion?: string;
   readonly hardwareProfileTtlMs?: number;
   readonly canaryRequestTimeoutMs?: number;
   readonly canaryUsabilityThresholdMs?: number;
@@ -372,6 +373,7 @@ export class LocalModelManager {
           architecture: this.#arch,
           processArchitecture: this.#processArch,
           runningUnderTranslation: this.#env.DJL_RUNNING_UNDER_TRANSLATION === "1",
+          ...(options.osVersion === undefined ? {} : { osVersion: options.osVersion }),
           ...(options.totalMemoryBytes === undefined
             ? {}
             : { totalMemoryBytes: options.totalMemoryBytes, gpus: [] }),

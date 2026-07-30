@@ -3252,7 +3252,6 @@ export default function ChatView({
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
   const isZeroConfigEntry = isCenteredEmptyLanding && !hasThreadStarted;
-  const isZeroConfigHomeLanding = isEmptyChatLanding && !hasThreadStarted;
   const { turnDiffSummaries, inferredCheckpointTurnCountByTurnId } =
     useTurnDiffSummaries(activeThread);
   const turnDiffSummaryByAssistantMessageId = useMemo(() => {
@@ -3785,6 +3784,7 @@ export default function ChatView({
   useEffect(() => {
     if (
       !isZeroConfigEntry ||
+      selectedProviderByThreadId !== null ||
       zeroConfigModelSelection.kind !== "selected" ||
       (selectedProvider === zeroConfigModelSelection.provider &&
         selectedModel === zeroConfigModelSelection.modelSlug)
@@ -3799,6 +3799,7 @@ export default function ChatView({
     isZeroConfigEntry,
     selectedModel,
     selectedProvider,
+    selectedProviderByThreadId,
     setComposerDraftModelSelectionAndSticky,
     threadId,
     zeroConfigModelSelection,
@@ -3912,6 +3913,7 @@ export default function ChatView({
     zeroConfigDiscoverySettled &&
     zeroConfigRemoteSelection.kind === "no-model" &&
     !hasUsableZeroConfigModel;
+  const isZeroConfigHomeLanding = isEmptyChatLanding && showZeroConfigLocalAiCard;
 
   const prepareLocalAiAndResume = useCallback(
     async (resumeTask: boolean): Promise<boolean> => {
@@ -7557,17 +7559,6 @@ export default function ChatView({
     ) {
       return false;
     }
-    const hasUsableModelForSend = isZeroConfigEntry
-      ? hasUsableZeroConfigModel
-      : hasConfiguredOpenCodeModel;
-    if (!hasUsableModelForSend) {
-      if (isElectron && isZeroConfigEntry && (queuedTurn || composerSendState.hasSendableContent)) {
-        await prepareLocalAiAndResume(true);
-      } else if (!isElectron || !isZeroConfigEntry) {
-        window.location.assign("/settings?section=models");
-      }
-      return false;
-    }
     if (isLegacyReadOnlyThread) {
       return false;
     }
@@ -7881,6 +7872,17 @@ export default function ChatView({
         pendingAutomationConversationRef.current = null;
         setPendingAutomationConversation(null);
       }
+    }
+    const hasUsableModelForSend = isZeroConfigEntry
+      ? hasUsableZeroConfigModel
+      : hasConfiguredOpenCodeModel;
+    if (!hasUsableModelForSend) {
+      if (isElectron && isZeroConfigEntry && (queuedTurn || composerSendState.hasSendableContent)) {
+        await prepareLocalAiAndResume(true);
+      } else if (!isElectron || !isZeroConfigEntry) {
+        window.location.assign("/settings?section=models");
+      }
+      return false;
     }
     sendPreflightInFlightRef.current = true;
     const sendProviderAvailability = await (async () => {
@@ -11541,7 +11543,7 @@ export default function ChatView({
             />
           </div>
         ) : null}
-        {isZeroConfigHomeLanding ? null : emptyLandingControls}
+        {emptyLandingControls}
       </div>
     ) : (
       <div

@@ -564,6 +564,7 @@ describe("hardware profile", () => {
     const profile = await collectHardwareProfile({
       stateDir: "unused",
       platform: "win32",
+      architecture: "x64",
       totalMemoryBytes: 32 * 1024 ** 3,
       availableMemoryBytes: 24 * 1024 ** 3,
       cpuLogicalCores: 16,
@@ -737,6 +738,7 @@ describe("hardware profile", () => {
     const profile = await collectHardwareProfile({
       stateDir: "unused",
       platform: "win32",
+      architecture: "x64",
       totalMemoryBytes: 16 * 1024 ** 3,
       availableMemoryBytes: 12 * 1024 ** 3,
       cpuLogicalCores: 8,
@@ -764,6 +766,7 @@ describe("hardware profile", () => {
     const profile = await collectHardwareProfile({
       stateDir: "unused",
       platform: "win32",
+      architecture: "x64",
       totalMemoryBytes: 24 * 1024 ** 3,
       availableMemoryBytes: 8 * 1024 ** 3,
       cpuLogicalCores: 12,
@@ -894,6 +897,7 @@ describe("hardware profile", () => {
     const profile = await collectHardwareProfile({
       stateDir: "unused",
       platform: "win32",
+      architecture: "x64",
       totalMemoryBytes: 16 * 1024 ** 3,
       availableMemoryBytes: 8 * 1024 ** 3,
       cpuLogicalCores: 8,
