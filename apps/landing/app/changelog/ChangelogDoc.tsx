@@ -101,7 +101,7 @@ export function ChangelogDoc({
   });
 
   return (
-    <main lang={t.htmlLang} className="changelog" data-theme="dark">
+    <main lang={t.htmlLang} className="changelog">
       <header className="cl-top">
         <a className="cl-back" href={homeHref}>
           <span aria-hidden="true">←</span> {c.home}
@@ -121,20 +121,19 @@ export function ChangelogDoc({
         </div>
       </header>
 
-      <AuroraBackground className="cl-hero">
-        <div className="cl-hero-inner">
-          <span className="cl-eyebrow">{c.eyebrow}</span>
-          <h1>{c.title}</h1>
-          <p>{c.lede}</p>
-        </div>
-      </AuroraBackground>
+      {/* The one inverted band. The aurora reads as the sticker constellation over it. */}
+      <div data-theme="dark">
+        <AuroraBackground className="cl-hero">
+          <div className="cl-hero-inner">
+            <span className="cl-eyebrow">{c.eyebrow}</span>
+            <h1>{c.title}</h1>
+            <p>{c.lede}</p>
+          </div>
+        </AuroraBackground>
+      </div>
 
-      {/* Dot background: the calm surface the entries are read against. */}
+      {/* Warm paper, no dot field: entries are grouped by whitespace and their own hairlines. */}
       <div className="cl-body">
-        <div
-          className="cl-dots [background-image:radial-gradient(#d4d4d4_1px,transparent_1px)] [background-size:20px_20px] dark:[background-image:radial-gradient(#2a2a2a_1px,transparent_1px)]"
-          aria-hidden="true"
-        />
         <div className="cl-body-inner">
           {locale === "zh" && <p className="cl-source-note">{c.sourceNote}</p>}
 
@@ -145,7 +144,7 @@ export function ChangelogDoc({
               <p className="cl-empty-title">{c.empty}</p>
               <p className="cl-empty-hint">{c.emptyHint}</p>
               <a
-                className="key"
+                className="btn" data-variant="secondary"
                 href={RELEASES_PAGE_URL}
                 target="_blank"
                 rel="noreferrer noopener"

@@ -17,10 +17,10 @@ import { cn } from "../cn";
 // properties accept almost any token the failure only surfaces later — `background-image` resolves
 // to `none` and the whole aurora silently disappears.
 const AURORA_VARS = {
-  // Warm wash, not the shipped blue/violet. A cool aurora over warm graphite reads as two unrelated
-  // decisions; ember through copper keeps the header inside the theme.
+  // Sticker palette over the night band: sky, purple and pink are exactly the decorative hues the
+  // system allows here, and a glowing constellation is what the dark hero is meant to carry.
   "--aurora":
-    "repeating-linear-gradient(100deg, #b4400e 10%, #f08a46 15%, #e8b07a 20%, #f4d3a8 25%, #c9541f 30%)",
+    "repeating-linear-gradient(100deg, #62aef0 10%, #d6b6f6 15%, #ff64c8 20%, #a8d4f7 25%, #62aef0 30%)",
   "--dark-gradient":
     "repeating-linear-gradient(100deg, #000 0%, #000 7%, transparent 10%, transparent 12%, #000 16%)",
   "--white-gradient":

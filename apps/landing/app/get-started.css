@@ -9,16 +9,8 @@
   position: relative;
   padding: clamp(3.5rem, 9vw, 7rem) clamp(1.25rem, 4vw, 3rem);
   border-top: 1px solid var(--line);
-  overflow: hidden;
 }
 
-.gs-grid {
-  position: absolute;
-  inset: 0;
-  mask-image: radial-gradient(ellipse at 30% 0%, black 5%, transparent 70%);
-  opacity: 0.8;
-  pointer-events: none;
-}
 
 .gs-inner {
   position: relative;
@@ -61,7 +53,7 @@
    the same boxed look this section is getting away from. A hairline underline is enough. */
 .gs-flip-word {
   color: var(--accent);
-  border-bottom: 2px solid rgba(180, 64, 14, 0.3);
+  border-bottom: 2px solid rgba(0, 117, 222, 0.28);
   padding-bottom: 0.05em;
 }
 
@@ -106,11 +98,11 @@
 .gs-step-n {
   display: block;
   margin-bottom: 0.7rem;
-  color: var(--accent);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.74rem;
+  color: var(--mute);
+  font-size: 12px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tr-eyebrow);
 }
 /* The old rule singling out step two in amber is gone: --accent and --amber are the same ember now,
    so it rendered identically. The local / online encoding still does real work on the guide, where

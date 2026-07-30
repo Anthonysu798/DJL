@@ -12,12 +12,7 @@ export function GetStarted({ t, locale }: { t: Content; locale: Locale }) {
 
   return (
     <section id="get-started" className="get-started" aria-labelledby="get-started-title">
-      {/* Grid background, faded at the edges so it reads as texture rather than a swatch. */}
-      <div
-        className="gs-grid [background-image:linear-gradient(to_right,#dfe3ea_1px,transparent_1px),linear-gradient(to_bottom,#dfe3ea_1px,transparent_1px)] [background-size:40px_40px]"
-        aria-hidden="true"
-      />
-
+      {/* No ruled background: whitespace and hairlines do the grouping, and a grid competes. */}
       <div className="gs-inner">
         <div className="gs-head">
           <span className="gs-tag">{s.tag}</span>
@@ -45,11 +40,11 @@ export function GetStarted({ t, locale }: { t: Content; locale: Locale }) {
         </ol>
 
         <div className="gs-actions">
-          {/* Standard rank: the nav already carries the site's one ember action. */}
-          <a className="key" href={guideHref}>
+          {/* Secondary rank: the page's one blue action is the nav CTA. */}
+          <a className="btn" data-variant="secondary" href={guideHref}>
             {s.cta}
           </a>
-          <a className="key" data-variant="ghost" href={changelogHref}>
+          <a className="btn" data-variant="utility" href={changelogHref}>
             {t.changelog.eyebrow}
           </a>
         </div>
