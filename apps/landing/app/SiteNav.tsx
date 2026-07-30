@@ -262,7 +262,8 @@ export function SiteNav({ t }: { t: Content }) {
             </a>
           </div>
           <a
-            className="site-nav-cta"
+            className="key"
+            data-variant="primary"
             href="#start"
             onClick={(event) => scrollTo(event, "start")}
           >

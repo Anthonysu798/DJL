@@ -145,7 +145,7 @@ export function ChangelogDoc({
               <p className="cl-empty-title">{c.empty}</p>
               <p className="cl-empty-hint">{c.emptyHint}</p>
               <a
-                className="cl-empty-action"
+                className="key"
                 href={RELEASES_PAGE_URL}
                 target="_blank"
                 rel="noreferrer noopener"

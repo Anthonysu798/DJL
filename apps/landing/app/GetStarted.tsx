@@ -45,11 +45,11 @@ export function GetStarted({ t, locale }: { t: Content; locale: Locale }) {
         </ol>
 
         <div className="gs-actions">
-          <a className="gs-cta" href={guideHref}>
+          {/* Standard rank: the nav already carries the site's one ember action. */}
+          <a className="key" href={guideHref}>
             {s.cta}
-            <span aria-hidden="true">→</span>
           </a>
-          <a className="gs-secondary" href={changelogHref}>
+          <a className="key" data-variant="ghost" href={changelogHref}>
             {t.changelog.eyebrow}
           </a>
         </div>
