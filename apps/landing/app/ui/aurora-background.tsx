@@ -17,8 +17,10 @@ import { cn } from "../cn";
 // properties accept almost any token the failure only surfaces later — `background-image` resolves
 // to `none` and the whole aurora silently disappears.
 const AURORA_VARS = {
+  // Warm wash, not the shipped blue/violet. A cool aurora over warm graphite reads as two unrelated
+  // decisions; ember through copper keeps the header inside the theme.
   "--aurora":
-    "repeating-linear-gradient(100deg, #3b82f6 10%, #a5b4fc 15%, #93c5fd 20%, #ddd6fe 25%, #60a5fa 30%)",
+    "repeating-linear-gradient(100deg, #b4400e 10%, #f08a46 15%, #e8b07a 20%, #f4d3a8 25%, #c9541f 30%)",
   "--dark-gradient":
     "repeating-linear-gradient(100deg, #000 0%, #000 7%, transparent 10%, transparent 12%, #000 16%)",
   "--white-gradient":
@@ -49,7 +51,8 @@ export function AuroraBackground({
             // Upstream also re-declares --aurora/--dark-gradient/--white-gradient here as arbitrary
             // properties. They are dead weight: an inline style always wins over a class for the
             // same custom property, so the values in AURORA_VARS are the ones that apply.
-            `pointer-events-none absolute -inset-[10px] opacity-50 blur-[10px] invert filter will-change-transform [background-image:var(--white-gradient),var(--aurora)] [background-position:50%_50%,50%_50%] [background-size:300%,_200%] after:absolute after:inset-0 after:animate-aurora after:mix-blend-difference after:content-[""] after:[background-attachment:fixed] after:[background-image:var(--white-gradient),var(--aurora)] after:[background-size:200%,_100%] dark:invert-0 dark:[background-image:var(--dark-gradient),var(--aurora)] after:dark:[background-image:var(--dark-gradient),var(--aurora)]`,
+            // difference blending inverted the warm hues into cyans; screen keeps them warm.
+            `pointer-events-none absolute -inset-[10px] opacity-35 blur-[14px] invert filter will-change-transform [background-image:var(--white-gradient),var(--aurora)] [background-position:50%_50%,50%_50%] [background-size:300%,_200%] after:absolute after:inset-0 after:animate-aurora after:mix-blend-screen after:content-[""] after:[background-attachment:fixed] after:[background-image:var(--white-gradient),var(--aurora)] after:[background-size:200%,_100%] dark:invert-0 dark:[background-image:var(--dark-gradient),var(--aurora)] after:dark:[background-image:var(--dark-gradient),var(--aurora)]`,
             // The aurora is decoration, so it holds still when the visitor asked for less motion.
             "motion-reduce:after:animate-none",
             showRadialGradient &&

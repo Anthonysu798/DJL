@@ -6,14 +6,14 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 .changelog {
-  --cl-bg: #08090d;
-  --cl-text: #edeef4;
-  --cl-dim: #9aa0b0;
-  --cl-mute: #6b7280;
-  --cl-line: rgba(237, 238, 244, 0.09);
-  --cl-line-2: rgba(237, 238, 244, 0.16);
-  --cl-accent: #22d3ee;
-  --cl-warm: #f0a55a;
+  --cl-bg: #161412;
+  --cl-text: #edeae5;
+  --cl-dim: #a5a09a;
+  --cl-mute: #7d766e;
+  --cl-line: rgba(237, 234, 229, 0.1);
+  --cl-line-2: rgba(237, 234, 229, 0.2);
+  --cl-accent: #f08a46;
+  --cl-warm: #f08a46;
 
   min-height: 100vh;
   background: var(--cl-bg);
@@ -31,7 +31,7 @@
   gap: 1rem;
   padding: 0.9rem clamp(1.25rem, 4vw, 3rem);
   border-bottom: 1px solid var(--cl-line);
-  background: rgba(8, 9, 13, 0.72);
+  background: rgba(22, 20, 18, 0.72);
   backdrop-filter: blur(14px);
 }
 .cl-top-right {
@@ -165,13 +165,13 @@
   white-space: nowrap;
 }
 .cl-badge[data-kind="current"] {
-  border-color: rgba(34, 211, 238, 0.35);
-  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(240, 138, 70, 0.35);
+  background: rgba(240, 138, 70, 0.1);
   color: var(--cl-accent);
 }
 .cl-badge[data-kind="prerelease"] {
-  border-color: rgba(240, 165, 90, 0.32);
-  background: rgba(240, 165, 90, 0.1);
+  border-color: rgba(240, 138, 70, 0.32);
+  background: rgba(240, 138, 70, 0.1);
   color: var(--cl-warm);
 }
 .cl-date {
@@ -209,10 +209,10 @@
 /* The three canonical headings get a hue so a long release can be skimmed by kind. Anything else
    (a first release's "Highlights") keeps the neutral treatment rather than being mislabelled. */
 .cl-section-heading[data-heading="added"] {
-  color: #7ee2a8;
+  color: #9ccb5a;
 }
 .cl-section-heading[data-heading="fixed"] {
-  color: #7fb2ff;
+  color: #8fb0ce;
 }
 .cl-section-heading[data-heading="changed"] {
   color: var(--cl-warm);
@@ -249,7 +249,7 @@
   font-size: 0.74rem;
   letter-spacing: 0.06em;
   text-decoration: none;
-  border-bottom: 1px solid rgba(34, 211, 238, 0.3);
+  border-bottom: 1px solid rgba(240, 138, 70, 0.3);
   padding-bottom: 1px;
   transition: border-color 0.2s var(--ease-out);
 }
@@ -274,20 +274,6 @@
   color: var(--cl-dim);
   font-size: 0.94rem;
   line-height: 1.6;
-}
-.cl-empty-action {
-  display: inline-block;
-  padding: 0.7rem 1.4rem;
-  border: 1px solid var(--cl-line-2);
-  border-radius: 999px;
-  color: var(--cl-text);
-  font-size: 0.9rem;
-  text-decoration: none;
-  transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
-}
-.cl-empty-action:hover {
-  border-color: rgba(34, 211, 238, 0.4);
-  background: rgba(34, 211, 238, 0.08);
 }
 
 [lang="zh-CN"] .cl-hero-inner h1 {

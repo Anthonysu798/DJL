@@ -7,15 +7,15 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 .guide {
-  --gd-bg: #08090d;
-  --gd-text: #edeef4;
-  --gd-dim: #9aa0b0;
-  --gd-mute: #6b7280;
-  --gd-line: rgba(237, 238, 244, 0.09);
-  --gd-line-2: rgba(237, 238, 244, 0.16);
-  --gd-azure: #7fb2ff;
-  --gd-amber: #f0a55a;
-  --gd-cyan: #22d3ee;
+  --gd-bg: #161412;
+  --gd-text: #edeae5;
+  --gd-dim: #a5a09a;
+  --gd-mute: #7d766e;
+  --gd-line: rgba(237, 234, 229, 0.1);
+  --gd-line-2: rgba(237, 234, 229, 0.2);
+  --gd-azure: #8fb0ce;
+  --gd-amber: #f08a46;
+  --gd-ember: #f08a46;
 
   min-height: 100vh;
   background: var(--gd-bg);
@@ -44,7 +44,7 @@ html:has(.guide) {
   gap: 1rem;
   padding: 0.9rem clamp(1.25rem, 4vw, 3rem);
   border-bottom: 1px solid var(--gd-line);
-  background: rgba(8, 9, 13, 0.72);
+  background: rgba(22, 20, 18, 0.72);
   backdrop-filter: blur(14px);
 }
 .gd-top-right {
@@ -73,7 +73,7 @@ html:has(.guide) {
   gap: 0.6rem;
 }
 .gd-lang a.active {
-  color: var(--gd-cyan);
+  color: var(--gd-ember);
 }
 
 /* ── lamp header ── */
@@ -96,7 +96,7 @@ html:has(.guide) {
 .gd-eyebrow {
   display: inline-block;
   margin-bottom: 1rem;
-  color: var(--gd-cyan);
+  color: var(--gd-ember);
   font-family: var(--font-mono), monospace;
   font-size: 0.68rem;
   letter-spacing: 0.18em;
@@ -105,7 +105,7 @@ html:has(.guide) {
 .gd-lamp-inner h1 {
   margin: 0 auto 1.1rem;
   max-width: 22ch;
-  background: linear-gradient(to bottom right, #f4f6fb, #97a0b5);
+  background: linear-gradient(to bottom right, #f4f1ec, #a8a099);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -187,7 +187,7 @@ html:has(.guide) {
   transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
 }
 .gd-toc a:hover {
-  border-left-color: var(--gd-cyan);
+  border-left-color: var(--gd-ember);
   color: var(--gd-text);
 }
 
@@ -375,7 +375,7 @@ html:has(.guide) {
 .gd-pill {
   display: inline-block;
   padding: 0.12rem 0.55rem;
-  border: 1px solid rgba(127, 178, 255, 0.3);
+  border: 1px solid rgba(143, 176, 206, 0.3);
   border-radius: 999px;
   color: var(--gd-azure);
   font-family: var(--font-mono), monospace;
@@ -385,12 +385,12 @@ html:has(.guide) {
 }
 /* A chat-only row is the trap this page exists to prevent, so it is marked, not buried. */
 .gd-table tr[data-agent="false"] .gd-pill {
-  border-color: rgba(240, 165, 90, 0.34);
+  border-color: rgba(240, 138, 70, 0.34);
   color: var(--gd-amber);
 }
 .gd-table tr[data-agent="false"] th,
 .gd-table tr[data-agent="false"] td {
-  background: rgba(240, 165, 90, 0.045);
+  background: rgba(240, 138, 70, 0.045);
 }
 
 /* ── callouts: a rule and a title, no box ── */
@@ -429,7 +429,7 @@ html:has(.guide) {
   /* Set here as well as passed to the component: the component animates this colour, so before
      hydration (and during the 0.3s transition) it would otherwise paint transparent then flash a
      light slab across a dark page. CSS owns the resting state; motion only moves between them. */
-  background: #0a0c12;
+  background: #1e1b18;
 }
 .gd-privacy-layer {
   padding: clamp(1.5rem, 4vw, 2.5rem);
@@ -449,14 +449,14 @@ html:has(.guide) {
 /* The masked layer paints white-on-dark through the cursor hole, so it needs its own colours
    rather than the page's. The revealed layer beneath keeps the normal treatment. */
 .gd-privacy [data-masked="true"] {
-  color: #08090d;
+  color: #161412;
 }
 .gd-privacy [data-masked="true"] h3,
 .gd-privacy [data-masked="true"] p {
   color: inherit;
 }
 .gd-privacy .gd-privacy-layer:not([data-masked="true"]) h3 {
-  color: var(--gd-cyan);
+  color: var(--gd-ember);
 }
 .gd-privacy .gd-privacy-layer:not([data-masked="true"]) p {
   color: var(--gd-dim);
@@ -483,22 +483,6 @@ html:has(.guide) {
   color: var(--gd-dim);
   font-size: 0.96rem;
   line-height: 1.6;
-}
-.gd-cta-button {
-  display: inline-block;
-  padding: 0.8rem 1.6rem;
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  border-radius: 999px;
-  background: rgba(34, 211, 238, 0.1);
-  color: var(--gd-cyan);
-  font-size: 0.92rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
-}
-.gd-cta-button:hover {
-  border-color: var(--gd-cyan);
-  background: rgba(34, 211, 238, 0.18);
 }
 
 [lang="zh-CN"] .gd-lamp-inner h1,

@@ -203,7 +203,7 @@ export function GuideDoc({ locale }: { locale: Locale }) {
                 curveIntensity={40}
               />
               <p>{g.cta.body}</p>
-              <a className="gd-cta-button" href="/download/mac/arm64">
+              <a className="key" data-variant="primary" href="/download/mac/arm64">
                 {g.cta.download}
               </a>
             </section>
