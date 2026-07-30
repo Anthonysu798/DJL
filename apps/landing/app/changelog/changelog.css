@@ -1,0 +1,296 @@
+/* ══════════════════════════════════════════════════════════════════════
+   CHANGELOG — Notion
+   Warm paper below a single deep-indigo night band, where the aurora reads as a
+   glowing sticker constellation. Releases are white cards at 12px on the paper,
+   held by hairlines rather than shadow. Added / Fixed / Changed take sticker
+   green, sky and orange, because the system carries status in that palette and
+   defines no separate semantic ramp.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.changelog {
+  --cl-paper: #f6f5f4;
+  --cl-surface: #ffffff;
+  --cl-ink: rgba(0, 0, 0, 0.95);
+  --cl-ink-2: #31302e;
+  --cl-stone: #615d59;
+  --cl-ash: #a39e98;
+  --cl-hairline: #e6e6e6;
+  --cl-night: #213183;
+
+  min-height: 100vh;
+  background: var(--cl-paper);
+  color: var(--cl-ink);
+  font-family: var(--font-body), var(--cjk);
+  font-feature-settings: "lnum", "locl";
+}
+
+/* ── top bar ── */
+.cl-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) clamp(var(--sp-md), 4vw, var(--sp-xxl));
+  border-bottom: 1px solid var(--cl-hairline);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+}
+.cl-top-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-lg);
+}
+.cl-back,
+.cl-top-link {
+  color: var(--cl-ink-2);
+  font-size: 15px;
+  line-height: 1.33;
+  text-decoration: none;
+}
+.cl-back:hover,
+.cl-top-link:hover {
+  color: var(--primary);
+}
+.cl-lang {
+  display: flex;
+  gap: var(--sp-xs);
+}
+.cl-lang a {
+  color: var(--cl-stone);
+  font-size: 15px;
+  text-decoration: none;
+}
+.cl-lang a:hover {
+  color: var(--cl-ink);
+}
+.cl-lang a.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ── the single night band ── */
+.cl-hero {
+  min-height: 42svh;
+  padding: clamp(3rem, 7vw, 5rem) clamp(var(--sp-md), 4vw, var(--sp-xxl));
+  background: var(--cl-night) !important;
+  color: #ffffff;
+  text-align: left;
+  align-items: flex-start;
+}
+.cl-hero-inner {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.cl-eyebrow {
+  display: inline-block;
+  margin-bottom: var(--sp-md);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: 9999px;
+  background: #ffffff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.33;
+  letter-spacing: var(--tr-eyebrow);
+}
+.cl-hero-inner h1 {
+  margin: 0 0 var(--sp-md);
+  max-width: 20ch;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 6.5vw, 4rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: var(--tr-display-1);
+  text-wrap: balance;
+}
+.cl-hero-inner p {
+  margin: 0;
+  max-width: 54ch;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.5;
+}
+
+/* ── body ── */
+.cl-body {
+  position: relative;
+}
+.cl-body-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(var(--sp-lg), 4vw, var(--sp-xxl)) clamp(var(--sp-md), 4vw, var(--sp-xxl))
+    clamp(4rem, 8vw, 7rem);
+}
+
+.cl-source-note {
+  margin: 0 0 var(--sp-md);
+  max-width: 64ch;
+  color: var(--cl-stone);
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+/* ── entry heading ── */
+.cl-entry-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-xs);
+}
+.cl-version {
+  margin: 0;
+  color: var(--cl-ink);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tr-heading-1);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.cl-badges {
+  display: flex;
+  gap: var(--sp-xxs);
+}
+.cl-badge {
+  padding: 2px var(--sp-xs);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
+  white-space: nowrap;
+}
+/* "Current" is a state, not an action, so it takes a sticker hue rather than the accent blue. */
+.cl-badge[data-kind="current"] {
+  background: rgba(26, 174, 57, 0.12);
+  color: #14832b;
+}
+.cl-badge[data-kind="prerelease"] {
+  background: rgba(221, 91, 0, 0.1);
+  color: var(--sticker-orange);
+}
+.cl-date {
+  flex-basis: 100%;
+  color: var(--cl-ash);
+  font-size: 14px;
+  line-height: 1.43;
+  font-variant-numeric: lining-nums;
+}
+
+/* ── entry body: a white card on paper ── */
+.cl-entry-body {
+  max-width: 64ch;
+  padding: var(--sp-lg);
+  border: 1px solid var(--cl-hairline);
+  border-radius: var(--r-lg);
+  background: var(--cl-surface);
+}
+.cl-intro {
+  margin: 0 0 var(--sp-md);
+  color: var(--cl-ink-2);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.cl-section + .cl-section {
+  margin-top: var(--sp-lg);
+}
+.cl-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--sp-xs);
+  color: var(--cl-stone);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
+  text-transform: uppercase;
+}
+/* A category dot per change kind. Anything outside the three canonical headings — a first release's
+   "Highlights" — keeps the neutral dot rather than being mislabelled. */
+.cl-section-heading::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--cl-ash);
+  flex: none;
+}
+.cl-section-heading[data-heading="added"]::before {
+  background: var(--sticker-green);
+}
+.cl-section-heading[data-heading="fixed"]::before {
+  background: var(--sticker-sky);
+}
+.cl-section-heading[data-heading="changed"]::before {
+  background: var(--sticker-orange);
+}
+
+.cl-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-items li {
+  position: relative;
+  padding: var(--sp-xxs) 0 var(--sp-xxs) var(--sp-md);
+  color: var(--cl-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.cl-items li::before {
+  content: "";
+  position: absolute;
+  top: 0.72rem;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--cl-ash);
+}
+
+/* Inline link colour is the accent's other sanctioned use. */
+.cl-source {
+  display: inline-block;
+  margin-top: var(--sp-md);
+  color: var(--primary);
+  font-size: 15px;
+  text-decoration: none;
+}
+.cl-source:hover {
+  text-decoration: underline;
+}
+
+/* ── empty state: an invitation to act ── */
+.cl-empty {
+  padding: clamp(3rem, 8vw, 5rem) var(--sp-lg);
+  border: 1px solid var(--cl-hairline);
+  border-radius: var(--r-lg);
+  background: var(--cl-surface);
+  text-align: center;
+}
+.cl-empty-title {
+  margin: 0 0 var(--sp-xxs);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.27;
+  letter-spacing: var(--tr-heading-3);
+}
+.cl-empty-hint {
+  margin: 0 auto var(--sp-lg);
+  max-width: 44ch;
+  color: var(--cl-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+[lang="zh-CN"] .cl-hero-inner h1,
+[lang="zh-CN"] .cl-version {
+  letter-spacing: 0;
+}

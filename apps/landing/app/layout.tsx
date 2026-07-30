@@ -1,20 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Manrope, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const bricolage = Bricolage_Grotesque({
+// One family for everything, 64px display down to 12px eyebrow — no serif, no mono display face.
+// NotionInter is a proprietary tuning of Inter, so Inter is the direct substitute; the tightness comes
+// from the explicit negative tracking in globals.css, since Inter at default tracking reads looser.
+//
+// Chinese stays on the system stack (see --cjk in globals.css). No family in next/font/google offers a
+// chinese-simplified subset, and self-hosting one costs megabytes for a script every target OS already
+// ships a good face for.
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-bricolage",
-  display: "swap",
-});
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-  display: "swap",
-});
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -25,12 +23,16 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#06070c",
+  themeColor: "#213183",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // The font variables go on <html>, not <body>. globals.css declares --font-display and friends on
+    // :root, and custom properties only inherit downwards — declared on <body> they were invisible to
+    // :root, so every --font-* token resolved to the guaranteed-invalid value and the whole site fell
+    // back to ui-sans-serif no matter which faces were loaded.
+    <html lang="en" className={inter.variable}>
       <head>
         {/* Always open at the top (hero) on reload. Runs before hydration so it
             beats the browser's default scroll-position restoration. */}
@@ -40,9 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           }}
         />
       </head>
-      <body className={`${bricolage.variable} ${manrope.variable} ${jetbrains.variable}`}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

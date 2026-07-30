@@ -1,35 +1,193 @@
 @import "tailwindcss";
 
-/* ───────────────────────────── tokens ───────────────────────────── */
+/* Bind `dark:` to an explicit attribute instead of the visitor's OS. Tailwind v4 defaults `dark:`
+   to prefers-color-scheme, which would flip the deliberately dark /guide and /changelog surfaces to
+   light for anyone whose machine is in light mode. The art direction here is fixed, not a user
+   preference, so the pages opt in with data-theme="dark". */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Keyframes for the Aceternity aurora background. Tailwind v4 registers animations as theme tokens,
+   so `--animate-aurora` is what makes `animate-aurora` resolve. */
+@theme inline {
+  --animate-aurora: aurora 60s linear infinite;
+  @keyframes aurora {
+    from {
+      background-position: 50% 50%, 50% 50%;
+    }
+    to {
+      background-position: 350% 50%, 350% 50%;
+    }
+  }
+}
+
+/* ───────────────────────────── tokens ─────────────────────────────
+   THEME REV 03 — Notion.
+   The dominant surface is warm paper-soft off-white, never clinical white, so
+   long pages read as a document. The chrome whispers in greys and blacks and
+   says exactly one thing in colour: a single dependable blue, reserved for the
+   primary action, inline links, and the active/focus signal.
+   Personality comes from a decorative sticker palette that never structures the
+   layout and never paints a CTA, plus one deep-indigo "night" band per page.
+   ───────────────────────────────────────────────────────────────── */
 :root {
-  --ink: #06070c;          /* page base: blue-black */
-  --ink-1: #0a0c13;        /* raised surface */
-  --ink-2: #0f1119;        /* panel */
-  --ink-3: #151826;        /* panel hover / inset */
-  --paper: #ecedf4;        /* primary text */
-  --paper-dim: #b7bac8;    /* secondary text */
-  --mute: #767a8a;         /* labels / captions */
-  --mute-2: #4c505e;       /* faint */
+  /* Notion's night band. This is the dark context — the home hero and the single
+     inverted band that heads the guide and the changelog. */
+  --ink: #213183;          /* page base: deep indigo */
+  --ink-1: #26397a;        /* raised surface */
+  --ink-2: #1c2a70;        /* panel */
+  --ink-3: #2c4198;        /* panel hover / inset */
+  --paper: #ffffff;        /* primary text on the night band */
+  --paper-dim: rgba(255, 255, 255, 0.76);
+  --mute: rgba(255, 255, 255, 0.58);
+  --mute-2: rgba(255, 255, 255, 0.38);
 
-  --line: rgba(236, 237, 244, 0.08);
-  --line-2: rgba(236, 237, 244, 0.15);
+  --line: rgba(255, 255, 255, 0.14);
+  --line-2: rgba(255, 255, 255, 0.26);
 
-  --amber: #ffb454;        /* LOCAL · primary signal */
-  --amber-hot: #ff8a3d;
-  --amber-soft: rgba(255, 180, 84, 0.14);
-  --azure: #5aa9ff;        /* ONLINE · secondary signal */
-  --azure-soft: rgba(90, 169, 255, 0.14);
+  /* The one structural accent. Nothing decorative may use it. */
+  --primary: #0075de;
+  --primary-active: #005bab;
+  --on-primary: #ffffff;
 
-  --font-display: var(--font-bricolage), "SF Pro Display", system-ui, sans-serif;
-  --font-body: var(--font-manrope), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Sticker palette — illustrations, category dots and status tags only. These
+     never fill a button and never carry structure. */
+  --sticker-sky: #62aef0;
+  --sticker-purple: #d6b6f6;
+  --sticker-purple-deep: #391c57;
+  --sticker-pink: #ff64c8;
+  --sticker-orange: #dd5b00;
+  --sticker-orange-deep: #793400;
+  --sticker-teal: #2a9d99;
+  --sticker-green: #1aae39;
+  --sticker-brown: #523410;
+
+  /* The site's older local/online signals now resolve to sticker hues, because
+     Notion permits exactly one structural accent and it is the blue above.
+     These two survive as decoration and status, which is what they encode. */
+  --amber: var(--sticker-orange);      /* LOCAL / private runtime */
+  --amber-hot: #ff8f3d;
+  --amber-soft: rgba(221, 91, 0, 0.1);
+  --azure: var(--sticker-teal);        /* ONLINE / the agent loop */
+  --azure-soft: rgba(42, 157, 153, 0.1);
+
+  --font-display: var(--font-inter), Inter, -apple-system, system-ui, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  --font-body: var(--font-display);
+  /* One family carries every role. Nothing here is set in a monospace face; where the old theme used
+     mono for data, Notion uses the same Inter at a smaller size with lining numerals. */
+  --font-mono: var(--font-display);
   --cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+
+  /* Notion's type scale. Tracking is em-based so it survives fluid clamp() sizes —
+     the px values in the spec are relative to their own size. */
+  --tr-display-1: -0.0332em;   /* 64px / −2.125px */
+  --tr-display-2: -0.0347em;   /* 54px / −1.875px */
+  --tr-heading-1: -0.025em;    /* 40px / −1px */
+  --tr-heading-2: -0.024em;    /* 26px / −0.625px */
+  --tr-heading-3: -0.0114em;   /* 22px / −0.25px */
+  --tr-title: -0.00625em;      /* 20px / −0.125px */
+  --tr-eyebrow: 0.0104em;      /* 12px / +0.125px */
+
+  /* Elevation is many near-transparent layers, never a hard cast. */
+  --shadow-1:
+    rgba(0, 0, 0, 0.01) 0 0.175px 1.041px, rgba(0, 0, 0, 0.02) 0 0.8px 2.925px,
+    rgba(0, 0, 0, 0.027) 0 2.025px 7.847px, rgba(0, 0, 0, 0.04) 0 4px 18px;
+  --shadow-2:
+    rgba(0, 0, 0, 0.01) 0 0.35px 2px, rgba(0, 0, 0, 0.02) 0 1.5px 5px,
+    rgba(0, 0, 0, 0.03) 0 4px 12px, rgba(0, 0, 0, 0.04) 0 9px 24px,
+    rgba(0, 0, 0, 0.05) 0 23px 52px;
+
+  /* 8px base */
+  --sp-xxs: 4px;
+  --sp-xs: 8px;
+  --sp-sm: 12px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 28px;
+  --sp-xxl: 32px;
+
+  --r-xs: 4px;    /* form fields, inline chips */
+  --r-sm: 5px;    /* menu items, list rows */
+  --r-md: 8px;    /* utility / nav buttons */
+  --r-lg: 12px;   /* feature cards, illustration frames */
+  --r-xl: 16px;   /* large containers, image wells */
 
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --maxw: 1280px;
 
   color-scheme: dark;
+}
+
+/* CJK needs a slightly tighter leading and no tracking at display sizes; Latin display type here is
+   set tight and uppercase, neither of which suits Chinese. */
+[lang="zh-CN"] {
+  --display-tracking: 0;
+}
+
+/* ─────────────────────────── buttons ───────────────────────────
+   Three ranks. Marketing CTAs are fully pill-shaped; utility and nav buttons round
+   tighter at 8px — that contrast is intentional. Elevation is the barely-there
+   layered shadow, never a hard cast, and only one blue action appears per view.
+   No hover state is specified by the system, so hover stays a whisper and the real
+   feedback is the pressed state.
+   ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-xs);
+  padding: 10px var(--sp-lg);
+  border: 0;
+  border-radius: 9999px;
+  background: var(--ink-1);
+  color: var(--paper);
+  font-family: var(--font-body), var(--cjk);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-decoration: none;
+  cursor: pointer;
+  /* Keeps a 44px tap target on mobile even as labels shrink. */
+  min-height: 44px;
+  transition: background 0.15s var(--ease-out), transform 0.1s var(--ease-out);
+}
+.btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* The system's press feedback. */
+.btn:active { transform: scale(0.96); }
+
+/* Primary — the single blue action. */
+.btn[data-variant=primary] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn[data-variant=primary]:hover { background: #0080f0; }
+.btn[data-variant=primary]:active { background: var(--primary-active); }
+
+/* Secondary — white pill carried by the soft layered shadow. */
+.btn[data-variant=secondary] {
+  background: #ffffff;
+  color: rgba(0, 0, 0, 0.95);
+  box-shadow: var(--shadow-1);
+}
+
+/* Utility — nav and plan-select. Tighter radius, hairline border, tight padding. */
+.btn[data-variant=utility] {
+  padding: var(--sp-xxs) 14px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #ffffff;
+  color: rgba(0, 0, 0, 0.95);
+  font-size: 15px;
+}
+.btn[data-variant=utility]:hover { background: #f6f5f4; }
+
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn:active { transition: none; transform: none; }
 }
 
 * { box-sizing: border-box; }
@@ -73,7 +231,7 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background:
-    linear-gradient(180deg, rgba(31, 111, 235, 0.54), rgba(82, 96, 114, 0.42));
+    linear-gradient(180deg, rgba(180, 64, 14, 0.54), rgba(82, 96, 114, 0.42));
 }
 
 ::-webkit-scrollbar-button {
@@ -212,7 +370,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .site-nav-list a:hover { color: #0b1118; }
 .site-nav-list a:focus { outline: 0; }
-.site-nav-list a.active { color: #1f6feb; }
+.site-nav-list a.active { color: var(--primary); }
 .site-nav-marker {
   position: absolute;
   top: 50%;
@@ -220,8 +378,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 36px;
   margin-top: -18px;
   border-radius: 999px;
-  background: rgba(31, 111, 235, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(31, 111, 235, 0.16);
+  background: rgba(180, 64, 14, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(180, 64, 14, 0.16);
   opacity: 0;
   transition:
     transform 0.42s var(--ease-expo),
@@ -263,30 +421,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .site-nav-lang a:hover { color: #0b1118; }
 .site-nav-lang a.active {
-  color: #1f6feb;
-  background: rgba(31, 111, 235, 0.12);
+  color: var(--primary);
+  background: rgba(0, 117, 222, 0.1);
 }
-.site-nav-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #ffffff;
-  background: #030303;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.25) inset,
-    0 14px 30px -16px rgba(31, 111, 235, 0.7);
-  transition: transform 0.2s var(--ease-out), background 0.2s ease;
+/* route link, not a section anchor: no marker, no scroll-spy */
+.site-nav-guide {
+  padding: 7px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #31302e;
+  transition: color 0.18s ease;
 }
-.site-nav-cta:hover {
-  background: #171717;
-  transform: translateY(-1px);
-}
-.site-nav-cta:active { transform: translateY(0) scale(0.98); }
+.site-nav-guide:hover { color: var(--primary); }
 
 /* The assembly field uses the white instrument header from the selected
    visual target. Hero styling remains unchanged until the page is scrolled. */
@@ -305,6 +452,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform: translateX(11px);
 }
 .site-nav[data-scrolled="true"] .site-nav-lang { display: none; }
+.site-nav[data-scrolled="true"] .site-nav-guide { display: none; }
 .site-nav[data-scrolled="true"] .site-nav-brand img { width: 88px; }
 .site-nav[data-scrolled="true"] .site-nav-brand img { filter: none; }
 .site-nav[data-scrolled="true"] .site-nav-list a {
@@ -315,25 +463,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .site-nav[data-scrolled="true"] .site-nav-list a.active { color: #111; }
 .site-nav[data-scrolled="true"] .site-nav-marker { display: none; }
-.site-nav[data-scrolled="true"] .site-nav-cta {
-  width: 120px;
-  height: 42px;
-  justify-content: center;
-  padding: 0 14px;
-  border-radius: 4px;
-  color: #fff;
-  background: #030303;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  font-size: 16px;
-  font-weight: 650;
-}
-.site-nav[data-scrolled="true"] .site-nav-cta:hover {
-  background: #171717;
-  transform: translateY(-1px);
-}
 
 @media (max-width: 960px) {
-  .site-nav-cta { display: none; }
   .site-nav-links { justify-content: flex-end; }
   .site-nav[data-scrolled="true"] {
     height: 76px;
@@ -363,12 +494,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
     min-width: 32px;
     padding: 6px 8px;
     font-size: 11px;
-  }
-  .site-nav[data-scrolled="true"] .site-nav-cta {
-    display: inline-flex;
-    width: auto;
-    min-width: 88px;
-    padding-inline: 13px;
   }
   .site-nav[data-scrolled="true"] {
     height: 64px;
@@ -443,7 +568,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn-primary {
   background: var(--amber);
   color: #160c00;
-  box-shadow: 0 0 0 1px rgba(255, 180, 84, 0.4), 0 18px 50px -22px var(--amber);
+  box-shadow: 0 0 0 1px rgba(240, 138, 70, 0.4), 0 18px 50px -22px var(--amber);
 }
 .btn-primary:hover { background: #ffc06b; }
 .btn-ghost {
@@ -514,8 +639,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(60% 52% at 50% 42%, rgba(255, 180, 84, 0.12), rgba(255, 180, 84, 0) 68%),
-    linear-gradient(180deg, #050505 0%, #08090d 58%, #111014 100%);
+    radial-gradient(60% 52% at 50% 42%, rgba(240, 138, 70, 0.12), rgba(240, 138, 70, 0) 68%),
+    linear-gradient(180deg, #050505 0%, #161412 58%, #111014 100%);
   transition: opacity 0.85s var(--ease-expo), transform 1s var(--ease-expo), filter 1s var(--ease-expo);
   contain: layout paint;
 }
@@ -549,7 +674,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   opacity: 0.42;
   background:
     repeating-linear-gradient(180deg, rgba(236, 237, 244, 0.075) 0 1px, rgba(236, 237, 244, 0) 1px 12px),
-    linear-gradient(90deg, rgba(255, 180, 84, 0) 0%, rgba(255, 180, 84, 0.34) 48%, rgba(255, 180, 84, 0) 100%);
+    linear-gradient(90deg, rgba(240, 138, 70, 0) 0%, rgba(240, 138, 70, 0.34) 48%, rgba(240, 138, 70, 0) 100%);
   background-size: auto, 100% 1px;
   background-position: 0 0, 0 -12%;
   animation: wake-scan 3.4s linear infinite;
@@ -624,7 +749,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   z-index: 2;
   width: clamp(70px, 9vw, 106px);
   height: clamp(82px, 10vw, 124px);
-  background: linear-gradient(90deg, rgba(236, 237, 244, 0.64), rgba(255, 180, 84, 0.64));
+  background: linear-gradient(90deg, rgba(236, 237, 244, 0.64), rgba(240, 138, 70, 0.64));
   clip-path: polygon(0 0, 100% 50%, 0 100%);
   filter: blur(0.2px);
   transform: translateY(-50%);
@@ -635,8 +760,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 1px;
   width: min(520px, 74vw);
   margin: 0 auto;
-  background: linear-gradient(90deg, rgba(255, 180, 84, 0), rgba(255, 180, 84, 0.95), rgba(255, 180, 84, 0));
-  box-shadow: 0 0 20px rgba(255, 180, 84, 0.4);
+  background: linear-gradient(90deg, rgba(240, 138, 70, 0), rgba(240, 138, 70, 0.95), rgba(240, 138, 70, 0));
+  box-shadow: 0 0 20px rgba(240, 138, 70, 0.4);
 }
 .wake-meta-row {
   position: relative;
@@ -698,7 +823,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: block;
   height: 100%;
   background: var(--amber);
-  box-shadow: 0 0 16px rgba(255, 180, 84, 0.75);
+  box-shadow: 0 0 16px rgba(240, 138, 70, 0.75);
   transition: width 0.12s linear;
 }
 .wake-hint {
@@ -794,8 +919,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   position: absolute;
   inset: -25%;
   background:
-    radial-gradient(38% 30% at 16% 10%, rgba(255, 180, 84, 0.18), transparent 70%),
-    radial-gradient(40% 32% at 86% 6%, rgba(90, 169, 255, 0.15), transparent 72%),
+    radial-gradient(38% 30% at 16% 10%, rgba(240, 138, 70, 0.18), transparent 70%),
+    radial-gradient(40% 32% at 86% 6%, rgba(143, 176, 206, 0.15), transparent 72%),
     radial-gradient(70% 55% at 50% 128%, rgba(120, 96, 220, 0.18), transparent 70%);
   filter: blur(12px);
 }
@@ -809,7 +934,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     radial-gradient(1px 1px at 32% 68%, rgba(236, 237, 244, 0.35), transparent),
     radial-gradient(1px 1px at 58% 18%, rgba(255, 196, 120, 0.5), transparent),
     radial-gradient(1px 1px at 71% 52%, rgba(236, 237, 244, 0.4), transparent),
-    radial-gradient(1px 1px at 84% 34%, rgba(90, 169, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 84% 34%, rgba(143, 176, 206, 0.5), transparent),
     radial-gradient(1px 1px at 44% 88%, rgba(236, 237, 244, 0.3), transparent),
     radial-gradient(1px 1px at 92% 74%, rgba(236, 237, 244, 0.35), transparent),
     radial-gradient(1px 1px at 22% 46%, rgba(255, 196, 120, 0.4), transparent);
@@ -826,8 +951,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform: translateX(-50%) perspective(440px) rotateX(76deg);
   transform-origin: bottom center;
   background-image:
-    linear-gradient(to right, rgba(255, 180, 84, 0.14) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 180, 84, 0.12) 1px, transparent 1px);
+    linear-gradient(to right, rgba(240, 138, 70, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(240, 138, 70, 0.12) 1px, transparent 1px);
   background-size: 58px 58px;
   mask-image: radial-gradient(62% 82% at 50% 100%, #000 8%, transparent 76%);
   -webkit-mask-image: radial-gradient(62% 82% at 50% 100%, #000 8%, transparent 76%);
@@ -849,8 +974,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   opacity: 0.55;
   user-select: none;
 }
-.glyph.amber { color: rgba(255, 180, 84, 0.62); }
-.glyph.azure { color: rgba(90, 169, 255, 0.62); }
+.glyph.amber { color: rgba(240, 138, 70, 0.62); }
+.glyph.azure { color: rgba(143, 176, 206, 0.62); }
 
 /* ───────────────────────── depth gauge ─────────────────────────
    Replaces a generic scroll bar: a descent meter through the runtime
@@ -970,7 +1095,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     radial-gradient(1px 1px at 24% 64%, rgba(236, 237, 244, 0.6), transparent),
     radial-gradient(1.5px 1.5px at 52% 14%, rgba(255, 196, 120, 0.9), transparent),
     radial-gradient(1px 1px at 68% 48%, rgba(236, 237, 244, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 82% 30%, rgba(90, 169, 255, 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 82% 30%, rgba(143, 176, 206, 0.9), transparent),
     radial-gradient(1px 1px at 40% 84%, rgba(236, 237, 244, 0.55), transparent),
     radial-gradient(1px 1px at 90% 70%, rgba(236, 237, 244, 0.6), transparent),
     radial-gradient(1px 1px at 16% 44%, rgba(255, 196, 120, 0.7), transparent),
@@ -1004,12 +1129,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .intro-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(255, 180, 84, 0.4);
+  border: 1px solid rgba(240, 138, 70, 0.4);
   opacity: 0;
 }
 .intro-ring.r1 { inset: 0; border-color: var(--line-2); }
-.intro-ring.r2 { inset: 14%; border-color: rgba(255, 180, 84, 0.45); animation: pulse-ring 2.6s var(--ease-out) infinite; }
-.intro-ring.r3 { inset: 28%; border-color: rgba(90, 169, 255, 0.4); animation: pulse-ring 2.6s var(--ease-out) 1.3s infinite; }
+.intro-ring.r2 { inset: 14%; border-color: rgba(240, 138, 70, 0.45); animation: pulse-ring 2.6s var(--ease-out) infinite; }
+.intro-ring.r3 { inset: 28%; border-color: rgba(143, 176, 206, 0.4); animation: pulse-ring 2.6s var(--ease-out) 1.3s infinite; }
 .intro-core {
   width: 16px;
   height: 16px;
@@ -1092,7 +1217,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: clamp(20px, 3.4vw, 30px);
   letter-spacing: 0.04em;
   color: var(--paper);
-  text-shadow: 0 0 30px rgba(255, 180, 84, 0.4);
+  text-shadow: 0 0 30px rgba(240, 138, 70, 0.4);
   opacity: 0;
 }
 .intro-descend {
@@ -1161,8 +1286,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   min-height: 100dvh;
   overflow: clip;
   background:
-    radial-gradient(80% 44% at 70% 8%, rgba(255, 180, 84, 0.1), transparent 68%),
-    radial-gradient(50% 32% at 8% 18%, rgba(90, 169, 255, 0.08), transparent 70%),
+    radial-gradient(80% 44% at 70% 8%, rgba(240, 138, 70, 0.1), transparent 68%),
+    radial-gradient(50% 32% at 8% 18%, rgba(143, 176, 206, 0.08), transparent 70%),
     var(--ink);
 }
 
@@ -1428,7 +1553,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid var(--line-2);
   border-radius: 12px;
   color: var(--amber);
-  background: rgba(255, 180, 84, 0.08);
+  background: rgba(240, 138, 70, 0.08);
 }
 .section-intro h2 {
   margin-top: 22px;
@@ -1566,7 +1691,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background:
-    radial-gradient(60% 60% at 74% 44%, rgba(255, 180, 84, 0.1), transparent 70%),
+    radial-gradient(60% 60% at 74% 44%, rgba(240, 138, 70, 0.1), transparent 70%),
     rgba(10, 12, 19, 0.42);
 }
 .story-grid {
@@ -1629,7 +1754,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid var(--line);
   border-radius: 14px;
   background:
-    linear-gradient(135deg, rgba(255, 180, 84, 0.08), transparent 42%),
+    linear-gradient(135deg, rgba(240, 138, 70, 0.08), transparent 42%),
     rgba(6, 7, 12, 0.55);
   padding: clamp(18px, 2vw, 26px);
 }
@@ -1915,7 +2040,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   inset: 16px auto 16px 25px;
   z-index: 0;
   width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(31, 111, 235, 0.42), transparent);
+  background: linear-gradient(180deg, transparent, rgba(180, 64, 14, 0.42), transparent);
 }
 .pipeline-tile {
   position: relative;
@@ -1935,7 +2060,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .pipeline-tile.lead {
   background:
-    linear-gradient(135deg, rgba(255, 180, 84, 0.13), transparent 48%),
+    linear-gradient(135deg, rgba(240, 138, 70, 0.13), transparent 48%),
     rgba(10, 12, 19, 0.86);
 }
 .pipeline-tile-top {
@@ -2039,7 +2164,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid var(--line);
   border-radius: 18px;
   background:
-    linear-gradient(135deg, rgba(255, 180, 84, 0.14), transparent 44%),
+    linear-gradient(135deg, rgba(240, 138, 70, 0.14), transparent 44%),
     rgba(15, 17, 25, 0.92);
   padding: clamp(42px, 8vw, 86px);
 }
@@ -2321,32 +2446,35 @@ button { font: inherit; color: inherit; cursor: pointer; }
    so the pinned ScrollTrigger deck keeps working.
    ══════════════════════════════════════════════════════════════════════ */
 .content-light {
-  /* token remap (light) */
-  --ink: #f5f7fa;          /* page base */
+  /* token remap (light) — warm paper-soft canvas with pure white reserved for cards and fields, which
+     is what creates the gentle figure/ground. Never a clinical full-page white. */
+  --ink: #f6f5f4;          /* page base: warm paper */
   --ink-1: #ffffff;        /* raised surface */
   --ink-2: #ffffff;        /* panel */
-  --ink-3: #eef1f6;        /* inset / hover */
-  --paper: #0b1118;        /* primary text */
-  --paper-dim: #475061;    /* secondary text */
-  --mute: #6b7385;         /* labels / captions */
-  --mute-2: #9aa1b0;
+  --ink-3: #f6f5f4;        /* inset / hover */
+  --paper: rgba(0, 0, 0, 0.95);  /* soft true-black */
+  --paper-dim: #31302e;    /* warm charcoal */
+  --mute: #615d59;         /* stone */
+  --mute-2: #a39e98;       /* ash */
 
-  --line: rgba(11, 17, 24, 0.10);
-  --line-2: rgba(11, 17, 24, 0.16);
+  --line: #e6e6e6;         /* hairline */
+  --line-2: #dddddd;
 
-  --amber: #b45309;        /* LOCAL / private signal (AA on white) */
-  --azure: #1f6feb;        /* ONLINE + the single brand accent */
-  --accent: #1f6feb;
-  --accent-soft: rgba(31, 111, 235, 0.10);
-  --card-shadow: 0 24px 60px -30px rgba(20, 44, 92, 0.45);
+  /* The single structural accent. Every primary control reads --accent, so this one line is what
+     keeps the whole light surface on Notion blue. */
+  --accent: var(--primary);
+  --accent-soft: rgba(0, 117, 222, 0.08);
+  /* Local and online stay as status hues from the sticker palette — decoration, never actions. */
+  --amber: var(--sticker-orange);
+  --azure: var(--sticker-teal);
+  --card-shadow: var(--shadow-1);
 
   position: relative;
   isolation: isolate;
   color: var(--paper);
-  background:
-    linear-gradient(rgba(36, 123, 255, 0.035) 1px, transparent 1px) 0 0 / 72px 72px,
-    linear-gradient(90deg, rgba(36, 123, 255, 0.03) 1px, transparent 1px) 0 0 / 72px 72px,
-    linear-gradient(180deg, #f7f8fa 0%, #eef3f7 58%, #ffffff 100%);
+  /* Flat warm paper. The grid is gone: Notion groups with whitespace and hairlines, and a ruled
+     background is exactly the kind of decoration that competes with content. */
+  background: #f6f5f4;
 }
 .content-light ::selection {
   background: var(--accent);
@@ -2356,7 +2484,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ── shared intro / accent ── */
 .content-light .section-icon {
   color: var(--accent);
-  border-color: rgba(31, 111, 235, 0.24);
+  border-color: rgba(180, 64, 14, 0.24);
   background: var(--accent-soft);
 }
 .content-light .section-intro p { color: var(--paper-dim); }
@@ -2404,8 +2532,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   min-height: 96dvh;
   padding: clamp(72px, 7vw, 112px) 0;
   background:
-    radial-gradient(42% 58% at 74% 46%, rgba(31, 111, 235, 0.12), transparent 70%),
-    radial-gradient(32% 42% at 34% 58%, rgba(255, 180, 84, 0.05), transparent 72%),
+    radial-gradient(42% 58% at 74% 46%, rgba(180, 64, 14, 0.12), transparent 70%),
+    radial-gradient(32% 42% at 34% 58%, rgba(240, 138, 70, 0.05), transparent 72%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 249, 252, 0.94) 48%, rgba(239, 243, 248, 0.92) 100%);
 }
 .content-light .runtime-editorial::before {
@@ -2416,8 +2544,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   pointer-events: none;
   opacity: 0.44;
   background:
-    linear-gradient(rgba(31, 111, 235, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 111, 235, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(180, 64, 14, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 64, 14, 0.08) 1px, transparent 1px);
   background-size: 96px 96px;
   mask-image: radial-gradient(ellipse at 62% 48%, #000 0%, rgba(0, 0, 0, 0.62) 42%, transparent 74%);
 }
@@ -2548,11 +2676,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .runtime-decision-step.local strong {
   color: #9a4b08;
-  background: rgba(255, 180, 84, 0.11);
+  background: rgba(240, 138, 70, 0.11);
 }
 .runtime-decision-step.online strong {
   color: #1d5ebd;
-  background: rgba(31, 111, 235, 0.1);
+  background: rgba(180, 64, 14, 0.1);
 }
 .runtime-decision-step.tool strong {
   color: #1e7d53;
@@ -2619,7 +2747,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   inset: auto 28% -32px 28%;
   height: 64px;
   border-radius: 50%;
-  background: rgba(31, 111, 235, 0.16);
+  background: rgba(180, 64, 14, 0.16);
   filter: blur(34px);
   pointer-events: none;
 }
@@ -2726,9 +2854,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .runtime-sidebar div.active {
   color: #0b1118;
   background:
-    linear-gradient(90deg, rgba(31, 111, 235, 0.14), rgba(31, 111, 235, 0.06)),
+    linear-gradient(90deg, rgba(180, 64, 14, 0.14), rgba(180, 64, 14, 0.06)),
     rgba(255, 255, 255, 0.46);
-  box-shadow: inset 3px 0 0 rgba(31, 111, 235, 0.6);
+  box-shadow: inset 3px 0 0 rgba(180, 64, 14, 0.6);
 }
 .runtime-sidebar svg {
   color: currentColor;
@@ -2747,7 +2875,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   inset: 14px 22px auto;
   height: 1px;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(31, 111, 235, 0.22), rgba(255, 180, 84, 0.16), transparent);
+  background: linear-gradient(90deg, transparent, rgba(180, 64, 14, 0.22), rgba(240, 138, 70, 0.16), transparent);
   transform: translateY(254px);
 }
 .runtime-panel,
@@ -2792,7 +2920,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .runtime-project-row:hover,
 .runtime-project-row.active {
-  background: rgba(31, 111, 235, 0.055);
+  background: rgba(180, 64, 14, 0.055);
 }
 .runtime-project-row:hover {
   transform: translateX(2px);
@@ -2859,18 +2987,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
   stroke-width: 1.8;
 }
 .runtime-route-card.local {
-  border-color: rgba(255, 180, 84, 0.28);
+  border-color: rgba(240, 138, 70, 0.28);
   background:
-    linear-gradient(135deg, rgba(255, 180, 84, 0.1), transparent 58%),
+    linear-gradient(135deg, rgba(240, 138, 70, 0.1), transparent 58%),
     rgba(255, 255, 255, 0.86);
 }
 .runtime-route-card.local svg {
   color: var(--amber);
 }
 .runtime-route-card.online {
-  border-color: rgba(31, 111, 235, 0.2);
+  border-color: rgba(180, 64, 14, 0.2);
   background:
-    linear-gradient(135deg, rgba(31, 111, 235, 0.09), transparent 58%),
+    linear-gradient(135deg, rgba(180, 64, 14, 0.09), transparent 58%),
     rgba(255, 255, 255, 0.86);
 }
 .runtime-route-card.online svg {
@@ -2909,7 +3037,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   left: 50%;
   width: 1px;
   height: 16px;
-  background: linear-gradient(180deg, transparent, rgba(31, 111, 235, 0.24), transparent);
+  background: linear-gradient(180deg, transparent, rgba(180, 64, 14, 0.24), transparent);
 }
 .runtime-route-divider::before {
   transform: translate(-50%, -17px);
@@ -2985,7 +3113,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
   50% {
     transform: scale(1.08);
-    box-shadow: 0 16px 34px -18px rgba(31, 111, 235, 0.9);
+    box-shadow: 0 16px 34px -18px rgba(180, 64, 14, 0.9);
   }
 }
 
@@ -3099,7 +3227,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-top: 1px solid rgba(11, 17, 24, 0.04);
   border-bottom: 1px solid rgba(11, 17, 24, 0.04);
   background:
-    radial-gradient(52% 90% at 58% 50%, rgba(31, 111, 235, 0.12), transparent 70%),
+    radial-gradient(52% 90% at 58% 50%, rgba(180, 64, 14, 0.12), transparent 70%),
     linear-gradient(180deg, rgba(247, 249, 252, 0.28), rgba(255, 255, 255, 0.88) 52%, rgba(247, 249, 252, 0.4));
 }
 .content-light .route-workflow-bridge::before,
@@ -3111,8 +3239,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .content-light .route-workflow-bridge::before {
   inset: 0;
   background:
-    linear-gradient(rgba(31, 111, 235, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 111, 235, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(180, 64, 14, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 64, 14, 0.035) 1px, transparent 1px);
   background-size: 72px 72px;
   -webkit-mask-image: radial-gradient(ellipse at 58% 50%, #000 0 46%, transparent 76%);
   mask-image: radial-gradient(ellipse at 58% 50%, #000 0 46%, transparent 76%);
@@ -3151,7 +3279,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .route-bridge-stage {
   position: relative;
   min-height: 174px;
-  border: 1px solid rgba(31, 111, 235, 0.1);
+  border: 1px solid rgba(180, 64, 14, 0.1);
   border-radius: 32px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(246, 249, 253, 0.58)),
@@ -3170,15 +3298,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 2px;
   transform-origin: left center;
   background:
-    linear-gradient(90deg, rgba(180, 83, 9, 0.16), rgba(31, 111, 235, 0.68), rgba(45, 166, 111, 0.32));
-  box-shadow: 0 0 28px rgba(31, 111, 235, 0.24);
+    linear-gradient(90deg, rgba(180, 83, 9, 0.16), rgba(180, 64, 14, 0.68), rgba(45, 166, 111, 0.32));
+  box-shadow: 0 0 28px rgba(180, 64, 14, 0.24);
 }
 .bridge-thread::before {
   content: "";
   position: absolute;
   inset: -14px 0;
   background:
-    repeating-linear-gradient(90deg, transparent 0 54px, rgba(31, 111, 235, 0.18) 54px 55px, transparent 55px 96px);
+    repeating-linear-gradient(90deg, transparent 0 54px, rgba(180, 64, 14, 0.18) 54px 55px, transparent 55px 96px);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
 }
@@ -3190,7 +3318,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   width: 50px;
   height: 50px;
   place-items: center;
-  border: 1px solid rgba(31, 111, 235, 0.18);
+  border: 1px solid rgba(180, 64, 14, 0.18);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
   color: var(--accent);
@@ -3218,10 +3346,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: #1f6feb;
+  background: #b4400e;
   box-shadow:
-    0 0 0 5px rgba(31, 111, 235, 0.12),
-    0 0 22px rgba(31, 111, 235, 0.54);
+    0 0 0 5px rgba(180, 64, 14, 0.12),
+    0 0 22px rgba(180, 64, 14, 0.54);
   animation: bridge-packet 3.8s var(--ease-out) infinite;
 }
 .bridge-label {
@@ -3252,7 +3380,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   position: absolute;
   top: calc(50% - 8px);
   left: calc(50% + 36px);
-  color: rgba(31, 111, 235, 0.62);
+  color: rgba(180, 64, 14, 0.62);
 }
 
 @keyframes bridge-packet {
@@ -3360,7 +3488,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     border: 0;
     pointer-events: none;
     background:
-      radial-gradient(46% 56% at 64% 42%, rgba(31, 111, 235, 0.14), transparent 70%),
+      radial-gradient(46% 56% at 64% 42%, rgba(180, 64, 14, 0.14), transparent 70%),
       linear-gradient(180deg, rgba(247, 249, 252, 0.05), rgba(255, 255, 255, 0.7) 58%, rgba(247, 249, 252, 0.04));
   }
 
@@ -3392,7 +3520,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .content-light .story-deck {
   border-color: var(--line);
   background:
-    radial-gradient(60% 60% at 74% 40%, rgba(31, 111, 235, 0.08), transparent 70%),
+    radial-gradient(60% 60% at 74% 40%, rgba(180, 64, 14, 0.08), transparent 70%),
     rgba(255, 255, 255, 0.34);
 }
 .content-light .deck-card {
@@ -3473,7 +3601,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
    only, so AgentConsole / ToolRunCard / ReviewCard keep their original design
    instead of washing out under the light remap. */
 .content-light .deck-visual {
-  --ink: #06070c;
+  --ink: #161412;
   --ink-1: #0a0c13;
   --ink-2: #0f1119;
   --ink-3: #151826;
@@ -3483,11 +3611,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   --mute-2: #4c505e;
   --line: rgba(236, 237, 244, 0.08);
   --line-2: rgba(236, 237, 244, 0.15);
-  --amber: #ffb454;
-  --azure: #5aa9ff;
+  --amber: #f08a46;
+  --azure: #8fb0ce;
   min-width: 0;
   color: var(--paper);
-  background: linear-gradient(180deg, #0a0c13, #06070c);
+  background: linear-gradient(180deg, #0a0c13, #161412);
   border: 1px solid rgba(236, 237, 244, 0.1);
   border-radius: 14px;
   overflow: hidden;
@@ -3511,8 +3639,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(31, 111, 235, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 111, 235, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(180, 64, 14, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 64, 14, 0.04) 1px, transparent 1px);
   background-size: 72px 72px;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
@@ -3538,7 +3666,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .content-light .workflow-copy .section-icon {
   width: 36px;
   height: 36px;
-  border-color: rgba(31, 111, 235, 0.12);
+  border-color: rgba(180, 64, 14, 0.12);
   border-radius: 11px;
   color: #5d6b7c;
   background:
@@ -3629,10 +3757,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: 12px;
 }
 .workflow-cockpit-head span {
-  border: 1px solid rgba(31, 111, 235, 0.14);
+  border: 1px solid rgba(180, 64, 14, 0.14);
   border-radius: 999px;
   padding: 6px 10px;
-  background: rgba(31, 111, 235, 0.06);
+  background: rgba(180, 64, 14, 0.06);
 }
 .workflow-cockpit-head small {
   font-weight: 650;
@@ -3659,7 +3787,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   bottom: 48px;
   left: 34px;
   width: 1px;
-  background: linear-gradient(180deg, rgba(31, 111, 235, 0.34), rgba(31, 111, 235, 0.1), rgba(11, 17, 24, 0.06));
+  background: linear-gradient(180deg, rgba(180, 64, 14, 0.34), rgba(180, 64, 14, 0.1), rgba(11, 17, 24, 0.06));
 }
 .workflow-step {
   position: relative;
@@ -3684,15 +3812,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .workflow-step.done .workflow-step-dot {
   border-color: rgba(180, 83, 9, 0.18);
   color: var(--amber);
-  background: rgba(255, 180, 84, 0.12);
+  background: rgba(240, 138, 70, 0.12);
 }
 .workflow-step.active .workflow-step-dot {
-  border-color: rgba(31, 111, 235, 0.22);
+  border-color: rgba(180, 64, 14, 0.22);
   color: var(--accent);
-  background: rgba(31, 111, 235, 0.1);
+  background: rgba(180, 64, 14, 0.1);
   box-shadow:
-    0 0 0 6px rgba(31, 111, 235, 0.08),
-    0 14px 34px -20px rgba(31, 111, 235, 0.8);
+    0 0 0 6px rgba(180, 64, 14, 0.08),
+    0 14px 34px -20px rgba(180, 64, 14, 0.8);
   animation: workflow-active-pulse 2.4s ease-in-out infinite;
 }
 .workflow-step strong {
@@ -3778,7 +3906,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   place-items: center;
   border-radius: 999px;
   color: #1d5ebd;
-  background: rgba(31, 111, 235, 0.09);
+  background: rgba(180, 64, 14, 0.09);
   font-size: 11px;
   font-weight: 780;
 }
@@ -3812,7 +3940,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .workflow-review {
   grid-column: 1 / -1;
   background:
-    linear-gradient(135deg, rgba(31, 111, 235, 0.06), transparent 52%),
+    linear-gradient(135deg, rgba(180, 64, 14, 0.06), transparent 52%),
     rgba(255, 255, 255, 0.82);
 }
 .workflow-review-row {
@@ -3884,26 +4012,26 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 .workflow-approval button:first-of-type {
-  border-color: rgba(31, 111, 235, 0.2);
+  border-color: rgba(180, 64, 14, 0.2);
   color: #fff;
-  background: linear-gradient(135deg, #1f6feb, #5aa9ff);
-  box-shadow: 0 16px 34px -24px rgba(31, 111, 235, 0.9);
+  background: linear-gradient(135deg, #b4400e, #8fb0ce);
+  box-shadow: 0 16px 34px -24px rgba(180, 64, 14, 0.9);
 }
 .workflow-approval button:hover {
   transform: translateY(-1px);
-  border-color: rgba(31, 111, 235, 0.24);
+  border-color: rgba(180, 64, 14, 0.24);
 }
 
 @keyframes workflow-active-pulse {
   0%, 100% {
     box-shadow:
-      0 0 0 4px rgba(31, 111, 235, 0.07),
-      0 14px 34px -20px rgba(31, 111, 235, 0.8);
+      0 0 0 4px rgba(180, 64, 14, 0.07),
+      0 14px 34px -20px rgba(180, 64, 14, 0.8);
   }
   50% {
     box-shadow:
-      0 0 0 8px rgba(31, 111, 235, 0.1),
-      0 18px 40px -20px rgba(31, 111, 235, 0.95);
+      0 0 0 8px rgba(180, 64, 14, 0.1),
+      0 18px 40px -20px rgba(180, 64, 14, 0.95);
   }
 }
 
@@ -3964,7 +4092,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   overflow: hidden;
   padding: clamp(96px, 11vw, 154px) 0;
   background:
-    radial-gradient(circle at 12% 18%, rgba(31, 111, 235, 0.08), transparent 30%),
+    radial-gradient(circle at 12% 18%, rgba(180, 64, 14, 0.08), transparent 30%),
     radial-gradient(circle at 86% 58%, rgba(178, 119, 20, 0.07), transparent 35%),
     linear-gradient(120deg, #fbfdff 0%, #f4f8fd 48%, #ffffff 100%);
 }
@@ -3975,8 +4103,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 58%;
   pointer-events: none;
   background:
-    linear-gradient(90deg, transparent, rgba(31, 111, 235, 0.08), transparent),
-    repeating-linear-gradient(90deg, transparent 0 92px, rgba(31, 111, 235, 0.045) 92px 93px);
+    linear-gradient(90deg, transparent, rgba(180, 64, 14, 0.08), transparent),
+    repeating-linear-gradient(90deg, transparent 0 92px, rgba(180, 64, 14, 0.045) 92px 93px);
   -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 48%, transparent 78%);
   mask-image: radial-gradient(ellipse at 50% 50%, #000 0 48%, transparent 78%);
 }
@@ -3996,14 +4124,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   align-items: center;
   gap: 8px;
   min-height: 34px;
-  border: 1px solid rgba(31, 111, 235, 0.16);
+  border: 1px solid rgba(180, 64, 14, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.78);
   color: var(--accent);
   padding: 0 12px;
   font-size: 12px;
   font-weight: 740;
-  box-shadow: 0 14px 32px -26px rgba(31, 111, 235, 0.7);
+  box-shadow: 0 14px 32px -26px rgba(180, 64, 14, 0.7);
 }
 .content-light .bilingual-studio .bilingual-copy h2 {
   margin: 26px 0 0;
@@ -4066,8 +4194,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 34px;
   background:
-    linear-gradient(rgba(31, 111, 235, 0.045) 1px, transparent 1px) 0 0 / 56px 56px,
-    linear-gradient(90deg, rgba(31, 111, 235, 0.04) 1px, transparent 1px) 0 0 / 56px 56px,
+    linear-gradient(rgba(180, 64, 14, 0.045) 1px, transparent 1px) 0 0 / 56px 56px,
+    linear-gradient(90deg, rgba(180, 64, 14, 0.04) 1px, transparent 1px) 0 0 / 56px 56px,
     linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(243, 247, 252, 0.86));
   box-shadow:
     0 48px 120px -62px rgba(20, 44, 92, 0.62),
@@ -4089,8 +4217,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bc-grid {
   inset: 0;
   background:
-    linear-gradient(rgba(31, 111, 235, 0.045) 1px, transparent 1px) 0 0 / 56px 56px,
-    linear-gradient(90deg, rgba(31, 111, 235, 0.04) 1px, transparent 1px) 0 0 / 56px 56px;
+    linear-gradient(rgba(180, 64, 14, 0.045) 1px, transparent 1px) 0 0 / 56px 56px,
+    linear-gradient(90deg, rgba(180, 64, 14, 0.04) 1px, transparent 1px) 0 0 / 56px 56px;
   -webkit-mask-image: radial-gradient(ellipse at 52% 48%, #000 0 56%, transparent 80%);
   mask-image: radial-gradient(ellipse at 52% 48%, #000 0 56%, transparent 80%);
 }
@@ -4098,7 +4226,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   inset: 16% 18%;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 48% 46%, rgba(31, 111, 235, 0.18), transparent 40%),
+    radial-gradient(circle at 48% 46%, rgba(180, 64, 14, 0.18), transparent 40%),
     radial-gradient(circle at 70% 60%, rgba(178, 119, 20, 0.12), transparent 36%);
   filter: blur(34px);
   animation: bilingual-aura 8s ease-in-out infinite alternate;
@@ -4153,7 +4281,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     background 0.35s var(--ease-out);
 }
 .bc-speech:hover {
-  border-color: rgba(31, 111, 235, 0.28);
+  border-color: rgba(180, 64, 14, 0.28);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 30px 70px -42px rgba(20, 44, 92, 0.62);
 }
@@ -4162,13 +4290,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
-  background: linear-gradient(180deg, #1f6feb, rgba(90, 169, 255, 0.16));
+  background: linear-gradient(180deg, #b4400e, rgba(143, 176, 206, 0.16));
 }
 .bc-speech-zh {
   --float-y: 54px;
 }
 .bc-speech-zh::before {
-  background: linear-gradient(180deg, #b27714, rgba(255, 180, 84, 0.18));
+  background: linear-gradient(180deg, #b27714, rgba(240, 138, 70, 0.18));
 }
 .bc-speech small {
   display: inline-flex;
@@ -4208,38 +4336,38 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: 50%;
   width: 58px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(31, 111, 235, 0.48));
+  background: linear-gradient(90deg, transparent, rgba(180, 64, 14, 0.48));
 }
 .bc-context-core::before {
   right: calc(100% + 4px);
 }
 .bc-context-core::after {
   left: calc(100% + 4px);
-  background: linear-gradient(90deg, rgba(31, 111, 235, 0.48), transparent);
+  background: linear-gradient(90deg, rgba(180, 64, 14, 0.48), transparent);
 }
 .bc-core-mark {
   display: grid;
   place-items: center;
   width: 116px;
   aspect-ratio: 1;
-  border: 1px solid rgba(31, 111, 235, 0.2);
+  border: 1px solid rgba(180, 64, 14, 0.2);
   border-radius: 999px;
   background:
-    radial-gradient(circle at 50% 34%, rgba(31, 111, 235, 0.2), transparent 58%),
+    radial-gradient(circle at 50% 34%, rgba(180, 64, 14, 0.2), transparent 58%),
     rgba(255, 255, 255, 0.88);
   color: var(--accent);
   box-shadow:
-    0 0 0 9px rgba(31, 111, 235, 0.05),
-    0 28px 58px -36px rgba(31, 111, 235, 0.82);
+    0 0 0 9px rgba(180, 64, 14, 0.05),
+    0 28px 58px -36px rgba(180, 64, 14, 0.82);
   transition:
     border-color 0.35s var(--ease-out),
     box-shadow 0.35s var(--ease-out);
 }
 .bc-context-core:hover .bc-core-mark {
-  border-color: rgba(31, 111, 235, 0.32);
+  border-color: rgba(180, 64, 14, 0.32);
   box-shadow:
-    0 0 0 12px rgba(31, 111, 235, 0.07),
-    0 34px 68px -38px rgba(31, 111, 235, 0.9);
+    0 0 0 12px rgba(180, 64, 14, 0.07),
+    0 34px 68px -38px rgba(180, 64, 14, 0.9);
 }
 .bc-core-mark strong {
   margin-top: 4px;
@@ -4273,7 +4401,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     background 0.35s var(--ease-out);
 }
 .bc-context-card:hover {
-  border-color: rgba(31, 111, 235, 0.26);
+  border-color: rgba(180, 64, 14, 0.26);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.88)),
     rgba(255, 255, 255, 0.9);
@@ -4285,7 +4413,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   inset: 0 14%;
   top: -28px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(31, 111, 235, 0.42), transparent);
+  background: linear-gradient(90deg, transparent, rgba(180, 64, 14, 0.42), transparent);
 }
 .bc-context-head {
   display: flex;
@@ -4456,7 +4584,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   aspect-ratio: 1;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 44%, rgba(31, 111, 235, 0.18), rgba(31, 111, 235, 0.06) 46%, transparent 66%),
+    radial-gradient(circle at 50% 44%, rgba(180, 64, 14, 0.18), rgba(180, 64, 14, 0.06) 46%, transparent 66%),
     radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.95), rgba(238, 243, 250, 0.55) 58%, transparent 74%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
@@ -4466,7 +4594,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ── pipeline ── */
 .content-light .pipeline-studio {
   background:
-    radial-gradient(circle at 16% 22%, rgba(31, 111, 235, 0.08), transparent 30%),
+    radial-gradient(circle at 16% 22%, rgba(180, 64, 14, 0.08), transparent 30%),
     radial-gradient(circle at 80% 72%, rgba(178, 119, 20, 0.06), transparent 34%),
     linear-gradient(120deg, #fbfdff 0%, #f4f8fd 48%, #ffffff 100%);
 }
@@ -4477,15 +4605,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 74%;
   pointer-events: none;
   background:
-    linear-gradient(rgba(31, 111, 235, 0.038) 1px, transparent 1px) 0 0 / 72px 72px,
-    linear-gradient(90deg, rgba(31, 111, 235, 0.034) 1px, transparent 1px) 0 0 / 72px 72px;
+    linear-gradient(rgba(180, 64, 14, 0.038) 1px, transparent 1px) 0 0 / 72px 72px,
+    linear-gradient(90deg, rgba(180, 64, 14, 0.034) 1px, transparent 1px) 0 0 / 72px 72px;
   -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 86%, transparent);
   mask-image: linear-gradient(180deg, transparent, #000 12%, #000 86%, transparent);
 }
 .content-light .pipeline-kicker {
-  border-color: rgba(31, 111, 235, 0.16);
+  border-color: rgba(180, 64, 14, 0.16);
   background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 14px 32px -26px rgba(31, 111, 235, 0.7);
+  box-shadow: 0 14px 32px -26px rgba(180, 64, 14, 0.7);
 }
 .content-light .pipeline-studio-copy h2 {
   color: #0b1118;
@@ -4500,7 +4628,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: #5a6676;
 }
 .content-light .pipeline-proof-row span {
-  border-left-color: rgba(31, 111, 235, 0.16);
+  border-left-color: rgba(180, 64, 14, 0.16);
 }
 .content-light .pipeline-proof-row strong {
   color: #111827;
@@ -4511,8 +4639,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .content-light .pipeline-board {
   border-color: rgba(148, 163, 184, 0.22);
   background:
-    linear-gradient(rgba(31, 111, 235, 0.04) 1px, transparent 1px) 0 0 / 54px 54px,
-    linear-gradient(90deg, rgba(31, 111, 235, 0.036) 1px, transparent 1px) 0 0 / 54px 54px,
+    linear-gradient(rgba(180, 64, 14, 0.04) 1px, transparent 1px) 0 0 / 54px 54px,
+    linear-gradient(90deg, rgba(180, 64, 14, 0.036) 1px, transparent 1px) 0 0 / 54px 54px,
     linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(243, 247, 252, 0.86));
   box-shadow:
     0 48px 120px -62px rgba(20, 44, 92, 0.62),
@@ -4520,7 +4648,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .content-light .pipeline-board-grid {
   background:
-    radial-gradient(circle at 36% 40%, rgba(31, 111, 235, 0.14), transparent 36%),
+    radial-gradient(circle at 36% 40%, rgba(180, 64, 14, 0.14), transparent 36%),
     radial-gradient(circle at 72% 70%, rgba(178, 119, 20, 0.08), transparent 32%);
   filter: blur(24px);
   opacity: 0.78;
@@ -4535,8 +4663,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: #667386;
 }
 .content-light .pipeline-board-head strong {
-  border-color: rgba(31, 111, 235, 0.16);
-  background: rgba(31, 111, 235, 0.07);
+  border-color: rgba(180, 64, 14, 0.16);
+  background: rgba(180, 64, 14, 0.07);
 }
 .content-light .pipeline-tile {
   border-color: rgba(148, 163, 184, 0.22);
@@ -4550,12 +4678,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .content-light .pipeline-tile.lead {
   background:
-    linear-gradient(135deg, rgba(31, 111, 235, 0.13), transparent 58%),
+    linear-gradient(135deg, rgba(180, 64, 14, 0.13), transparent 58%),
     rgba(255, 255, 255, 0.9);
 }
 .content-light .pipeline-tile:hover {
   transform: translateY(-3px);
-  border-color: rgba(31, 111, 235, 0.26);
+  border-color: rgba(180, 64, 14, 0.26);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 30px 78px -46px rgba(20, 44, 92, 0.58);
 }
@@ -4589,7 +4717,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .content-light .cta-panel {
   border-color: rgba(255, 255, 255, 0.08);
   background:
-    radial-gradient(80% 120% at 12% 0%, rgba(31, 111, 235, 0.34), transparent 52%),
+    radial-gradient(80% 120% at 12% 0%, rgba(180, 64, 14, 0.34), transparent 52%),
     linear-gradient(180deg, #0d1424, #070b14);
   color: #eef1f6;
   box-shadow: 0 60px 140px -60px rgba(10, 22, 52, 0.7);
@@ -4598,7 +4726,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .content-light .cta-panel .btn-primary {
   background: var(--accent);
   color: #ffffff;
-  box-shadow: 0 0 0 1px rgba(31, 111, 235, 0.5), 0 18px 50px -22px var(--accent);
+  box-shadow: 0 0 0 1px rgba(180, 64, 14, 0.5), 0 18px 50px -22px var(--accent);
 }
 .content-light .cta-panel .btn-primary:hover { background: #3b82f6; }
 .content-light .cta-panel .btn-ghost {
