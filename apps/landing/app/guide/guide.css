@@ -1,19 +1,29 @@
 /* ══════════════════════════════════════════════════════════════════════
    GUIDE
-   A reading surface, not a deck. It inherits the light token remap from
-   .content-light and adds only document typography: measure, rhythm, and a
-   sticky table of contents. The two-hue encoding from the home page is kept —
-   azure for the agent workflow, amber for anything about the local runtime.
+   A dark reading room. Structure comes from hairlines, numbering and space —
+   not from boxed cards, which is what made the first pass read as generic. The
+   two-hue encoding is kept because it carries meaning: amber is the local /
+   private runtime, azure is the agent workflow.
    ══════════════════════════════════════════════════════════════════════ */
 
 .guide {
+  --gd-bg: #08090d;
+  --gd-text: #edeef4;
+  --gd-dim: #9aa0b0;
+  --gd-mute: #6b7280;
+  --gd-line: rgba(237, 238, 244, 0.09);
+  --gd-line-2: rgba(237, 238, 244, 0.16);
+  --gd-azure: #7fb2ff;
+  --gd-amber: #f0a55a;
+  --gd-cyan: #22d3ee;
+
   min-height: 100vh;
-  padding-bottom: clamp(4rem, 9vw, 8rem);
-  background-attachment: fixed;
+  background: var(--gd-bg);
+  color: var(--gd-text);
 }
 
-/* The global rule disables smooth scrolling because it fights ScrollTrigger
-   pinning. Nothing is pinned here, so anchor jumps can ease. */
+/* Nothing is pinned here, so anchor jumps can ease — the global rule disables smooth scrolling
+   because it fights ScrollTrigger on the home page. */
 html:has(.guide) {
   scroll-behavior: smooth;
 }
@@ -24,461 +34,474 @@ html:has(.guide) {
 }
 
 /* ── top bar ── */
-.guide-top {
+.gd-top {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem clamp(1.25rem, 4vw, 3rem);
-  border-bottom: 1px solid var(--line);
-  background: rgba(247, 248, 250, 0.82);
-  backdrop-filter: blur(12px);
+  padding: 0.9rem clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--gd-line);
+  background: rgba(8, 9, 13, 0.72);
+  backdrop-filter: blur(14px);
 }
-
-.guide-back,
-.guide-lang a {
-  color: var(--paper-dim);
+.gd-top-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.gd-back,
+.gd-top-link,
+.gd-lang a {
+  color: var(--gd-dim);
   font-family: var(--font-mono), monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   text-decoration: none;
   transition: color 0.2s var(--ease-out);
 }
-.guide-back:hover,
-.guide-lang a:hover {
-  color: var(--accent);
+.gd-back:hover,
+.gd-top-link:hover,
+.gd-lang a:hover {
+  color: var(--gd-text);
 }
-
-.guide-lang {
+.gd-lang {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
-.guide-lang a.active {
-  color: var(--paper);
-  font-weight: 600;
+.gd-lang a.active {
+  color: var(--gd-cyan);
 }
 
-/* ── shell ── */
-.guide-shell {
+/* ── lamp header ── */
+.gd-lamp {
+  min-height: 66svh;
+  /* The lamp ships its own slate; align it with this page's base so the seam disappears. */
+  background: var(--gd-bg);
+  /* The header content is lifted into the glow, which leaves an empty tail the height of that
+     lift. Pulling the body up by roughly the same amount closes the gap instead of shipping a
+     screen of dead space under the lede. */
+  margin-bottom: -7rem;
+}
+.gd-lamp-inner {
+  width: 100%;
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 clamp(1.25rem, 4vw, 3rem);
+  padding: 0 clamp(0.25rem, 2vw, 2rem);
+  text-align: center;
 }
-
-.guide-intro {
-  padding: clamp(3rem, 8vw, 6rem) 0 clamp(2rem, 4vw, 3rem);
-  border-bottom: 1px solid var(--line);
-}
-.guide-eyebrow {
+.gd-eyebrow {
   display: inline-block;
   margin-bottom: 1rem;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid rgba(31, 111, 235, 0.24);
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--gd-cyan);
   font-family: var(--font-mono), monospace;
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
-.guide-intro h1 {
-  margin: 0 0 1rem;
+.gd-lamp-inner h1 {
+  margin: 0 auto 1.1rem;
   max-width: 22ch;
+  background: linear-gradient(to bottom right, #f4f6fb, #97a0b5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   font-family: var(--font-display), var(--cjk);
-  font-size: clamp(2.25rem, 6vw, 4rem);
+  font-size: clamp(2.2rem, 6vw, 4.2rem);
   font-weight: 600;
   line-height: 1.03;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
 }
-.guide-intro p {
-  margin: 0;
-  max-width: 56ch;
-  color: var(--paper-dim);
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
-  line-height: 1.6;
+.gd-lamp-inner p {
+  margin: 0 auto;
+  max-width: 52ch;
+  color: var(--gd-dim);
+  font-size: clamp(0.98rem, 1.5vw, 1.12rem);
+  line-height: 1.62;
 }
 
-/* ── two column body ── */
-.guide-body {
+/* ── body surface ── */
+.gd-body {
+  position: relative;
+  border-top: 1px solid var(--gd-line);
+}
+.gd-grid {
+  position: absolute;
+  inset: 0;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 5%, transparent 70%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.gd-shell {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(2rem, 5vw, 4rem);
-  padding-top: clamp(2.5rem, 5vw, 4rem);
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3rem) clamp(4rem, 8vw, 7rem);
 }
 @media (min-width: 60rem) {
-  .guide-body {
-    grid-template-columns: 15rem minmax(0, 1fr);
+  .gd-shell {
+    grid-template-columns: 14rem minmax(0, 1fr);
   }
 }
 
-.guide-toc {
+/* ── sticky contents ── */
+.gd-toc {
   align-self: start;
 }
 @media (min-width: 60rem) {
-  .guide-toc {
+  .gd-toc {
     position: sticky;
-    /* clears the sticky top bar */
-    top: 5.5rem;
+    top: 5rem;
   }
 }
-.guide-toc-label {
+.gd-toc-label {
   display: block;
   margin-bottom: 0.75rem;
-  color: var(--mute);
+  color: var(--gd-mute);
   font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
-.guide-toc ol {
+.gd-toc ol {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-left: 1px solid var(--line-2);
+  border-left: 1px solid var(--gd-line-2);
 }
-.guide-toc li a {
+.gd-toc a {
   display: block;
-  padding: 0.5rem 0 0.5rem 1rem;
   margin-left: -1px;
+  padding: 0.5rem 0 0.5rem 1rem;
   border-left: 2px solid transparent;
-  color: var(--paper-dim);
-  font-size: 0.9rem;
+  color: var(--gd-dim);
+  font-size: 0.88rem;
   text-decoration: none;
   transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
 }
-.guide-toc li a:hover {
-  border-left-color: var(--accent);
-  color: var(--paper);
+.gd-toc a:hover {
+  border-left-color: var(--gd-cyan);
+  color: var(--gd-text);
 }
 
 /* ── sections ── */
-.guide-article {
+.gd-article {
   min-width: 0;
 }
-
-.guide-section {
-  padding-bottom: clamp(3rem, 6vw, 5rem);
-  /* clears the sticky top bar when jumped to by anchor */
-  scroll-margin-top: 5rem;
+.gd-section {
+  padding-bottom: clamp(3.5rem, 7vw, 6rem);
+  scroll-margin-top: 4.5rem;
 }
-
-.guide-section-head {
+.gd-section-head {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
-.guide-index,
-.guide-tag {
+.gd-index,
+.gd-tag {
   font-family: var(--font-mono), monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.14em;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
-.guide-index {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  color: var(--accent);
+.gd-index {
+  color: var(--gd-azure);
 }
-.guide-tag {
-  color: var(--mute);
+.gd-tag {
+  color: var(--gd-mute);
 }
-/* amber is reserved for the local / private runtime signal */
-.guide-section[data-signal="local"] .guide-index {
-  background: rgba(180, 83, 9, 0.1);
-  color: var(--amber);
+/* amber stays reserved for the local / private runtime signal */
+.gd-section[data-signal="local"] .gd-index {
+  color: var(--gd-amber);
 }
 
-.guide-section h2 {
+.gd-section h2 {
   margin: 0 0 0.9rem;
-  max-width: 30ch;
+  max-width: 28ch;
   font-family: var(--font-display), var(--cjk);
-  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  font-size: clamp(1.6rem, 3.6vw, 2.5rem);
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
 }
-.guide-lead {
-  margin: 0 0 2rem;
+.gd-lead {
+  margin: 0 0 2.5rem;
   max-width: 62ch;
-  color: var(--paper-dim);
-  font-size: clamp(0.98rem, 1.4vw, 1.1rem);
-  line-height: 1.65;
+  color: var(--gd-dim);
+  font-size: clamp(0.98rem, 1.4vw, 1.08rem);
+  line-height: 1.68;
+}
+.gd-subhead {
+  margin: 3rem 0 0.8rem;
+  font-family: var(--font-display), var(--cjk);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+.gd-caption {
+  margin: 0 0 1.25rem;
+  max-width: 62ch;
+  color: var(--gd-mute);
+  font-size: 0.88rem;
+  line-height: 1.58;
 }
 
-.guide-subhead {
-  margin: 2.5rem 0 0.75rem;
-  font-family: var(--font-display), var(--cjk);
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.guide-caption {
-  margin: 0 0 1rem;
-  max-width: 62ch;
-  color: var(--mute);
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
-/* ── numbered steps ── */
-.guide-steps {
+/* ── steps: hairline rows, not cards ── */
+.gd-steps {
   margin: 0;
   padding: 0;
   list-style: none;
-  counter-reset: guide-step;
-  display: grid;
-  gap: 1px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--line);
-  box-shadow: var(--card-shadow);
+  border-top: 1px solid var(--gd-line);
 }
-.guide-steps li {
-  counter-increment: guide-step;
-  padding: 1.15rem 1.25rem 1.15rem 3.4rem;
-  position: relative;
-  background: var(--ink-2);
-}
-.guide-steps li::before {
-  content: counter(guide-step);
-  position: absolute;
-  top: 1.15rem;
-  left: 1.25rem;
+.gd-steps li {
   display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0 1rem;
+  padding: 1.15rem 0;
+  border-bottom: 1px solid var(--gd-line);
+}
+.gd-step-n {
+  color: var(--gd-azure);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  padding-top: 0.15rem;
 }
-.guide-section[data-signal="local"] .guide-steps li::before {
-  background: rgba(180, 83, 9, 0.1);
-  color: var(--amber);
+.gd-section[data-signal="local"] .gd-step-n {
+  color: var(--gd-amber);
 }
-.guide-steps h3 {
+.gd-steps h3 {
   margin: 0 0 0.3rem;
   font-size: 0.98rem;
   font-weight: 600;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.004em;
 }
-.guide-steps p {
+.gd-steps p {
   margin: 0;
-  color: var(--paper-dim);
+  color: var(--gd-dim);
   font-size: 0.92rem;
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
-.guide-note,
-.guide-desktop-only {
+.gd-note {
+  margin: 1.5rem 0 0;
   max-width: 62ch;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--gd-azure);
+  color: var(--gd-dim);
   font-size: 0.9rem;
   line-height: 1.6;
 }
-.guide-note {
-  margin: 1.25rem 0 0;
+.gd-desktop-only {
+  margin: 0 0 2rem;
+  max-width: 62ch;
   padding-left: 0.9rem;
-  border-left: 2px solid var(--accent);
-  color: var(--paper-dim);
-}
-.guide-desktop-only {
-  margin: 0 0 1.5rem;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid rgba(180, 83, 9, 0.22);
-  border-radius: 10px;
-  background: rgba(180, 83, 9, 0.06);
-  color: var(--amber);
+  border-left: 2px solid var(--gd-amber);
+  color: var(--gd-amber);
   font-family: var(--font-mono), monospace;
   font-size: 0.8rem;
+  line-height: 1.6;
 }
 
 /* ── runtimes ── */
-.guide-runtimes {
+.gd-runtimes {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 42rem) {
-  .guide-runtimes {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-.guide-runtime {
-  padding: 1.15rem 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--ink-2);
-  box-shadow: var(--card-shadow);
-}
-.guide-runtime h4 {
-  margin: 0 0 0.4rem;
-  font-family: var(--font-mono), monospace;
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
-  color: var(--amber);
-}
-.guide-runtime p {
+  gap: 0;
   margin: 0;
-  color: var(--paper-dim);
+  border-top: 1px solid var(--gd-line);
+}
+.gd-runtimes > div {
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--gd-line);
+}
+.gd-runtimes dt {
+  margin-bottom: 0.3rem;
+  color: var(--gd-amber);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+.gd-runtimes dd {
+  margin: 0;
+  color: var(--gd-dim);
   font-size: 0.92rem;
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
-/* ── model table ── */
-.guide-table-scroll {
+/* ── model table: the most important content, so the quietest treatment ── */
+.gd-table-scroll {
   overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--ink-2);
-  box-shadow: var(--card-shadow);
+  border-top: 1px solid var(--gd-line-2);
 }
-.guide-table {
+.gd-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
-  /* keeps the four columns legible instead of crushing them on a phone */
   min-width: 34rem;
 }
-.guide-table th,
-.guide-table td {
-  padding: 0.75rem 1rem;
+.gd-table th,
+.gd-table td {
+  padding: 0.8rem 1rem 0.8rem 0;
   text-align: left;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--gd-line);
 }
-.guide-table thead th {
-  color: var(--mute);
+.gd-table thead th {
+  padding-top: 0.7rem;
+  color: var(--gd-mute);
   font-family: var(--font-mono), monospace;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
 }
-.guide-table tbody th {
+.gd-table tbody th {
   font-weight: 600;
   white-space: nowrap;
 }
-.guide-table td {
-  color: var(--paper-dim);
+.gd-table td {
+  color: var(--gd-dim);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.guide-table tbody tr:last-child th,
-.guide-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.guide-pill {
+.gd-pill {
   display: inline-block;
-  padding: 0.15rem 0.55rem;
+  padding: 0.12rem 0.55rem;
+  border: 1px solid rgba(127, 178, 255, 0.3);
   border-radius: 999px;
-  border: 1px solid rgba(31, 111, 235, 0.24);
-  background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--gd-azure);
   font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.04em;
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
-/* a chat-only row is the trap this page exists to prevent: mark it, don't bury it */
-.guide-table tr[data-agent="false"] .guide-pill {
-  border-color: rgba(180, 83, 9, 0.3);
-  background: rgba(180, 83, 9, 0.09);
-  color: var(--amber);
+/* A chat-only row is the trap this page exists to prevent, so it is marked, not buried. */
+.gd-table tr[data-agent="false"] .gd-pill {
+  border-color: rgba(240, 165, 90, 0.34);
+  color: var(--gd-amber);
 }
-.guide-table tr[data-agent="false"] th,
-.guide-table tr[data-agent="false"] td {
-  background: rgba(180, 83, 9, 0.035);
+.gd-table tr[data-agent="false"] th,
+.gd-table tr[data-agent="false"] td {
+  background: rgba(240, 165, 90, 0.045);
 }
 
-/* ── callouts ── */
-.guide-callout {
-  margin-top: 1.5rem;
-  padding: 1.15rem 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--ink-2);
+/* ── callouts: a rule and a title, no box ── */
+.gd-callout {
+  margin-top: 2.25rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--gd-line-2);
 }
-.guide-callout[data-kind="warning"] {
-  border-color: rgba(180, 83, 9, 0.28);
-  background: rgba(180, 83, 9, 0.05);
+.gd-callout[data-kind="warning"] {
+  border-left-color: var(--gd-amber);
 }
-.guide-callout h3 {
+.gd-callout h3 {
   margin: 0 0 0.45rem;
   font-size: 0.98rem;
   font-weight: 600;
 }
-.guide-callout[data-kind="warning"] h3 {
-  color: var(--amber);
+.gd-callout[data-kind="warning"] h3 {
+  color: var(--gd-amber);
 }
-.guide-callout p {
+.gd-callout p {
   margin: 0;
   max-width: 62ch;
-  color: var(--paper-dim);
+  color: var(--gd-dim);
   font-size: 0.92rem;
-  line-height: 1.65;
+  line-height: 1.68;
+}
+
+/* ── masked privacy callout ── */
+.gd-privacy {
+  height: auto;
+  min-height: 15rem;
+  margin-top: 2.5rem;
+  border: 1px solid var(--gd-line);
+  border-radius: 2px;
+  overflow: hidden;
+  /* Set here as well as passed to the component: the component animates this colour, so before
+     hydration (and during the 0.3s transition) it would otherwise paint transparent then flash a
+     light slab across a dark page. CSS owns the resting state; motion only moves between them. */
+  background: #0a0c12;
+}
+.gd-privacy-layer {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+.gd-privacy-layer h3 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display), var(--cjk);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.gd-privacy-layer p {
+  margin: 0;
+  max-width: 58ch;
+  font-size: 0.92rem;
+  line-height: 1.68;
+}
+/* The masked layer paints white-on-dark through the cursor hole, so it needs its own colours
+   rather than the page's. The revealed layer beneath keeps the normal treatment. */
+.gd-privacy [data-masked="true"] {
+  color: #08090d;
+}
+.gd-privacy [data-masked="true"] h3,
+.gd-privacy [data-masked="true"] p {
+  color: inherit;
+}
+.gd-privacy .gd-privacy-layer:not([data-masked="true"]) h3 {
+  color: var(--gd-cyan);
+}
+.gd-privacy .gd-privacy-layer:not([data-masked="true"]) p {
+  color: var(--gd-dim);
 }
 
 /* ── closing cta ── */
-.guide-cta {
+.gd-cta {
   margin-top: 1rem;
-  padding: clamp(2rem, 5vw, 3rem);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--ink-1);
-  box-shadow: var(--card-shadow);
+  padding-top: clamp(2.5rem, 5vw, 4rem);
+  border-top: 1px solid var(--gd-line-2);
   text-align: center;
 }
-.guide-cta h2 {
-  margin: 0 0 0.6rem;
+.gd-cta-title {
   font-family: var(--font-display), var(--cjk);
-  font-size: clamp(1.4rem, 3vw, 2rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  /* Large enough that the stroke field reads as letterforms rather than as noise. */
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
 }
-.guide-cta p {
-  margin: 0 auto 1.5rem;
-  max-width: 44ch;
-  color: var(--paper-dim);
-  font-size: 0.98rem;
+.gd-cta p {
+  margin: 1rem auto 1.75rem;
+  max-width: 42ch;
+  color: var(--gd-dim);
+  font-size: 0.96rem;
   line-height: 1.6;
 }
-.guide-cta-button {
+.gd-cta-button {
   display: inline-block;
   padding: 0.8rem 1.6rem;
+  border: 1px solid rgba(34, 211, 238, 0.35);
   border-radius: 999px;
-  background: var(--accent);
-  color: #ffffff;
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--gd-cyan);
   font-size: 0.92rem;
   font-weight: 600;
   text-decoration: none;
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
 }
-.guide-cta-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px -12px rgba(31, 111, 235, 0.6);
-}
-@media (prefers-reduced-motion: reduce) {
-  .guide-cta-button:hover {
-    transform: none;
-  }
+.gd-cta-button:hover {
+  border-color: var(--gd-cyan);
+  background: rgba(34, 211, 238, 0.18);
 }
 
-/* Chinese headings carry less weight well; match the home page treatment. */
-[lang="zh-CN"] .guide-intro h1,
-[lang="zh-CN"] .guide-section h2,
-[lang="zh-CN"] .guide-cta h2 {
+[lang="zh-CN"] .gd-lamp-inner h1,
+[lang="zh-CN"] .gd-section h2 {
   letter-spacing: -0.01em;
-  font-weight: 600;
 }

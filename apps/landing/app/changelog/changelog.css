@@ -1,0 +1,295 @@
+/* ══════════════════════════════════════════════════════════════════════
+   CHANGELOG
+   A dark reading room. The aurora carries the header; below it the surface goes
+   quiet so release notes stay scannable. Structure is hairlines and space — no
+   boxed cards, which is what made the earlier pages read as generic.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.changelog {
+  --cl-bg: #08090d;
+  --cl-text: #edeef4;
+  --cl-dim: #9aa0b0;
+  --cl-mute: #6b7280;
+  --cl-line: rgba(237, 238, 244, 0.09);
+  --cl-line-2: rgba(237, 238, 244, 0.16);
+  --cl-accent: #22d3ee;
+  --cl-warm: #f0a55a;
+
+  min-height: 100vh;
+  background: var(--cl-bg);
+  color: var(--cl-text);
+}
+
+/* ── top bar ── */
+.cl-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--cl-line);
+  background: rgba(8, 9, 13, 0.72);
+  backdrop-filter: blur(14px);
+}
+.cl-top-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.cl-back,
+.cl-top-link,
+.cl-lang a {
+  color: var(--cl-dim);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s var(--ease-out);
+}
+.cl-back:hover,
+.cl-top-link:hover,
+.cl-lang a:hover {
+  color: var(--cl-text);
+}
+.cl-lang {
+  display: flex;
+  gap: 0.6rem;
+}
+.cl-lang a.active {
+  color: var(--cl-accent);
+}
+
+/* ── aurora header ── */
+.cl-hero {
+  min-height: 44svh;
+  padding: clamp(3.5rem, 8vw, 6rem) clamp(1.25rem, 4vw, 3rem);
+  background: var(--cl-bg) !important;
+  color: var(--cl-text);
+  text-align: left;
+  align-items: flex-start;
+}
+.cl-hero-inner {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+.cl-eyebrow {
+  display: inline-block;
+  margin-bottom: 1.1rem;
+  color: var(--cl-accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.cl-hero-inner h1 {
+  margin: 0 0 1rem;
+  max-width: 20ch;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(2.2rem, 6vw, 4.2rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+.cl-hero-inner p {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--cl-dim);
+  font-size: clamp(0.98rem, 1.5vw, 1.15rem);
+  line-height: 1.62;
+}
+
+/* ── body surface ── */
+.cl-body {
+  position: relative;
+  border-top: 1px solid var(--cl-line);
+}
+.cl-dots {
+  position: absolute;
+  inset: 0;
+  /* Fades the dot field out at the edges so it reads as texture, not as a texture swatch. */
+  mask-image: radial-gradient(ellipse at 50% 0%, black 10%, transparent 75%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.cl-body-inner {
+  position: relative;
+  z-index: 1;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem) clamp(4rem, 8vw, 7rem);
+}
+
+.cl-source-note {
+  margin: 0 0 1rem;
+  max-width: 62ch;
+  color: var(--cl-mute);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+/* ── timeline entry ── */
+.cl-entry-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.cl-version {
+  margin: 0;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--cl-text);
+}
+.cl-badges {
+  display: flex;
+  gap: 0.4rem;
+}
+.cl-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--cl-line-2);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cl-badge[data-kind="current"] {
+  border-color: rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--cl-accent);
+}
+.cl-badge[data-kind="prerelease"] {
+  border-color: rgba(240, 165, 90, 0.32);
+  background: rgba(240, 165, 90, 0.1);
+  color: var(--cl-warm);
+}
+.cl-date {
+  flex-basis: 100%;
+  color: var(--cl-mute);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.cl-entry-body {
+  max-width: 62ch;
+}
+.cl-intro {
+  margin: 0 0 1rem;
+  color: var(--cl-dim);
+  font-size: 0.98rem;
+  line-height: 1.68;
+}
+
+.cl-section + .cl-section {
+  margin-top: 1.75rem;
+}
+.cl-section-heading {
+  margin: 0 0 0.7rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--cl-line);
+  color: var(--cl-mute);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+/* The three canonical headings get a hue so a long release can be skimmed by kind. Anything else
+   (a first release's "Highlights") keeps the neutral treatment rather than being mislabelled. */
+.cl-section-heading[data-heading="added"] {
+  color: #7ee2a8;
+}
+.cl-section-heading[data-heading="fixed"] {
+  color: #7fb2ff;
+}
+.cl-section-heading[data-heading="changed"] {
+  color: var(--cl-warm);
+}
+
+.cl-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-items li {
+  position: relative;
+  padding: 0.4rem 0 0.4rem 1.1rem;
+  color: var(--cl-dim);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+.cl-items li::before {
+  content: "";
+  position: absolute;
+  top: 1.1rem;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cl-line-2);
+}
+
+.cl-source {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: var(--cl-accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.3);
+  padding-bottom: 1px;
+  transition: border-color 0.2s var(--ease-out);
+}
+.cl-source:hover {
+  border-bottom-color: var(--cl-accent);
+}
+
+/* ── empty state ── */
+.cl-empty {
+  padding: clamp(3rem, 8vw, 6rem) 0;
+  text-align: center;
+}
+.cl-empty-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display), var(--cjk);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.cl-empty-hint {
+  margin: 0 auto 1.5rem;
+  max-width: 44ch;
+  color: var(--cl-dim);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+.cl-empty-action {
+  display: inline-block;
+  padding: 0.7rem 1.4rem;
+  border: 1px solid var(--cl-line-2);
+  border-radius: 999px;
+  color: var(--cl-text);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+.cl-empty-action:hover {
+  border-color: rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+[lang="zh-CN"] .cl-hero-inner h1 {
+  letter-spacing: -0.01em;
+}

@@ -272,7 +272,12 @@ export const content = {
     },
     start: {
       tag: "GET STARTED",
-      title: "Three steps to a private agent",
+      // Rendered by LayoutTextFlip: `text` is static, `words` rotate. Each word has to read as a
+      // grammatical ending to `text` on its own.
+      flip: {
+        text: "Three steps to an agent that runs",
+        words: ["privately", "on your own hardware", "without the cloud"],
+      },
       body: "Install DJL, give it a model that runs on your own hardware, and keep approval over every change.",
       steps: [
         { k: "Install DJL", v: "One download for macOS or Windows." },
@@ -381,6 +386,24 @@ export const content = {
         body: "Download DJL and give it a model that runs where you are.",
         download: "Download for macOS",
       },
+    },
+    changelog: {
+      eyebrow: "Changelog",
+      title: "Every release, as it shipped",
+      lede: "Read straight from the published GitHub releases. New versions appear here on their own, with no edit to this site.",
+      home: "Home",
+      guide: "Guide",
+      current: "Current",
+      prerelease: "Pre-release",
+      published: "Published",
+      viewOnGithub: "View release on GitHub",
+      empty: "No releases have been published yet.",
+      emptyHint: "The release feed could not be read just now. GitHub has the canonical list.",
+      emptyAction: "Open releases on GitHub",
+      // Stated rather than hidden: the notes are the tag annotation, so they cannot be translated at
+      // render time without inventing content.
+      sourceNote:
+        "Release notes are taken from each version's GitHub release, so they appear in English.",
     },
   },
 
@@ -565,7 +588,10 @@ export const content = {
     },
     start: {
       tag: "开始使用",
-      title: "三步拥有私有智能体",
+      flip: {
+        text: "三步拥有一个智能体，它运行在",
+        words: ["你的设备上", "本地", "你自己的硬件上"],
+      },
       body: "安装 DJL，为它配置一个在你自己硬件上运行的模型，并对每一次改动保留批准权。",
       steps: [
         { k: "安装 DJL", v: "macOS 与 Windows 各一个安装包。" },
@@ -671,6 +697,21 @@ export const content = {
         body: "下载 DJL，为它配置一个在你所在之处运行的模型。",
         download: "下载 macOS 版",
       },
+    },
+    changelog: {
+      eyebrow: "更新日志",
+      title: "每一个发布版本",
+      lede: "内容直接来自 GitHub 上已发布的版本。新版本会自动出现在这里，无需改动本站。",
+      home: "首页",
+      guide: "指南",
+      current: "当前版本",
+      prerelease: "预发布",
+      published: "发布于",
+      viewOnGithub: "在 GitHub 上查看",
+      empty: "尚未发布任何版本。",
+      emptyHint: "暂时无法读取发布列表。GitHub 上有完整的版本记录。",
+      emptyAction: "在 GitHub 上查看发布",
+      sourceNote: "更新日志取自各版本的 GitHub 发布说明，因此以英文呈现。",
     },
   },
 } as const;

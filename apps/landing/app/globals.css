@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* Bind `dark:` to an explicit attribute instead of the visitor's OS. Tailwind v4 defaults `dark:`
+   to prefers-color-scheme, which would flip the deliberately dark /guide and /changelog surfaces to
+   light for anyone whose machine is in light mode. The art direction here is fixed, not a user
+   preference, so the pages opt in with data-theme="dark". */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Keyframes for the Aceternity aurora background. Tailwind v4 registers animations as theme tokens,
+   so `--animate-aurora` is what makes `animate-aurora` resolve. */
+@theme inline {
+  --animate-aurora: aurora 60s linear infinite;
+  @keyframes aurora {
+    from {
+      background-position: 50% 50%, 50% 50%;
+    }
+    to {
+      background-position: 350% 50%, 350% 50%;
+    }
+  }
+}
+
 /* ───────────────────────────── tokens ───────────────────────────── */
 :root {
   --ink: #06070c;          /* page base: blue-black */
