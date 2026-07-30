@@ -266,6 +266,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: #1f6feb;
   background: rgba(31, 111, 235, 0.12);
 }
+/* route link, not a section anchor: no marker, no scroll-spy */
+.site-nav-guide {
+  padding: 7px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(11, 17, 24, 0.62);
+  transition: color 0.18s ease;
+}
+.site-nav-guide:hover { color: #1f6feb; }
 .site-nav-cta {
   display: inline-flex;
   align-items: center;
@@ -305,6 +315,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform: translateX(11px);
 }
 .site-nav[data-scrolled="true"] .site-nav-lang { display: none; }
+.site-nav[data-scrolled="true"] .site-nav-guide { display: none; }
 .site-nav[data-scrolled="true"] .site-nav-brand img { width: 88px; }
 .site-nav[data-scrolled="true"] .site-nav-brand img { filter: none; }
 .site-nav[data-scrolled="true"] .site-nav-list a {

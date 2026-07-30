@@ -245,6 +245,11 @@ export function SiteNav({ t }: { t: Content }) {
         </nav>
 
         <div className="site-nav-actions">
+          {/* A real route, so it stays out of `items` — that list drives the GSAP
+              scrollTo and the scroll-spy marker, both of which assume an on-page section. */}
+          <a className="site-nav-guide" href={isZh ? "/guide" : "/guide?lang=en"}>
+            {isZh ? "指南" : "Guide"}
+          </a>
           <div className="site-nav-lang" role="group" aria-label="Language">
             <a href="?lang=en" className={isZh ? "" : "active"}>
               EN

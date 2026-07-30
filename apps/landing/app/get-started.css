@@ -1,0 +1,134 @@
+/* ══════════════════════════════════════════════════════════════════════
+   GET STARTED
+   The last block on the home page, after the capability rail unpins. It is
+   deliberately quiet: three steps and one link out to /guide. Anything longer
+   belongs on the guide, not inside a scroll the rail is driving.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.get-started {
+  padding: clamp(3.5rem, 9vw, 7rem) clamp(1.25rem, 4vw, 3rem);
+  border-top: 1px solid var(--line);
+}
+
+.gs-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.gs-head {
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+.gs-tag {
+  display: inline-block;
+  margin-bottom: 0.9rem;
+  color: var(--mute);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.gs-head h2 {
+  margin: 0 0 0.75rem;
+  max-width: 26ch;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.gs-head p {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--paper-dim);
+  font-size: clamp(0.96rem, 1.4vw, 1.1rem);
+  line-height: 1.6;
+}
+
+.gs-steps {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 clamp(2rem, 4vw, 2.75rem);
+  padding: 0;
+  list-style: none;
+  counter-reset: gs-step;
+}
+@media (min-width: 48rem) {
+  .gs-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.gs-steps li {
+  counter-increment: gs-step;
+  padding: 1.35rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--ink-2);
+  box-shadow: var(--card-shadow);
+}
+.gs-steps li::before {
+  content: counter(gs-step);
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  margin-bottom: 0.85rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+/* step two is the local runtime, which the palette encodes in amber */
+.gs-steps li:nth-child(2)::before {
+  background: rgba(180, 83, 9, 0.1);
+  color: var(--amber);
+}
+.gs-steps h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.gs-steps p {
+  margin: 0;
+  color: var(--paper-dim);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.gs-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.gs-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -12px rgba(31, 111, 235, 0.6);
+}
+.gs-cta span {
+  transition: transform 0.2s var(--ease-out);
+}
+.gs-cta:hover span {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gs-cta:hover,
+  .gs-cta:hover span {
+    transform: none;
+  }
+}
+
+[lang="zh-CN"] .gs-head h2 {
+  letter-spacing: -0.01em;
+}

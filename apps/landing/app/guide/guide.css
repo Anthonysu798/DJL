@@ -1,0 +1,484 @@
+/* ══════════════════════════════════════════════════════════════════════
+   GUIDE
+   A reading surface, not a deck. It inherits the light token remap from
+   .content-light and adds only document typography: measure, rhythm, and a
+   sticky table of contents. The two-hue encoding from the home page is kept —
+   azure for the agent workflow, amber for anything about the local runtime.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.guide {
+  min-height: 100vh;
+  padding-bottom: clamp(4rem, 9vw, 8rem);
+  background-attachment: fixed;
+}
+
+/* The global rule disables smooth scrolling because it fights ScrollTrigger
+   pinning. Nothing is pinned here, so anchor jumps can ease. */
+html:has(.guide) {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.guide) {
+    scroll-behavior: auto;
+  }
+}
+
+/* ── top bar ── */
+.guide-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--line);
+  background: rgba(247, 248, 250, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.guide-back,
+.guide-lang a {
+  color: var(--paper-dim);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s var(--ease-out);
+}
+.guide-back:hover,
+.guide-lang a:hover {
+  color: var(--accent);
+}
+
+.guide-lang {
+  display: flex;
+  gap: 0.75rem;
+}
+.guide-lang a.active {
+  color: var(--paper);
+  font-weight: 600;
+}
+
+/* ── shell ── */
+.guide-shell {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 4vw, 3rem);
+}
+
+.guide-intro {
+  padding: clamp(3rem, 8vw, 6rem) 0 clamp(2rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--line);
+}
+.guide-eyebrow {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(31, 111, 235, 0.24);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.guide-intro h1 {
+  margin: 0 0 1rem;
+  max-width: 22ch;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(2.25rem, 6vw, 4rem);
+  font-weight: 600;
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+}
+.guide-intro p {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--paper-dim);
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  line-height: 1.6;
+}
+
+/* ── two column body ── */
+.guide-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 4rem);
+  padding-top: clamp(2.5rem, 5vw, 4rem);
+}
+@media (min-width: 60rem) {
+  .guide-body {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+}
+
+.guide-toc {
+  align-self: start;
+}
+@media (min-width: 60rem) {
+  .guide-toc {
+    position: sticky;
+    /* clears the sticky top bar */
+    top: 5.5rem;
+  }
+}
+.guide-toc-label {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--mute);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.guide-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--line-2);
+}
+.guide-toc li a {
+  display: block;
+  padding: 0.5rem 0 0.5rem 1rem;
+  margin-left: -1px;
+  border-left: 2px solid transparent;
+  color: var(--paper-dim);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.guide-toc li a:hover {
+  border-left-color: var(--accent);
+  color: var(--paper);
+}
+
+/* ── sections ── */
+.guide-article {
+  min-width: 0;
+}
+
+.guide-section {
+  padding-bottom: clamp(3rem, 6vw, 5rem);
+  /* clears the sticky top bar when jumped to by anchor */
+  scroll-margin-top: 5rem;
+}
+
+.guide-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.guide-index,
+.guide-tag {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.guide-index {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.guide-tag {
+  color: var(--mute);
+}
+/* amber is reserved for the local / private runtime signal */
+.guide-section[data-signal="local"] .guide-index {
+  background: rgba(180, 83, 9, 0.1);
+  color: var(--amber);
+}
+
+.guide-section h2 {
+  margin: 0 0 0.9rem;
+  max-width: 30ch;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.guide-lead {
+  margin: 0 0 2rem;
+  max-width: 62ch;
+  color: var(--paper-dim);
+  font-size: clamp(0.98rem, 1.4vw, 1.1rem);
+  line-height: 1.65;
+}
+
+.guide-subhead {
+  margin: 2.5rem 0 0.75rem;
+  font-family: var(--font-display), var(--cjk);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.guide-caption {
+  margin: 0 0 1rem;
+  max-width: 62ch;
+  color: var(--mute);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* ── numbered steps ── */
+.guide-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: guide-step;
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--line);
+  box-shadow: var(--card-shadow);
+}
+.guide-steps li {
+  counter-increment: guide-step;
+  padding: 1.15rem 1.25rem 1.15rem 3.4rem;
+  position: relative;
+  background: var(--ink-2);
+}
+.guide-steps li::before {
+  content: counter(guide-step);
+  position: absolute;
+  top: 1.15rem;
+  left: 1.25rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.guide-section[data-signal="local"] .guide-steps li::before {
+  background: rgba(180, 83, 9, 0.1);
+  color: var(--amber);
+}
+.guide-steps h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.guide-steps p {
+  margin: 0;
+  color: var(--paper-dim);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.guide-note,
+.guide-desktop-only {
+  max-width: 62ch;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.guide-note {
+  margin: 1.25rem 0 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--accent);
+  color: var(--paper-dim);
+}
+.guide-desktop-only {
+  margin: 0 0 1.5rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  border-radius: 10px;
+  background: rgba(180, 83, 9, 0.06);
+  color: var(--amber);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+}
+
+/* ── runtimes ── */
+.guide-runtimes {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 42rem) {
+  .guide-runtimes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.guide-runtime {
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--ink-2);
+  box-shadow: var(--card-shadow);
+}
+.guide-runtime h4 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--amber);
+}
+.guide-runtime p {
+  margin: 0;
+  color: var(--paper-dim);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+/* ── model table ── */
+.guide-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--ink-2);
+  box-shadow: var(--card-shadow);
+}
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  /* keeps the four columns legible instead of crushing them on a phone */
+  min-width: 34rem;
+}
+.guide-table th,
+.guide-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.guide-table thead th {
+  color: var(--mute);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.guide-table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.guide-table td {
+  color: var(--paper-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.guide-table tbody tr:last-child th,
+.guide-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.guide-pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 111, 235, 0.24);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+/* a chat-only row is the trap this page exists to prevent: mark it, don't bury it */
+.guide-table tr[data-agent="false"] .guide-pill {
+  border-color: rgba(180, 83, 9, 0.3);
+  background: rgba(180, 83, 9, 0.09);
+  color: var(--amber);
+}
+.guide-table tr[data-agent="false"] th,
+.guide-table tr[data-agent="false"] td {
+  background: rgba(180, 83, 9, 0.035);
+}
+
+/* ── callouts ── */
+.guide-callout {
+  margin-top: 1.5rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--ink-2);
+}
+.guide-callout[data-kind="warning"] {
+  border-color: rgba(180, 83, 9, 0.28);
+  background: rgba(180, 83, 9, 0.05);
+}
+.guide-callout h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+.guide-callout[data-kind="warning"] h3 {
+  color: var(--amber);
+}
+.guide-callout p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--paper-dim);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+/* ── closing cta ── */
+.guide-cta {
+  margin-top: 1rem;
+  padding: clamp(2rem, 5vw, 3rem);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--ink-1);
+  box-shadow: var(--card-shadow);
+  text-align: center;
+}
+.guide-cta h2 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.guide-cta p {
+  margin: 0 auto 1.5rem;
+  max-width: 44ch;
+  color: var(--paper-dim);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+.guide-cta-button {
+  display: inline-block;
+  padding: 0.8rem 1.6rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.guide-cta-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -12px rgba(31, 111, 235, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-cta-button:hover {
+    transform: none;
+  }
+}
+
+/* Chinese headings carry less weight well; match the home page treatment. */
+[lang="zh-CN"] .guide-intro h1,
+[lang="zh-CN"] .guide-section h2,
+[lang="zh-CN"] .guide-cta h2 {
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
