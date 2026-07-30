@@ -51,6 +51,36 @@ export const iconSlugs = [
 
 export const iconImages = iconSlugs.map((s) => `https://cdn.simpleicons.org/${s}/0b1118`);
 
+// The curated local models DJL offers, mirrored by hand from
+// apps/server/src/localModels/catalog.ts. This app builds standalone and is mirrored to its own
+// deployment repository, so it cannot import from the server workspace; update both together.
+//
+// `agent: false` is `supportsToolCalls: false` there. Such a model chats but cannot drive tools,
+// and handing it tool definitions stalls silently rather than erroring — which is the one thing a
+// visitor must not have to discover by watching the agent hang.
+export const localModelCatalog = [
+  { id: "qwen3-1.7b", name: "Qwen3 1.7B", minMemoryGb: 4, downloadGb: 1.4, agent: false },
+  { id: "qwen3.5-2b", name: "Qwen3.5 2B", minMemoryGb: 8, downloadGb: 1.9, agent: false },
+  { id: "granite-4.1-3b", name: "Granite 4.1 3B", minMemoryGb: 8, downloadGb: 2.1, agent: true },
+  {
+    id: "qwen2.5-coder-7b",
+    name: "Qwen2.5 Coder 7B",
+    minMemoryGb: 16,
+    downloadGb: 4.36,
+    agent: true,
+  },
+  { id: "gpt-oss-20b", name: "GPT-OSS 20B", minMemoryGb: 16, downloadGb: 13, agent: true },
+  { id: "qwen3-coder-30b", name: "Qwen3 Coder 30B", minMemoryGb: 32, downloadGb: 19, agent: true },
+] as const;
+
+export type LocalModelRow = (typeof localModelCatalog)[number];
+
+// Weights are fractional gibibytes; a fixed decimal count would print "13.00 GB", which reads as
+// precision the catalog does not claim.
+export function formatGb(value: number): string {
+  return `${Number(value.toFixed(2))} GB`;
+}
+
 export const content = {
   en: {
     htmlLang: "en",
@@ -240,6 +270,141 @@ export const content = {
       ],
       note: "Runs where you are.",
     },
+    start: {
+      tag: "GET STARTED",
+      // Rendered by LayoutTextFlip: `text` is static, `words` rotate. Each word has to read as a
+      // grammatical ending to `text` on its own.
+      flip: {
+        text: "Three steps to an agent that runs",
+        words: ["privately", "on your own hardware", "without the cloud"],
+      },
+      body: "Install DJL, give it a model that runs on your own hardware, and keep approval over every change.",
+      steps: [
+        { k: "Install DJL", v: "One download for macOS or Windows." },
+        { k: "Add a local model", v: "DJL detects your hardware and installs the runtime for you." },
+        { k: "Describe a task", v: "Read the plan, watch the tools, approve the diff." },
+      ],
+      cta: "Read the guide",
+    },
+    guide: {
+      eyebrow: "Guide",
+      title: "Put DJL to work",
+      lede: "Two things worth knowing: how the agent runs a task, and how to give it a model that runs on your own machine.",
+      home: "Home",
+      toc: "On this page",
+      sections: { use: "Using the agent", local: "Installing a local model" },
+      use: {
+        index: "01",
+        tag: "Using the agent",
+        title: "Describe the task, then stay in control",
+        body: "DJL turns a request into ordered steps, runs each tool in the open, and stops for your approval before anything touches your files.",
+        steps: [
+          {
+            k: "Describe the task",
+            v: "Write what you want in English or 中文. Both languages share one context, so you can switch mid-task without repeating yourself.",
+          },
+          {
+            k: "Read the plan",
+            v: "Work is decomposed into ordered, legible steps you can read before anything runs.",
+          },
+          {
+            k: "Watch the tools",
+            v: "Each tool executes in a sandbox, streaming its output so nothing happens off-screen.",
+          },
+          {
+            k: "Review the diff",
+            v: "Every change waits for you: approve and apply, request changes, or cancel and roll back.",
+          },
+        ],
+        note: "Nothing reaches your project until you approve it.",
+      },
+      local: {
+        index: "02",
+        tag: "Installing a local model",
+        title: "Run a model on your own hardware",
+        body: "DJL works out what your computer can run, then installs and starts the runtime itself. No terminal, no admin password.",
+        desktopOnly: "Local model management lives in the DJL desktop app.",
+        steps: [
+          { k: "Open the desktop app", v: "Download DJL for your platform and launch it." },
+          {
+            k: "Go to Settings → Local Models",
+            v: "Listed under Private inference.",
+          },
+          {
+            k: "Check what DJL detected",
+            v: "It reports your processor, graphics card, and memory, then recommends the largest model that will still feel fast — deliberately one tier below what your machine could merely hold.",
+          },
+          {
+            k: "Install and start a runtime",
+            v: "Choose Ollama or LM Studio. DJL downloads it, starts the local server, and connects to it.",
+          },
+          {
+            k: "Select the model",
+            v: "Once installed, pick it in the model picker and describe your first task.",
+          },
+        ],
+        runtimeTitle: "Two runtimes",
+        runtimes: [
+          {
+            k: "Ollama",
+            v: "DJL installs, starts, and connects Ollama for you. No terminal or admin password needed.",
+          },
+          {
+            k: "LM Studio",
+            v: "Install LM Studio once, then DJL can start and manage its local server.",
+          },
+        ],
+        table: {
+          title: "Curated models",
+          caption: "DJL recommends one of these from your hardware. You can always choose another.",
+          model: "Model",
+          memory: "Memory",
+          download: "Download",
+          drives: "Drives the agent",
+          yes: "Yes",
+          no: "Chat only",
+        },
+        warning: {
+          title: "“Chat only” means chat only",
+          body: "Qwen3 1.7B and Qwen3.5 2B answer questions well but are too small to hold a tool-calling loop together. Give either one a task that needs file edits and it stalls silently instead of reporting an error. For real work pick a model marked “Drives the agent” — Granite 4.1 3B is the smallest that qualifies, and it runs in 8 GB.",
+        },
+        context: {
+          title: "If the tools stop working",
+          body: "A capable model still needs enough context loaded to use tools. When DJL says the model is chat-only at its current context, reload it with a larger context window and the tools come back.",
+        },
+        custom: {
+          title: "Bringing your own model",
+          body: "The curated list is a starting point, not a limit. Install any Ollama tag, LM Studio catalog ID, or exact Hugging Face model URL.",
+        },
+        privacy: {
+          title: "What stays on your machine",
+          body: "Inference runs locally: prompts, code context, and output are never sent to a hosted model provider. DJL connects only to fixed loopback addresses (127.0.0.1) and never exposes either runtime to your network. Tools you approve can still reach the network on their own.",
+        },
+      },
+      cta: {
+        title: "Ready when you are",
+        body: "Download DJL and give it a model that runs where you are.",
+        download: "Download for macOS",
+      },
+    },
+    changelog: {
+      eyebrow: "Changelog",
+      title: "Every release, as it shipped",
+      lede: "Read straight from the published GitHub releases. New versions appear here on their own, with no edit to this site.",
+      home: "Home",
+      guide: "Guide",
+      current: "Current",
+      prerelease: "Pre-release",
+      published: "Published",
+      viewOnGithub: "View release on GitHub",
+      empty: "No releases have been published yet.",
+      emptyHint: "The release feed could not be read just now. GitHub has the canonical list.",
+      emptyAction: "Open releases on GitHub",
+      // Stated rather than hidden: the notes are the tag annotation, so they cannot be translated at
+      // render time without inventing content.
+      sourceNote:
+        "Release notes are taken from each version's GitHub release, so they appear in English.",
+    },
   },
 
   zh: {
@@ -420,6 +585,133 @@ export const content = {
         { h: "资源", links: ["文档", "更新日志", "隐私", "状态"] },
       ],
       note: "在你所在之处运行。",
+    },
+    start: {
+      tag: "开始使用",
+      flip: {
+        text: "三步拥有一个智能体，它运行在",
+        words: ["你的设备上", "本地", "你自己的硬件上"],
+      },
+      body: "安装 DJL，为它配置一个在你自己硬件上运行的模型，并对每一次改动保留批准权。",
+      steps: [
+        { k: "安装 DJL", v: "macOS 与 Windows 各一个安装包。" },
+        { k: "添加本地模型", v: "DJL 会检测你的硬件并自动安装运行时。" },
+        { k: "描述任务", v: "阅读计划、观察工具、批准差异。" },
+      ],
+      cta: "阅读指南",
+    },
+    guide: {
+      eyebrow: "指南",
+      title: "让 DJL 开始工作",
+      lede: "两件值得了解的事：智能体如何执行一项任务，以及如何为它配置一个在你自己设备上运行的模型。",
+      home: "首页",
+      toc: "本页内容",
+      sections: { use: "使用智能体", local: "安装本地模型" },
+      use: {
+        index: "01",
+        tag: "使用智能体",
+        title: "描述任务，并始终掌控",
+        body: "DJL 会把请求拆解为有序步骤，公开运行每个工具，并在改动触及你的文件之前停下来等待批准。",
+        steps: [
+          {
+            k: "描述任务",
+            v: "用中文或英文写下你的需求。两种语言共享同一上下文，因此可以中途切换而无需重述。",
+          },
+          {
+            k: "阅读计划",
+            v: "工作会被拆解为有序、清晰的步骤，在任何操作运行之前供你阅读。",
+          },
+          {
+            k: "观察工具",
+            v: "每个工具都在沙箱中执行，并实时输出，任何事都不会在你看不到的地方发生。",
+          },
+          {
+            k: "审查差异",
+            v: "每一处改动都会等你决定：批准并应用、要求修改，或取消并回滚。",
+          },
+        ],
+        note: "在你批准之前，任何内容都不会写入你的项目。",
+      },
+      local: {
+        index: "02",
+        tag: "安装本地模型",
+        title: "在你自己的硬件上运行模型",
+        body: "DJL 会判断你的电脑能够运行什么，然后自行安装并启动运行时。无需终端，也无需管理员密码。",
+        desktopOnly: "本地模型管理位于 DJL 桌面应用中。",
+        steps: [
+          { k: "打开桌面应用", v: "下载对应平台的 DJL 并启动。" },
+          { k: "进入设置 → 本地模型", v: "位于「私有推理」分组下。" },
+          {
+            k: "查看 DJL 的检测结果",
+            v: "它会报告你的处理器、显卡与内存，并推荐仍能保持流畅的最大模型——有意比你的机器勉强装得下的规格低一档。",
+          },
+          {
+            k: "安装并启动运行时",
+            v: "选择 Ollama 或 LM Studio。DJL 会完成下载、启动本地服务并建立连接。",
+          },
+          {
+            k: "选择模型",
+            v: "安装完成后，在模型选择器中选中它，然后描述你的第一个任务。",
+          },
+        ],
+        runtimeTitle: "两种运行时",
+        runtimes: [
+          {
+            k: "Ollama",
+            v: "DJL 会为你安装、启动并连接 Ollama。无需终端或管理员密码。",
+          },
+          {
+            k: "LM Studio",
+            v: "只需安装一次 LM Studio，之后 DJL 即可启动并管理它的本地服务。",
+          },
+        ],
+        table: {
+          title: "精选模型",
+          caption: "DJL 会依据你的硬件推荐其中之一，你也随时可以另选。",
+          model: "模型",
+          memory: "内存",
+          download: "下载体积",
+          drives: "可驱动智能体",
+          yes: "可以",
+          no: "仅对话",
+        },
+        warning: {
+          title: "「仅对话」就是只能对话",
+          body: "Qwen3 1.7B 与 Qwen3.5 2B 回答问题不错，但太小，无法完整维持一轮工具调用循环。若交给它们需要修改文件的任务，它们会静默停滞而不会报错。要做实际工作，请选择标记为「可驱动智能体」的模型——Granite 4.1 3B 是其中最小的一个，8 GB 内存即可运行。",
+        },
+        context: {
+          title: "如果工具失效了",
+          body: "即使模型本身够强，也需要加载足够的上下文才能使用工具。当 DJL 提示当前上下文下仅能对话时，请以更大的上下文窗口重新加载该模型，工具便会恢复。",
+        },
+        custom: {
+          title: "使用你自己的模型",
+          body: "精选列表只是起点，而非限制。你可以安装任意 Ollama 标签、LM Studio 目录 ID，或精确的 Hugging Face 模型链接。",
+        },
+        privacy: {
+          title: "哪些内容留在你的设备上",
+          body: "推理在本地进行：提示词、代码上下文与输出都不会发送给托管的模型服务商。DJL 只连接固定的本地回环地址（127.0.0.1），绝不会把任一运行时暴露到你的网络中。你批准的工具仍可自行访问网络。",
+        },
+      },
+      cta: {
+        title: "随时可以开始",
+        body: "下载 DJL，为它配置一个在你所在之处运行的模型。",
+        download: "下载 macOS 版",
+      },
+    },
+    changelog: {
+      eyebrow: "更新日志",
+      title: "每一个发布版本",
+      lede: "内容直接来自 GitHub 上已发布的版本。新版本会自动出现在这里，无需改动本站。",
+      home: "首页",
+      guide: "指南",
+      current: "当前版本",
+      prerelease: "预发布",
+      published: "发布于",
+      viewOnGithub: "在 GitHub 上查看",
+      empty: "尚未发布任何版本。",
+      emptyHint: "暂时无法读取发布列表。GitHub 上有完整的版本记录。",
+      emptyAction: "在 GitHub 上查看发布",
+      sourceNote: "更新日志取自各版本的 GitHub 发布说明，因此以英文呈现。",
     },
   },
 } as const;
