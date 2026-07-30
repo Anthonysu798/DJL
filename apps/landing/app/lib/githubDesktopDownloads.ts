@@ -52,7 +52,9 @@ export type ReleaseFetch = (
   init?: CachingRequestInit,
 ) => Promise<{ readonly ok: boolean; json: () => Promise<unknown> }>;
 
-function requestHeaders(): Record<string, string> {
+// Exported so the changelog reads releases through the same headers and optional token rather than
+// standing up a second, divergent GitHub client.
+export function requestHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",

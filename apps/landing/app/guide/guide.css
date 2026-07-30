@@ -1,0 +1,510 @@
+/* ══════════════════════════════════════════════════════════════════════
+   GUIDE — Notion
+   A document on warm paper. One deep-indigo night band heads the page and
+   nothing else inverts. Structure is whitespace and hairlines; pure white is
+   reserved for cards so figure and ground stay gentle. Blue appears only on
+   links, the active signal, and the one primary action. The local / online
+   signals survive as sticker-palette status hues — decoration, not structure.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.guide {
+  --gd-paper: #f6f5f4;
+  --gd-surface: #ffffff;
+  --gd-ink: rgba(0, 0, 0, 0.95);
+  --gd-ink-2: #31302e;
+  --gd-stone: #615d59;
+  --gd-ash: #a39e98;
+  --gd-hairline: #e6e6e6;
+  --gd-night: #213183;
+
+  min-height: 100vh;
+  background: var(--gd-paper);
+  color: var(--gd-ink);
+  font-family: var(--font-body), var(--cjk);
+  font-feature-settings: "lnum", "locl";
+}
+
+html:has(.guide) {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.guide) {
+    scroll-behavior: auto;
+  }
+}
+
+/* ── top bar ── */
+.gd-top {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) clamp(var(--sp-md), 4vw, var(--sp-xxl));
+  border-bottom: 1px solid var(--gd-hairline);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+}
+.gd-top-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-lg);
+}
+.gd-back,
+.gd-top-link {
+  color: var(--gd-ink-2);
+  font-size: 15px;
+  line-height: 1.33;
+  text-decoration: none;
+}
+.gd-back:hover,
+.gd-top-link:hover {
+  color: var(--primary);
+}
+.gd-lang {
+  display: flex;
+  gap: var(--sp-xs);
+}
+.gd-lang a {
+  color: var(--gd-stone);
+  font-size: 15px;
+  text-decoration: none;
+}
+.gd-lang a:hover {
+  color: var(--gd-ink);
+}
+/* Besides links and the CTA, the active signal is the only thing blue may carry. */
+.gd-lang a.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ── the single night band ── */
+.gd-lamp {
+  min-height: 44svh;
+  background: var(--gd-night);
+  /* The header content is lifted into the glow, leaving a tail the height of that lift; the body
+     pulls back up by the same amount. */
+  margin-bottom: -5rem;
+}
+.gd-lamp-inner {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 clamp(var(--sp-md), 4vw, var(--sp-xxl));
+  text-align: center;
+}
+.gd-eyebrow {
+  display: inline-block;
+  margin-bottom: var(--sp-md);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: 9999px;
+  background: #ffffff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.33;
+  letter-spacing: var(--tr-eyebrow);
+}
+.gd-lamp-inner h1 {
+  margin: 0 auto var(--sp-md);
+  max-width: 20ch;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 6.5vw, 4rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: var(--tr-display-1);
+  text-wrap: balance;
+}
+.gd-lamp-inner p {
+  margin: 0 auto;
+  max-width: 52ch;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.5;
+}
+
+/* ── body ── */
+.gd-body {
+  position: relative;
+  padding-top: 5rem;
+}
+.gd-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(var(--sp-xxl), 5vw, 4rem);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(var(--sp-xxl), 5vw, 4rem) clamp(var(--sp-md), 4vw, var(--sp-xxl))
+    clamp(4rem, 8vw, 7rem);
+}
+@media (min-width: 60rem) {
+  .gd-shell {
+    grid-template-columns: 13rem minmax(0, 1fr);
+  }
+}
+
+/* ── sticky contents ── */
+.gd-toc {
+  align-self: start;
+}
+@media (min-width: 60rem) {
+  .gd-toc {
+    position: sticky;
+    top: 5rem;
+  }
+}
+.gd-toc-label {
+  display: block;
+  margin-bottom: var(--sp-sm);
+  color: var(--gd-ash);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.33;
+  letter-spacing: var(--tr-eyebrow);
+  text-transform: uppercase;
+}
+.gd-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gd-toc a {
+  display: block;
+  padding: 6px var(--sp-xs);
+  border-radius: var(--r-sm);
+  color: var(--gd-ink-2);
+  font-size: 15px;
+  line-height: 1.33;
+  text-decoration: none;
+}
+.gd-toc a:hover {
+  background: #ffffff;
+  color: var(--gd-ink);
+}
+
+/* ── sections ── */
+.gd-article {
+  min-width: 0;
+}
+.gd-section {
+  padding-bottom: clamp(3rem, 6vw, 5rem);
+  scroll-margin-top: 5rem;
+}
+.gd-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  margin-bottom: var(--sp-sm);
+}
+/* Category dots from the sticker palette: teal for the agent loop, orange for the local runtime.
+   Both are decoration and status — neither ever paints an action. */
+.gd-index {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gd-stone);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
+}
+.gd-index::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--sticker-teal);
+}
+.gd-section[data-signal="local"] .gd-index::before {
+  background: var(--sticker-orange);
+}
+.gd-tag {
+  color: var(--gd-ash);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
+  text-transform: uppercase;
+}
+
+.gd-section h2 {
+  margin: 0 0 var(--sp-sm);
+  max-width: 28ch;
+  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tr-heading-1);
+  text-wrap: balance;
+}
+.gd-lead {
+  margin: 0 0 var(--sp-xxl);
+  max-width: 64ch;
+  color: var(--gd-ink-2);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.gd-subhead {
+  margin: clamp(2rem, 4vw, 3rem) 0 var(--sp-sm);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.27;
+  letter-spacing: var(--tr-heading-3);
+}
+.gd-caption {
+  margin: 0 0 var(--sp-md);
+  max-width: 64ch;
+  color: var(--gd-stone);
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+/* ── steps: white cards on paper, hairline only ── */
+.gd-steps {
+  display: grid;
+  gap: var(--sp-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gd-steps li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0 var(--sp-md);
+  padding: var(--sp-md) var(--sp-lg);
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-lg);
+  background: var(--gd-surface);
+}
+.gd-step-n {
+  color: var(--gd-ash);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+  padding-top: 1px;
+}
+.gd-steps h3 {
+  margin: 0 0 var(--sp-xxs);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.gd-steps p {
+  margin: 0;
+  color: var(--gd-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.gd-note,
+.gd-desktop-only {
+  max-width: 64ch;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.gd-note {
+  margin: var(--sp-md) 0 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-md);
+  background: #ffffff;
+  color: var(--gd-ink-2);
+}
+/* Status carried by a sticker hue, since the system defines no semantic ramp. */
+.gd-desktop-only {
+  margin: 0 0 var(--sp-lg);
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--r-md);
+  background: rgba(221, 91, 0, 0.07);
+  color: var(--sticker-orange-deep);
+}
+
+/* ── runtimes ── */
+.gd-runtimes {
+  display: grid;
+  gap: var(--sp-md);
+  margin: 0;
+}
+@media (min-width: 42rem) {
+  .gd-runtimes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.gd-runtimes > div {
+  padding: var(--sp-lg);
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-lg);
+  background: var(--gd-surface);
+}
+.gd-runtimes dt {
+  margin-bottom: var(--sp-xxs);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--tr-title);
+}
+.gd-runtimes dd {
+  margin: 0;
+  color: var(--gd-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── model table ── */
+.gd-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-lg);
+  background: var(--gd-surface);
+}
+.gd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  min-width: 34rem;
+}
+.gd-table th,
+.gd-table td {
+  padding: var(--sp-sm) var(--sp-md);
+  text-align: left;
+  border-bottom: 1px solid var(--gd-hairline);
+}
+.gd-table thead th {
+  color: var(--gd-stone);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.gd-table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.gd-table td {
+  color: var(--gd-ink-2);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.gd-table tbody tr:last-child th,
+.gd-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Sticker-palette status tags. Green affirms, orange warns — never blue, which belongs to actions. */
+.gd-pill {
+  display: inline-block;
+  padding: 2px var(--sp-xs);
+  border-radius: 9999px;
+  background: rgba(26, 174, 57, 0.12);
+  color: #14832b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
+  white-space: nowrap;
+}
+.gd-table tr[data-agent="false"] .gd-pill {
+  background: rgba(221, 91, 0, 0.1);
+  color: var(--sticker-orange);
+}
+
+/* ── callouts ── */
+.gd-callout {
+  margin-top: var(--sp-lg);
+  padding: var(--sp-lg);
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-lg);
+  background: var(--gd-surface);
+}
+.gd-callout[data-kind="warning"] {
+  border-color: rgba(221, 91, 0, 0.28);
+  background: rgba(221, 91, 0, 0.05);
+}
+.gd-callout h3 {
+  margin: 0 0 var(--sp-xxs);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--tr-title);
+}
+.gd-callout[data-kind="warning"] h3 {
+  color: var(--sticker-orange-deep);
+}
+.gd-callout p {
+  margin: 0;
+  max-width: 64ch;
+  color: var(--gd-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── masked privacy callout ── */
+.gd-privacy {
+  height: auto;
+  min-height: 14rem;
+  margin-top: var(--sp-lg);
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--gd-surface);
+}
+.gd-privacy-layer {
+  padding: var(--sp-lg);
+}
+.gd-privacy-layer h3 {
+  margin: 0 0 var(--sp-xxs);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: var(--tr-title);
+}
+.gd-privacy-layer p {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 15px;
+  line-height: 1.5;
+}
+/* The masked layer paints through the cursor hole and needs its own colours; the layer beneath keeps
+   the page treatment. */
+.gd-privacy [data-masked="true"] {
+  color: #ffffff;
+}
+.gd-privacy [data-masked="true"] h3,
+.gd-privacy [data-masked="true"] p {
+  color: inherit;
+}
+.gd-privacy .gd-privacy-layer:not([data-masked="true"]) h3 {
+  color: var(--gd-ink);
+}
+.gd-privacy .gd-privacy-layer:not([data-masked="true"]) p {
+  color: var(--gd-ink-2);
+}
+
+/* ── closing cta ── */
+.gd-cta {
+  margin-top: var(--sp-md);
+  padding: clamp(2rem, 5vw, 3rem) var(--sp-lg);
+  border: 1px solid var(--gd-hairline);
+  border-radius: var(--r-xl);
+  background: var(--gd-surface);
+  text-align: center;
+}
+.gd-cta-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tr-heading-1);
+}
+.gd-cta p {
+  margin: var(--sp-sm) auto var(--sp-lg);
+  max-width: 44ch;
+  color: var(--gd-ink-2);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Chinese does not take the Latin display tracking. */
+[lang="zh-CN"] .gd-lamp-inner h1,
+[lang="zh-CN"] .gd-section h2,
+[lang="zh-CN"] .gd-cta-title {
+  letter-spacing: 0;
+}

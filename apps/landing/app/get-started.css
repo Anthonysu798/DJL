@@ -1,0 +1,134 @@
+/* ══════════════════════════════════════════════════════════════════════
+   GET STARTED
+   The last block on the home page, after the capability rail unpins. Quiet by
+   design: three hairline-separated steps and one link out to /guide. The boxed
+   cards this replaced are what made the section read as generic.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.get-started {
+  position: relative;
+  padding: clamp(3.5rem, 9vw, 7rem) clamp(1.25rem, 4vw, 3rem);
+  border-top: 1px solid var(--line);
+}
+
+
+.gs-inner {
+  position: relative;
+  z-index: 1;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.gs-head {
+  margin-bottom: clamp(2.25rem, 5vw, 3.5rem);
+}
+.gs-tag {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--mute);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* The flip renders two inline spans, so the heading is a flex line that wraps as one phrase. */
+.gs-flip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin: 0 0 1rem;
+  max-width: 32ch;
+  font-family: var(--font-display), var(--cjk);
+  font-size: clamp(1.65rem, 4vw, 2.7rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.gs-flip-static {
+  color: var(--paper);
+}
+/* Restrained on purpose: the upstream default is a white pill with a ring and two shadows, which is
+   the same boxed look this section is getting away from. A hairline underline is enough. */
+.gs-flip-word {
+  color: var(--accent);
+  border-bottom: 2px solid rgba(0, 117, 222, 0.28);
+  padding-bottom: 0.05em;
+}
+
+.gs-head p {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--paper-dim);
+  font-size: clamp(0.96rem, 1.4vw, 1.08rem);
+  line-height: 1.62;
+}
+
+/* ── steps ── */
+.gs-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0 0 clamp(2rem, 4vw, 2.75rem);
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line-2);
+}
+.gs-steps li {
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+@media (min-width: 48rem) {
+  .gs-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--line);
+  }
+  .gs-steps li {
+    padding: 1.5rem clamp(1rem, 2vw, 1.75rem) 1.75rem 0;
+    border-bottom: 0;
+  }
+  /* Vertical hairlines between columns instead of three separate card outlines. */
+  .gs-steps li + li {
+    border-left: 1px solid var(--line);
+    padding-left: clamp(1rem, 2vw, 1.75rem);
+  }
+}
+
+.gs-step-n {
+  display: block;
+  margin-bottom: 0.7rem;
+  color: var(--mute);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tr-eyebrow);
+}
+/* The old rule singling out step two in amber is gone: --accent and --amber are the same ember now,
+   so it rendered identically. The local / online encoding still does real work on the guide, where
+   two runtimes and two section kinds actually need telling apart. */
+.gs-steps h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.gs-steps p {
+  margin: 0;
+  color: var(--paper-dim);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+/* ── actions ── */
+.gs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+
+[lang="zh-CN"] .gs-flip {
+  letter-spacing: -0.01em;
+}

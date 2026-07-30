@@ -35,7 +35,7 @@ export function ThreeSignalCore({ className = "" }: { className?: string }) {
 
       const coreGeometry = new THREE.IcosahedronGeometry(1.05, 2);
       const coreMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffb454,
+        color: 0xf08a46,
         wireframe: true,
         transparent: true,
         opacity: 0.72,
@@ -45,7 +45,7 @@ export function ThreeSignalCore({ className = "" }: { className?: string }) {
 
       const shellGeometry = new THREE.TorusGeometry(1.78, 0.008, 8, 120);
       const ringMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffb454,
+        color: 0xf08a46,
         transparent: true,
         opacity: 0.5,
       });
@@ -71,7 +71,7 @@ export function ThreeSignalCore({ className = "" }: { className?: string }) {
       const pointsGeometry = new THREE.BufferGeometry();
       pointsGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       const pointsMaterial = new THREE.PointsMaterial({
-        color: 0x5aa9ff,
+        color: 0x8fb0ce,
         size: 0.025,
         transparent: true,
         opacity: 0.62,

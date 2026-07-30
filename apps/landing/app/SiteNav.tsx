@@ -245,6 +245,14 @@ export function SiteNav({ t }: { t: Content }) {
         </nav>
 
         <div className="site-nav-actions">
+          {/* Real routes, so they stay out of `items` — that list drives the GSAP
+              scrollTo and the scroll-spy marker, both of which assume an on-page section. */}
+          <a className="site-nav-guide" href={isZh ? "/guide" : "/guide?lang=en"}>
+            {isZh ? "指南" : "Guide"}
+          </a>
+          <a className="site-nav-guide" href={isZh ? "/changelog" : "/changelog?lang=en"}>
+            {isZh ? "更新日志" : "Changelog"}
+          </a>
           <div className="site-nav-lang" role="group" aria-label="Language">
             <a href="?lang=en" className={isZh ? "" : "active"}>
               EN
@@ -254,7 +262,8 @@ export function SiteNav({ t }: { t: Content }) {
             </a>
           </div>
           <a
-            className="site-nav-cta"
+            className="btn"
+            data-variant="utility"
             href="#start"
             onClick={(event) => scrollTo(event, "start")}
           >

@@ -6,6 +6,7 @@ import { SiteNav } from "./SiteNav";
 import { DjlHero } from "./hero/DjlHero";
 import { HeroRailGateway } from "./HeroRailGateway";
 import { ContextRailField } from "./ContextRailField";
+import { GetStarted } from "./GetStarted";
 
 export function Site({
   locale,
@@ -56,6 +57,7 @@ export function Site({
       <div className="content-light">
         <HeroRailGateway stats={t.hero.stats} />
         <ContextRailField t={t} />
+        <GetStarted t={t} locale={locale} />
       </div>
     </main>
   );
