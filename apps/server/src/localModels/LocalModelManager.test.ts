@@ -1880,7 +1880,9 @@ describe("LocalModelManager", () => {
     expect(removed).toEqual([]);
     expect(installed.has("qwen3-coder:30b")).toBe(true);
 
-    expect(releasePull).toBeTypeOf("function");
+    await vi.waitFor(() => {
+      expect(releasePull).toBeTypeOf("function");
+    });
     releasePull?.();
     await vi.waitFor(async () => {
       const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
