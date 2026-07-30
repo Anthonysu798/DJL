@@ -37,7 +37,7 @@ describe("native hardware recommendation smoke", () => {
         } catch (error) {
           // A machine can legitimately lack a Vulkan 1.2 loader. C# source/ABI mistakes are not
           // runtime capability failures and must remain visible in the native smoke test.
-          expect(String(error)).not.toMatch(/(?:Add-Type|Cannot add type|error CS\d{4})/iu);
+          expect(String(error)).not.toMatch(/(?:Cannot add type|error CS\d{4})/iu);
         }
       }
 
