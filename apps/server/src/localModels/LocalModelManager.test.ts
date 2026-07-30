@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { SpawnOptions } from "node:child_process";
 
 import type { LocalModelsSnapshot } from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -151,6 +152,9 @@ describe("LocalModelManager", () => {
         });
       }
       if (url.endsWith("/api/v1/models")) return json({ models: [] });
+      if (url.endsWith("/v1/chat/completions")) {
+        return json({ choices: [{ message: { content: "READY" } }] });
+      }
       if (url.endsWith("/api/pull")) {
         installed = true;
         return new Response(
@@ -169,6 +173,16 @@ describe("LocalModelManager", () => {
       freeDiskBytes: 20 * 1024 ** 3,
       platform: "win32",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 8 * 1024 ** 3,
+        availableMemoryBytes: 8 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 20 * 1024 ** 3,
+      }),
       installOllama,
       spawnRuntime: () => {
         running = true;
@@ -176,7 +190,10 @@ describe("LocalModelManager", () => {
       },
     });
 
-    const started = await manager.startSetup({ runtime: "ollama" });
+    const started = await manager.startSetup({
+      runtime: "ollama",
+      recommendationId: "qwen3.5-2b",
+    });
     await vi.waitFor(async () => {
       const snapshot = await manager.getSnapshot();
       expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
@@ -498,7 +515,9 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 8 * 1024 ** 3,
         freeDiskBytes: 20 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        runInferenceCanary: vi.fn(async () => undefined),
         installOllama: vi.fn(async () => ({
           command: join(stateDir, "local-models", "runtimes", "ollama", "current", "ollama"),
           version: "v0.32.0",
@@ -508,7 +527,10 @@ describe("LocalModelManager", () => {
           return { once: vi.fn(), unref: vi.fn() };
         },
       });
-      const started = await manager.startSetup({ runtime: "ollama" });
+      const started = await manager.startSetup({
+        runtime: "ollama",
+        recommendationId: "qwen3.5-2b",
+      });
       await vi.waitFor(async () => {
         const snapshot = await manager.getSnapshot();
         expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
@@ -581,7 +603,9 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 8 * 1024 ** 3,
         freeDiskBytes: 20 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        runInferenceCanary: vi.fn(async () => undefined),
         installOllama: vi.fn(async () => ({
           command: join(stateDir, "local-models", "runtimes", "ollama", "current", "ollama"),
           version: "v0.32.0",
@@ -592,7 +616,10 @@ describe("LocalModelManager", () => {
         },
       });
 
-      const started = await manager.startSetup({ runtime: "ollama" });
+      const started = await manager.startSetup({
+        runtime: "ollama",
+        recommendationId: "qwen3.5-2b",
+      });
       await vi.waitFor(async () => {
         const snapshot = await manager.getSnapshot();
         expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
@@ -636,7 +663,9 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 8 * 1024 ** 3,
         freeDiskBytes: 20 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+        runInferenceCanary: vi.fn(async () => undefined),
         installOllama: vi.fn(async () => ({
           command: join(stateDir, "local-models", "runtimes", "ollama", "current", "ollama"),
           version: "v0.32.0",
@@ -647,7 +676,10 @@ describe("LocalModelManager", () => {
         },
       });
 
-      const started = await manager.startSetup({ runtime: "ollama" });
+      const started = await manager.startSetup({
+        runtime: "ollama",
+        recommendationId: "qwen3.5-2b",
+      });
       await vi.waitFor(async () => {
         const snapshot = await manager.getSnapshot();
         expect(snapshot.setupJobs.find(({ id }) => id === started.id)?.state).toBe("ready");
@@ -990,6 +1022,7 @@ describe("LocalModelManager", () => {
         totalMemoryBytes: 32 * 1024 ** 3,
         freeDiskBytes: 200 * 1024 ** 3,
         platform: "win32",
+        osVersion: "10.0.19045",
         env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       });
     }
@@ -1162,10 +1195,15 @@ describe("LocalModelManager", () => {
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 20 * 1024 ** 3,
       platform: "win32",
+      osVersion: "10.0.19045",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      runInferenceCanary: vi.fn(async () => undefined),
     });
 
-    const started = await manager.startSetup({ runtime: "lmstudio" });
+    const started = await manager.startSetup({
+      runtime: "lmstudio",
+      recommendationId: "qwen3.5-2b",
+    });
     await vi.waitFor(
       async () => {
         const snapshot = await manager.getSnapshot();
@@ -1215,6 +1253,7 @@ describe("LocalModelManager", () => {
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 40 * 1024 ** 3,
       platform: "win32",
+      osVersion: "10.0.19045",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       installOllama,
     });
@@ -1231,12 +1270,14 @@ describe("LocalModelManager", () => {
     if ("job" in outcome) await manager.cancelSetup(outcome.job.id);
 
     expect(outcome).toEqual({ error: expect.any(Error) });
-    expect("error" in outcome ? String(outcome.error) : "").toContain("16 GB");
+    expect("error" in outcome ? String(outcome.error) : "").toContain(
+      "not a safe champion for the selected category",
+    );
     expect(installOllama).not.toHaveBeenCalled();
     expect((await manager.getSnapshot()).setupJobs).toHaveLength(0);
   });
 
-  it("reuses the same active setup and rejects a different concurrent setup", async () => {
+  it("reuses the active category setup and rejects a different concurrent category", async () => {
     const stateDir = await temporaryRoot();
     const installOllama = vi.fn(() => new Promise<never>(() => undefined));
     const manager = new LocalModelManager({
@@ -1247,6 +1288,7 @@ describe("LocalModelManager", () => {
       totalMemoryBytes: 8 * 1024 ** 3,
       freeDiskBytes: 40 * 1024 ** 3,
       platform: "win32",
+      osVersion: "10.0.19045",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
       installOllama,
     });
@@ -1266,17 +1308,23 @@ describe("LocalModelManager", () => {
       recommendationId: "qwen3.5-2b",
     });
     expect(reused.id).toBe(active.id);
+    const reusedAfterRecommendationChange = await manager.startSetup({
+      runtime: "ollama",
+      recommendationId: "granite-4.1-3b",
+    });
+    expect(reusedAfterRecommendationChange.id).toBe(active.id);
     await expect(
       manager.startSetup({
         runtime: "ollama",
+        useCase: "coding",
         recommendationId: "granite-4.1-3b",
       }),
-    ).rejects.toThrow("another local AI setup");
+    ).rejects.toThrow("Another local AI is already being prepared");
 
     expect((await manager.cancelSetup(active.id)).state).toBe("cancelled");
   });
 
-  it("enforces memory and concurrency guards when retrying setup", async () => {
+  it("reuses an active category setup when retrying older failures", async () => {
     const stateDir = await temporaryRoot();
     await mkdir(join(stateDir, "local-models"), { recursive: true });
     await writeFile(
@@ -1335,9 +1383,795 @@ describe("LocalModelManager", () => {
       installOllama: vi.fn(() => new Promise<never>(() => undefined)),
     });
 
-    await expect(manager.retrySetup("failed-oversized")).rejects.toThrow("16 GB");
-    await expect(manager.retrySetup("failed-safe")).rejects.toThrow("another local AI setup");
+    expect((await manager.retrySetup("failed-oversized")).id).toBe("active-safe");
+    expect((await manager.retrySetup("failed-safe")).id).toBe("active-safe");
     await manager.cancelSetup("active-safe");
+  });
+
+  it("blocks one-click setup on Windows versions older than Windows 10 22H2", async () => {
+    const stateDir = await temporaryRoot();
+    const installOllama = vi.fn();
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      installOllama,
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19044",
+        totalMemoryBytes: 32 * 1024 ** 3,
+        availableMemoryBytes: 24 * 1024 ** 3,
+        cpuLogicalCores: 16,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 64 * 1024 ** 3,
+      }),
+    });
+
+    await expect(manager.startSetup({ runtime: "ollama" })).rejects.toThrow(
+      "Windows 10 22H2 or later",
+    );
+    expect(installOllama).not.toHaveBeenCalled();
+  });
+
+  it("routes Intel Macs to Ollama instead of an unsupported LM Studio setup", async () => {
+    const stateDir = await temporaryRoot();
+    const installLmStudio = vi.fn();
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "darwin",
+      env: { PATH: "" },
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      installLmStudio,
+      hardwareProfileProvider: async () => ({
+        platform: "darwin",
+        osVersion: "14.7.6",
+        totalMemoryBytes: 32 * 1024 ** 3,
+        availableMemoryBytes: 24 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 64 * 1024 ** 3,
+      }),
+    });
+
+    await expect(manager.startSetup({ runtime: "lmstudio" })).rejects.toThrow(
+      "Choose Ollama for an Intel Mac",
+    );
+    await expect(manager.installRuntime("lmstudio")).rejects.toThrow(
+      "Choose Ollama for an Intel Mac",
+    );
+    expect(installLmStudio).not.toHaveBeenCalled();
+  });
+
+  it.each(["13.6.9", "garbage", undefined])(
+    "blocks direct runtime installation when macOS cannot be verified as supported (%s)",
+    async (osVersion) => {
+      const stateDir = await temporaryRoot();
+      const installOllama = vi.fn();
+      const manager = new LocalModelManager({
+        stateDir,
+        platform: "darwin",
+        env: { PATH: "" },
+        fetch: vi.fn(async () => {
+          throw new Error("not running");
+        }),
+        installOllama,
+        hardwareProfileProvider: async () => ({
+          platform: "darwin",
+          ...(osVersion === undefined ? {} : { osVersion }),
+          totalMemoryBytes: 32 * 1024 ** 3,
+          availableMemoryBytes: 24 * 1024 ** 3,
+          cpuLogicalCores: 10,
+          cpuArchitecture: "arm64",
+          gpus: [],
+          freeDiskBytes: 64 * 1024 ** 3,
+        }),
+      });
+
+      await expect(manager.installRuntime("ollama")).rejects.toThrow("macOS 14 or later");
+      expect(installOllama).not.toHaveBeenCalled();
+    },
+  );
+
+  it("publishes the detected hardware profile and recommends from available capacity", async () => {
+    const stateDir = await temporaryRoot();
+    const manager = new LocalModelManager({
+      stateDir,
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 32 * 1024 ** 3,
+        availableMemoryBytes: 24 * 1024 ** 3,
+        cpuLogicalCores: 12,
+        cpuArchitecture: "x64",
+        gpus: [
+          {
+            name: "GPU",
+            dedicatedMemoryBytes: 12 * 1024 ** 3,
+            availableMemoryBytes: 11 * 1024 ** 3,
+          },
+        ],
+        freeDiskBytes: 80 * 1024 ** 3,
+      }),
+    });
+
+    const snapshot = await manager.getSnapshot();
+
+    expect(snapshot.recommendedModelId).toBe("gpt-oss-20b");
+    expect(snapshot.recommendedModelIdsByUseCase).toEqual({
+      general: "gpt-oss-20b",
+      document: "granite-4.1-3b",
+      reasoning: "gpt-oss-20b",
+      coding: "qwen2.5-coder-14b",
+    });
+    expect(snapshot.hardwareProfile?.availableMemoryBytes).toBe(24 * 1024 ** 3);
+    expect(snapshot.hardwareProfile?.gpus[0]).toEqual({
+      name: "GPU",
+      dedicatedMemoryBytes: 12 * 1024 ** 3,
+      availableMemoryBytes: 11 * 1024 ** 3,
+    });
+    expect(snapshot.totalMemoryBytes).toBe(snapshot.hardwareProfile?.totalMemoryBytes);
+    expect(snapshot.freeDiskBytes).toBe(snapshot.hardwareProfile?.freeDiskBytes);
+  });
+
+  it("refreshes an expired hardware snapshot so the displayed recommendation follows load", async () => {
+    const stateDir = await temporaryRoot();
+    const gib = 1024 ** 3;
+    const hardwareProfileProvider = vi
+      .fn()
+      .mockResolvedValueOnce({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 32 * gib,
+        availableMemoryBytes: 24 * gib,
+        cpuLogicalCores: 20,
+        cpuArchitecture: "x64",
+        gpus: [
+          {
+            name: "GPU",
+            dedicatedMemoryBytes: 24 * gib,
+            availableMemoryBytes: 22 * gib,
+            memoryType: "dedicated" as const,
+            computeCompatible: true,
+          },
+        ],
+        freeDiskBytes: 80 * gib,
+      })
+      .mockResolvedValue({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 32 * gib,
+        availableMemoryBytes: 8 * gib,
+        cpuLogicalCores: 20,
+        cpuArchitecture: "x64",
+        gpus: [
+          {
+            name: "GPU",
+            dedicatedMemoryBytes: 24 * gib,
+            availableMemoryBytes: 2 * gib,
+            memoryType: "dedicated" as const,
+            computeCompatible: true,
+          },
+        ],
+        freeDiskBytes: 80 * gib,
+      });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      hardwareProfileProvider,
+      hardwareProfileTtlMs: 0,
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+    });
+
+    expect((await manager.getSnapshot()).recommendedModelId).toBe("gpt-oss-20b");
+    expect((await manager.getSnapshot()).recommendedModelId).toBe("granite-4.1-3b");
+    expect(hardwareProfileProvider).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the physical Apple Silicon host architecture when the app runs under Rosetta", async () => {
+    const stateDir = await temporaryRoot();
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "darwin",
+      totalMemoryBytes: 16 * 1024 ** 3,
+      availableMemoryBytes: 12 * 1024 ** 3,
+      cpuLogicalCores: 8,
+      freeDiskBytes: 64 * 1024 ** 3,
+      env: {
+        PATH: "",
+        DJL_HOST_ARCH: "arm64",
+        DJL_PROCESS_ARCH: "x64",
+        DJL_RUNNING_UNDER_TRANSLATION: "1",
+      },
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+    });
+
+    expect((await manager.getSnapshot()).hardwareProfile).toMatchObject({
+      cpuArchitecture: "arm64",
+      processArchitecture: "x64",
+      runningUnderTranslation: true,
+    });
+  });
+
+  it("passes the Apple Silicon host architecture to setup installers under Rosetta", async () => {
+    const stateDir = await temporaryRoot();
+    const installLmStudio = vi.fn(async () => {
+      throw new Error("stop after architecture check");
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "darwin",
+      env: {
+        PATH: "",
+        DJL_HOST_ARCH: "arm64",
+        DJL_PROCESS_ARCH: "x64",
+        DJL_RUNNING_UNDER_TRANSLATION: "1",
+      },
+      hardwareProfileProvider: async () => ({
+        platform: "darwin",
+        osVersion: "15.6",
+        totalMemoryBytes: 16 * 1024 ** 3,
+        availableMemoryBytes: 12 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "arm64",
+        processArchitecture: "x64",
+        runningUnderTranslation: true,
+        gpus: [
+          {
+            name: "Apple GPU",
+            dedicatedMemoryBytes: null,
+            availableMemoryBytes: null,
+            memoryType: "unified",
+          },
+        ],
+        freeDiskBytes: 64 * 1024 ** 3,
+      }),
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      installLmStudio,
+    });
+
+    const started = await manager.startSetup({ runtime: "lmstudio" });
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job?.state).toBe("failed");
+    });
+
+    expect(installLmStudio).toHaveBeenCalledWith(
+      expect.objectContaining({ platform: "darwin", arch: "arm64" }),
+    );
+  });
+
+  it("refreshes available RAM and VRAM before choosing a one-click setup model", async () => {
+    const stateDir = await temporaryRoot();
+    const gib = 1024 ** 3;
+    const profiles = [
+      {
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 32 * gib,
+        availableMemoryBytes: 24 * gib,
+        cpuLogicalCores: 20,
+        cpuArchitecture: "x64",
+        gpus: [
+          {
+            name: "RTX 4070 SUPER",
+            dedicatedMemoryBytes: 12 * gib,
+            availableMemoryBytes: 11 * gib,
+            memoryType: "dedicated" as const,
+            computeCompatible: true,
+          },
+        ],
+        freeDiskBytes: 80 * gib,
+      },
+      {
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 32 * gib,
+        availableMemoryBytes: Math.round(4.9 * gib),
+        cpuLogicalCores: 20,
+        cpuArchitecture: "x64",
+        gpus: [
+          {
+            name: "RTX 4070 SUPER",
+            dedicatedMemoryBytes: 12 * gib,
+            availableMemoryBytes: Math.round(5.5 * gib),
+            memoryType: "dedicated" as const,
+            computeCompatible: true,
+          },
+        ],
+        freeDiskBytes: 80 * gib,
+      },
+    ];
+    let profileIndex = 0;
+    const hardwareProfileProvider = vi.fn(
+      async () => profiles[Math.min(profileIndex++, profiles.length - 1)]!,
+    );
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      hardwareProfileProvider,
+      fetch: vi.fn(async () => {
+        throw new Error("not running");
+      }),
+      installOllama: vi.fn(async () => {
+        throw new Error("stop after recommendation");
+      }),
+    });
+
+    expect((await manager.getSnapshot()).recommendedModelId).toBe("gpt-oss-20b");
+
+    const started = await manager.startSetup({ runtime: "ollama" });
+
+    expect(started.recommendationId).toBe("granite-4.1-3b");
+    expect(started.modelId).toBe("granite4.1:3b");
+    expect(hardwareProfileProvider).toHaveBeenCalledTimes(2);
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job?.state).toBe("failed");
+    });
+  });
+
+  it("keeps canary downgrade inside the selected coding category", async () => {
+    const stateDir = await temporaryRoot();
+    const installed = new Set<string>();
+    const removed: string[] = [];
+    const setupMessages: string[] = [];
+    const runInferenceCanary = vi.fn(async ({ modelId }: { modelId: string }) => {
+      if (modelId === "qwen3-coder:30b") throw new Error("model could not load");
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "linux",
+      env: { PATH: "" },
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 64 * 1024 ** 3,
+        availableMemoryBytes: 56 * 1024 ** 3,
+        cpuLogicalCores: 16,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 80 * 1024 ** 3,
+      }),
+      runInferenceCanary,
+      onSnapshot: (snapshot) => {
+        const message = snapshot.setupJobs[0]?.message;
+        if (message) setupMessages.push(message);
+      },
+      fetch: vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+        if (url.endsWith("/api/tags")) {
+          return json({ models: [...installed].map((name) => ({ name, size: 100 })) });
+        }
+        if (url.endsWith("/api/v1/models")) return json({ models: [] });
+        if (url.endsWith("/api/delete")) {
+          const body = JSON.parse(String(init?.body)) as { model: string };
+          removed.push(body.model);
+          installed.delete(body.model);
+          return json({});
+        }
+        if (url.endsWith("/api/pull")) {
+          const body = JSON.parse(String(init?.body)) as { model: string };
+          installed.add(body.model);
+          return new Response(
+            new TextEncoder().encode('{"status":"success","completed":100,"total":100}\n'),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    });
+
+    const started = await manager.startSetup({ runtime: "ollama", useCase: "coding" });
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job?.state).toBe("ready");
+      expect(job?.useCase).toBe("coding");
+      expect(job?.recommendationId).toBe("qwen2.5-coder-14b");
+      expect(job?.modelId).toBe("qwen2.5-coder:14b");
+    });
+
+    expect(runInferenceCanary.mock.calls.map(([input]) => input.modelId)).toEqual([
+      "qwen3-coder:30b",
+      "qwen2.5-coder:14b",
+    ]);
+    expect(removed).toEqual(["qwen3-coder:30b"]);
+    expect(installed).toEqual(new Set(["qwen2.5-coder:14b"]));
+    expect(setupMessages.some((message) => message.includes("more compatible"))).toBe(true);
+    expect(
+      setupMessages.every((message) => !/Ollama|LM Studio|qwen|gpt-oss|:14b|:20b/.test(message)),
+    ).toBe(true);
+  });
+
+  it("reuses the active runtime setup after automatic downgrade changes its model", async () => {
+    const stateDir = await temporaryRoot();
+    const installed = new Set(["qwen3-coder:30b"]);
+    const removed: string[] = [];
+    let releasePull: (() => void) | undefined;
+    const hardwareProfileProvider = vi.fn(async () => ({
+      platform: "win32",
+      osVersion: "10.0.19045",
+      totalMemoryBytes: 64 * 1024 ** 3,
+      availableMemoryBytes: 56 * 1024 ** 3,
+      cpuLogicalCores: 16,
+      cpuArchitecture: "x64",
+      gpus: [],
+      freeDiskBytes: 80 * 1024 ** 3,
+    }));
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "linux",
+      env: { PATH: "" },
+      hardwareProfileProvider,
+      runInferenceCanary: async ({ modelId }) => {
+        if (modelId === "qwen3-coder:30b") throw new Error("model could not load");
+      },
+      fetch: vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+        if (url.endsWith("/api/tags")) {
+          return json({ models: [...installed].map((name) => ({ name, size: 100 })) });
+        }
+        if (url.endsWith("/api/v1/models")) return json({ models: [] });
+        if (url.endsWith("/api/delete")) {
+          const body = JSON.parse(String(init?.body)) as { model: string };
+          removed.push(body.model);
+          installed.delete(body.model);
+          return json({});
+        }
+        if (url.endsWith("/api/pull")) {
+          const body = JSON.parse(String(init?.body)) as { model: string };
+          expect(body.model).toBe("qwen2.5-coder:14b");
+          return new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                releasePull = () => {
+                  installed.add(body.model);
+                  controller.enqueue(
+                    new TextEncoder().encode('{"status":"success","completed":100,"total":100}\n'),
+                  );
+                  controller.close();
+                };
+              },
+            }),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    });
+
+    const started = await manager.startSetup({ runtime: "ollama", useCase: "coding" });
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job?.state).toBe("downloading_model");
+      expect(job?.useCase).toBe("coding");
+      expect(job?.modelId).toBe("qwen2.5-coder:14b");
+    });
+
+    const reused = await manager.startSetup({ runtime: "ollama", useCase: "coding" });
+    expect(reused.id).toBe(started.id);
+    expect(reused.modelId).toBe("qwen2.5-coder:14b");
+    await expect(manager.startSetup({ runtime: "ollama", useCase: "document" })).rejects.toThrow(
+      "Another local AI is already being prepared",
+    );
+    await expect(manager.startSetup({ runtime: "lmstudio", useCase: "coding" })).rejects.toThrow(
+      "Another local AI is already being prepared",
+    );
+    expect(hardwareProfileProvider).toHaveBeenCalledOnce();
+    expect(removed).toEqual([]);
+    expect(installed.has("qwen3-coder:30b")).toBe(true);
+
+    expect(releasePull).toBeTypeOf("function");
+    releasePull?.();
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job?.state).toBe("ready");
+    });
+  });
+
+  it("does not retry a failed category while another category uses the same runtime", async () => {
+    const stateDir = await temporaryRoot();
+    const setupDirectory = join(stateDir, "local-models");
+    await mkdir(setupDirectory, { recursive: true });
+    await writeFile(
+      join(setupDirectory, "setup-state.json"),
+      JSON.stringify({
+        version: 2,
+        jobs: [
+          {
+            id: "failed-general",
+            runtime: "ollama",
+            useCase: "general",
+            recommendationId: "granite-4.1-3b",
+            modelId: "granite4.1:3b",
+            state: "failed",
+            downloadedBytes: 0,
+            totalBytes: 2 * 1024 ** 3,
+            message: "Setup failed.",
+            startedAt: "2026-07-28T12:00:00.000Z",
+            finishedAt: "2026-07-28T12:01:00.000Z",
+          },
+          {
+            id: "active-coding",
+            runtime: "ollama",
+            useCase: "coding",
+            recommendationId: "qwen2.5-coder-7b",
+            modelId: "qwen2.5-coder:7b",
+            state: "downloading_model",
+            downloadedBytes: 1,
+            totalBytes: 4 * 1024 ** 3,
+            message: "Downloading local AI…",
+            startedAt: "2026-07-28T12:02:00.000Z",
+            finishedAt: null,
+          },
+        ],
+      }),
+    );
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "linux",
+      env: { PATH: "" },
+      fetch: vi.fn(async () => {
+        throw new Error("runtime unavailable");
+      }),
+    });
+
+    await expect(manager.retrySetup("failed-general")).rejects.toThrow(
+      "Another local AI is already being prepared",
+    );
+    await vi.waitFor(async () => {
+      const active = (await manager.getSnapshot()).setupJobs.find(
+        ({ id }) => id === "active-coding",
+      );
+      expect(active?.state).toBe("failed");
+    });
+  });
+
+  it("coalesces concurrent retries of the same failed setup job", async () => {
+    const stateDir = await temporaryRoot();
+    const setupDirectory = join(stateDir, "local-models");
+    await mkdir(setupDirectory, { recursive: true });
+    await writeFile(
+      join(setupDirectory, "setup-state.json"),
+      JSON.stringify({
+        version: 2,
+        jobs: [
+          {
+            id: "failed-general",
+            runtime: "ollama",
+            useCase: "general",
+            recommendationId: "granite-4.1-3b",
+            modelId: "granite4.1:3b",
+            state: "failed",
+            downloadedBytes: 0,
+            totalBytes: 2 * 1024 ** 3,
+            message: "Setup failed.",
+            startedAt: "2026-07-28T12:00:00.000Z",
+            finishedAt: "2026-07-28T12:01:00.000Z",
+          },
+        ],
+      }),
+    );
+    let releaseHardwareProbe: (() => void) | undefined;
+    const hardwareProbeGate = new Promise<void>((resolve) => {
+      releaseHardwareProbe = resolve;
+    });
+    const hardwareProfileProvider = vi.fn(async () => {
+      await hardwareProbeGate;
+      return {
+        platform: "win32" as const,
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 8 * 1024 ** 3,
+        availableMemoryBytes: 8 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 64 * 1024 ** 3,
+      };
+    });
+    const runInferenceCanary = vi.fn(async () => undefined);
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "win32",
+      env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      hardwareProfileProvider,
+      runInferenceCanary,
+      fetch: vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+        if (url.endsWith("/api/tags")) {
+          return json({ models: [{ name: "granite4.1:3b", size: 100 }] });
+        }
+        if (url.endsWith("/api/v1/models")) return json({ models: [] });
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    });
+
+    const firstRetry = manager.retrySetup("failed-general");
+    const secondRetry = manager.retrySetup("failed-general");
+    await vi.waitFor(() => expect(hardwareProfileProvider).toHaveBeenCalledTimes(2));
+    releaseHardwareProbe?.();
+
+    const [first, second] = await Promise.all([firstRetry, secondRetry]);
+    expect(first.id).toBe("failed-general");
+    expect(second.id).toBe("failed-general");
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === "failed-general");
+      expect(job?.state).toBe("ready");
+    });
+    expect(runInferenceCanary).toHaveBeenCalledOnce();
+  });
+
+  it("falls back when real local inference exceeds the usability threshold", async () => {
+    const stateDir = await temporaryRoot();
+    const canaryModels: string[] = [];
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+      if (url.endsWith("/api/tags")) {
+        return json({
+          models: [
+            { name: "qwen3-coder:30b", size: 100 },
+            { name: "qwen2.5-coder:14b", size: 100 },
+          ],
+        });
+      }
+      if (url.endsWith("/api/v1/models")) return json({ models: [] });
+      if (url.endsWith("/v1/chat/completions")) {
+        const body = JSON.parse(String(init?.body)) as { model: string };
+        canaryModels.push(body.model);
+        if (body.model === "qwen3-coder:30b") {
+          await new Promise((resolve) => setTimeout(resolve, 75));
+        }
+        return json({ choices: [{ message: { content: "READY" } }] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "linux",
+      env: { PATH: "" },
+      canaryRequestTimeoutMs: 500,
+      canaryUsabilityThresholdMs: 50,
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 64 * 1024 ** 3,
+        availableMemoryBytes: 56 * 1024 ** 3,
+        cpuLogicalCores: 16,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 80 * 1024 ** 3,
+      }),
+      fetch: fetchMock,
+    });
+
+    const started = await manager.startSetup({ runtime: "ollama", useCase: "coding" });
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job).toMatchObject({
+        state: "ready",
+        recommendationId: "qwen2.5-coder-14b",
+        modelId: "qwen2.5-coder:14b",
+      });
+    });
+    expect(canaryModels).toEqual(["qwen3-coder:30b", "qwen2.5-coder:14b"]);
+  });
+
+  it("falls back when the local inference canary reaches its hard timeout", async () => {
+    const stateDir = await temporaryRoot();
+    const canaryModels: string[] = [];
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+      if (url.endsWith("/api/tags")) {
+        return json({
+          models: [
+            { name: "qwen3-coder:30b", size: 100 },
+            { name: "qwen2.5-coder:14b", size: 100 },
+          ],
+        });
+      }
+      if (url.endsWith("/api/v1/models")) return json({ models: [] });
+      if (url.endsWith("/v1/chat/completions")) {
+        const body = JSON.parse(String(init?.body)) as { model: string };
+        canaryModels.push(body.model);
+        if (body.model === "qwen3-coder:30b") {
+          return await new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            const rejectAborted = () =>
+              reject(signal?.reason instanceof Error ? signal.reason : new Error("aborted"));
+            if (signal?.aborted) rejectAborted();
+            else signal?.addEventListener("abort", rejectAborted, { once: true });
+          });
+        }
+        return json({ choices: [{ message: { content: "READY" } }] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      platform: "linux",
+      env: { PATH: "" },
+      canaryRequestTimeoutMs: 25,
+      canaryUsabilityThresholdMs: 500,
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 64 * 1024 ** 3,
+        availableMemoryBytes: 56 * 1024 ** 3,
+        cpuLogicalCores: 16,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 80 * 1024 ** 3,
+      }),
+      fetch: fetchMock,
+    });
+
+    const started = await manager.startSetup({ runtime: "ollama", useCase: "coding" });
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job).toMatchObject({
+        state: "ready",
+        recommendationId: "qwen2.5-coder-14b",
+        modelId: "qwen2.5-coder:14b",
+      });
+    });
+    expect(canaryModels).toEqual(["qwen3-coder:30b", "qwen2.5-coder:14b"]);
+  });
+
+  it("fails safely when the smallest model returns an empty canary response", async () => {
+    const stateDir = await temporaryRoot();
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+      if (url.endsWith("/api/tags")) {
+        return json({ models: [{ name: "granite4.1:3b", size: 100 }] });
+      }
+      if (url.endsWith("/api/v1/models")) return json({ models: [] });
+      if (url.endsWith("/v1/chat/completions")) {
+        return json({ choices: [{ message: { content: "" } }] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const manager = new LocalModelManager({
+      stateDir,
+      fetch: fetchMock,
+      totalMemoryBytes: 8 * 1024 ** 3,
+      freeDiskBytes: 20 * 1024 ** 3,
+      platform: "linux",
+      env: { PATH: "" },
+    });
+
+    const started = await manager.startSetup({ runtime: "ollama" });
+    await vi.waitFor(async () => {
+      const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
+      expect(job?.state).toBe("failed");
+      expect(job?.message).toBe("Local AI setup could not be completed. Retry setup.");
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:11434/v1/chat/completions",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("starts a stopped local runtime on demand before chat", async () => {
@@ -1346,7 +2180,7 @@ describe("LocalModelManager", () => {
     await mkdir(join(command, ".."), { recursive: true });
     await writeFile(command, "runtime");
     let running = false;
-    const spawnRuntime = vi.fn(() => {
+    const spawnRuntime = vi.fn((_command: string, _args: string[], _options: SpawnOptions) => {
       running = true;
       return { once: vi.fn(), unref: vi.fn() };
     });
@@ -1469,7 +2303,7 @@ describe("LocalModelManager", () => {
         version: "v0.32.0",
       };
     });
-    const spawnRuntime = vi.fn(() => {
+    const spawnRuntime = vi.fn((_command: string, _args: string[], _options: SpawnOptions) => {
       running = true;
       return { once: vi.fn(), unref: vi.fn() };
     });
@@ -1487,7 +2321,25 @@ describe("LocalModelManager", () => {
       stateDir,
       fetch: fetchMock,
       platform: "darwin",
-      env: { PATH: "" },
+      env: {
+        PATH: "",
+        CUDA_VISIBLE_DEVICES: "-1",
+        GGML_VK_VISIBLE_DEVICES: "-1",
+        OLLAMA_VULKAN: "0",
+        Vk_Driver_Files: "C:\\untrusted-vulkan-driver.json",
+        VK_INSTANCE_LAYERS: "untrusted-instance-layer",
+        VK_LOADER_LAYERS_ALLOW: "untrusted-allowed-layer",
+      },
+      hardwareProfileProvider: async () => ({
+        platform: "darwin",
+        osVersion: "15.6",
+        totalMemoryBytes: 16 * 1024 ** 3,
+        availableMemoryBytes: 12 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "arm64",
+        gpus: [],
+        freeDiskBytes: 64 * 1024 ** 3,
+      }),
       installOllama,
       spawnRuntime,
     });
@@ -1499,11 +2351,11 @@ describe("LocalModelManager", () => {
       expect.stringMatching(/local-models[\\/]runtimes[\\/]ollama[\\/]current[\\/]ollama$/u),
       ["serve"],
       expect.objectContaining({
-        // Only the model directory is DJL's to decide. Everything about how the model runs is
-        // Ollama's default: DJL is a UI over the opencode harness, not a tuner of the runtime.
-        // Ollama's own default context is far larger than the 8192 DJL used to force, so pinning
-        // it actively shrank the window and made local models worse.
-        env: expect.objectContaining({ OLLAMA_MODELS: expect.any(String) }),
+        // Keep Ollama's own context default while applying only DJL-owned safety settings.
+        env: expect.objectContaining({
+          OLLAMA_MODELS: expect.any(String),
+          VK_LOADER_LAYERS_DISABLE: "~implicit~",
+        }),
       }),
     );
     expect(spawnRuntime).toHaveBeenCalledWith(
@@ -1513,6 +2365,13 @@ describe("LocalModelManager", () => {
         env: expect.not.objectContaining({ OLLAMA_CONTEXT_LENGTH: expect.anything() }),
       }),
     );
+    const managedEnvironment = spawnRuntime.mock.calls[0]?.[2]?.env;
+    expect(managedEnvironment).not.toHaveProperty("CUDA_VISIBLE_DEVICES");
+    expect(managedEnvironment).not.toHaveProperty("GGML_VK_VISIBLE_DEVICES");
+    expect(managedEnvironment).not.toHaveProperty("OLLAMA_VULKAN");
+    expect(managedEnvironment).not.toHaveProperty("Vk_Driver_Files");
+    expect(managedEnvironment).not.toHaveProperty("VK_INSTANCE_LAYERS");
+    expect(managedEnvironment).not.toHaveProperty("VK_LOADER_LAYERS_ALLOW");
     expect(snapshot.runtimes.find(({ runtime }) => runtime === "ollama")?.state).toBe("running");
     expect(snapshot.runtimeInstallJobs[0]).toMatchObject({
       runtime: "ollama",
@@ -1689,6 +2548,16 @@ describe("LocalModelManager", () => {
       stateDir,
       platform: "win32",
       env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      hardwareProfileProvider: async () => ({
+        platform: "win32",
+        osVersion: "10.0.19045",
+        totalMemoryBytes: 16 * 1024 ** 3,
+        availableMemoryBytes: 12 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 64 * 1024 ** 3,
+      }),
       fetch: vi.fn(async (input: string | URL | Request) => {
         const url = String(input);
         if (url.endsWith("/api/version") || url.endsWith("/api/tags")) {
@@ -1758,6 +2627,16 @@ describe("LocalModelManager", () => {
       fetch: fetchMock,
       platform: "darwin",
       env: { PATH: "" },
+      hardwareProfileProvider: async () => ({
+        platform: "darwin",
+        osVersion: "15.6",
+        totalMemoryBytes: 16 * 1024 ** 3,
+        availableMemoryBytes: 12 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "arm64",
+        gpus: [],
+        freeDiskBytes: 64 * 1024 ** 3,
+      }),
       installOllama,
       spawnRuntime: () => {
         running = true;
@@ -1815,7 +2694,18 @@ describe("LocalModelManager", () => {
           totalMemoryBytes: 16 * 1024 ** 3,
         }),
       },
+      hardwareProfileProvider: async () => ({
+        platform: "linux",
+        osVersion: "6.8.0",
+        totalMemoryBytes: 16 * 1024 ** 3,
+        availableMemoryBytes: 16 * 1024 ** 3,
+        cpuLogicalCores: 8,
+        cpuArchitecture: "x64",
+        gpus: [],
+        freeDiskBytes: 200 * 1024 ** 3,
+      }),
       platform: "linux",
+      freeDiskBytes: 200 * 1024 ** 3,
       env: { PATH: "" },
     });
 
@@ -1824,6 +2714,12 @@ describe("LocalModelManager", () => {
     // 16 GB of system RAM with no GPU cannot run a 13 GB model at usable speed.
     expect(snapshot.recommendedModelId).toBe("granite-4.1-3b");
     expect(snapshot.hardware.acceleration).toBe("cpu_only");
+    expect(snapshot.recommendedModelIdsByUseCase).toEqual({
+      general: "granite-4.1-3b",
+      document: "granite-4.1-3b",
+      reasoning: "qwen3.5-2b",
+      coding: "qwen2.5-coder-7b",
+    });
     expect(snapshot.installedModels).toHaveLength(2);
     expect(
       snapshot.installedModels.every(({ supportsToolCalls }) => supportsToolCalls === false),

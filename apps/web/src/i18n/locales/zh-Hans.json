@@ -170,6 +170,42 @@
         "ready": "计划已就绪",
         "showSidebar": "显示 {{name}} 侧边栏",
         "tasks": "任务"
+      },
+      "zeroConfig": {
+        "action": "准备本地 AI 并开始",
+        "checking": "正在检测这台设备",
+        "device": "检测到的设备：{{summary}}",
+        "deviceSummary": "可用内存 {{availableMemory}} / {{totalMemory}} · {{cores}} 个逻辑核心",
+        "download": "预计下载：{{size}}",
+        "failed": "DJL 无法准备本地 AI",
+        "fallingBack": "正在切换到更小的稳定模型",
+        "gpuSummary": " · {{name}} · 显存 {{vram}}",
+        "gpuSummaryAvailable": " · {{name}} · 可用显存 {{availableVram}} / {{totalVram}}",
+        "placeholder": "你想让 DJL 帮你做什么？",
+        "preparing": "正在准备本地 AI",
+        "privacy": "AI 在本机运行，你的提示和文件不会离开设备。",
+        "recommended": "DJL 为此设备筛选的{{category}}：{{model}}",
+        "retry": "重试",
+        "testing": "正在测试模型",
+        "useCaseLabel": "选择你最需要的能力",
+        "useCases": {
+          "coding": {
+            "description": "写代码、调试与项目任务",
+            "label": "编程冠军"
+          },
+          "document": {
+            "description": "总结、提取与长文处理",
+            "label": "文档冠军"
+          },
+          "general": {
+            "description": "问答、写作与日常任务",
+            "label": "综合冠军"
+          },
+          "reasoning": {
+            "description": "分析、数学与复杂问题",
+            "label": "推理冠军"
+          }
+        }
       }
     },
     "confirmations": {
@@ -1217,12 +1253,47 @@
       "ollamaDescription": "DJL 会为你安装、启动并连接 Ollama，无需终端或管理员密码。",
       "privacyDescription": "模型推理留在此计算机上。提示、代码上下文和输出不会发送给托管模型提供商；获准的工具可另行访问网络。",
       "privacyTitle": "隐私优先设计",
+      "quick": {
+        "chooseAnother": "选择其他安装方式",
+        "description": "DJL 将安装 {{runtime}} 并下载 {{model}}（约 {{size}}）。无需终端或管理员密码。",
+        "download": "下载 {{model}}（约 {{size}}）",
+        "insufficientDisk": "至少需要 {{size}} 可用磁盘空间。",
+        "readyDescription": "{{model}} 已通过 {{runtime}} 安装，可直接在聊天中使用。",
+        "readyTitle": "{{runtime}} 已就绪",
+        "retry": "重试设置",
+        "runtimeLabel": "选择本地运行时",
+        "setup": "一键设置本地 AI · {{model}}（约 {{size}}）",
+        "title": "一键设置 {{runtime}}",
+        "useCaseLabel": "选择本地 AI 最擅长的任务",
+        "useCases": {
+          "coding": {
+            "description": "写代码、调试与项目任务",
+            "label": "编程冠军"
+          },
+          "document": {
+            "description": "总结、提取与长文处理",
+            "label": "文档冠军"
+          },
+          "general": {
+            "description": "问答、写作与日常任务",
+            "label": "综合冠军"
+          },
+          "reasoning": {
+            "description": "分析、数学与复杂问题",
+            "label": "推理冠军"
+          }
+        },
+        "useInChat": "在聊天中使用"
+      },
       "recommendations": {
         "gpt-oss-20b": {
-          "description": "适用于配备 16 GB 或更多内存设备的高性能本地编程模型。"
+          "description": "适用于 24 GB 或更多内存设备的高性能综合与推理模型。"
         },
         "granite-4.1-3b": {
-          "description": "适用于配备 8 GB 内存的 Mac 和 PC 的紧凑型编程模型。"
+          "description": "适用于 8 GB 内存设备的紧凑型综合、文档与编程模型。"
+        },
+        "qwen2.5-coder-14b": {
+          "description": "适用于配备 24 GB 内存设备的更强编程模型。"
         },
         "qwen2.5-coder-7b": {
           "description": "适用于 16 GB 内存设备和 8 GB 显卡的高性能编程模型。"
@@ -1231,10 +1302,10 @@
           "description": "适用于 4 GB 及以上内存低配设备的快速聊天模型。"
         },
         "qwen3-coder-30b": {
-          "description": "面向 32 GB 内存设备的精选高性能编程模型。"
+          "description": "面向 48 GB 内存设备的精选高性能编程模型。"
         },
         "qwen3.5-2b": {
-          "description": "为 8 GB 内存设备优化的紧凑型工具调用聊天模型。"
+          "description": "适用于 6 GB 内存设备的轻量通用与编程模型。"
         }
       },
       "recommendedTitle": "为此计算机推荐",
@@ -2280,6 +2351,51 @@
       "settings": "设置",
       "toggleSidebar": "切换话题侧边栏"
     },
+    "onboarding": {
+      "ariaLabel": "DJL 新手教程",
+      "back": "上一步",
+      "finish": "完成",
+      "next": "下一步",
+      "progress": "第 {{current}} / {{total}} 步",
+      "settings": {
+        "action": "开始教程",
+        "basicTitle": "基础功能教程",
+        "description": "重新查看工作模式、项目模式、本地 AI 推荐和设置的箭头引导。",
+        "section": "开始使用",
+        "title": "新手教程"
+      },
+      "skip": "跳过",
+      "steps": {
+        "local-ai-device": {
+          "description": "DJL 会检查可用内存、显存、CPU 和磁盘，并推荐这台电脑当前能够稳定运行的最强模型。",
+          "title": "适合这台电脑的推荐"
+        },
+        "local-ai-prepare": {
+          "description": "DJL 会自动下载、启动、验证并切换模型；如果运行不稳定，只会在同一类别内降级。",
+          "title": "一键准备本地 AI"
+        },
+        "local-ai-purpose": {
+          "description": "选择综合、文档、推理或编程。DJL 已为每个安全设备档位提前筛选唯一冠军模型。",
+          "title": "选择本地 AI 擅长方向"
+        },
+        "project-mode": {
+          "description": "任务围绕文件夹或代码项目并需要持续上下文时，请使用项目模式。",
+          "title": "项目模式"
+        },
+        "settings": {
+          "description": "点击这里可以更改语言、模型、外观和软件行为。",
+          "title": "设置"
+        },
+        "tutorial-replay": {
+          "description": "以后忘记某个功能在哪里，可以点击这里，随时重新播放基础功能教程或设置功能教程。",
+          "title": "随时重新查看教程"
+        },
+        "work-mode": {
+          "description": "写作、研究和文件处理等目标明确的任务，请使用工作模式。",
+          "title": "工作模式"
+        }
+      }
+    },
     "pluginLibrary": {
       "hero": "按你的方式使用 {{provider}}",
       "installedPluginsOnly": "此视图仅显示 Codex 设置中已有的插件。",
@@ -2351,6 +2467,12 @@
     },
     "recovery": {
       "retry": "重试"
+    },
+    "settingsTour": {
+      "action": "查看设置导览",
+      "ariaLabel": "DJL 设置新手教程",
+      "description": "逐一了解设置中的全部分类，以及每一类可以控制的功能。",
+      "title": "设置功能教程"
     },
     "shortcuts": {
       "description": "显示当前上下文中生效的快捷键。",
@@ -2852,6 +2974,7 @@
         "downloadStartFailed": "无法开始更新下载",
         "finishFailed": "无法完成更新",
         "installFailed": "无法安装更新",
+        "later": "稍后",
         "manualAfterFailures_one": "自动安装失败{{count}} 时间 。 手动下载{{version}}完成更新.",
         "manualAfterFailures_other": "自动安装失败{{count}} 次 。 手动下载{{version}}完成更新.",
         "manualFallback": "应用中的更新无法完成 。 你可以手动下载.",
@@ -2859,6 +2982,8 @@
         "preparingVersion": "DJL 正在后台准备版本 {{version}}。",
         "ready": "更新准备就绪",
         "readyDescription": "当您准备好重新启动并安装它时，单击更新。",
+        "readyPrompt": "DJL {{version}} 已准备就绪。立即重启即可完成更新。",
+        "restartNow": "立即重启更新",
         "theUpdate": "更新"
       },
       "updateButton": {
@@ -2977,7 +3102,7 @@
       "before": {
         "description": "比例只基于可分析正文，而不是整个文件。",
         "itemCoverage": "引用、代码、表格、参考文献、元数据和不支持的语言会被排除。",
-        "itemEstimate": "结果是概率性提示，不能证明作者身份。",
+        "itemEstimate": "结果只是概率性信号，不能证明作者身份；经 AI 润色的人工文本仍可能呈现人工特征。",
         "itemLocal": "您的文档不会离开此设备。",
         "title": "检测范围"
       },
@@ -3057,13 +3182,14 @@
       },
       "results": {
         "assessment": {
+          "inconclusive": "检测器没有足够一致的证据来区分 AI 写作特征与人工写作特征。",
           "insufficient": "可分析正文太少，无法给出可靠的全文评估。",
           "likely-ai": "大部分可分析正文与模型学习到的 AI 生成文本特征相似。",
           "likely-human": "大部分可分析正文与模型学习到的人工写作特征相似。",
-          "mixed": "可分析正文包含混合或不确定信号。",
+          "mixed": "可分析正文同时包含 AI 写作特征和人工写作特征。",
           "unsupported": "未找到可分析的英文或简体中文正文。"
         },
-        "confidence": "置信度",
+        "confidence": "证据强度",
         "confidenceLevel": {
           "high": "高",
           "low": "低",

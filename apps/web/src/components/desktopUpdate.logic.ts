@@ -44,22 +44,30 @@ export function resolveDesktopUpdateButtonAction(
     ) {
       return "download";
     }
+    // If the updater lost its version context, checking again is the only safe
+    // recovery action and keeps the permanent button useful instead of inert.
+    return "check";
   }
   return "none";
 }
 
 export function shouldShowDesktopUpdateButton(state: DesktopUpdateState | null): boolean {
-  if (!state?.enabled) return false;
-  // Only show the button when there's actually something to do:
-  // a version being prepared, a downloaded update to install, or a retryable error.
-  // Update checks stay background-only so periodic polling never flashes sidebar UI.
-  const action = resolveDesktopUpdateButtonAction(state);
-  return (
-    state.status === "available" ||
-    state.status === "downloading" ||
-    state.status === "downloaded" ||
-    (state.status === "error" && state.errorContext !== "check" && action !== "none")
-  );
+  // Keep one predictable in-app entry point visible in every packaged desktop
+  // build. The same button checks, shows download progress, and restarts to
+  // install, so users never need to return to the website for normal updates.
+  return state?.enabled === true;
+}
+
+export function getDesktopUpdateReadyPromptVersion(
+  state: DesktopUpdateState | null,
+  promptedVersion: string | null,
+): string | null {
+  if (!state?.enabled || state.status !== "downloaded" || state.errorContext !== null) {
+    return null;
+  }
+  const version = state.downloadedVersion ?? state.availableVersion;
+  if (!version || version === promptedVersion) return null;
+  return version;
 }
 
 export function shouldShowArm64IntelBuildWarning(state: DesktopUpdateState | null): boolean {
@@ -227,7 +235,9 @@ export function getDesktopUpdateButtonTooltip(
     if (state.errorContext === "install" && state.downloadedVersion) {
       return `Could not install update ${state.downloadedVersion}. Click to retry.`;
     }
-    return state.message ?? "Update failed";
+    return state.message
+      ? `${state.message}. Click to check again.`
+      : "Update failed. Click to check again.";
   }
   return "Update available";
 }

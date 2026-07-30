@@ -5,6 +5,8 @@ import path from "node:path";
 import type { AiDetectorState } from "@synara/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AI_DETECTOR_MODELS, type DetectorModelOutputContract } from "./modelManifest";
+
 const installer = vi.hoisted(() => {
   let abortDelayMs = 0;
   let installed = false;
@@ -184,5 +186,72 @@ describe("AiDetectorManager model installation", () => {
     await manager.installModel("en");
     installer.finish();
     await vi.waitFor(() => expect(dispose).toHaveBeenCalledOnce());
+  });
+
+  it("includes calibration and the model output contract in the result cache key", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "djl-ai-manager-"));
+    const manager = new AiDetectorManager(stateDir);
+    const cacheKey = (
+      manager as unknown as {
+        cacheKey(contentHash: string, preference: "en"): string;
+      }
+    ).cacheKey.bind(manager);
+    const manifest = AI_DETECTOR_MODELS.en as unknown as {
+      calibrationBands: Array<{
+        minimumEligibleCharacters: number;
+        maximumEligibleCharacters: number | null;
+        humanThreshold: number;
+        aiThreshold: number | null;
+      }>;
+      output: DetectorModelOutputContract;
+    };
+    const originalOutput = manifest.output;
+    const originalBands = manifest.calibrationBands;
+
+    try {
+      const before = cacheKey("content-hash", "en");
+      manifest.calibrationBands = originalBands.map((band, index) =>
+        index === originalBands.length - 1 ? { ...band, aiThreshold: 0.999 } : band,
+      );
+      expect(cacheKey("content-hash", "en")).not.toBe(before);
+      manifest.calibrationBands = originalBands;
+      manifest.output = {
+        probability: "single-logit-sigmoid",
+        aiLabelIndex: 0,
+      };
+      expect(cacheKey("content-hash", "en")).not.toBe(before);
+    } finally {
+      manifest.calibrationBands = originalBands;
+      manifest.output = originalOutput;
+    }
+  });
+
+  it("bypasses both cache reads and writes for reproducible benchmark inference", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "djl-ai-manager-"));
+    const manager = new AiDetectorManager(stateDir);
+    const cache = (
+      manager as unknown as {
+        cache: {
+          getWithGeneration: (...args: unknown[]) => Promise<unknown>;
+          setIfGeneration: (...args: unknown[]) => Promise<unknown>;
+        };
+      }
+    ).cache;
+    const getWithGeneration = vi.spyOn(cache, "getWithGeneration");
+    const setIfGeneration = vi.spyOn(cache, "setIfGeneration");
+
+    const report = await manager.analyze({
+      bytes: new TextEncoder().encode("Short metadata"),
+      filename: "benchmark.txt",
+      mediaType: "text/plain",
+      languagePreference: "en",
+      bypassResultCache: true,
+      signal: new AbortController().signal,
+      emit: () => undefined,
+    });
+
+    expect(report.cacheHit).toBe(false);
+    expect(getWithGeneration).not.toHaveBeenCalled();
+    expect(setIfGeneration).not.toHaveBeenCalled();
   });
 });

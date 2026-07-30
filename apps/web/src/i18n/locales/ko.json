@@ -170,6 +170,42 @@
         "ready": "계획 준비 완료",
         "showSidebar": "{{name}} 사이드바 표시",
         "tasks": "작업"
+      },
+      "zeroConfig": {
+        "action": "로컬 AI 준비 후 시작",
+        "checking": "이 기기 확인 중",
+        "device": "감지된 기기: {{summary}}",
+        "deviceSummary": "사용 가능 메모리 {{availableMemory}} / {{totalMemory}} · 논리 코어 {{cores}}개",
+        "download": "예상 다운로드: {{size}}",
+        "failed": "DJL이 로컬 AI를 준비하지 못했습니다",
+        "fallingBack": "더 작은 안정 모델로 전환 중",
+        "gpuSummary": " · {{name}} · VRAM {{vram}}",
+        "gpuSummaryAvailable": " · {{name}} · 사용 가능 VRAM {{availableVram}} / {{totalVram}}",
+        "placeholder": "DJL이 무엇을 도와드릴까요?",
+        "preparing": "로컬 AI 준비 중",
+        "privacy": "이 기기에서 실행됩니다. 프롬프트와 파일은 기기 밖으로 전송되지 않습니다.",
+        "recommended": "이 기기를 위한 DJL {{category}}: {{model}}",
+        "retry": "다시 시도",
+        "testing": "모델 테스트 중",
+        "useCaseLabel": "가장 필요한 용도를 선택하세요",
+        "useCases": {
+          "coding": {
+            "description": "코드, 디버깅, 프로젝트 작업",
+            "label": "코딩 챔피언"
+          },
+          "document": {
+            "description": "요약, 추출, 긴 문서 처리",
+            "label": "문서 챔피언"
+          },
+          "general": {
+            "description": "질문, 글쓰기, 일상 작업",
+            "label": "종합 챔피언"
+          },
+          "reasoning": {
+            "description": "분석, 수학, 복잡한 문제",
+            "label": "추론 챔피언"
+          }
+        }
       }
     },
     "confirmations": {
@@ -1217,12 +1253,47 @@
       "ollamaDescription": "DJL이 Ollama를 설치하고 시작하여 연결합니다. 터미널이나 관리자 암호가 필요하지 않습니다.",
       "privacyDescription": "모델 추론은 이 컴퓨터에 남습니다. 프롬프트, 코드 컨텍스트, 출력은 호스팅 모델 제공자에게 전송되지 않습니다. 승인된 도구는 별도로 네트워크에 접근할 수 있습니다.",
       "privacyTitle": "개인정보 보호 설계",
+      "quick": {
+        "chooseAnother": "다른 설정 선택",
+        "description": "DJL이 {{runtime}}을 설치하고 {{model}}(약 {{size}})을 다운로드합니다. 터미널이나 관리자 암호가 필요하지 않습니다.",
+        "download": "{{model}} 다운로드(약 {{size}})",
+        "insufficientDisk": "최소 {{size}}의 여유 디스크 공간이 필요합니다.",
+        "readyDescription": "{{model}}이 {{runtime}}을 통해 설치되어 채팅에서 사용할 수 있습니다.",
+        "readyTitle": "{{runtime}} 준비 완료",
+        "retry": "설정 다시 시도",
+        "runtimeLabel": "로컬 런타임 선택",
+        "setup": "로컬 AI 설정 · {{model}}(약 {{size}})",
+        "title": "원클릭 {{runtime}} 설정",
+        "useCaseLabel": "로컬 AI가 가장 잘할 작업을 선택하세요",
+        "useCases": {
+          "coding": {
+            "description": "코드, 디버깅, 프로젝트 작업",
+            "label": "코딩 챔피언"
+          },
+          "document": {
+            "description": "요약, 추출, 긴 문서 처리",
+            "label": "문서 챔피언"
+          },
+          "general": {
+            "description": "질문, 글쓰기, 일상 작업",
+            "label": "종합 챔피언"
+          },
+          "reasoning": {
+            "description": "분석, 수학, 복잡한 문제",
+            "label": "추론 챔피언"
+          }
+        },
+        "useInChat": "채팅에서 사용"
+      },
       "recommendations": {
         "gpt-oss-20b": {
-          "description": "16 GB 이상의 메모리를 갖춘 시스템에 권장하는 강력한 로컬 코딩 모델입니다."
+          "description": "24 GB 이상 시스템을 위한 강력한 종합·추론 모델입니다."
         },
         "granite-4.1-3b": {
-          "description": "8 GB 메모리를 갖춘 Mac 및 PC용 소형 코딩 모델입니다."
+          "description": "8 GB 메모리 시스템을 위한 소형 종합·문서·코딩 모델입니다."
+        },
+        "qwen2.5-coder-14b": {
+          "description": "24 GB 메모리를 갖춘 시스템을 위한 더 강력한 코딩 모델입니다."
         },
         "qwen2.5-coder-7b": {
           "description": "16GB 컴퓨터와 8GB 그래픽 카드를 위한 고성능 코딩 모델입니다."
@@ -1231,10 +1302,10 @@
           "description": "4 GB 이상의 메모리를 갖춘 저사양 컴퓨터용 빠른 채팅 모델입니다."
         },
         "qwen3-coder-30b": {
-          "description": "32 GB 메모리 시스템을 위한 가장 강력한 선별 로컬 코딩 모델입니다."
+          "description": "48 GB 메모리 시스템을 위한 가장 강력한 선별 로컬 코딩 모델입니다."
         },
         "qwen3.5-2b": {
-          "description": "8 GB 메모리 컴퓨터에 최적화된 도구 호출 지원 소형 채팅 모델입니다."
+          "description": "6 GB 메모리 기기에 적합한 경량 범용 및 코딩 모델입니다."
         }
       },
       "recommendedTitle": "이 컴퓨터에 권장",
@@ -2280,6 +2351,51 @@
       "settings": "설정",
       "toggleSidebar": "스레드 사이드바 전환"
     },
+    "onboarding": {
+      "ariaLabel": "DJL 초보자 안내",
+      "back": "이전",
+      "finish": "완료",
+      "next": "다음",
+      "progress": "{{current}} / {{total}}",
+      "settings": {
+        "action": "튜토리얼 시작",
+        "basicTitle": "기본 기능 튜토리얼",
+        "description": "작업 모드, 프로젝트 모드, 로컬 AI 추천 및 설정 안내를 다시 봅니다.",
+        "section": "시작하기",
+        "title": "초보자 튜토리얼"
+      },
+      "skip": "건너뛰기",
+      "steps": {
+        "local-ai-device": {
+          "description": "DJL이 사용 가능한 메모리, GPU 메모리, CPU 및 디스크를 확인하여 이 컴퓨터에서 안정적으로 실행할 수 있는 가장 강력한 모델을 추천합니다.",
+          "title": "이 컴퓨터에 맞는 추천"
+        },
+        "local-ai-prepare": {
+          "description": "DJL이 모델을 자동으로 다운로드하고 시작하고 검증한 뒤 선택합니다. 안정적으로 실행되지 않으면 같은 분류 안에서 더 작은 모델로 전환합니다.",
+          "title": "한 번의 클릭으로 로컬 AI 준비"
+        },
+        "local-ai-purpose": {
+          "description": "종합, 문서, 추론 또는 코딩을 선택하세요. DJL은 안전한 각 기기 등급마다 하나의 챔피언 모델을 미리 선정했습니다.",
+          "title": "로컬 AI의 강점 선택"
+        },
+        "project-mode": {
+          "description": "폴더나 코드베이스를 중심으로 지속적인 맥락이 필요한 작업에는 프로젝트 모드를 사용하세요.",
+          "title": "프로젝트 모드"
+        },
+        "settings": {
+          "description": "여기에서 언어, 모델, 모양 및 앱 동작을 변경할 수 있습니다.",
+          "title": "설정"
+        },
+        "tutorial-replay": {
+          "description": "기능 위치가 기억나지 않으면 여기에서 기본 기능 튜토리얼이나 설정 튜토리얼을 언제든지 다시 볼 수 있습니다.",
+          "title": "언제든지 튜토리얼 다시 보기"
+        },
+        "work-mode": {
+          "description": "글쓰기, 조사, 파일 처리처럼 목표가 분명한 작업에는 작업 모드를 사용하세요.",
+          "title": "작업 모드"
+        }
+      }
+    },
     "pluginLibrary": {
       "hero": "{{provider}}를 나만의 방식으로 활용하세요",
       "installedPluginsOnly": "이 화면에는 Codex 설정에서 이미 사용할 수 있는 플러그인만 표시됩니다.",
@@ -2351,6 +2467,12 @@
     },
     "recovery": {
       "retry": "다시 시도"
+    },
+    "settingsTour": {
+      "action": "설정 둘러보기",
+      "ariaLabel": "DJL 설정 튜토리얼",
+      "description": "모든 설정 카테고리를 둘러보고 각 항목의 기능을 알아봅니다.",
+      "title": "설정 튜토리얼"
     },
     "shortcuts": {
       "description": "현재 상황에서 활성화된 키 설정을 표시합니다.",
@@ -2852,6 +2974,7 @@
         "downloadStartFailed": "업데이트 다운로드를 시작할 수 없습니다.",
         "finishFailed": "Updating를 완료하지 못했습니다.",
         "installFailed": "업데이트를 설치할 수 없습니다.",
+        "later": "나중에",
         "manualAfterFailures_one": "자동 설치는 {{count}} 시간을 실패했습니다. 다운로드 {{version}} 수동으로 업데이트 완료.",
         "manualAfterFailures_other": "자동 설치는 {{count}} 시간을 실패했습니다. 다운로드 {{version}} 수동으로 업데이트 완료.",
         "manualFallback": "앱 업데이트가 완료되지 않았습니다. 수동으로 다운로드 할 수 있습니다.",
@@ -2859,6 +2982,8 @@
         "preparingVersion": "DJL은 백그라운드에서 {{version}} 버전을 준비 중입니다.",
         "ready": "업데이트 준비됨",
         "readyDescription": "다시 시작할 준비가 되면 업데이트를 클릭하고 설치하세요.",
+        "readyPrompt": "DJL {{version}} 업데이트가 준비되었습니다. 지금 다시 시작하여 업데이트를 완료하세요.",
+        "restartNow": "다시 시작 및 업데이트",
         "theUpdate": "업데이트"
       },
       "updateButton": {
@@ -2977,7 +3102,7 @@
       "before": {
         "description": "비율은 전체 파일이 아닌 분석 가능한 본문을 기준으로 합니다.",
         "itemCoverage": "인용문, 코드, 표, 참고 문헌, 메타데이터 및 미지원 언어는 제외됩니다.",
-        "itemEstimate": "결과는 확률 지표이며 작성자를 증명하지 않습니다.",
+        "itemEstimate": "결과는 확률적 지표일 뿐 저자임을 증명하지 않으며, AI로 다듬은 사람이 쓴 글도 사람의 글처럼 보일 수 있습니다.",
         "itemLocal": "글은 DJL 기기 안에만 보관됩니다.",
         "title": "검사 범위"
       },
@@ -3057,13 +3182,14 @@
       },
       "results": {
         "assessment": {
+          "inconclusive": "AI와 유사한 글과 사람이 쓴 글을 구분할 만큼 일관된 증거가 충분하지 않습니다.",
           "insufficient": "책임 있는 문서 전체 평가를 하기에는 분석 대상 본문이 너무 적습니다.",
           "likely-ai": "분석 대상 본문의 대부분이 모델이 학습한 AI 생성 글의 특징과 비슷합니다.",
           "likely-human": "분석 대상 본문의 대부분이 모델이 학습한 사람 글의 특징과 비슷합니다.",
-          "mixed": "분석 대상 본문에 혼합되거나 불확실한 신호가 있습니다.",
+          "mixed": "분석 대상 본문에 AI와 유사한 특징과 사람이 쓴 글의 특징이 모두 있습니다.",
           "unsupported": "분석할 수 있는 영어 또는 중국어 간체 본문을 찾지 못했습니다."
         },
-        "confidence": "신뢰도",
+        "confidence": "근거 강도",
         "confidenceLevel": {
           "high": "높음",
           "low": "낮음",

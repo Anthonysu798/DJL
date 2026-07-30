@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
+import {
+  isArm64HostRunningIntelBuild,
+  resolveDesktopRuntimeInfo,
+  resolveLocalAiRuntimeInfo,
+} from "./runtimeArch";
 
 describe("resolveDesktopRuntimeInfo", () => {
   it("detects Rosetta-translated Intel builds on Apple Silicon", () => {
@@ -44,6 +48,28 @@ describe("resolveDesktopRuntimeInfo", () => {
       hostArch: "x64",
       appArch: "x64",
       runningUnderArm64Translation: false,
+    });
+  });
+
+  it("preserves the updater architecture while exposing a Windows ARM host to local AI", () => {
+    const input = {
+      platform: "win32" as const,
+      processArch: "x64" as const,
+      runningUnderArm64Translation: true,
+    };
+    const updaterRuntimeInfo = resolveDesktopRuntimeInfo(input);
+    const localAiRuntimeInfo = resolveLocalAiRuntimeInfo(input);
+
+    expect(updaterRuntimeInfo).toEqual({
+      hostArch: "x64",
+      appArch: "x64",
+      runningUnderArm64Translation: false,
+    });
+    expect(isArm64HostRunningIntelBuild(updaterRuntimeInfo)).toBe(false);
+    expect(localAiRuntimeInfo).toEqual({
+      hostArch: "arm64",
+      appArch: "x64",
+      runningUnderArm64Translation: true,
     });
   });
 });

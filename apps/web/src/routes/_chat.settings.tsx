@@ -162,6 +162,7 @@ import ReleaseHistoryDialog from "../components/ReleaseHistoryDialog";
 import { createAllThreadsMessagelessSelector, createThreadShellsSelector } from "../storeSelectors";
 import { formatWorktreePathForDisplay } from "../worktreeCleanup";
 import { sameProviderOrder } from "../providerOrdering";
+import { requestFirstRunTourReplay, requestSettingsTourReplay } from "../onboarding/firstRunTour";
 import { changeRendererLocale } from "../i18n";
 import { APP_LANGUAGE_NATIVE_LABELS, selectableLanguageOptions } from "../i18n/appLocaleOptions";
 import {
@@ -1641,6 +1642,29 @@ function SettingsRouteView() {
 
   const renderGeneralPanel = () => (
     <div className="space-y-6">
+      <SettingsSection title={t("onboarding.settings.section", { ns: "shell" })}>
+        <SettingsRow
+          settingId="onboarding-basic-tour"
+          title={t("onboarding.settings.title", { ns: "shell" })}
+          description={t("onboarding.settings.description", { ns: "shell" })}
+          control={
+            <Button size="sm" variant="outline" onClick={requestFirstRunTourReplay}>
+              {t("onboarding.settings.action", { ns: "shell" })}
+            </Button>
+          }
+        />
+        <SettingsRow
+          settingId="onboarding-settings-tour"
+          title={t("settingsTour.title", { ns: "shell" })}
+          description={t("settingsTour.description", { ns: "shell" })}
+          control={
+            <Button size="sm" variant="outline" onClick={requestSettingsTourReplay}>
+              {t("settingsTour.action", { ns: "shell" })}
+            </Button>
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection title={t("route.general.sections.coreDefaults")}>
         <SettingsRow
           settingId="new-threads"

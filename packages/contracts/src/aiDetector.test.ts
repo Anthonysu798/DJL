@@ -33,6 +33,12 @@ describe("AI detector contracts", () => {
     });
   });
 
+  it("accepts an explicit inconclusive assessment", () => {
+    expect(
+      Schema.decodeUnknownSync(AiDetectorReport)({ ...report, assessment: "inconclusive" }),
+    ).toMatchObject({ assessment: "inconclusive" });
+  });
+
   it("rejects invalid percentages and offsets", () => {
     expect(() =>
       Schema.decodeUnknownSync(AiDetectorReport)({

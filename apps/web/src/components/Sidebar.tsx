@@ -9,6 +9,7 @@ import {
   ChevronRightIcon,
   ClockIcon,
   CopyIcon,
+  CircleQuestionIcon,
   ExternalLinkIcon,
   FolderIcon,
   FolderOpenIcon,
@@ -191,7 +192,6 @@ import { SidebarMetaChipStack } from "./SidebarMetaChip";
 import { SidebarRowHoverActions } from "./SidebarRowHoverActions";
 import { SidebarSectionToolbar } from "./SidebarSectionToolbar";
 import { SidebarGlyph, sidebarGlyphClass, SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
-import { WORK_TASK_STATUS_TONES } from "./work/workTaskPresentation";
 import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
 import { RenameDialog } from "./RenameDialog";
@@ -225,6 +225,7 @@ import {
   getDesktopUpdateAlreadyCurrentNotice,
   getDesktopUpdateButtonTooltip,
   getDesktopUpdateErrorSignature,
+  getDesktopUpdateReadyPromptVersion,
   isDesktopUpdateButtonDisabled,
   resolveDesktopUpdateButtonAction,
   shouldRecommendManualDesktopDownload,
@@ -334,6 +335,11 @@ import {
 } from "../lib/threadHandoff";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
+import {
+  FIRST_RUN_TUTORIAL_REPLAY_TARGET,
+  requestFirstRunTourReplay,
+  requestSettingsTourReplay,
+} from "../onboarding/firstRunTour";
 import { normalizeSettingsSection } from "../settingsNavigation";
 import {
   sidebarHoverRevealHideClassName,
@@ -398,6 +404,7 @@ const EMPTY_THREAD_JUMP_LABELS = new Map<ThreadId, string>();
 const EMPTY_SHORTCUT_PARTS: readonly string[] = [];
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS = 6;
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS = 50;
+const DESKTOP_UPDATE_READY_PROMPT_SESSION_KEY = "synara:desktop-update-ready-prompt:v1";
 const SIDEBAR_VIEW_LABEL_KEYS: Record<SidebarView, string> = {
   threads: "sidebar.views.projects",
   studio: "sidebar.views.work",
@@ -413,6 +420,24 @@ const DebugFeatureFlagsMenu = import.meta.env.DEV
       })),
     )
   : null;
+
+function readPromptedDesktopUpdateVersion(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage.getItem(DESKTOP_UPDATE_READY_PROMPT_SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberPromptedDesktopUpdateVersion(version: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(DESKTOP_UPDATE_READY_PROMPT_SESSION_KEY, version);
+  } catch {
+    // The in-memory ref still prevents duplicate prompts for this mount.
+  }
+}
 
 type ProjectContextMenuId =
   | "open-in-finder"
@@ -1020,6 +1045,64 @@ function ProjectSortMenu({
   );
 }
 
+function TutorialReplayMenu() {
+  const { t } = useTranslation("shell");
+
+  return (
+    <Menu>
+      <SidebarMenuButton
+        render={<MenuTrigger />}
+        size="sm"
+        data-onboarding-target={FIRST_RUN_TUTORIAL_REPLAY_TARGET}
+        aria-label={t("onboarding.settings.title")}
+        className={cn(
+          SIDEBAR_HEADER_ROW_CLASS_NAME,
+          SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME,
+          SIDEBAR_ROW_HOVER_CLASS_NAME,
+          "w-full",
+        )}
+      >
+        <SidebarLeadingIcon size="sm" tone={SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}>
+          <SidebarGlyph icon={CircleQuestionIcon} variant="leading" />
+        </SidebarLeadingIcon>
+        <span>{t("onboarding.settings.title")}</span>
+        <SidebarGlyph icon={ChevronDownIcon} variant="chevron" className="ml-auto" />
+      </SidebarMenuButton>
+      <MenuPopup
+        align="start"
+        side="top"
+        sideOffset={6}
+        className="min-w-64 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+      >
+        <MenuItem
+          className="min-h-12 items-start gap-2.5 px-2.5 py-2"
+          onClick={requestFirstRunTourReplay}
+        >
+          <PlayIcon className="mt-0.5 size-4 text-muted-foreground" />
+          <span className="min-w-0">
+            <span className="block font-medium">{t("onboarding.settings.basicTitle")}</span>
+            <span className="mt-0.5 block text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-muted-foreground">
+              {t("onboarding.settings.description")}
+            </span>
+          </span>
+        </MenuItem>
+        <MenuItem
+          className="min-h-12 items-start gap-2.5 px-2.5 py-2"
+          onClick={requestSettingsTourReplay}
+        >
+          <SettingsIcon className="mt-0.5 size-4 text-muted-foreground" />
+          <span className="min-w-0">
+            <span className="block font-medium">{t("settingsTour.title")}</span>
+            <span className="mt-0.5 block text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-muted-foreground">
+              {t("settingsTour.description")}
+            </span>
+          </span>
+        </MenuItem>
+      </MenuPopup>
+    </Menu>
+  );
+}
+
 function ThreadSortMenuItems({
   threadSortOrder,
   onThreadSortOrderChange,
@@ -1273,6 +1356,9 @@ function SidebarSegmentedPicker({
             <button
               key={view}
               type="button"
+              data-onboarding-target={
+                view === "studio" ? "work-mode" : view === "threads" ? "project-mode" : undefined
+              }
               className={cn(
                 "relative z-10 flex-1 rounded-md px-2.5 py-0.5 text-[11.5px] font-medium transition-colors duration-200",
                 active
@@ -1575,6 +1661,7 @@ export default function Sidebar() {
   const optimisticPinnedStateByThreadIdRef = useRef(new Map<ThreadId, boolean>());
   const latestPinnedMutationVersionByThreadIdRef = useRef(new Map<ThreadId, number>());
   const [desktopUpdateState, setDesktopUpdateState] = useState<DesktopUpdateState | null>(null);
+  const [desktopUpdatePromptVersion, setDesktopUpdatePromptVersion] = useState<string | null>(null);
   const [renamingWorkspaceId, setRenamingWorkspaceId] = useState<string | null>(null);
   const [renamingWorkspaceTitle, setRenamingWorkspaceTitle] = useState("");
   const [installingDesktopUpdate, setInstallingDesktopUpdate] = useState(false);
@@ -1587,6 +1674,7 @@ export default function Sidebar() {
   // Dedupes the manual-download fallback toast so a single failure surfaced by
   // both the click handler and the install-watchdog push only notifies once.
   const lastDesktopUpdateErrorToastSignatureRef = useRef<string | null>(null);
+  const promptedDesktopUpdateVersionRef = useRef<string | null>(null);
   const selectedThreadIds = useThreadSelectionStore((s) => s.selectedThreadIds);
   const toggleThreadSelection = useThreadSelectionStore((s) => s.toggleThread);
   const rangeSelectTo = useThreadSelectionStore((s) => s.rangeSelectTo);
@@ -5340,19 +5428,6 @@ export default function Sidebar() {
                   {t("sidebar.status.pending")}
                 </span>
               ) : null}
-              {!isSubagentThread && thread.workTask ? (
-                <span
-                  aria-label={t("sidebar.workTaskStatus.aria", {
-                    status: t(`sidebar.workTaskStatus.${thread.workTask.status}`),
-                  })}
-                  className={cn(
-                    "shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium leading-none",
-                    WORK_TASK_STATUS_TONES[thread.workTask.status],
-                  )}
-                >
-                  {t(`sidebar.workTaskStatus.${thread.workTask.status}`)}
-                </span>
-              ) : null}
             </div>
             {projectLabel ? (
               // Right-aligned project context for the flattened pinned list. The title
@@ -5613,19 +5688,6 @@ export default function Sidebar() {
                   className={cn("shrink-0 text-[10px] font-medium", threadStatus.colorClass)}
                 >
                   {t("sidebar.status.pending")}
-                </span>
-              ) : null}
-              {!isSubagentThread && topLevel && thread.workTask ? (
-                <span
-                  aria-label={t("sidebar.workTaskStatus.aria", {
-                    status: t(`sidebar.workTaskStatus.${thread.workTask.status}`),
-                  })}
-                  className={cn(
-                    "shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium leading-none",
-                    WORK_TASK_STATUS_TONES[thread.workTask.status],
-                  )}
-                >
-                  {t(`sidebar.workTaskStatus.${thread.workTask.status}`)}
                 </span>
               ) : null}
             </div>
@@ -6449,15 +6511,6 @@ export default function Sidebar() {
             return;
           }
 
-          if (nextState.status === "downloaded") {
-            toastManager.add({
-              type: "success",
-              title: t("sidebar.update.ready"),
-              description: t("sidebar.update.readyDescription"),
-            });
-            return;
-          }
-
           if (nextState.status === "up-to-date") {
             toastManager.add({
               type: "info",
@@ -6493,13 +6546,6 @@ export default function Sidebar() {
         .then((result) => {
           setInstallingDesktopUpdate(false);
           setDesktopUpdateState(result.state);
-          if (result.completed) {
-            toastManager.add({
-              type: "success",
-              title: t("sidebar.update.ready"),
-              description: t("sidebar.update.readyDescription"),
-            });
-          }
           const alreadyCurrentNotice = getDesktopUpdateAlreadyCurrentNotice(result);
           if (alreadyCurrentNotice) {
             toastManager.add({
@@ -6570,6 +6616,23 @@ export default function Sidebar() {
     surfaceDesktopUpdateError,
     t,
   ]);
+
+  useEffect(() => {
+    const promptVersion = getDesktopUpdateReadyPromptVersion(
+      desktopUpdateState,
+      promptedDesktopUpdateVersionRef.current ?? readPromptedDesktopUpdateVersion(),
+    );
+    if (!promptVersion) {
+      if (desktopUpdateState?.status !== "downloaded") {
+        setDesktopUpdatePromptVersion(null);
+      }
+      return;
+    }
+
+    promptedDesktopUpdateVersionRef.current = promptVersion;
+    rememberPromptedDesktopUpdateVersion(promptVersion);
+    setDesktopUpdatePromptVersion(promptVersion);
+  }, [desktopUpdateState]);
 
   // Both handlers step from the *effective* (clamped) page count reported by the derived
   // project data, so stale/oversized stored paging self-heals on the very next click.
@@ -7289,10 +7352,12 @@ export default function Sidebar() {
                   <DebugFeatureFlagsMenu />
                 </Suspense>
               ) : null}
+              <TutorialReplayMenu />
               <div className="flex items-center gap-2">
                 {!isOnSettings && (
                   <SidebarMenuButton
                     size="sm"
+                    data-onboarding-target="settings"
                     className={cn(
                       SIDEBAR_HEADER_ROW_CLASS_NAME,
                       SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME,
@@ -7483,6 +7548,41 @@ export default function Sidebar() {
           </ComposerPickerMenuPopup>
         </Menu>
       ) : null}
+
+      <Dialog
+        open={desktopUpdatePromptVersion !== null}
+        onOpenChange={(open) => {
+          if (!open) setDesktopUpdatePromptVersion(null);
+        }}
+      >
+        <DialogPopup surface="solid" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2Icon className="size-4 text-emerald-500" />
+              {t("sidebar.update.ready")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("sidebar.update.readyPrompt", {
+                version: desktopUpdatePromptVersion ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDesktopUpdatePromptVersion(null)}>
+              {t("sidebar.update.later")}
+            </Button>
+            <Button
+              disabled={desktopUpdateButtonDisabled}
+              onClick={() => {
+                setDesktopUpdatePromptVersion(null);
+                handleDesktopUpdateButtonClick();
+              }}
+            >
+              {t("sidebar.update.restartNow")}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
 
       <Dialog
         open={projectRunDialogProjectId !== null}

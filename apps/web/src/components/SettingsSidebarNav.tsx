@@ -5,12 +5,19 @@
 // Layer: UI component
 // Exports: SettingsSidebarNav
 
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useMemo, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { CentralIcon } from "~/lib/central-icons";
 import { isElectron } from "~/env";
 import { cn } from "~/lib/utils";
+import { SETTINGS_TOUR_REPLAY_EVENT } from "~/onboarding/firstRunTour";
 import { SearchInput } from "./ui/search-input";
 import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import {
@@ -96,6 +103,13 @@ export function SettingsSidebarNav(props: {
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const isSearching = trimmedQuery.length > 0;
+
+  useEffect(() => {
+    const clearSearchForTour = () => setQuery("");
+    window.addEventListener(SETTINGS_TOUR_REPLAY_EVENT, clearSearchForTour);
+    return () => window.removeEventListener(SETTINGS_TOUR_REPLAY_EVENT, clearSearchForTour);
+  }, []);
+
   const results = useMemo(
     () =>
       rankSettingsSearchEntries(
@@ -155,7 +169,7 @@ export function SettingsSidebarNav(props: {
         </button>
       </div>
 
-      <div className="mb-3 px-1">
+      <div className="mb-3 px-1" data-onboarding-target="settings-search">
         <SearchInput
           value={query}
           spellCheck={false}
@@ -219,6 +233,7 @@ export function SettingsSidebarNav(props: {
                         <button
                           type="button"
                           aria-current={isActive ? "page" : undefined}
+                          data-onboarding-target={`settings-section-${item.id}`}
                           className={cn(
                             SETTINGS_SIDEBAR_ITEM_CLASS_NAME,
                             isActive
