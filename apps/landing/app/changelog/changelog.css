@@ -1,23 +1,27 @@
 /* ══════════════════════════════════════════════════════════════════════
-   CHANGELOG
-   A dark reading room. The aurora carries the header; below it the surface goes
-   quiet so release notes stay scannable. Structure is hairlines and space — no
-   boxed cards, which is what made the earlier pages read as generic.
+   CHANGELOG — Notion
+   Warm paper below a single deep-indigo night band, where the aurora reads as a
+   glowing sticker constellation. Releases are white cards at 12px on the paper,
+   held by hairlines rather than shadow. Added / Fixed / Changed take sticker
+   green, sky and orange, because the system carries status in that palette and
+   defines no separate semantic ramp.
    ══════════════════════════════════════════════════════════════════════ */
 
 .changelog {
-  --cl-bg: #161412;
-  --cl-text: #edeae5;
-  --cl-dim: #a5a09a;
-  --cl-mute: #7d766e;
-  --cl-line: rgba(237, 234, 229, 0.1);
-  --cl-line-2: rgba(237, 234, 229, 0.2);
-  --cl-accent: #f08a46;
-  --cl-warm: #f08a46;
+  --cl-paper: #f6f5f4;
+  --cl-surface: #ffffff;
+  --cl-ink: rgba(0, 0, 0, 0.95);
+  --cl-ink-2: #31302e;
+  --cl-stone: #615d59;
+  --cl-ash: #a39e98;
+  --cl-hairline: #e6e6e6;
+  --cl-night: #213183;
 
   min-height: 100vh;
-  background: var(--cl-bg);
-  color: var(--cl-text);
+  background: var(--cl-paper);
+  color: var(--cl-ink);
+  font-family: var(--font-body), var(--cjk);
+  font-feature-settings: "lnum", "locl";
 }
 
 /* ── top bar ── */
@@ -28,47 +32,51 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem clamp(1.25rem, 4vw, 3rem);
-  border-bottom: 1px solid var(--cl-line);
-  background: rgba(22, 20, 18, 0.72);
-  backdrop-filter: blur(14px);
+  gap: var(--sp-md);
+  padding: var(--sp-sm) clamp(var(--sp-md), 4vw, var(--sp-xxl));
+  border-bottom: 1px solid var(--cl-hairline);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
 }
 .cl-top-right {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: var(--sp-lg);
 }
 .cl-back,
-.cl-top-link,
-.cl-lang a {
-  color: var(--cl-dim);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.cl-top-link {
+  color: var(--cl-ink-2);
+  font-size: 15px;
+  line-height: 1.33;
   text-decoration: none;
-  transition: color 0.2s var(--ease-out);
 }
 .cl-back:hover,
-.cl-top-link:hover,
-.cl-lang a:hover {
-  color: var(--cl-text);
+.cl-top-link:hover {
+  color: var(--primary);
 }
 .cl-lang {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--sp-xs);
+}
+.cl-lang a {
+  color: var(--cl-stone);
+  font-size: 15px;
+  text-decoration: none;
+}
+.cl-lang a:hover {
+  color: var(--cl-ink);
 }
 .cl-lang a.active {
-  color: var(--cl-accent);
+  color: var(--primary);
+  font-weight: 600;
 }
 
-/* ── aurora header ── */
+/* ── the single night band ── */
 .cl-hero {
-  min-height: 44svh;
-  padding: clamp(3.5rem, 8vw, 6rem) clamp(1.25rem, 4vw, 3rem);
-  background: var(--cl-bg) !important;
-  color: var(--cl-text);
+  min-height: 42svh;
+  padding: clamp(3rem, 7vw, 5rem) clamp(var(--sp-md), 4vw, var(--sp-xxl));
+  background: var(--cl-night) !important;
+  color: #ffffff;
   text-align: left;
   align-items: flex-start;
 }
@@ -76,146 +84,152 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: var(--maxw);
+  max-width: 1080px;
   margin: 0 auto;
 }
 .cl-eyebrow {
   display: inline-block;
-  margin-bottom: 1.1rem;
-  color: var(--cl-accent);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  margin-bottom: var(--sp-md);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: 9999px;
+  background: #ffffff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.33;
+  letter-spacing: var(--tr-eyebrow);
 }
 .cl-hero-inner h1 {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--sp-md);
   max-width: 20ch;
-  font-family: var(--font-display), var(--cjk);
-  font-size: clamp(2.2rem, 6vw, 4.2rem);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 6.5vw, 4rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: var(--tr-display-1);
+  text-wrap: balance;
 }
 .cl-hero-inner p {
   margin: 0;
   max-width: 54ch;
-  color: var(--cl-dim);
-  font-size: clamp(0.98rem, 1.5vw, 1.15rem);
-  line-height: 1.62;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.5;
 }
 
-/* ── body surface ── */
+/* ── body ── */
 .cl-body {
   position: relative;
-  border-top: 1px solid var(--cl-line);
-}
-.cl-dots {
-  position: absolute;
-  inset: 0;
-  /* Fades the dot field out at the edges so it reads as texture, not as a texture swatch. */
-  mask-image: radial-gradient(ellipse at 50% 0%, black 10%, transparent 75%);
-  opacity: 0.7;
-  pointer-events: none;
 }
 .cl-body-inner {
   position: relative;
   z-index: 1;
-  max-width: var(--maxw);
+  max-width: 1080px;
   margin: 0 auto;
-  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem) clamp(4rem, 8vw, 7rem);
+  padding: clamp(var(--sp-lg), 4vw, var(--sp-xxl)) clamp(var(--sp-md), 4vw, var(--sp-xxl))
+    clamp(4rem, 8vw, 7rem);
 }
 
 .cl-source-note {
-  margin: 0 0 1rem;
-  max-width: 62ch;
-  color: var(--cl-mute);
-  font-size: 0.82rem;
-  line-height: 1.6;
+  margin: 0 0 var(--sp-md);
+  max-width: 64ch;
+  color: var(--cl-stone);
+  font-size: 14px;
+  line-height: 1.43;
 }
 
-/* ── timeline entry ── */
+/* ── entry heading ── */
 .cl-entry-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: var(--sp-xs);
 }
 .cl-version {
   margin: 0;
-  font-family: var(--font-display), var(--cjk);
-  font-size: clamp(1.9rem, 4vw, 3rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  color: var(--cl-text);
+  color: var(--cl-ink);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tr-heading-1);
+  font-variant-numeric: tabular-nums lining-nums;
 }
 .cl-badges {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--sp-xxs);
 }
 .cl-badge {
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--cl-line-2);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  padding: 2px var(--sp-xs);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
   white-space: nowrap;
 }
+/* "Current" is a state, not an action, so it takes a sticker hue rather than the accent blue. */
 .cl-badge[data-kind="current"] {
-  border-color: rgba(240, 138, 70, 0.35);
-  background: rgba(240, 138, 70, 0.1);
-  color: var(--cl-accent);
+  background: rgba(26, 174, 57, 0.12);
+  color: #14832b;
 }
 .cl-badge[data-kind="prerelease"] {
-  border-color: rgba(240, 138, 70, 0.32);
-  background: rgba(240, 138, 70, 0.1);
-  color: var(--cl-warm);
+  background: rgba(221, 91, 0, 0.1);
+  color: var(--sticker-orange);
 }
 .cl-date {
   flex-basis: 100%;
-  color: var(--cl-mute);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  color: var(--cl-ash);
+  font-size: 14px;
+  line-height: 1.43;
+  font-variant-numeric: lining-nums;
 }
 
+/* ── entry body: a white card on paper ── */
 .cl-entry-body {
-  max-width: 62ch;
+  max-width: 64ch;
+  padding: var(--sp-lg);
+  border: 1px solid var(--cl-hairline);
+  border-radius: var(--r-lg);
+  background: var(--cl-surface);
 }
 .cl-intro {
-  margin: 0 0 1rem;
-  color: var(--cl-dim);
-  font-size: 0.98rem;
-  line-height: 1.68;
+  margin: 0 0 var(--sp-md);
+  color: var(--cl-ink-2);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .cl-section + .cl-section {
-  margin-top: 1.75rem;
+  margin-top: var(--sp-lg);
 }
 .cl-section-heading {
-  margin: 0 0 0.7rem;
-  padding-bottom: 0.45rem;
-  border-bottom: 1px solid var(--cl-line);
-  color: var(--cl-mute);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.16em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--sp-xs);
+  color: var(--cl-stone);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tr-eyebrow);
   text-transform: uppercase;
 }
-/* The three canonical headings get a hue so a long release can be skimmed by kind. Anything else
-   (a first release's "Highlights") keeps the neutral treatment rather than being mislabelled. */
-.cl-section-heading[data-heading="added"] {
-  color: #9ccb5a;
+/* A category dot per change kind. Anything outside the three canonical headings — a first release's
+   "Highlights" — keeps the neutral dot rather than being mislabelled. */
+.cl-section-heading::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--cl-ash);
+  flex: none;
 }
-.cl-section-heading[data-heading="fixed"] {
-  color: #8fb0ce;
+.cl-section-heading[data-heading="added"]::before {
+  background: var(--sticker-green);
 }
-.cl-section-heading[data-heading="changed"] {
-  color: var(--cl-warm);
+.cl-section-heading[data-heading="fixed"]::before {
+  background: var(--sticker-sky);
+}
+.cl-section-heading[data-heading="changed"]::before {
+  background: var(--sticker-orange);
 }
 
 .cl-items {
@@ -225,57 +239,58 @@
 }
 .cl-items li {
   position: relative;
-  padding: 0.4rem 0 0.4rem 1.1rem;
-  color: var(--cl-dim);
-  font-size: 0.94rem;
-  line-height: 1.65;
+  padding: var(--sp-xxs) 0 var(--sp-xxs) var(--sp-md);
+  color: var(--cl-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
 }
 .cl-items li::before {
   content: "";
   position: absolute;
-  top: 1.1rem;
+  top: 0.72rem;
   left: 0;
   width: 4px;
   height: 4px;
-  border-radius: 50%;
-  background: var(--cl-line-2);
+  border-radius: 9999px;
+  background: var(--cl-ash);
 }
 
+/* Inline link colour is the accent's other sanctioned use. */
 .cl-source {
   display: inline-block;
-  margin-top: 1.5rem;
-  color: var(--cl-accent);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.74rem;
-  letter-spacing: 0.06em;
+  margin-top: var(--sp-md);
+  color: var(--primary);
+  font-size: 15px;
   text-decoration: none;
-  border-bottom: 1px solid rgba(240, 138, 70, 0.3);
-  padding-bottom: 1px;
-  transition: border-color 0.2s var(--ease-out);
 }
 .cl-source:hover {
-  border-bottom-color: var(--cl-accent);
+  text-decoration: underline;
 }
 
-/* ── empty state ── */
+/* ── empty state: an invitation to act ── */
 .cl-empty {
-  padding: clamp(3rem, 8vw, 6rem) 0;
+  padding: clamp(3rem, 8vw, 5rem) var(--sp-lg);
+  border: 1px solid var(--cl-hairline);
+  border-radius: var(--r-lg);
+  background: var(--cl-surface);
   text-align: center;
 }
 .cl-empty-title {
-  margin: 0 0 0.5rem;
-  font-family: var(--font-display), var(--cjk);
-  font-size: 1.25rem;
-  font-weight: 600;
+  margin: 0 0 var(--sp-xxs);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.27;
+  letter-spacing: var(--tr-heading-3);
 }
 .cl-empty-hint {
-  margin: 0 auto 1.5rem;
+  margin: 0 auto var(--sp-lg);
   max-width: 44ch;
-  color: var(--cl-dim);
-  font-size: 0.94rem;
-  line-height: 1.6;
+  color: var(--cl-ink-2);
+  font-size: 15px;
+  line-height: 1.5;
 }
 
-[lang="zh-CN"] .cl-hero-inner h1 {
-  letter-spacing: -0.01em;
+[lang="zh-CN"] .cl-hero-inner h1,
+[lang="zh-CN"] .cl-version {
+  letter-spacing: 0;
 }

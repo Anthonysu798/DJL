@@ -15,7 +15,7 @@ export function GuideDoc({ locale }: { locale: Locale }) {
   const changelogHref = locale === "en" ? "/changelog?lang=en" : "/changelog";
 
   return (
-    <main lang={t.htmlLang} className="guide" data-theme="dark">
+    <main lang={t.htmlLang} className="guide">
       <header className="gd-top">
         <a className="gd-back" href={homeHref}>
           <span aria-hidden="true">←</span> {g.home}
@@ -35,21 +35,20 @@ export function GuideDoc({ locale }: { locale: Locale }) {
         </div>
       </header>
 
-      <LampContainer className="gd-lamp" contentClassName="-translate-y-[14rem]">
-        <div className="gd-lamp-inner">
-          <span className="gd-eyebrow">{g.eyebrow}</span>
-          <h1>{g.title}</h1>
-          <p>{g.lede}</p>
-        </div>
-      </LampContainer>
+      {/* The one inverted band on the page. data-theme is scoped here rather than to the whole
+          document, because everything below it is warm paper. */}
+      <div data-theme="dark">
+        <LampContainer className="gd-lamp" contentClassName="-translate-y-[9.5rem]">
+          <div className="gd-lamp-inner">
+            <span className="gd-eyebrow">{g.eyebrow}</span>
+            <h1>{g.title}</h1>
+            <p>{g.lede}</p>
+          </div>
+        </LampContainer>
+      </div>
 
+      {/* No ruled background: grouping is whitespace and hairlines, and a grid would compete. */}
       <div className="gd-body">
-        {/* Grid background: the calm surface everything below is read against. */}
-        <div
-          className="gd-grid [background-image:linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] [background-size:40px_40px] dark:[background-image:linear-gradient(to_right,#1c1f27_1px,transparent_1px),linear-gradient(to_bottom,#1c1f27_1px,transparent_1px)]"
-          aria-hidden="true"
-        />
-
         <div className="gd-shell">
           <aside className="gd-toc" aria-label={g.toc}>
             <span className="gd-toc-label">{g.toc}</span>
@@ -175,8 +174,8 @@ export function GuideDoc({ locale }: { locale: Locale }) {
               <MaskContainer
                 className="gd-privacy"
                 revealSize={320}
-                baseColor="#0a0c12"
-                hoverColor="#06070b"
+                baseColor="#ffffff"
+                hoverColor="#f6f5f4"
                 revealText={
                   <div className="gd-privacy-layer">
                     <h3>{g.local.privacy.title}</h3>
@@ -194,16 +193,19 @@ export function GuideDoc({ locale }: { locale: Locale }) {
             <section className="gd-cta">
               {/* Dense lines and large type on purpose: at a small size with the default 10px gap
                   only a few strokes cross each glyph and the words read as scattered dashes. */}
+              {/* The one place the sticker palette gets to be purely illustrative: text drawn from
+                  coloured lines on white. It carries no meaning and paints no action. */}
               <CanvasText
                 text={g.cta.title}
                 className="gd-cta-title"
-                backgroundClassName="bg-[#08090d]"
+                backgroundClassName="bg-white"
+                colors={["#62aef0", "#d6b6f6", "#ff64c8", "#2a9d99", "#1aae39"]}
                 lineGap={4}
                 lineWidth={2}
                 curveIntensity={40}
               />
               <p>{g.cta.body}</p>
-              <a className="key" data-variant="primary" href="/download/mac/arm64">
+              <a className="btn" data-variant="primary" href="/download/mac/arm64">
                 {g.cta.download}
               </a>
             </section>

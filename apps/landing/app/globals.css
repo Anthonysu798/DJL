@@ -21,40 +21,96 @@
 }
 
 /* ───────────────────────────── tokens ─────────────────────────────
-   THEME REV 02 — warm graphite and ember.
-   Two corrections are encoded here rather than in the rules below.
-   1. The ground moved off blue-black. Blue-black reads cloud; warm graphite
-      reads metal on a desk, which is what a local-first runtime is.
-   2. Ember is the brand hue. Amber already meant "local, private runtime" and
-      azure meant "online" — yet every headline control was azure, so the site
-      shouted the one thing DJL is not. Azure is now a desaturated slate that
-      appears only where the network is genuinely the subject.
+   THEME REV 03 — Notion.
+   The dominant surface is warm paper-soft off-white, never clinical white, so
+   long pages read as a document. The chrome whispers in greys and blacks and
+   says exactly one thing in colour: a single dependable blue, reserved for the
+   primary action, inline links, and the active/focus signal.
+   Personality comes from a decorative sticker palette that never structures the
+   layout and never paints a CTA, plus one deep-indigo "night" band per page.
    ───────────────────────────────────────────────────────────────── */
 :root {
-  --ink: #161412;          /* page base: warm graphite */
-  --ink-1: #1e1b18;        /* raised surface */
-  --ink-2: #211d1a;        /* panel */
-  --ink-3: #2a2622;        /* panel hover / inset */
-  --paper: #edeae5;        /* primary text, warm-biased */
-  --paper-dim: #a5a09a;    /* secondary text */
-  --mute: #7d766e;         /* labels / captions */
-  --mute-2: #514b45;       /* faint */
+  /* Notion's night band. This is the dark context — the home hero and the single
+     inverted band that heads the guide and the changelog. */
+  --ink: #213183;          /* page base: deep indigo */
+  --ink-1: #26397a;        /* raised surface */
+  --ink-2: #1c2a70;        /* panel */
+  --ink-3: #2c4198;        /* panel hover / inset */
+  --paper: #ffffff;        /* primary text on the night band */
+  --paper-dim: rgba(255, 255, 255, 0.76);
+  --mute: rgba(255, 255, 255, 0.58);
+  --mute-2: rgba(255, 255, 255, 0.38);
 
-  --line: rgba(237, 234, 229, 0.1);
-  --line-2: rgba(237, 234, 229, 0.2);
+  --line: rgba(255, 255, 255, 0.14);
+  --line-2: rgba(255, 255, 255, 0.26);
 
-  --amber: #f08a46;        /* LOCAL · brand signal */
-  --amber-hot: #f4a267;
-  --amber-soft: rgba(240, 138, 70, 0.13);
-  --azure: #8fb0ce;        /* ONLINE · desaturated so it never competes */
-  --azure-soft: rgba(143, 176, 206, 0.13);
+  /* The one structural accent. Nothing decorative may use it. */
+  --primary: #0075de;
+  --primary-active: #005bab;
+  --on-primary: #ffffff;
 
-  --font-display: var(--font-plex-condensed), "Helvetica Neue", system-ui, sans-serif;
-  --font-body: var(--font-plex-sans), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
-  /* Chinese has no webfont here on purpose — see layout.tsx. PingFang's even strokes sit well
-     beside Plex, and every target OS ships a good face. */
+  /* Sticker palette — illustrations, category dots and status tags only. These
+     never fill a button and never carry structure. */
+  --sticker-sky: #62aef0;
+  --sticker-purple: #d6b6f6;
+  --sticker-purple-deep: #391c57;
+  --sticker-pink: #ff64c8;
+  --sticker-orange: #dd5b00;
+  --sticker-orange-deep: #793400;
+  --sticker-teal: #2a9d99;
+  --sticker-green: #1aae39;
+  --sticker-brown: #523410;
+
+  /* The site's older local/online signals now resolve to sticker hues, because
+     Notion permits exactly one structural accent and it is the blue above.
+     These two survive as decoration and status, which is what they encode. */
+  --amber: var(--sticker-orange);      /* LOCAL / private runtime */
+  --amber-hot: #ff8f3d;
+  --amber-soft: rgba(221, 91, 0, 0.1);
+  --azure: var(--sticker-teal);        /* ONLINE / the agent loop */
+  --azure-soft: rgba(42, 157, 153, 0.1);
+
+  --font-display: var(--font-inter), Inter, -apple-system, system-ui, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  --font-body: var(--font-display);
+  /* One family carries every role. Nothing here is set in a monospace face; where the old theme used
+     mono for data, Notion uses the same Inter at a smaller size with lining numerals. */
+  --font-mono: var(--font-display);
   --cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+
+  /* Notion's type scale. Tracking is em-based so it survives fluid clamp() sizes —
+     the px values in the spec are relative to their own size. */
+  --tr-display-1: -0.0332em;   /* 64px / −2.125px */
+  --tr-display-2: -0.0347em;   /* 54px / −1.875px */
+  --tr-heading-1: -0.025em;    /* 40px / −1px */
+  --tr-heading-2: -0.024em;    /* 26px / −0.625px */
+  --tr-heading-3: -0.0114em;   /* 22px / −0.25px */
+  --tr-title: -0.00625em;      /* 20px / −0.125px */
+  --tr-eyebrow: 0.0104em;      /* 12px / +0.125px */
+
+  /* Elevation is many near-transparent layers, never a hard cast. */
+  --shadow-1:
+    rgba(0, 0, 0, 0.01) 0 0.175px 1.041px, rgba(0, 0, 0, 0.02) 0 0.8px 2.925px,
+    rgba(0, 0, 0, 0.027) 0 2.025px 7.847px, rgba(0, 0, 0, 0.04) 0 4px 18px;
+  --shadow-2:
+    rgba(0, 0, 0, 0.01) 0 0.35px 2px, rgba(0, 0, 0, 0.02) 0 1.5px 5px,
+    rgba(0, 0, 0, 0.03) 0 4px 12px, rgba(0, 0, 0, 0.04) 0 9px 24px,
+    rgba(0, 0, 0, 0.05) 0 23px 52px;
+
+  /* 8px base */
+  --sp-xxs: 4px;
+  --sp-xs: 8px;
+  --sp-sm: 12px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 28px;
+  --sp-xxl: 32px;
+
+  --r-xs: 4px;    /* form fields, inline chips */
+  --r-sm: 5px;    /* menu items, list rows */
+  --r-md: 8px;    /* utility / nav buttons */
+  --r-lg: 12px;   /* feature cards, illustration frames */
+  --r-xl: 16px;   /* large containers, image wells */
 
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -69,78 +125,69 @@
   --display-tracking: 0;
 }
 
-/* ─────────────────────────── the keycap control ───────────────────────────
-   One control system for the whole site, replacing the rounded blue pill. A key
-   with a lit top edge, a 2px base and real travel on :active — a control on a
-   tool that runs on your own hardware should feel like hardware. This is the
-   single flourish the theme spends, so nothing else glows.
-   ───────────────────────────────────────────────────────────────────────── */
-.key {
+/* ─────────────────────────── buttons ───────────────────────────
+   Three ranks. Marketing CTAs are fully pill-shaped; utility and nav buttons round
+   tighter at 8px — that contrast is intentional. Elevation is the barely-there
+   layered shadow, never a hard cast, and only one blue action appears per view.
+   No hover state is specified by the system, so hover stays a whisper and the real
+   feedback is the pressed state.
+   ─────────────────────────────────────────────────────────────── */
+.btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.68rem 1.15rem;
-  border: 1px solid var(--key-edge, var(--line-2));
-  border-radius: 4px;
-  background: linear-gradient(var(--key-top, var(--ink-3)), var(--key-bot, var(--ink-2)));
-  box-shadow:
-    inset 0 1px 0 var(--key-hi, rgba(255, 255, 255, 0.08)),
-    0 2px 0 var(--key-edge, var(--line-2)),
-    0 4px 9px var(--key-drop, rgba(0, 0, 0, 0.45));
+  justify-content: center;
+  gap: var(--sp-xs);
+  padding: 10px var(--sp-lg);
+  border: 0;
+  border-radius: 9999px;
+  background: var(--ink-1);
   color: var(--paper);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.74rem;
+  font-family: var(--font-body), var(--cjk);
+  font-size: 16px;
   font-weight: 500;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
+  line-height: 1.5;
+  letter-spacing: 0;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.06s linear, box-shadow 0.06s linear, filter 0.15s var(--ease-out);
+  /* Keeps a 44px tap target on mobile even as labels shrink. */
+  min-height: 44px;
+  transition: background 0.15s var(--ease-out), transform 0.1s var(--ease-out);
 }
-.key:hover { filter: brightness(1.07); }
-.key:active {
-  transform: translateY(2px);
-  box-shadow:
-    inset 0 1px 0 var(--key-hi, rgba(255, 255, 255, 0.08)),
-    0 0 0 var(--key-edge, var(--line-2)),
-    0 1px 2px var(--key-drop, rgba(0, 0, 0, 0.45));
-}
-.key:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* The system's press feedback. */
+.btn:active { transform: scale(0.96); }
 
-/* Ember rank. Used once per view — the one action the page is asking for. */
-.key[data-variant="primary"] {
-  --key-top: #c86a2c;
-  --key-bot: #9a4a14;
-  --key-edge: #6d3208;
-  --key-hi: rgba(255, 255, 255, 0.2);
-  color: #fff8f2;
+/* Primary — the single blue action. */
+.btn[data-variant=primary] {
+  background: var(--primary);
+  color: var(--on-primary);
 }
-.content-light .key[data-variant="primary"] {
-  --key-top: #c9541f;
-  --key-bot: #a5380a;
-  --key-edge: #7d2a06;
-  --key-hi: rgba(255, 255, 255, 0.28);
-}
-.content-light .key {
-  --key-top: #fbfbfa;
-  --key-bot: #e4e3e0;
-  --key-edge: rgba(26, 23, 20, 0.28);
-  --key-hi: rgba(255, 255, 255, 0.9);
-  --key-drop: rgba(26, 23, 20, 0.22);
+.btn[data-variant=primary]:hover { background: #0080f0; }
+.btn[data-variant=primary]:active { background: var(--primary-active); }
+
+/* Secondary — white pill carried by the soft layered shadow. */
+.btn[data-variant=secondary] {
+  background: #ffffff;
+  color: rgba(0, 0, 0, 0.95);
+  box-shadow: var(--shadow-1);
 }
 
-/* Ghost rank: no key, just a target. For tertiary navigation. */
-.key[data-variant="ghost"] {
-  background: none;
-  box-shadow: none;
-  border-color: var(--line-2);
-  color: var(--paper-dim);
+/* Utility — nav and plan-select. Tighter radius, hairline border, tight padding. */
+.btn[data-variant=utility] {
+  padding: var(--sp-xxs) 14px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #ffffff;
+  color: rgba(0, 0, 0, 0.95);
+  font-size: 15px;
 }
-.key[data-variant="ghost"]:hover { filter: none; color: var(--paper); border-color: var(--paper-dim); }
-.key[data-variant="ghost"]:active { transform: none; background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
+.btn[data-variant=utility]:hover { background: #f6f5f4; }
+
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 
 @media (prefers-reduced-motion: reduce) {
-  .key, .key:active { transition: none; transform: none; }
+  .btn, .btn:active { transition: none; transform: none; }
 }
 
 * { box-sizing: border-box; }
@@ -323,7 +370,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .site-nav-list a:hover { color: #0b1118; }
 .site-nav-list a:focus { outline: 0; }
-.site-nav-list a.active { color: #b4400e; }
+.site-nav-list a.active { color: var(--primary); }
 .site-nav-marker {
   position: absolute;
   top: 50%;
@@ -374,8 +421,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .site-nav-lang a:hover { color: #0b1118; }
 .site-nav-lang a.active {
-  color: #b4400e;
-  background: rgba(180, 64, 14, 0.12);
+  color: var(--primary);
+  background: rgba(0, 117, 222, 0.1);
 }
 /* route link, not a section anchor: no marker, no scroll-spy */
 .site-nav-guide {
@@ -383,10 +430,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(11, 17, 24, 0.62);
+  color: #31302e;
   transition: color 0.18s ease;
 }
-.site-nav-guide:hover { color: #b4400e; }
+.site-nav-guide:hover { color: var(--primary); }
 
 /* The assembly field uses the white instrument header from the selected
    visual target. Hero styling remains unchanged until the page is scrolled. */
@@ -2399,37 +2446,35 @@ button { font: inherit; color: inherit; cursor: pointer; }
    so the pinned ScrollTrigger deck keeps working.
    ══════════════════════════════════════════════════════════════════════ */
 .content-light {
-  /* token remap (light) — anodized grey, not paper white. The old #f5f7fa/#ffffff pairing is what
-     produced the white-card look; a warm grey ground lets hairlines carry structure instead. */
-  --ink: #e8e8e6;          /* page base */
-  --ink-1: #f2f2f0;        /* raised surface */
-  --ink-2: #f2f2f0;        /* panel */
-  --ink-3: #dedddb;        /* inset / hover */
-  --paper: #1a1714;        /* primary text */
-  --paper-dim: #514b45;    /* secondary text */
-  --mute: #736c65;         /* labels / captions */
-  --mute-2: #9a938b;
+  /* token remap (light) — warm paper-soft canvas with pure white reserved for cards and fields, which
+     is what creates the gentle figure/ground. Never a clinical full-page white. */
+  --ink: #f6f5f4;          /* page base: warm paper */
+  --ink-1: #ffffff;        /* raised surface */
+  --ink-2: #ffffff;        /* panel */
+  --ink-3: #f6f5f4;        /* inset / hover */
+  --paper: rgba(0, 0, 0, 0.95);  /* soft true-black */
+  --paper-dim: #31302e;    /* warm charcoal */
+  --mute: #615d59;         /* stone */
+  --mute-2: #a39e98;       /* ash */
 
-  --line: rgba(26, 23, 20, 0.14);
-  --line-2: rgba(26, 23, 20, 0.26);
+  --line: #e6e6e6;         /* hairline */
+  --line-2: #dddddd;
 
-  /* The accent is ember, not azure. This one line is what recolours every primary control on the
-     light surface, because the buttons all read --accent rather than a literal blue. */
-  --amber: #b4400e;        /* LOCAL / private signal (AA on this ground) */
-  --azure: #4e6e8c;        /* ONLINE, desaturated */
-  --accent: #b4400e;
-  --accent-soft: rgba(180, 64, 14, 0.09);
-  --card-shadow: 0 18px 44px -26px rgba(26, 23, 20, 0.35);
+  /* The single structural accent. Every primary control reads --accent, so this one line is what
+     keeps the whole light surface on Notion blue. */
+  --accent: var(--primary);
+  --accent-soft: rgba(0, 117, 222, 0.08);
+  /* Local and online stay as status hues from the sticker palette — decoration, never actions. */
+  --amber: var(--sticker-orange);
+  --azure: var(--sticker-teal);
+  --card-shadow: var(--shadow-1);
 
   position: relative;
   isolation: isolate;
   color: var(--paper);
-  /* Warm grid on a warm ground. The old version drew blue rules over a white-to-#eef3f7 wash, which
-     is where the "blueprint on paper" reading came from. */
-  background:
-    linear-gradient(rgba(26, 23, 20, 0.045) 1px, transparent 1px) 0 0 / 72px 72px,
-    linear-gradient(90deg, rgba(26, 23, 20, 0.04) 1px, transparent 1px) 0 0 / 72px 72px,
-    linear-gradient(180deg, #ecebe8 0%, #e6e6e3 58%, #f1f1ef 100%);
+  /* Flat warm paper. The grid is gone: Notion groups with whitespace and hairlines, and a ruled
+     background is exactly the kind of decoration that competes with content. */
+  background: #f6f5f4;
 }
 .content-light ::selection {
   background: var(--accent);
