@@ -170,6 +170,42 @@
         "ready": "計畫已就緒",
         "showSidebar": "顯示 {{name}} 側邊欄",
         "tasks": "任務"
+      },
+      "zeroConfig": {
+        "action": "準備本機 AI 並開始",
+        "checking": "正在偵測這台裝置",
+        "device": "偵測到的裝置：{{summary}}",
+        "deviceSummary": "可用記憶體 {{availableMemory}} / {{totalMemory}} · {{cores}} 個邏輯核心",
+        "download": "預計下載：{{size}}",
+        "failed": "DJL 無法準備本機 AI",
+        "fallingBack": "正在切換到較小的穩定模型",
+        "gpuSummary": " · {{name}} · 顯示記憶體 {{vram}}",
+        "gpuSummaryAvailable": " · {{name}} · 可用顯示記憶體 {{availableVram}} / {{totalVram}}",
+        "placeholder": "你想讓 DJL 幫你做什麼？",
+        "preparing": "正在準備本機 AI",
+        "privacy": "AI 在本機執行，你的提示和檔案不會離開裝置。",
+        "recommended": "DJL 為此裝置篩選的{{category}}：{{model}}",
+        "retry": "重試",
+        "testing": "正在測試模型",
+        "useCaseLabel": "選擇你最需要的能力",
+        "useCases": {
+          "coding": {
+            "description": "寫程式、除錯與專案任務",
+            "label": "程式冠軍"
+          },
+          "document": {
+            "description": "摘要、擷取與長文處理",
+            "label": "文件冠軍"
+          },
+          "general": {
+            "description": "問答、寫作與日常任務",
+            "label": "綜合冠軍"
+          },
+          "reasoning": {
+            "description": "分析、數學與複雜問題",
+            "label": "推理冠軍"
+          }
+        }
       }
     },
     "confirmations": {
@@ -1217,12 +1253,47 @@
       "ollamaDescription": "DJL 會為你安裝、啟動並連線 Ollama，無需終端或管理員密碼。",
       "privacyDescription": "模型推論留在此電腦上。提示、程式碼內容與輸出不會傳送給託管模型供應商；獲准工具可另外存取網路。",
       "privacyTitle": "以隱私為本",
+      "quick": {
+        "chooseAnother": "選擇其他安裝方式",
+        "description": "DJL 將安裝 {{runtime}} 並下載 {{model}}（約 {{size}}）。不需要終端機或管理員密碼。",
+        "download": "下載 {{model}}（約 {{size}}）",
+        "insufficientDisk": "至少需要 {{size}} 可用磁碟空間。",
+        "readyDescription": "{{model}} 已透過 {{runtime}} 安裝，可直接在聊天中使用。",
+        "readyTitle": "{{runtime}} 已準備就緒",
+        "retry": "重試設定",
+        "runtimeLabel": "選擇本機執行階段",
+        "setup": "一鍵設定本機 AI · {{model}}（約 {{size}}）",
+        "title": "一鍵設定 {{runtime}}",
+        "useCaseLabel": "選擇本機 AI 最擅長的任務",
+        "useCases": {
+          "coding": {
+            "description": "寫程式、除錯與專案任務",
+            "label": "程式冠軍"
+          },
+          "document": {
+            "description": "摘要、擷取與長文處理",
+            "label": "文件冠軍"
+          },
+          "general": {
+            "description": "問答、寫作與日常任務",
+            "label": "綜合冠軍"
+          },
+          "reasoning": {
+            "description": "分析、數學與複雜問題",
+            "label": "推理冠軍"
+          }
+        },
+        "useInChat": "在聊天中使用"
+      },
       "recommendations": {
         "gpt-oss-20b": {
-          "description": "適合配備 16 GB 或更多記憶體裝置的高效能本機程式設計模型。"
+          "description": "適用於 24 GB 或更多記憶體裝置的高效能綜合與推理模型。"
         },
         "granite-4.1-3b": {
-          "description": "適用於配備 8 GB 記憶體的 Mac 和 PC 的精巧程式設計模型。"
+          "description": "適用於 8 GB 記憶體裝置的精巧綜合、文件與程式設計模型。"
+        },
+        "qwen2.5-coder-14b": {
+          "description": "適合配備 24 GB 記憶體裝置的進階程式設計模型。"
         },
         "qwen2.5-coder-7b": {
           "description": "適用於 16 GB 記憶體裝置和 8 GB 顯示卡的高效能程式設計模型。"
@@ -1231,10 +1302,10 @@
           "description": "適用於 4 GB 以上記憶體低階裝置的快速聊天模型。"
         },
         "qwen3-coder-30b": {
-          "description": "專為配備 32 GB 記憶體裝置挑選的高效能程式設計模型。"
+          "description": "專為配備 48 GB 記憶體裝置挑選的最高效能程式設計模型。"
         },
         "qwen3.5-2b": {
-          "description": "針對 8 GB 記憶體裝置最佳化、支援工具呼叫的精巧聊天模型。"
+          "description": "適用於 6 GB 記憶體裝置的輕量通用與程式設計模型。"
         }
       },
       "recommendedTitle": "為此電腦推薦",
@@ -2280,6 +2351,51 @@
       "settings": "設定",
       "toggleSidebar": "切換討論串側邊欄"
     },
+    "onboarding": {
+      "ariaLabel": "DJL 新手教學",
+      "back": "上一步",
+      "finish": "完成",
+      "next": "下一步",
+      "progress": "第 {{current}} / {{total}} 步",
+      "settings": {
+        "action": "開始教學",
+        "basicTitle": "基礎功能教學",
+        "description": "重新查看工作模式、專案模式、本機 AI 推薦和設定的箭頭引導。",
+        "section": "開始使用",
+        "title": "新手教學"
+      },
+      "skip": "跳過",
+      "steps": {
+        "local-ai-device": {
+          "description": "DJL 會檢查可用記憶體、顯示記憶體、CPU 和磁碟，並推薦這台電腦目前能夠穩定執行的最強模型。",
+          "title": "適合這台電腦的推薦"
+        },
+        "local-ai-prepare": {
+          "description": "DJL 會自動下載、啟動、驗證並切換模型；如果執行不穩定，只會在同一類別內降級。",
+          "title": "一鍵準備本機 AI"
+        },
+        "local-ai-purpose": {
+          "description": "選擇綜合、文件、推理或程式設計。DJL 已為每個安全裝置級別預先篩選唯一冠軍模型。",
+          "title": "選擇本機 AI 擅長方向"
+        },
+        "project-mode": {
+          "description": "任務圍繞資料夾或程式碼專案並需要持續脈絡時，請使用專案模式。",
+          "title": "專案模式"
+        },
+        "settings": {
+          "description": "點擊這裡可以更改語言、模型、外觀和軟體行為。",
+          "title": "設定"
+        },
+        "tutorial-replay": {
+          "description": "以後忘記某個功能在哪裡，可以點擊這裡，隨時重新播放基礎功能教學或設定功能教學。",
+          "title": "隨時重新查看教學"
+        },
+        "work-mode": {
+          "description": "寫作、研究和檔案處理等目標明確的任務，請使用工作模式。",
+          "title": "工作模式"
+        }
+      }
+    },
     "pluginLibrary": {
       "hero": "依你的方式使用 {{provider}}",
       "installedPluginsOnly": "此檢視只顯示 Codex 設定中已有的外掛程式。",
@@ -2351,6 +2467,12 @@
     },
     "recovery": {
       "retry": "重試"
+    },
+    "settingsTour": {
+      "action": "查看設定導覽",
+      "ariaLabel": "DJL 設定新手教學",
+      "description": "逐一瞭解設定中的全部分類，以及每一類可以控制的功能。",
+      "title": "設定功能教學"
     },
     "shortcuts": {
       "description": "顯示目前情境中生效的按鍵設定。",
@@ -2852,6 +2974,7 @@
         "downloadStartFailed": "無法開始更新下載",
         "finishFailed": "無法完成更新",
         "installFailed": "無法安裝更新",
+        "later": "稍後",
         "manualAfterFailures_one": "自動安裝失敗{{count}} 時間 。 手動下載{{version}}完成更新.",
         "manualAfterFailures_other": "自動安裝失敗{{count}} 次 。 手動下載{{version}}完成更新.",
         "manualFallback": "應用中的更新無法完成 。 你可以手動下載.",
@@ -2859,6 +2982,8 @@
         "preparingVersion": "DJL 正在後台準備版本 {{version}}。",
         "ready": "更新準備就緒",
         "readyDescription": "當您準備好重新啟動並安裝它時，請點擊更新。",
+        "readyPrompt": "DJL {{version}} 已準備就緒。立即重新啟動即可完成更新。",
+        "restartNow": "立即重新啟動並更新",
         "theUpdate": "更新"
       },
       "updateButton": {
@@ -2977,7 +3102,7 @@
       "before": {
         "description": "比例只根據可分析正文，而非整個檔案。",
         "itemCoverage": "引文、程式碼、表格、參考文獻、中繼資料及不支援的語言會被排除。",
-        "itemEstimate": "結果是機率提示，無法證明作者身分。",
+        "itemEstimate": "結果只是機率性訊號，不能證明作者身分；經 AI 潤飾的人工文本仍可能呈現人工特徵。",
         "itemLocal": "您的檔案不會離開此裝置。",
         "title": "檢測範圍"
       },
@@ -3057,13 +3182,14 @@
       },
       "results": {
         "assessment": {
+          "inconclusive": "偵測器沒有足夠一致的證據來區分 AI 寫作特徵與人工寫作特徵。",
           "insufficient": "可分析正文太少，無法提供可靠的全文評估。",
           "likely-ai": "大部分可分析正文與模型學到的 AI 生成文字特徵相似。",
           "likely-human": "大部分可分析正文與模型學到的人工寫作特徵相似。",
-          "mixed": "可分析正文包含混合或不確定訊號。",
+          "mixed": "可分析正文同時包含 AI 寫作特徵與人工寫作特徵。",
           "unsupported": "找不到可分析的英文或簡體中文正文。"
         },
-        "confidence": "可信度",
+        "confidence": "證據強度",
         "confidenceLevel": {
           "high": "高",
           "low": "低",

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   LocalModelEvent,
+  LocalModelGpu,
   LocalModelInstallInput,
   LocalInstalledModel,
   LocalModelSetupInput,
@@ -15,6 +16,7 @@ import {
 
 const decodeSnapshot = Schema.decodeUnknownEffect(LocalModelsSnapshot);
 const decodeInstalledModel = Schema.decodeUnknownEffect(LocalInstalledModel);
+const decodeGpu = Schema.decodeUnknownEffect(LocalModelGpu);
 const decodeInstall = Schema.decodeUnknownEffect(LocalModelInstallInput);
 const decodeEvent = Schema.decodeUnknownEffect(LocalModelEvent);
 const decodeSetup = Schema.decodeUnknownEffect(LocalModelSetupInput);
@@ -58,7 +60,32 @@ describe("local model contracts", () => {
           usableModelBytes: 14_431_090_114,
         },
         freeDiskBytes: 68_719_476_736,
+        hardwareProfile: {
+          platform: "win32",
+          totalMemoryBytes: 34_359_738_368,
+          availableMemoryBytes: 25_769_803_776,
+          cpuLogicalCores: 16,
+          cpuArchitecture: "x64",
+          gpus: [
+            {
+              id: "00000000:0000abcd",
+              name: "Example GPU",
+              dedicatedMemoryBytes: 12_884_901_888,
+              availableMemoryBytes: 6_442_450_944,
+              memoryType: "dedicated",
+              computeCompatible: true,
+              computeBackend: "cuda",
+            },
+          ],
+          freeDiskBytes: 68_719_476_736,
+        },
         recommendedModelId: "qwen3-coder-large",
+        recommendedModelIdsByUseCase: {
+          general: "gpt-oss-20b",
+          document: "granite-4.1-3b",
+          reasoning: "gpt-oss-20b",
+          coding: "qwen3-coder-large",
+        },
         runtimes: [
           {
             runtime: "ollama",
@@ -103,12 +130,180 @@ describe("local model contracts", () => {
     );
 
     expect(snapshot.runtimes[0]?.runtime).toBe("ollama");
+    expect(snapshot.hardwareProfile?.gpus[0]?.name).toBe("Example GPU");
+    expect(snapshot.hardwareProfile?.gpus[0]?.availableMemoryBytes).toBe(6_442_450_944);
+    expect(snapshot.hardwareProfile?.gpus[0]?.memoryType).toBe("dedicated");
+    expect(snapshot.hardwareProfile?.gpus[0]?.computeCompatible).toBe(true);
+    expect(snapshot.hardwareProfile?.gpus[0]?.computeBackend).toBe("cuda");
     expect(snapshot.recommendedModelId).toBe("qwen3-coder-large");
     expect(snapshot.recommendations[0]?.sources[0]).toMatchObject({
       runtime: "lmstudio",
       modelId: "qwen/qwen3.5-2b",
       quantization: "Q4_K_M",
     });
+    expect(snapshot.recommendedModelIdsByUseCase).toEqual({
+      general: "gpt-oss-20b",
+      document: "granite-4.1-3b",
+      reasoning: "gpt-oss-20b",
+      coding: "qwen3-coder-large",
+    });
+  });
+
+  it("keeps legacy snapshots and setup jobs decodable while champion fields age in", async () => {
+    const snapshot = await Effect.runPromise(
+      decodeSnapshot({
+        totalMemoryBytes: 8,
+        hardware: {
+          totalMemoryBytes: 8,
+          cpuModel: null,
+          cpuCores: 1,
+          acceleration: "cpu_only",
+          gpuName: null,
+          vramBytes: null,
+          usableModelBytes: 1,
+        },
+        freeDiskBytes: null,
+        recommendedModelId: null,
+        runtimes: [],
+        recommendations: [],
+        installedModels: [],
+        runtimeInstallJobs: [],
+        installJobs: [],
+        setupJobs: [
+          {
+            id: "legacy-setup",
+            runtime: "ollama",
+            recommendationId: "qwen3.5-2b",
+            modelId: "qwen3.5:2b-q4_K_M",
+            state: "ready",
+            downloadedBytes: 1,
+            totalBytes: 1,
+            message: null,
+            startedAt: "2026-07-14T12:00:00.000Z",
+            finishedAt: "2026-07-14T12:01:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    expect(snapshot.hardwareProfile).toBeUndefined();
+    expect(snapshot.recommendedModelIdsByUseCase).toBeUndefined();
+    expect(snapshot.setupJobs[0]?.useCase).toBeUndefined();
+  });
+
+  it("rejects invalid champion maps and use cases", async () => {
+    const invalidSnapshot = {
+      totalMemoryBytes: 8,
+      freeDiskBytes: null,
+      recommendedModelId: null,
+      recommendedModelIdsByUseCase: {
+        general: null,
+        document: null,
+        reasoning: null,
+        coding: 123,
+      },
+      runtimes: [],
+      recommendations: [],
+      installedModels: [],
+      runtimeInstallJobs: [],
+      installJobs: [],
+      setupJobs: [],
+    };
+
+    await expect(Effect.runPromise(decodeSnapshot(invalidSnapshot))).rejects.toBeDefined();
+    await expect(
+      Effect.runPromise(decodeSetup({ runtime: "ollama", useCase: "translation" })),
+    ).rejects.toBeDefined();
+    await expect(
+      Effect.runPromise(
+        decodeSetupJob({
+          id: "setup-invalid",
+          runtime: "ollama",
+          useCase: "translation",
+          recommendationId: "qwen3.5-2b",
+          modelId: "qwen3.5:2b-q4_K_M",
+          state: "ready",
+          downloadedBytes: 1,
+          totalBytes: 1,
+          message: null,
+          startedAt: "2026-07-14T12:00:00.000Z",
+          finishedAt: "2026-07-14T12:01:00.000Z",
+        }),
+      ),
+    ).rejects.toBeDefined();
+  });
+
+  it("accepts live, unknown, and legacy GPU available-memory data", async () => {
+    await expect(
+      Effect.runPromise(
+        decodeGpu({
+          id: "metal-0",
+          name: "Busy GPU",
+          dedicatedMemoryBytes: 12_884_901_888,
+          availableMemoryBytes: 0,
+          memoryType: "dedicated",
+          computeBackend: "vulkan",
+        }),
+      ),
+    ).resolves.toMatchObject({ availableMemoryBytes: 0, computeBackend: "vulkan" });
+    await expect(
+      Effect.runPromise(
+        decodeGpu({
+          name: "Apple M4 Pro",
+          dedicatedMemoryBytes: null,
+          availableMemoryBytes: null,
+          memoryType: "unified",
+        }),
+      ),
+    ).resolves.toMatchObject({ memoryType: "unified" });
+    await expect(
+      Effect.runPromise(
+        decodeGpu({
+          name: "Unobservable GPU",
+          dedicatedMemoryBytes: null,
+          availableMemoryBytes: null,
+        }),
+      ),
+    ).resolves.toMatchObject({ availableMemoryBytes: null });
+    await expect(
+      Effect.runPromise(decodeGpu({ name: "Legacy GPU", dedicatedMemoryBytes: 8_589_934_592 })),
+    ).resolves.toEqual({ name: "Legacy GPU", dedicatedMemoryBytes: 8_589_934_592 });
+    await expect(
+      Effect.runPromise(
+        decodeGpu({
+          name: "Invalid GPU",
+          dedicatedMemoryBytes: 8_589_934_592,
+          availableMemoryBytes: -1,
+        }),
+      ),
+    ).rejects.toBeDefined();
+  });
+
+  it("keeps hardware profiles bounded and rejects invalid device data", async () => {
+    await expect(
+      Effect.runPromise(
+        decodeSnapshot({
+          totalMemoryBytes: 8,
+          freeDiskBytes: null,
+          hardwareProfile: {
+            platform: "win32",
+            totalMemoryBytes: 8,
+            availableMemoryBytes: -1,
+            cpuLogicalCores: 0,
+            cpuArchitecture: "x64",
+            gpus: [],
+            freeDiskBytes: null,
+          },
+          recommendedModelId: null,
+          runtimes: [],
+          recommendations: [],
+          installedModels: [],
+          runtimeInstallJobs: [],
+          installJobs: [],
+          setupJobs: [],
+        }),
+      ),
+    ).rejects.toBeDefined();
   });
 
   it("accepts Ollama tags and approved LM Studio catalog or Hugging Face identifiers", async () => {
@@ -212,6 +407,9 @@ describe("local model contracts", () => {
     await expect(
       Effect.runPromise(decodeSetup({ runtime: "lmstudio", recommendationId: "granite-4.1-3b" })),
     ).resolves.toEqual({ runtime: "lmstudio", recommendationId: "granite-4.1-3b" });
+    await expect(
+      Effect.runPromise(decodeSetup({ runtime: "ollama", useCase: "coding" })),
+    ).resolves.toEqual({ runtime: "ollama", useCase: "coding" });
   });
 
   it("decodes a failed setup job that can be retried after reconnect", async () => {
@@ -219,6 +417,7 @@ describe("local model contracts", () => {
       decodeSetupJob({
         id: "setup-2",
         runtime: "lmstudio",
+        useCase: "document",
         recommendationId: "granite-4.1-3b",
         modelId: "ibm/granite-4.1-3b",
         state: "failed",
@@ -231,6 +430,7 @@ describe("local model contracts", () => {
     );
 
     expect(job.runtime).toBe("lmstudio");
+    expect(job.useCase).toBe("document");
     expect(job.state).toBe("failed");
   });
 });

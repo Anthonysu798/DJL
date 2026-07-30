@@ -136,7 +136,11 @@ import {
   type UpdateInstallMarker,
 } from "./updateInstallMarker";
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
-import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
+import {
+  isArm64HostRunningIntelBuild,
+  resolveDesktopRuntimeInfo,
+  resolveLocalAiRuntimeInfo,
+} from "./runtimeArch";
 import { DesktopBrowserManager } from "./browserManager";
 import {
   BROWSER_IPC_CHANNELS,
@@ -364,6 +368,11 @@ async function ensureBrowserUsePipeServer(): Promise<void> {
 
 let destructiveMenuIconCache: Electron.NativeImage | null | undefined;
 const desktopRuntimeInfo = resolveDesktopRuntimeInfo({
+  platform: process.platform,
+  processArch: process.arch,
+  runningUnderArm64Translation: app.runningUnderARM64Translation === true,
+});
+const localAiRuntimeInfo = resolveLocalAiRuntimeInfo({
   platform: process.platform,
   processArch: process.arch,
   runningUnderArm64Translation: app.runningUnderARM64Translation === true,
@@ -2438,6 +2447,13 @@ function backendEnv(): NodeJS.ProcessEnv {
     DJL_MIGRATION_SOURCES: migrationSources.join(Path.delimiter),
     DJL_HOME: BASE_DIR,
     SYNARA_HOME: BASE_DIR,
+    ...(localAiRuntimeInfo.hostArch === "arm64" || localAiRuntimeInfo.hostArch === "x64"
+      ? { DJL_HOST_ARCH: localAiRuntimeInfo.hostArch }
+      : {}),
+    ...(localAiRuntimeInfo.appArch === "arm64" || localAiRuntimeInfo.appArch === "x64"
+      ? { DJL_PROCESS_ARCH: localAiRuntimeInfo.appArch }
+      : {}),
+    DJL_RUNNING_UNDER_TRANSLATION: localAiRuntimeInfo.runningUnderArm64Translation ? "1" : "0",
     SYNARA_AUTH_TOKEN: backendAuthToken,
     ...(app.isPackaged
       ? { DJL_OPENCODE_BINARY_PATH: resolveBundledOpenCodePath(process.resourcesPath) }

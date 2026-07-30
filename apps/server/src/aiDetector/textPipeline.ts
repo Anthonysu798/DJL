@@ -9,12 +9,11 @@ import type {
   AiDetectorScoreSummary,
 } from "@synara/contracts";
 
-import { getModelManifest, type DetectorModelLanguage } from "./modelManifest";
+import { getCalibrationBand, getModelManifest, type DetectorModelLanguage } from "./modelManifest";
 
 export const AI_DETECTOR_PREPROCESSING_VERSION = "djl-prose-v2";
 export const AI_DETECTOR_SEGMENTATION_VERSION = "djl-passages-v3";
 export const MIN_ELIGIBLE_CHARACTERS = 120;
-export const ENGLISH_LIKELY_AI_MIN_ELIGIBLE_CHARACTERS = 600;
 
 export interface NormalizedText {
   readonly text: string;
@@ -46,7 +45,13 @@ export interface AggregatedTextResult {
   readonly regions: readonly AiDetectorRegion[];
   readonly eligibleCharacters: number;
   readonly excludedCharacters: number;
-  readonly assessment: "likely-ai" | "mixed" | "likely-human" | "insufficient" | "unsupported";
+  readonly assessment:
+    | "likely-ai"
+    | "mixed"
+    | "likely-human"
+    | "inconclusive"
+    | "insufficient"
+    | "unsupported";
   readonly confidence: "low" | "medium" | "high";
 }
 
@@ -318,14 +323,21 @@ export async function segmentPassagesTokenAware(
 export function calibrateScore(
   language: DetectorModelLanguage,
   probability: number,
+  eligibleCharacters: number,
 ): Exclude<AiDetectorRegionLabel, "excluded"> {
+  if (eligibleCharacters < MIN_ELIGIBLE_CHARACTERS) return "uncertain";
   const manifest = getModelManifest(language);
-  if (probability <= manifest.humanThreshold) return "likely-human";
-  if (probability >= manifest.aiThreshold) return "likely-ai";
+  const calibration = getCalibrationBand(manifest, eligibleCharacters);
+  if (probability <= calibration.humanThreshold) return "likely-human";
+  if (calibration.aiThreshold !== null && probability >= calibration.aiThreshold) {
+    return "likely-ai";
+  }
   return "uncertain";
 }
 
-function roundPercentages(counts: readonly [number, number, number]): AiDetectorScoreSummary {
+export function roundEvidencePercentages(
+  counts: readonly [number, number, number],
+): AiDetectorScoreSummary {
   const total = counts[0] + counts[1] + counts[2];
   if (total <= 0) return { likelyAi: 0, uncertain: 0, likelyHuman: 0 };
   const raw = counts.map((count) => (count / total) * 100);
@@ -344,6 +356,26 @@ function roundPercentages(counts: readonly [number, number, number]): AiDetector
     uncertain: rounded[1] ?? 0,
     likelyHuman: rounded[2] ?? 0,
   };
+}
+
+export function assessEvidenceSummary(
+  scores: AiDetectorScoreSummary,
+  eligibleCharacters: number,
+  hasUnsupportedLanguage = false,
+): AggregatedTextResult["assessment"] {
+  return eligibleCharacters === 0
+    ? hasUnsupportedLanguage
+      ? "unsupported"
+      : "insufficient"
+    : eligibleCharacters < MIN_ELIGIBLE_CHARACTERS
+      ? "insufficient"
+      : scores.likelyAi >= 65
+        ? "likely-ai"
+        : scores.likelyHuman >= 65
+          ? "likely-human"
+          : scores.uncertain >= 65
+            ? "inconclusive"
+            : "mixed";
 }
 
 function mergeRegions(regions: readonly AiDetectorRegion[]): readonly AiDetectorRegion[] {
@@ -381,9 +413,14 @@ export function aggregateReport(input: {
       reason: span.excludedReason,
     }));
   const eligibleSpans = input.routed.filter((span) => span.excludedReason === undefined);
-  const englishEligibleCharacters = eligibleSpans
-    .filter((span) => span.language === "en")
-    .reduce((total, span) => total + Math.max(0, span.end - span.start), 0);
+  const eligibleCharactersByLanguage = {
+    en: eligibleSpans
+      .filter((span) => span.language === "en")
+      .reduce((total, span) => total + Math.max(0, span.end - span.start), 0),
+    "zh-Hans": eligibleSpans
+      .filter((span) => span.language === "zh-Hans")
+      .reduce((total, span) => total + Math.max(0, span.end - span.start), 0),
+  };
   const scoredRegions: AiDetectorRegion[] = [];
   const counts: [number, number, number] = [0, 0, 0];
 
@@ -410,13 +447,10 @@ export function aggregateReport(input: {
           ? covering.reduce((sum, passage) => sum + passage.aiProbability, 0) / covering.length
           : 0.5;
       const language = eligible.language as DetectorModelLanguage;
-      const calibrated = covering.length > 0 ? calibrateScore(language, score) : "uncertain";
       const label =
-        calibrated === "likely-ai" &&
-        language === "en" &&
-        englishEligibleCharacters < ENGLISH_LIKELY_AI_MIN_ELIGIBLE_CHARACTERS
-          ? "uncertain"
-          : calibrated;
+        covering.length > 0
+          ? calibrateScore(language, score, eligibleCharactersByLanguage[language])
+          : "uncertain";
       const length = end - start;
       if (label === "likely-ai") counts[0] += length;
       else if (label === "uncertain") counts[1] += length;
@@ -430,22 +464,11 @@ export function aggregateReport(input: {
     (total, region) => total + Math.max(0, region.end - region.start),
     0,
   );
-  const scores = roundPercentages(counts);
+  const scores = roundEvidencePercentages(counts);
   const hasUnsupportedLanguage = excludedRegions.some(
     (region) => region.reason === "unsupported-language",
   );
-  const assessment =
-    eligibleCharacters === 0
-      ? hasUnsupportedLanguage
-        ? "unsupported"
-        : "insufficient"
-      : eligibleCharacters < MIN_ELIGIBLE_CHARACTERS
-        ? "insufficient"
-        : scores.likelyAi >= 65
-          ? "likely-ai"
-          : scores.likelyHuman >= 65
-            ? "likely-human"
-            : "mixed";
+  const assessment = assessEvidenceSummary(scores, eligibleCharacters, hasUnsupportedLanguage);
   const confidence =
     eligibleCharacters < 300 || scores.uncertain >= 45
       ? "low"

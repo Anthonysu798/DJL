@@ -11,6 +11,7 @@ import {
   getDesktopUpdateButtonTooltip,
   getDesktopUpdateDownloadPercent,
   getDesktopUpdateErrorSignature,
+  getDesktopUpdateReadyPromptVersion,
   isDesktopUpdateButtonDisabled,
   resolveDesktopUpdateButtonAction,
   shouldHighlightDesktopUpdateError,
@@ -39,10 +40,21 @@ const baseState: DesktopUpdateState = {
 };
 
 describe("desktop update button state", () => {
-  it("hides the button when idle (no update available)", () => {
-    expect(shouldShowDesktopUpdateButton(baseState)).toBe(false);
+  it("keeps a manual check button visible when idle", () => {
+    expect(shouldShowDesktopUpdateButton(baseState)).toBe(true);
     expect(resolveDesktopUpdateButtonAction(baseState)).toBe("check");
     expect(getDesktopUpdateButtonTooltip(baseState)).toBe("Check for updates");
+  });
+
+  it("hides the update button when desktop updates are unavailable", () => {
+    expect(shouldShowDesktopUpdateButton(null)).toBe(false);
+    expect(
+      shouldShowDesktopUpdateButton({
+        ...baseState,
+        enabled: false,
+        status: "disabled",
+      }),
+    ).toBe(false);
   });
 
   it("shows a download action when an update is available", () => {
@@ -131,7 +143,7 @@ describe("desktop update button state", () => {
     ).toBe("download");
   });
 
-  it("hides the button for non-actionable check errors", () => {
+  it("keeps the button visible so a failed update check can be retried", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "error",
@@ -139,12 +151,12 @@ describe("desktop update button state", () => {
       errorContext: "check",
       canRetry: true,
     };
-    expect(shouldShowDesktopUpdateButton(state)).toBe(false);
+    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
     expect(resolveDesktopUpdateButtonAction(state)).toBe("check");
     expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to check again");
   });
 
-  it("hides non-actionable update errors without a known version", () => {
+  it("recovers from an update error with no known version by checking again", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "error",
@@ -153,8 +165,9 @@ describe("desktop update button state", () => {
       canRetry: false,
     };
 
-    expect(resolveDesktopUpdateButtonAction(state)).toBe("none");
-    expect(shouldShowDesktopUpdateButton(state)).toBe(false);
+    expect(resolveDesktopUpdateButtonAction(state)).toBe("check");
+    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
+    expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to check again");
   });
 
   it("disables the button while downloading", () => {
@@ -207,17 +220,35 @@ describe("desktop update button state", () => {
     ).toBeNull();
   });
 
-  it("keeps update checks hidden while a check is in flight", () => {
+  it("keeps the update button visible and disabled while a check is in flight", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "checking",
     };
 
-    expect(shouldShowDesktopUpdateButton(state)).toBe(false);
+    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
     expect(resolveDesktopUpdateButtonAction(state)).toBe("check");
     expect(isDesktopUpdateButtonDisabled(state)).toBe(true);
     expect(getDesktopUpdateButtonTooltip(state)).toContain("Checking for updates");
     expect(getDesktopUpdateButtonLabel(state)).toBe("Checking...");
+  });
+
+  it("prompts once when a downloaded update is ready", () => {
+    const state: DesktopUpdateState = {
+      ...baseState,
+      status: "downloaded",
+      availableVersion: "1.1.0",
+      downloadedVersion: "1.1.0",
+    };
+
+    expect(getDesktopUpdateReadyPromptVersion(state, null)).toBe("1.1.0");
+    expect(getDesktopUpdateReadyPromptVersion(state, "1.1.0")).toBeNull();
+    expect(
+      getDesktopUpdateReadyPromptVersion(
+        { ...state, status: "error", errorContext: "install" },
+        null,
+      ),
+    ).toBeNull();
   });
 
   it("shows retry labels for actionable update errors", () => {

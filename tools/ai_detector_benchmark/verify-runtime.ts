@@ -75,7 +75,7 @@ try {
 
   const tolerance = 1e-12;
   const result = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     iterationsPerLanguage: 20,
     executionProvider: "cpu",
     outboundNetworkBlocked: true,
@@ -84,12 +84,14 @@ try {
     english: {
       score: englishScores[0],
       spread: spread(englishScores),
-      classification: calibrateScore("en", englishScores[0]!),
+      eligibleCharacters: english.length,
+      classification: calibrateScore("en", englishScores[0]!, english.length),
     },
     simplifiedChinese: {
       score: chineseScores[0],
       spread: spread(chineseScores),
-      classification: calibrateScore("zh-Hans", chineseScores[0]!),
+      eligibleCharacters: chinese.length,
+      classification: calibrateScore("zh-Hans", chineseScores[0]!, chinese.length),
     },
     mixed: {
       uniqueDisplayedReports: new Set(mixedSignatures).size,

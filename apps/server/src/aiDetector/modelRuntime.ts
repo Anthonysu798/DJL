@@ -3,21 +3,107 @@
 
 import path from "node:path";
 
-import type { DetectorModelLanguage } from "./modelManifest";
+import {
+  getModelManifest,
+  type DetectorModelLanguage,
+  type DetectorModelOutputContract,
+} from "./modelManifest";
 import { verifyInstalledModel } from "./modelInstaller";
 
-type ClassifierResult = { readonly label: string; readonly score: number };
-type Classifier = ((
-  text: string,
-  options: Record<string, unknown>,
-) => Promise<ClassifierResult | ClassifierResult[]>) & {
-  readonly tokenizer?: { readonly encode?: (text: string) => readonly number[] };
-  dispose?: () => Promise<void> | void;
+export interface DetectorLogits {
+  readonly dims: readonly number[];
+  readonly data: ArrayLike<number | bigint>;
+  readonly size: number;
+  readonly type: string;
+  dispose: () => void;
+}
+
+type ModelInputs = Readonly<Record<string, DetectorLogits>>;
+type SequenceClassifier = ((
+  inputs: ModelInputs,
+) => Promise<{ readonly logits?: DetectorLogits }>) & {
+  dispose?: () => Promise<unknown> | unknown;
 };
-type Tokenizer = {
+type Tokenizer = ((
+  text: string,
+  options: {
+    readonly padding: true;
+    readonly truncation: true;
+    readonly max_length: 512;
+  },
+) => ModelInputs) & {
   readonly encode: (text: string) => readonly number[];
   dispose?: () => Promise<void> | void;
 };
+
+const invalidLogitsMessage = "The local detector returned invalid classification logits.";
+
+function validateLogitsData(logits: DetectorLogits, expectedLogits: number): readonly number[] {
+  const validData =
+    (logits.type === "float32" && logits.data instanceof Float32Array) ||
+    (logits.type === "float64" && logits.data instanceof Float64Array);
+  if (
+    logits.dims.length !== 2 ||
+    logits.dims[0] !== 1 ||
+    logits.dims[1] !== expectedLogits ||
+    logits.size !== expectedLogits ||
+    logits.data.length !== expectedLogits ||
+    !validData
+  ) {
+    throw new Error(invalidLogitsMessage);
+  }
+
+  const values = Array.from(logits.data);
+  if (values.some((value) => typeof value !== "number" || !Number.isFinite(value))) {
+    throw new Error(invalidLogitsMessage);
+  }
+  return values as number[];
+}
+
+export function detectorProbabilityFromLogits(
+  logits: DetectorLogits | undefined,
+  output: DetectorModelOutputContract,
+): number {
+  if (!logits) throw new Error(invalidLogitsMessage);
+  const expectedLogits = output.probability === "two-logit-softmax" ? 2 : 1;
+  const values = validateLogitsData(logits, expectedLogits);
+
+  let probability: number;
+  if (output.probability === "two-logit-softmax") {
+    const maximum = Math.max(...values);
+    const exponentials = values.map((value) => Math.exp(value - maximum));
+    const denominator = exponentials.reduce((total, value) => total + value, 0);
+    probability = exponentials[output.aiLabelIndex]! / denominator;
+  } else {
+    const value = values[0]!;
+    if (value >= 0) {
+      probability = 1 / (1 + Math.exp(-value));
+    } else {
+      const exponential = Math.exp(value);
+      probability = exponential / (1 + exponential);
+    }
+  }
+
+  if (!Number.isFinite(probability) || probability < 0 || probability > 1) {
+    throw new Error(invalidLogitsMessage);
+  }
+  return probability;
+}
+
+function disposeTensors(tensors: Iterable<DetectorLogits | undefined>): void {
+  const unique = new Set(tensors);
+  let firstError: unknown;
+  let disposalFailed = false;
+  for (const tensor of unique) {
+    try {
+      tensor?.dispose();
+    } catch (error) {
+      if (!disposalFailed) firstError = error;
+      disposalFailed = true;
+    }
+  }
+  if (disposalFailed) throw firstError;
+}
 
 export class DetectorModelIntegrityError extends Error {
   constructor(readonly language: DetectorModelLanguage) {
@@ -27,9 +113,9 @@ export class DetectorModelIntegrityError extends Error {
 }
 
 export class DetectorModelRuntime {
-  private classifier: Classifier | null = null;
+  private model: SequenceClassifier | null = null;
   private language: DetectorModelLanguage | null = null;
-  private loading: Promise<Classifier> | null = null;
+  private loading: Promise<SequenceClassifier> | null = null;
   private operation = Promise.resolve();
   private readonly verifiedLanguages = new Set<DetectorModelLanguage>();
   private readonly tokenizers = new Map<DetectorModelLanguage, Tokenizer>();
@@ -62,19 +148,26 @@ export class DetectorModelRuntime {
     return transformers;
   }
 
-  private async load(language: DetectorModelLanguage): Promise<Classifier> {
-    if (this.classifier && this.language === language) return this.classifier;
+  private async load(language: DetectorModelLanguage): Promise<SequenceClassifier> {
+    if (this.model && this.language === language) return this.model;
     if (this.loading && this.language === language) return this.loading;
     await this.disposeCurrent();
     await this.verify(language);
     this.language = language;
     this.loading = (async () => {
       const transformers = await this.loadTransformers();
-      const loaded = (await transformers.pipeline("text-classification", language, {
-        device: "cpu",
-        dtype: "q8",
-      })) as unknown as Classifier;
-      this.classifier = loaded;
+      const loaded = (await transformers.AutoModelForSequenceClassification.from_pretrained(
+        language,
+        {
+          local_files_only: true,
+          device: "cpu",
+          dtype: "q8",
+        },
+      )) as unknown as SequenceClassifier;
+      if (typeof loaded !== "function") {
+        throw new Error("The installed detector model is incompatible with this runtime.");
+      }
+      this.model = loaded;
       return loaded;
     })();
     try {
@@ -92,7 +185,7 @@ export class DetectorModelRuntime {
     const tokenizer = (await transformers.AutoTokenizer.from_pretrained(language, {
       local_files_only: true,
     })) as unknown as Tokenizer;
-    if (typeof tokenizer.encode !== "function") {
+    if (typeof tokenizer !== "function" || typeof tokenizer.encode !== "function") {
       throw new Error("The installed detector tokenizer is incompatible with this runtime.");
     }
     this.tokenizers.set(language, tokenizer);
@@ -102,20 +195,38 @@ export class DetectorModelRuntime {
   score(language: DetectorModelLanguage, text: string, signal: AbortSignal): Promise<number> {
     return this.serialize(async () => {
       signal.throwIfAborted();
-      const classifier = await this.load(language);
+      const model = await this.load(language);
       signal.throwIfAborted();
-      const raw = await classifier(text, { top_k: null, truncation: true, max_length: 512 });
+      const tokenizer = await this.loadTokenizer(language);
       signal.throwIfAborted();
-      const results = Array.isArray(raw) ? raw : [raw];
-      const ai = results.find((result) =>
-        language === "en"
-          ? result.label.toLowerCase() === "ai" || result.label === "LABEL_1"
-          : result.label === "LABEL_1" || result.label.toLowerCase().includes("ai_generated"),
-      );
-      if (!ai || !Number.isFinite(ai.score) || ai.score < 0 || ai.score > 1) {
-        throw new Error("The local detector returned an invalid classification score.");
+      let inputs: ModelInputs | null = null;
+      let logits: DetectorLogits | undefined;
+      let probability: number | undefined;
+      let operationFailed = false;
+      let operationError: unknown;
+      try {
+        inputs = tokenizer(text, { padding: true, truncation: true, max_length: 512 });
+        signal.throwIfAborted();
+        const output = await model(inputs);
+        logits = output.logits;
+        signal.throwIfAborted();
+        probability = detectorProbabilityFromLogits(logits, getModelManifest(language).output);
+      } catch (error) {
+        operationFailed = true;
+        operationError = error;
       }
-      return ai.score;
+
+      let disposalFailed = false;
+      let disposalError: unknown;
+      try {
+        disposeTensors([logits, ...Object.values(inputs ?? {})]);
+      } catch (error) {
+        disposalFailed = true;
+        disposalError = error;
+      }
+      if (operationFailed) throw operationError;
+      if (disposalFailed) throw disposalError;
+      return probability!;
     });
   }
 
@@ -133,11 +244,11 @@ export class DetectorModelRuntime {
   }
 
   private async disposeCurrent(): Promise<void> {
-    const classifier = this.classifier;
-    this.classifier = null;
+    const model = this.model;
+    this.model = null;
     this.language = null;
     this.loading = null;
-    await classifier?.dispose?.();
+    await model?.dispose?.();
   }
 
   dispose(): Promise<void> {

@@ -2,11 +2,14 @@
 // Emits a revision-pinned, balanced HC3 JSONL sample without persisting the corpus.
 
 import {
-  buildHuggingFaceDatasetMetadataUrl,
+  assertHc3SplitRole,
+  buildPinnedHuggingFaceDatasetFileUrl,
+  decodePinnedHc3JsonlRows,
+  HC3_WINDOW_SIZE,
   selectBalancedHc3Fixtures,
   type Hc3SampleSource,
-  type Hc3SourceRow,
 } from "./hc3Sample";
+import { BENCHMARK_SPLIT_ROLES, type BenchmarkSplitRole } from "./benchmarkInput";
 
 interface DatasetSpec {
   readonly dataset: string;
@@ -50,70 +53,80 @@ function pairsPerLanguage(): number {
   return parsed;
 }
 
-async function fetchJson(url: string): Promise<unknown> {
-  const response = await fetch(url, { redirect: "error" });
-  if (!response.ok) throw new Error(`HC3 request failed with HTTP ${response.status}.`);
-  return response.json();
+function rowOffset(): number {
+  const index = process.argv.indexOf("--row-offset");
+  const raw = index >= 0 ? process.argv[index + 1] : "0";
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 10_000 || parsed % 100 !== 0) {
+    throw new Error("--row-offset must be a multiple of 100 from 0 through 10000.");
+  }
+  return parsed;
 }
 
-async function assertRevision(spec: DatasetSpec): Promise<void> {
-  const metadata = (await fetchJson(buildHuggingFaceDatasetMetadataUrl(spec.dataset))) as {
-    readonly sha?: unknown;
-  };
-  if (metadata.sha !== spec.revision) {
+function splitRole(): BenchmarkSplitRole {
+  const index = process.argv.indexOf("--split-role");
+  const value = index >= 0 ? process.argv[index + 1] : undefined;
+  if (!BENCHMARK_SPLIT_ROLES.includes(value as BenchmarkSplitRole)) {
+    throw new Error("--split-role must be development, validation, or locked.");
+  }
+  return value as BenchmarkSplitRole;
+}
+
+async function fetchPinnedRowPrefix(
+  url: string,
+  revision: string,
+  requiredRows: number,
+): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HC3 request failed with HTTP ${response.status}.`);
+  const resolved = new URL(response.url);
+  if (resolved.protocol !== "https:" || !resolved.pathname.includes(`/${revision}/`)) {
     throw new Error(
-      `HC3 revision changed for ${spec.dataset}: expected ${spec.revision}, received ${String(metadata.sha)}.`,
+      `HC3 download did not resolve to pinned revision ${revision}: ${response.url}.`,
     );
   }
-}
+  if (!response.body) throw new Error("HC3 download returned no response body.");
 
-function decodeRows(value: unknown): readonly Hc3SourceRow[] {
-  const rows = (value as { readonly rows?: unknown }).rows;
-  if (!Array.isArray(rows)) throw new Error("HC3 rows response is malformed.");
-  return rows.map((entry) => {
-    const record = entry as { readonly row_idx?: unknown; readonly row?: unknown };
-    const row = record.row as
-      | { readonly human_answers?: unknown; readonly chatgpt_answers?: unknown }
-      | undefined;
-    if (
-      !Number.isSafeInteger(record.row_idx) ||
-      !row ||
-      !Array.isArray(row.human_answers) ||
-      !row.human_answers.every((answer) => typeof answer === "string") ||
-      !Array.isArray(row.chatgpt_answers) ||
-      !row.chatgpt_answers.every((answer) => typeof answer === "string")
-    ) {
-      throw new Error("HC3 row is malformed.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let completedRows = 0;
+  try {
+    while (completedRows < requiredRows) {
+      const { value, done } = await reader.read();
+      if (done) {
+        chunks.push(decoder.decode());
+        break;
+      }
+      const decoded = decoder.decode(value, { stream: true });
+      chunks.push(decoded);
+      completedRows += decoded.match(/\n/gu)?.length ?? 0;
     }
-    return {
-      rowIndex: record.row_idx as number,
-      humanAnswers: row.human_answers as string[],
-      aiAnswers: row.chatgpt_answers as string[],
-    };
-  });
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  return chunks.join("");
 }
 
-async function fetchSource(spec: DatasetSpec): Promise<Hc3SampleSource> {
-  await assertRevision(spec);
-  const query = new URLSearchParams({
-    dataset: spec.dataset,
-    config: spec.config,
-    split: "train",
-    offset: "0",
-    length: "100",
-  });
-  const rows = decodeRows(
-    await fetchJson(`https://datasets-server.huggingface.co/rows?${query.toString()}`),
+async function fetchSource(spec: DatasetSpec, offset: number): Promise<Hc3SampleSource> {
+  const url = buildPinnedHuggingFaceDatasetFileUrl(spec.dataset, spec.revision, spec.config);
+  const rows = decodePinnedHc3JsonlRows(
+    await fetchPinnedRowPrefix(url, spec.revision, offset + HC3_WINDOW_SIZE),
+    offset,
   );
   return { ...spec, rows };
 }
 
 const pairs = pairsPerLanguage();
-const sources = await Promise.all(DATASETS.map(fetchSource));
+const offset = rowOffset();
+const role = splitRole();
+assertHc3SplitRole(offset, role);
+const sources = await Promise.all(DATASETS.map((spec) => fetchSource(spec, offset)));
 const fixtures = (["en", "zh-Hans"] as const).flatMap((language) =>
   selectBalancedHc3Fixtures(
     sources.filter((source) => source.language === language),
     pairs,
+    role,
   ),
 );
 process.stdout.write(`${fixtures.map((fixture) => JSON.stringify(fixture)).join("\n")}\n`);

@@ -170,6 +170,42 @@
         "ready": "Plan ready",
         "showSidebar": "Show {{name}} sidebar",
         "tasks": "Tasks"
+      },
+      "zeroConfig": {
+        "action": "Prepare local AI and start",
+        "checking": "Checking this device",
+        "device": "Detected device: {{summary}}",
+        "deviceSummary": "Available memory {{availableMemory}} / {{totalMemory}} · {{cores}} logical cores",
+        "download": "Estimated download: {{size}}",
+        "failed": "DJL could not prepare local AI",
+        "fallingBack": "Switching to a smaller stable model",
+        "gpuSummary": " · {{name}} · {{vram}} VRAM",
+        "gpuSummaryAvailable": " · {{name}} · Available VRAM {{availableVram}} / {{totalVram}}",
+        "placeholder": "What do you want DJL to help you with?",
+        "preparing": "Preparing local AI",
+        "privacy": "Runs on this device. Your prompts and files stay local.",
+        "recommended": "DJL's {{category}} for this device: {{model}}",
+        "retry": "Try again",
+        "testing": "Testing the model",
+        "useCaseLabel": "Choose what you need",
+        "useCases": {
+          "coding": {
+            "description": "Code, debugging, and project work",
+            "label": "Coding champion"
+          },
+          "document": {
+            "description": "Summaries, extraction, and long documents",
+            "label": "Document champion"
+          },
+          "general": {
+            "description": "Questions, writing, and everyday tasks",
+            "label": "All-round champion"
+          },
+          "reasoning": {
+            "description": "Analysis, math, and complex problems",
+            "label": "Reasoning champion"
+          }
+        }
       }
     },
     "confirmations": {
@@ -1217,12 +1253,47 @@
       "ollamaDescription": "DJL installs, starts, and connects Ollama for you. No terminal or admin password needed.",
       "privacyDescription": "Model inference stays on this computer. Prompts, code context, and output are not sent to a hosted model provider. Approved tools can access the network separately.",
       "privacyTitle": "Private by design",
+      "quick": {
+        "chooseAnother": "Choose another setup",
+        "description": "DJL will install {{runtime}} and download {{model}} (about {{size}}). No terminal or administrator password needed.",
+        "download": "Download {{model}} (about {{size}})",
+        "insufficientDisk": "At least {{size}} of free disk space is required.",
+        "readyDescription": "{{model}} is installed through {{runtime}} and available in chat.",
+        "readyTitle": "{{runtime}} is ready",
+        "retry": "Retry setup",
+        "runtimeLabel": "Choose a local runtime",
+        "setup": "Set up local AI · {{model}} (about {{size}})",
+        "title": "One-click {{runtime}} setup",
+        "useCaseLabel": "Choose what the local AI should do best",
+        "useCases": {
+          "coding": {
+            "description": "Code, debugging, and project work",
+            "label": "Coding champion"
+          },
+          "document": {
+            "description": "Summaries, extraction, and long documents",
+            "label": "Document champion"
+          },
+          "general": {
+            "description": "Questions, writing, and everyday tasks",
+            "label": "All-round champion"
+          },
+          "reasoning": {
+            "description": "Analysis, math, and complex problems",
+            "label": "Reasoning champion"
+          }
+        },
+        "useInChat": "Use in chat"
+      },
       "recommendations": {
         "gpt-oss-20b": {
-          "description": "A capable local coding model recommended for systems with 16 GB or more."
+          "description": "A capable general and reasoning model for systems with 24 GB or more."
         },
         "granite-4.1-3b": {
-          "description": "A compact coding model for Macs and PCs with 8 GB of memory."
+          "description": "A compact general, document, and coding model for systems with 8 GB of memory."
+        },
+        "qwen2.5-coder-14b": {
+          "description": "A stronger coding model for systems with 24 GB of memory."
         },
         "qwen2.5-coder-7b": {
           "description": "A capable coding model for 16 GB machines and 8 GB graphics cards."
@@ -1231,10 +1302,10 @@
           "description": "A fast chat model for low-memory computers with 4 GB or more."
         },
         "qwen3-coder-30b": {
-          "description": "The strongest curated local coding option, intended for 32 GB systems."
+          "description": "The strongest curated local coding option, intended for systems with 48 GB of memory."
         },
         "qwen3.5-2b": {
-          "description": "A compact tool-capable chat model tuned for computers with 8 GB of memory."
+          "description": "A lightweight general-purpose and coding model for devices with 6 GB of memory."
         }
       },
       "recommendedTitle": "Recommended for this computer",
@@ -2280,6 +2351,51 @@
       "settings": "Settings",
       "toggleSidebar": "Toggle thread sidebar"
     },
+    "onboarding": {
+      "ariaLabel": "DJL new user tutorial",
+      "back": "Back",
+      "finish": "Finish",
+      "next": "Next",
+      "progress": "{{current}} of {{total}}",
+      "settings": {
+        "action": "Start tutorial",
+        "basicTitle": "Basic tutorial",
+        "description": "Replay the guided tour for Work, Projects, local AI recommendations, and Settings.",
+        "section": "Getting started",
+        "title": "New user tutorial"
+      },
+      "skip": "Skip",
+      "steps": {
+        "local-ai-device": {
+          "description": "DJL checks available memory, GPU memory, CPU, and disk, then shows the strongest model this computer can run reliably.",
+          "title": "A recommendation for this computer"
+        },
+        "local-ai-prepare": {
+          "description": "DJL downloads, starts, verifies, and selects the model automatically. If it cannot run reliably, DJL falls back within the same category.",
+          "title": "Prepare local AI in one click"
+        },
+        "local-ai-purpose": {
+          "description": "Pick General, Documents, Reasoning, or Coding. DJL has already selected one champion for each safe device tier.",
+          "title": "Choose what local AI does best"
+        },
+        "project-mode": {
+          "description": "Use Projects when work belongs to a folder or codebase and needs ongoing context.",
+          "title": "Project mode"
+        },
+        "settings": {
+          "description": "Open Settings here to change language, models, appearance, and app behavior.",
+          "title": "Settings"
+        },
+        "tutorial-replay": {
+          "description": "If you forget where something is, open New user tutorial here to replay the basic tour or the full Settings tour at any time.",
+          "title": "Replay tutorials anytime"
+        },
+        "work-mode": {
+          "description": "Use Work for focused tasks such as writing, research, and file processing.",
+          "title": "Work mode"
+        }
+      }
+    },
     "pluginLibrary": {
       "hero": "Make {{provider}} work your way",
       "installedPluginsOnly": "This view only shows plugins already available in your Codex setup.",
@@ -2351,6 +2467,12 @@
     },
     "recovery": {
       "retry": "Retry"
+    },
+    "settingsTour": {
+      "action": "Explore settings",
+      "ariaLabel": "DJL settings tutorial",
+      "description": "Tour every Settings category and learn what each one controls.",
+      "title": "Settings tutorial"
     },
     "shortcuts": {
       "description": "Reflects the bindings active in your current context.",
@@ -2852,6 +2974,7 @@
         "downloadStartFailed": "Could not start update download",
         "finishFailed": "Couldn’t finish updating",
         "installFailed": "Could not install update",
+        "later": "Later",
         "manualAfterFailures_one": "Automatic installation has failed {{count}} time. Download {{version}} manually to finish updating.",
         "manualAfterFailures_other": "Automatic installation has failed {{count}} times. Download {{version}} manually to finish updating.",
         "manualFallback": "The in-app update could not complete. You can download it manually.",
@@ -2859,6 +2982,8 @@
         "preparingVersion": "DJL is preparing version {{version}} in the background.",
         "ready": "Update ready",
         "readyDescription": "Click Update when you’re ready to restart and install it.",
+        "readyPrompt": "DJL {{version}} is ready. Restart now to install the update.",
+        "restartNow": "Restart and update",
         "theUpdate": "the update"
       },
       "updateButton": {
@@ -2977,7 +3102,7 @@
       "before": {
         "description": "The score covers eligible prose, not the entire file.",
         "itemCoverage": "Quotes, code, tables, references, metadata, and unsupported languages are excluded.",
-        "itemEstimate": "Results are probabilistic indicators, not proof of authorship.",
+        "itemEstimate": "Results are probabilistic, not proof of authorship; AI-refined human text may still look human.",
         "itemLocal": "Your document never leaves this device.",
         "title": "What this check measures"
       },
@@ -3057,13 +3182,14 @@
       },
       "results": {
         "assessment": {
+          "inconclusive": "The detector does not have enough consistent evidence to distinguish AI-like from human-like writing.",
           "insufficient": "There is too little eligible prose for a responsible document-level assessment.",
           "likely-ai": "Most eligible prose resembles patterns learned from AI-generated text.",
           "likely-human": "Most eligible prose resembles patterns learned from human writing.",
-          "mixed": "Eligible prose contains mixed or uncertain signals.",
+          "mixed": "Eligible prose contains both AI-like and human-like signals.",
           "unsupported": "No eligible English or Simplified Chinese prose was found to analyze."
         },
-        "confidence": "Confidence",
+        "confidence": "Evidence strength",
         "confidenceLevel": {
           "high": "High",
           "low": "Low",

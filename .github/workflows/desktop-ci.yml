@@ -193,6 +193,10 @@ jobs:
       - name: Install frozen dependencies
         uses: ./.github/actions/setup-desktop
 
+      - name: Verify native hardware recommendation
+        shell: bash
+        run: bun run --cwd apps/server test -- src/localModels/hardwareProfile.native.test.ts
+
       - name: Build unsigned native package
         shell: bash
         env:

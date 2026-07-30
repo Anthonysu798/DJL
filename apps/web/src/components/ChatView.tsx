@@ -34,6 +34,9 @@ import {
   type TurnId,
   type EditorId,
   type KeybindingCommand,
+  type LocalModelGpu,
+  type LocalModelUseCase,
+  type LocalModelsSnapshot,
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
@@ -88,6 +91,7 @@ import {
   providerComposerCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
   providerModelsQueryOptions,
+  openCodeModelProvidersQueryOptions,
   providerPluginsQueryOptions,
   providerSkillsQueryOptions,
   supportsNativeSlashCommandDiscovery,
@@ -288,6 +292,7 @@ import {
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
+import { ZeroConfigLocalAiCard } from "./chat/ZeroConfigLocalAiCard";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "./ui/menu";
@@ -307,7 +312,7 @@ import {
 } from "~/projectScripts";
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
-import { readNativeApi } from "~/nativeApi";
+import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import {
   confirmTerminalTabClose,
   resolveTerminalCloseTitle,
@@ -315,6 +320,18 @@ import {
 } from "~/lib/terminalCloseConfirmation";
 import { promoteThreadCreate } from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
+import {
+  readLocalModelsBrowserCache,
+  writeLocalModelsBrowserCache,
+} from "~/lib/localModelsBrowserCache";
+import { selectZeroConfigModel } from "~/lib/zeroConfigModelSelection";
+import { readLocalModelUseCase, writeLocalModelUseCase } from "~/lib/localModelUseCaseStore";
+import {
+  canAutoResumeLocalModelSetup,
+  fingerprintLocalModelSetupDraft,
+  localModelSetupContinuationStore,
+  useLocalModelSetupContinuation,
+} from "~/localModelSetupContinuationStore";
 import {
   getAppModelOptions,
   getCustomBinaryPathForProvider,
@@ -1021,6 +1038,33 @@ function composerPromptStillMatchesRestoredQueuedDraft(
   return probe.length >= 16 && next.includes(probe);
 }
 
+function formatZeroConfigBytes(bytes: number, locale: string): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 GB";
+  const gibibytes = bytes / 1024 ** 3;
+  return `${new Intl.NumberFormat(locale, {
+    maximumFractionDigits: gibibytes >= 10 ? 0 : 1,
+  }).format(gibibytes)} GB`;
+}
+
+function selectZeroConfigGpu(gpus: ReadonlyArray<LocalModelGpu>): LocalModelGpu | null {
+  const hasLiveAvailableMemory = gpus.some(
+    ({ availableMemoryBytes }) =>
+      availableMemoryBytes !== null && availableMemoryBytes !== undefined,
+  );
+  const recommendationBudget = (gpu: LocalModelGpu): number => {
+    if (!hasLiveAvailableMemory) return gpu.dedicatedMemoryBytes ?? 0;
+    if (gpu.availableMemoryBytes === null || gpu.availableMemoryBytes === undefined) return -1;
+    const totalBytes = gpu.dedicatedMemoryBytes ?? 0;
+    const availableBytes = Math.min(Math.max(0, gpu.availableMemoryBytes), totalBytes);
+    const reserveBytes = Math.max(1.5 * 1024 ** 3, totalBytes * 0.125);
+    return Math.max(0, availableBytes - reserveBytes);
+  };
+  return gpus.reduce<LocalModelGpu | null>((best, gpu) => {
+    if (!best) return gpu;
+    return recommendationBudget(gpu) > recommendationBudget(best) ? gpu : best;
+  }, null);
+}
+
 // Builds an ephemeral transcript bubble for the conversational automation-setup
 // exchange. These never reach a provider and are not persisted; they render the
 // back-and-forth (user request, Synara's clarifying questions) inline like Codex.
@@ -1078,6 +1122,7 @@ export default function ChatView({
   const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
   const { resolvedTheme } = useTheme();
   const queryClient = useQueryClient();
+  const localModelSetupContinuation = useLocalModelSetupContinuation();
   const createWorktreeMutation = useMutation(gitCreateWorktreeMutationOptions({ queryClient }));
   const isEditorRail = presentationMode === "editor";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
@@ -1127,6 +1172,61 @@ export default function ChatView({
     ],
   );
   const nonPersistedComposerImageIds = composerDraft.nonPersistedImageIds;
+  const localAiDraftFingerprint = useMemo(
+    () =>
+      fingerprintLocalModelSetupDraft(
+        JSON.stringify({
+          prompt,
+          images: composerImages.map(({ file, previewUrl: _previewUrl, ...attachment }) => ({
+            ...attachment,
+            file: {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified,
+            },
+          })),
+          files: composerFiles.map(({ file, ...attachment }) => ({
+            ...attachment,
+            file: {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified,
+            },
+          })),
+          nonPersistedImageIds: nonPersistedComposerImageIds,
+          persistedAttachments: composerDraft.persistedAttachments.map(
+            ({ dataUrl: _dataUrl, ...attachment }) => attachment,
+          ),
+          browserFindings: composerBrowserFindings,
+          assistantSelections: composerAssistantSelections,
+          terminalContexts: composerTerminalContexts,
+          fileComments: composerFileComments,
+          pastedTexts: composerPastedTexts,
+          skills: composerSkills,
+          mentions: composerMentions,
+          queuedTurns: queuedComposerTurns,
+          restoredSourceProposedPlan,
+        }),
+      ),
+    [
+      composerAssistantSelections,
+      composerBrowserFindings,
+      composerDraft.persistedAttachments,
+      composerFileComments,
+      composerFiles,
+      composerImages,
+      composerMentions,
+      composerPastedTexts,
+      composerSkills,
+      composerTerminalContexts,
+      nonPersistedComposerImageIds,
+      prompt,
+      queuedComposerTurns,
+      restoredSourceProposedPlan,
+    ],
+  );
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
   const setComposerDraftPromptHistorySavedDraft = useComposerDraftStore(
     (store) => store.setPromptHistorySavedDraft,
@@ -1237,6 +1337,12 @@ export default function ChatView({
   const [localDispatch, setLocalDispatch] = useState<LocalDispatchSnapshot | null>(null);
   const failedWorktreeSetupDispatchStartedAtRef = useRef<string | null>(null);
   const [isLocalConnecting, _setIsLocalConnecting] = useState(false);
+  const [localAiSetupJobId, setLocalAiSetupJobId] = useState<string | null>(null);
+  const [localAiSetupError, setLocalAiSetupError] = useState<string | null>(null);
+  const [isLocalAiSetupStarting, setIsLocalAiSetupStarting] = useState(false);
+  const [localAiUseCase, setLocalAiUseCase] = useState<LocalModelUseCase>(readLocalModelUseCase);
+  const localAiSetupStartInFlightRef = useRef(false);
+  const autoResumeAttemptedJobIdRef = useRef<string | null>(null);
   const [isRevertingCheckpoint, setIsRevertingCheckpoint] = useState(false);
   const [pendingFileUndo, setPendingFileUndo] = useState<PendingFileUndo | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -1358,6 +1464,9 @@ export default function ChatView({
     setComposerCommandPicker(null);
     setIsModelPickerOpen(false);
     setIsTraitsPickerOpen(false);
+    setLocalAiSetupJobId(null);
+    setLocalAiSetupError(null);
+    autoResumeAttemptedJobIdRef.current = null;
   }, [threadId]);
   useEffect(() => {
     const scrollDebouncer = showScrollDebouncer.current;
@@ -2040,7 +2149,10 @@ export default function ChatView({
     providerModelsQueryOptions({ provider: "codex", enabled: false }),
   );
   const openCodeModelDiscoveryEnabled =
-    selectedProvider === "opencode" || lockedProvider === "opencode" || isModelPickerOpen;
+    !hasThreadStarted ||
+    selectedProvider === "opencode" ||
+    lockedProvider === "opencode" ||
+    isModelPickerOpen;
   const kiloModelDiscoveryEnabled =
     selectedProvider === "kilo" || lockedProvider === "kilo" || isModelPickerOpen;
   const piModelDiscoveryEnabled =
@@ -2755,7 +2867,7 @@ export default function ChatView({
   const isComposerEditorDisabled =
     isConnecting ||
     isComposerApprovalState ||
-    !hasConfiguredOpenCodeModel ||
+    (!hasConfiguredOpenCodeModel && hasThreadStarted) ||
     isLegacyReadOnlyThread;
   const canCollapsePastedTextToDraft = shouldEnableComposerPastedTextCollapse({
     isComposerApprovalState,
@@ -3139,6 +3251,7 @@ export default function ChatView({
     timelineEntries.length === 0 && !activeThread?.parentThreadId && !isEditorRail;
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
+  const isZeroConfigEntry = isCenteredEmptyLanding && !hasThreadStarted;
   const { turnDiffSummaries, inferredCheckpointTurnCountByTurnId } =
     useTurnDiffSummaries(activeThread);
   const turnDiffSummaryByAssistantMessageId = useMemo(() => {
@@ -3588,6 +3701,299 @@ export default function ChatView({
         .flatMap((status) => (status ? [status] : [])),
     [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
   );
+  const openCodeModelProvidersQuery = useQuery({
+    ...openCodeModelProvidersQueryOptions(),
+    enabled: isZeroConfigEntry,
+  });
+  const zeroConfigRemoteSelection = useMemo(
+    () =>
+      selectZeroConfigModel({
+        modelOptionsByProvider,
+        providerStatuses,
+        openCodeProviders: openCodeModelProvidersQuery.data?.providers,
+        localModels: null,
+        currentSelection: {
+          provider: selectedProvider,
+          modelSlug: selectedModel,
+        },
+      }),
+    [
+      modelOptionsByProvider,
+      openCodeModelProvidersQuery.data?.providers,
+      providerStatuses,
+      selectedModel,
+      selectedProvider,
+    ],
+  );
+  const zeroConfigDiscoverySettled =
+    serverConfigQuery.data !== undefined &&
+    !serverConfigQuery.isFetching &&
+    !openCodeDynamicModelsQuery.isFetching &&
+    !openCodeModelProvidersQuery.isFetching;
+  const shouldInspectLocalAi =
+    isElectron &&
+    isZeroConfigEntry &&
+    zeroConfigDiscoverySettled &&
+    zeroConfigRemoteSelection.kind === "no-model";
+  const cachedLocalModelsSnapshot = useMemo(() => readLocalModelsBrowserCache(), []);
+  const localModelsSnapshotQuery = useQuery({
+    queryKey: ["local-models", "snapshot"] as const,
+    queryFn: async (): Promise<LocalModelsSnapshot> => {
+      const snapshot = await ensureNativeApi().localModels.getSnapshot();
+      writeLocalModelsBrowserCache(snapshot);
+      return snapshot;
+    },
+    initialData: cachedLocalModelsSnapshot?.data,
+    ...(cachedLocalModelsSnapshot
+      ? { initialDataUpdatedAt: cachedLocalModelsSnapshot.updatedAt }
+      : {}),
+    enabled: shouldInspectLocalAi,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  const freshLocalModelsSnapshot =
+    shouldInspectLocalAi &&
+    localModelsSnapshotQuery.isFetchedAfterMount &&
+    !localModelsSnapshotQuery.isFetching &&
+    !localModelsSnapshotQuery.isError
+      ? localModelsSnapshotQuery.data
+      : undefined;
+  const zeroConfigModelSelection = useMemo(
+    () =>
+      selectZeroConfigModel({
+        modelOptionsByProvider,
+        providerStatuses,
+        openCodeProviders: openCodeModelProvidersQuery.data?.providers,
+        localModels: freshLocalModelsSnapshot ?? null,
+        currentSelection: {
+          provider: selectedProvider,
+          modelSlug: selectedModel,
+        },
+      }),
+    [
+      freshLocalModelsSnapshot,
+      modelOptionsByProvider,
+      openCodeModelProvidersQuery.data?.providers,
+      providerStatuses,
+      selectedModel,
+      selectedProvider,
+    ],
+  );
+  const hasUsableZeroConfigModel = zeroConfigModelSelection.kind === "selected";
+
+  useEffect(() => {
+    if (
+      !isZeroConfigEntry ||
+      selectedProviderByThreadId !== null ||
+      zeroConfigModelSelection.kind !== "selected" ||
+      (selectedProvider === zeroConfigModelSelection.provider &&
+        selectedModel === zeroConfigModelSelection.modelSlug)
+    ) {
+      return;
+    }
+    setComposerDraftModelSelectionAndSticky(threadId, {
+      provider: zeroConfigModelSelection.provider,
+      model: zeroConfigModelSelection.modelSlug as ModelSlug,
+    });
+  }, [
+    isZeroConfigEntry,
+    selectedModel,
+    selectedProvider,
+    selectedProviderByThreadId,
+    setComposerDraftModelSelectionAndSticky,
+    threadId,
+    zeroConfigModelSelection,
+  ]);
+
+  const localAiContinuationForThread =
+    localModelSetupContinuation?.threadId === threadId ? localModelSetupContinuation : null;
+  const visibleLocalAiSetupJobId = localAiContinuationForThread?.jobId ?? localAiSetupJobId;
+  const visibleLocalAiSetupJob = visibleLocalAiSetupJobId
+    ? (localModelsSnapshotQuery.data?.setupJobs.find(({ id }) => id === visibleLocalAiSetupJobId) ??
+      null)
+    : null;
+  const visibleLocalAiSetupJobIsActive = Boolean(
+    visibleLocalAiSetupJob &&
+    !["ready", "failed", "cancelled"].includes(visibleLocalAiSetupJob.state),
+  );
+  const visibleLocalAiSetupJobUseCase = visibleLocalAiSetupJob?.useCase ?? "general";
+  const displayedLocalAiUseCase = visibleLocalAiSetupJobIsActive
+    ? visibleLocalAiSetupJobUseCase
+    : localAiUseCase;
+  const presentedLocalAiSetupJob =
+    visibleLocalAiSetupJob &&
+    (visibleLocalAiSetupJobIsActive || visibleLocalAiSetupJobUseCase === localAiUseCase)
+      ? visibleLocalAiSetupJob
+      : null;
+  const preferredLocalAiId =
+    localModelsSnapshotQuery.data?.recommendedModelIdsByUseCase?.[displayedLocalAiUseCase] ??
+    localModelsSnapshotQuery.data?.recommendedModelId;
+  const recommendedLocalAiId = presentedLocalAiSetupJob?.recommendationId ?? preferredLocalAiId;
+  const recommendedLocalAi = localModelsSnapshotQuery.data?.recommendations.find(
+    ({ id }) => id === recommendedLocalAiId,
+  );
+  const recommendedLocalAiSource = recommendedLocalAi?.sources.find(
+    ({ runtime }) => runtime === "ollama",
+  );
+  const localAiSetupProgressPercent =
+    presentedLocalAiSetupJob?.totalBytes && presentedLocalAiSetupJob.totalBytes > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              (presentedLocalAiSetupJob.downloadedBytes / presentedLocalAiSetupJob.totalBytes) *
+                100,
+            ),
+          ),
+        )
+      : null;
+  const localAiSetupStage = isLocalAiSetupStarting
+    ? ("checking" as const)
+    : !presentedLocalAiSetupJob && localModelsSnapshotQuery.isError
+      ? ("failed" as const)
+      : presentedLocalAiSetupJob?.state === "failed" ||
+          presentedLocalAiSetupJob?.state === "cancelled"
+        ? ("failed" as const)
+        : presentedLocalAiSetupJob?.state === "synchronizing" ||
+            presentedLocalAiSetupJob?.state === "ready"
+          ? ("testing" as const)
+          : presentedLocalAiSetupJob?.state === "detecting" &&
+              presentedLocalAiSetupJob.recommendationId !== preferredLocalAiId
+            ? ("falling_back" as const)
+            : presentedLocalAiSetupJob
+              ? presentedLocalAiSetupJob.state === "detecting"
+                ? "checking"
+                : "preparing"
+              : localModelsSnapshotQuery.isFetching ||
+                  (shouldInspectLocalAi && !localModelsSnapshotQuery.data)
+                ? ("checking" as const)
+                : ("idle" as const);
+  const isLocalAiSetupBusy =
+    !hasUsableZeroConfigModel && localAiSetupStage !== "idle" && localAiSetupStage !== "failed";
+  const localAiHardwareProfile = localModelsSnapshotQuery.data?.hardwareProfile;
+  const localAiGpu = selectZeroConfigGpu(localAiHardwareProfile?.gpus ?? []);
+  const localAiGpuAvailableMemoryBytes = localAiGpu?.availableMemoryBytes;
+  const localAiDeviceSummary = localAiHardwareProfile
+    ? `${t("composer.zeroConfig.deviceSummary", {
+        availableMemory: formatZeroConfigBytes(localAiHardwareProfile.availableMemoryBytes, locale),
+        totalMemory: formatZeroConfigBytes(localAiHardwareProfile.totalMemoryBytes, locale),
+        cores: localAiHardwareProfile.cpuLogicalCores,
+      })}${
+        localAiGpu
+          ? localAiGpuAvailableMemoryBytes !== null && localAiGpuAvailableMemoryBytes !== undefined
+            ? t("composer.zeroConfig.gpuSummaryAvailable", {
+                name: localAiGpu.name,
+                availableVram: formatZeroConfigBytes(localAiGpuAvailableMemoryBytes, locale),
+                totalVram:
+                  localAiGpu.dedicatedMemoryBytes === null
+                    ? "—"
+                    : formatZeroConfigBytes(localAiGpu.dedicatedMemoryBytes, locale),
+              })
+            : t("composer.zeroConfig.gpuSummary", {
+                name: localAiGpu.name,
+                vram:
+                  localAiGpu.dedicatedMemoryBytes === null
+                    ? "—"
+                    : formatZeroConfigBytes(localAiGpu.dedicatedMemoryBytes, locale),
+              })
+          : ""
+      }`
+    : undefined;
+  const localAiRuntime = localModelsSnapshotQuery.data?.runtimes.find(
+    ({ runtime }) => runtime === "ollama",
+  );
+  const localAiEstimatedDownloadBytes = recommendedLocalAiSource
+    ? recommendedLocalAiSource.estimatedDownloadBytes +
+      (localAiRuntime?.state === "not_installed" ? localAiRuntime.estimatedDownloadBytes : 0)
+    : null;
+  const showZeroConfigLocalAiCard =
+    isElectron &&
+    isZeroConfigEntry &&
+    zeroConfigDiscoverySettled &&
+    zeroConfigRemoteSelection.kind === "no-model" &&
+    !hasUsableZeroConfigModel;
+  const isZeroConfigHomeLanding = isEmptyChatLanding && showZeroConfigLocalAiCard;
+
+  const prepareLocalAiAndResume = useCallback(
+    async (resumeTask: boolean): Promise<boolean> => {
+      if (localAiSetupStartInFlightRef.current) return false;
+      const api = readNativeApi();
+      if (!api || !isElectron) return false;
+
+      localAiSetupStartInFlightRef.current = true;
+      setIsLocalAiSetupStarting(true);
+      setLocalAiSetupError(null);
+      try {
+        let snapshot = localModelsSnapshotQuery.data;
+        if (!snapshot) {
+          snapshot = await api.localModels.getSnapshot();
+          writeLocalModelsBrowserCache(snapshot);
+          queryClient.setQueryData(["local-models", "snapshot"], snapshot);
+        }
+
+        const existingJobId = localAiContinuationForThread?.jobId ?? localAiSetupJobId;
+        const existingJob = existingJobId
+          ? snapshot.setupJobs.find(({ id }) => id === existingJobId)
+          : undefined;
+        const existingJobMatchesUseCase =
+          existingJob !== undefined && (existingJob.useCase ?? "general") === localAiUseCase;
+        const job =
+          existingJobMatchesUseCase &&
+          (existingJob.state === "failed" || existingJob.state === "cancelled")
+            ? await api.localModels.retrySetup({ jobId: existingJob.id })
+            : existingJobMatchesUseCase
+              ? existingJob
+              : await api.localModels.startSetup({ runtime: "ollama", useCase: localAiUseCase });
+
+        setLocalAiSetupJobId(job.id);
+        if (
+          resumeTask &&
+          (!localModelSetupContinuation || localModelSetupContinuation.threadId === threadId)
+        ) {
+          localModelSetupContinuationStore.begin({
+            threadId,
+            jobId: job.id,
+            expectedModelSlug: `${job.runtime}/${job.modelId}`,
+            draftFingerprint: localAiDraftFingerprint,
+          });
+          if (job.state === "ready") {
+            localModelSetupContinuationStore.markReady(job.id, `${job.runtime}/${job.modelId}`);
+          }
+        }
+
+        snapshot = await api.localModels.getSnapshot();
+        writeLocalModelsBrowserCache(snapshot);
+        queryClient.setQueryData(["local-models", "snapshot"], snapshot);
+        return true;
+      } catch (error) {
+        setLocalAiSetupError(error instanceof Error ? error.message : t("errors.generic"));
+        return false;
+      } finally {
+        localAiSetupStartInFlightRef.current = false;
+        setIsLocalAiSetupStarting(false);
+      }
+    },
+    [
+      localAiContinuationForThread?.jobId,
+      localAiSetupJobId,
+      localAiDraftFingerprint,
+      localAiUseCase,
+      localModelSetupContinuation,
+      localModelsSnapshotQuery.data,
+      queryClient,
+      t,
+      threadId,
+    ],
+  );
+  const handlePrepareLocalAi = useCallback(() => {
+    void prepareLocalAiAndResume(composerSendState.hasSendableContent);
+  }, [composerSendState.hasSendableContent, prepareLocalAiAndResume]);
+  const handleLocalAiUseCaseChange = useCallback((useCase: LocalModelUseCase) => {
+    setLocalAiUseCase(useCase);
+    writeLocalModelUseCase(useCase);
+    setLocalAiSetupError(null);
+  }, []);
   const handoffBadgeLabel = useMemo(
     () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
     [activeThread],
@@ -7153,10 +7559,6 @@ export default function ChatView({
     ) {
       return false;
     }
-    if (!hasConfiguredOpenCodeModel) {
-      window.location.assign("/settings?section=models");
-      return false;
-    }
     if (isLegacyReadOnlyThread) {
       return false;
     }
@@ -7470,6 +7872,17 @@ export default function ChatView({
         pendingAutomationConversationRef.current = null;
         setPendingAutomationConversation(null);
       }
+    }
+    const hasUsableModelForSend = isZeroConfigEntry
+      ? hasUsableZeroConfigModel
+      : hasConfiguredOpenCodeModel;
+    if (!hasUsableModelForSend) {
+      if (isElectron && isZeroConfigEntry && (queuedTurn || composerSendState.hasSendableContent)) {
+        await prepareLocalAiAndResume(true);
+      } else if (!isElectron || !isZeroConfigEntry) {
+        window.location.assign("/settings?section=models");
+      }
+      return false;
     }
     sendPreflightInFlightRef.current = true;
     const sendProviderAvailability = await (async () => {
@@ -8636,6 +9049,76 @@ export default function ChatView({
   const onSubmitPlanFollowUpRef = useRef(onSubmitPlanFollowUp);
   onSendRef.current = onSend;
   onSubmitPlanFollowUpRef.current = onSubmitPlanFollowUp;
+
+  useEffect(() => {
+    if (localAiContinuationForThread?.state === "waiting") {
+      autoResumeAttemptedJobIdRef.current = null;
+    }
+  }, [localAiContinuationForThread?.jobId, localAiContinuationForThread?.state]);
+
+  useEffect(() => {
+    if (!localAiContinuationForThread) return;
+    localModelSetupContinuationStore.cancelIfDraftChanged({
+      threadId,
+      draftFingerprint: localAiDraftFingerprint,
+    });
+  }, [localAiContinuationForThread, localAiDraftFingerprint, threadId]);
+
+  useEffect(() => {
+    const continuation = localAiContinuationForThread;
+    if (
+      !canAutoResumeLocalModelSetup({
+        continuation,
+        threadId,
+        selectedProvider,
+        selectedModel,
+        availableOpenCodeModelSlugs: modelOptionsByProvider.opencode.map(({ slug }) => slug),
+        draftFingerprint: localAiDraftFingerprint,
+        hasSendableContent: composerSendState.hasSendableContent,
+        busy: isSendBusy || isConnecting || isVoiceTranscribing,
+      }) ||
+      !continuation ||
+      autoResumeAttemptedJobIdRef.current === continuation.jobId
+    ) {
+      return;
+    }
+
+    const claimed = localModelSetupContinuationStore.claimDispatch({
+      threadId,
+      expectedModelSlug: continuation.expectedModelSlug,
+      draftFingerprint: localAiDraftFingerprint,
+    });
+    if (!claimed) return;
+    autoResumeAttemptedJobIdRef.current = claimed.jobId;
+
+    void onSendRef
+      .current()
+      .then((sent) => {
+        if (sent) {
+          localModelSetupContinuationStore.complete(claimed.jobId);
+          autoResumeAttemptedJobIdRef.current = null;
+          return;
+        }
+        localModelSetupContinuationStore.resetDispatch(claimed.jobId);
+        setLocalAiSetupError(t("composer.zeroConfig.failed"));
+      })
+      .catch(() => {
+        localModelSetupContinuationStore.resetDispatch(claimed.jobId);
+        setLocalAiSetupError(t("composer.zeroConfig.failed"));
+      });
+  }, [
+    composerSendState.hasSendableContent,
+    isConnecting,
+    isSendBusy,
+    isVoiceTranscribing,
+    localAiDraftFingerprint,
+    localAiContinuationForThread,
+    modelOptionsByProvider.opencode,
+    selectedModel,
+    selectedProvider,
+    t,
+    threadId,
+  ]);
 
   const dispatchQueuedComposerTurn = useCallback(
     async (queuedTurn: QueuedComposerTurn, dispatchMode: "queue" | "steer"): Promise<boolean> => {
@@ -10735,21 +11218,23 @@ export default function ChatView({
                     placeholder={
                       isLegacyReadOnlyThread
                         ? t("composer.placeholder.readOnly")
-                        : !hasConfiguredOpenCodeModel
-                          ? t("composer.placeholder.configureModel")
-                          : isComposerApprovalState
-                            ? t("composer.placeholder.approval")
-                            : activePendingProgress
-                              ? activePendingProgress.activeQuestion?.options.length === 0
-                                ? t("composer.placeholder.answer")
-                                : t("composer.placeholder.ownAnswer")
-                              : showPlanFollowUpPrompt && activeProposedPlan
-                                ? t("composer.placeholder.planFeedback")
-                                : hasLiveTurn
-                                  ? t("composer.placeholder.followUp")
-                                  : phase === "disconnected"
-                                    ? t("composer.placeholder.followUpAttachments")
-                                    : t("composer.placeholder.default")
+                        : isZeroConfigEntry
+                          ? t("composer.zeroConfig.placeholder")
+                          : !hasConfiguredOpenCodeModel
+                            ? t("composer.placeholder.configureModel")
+                            : isComposerApprovalState
+                              ? t("composer.placeholder.approval")
+                              : activePendingProgress
+                                ? activePendingProgress.activeQuestion?.options.length === 0
+                                  ? t("composer.placeholder.answer")
+                                  : t("composer.placeholder.ownAnswer")
+                                : showPlanFollowUpPrompt && activeProposedPlan
+                                  ? t("composer.placeholder.planFeedback")
+                                  : hasLiveTurn
+                                    ? t("composer.placeholder.followUp")
+                                    : phase === "disconnected"
+                                      ? t("composer.placeholder.followUpAttachments")
+                                      : t("composer.placeholder.default")
                     }
                     disabled={isComposerEditorDisabled}
                   />
@@ -10768,58 +11253,60 @@ export default function ChatView({
                         : "flex-wrap gap-1.5 sm:flex-nowrap sm:gap-0",
                     )}
                   >
-                    <div
-                      data-chat-composer-leading="true"
-                      className={cn(
-                        "flex items-center",
-                        isVoiceRecording || isVoiceTranscribing
-                          ? "min-w-0 shrink-0 gap-1"
-                          : isComposerFooterCompact
-                            ? "min-w-0 flex-1 gap-1 overflow-hidden"
-                            : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
-                      )}
-                    >
-                      {relocateComposerLeadingControls
-                        ? null
-                        : renderComposerLeadingControls({ iconOnly: false })}
+                    {isZeroConfigHomeLanding ? null : (
+                      <div
+                        data-chat-composer-leading="true"
+                        className={cn(
+                          "flex items-center",
+                          isVoiceRecording || isVoiceTranscribing
+                            ? "min-w-0 shrink-0 gap-1"
+                            : isComposerFooterCompact
+                              ? "min-w-0 flex-1 gap-1 overflow-hidden"
+                              : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
+                        )}
+                      >
+                        {relocateComposerLeadingControls
+                          ? null
+                          : renderComposerLeadingControls({ iconOnly: false })}
 
-                      {!isVoiceRecording && !isVoiceTranscribing ? (
-                        <>
-                          {interactionMode === "plan" ? (
-                            <Button
-                              variant="ghost"
-                              className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
-                              size="sm"
-                              type="button"
-                              onClick={toggleInteractionMode}
-                              title={t("composer.plan.modeHint")}
-                            >
-                              <GoTasklist className="size-3.5" />
-                              <span className="sr-only sm:not-sr-only">
-                                {t("composer.plan.label")}
-                              </span>
-                            </Button>
-                          ) : null}
+                        {!isVoiceRecording && !isVoiceTranscribing ? (
+                          <>
+                            {interactionMode === "plan" ? (
+                              <Button
+                                variant="ghost"
+                                className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
+                                size="sm"
+                                type="button"
+                                onClick={toggleInteractionMode}
+                                title={t("composer.plan.modeHint")}
+                              >
+                                <GoTasklist className="size-3.5" />
+                                <span className="sr-only sm:not-sr-only">
+                                  {t("composer.plan.label")}
+                                </span>
+                              </Button>
+                            ) : null}
 
-                          {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
-                            <Button
-                              variant="ghost"
-                              className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal sm:px-3"
-                              size="sm"
-                              type="button"
-                              onClick={togglePlanSidebar}
-                              title={planSidebarToggleTitle}
-                              aria-label={planSidebarToggleTitle}
-                            >
-                              <LayoutSidebarIcon className="size-3.5" />
-                              <span className="sr-only sm:not-sr-only">
-                                {planSidebarToggleLabel}
-                              </span>
-                            </Button>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
+                            {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
+                              <Button
+                                variant="ghost"
+                                className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal sm:px-3"
+                                size="sm"
+                                type="button"
+                                onClick={togglePlanSidebar}
+                                title={planSidebarToggleTitle}
+                                aria-label={planSidebarToggleTitle}
+                              >
+                                <LayoutSidebarIcon className="size-3.5" />
+                                <span className="sr-only sm:not-sr-only">
+                                  {planSidebarToggleLabel}
+                                </span>
+                              </Button>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </div>
+                    )}
 
                     <div
                       data-chat-composer-actions="right"
@@ -10828,7 +11315,8 @@ export default function ChatView({
                         isVoiceRecording || isVoiceTranscribing ? "min-w-0 flex-1" : "shrink-0",
                       )}
                     >
-                      {!isVoiceRecording &&
+                      {!isZeroConfigHomeLanding &&
+                      !isVoiceRecording &&
                       !isVoiceTranscribing &&
                       runtimeUsageContextWindow &&
                       composerFooterControlsPlan.showContextMeter ? (
@@ -10850,7 +11338,9 @@ export default function ChatView({
                             : {})}
                         />
                       ) : null}
-                      {!isVoiceRecording && !isVoiceTranscribing ? composerPickerControls : null}
+                      {!isZeroConfigHomeLanding && !isVoiceRecording && !isVoiceTranscribing
+                        ? composerPickerControls
+                        : null}
                       {showVoiceNotesControl && (isVoiceRecording || isVoiceTranscribing) ? (
                         <ComposerVoiceRecorderBar
                           disabled={isComposerApprovalState || isConnecting || isSendBusy}
@@ -10955,9 +11445,9 @@ export default function ChatView({
                               </Menu>
                             </div>
                           )
-                        ) : (
+                        ) : isElectron && isZeroConfigEntry && !hasUsableZeroConfigModel ? null : (
                           <>
-                            {showVoiceNotesControl ? (
+                            {showVoiceNotesControl && !isZeroConfigHomeLanding ? (
                               <ComposerVoiceButton
                                 disabled={isComposerApprovalState || isConnecting || isSendBusy}
                                 isRecording={isVoiceRecording}
@@ -10975,7 +11465,8 @@ export default function ChatView({
                                 isSendBusy ||
                                 isConnecting ||
                                 isVoiceTranscribing ||
-                                !hasConfiguredOpenCodeModel ||
+                                (!hasConfiguredOpenCodeModel && hasThreadStarted) ||
+                                isLocalAiSetupBusy ||
                                 isLegacyReadOnlyThread ||
                                 !composerSendState.hasSendableContent
                               }
@@ -11027,6 +11518,31 @@ export default function ChatView({
             </div>
           </ComposerColumnFrame>
         </form>
+        {showZeroConfigLocalAiCard ? (
+          <div className={cn("mt-3", COMPOSER_COLUMN_FRAME_CLASS_NAME)}>
+            <ZeroConfigLocalAiCard
+              status={localAiSetupStage}
+              selectedUseCase={displayedLocalAiUseCase}
+              recommendedModelName={recommendedLocalAi?.name}
+              estimatedDownloadLabel={
+                localAiEstimatedDownloadBytes === null
+                  ? undefined
+                  : formatZeroConfigBytes(localAiEstimatedDownloadBytes, locale)
+              }
+              deviceSummary={localAiDeviceSummary}
+              progressPercent={localAiSetupProgressPercent ?? undefined}
+              errorMessage={
+                localAiSetupError ??
+                (localAiSetupStage === "failed"
+                  ? (presentedLocalAiSetupJob?.message ?? undefined)
+                  : undefined)
+              }
+              onPrepare={handlePrepareLocalAi}
+              onRetry={handlePrepareLocalAi}
+              onUseCaseChange={handleLocalAiUseCaseChange}
+            />
+          </div>
+        ) : null}
         {emptyLandingControls}
       </div>
     ) : (
@@ -11255,33 +11771,36 @@ export default function ChatView({
                     view instead of the composer being centered with the list hanging
                     below it. */}
                 <div className="flex w-full flex-col justify-center">
-                  <div
-                    className={cn(
-                      "flex flex-col items-center gap-4 px-6 pb-5 text-center select-none",
-                      CHAT_COLUMN_FRAME_CLASS_NAME,
-                    )}
-                  >
-                    <DjlLogo aria-label={t("a11y.djlLogo")} className="size-10" />
-                    <h2
-                      data-testid="empty-landing-heading"
-                      className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
-                    >
-                      {isEmptyChatLanding ? (
-                        t("empty.whatShouldWeWorkOn")
-                      ) : (
-                        <>
-                          {t("empty.whatShouldWeDoIn")}{" "}
-                          <span className={COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME}>
-                            {activeProjectDisplayName ?? t("empty.thisFolder")}
-                          </span>
-                          ?
-                        </>
+                  {isZeroConfigHomeLanding ? null : (
+                    <div
+                      className={cn(
+                        "flex flex-col items-center gap-4 px-6 pb-5 text-center select-none",
+                        CHAT_COLUMN_FRAME_CLASS_NAME,
                       )}
-                    </h2>
-                  </div>
+                    >
+                      <DjlLogo aria-label={t("a11y.djlLogo")} className="size-10" />
+                      <h2
+                        data-testid="empty-landing-heading"
+                        className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
+                      >
+                        {isEmptyChatLanding ? (
+                          t("empty.whatShouldWeWorkOn")
+                        ) : (
+                          <>
+                            {t("empty.whatShouldWeDoIn")}{" "}
+                            <span className={COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME}>
+                              {activeProjectDisplayName ?? t("empty.thisFolder")}
+                            </span>
+                            ?
+                          </>
+                        )}
+                      </h2>
+                    </div>
+                  )}
                   {composerSection}
-                  {(isGitRepo && !environmentEnabled && !isCenteredEmptyLanding) ||
-                  relocateComposerLeadingControls ? (
+                  {!isZeroConfigHomeLanding &&
+                  ((isGitRepo && !environmentEnabled && !isCenteredEmptyLanding) ||
+                    relocateComposerLeadingControls) ? (
                     <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
                       <div className="flex w-full items-center gap-1">
                         {relocateComposerLeadingControls ? (

@@ -22,8 +22,6 @@ import {
   needsDocumentReview,
 } from "./DocumentArtifactPreviewContent";
 
-import { WORK_TASK_STATUS_TONES } from "./workTaskPresentation";
-
 type JsonRecord = Record<string, unknown>;
 
 export type WorkUiErrorCode =
@@ -388,14 +386,8 @@ export function WorkTaskPanel(props: WorkTaskPanelProps) {
         <div className="flex flex-wrap items-center gap-2">
           <span
             aria-live="polite"
-            className={cn(
-              "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-              WORK_TASK_STATUS_TONES[props.task.status],
-            )}
+            className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
           >
-            {t(`task.status.${props.task.status}`, { ns: "work" })}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
             {props.task.statusReason ?? t("task.preparing", { ns: "work" })}
           </span>
           <div className="flex flex-wrap items-center gap-1.5">

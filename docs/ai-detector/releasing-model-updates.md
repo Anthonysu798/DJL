@@ -8,4 +8,4 @@
 6. Update architecture, licenses, benchmark results, limitations, and release notes.
 7. Ship behind the Beta label unless all accuracy, privacy, security, performance, accessibility, packaging, and independent-review gates pass.
 
-Rollback by restoring the prior pinned manifest/calibration version. Cache keys include model and calibration versions, so results cannot cross versions.
+Rollback by restoring the prior pinned manifest/calibration version. Cache keys include every artifact fingerprint, the output contract, and complete calibration bands as well as version labels, so results cannot cross model or policy changes.

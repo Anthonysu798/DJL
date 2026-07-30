@@ -12,6 +12,9 @@ const ModelIdentifier = TrimmedNonEmptyString.check(Schema.isMaxLength(2_048));
 export const LocalModelRuntime = Schema.Literals(["ollama", "lmstudio"]);
 export type LocalModelRuntime = typeof LocalModelRuntime.Type;
 
+export const LocalModelUseCase = Schema.Literals(["general", "document", "reasoning", "coding"]);
+export type LocalModelUseCase = typeof LocalModelUseCase.Type;
+
 export const LocalModelRuntimeState = Schema.Literals([
   "not_installed",
   "stopped",
@@ -93,6 +96,49 @@ export const LocalModelRecommendation = Schema.Struct({
 });
 export type LocalModelRecommendation = typeof LocalModelRecommendation.Type;
 
+const OptionalRecommendationId = Schema.NullOr(
+  TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+);
+
+export const LocalModelRecommendationsByUseCase = Schema.Struct({
+  general: OptionalRecommendationId,
+  document: OptionalRecommendationId,
+  reasoning: OptionalRecommendationId,
+  coding: OptionalRecommendationId,
+});
+export type LocalModelRecommendationsByUseCase = typeof LocalModelRecommendationsByUseCase.Type;
+
+export const LocalModelGpu = Schema.Struct({
+  // A platform-stable identifier when the operating system exposes one (for example a DXGI LUID).
+  id: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  dedicatedMemoryBytes: Schema.NullOr(NonNegativeInt),
+  // Optional while older desktop snapshots age out. Null means the GPU cannot report live usage.
+  availableMemoryBytes: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  // Unified/shared memory must never be added to system RAM a second time.
+  memoryType: Schema.optional(Schema.Literals(["dedicated", "shared", "unified", "unknown"])),
+  // False means the installed driver/runtime cannot use this accelerator for local inference.
+  computeCompatible: Schema.optional(Schema.Boolean),
+  // Compatible devices can only share a memory budget when they use the same compute backend.
+  computeBackend: Schema.optional(Schema.Literals(["cuda", "vulkan", "metal", "unknown"])),
+});
+export type LocalModelGpu = typeof LocalModelGpu.Type;
+
+export const LocalModelHardwareProfile = Schema.Struct({
+  platform: TrimmedNonEmptyString.check(Schema.isMaxLength(32)),
+  totalMemoryBytes: NonNegativeInt,
+  availableMemoryBytes: NonNegativeInt,
+  cpuLogicalCores: PositiveInt,
+  // cpuArchitecture is the physical host architecture. processArchitecture differs under Rosetta.
+  cpuArchitecture: TrimmedNonEmptyString.check(Schema.isMaxLength(32)),
+  processArchitecture: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(32))),
+  runningUnderTranslation: Schema.optional(Schema.Boolean),
+  osVersion: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(64))),
+  gpus: Schema.Array(LocalModelGpu).check(Schema.isMaxLength(16)),
+  freeDiskBytes: Schema.NullOr(NonNegativeInt),
+});
+export type LocalModelHardwareProfile = typeof LocalModelHardwareProfile.Type;
+
 export const LocalInstalledModel = Schema.Struct({
   runtime: LocalModelRuntime,
   modelId: ModelIdentifier,
@@ -168,6 +214,8 @@ export type LocalModelSetupJobState = typeof LocalModelSetupJobState.Type;
 export const LocalModelSetupJob = Schema.Struct({
   id: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   runtime: LocalModelRuntime,
+  // Optional while setup jobs created by older desktop builds age out.
+  useCase: Schema.optional(LocalModelUseCase),
   recommendationId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   modelId: ModelIdentifier,
   state: LocalModelSetupJobState,
@@ -189,7 +237,11 @@ export const LocalModelsSnapshot = Schema.Struct({
   totalMemoryBytes: NonNegativeInt,
   hardware: LocalHardwareProfile,
   freeDiskBytes: Schema.NullOr(NonNegativeInt),
+  // Optional while v1 browser and desktop caches age out. New server snapshots always include it.
+  hardwareProfile: Schema.optional(LocalModelHardwareProfile),
   recommendedModelId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  // Optional while v1 browser and desktop caches age out. The legacy recommendation stays general.
+  recommendedModelIdsByUseCase: Schema.optional(LocalModelRecommendationsByUseCase),
   runtimes: Schema.Array(LocalModelRuntimeStatus).check(Schema.isMaxLength(2)),
   recommendations: Schema.Array(LocalModelRecommendation).check(Schema.isMaxLength(16)),
   installedModels: Schema.Array(LocalInstalledModel).check(Schema.isMaxLength(1_024)),
@@ -204,6 +256,7 @@ export type LocalModelRuntimeInput = typeof LocalModelRuntimeInput.Type;
 
 export const LocalModelSetupInput = Schema.Struct({
   runtime: Schema.optional(LocalModelRuntime),
+  useCase: Schema.optional(LocalModelUseCase),
   recommendationId: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
 });
 export type LocalModelSetupInput = typeof LocalModelSetupInput.Type;

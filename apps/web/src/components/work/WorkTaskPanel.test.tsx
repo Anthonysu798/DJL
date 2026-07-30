@@ -82,7 +82,7 @@ describe("WorkTaskPanel", () => {
     expect(source).toContain('workErrorFromCause("openFile", cause)');
   });
 
-  it("shows status, progress, deliverables, and review actions without a duplicate plan", () => {
+  it("shows progress, deliverables, and review actions without duplicate status chrome", () => {
     const markup = renderLocalized(
       <WorkTaskPanel
         task={task}
@@ -98,7 +98,8 @@ describe("WorkTaskPanel", () => {
       />,
     );
 
-    expect(markup).toContain("Needs review");
+    expect(markup).not.toContain("Needs review");
+    expect(markup).toContain("Work is ready for review");
     expect(markup).toContain('aria-valuenow="90"');
     expect(markup).toContain('aria-current="step"');
     expect(markup).not.toContain("Read source workbook");

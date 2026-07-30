@@ -61,6 +61,12 @@ export interface AiDetectorAnalyzeInput {
   readonly filename?: string;
   readonly mediaType?: string;
   readonly languagePreference: AiDetectorLanguagePreference;
+  /**
+   * Benchmark-only escape hatch. It prevents both reading and writing the
+   * persistent result cache so timing and model identity evidence always comes
+   * from a fresh inference pass.
+   */
+  readonly bypassResultCache?: boolean;
   readonly signal: AbortSignal;
   readonly emit: (event: AiDetectorAnalysisEvent) => void | Promise<void>;
 }
@@ -282,7 +288,13 @@ export class AiDetectorManager {
               language,
               manifest.revision,
               modelArtifactFingerprint(manifest),
-              manifest.calibrationVersion,
+              {
+                version: manifest.calibrationVersion,
+                humanThreshold: manifest.humanThreshold,
+                aiThreshold: manifest.aiThreshold,
+                bands: manifest.calibrationBands,
+              },
+              manifest.output,
             ];
           }),
         }),
@@ -308,7 +320,9 @@ export class AiDetectorManager {
       await emit({ type: "progress", stage: "normalizing", completed: 1, total: 1 });
 
       const key = this.cacheKey(contentHash, input.languagePreference);
-      const cacheLookup = await this.cache.getWithGeneration(key, normalized.text);
+      const cacheLookup = input.bypassResultCache
+        ? { report: null, generation: 0 }
+        : await this.cache.getWithGeneration(key, normalized.text);
       if (cacheLookup.report) {
         await emit({ type: "progress", stage: "complete", completed: 1, total: 1 });
         return {
@@ -423,8 +437,10 @@ export class AiDetectorManager {
         cacheHit: false,
         warnings,
       };
-      const cacheUpdated = await this.cache.setIfGeneration(key, report, cacheLookup.generation);
-      if (cacheUpdated) await this.publishState();
+      if (!input.bypassResultCache) {
+        const cacheUpdated = await this.cache.setIfGeneration(key, report, cacheLookup.generation);
+        if (cacheUpdated) await this.publishState();
+      }
       await emit({ type: "progress", stage: "aggregating", completed: 1, total: 1 });
       await emit({ type: "progress", stage: "complete", completed: 1, total: 1 });
       return report;

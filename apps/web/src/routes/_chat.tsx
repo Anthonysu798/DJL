@@ -11,6 +11,7 @@ import {
 } from "../appNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
 import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
+import { FirstRunTour } from "../components/onboarding/FirstRunTour";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
@@ -589,6 +590,7 @@ function ChatRouteLayout() {
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
+      <FirstRunTour />
       {sidebarElement}
       {mainContentShell}
     </SidebarProvider>
