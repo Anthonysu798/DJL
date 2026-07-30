@@ -22,4 +22,4 @@ runs:
 
     - name: Install dependencies from the lockfile
       shell: bash
-      run: bun install --frozen-lockfile --backend=copyfile
+      run: bun install --frozen-lockfile --backend=copyfile --concurrent-scripts=1

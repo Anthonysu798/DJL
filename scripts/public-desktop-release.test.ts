@@ -396,9 +396,12 @@ describe("public desktop release preparation", () => {
     assert.equal(ciWorkflow.includes("secrets."), false);
     assert.equal(ciWorkflow.includes("pull_request_target"), false);
     assert.match(ciWorkflow, /cancel-in-progress: true/);
-    // Lifecycle patches must not mutate Bun's shared cache through hard links. Otherwise a later
-    // Windows runner restores already-patched TypeScript and effect-language-service fails.
-    assert.match(setupAction, /bun install --frozen-lockfile --backend=copyfile/);
+    // Lifecycle patches must not mutate Bun's shared cache through hard links or race one another
+    // while patching shared TypeScript from multiple workspaces.
+    assert.match(
+      setupAction,
+      /bun install --frozen-lockfile --backend=copyfile --concurrent-scripts=1/,
+    );
     assert.match(
       setupAction,
       /key: bun-v2-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('bun\.lock', 'package\.json'\) \}\}/,
