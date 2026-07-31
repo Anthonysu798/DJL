@@ -9832,6 +9832,9 @@ export type SessionPromptData = {
     tools?: {
       [key: string]: boolean;
     };
+    visibleTools?: Array<string>;
+    requiredToolCall?: boolean;
+    instructionScope?: "default" | "work-isolated" | "authorized-root";
     format?: OutputFormat;
     system?: string;
     variant?: string;
@@ -10181,6 +10184,9 @@ export type SessionPromptAsyncData = {
     tools?: {
       [key: string]: boolean;
     };
+    visibleTools?: Array<string>;
+    requiredToolCall?: boolean;
+    instructionScope?: "default" | "work-isolated" | "authorized-root";
     format?: OutputFormat;
     system?: string;
     variant?: string;

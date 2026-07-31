@@ -38,6 +38,41 @@ const SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES = new Set([
   "image/webp",
 ]);
 
+export function filterVisibleTools<T extends Record<string, unknown>>(
+  tools: T,
+  visibleTools: ReadonlyArray<string> | undefined,
+): T {
+  if (visibleTools === undefined) return tools;
+  const visible: Record<string, unknown> = {};
+  for (const name of new Set(visibleTools)) {
+    if (name in tools) {
+      visible[name] = tools[name];
+      continue;
+    }
+    const matches = Object.entries(tools).filter(([toolID]) => toolID.endsWith(`_${name}`));
+    if (matches.length === 1) {
+      // Managed MCP server names include a per-task suffix. Keep that implementation detail out
+      // of the model schema while retaining the original tool closure and permission behavior.
+      visible[name] = matches[0][1];
+    }
+  }
+  return visible as T;
+}
+
+export function requiredWorkToolChoice(input: {
+  readonly tools: Record<string, unknown>;
+  readonly required: boolean | undefined;
+  readonly step: number;
+}): "required" | undefined {
+  // The session loop increments `step` before resolving tools and calling the model, so the first
+  // provider request is step 1 (not step 0).
+  if (!input.required || input.step !== 1) return undefined;
+  // Keep the provider-facing value on the standard portable form. Work tool filtering already
+  // makes a single-tool route deterministic, while some OpenAI-compatible local runtimes silently
+  // drop the AI SDK's exact named-tool object before it reaches Ollama or LM Studio.
+  return Object.keys(input.tools).length > 0 ? "required" : undefined;
+}
+
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   agent: Agent.Info;
   model: Provider.Model;
@@ -46,6 +81,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   bypassAgentCheck: boolean;
   messages: SessionV1.WithParts[];
   promptOps: TaskPromptOps;
+  visibleTools?: ReadonlyArray<string>;
 }) {
   const tools: Record<string, AITool> = {};
   const run = yield* EffectBridge.make();
@@ -417,7 +453,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     });
   }
 
-  if (flags.experimentalCodeMode) return tools;
+  if (flags.experimentalCodeMode) return filterVisibleTools(tools, input.visibleTools);
 
   for (const [key, entry] of Object.entries(yield* mcp.tools())) {
     const item = McpCatalog.convertTool(entry.def, entry.client, entry.timeout);
@@ -528,7 +564,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     tools[key] = item;
   }
 
-  return tools;
+  return filterVisibleTools(tools, input.visibleTools);
 });
 
 function toRecord(value: unknown) {

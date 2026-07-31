@@ -583,6 +583,8 @@
       "enableSoftWrap": "折り返しを有効化"
     },
     "model": {
+      "agenticTools": "エージェントツール",
+      "assistedTools": "アシストツール",
       "availability": {
         "checking": "チェック中",
         "comingSoon": "近日公開予定",
@@ -930,6 +932,10 @@
       "preparingWorktree": "ワークツリーを準備しています...",
       "rawCall": "生の通話",
       "revertMessage": "このメッセージに戻る",
+      "savedMemoryTitle": "保存したメモ",
+      "savedToMemory": "プロジェクトメモリに保存しました",
+      "saveToMemory": "プロジェクトメモリに保存",
+      "saveToMemoryFailed": "プロジェクトメモリに保存できませんでした",
       "scrollBottom": "一番下へスクロール",
       "selectionActions": "選択操作",
       "sentViaAutomation": "オートメーション経由で送信",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "エージェントツール",
+      "assistedTools": "アシストツール",
       "chatOnly": "チャットのみ",
       "checking": "ローカルモデルランタイムを確認中…",
       "connectedOn": "{{endpoint}} に安全に接続",
@@ -1313,6 +1321,7 @@
       "removeButton": "削除",
       "removeConfirmation": "{{model}} を Ollama から削除しますか？",
       "removing": "削除中…",
+      "rerunCapabilityCheck": "ツールを確認",
       "retryInstall": "インストールを再試行",
       "runtimeAriaLabel": "ローカルモデルランタイム",
       "runtimeDetails": {

@@ -583,6 +583,8 @@
       "enableSoftWrap": "Activer le retour à la ligne"
     },
     "model": {
+      "agenticTools": "Outils agentiques",
+      "assistedTools": "Outils assistés",
       "availability": {
         "checking": "Vérification",
         "comingSoon": "Bientôt",
@@ -930,6 +932,10 @@
       "preparingWorktree": "Préparer l'arbre...",
       "rawCall": "Appel brut",
       "revertMessage": "Revenir à ce message",
+      "savedMemoryTitle": "Note enregistrée",
+      "savedToMemory": "Enregistré dans la mémoire du projet",
+      "saveToMemory": "Enregistrer dans la mémoire du projet",
+      "saveToMemoryFailed": "Impossible d’enregistrer dans la mémoire du projet",
       "scrollBottom": "Faire défiler jusqu’en bas",
       "selectionActions": "Actions de sélection",
       "sentViaAutomation": "Envoyé par Automation",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "Outils agentiques",
+      "assistedTools": "Outils assistés",
       "chatOnly": "Discussion uniquement",
       "checking": "Vérification des environnements locaux…",
       "connectedOn": "Connexion sécurisée sur {{endpoint}}",
@@ -1313,6 +1321,7 @@
       "removeButton": "Supprimer",
       "removeConfirmation": "Supprimer {{model}} d’Ollama ?",
       "removing": "Suppression…",
+      "rerunCapabilityCheck": "Tester les outils",
       "retryInstall": "Réessayer l’installation",
       "runtimeAriaLabel": "Environnement du modèle local",
       "runtimeDetails": {

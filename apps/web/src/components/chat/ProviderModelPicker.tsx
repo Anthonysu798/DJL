@@ -360,7 +360,25 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       );
     }
 
-    const providerOptions = props.modelOptionsByProvider[provider];
+    const measuredCapabilityTierBySlug = new Map<string, "chat-only" | "assisted" | "agentic">(
+      (readLocalModelsBrowserCache()?.data.installedModels ?? []).flatMap((installedModel) =>
+        installedModel.capabilityProfile
+          ? [
+              [
+                `${installedModel.runtime}/${installedModel.modelId}`,
+                installedModel.capabilityProfile.tier,
+              ] as const,
+            ]
+          : [],
+      ),
+    );
+    const providerOptions =
+      provider === "opencode"
+        ? props.modelOptionsByProvider[provider].map((option) => {
+            const capabilityTier = measuredCapabilityTierBySlug.get(option.slug);
+            return capabilityTier ? { ...option, capabilityTier } : option;
+          })
+        : props.modelOptionsByProvider[provider];
     const shouldShowSearch =
       (provider === "kilo" ||
         provider === "opencode" ||

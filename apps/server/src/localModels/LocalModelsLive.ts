@@ -105,6 +105,8 @@ const make = Effect.gen(function* () {
         ? run("toolSupportForModel", () => manager.toolSupportForModel(modelSlug))
         : Effect.succeed(null),
     removeModel: (input) => desktopOnly("removeModel", () => manager.removeModel(input)),
+    rerunCapabilityCheck: (input) =>
+      desktopOnly("rerunCapabilityCheck", () => manager.rerunCapabilityCheck(input)),
     events: Stream.fromPubSub(events),
   } satisfies LocalModelsServiceShape;
 });

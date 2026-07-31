@@ -2,8 +2,9 @@
 // Purpose: Localhost-only, bearer-scoped Streamable HTTP MCP implementation for Work tools.
 
 import { createHash, randomBytes } from "node:crypto";
-import { lstat, mkdir, readdir, realpath } from "node:fs/promises";
+import { lstat, mkdir, readdir, realpath, statfs } from "node:fs/promises";
 import http from "node:http";
+import { cpus, platform, release, totalmem } from "node:os";
 import path from "node:path";
 
 import { ProjectId, ThreadId } from "@synara/contracts";
@@ -73,6 +74,24 @@ interface ToolDefinition {
 
 const TOOLS: ReadonlyArray<ToolDefinition> = [
   {
+    name: "djl_system_info",
+    description:
+      "Read current OS, total RAM, CPU, and disk capacity facts from this computer. Use this instead of guessing hardware details.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    annotations: {
+      title: "Check this computer",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    _meta: { "djl/tool-classification": "read" },
+  },
+  {
     name: "djl_list_files",
     description:
       "List files inside this DJL Work task's authorized folder. Never accesses other tasks.",
@@ -122,7 +141,11 @@ const TOOLS: ReadonlyArray<ToolDefinition> = [
       type: "object",
       properties: {
         format: { type: "string", enum: ["docx", "xlsx", "pptx", "pdf"] },
-        name: { type: "string" },
+        name: {
+          type: "string",
+          description:
+            "Output filename. When omitted, DJL safely derives it from title and format.",
+        },
         title: { type: "string" },
         paragraphs: { type: "array", items: { type: "string" } },
         rows: { type: "array", items: { type: "array" } },
@@ -136,7 +159,7 @@ const TOOLS: ReadonlyArray<ToolDefinition> = [
           },
         },
       },
-      required: ["format", "name", "title"],
+      required: ["format", "title"],
       additionalProperties: false,
     },
     annotations: {
@@ -346,6 +369,12 @@ function stringField(value: Record<string, unknown>, key: string): string {
   return field.trim();
 }
 
+function documentReadPath(value: Record<string, unknown>): string {
+  return stringField(value, "path")
+    .replace(/^(?:(?:please\s+)?(?:read|open|inspect|review)\s+|(?:读取|打开|检查|查看)\s*)/i, "")
+    .trim();
+}
+
 function optionalStringArray(value: Record<string, unknown>, key: string): string[] | undefined {
   const field = value[key];
   if (field === undefined) return undefined;
@@ -443,6 +472,31 @@ async function executeTool(
 ): Promise<unknown> {
   const args = object(rawArguments ?? {});
   switch (name) {
+    case "djl_system_info": {
+      const processors = cpus();
+      const disk = await statfs(scope.authorizedRoot);
+      const memoryTotalBytes = totalmem();
+      const diskFreeBytes = disk.bavail * disk.bsize;
+      const diskTotalBytes = disk.blocks * disk.bsize;
+      return {
+        os: { platform: platform(), release: release() },
+        memory: {
+          totalBytes: memoryTotalBytes,
+          totalGiB: Number((memoryTotalBytes / 1024 ** 3).toFixed(2)),
+        },
+        cpu: {
+          model: processors[0]?.model.trim() || "Unknown CPU",
+          logicalCores: processors.length,
+        },
+        disk: {
+          freeBytes: diskFreeBytes,
+          freeGiB: Number((diskFreeBytes / 1024 ** 3).toFixed(2)),
+          totalBytes: diskTotalBytes,
+          totalGiB: Number((diskTotalBytes / 1024 ** 3).toFixed(2)),
+        },
+        collectedAt: new Date().toISOString(),
+      };
+    }
     case "djl_list_files": {
       const directory = typeof args.directory === "string" ? args.directory : ".";
       const resolved =
@@ -466,7 +520,7 @@ async function executeTool(
     case "djl_read_document": {
       const filePath = await resolveAuthorizedInputPath(
         scope.authorizedRoot,
-        stringField(args, "path"),
+        documentReadPath(args),
         await scopedAttachmentInputFiles(scope),
       );
       const artifact = await normalizeScopedDocument(scope, filePath);
@@ -485,11 +539,14 @@ async function executeTool(
       const rows = args.rows;
       const slides = args.slides;
       const paragraphs = optionalStringArray(args, "paragraphs");
+      const title = stringField(args, "title");
+      const name =
+        typeof args.name === "string" && args.name.trim().length > 0 ? args.name.trim() : title;
       return createOfficeDeliverable({
         authorizedRoot: scope.authorizedRoot,
         format,
-        name: stringField(args, "name"),
-        title: stringField(args, "title"),
+        name,
+        title,
         ...(paragraphs ? { paragraphs } : {}),
         ...(Array.isArray(rows)
           ? { rows: rows.map((row) => (Array.isArray(row) ? row : [row])) }
@@ -707,9 +764,18 @@ const make = Effect.gen(function* () {
         response.end("Forbidden");
         return;
       }
-      if (request.url !== "/mcp" || request.method !== "POST") {
+      if (request.url !== "/mcp") {
         response.writeHead(404, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
         response.end("Not Found");
+        return;
+      }
+      if (request.method !== "POST") {
+        response.writeHead(405, {
+          Allow: "POST",
+          "Content-Type": "text/plain",
+          "Cache-Control": "no-store",
+        });
+        response.end("Method Not Allowed");
         return;
       }
       const authorization = request.headers.authorization;

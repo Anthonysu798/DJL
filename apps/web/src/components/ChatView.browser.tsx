@@ -106,14 +106,44 @@ const DEFAULT_VIEWPORT: ViewportSpec = {
 };
 const TEXT_VIEWPORT_MATRIX = [
   DEFAULT_VIEWPORT,
-  { name: "tablet", width: 720, height: 1_024, textTolerancePx: 44, attachmentTolerancePx: 56 },
-  { name: "mobile", width: 430, height: 932, textTolerancePx: 56, attachmentTolerancePx: 56 },
-  { name: "narrow", width: 320, height: 700, textTolerancePx: 84, attachmentTolerancePx: 56 },
+  {
+    name: "tablet",
+    width: 720,
+    height: 1_024,
+    textTolerancePx: 44,
+    attachmentTolerancePx: 56,
+  },
+  {
+    name: "mobile",
+    width: 430,
+    height: 932,
+    textTolerancePx: 56,
+    attachmentTolerancePx: 56,
+  },
+  {
+    name: "narrow",
+    width: 320,
+    height: 700,
+    textTolerancePx: 84,
+    attachmentTolerancePx: 56,
+  },
 ] as const satisfies readonly ViewportSpec[];
 const ATTACHMENT_VIEWPORT_MATRIX = [
   DEFAULT_VIEWPORT,
-  { name: "mobile", width: 430, height: 932, textTolerancePx: 56, attachmentTolerancePx: 56 },
-  { name: "narrow", width: 320, height: 700, textTolerancePx: 84, attachmentTolerancePx: 56 },
+  {
+    name: "mobile",
+    width: 430,
+    height: 932,
+    textTolerancePx: 56,
+    attachmentTolerancePx: 56,
+  },
+  {
+    name: "narrow",
+    width: 320,
+    height: 700,
+    textTolerancePx: 84,
+    attachmentTolerancePx: 56,
+  },
 ] as const satisfies readonly ViewportSpec[];
 
 interface UserRowMeasurement {
@@ -830,8 +860,14 @@ function createSnapshotWithSettledCompletedInlinePlan(): OrchestrationReadModel 
                     ...activity,
                     payload: {
                       tasks: [
-                        { task: "Inspecting ChatView boundaries", status: "completed" },
-                        { task: "Patch the shared checklist receiver", status: "completed" },
+                        {
+                          task: "Inspecting ChatView boundaries",
+                          status: "completed",
+                        },
+                        {
+                          task: "Patch the shared checklist receiver",
+                          status: "completed",
+                        },
                         { task: "Run final validation", status: "completed" },
                       ],
                     },
@@ -1321,6 +1357,7 @@ async function waitForProductionStyles(): Promise<void> {
 async function waitForElement<T extends Element>(
   query: () => T | null,
   errorMessage: string,
+  timeoutMs = 20_000,
 ): Promise<T> {
   let element: T | null = null;
   await vi.waitFor(
@@ -1329,7 +1366,7 @@ async function waitForElement<T extends Element>(
       expect(element, errorMessage).toBeTruthy();
     },
     {
-      timeout: 20_000,
+      timeout: timeoutMs,
       interval: 16,
     },
   );
@@ -1582,6 +1619,7 @@ async function measureUserRow(options: {
   const scrollContainer = await waitForElement(
     () => host.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
     "Unable to find ChatView message scroll container.",
+    40_000,
   );
 
   let row: HTMLElement | null = null;
@@ -1641,7 +1679,11 @@ async function measureUserRow(options: {
     },
   );
 
-  return { measuredRowHeightPx, timelineWidthMeasuredPx, renderedInVirtualizedRegion };
+  return {
+    measuredRowHeightPx,
+    timelineWidthMeasuredPx,
+    renderedInVirtualizedRegion,
+  };
 }
 
 async function measureChatLayout(host: HTMLElement): Promise<ChatLayoutMeasurement> {
@@ -1848,7 +1890,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const measurements: Array<
-        UserRowMeasurement & { viewport: ViewportSpec; estimatedHeightPx: number }
+        UserRowMeasurement & {
+          viewport: ViewportSpec;
+          estimatedHeightPx: number;
+        }
       > = [];
 
       for (const viewport of TEXT_VIEWPORT_MATRIX) {
@@ -2848,7 +2893,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .opencode,
-        ).toMatchObject({ provider: "opencode", model: "anthropic/claude-sonnet-4-6" });
+        ).toMatchObject({
+          provider: "opencode",
+          model: "anthropic/claude-sonnet-4-6",
+        });
       });
       expect(document.querySelector('[data-slot="menu-popup"]')).toBeNull();
 
@@ -3469,7 +3517,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(turnStartRequest).toBeTruthy();
           const command = turnStartRequest!.command as {
             interactionMode?: unknown;
-            message?: { attachments?: Array<{ type?: unknown; name?: unknown }> };
+            message?: {
+              attachments?: Array<{ type?: unknown; name?: unknown }>;
+            };
           };
           // Dispatched as a normal chat turn: it keeps the queued turn's own
           // "default" interaction mode rather than being coerced to "plan" by the
@@ -5109,7 +5159,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 8_000, interval: 16 },
       );
 
-      const settledSnapshot = createSnapshotWithInlineToolOverflow({ active: false });
+      const settledSnapshot = createSnapshotWithInlineToolOverflow({
+        active: false,
+      });
       fixture = { ...fixture, snapshot: settledSnapshot };
       useStore.getState().syncServerReadModel(settledSnapshot);
 

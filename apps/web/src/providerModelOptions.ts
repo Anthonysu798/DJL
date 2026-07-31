@@ -41,6 +41,7 @@ export interface ProviderModelOption {
   supportsPdf?: boolean;
   // False only when the model is known too small to drive tool calls. Undefined means unknown.
   supportsToolCalls?: boolean;
+  capabilityTier?: "chat-only" | "assisted" | "agentic";
 }
 
 export interface ProviderModelOptionGroup {
@@ -204,7 +205,13 @@ export function mergeDynamicModelOptions(input: {
 // all: it emits malformed calls whose validation errors surface as raw text in the user's chat.
 // Unknown capability is never treated as incapable — only measured evidence disables a model.
 export function isChatOnlyModel(option: ProviderModelOption): boolean {
-  return option.supportsToolCalls === false;
+  return modelCapabilityTier(option) === "chat-only";
+}
+
+export function modelCapabilityTier(
+  option: ProviderModelOption,
+): ProviderModelOption["capabilityTier"] | undefined {
+  return option.capabilityTier ?? (option.supportsToolCalls === false ? "chat-only" : undefined);
 }
 
 /** Returns a compact label for provider descriptions that begin with an `Nx` cost multiplier. */

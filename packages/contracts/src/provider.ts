@@ -62,6 +62,27 @@ export const ProviderSessionStartInput = Schema.Struct({
 });
 export type ProviderSessionStartInput = typeof ProviderSessionStartInput.Type;
 
+export const WorkRouteDecision = Schema.Literals([
+  "chat",
+  "web-research",
+  "system-info",
+  "office",
+  "file",
+  "coding",
+]);
+export type WorkRouteDecision = typeof WorkRouteDecision.Type;
+
+export const WorkTurnPolicy = Schema.Struct({
+  route: WorkRouteDecision,
+  visibleTools: Schema.Array(TrimmedNonEmptyString.check(Schema.isMaxLength(128))).check(
+    Schema.isMaxLength(32),
+  ),
+  requireSuccessfulTool: Schema.Boolean,
+  evidenceRequired: Schema.Boolean,
+  instructionScope: Schema.Literals(["work-isolated", "authorized-root"]),
+});
+export type WorkTurnPolicy = typeof WorkTurnPolicy.Type;
+
 export const ProviderSendTurnInput = Schema.Struct({
   threadId: ThreadId,
   input: Schema.optional(
@@ -74,6 +95,7 @@ export const ProviderSendTurnInput = Schema.Struct({
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
   modelSelection: Schema.optional(ModelSelection),
   interactionMode: Schema.optional(ProviderInteractionMode),
+  workTurnPolicy: Schema.optional(WorkTurnPolicy),
 });
 export type ProviderSendTurnInput = typeof ProviderSendTurnInput.Type;
 export const ProviderSteerTurnInput = ProviderSendTurnInput;

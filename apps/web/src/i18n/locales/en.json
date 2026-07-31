@@ -583,6 +583,8 @@
       "enableSoftWrap": "Enable soft wrap"
     },
     "model": {
+      "agenticTools": "Agentic tools",
+      "assistedTools": "Assisted tools",
       "availability": {
         "checking": "Checking",
         "comingSoon": "Coming soon",
@@ -930,6 +932,10 @@
       "preparingWorktree": "Preparing worktree...",
       "rawCall": "Raw call",
       "revertMessage": "Revert to this message",
+      "savedMemoryTitle": "Saved note",
+      "savedToMemory": "Saved to project memory",
+      "saveToMemory": "Save to project memory",
+      "saveToMemoryFailed": "Could not save to project memory",
       "scrollBottom": "Scroll to bottom",
       "selectionActions": "Selection actions",
       "sentViaAutomation": "Sent via Automation",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "Agentic tools",
+      "assistedTools": "Assisted tools",
       "chatOnly": "Chat only",
       "checking": "Checking local model runtimes…",
       "connectedOn": "Connected securely on {{endpoint}}",
@@ -1313,6 +1321,7 @@
       "removeButton": "Delete",
       "removeConfirmation": "Delete {{model}} from Ollama?",
       "removing": "Deleting…",
+      "rerunCapabilityCheck": "Check tools",
       "retryInstall": "Retry install",
       "runtimeAriaLabel": "Local model runtime",
       "runtimeDetails": {

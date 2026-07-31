@@ -129,7 +129,7 @@ describe("ProviderCommandReactor", () => {
     readonly checkpointStore?: Partial<CheckpointStoreShape>;
     readonly studioOutputReactor?: Partial<StudioOutputReactorShape>;
     readonly forkThreadResult?: ProviderForkThreadResult | null;
-    readonly projectKind?: "project" | "studio";
+    readonly projectKind?: "project" | "studio" | "chat";
     readonly projectWorkspaceRoot?: string;
   }) {
     const now = new Date().toISOString();
@@ -2097,6 +2097,46 @@ describe("ProviderCommandReactor", () => {
     );
   });
 
+  it("applies grounded tool instructions to every unprepared Work turn", async () => {
+    const harness = await createHarness({
+      projectKind: "chat",
+      threadModelSelection: { provider: "opencode", model: "ollama/qwen2.5:3b" },
+    });
+    const now = new Date().toISOString();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-work-document-read"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("work-document-read-1"),
+          role: "user",
+          text: "Read Deliverables/test-v1.docx and tell me its title.",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "full-access",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.enqueueWorkPreparation).not.toHaveBeenCalled();
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: expect.stringContaining(
+        "call djl_read_document now with that exact path before answering",
+      ),
+      workTurnPolicy: {
+        route: "file",
+        visibleTools: ["djl_read_document"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "work-isolated",
+      },
+    });
+  });
+
   it("creates a managed Work task folder before first-turn title generation", async () => {
     const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-work-title-"));
     const projectWorkspaceRoot = path.join(baseDir, "managed-work");
@@ -2558,6 +2598,7 @@ describe("ProviderCommandReactor", () => {
     );
 
     await waitFor(() => harness.startSession.mock.calls.length === 1);
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
       modelSelection: {
         provider: "codex",
@@ -2566,6 +2607,14 @@ describe("ProviderCommandReactor", () => {
       runtimeMode: "approval-required",
     });
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: "hello from home chat",
+      workTurnPolicy: {
+        route: "chat",
+        visibleTools: [],
+        instructionScope: "work-isolated",
+      },
+    });
   });
 
   it("renames a generic first-turn thread title using text generation", async () => {

@@ -150,4 +150,25 @@ describe("ProviderSendTurnInput", () => {
     }
     expect(parsed.modelSelection.options?.effort).toBe("xhigh");
   });
+
+  it("accepts a scoped Work turn policy without changing session permissions", () => {
+    const parsed = decodeProviderSendTurnInput({
+      threadId: "thread-1",
+      workTurnPolicy: {
+        route: "web-research",
+        visibleTools: ["websearch", "webfetch"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "work-isolated",
+      },
+    });
+
+    expect(parsed.workTurnPolicy).toEqual({
+      route: "web-research",
+      visibleTools: ["websearch", "webfetch"],
+      requireSuccessfulTool: true,
+      evidenceRequired: true,
+      instructionScope: "work-isolated",
+    });
+  });
 });

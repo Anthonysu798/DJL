@@ -5524,6 +5524,31 @@ export default function ChatView({
     onMessagesTouchStartBase,
     onMessagesWheelBase,
   });
+  const savePendingSelectionToProjectMemory = useCallback(() => {
+    const pendingSelection = pendingTranscriptSelectionAction;
+    if (!pendingSelection || !activeProjectId || !isStudioContainer) {
+      return;
+    }
+    const content = pendingSelection.selection.text.trim();
+    const title =
+      content.split(/\r?\n/, 1)[0]?.trim().slice(0, 80) || t("transcript.savedMemoryTitle");
+    dismissTranscriptSelectionAction();
+    window.getSelection()?.removeAllRanges();
+    void ensureNativeApi()
+      .projectMemory.save({ projectId: activeProjectId, title, content })
+      .then(() => {
+        toastManager.add({ type: "success", title: t("transcript.savedToMemory") });
+      })
+      .catch(() => {
+        toastManager.add({ type: "error", title: t("transcript.saveToMemoryFailed") });
+      });
+  }, [
+    activeProjectId,
+    dismissTranscriptSelectionAction,
+    isStudioContainer,
+    pendingTranscriptSelectionAction,
+    t,
+  ]);
   const createMarkerFromPendingSelection = useCallback(
     (style: ThreadMarkerStyle, color: ThreadMarkerColor) => {
       const pendingSelection = pendingTranscriptSelectionAction;
@@ -12036,6 +12061,9 @@ export default function ChatView({
           action={pendingTranscriptSelectionAction}
           onHighlight={createHighlightFromPendingSelection}
           onUnderline={createUnderlineFromPendingSelection}
+          onSaveToMemory={
+            activeProjectId && isStudioContainer ? savePendingSelectionToProjectMemory : undefined
+          }
           onAddToChat={commitTranscriptAssistantSelection}
         />
       )}

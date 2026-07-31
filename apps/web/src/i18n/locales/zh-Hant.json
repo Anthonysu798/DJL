@@ -583,6 +583,8 @@
       "enableSoftWrap": "開啟自動換行"
     },
     "model": {
+      "agenticTools": "智能體工具",
+      "assistedTools": "輔助工具",
       "availability": {
         "checking": "檢查",
         "comingSoon": "即將推出",
@@ -930,6 +932,10 @@
       "preparingWorktree": "正在準備工作樹...",
       "rawCall": "原始調用",
       "revertMessage": "回覆此訊息",
+      "savedMemoryTitle": "已儲存的筆記",
+      "savedToMemory": "已儲存到專案記憶",
+      "saveToMemory": "儲存到專案記憶",
+      "saveToMemoryFailed": "無法儲存到專案記憶",
       "scrollBottom": "捲動到底部",
       "selectionActions": "選取動作",
       "sentViaAutomation": "透過自動化發送",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "智能體工具",
+      "assistedTools": "輔助工具",
       "chatOnly": "僅聊天",
       "checking": "正在檢查本機模型執行階段…",
       "connectedOn": "已安全連線到 {{endpoint}}",
@@ -1313,6 +1321,7 @@
       "removeButton": "刪除",
       "removeConfirmation": "要從 Ollama 刪除 {{model}} 嗎？",
       "removing": "正在刪除…",
+      "rerunCapabilityCheck": "檢查工具",
       "retryInstall": "重試安裝",
       "runtimeAriaLabel": "本機模型執行階段",
       "runtimeDetails": {

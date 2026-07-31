@@ -77,6 +77,7 @@ import { shouldRejectUntrustedRequestOrigin } from "./trustedOrigins";
 import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
 import { LocalModelsService } from "./localModels/LocalModelsService";
 import { AiDetectorService } from "./aiDetector/Services/AiDetectorService";
+import { ProjectMemory } from "./memory/Services/ProjectMemory";
 
 const MAX_DIAGNOSTIC_CHILD_PROCESSES = 80;
 const MAX_DIAGNOSTIC_ARGS_CHARS = 500;
@@ -325,6 +326,7 @@ export const makeWsRpcLayer = () =>
       const gitStatusBroadcaster = yield* GitStatusBroadcaster;
       const keybindings = yield* Keybindings;
       const localModels = yield* LocalModelsService;
+      const projectMemory = yield* ProjectMemory;
       const aiDetector = yield* AiDetectorService;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
@@ -991,6 +993,11 @@ export const makeWsRpcLayer = () =>
           rpcEffect(localModels.retrySetup(input), "Failed to retry local AI setup"),
         [WS_METHODS.localModelsCancelSetup]: (input) =>
           rpcEffect(localModels.cancelSetup(input), "Failed to cancel local AI setup"),
+        [WS_METHODS.localModelsRerunCapabilityCheck]: (input) =>
+          rpcEffect(
+            localModels.rerunCapabilityCheck(input),
+            "Failed to rerun local model capability check",
+          ),
         [WS_METHODS.localModelsRemoveModel]: (input) =>
           rpcEffect(localModels.removeModel(input), "Failed to remove local model"),
         [WS_METHODS.subscribeLocalModelEvents]: () =>
@@ -1005,6 +1012,23 @@ export const makeWsRpcLayer = () =>
             ),
             bufferLiveUiStream(localModels.events, { label: "localModels.events" }),
           ),
+        [WS_METHODS.projectMemoryList]: (input) =>
+          rpcEffect(
+            projectMemory
+              .list(input.projectId, {
+                ...(input.includeTaskHistory === undefined
+                  ? {}
+                  : { includeTaskHistory: input.includeTaskHistory }),
+              })
+              .pipe(Effect.map((items) => ({ items: [...items] }))),
+            "Failed to list project memory",
+          ),
+        [WS_METHODS.projectMemorySave]: (input) =>
+          rpcEffect(projectMemory.save(input), "Failed to save project memory"),
+        [WS_METHODS.projectMemoryRename]: (input) =>
+          rpcEffect(projectMemory.rename(input), "Failed to rename project memory"),
+        [WS_METHODS.projectMemoryDelete]: (input) =>
+          rpcEffect(projectMemory.delete(input), "Failed to delete project memory"),
         [WS_METHODS.aiDetectorGetState]: () =>
           rpcEffect(aiDetector.getState, "Failed to load AI detector state"),
         [WS_METHODS.aiDetectorInstallModel]: (input) =>
