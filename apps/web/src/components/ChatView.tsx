@@ -440,6 +440,7 @@ import { useThreadRecap } from "~/hooks/useThreadRecap";
 import { useRepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { useSelectedLocale } from "~/i18n/intl";
 import { useIsMobile } from "~/hooks/useMediaQuery";
+import { MODEL_PICKER_OPEN_EVENT } from "~/onboarding/firstRunTour";
 import {
   acknowledgedRiskIdsForFormWarnings,
   AutomationDialog,
@@ -4376,6 +4377,16 @@ export default function ChatView({
       setIsModelPickerOpen(false);
     }
   }, []);
+  useEffect(() => {
+    const openModelPicker = (event: Event) => {
+      const target = (event as CustomEvent<{ target: HTMLElement | null }>).detail?.target;
+      if (target && !composerFormRef.current?.contains(target)) return;
+      handleModelPickerOpenChange(true);
+      scheduleComposerFocus();
+    };
+    window.addEventListener(MODEL_PICKER_OPEN_EVENT, openModelPicker);
+    return () => window.removeEventListener(MODEL_PICKER_OPEN_EVENT, openModelPicker);
+  }, [handleModelPickerOpenChange, scheduleComposerFocus]);
   const appendVoiceTranscriptToComposer = useCallback(
     (transcript: string) => {
       const nextPrompt = appendVoiceTranscriptToPrompt(promptRef.current, transcript);

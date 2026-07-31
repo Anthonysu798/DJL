@@ -7,9 +7,14 @@ import {
   FIRST_RUN_TOUR_TARGETS,
   FIRST_RUN_TUTORIAL_REPLAY_TARGET,
   SETTINGS_TOUR_VERSION,
+  MODEL_GUIDE_TARGET,
+  MODEL_GUIDE_VERSION,
   markFirstRunTourSeen,
+  markModelGuideSeen,
   markSettingsTourSeen,
+  resolveFirstRunTourTargets,
   shouldAutoStartFirstRunTour,
+  shouldAutoStartModelGuide,
   shouldAutoStartSettingsTour,
 } from "./firstRunTour";
 
@@ -33,6 +38,15 @@ describe("first-run tour state", () => {
       "settings",
       FIRST_RUN_TUTORIAL_REPLAY_TARGET,
     ]);
+  });
+
+  it("appends the desktop model guide as the final first-run step", () => {
+    expect(
+      resolveFirstRunTourTargets({ includeLocalAiSteps: true, includeModelGuide: true }).at(-1),
+    ).toBe(MODEL_GUIDE_TARGET);
+    expect(
+      resolveFirstRunTourTargets({ includeLocalAiSteps: false, includeModelGuide: false }),
+    ).toEqual(FIRST_RUN_CORE_TOUR_TARGETS);
   });
 
   it("waits for thread hydration before opening an unseen tour", () => {
@@ -65,6 +79,42 @@ describe("first-run tour state", () => {
     });
     expect(markFirstRunTourSeen({ seenVersion: FIRST_RUN_TOUR_VERSION + 1 })).toEqual({
       seenVersion: FIRST_RUN_TOUR_VERSION + 1,
+    });
+  });
+});
+
+describe("model guide state", () => {
+  it("uses a separate composer target and waits until the basic tour is complete", () => {
+    expect(MODEL_GUIDE_TARGET).toBe("model-guide");
+    expect(
+      shouldAutoStartModelGuide({
+        firstRunSeenVersion: 0,
+        seenVersion: 0,
+        threadsHydrated: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoStartModelGuide({
+        firstRunSeenVersion: FIRST_RUN_TOUR_VERSION,
+        seenVersion: 0,
+        threadsHydrated: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not reopen the current guide and never moves a newer version backwards", () => {
+    expect(
+      shouldAutoStartModelGuide({
+        firstRunSeenVersion: FIRST_RUN_TOUR_VERSION,
+        seenVersion: MODEL_GUIDE_VERSION,
+        threadsHydrated: true,
+      }),
+    ).toBe(false);
+    expect(markModelGuideSeen({ seenVersion: 0 })).toEqual({
+      seenVersion: MODEL_GUIDE_VERSION,
+    });
+    expect(markModelGuideSeen({ seenVersion: MODEL_GUIDE_VERSION + 1 })).toEqual({
+      seenVersion: MODEL_GUIDE_VERSION + 1,
     });
   });
 });

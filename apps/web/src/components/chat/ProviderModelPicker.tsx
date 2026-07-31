@@ -51,6 +51,7 @@ import {
   type FavoriteModelProvider,
 } from "../../lib/modelFavorites";
 import { Skeleton } from "../ui/skeleton";
+import { MODEL_GUIDE_TARGET } from "~/onboarding/firstRunTour";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -660,6 +661,8 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(
 
   const triggerButton = (
     <PickerTriggerButton
+      data-onboarding-current-model={selectedModelLabel}
+      data-onboarding-target={MODEL_GUIDE_TARGET}
       disabled={props.disabled ?? false}
       compact={props.compact ?? false}
       hideLabel={props.hideLabel ?? false}
