@@ -2364,6 +2364,56 @@
       "ariaLabel": "DJL 新手教程",
       "back": "上一步",
       "finish": "完成",
+      "modelGuide": {
+        "actions": {
+          "choose": "选择 API 模型",
+          "connect": "连接 API 模型",
+          "continue": "继续使用本地模型",
+          "how": "API 设置如何工作"
+        },
+        "api": {
+          "bullets": {
+            "long": "处理长任务时不容易跑偏",
+            "planning": "更擅长规划和编写代码",
+            "powerful": "使用更强大的在线模型",
+            "tools": "使用工具更稳定"
+          },
+          "recommended": "推荐",
+          "title": "API 模型"
+        },
+        "ariaLabel": "为 DJL 选择合适的模型",
+        "description": "DJL 是助手，模型是它的大脑。更强的模型能记住更多步骤，也能完成更难的工作。",
+        "goodToKnow": {
+          "cost": "服务商可能会按使用量收费",
+          "internet": "需要联网",
+          "security": "DJL 会安全保存密钥，不会把密钥返回到界面中",
+          "title": "需要知道"
+        },
+        "largeLocal": "30B 以上的本地模型也能很好地工作，但需要配置很高、内存很大的电脑。",
+        "local": {
+          "bullets": {
+            "computer": "在你的电脑上运行",
+            "long": "处理大型任务时可能忘记步骤",
+            "private": "内容私密，也能离线使用",
+            "simple": "适合简单、短小的任务"
+          },
+          "current": "当前 · {{model}}",
+          "title": "小型本地模型"
+        },
+        "recommendation": "当你想让 DJL 完成项目、写代码、研究资料或自动执行工作时，请使用 API 模型。",
+        "setup": {
+          "choose": "选择一个在线模型服务商。",
+          "key": "从该服务商获取 API 密钥。",
+          "paste": "把密钥粘贴到 DJL 中，然后测试连接。",
+          "title": "只需三个简单步骤"
+        },
+        "sidebar": {
+          "description": "连接在线模型，发挥 DJL 更强的智能体能力。",
+          "recommended": "推荐",
+          "title": "API 模型设置"
+        },
+        "title": "为 DJL 选择合适的大脑"
+      },
       "next": "下一步",
       "progress": "第 {{current}} / {{total}} 步",
       "settings": {

@@ -36,6 +36,7 @@ type SettingsNavItemTranslationKey =
  * silently drifting apart.
  */
 export const SETTINGS_TARGETS = {
+  modelProviders: "model-providers",
   providerUpdates: "provider-updates",
   providerInstalls: "provider-installs",
   environmentPanel: "environment-panel",
