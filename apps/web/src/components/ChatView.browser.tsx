@@ -5,6 +5,7 @@ import {
   AutomationId,
   type AutomationCreateInput,
   type AutomationDefinition,
+  CommandId,
   EventId,
   MessageId,
   ORCHESTRATION_WS_METHODS,
@@ -13,6 +14,7 @@ import {
   type ServerConfig,
   ThreadId,
   TurnId,
+  type WorkTask,
   type WsWelcomePayload,
   WS_METHODS,
   OrchestrationSessionStatus,
@@ -409,6 +411,33 @@ function createSnapshotWithLongAssistantResponse(): OrchestrationReadModel {
   return {
     ...snapshot,
     threads,
+  };
+}
+
+function createSnapshotWithReviewWorkTask(): OrchestrationReadModel {
+  const snapshot = createSnapshotForTargetUser({
+    targetMessageId: "msg-user-review-task" as MessageId,
+    targetText: "Review the completed work",
+  });
+  const workTask = {
+    threadId: THREAD_ID,
+    phase: "review",
+    condition: "active",
+    status: "needs_review",
+    resumePhase: "review",
+    progress: 90,
+    statusReason: "Work is ready for review",
+    lastTransitionCommandId: CommandId.makeUnsafe("provider:turn-review"),
+    createdAt: isoAt(1_000),
+    updatedAt: isoAt(1_001),
+    completedAt: null,
+  } satisfies WorkTask;
+
+  return {
+    ...snapshot,
+    threads: snapshot.threads.map((thread) =>
+      thread.id === THREAD_ID ? { ...thread, workTask } : thread,
+    ),
   };
 }
 
@@ -5007,6 +5036,20 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await expect.element(page.getByText("Expand plan")).toBeInTheDocument();
       expect(document.querySelector('[aria-label="Hide Plan sidebar"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps Work task progress chrome out of the conversation surface", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotWithReviewWorkTask(),
+    });
+
+    try {
+      expect(document.querySelector('[aria-label="Task progress"]')).toBeNull();
+      expect(document.body.textContent).not.toContain("Work is ready for review");
     } finally {
       await mounted.cleanup();
     }

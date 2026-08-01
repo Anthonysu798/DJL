@@ -1384,6 +1384,7 @@ const layer = Layer.effect(
                     tools,
                     required: lastUser.requiredToolCall,
                     step,
+                    providerID: model.providerID,
                   }),
           });
 

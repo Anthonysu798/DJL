@@ -25,8 +25,8 @@ describe("per-turn tool visibility", () => {
       Object.keys(
         filterVisibleTools(
           {
-            "first_djl_system_info": {},
-            "second_djl_system_info": {},
+            first_djl_system_info: {},
+            second_djl_system_info: {},
           },
           ["djl_system_info"],
         ),
@@ -38,25 +38,33 @@ describe("per-turn tool visibility", () => {
     expect(filterVisibleTools(tools, undefined)).toBe(tools);
   });
 
-  test("uses the portable required choice when a grounded turn exposes only one tool", () => {
-    expect(
-      requiredWorkToolChoice({
-        tools: { djl_work_123_djl_system_info: {} },
-        required: true,
-        step: 1,
-      }),
-    ).toBe("required");
-  });
+  test.each(["deepseek", "openai", "anthropic", "custom-api-provider"])(
+    "uses portable automatic tool choice for remote API provider %s",
+    (providerID) => {
+      expect(
+        requiredWorkToolChoice({
+          tools: { websearch: {}, webfetch: {} },
+          required: true,
+          step: 1,
+          providerID,
+        }),
+      ).toBe("auto");
+    },
+  );
 
-  test("falls back to any required tool for multi-tool grounded turns", () => {
-    expect(
-      requiredWorkToolChoice({
-        tools: { websearch: {}, webfetch: {} },
-        required: true,
-        step: 1,
-      }),
-    ).toBe("required");
-  });
+  test.each(["ollama", "lmstudio"])(
+    "keeps required tool choice for local provider %s",
+    (providerID) => {
+      expect(
+        requiredWorkToolChoice({
+          tools: { djl_work_123_djl_system_info: {} },
+          required: true,
+          step: 1,
+          providerID,
+        }),
+      ).toBe("required");
+    },
+  );
 
   test("does not force another tool after the first model step", () => {
     expect(
@@ -64,6 +72,18 @@ describe("per-turn tool visibility", () => {
         tools: { djl_work_123_djl_system_info: {} },
         required: true,
         step: 2,
+        providerID: "openai",
+      }),
+    ).toBeUndefined();
+  });
+
+  test("does not select a tool when the grounded policy does not require one", () => {
+    expect(
+      requiredWorkToolChoice({
+        tools: { websearch: {} },
+        required: false,
+        step: 1,
+        providerID: "openai",
       }),
     ).toBeUndefined();
   });
@@ -74,6 +94,7 @@ describe("per-turn tool visibility", () => {
         tools: {},
         required: true,
         step: 1,
+        providerID: "openai",
       }),
     ).toBeUndefined();
   });

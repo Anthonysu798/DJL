@@ -63,14 +63,17 @@ export function requiredWorkToolChoice(input: {
   readonly tools: Record<string, unknown>;
   readonly required: boolean | undefined;
   readonly step: number;
-}): "required" | undefined {
+  readonly providerID: string;
+}): "auto" | "required" | undefined {
   // The session loop increments `step` before resolving tools and calling the model, so the first
   // provider request is step 1 (not step 0).
   if (!input.required || input.step !== 1) return undefined;
-  // Keep the provider-facing value on the standard portable form. Work tool filtering already
-  // makes a single-tool route deterministic, while some OpenAI-compatible local runtimes silently
-  // drop the AI SDK's exact named-tool object before it reaches Ollama or LM Studio.
-  return Object.keys(input.tools).length > 0 ? "required" : undefined;
+  if (Object.keys(input.tools).length === 0) return undefined;
+  // Remote APIs do not consistently support forced tool choice, especially while reasoning or
+  // thinking is enabled. DJL still fails the turn unless a tool succeeds, so automatic choice is
+  // portable without weakening the evidence requirement. Keep forcing local runtimes, whose
+  // smaller models benefit from the stronger instruction.
+  return ["ollama", "lmstudio"].includes(input.providerID) ? "required" : "auto";
 }
 
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {

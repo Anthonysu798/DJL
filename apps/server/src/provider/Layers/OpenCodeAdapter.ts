@@ -756,7 +756,10 @@ export function workTurnFailureError(
   sawSuccessfulTool: boolean,
   providerMessage: string,
 ): string {
-  return workTurnCompletionError(policy, sawSuccessfulTool) ?? providerMessage;
+  const completionError = workTurnCompletionError(policy, sawSuccessfulTool);
+  return completionError
+    ? `${completionError} Provider error: ${providerMessage}`
+    : providerMessage;
 }
 
 export function buildWorkTurnSystemPrompt(policy: WorkTurnPolicy): string {

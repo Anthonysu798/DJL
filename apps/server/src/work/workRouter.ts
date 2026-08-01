@@ -1,7 +1,7 @@
 import type { WorkTurnPolicy } from "@synara/contracts";
 
 const WEB_FRESHNESS =
-  /\b(price|stock|market|weather|news|exchange rate|score|schedule)\b|股价|股票|行情|天气|新闻|汇率|比分|赛程/i;
+  /\b(prices?|stocks?|markets?|weather|news|exchange rates?|scores?|schedules?|web\s*search|web\s*fetch)\b|\b(?:analy[sz]e|research|evaluate)\b.{0,80}\b(?:compan(?:y|ies)|business|investment)\b|(?:分析|研究|评估).{0,40}(?:公司|企业|投资)|股价|股票|行情|天气|新闻|汇率|比分|赛程/i;
 const SYSTEM_INFO =
   /\b(this (?:computer|mac|pc)|my (?:computer|mac|pc)|ram|system memory|cpu|disk space)\b|这台电脑|我的电脑|本机|内存(?:有|是|多少)|处理器|磁盘空间/i;
 const OFFICE =

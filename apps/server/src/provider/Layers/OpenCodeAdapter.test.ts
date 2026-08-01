@@ -57,10 +57,10 @@ describe("workTurnCompletionError", () => {
     ).toContain("Do not assume project or memory context exists");
   });
 
-  it("holds evidence-required prose until a tool succeeds", () => {
+  it.each(["websearch", "webfetch"])("holds evidence-required prose until %s succeeds", (tool) => {
     const policy = {
       route: "web-research" as const,
-      visibleTools: ["websearch"],
+      visibleTools: [tool],
       requireSuccessfulTool: true,
       evidenceRequired: true,
       instructionScope: "work-isolated" as const,
@@ -100,20 +100,21 @@ describe("workTurnCompletionError", () => {
     ).toBeUndefined();
   });
 
-  it("replaces a failed required-tool turn with a safe visible explanation", () => {
-    expect(
-      workTurnFailureError(
-        {
-          route: "web-research",
-          visibleTools: ["websearch"],
-          requireSuccessfulTool: true,
-          evidenceRequired: true,
-          instructionScope: "work-isolated",
-        },
-        false,
-        "Too Many Requests",
-      ),
-    ).toContain("could not verify safely");
+  it("keeps the provider cause in a failed required-tool turn's safe explanation", () => {
+    const message = workTurnFailureError(
+      {
+        route: "web-research",
+        visibleTools: ["websearch", "webfetch"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "work-isolated",
+      },
+      false,
+      "Thinking mode does not support this tool_choice",
+    );
+
+    expect(message).toContain("could not verify safely");
+    expect(message).toContain("Thinking mode does not support this tool_choice");
     expect(workTurnFailureError(undefined, false, "Too Many Requests")).toBe("Too Many Requests");
   });
 
