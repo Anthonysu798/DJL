@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   modelProviderStatusText,
   resolveAuthenticatedModelSelection,
+  resolveGuidedProviderId,
 } from "./OpenCodeModelsSettingsPanel";
 
 describe("modelProviderStatusText", () => {
@@ -12,6 +13,19 @@ describe("modelProviderStatusText", () => {
 
   it("summarizes configured providers and models", () => {
     expect(modelProviderStatusText(2, 14)).toBe("2 providers · 14 models available");
+  });
+});
+
+describe("resolveGuidedProviderId", () => {
+  it("prefers the first unconnected provider and falls back to the first provider", () => {
+    expect(
+      resolveGuidedProviderId([
+        { id: "openai", connected: true },
+        { id: "anthropic", connected: false },
+      ]),
+    ).toBe("anthropic");
+    expect(resolveGuidedProviderId([{ id: "openai", connected: true }])).toBe("openai");
+    expect(resolveGuidedProviderId([])).toBeNull();
   });
 });
 

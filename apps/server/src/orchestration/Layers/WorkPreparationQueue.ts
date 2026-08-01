@@ -42,6 +42,30 @@ function stableToken(value: string): string {
   return createHash("sha256").update(value).digest("hex").slice(0, 32);
 }
 
+export function projectMemorySearchQuery(messageText: string): string | null {
+  const match = messageText.trim().match(/^\/memory(?:\s+(.+))?$/isu);
+  const query = match?.[1]?.trim();
+  return query ? query : null;
+}
+
+export function workContextCharacterBudget(input: {
+  readonly contextWindowTokens: number;
+  readonly outputTokens: number;
+  readonly systemPromptChars: number;
+  readonly currentThreadHistoryChars: number;
+  readonly toolSchemaChars: number;
+  readonly attachmentChars: number;
+}): number {
+  const contextChars = Math.max(0, Math.floor(input.contextWindowTokens)) * 4;
+  const reservedChars =
+    Math.max(0, Math.floor(input.outputTokens)) * 4 +
+    Math.max(0, Math.floor(input.systemPromptChars)) +
+    Math.max(0, Math.floor(input.currentThreadHistoryChars)) +
+    Math.max(0, Math.floor(input.toolSchemaChars)) +
+    Math.max(0, Math.floor(input.attachmentChars));
+  return Math.max(0, contextChars - reservedChars);
+}
+
 export function preservePreparationFailure(cause: unknown): Error {
   return cause instanceof Error
     ? cause
@@ -182,30 +206,79 @@ const make = Effect.gen(function* () {
           }),
         { concurrency: 2 },
       );
-      const readModel = yield* orchestrationEngine.getReadModel();
-      const thread = readModel.threads.find((candidate) => candidate.id === job.threadId);
-      const project = readModel.projects.find((candidate) => candidate.id === job.projectId);
-      const memoryScope = resolveProjectMemoryScope({
-        containerProjectId: job.projectId,
-        containerTitle: project?.title ?? "DJL Work",
-        workspaceRoot: thread?.worktreePath,
-      });
-      const memory = yield* projectMemory
-        .retrieve({
-          projectId: memoryScope.projectId,
-          threadId: job.threadId,
-          query: job.messageText,
-          maxChars: 12_000,
-        })
-        .pipe(
-          Effect.catchCause((cause) =>
-            Effect.logWarning("Project memory retrieval failed; continuing without memory", {
-              jobId,
-              projectId: job.projectId,
-              cause: Cause.pretty(cause),
-            }).pipe(Effect.as({ brief: "", citations: [] })),
-          ),
-        );
+      const memoryQuery =
+        projectMemorySearchQuery(job.messageText) ??
+        (job.request.memoryContext?.searchProject ? job.messageText : null);
+      const memoryReferences = job.request.memoryContext?.references ?? [];
+      const attachmentChars = artifacts.reduce(
+        (total, artifact) =>
+          total + artifact.blocks.reduce((blockTotal, block) => blockTotal + block.text.length, 0),
+        0,
+      );
+      // Work preparation happens before the provider inventory is attached to the turn. Use the
+      // smallest supported local context here so an explicitly selected memory note remains safe
+      // for Granite/Qwen even when the runtime reports no larger effective window.
+      const explicitMemoryBudget = Math.min(
+        12_000,
+        workContextCharacterBudget({
+          contextWindowTokens: 8_192,
+          outputTokens: 2_048,
+          systemPromptChars: 6_000,
+          currentThreadHistoryChars: 0,
+          toolSchemaChars: 6_000,
+          attachmentChars: attachmentChars + job.messageText.length,
+        }),
+      );
+      const memory =
+        (memoryQuery === null && memoryReferences.length === 0) || explicitMemoryBudget === 0
+          ? { brief: "", citations: [] }
+          : yield* Effect.gen(function* () {
+              const readModel = yield* orchestrationEngine.getReadModel();
+              const thread = readModel.threads.find((candidate) => candidate.id === job.threadId);
+              const project = readModel.projects.find(
+                (candidate) => candidate.id === job.projectId,
+              );
+              const memoryScope = resolveProjectMemoryScope({
+                containerProjectId: job.projectId,
+                containerTitle: project?.title ?? "DJL Work",
+                workspaceRoot: thread?.worktreePath,
+              });
+              const exact =
+                memoryReferences.length > 0
+                  ? yield* projectMemory.retrieveExact({
+                      projectId: memoryScope.projectId,
+                      references: memoryReferences,
+                      maxChars:
+                        memoryQuery === null
+                          ? explicitMemoryBudget
+                          : Math.floor(explicitMemoryBudget / 2),
+                    })
+                  : { brief: "", citations: [] };
+              const searched =
+                memoryQuery !== null
+                  ? yield* projectMemory.retrieve({
+                      projectId: memoryScope.projectId,
+                      threadId: job.threadId,
+                      query: memoryQuery,
+                      maxChars:
+                        memoryReferences.length === 0
+                          ? explicitMemoryBudget
+                          : explicitMemoryBudget - exact.brief.length,
+                    })
+                  : { brief: "", citations: [] };
+              return {
+                brief: [exact.brief, searched.brief].filter(Boolean).join("\n\n"),
+                citations: [...exact.citations, ...searched.citations],
+              };
+            }).pipe(
+              Effect.catchCause((cause) =>
+                Effect.logWarning("Explicit project memory search failed", {
+                  jobId,
+                  projectId: job.projectId,
+                  cause: Cause.pretty(cause),
+                }).pipe(Effect.as({ brief: "", citations: [] })),
+              ),
+            );
       const preparedPrompt = buildTrustedWorkPrompt({
         userPrompt: job.messageText,
         artifacts,

@@ -1,16 +1,19 @@
+import type { Metadata, Viewport } from "next";
 import { Site } from "./Site";
-import type { ConsoleTab, Locale } from "./content";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = (await searchParams) ?? {};
-  // Chinese is the default; opt into English with ?lang=en
-  const locale: Locale = params.lang === "en" ? "en" : "zh";
-  const tabParam = params.tab;
-  const tab: ConsoleTab = tabParam === "tools" || tabParam === "review" ? tabParam : "plan";
+// The redesigned landing surface is paper-white; /guide and /changelog keep the
+// dark themeColor from the root layout.
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+};
 
-  return <Site locale={locale} tab={tab} />;
+export const metadata: Metadata = {
+  alternates: {
+    languages: { "zh-CN": "/", en: "/en" },
+  },
+};
+
+// Chinese is the default locale and lives at the bare paths; English is at /en.
+export default function Home() {
+  return <Site locale="zh" />;
 }

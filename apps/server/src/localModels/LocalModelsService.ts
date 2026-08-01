@@ -1,5 +1,6 @@
 import type {
   LocalModelCancelInstallInput,
+  LocalModelCapabilityCheckInput,
   LocalModelEvent,
   LocalModelInstallInput,
   LocalModelInstallJob,
@@ -57,6 +58,9 @@ export interface LocalModelsServiceShape {
   ) => Effect.Effect<boolean | null, LocalModelsServiceError>;
   readonly removeModel: (
     input: LocalModelRemoveInput,
+  ) => Effect.Effect<LocalModelsSnapshot, LocalModelsServiceError>;
+  readonly rerunCapabilityCheck: (
+    input: LocalModelCapabilityCheckInput,
   ) => Effect.Effect<LocalModelsSnapshot, LocalModelsServiceError>;
   readonly events: Stream.Stream<LocalModelEvent>;
 }

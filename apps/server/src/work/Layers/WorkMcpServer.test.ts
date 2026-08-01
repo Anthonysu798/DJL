@@ -96,6 +96,15 @@ describe("WorkMcpServer", () => {
         },
       });
 
+      const optionalEventStream = await fetch(first.url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${first.bearerToken}`,
+          Accept: "text/event-stream",
+        },
+      });
+      expect(optionalEventStream.status).toBe(405);
+
       const listed = await rpc(first, { jsonrpc: "2.0", id: 2, method: "tools/list" });
       const listedBody = (await listed.json()) as {
         result: {
@@ -106,6 +115,7 @@ describe("WorkMcpServer", () => {
         };
       };
       expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_create_document");
+      expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_system_info");
       expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_modify_office_copy");
       expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_compare_pdfs");
       expect(
@@ -113,6 +123,30 @@ describe("WorkMcpServer", () => {
           "djl/tool-classification"
         ],
       ).toBe("modify-copy");
+
+      const systemInfo = await rpc(first, {
+        jsonrpc: "2.0",
+        id: 29,
+        method: "tools/call",
+        params: { name: "djl_system_info", arguments: {} },
+      });
+      await expect(systemInfo.json()).resolves.toMatchObject({
+        result: {
+          isError: false,
+          structuredContent: {
+            os: { platform: expect.any(String), release: expect.any(String) },
+            memory: { totalBytes: expect.any(Number), totalGiB: expect.any(Number) },
+            cpu: { model: expect.any(String), logicalCores: expect.any(Number) },
+            disk: {
+              freeBytes: expect.any(Number),
+              freeGiB: expect.any(Number),
+              totalBytes: expect.any(Number),
+              totalGiB: expect.any(Number),
+            },
+            collectedAt: expect.any(String),
+          },
+        },
+      });
 
       const created = await rpc(first, {
         jsonrpc: "2.0",
@@ -139,6 +173,46 @@ describe("WorkMcpServer", () => {
           .subarray(0, 4)
           .toString(),
       ).toBe("%PDF");
+
+      const prefixedDocumentRead = await rpc(first, {
+        jsonrpc: "2.0",
+        id: 301,
+        method: "tools/call",
+        params: {
+          name: "djl_read_document",
+          arguments: { path: `Read ${createdBody.result.structuredContent.path}` },
+        },
+      });
+      await expect(prefixedDocumentRead.json()).resolves.toMatchObject({
+        result: {
+          isError: false,
+          structuredContent: {
+            blocks: [expect.objectContaining({ text: expect.stringContaining("MCP Report") })],
+          },
+        },
+      });
+
+      const createdWithoutName = await rpc(first, {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: {
+          name: "djl_create_document",
+          arguments: {
+            format: "docx",
+            title: "Small model report.docx",
+            paragraphs: ["The filename was derived safely."],
+          },
+        },
+      });
+      await expect(createdWithoutName.json()).resolves.toMatchObject({
+        result: {
+          isError: false,
+          structuredContent: {
+            path: expect.stringMatching(/^Deliverables\/.+\.docx$/),
+          },
+        },
+      });
 
       const readOwnAttachment = await rpc(first, {
         jsonrpc: "2.0",

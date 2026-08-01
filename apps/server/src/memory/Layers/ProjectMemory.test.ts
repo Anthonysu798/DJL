@@ -46,12 +46,13 @@ describe("ProjectMemoryLive", () => {
             "Decisions",
             "People",
             "Project.md",
+            "Notes",
             "Sources",
             "Tasks",
           ]),
         );
 
-        yield* memory.recordTurn({
+        const recorded = yield* memory.recordTurn({
           projectId: projectA,
           projectTitle: "Launch planning",
           projectCreatedAt: "2026-07-13T10:00:00.000Z",
@@ -68,8 +69,18 @@ describe("ProjectMemoryLive", () => {
           threadId: threadA,
           query: "When is the launch date?",
         });
-        expect(sameProject.brief).toContain("September 9");
-        expect(sameProject.brief).toContain("[[Tasks/thread-a]]");
+        expect(sameProject.brief).not.toContain("September 9");
+        expect(sameProject.brief).not.toContain("[[Tasks/thread-a]]");
+        expect(yield* Effect.promise(() => readFile(recorded.path, "utf8"))).toContain(
+          "September 9",
+        );
+        const explicitlySelected = yield* memory.retrieveExact({
+          projectId: projectA,
+          references: [{ path: "Tasks/thread-a.md", title: "Choose launch date", kind: "task" }],
+          maxChars: 4_000,
+        });
+        expect(explicitlySelected.brief).toContain("September 9");
+        expect(explicitlySelected.brief).toContain("[[Tasks/thread-a]]");
 
         yield* memory.ensureProject({
           projectId: projectB,
@@ -82,6 +93,45 @@ describe("ProjectMemoryLive", () => {
           query: "September launch date",
         });
         expect(otherProject.brief).not.toContain("September 9");
+      }).pipe(Effect.provide(testLayer())),
+    );
+  });
+
+  it("lists, renames, and removes only explicitly saved memory notes", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* runMigrations();
+        const memory = yield* ProjectMemory;
+        yield* memory.ensureProject({
+          projectId: projectA,
+          title: "Saved notes",
+          createdAt: "2026-07-13T10:00:00.000Z",
+        });
+        const saved = yield* memory.save({
+          projectId: projectA,
+          title: "Customer preference",
+          content: "The customer prefers the ORCHID theme.",
+        });
+        expect(saved.path).toMatch(/^Notes\/Customer-preference-/);
+        expect(yield* memory.list(projectA)).toEqual([
+          expect.objectContaining({ path: saved.path, title: "Customer preference", kind: "note" }),
+        ]);
+
+        const renamed = yield* memory.rename({
+          projectId: projectA,
+          path: saved.path,
+          title: "Theme preference",
+        });
+        expect(renamed.title).toBe("Theme preference");
+        const exact = yield* memory.retrieveExact({
+          projectId: projectA,
+          references: [{ path: saved.path, title: renamed.title, kind: "note" }],
+        });
+        expect(exact.brief).toContain("Theme preference");
+        expect(exact.brief).toContain("ORCHID theme");
+
+        yield* memory.delete({ projectId: projectA, path: saved.path });
+        expect(yield* memory.list(projectA)).toEqual([]);
       }).pipe(Effect.provide(testLayer())),
     );
   });

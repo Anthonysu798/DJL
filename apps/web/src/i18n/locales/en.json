@@ -583,6 +583,8 @@
       "enableSoftWrap": "Enable soft wrap"
     },
     "model": {
+      "agenticTools": "Agentic tools",
+      "assistedTools": "Assisted tools",
       "availability": {
         "checking": "Checking",
         "comingSoon": "Coming soon",
@@ -930,6 +932,10 @@
       "preparingWorktree": "Preparing worktree...",
       "rawCall": "Raw call",
       "revertMessage": "Revert to this message",
+      "savedMemoryTitle": "Saved note",
+      "savedToMemory": "Saved to project memory",
+      "saveToMemory": "Save to project memory",
+      "saveToMemoryFailed": "Could not save to project memory",
       "scrollBottom": "Scroll to bottom",
       "selectionActions": "Selection actions",
       "sentViaAutomation": "Sent via Automation",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "Agentic tools",
+      "assistedTools": "Assisted tools",
       "chatOnly": "Chat only",
       "checking": "Checking local model runtimes…",
       "connectedOn": "Connected securely on {{endpoint}}",
@@ -1313,6 +1321,7 @@
       "removeButton": "Delete",
       "removeConfirmation": "Delete {{model}} from Ollama?",
       "removing": "Deleting…",
+      "rerunCapabilityCheck": "Check tools",
       "retryInstall": "Retry install",
       "runtimeAriaLabel": "Local model runtime",
       "runtimeDetails": {
@@ -2355,6 +2364,56 @@
       "ariaLabel": "DJL new user tutorial",
       "back": "Back",
       "finish": "Finish",
+      "modelGuide": {
+        "actions": {
+          "choose": "Choose API model",
+          "connect": "Connect API model",
+          "continue": "Keep using local",
+          "how": "How API setup works"
+        },
+        "api": {
+          "bullets": {
+            "long": "Stays on track for longer work",
+            "planning": "Plans and writes code better",
+            "powerful": "Uses a stronger model online",
+            "tools": "Uses tools more reliably"
+          },
+          "recommended": "Recommended",
+          "title": "API model"
+        },
+        "ariaLabel": "Choose the right model for DJL",
+        "description": "DJL is the helper. The model is its brain. A stronger model can remember more steps and handle harder jobs.",
+        "goodToKnow": {
+          "cost": "Your provider may charge for usage",
+          "internet": "Needs an internet connection",
+          "security": "DJL stores your key securely and never returns it to the UI",
+          "title": "Good to know"
+        },
+        "largeLocal": "A 30B+ local model can also work well, but it needs a powerful computer with lots of memory.",
+        "local": {
+          "bullets": {
+            "computer": "Runs on your computer",
+            "long": "Can lose track on big jobs",
+            "private": "Private and works offline",
+            "simple": "Good for short, simple tasks"
+          },
+          "current": "Current · {{model}}",
+          "title": "Small local model"
+        },
+        "recommendation": "Use an API model when you want DJL to build a project, write code, research, or automate work.",
+        "setup": {
+          "choose": "Choose an online model provider.",
+          "key": "Get an API key from that provider.",
+          "paste": "Paste the key into DJL and test the connection.",
+          "title": "Three simple steps"
+        },
+        "sidebar": {
+          "description": "Connect an online model to unlock DJL’s strongest agent capabilities.",
+          "recommended": "Recommended",
+          "title": "API model setup"
+        },
+        "title": "Choose the right brain for DJL"
+      },
       "next": "Next",
       "progress": "{{current}} of {{total}}",
       "settings": {

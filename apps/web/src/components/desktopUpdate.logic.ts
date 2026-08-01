@@ -52,10 +52,15 @@ export function resolveDesktopUpdateButtonAction(
 }
 
 export function shouldShowDesktopUpdateButton(state: DesktopUpdateState | null): boolean {
-  // Keep one predictable in-app entry point visible in every packaged desktop
-  // build. The same button checks, shows download progress, and restarts to
-  // install, so users never need to return to the website for normal updates.
-  return state?.enabled === true;
+  if (!state?.enabled) return false;
+
+  const action = resolveDesktopUpdateButtonAction(state);
+  return (
+    state.status === "available" ||
+    state.status === "downloading" ||
+    state.status === "downloaded" ||
+    (state.status === "error" && state.canRetry && (action === "download" || action === "install"))
+  );
 }
 
 export function getDesktopUpdateReadyPromptVersion(

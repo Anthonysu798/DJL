@@ -14,6 +14,22 @@ import { join, resolve } from "node:path";
 export const DJL_OPENCODE_VERSION = "1.17.18";
 export const DJL_OPENCODE_COMMIT = "b1fc8113948b518835c2a39ece49553cffe9b30c";
 export const DJL_OPENCODE_BUN_VERSION = "1.3.14";
+export const DJL_OPENCODE_FINGERPRINT_PATHS = [
+  "vendor/opencode/bun.lock",
+  "vendor/opencode/DJL_UPSTREAM.md",
+  "vendor/opencode/package.json",
+  "vendor/opencode/packages/opencode/package.json",
+  "vendor/opencode/packages/opencode/script/build.ts",
+  "vendor/opencode/packages/opencode/src/provider/provider.ts",
+  "vendor/opencode/packages/opencode/src/session/llm.ts",
+  "vendor/opencode/packages/opencode/src/session/llm/local-model-prompt.ts",
+  "vendor/opencode/packages/opencode/src/session/llm/local-tool-call-middleware.ts",
+  "vendor/opencode/packages/opencode/src/session/llm/request.ts",
+  "vendor/opencode/packages/opencode/src/session/prompt.ts",
+  "vendor/opencode/packages/opencode/src/session/tools.ts",
+  "vendor/opencode/packages/schema/src/v1/session.ts",
+  "scripts/lib/vendored-opencode.ts",
+] as const;
 
 export type OpenCodeTargetPlatform = "darwin" | "linux" | "win32";
 export type OpenCodeTargetArch = "arm64" | "x64";
@@ -62,19 +78,7 @@ export function computeVendoredOpenCodeFingerprint(repoRoot: string): string {
   hash.update(DJL_OPENCODE_VERSION);
   hash.update(DJL_OPENCODE_COMMIT);
   hash.update(DJL_OPENCODE_BUN_VERSION);
-  for (const relativePath of [
-    "vendor/opencode/bun.lock",
-    "vendor/opencode/DJL_UPSTREAM.md",
-    "vendor/opencode/package.json",
-    "vendor/opencode/packages/opencode/package.json",
-    "vendor/opencode/packages/opencode/script/build.ts",
-    "vendor/opencode/packages/opencode/src/provider/provider.ts",
-    "vendor/opencode/packages/opencode/src/session/llm.ts",
-    "vendor/opencode/packages/opencode/src/session/llm/local-model-prompt.ts",
-    "vendor/opencode/packages/opencode/src/session/llm/local-tool-call-middleware.ts",
-    "vendor/opencode/packages/opencode/src/session/llm/request.ts",
-    "scripts/lib/vendored-opencode.ts",
-  ]) {
+  for (const relativePath of DJL_OPENCODE_FINGERPRINT_PATHS) {
     hash.update(relativePath);
     hash.update(readFileSync(join(repoRoot, relativePath)));
   }

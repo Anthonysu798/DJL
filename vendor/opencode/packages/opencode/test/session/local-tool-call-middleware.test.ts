@@ -4,9 +4,38 @@ import { describe, expect, test } from "bun:test";
 import {
   createLocalToolCallMiddleware,
   parseLocalTextToolCalls,
+  supportsTextToolCallRecovery,
 } from "../../src/session/llm/local-tool-call-middleware";
 
 describe("local text tool-call recovery", () => {
+  test("enables text tool-call recovery for DeepSeek", () => {
+    expect(supportsTextToolCallRecovery("deepseek")).toBe(true);
+    expect(supportsTextToolCallRecovery("openai")).toBe(false);
+  });
+
+  test("recovers a DeepSeek DSML tool call emitted as assistant text", async () => {
+    const middleware = createLocalToolCallMiddleware(new Set(["webfetch", "invalid"]));
+    const output = await transform(middleware, [
+      { type: "text-start", id: "text-dsml" },
+      {
+        type: "text-delta",
+        id: "text-dsml",
+        delta:
+          '<｜｜DSML｜｜tool_calls><｜｜DSML｜｜invoke name="webfetch"><｜｜DSML｜｜parameter name="format" string="true">text</｜｜DSML｜｜parameter><｜｜DSML｜｜parameter name="numResults" string="false">3</｜｜DSML｜｜parameter><｜｜DSML｜｜parameter name="url" string="true">https://www.google.com/finance</｜｜DSML｜｜parameter></｜｜DSML｜｜invoke></｜｜DSML｜｜tool_calls>',
+      },
+      { type: "text-end", id: "text-dsml" },
+    ]);
+
+    expect(output).toHaveLength(4);
+    expect(output[0]).toMatchObject({ type: "tool-input-start", toolName: "webfetch" });
+    expect(output[1]).toMatchObject({
+      type: "tool-input-delta",
+      delta: '{"format":"text","numResults":3,"url":"https://www.google.com/finance"}',
+    });
+    expect(output[3]).toMatchObject({ type: "tool-call", toolName: "webfetch" });
+    expect(output.some((part) => part.type === "text-delta")).toBe(false);
+  });
+
   test("parses and de-duplicates bare tool JSON emitted as assistant text", () => {
     const text = [
       '{"name":"write","arguments":{"filePath":"C:/tmp/a.txt","content":"hello"}}',

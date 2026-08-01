@@ -9,6 +9,7 @@ interface TranscriptSelectionActionLayerProps {
   action: PendingTranscriptSelectionAction | null;
   onHighlight: () => void;
   onUnderline: () => void;
+  onSaveToMemory?: (() => void) | undefined;
   onAddToChat: () => void;
 }
 
@@ -24,6 +25,7 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
       placement={props.action.placement}
       onHighlight={props.onHighlight}
       onUnderline={props.onUnderline}
+      onSaveToMemory={props.onSaveToMemory}
       onAddToChat={props.onAddToChat}
     />
   );

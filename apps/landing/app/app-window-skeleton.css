@@ -1,0 +1,112 @@
+.aws {
+  display: grid;
+  grid-template-columns: 176px 1fr;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+}
+
+.aws-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 18px;
+  border-right: 1px solid var(--lp-hairline);
+}
+
+.aws-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 26px 22px;
+  background: var(--lp-canvas);
+}
+
+.aws-bar {
+  display: block;
+  height: 9px;
+  border-radius: 5px;
+  background: var(--lp-hairline);
+}
+
+.aws-bar--tab {
+  width: 46%;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--lp-hairline-strong);
+}
+
+.aws-bar--active {
+  background: var(--lp-hairline-strong);
+}
+
+/* stage rail — plan → tools → review → done, first stop complete */
+.aws-stages {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.aws-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--lp-hairline-strong);
+}
+
+.aws-dot--done {
+  background: var(--lp-ink);
+}
+
+.aws-line {
+  flex: 1;
+  height: 1px;
+  background: var(--lp-hairline);
+}
+
+/* the visitor's message, right-aligned like the real exchange */
+.aws-bubble {
+  align-self: flex-end;
+  width: 42%;
+  height: 26px;
+  border-radius: 13px 13px 4px 13px;
+  border: 1px solid var(--lp-hairline);
+  background: var(--lp-surface-soft);
+}
+
+.aws-composer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--lp-hairline);
+  border-radius: 12px;
+}
+
+.aws-chip {
+  width: 64px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(221, 91, 0, 0.35);
+}
+
+.aws-send {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--lp-ink);
+}
+
+@media (max-width: 640px) {
+  .aws {
+    grid-template-columns: 1fr;
+  }
+
+  .aws-side {
+    display: none;
+  }
+}

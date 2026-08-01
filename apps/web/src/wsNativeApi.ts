@@ -558,11 +558,21 @@ export function createWsNativeApi(): NativeApi {
       startSetup: (input) => transport.request(WS_METHODS.localModelsStartSetup, input),
       retrySetup: (input) => transport.request(WS_METHODS.localModelsRetrySetup, input),
       cancelSetup: (input) => transport.request(WS_METHODS.localModelsCancelSetup, input),
+      rerunCapabilityCheck: (input) =>
+        transport.request(WS_METHODS.localModelsRerunCapabilityCheck, input, {
+          timeoutMs: 180_000,
+        }),
       removeModel: (input) => transport.request(WS_METHODS.localModelsRemoveModel, input),
       onEvent: (callback) => {
         localModelEventListeners.add(callback);
         return () => localModelEventListeners.delete(callback);
       },
+    },
+    projectMemory: {
+      list: (input) => transport.request(WS_METHODS.projectMemoryList, input),
+      save: (input) => transport.request(WS_METHODS.projectMemorySave, input),
+      rename: (input) => transport.request(WS_METHODS.projectMemoryRename, input),
+      delete: (input) => transport.request(WS_METHODS.projectMemoryDelete, input),
     },
     aiDetector: {
       getState: () => transport.request(WS_METHODS.aiDetectorGetState),

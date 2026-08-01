@@ -65,16 +65,8 @@ const thread = {
 } as unknown as OrchestrationThread;
 
 describe("recordInputFromCompletedWorkThread", () => {
-  it("selects only source-backed messages from the completed turn", () => {
-    expect(recordInputFromCompletedWorkThread(project, thread)).toEqual(
-      expect.objectContaining({
-        projectId: "project-a",
-        threadId: "thread-a",
-        turnId: "turn-a",
-        userText: "Choose the date",
-        assistantText: "Decision: September 9",
-      }),
-    );
+  it("does not automatically promote completed Work answers into project memory", () => {
+    expect(recordInputFromCompletedWorkThread(project, thread)).toBeNull();
   });
 
   it("does not save streaming, failed, or non-Work output", () => {
@@ -95,14 +87,12 @@ describe("recordInputFromCompletedWorkThread", () => {
     ).toBeNull();
   });
 
-  it("stores folder-backed Work memory in a location-specific scope", () => {
-    const scoped = recordInputFromCompletedWorkThread(project, {
-      ...thread,
-      worktreePath: "/Clients/Acme",
-    });
-
-    expect(scoped?.projectId).toMatch(/^work-location-[a-f0-9]{40}$/);
-    expect(scoped?.projectId).not.toBe(project.id);
-    expect(scoped?.projectTitle).toBe("Acme");
+  it("does not automatically save folder-backed Work answers", () => {
+    expect(
+      recordInputFromCompletedWorkThread(project, {
+        ...thread,
+        worktreePath: "/Clients/Acme",
+      }),
+    ).toBeNull();
   });
 });

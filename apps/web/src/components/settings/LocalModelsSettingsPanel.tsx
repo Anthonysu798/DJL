@@ -235,6 +235,11 @@ type LocalModelAction =
     }
   | { readonly type: "retry-setup"; readonly jobId: string }
   | { readonly type: "cancel-setup"; readonly jobId: string }
+  | {
+      readonly type: "rerun-capability";
+      readonly runtime: LocalModelRuntime;
+      readonly modelId: string;
+    }
   | { readonly type: "remove"; readonly runtime: LocalModelRuntime; readonly modelId: string };
 
 export function installedModelRemovalAction(
@@ -293,6 +298,11 @@ export function LocalModelsSettingsPanel() {
           return api.retrySetup({ jobId: action.jobId });
         case "cancel-setup":
           return api.cancelSetup({ jobId: action.jobId });
+        case "rerun-capability":
+          return api.rerunCapabilityCheck({
+            runtime: action.runtime,
+            modelId: action.modelId,
+          });
         case "remove":
           return action.runtime === "ollama"
             ? api.removeModel({ runtime: "ollama", modelId: action.modelId })
@@ -778,7 +788,16 @@ export function LocalModelsSettingsPanel() {
                 }
                 actions={
                   <>
-                    {model.supportsToolCalls === false ? (
+                    {model.capabilityProfile?.tier === "agentic" ? (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                        {t("localModels.agenticTools")}
+                      </span>
+                    ) : model.capabilityProfile?.tier === "assisted" ? (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                        {t("localModels.assistedTools")}
+                      </span>
+                    ) : model.supportsToolCalls === false ||
+                      model.capabilityProfile?.tier === "chat-only" ? (
                       <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
                         {t("localModels.chatOnly")}
                       </span>
@@ -787,6 +806,21 @@ export function LocalModelsSettingsPanel() {
                         {t("localModels.installed")}
                       </span>
                     )}
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      disabled={actionMutation.isPending}
+                      onClick={() =>
+                        actionMutation.mutate({
+                          type: "rerun-capability",
+                          runtime: model.runtime,
+                          modelId: model.modelId,
+                        })
+                      }
+                    >
+                      <RefreshCwIcon className="size-3.5" />
+                      {t("localModels.rerunCapabilityCheck")}
+                    </Button>
                     {removalAction ? (
                       <Button
                         size="xs"

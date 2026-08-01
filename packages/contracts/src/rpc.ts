@@ -91,6 +91,12 @@ import {
   OrchestrationShellStreamItem,
   OrchestrationSubscribeDomainEventsInput,
   OrchestrationThreadStreamItem,
+  ProjectMemoryDeleteInput,
+  ProjectMemoryItem,
+  ProjectMemoryListInput,
+  ProjectMemoryListResult,
+  ProjectMemoryRenameInput,
+  ProjectMemorySaveInput,
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
@@ -187,6 +193,7 @@ import {
 import { WS_METHODS } from "./ws";
 import {
   LocalModelCancelInstallInput,
+  LocalModelCapabilityCheckInput,
   LocalModelEvent,
   LocalModelInstallInput,
   LocalModelInstallJob,
@@ -558,11 +565,44 @@ export const WsLocalModelsRemoveModelRpc = Rpc.make(WS_METHODS.localModelsRemove
   error: WsRpcError,
 });
 
+export const WsLocalModelsRerunCapabilityCheckRpc = Rpc.make(
+  WS_METHODS.localModelsRerunCapabilityCheck,
+  {
+    payload: LocalModelCapabilityCheckInput,
+    success: LocalModelsSnapshot,
+    error: WsRpcError,
+  },
+);
+
 export const WsSubscribeLocalModelEventsRpc = Rpc.make(WS_METHODS.subscribeLocalModelEvents, {
   payload: Schema.Struct({}),
   success: LocalModelEvent,
   error: WsRpcError,
   stream: true,
+});
+
+export const WsProjectMemoryListRpc = Rpc.make(WS_METHODS.projectMemoryList, {
+  payload: ProjectMemoryListInput,
+  success: ProjectMemoryListResult,
+  error: WsRpcError,
+});
+
+export const WsProjectMemorySaveRpc = Rpc.make(WS_METHODS.projectMemorySave, {
+  payload: ProjectMemorySaveInput,
+  success: ProjectMemoryItem,
+  error: WsRpcError,
+});
+
+export const WsProjectMemoryRenameRpc = Rpc.make(WS_METHODS.projectMemoryRename, {
+  payload: ProjectMemoryRenameInput,
+  success: ProjectMemoryItem,
+  error: WsRpcError,
+});
+
+export const WsProjectMemoryDeleteRpc = Rpc.make(WS_METHODS.projectMemoryDelete, {
+  payload: ProjectMemoryDeleteInput,
+  success: Schema.Void,
+  error: WsRpcError,
 });
 
 export const WsAiDetectorGetStateRpc = Rpc.make(WS_METHODS.aiDetectorGetState, {
@@ -1127,8 +1167,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsLocalModelsStartSetupRpc,
   WsLocalModelsRetrySetupRpc,
   WsLocalModelsCancelSetupRpc,
+  WsLocalModelsRerunCapabilityCheckRpc,
   WsLocalModelsRemoveModelRpc,
   WsSubscribeLocalModelEventsRpc,
+  WsProjectMemoryListRpc,
+  WsProjectMemorySaveRpc,
+  WsProjectMemoryRenameRpc,
+  WsProjectMemoryDeleteRpc,
   WsAiDetectorGetStateRpc,
   WsAiDetectorInstallModelRpc,
   WsAiDetectorCancelInstallRpc,

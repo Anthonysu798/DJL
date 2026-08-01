@@ -1091,6 +1091,59 @@ describe("store pure functions", () => {
     ]);
   });
 
+  it("replaces a divergent streamed assistant draft with the final snapshot", () => {
+    const assistantId = MessageId.makeUnsafe("assistant-message");
+    const turnId = TurnId.makeUnsafe("turn-1");
+    const completedText = "Answer starts here.\nCorrect ending.";
+    const initialState = makeState(
+      makeThread({
+        messages: [
+          {
+            id: assistantId,
+            role: "assistant",
+            text: "Answer starts here.\nWrong draft content.\nAnswer starts here.\nCorrect ending.",
+            turnId,
+            createdAt: "2026-02-27T00:01:05.000Z",
+            streaming: true,
+            source: "native",
+          },
+        ],
+        latestTurn: {
+          turnId,
+          state: "running",
+          requestedAt: "2026-02-27T00:01:00.000Z",
+          startedAt: "2026-02-27T00:01:05.000Z",
+          completedAt: null,
+          assistantMessageId: assistantId,
+        },
+      }),
+    );
+
+    const next = applyOrchestrationEvents(initialState, [
+      makeDomainEvent("thread.message-sent", {
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        messageId: assistantId,
+        role: "assistant",
+        text: completedText,
+        turnId,
+        streaming: false,
+        createdAt: "2026-02-27T00:01:05.000Z",
+        updatedAt: "2026-02-27T00:01:06.000Z",
+        attachments: [],
+        source: "native",
+      }),
+    ]);
+
+    expect(next.threads[0]?.messages).toMatchObject([
+      {
+        id: assistantId,
+        text: completedText,
+        streaming: false,
+        completedAt: "2026-02-27T00:01:06.000Z",
+      },
+    ]);
+  });
+
   it("replaces a non-streaming user message when an active-tail edit reuses its message id", () => {
     const userId = MessageId.makeUnsafe("user-active-edit");
     const initialState = makeState(

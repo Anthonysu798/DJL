@@ -473,6 +473,58 @@ export type OrchestrationProjectShell = typeof OrchestrationProjectShell.Type;
 export const OrchestrationMessageRole = Schema.Literals(["user", "assistant", "system"]);
 export type OrchestrationMessageRole = typeof OrchestrationMessageRole.Type;
 
+export const MemoryContextReference = Schema.Struct({
+  path: TrimmedNonEmptyString,
+  title: TrimmedNonEmptyString,
+  kind: Schema.Literals(["note", "task"]),
+});
+export type MemoryContextReference = typeof MemoryContextReference.Type;
+
+export const MemoryContextRequest = Schema.Struct({
+  references: Schema.Array(MemoryContextReference).check(Schema.isMaxLength(32)),
+  searchProject: Schema.Boolean,
+});
+export type MemoryContextRequest = typeof MemoryContextRequest.Type;
+
+export const ProjectMemoryItem = Schema.Struct({
+  path: Schema.String,
+  title: Schema.String,
+  kind: Schema.Literals(["project", "task", "decision", "person", "source", "note"]),
+  updatedAt: Schema.String,
+});
+export type ProjectMemoryItem = typeof ProjectMemoryItem.Type;
+
+export const ProjectMemoryListInput = Schema.Struct({
+  projectId: ProjectId,
+  includeTaskHistory: Schema.optional(Schema.Boolean),
+});
+export type ProjectMemoryListInput = typeof ProjectMemoryListInput.Type;
+
+export const ProjectMemoryListResult = Schema.Struct({
+  items: Schema.Array(ProjectMemoryItem),
+});
+export type ProjectMemoryListResult = typeof ProjectMemoryListResult.Type;
+
+export const ProjectMemorySaveInput = Schema.Struct({
+  projectId: ProjectId,
+  title: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(160)),
+  content: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+});
+export type ProjectMemorySaveInput = typeof ProjectMemorySaveInput.Type;
+
+export const ProjectMemoryRenameInput = Schema.Struct({
+  projectId: ProjectId,
+  path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(1_024)),
+  title: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(160)),
+});
+export type ProjectMemoryRenameInput = typeof ProjectMemoryRenameInput.Type;
+
+export const ProjectMemoryDeleteInput = Schema.Struct({
+  projectId: ProjectId,
+  path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(1_024)),
+});
+export type ProjectMemoryDeleteInput = typeof ProjectMemoryDeleteInput.Type;
+
 export const OrchestrationMessage = Schema.Struct({
   id: MessageId,
   role: OrchestrationMessageRole,
@@ -480,6 +532,7 @@ export const OrchestrationMessage = Schema.Struct({
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  memoryContext: Schema.optional(MemoryContextRequest),
   dispatchMode: Schema.optional(TurnDispatchMode),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   turnId: Schema.NullOr(TurnId),
@@ -1124,6 +1177,7 @@ export const ThreadTurnStartCommand = Schema.Struct({
     attachments: ChatAttachmentList,
     skills: Schema.optional(Schema.Array(ProviderSkillReference)),
     mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+    memoryContext: Schema.optional(MemoryContextRequest),
   }),
   modelSelection: Schema.optional(NewTaskModelSelection),
   providerOptions: Schema.optional(NewTaskProviderStartOptions),
@@ -1154,6 +1208,7 @@ const ClientThreadTurnStartCommand = Schema.Struct({
     attachments: UploadChatAttachmentList,
     skills: Schema.optional(Schema.Array(ProviderSkillReference)),
     mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+    memoryContext: Schema.optional(MemoryContextRequest),
   }),
   modelSelection: Schema.optional(NewTaskModelSelection),
   providerOptions: Schema.optional(NewTaskProviderStartOptions),
@@ -1680,6 +1735,7 @@ export const ThreadMessageSentPayload = Schema.Struct({
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  memoryContext: Schema.optional(MemoryContextRequest),
   dispatchMode: Schema.optional(TurnDispatchMode),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   turnId: Schema.NullOr(TurnId),
@@ -1692,6 +1748,7 @@ export const ThreadMessageSentPayload = Schema.Struct({
 export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
+  memoryContext: Schema.optional(MemoryContextRequest),
   modelSelection: Schema.optional(ModelSelection),
   providerOptions: Schema.optional(ProviderStartOptions),
   reviewTarget: Schema.optional(ProviderReviewTarget),

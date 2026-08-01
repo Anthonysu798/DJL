@@ -40,7 +40,6 @@ import {
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
-  type WorkTaskAction,
 } from "@synara/contracts";
 import { getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
 import {
@@ -271,7 +270,6 @@ import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
 import { DjlLogo } from "./DjlLogo";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
-import { WorkTaskPanel } from "./work/WorkTaskPanel";
 import {
   formatShortcutLabel,
   resolveShortcutCommand,
@@ -365,7 +363,6 @@ import { appendComposerPromptText } from "../lib/chatReferences";
 import {
   appendOriginalComposerPromptBlocks,
   appendTerminalContextsToPrompt,
-  deriveDisplayedUserMessageState,
   IMAGE_ONLY_BOOTSTRAP_PROMPT,
   formatTerminalContextLabel,
   insertInlineTerminalContextPlaceholder,
@@ -440,6 +437,7 @@ import { useThreadRecap } from "~/hooks/useThreadRecap";
 import { useRepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { useSelectedLocale } from "~/i18n/intl";
 import { useIsMobile } from "~/hooks/useMediaQuery";
+import { MODEL_PICKER_OPEN_EVENT } from "~/onboarding/firstRunTour";
 import {
   acknowledgedRiskIdsForFormWarnings,
   AutomationDialog,
@@ -4376,6 +4374,16 @@ export default function ChatView({
       setIsModelPickerOpen(false);
     }
   }, []);
+  useEffect(() => {
+    const openModelPicker = (event: Event) => {
+      const target = (event as CustomEvent<{ target: HTMLElement | null }>).detail?.target;
+      if (target && !composerFormRef.current?.contains(target)) return;
+      handleModelPickerOpenChange(true);
+      scheduleComposerFocus();
+    };
+    window.addEventListener(MODEL_PICKER_OPEN_EVENT, openModelPicker);
+    return () => window.removeEventListener(MODEL_PICKER_OPEN_EVENT, openModelPicker);
+  }, [handleModelPickerOpenChange, scheduleComposerFocus]);
   const appendVoiceTranscriptToComposer = useCallback(
     (transcript: string) => {
       const nextPrompt = appendVoiceTranscriptToPrompt(promptRef.current, transcript);
@@ -5524,6 +5532,31 @@ export default function ChatView({
     onMessagesTouchStartBase,
     onMessagesWheelBase,
   });
+  const savePendingSelectionToProjectMemory = useCallback(() => {
+    const pendingSelection = pendingTranscriptSelectionAction;
+    if (!pendingSelection || !activeProjectId || !isStudioContainer) {
+      return;
+    }
+    const content = pendingSelection.selection.text.trim();
+    const title =
+      content.split(/\r?\n/, 1)[0]?.trim().slice(0, 80) || t("transcript.savedMemoryTitle");
+    dismissTranscriptSelectionAction();
+    window.getSelection()?.removeAllRanges();
+    void ensureNativeApi()
+      .projectMemory.save({ projectId: activeProjectId, title, content })
+      .then(() => {
+        toastManager.add({ type: "success", title: t("transcript.savedToMemory") });
+      })
+      .catch(() => {
+        toastManager.add({ type: "error", title: t("transcript.saveToMemoryFailed") });
+      });
+  }, [
+    activeProjectId,
+    dismissTranscriptSelectionAction,
+    isStudioContainer,
+    pendingTranscriptSelectionAction,
+    t,
+  ]);
   const createMarkerFromPendingSelection = useCallback(
     (style: ThreadMarkerStyle, color: ThreadMarkerColor) => {
       const pendingSelection = pendingTranscriptSelectionAction;
@@ -6271,49 +6304,6 @@ export default function ChatView({
       createdAt: new Date().toISOString(),
     });
   }, [activeThread]);
-
-  const [workTaskActionBusy, setWorkTaskActionBusy] = useState(false);
-  const dispatchWorkTaskTransition = useCallback(
-    async (action: WorkTaskAction, reason?: string) => {
-      const api = readNativeApi();
-      if (!api || !activeThread?.workTask || workTaskActionBusy) return false;
-      setWorkTaskActionBusy(true);
-      try {
-        await api.orchestration.dispatchCommand({
-          type: "thread.work-task.transition",
-          commandId: newCommandId(),
-          threadId: activeThread.id,
-          action,
-          ...(reason ? { reason } : {}),
-          createdAt: new Date().toISOString(),
-        });
-        return true;
-      } catch (error) {
-        toastManager.add({
-          type: "error",
-          title: t("tasks.updateFailed"),
-          description: error instanceof Error ? error.message : t("tasks.updateFailedFallback"),
-        });
-        return false;
-      } finally {
-        setWorkTaskActionBusy(false);
-      }
-    },
-    [activeThread, t, workTaskActionBusy],
-  );
-
-  const handleCancelWorkTask = useCallback(async () => {
-    const transitioned = await dispatchWorkTaskTransition("cancel", "Cancelled by the user");
-    if (transitioned) await onInterrupt();
-  }, [dispatchWorkTaskTransition, onInterrupt]);
-
-  const handleWorkTaskFollowUp = useCallback(
-    async (action: "request_changes") => {
-      const transitioned = await dispatchWorkTaskTransition(action, "Changes requested");
-      if (transitioned) scheduleComposerFocus();
-    },
-    [dispatchWorkTaskTransition, scheduleComposerFocus],
-  );
 
   const onProviderModelSelect = useCallback(
     (provider: ProviderKind, model: ModelSlug) => {
@@ -9024,27 +9014,6 @@ export default function ChatView({
     ],
   );
 
-  const handleRetryWorkTask = useCallback(async () => {
-    const latestUserMessage = activeThread?.messages
-      .toReversed()
-      .find((message) => message.role === "user" && message.source === "native");
-    if (!latestUserMessage) {
-      toastManager.add({
-        type: "error",
-        title: t("tasks.nothingToRetry"),
-        description: t("tasks.originalRequestMissing"),
-      });
-      return;
-    }
-    const transitioned = await dispatchWorkTaskTransition("retry", "Retry requested");
-    if (!transitioned) return;
-    const visibleText = deriveDisplayedUserMessageState(latestUserMessage.text).copyText;
-    const resent = await onEditUserMessage(latestUserMessage.id, visibleText);
-    if (!resent) {
-      await dispatchWorkTaskTransition("fail", "The retry could not be started");
-    }
-  }, [activeThread?.messages, dispatchWorkTaskTransition, onEditUserMessage, t]);
-
   const onSendRef = useRef(onSend);
   const onSubmitPlanFollowUpRef = useRef(onSubmitPlanFollowUp);
   onSendRef.current = onSend;
@@ -11723,20 +11692,6 @@ export default function ChatView({
         rateLimitStatus={visibleActiveRateLimitStatus}
         onDismiss={dismissActiveRateLimitBanner}
       />
-      {isStudioContainer && activeThread.workTask ? (
-        <WorkTaskPanel
-          task={activeThread.workTask}
-          activities={activeThread.activities}
-          timestampFormat={timestampFormat}
-          busy={workTaskActionBusy}
-          onComplete={() => void dispatchWorkTaskTransition("complete", "Approved by the user")}
-          onRequestChanges={() => void handleWorkTaskFollowUp("request_changes")}
-          onRetry={() => void handleRetryWorkTask()}
-          onReopen={() => void dispatchWorkTaskTransition("reopen", "Reopened by the user")}
-          onCancel={() => void handleCancelWorkTask()}
-          onProvideInput={scheduleComposerFocus}
-        />
-      ) : null}
       {terminalWorkspaceOpen && !isEditorRail ? (
         <TerminalWorkspaceTabs
           activeTab={terminalState.workspaceActiveTab}
@@ -12036,6 +11991,9 @@ export default function ChatView({
           action={pendingTranscriptSelectionAction}
           onHighlight={createHighlightFromPendingSelection}
           onUnderline={createUnderlineFromPendingSelection}
+          onSaveToMemory={
+            activeProjectId && isStudioContainer ? savePendingSelectionToProjectMemory : undefined
+          }
           onAddToChat={commitTranscriptAssistantSelection}
         />
       )}

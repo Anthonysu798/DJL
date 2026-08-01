@@ -29,7 +29,10 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer";
 import { LLMAISDK } from "./llm/ai-sdk";
 import { LLMNativeRuntime } from "./llm/native-runtime";
 import { LLMRequestPrep } from "./llm/request";
-import { createLocalToolCallMiddleware } from "./llm/local-tool-call-middleware";
+import {
+  createLocalToolCallMiddleware,
+  supportsTextToolCallRecovery,
+} from "./llm/local-tool-call-middleware";
 
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX;
 
@@ -334,7 +337,7 @@ const live: Layer.Layer<
           model: wrapLanguageModel({
             model: language,
             middleware: [
-              ...(["ollama", "lmstudio"].includes(input.model.providerID) &&
+              ...(supportsTextToolCallRecovery(input.model.providerID) &&
               Object.keys(prepared.tools).length > 0
                 ? [createLocalToolCallMiddleware(new Set(Object.keys(prepared.tools)))]
                 : []),

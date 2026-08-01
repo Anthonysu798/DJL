@@ -3,7 +3,7 @@
 
 import type { OpenCodeModelProviderConnection } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import englishCatalog from "../../i18n/locales/en.json";
@@ -23,6 +23,7 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
 import { cn } from "~/lib/utils";
+import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
   SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
@@ -61,6 +62,12 @@ export function resolveAuthenticatedModelSelection(
 ): string | undefined {
   if (current && models.some((model) => model.slug === current)) return current;
   return models[0]?.slug;
+}
+
+export function resolveGuidedProviderId(
+  providers: ReadonlyArray<Pick<OpenCodeModelProviderConnection, "connected" | "id">>,
+): string | null {
+  return providers.find((provider) => !provider.connected)?.id ?? providers[0]?.id ?? null;
 }
 
 function ProviderCredentialRow(props: {
@@ -169,13 +176,17 @@ function ProviderCredentialRow(props: {
   );
 }
 
-export function OpenCodeModelsSettingsPanel(props: { cwd?: string | null }) {
+export function OpenCodeModelsSettingsPanel(props: {
+  cwd?: string | null;
+  revealProviderAccess?: boolean;
+}) {
   const { t } = useTranslation(["settings", "common"]);
   const cwd = props.cwd ?? null;
   const queryClient = useQueryClient();
   const { settings, updateSettings } = useAppSettings();
   const [openProviderIds, setOpenProviderIds] = useState<ReadonlySet<string>>(() => new Set());
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const providerAccessRef = useRef<HTMLDivElement | null>(null);
   const connectionsQuery = useQuery(openCodeModelProvidersQueryOptions(cwd));
   const connectedCount = connectionsQuery.data?.configuredProviderCount ?? 0;
   const modelsQuery = useQuery(
@@ -186,6 +197,16 @@ export function OpenCodeModelsSettingsPanel(props: { cwd?: string | null }) {
     }),
   );
   const models = modelsQuery.data?.models ?? [];
+
+  useEffect(() => {
+    const providerData = connectionsQuery.data;
+    if (!props.revealProviderAccess || !connectionsQuery.isSuccess || !providerData) return;
+    const providerId = resolveGuidedProviderId(providerData.providers);
+    if (providerId) {
+      setOpenProviderIds((current) => new Set(current).add(providerId));
+    }
+    providerAccessRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [connectionsQuery.data, connectionsQuery.isSuccess, props.revealProviderAccess]);
 
   const refreshCatalog = async () => {
     const api = ensureNativeApi();
@@ -271,76 +292,81 @@ export function OpenCodeModelsSettingsPanel(props: { cwd?: string | null }) {
 
   return (
     <div className="space-y-6">
-      <SettingsSection title={t("models.accessTitle")}>
-        <div className="px-4 py-3.5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>
-                {t("models.configuredTitle")}
+      <div id={SETTINGS_TARGETS.modelProviders} ref={providerAccessRef}>
+        <SettingsSection title={t("models.accessTitle")}>
+          <div className="px-4 py-3.5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>
+                  {t("models.configuredTitle")}
+                </div>
+                <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
+                  {modelProviderStatusText(
+                    connectionsQuery.data?.configuredProviderCount ?? 0,
+                    connectionsQuery.data?.modelCount ?? 0,
+                    t,
+                  )}
+                </p>
               </div>
-              <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
-                {modelProviderStatusText(
-                  connectionsQuery.data?.configuredProviderCount ?? 0,
-                  connectionsQuery.data?.modelCount ?? 0,
-                  t,
-                )}
-              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={connectionsQuery.isFetching}
+                onClick={() => void refreshCatalog()}
+              >
+                {t("actions.refresh", { ns: "common" })}
+              </Button>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={connectionsQuery.isFetching}
-              onClick={() => void refreshCatalog()}
-            >
-              {t("actions.refresh", { ns: "common" })}
-            </Button>
           </div>
-        </div>
-        {(connectionsQuery.data?.providers ?? []).map((provider) => (
-          <ProviderCredentialRow
-            key={provider.id}
-            provider={provider}
-            models={modelsByProvider.get(provider.id) ?? []}
-            apiKey={apiKeys[provider.id] ?? ""}
-            open={openProviderIds.has(provider.id)}
-            busy={setKeyMutation.isPending || removeMutation.isPending}
-            onApiKeyChange={(value) =>
-              setApiKeys((current) => ({ ...current, [provider.id]: value }))
-            }
-            onToggle={() =>
-              setOpenProviderIds((current) => {
-                const next = new Set(current);
-                if (next.has(provider.id)) next.delete(provider.id);
-                else next.add(provider.id);
-                return next;
-              })
-            }
-            onSave={() =>
-              setKeyMutation.mutate({ providerId: provider.id, apiKey: apiKeys[provider.id] ?? "" })
-            }
-            onDisconnect={() => removeMutation.mutate(provider.id)}
-            onTest={() => {
-              void refreshCatalog().then(() =>
-                toastManager.add({
-                  type: "success",
-                  title: t("models.toasts.connectionRefreshed", { provider: provider.name }),
-                }),
-              );
-            }}
-          />
-        ))}
-        {connectionsQuery.isError ? (
-          <SettingsLoadError
-            summary={t("models.runtimeUnavailable")}
-            detail={settingsLoadErrorDetail(
-              connectionsQuery.error,
-              t("modelsRuntimeUnavailableDetail"),
-            )}
-            actionLabel={t("actions.refresh", { ns: "common" })}
-            onAction={() => void refreshCatalog()}
-          />
-        ) : null}
-      </SettingsSection>
+          {(connectionsQuery.data?.providers ?? []).map((provider) => (
+            <ProviderCredentialRow
+              key={provider.id}
+              provider={provider}
+              models={modelsByProvider.get(provider.id) ?? []}
+              apiKey={apiKeys[provider.id] ?? ""}
+              open={openProviderIds.has(provider.id)}
+              busy={setKeyMutation.isPending || removeMutation.isPending}
+              onApiKeyChange={(value) =>
+                setApiKeys((current) => ({ ...current, [provider.id]: value }))
+              }
+              onToggle={() =>
+                setOpenProviderIds((current) => {
+                  const next = new Set(current);
+                  if (next.has(provider.id)) next.delete(provider.id);
+                  else next.add(provider.id);
+                  return next;
+                })
+              }
+              onSave={() =>
+                setKeyMutation.mutate({
+                  providerId: provider.id,
+                  apiKey: apiKeys[provider.id] ?? "",
+                })
+              }
+              onDisconnect={() => removeMutation.mutate(provider.id)}
+              onTest={() => {
+                void refreshCatalog().then(() =>
+                  toastManager.add({
+                    type: "success",
+                    title: t("models.toasts.connectionRefreshed", { provider: provider.name }),
+                  }),
+                );
+              }}
+            />
+          ))}
+          {connectionsQuery.isError ? (
+            <SettingsLoadError
+              summary={t("models.runtimeUnavailable")}
+              detail={settingsLoadErrorDetail(
+                connectionsQuery.error,
+                t("modelsRuntimeUnavailableDetail"),
+              )}
+              actionLabel={t("actions.refresh", { ns: "common" })}
+              onAction={() => void refreshCatalog()}
+            />
+          ) : null}
+        </SettingsSection>
+      </div>
 
       <SettingsSection title={t("models.generationDefaultsTitle")}>
         <div className="flex flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">

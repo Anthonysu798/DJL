@@ -198,6 +198,64 @@ export const runOpenCodeSdk = <A>(
       new OpenCodeRuntimeError({ operation, detail: openCodeRuntimeErrorDetail(cause), cause }),
   }).pipe(Effect.withSpan(`opencode.${operation}`));
 
+export type DjlOpenCodePromptInput = Parameters<OpencodeClient["session"]["prompt"]>[0] & {
+  readonly visibleTools?: ReadonlyArray<string>;
+  readonly requiredToolCall?: boolean;
+  readonly instructionScope?: "default" | "work-isolated" | "authorized-root";
+};
+
+type OpenCodeLowLevelClient = {
+  readonly post: (input: Record<string, unknown>) => Promise<unknown>;
+};
+
+function lowLevelOpenCodeClient(client: OpencodeClient): OpenCodeLowLevelClient | null {
+  const candidate = (client as unknown as { readonly client?: OpenCodeLowLevelClient }).client;
+  return candidate && typeof candidate.post === "function" ? candidate : null;
+}
+
+function promptRequest(input: DjlOpenCodePromptInput, async: boolean): Record<string, unknown> {
+  const { sessionID, directory, workspace, ...body } = input as DjlOpenCodePromptInput & {
+    readonly directory?: string;
+    readonly workspace?: string;
+  };
+  return {
+    url: async ? "/session/{sessionID}/prompt_async" : "/session/{sessionID}/message",
+    path: { sessionID },
+    ...(directory || workspace
+      ? {
+          query: {
+            ...(directory ? { directory } : {}),
+            ...(workspace ? { workspace } : {}),
+          },
+        }
+      : {}),
+    body,
+    headers: { "Content-Type": "application/json" },
+  };
+}
+
+export async function sendOpenCodePrompt(
+  client: OpencodeClient,
+  input: DjlOpenCodePromptInput,
+): Promise<Awaited<ReturnType<OpencodeClient["session"]["prompt"]>>> {
+  const lowLevel = lowLevelOpenCodeClient(client);
+  if (!lowLevel) return await client.session.prompt(input);
+  return (await lowLevel.post(promptRequest(input, false))) as Awaited<
+    ReturnType<OpencodeClient["session"]["prompt"]>
+  >;
+}
+
+export async function sendOpenCodePromptAsync(
+  client: OpencodeClient,
+  input: DjlOpenCodePromptInput,
+): Promise<Awaited<ReturnType<OpencodeClient["session"]["promptAsync"]>>> {
+  const lowLevel = lowLevelOpenCodeClient(client);
+  if (!lowLevel) return await client.session.promptAsync(input);
+  return (await lowLevel.post(promptRequest(input, true))) as Awaited<
+    ReturnType<OpencodeClient["session"]["promptAsync"]>
+  >;
+}
+
 export interface OpenCodeCommandResult {
   readonly stdout: string;
   readonly stderr: string;
@@ -918,6 +976,8 @@ export function buildOpenCodeServerProcessEnv(input: {
     XDG_CACHE_HOME: join(input.managedRootDir, "cache"),
     XDG_STATE_HOME: join(input.managedRootDir, "state"),
     DJL_MANAGED_AUTH: "1",
+    OPENCODE_ENABLE_EXA: "true",
+    OPENCODE_WEBSEARCH_PROVIDER: "exa",
   };
 }
 

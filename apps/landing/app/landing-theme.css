@@ -1,0 +1,175 @@
+/* FILE: landing-theme.css
+   Purpose: Scoped token layer for the redesigned paper-white landing page.
+   The tokens mirror apps/landing/design.md (Ollama-derived system). Everything is
+   scoped under .landing-light so the dark :root theme in globals.css — still used
+   by /guide, /changelog and /robot-lab — is untouched, following the same escape
+   pattern those pages use for themselves. */
+
+html:has(.landing-light) {
+  background: #ffffff;
+}
+
+html:has(.landing-light) body {
+  background: #ffffff;
+  color: #000000;
+}
+
+.landing-light {
+  /* surfaces */
+  --lp-canvas: #ffffff;
+  --lp-surface-soft: #fafafa;
+  --lp-surface-dark: #171717;
+  --lp-hairline: #e5e5e5;
+  --lp-hairline-strong: #d4d4d4;
+
+  /* text */
+  --lp-ink: #000000;
+  --lp-ink-deep: #090909;
+  --lp-charcoal: #525252;
+  --lp-body: #737373;
+  --lp-mute: #a3a3a3;
+  --lp-on-dark: #ffffff;
+  --lp-on-dark-mute: rgba(255, 255, 255, 0.7);
+
+  /* the single accent — hero eyebrow only (existing DJL brand orange) */
+  --lp-accent: #dd5b00;
+
+  /* terminal traffic lights */
+  --lp-terminal-red: #ff5f56;
+  --lp-terminal-yellow: #ffbd2e;
+  --lp-terminal-green: #27c93f;
+
+  /* type — design.md: SF Pro Rounded display, system/Inter body, system mono code */
+  --lp-font-display: ui-rounded, "SF Pro Rounded", var(--font-inter), Inter, -apple-system,
+    system-ui, "Segoe UI", var(--cjk);
+  --lp-font-body: var(--font-inter), Inter, -apple-system, system-ui, "Segoe UI", var(--cjk);
+  --lp-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* rhythm + shape */
+  --lp-section: 88px;
+  --lp-r-md: 8px;
+  --lp-r-lg: 12px;
+  --lp-focus-ring: rgba(59, 130, 246, 0.5);
+
+  background: var(--lp-canvas);
+  color: var(--lp-ink);
+  font-family: var(--lp-font-body);
+  color-scheme: light;
+  overflow-x: clip;
+  min-height: 100vh;
+}
+
+@media (max-width: 1024px) {
+  .landing-light {
+    --lp-section: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-light {
+    --lp-section: 48px;
+  }
+}
+
+.landing-light ::selection {
+  background: var(--lp-ink);
+  color: var(--lp-canvas);
+}
+
+.landing-light :focus-visible {
+  outline: 2px solid var(--lp-focus-ring);
+  outline-offset: 2px;
+}
+
+/* anchored sections land below the floating glass nav */
+.landing-light #product,
+.landing-light #capabilities,
+.landing-light #local-ai {
+  scroll-margin-top: 96px;
+}
+
+/* ── layout primitives ── */
+
+.lp-container {
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+.lp-section {
+  margin-block: var(--lp-section);
+}
+
+.lp-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lp-mute);
+}
+
+/* ── pill buttons (design.md: every interactive element is a pill) ── */
+
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--lp-ink);
+  color: var(--lp-on-dark);
+  font-family: var(--lp-font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.lp-btn:active {
+  background: var(--lp-ink-deep);
+  transform: scale(0.98);
+}
+
+.lp-btn--outline {
+  background: var(--lp-canvas);
+  color: var(--lp-ink);
+  border: 1px solid var(--lp-hairline-strong);
+}
+
+.lp-btn--outline:active {
+  background: var(--lp-surface-soft);
+}
+
+.lp-btn--on-dark {
+  background: var(--lp-canvas);
+  color: var(--lp-ink);
+}
+
+.lp-btn--on-dark:active {
+  background: var(--lp-surface-soft);
+}
+
+/* secondary action on the dark strip: transparent pill, white text */
+.lp-btn--ghost-dark {
+  background: transparent;
+  color: var(--lp-on-dark);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.lp-btn--ghost-dark:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* hero-scale variant — the reference hero uses larger CTAs than the 36px chrome pill */
+.lp-btn--lg {
+  height: 48px;
+  padding: 12px 26px;
+  font-size: 15px;
+}
