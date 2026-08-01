@@ -1,0 +1,38 @@
+.awv {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.awv video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.awv-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--lp-ink, #000);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.awv-play:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.awv-play:active {
+  transform: translate(-50%, -50%) scale(0.97);
+}

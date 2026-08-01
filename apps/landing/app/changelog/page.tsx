@@ -1,27 +1,26 @@
-import type { Metadata } from "next";
-import type { Locale } from "../content";
+import type { Metadata, Viewport } from "next";
 import { fetchChangelogReleases } from "../lib/githubReleases";
 import { ChangelogDoc } from "./ChangelogDoc";
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+};
 
 export const metadata: Metadata = {
   title: "DJL changelog - every release",
   description:
     "What changed in each version of the DJL desktop app, read from the published GitHub releases.",
+  alternates: {
+    languages: { "zh-CN": "/changelog", en: "/en/changelog" },
+  },
 };
 
 // The page itself is revalidated on the same window as the underlying release read, so a newly
 // published version reaches the site without a redeploy or a code change.
 export const revalidate = 600;
 
-export default async function ChangelogPage({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = (await searchParams) ?? {};
-  // Chinese default, English opt-in — the same rule as the home page and the guide.
-  const locale: Locale = params.lang === "en" ? "en" : "zh";
+export default async function ChangelogPage() {
   const releases = await fetchChangelogReleases();
 
-  return <ChangelogDoc locale={locale} releases={releases} />;
+  return <ChangelogDoc locale="zh" releases={releases} />;
 }

@@ -1,0 +1,684 @@
+/* Miniature of the real DJL window, light theme — matches the app's light UI
+   and sits naturally on the paper-white page. */
+
+.had {
+  --had-bg: #ffffff;
+  --had-side: #f7f7f8;
+  --had-panel: #f4f4f5;
+  --had-line: #e7e7e8;
+  --had-text: #141414;
+  --had-mute: #565656;
+  --had-dim: #9b9b9b;
+  --had-accent: var(--lp-accent, #dd5b00);
+
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  background: var(--had-bg);
+  color: var(--had-text);
+  font-size: 12px;
+  text-align: left;
+  cursor: default;
+}
+
+/* ── sidebar ── */
+
+.had-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 10px;
+  background: var(--had-side);
+  border-right: 1px solid var(--had-line);
+  min-height: 0;
+}
+
+.had-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.had-tabs button {
+  padding: 5px 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--had-mute);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.had-tabs button[data-active] {
+  background: var(--had-bg);
+  color: var(--had-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.had-side-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--had-mute);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: default;
+}
+
+button.had-side-row {
+  cursor: pointer;
+}
+
+button.had-side-row:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--had-text);
+}
+
+.had-side-label {
+  margin: 12px 8px 4px;
+  font-size: 10.5px;
+  color: var(--had-dim);
+}
+
+.had-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.had-task {
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--had-mute);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.had-empty {
+  padding: 14px 8px;
+  font-size: 11px;
+  color: var(--had-dim);
+  text-align: center;
+}
+
+.had-side-bottom {
+  margin-top: auto;
+}
+
+/* ── main column ── */
+
+.had-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.had-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--had-line);
+}
+
+.had-title {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--had-mute);
+}
+
+.had-handoff {
+  padding: 4px 10px;
+  border: 1px solid var(--had-line);
+  border-radius: 7px;
+  font-size: 10.5px;
+  color: var(--had-mute);
+}
+
+/* idle state */
+
+.had-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px;
+}
+
+.had-headline {
+  margin: 0;
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 500;
+  color: var(--had-text);
+}
+
+.had-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.had-suggestions button {
+  padding: 6px 12px;
+  border: 1px solid var(--had-line);
+  border-radius: 9999px;
+  background: var(--had-side);
+  color: var(--had-mute);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.had-suggestions button:hover {
+  background: var(--had-panel);
+  color: var(--had-text);
+}
+
+/* run state */
+
+.had-run {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  padding: 14px 24px 8px;
+  overflow-y: auto;
+}
+
+.had-stages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.had-stage {
+  position: relative;
+  padding-left: 12px;
+  font-size: 10.5px;
+  color: var(--had-dim);
+  transition: color 0.3s ease;
+}
+
+.had-stage::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.14);
+  transition: background 0.3s ease;
+}
+
+.had-stage[data-state="on"] {
+  color: var(--had-mute);
+}
+
+.had-stage[data-state="on"]::before {
+  background: var(--had-text);
+}
+
+.had-stage + .had-stage {
+  margin-left: 12px;
+}
+
+.had-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.had-bubble {
+  align-self: flex-end;
+  max-width: 75%;
+  padding: 7px 12px;
+  border-radius: 12px 12px 4px 12px;
+  background: var(--had-panel);
+  font-size: 12px;
+  color: var(--had-text);
+}
+
+.had-line {
+  margin: 0;
+  max-width: 80%;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--had-mute);
+  animation: hadIn 0.35s ease both;
+}
+
+.had-dim {
+  color: var(--had-dim);
+}
+
+.had-done {
+  color: var(--had-text);
+}
+
+.had-mono {
+  display: flex;
+  gap: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.had-mono span {
+  color: var(--had-dim);
+}
+
+.had-mono-inline {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--had-dim);
+}
+
+.had-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 80%;
+  padding: 12px 14px;
+  border: 1px solid var(--had-line);
+  border-radius: 10px;
+  background: var(--had-bg);
+  animation: hadIn 0.35s ease both;
+}
+
+.had-review p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--had-text);
+}
+
+.had-review-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.had-btn-ghost,
+.had-btn-solid {
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.had-btn-ghost {
+  border: 1px solid var(--had-line);
+  background: transparent;
+  color: var(--had-mute);
+}
+
+.had-btn-ghost:hover {
+  color: var(--had-text);
+}
+
+.had-btn-solid {
+  border: 0;
+  background: var(--had-text);
+  color: #ffffff;
+}
+
+@keyframes hadIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .had-line,
+  .had-review {
+    animation: none;
+  }
+}
+
+/* ── composer ── */
+
+.had-composer-wrap {
+  padding: 10px 24px 12px;
+}
+
+.had-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--had-line);
+  border-radius: 12px;
+  background: var(--had-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* The page-level .landing-light :focus-visible outline would draw a blue ring
+   inside the app miniature; the composer border carries the focus cue instead. */
+.landing-light .had-composer input,
+.landing-light .had-composer input:focus-visible {
+  border: 0;
+  background: transparent;
+  color: var(--had-text);
+  font-size: 12px;
+  outline: none;
+}
+
+.had-composer:focus-within {
+  border-color: var(--had-dim);
+}
+
+.had-composer input::placeholder {
+  color: var(--had-dim);
+}
+
+.had-composer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.had-icon {
+  color: var(--had-mute);
+  flex-shrink: 0;
+}
+
+.had-access {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 10.5px;
+  color: var(--had-mute);
+  cursor: pointer;
+}
+
+.had-access[data-kind="full"] {
+  color: var(--had-accent);
+}
+
+.had-model,
+.had-effort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 10.5px;
+  color: var(--had-mute);
+  cursor: pointer;
+}
+
+.had-model:hover,
+.had-effort:hover,
+.had-access:hover {
+  color: var(--had-text);
+}
+
+.had-access[data-kind="full"]:hover {
+  color: var(--had-accent);
+}
+
+/* ── dropdown menus ── */
+
+.had-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.had-menu-wrap--model {
+  margin-left: auto;
+}
+
+.had-menu {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  z-index: 6;
+  padding: 8px;
+  border: 1px solid var(--had-line);
+  border-radius: 12px;
+  background: var(--had-bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+  animation: hadIn 0.18s ease both;
+  text-align: left;
+}
+
+.had-menu--access {
+  left: -8px;
+  width: 272px;
+}
+
+.had-menu--model {
+  right: -8px;
+  width: 248px;
+  max-height: 272px;
+  overflow-y: auto;
+}
+
+.had-menu--effort {
+  right: -8px;
+  width: 172px;
+}
+
+.had-menu-title {
+  margin: 0 0 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--had-dim);
+}
+
+.had-menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.had-menu-item:hover {
+  background: var(--had-side);
+}
+
+.had-mi-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--had-mute);
+}
+
+.had-menu-item[data-kind="full"] .had-mi-icon {
+  color: var(--had-accent);
+}
+
+.had-mi-body {
+  min-width: 0;
+}
+
+.had-mi-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--had-text);
+}
+
+.had-menu-item[data-kind="full"] .had-mi-label {
+  color: var(--had-accent);
+}
+
+.had-mi-body p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--had-mute);
+}
+
+.had-mi-check {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: center;
+  color: var(--had-text);
+}
+
+.had-menu-item[data-kind="full"] .had-mi-check {
+  color: var(--had-accent);
+}
+
+.had-menu-item--plain {
+  align-items: center;
+  padding: 7px 8px;
+}
+
+.had-menu-item--plain .had-mi-label {
+  font-weight: 400;
+}
+
+/* model groups */
+
+.had-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--had-mute);
+  cursor: pointer;
+}
+
+.had-group:hover {
+  background: var(--had-side);
+}
+
+.had-group-count {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 9999px;
+  background: var(--had-panel);
+  font-size: 10px;
+  color: var(--had-mute);
+}
+
+.had-model-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 8px 6px 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.had-model-item:hover {
+  background: var(--had-side);
+}
+
+.had-model-name {
+  font-size: 12px;
+  color: var(--had-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.had-badge-soft {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(221, 91, 0, 0.1);
+  font-size: 10px;
+  color: #c25a10;
+}
+
+.had-star {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--had-dim);
+}
+
+.had-star[data-on] {
+  color: var(--had-accent);
+}
+
+.had-model-item .had-mi-check + .had-star {
+  margin-left: 6px;
+}
+
+.had-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.12);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.had-send[data-ready] {
+  background: var(--had-text);
+}
+
+.had-folder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--had-dim);
+}
+
+/* ── responsive ── */
+
+@media (max-width: 640px) {
+  .had {
+    grid-template-columns: 1fr;
+  }
+
+  .had-side {
+    display: none;
+  }
+
+  .had-suggestions button:nth-child(n + 3) {
+    display: none;
+  }
+}

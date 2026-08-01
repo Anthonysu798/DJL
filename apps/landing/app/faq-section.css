@@ -1,0 +1,69 @@
+.lp-faq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.lp-faq-title {
+  margin: 12px 0 0;
+  font-family: var(--lp-font-display);
+  font-size: clamp(1.9rem, 2.6vw + 1rem, 2.6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--lp-ink);
+}
+
+.lp-faq-support {
+  margin: 20px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lp-body);
+}
+
+.lp-faq-support a {
+  color: var(--lp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* design.md faq-row voice: flat canvas, hairline dividers, no card chrome */
+.lp-faq-item {
+  border-color: var(--lp-hairline);
+}
+
+.lp-faq-q {
+  font-family: var(--lp-font-body);
+  font-size: 17px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--lp-ink);
+  padding-block: 18px;
+}
+
+.lp-faq-q:hover {
+  color: var(--lp-ink);
+}
+
+.lp-faq-q svg {
+  color: var(--lp-mute);
+}
+
+.lp-faq-a p {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--lp-body);
+}
+
+@media (max-width: 880px) {
+  .lp-faq-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .lp-faq-support {
+    margin-bottom: 16px;
+  }
+}

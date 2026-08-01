@@ -8,6 +8,8 @@ import type { DesktopDownloadTarget } from "./vpsDesktopDownloads";
 
 export const GITHUB_RELEASE_REPOSITORY = "Anthonysu798/DJL";
 
+export const GITHUB_REPOSITORY_URL = `https://github.com/${GITHUB_RELEASE_REPOSITORY}`;
+
 export const GITHUB_LATEST_RELEASE_API_URL = `https://api.github.com/repos/${GITHUB_RELEASE_REPOSITORY}/releases/latest`;
 
 // `SHA256SUMS` keeps the same name in every release, so this static path always resolves to the
