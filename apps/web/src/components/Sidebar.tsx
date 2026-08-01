@@ -24,6 +24,7 @@ import {
   PlayIcon,
   SearchIcon,
   SettingsIcon,
+  SparklesIcon,
   StopFilledIcon,
   TemporaryThreadIcon,
   TerminalIcon,
@@ -337,6 +338,7 @@ import { isTerminalFocused } from "../lib/terminalFocus";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
   FIRST_RUN_TUTORIAL_REPLAY_TARGET,
+  requestModelGuideReplay,
   requestFirstRunTourReplay,
   requestSettingsTourReplay,
 } from "../onboarding/firstRunTour";
@@ -1098,6 +1100,25 @@ function TutorialReplayMenu() {
             </span>
           </span>
         </MenuItem>
+        {isElectron ? (
+          <MenuItem
+            className="min-h-12 items-start gap-2.5 px-2.5 py-2"
+            onClick={requestModelGuideReplay}
+          >
+            <SparklesIcon className="mt-0.5 size-4 text-muted-foreground" />
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-center gap-1.5 font-medium">
+                <span>{t("onboarding.modelGuide.sidebar.title")}</span>
+                <span className="rounded-md bg-foreground px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-background">
+                  {t("onboarding.modelGuide.sidebar.recommended")}
+                </span>
+              </span>
+              <span className="mt-0.5 block text-[length:var(--app-font-size-ui-xs,10px)] leading-snug text-muted-foreground">
+                {t("onboarding.modelGuide.sidebar.description")}
+              </span>
+            </span>
+          </MenuItem>
+        ) : null}
       </MenuPopup>
     </Menu>
   );

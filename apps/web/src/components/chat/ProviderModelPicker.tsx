@@ -51,6 +51,7 @@ import {
   type FavoriteModelProvider,
 } from "../../lib/modelFavorites";
 import { Skeleton } from "../ui/skeleton";
+import { MODEL_GUIDE_TARGET } from "~/onboarding/firstRunTour";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -360,7 +361,25 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       );
     }
 
-    const providerOptions = props.modelOptionsByProvider[provider];
+    const measuredCapabilityTierBySlug = new Map<string, "chat-only" | "assisted" | "agentic">(
+      (readLocalModelsBrowserCache()?.data.installedModels ?? []).flatMap((installedModel) =>
+        installedModel.capabilityProfile
+          ? [
+              [
+                `${installedModel.runtime}/${installedModel.modelId}`,
+                installedModel.capabilityProfile.tier,
+              ] as const,
+            ]
+          : [],
+      ),
+    );
+    const providerOptions =
+      provider === "opencode"
+        ? props.modelOptionsByProvider[provider].map((option) => {
+            const capabilityTier = measuredCapabilityTierBySlug.get(option.slug);
+            return capabilityTier ? { ...option, capabilityTier } : option;
+          })
+        : props.modelOptionsByProvider[provider];
     const shouldShowSearch =
       (provider === "kilo" ||
         provider === "opencode" ||
@@ -642,6 +661,8 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(
 
   const triggerButton = (
     <PickerTriggerButton
+      data-onboarding-current-model={selectedModelLabel}
+      data-onboarding-target={MODEL_GUIDE_TARGET}
       disabled={props.disabled ?? false}
       compact={props.compact ?? false}
       hideLabel={props.hideLabel ?? false}

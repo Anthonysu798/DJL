@@ -2993,6 +2993,12 @@ function mergeStreamingMessage(
     nextText = incomingMessage.text;
   } else if (incomingMessage.streaming || incomingMessage.text.length === 0) {
     nextText = `${existingMessage.text}${incomingMessage.text}`;
+  } else if (
+    existingMessage.streaming &&
+    incomingMessage.text.length >= 16 &&
+    existingMessage.text.startsWith(incomingMessage.text.slice(0, 16))
+  ) {
+    nextText = incomingMessage.text;
   } else if (incomingMessage.text.startsWith(existingMessage.text)) {
     nextText = incomingMessage.text;
   } else if (existingMessage.text.startsWith(incomingMessage.text)) {

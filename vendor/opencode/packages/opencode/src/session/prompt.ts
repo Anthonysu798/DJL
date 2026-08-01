@@ -710,7 +710,10 @@ const layer = Layer.effect(
           variant,
         },
         system: input.system,
+        requiredToolCall: input.requiredToolCall,
         format: input.format,
+        visibleTools: input.visibleTools,
+        instructionScope: input.instructionScope,
       };
 
       const current = yield* sessions.get(input.sessionID).pipe(Effect.orDie);
@@ -1318,6 +1321,8 @@ const layer = Layer.effect(
             bypassAgentCheck,
             messages: msgs,
             promptOps,
+            visibleTools:
+              lastUserMsg?.info.role === "user" ? lastUserMsg.info.visibleTools : undefined,
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),
@@ -1326,7 +1331,6 @@ const layer = Layer.effect(
             Effect.provideService(Truncate.Service, truncate),
             Effect.provideService(RuntimeFlags.Service, flags),
           );
-
           if (lastUser.format?.type === "json_schema") {
             tools["StructuredOutput"] = createStructuredOutputTool({
               schema: lastUser.format.schema,
@@ -1346,7 +1350,9 @@ const layer = Layer.effect(
           const [skills, env, instructions, mcpInstructions, modelMsgs] = yield* Effect.all([
             sys.skills(agent),
             sys.environment(model),
-            instruction.system().pipe(Effect.orDie),
+            lastUser.instructionScope === "work-isolated"
+              ? Effect.succeed([])
+              : instruction.system().pipe(Effect.orDie),
             sys.mcp(agent, session.permission),
             MessageV2.toModelMessagesEffect(msgs, model),
           ]);
@@ -1371,7 +1377,15 @@ const layer = Layer.effect(
             ],
             tools,
             model,
-            toolChoice: format.type === "json_schema" ? "required" : undefined,
+            toolChoice:
+              format.type === "json_schema"
+                ? "required"
+                : SessionTools.requiredWorkToolChoice({
+                    tools,
+                    required: lastUser.requiredToolCall,
+                    step,
+                    providerID: model.providerID,
+                  }),
           });
 
           if (structured !== undefined) {
@@ -1623,6 +1637,11 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
+  visibleTools: Schema.optional(Schema.Array(Schema.String)),
+  requiredToolCall: Schema.optional(Schema.Boolean),
+  instructionScope: Schema.optional(
+    Schema.Literals(["default", "work-isolated", "authorized-root"]),
+  ),
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),

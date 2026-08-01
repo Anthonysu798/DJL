@@ -359,6 +359,11 @@ export const User = Schema.Struct({
   }),
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
+  visibleTools: Schema.optional(Schema.Array(Schema.String)),
+  requiredToolCall: Schema.optional(Schema.Boolean),
+  instructionScope: Schema.optional(
+    Schema.Literals(["default", "work-isolated", "authorized-root"]),
+  ),
 }).annotate({ identifier: "UserMessage" });
 export type User = Types.DeepMutable<Schema.Schema.Type<typeof User>>;
 

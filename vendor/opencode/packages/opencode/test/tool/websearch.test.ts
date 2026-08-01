@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
 import { parseResponse } from "../../src/tool/mcp-websearch";
 import {
+  appendWebRetrievalTime,
   selectWebSearchProvider,
   webSearchModelName,
   webSearchProviderLabel,
@@ -14,6 +15,12 @@ import { ProviderV2 } from "@opencode-ai/core/provider";
 const SESSION_ID = "ses_0196aabbccddeeff001122334455";
 
 describe("websearch provider", () => {
+  test("adds a machine-readable retrieval time to grounded search evidence", () => {
+    expect(appendWebRetrievalTime("result", new Date("2026-07-31T09:30:00.000Z"))).toBe(
+      "result\n\nRetrieved at: 2026-07-31T09:30:00.000Z",
+    );
+  });
+
   test("selects a stable provider per session", () => {
     expect(selectWebSearchProvider(SESSION_ID)).toBe(selectWebSearchProvider(SESSION_ID));
   });

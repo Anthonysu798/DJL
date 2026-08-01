@@ -12,8 +12,7 @@ import {
 import { makeDrainableWorker } from "@synara/shared/DrainableWorker";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
 
-import { ProjectMemory } from "../../memory/Services/ProjectMemory.ts";
-import { resolveProjectMemoryScope } from "../../memory/projectMemoryScope.ts";
+import { ProjectMemory, type RecordProjectTurnInput } from "../../memory/Services/ProjectMemory.ts";
 import { MemoryReactor, type MemoryReactorShape } from "../Services/MemoryReactor.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
@@ -27,33 +26,10 @@ function stableEventToken(value: string): string {
 export function recordInputFromCompletedWorkThread(
   project: OrchestrationProjectShell,
   thread: OrchestrationThread,
-) {
-  const latestTurn = thread.latestTurn;
-  if (!thread.workTask || !latestTurn || latestTurn.state !== "completed") return null;
-  const turnMessages = thread.messages.filter((message) => message.turnId === latestTurn.turnId);
-  const userMessage =
-    turnMessages.find((message) => message.role === "user") ??
-    thread.messages.toReversed().find((message) => message.role === "user");
-  const assistantMessage = turnMessages
-    .toReversed()
-    .find((message) => message.role === "assistant" && !message.streaming);
-  if (!userMessage || !assistantMessage || !assistantMessage.text.trim()) return null;
-  const memoryScope = resolveProjectMemoryScope({
-    containerProjectId: project.id,
-    containerTitle: project.title,
-    workspaceRoot: thread.worktreePath,
-  });
-  return {
-    projectId: memoryScope.projectId,
-    projectTitle: memoryScope.title,
-    projectCreatedAt: project.createdAt,
-    threadId: thread.id,
-    threadTitle: thread.title,
-    turnId: latestTurn.turnId,
-    userText: userMessage.text,
-    assistantText: assistantMessage.text,
-    completedAt: latestTurn.completedAt ?? assistantMessage.updatedAt,
-  } as const;
+): RecordProjectTurnInput | null {
+  void project;
+  void thread;
+  return null;
 }
 
 const make = Effect.gen(function* () {

@@ -12,6 +12,7 @@ import {
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { SidebarProvider } from "~/components/ui/sidebar";
 import englishCatalog from "~/i18n/locales/en.json";
@@ -19,9 +20,13 @@ import {
   FIRST_RUN_TOUR_STORAGE_KEY,
   FIRST_RUN_TOUR_VERSION,
   FIRST_RUN_TUTORIAL_REPLAY_TARGET,
+  MODEL_GUIDE_STORAGE_KEY,
+  MODEL_GUIDE_TARGET,
+  MODEL_GUIDE_VERSION,
   SETTINGS_TOUR_STORAGE_KEY,
   SETTINGS_TOUR_VERSION,
   requestFirstRunTourReplay,
+  requestModelGuideReplay,
   requestSettingsTourReplay,
   settingsTourTarget,
 } from "~/onboarding/firstRunTour";
@@ -32,6 +37,10 @@ import {
 } from "~/settingsNavigation";
 import { useStore } from "~/store";
 import { FirstRunTour } from "./FirstRunTour";
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 
 const BROWSER_SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter(
   (item) => isSettingsSectionVisible(item.id) && !item.desktopOnly,
@@ -51,43 +60,56 @@ function TourFixture() {
   const showLocalAiCard = routeSearch.localAi !== "hidden";
 
   return (
-    <SidebarProvider open>
-      <div className="flex h-screen w-screen items-start gap-3 p-6">
-        <button data-onboarding-target="work-mode" type="button">
-          Work
-        </button>
-        <button data-onboarding-target="project-mode" type="button">
-          Projects
-        </button>
-        {showLocalAiCard ? (
-          <div data-onboarding-target="local-ai-card">
-            <button data-onboarding-target="local-ai-purpose" type="button">
-              Local AI purpose
-            </button>
-            <button data-onboarding-target="local-ai-device" type="button">
-              Local AI device recommendation
-            </button>
-            <button data-onboarding-target="local-ai-prepare" type="button">
-              Prepare local AI
-            </button>
-          </div>
-        ) : null}
-        <button data-onboarding-target="settings" type="button">
-          Settings
-        </button>
-        <button data-onboarding-target={FIRST_RUN_TUTORIAL_REPLAY_TARGET} type="button">
-          New user tutorial
-        </button>
-        {BROWSER_SETTINGS_TOUR_ITEMS.map((item) => (
-          <button key={item.id} data-onboarding-target={settingsTourTarget(item.id)} type="button">
-            {item.id}
+    <QueryClientProvider client={queryClient}>
+      <SidebarProvider open>
+        <div className="flex h-screen w-screen items-start gap-3 p-6">
+          <button data-onboarding-target="work-mode" type="button">
+            Work
           </button>
-        ))}
-        <output data-testid="active-settings-section">{activeSettingsSection}</output>
-      </div>
-      <FirstRunTour />
-      <Outlet />
-    </SidebarProvider>
+          <button data-onboarding-target="project-mode" type="button">
+            Projects
+          </button>
+          {showLocalAiCard ? (
+            <div data-onboarding-target="local-ai-card">
+              <button data-onboarding-target="local-ai-purpose" type="button">
+                Local AI purpose
+              </button>
+              <button data-onboarding-target="local-ai-device" type="button">
+                Local AI device recommendation
+              </button>
+              <button data-onboarding-target="local-ai-prepare" type="button">
+                Prepare local AI
+              </button>
+            </div>
+          ) : null}
+          <button data-onboarding-target="settings" type="button">
+            Settings
+          </button>
+          <button data-onboarding-target={FIRST_RUN_TUTORIAL_REPLAY_TARGET} type="button">
+            New user tutorial
+          </button>
+          <button
+            data-onboarding-current-model="djl-qwen:7b"
+            data-onboarding-target={MODEL_GUIDE_TARGET}
+            type="button"
+          >
+            djl-qwen:7b
+          </button>
+          {BROWSER_SETTINGS_TOUR_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              data-onboarding-target={settingsTourTarget(item.id)}
+              type="button"
+            >
+              {item.id}
+            </button>
+          ))}
+          <output data-testid="active-settings-section">{activeSettingsSection}</output>
+        </div>
+        <FirstRunTour />
+        <Outlet />
+      </SidebarProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -112,8 +134,58 @@ function createTourRouter(initialEntry = "/") {
 describe("FirstRunTour", () => {
   afterEach(async () => {
     await cleanup();
+    queryClient.clear();
     window.localStorage.clear();
     useStore.setState({ threadsHydrated: false });
+  });
+
+  it("replays the model guide directly and persists its independent version", async () => {
+    window.localStorage.setItem(
+      FIRST_RUN_TOUR_STORAGE_KEY,
+      JSON.stringify({ seenVersion: FIRST_RUN_TOUR_VERSION }),
+    );
+    window.localStorage.setItem(
+      MODEL_GUIDE_STORAGE_KEY,
+      JSON.stringify({ seenVersion: MODEL_GUIDE_VERSION }),
+    );
+    useStore.setState({ threadsHydrated: true });
+    await render(<RouterProvider router={createTourRouter()} />);
+
+    requestModelGuideReplay();
+    await expect.element(page.getByText("Choose the right brain for DJL")).toBeVisible();
+    await expect.element(page.getByText("Current · djl-qwen:7b")).toBeVisible();
+    await page.getByRole("button", { name: "Keep using local" }).click();
+
+    expect(JSON.parse(window.localStorage.getItem(MODEL_GUIDE_STORAGE_KEY) ?? "{}")).toEqual({
+      seenVersion: MODEL_GUIDE_VERSION,
+    });
+  });
+
+  it("keeps the provider deep link visible instead of starting the settings tour", async () => {
+    window.localStorage.setItem(
+      FIRST_RUN_TOUR_STORAGE_KEY,
+      JSON.stringify({ seenVersion: FIRST_RUN_TOUR_VERSION }),
+    );
+    window.localStorage.setItem(
+      MODEL_GUIDE_STORAGE_KEY,
+      JSON.stringify({ seenVersion: MODEL_GUIDE_VERSION }),
+    );
+    useStore.setState({ threadsHydrated: true });
+    const router = createTourRouter();
+    await render(<RouterProvider router={router} />);
+
+    requestModelGuideReplay();
+    await page.getByRole("button", { name: "Connect API model" }).click();
+
+    await expect.poll(() => router.state.location.pathname).toBe("/settings");
+    await expect
+      .poll(() => (router.state.location.search as Record<string, unknown>).section)
+      .toBe("models");
+    await expect
+      .poll(() => (router.state.location.search as Record<string, unknown>).target)
+      .toBe("model-providers");
+    await new Promise((resolve) => window.setTimeout(resolve, 900));
+    expect(document.querySelector('[aria-label="DJL settings tutorial"]')).toBeNull();
   });
 
   it("walks through each anchored step and persists completion", async () => {

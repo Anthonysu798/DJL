@@ -40,10 +40,52 @@ const baseState: DesktopUpdateState = {
 };
 
 describe("desktop update button state", () => {
-  it("keeps a manual check button visible when idle", () => {
-    expect(shouldShowDesktopUpdateButton(baseState)).toBe(true);
+  it.each([
+    ["idle", { ...baseState, status: "idle" }],
+    ["checking", { ...baseState, status: "checking" }],
+    ["up-to-date", { ...baseState, status: "up-to-date" }],
+    [
+      "check failure",
+      {
+        ...baseState,
+        status: "error",
+        message: "network unavailable",
+        errorContext: "check",
+        canRetry: true,
+      },
+    ],
+    [
+      "error without an actionable version",
+      {
+        ...baseState,
+        status: "error",
+        message: "native updater failed",
+        errorContext: "install",
+        canRetry: false,
+      },
+    ],
+    [
+      "non-retryable error with a known version",
+      {
+        ...baseState,
+        status: "error",
+        availableVersion: "1.1.0",
+        message: "native updater stopped",
+        errorContext: "download",
+        canRetry: false,
+      },
+    ],
+  ] satisfies ReadonlyArray<readonly [string, DesktopUpdateState]>)(
+    "hides the blue update button for non-actionable %s state",
+    (_label, state) => {
+      expect(shouldShowDesktopUpdateButton(state)).toBe(false);
+    },
+  );
+
+  it("keeps manual checking available without showing the blue update indicator", () => {
     expect(resolveDesktopUpdateButtonAction(baseState)).toBe("check");
     expect(getDesktopUpdateButtonTooltip(baseState)).toBe("Check for updates");
+    expect(shouldShowDesktopUpdateButton(baseState)).toBe(false);
   });
 
   it("hides the update button when desktop updates are unavailable", () => {
@@ -143,7 +185,7 @@ describe("desktop update button state", () => {
     ).toBe("download");
   });
 
-  it("keeps the button visible so a failed update check can be retried", () => {
+  it("keeps failed update checks out of the actionable update indicator", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "error",
@@ -151,12 +193,12 @@ describe("desktop update button state", () => {
       errorContext: "check",
       canRetry: true,
     };
-    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
+    expect(shouldShowDesktopUpdateButton(state)).toBe(false);
     expect(resolveDesktopUpdateButtonAction(state)).toBe("check");
     expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to check again");
   });
 
-  it("recovers from an update error with no known version by checking again", () => {
+  it("keeps an update error without a known version out of the actionable indicator", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "error",
@@ -166,7 +208,7 @@ describe("desktop update button state", () => {
     };
 
     expect(resolveDesktopUpdateButtonAction(state)).toBe("check");
-    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
+    expect(shouldShowDesktopUpdateButton(state)).toBe(false);
     expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to check again");
   });
 
@@ -220,17 +262,32 @@ describe("desktop update button state", () => {
     ).toBeNull();
   });
 
-  it("keeps the update button visible and disabled while a check is in flight", () => {
+  it("keeps update checks hidden while a check is in flight", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "checking",
     };
 
-    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
+    expect(shouldShowDesktopUpdateButton(state)).toBe(false);
     expect(resolveDesktopUpdateButtonAction(state)).toBe("check");
     expect(isDesktopUpdateButtonDisabled(state)).toBe(true);
     expect(getDesktopUpdateButtonTooltip(state)).toContain("Checking for updates");
     expect(getDesktopUpdateButtonLabel(state)).toBe("Checking...");
+  });
+
+  it("hides the button throughout startup after a successful update install", () => {
+    const postInstallStates: DesktopUpdateState[] = [
+      { ...baseState, currentVersion: "1.1.0", status: "idle" },
+      { ...baseState, currentVersion: "1.1.0", status: "checking" },
+      {
+        ...baseState,
+        currentVersion: "1.1.0",
+        status: "up-to-date",
+        checkedAt: "2026-07-31T12:00:00.000Z",
+      },
+    ];
+
+    expect(postInstallStates.map(shouldShowDesktopUpdateButton)).toEqual([false, false, false]);
   });
 
   it("prompts once when a downloaded update is ready", () => {
@@ -241,6 +298,9 @@ describe("desktop update button state", () => {
       downloadedVersion: "1.1.0",
     };
 
+    expect(shouldShowDesktopUpdateButton(state)).toBe(true);
+    expect(isDesktopUpdateButtonDisabled(state)).toBe(false);
+    expect(resolveDesktopUpdateButtonAction(state)).toBe("install");
     expect(getDesktopUpdateReadyPromptVersion(state, null)).toBe("1.1.0");
     expect(getDesktopUpdateReadyPromptVersion(state, "1.1.0")).toBeNull();
     expect(

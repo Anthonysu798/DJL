@@ -583,6 +583,8 @@
       "enableSoftWrap": "折り返しを有効化"
     },
     "model": {
+      "agenticTools": "エージェントツール",
+      "assistedTools": "アシストツール",
       "availability": {
         "checking": "チェック中",
         "comingSoon": "近日公開予定",
@@ -930,6 +932,10 @@
       "preparingWorktree": "ワークツリーを準備しています...",
       "rawCall": "生の通話",
       "revertMessage": "このメッセージに戻る",
+      "savedMemoryTitle": "保存したメモ",
+      "savedToMemory": "プロジェクトメモリに保存しました",
+      "saveToMemory": "プロジェクトメモリに保存",
+      "saveToMemoryFailed": "プロジェクトメモリに保存できませんでした",
       "scrollBottom": "一番下へスクロール",
       "selectionActions": "選択操作",
       "sentViaAutomation": "オートメーション経由で送信",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "エージェントツール",
+      "assistedTools": "アシストツール",
       "chatOnly": "チャットのみ",
       "checking": "ローカルモデルランタイムを確認中…",
       "connectedOn": "{{endpoint}} に安全に接続",
@@ -1313,6 +1321,7 @@
       "removeButton": "削除",
       "removeConfirmation": "{{model}} を Ollama から削除しますか？",
       "removing": "削除中…",
+      "rerunCapabilityCheck": "ツールを確認",
       "retryInstall": "インストールを再試行",
       "runtimeAriaLabel": "ローカルモデルランタイム",
       "runtimeDetails": {
@@ -2355,6 +2364,56 @@
       "ariaLabel": "DJL 初心者向けチュートリアル",
       "back": "戻る",
       "finish": "完了",
+      "modelGuide": {
+        "actions": {
+          "choose": "API モデルを選ぶ",
+          "connect": "API モデルを接続",
+          "continue": "ローカルモデルを使い続ける",
+          "how": "API 設定の仕組み"
+        },
+        "api": {
+          "bullets": {
+            "long": "長い作業でも目標を見失いにくい",
+            "planning": "計画とコード作成が得意",
+            "powerful": "より高性能なオンラインモデルを使用",
+            "tools": "ツールをより安定して使用"
+          },
+          "recommended": "おすすめ",
+          "title": "API モデル"
+        },
+        "ariaLabel": "DJL に合うモデルを選ぶ",
+        "description": "DJL は手伝う役、モデルはその頭脳です。強いモデルほど多くの手順を覚え、難しい作業を進められます。",
+        "goodToKnow": {
+          "cost": "プロバイダーの利用料金がかかる場合があります",
+          "internet": "インターネット接続が必要です",
+          "security": "DJL はキーを安全に保存し、画面へ返しません",
+          "title": "知っておきたいこと"
+        },
+        "largeLocal": "30B 以上のローカルモデルも高い性能を発揮しますが、多くのメモリを備えた高性能なパソコンが必要です。",
+        "local": {
+          "bullets": {
+            "computer": "自分のパソコン上で動作",
+            "long": "大きな作業では手順を見失うことがある",
+            "private": "プライベートでオフラインでも使用可能",
+            "simple": "短く簡単な作業に向いている"
+          },
+          "current": "現在 · {{model}}",
+          "title": "小型ローカルモデル"
+        },
+        "recommendation": "プロジェクト作成、コード作成、調査、自動化を DJL に任せるなら、API モデルを使いましょう。",
+        "setup": {
+          "choose": "オンラインモデルのプロバイダーを選びます。",
+          "key": "そのプロバイダーから API キーを取得します。",
+          "paste": "キーを DJL に貼り付け、接続をテストします。",
+          "title": "3 つの簡単な手順"
+        },
+        "sidebar": {
+          "description": "オンラインモデルを接続して、DJL の強力なエージェント機能を利用します。",
+          "recommended": "おすすめ",
+          "title": "API モデル設定"
+        },
+        "title": "DJL に合う頭脳を選ぼう"
+      },
       "next": "次へ",
       "progress": "{{current}} / {{total}}",
       "settings": {

@@ -17,6 +17,7 @@ import { DocumentIntelligence } from "../../work/Services/DocumentIntelligence.t
 import { ProjectMemory } from "../../memory/Services/ProjectMemory.ts";
 import { DocumentOcrRequiredError } from "../../work/documentExtraction.ts";
 import { preservePreparationFailure } from "./WorkPreparationQueue.ts";
+import { projectMemorySearchQuery, workContextCharacterBudget } from "./WorkPreparationQueue.ts";
 
 const tempDirs: string[] = [];
 
@@ -25,6 +26,36 @@ afterEach(() => {
 });
 
 describe("WorkPreparationQueue", () => {
+  it("allocates explicit memory only after prompt, output, history, and tools are reserved", () => {
+    expect(
+      workContextCharacterBudget({
+        contextWindowTokens: 8_192,
+        outputTokens: 2_048,
+        systemPromptChars: 4_000,
+        currentThreadHistoryChars: 8_000,
+        toolSchemaChars: 6_000,
+        attachmentChars: 2_000,
+      }),
+    ).toBe(4_576);
+    expect(
+      workContextCharacterBudget({
+        contextWindowTokens: 4_096,
+        outputTokens: 2_048,
+        systemPromptChars: 8_000,
+        currentThreadHistoryChars: 8_000,
+        toolSchemaChars: 8_000,
+        attachmentChars: 8_000,
+      }),
+    ).toBe(0);
+  });
+
+  it("enables project memory only for the explicit /memory command", () => {
+    expect(projectMemorySearchQuery("What did we decide?")).toBeNull();
+    expect(projectMemorySearchQuery("remember today was nice")).toBeNull();
+    expect(projectMemorySearchQuery("/memory launch date")).toBe("launch date");
+    expect(projectMemorySearchQuery("  /memory   发布日期  ")).toBe("发布日期");
+  });
+
   it("preserves typed OCR failures across the promise boundary", async () => {
     const original = new DocumentOcrRequiredError("scan.png");
     const failure = await Effect.runPromise(
@@ -66,6 +97,7 @@ describe("WorkPreparationQueue", () => {
     let record: WorkPreparationJobRecord | null = null;
     const artifacts: unknown[] = [];
     const commands: unknown[] = [];
+    let memoryRetrievals = 0;
     const repositoryLayer = Layer.succeed(WorkPreparationRepository, {
       enqueue: (input) =>
         Effect.sync(() => {
@@ -182,10 +214,18 @@ describe("WorkPreparationQueue", () => {
           ensureProject: () => Effect.succeed("/tmp/memory"),
           recordTurn: () => Effect.die("unused"),
           retrieve: () =>
-            Effect.succeed({
-              brief: "Source [[Project]]\nThe preferred reporting currency is CAD.",
-              citations: [{ path: "Project", title: "Project", score: 1 }],
+            Effect.sync(() => {
+              memoryRetrievals += 1;
+              return {
+                brief: "Source [[Project]]\nThe preferred reporting currency is CAD.",
+                citations: [{ path: "Project", title: "Project", score: 1 }],
+              };
             }),
+          retrieveExact: () => Effect.succeed({ brief: "", citations: [] }),
+          list: () => Effect.succeed([]),
+          save: () => Effect.die("unused"),
+          rename: () => Effect.die("unused"),
+          delete: () => Effect.die("unused"),
           reindexProject: () => Effect.void,
           vaultRoot: "/tmp/memory",
           projectRoot: () => "/tmp/memory/Studio/Projects/project-1",
@@ -253,9 +293,10 @@ describe("WorkPreparationQueue", () => {
         }),
       ),
     );
-    expect(Option.getOrThrow(prepared).job.preparedPrompt).toContain(
+    expect(Option.getOrThrow(prepared).job.preparedPrompt).not.toContain(
       "preferred reporting currency is CAD",
     );
+    expect(memoryRetrievals).toBe(0);
     expect(artifacts).toHaveLength(1);
     expect(commands).toEqual(
       expect.arrayContaining([

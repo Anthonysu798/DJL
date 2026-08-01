@@ -583,6 +583,8 @@
       "enableSoftWrap": "Activer le retour à la ligne"
     },
     "model": {
+      "agenticTools": "Outils agentiques",
+      "assistedTools": "Outils assistés",
       "availability": {
         "checking": "Vérification",
         "comingSoon": "Bientôt",
@@ -930,6 +932,10 @@
       "preparingWorktree": "Préparer l'arbre...",
       "rawCall": "Appel brut",
       "revertMessage": "Revenir à ce message",
+      "savedMemoryTitle": "Note enregistrée",
+      "savedToMemory": "Enregistré dans la mémoire du projet",
+      "saveToMemory": "Enregistrer dans la mémoire du projet",
+      "saveToMemoryFailed": "Impossible d’enregistrer dans la mémoire du projet",
       "scrollBottom": "Faire défiler jusqu’en bas",
       "selectionActions": "Actions de sélection",
       "sentViaAutomation": "Envoyé par Automation",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "Outils agentiques",
+      "assistedTools": "Outils assistés",
       "chatOnly": "Discussion uniquement",
       "checking": "Vérification des environnements locaux…",
       "connectedOn": "Connexion sécurisée sur {{endpoint}}",
@@ -1313,6 +1321,7 @@
       "removeButton": "Supprimer",
       "removeConfirmation": "Supprimer {{model}} d’Ollama ?",
       "removing": "Suppression…",
+      "rerunCapabilityCheck": "Tester les outils",
       "retryInstall": "Réessayer l’installation",
       "runtimeAriaLabel": "Environnement du modèle local",
       "runtimeDetails": {
@@ -2355,6 +2364,56 @@
       "ariaLabel": "Tutoriel DJL pour les nouveaux utilisateurs",
       "back": "Retour",
       "finish": "Terminer",
+      "modelGuide": {
+        "actions": {
+          "choose": "Choisir un modèle API",
+          "connect": "Connecter un modèle API",
+          "continue": "Continuer avec le modèle local",
+          "how": "Fonctionnement de la configuration"
+        },
+        "api": {
+          "bullets": {
+            "long": "Garde le cap sur les travaux plus longs",
+            "planning": "Planifie et écrit mieux le code",
+            "powerful": "Utilise un modèle en ligne plus puissant",
+            "tools": "Utilise les outils de façon plus fiable"
+          },
+          "recommended": "Recommandé",
+          "title": "Modèle API"
+        },
+        "ariaLabel": "Choisir le bon modèle pour DJL",
+        "description": "DJL vous aide. Le modèle est son cerveau. Un modèle plus puissant mémorise davantage d’étapes et réalise des tâches plus difficiles.",
+        "goodToKnow": {
+          "cost": "Votre fournisseur peut facturer l’utilisation",
+          "internet": "Nécessite une connexion Internet",
+          "security": "DJL conserve votre clé de façon sécurisée et ne la renvoie jamais à l’interface",
+          "title": "Bon à savoir"
+        },
+        "largeLocal": "Un modèle local de 30B ou plus peut également être performant, mais il nécessite un ordinateur puissant avec beaucoup de mémoire.",
+        "local": {
+          "bullets": {
+            "computer": "Fonctionne sur votre ordinateur",
+            "long": "Peut perdre le fil sur les gros travaux",
+            "private": "Privé et utilisable hors ligne",
+            "simple": "Adapté aux tâches courtes et simples"
+          },
+          "current": "Actuel · {{model}}",
+          "title": "Petit modèle local"
+        },
+        "recommendation": "Utilisez un modèle API pour demander à DJL de créer un projet, écrire du code, effectuer des recherches ou automatiser des tâches.",
+        "setup": {
+          "choose": "Choisissez un fournisseur de modèles en ligne.",
+          "key": "Obtenez une clé API auprès de ce fournisseur.",
+          "paste": "Collez la clé dans DJL et testez la connexion.",
+          "title": "Trois étapes simples"
+        },
+        "sidebar": {
+          "description": "Connectez un modèle en ligne pour profiter des fonctions d’agent les plus puissantes de DJL.",
+          "recommended": "Recommandé",
+          "title": "Configuration du modèle API"
+        },
+        "title": "Choisissez le bon cerveau pour DJL"
+      },
       "next": "Suivant",
       "progress": "{{current}} sur {{total}}",
       "settings": {

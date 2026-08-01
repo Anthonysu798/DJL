@@ -741,6 +741,9 @@ export function projectEvent(
             ...(payload.attachments !== undefined ? { attachments: payload.attachments } : {}),
             ...(payload.skills !== undefined ? { skills: payload.skills } : {}),
             ...(payload.mentions !== undefined ? { mentions: payload.mentions } : {}),
+            ...(payload.memoryContext !== undefined
+              ? { memoryContext: payload.memoryContext }
+              : {}),
             turnId: payload.turnId,
             streaming: payload.streaming,
             source: payload.source,

@@ -12,6 +12,7 @@ import {
   isChatOnlyModel,
   groupProviderModelOptionsWithFavorites,
   mergeDynamicModelOptions,
+  modelCapabilityTier,
   providerModelCostMultiplierLabel,
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
@@ -19,6 +20,24 @@ import {
 } from "./providerModelOptions";
 
 describe("formatProviderModelOptionName", () => {
+  it("prefers a measured local capability tier over advertised support", () => {
+    expect(
+      modelCapabilityTier({
+        slug: "ollama/qwen2.5:3b",
+        name: "Qwen",
+        supportsToolCalls: true,
+        capabilityTier: "assisted",
+      }),
+    ).toBe("assisted");
+    expect(
+      modelCapabilityTier({
+        slug: "ollama/llama3.2:1b",
+        name: "Llama",
+        supportsToolCalls: false,
+      }),
+    ).toBe("chat-only");
+  });
+
   it("humanizes unknown OpenCode runtime model slugs using the model identifier", () => {
     expect(
       formatProviderModelOptionName({

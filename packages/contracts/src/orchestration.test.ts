@@ -436,6 +436,45 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
   }),
 );
 
+it.effect("preserves explicit Work memory context without enabling ambient retrieval", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeThreadTurnStartCommand({
+      type: "thread.turn.start",
+      commandId: "cmd-memory-turn",
+      threadId: "thread-1",
+      message: {
+        messageId: "msg-memory",
+        role: "user",
+        text: "Use the selected launch note",
+        attachments: [],
+        memoryContext: {
+          references: [
+            {
+              path: "Sources/Launch.md",
+              title: "Launch",
+              kind: "note",
+            },
+          ],
+          searchProject: false,
+        },
+      },
+      runtimeMode: "full-access",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    assert.deepStrictEqual(parsed.message.memoryContext, {
+      references: [
+        {
+          path: "Sources/Launch.md",
+          title: "Launch",
+          kind: "note",
+        },
+      ],
+      searchProject: false,
+    });
+  }),
+);
+
 it.effect("rejects legacy providers for new turns while historical payloads remain readable", () =>
   Effect.gen(function* () {
     const error = yield* decodeThreadTurnStartCommand({

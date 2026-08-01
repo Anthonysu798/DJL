@@ -16,13 +16,169 @@ import {
   flattenOpenCodeCliModels,
   flattenOpenCodeModels,
   flattenOpenCodeProviderConnections,
+  buildOpenCodeModelToolSupportMap,
+  buildWorkTurnSystemPrompt,
+  appendMissingWorkEvidenceFooter,
   makeOpenCodeAdapterLive,
   mergeOpenCodeAssistantText,
   normalizeOpenCodeTokenUsage,
   reconcileOpenCodeLocalModels,
   resolvePreferredOpenCodeModelProviders,
   supportsSimpleOpenCodeApiKey,
+  workTurnCompletionError,
+  workTurnFailureError,
+  shouldEmitWorkAssistantText,
+  webRetrievalTimeFromToolOutput,
+  webSourceUrlsFromToolOutput,
 } from "./OpenCodeAdapter.ts";
+
+describe("workTurnCompletionError", () => {
+  it("requires grounded Work routes to call a visible tool before answering", () => {
+    expect(
+      buildWorkTurnSystemPrompt({
+        route: "system-info",
+        visibleTools: ["djl_system_info"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "work-isolated",
+      }),
+    ).toContain("Before writing any assistant prose, call one of the visible tools");
+  });
+
+  it("keeps ordinary Work chat conversational and context-free", () => {
+    expect(
+      buildWorkTurnSystemPrompt({
+        route: "chat",
+        visibleTools: [],
+        requireSuccessfulTool: false,
+        evidenceRequired: false,
+        instructionScope: "work-isolated",
+      }),
+    ).toContain("Do not assume project or memory context exists");
+  });
+
+  it.each(["websearch", "webfetch"])("holds evidence-required prose until %s succeeds", (tool) => {
+    const policy = {
+      route: "web-research" as const,
+      visibleTools: [tool],
+      requireSuccessfulTool: true,
+      evidenceRequired: true,
+      instructionScope: "work-isolated" as const,
+    };
+    expect(shouldEmitWorkAssistantText(policy, false)).toBe(false);
+    expect(shouldEmitWorkAssistantText(policy, true)).toBe(true);
+    expect(shouldEmitWorkAssistantText({ ...policy, evidenceRequired: false }, false)).toBe(true);
+  });
+
+  it("rejects required-action turns that produced no successful tool result", () => {
+    expect(
+      workTurnCompletionError(
+        {
+          route: "system-info",
+          visibleTools: ["djl_system_info"],
+          requireSuccessfulTool: true,
+          evidenceRequired: true,
+          instructionScope: "work-isolated",
+        },
+        false,
+      ),
+    ).toContain("could not verify safely");
+  });
+
+  it("allows chat and grounded action turns to complete", () => {
+    expect(
+      workTurnCompletionError(
+        {
+          route: "chat",
+          visibleTools: [],
+          requireSuccessfulTool: false,
+          evidenceRequired: false,
+          instructionScope: "work-isolated",
+        },
+        false,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("keeps the provider cause in a failed required-tool turn's safe explanation", () => {
+    const message = workTurnFailureError(
+      {
+        route: "web-research",
+        visibleTools: ["websearch", "webfetch"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "work-isolated",
+      },
+      false,
+      "Thinking mode does not support this tool_choice",
+    );
+
+    expect(message).toContain("could not verify safely");
+    expect(message).toContain("Thinking mode does not support this tool_choice");
+    expect(workTurnFailureError(undefined, false, "Too Many Requests")).toBe("Too Many Requests");
+  });
+
+  it("preserves a web retrieval timestamp when a small model omits it", () => {
+    const policy = {
+      route: "web-research" as const,
+      visibleTools: ["websearch"],
+      requireSuccessfulTool: true,
+      evidenceRequired: true,
+      instructionScope: "work-isolated" as const,
+    };
+    const retrievedAt = webRetrievalTimeFromToolOutput(
+      "Evidence\n\nRetrieved at: 2026-07-31T10:13:14.906Z",
+    );
+    expect(retrievedAt).toBe("2026-07-31T10:13:14.906Z");
+    expect(appendMissingWorkEvidenceFooter("Grounded answer.", policy, retrievedAt)).toBe(
+      "Grounded answer.\n\nRetrieved at: 2026-07-31T10:13:14.906Z",
+    );
+    expect(
+      appendMissingWorkEvidenceFooter(
+        "Grounded answer.\n\nRetrieved at: 2026-07-31T10:13:14.906Z",
+        policy,
+        retrievedAt,
+      ),
+    ).toBe("Grounded answer.\n\nRetrieved at: 2026-07-31T10:13:14.906Z");
+    expect(
+      webSourceUrlsFromToolOutput("URL: https://example.com/one\nURL: https://example.com/two"),
+    ).toEqual(["https://example.com/one", "https://example.com/two"]);
+    expect(
+      appendMissingWorkEvidenceFooter("Grounded answer.", policy, retrievedAt, [
+        "https://example.com/one",
+      ]),
+    ).toBe(
+      "Grounded answer.\n\nSources:\n- https://example.com/one\n\nRetrieved at: 2026-07-31T10:13:14.906Z",
+    );
+  });
+});
+
+describe("buildOpenCodeModelToolSupportMap", () => {
+  it("uses the live runtime capability instead of model size", () => {
+    const support = buildOpenCodeModelToolSupportMap({
+      providerList: {
+        all: [
+          {
+            id: "ollama",
+            models: {
+              "llama3.2:1b": {
+                id: "llama3.2:1b",
+                capabilities: { toolcall: false },
+              },
+              "qwen2.5:3b": {
+                id: "qwen2.5:3b",
+                capabilities: { toolcall: true },
+              },
+            },
+          },
+        ],
+      },
+    } as never);
+
+    expect(support.get("ollama/llama3.2:1b")).toBe(false);
+    expect(support.get("ollama/qwen2.5:3b")).toBe(true);
+  });
+});
 
 describe("reconcileOpenCodeLocalModels", () => {
   it("removes catalog-only local models that the live runtimes cannot serve", () => {
@@ -148,9 +304,18 @@ describe("flattenOpenCodeProviderConnections", () => {
           name: "DeepSeek",
           models: {
             "deepseek-chat": { id: "deepseek-chat", name: "DeepSeek Chat" },
-            "deepseek-reasoner": { id: "deepseek-reasoner", name: "DeepSeek Reasoner" },
-            "deepseek-v4-flash": { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" },
-            "deepseek-v4-pro": { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
+            "deepseek-reasoner": {
+              id: "deepseek-reasoner",
+              name: "DeepSeek Reasoner",
+            },
+            "deepseek-v4-flash": {
+              id: "deepseek-v4-flash",
+              name: "DeepSeek V4 Flash",
+            },
+            "deepseek-v4-pro": {
+              id: "deepseek-v4-pro",
+              name: "DeepSeek V4 Pro",
+            },
           },
         }),
       ],
@@ -221,7 +386,11 @@ function makeModel(input: Omit<TestModelInput, "providerID"> & Pick<Model, "prov
   return {
     id: input.id,
     providerID: input.providerID,
-    api: input.api ?? { id: "openai", url: "https://api.openai.com/v1", npm: "@ai-sdk/openai" },
+    api: input.api ?? {
+      id: "openai",
+      url: "https://api.openai.com/v1",
+      npm: "@ai-sdk/openai",
+    },
     name: input.name,
     capabilities,
     cost: input.cost ?? {
@@ -267,6 +436,7 @@ function createMockOpenCodeRuntime(options?: {
   readonly sessionGetError?: Error;
   readonly onConnect?: () => void;
   readonly onSessionCreate?: () => void;
+  readonly mcpAddData?: Record<string, { status: string; error?: string }>;
 }) {
   const abortCalls: Array<{ sessionID: string }> = [];
   const cliModelCalls: Array<Parameters<OpenCodeRuntimeShape["listOpenCodeCliModels"]>[0]> = [];
@@ -323,7 +493,9 @@ function createMockOpenCodeRuntime(options?: {
         if (options?.sessionGetError) {
           throw options.sessionGetError;
         }
-        return { data: { directory: process.cwd(), ...(options?.session ?? {}) } };
+        return {
+          data: { directory: process.cwd(), ...(options?.session ?? {}) },
+        };
       },
       revert: async () => ({ data: null }),
       summarize: async () => ({ data: null }),
@@ -347,7 +519,13 @@ function createMockOpenCodeRuntime(options?: {
     mcp: {
       add: async (input: Record<string, unknown>) => {
         mcpAddCalls.push(input);
-        return { data: { djl_work: { status: "connected" } } };
+        return {
+          data:
+            options?.mcpAddData ??
+            (typeof input.name === "string"
+              ? { [input.name]: { status: "connected" } }
+              : { djl_work: { status: "connected" } }),
+        };
       },
     },
     provider: {
@@ -621,10 +799,16 @@ describe("normalizeOpenCodeTokenUsage", () => {
     expect(normalizeOpenCodeTokenUsage(undefined)).toBeUndefined();
     expect(normalizeOpenCodeTokenUsage({ ...validBase, input: -1 })).toBeUndefined();
     expect(
-      normalizeOpenCodeTokenUsage({ ...validBase, output: Number.POSITIVE_INFINITY }),
+      normalizeOpenCodeTokenUsage({
+        ...validBase,
+        output: Number.POSITIVE_INFINITY,
+      }),
     ).toBeUndefined();
     expect(
-      normalizeOpenCodeTokenUsage({ ...validBase, cache: { read: Number.NaN, write: 1 } }),
+      normalizeOpenCodeTokenUsage({
+        ...validBase,
+        cache: { read: Number.NaN, write: 1 },
+      }),
     ).toBeUndefined();
     expect(
       normalizeOpenCodeTokenUsage({
@@ -901,12 +1085,18 @@ describe("flattenOpenCodeModels", () => {
               name: "DeepSeek",
               models: {
                 "deepseek-chat": { id: "deepseek-chat", name: "DeepSeek Chat" },
-                "deepseek-reasoner": { id: "deepseek-reasoner", name: "DeepSeek Reasoner" },
+                "deepseek-reasoner": {
+                  id: "deepseek-reasoner",
+                  name: "DeepSeek Reasoner",
+                },
                 "deepseek-v4-flash": {
                   id: "deepseek-v4-flash",
                   name: "DeepSeek V4 Flash",
                 },
-                "deepseek-v4-pro": { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
+                "deepseek-v4-pro": {
+                  id: "deepseek-v4-pro",
+                  name: "DeepSeek V4 Pro",
+                },
               },
             }),
           ],
@@ -1391,15 +1581,24 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       },
     });
     const layer = makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
-      Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "opencode-auth-test-" })),
+      Layer.provideMerge(
+        ServerConfig.layerTest(process.cwd(), {
+          prefix: "opencode-auth-test-",
+        }),
+      ),
       Layer.provideMerge(NodeServices.layer),
     );
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
-        const saved = yield* adapter.setApiKey({ providerId: "openai", apiKey: "secret-value" });
-        const removed = yield* adapter.removeCredential({ providerId: "openai" });
+        const saved = yield* adapter.setApiKey({
+          providerId: "openai",
+          apiKey: "secret-value",
+        });
+        const removed = yield* adapter.removeCredential({
+          providerId: "openai",
+        });
         return { saved, removed };
       }).pipe(Effect.provide(layer)),
     );
@@ -1475,7 +1674,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1489,7 +1690,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     });
     expect(result?.models.map((model) => model.slug)).toEqual(["openai/gpt-5"]);
     expect(runtime.connectCalls).toHaveLength(1);
-    expect(runtime.connectCalls[0]).toMatchObject({ cwd: "/repo/model-discovery-config" });
+    expect(runtime.connectCalls[0]).toMatchObject({
+      cwd: "/repo/model-discovery-config",
+    });
     expect(runtime.cliModelCalls).toHaveLength(0);
   });
 
@@ -1528,7 +1731,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.provide(
             makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
               Layer.provideMerge(
-                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),
@@ -1537,7 +1742,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       ),
     ).rejects.toThrow("OpenCode server failed to start");
     expect(runtime.connectCalls).toHaveLength(1);
-    expect(runtime.connectCalls[0]).toMatchObject({ cwd: "/repo/server-startup-fails" });
+    expect(runtime.connectCalls[0]).toMatchObject({
+      cwd: "/repo/server-startup-fails",
+    });
     expect(runtime.cliModelCalls).toHaveLength(0);
   });
 
@@ -1578,7 +1785,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1598,7 +1807,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       ],
     });
     expect(runtime.connectCalls).toHaveLength(1);
-    expect(runtime.connectCalls[0]).toMatchObject({ cwd: "/repo/agent-discovery-config" });
+    expect(runtime.connectCalls[0]).toMatchObject({
+      cwd: "/repo/agent-discovery-config",
+    });
   });
 
   it("does not reuse an unrelated active OpenCode session for command discovery", async () => {
@@ -1628,7 +1839,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1660,7 +1873,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1701,7 +1916,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
               }),
           }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1740,7 +1957,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
                 Effect.fail(new Error("LM Studio context preparation failed")),
             }).pipe(
               Layer.provideMerge(
-                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),
@@ -1789,9 +2008,14 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         yield* adapter.stopSession(threadId);
       }).pipe(
         Effect.provide(
-          makeOpenCodeAdapterLive({ runtime: runtime.runtime, workMcpServer }).pipe(
+          makeOpenCodeAdapterLive({
+            runtime: runtime.runtime,
+            workMcpServer,
+          }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1816,6 +2040,51 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(unregisterCalls).toEqual(["server-only-token"]);
   });
 
+  it("fails session startup when OpenCode cannot connect to the Work MCP endpoint", async () => {
+    const runtime = createMockOpenCodeRuntime({
+      mcpAddData: {
+        djl_work_test: { status: "failed", error: "GET /mcp returned 404" },
+      },
+    });
+    const workMcpServer = {
+      start: Effect.void,
+      registerSession: () =>
+        Effect.succeed({
+          name: "djl_work_test",
+          url: "http://127.0.0.1:41821/mcp",
+          bearerToken: "server-only-token",
+        }),
+      unregisterSession: () => Effect.void,
+    };
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* OpenCodeAdapter;
+          yield* adapter.startSession({
+            provider: "opencode",
+            threadId: asThreadId("thread-work-mcp-failed"),
+            runtimeMode: "full-access",
+          });
+        }).pipe(
+          Effect.provide(
+            makeOpenCodeAdapterLive({
+              runtime: runtime.runtime,
+              workMcpServer,
+            }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      ),
+    ).rejects.toThrow("GET /mcp returned 404");
+  });
+
   it("uses the persisted resume cursor cwd when resuming OpenCode sessions", async () => {
     const runtime = createMockOpenCodeRuntime();
 
@@ -1826,13 +2095,18 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           provider: "opencode",
           threadId: asThreadId("thread-resume-cwd"),
           runtimeMode: "full-access",
-          resumeCursor: { openCodeSessionId: "existing-session-1", cwd: "/repo/resume" },
+          resumeCursor: {
+            openCodeSessionId: "existing-session-1",
+            cwd: "/repo/resume",
+          },
         });
       }).pipe(
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1872,7 +2146,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -1902,13 +2178,18 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             provider: "opencode",
             threadId: asThreadId("thread-resume-validation-failure"),
             runtimeMode: "full-access",
-            resumeCursor: { openCodeSessionId: "ses_network_error", cwd: "/repo/resume" },
+            resumeCursor: {
+              openCodeSessionId: "ses_network_error",
+              cwd: "/repo/resume",
+            },
           });
         }).pipe(
           Effect.provide(
             makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
               Layer.provideMerge(
-                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),
@@ -1951,13 +2232,18 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             provider: "opencode",
             threadId: asThreadId("thread-resume-permissions"),
             runtimeMode,
-            resumeCursor: { openCodeSessionId: "existing-session-1", cwd: "/repo/resume" },
+            resumeCursor: {
+              openCodeSessionId: "existing-session-1",
+              cwd: "/repo/resume",
+            },
           });
         }).pipe(
           Effect.provide(
             makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
               Layer.provideMerge(
-                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),
@@ -1998,7 +2284,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.provide(
             makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
               Layer.provideMerge(
-                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),
@@ -2032,7 +2320,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2079,7 +2369,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2113,7 +2405,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2151,7 +2445,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2211,7 +2507,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2249,6 +2547,60 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         reason: "Interrupted by user.",
       },
     });
+  });
+
+  it("passes Work tool visibility separately from OpenCode session permissions", async () => {
+    const runtime = createMockOpenCodeRuntime();
+
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const adapter = yield* OpenCodeAdapter;
+          yield* adapter.startSession({
+            provider: "opencode",
+            threadId: asThreadId("thread-work-tools"),
+            runtimeMode: "full-access",
+          });
+          yield* adapter.sendTurn({
+            threadId: asThreadId("thread-work-tools"),
+            input: "hi",
+            attachments: [],
+            modelSelection: {
+              provider: "opencode",
+              model: "ollama/qwen2.5:3b",
+            },
+            workTurnPolicy: {
+              route: "chat",
+              visibleTools: [],
+              requireSuccessfulTool: false,
+              evidenceRequired: false,
+              instructionScope: "work-isolated",
+            },
+          });
+        }).pipe(
+          Effect.provide(
+            makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
+              Layer.provideMerge(
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
+              ),
+              Layer.provideMerge(NodeServices.layer),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(runtime.promptCalls[0]).toMatchObject({
+      visibleTools: [],
+      instructionScope: "work-isolated",
+      requiredToolCall: false,
+    });
+    expect(runtime.promptCalls[0]?.system).toContain(
+      "Do not assume project or memory context exists",
+    );
+    expect(runtime.promptCalls[0]).not.toHaveProperty("tools");
   });
 
   it("replays assistant text when OpenCode sends delta before part snapshot and assistant role", async () => {
@@ -2354,7 +2706,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2498,7 +2852,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2596,7 +2952,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2653,7 +3011,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2700,7 +3060,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2748,7 +3110,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2791,7 +3155,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2834,7 +3200,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2918,7 +3286,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -2989,7 +3359,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3071,7 +3443,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3127,7 +3501,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3220,7 +3596,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3276,8 +3654,16 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           properties: {
             sessionID: "opencode-session-1",
             todos: [
-              { content: "Inspect OpenCode events", status: "completed", priority: "high" },
-              { content: "Wire todo updates", status: "in_progress", priority: "medium" },
+              {
+                content: "Inspect OpenCode events",
+                status: "completed",
+                priority: "high",
+              },
+              {
+                content: "Wire todo updates",
+                status: "in_progress",
+                priority: "medium",
+              },
               { content: "Report back", status: "pending", priority: "low" },
             ],
           },
@@ -3290,7 +3676,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3390,7 +3778,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3524,7 +3914,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3669,7 +4061,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3753,7 +4147,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.provide(
             makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
               Layer.provideMerge(
-                ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+                ServerConfig.layerTest(process.cwd(), {
+                  prefix: "opencode-adapter-test-",
+                }),
               ),
               Layer.provideMerge(NodeServices.layer),
             ),
@@ -3857,7 +4253,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -3977,7 +4375,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -4075,7 +4475,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -4156,7 +4558,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             promptSubmissionInlineWaitMs: 1,
           }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -4214,7 +4618,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             promptSubmissionInlineWaitMs: 50,
           }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),
@@ -4314,7 +4720,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.provide(
           makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
             Layer.provideMerge(
-              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+              ServerConfig.layerTest(process.cwd(), {
+                prefix: "opencode-adapter-test-",
+              }),
             ),
             Layer.provideMerge(NodeServices.layer),
           ),

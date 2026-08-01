@@ -169,6 +169,12 @@ import type {
   OrchestrationShellStreamItem,
   OrchestrationSubscribeThreadInput,
   OrchestrationThreadStreamItem,
+  ProjectMemoryDeleteInput,
+  ProjectMemoryItem,
+  ProjectMemoryListInput,
+  ProjectMemoryListResult,
+  ProjectMemoryRenameInput,
+  ProjectMemorySaveInput,
 } from "./orchestration";
 import { EditorId } from "./editor";
 import type { ThreadId } from "./baseSchemas";
@@ -204,6 +210,7 @@ import type {
 } from "./stats";
 import type {
   LocalModelCancelInstallInput,
+  LocalModelCapabilityCheckInput,
   LocalModelEvent,
   LocalModelInstallInput,
   LocalModelInstallJob,
@@ -564,8 +571,15 @@ export interface NativeApi {
     startSetup: (input: LocalModelSetupInput) => Promise<LocalModelSetupJob>;
     retrySetup: (input: LocalModelSetupJobInput) => Promise<LocalModelSetupJob>;
     cancelSetup: (input: LocalModelSetupJobInput) => Promise<LocalModelSetupJob>;
+    rerunCapabilityCheck: (input: LocalModelCapabilityCheckInput) => Promise<LocalModelsSnapshot>;
     removeModel: (input: LocalModelRemoveInput) => Promise<LocalModelsSnapshot>;
     onEvent: (callback: (event: LocalModelEvent) => void) => () => void;
+  };
+  projectMemory: {
+    list: (input: ProjectMemoryListInput) => Promise<ProjectMemoryListResult>;
+    save: (input: ProjectMemorySaveInput) => Promise<ProjectMemoryItem>;
+    rename: (input: ProjectMemoryRenameInput) => Promise<ProjectMemoryItem>;
+    delete: (input: ProjectMemoryDeleteInput) => Promise<void>;
   };
   aiDetector: {
     getState: () => Promise<AiDetectorState>;

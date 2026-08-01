@@ -1,296 +1,221 @@
-/* ══════════════════════════════════════════════════════════════════════
-   CHANGELOG — Notion
-   Warm paper below a single deep-indigo night band, where the aurora reads as a
-   glowing sticker constellation. Releases are white cards at 12px on the paper,
-   held by hairlines rather than shadow. Added / Fixed / Changed take sticker
-   green, sky and orange, because the system carries status in that palette and
-   defines no separate semantic ramp.
-   ══════════════════════════════════════════════════════════════════════ */
+/* Changelog on the paper-white lp system: a Linear-style timeline. Each release
+   is a grid row with a sticky version rail on the left and the notes on the
+   right, separated by a single hairline per release. */
 
-.changelog {
-  --cl-paper: #f6f5f4;
-  --cl-surface: #ffffff;
-  --cl-ink: rgba(0, 0, 0, 0.95);
-  --cl-ink-2: #31302e;
-  --cl-stone: #615d59;
-  --cl-ash: #a39e98;
-  --cl-hairline: #e6e6e6;
-  --cl-night: #213183;
-
+.clg {
   min-height: 100vh;
-  background: var(--cl-paper);
-  color: var(--cl-ink);
-  font-family: var(--font-body), var(--cjk);
-  font-feature-settings: "lnum", "locl";
 }
 
-/* ── top bar ── */
-.cl-top {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  padding: var(--sp-sm) clamp(var(--sp-md), 4vw, var(--sp-xxl));
-  border-bottom: 1px solid var(--cl-hairline);
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(12px);
-}
-.cl-top-right {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-lg);
-}
-.cl-back,
-.cl-top-link {
-  color: var(--cl-ink-2);
-  font-size: 15px;
-  line-height: 1.33;
-  text-decoration: none;
-}
-.cl-back:hover,
-.cl-top-link:hover {
-  color: var(--primary);
-}
-.cl-lang {
-  display: flex;
-  gap: var(--sp-xs);
-}
-.cl-lang a {
-  color: var(--cl-stone);
-  font-size: 15px;
-  text-decoration: none;
-}
-.cl-lang a:hover {
-  color: var(--cl-ink);
-}
-.cl-lang a.active {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-/* ── the single night band ── */
-.cl-hero {
-  min-height: 42svh;
-  padding: clamp(3rem, 7vw, 5rem) clamp(var(--sp-md), 4vw, var(--sp-xxl));
-  background: var(--cl-night) !important;
-  color: #ffffff;
-  text-align: left;
-  align-items: flex-start;
-}
-.cl-hero-inner {
-  position: relative;
-  z-index: 10;
-  width: 100%;
+.clg-hero {
   max-width: 1080px;
-  margin: 0 auto;
+  margin-inline: auto;
+  padding: 72px 24px 48px;
 }
-.cl-eyebrow {
-  display: inline-block;
-  margin-bottom: var(--sp-md);
-  padding: var(--sp-xxs) var(--sp-xs);
-  border-radius: 9999px;
-  background: #ffffff;
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.33;
-  letter-spacing: var(--tr-eyebrow);
-}
-.cl-hero-inner h1 {
-  margin: 0 0 var(--sp-md);
-  max-width: 20ch;
-  color: #ffffff;
-  font-size: clamp(2.4rem, 6.5vw, 4rem);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: var(--tr-display-1);
-  text-wrap: balance;
-}
-.cl-hero-inner p {
+
+.clg-hero h1 {
   margin: 0;
-  max-width: 54ch;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: clamp(1rem, 1.4vw, 1.125rem);
-  line-height: 1.5;
+  font-family: var(--lp-font-display);
+  font-size: clamp(2rem, 2.6vw + 1rem, 2.9rem);
+  font-weight: 600;
+  line-height: 1.12;
+  color: var(--lp-ink);
 }
 
-/* ── body ── */
-.cl-body {
-  position: relative;
+.clg-hero p {
+  margin: 14px 0 0;
+  max-width: 560px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--lp-body);
 }
-.cl-body-inner {
-  position: relative;
-  z-index: 1;
+
+.clg-source-note {
+  font-size: 13px !important;
+  color: var(--lp-mute) !important;
+}
+
+.clg-list {
   max-width: 1080px;
-  margin: 0 auto;
-  padding: clamp(var(--sp-lg), 4vw, var(--sp-xxl)) clamp(var(--sp-md), 4vw, var(--sp-xxl))
-    clamp(4rem, 8vw, 7rem);
+  margin-inline: auto;
+  padding: 0 24px 120px;
 }
 
-.cl-source-note {
-  margin: 0 0 var(--sp-md);
-  max-width: 64ch;
-  color: var(--cl-stone);
-  font-size: 14px;
-  line-height: 1.43;
+/* ── one release = sticky version rail + notes ── */
+
+.clg-release {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 48px;
+  padding-block: 56px;
+  border-top: 1px solid var(--lp-hairline);
 }
 
-/* ── entry heading ── */
-.cl-entry-head {
+.clg-meta {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+}
+
+.clg-version {
+  margin: 0;
+  font-family: var(--lp-font-mono);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--lp-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.clg-badges {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--sp-xs);
-}
-.cl-version {
-  margin: 0;
-  color: var(--cl-ink);
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: var(--tr-heading-1);
-  font-variant-numeric: tabular-nums lining-nums;
-}
-.cl-badges {
-  display: flex;
-  gap: var(--sp-xxs);
-}
-.cl-badge {
-  padding: 2px var(--sp-xs);
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: var(--tr-eyebrow);
-  white-space: nowrap;
-}
-/* "Current" is a state, not an action, so it takes a sticker hue rather than the accent blue. */
-.cl-badge[data-kind="current"] {
-  background: rgba(26, 174, 57, 0.12);
-  color: #14832b;
-}
-.cl-badge[data-kind="prerelease"] {
-  background: rgba(221, 91, 0, 0.1);
-  color: var(--sticker-orange);
-}
-.cl-date {
-  flex-basis: 100%;
-  color: var(--cl-ash);
-  font-size: 14px;
-  line-height: 1.43;
-  font-variant-numeric: lining-nums;
-}
-
-/* ── entry body: a white card on paper ── */
-.cl-entry-body {
-  max-width: 64ch;
-  padding: var(--sp-lg);
-  border: 1px solid var(--cl-hairline);
-  border-radius: var(--r-lg);
-  background: var(--cl-surface);
-}
-.cl-intro {
-  margin: 0 0 var(--sp-md);
-  color: var(--cl-ink-2);
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.cl-section + .cl-section {
-  margin-top: var(--sp-lg);
-}
-.cl-section-heading {
-  display: flex;
-  align-items: center;
   gap: 6px;
-  margin: 0 0 var(--sp-xs);
-  color: var(--cl-stone);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: var(--tr-eyebrow);
-  text-transform: uppercase;
-}
-/* A category dot per change kind. Anything outside the three canonical headings — a first release's
-   "Highlights" — keeps the neutral dot rather than being mislabelled. */
-.cl-section-heading::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: var(--cl-ash);
-  flex: none;
-}
-.cl-section-heading[data-heading="added"]::before {
-  background: var(--sticker-green);
-}
-.cl-section-heading[data-heading="fixed"]::before {
-  background: var(--sticker-sky);
-}
-.cl-section-heading[data-heading="changed"]::before {
-  background: var(--sticker-orange);
+  margin-top: 10px;
 }
 
-.cl-items {
+.clg-badge {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.clg-badge[data-kind="current"] {
+  background: var(--lp-ink);
+  color: var(--lp-on-dark);
+}
+
+.clg-badge[data-kind="prerelease"] {
+  border: 1px solid var(--lp-hairline-strong);
+  color: var(--lp-charcoal);
+}
+
+.clg-date {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--lp-mute);
+}
+
+/* notes */
+
+.clg-intro {
+  margin: 0 0 16px;
+  max-width: 640px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--lp-charcoal);
+}
+
+.clg-section {
+  margin-top: 20px;
+}
+
+.clg-section:first-child {
+  margin-top: 0;
+}
+
+.clg-section h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lp-mute);
+}
+
+.clg-section ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.cl-items li {
+
+.clg-section li {
   position: relative;
-  padding: var(--sp-xxs) 0 var(--sp-xxs) var(--sp-md);
-  color: var(--cl-ink-2);
-  font-size: 15px;
-  line-height: 1.5;
+  max-width: 640px;
+  padding-left: 18px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--lp-charcoal);
 }
-.cl-items li::before {
+
+.clg-section li::before {
   content: "";
   position: absolute;
-  top: 0.72rem;
-  left: 0;
-  width: 4px;
-  height: 4px;
+  left: 2px;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
   border-radius: 9999px;
-  background: var(--cl-ash);
+  background: var(--lp-hairline-strong);
 }
 
-/* Inline link colour is the accent's other sanctioned use. */
-.cl-source {
+.clg-source {
   display: inline-block;
-  margin-top: var(--sp-md);
-  color: var(--primary);
-  font-size: 15px;
-  text-decoration: none;
-}
-.cl-source:hover {
+  margin-top: 24px;
+  font-size: 13.5px;
+  color: var(--lp-body);
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-/* ── empty state: an invitation to act ── */
-.cl-empty {
-  padding: clamp(3rem, 8vw, 5rem) var(--sp-lg);
-  border: 1px solid var(--cl-hairline);
-  border-radius: var(--r-lg);
-  background: var(--cl-surface);
+.clg-source:hover {
+  color: var(--lp-ink);
+}
+
+/* empty state */
+
+.clg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 80px 24px;
+  border: 1px solid var(--lp-hairline);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-surface-soft);
   text-align: center;
 }
-.cl-empty-title {
-  margin: 0 0 var(--sp-xxs);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.27;
-  letter-spacing: var(--tr-heading-3);
-}
-.cl-empty-hint {
-  margin: 0 auto var(--sp-lg);
-  max-width: 44ch;
-  color: var(--cl-ink-2);
-  font-size: 15px;
-  line-height: 1.5;
+
+.clg-empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lp-ink);
 }
 
-[lang="zh-CN"] .cl-hero-inner h1,
-[lang="zh-CN"] .cl-version {
-  letter-spacing: 0;
+.clg-empty-hint {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--lp-body);
+}
+
+/* ── responsive ── */
+
+@media (max-width: 768px) {
+  .clg-hero {
+    padding-top: 48px;
+  }
+
+  .clg-release {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding-block: 40px;
+  }
+
+  .clg-meta {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .clg-badges,
+  .clg-date {
+    margin-top: 0;
+  }
 }

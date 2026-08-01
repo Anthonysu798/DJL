@@ -583,6 +583,8 @@
       "enableSoftWrap": "자동 줄 바꿈 켜기"
     },
     "model": {
+      "agenticTools": "에이전트 도구",
+      "assistedTools": "보조 도구",
       "availability": {
         "checking": "확인 중",
         "comingSoon": "곧 출시 예정",
@@ -930,6 +932,10 @@
       "preparingWorktree": "작업 트리 준비 중...",
       "rawCall": "원시 통화",
       "revertMessage": "이 메시지로 되돌리기",
+      "savedMemoryTitle": "저장된 메모",
+      "savedToMemory": "프로젝트 메모리에 저장됨",
+      "saveToMemory": "프로젝트 메모리에 저장",
+      "saveToMemoryFailed": "프로젝트 메모리에 저장할 수 없습니다",
       "scrollBottom": "맨 아래로 스크롤",
       "selectionActions": "선택 작업",
       "sentViaAutomation": "자동화를 통해 전송됨",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "에이전트 도구",
+      "assistedTools": "보조 도구",
       "chatOnly": "채팅 전용",
       "checking": "로컬 모델 런타임 확인 중…",
       "connectedOn": "{{endpoint}}에 안전하게 연결됨",
@@ -1313,6 +1321,7 @@
       "removeButton": "삭제",
       "removeConfirmation": "Ollama에서 {{model}}을(를) 삭제할까요?",
       "removing": "삭제 중…",
+      "rerunCapabilityCheck": "도구 확인",
       "retryInstall": "설치 다시 시도",
       "runtimeAriaLabel": "로컬 모델 런타임",
       "runtimeDetails": {
@@ -2355,6 +2364,56 @@
       "ariaLabel": "DJL 초보자 안내",
       "back": "이전",
       "finish": "완료",
+      "modelGuide": {
+        "actions": {
+          "choose": "API 모델 선택",
+          "connect": "API 모델 연결",
+          "continue": "로컬 모델 계속 사용",
+          "how": "API 설정 방식"
+        },
+        "api": {
+          "bullets": {
+            "long": "긴 작업에서도 흐름을 잘 유지함",
+            "planning": "계획과 코드 작성 능력이 더 뛰어남",
+            "powerful": "더 강력한 온라인 모델 사용",
+            "tools": "도구를 더 안정적으로 사용"
+          },
+          "recommended": "추천",
+          "title": "API 모델"
+        },
+        "ariaLabel": "DJL에 알맞은 모델 선택",
+        "description": "DJL은 일을 돕고, 모델은 DJL의 두뇌 역할을 합니다. 더 강한 모델은 더 많은 단계를 기억하고 어려운 작업도 처리할 수 있습니다.",
+        "goodToKnow": {
+          "cost": "제공업체에서 사용 요금을 청구할 수 있음",
+          "internet": "인터넷 연결 필요",
+          "security": "DJL은 키를 안전하게 저장하며 UI로 다시 보내지 않음",
+          "title": "알아둘 점"
+        },
+        "largeLocal": "30B 이상의 로컬 모델도 잘 작동하지만 메모리가 많은 고성능 컴퓨터가 필요합니다.",
+        "local": {
+          "bullets": {
+            "computer": "내 컴퓨터에서 실행",
+            "long": "큰 작업에서는 단계를 놓칠 수 있음",
+            "private": "비공개로 오프라인에서도 사용 가능",
+            "simple": "짧고 간단한 작업에 적합"
+          },
+          "current": "현재 · {{model}}",
+          "title": "소형 로컬 모델"
+        },
+        "recommendation": "DJL로 프로젝트를 만들거나 코드를 작성하고 조사 및 자동화 작업을 하려면 API 모델을 사용하세요.",
+        "setup": {
+          "choose": "온라인 모델 제공업체를 선택합니다.",
+          "key": "해당 제공업체에서 API 키를 받습니다.",
+          "paste": "키를 DJL에 붙여 넣고 연결을 테스트합니다.",
+          "title": "간단한 3단계"
+        },
+        "sidebar": {
+          "description": "온라인 모델을 연결해 DJL의 강력한 에이전트 기능을 사용합니다.",
+          "recommended": "추천",
+          "title": "API 모델 설정"
+        },
+        "title": "DJL에 알맞은 두뇌 선택"
+      },
       "next": "다음",
       "progress": "{{current}} / {{total}}",
       "settings": {

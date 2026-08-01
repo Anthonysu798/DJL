@@ -3614,11 +3614,21 @@ function SettingsRouteView() {
       case "archived":
         return renderArchivedPanel();
       case "models":
-        return <OpenCodeModelsSettingsPanel cwd={providerModelDiscoveryCwd} />;
+        return (
+          <OpenCodeModelsSettingsPanel
+            cwd={providerModelDiscoveryCwd}
+            revealProviderAccess={settingsTarget === SETTINGS_TARGETS.modelProviders}
+          />
+        );
       case "local-models":
         return <LocalModelsSettingsPanel />;
       case "providers":
-        return <OpenCodeModelsSettingsPanel cwd={providerModelDiscoveryCwd} />;
+        return (
+          <OpenCodeModelsSettingsPanel
+            cwd={providerModelDiscoveryCwd}
+            revealProviderAccess={settingsTarget === SETTINGS_TARGETS.modelProviders}
+          />
+        );
       case "profile":
         return <ProfileSettingsPanel />;
       case "skills":

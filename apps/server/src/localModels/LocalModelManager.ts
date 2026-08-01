@@ -9,6 +9,7 @@ import { totalmem } from "node:os";
 import type {
   LocalHardwareProfile,
   LocalInstalledModel,
+  LocalModelCapabilityProfile,
   LocalModelHardwareProfile,
   LocalModelInstallInput,
   LocalModelInstallJob,
@@ -135,6 +136,17 @@ export interface LocalModelInferenceCanaryInput {
   readonly signal: AbortSignal;
 }
 
+export interface LocalModelCapabilityProbeInput {
+  readonly runtime: LocalModelRuntime;
+  readonly modelId: string;
+}
+
+export interface LocalModelCapabilityProbeResult {
+  readonly tier: LocalModelCapabilityProfile["tier"];
+  readonly result: LocalModelCapabilityProfile["result"];
+  readonly failureReason: string | null;
+}
+
 export interface LocalModelManagerOptions {
   readonly stateDir: string;
   readonly managedOpenCodeRootDir?: string;
@@ -155,6 +167,9 @@ export interface LocalModelManagerOptions {
   readonly onSnapshot?: (snapshot: LocalModelsSnapshot) => void | Promise<void>;
   readonly hardwareProfileProvider?: () => Promise<LocalModelHardwareProfile>;
   readonly runInferenceCanary?: (input: LocalModelInferenceCanaryInput) => Promise<void>;
+  readonly runCapabilityProbe?: (
+    input: LocalModelCapabilityProbeInput,
+  ) => Promise<LocalModelCapabilityProbeResult>;
   readonly installOllama?: (options: OllamaInstallOptions) => Promise<OllamaInstallResult>;
   readonly installLmStudio?: (options: LmStudioInstallOptions) => Promise<LmStudioInstallResult>;
   readonly spawnRuntime?: (
@@ -284,6 +299,9 @@ export class LocalModelManager {
   #hardwareSummaryPromise: Promise<LocalHardwareProfile> | null = null;
   readonly #hardwareProfileProvider: () => Promise<LocalModelHardwareProfile>;
   readonly #runInferenceCanary: (input: LocalModelInferenceCanaryInput) => Promise<void>;
+  readonly #runCapabilityProbe: (
+    input: LocalModelCapabilityProbeInput,
+  ) => Promise<LocalModelCapabilityProbeResult>;
   readonly #platform: NodeJS.Platform;
   readonly #arch: NodeJS.Architecture;
   readonly #processArch: NodeJS.Architecture;
@@ -303,6 +321,10 @@ export class LocalModelManager {
   // Measured tokens per second keyed by `${runtime}:${modelId}`; runtimes cannot report this.
   // Persisted alongside the setup jobs so a restart does not throw the numbers away.
   readonly #measuredSpeeds = new Map<string, number>();
+  readonly #capabilityProfiles = new Map<
+    string,
+    { readonly digest: string; readonly profile: LocalModelCapabilityProfile }
+  >();
   // Models already attempted this run, so one that cannot be timed is not retried every tick.
   readonly #attemptedSpeedKeys = new Set<string>();
   #residentMeasurement: Promise<void> | null = null;
@@ -391,6 +413,8 @@ export class LocalModelManager {
         }));
     this.#runInferenceCanary =
       options.runInferenceCanary ?? ((input) => this.#runDefaultInferenceCanary(input));
+    this.#runCapabilityProbe =
+      options.runCapabilityProbe ?? ((input) => this.#runDefaultCapabilityProbe(input));
     this.#configPath = join(
       options.managedOpenCodeRootDir ?? join(options.stateDir, "opencode"),
       "config",
@@ -427,7 +451,9 @@ export class LocalModelManager {
     if (options.synchronizeConfig !== false) {
       await this.#synchronizeOpenCodeConfig();
     }
-    const installedModels = [...this.#knownModels.values()].flat();
+    const installedModels = [...this.#knownModels.values()]
+      .flat()
+      .map((model) => this.#modelWithCapabilityProfile(model));
     const [hardware, hardwareProfile] = await Promise.all([
       this.#getHardwareSummary(),
       this.#getHardwareProfile(),
@@ -477,11 +503,57 @@ export class LocalModelManager {
     if (!runtime) return null;
     const modelId = modelSlug.slice(runtime.length + 1);
     const snapshot = await this.getSnapshot({ synchronizeConfig: false });
-    return (
-      snapshot.installedModels.find(
-        (model) => model.runtime === runtime && model.modelId === modelId,
-      )?.supportsToolCalls ?? null
+    const model = snapshot.installedModels.find(
+      (candidate) => candidate.runtime === runtime && candidate.modelId === modelId,
     );
+    if (!model) return null;
+    const digest = this.#capabilityDigest(model);
+    if (model.supportsToolCalls === false) {
+      this.#capabilityProfiles.set(modelSlug, {
+        digest,
+        profile: {
+          tier: "chat-only",
+          runtimeDigest: digest,
+          probedAt: this.#now().toISOString(),
+          result: "failed",
+          failureReason: "The model is known to be unable to produce valid tool calls.",
+        },
+      });
+      await this.#persistSetupState();
+      return false;
+    }
+    const cached = this.#capabilityProfiles.get(modelSlug);
+    if (cached?.digest === digest) {
+      return cached.profile.result === "passed" && cached.profile.tier !== "chat-only";
+    }
+    let result: LocalModelCapabilityProbeResult;
+    try {
+      result = await this.#runCapabilityProbe({ runtime, modelId });
+    } catch {
+      // An unavailable runtime is not evidence that the model lacks tools. Retry on next use.
+      return null;
+    }
+    if (result.result === "unknown") return null;
+    this.#capabilityProfiles.set(modelSlug, {
+      digest,
+      profile: {
+        ...result,
+        runtimeDigest: digest,
+        probedAt: this.#now().toISOString(),
+      },
+    });
+    await this.#persistSetupState();
+    await this.#emitLatestSnapshot();
+    return result.result === "passed" && result.tier !== "chat-only";
+  }
+
+  async rerunCapabilityCheck(input: LocalModelCapabilityProbeInput): Promise<LocalModelsSnapshot> {
+    const modelSlug = `${input.runtime}/${input.modelId}`;
+    this.#capabilityProfiles.delete(modelSlug);
+    await this.toolSupportForModel(modelSlug);
+    const snapshot = await this.getSnapshot({ synchronizeConfig: false });
+    await this.#emitSnapshot(snapshot);
+    return snapshot;
   }
 
   async ensureRuntimeForModel(modelSlug: string): Promise<void> {
@@ -1932,6 +2004,27 @@ export class LocalModelManager {
               this.#measuredSpeeds.set(key, value);
             }
           }
+          for (const [modelSlug, value] of Object.entries(record(root?.capabilityProfiles) ?? {})) {
+            const entry = record(value);
+            const profile = record(entry?.profile);
+            if (
+              typeof entry?.digest === "string" &&
+              (profile?.tier === "chat-only" ||
+                profile?.tier === "assisted" ||
+                profile?.tier === "agentic") &&
+              (profile.result === "passed" ||
+                profile.result === "failed" ||
+                profile.result === "unknown") &&
+              typeof profile.runtimeDigest === "string" &&
+              typeof profile.probedAt === "string" &&
+              (profile.failureReason === null || typeof profile.failureReason === "string")
+            ) {
+              this.#capabilityProfiles.set(modelSlug, {
+                digest: entry.digest,
+                profile: profile as unknown as LocalModelCapabilityProfile,
+              });
+            }
+          }
         } catch (cause) {
           if ((cause as NodeJS.ErrnoException).code !== "ENOENT") {
             throw new LocalModelManagerError(
@@ -1977,6 +2070,7 @@ export class LocalModelManager {
         version: 2,
         jobs: [...this.#setupJobs.values()],
         speeds: Object.fromEntries(this.#measuredSpeeds),
+        capabilityProfiles: Object.fromEntries(this.#capabilityProfiles),
       },
       null,
       2,
@@ -2055,6 +2149,152 @@ export class LocalModelManager {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  #capabilityDigest(model: LocalInstalledModel): string {
+    return [
+      model.runtime,
+      model.modelId,
+      model.sizeBytes,
+      model.contextWindowTokens ?? "unknown",
+      model.loadedContextWindowTokens ?? "unknown",
+    ].join(":");
+  }
+
+  #modelWithCapabilityProfile(model: LocalInstalledModel): LocalInstalledModel {
+    const cached = this.#capabilityProfiles.get(`${model.runtime}/${model.modelId}`);
+    return cached?.digest === this.#capabilityDigest(model)
+      ? { ...model, capabilityProfile: cached.profile }
+      : model;
+  }
+
+  async #runDefaultCapabilityProbe(
+    input: LocalModelCapabilityProbeInput,
+  ): Promise<LocalModelCapabilityProbeResult> {
+    const endpoint = `${runtimeMetadata(input.runtime).endpoint}/v1/chat/completions`;
+    const request = async (body: Record<string, unknown>): Promise<Record<string, unknown>> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.#canaryRequestTimeoutMs);
+      try {
+        const response = await this.#fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: input.modelId, stream: false, max_tokens: 96, ...body }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Capability probe returned HTTP ${response.status}.`);
+        return record(await responseJson(response)) ?? {};
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+    const messageFrom = (payload: Record<string, unknown>): Record<string, unknown> | null => {
+      const choices = Array.isArray(payload.choices) ? payload.choices : [];
+      return record(record(choices[0])?.message);
+    };
+    const toolCallsFrom = (
+      message: Record<string, unknown> | null,
+    ): ReadonlyArray<Record<string, unknown>> =>
+      Array.isArray(message?.tool_calls)
+        ? message.tool_calls.flatMap((value) => {
+            const parsed = record(value);
+            return parsed ? [parsed] : [];
+          })
+        : [];
+    const tool = {
+      type: "function",
+      function: {
+        name: "djl_capability_probe",
+        description: "Return a deterministic probe token.",
+        parameters: {
+          type: "object",
+          properties: { token: { type: "string" } },
+          required: ["token"],
+          additionalProperties: false,
+        },
+      },
+    };
+
+    const plain = messageFrom(
+      await request({ messages: [{ role: "user", content: "Reply with READY." }] }),
+    );
+    if (!hasNonEmptyText(plain?.content) && !hasNonEmptyText(plain?.reasoning_content)) {
+      return {
+        tier: "chat-only",
+        result: "failed",
+        failureReason: "The model did not complete the plain-chat capability probe.",
+      };
+    }
+
+    const firstToolMessage = messageFrom(
+      await request({
+        messages: [
+          {
+            role: "user",
+            content:
+              "Call djl_capability_probe exactly once with token FIRST. Do not answer in prose.",
+          },
+        ],
+        tools: [tool],
+        tool_choice: "required",
+      }),
+    );
+    const firstToolCall = toolCallsFrom(firstToolMessage)[0];
+    const firstToolFunction = record(firstToolCall?.function);
+    if (!firstToolCall || firstToolFunction?.name !== "djl_capability_probe") {
+      return {
+        tier: "chat-only",
+        result: "failed",
+        failureReason: "The model did not produce a valid synthetic tool call.",
+      };
+    }
+
+    const synthesis = messageFrom(
+      await request({
+        messages: [
+          {
+            role: "user",
+            content: "Use the tool result and reply with the exact word SYNTHESIZED.",
+          },
+          {
+            role: "assistant",
+            content: null,
+            tool_calls: [firstToolCall],
+          },
+          {
+            role: "tool",
+            tool_call_id: firstToolCall.id,
+            content: '{"token":"SYNTHESIZED"}',
+          },
+        ],
+        tools: [tool],
+      }),
+    );
+    if (!hasNonEmptyText(synthesis?.content)) {
+      return {
+        tier: "chat-only",
+        result: "failed",
+        failureReason: "The model called a tool but could not synthesize its result.",
+      };
+    }
+
+    const secondToolMessage = messageFrom(
+      await request({
+        messages: [
+          {
+            role: "user",
+            content:
+              "Call djl_capability_probe exactly once with token SECOND. Do not answer in prose.",
+          },
+        ],
+        tools: [tool],
+        tool_choice: "required",
+      }),
+    );
+    const secondToolCall = toolCallsFrom(secondToolMessage)[0];
+    return secondToolCall && record(secondToolCall.function)?.name === "djl_capability_probe"
+      ? { tier: "agentic", result: "passed", failureReason: null }
+      : { tier: "assisted", result: "passed", failureReason: null };
   }
 
   #installationKindForCommand(command: string): LocalModelRuntimeInstallationKind {

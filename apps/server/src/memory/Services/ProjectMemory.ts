@@ -1,4 +1,10 @@
-import type { ProjectId, ThreadId, TurnId } from "@synara/contracts";
+import type {
+  MemoryContextReference,
+  ProjectId,
+  ProjectMemoryItem,
+  ThreadId,
+  TurnId,
+} from "@synara/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -52,6 +58,29 @@ export interface RetrieveProjectMemoryInput {
   readonly maxChars?: number;
 }
 
+export interface RetrieveExactProjectMemoryInput {
+  readonly projectId: ProjectId;
+  readonly references: ReadonlyArray<MemoryContextReference>;
+  readonly maxChars?: number;
+}
+
+export interface SaveProjectMemoryInput {
+  readonly projectId: ProjectId;
+  readonly title: string;
+  readonly content: string;
+}
+
+export interface RenameProjectMemoryInput {
+  readonly projectId: ProjectId;
+  readonly path: string;
+  readonly title: string;
+}
+
+export interface DeleteProjectMemoryInput {
+  readonly projectId: ProjectId;
+  readonly path: string;
+}
+
 export interface ProjectMemoryShape {
   readonly start: Effect.Effect<void, ProjectMemoryError>;
   readonly ensureProject: (
@@ -66,6 +95,20 @@ export interface ProjectMemoryShape {
   readonly retrieve: (
     input: RetrieveProjectMemoryInput,
   ) => Effect.Effect<ProjectMemoryRetrieval, ProjectMemoryError>;
+  readonly retrieveExact: (
+    input: RetrieveExactProjectMemoryInput,
+  ) => Effect.Effect<ProjectMemoryRetrieval, ProjectMemoryError>;
+  readonly list: (
+    projectId: ProjectId,
+    options?: { readonly includeTaskHistory?: boolean },
+  ) => Effect.Effect<ReadonlyArray<ProjectMemoryItem>, ProjectMemoryError>;
+  readonly save: (
+    input: SaveProjectMemoryInput,
+  ) => Effect.Effect<ProjectMemoryItem, ProjectMemoryError>;
+  readonly rename: (
+    input: RenameProjectMemoryInput,
+  ) => Effect.Effect<ProjectMemoryItem, ProjectMemoryError>;
+  readonly delete: (input: DeleteProjectMemoryInput) => Effect.Effect<void, ProjectMemoryError>;
   readonly reindexProject: (projectId: ProjectId) => Effect.Effect<void, ProjectMemoryError>;
   readonly vaultRoot: string;
   readonly projectRoot: (projectId: ProjectId) => string;

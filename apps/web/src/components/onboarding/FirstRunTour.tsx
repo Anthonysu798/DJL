@@ -1,4 +1,5 @@
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,29 +9,40 @@ import { ArrowLeftIcon, ArrowUpIcon } from "~/lib/icons";
 import {
   FIRST_RUN_TOUR_REPLAY_EVENT,
   FIRST_RUN_TOUR_STORAGE_KEY,
-  FIRST_RUN_CORE_TOUR_TARGETS,
-  FIRST_RUN_TOUR_TARGETS,
   FirstRunTourStorageSchema,
   INITIAL_FIRST_RUN_TOUR_STORAGE,
+  INITIAL_MODEL_GUIDE_STORAGE,
   INITIAL_SETTINGS_TOUR_STORAGE,
   markFirstRunTourSeen,
+  markModelGuideSeen,
   markSettingsTourSeen,
+  MODEL_GUIDE_REPLAY_EVENT,
+  MODEL_GUIDE_STORAGE_KEY,
+  MODEL_GUIDE_TARGET,
+  MODEL_GUIDE_VERSION,
+  ModelGuideStorageSchema,
+  requestModelPickerOpen,
+  resolveFirstRunTourTargets,
   SETTINGS_TOUR_REPLAY_EVENT,
   SETTINGS_TOUR_STORAGE_KEY,
   SettingsTourStorageSchema,
   settingsTourTarget,
   shouldAutoStartFirstRunTour,
+  shouldAutoStartModelGuide,
   shouldAutoStartSettingsTour,
 } from "~/onboarding/firstRunTour";
+import { openCodeModelProvidersQueryOptions } from "~/lib/providerDiscoveryReactQuery";
 import {
   isSettingsSectionVisible,
   normalizeSettingsSection,
   SETTINGS_NAV_ITEMS,
+  SETTINGS_TARGETS,
 } from "~/settingsNavigation";
 import { useStore } from "~/store";
 import { Button } from "../ui/button";
 import { Popover, PopoverDescription, PopoverPopup, PopoverTitle } from "../ui/popover";
 import { useSidebar } from "../ui/sidebar";
+import { ModelGuideCard } from "./ModelGuideCard";
 
 const AUTO_START_DELAY_MS = 700;
 const TARGET_DISCOVERY_TIMEOUT_MS = 1_500;
@@ -38,7 +50,7 @@ const SPOTLIGHT_PADDING_PX = 6;
 const SPOTLIGHT_TRANSITION_CLASS_NAME =
   "transition-[top,left,width,height] duration-150 ease-out motion-reduce:transition-none";
 
-type ActiveTour = "first-run" | "settings";
+type ActiveTour = "first-run" | "model-guide" | "settings";
 
 const SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter(
   (item) => isSettingsSectionVisible(item.id) && (!item.desktopOnly || isElectron),
@@ -70,6 +82,15 @@ function targetSelector(target: string): string {
   return `[data-onboarding-target="${target}"]`;
 }
 
+function findVisibleTarget(target: string): HTMLElement | null {
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>(targetSelector(target))).find((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }) ?? null
+  );
+}
+
 export function FirstRunTour() {
   const { t } = useTranslation("shell");
   const { t: tSettings } = useTranslation("settings");
@@ -89,38 +110,60 @@ export function FirstRunTour() {
     INITIAL_SETTINGS_TOUR_STORAGE,
     SettingsTourStorageSchema,
   );
+  const [modelGuideStorage, setModelGuideStorage] = useLocalStorage(
+    MODEL_GUIDE_STORAGE_KEY,
+    INITIAL_MODEL_GUIDE_STORAGE,
+    ModelGuideStorageSchema,
+  );
+  const modelProvidersQuery = useQuery({
+    ...openCodeModelProvidersQueryOptions(),
+    enabled: isElectron,
+  });
   const [activeTour, setActiveTour] = useState<ActiveTour | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null);
   const [includeLocalAiSteps, setIncludeLocalAiSteps] = useState(false);
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
   const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null);
+  const [modelGuideReady, setModelGuideReady] = useState(false);
   const autoStartScheduledRef = useRef<Record<ActiveTour, boolean>>({
     "first-run": false,
+    "model-guide": false,
     settings: false,
   });
 
   const isOpen = activeTour !== null;
+  const firstRunTargets = resolveFirstRunTourTargets({
+    includeLocalAiSteps,
+    includeModelGuide: isElectron,
+  });
   const tourTargets =
     activeTour === "settings"
       ? SETTINGS_TOUR_TARGETS
-      : includeLocalAiSteps
-        ? FIRST_RUN_TOUR_TARGETS
-        : FIRST_RUN_CORE_TOUR_TARGETS;
+      : activeTour === "model-guide"
+        ? [MODEL_GUIDE_TARGET]
+        : firstRunTargets;
   const stepTarget = tourTargets[stepIndex] ?? tourTargets[0] ?? null;
   const isLastStep = stepIndex === tourTargets.length - 1;
+  const isModelGuideStep = stepTarget === MODEL_GUIDE_TARGET;
 
   const finishTour = useCallback(() => {
     if (activeTour === "settings") {
       setSettingsStorage((current) => markSettingsTourSeen(current));
+    } else if (activeTour === "model-guide") {
+      setModelGuideStorage((current) => markModelGuideSeen(current));
     } else if (activeTour === "first-run") {
       setFirstRunStorage((current) => markFirstRunTourSeen(current));
+      if (isElectron) {
+        setModelGuideStorage((current) => markModelGuideSeen(current));
+      }
     }
     setActiveTour(null);
     setPendingStepIndex(null);
     setTargetElement(null);
     setSpotlightRect(null);
-  }, [activeTour, setFirstRunStorage, setSettingsStorage]);
+    setModelGuideReady(false);
+  }, [activeTour, setFirstRunStorage, setModelGuideStorage, setSettingsStorage]);
 
   const navigateToSettingsTourStep = useCallback(
     (nextStepIndex: number) => {
@@ -146,6 +189,7 @@ export function FirstRunTour() {
       setPendingStepIndex(null);
       setTargetElement(null);
       setSpotlightRect(null);
+      setModelGuideReady(false);
       if (tour === "first-run") {
         setIncludeLocalAiSteps(document.querySelector(targetSelector("local-ai-card")) !== null);
       }
@@ -153,7 +197,7 @@ export function FirstRunTour() {
       if (isMobile) setOpenMobile(true);
 
       const showTour = () => setActiveTour(tour);
-      if (tour === "first-run" && pathname === "/settings") {
+      if ((tour === "first-run" || tour === "model-guide") && pathname === "/settings") {
         void navigate({ to: "/" }).then(showTour);
         return;
       }
@@ -170,6 +214,12 @@ export function FirstRunTour() {
     const replay = () => startTour("first-run");
     window.addEventListener(FIRST_RUN_TOUR_REPLAY_EVENT, replay);
     return () => window.removeEventListener(FIRST_RUN_TOUR_REPLAY_EVENT, replay);
+  }, [startTour]);
+
+  useEffect(() => {
+    const replay = () => startTour("model-guide");
+    window.addEventListener(MODEL_GUIDE_REPLAY_EVENT, replay);
+    return () => window.removeEventListener(MODEL_GUIDE_REPLAY_EVENT, replay);
   }, [startTour]);
 
   useEffect(() => {
@@ -203,10 +253,44 @@ export function FirstRunTour() {
   }, [activeTour, firstRunStorage.seenVersion, startTour, threadsHydrated]);
 
   useEffect(() => {
+    if (!isElectron) return;
+    const scheduledTours = autoStartScheduledRef.current;
+    if (
+      activeTour !== null ||
+      scheduledTours["first-run"] ||
+      scheduledTours["model-guide"] ||
+      !shouldAutoStartModelGuide({
+        firstRunSeenVersion: firstRunStorage.seenVersion,
+        seenVersion: modelGuideStorage.seenVersion,
+        threadsHydrated,
+      })
+    ) {
+      return;
+    }
+    scheduledTours["model-guide"] = true;
+    let started = false;
+    const timeout = window.setTimeout(() => {
+      started = true;
+      startTour("model-guide");
+    }, AUTO_START_DELAY_MS);
+    return () => {
+      window.clearTimeout(timeout);
+      if (!started) scheduledTours["model-guide"] = false;
+    };
+  }, [
+    activeTour,
+    firstRunStorage.seenVersion,
+    modelGuideStorage.seenVersion,
+    startTour,
+    threadsHydrated,
+  ]);
+
+  useEffect(() => {
     const scheduledTours = autoStartScheduledRef.current;
     if (
       activeTour !== null ||
       scheduledTours.settings ||
+      (isElectron && modelGuideStorage.seenVersion < MODEL_GUIDE_VERSION) ||
       !shouldAutoStartSettingsTour({
         firstRunSeenVersion: firstRunStorage.seenVersion,
         pathname,
@@ -230,6 +314,7 @@ export function FirstRunTour() {
     activeTour,
     firstRunStorage.seenVersion,
     pathname,
+    modelGuideStorage.seenVersion,
     settingsStorage.seenVersion,
     startTour,
     threadsHydrated,
@@ -288,11 +373,12 @@ export function FirstRunTour() {
     let observer: MutationObserver | null = null;
     const findTarget = () => {
       if (found) return;
-      const nextTarget = document.querySelector<HTMLElement>(targetSelector(stepTarget));
+      const nextTarget = findVisibleTarget(stepTarget);
       if (!nextTarget) return;
       found = true;
       observer?.disconnect();
       setTargetElement(nextTarget);
+      if (stepTarget === MODEL_GUIDE_TARGET) setModelGuideReady(true);
       nextTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
     };
     findTarget();
@@ -302,6 +388,10 @@ export function FirstRunTour() {
     }
     const timeout = window.setTimeout(() => {
       if (found) return;
+      if (stepTarget === MODEL_GUIDE_TARGET) {
+        setModelGuideReady(true);
+        return;
+      }
       if (isLastStep) finishTour();
       else moveToStep(stepIndex + 1);
     }, TARGET_DISCOVERY_TIMEOUT_MS);
@@ -341,6 +431,12 @@ export function FirstRunTour() {
   }, [finishTour, isOpen]);
 
   const stepCopy = useMemo(() => {
+    if (isModelGuideStep) {
+      return {
+        description: t("onboarding.modelGuide.description"),
+        title: t("onboarding.modelGuide.title"),
+      };
+    }
     if (activeTour === "settings") {
       const item = SETTINGS_TOUR_ITEMS[stepIndex] ?? SETTINGS_TOUR_ITEMS[0];
       return {
@@ -352,12 +448,49 @@ export function FirstRunTour() {
       description: stepTarget ? t(`onboarding.steps.${stepTarget}.description`) : "",
       title: stepTarget ? t(`onboarding.steps.${stepTarget}.title`) : "",
     };
-  }, [activeTour, stepIndex, stepTarget, t, tSettings]);
+  }, [activeTour, isModelGuideStep, stepIndex, stepTarget, t, tSettings]);
 
   const tourAriaLabel =
     activeTour === "settings" ? t("settingsTour.ariaLabel") : t("onboarding.ariaLabel");
 
-  if (!isOpen || !stepTarget || !targetElement || !spotlightRect) return null;
+  if (!isOpen || !stepTarget) return null;
+
+  if (isModelGuideStep) {
+    if (!modelGuideReady) return null;
+    const currentModel = targetElement?.dataset.onboardingCurrentModel?.trim() || null;
+    const hasConnectedProvider = (modelProvidersQuery.data?.configuredProviderCount ?? 0) > 0;
+    return (
+      <ModelGuideCard
+        anchor={targetElement}
+        currentModel={currentModel}
+        hasConnectedProvider={hasConnectedProvider}
+        connectionPending={modelProvidersQuery.isLoading}
+        onConnect={() => {
+          // The Settings tour also auto-starts the first time a new user enters Settings.
+          // This CTA is already a guided handoff, so keep that tour queued for a later visit
+          // instead of letting it replace the provider deep link after its start delay.
+          autoStartScheduledRef.current.settings = true;
+          finishTour();
+          void navigate({
+            to: "/settings",
+            search: (previous) => ({
+              ...previous,
+              section: "models",
+              target: SETTINGS_TARGETS.modelProviders,
+            }),
+          });
+        }}
+        onChoose={() => {
+          const modelPickerTarget = targetElement;
+          finishTour();
+          window.setTimeout(() => requestModelPickerOpen(modelPickerTarget), 0);
+        }}
+        onContinue={finishTour}
+      />
+    );
+  }
+
+  if (!targetElement || !spotlightRect) return null;
 
   const top = Math.max(0, spotlightRect.top - SPOTLIGHT_PADDING_PX);
   const left = Math.max(0, spotlightRect.left - SPOTLIGHT_PADDING_PX);

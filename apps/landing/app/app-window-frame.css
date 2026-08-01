@@ -1,0 +1,55 @@
+.awf {
+  margin: 0;
+  background: var(--lp-canvas);
+  border: 1px solid var(--lp-hairline);
+  border-radius: var(--lp-r-lg);
+  overflow: hidden;
+}
+
+.awf-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--lp-hairline);
+}
+
+.awf-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+}
+
+.awf-dot--red {
+  background: var(--lp-terminal-red);
+}
+
+.awf-dot--yellow {
+  background: var(--lp-terminal-yellow);
+}
+
+.awf-dot--green {
+  background: var(--lp-terminal-green);
+}
+
+.awf-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+  background: var(--lp-surface-soft);
+}
+
+.awf-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.awf-placeholder {
+  font-family: var(--lp-font-mono);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--lp-mute);
+}

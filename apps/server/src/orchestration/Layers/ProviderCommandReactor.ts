@@ -25,6 +25,7 @@ import {
   type ProviderSession,
   type RuntimeMode,
   TurnId,
+  type WorkTurnPolicy,
 } from "@synara/contracts";
 import {
   Cache,
@@ -60,7 +61,11 @@ import {
 } from "../../checkpointing/Utils.ts";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
-import { ProviderAdapterRequestError, ProviderServiceError } from "../../provider/Errors.ts";
+import {
+  ProviderAdapterRequestError,
+  ProviderAdapterValidationError,
+  ProviderServiceError,
+} from "../../provider/Errors.ts";
 import { isOpenCodeSessionNotFoundDetail } from "../../provider/openCodeSessionRecovery.ts";
 import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
 import {
@@ -73,6 +78,7 @@ import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import type { WorkPreparationJobRecord } from "../../persistence/Services/WorkPreparationRepository.ts";
 import { resolveWorkModelDocumentRouting } from "../../work/modelDocumentRouting.ts";
+import { buildGroundedWorkPrompt, decideWorkTurnPolicy } from "../../work/workRouter.ts";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
@@ -1096,6 +1102,7 @@ const make = Effect.gen(function* () {
     readonly runtimeMode?: RuntimeMode;
     readonly interactionMode?: "default" | "plan";
     readonly dispatchMode?: "queue" | "steer";
+    readonly workTurnPolicy?: WorkTurnPolicy;
     readonly createdAt: string;
   }) {
     const thread = yield* resolveThread(input.threadId);
@@ -1289,6 +1296,7 @@ const make = Effect.gen(function* () {
         ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
         ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
+        ...(input.workTurnPolicy !== undefined ? { workTurnPolicy: input.workTurnPolicy } : {}),
       });
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
@@ -1777,7 +1785,13 @@ const make = Effect.gen(function* () {
     }
 
     const project = yield* resolveThreadWorkspaceProject(thread);
-    if (!preparedJob && project?.kind === "studio") {
+    const isWorkSurface = project?.kind === "studio" || project?.kind === "chat";
+    const requiresWorkPreparation =
+      project?.kind === "studio" ||
+      (message.attachments?.length ?? 0) > 0 ||
+      event.payload.memoryContext?.searchProject === true ||
+      (event.payload.memoryContext?.references.length ?? 0) > 0;
+    if (!preparedJob && isWorkSurface && requiresWorkPreparation) {
       // Work preparation owns document extraction and memory retrieval. Keep it
       // off the provider worker so other tasks remain responsive under load.
       yield* workPreparationQueue.enqueue({
@@ -1890,11 +1904,30 @@ const make = Effect.gen(function* () {
     const providerAttachments = preparedJob
       ? attachmentsForPreparedWorkTurn(preparedJob, thread)
       : message.attachments;
+    const workTurnPolicy =
+      preparedJob || isWorkSurface
+        ? decideWorkTurnPolicy({
+            prompt: message.text,
+            hasAttachments: (message.attachments?.length ?? 0) > 0,
+          })
+        : undefined;
+    const hasExplicitWorkContext =
+      preparedJob !== undefined &&
+      (preparedJob.attachments.length > 0 ||
+        preparedJob.request.memoryContext?.searchProject === true ||
+        (preparedJob.request.memoryContext?.references.length ?? 0) > 0);
 
     yield* dispatchTurnForThread({
       threadId: event.payload.threadId,
       messageId: message.id,
-      messageText: preparedJob?.preparedPrompt ?? message.text,
+      messageText: workTurnPolicy
+        ? buildGroundedWorkPrompt(
+            preparedJob && hasExplicitWorkContext
+              ? (preparedJob.preparedPrompt ?? message.text)
+              : message.text,
+            workTurnPolicy,
+          )
+        : message.text,
       ...(providerAttachments !== undefined ? { attachments: providerAttachments } : {}),
       ...(message.skills !== undefined ? { skills: message.skills } : {}),
       ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
@@ -1912,6 +1945,7 @@ const make = Effect.gen(function* () {
         : {}),
       interactionMode: event.payload.interactionMode,
       dispatchMode: immediateDispatchMode,
+      ...(workTurnPolicy ? { workTurnPolicy } : {}),
       createdAt: event.payload.createdAt,
     }).pipe(
       Effect.tap(() =>
@@ -1921,7 +1955,9 @@ const make = Effect.gen(function* () {
       ),
       Effect.catchCause((cause) =>
         Effect.gen(function* () {
-          const detail = Cause.pretty(cause);
+          const failure = Cause.squash(cause);
+          const detail =
+            failure instanceof ProviderAdapterValidationError ? failure.issue : Cause.pretty(cause);
           yield* appendProviderFailureActivity({
             threadId: event.payload.threadId,
             kind: "provider.turn.start.failed",

@@ -139,6 +139,15 @@ export const LocalModelHardwareProfile = Schema.Struct({
 });
 export type LocalModelHardwareProfile = typeof LocalModelHardwareProfile.Type;
 
+export const LocalModelCapabilityProfile = Schema.Struct({
+  tier: Schema.Literals(["chat-only", "assisted", "agentic"]),
+  runtimeDigest: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+  probedAt: IsoDateTime,
+  result: Schema.Literals(["passed", "failed", "unknown"]),
+  failureReason: Schema.NullOr(BoundedDetail),
+});
+export type LocalModelCapabilityProfile = typeof LocalModelCapabilityProfile.Type;
+
 export const LocalInstalledModel = Schema.Struct({
   runtime: LocalModelRuntime,
   modelId: ModelIdentifier,
@@ -149,6 +158,7 @@ export const LocalInstalledModel = Schema.Struct({
   loadedContextWindowTokens: Schema.optional(Schema.NullOr(PositiveInt)),
   toolContextWindowReady: Schema.optional(Schema.NullOr(Schema.Boolean)),
   supportsToolCalls: Schema.NullOr(Schema.Boolean),
+  capabilityProfile: Schema.optional(LocalModelCapabilityProfile),
   // Measured during setup on this machine; null until a warm-up run has timed the model.
   tokensPerSecond: Schema.optional(Schema.NullOr(NonNegativeInt)),
 });
@@ -316,6 +326,12 @@ export const LocalModelRemoveInput = Schema.Union([
   LmStudioLocalModelRemoveInput,
 ]);
 export type LocalModelRemoveInput = typeof LocalModelRemoveInput.Type;
+
+export const LocalModelCapabilityCheckInput = Schema.Struct({
+  runtime: LocalModelRuntime,
+  modelId: ModelIdentifier,
+});
+export type LocalModelCapabilityCheckInput = typeof LocalModelCapabilityCheckInput.Type;
 
 export const LocalModelEvent = Schema.Struct({
   type: Schema.Literal("snapshot.updated"),

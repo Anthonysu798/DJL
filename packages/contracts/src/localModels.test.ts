@@ -46,6 +46,29 @@ describe("local model contracts", () => {
     });
   });
 
+  it("decodes a behavior-probed capability profile", async () => {
+    const model = await Effect.runPromise(
+      decodeInstalledModel({
+        runtime: "ollama",
+        modelId: "qwen2.5:3b",
+        name: "Qwen 2.5 3B",
+        sizeBytes: 1_900_000_000,
+        contextWindowTokens: 32_768,
+        supportsToolCalls: true,
+        capabilityProfile: {
+          tier: "assisted",
+          runtimeDigest: "ollama:0.12.0:qwen2.5:3b:sha256-example",
+          probedAt: "2026-07-30T17:00:00.000Z",
+          result: "passed",
+          failureReason: null,
+        },
+      }),
+    );
+
+    expect(model.capabilityProfile?.tier).toBe("assisted");
+    expect(model.capabilityProfile?.result).toBe("passed");
+  });
+
   it("decodes a bounded desktop runtime snapshot", async () => {
     const snapshot = await Effect.runPromise(
       decodeSnapshot({

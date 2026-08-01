@@ -100,6 +100,10 @@ function callProvider(
   );
 }
 
+export function appendWebRetrievalTime(output: string, retrievedAt = new Date()): string {
+  return `${output.trim()}\n\nRetrieved at: ${retrievedAt.toISOString()}`;
+}
+
 export const WebSearchTool = Tool.define(
   "websearch",
   Effect.gen(function* () {
@@ -137,7 +141,9 @@ export const WebSearchTool = Tool.define(
           const result = yield* callProvider(http, provider, params, ctx);
 
           return {
-            output: result ?? "No search results found. Please try a different query.",
+            output: appendWebRetrievalTime(
+              result ?? "No search results found. Please try a different query.",
+            ),
             title: `${title}: ${params.query}`,
             metadata: { provider },
           };

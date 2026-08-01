@@ -30,6 +30,10 @@ import {
   OrchestrationGetSnapshotInput,
   OrchestrationGetTurnDiffInput,
   OrchestrationReplayEventsInput,
+  ProjectMemoryDeleteInput,
+  ProjectMemoryListInput,
+  ProjectMemoryRenameInput,
+  ProjectMemorySaveInput,
 } from "./orchestration";
 import {
   GitActionProgressEvent,
@@ -125,6 +129,7 @@ import {
   LmStudioLocalModelInstallInput,
   LmStudioLocalModelRemoveInput,
   LocalModelCancelInstallInput,
+  LocalModelCapabilityCheckInput,
   LocalModelEvent,
   LocalModelRuntimeInput,
   LocalModelSetupInput,
@@ -271,8 +276,15 @@ export const WS_METHODS = {
   localModelsStartSetup: "localModels.startSetup",
   localModelsRetrySetup: "localModels.retrySetup",
   localModelsCancelSetup: "localModels.cancelSetup",
+  localModelsRerunCapabilityCheck: "localModels.rerunCapabilityCheck",
   localModelsRemoveModel: "localModels.removeModel",
   subscribeLocalModelEvents: "localModels.subscribe",
+
+  // Explicit-use project memory
+  projectMemoryList: "projectMemory.list",
+  projectMemorySave: "projectMemory.save",
+  projectMemoryRename: "projectMemory.rename",
+  projectMemoryDelete: "projectMemory.delete",
 
   // DJL AI Writing Check
   aiDetectorGetState: "aiDetector.getState",
@@ -462,9 +474,14 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.localModelsStartSetup, LocalModelSetupInput),
   tagRequestBody(WS_METHODS.localModelsRetrySetup, LocalModelSetupJobInput),
   tagRequestBody(WS_METHODS.localModelsCancelSetup, LocalModelSetupJobInput),
+  tagRequestBody(WS_METHODS.localModelsRerunCapabilityCheck, LocalModelCapabilityCheckInput),
   tagRequestBody(WS_METHODS.localModelsRemoveModel, OllamaLocalModelRemoveInput),
   tagRequestBody(WS_METHODS.localModelsRemoveModel, LmStudioLocalModelRemoveInput),
   tagRequestBody(WS_METHODS.subscribeLocalModelEvents, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.projectMemoryList, ProjectMemoryListInput),
+  tagRequestBody(WS_METHODS.projectMemorySave, ProjectMemorySaveInput),
+  tagRequestBody(WS_METHODS.projectMemoryRename, ProjectMemoryRenameInput),
+  tagRequestBody(WS_METHODS.projectMemoryDelete, ProjectMemoryDeleteInput),
 
   // DJL AI Writing Check
   tagRequestBody(WS_METHODS.aiDetectorGetState, Schema.Struct({})),

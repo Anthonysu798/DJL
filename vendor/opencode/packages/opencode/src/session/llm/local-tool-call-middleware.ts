@@ -6,6 +6,10 @@ type LocalTextToolCall = {
   readonly arguments: Record<string, unknown>;
 };
 
+export function supportsTextToolCallRecovery(providerID: string): boolean {
+  return ["deepseek", "ollama", "lmstudio"].includes(providerID.toLowerCase());
+}
+
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -57,8 +61,56 @@ function splitJsonObjects(text: string): string[] | undefined {
   return objects.length > 0 ? objects : undefined;
 }
 
+function decodeDsmlText(text: string): string {
+  return text
+    .replace(/&quot;/gu, '"')
+    .replace(/&apos;|&#39;/gu, "'")
+    .replace(/&lt;/gu, "<")
+    .replace(/&gt;/gu, ">")
+    .replace(/&amp;/gu, "&");
+}
+
+function dsmlToolCallJsonBlocks(text: string): string[] | undefined {
+  const match =
+    /^<｜{1,2}DSML｜{1,2}tool_calls>\s*([\s\S]*?)\s*<\/｜{1,2}DSML｜{1,2}tool_calls>$/u.exec(
+      stripCodeFence(text),
+    );
+  if (!match) return undefined;
+
+  const calls: string[] = [];
+  const remainder = match[1].replace(
+    /<｜{1,2}DSML｜{1,2}invoke\s+name="([\w.-]+)">\s*([\s\S]*?)\s*<\/｜{1,2}DSML｜{1,2}invoke>/gu,
+    (_invoke, name: string, body: string) => {
+      const args: Record<string, unknown> = {};
+      let valid = true;
+      const parameterRemainder = body.replace(
+        /<｜{1,2}DSML｜{1,2}parameter\s+name="([\w.-]+)"\s+string="(true|false)">\s*([\s\S]*?)\s*<\/｜{1,2}DSML｜{1,2}parameter>/gu,
+        (_parameter, parameterName: string, isString: string, value: string) => {
+          const decoded = decodeDsmlText(value);
+          if (isString === "true") {
+            args[parameterName] = decoded;
+            return "";
+          }
+          try {
+            args[parameterName] = JSON.parse(decoded);
+          } catch {
+            valid = false;
+          }
+          return "";
+        },
+      );
+      if (!valid || parameterRemainder.trim().length > 0) return _invoke;
+      calls.push(JSON.stringify({ name, arguments: args }));
+      return "";
+    },
+  );
+  return remainder.trim().length === 0 && calls.length > 0 ? calls : undefined;
+}
+
 function toolCallJsonBlocks(text: string): string[] | undefined {
   const normalized = stripCodeFence(text);
+  const dsml = dsmlToolCallJsonBlocks(normalized);
+  if (dsml) return dsml;
   if (!normalized.includes("<tool_call>")) return splitJsonObjects(normalized);
 
   const blocks: string[] = [];

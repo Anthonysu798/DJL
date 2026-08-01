@@ -4,7 +4,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageCircleIcon, PencilIcon, TextWrapIcon } from "~/lib/icons";
+import { BrainIcon, MessageCircleIcon, PencilIcon, TextWrapIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
 interface TranscriptSelectionActionProps {
@@ -15,6 +15,7 @@ interface TranscriptSelectionActionProps {
   // surfaces (file preview, diff view) omit them and get an add-only toolbar.
   onHighlight?: (() => void) | undefined;
   onUnderline?: (() => void) | undefined;
+  onSaveToMemory?: (() => void) | undefined;
   onAddToChat: () => void;
 }
 
@@ -79,6 +80,14 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
             onClick={props.onUnderline}
           >
             <TextWrapIcon className="size-3.5" />
+          </TranscriptSelectionToolbarButton>
+        ) : null}
+        {props.onSaveToMemory ? (
+          <TranscriptSelectionToolbarButton
+            label={t("transcript.saveToMemory")}
+            onClick={props.onSaveToMemory}
+          >
+            <BrainIcon className="size-3.5" />
           </TranscriptSelectionToolbarButton>
         ) : null}
         <TranscriptSelectionToolbarButton

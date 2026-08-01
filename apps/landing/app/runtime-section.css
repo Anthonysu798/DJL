@@ -1,0 +1,133 @@
+.lp-runtime-head {
+  max-width: 640px;
+}
+
+.lp-runtime-title {
+  margin: 12px 0 0;
+  font-family: var(--lp-font-display);
+  font-size: clamp(1.9rem, 2.6vw + 1rem, 2.6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--lp-ink);
+}
+
+.lp-runtime-body {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--lp-body);
+}
+
+.lp-runtime-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 40px;
+}
+
+.lp-runtime-card {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  border: 1px solid var(--lp-hairline);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-canvas);
+}
+
+/* the section's subject gets the stronger hairline — emphasis without a second
+   dark surface on the page */
+.lp-runtime-card--api {
+  border-color: var(--lp-hairline-strong);
+}
+
+.lp-runtime-tag {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--lp-hairline);
+  background: var(--lp-surface-soft);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--lp-charcoal);
+}
+
+.lp-runtime-tag--ink {
+  border-color: var(--lp-ink);
+  background: var(--lp-ink);
+  color: var(--lp-on-dark);
+}
+
+.lp-runtime-card h3 {
+  margin: 18px 0 0;
+  font-family: var(--lp-font-display);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--lp-ink);
+}
+
+.lp-runtime-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-runtime-card li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--lp-charcoal);
+}
+
+.lp-runtime-card li::before {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.lp-runtime-card li[data-kind="pro"]::before {
+  content: "✓";
+  color: var(--lp-ink);
+}
+
+.lp-runtime-card li[data-kind="con"]::before {
+  content: "–";
+  color: var(--lp-mute);
+}
+
+.lp-runtime-card li[data-kind="con"] {
+  color: var(--lp-body);
+}
+
+.lp-runtime-note {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--lp-hairline);
+  font-size: 13px;
+  color: var(--lp-mute);
+}
+
+.lp-runtime-closing {
+  max-width: 720px;
+  margin: 56px auto 0;
+  text-align: center;
+  font-family: var(--lp-font-display);
+  font-size: clamp(1.15rem, 1vw + 0.9rem, 1.45rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--lp-ink);
+}
+
+@media (max-width: 880px) {
+  .lp-runtime-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-runtime-closing {
+    margin-top: 40px;
+  }
+}

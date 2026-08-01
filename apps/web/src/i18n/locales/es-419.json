@@ -583,6 +583,8 @@
       "enableSoftWrap": "Activar ajuste de línea"
     },
     "model": {
+      "agenticTools": "Herramientas autónomas",
+      "assistedTools": "Herramientas asistidas",
       "availability": {
         "checking": "comprobando",
         "comingSoon": "Próximamente",
@@ -930,6 +932,10 @@
       "preparingWorktree": "Preparando árbol de trabajo...",
       "rawCall": "llamada sin procesar",
       "revertMessage": "Volver a este mensaje",
+      "savedMemoryTitle": "Nota guardada",
+      "savedToMemory": "Guardado en la memoria del proyecto",
+      "saveToMemory": "Guardar en la memoria del proyecto",
+      "saveToMemoryFailed": "No se pudo guardar en la memoria del proyecto",
       "scrollBottom": "Desplazarse al final",
       "selectionActions": "Acciones de selección",
       "sentViaAutomation": "Enviado vía Automatización",
@@ -1215,6 +1221,8 @@
       }
     },
     "localModels": {
+      "agenticTools": "Herramientas autónomas",
+      "assistedTools": "Herramientas asistidas",
       "chatOnly": "Solo chat",
       "checking": "Comprobando entornos de modelos locales…",
       "connectedOn": "Conectado de forma segura en {{endpoint}}",
@@ -1313,6 +1321,7 @@
       "removeButton": "Eliminar",
       "removeConfirmation": "¿Eliminar {{model}} de Ollama?",
       "removing": "Eliminando…",
+      "rerunCapabilityCheck": "Probar herramientas",
       "retryInstall": "Reintentar instalación",
       "runtimeAriaLabel": "Entorno del modelo local",
       "runtimeDetails": {
@@ -2355,6 +2364,56 @@
       "ariaLabel": "Tutorial para nuevos usuarios de DJL",
       "back": "Atrás",
       "finish": "Finalizar",
+      "modelGuide": {
+        "actions": {
+          "choose": "Elegir modelo de API",
+          "connect": "Conectar modelo de API",
+          "continue": "Seguir usando el modelo local",
+          "how": "Cómo funciona la configuración"
+        },
+        "api": {
+          "bullets": {
+            "long": "Mantiene el rumbo en trabajos más largos",
+            "planning": "Planifica y escribe código mejor",
+            "powerful": "Usa un modelo más potente en línea",
+            "tools": "Usa las herramientas con mayor confiabilidad"
+          },
+          "recommended": "Recomendado",
+          "title": "Modelo de API"
+        },
+        "ariaLabel": "Elige el modelo adecuado para DJL",
+        "description": "DJL es quien ayuda. El modelo es su cerebro. Un modelo más potente recuerda más pasos y puede hacer trabajos más difíciles.",
+        "goodToKnow": {
+          "cost": "El proveedor puede cobrar por el uso",
+          "internet": "Necesita conexión a internet",
+          "security": "DJL guarda tu clave de forma segura y nunca la devuelve a la interfaz",
+          "title": "Información importante"
+        },
+        "largeLocal": "Un modelo local de 30B o más también puede funcionar bien, pero necesita una computadora potente con mucha memoria.",
+        "local": {
+          "bullets": {
+            "computer": "Se ejecuta en tu computadora",
+            "long": "Puede perder el hilo en trabajos grandes",
+            "private": "Es privado y funciona sin conexión",
+            "simple": "Ideal para tareas cortas y sencillas"
+          },
+          "current": "Actual · {{model}}",
+          "title": "Modelo local pequeño"
+        },
+        "recommendation": "Usa un modelo de API cuando quieras que DJL cree un proyecto, escriba código, investigue o automatice trabajo.",
+        "setup": {
+          "choose": "Elige un proveedor de modelos en línea.",
+          "key": "Obtén una clave de API de ese proveedor.",
+          "paste": "Pega la clave en DJL y prueba la conexión.",
+          "title": "Tres pasos sencillos"
+        },
+        "sidebar": {
+          "description": "Conecta un modelo en línea para usar las funciones de agente más potentes de DJL.",
+          "recommended": "Recomendado",
+          "title": "Configuración de modelo de API"
+        },
+        "title": "Elige el cerebro adecuado para DJL"
+      },
       "next": "Siguiente",
       "progress": "{{current}} de {{total}}",
       "settings": {

@@ -12,6 +12,7 @@ import {
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
   isChatOnlyModel,
+  modelCapabilityTier,
   providerModelCostMultiplierLabel,
   type ProviderModelOption,
   type ProviderModelOptionGroup,
@@ -66,9 +67,14 @@ function ProviderModelRadioItem(
   // explanation is more confusing than the limitation itself, and chatting with a small model is a
   // legitimate thing to want. The badge marks it here; picking it asks for confirmation.
   const chatOnly = isChatOnlyModel(modelOption);
-  const chatOnlyBadge = chatOnly ? (
+  const capabilityTier = modelCapabilityTier(modelOption);
+  const capabilityBadge = capabilityTier ? (
     <span className="ms-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 align-middle text-[9px] font-medium text-amber-700 dark:text-amber-400">
-      {t("model.chatOnly")}
+      {capabilityTier === "chat-only"
+        ? t("model.chatOnly")
+        : capabilityTier === "agentic"
+          ? t("model.agenticTools")
+          : t("model.assistedTools")}
     </span>
   ) : null;
 
@@ -130,12 +136,12 @@ function ProviderModelRadioItem(
           )}
         >
           {modelOption.name}
-          {chatOnlyBadge}
+          {capabilityBadge}
         </span>
       ) : (
         <>
           {modelOption.name}
-          {chatOnlyBadge}
+          {capabilityBadge}
         </>
       )}
     </MenuRadioItem>

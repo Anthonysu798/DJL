@@ -1,0 +1,65 @@
+.lp-localai-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.lp-localai-title {
+  margin: 12px 0 0;
+  font-family: var(--lp-font-display);
+  font-size: clamp(1.9rem, 2.6vw + 1rem, 2.6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--lp-ink);
+}
+
+.lp-localai-body {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--lp-body);
+}
+
+.lp-localai-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-localai-bullets li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--lp-charcoal);
+}
+
+.lp-localai-bullets li::before {
+  content: "✓";
+  font-weight: 600;
+  color: var(--lp-ink);
+}
+
+.lp-robot-stage {
+  position: relative;
+  height: clamp(420px, 58vh, 560px);
+  overflow: hidden;
+  border: 1px solid var(--lp-hairline);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-surface-soft);
+}
+
+@media (max-width: 1024px) {
+  .lp-localai-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .lp-robot-stage {
+    height: clamp(360px, 50vh, 480px);
+  }
+}

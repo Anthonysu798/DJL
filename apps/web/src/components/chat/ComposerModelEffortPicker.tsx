@@ -41,6 +41,7 @@ import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerP
 import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./composerTraits";
 import { ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderModelPicker";
 import { TraitsMenuContent } from "./TraitsPicker";
+import { MODEL_GUIDE_TARGET } from "~/onboarding/firstRunTour";
 
 type ComposerModelEffortPickerProps = {
   // Model picker data.
@@ -185,6 +186,8 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
 
   const triggerButton = (
     <Button
+      data-onboarding-current-model={modelLabel}
+      data-onboarding-target={MODEL_GUIDE_TARGET}
       size="sm"
       variant="chrome"
       disabled={props.disabled ?? false}

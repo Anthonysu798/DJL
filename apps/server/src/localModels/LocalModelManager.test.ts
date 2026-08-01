@@ -331,6 +331,56 @@ describe("LocalModelManager", () => {
   });
 
   describe("tool support lookup", () => {
+    it("uses and caches a behavioral capability probe for a tool-capable model", async () => {
+      const stateDir = await temporaryRoot();
+      const runCapabilityProbe = vi.fn(async () => ({
+        tier: "assisted" as const,
+        result: "passed" as const,
+        failureReason: null,
+      }));
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.32.0" });
+        if (url.endsWith("/api/tags")) {
+          return json({
+            models: [
+              { name: "qwen2.5:3b", size: 1_800_000_000, details: { parameter_size: "3.1B" } },
+            ],
+          });
+        }
+        if (url.endsWith("/api/v1/models")) throw new Error("LM Studio unavailable");
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const manager = new LocalModelManager({
+        stateDir,
+        fetch: fetchMock,
+        runCapabilityProbe,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      });
+
+      expect(await manager.toolSupportForModel("ollama/qwen2.5:3b")).toBe(true);
+      expect(await manager.toolSupportForModel("ollama/qwen2.5:3b")).toBe(true);
+      expect(runCapabilityProbe).toHaveBeenCalledOnce();
+      expect((await manager.getSnapshot()).installedModels[0]?.capabilityProfile).toMatchObject({
+        tier: "assisted",
+        result: "passed",
+      });
+
+      const secondProbe = vi.fn(async () => {
+        throw new Error("persisted capability should be reused");
+      });
+      const restarted = new LocalModelManager({
+        stateDir,
+        fetch: fetchMock,
+        runCapabilityProbe: secondProbe,
+        platform: "win32",
+        env: { PATH: "", LOCALAPPDATA: stateDir, USERPROFILE: stateDir },
+      });
+      expect(await restarted.toolSupportForModel("ollama/qwen2.5:3b")).toBe(true);
+      expect(secondProbe).not.toHaveBeenCalled();
+    });
+
     async function managerWithModels() {
       const stateDir = await temporaryRoot();
       const fetchMock = vi.fn(async (input: string | URL | Request) => {

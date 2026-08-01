@@ -1154,6 +1154,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           attachments: command.message.attachments,
           ...(command.message.skills !== undefined ? { skills: command.message.skills } : {}),
           ...(command.message.mentions !== undefined ? { mentions: command.message.mentions } : {}),
+          ...(command.message.memoryContext !== undefined
+            ? { memoryContext: command.message.memoryContext }
+            : {}),
           dispatchMode,
           ...(command.dispatchOrigin !== undefined
             ? { dispatchOrigin: command.dispatchOrigin }
@@ -1168,6 +1171,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const turnRequestPayload = {
         threadId: command.threadId,
         messageId: command.message.messageId,
+        ...(command.message.memoryContext !== undefined
+          ? { memoryContext: command.message.memoryContext }
+          : {}),
         ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
         ...(command.providerOptions !== undefined
           ? { providerOptions: command.providerOptions }

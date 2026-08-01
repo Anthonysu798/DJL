@@ -24,6 +24,7 @@ import {
   parseOpenCodeCliModelsOutput,
   parseOpenCodeCredentialProviderIDs,
   resolveDjlOpenCodeBinaryPath,
+  sendOpenCodePromptAsync,
   toOpenCodeFileParts,
 } from "./opencodeRuntime.ts";
 
@@ -43,6 +44,47 @@ describe("buildOpenCodePermissionRules", () => {
       { permission: "*", pattern: "*", action: "ask" },
       { permission: "edit", pattern: "*", action: "allow" },
       { permission: "question", pattern: "*", action: "allow" },
+    ]);
+  });
+});
+
+describe("sendOpenCodePromptAsync", () => {
+  it("preserves DJL per-turn policy fields that the generated 1.17 SDK drops", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const client = {
+      client: {
+        post: async (input: Record<string, unknown>) => {
+          requests.push(input);
+          return { data: null };
+        },
+      },
+      session: {
+        promptAsync: async () => {
+          throw new Error("generated SDK promptAsync must not be used");
+        },
+      },
+    };
+
+    await sendOpenCodePromptAsync(client as never, {
+      sessionID: "ses_test",
+      parts: [{ type: "text", text: "Check RAM." }],
+      visibleTools: ["djl_system_info"],
+      requiredToolCall: true,
+      instructionScope: "work-isolated",
+    });
+
+    expect(requests).toEqual([
+      {
+        url: "/session/{sessionID}/prompt_async",
+        path: { sessionID: "ses_test" },
+        body: {
+          parts: [{ type: "text", text: "Check RAM." }],
+          visibleTools: ["djl_system_info"],
+          requiredToolCall: true,
+          instructionScope: "work-isolated",
+        },
+        headers: { "Content-Type": "application/json" },
+      },
     ]);
   });
 });
@@ -215,6 +257,8 @@ describe("buildOpenCodeServerProcessEnv", () => {
       XDG_STATE_HOME: "/tmp/djl/opencode/state",
       DJL_MANAGED_AUTH: "1",
       OPENCODE_SERVER_PASSWORD: "process-local-secret",
+      OPENCODE_ENABLE_EXA: "true",
+      OPENCODE_WEBSEARCH_PROVIDER: "exa",
     });
     expect(env.OPENAI_API_KEY).toBeUndefined();
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
