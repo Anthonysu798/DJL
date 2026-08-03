@@ -133,23 +133,27 @@ jobs:
             exit 1
           }
 
-      - name: Require all Apple release credentials
+      - name: Require all release credentials
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
           missing=()
           for name in \
-            CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_CONTENT APPLE_API_KEY_ID APPLE_API_ISSUER
+            CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_CONTENT APPLE_API_KEY_ID APPLE_API_ISSUER \
+            AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID
           do
             [[ -n "${!name}" ]] || missing+=("$name")
           done
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required Apple release secret: %s\n' "${missing[@]}" >&2
+            printf 'Missing required release secret: %s\n' "${missing[@]}" >&2
             exit 1
           fi
 
@@ -248,8 +252,8 @@ jobs:
 
           DJL desktop installers for macOS Apple Silicon, macOS Intel, and Windows x64. macOS
           installers are Developer ID signed, notarized, and stapled. The Windows installer is
-          intentionally unsigned and may trigger Microsoft SmartScreen. Verify `SHA256SUMS` before
-          installing.
+          Authenticode signed and timestamped by Anthony Su using Microsoft Artifact Signing.
+          Verify `SHA256SUMS` before installing.
           FOOTER
           payload="$(
             jq -n \
@@ -281,6 +285,7 @@ jobs:
     needs: [preflight, create-draft]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
+    environment: windows-signing
     permissions:
       contents: write
       # Sigstore signs the provenance against this job's OIDC identity, which is what makes the
@@ -316,6 +321,14 @@ jobs:
       - name: Install frozen dependencies
         uses: ./.github/actions/setup-desktop
 
+      - name: Azure login for Artifact Signing
+        if: matrix.platform == 'win'
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Align package versions
         run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
 
@@ -329,6 +342,15 @@ jobs:
           APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: Anthony Su
+          AZURE_TRUSTED_SIGNING_ENDPOINT: https://eus.codesigning.azure.net/
+          AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME: djl-windows-release-prod
+          AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: djl-release-signing-prod
+          AZURE_TRUSTED_SIGNING_FILE_DIGEST: SHA256
+          AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST: SHA256
+          AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161: http://timestamp.acs.microsoft.com
         run: |
           set -euo pipefail
           args=(
@@ -349,15 +371,9 @@ jobs:
           else
             unset \
               APPLE_API_KEY APPLE_API_KEY_CONTENT APPLE_API_KEY_ID APPLE_API_ISSUER \
-              CSC_LINK CSC_KEY_PASSWORD \
-              AZURE_TRUSTED_SIGNING_PUBLISHER_NAME \
-              AZURE_TRUSTED_SIGNING_ENDPOINT \
-              AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME \
-              AZURE_TRUSTED_SIGNING_ACCOUNT_NAME \
-              AZURE_TRUSTED_SIGNING_FILE_DIGEST \
-              AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST \
-              AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161
+              CSC_LINK CSC_KEY_PASSWORD
             export CSC_IDENTITY_AUTO_DISCOVERY=false
+            args+=(--signed)
           fi
           bun run dist:desktop:artifact -- "${args[@]}"
 
@@ -388,7 +404,7 @@ jobs:
           # first executing here, after notarization has already been paid for.
           scripts/verify-macos-app-bundle.sh "$app" "${{ matrix.arch }}"
 
-      - name: Verify intentionally unsigned Windows release
+      - name: Verify signed and timestamped Windows release
         if: matrix.platform == 'win'
         shell: pwsh
         env:
@@ -396,8 +412,14 @@ jobs:
         run: |
           $installer = "release-native/DJL-$env:RELEASE_VERSION-x64.exe"
           $signature = Get-AuthenticodeSignature $installer
-          if ($signature.Status -ne "NotSigned") {
-            throw "Windows production installer must be unsigned; received $($signature.Status)."
+          if ($signature.Status -ne "Valid") {
+            throw "Windows production installer must have a valid Authenticode signature; received $($signature.Status)."
+          }
+          if ($signature.SignerCertificate.Subject -notmatch '(^|, )CN=Anthony Su(,|$)') {
+            throw "Unexpected Windows signer: $($signature.SignerCertificate.Subject)"
+          }
+          if ($null -eq $signature.TimeStamperCertificate) {
+            throw "Windows production installer is missing its RFC 3161 timestamp."
           }
 
       - name: Create receipt and small metadata bundle

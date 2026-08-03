@@ -63,10 +63,23 @@ for (const expected of [
   "Upload updater manifests last",
   "Verify exact 13-asset draft inventory",
   "environment: production",
+  "environment: windows-signing",
+  "Azure login for Artifact Signing",
   "Get-AuthenticodeSignature",
-  'Status -ne "NotSigned"',
+  'Status -ne "Valid"',
+  "TimeStamperCertificate",
+  "djl-windows-release-prod",
+  "http://timestamp.acs.microsoft.com",
 ]) {
   requireText(production, expected);
+}
+for (const expected of [
+  "Azure login for Artifact Signing",
+  'Status -ne "Valid"',
+  "TimeStamperCertificate",
+  "djl-windows-release-prod",
+]) {
+  requireText(ci, expected);
 }
 for (const forbidden of [
   "pull_request_target",
@@ -83,5 +96,7 @@ for (const forbidden of [
   rejectText(ci, forbidden);
   rejectText(production, forbidden);
 }
+rejectText(ci, "AZURE_CLIENT_SECRET");
+rejectText(production, "AZURE_CLIENT_SECRET");
 
 console.log("Desktop release architecture smoke checks passed.");
