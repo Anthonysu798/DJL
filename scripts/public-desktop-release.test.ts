@@ -376,10 +376,7 @@ describe("public desktop release preparation", () => {
     assert.match(ciWorkflow, /pull_request:/);
     assert.match(ciWorkflow, /push:\n    branches:\n      - main/);
     assert.match(ciWorkflow, /workflow_dispatch:/);
-    assert.match(
-      ciWorkflow,
-      /if: github\.event_name == 'push' \|\| github\.event_name == 'workflow_dispatch'/,
-    );
+    assert.match(ciWorkflow, /github\.ref == 'refs\/heads\/main'/);
     assert.match(ciWorkflow, /quality:\n    name: Quality/);
     assert.match(ciWorkflow, /desktop-tests:\n    name: Desktop unit and contract tests/);
     assert.match(ciWorkflow, /renderer-tests:\n    name: Chromium renderer tests/);
@@ -393,7 +390,12 @@ describe("public desktop release preparation", () => {
       /desktop-ci:\n    name: desktop-ci\n    if: always\(\)\n    needs:[\s\S]*- runtime-smoke/,
     );
     assert.match(ciWorkflow, /package-smoke:[\s\S]*needs: desktop-ci/);
-    assert.equal(ciWorkflow.includes("secrets."), false);
+    for (const secret of ["AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"]) {
+      assert.match(ciWorkflow, new RegExp(`secrets\\.${secret}`));
+      assert.match(releaseWorkflow, new RegExp(`secrets\\.${secret}`));
+    }
+    assert.equal(ciWorkflow.includes("AZURE_CLIENT_SECRET"), false);
+    assert.equal(releaseWorkflow.includes("AZURE_CLIENT_SECRET"), false);
     assert.equal(ciWorkflow.includes("pull_request_target"), false);
     assert.match(ciWorkflow, /cancel-in-progress: true/);
     // Lifecycle patches must not mutate Bun's shared cache through hard links or race one another
@@ -439,10 +441,19 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /permissions:\n  contents: read/);
     assert.match(releaseWorkflow, /persist-credentials: false/);
     assert.match(releaseWorkflow, /environment: production/);
+    assert.match(releaseWorkflow, /environment: windows-signing/);
     assert.match(releaseWorkflow, /retention-days: 1/);
     assert.match(releaseWorkflow, /gh release upload "\$RELEASE_TAG" "\$\{payloads\[@\]\}"/);
     assert.match(releaseWorkflow, /Get-AuthenticodeSignature/);
-    assert.match(releaseWorkflow, /Status -ne "NotSigned"/);
+    assert.match(releaseWorkflow, /Status -ne "Valid"/);
+    assert.match(releaseWorkflow, /TimeStamperCertificate/);
+    assert.match(ciWorkflow, /Status -ne "Valid"/);
+    assert.match(ciWorkflow, /TimeStamperCertificate/);
+    assert.match(ciWorkflow, /Azure login for Artifact Signing/);
+    assert.match(releaseWorkflow, /Azure login for Artifact Signing/);
+    assert.match(ciWorkflow, /djl-windows-release-prod/);
+    assert.match(releaseWorkflow, /djl-windows-release-prod/);
+    assert.match(releaseWorkflow, /http:\/\/timestamp\.acs\.microsoft\.com/);
     assert.match(releaseWorkflow, /xcrun stapler validate "\$dmg"/);
     assert.match(releaseWorkflow, /TeamIdentifier=U76N9JSK4M/);
     // The bundle contract now lives in one script that both the release build and the CI package

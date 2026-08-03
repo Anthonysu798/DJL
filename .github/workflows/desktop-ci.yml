@@ -161,10 +161,13 @@ jobs:
 
   package-smoke:
     name: Package smoke (${{ matrix.label }})
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: desktop-ci
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -193,35 +196,58 @@ jobs:
       - name: Install frozen dependencies
         uses: ./.github/actions/setup-desktop
 
+      - name: Azure login for Artifact Signing
+        if: matrix.platform == 'win'
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Verify native hardware recommendation
         shell: bash
         run: bun run --cwd apps/server test -- src/localModels/hardwareProfile.native.test.ts
 
-      - name: Build unsigned native package
+      - name: Build native package
         shell: bash
         env:
           SMOKE_VERSION: 0.0.0-ci.${{ github.run_number }}
           SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: Anthony Su
+          AZURE_TRUSTED_SIGNING_ENDPOINT: https://eus.codesigning.azure.net/
+          AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME: djl-windows-release-prod
+          AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: djl-release-signing-prod
+          AZURE_TRUSTED_SIGNING_FILE_DIGEST: SHA256
+          AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST: SHA256
+          AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161: http://timestamp.acs.microsoft.com
         run: |
           set -euo pipefail
-          unset \
-            APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER \
-            CSC_LINK CSC_KEY_PASSWORD \
-            AZURE_TRUSTED_SIGNING_PUBLISHER_NAME \
-            AZURE_TRUSTED_SIGNING_ENDPOINT \
-            AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME \
-            AZURE_TRUSTED_SIGNING_ACCOUNT_NAME \
-            AZURE_TRUSTED_SIGNING_FILE_DIGEST \
-            AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST \
-            AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161
-          export CSC_IDENTITY_AUTO_DISCOVERY=false
-          bun run dist:desktop:artifact -- \
-            --platform "${{ matrix.platform }}" \
-            --target "${{ matrix.target }}" \
-            --arch "${{ matrix.arch }}" \
-            --build-version "$SMOKE_VERSION" \
-            --output-dir package-smoke \
+          args=(
+            --platform "${{ matrix.platform }}"
+            --target "${{ matrix.target }}"
+            --arch "${{ matrix.arch }}"
+            --build-version "$SMOKE_VERSION"
+            --output-dir package-smoke
             --verbose
+          )
+          if [[ "${{ matrix.platform }}" == "win" ]]; then
+            unset APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER CSC_LINK CSC_KEY_PASSWORD
+            args+=(--signed)
+          else
+            unset \
+              AZURE_CLIENT_ID AZURE_TENANT_ID \
+              AZURE_TRUSTED_SIGNING_PUBLISHER_NAME \
+              AZURE_TRUSTED_SIGNING_ENDPOINT \
+              AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME \
+              AZURE_TRUSTED_SIGNING_ACCOUNT_NAME \
+              AZURE_TRUSTED_SIGNING_FILE_DIGEST \
+              AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST \
+              AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161
+          fi
+          export CSC_IDENTITY_AUTO_DISCOVERY=false
+          bun run dist:desktop:artifact -- "${args[@]}"
 
       - name: Verify unsigned macOS package smoke
         if: matrix.platform == 'mac'
@@ -240,7 +266,7 @@ jobs:
           # rather than mid-release after notarization has already been paid for.
           scripts/verify-macos-app-bundle.sh "$mount_point/DJL.app" "${{ matrix.arch }}"
 
-      - name: Verify unsigned Windows package smoke
+      - name: Verify signed and timestamped Windows package smoke
         if: matrix.platform == 'win'
         shell: pwsh
         env:
@@ -251,6 +277,12 @@ jobs:
             throw "Missing Windows installer: $installer"
           }
           $signature = Get-AuthenticodeSignature $installer
-          if ($signature.Status -ne "NotSigned") {
-            throw "Windows package smoke must be unsigned; received $($signature.Status)."
+          if ($signature.Status -ne "Valid") {
+            throw "Windows package smoke must have a valid Authenticode signature; received $($signature.Status)."
+          }
+          if ($signature.SignerCertificate.Subject -notmatch '(^|, )CN=Anthony Su(,|$)') {
+            throw "Unexpected Windows signer: $($signature.SignerCertificate.Subject)"
+          }
+          if ($null -eq $signature.TimeStamperCertificate) {
+            throw "Windows package smoke is missing its RFC 3161 timestamp."
           }
