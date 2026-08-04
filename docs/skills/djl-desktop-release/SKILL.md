@@ -75,7 +75,8 @@ Fail-closed. Fix the cause; never work around a refusal.
 - Source: a commit contained in protected `main` with full Desktop CI success
 - macOS ARM64 on `macos-14`, macOS x64 on `macos-15-intel`, Windows x64 on `windows-2022`
 - macOS: Developer ID signed, notarized, stapled, Gatekeeper verified
-- Windows: intentionally unsigned; Authenticode must report `NotSigned`
+- Windows: Authenticode signed through Microsoft Artifact Signing; status `Valid`, signer
+  `CN=Anthony Su`, and RFC 3161 timestamp required
 - Installers carry Sigstore build provenance
 - Inventory: exactly **13** assets — 8 payloads, 4 updater manifests, `SHA256SUMS`
 - Promotion: protected `production` environment
@@ -120,9 +121,10 @@ gh attestation verify DJL-X.Y.Z-x64.exe --repo Anthonysu798/DJL
 curl -sI https://slcor.com/download/windows                                          # 307 to the new version
 ```
 
-Confirm both macOS builds report the Developer ID authority and Team ID `U76N9JSK4M`, Windows
-reports `NotSigned`, three schema-version-1 receipts validated, four manifests uploaded last, and
-stable releases set as Latest.
+Confirm both macOS builds report the Developer ID authority and Team ID `U76N9JSK4M`. Confirm the
+Windows installer reports a `Valid` Authenticode signature from `CN=Anthony Su` with an RFC 3161
+timestamp, three schema-version-1 receipts validated, four manifests uploaded last, and stable
+releases set as Latest.
 
 The landing site needs no change: its Download buttons resolve the newest release at request time
 and follow automatically.
@@ -154,5 +156,6 @@ and is not part of a desktop release.
 Preparing a release does not authorize renaming or creating repositories, changing visibility,
 configuring secrets, or archiving `DJL-Releases`. Do those only on explicit request.
 
-Report the source commit, workflow run, version and tag, signing status, unsigned Windows status,
-13-asset verification, provenance, updater state, and any remaining limitation.
+Report the source commit, workflow run, version and tag, macOS signing/notarization status, Windows
+Authenticode signer and timestamp status, 13-asset verification, provenance, updater state, and any
+remaining limitation.

@@ -42,7 +42,8 @@ Rules learned from real failures. Each one cost a release attempt.
 - Both macOS builds are Developer ID signed, notarized, stapled, and verified.
 - Every installer carries Sigstore-signed build provenance, verifiable with
   `gh attestation verify <installer> --repo Anthonysu798/DJL`.
-- Windows x64 is intentionally unsigned; `Get-AuthenticodeSignature` must return `NotSigned`.
+- Windows x64 is Authenticode signed through Microsoft Artifact Signing; the signature must be
+  `Valid`, the signer subject must contain `CN=Anthony Su`, and an RFC 3161 timestamp must be present.
 - A private draft exists before native builds start.
 - Native runners upload large payloads directly to that draft.
 - Only receipts and source manifests use one-day Actions artifacts.
@@ -69,14 +70,14 @@ flowchart TD
   Main --> Renderer
   Main --> Audit
   Main --> Runtime
-  Aggregate --> Packages["Unsigned package smokes<br/>macOS ARM64, macOS Intel, Windows x64"]
+  Aggregate --> Packages["Native package smokes<br/>macOS bundle checks, signed Windows"]
   Packages --> Validated["Exact commit has full Desktop CI success"]
   Tag["Push annotated semantic-version tag"] --> Preflight["Tag, protected-main, version, feed, credential preflight"]
   Validated --> Preflight
   Preflight --> Draft["Create private draft release"]
   Draft --> MacArm["Build, sign, notarize<br/>macOS ARM64"]
   Draft --> MacIntel["Build, sign, notarize<br/>macOS Intel"]
-  Draft --> Windows["Build unsigned<br/>Windows x64"]
+  Draft --> Windows["Build, sign, timestamp<br/>Windows x64"]
   MacArm --> Direct["Upload eight payloads directly"]
   MacIntel --> Direct
   Windows --> Direct
@@ -106,13 +107,13 @@ flowchart TD
 The small `desktop-ci` job depends on all five lanes and fails closed if any lane fails, is
 cancelled, or is skipped. It is the only status required by branch protection.
 
-Pushes to `main` and manual CI dispatches additionally build unsigned package smokes on:
+Pushes to `main` and manual CI dispatches additionally build native package smokes on:
 
 | Runner | Target |
 | --- | --- |
-| `macos-14` | macOS ARM64 DMG and update ZIP |
-| `macos-15-intel` | macOS x64 DMG and update ZIP |
-| `windows-2022` | Windows x64 NSIS installer |
+| `macos-14` | Unsigned macOS ARM64 DMG and update ZIP; shared bundle contract verified |
+| `macos-15-intel` | Unsigned macOS x64 DMG and update ZIP; shared bundle contract verified |
+| `windows-2022` | Authenticode-signed and RFC 3161-timestamped Windows x64 NSIS installer |
 
 Ubuntu is a test runner only. No Linux installer is built. Package smokes are validated in place
 and are not uploaded to Actions artifact storage.
@@ -156,6 +157,19 @@ Create an environment named `production`:
 The environment gates only the `promote` job. Approval never starts a build and never publishes
 unverified bytes.
 
+### Windows signing environment
+
+Microsoft Artifact Signing uses secretless GitHub OIDC authentication through the single-tenant
+Entra application `djl-github-windows-signing`. Keep two federated credentials:
+
+- protected `main` for the signed Windows package smoke;
+- the `windows-signing` GitHub environment for production release tags.
+
+The `windows-signing` environment allows only tags matching `v*.*.*`. Grant the application only
+**Artifact Signing Certificate Profile Signer** at the exact
+`djl-release-signing-prod/djl-windows-release-prod` certificate-profile scope. Do not create or
+store an Azure client secret.
+
 ### Security and community
 
 - Enable the dependency graph, Dependabot alerts, secret scanning, and push protection.
@@ -177,6 +191,9 @@ Repository secrets:
 | `APPLE_API_KEY` | App Store Connect API private-key contents, not a local path |
 | `APPLE_API_KEY_ID` | App Store Connect key ID |
 | `APPLE_API_ISSUER` | App Store Connect issuer ID |
+| `AZURE_CLIENT_ID` | Entra application ID used by GitHub OIDC |
+| `AZURE_TENANT_ID` | Entra tenant containing the signing application |
+| `AZURE_SUBSCRIPTION_ID` | Subscription containing the Artifact Signing account |
 
 Optional repository variable:
 
@@ -193,9 +210,9 @@ Optional secret for the landing mirror:
 Without `LANDING_MIRROR_TOKEN` the landing workflow still builds and tests the site; it just reports
 that it could not deploy instead of failing.
 
-Normal publication uses the workflow-scoped `GITHUB_TOKEN`. There is no steady-state
-cross-repository release token and no Azure/Windows signing credential while Windows remains
-unsigned.
+Normal publication uses the workflow-scoped `GITHUB_TOKEN`. Windows signing uses short-lived OIDC
+tokens plus the three Azure identifiers above; there is no Azure client secret or steady-state
+cross-repository release token.
 
 ## Shipping a release
 
@@ -254,7 +271,7 @@ The tag push starts **Desktop Release**. Preflight fails unless:
 - the peeled tag commit is contained in the protected `main` branch;
 - full Desktop CI succeeded for that exact SHA through a `push` or manual validation run;
 - no release or duplicate non-canonical version tag exists;
-- every Apple credential is present;
+- every Apple credential and all three Azure OIDC identifiers are present;
 - the version is newer than every semantic release in the canonical and legacy repositories;
 - the version is newer than both live VPS manifests:
   `latest.yml` and `latest-mac.yml`.
@@ -275,9 +292,11 @@ Both Mac runners must verify:
 - updater owner `Anthonysu798` and repository `DJL`;
 - embedded OpenCode `1.17.18` launches on the target host.
 
-The Windows job explicitly removes Apple and Azure signing variables before packaging. The final
-installer must report `NotSigned`. If Windows signing is introduced later, change the product
-policy, workflow assertions, README warning, tests, and release notes together.
+The Windows job removes Apple signing variables, authenticates to Azure through GitHub OIDC, and
+passes the Microsoft Artifact Signing account and certificate profile to Electron Builder before
+updater manifests and hashes are generated. The final installer must report a `Valid`
+Authenticode signature whose subject contains `CN=Anthony Su`, plus a non-null RFC 3161 timestamp.
+The same checks run in the Windows package smoke on every push to `main`.
 
 ## Receipt and asset contract
 
@@ -399,7 +418,8 @@ one-day artifact storage. See [GitHub Actions billing](https://docs.github.com/e
 - [ ] Full Desktop CI succeeded for that exact SHA.
 - [ ] Both DMGs pass signature, notarization, stapling, Gatekeeper, architecture, native dependency,
       updater-origin, and embedded-runtime checks.
-- [ ] Windows x64 reports `NotSigned`.
+- [ ] Windows x64 reports a `Valid` Authenticode signature from `CN=Anthony Su` and an RFC 3161
+      timestamp.
 - [ ] The draft reports exactly 15 names, positive sizes, and matching SHA-256 digests.
 - [ ] `latest-mac.yml` contains ARM64 and x64 ZIP/DMG entries.
 - [ ] `latest.yml` references the matching Windows EXE.
