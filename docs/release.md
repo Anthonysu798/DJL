@@ -218,7 +218,8 @@ cross-repository release token.
 
 `bun run ship` is the supported way to cut a release. It refuses to tag unless the working tree is
 clean, the branch is `main`, local matches `origin/main`, `main` is protected, the exact commit has a
-successful full Desktop CI run, and the version is unused and newer than every live feed.
+successful full Desktop CI run, and the version is unused and newer than every canonical GitHub
+release.
 
 ```bash
 bun run ship --dry-run                       # show the computed version, tag nothing
@@ -228,8 +229,9 @@ bun run ship major --notes-file notes.md     # next major
 bun run ship rc --notes-file notes.md        # next release candidate
 ```
 
-The version is derived from the highest version observed across canonical releases, the legacy
-release repository, and both live VPS manifests — never from a file in the tree, so it cannot drift.
+The version is derived from the highest version published in the canonical `Anthonysu798/DJL`
+GitHub Releases feed — never from a file in the tree, so it cannot drift. Legacy repositories and
+VPS manifests are not consulted during normal publication.
 
 The annotated tag message becomes the published release body, followed by the standing install and
 verification guidance and GitHub's generated changelog. Write the notes for someone deciding whether
@@ -272,12 +274,10 @@ The tag push starts **Desktop Release**. Preflight fails unless:
 - full Desktop CI succeeded for that exact SHA through a `push` or manual validation run;
 - no release or duplicate non-canonical version tag exists;
 - every Apple credential and all three Azure OIDC identifiers are present;
-- the version is newer than every semantic release in the canonical and legacy repositories;
-- the version is newer than both live VPS manifests:
-  `latest.yml` and `latest-mac.yml`.
+- the version is newer than every semantic release in the canonical GitHub repository.
 
-An unavailable or malformed legacy feed is a preflight failure. Do not bypass version checks by
-editing the workflow.
+An unavailable or malformed canonical GitHub release response is a preflight failure. Do not bypass
+version checks by editing the workflow.
 
 ## Native build verification
 
@@ -353,7 +353,7 @@ architecture-complete feed. `SHA256SUMS` covers the other 12 assets exactly.
 
 The workflow deliberately has no automatic draft deletion.
 
-- **Preflight failure:** fix the repository setting, feed, credential, version, or tag. If the tag
+- **Preflight failure:** fix the repository setting, credential, version, or tag. If the tag
   itself is wrong, delete only that unpublished tag, create a corrected annotated tag, and push it.
 - **Build/upload failure:** retain the private draft for inspection. Delete that draft only after
   diagnosing the failure, then re-run the existing tag workflow from GitHub Actions.

@@ -22,11 +22,6 @@ import {
 } from "./lib/release-update-policy.ts";
 
 const RELEASE_REPOSITORY = "Anthonysu798/DJL";
-const LEGACY_RELEASE_REPOSITORY = "Anthonysu798/DJL-Releases";
-const VPS_MANIFESTS = [
-  { source: "Windows VPS manifest", url: "https://downloads.slcor.com/stable/latest.yml" },
-  { source: "macOS VPS manifest", url: "https://downloads.slcor.com/stable/latest-mac.yml" },
-];
 const BUMP_LEVELS = new Set<ReleaseBumpLevel>(["patch", "minor", "major", "rc"]);
 
 interface ShipOptions {
@@ -132,35 +127,23 @@ function assertDesktopCiSucceeded(commit: string): void {
   }
 }
 
-async function readObservedVersions(): Promise<ObservedReleaseVersion[]> {
+function readObservedVersions(): ObservedReleaseVersion[] {
   const observed: ObservedReleaseVersion[] = [];
   const versionPattern = /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
-  for (const [repository, source] of [
-    [RELEASE_REPOSITORY, "canonical GitHub release"],
-    [LEGACY_RELEASE_REPOSITORY, "legacy GitHub release"],
-  ] as const) {
-    const tags = tryRun("gh", [
-      "api",
-      `repos/${repository}/releases?per_page=100`,
-      "--jq",
-      ".[].tag_name",
-    ]);
-    for (const tag of (tags ?? "").split("\n").filter(Boolean)) {
-      if (versionPattern.test(tag)) observed.push({ source, version: tag });
-    }
+  const tags = tryRun("gh", [
+    "api",
+    `repos/${RELEASE_REPOSITORY}/releases?per_page=100`,
+    "--jq",
+    ".[].tag_name",
+  ]);
+  if (tags === null) {
+    throw new ShipError("Could not read canonical GitHub releases.");
   }
-
-  for (const manifest of VPS_MANIFESTS) {
-    const response = await fetch(manifest.url);
-    if (!response.ok) {
-      throw new ShipError(`Could not read ${manifest.source} (${response.status}).`);
+  for (const tag of tags.split("\n").filter(Boolean)) {
+    if (versionPattern.test(tag)) {
+      observed.push({ source: "canonical GitHub release", version: tag });
     }
-    const version = /^version:\s*['"]?([^'"\s]+)['"]?$/m.exec(await response.text())?.[1];
-    if (!version) {
-      throw new ShipError(`${manifest.source} does not expose a version.`);
-    }
-    observed.push({ source: manifest.source, version });
   }
 
   return observed;
@@ -206,7 +189,7 @@ async function main(argv: readonly string[]): Promise<void> {
   assertProtectedMain();
   assertDesktopCiSucceeded(commit);
 
-  const observed = await readObservedVersions();
+  const observed = readObservedVersions();
   const highest = highestReleaseVersion(observed);
   if (!highest) {
     throw new ShipError("No published version was observed, so the next version is ambiguous.");

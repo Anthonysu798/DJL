@@ -383,6 +383,7 @@ describe("public desktop release preparation", () => {
       resolve(REPOSITORY_ROOT, ".github/workflows/desktop-release.yml"),
       "utf8",
     );
+    const shipScript = readFileSync(resolve(REPOSITORY_ROOT, "scripts/ship-release.ts"), "utf8");
     const setupAction = readFileSync(
       resolve(REPOSITORY_ROOT, ".github/actions/setup-desktop/action.yml"),
       "utf8",
@@ -464,6 +465,11 @@ describe("public desktop release preparation", () => {
     }
 
     assert.match(releaseWorkflow, /RELEASE_REPOSITORY: Anthonysu798\/DJL/);
+    assert.match(releaseWorkflow, /newer than every canonical GitHub release/);
+    for (const normalReleasePath of [releaseWorkflow, shipScript]) {
+      assert.equal(normalReleasePath.includes("downloads.slcor.com"), false);
+      assert.equal(normalReleasePath.includes("DJL-Releases"), false);
+    }
     assert.match(releaseWorkflow, /push:\n    tags:\n      - "v\*\.\*\.\*"/);
     assert.equal(releaseWorkflow.includes("workflow_dispatch:"), false);
     assert.match(releaseWorkflow, /Release tag \$RELEASE_TAG must be annotated/);
