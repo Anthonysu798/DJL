@@ -19,11 +19,11 @@ Download installers from [GitHub Releases](https://github.com/Anthonysu798/DJL/r
 | macOS | Intel | `DJL-X.Y.Z-x64.dmg` |
 | Windows | x64 | `DJL-X.Y.Z-x64.exe` |
 
-> [!WARNING]
-> The Windows installer is intentionally unsigned for now. Microsoft SmartScreen may show
-> “Windows protected your PC.” Verify the installer against `SHA256SUMS` on the same release before
-> choosing **More info → Run anyway**. macOS releases are Developer ID signed, notarized, and
-> stapled.
+> [!NOTE]
+> Windows releases are Authenticode signed and RFC 3161 timestamped by Anthony Su through Microsoft
+> Artifact Signing. If Windows displays a reputation warning, confirm that the publisher is
+> **Anthony Su** and verify the installer against `SHA256SUMS`. macOS releases are Developer ID
+> signed, notarized, and stapled.
 
 ## Highlights
 

@@ -23,5 +23,6 @@ current release.
 ## Release security
 
 macOS production artifacts must be Developer ID signed, notarized, stapled, and verified before a
-release leaves draft state. Windows is intentionally unsigned until a Windows signing service is
-configured; releases and the README must continue to disclose that limitation.
+release leaves draft state. Windows production installers must carry a valid Authenticode signature
+from `CN=Anthony Su` and an RFC 3161 timestamp issued through Microsoft Artifact Signing. The
+release workflow fails closed if either the signature or timestamp is missing or invalid.

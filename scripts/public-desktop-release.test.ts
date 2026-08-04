@@ -331,6 +331,41 @@ describe("public desktop release preparation", () => {
     assert.equal(skill.includes("gh workflow run desktop-release.yml"), false);
   });
 
+  it("keeps signed Windows policy consistent across release and download guidance", () => {
+    const policyFiles = [
+      "README.md",
+      "SECURITY.md",
+      ".docs/ci.md",
+      "docs/open-source-launch.md",
+      "docs/release.md",
+      "docs/skills/djl-desktop-release/SKILL.md",
+      "docs/skills/djl-desktop-release/references/platform-setup.md",
+      "apps/landing/app/DesktopLaunchGate.tsx",
+    ].map((path) => ({
+      path,
+      contents: readFileSync(resolve(REPOSITORY_ROOT, path), "utf8"),
+    }));
+
+    for (const { path, contents } of policyFiles) {
+      assert.equal(
+        /windows[^\n.]{0,100}(?:intentionally |currently )?unsigned|unsigned[^\n.]{0,100}windows|NotSigned/i.test(
+          contents,
+        ),
+        false,
+        `${path} must not describe current Windows artifacts as unsigned`,
+      );
+    }
+
+    const combined = policyFiles.map(({ contents }) => contents).join("\n");
+    assert.match(combined, /Microsoft Artifact Signing/);
+    assert.match(combined, /CN=Anthony Su/);
+    assert.match(combined, /RFC 3161/);
+    assert.match(combined, /AZURE_CLIENT_ID/);
+    assert.match(combined, /windows-signing/);
+    assert.match(combined, /no Azure client secret/i);
+    assert.equal(combined.includes("secrets.AZURE_CLIENT_SECRET"), false);
+  });
+
   it("preserves markdown headings in the release notes it writes into the tag", () => {
     const shipScript = readFileSync(resolve(REPOSITORY_ROOT, "scripts/ship-release.ts"), "utf8");
 
