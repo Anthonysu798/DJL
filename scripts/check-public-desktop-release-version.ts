@@ -1,5 +1,5 @@
 // FILE: check-public-desktop-release-version.ts
-// Purpose: Fails unless a requested version is newer than every observed release feed.
+// Purpose: Fails unless a requested version is newer than every observed canonical release.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -35,7 +35,7 @@ function main(args: readonly string[]): void {
     );
   }
   const validated = checkPublicDesktopReleaseVersion(version, observedVersionsPath);
-  console.log(`Release ${validated} is newer than every observed canonical and legacy feed.`);
+  console.log(`Release ${validated} is newer than every observed canonical GitHub release.`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

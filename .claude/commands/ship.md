@@ -23,7 +23,8 @@ Ship the current `main` as a production release.
 
 3. **The script refuses to ship** unless the tree is clean, you are on `main`, local matches
    `origin/main`, `main` is protected, the exact commit has a successful full Desktop CI run, and the
-   version is unused and newer than every live feed. Do not work around a refusal — fix the cause.
+   version is unused and newer than every canonical GitHub release. Do not work around a refusal —
+   fix the cause.
    If CI has not finished for the current commit, wait for it.
 
 4. **After the tag is pushed**, watch the release:

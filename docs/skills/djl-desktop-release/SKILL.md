@@ -45,8 +45,8 @@ gh run list --repo Anthonysu798/DJL --workflow desktop-release.yml --limit 1
 
 ## How the version is chosen
 
-`ship` never reads a version from the tree. It takes the highest version observed across canonical
-GitHub releases, the legacy `DJL-Releases` repository, and both live VPS manifests, then bumps it:
+`ship` never reads a version from the tree. It takes the highest version published in the canonical
+`Anthonysu798/DJL` GitHub Releases feed, then bumps it:
 
 | Argument | 0.5.6 becomes | Notes |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ Fail-closed. Fix the cause; never work around a refusal.
 - a branch other than `main`, or `main` out of sync with `origin/main`
 - `main` not protected — run `bun run release:protect-main`
 - no successful full **Desktop CI** run for the exact `HEAD` commit
-- a version already tagged or released, or not newer than every live feed
+- a version already tagged or released, or not newer than every canonical GitHub release
 
 ## Release contract
 

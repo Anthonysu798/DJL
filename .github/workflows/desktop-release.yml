@@ -14,7 +14,6 @@ concurrency:
 
 env:
   RELEASE_REPOSITORY: Anthonysu798/DJL
-  LEGACY_RELEASE_REPOSITORY: Anthonysu798/DJL-Releases
 
 jobs:
   preflight:
@@ -173,18 +172,13 @@ jobs:
             exit 1
           fi
 
-      - name: Require a version newer than every live feed
+      - name: Require a version newer than every canonical GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           gh api "repos/$RELEASE_REPOSITORY/releases?per_page=100" > canonical-releases.json
-          gh api "repos/$LEGACY_RELEASE_REPOSITORY/releases?per_page=100" > legacy-releases.json
-          curl --fail --silent --show-error \
-            https://downloads.slcor.com/stable/latest.yml > vps-windows.yml
-          curl --fail --silent --show-error \
-            https://downloads.slcor.com/stable/latest-mac.yml > vps-mac.yml
 
           jq --arg source "canonical GitHub release" '
             [
@@ -193,32 +187,7 @@ jobs:
               | select($version | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"))
               | { source: $source, version: $version }
             ]
-          ' canonical-releases.json > canonical-observed.json
-          jq --arg source "legacy GitHub release" '
-            [
-              .[]
-              | .tag_name as $version
-              | select($version | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"))
-              | { source: $source, version: $version }
-            ]
-          ' legacy-releases.json > legacy-observed.json
-
-          windows_version="$(sed -nE "s/^version:[[:space:]]*['\"]?([^'\"]+)['\"]?$/\\1/p" vps-windows.yml | head -1)"
-          mac_version="$(sed -nE "s/^version:[[:space:]]*['\"]?([^'\"]+)['\"]?$/\\1/p" vps-mac.yml | head -1)"
-          [[ -n "$windows_version" && -n "$mac_version" ]] || {
-            echo "Both live VPS manifests must expose a version." >&2
-            exit 1
-          }
-          jq -n \
-            --arg windows "$windows_version" \
-            --arg mac "$mac_version" \
-            '[
-              { source: "Windows VPS manifest", version: $windows },
-              { source: "macOS VPS manifest", version: $mac }
-            ]' > vps-observed.json
-          jq -s 'add' \
-            canonical-observed.json legacy-observed.json vps-observed.json \
-            > observed-versions.json
+          ' canonical-releases.json > observed-versions.json
           node --experimental-strip-types scripts/check-public-desktop-release-version.ts \
             "$RELEASE_VERSION" observed-versions.json
 
