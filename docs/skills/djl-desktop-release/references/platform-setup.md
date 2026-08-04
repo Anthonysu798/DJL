@@ -58,11 +58,23 @@ and the runner is slower than ARM64.
 
 ## Windows x64
 
-Windows builds run on `windows-2022` and must clear Apple and Azure Trusted Signing variables before
-packaging. Until the policy changes, the final NSIS installer must return `NotSigned` from
-`Get-AuthenticodeSignature`, and release notes must disclose SmartScreen.
+Windows builds run on `windows-2022`. They authenticate to Microsoft Artifact Signing with GitHub
+OIDC through the Entra application `djl-github-windows-signing`; never create an
+`AZURE_CLIENT_SECRET`. Configure these repository secrets:
 
-Windows has no code-signing trust anchor, which is why installers carry Sigstore build provenance:
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+The application has **Artifact Signing Certificate Profile Signer** only at the
+`djl-release-signing-prod/djl-windows-release-prod` profile scope. Its federated credentials trust
+protected `main` for CI and the `windows-signing` GitHub environment for release tags. That
+environment accepts only tags matching `v*.*.*`.
+
+Electron Builder signs through `https://eus.codesigning.azure.net/` and timestamps through the
+Microsoft RFC 3161 service. `Get-AuthenticodeSignature` must return `Valid`, the signer subject must
+contain `CN=Anthony Su`, and `TimeStamperCertificate` must be present. The Windows installer also
+carries Sigstore build provenance:
 
 ```bash
 gh attestation verify DJL-X.Y.Z-x64.exe --repo Anthonysu798/DJL

@@ -1,6 +1,11 @@
 # CI quality gates
 
-- `.github/workflows/ci.yml` runs `bun run lint`, `bun run typecheck`, and `bun run test` on pull requests and pushes to `main`.
-- `.github/workflows/release.yml` builds macOS (`arm64` and `x64`), Linux (`x64`), and Windows (`x64`) desktop artifacts from a single `v*.*.*` tag and publishes one GitHub release.
-- The release workflow auto-enables signing only when secrets are present: Apple credentials for macOS and Azure Trusted Signing credentials for Windows. Without secrets, it still releases unsigned artifacts.
-- See `docs/release.md` for full release/signing setup checklist.
+- `.github/workflows/desktop-ci.yml` runs the five desktop test lanes on pull requests and pushes to
+  `main`, then requires the aggregate `desktop-ci` check.
+- Pushes to `main` additionally build native macOS ARM64, macOS Intel, and Windows x64 package
+  smokes. The Windows smoke signs through Microsoft Artifact Signing and verifies Authenticode plus
+  its RFC 3161 timestamp.
+- `.github/workflows/desktop-release.yml` builds the same three production targets from an annotated
+  `v*.*.*` tag. Missing Apple or Azure signing configuration fails preflight; there is no unsigned
+  Windows fallback.
+- See `docs/release.md` for the complete release and signing setup.

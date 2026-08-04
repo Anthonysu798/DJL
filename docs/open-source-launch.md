@@ -89,6 +89,7 @@ as part of source preparation.
 ## 5. First public release
 
 After public launch, dispatch **Desktop Release** with the mechanically selected bridge version.
-Verify both Mac installers, unsigned Windows, exact 15-asset inventory, Latest/prerelease state,
-legacy-repository byte mirroring, VPS promotion, and installed-client updates from both legacy
-feeds. Then archive `DJL-Releases` while retaining all old release and VPS bytes indefinitely.
+Verify both Mac installers, the signed and timestamped Windows installer, exact 15-asset inventory,
+Latest/prerelease state, legacy-repository byte mirroring, VPS promotion, and installed-client
+updates from both legacy feeds. Then archive `DJL-Releases` while retaining all old release and VPS
+bytes indefinitely.
