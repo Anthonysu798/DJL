@@ -1269,6 +1269,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const messageText = resolveAssistantMessageDisplayText({
             ...row,
             emptyResponseLabel: t("timeline.emptyResponse"),
+            protocolRecoveryLabel: t("timeline.protocolRecovery"),
           });
           const messageMarkers =
             threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;

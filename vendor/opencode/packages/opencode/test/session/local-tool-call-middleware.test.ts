@@ -36,6 +36,57 @@ describe("local text tool-call recovery", () => {
     expect(output.some((part) => part.type === "text-delta")).toBe(false);
   });
 
+  test("recovers the recorded DeepSeek websearch payload with typed arguments", async () => {
+    const middleware = createLocalToolCallMiddleware(new Set(["websearch", "invalid"]));
+    const output = await transform(middleware, [
+      { type: "text-start", id: "text-recorded-dsml" },
+      {
+        type: "text-delta",
+        id: "text-recorded-dsml",
+        delta: [
+          "<｜｜DSML｜｜tool_calls>",
+          '<｜｜DSML｜｜invoke name="websearch">',
+          '<｜｜DSML｜｜parameter name="query" string="true">MiniMax 0100.HK 收盘 2026年8月1日 或 7月31日 股价</｜｜DSML｜｜parameter>',
+          '<｜｜DSML｜｜parameter name="numResults" string="false">6</｜｜DSML｜｜parameter>',
+          "</｜｜DSML｜｜invoke>",
+          "</｜｜DSML｜｜tool_calls>",
+        ].join("\n"),
+      },
+      { type: "text-end", id: "text-recorded-dsml" },
+    ]);
+
+    expect(output).toHaveLength(4);
+    expect(output[0]).toMatchObject({ type: "tool-input-start", toolName: "websearch" });
+    expect(output[1]).toMatchObject({
+      type: "tool-input-delta",
+      delta:
+        '{"query":"MiniMax 0100.HK 收盘 2026年8月1日 或 7月31日 股价","numResults":6}',
+    });
+    expect(output[3]).toMatchObject({ type: "tool-call", toolName: "websearch" });
+    expect(output.some((part) => part.type === "text-delta")).toBe(false);
+  });
+
+  test("recovers multiple DSML calls without leaking any assistant text", async () => {
+    const middleware = createLocalToolCallMiddleware(new Set(["websearch", "read", "invalid"]));
+    const output = await transform(middleware, [
+      { type: "text-start", id: "text-multi-dsml" },
+      {
+        type: "text-delta",
+        id: "text-multi-dsml",
+        delta:
+          '<｜｜DSML｜｜tool_calls><｜｜DSML｜｜invoke name="websearch"><｜｜DSML｜｜parameter name="query" string="true">DJL</｜｜DSML｜｜parameter></｜｜DSML｜｜invoke><｜｜DSML｜｜invoke name="read"><｜｜DSML｜｜parameter name="filePath" string="true">README.md</｜｜DSML｜｜parameter></｜｜DSML｜｜invoke></｜｜DSML｜｜tool_calls>',
+      },
+      { type: "text-end", id: "text-multi-dsml" },
+    ]);
+
+    expect(output.filter((part) => part.type === "tool-call")).toHaveLength(2);
+    expect(output.filter((part) => part.type === "tool-call").map((part) => part.toolName)).toEqual([
+      "websearch",
+      "read",
+    ]);
+    expect(output.some((part) => part.type === "text-delta")).toBe(false);
+  });
+
   test("parses and de-duplicates bare tool JSON emitted as assistant text", () => {
     const text = [
       '{"name":"write","arguments":{"filePath":"C:/tmp/a.txt","content":"hello"}}',

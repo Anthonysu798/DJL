@@ -77,6 +77,26 @@ function thread(overrides: Partial<Thread> = {}): Thread {
 }
 
 describe("deriveThreadRecapSource", () => {
+  it("excludes protocol-only assistant messages from recap material", () => {
+    const source = deriveThreadRecapSource({
+      thread: thread({
+        messages: [
+          message({ id: "m1", role: "user", text: "Check the closing price." }),
+          message({
+            id: "m2",
+            role: "assistant",
+            text: '<tool_calls><invoke name="websearch"><parameter name="query">DJL</parameter></invoke></tool_calls>',
+          }),
+        ],
+      }),
+      hasPreviousRecap: false,
+    });
+
+    expect(source.newMaterial).toContain("Check the closing price.");
+    expect(source.newMaterial).not.toContain("tool_calls");
+    expect(source.latestMessageId).toBe("m1");
+  });
+
   it("builds initial material from real user and assistant messages", () => {
     const source = deriveThreadRecapSource({
       thread: thread({

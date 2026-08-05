@@ -705,6 +705,16 @@ describe("resolveAssistantMessageCopyState", () => {
       }),
     ).toEqual({ text: null, visible: false });
   });
+
+  it("does not offer leaked DSML protocol text for copying", () => {
+    expect(
+      resolveAssistantMessageCopyState({
+        text: '<｜｜DSML｜｜tool_calls><｜｜DSML｜｜invoke name="websearch"></｜｜DSML｜｜invoke></｜｜DSML｜｜tool_calls>',
+        showCopyButton: true,
+        streaming: false,
+      }),
+    ).toEqual({ text: null, visible: false });
+  });
 });
 
 describe("resolveAssistantMessageDisplayText", () => {
@@ -784,6 +794,22 @@ describe("resolveAssistantMessageDisplayText", () => {
         ],
       }),
     ).toBe("Here is your image.");
+  });
+
+  it("replaces legacy DSML-only assistant text with a recovery notice", () => {
+    expect(
+      resolveAssistantMessageDisplayText({
+        message: {
+          text: '<｜｜DSML｜｜tool_calls><｜｜DSML｜｜invoke name="websearch"></｜｜DSML｜｜invoke></｜｜DSML｜｜tool_calls>',
+          streaming: false,
+        },
+        emptyResponseLabel: "(empty response)",
+        protocolRecoveryLabel:
+          "An older DJL build saved a tool call as text. It was not executed. Send the request again if you still need the result.",
+      }),
+    ).toBe(
+      "An older DJL build saved a tool call as text. It was not executed. Send the request again if you still need the result.",
+    );
   });
 });
 

@@ -4,6 +4,7 @@
 // Exports: row derivation, structural sharing, copy/timer helpers
 
 import { type MessageId, type TurnId } from "@synara/contracts";
+import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {
@@ -127,7 +128,7 @@ export function resolveAssistantMessageCopyState({
   showCopyButton: boolean;
   streaming: boolean;
 }) {
-  const normalizedText = text?.trim() ? text : null;
+  const normalizedText = text?.trim() && !isProviderProtocolOnlyText(text) ? text : null;
   return {
     text: normalizedText,
     visible: showCopyButton && normalizedText !== null && !streaming,
@@ -137,6 +138,7 @@ export function resolveAssistantMessageCopyState({
 type AssistantMessageDisplayInput = {
   readonly message: Pick<ChatMessage, "text" | "streaming">;
   readonly emptyResponseLabel: string;
+  readonly protocolRecoveryLabel?: string;
   readonly leadingWorkEntries?: ReadonlyArray<WorkLogEntry>;
   readonly inlineWorkEntries?: ReadonlyArray<WorkLogEntry>;
   readonly collapsedTurnItems?: ReadonlyArray<CollapsedTurnItem>;
@@ -159,6 +161,9 @@ function isVisibleGeneratedImageEntry(entry: WorkLogEntry): boolean {
 export function resolveAssistantMessageDisplayText(
   input: AssistantMessageDisplayInput,
 ): string | null {
+  if (isProviderProtocolOnlyText(input.message.text)) {
+    return input.protocolRecoveryLabel ?? null;
+  }
   if (input.message.text) {
     return input.message.text;
   }
