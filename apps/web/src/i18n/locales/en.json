@@ -867,6 +867,7 @@
       "moreToolCalls_one": "+{{count}} more tool call",
       "moreToolCalls_other": "+{{count}} more tool calls",
       "pinToPanel": "Pin to panel",
+      "protocolRecovery": "An older DJL build saved a tool call as text. It was not executed. Send the request again if you still need the result.",
       "showLess": "Show less",
       "showMore": "Show more",
       "showMoreCount_one": "Show {{count}} more",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "The exact build currently running on this device.",
+          "development": "Development build",
+          "developmentWithCommit": "Development build · {{commit}}"
+        },
         "keybindings": {
           "description": "Open the persisted keybindings.json file to edit advanced bindings directly.",
           "editorHint": "Opens in your preferred editor.",
           "openFile": "Open file",
           "opening": "Opening...",
           "resolvingPath": "Resolving keybindings path..."
+        },
+        "latestGithubRelease": {
+          "description": "Newest stable release published by Anthonysu798/DJL.",
+          "loading": "Checking…",
+          "retry": "Retry",
+          "title": "Latest GitHub release"
         },
         "recovery": {
           "description": "Rebuild local project indexes without clearing existing chats when local state gets out of sync.",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "About",
           "developerTools": "Developer tools"
-        },
-        "version": {
-          "description": "Current application version."
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "application version about",
-            "title": "Version"
+            "title": "Installed build"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "Back to What's new",
       "close": "Close",
       "gotIt": "Got it",
-      "viewChangelog": "View changelog"
+      "retry": "Retry",
+      "viewChangelog": "View changelog",
+      "viewOnGithub": "View on GitHub"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "Complete changelog",
-      "description": "Every curated release, newest first.",
+      "description": "Published DJL releases from GitHub, newest first.",
       "empty": "No release notes yet — check back after the next update.",
+      "githubLanguageNotice": "GitHub release notes are shown in their original language.",
+      "loading": "Loading releases from GitHub…",
       "olderEntriesNotice": "Older release notes are available in English only.",
+      "prerelease": "Prerelease",
       "releaseTitle": "Release history",
+      "unavailable": "Release information is unavailable right now.",
       "updateCount_one": "{{count}} update",
       "updateCount_other": "{{count}} updates",
       "version": "Version {{version}}"

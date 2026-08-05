@@ -416,12 +416,15 @@ export interface SynaraStorageSnapshot {
   readonly entries: Readonly<Record<string, string>>;
 }
 
+export interface DesktopBuildInfo {
+  readonly kind: "packaged" | "development";
+  readonly version: string | null;
+  readonly commit: string | null;
+}
+
 export interface DesktopBridge {
   getWsUrl: () => string | null;
-  getBuildInfo: () => {
-    readonly version: string;
-    readonly commit: string | null;
-  };
+  getBuildInfo: () => DesktopBuildInfo;
   locale: {
     getPreferredSystemLanguages: () => readonly string[];
     applyPreference: (preference: AppLocalePreference) => Promise<AppLocale>;

@@ -26,9 +26,48 @@ function titleWords(value: string): string[] {
 }
 
 function containsProviderProtocolMarkup(value: string): boolean {
-  return /<\s*\/?\s*(?:tool_calls?|parameter|function_calls?|assistant|analysis|final)\b/i.test(
-    value,
+  return (
+    /<\s*\/?\s*(?:tool_calls?|parameter|function_calls?|assistant|analysis|final)\b/i.test(value) ||
+    /<\/?｜{1,2}DSML｜{1,2}(?:tool_calls|invoke|parameter)\b/u.test(value)
   );
+}
+
+/** True only when the complete assistant text is a raw provider protocol envelope. */
+export function isProviderProtocolOnlyText(value: string | null | undefined): boolean {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length === 0) return false;
+  if (
+    /^<｜{1,2}DSML｜{1,2}tool_calls>[\s\S]*<\/｜{1,2}DSML｜{1,2}tool_calls>$/u.test(trimmed) ||
+    /^<\s*(?:tool_calls?|function_calls?)\b[^>]*>[\s\S]*<\/\s*(?:tool_calls?|function_calls?)\s*>$/i.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return false;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+    const envelope = parsed as Record<string, unknown>;
+    const name = envelope.name ?? envelope.function_name;
+    if (typeof name === "string" && Object.hasOwn(envelope, "arguments")) return true;
+    return (
+      Array.isArray(envelope.tool_calls) &&
+      envelope.tool_calls.length > 0 &&
+      envelope.tool_calls.every((call) => {
+        if (call === null || typeof call !== "object" || Array.isArray(call)) return false;
+        const functionCall = (call as Record<string, unknown>).function;
+        return (
+          functionCall !== null &&
+          typeof functionCall === "object" &&
+          typeof (functionCall as Record<string, unknown>).name === "string"
+        );
+      })
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function truncateChatThreadTitle(
@@ -54,7 +93,7 @@ export function buildPromptThreadTitleFallback(message: string): string {
 // Keep generated titles compact so the sidebar never renders sentence-length prompts.
 export function sanitizeGeneratedThreadTitle(raw: string): string {
   const unquoted = normalizeTitleWhitespace(raw).replace(/^['"`]+|['"`]+$/g, "");
-  if (containsProviderProtocolMarkup(unquoted)) {
+  if (containsProviderProtocolMarkup(unquoted) || isProviderProtocolOnlyText(unquoted)) {
     return GENERIC_CHAT_THREAD_TITLE;
   }
   const words = titleWords(unquoted).slice(0, MAX_CHAT_THREAD_TITLE_WORDS);

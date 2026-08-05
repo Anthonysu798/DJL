@@ -1,6 +1,7 @@
 import type { ChatMessage } from "./types";
 import { stripEmbeddedAssistantSelections } from "./lib/assistantSelections";
 import { pluralize } from "@synara/shared/text";
+import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
 import { translateRendererCopy } from "./i18n";
 
 export interface BootstrapInputResult {
@@ -125,6 +126,7 @@ export function buildBootstrapInput(
   for (let index = previousMessages.length - 1; index >= 0; index -= 1) {
     const message = previousMessages[index];
     if (!message) continue;
+    if (message.role === "assistant" && isProviderProtocolOnlyText(message.text)) continue;
     newestFirstBlocks.push(buildMessageBlock(message));
   }
 
@@ -142,7 +144,7 @@ export function buildBootstrapInput(
   for (const block of newestFirstBlocks) {
     const nextNewestFirst = [...includedNewestFirst, block];
     const nextChronological = nextNewestFirst.toReversed();
-    const omittedCount = newestFirstBlocks.length - nextChronological.length;
+    const omittedCount = previousMessages.length - nextChronological.length;
     const transcriptBody =
       omittedCount > 0
         ? `${OMITTED_SUMMARY(omittedCount)}\n\n${nextChronological.join("\n\n")}`
@@ -155,7 +157,7 @@ export function buildBootstrapInput(
 
   let includedChronological = includedNewestFirst.toReversed();
   while (true) {
-    const omittedCount = newestFirstBlocks.length - includedChronological.length;
+    const omittedCount = previousMessages.length - includedChronological.length;
     const transcriptBody =
       omittedCount > 0
         ? includedChronological.length > 0

@@ -5,7 +5,6 @@ import {
   collectVisibleEnglish,
   isProductionSourceFile,
   validateCatalogs,
-  validateCurrentWhatsNewCatalog,
   validateLocaleReviewStatus,
   validateRendererCopyKeys,
 } from "./check";
@@ -85,34 +84,6 @@ describe("i18n catalog validation", () => {
     expect(validateLocaleReviewStatus(["en", "fr"], { en: "approved", fr: "pending" })).not.toEqual(
       [],
     );
-  });
-
-  it("requires catalog keys for every authored field in the current release entry", () => {
-    const source = `
-      export const WHATS_NEW_ENTRIES = [{
-        version: "1.2.3",
-        features: [{ id: "faster", title: "Faster", description: "Much faster now", details: "Technical detail" }],
-      }] as const;
-    `;
-    expect(
-      validateCurrentWhatsNewCatalog(source, "1.2.3", {
-        whatsNew: {
-          currentRelease: {
-            features: {
-              faster: {
-                title: "Faster",
-                description: "Much faster now",
-                details: "Technical detail",
-              },
-            },
-          },
-        },
-      }),
-    ).toEqual([]);
-    expect(validateCurrentWhatsNewCatalog(source, "1.2.3", {})).toHaveLength(3);
-    expect(validateCurrentWhatsNewCatalog(source, "2.0.0", {})).toEqual([
-      "whatsNew/entries.ts: no entry matches current app version 2.0.0",
-    ]);
   });
 
   it("validates literal renderer keys with namespaces and i18next plural resolution", () => {

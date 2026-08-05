@@ -4,6 +4,7 @@ import {
   buildPromptThreadTitleFallback,
   GENERIC_CHAT_THREAD_TITLE,
   isGenericChatThreadTitle,
+  isProviderProtocolOnlyText,
   sanitizeGeneratedThreadTitle,
 } from "./chatThreads";
 
@@ -28,6 +29,34 @@ describe("chatThreads", () => {
         '<tool_calls> <tool_call name="Read"> <parameter name="file_path">policy.pdf</parameter>',
       ),
     ).toBe(GENERIC_CHAT_THREAD_TITLE);
+    expect(sanitizeGeneratedThreadTitle('{"name":"websearch","arguments":{"query":"DJL"}}')).toBe(
+      GENERIC_CHAT_THREAD_TITLE,
+    );
+  });
+
+  it("rejects leaked DeepSeek DSML tool-call markup", () => {
+    expect(
+      sanitizeGeneratedThreadTitle(
+        '<｜｜DSML｜｜tool_calls> <｜｜DSML｜｜invoke name="websearch"> <｜｜DSML｜｜parameter name="query" string="true">MiniMax stock price</｜｜DSML｜｜parameter> </｜｜DSML｜｜invoke> </｜｜DSML｜｜tool_calls>',
+      ),
+    ).toBe(GENERIC_CHAT_THREAD_TITLE);
+  });
+
+  it("detects conventional JSON tool-call envelopes without hiding examples", () => {
+    expect(
+      isProviderProtocolOnlyText(
+        '{"name":"websearch","arguments":{"query":"MiniMax stock price","numResults":6}}',
+      ),
+    ).toBe(true);
+    expect(
+      isProviderProtocolOnlyText(
+        '```json\n{"name":"websearch","arguments":{"query":"example"}}\n```',
+      ),
+    ).toBe(false);
+    expect(
+      isProviderProtocolOnlyText("<example><tool_calls>documentation</tool_calls></example>"),
+    ).toBe(false);
+    expect(isProviderProtocolOnlyText("<article>Ordinary XML</article>")).toBe(false);
   });
 
   it("keeps distinguishing identifiers within the six-word cap", () => {

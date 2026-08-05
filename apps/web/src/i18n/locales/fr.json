@@ -867,6 +867,7 @@
       "moreToolCalls_one": "+{{count}} plus d'appel d'outil",
       "moreToolCalls_other": "+{{count}} appels d'outils supplémentaires",
       "pinToPanel": "Épingle au panneau",
+      "protocolRecovery": "Une ancienne version de DJL a enregistré un appel d’outil sous forme de texte sans l’exécuter. Renvoyez la demande si vous avez encore besoin du résultat.",
       "showLess": "Afficher moins",
       "showMore": "Afficher plus",
       "showMoreCount_one": "Afficher {{count}} plus",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "La version exacte actuellement exécutée sur cet appareil.",
+          "development": "Version de développement",
+          "developmentWithCommit": "Version de développement · {{commit}}"
+        },
         "keybindings": {
           "description": "Ouvrez le fichier keybindings.json persistant pour modifier directement les raccourcis avancés.",
           "editorHint": "S’ouvre dans votre éditeur préféré.",
           "openFile": "Ouvrir le fichier",
           "opening": "Ouverture...",
           "resolvingPath": "Résolution du chemin des raccourcis..."
+        },
+        "latestGithubRelease": {
+          "description": "Dernière version stable publiée par Anthonysu798/DJL.",
+          "loading": "Vérification…",
+          "retry": "Réessayer",
+          "title": "Dernière version GitHub"
         },
         "recovery": {
           "description": "Reconstruit les index locaux des projets sans effacer les discussions lorsque l’état local est désynchronisé.",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "À propos",
           "developerTools": "Outils de développement"
-        },
-        "version": {
-          "description": "Version actuelle de l’application."
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "version application à propos",
-            "title": "Version de l’application"
+            "title": "Version installée"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "Retour aux nouveautés",
       "close": "Fermer",
       "gotIt": "Compris",
-      "viewChangelog": "Voir le journal des modifications"
+      "retry": "Réessayer",
+      "viewChangelog": "Voir le journal des modifications",
+      "viewOnGithub": "Voir sur GitHub"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "Journal complet des modifications",
-      "description": "Toutes les versions sélectionnées, de la plus récente à la plus ancienne.",
+      "description": "Versions DJL publiées sur GitHub, de la plus récente à la plus ancienne.",
       "empty": "Aucune note de version pour le moment — revenez après la prochaine mise à jour.",
+      "githubLanguageNotice": "Les notes GitHub sont affichées dans leur langue d’origine.",
+      "loading": "Chargement des versions depuis GitHub…",
       "olderEntriesNotice": "Les anciennes notes de version sont disponibles uniquement en anglais.",
+      "prerelease": "Préversion",
       "releaseTitle": "Historique des versions",
+      "unavailable": "Les informations de version sont indisponibles pour le moment.",
       "updateCount_one": "{{count}} mise à jour",
       "updateCount_other": "{{count}} mises à jour",
       "version": "Version nº {{version}}"

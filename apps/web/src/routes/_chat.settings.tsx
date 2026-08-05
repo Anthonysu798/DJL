@@ -54,7 +54,7 @@ import {
   TERMINAL_FONT_FAMILY_SUGGESTIONS,
   useAppSettings,
 } from "../appSettings";
-import { APP_VERSION } from "../branding";
+import { useGithubReleases } from "../whatsNew/useGithubReleases";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
 import {
@@ -637,10 +637,18 @@ function SettingsRouteView() {
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
   const desktopBuildInfo =
     typeof window === "undefined" ? null : (window.desktopBridge?.getBuildInfo?.() ?? null);
-  const displayedBuildVersion = desktopBuildInfo?.version || APP_VERSION;
-  const displayedBuildProvenance = desktopBuildInfo?.commit
-    ? `${displayedBuildVersion} · ${desktopBuildInfo.commit}`
-    : displayedBuildVersion;
+  const installedVersion = desktopBuildInfo?.kind === "packaged" ? desktopBuildInfo.version : null;
+  const displayedBuildProvenance =
+    desktopBuildInfo?.kind === "packaged" && desktopBuildInfo.version
+      ? desktopBuildInfo.commit
+        ? `${desktopBuildInfo.version} · ${desktopBuildInfo.commit}`
+        : desktopBuildInfo.version
+      : desktopBuildInfo?.commit
+        ? t("route.advanced.installedBuild.developmentWithCommit", {
+            commit: desktopBuildInfo.commit,
+          })
+        : t("route.advanced.installedBuild.development");
+  const releaseFeed = useGithubReleases();
 
   const { isDefaultActiveTheme, resetAllThemes, resolvedTheme, theme, setTheme } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
@@ -3574,11 +3582,36 @@ function SettingsRouteView() {
         <SettingsRow
           settingId="version"
           title={t("search.entries.advanced.version.title")}
-          description={t("route.advanced.version.description")}
+          description={t("route.advanced.installedBuild.description")}
           control={
             <code className="text-xs font-medium text-muted-foreground">
               {displayedBuildProvenance}
             </code>
+          }
+        />
+        <SettingsRow
+          settingId="latest-github-release"
+          title={t("route.advanced.latestGithubRelease.title")}
+          description={t("route.advanced.latestGithubRelease.description")}
+          control={
+            releaseFeed.latestStable ? (
+              <a
+                href={releaseFeed.latestStable.htmlUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                v{releaseFeed.latestStable.version}
+              </a>
+            ) : releaseFeed.status === "loading" ? (
+              <span className="text-xs text-muted-foreground">
+                {t("route.advanced.latestGithubRelease.loading")}
+              </span>
+            ) : (
+              <Button size="xs" variant="outline" onClick={releaseFeed.retry}>
+                {t("route.advanced.latestGithubRelease.retry")}
+              </Button>
+            )
           }
         />
         <SettingsRow
@@ -3716,7 +3749,7 @@ function SettingsRouteView() {
         <ReleaseHistoryDialog
           open={releaseHistoryOpen}
           onOpenChange={setReleaseHistoryOpen}
-          defaultExpandedVersion={APP_VERSION}
+          currentVersion={installedVersion}
         />
       </RouteInsetSurface>
     </div>

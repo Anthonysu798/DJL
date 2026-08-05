@@ -159,7 +159,7 @@ import {
   normalizeDesktopWsUrl,
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
-import { DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";
+import { createDesktopBuildInfo, DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";
 import {
   repairBrowserProfileFromBridgeManifest,
   resolveDesktopAppDataBase,
@@ -943,9 +943,18 @@ function resolveAboutCommitHash(): string | null {
     return aboutCommitHashCache;
   }
 
-  // Only packaged builds are required to expose commit metadata.
   if (!app.isPackaged) {
-    aboutCommitHashCache = null;
+    try {
+      aboutCommitHashCache = normalizeCommitHash(
+        ChildProcess.execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: ROOT_DIR,
+          encoding: "utf8",
+          timeout: 2_000,
+        }),
+      );
+    } catch {
+      aboutCommitHashCache = null;
+    }
     return aboutCommitHashCache;
   }
 
@@ -3037,10 +3046,11 @@ function registerIpcHandlers(): void {
 
   ipcMain.removeAllListeners(DESKTOP_BUILD_INFO_CHANNEL);
   ipcMain.on(DESKTOP_BUILD_INFO_CHANNEL, (event: IpcMainEvent) => {
-    event.returnValue = {
-      version: resolveDiagnosticVersion(),
+    event.returnValue = createDesktopBuildInfo({
+      isPackaged: app.isPackaged,
+      version: app.getVersion(),
       commit: resolveAboutCommitHash(),
-    };
+    });
   });
 
   ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.getState);

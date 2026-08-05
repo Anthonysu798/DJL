@@ -1,12 +1,29 @@
 import { type ModelSelection } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  buildThreadHandoffImportedMessages,
   resolveAvailableHandoffTargetProviders,
   resolveThreadHandoffTitle,
   resolveThreadHandoffModelSelection,
 } from "./threadHandoff";
 
 describe("threadHandoff", () => {
+  it("does not import protocol-only assistant messages into a handoff", () => {
+    const imported = buildThreadHandoffImportedMessages({
+      messages: [
+        {
+          id: "message-1" as never,
+          role: "assistant",
+          text: '<tool_calls><invoke name="websearch"><parameter name="query">DJL</parameter></invoke></tool_calls>',
+          createdAt: "2026-08-01T00:00:00.000Z",
+          streaming: false,
+        },
+      ],
+    });
+
+    expect(imported).toEqual([]);
+  });
+
   it("lists all supported handoff targets except the active provider", () => {
     expect(resolveAvailableHandoffTargetProviders("codex")).toEqual([
       "claudeAgent",

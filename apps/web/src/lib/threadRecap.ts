@@ -6,6 +6,7 @@
 import type { ThreadId } from "@synara/contracts";
 import type { Thread, ChatMessage } from "~/types";
 import { isPlainObject, sanitizeStringKeyedRecord } from "~/persistedRecord";
+import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
 import { translateRendererCopy } from "../i18n";
 
 const MAX_RECAP_MESSAGES = 6;
@@ -118,7 +119,9 @@ function compactText(value: string, maxChars: number): string {
 
 function isRecappableMessage(message: ChatMessage): boolean {
   return (
-    (message.role === "user" || message.role === "assistant") && message.text.trim().length > 0
+    (message.role === "user" || message.role === "assistant") &&
+    message.text.trim().length > 0 &&
+    !(message.role === "assistant" && isProviderProtocolOnlyText(message.text))
   );
 }
 

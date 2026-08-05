@@ -867,6 +867,7 @@
       "moreToolCalls_one": "+{{count}} より多くのツールコール",
       "moreToolCalls_other": "+{{count}} より多くのツールコール",
       "pinToPanel": "パネルへのピン",
+      "protocolRecovery": "以前の DJL がツール呼び出しをテキストとして保存したため、実行されませんでした。結果が必要な場合は、リクエストを再送信してください。",
       "showLess": "もっと表示",
       "showMore": "もっと表示",
       "showMoreCount_one": "{{count}}をもっと見る",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "このデバイスで現在実行中の正確なビルドです。",
+          "development": "開発ビルド",
+          "developmentWithCommit": "開発ビルド · {{commit}}"
+        },
         "keybindings": {
           "description": "保存された keybindings.json を開き、高度なキー割り当てを直接編集します。",
           "editorHint": "優先エディターで開きます。",
           "openFile": "ファイルを開く",
           "opening": "開いています...",
           "resolvingPath": "キー割り当てのパスを確認中..."
+        },
+        "latestGithubRelease": {
+          "description": "Anthonysu798/DJL が公開した最新の安定版です。",
+          "loading": "確認中…",
+          "retry": "再試行",
+          "title": "最新の GitHub リリース"
         },
         "recovery": {
           "description": "ローカル状態が同期していない場合に、既存のチャットを消さずにプロジェクト索引を再構築します。",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "このアプリについて",
           "developerTools": "開発者ツール"
-        },
-        "version": {
-          "description": "現在のアプリバージョンです。"
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "アプリ バージョン 情報",
-            "title": "バージョン"
+            "title": "インストール済みビルド"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "新着情報に戻る",
       "close": "閉じる",
       "gotIt": "了解",
-      "viewChangelog": "変更履歴を表示"
+      "retry": "再試行",
+      "viewChangelog": "変更履歴を表示",
+      "viewOnGithub": "GitHubで表示"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "完全な変更履歴",
-      "description": "厳選されたすべてのリリースを新しい順に表示します。",
+      "description": "GitHub で公開された DJL リリースを新しい順に表示します。",
       "empty": "リリースノートはまだありません。次回の更新後にご確認ください。",
+      "githubLanguageNotice": "GitHubのリリースノートは原文で表示されます。",
+      "loading": "GitHubからリリースを読み込んでいます…",
       "olderEntriesNotice": "過去のリリースノートは英語のみです。",
+      "prerelease": "プレリリース",
       "releaseTitle": "リリース履歴",
+      "unavailable": "現在、リリース情報を利用できません。",
       "updateCount_one": "{{count}} 件の更新",
       "updateCount_other": "{{count}} 件の更新",
       "version": "バージョン {{version}}"

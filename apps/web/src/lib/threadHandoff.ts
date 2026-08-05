@@ -13,6 +13,7 @@ import {
   type ThreadHandoffImportedMessage,
 } from "@synara/contracts";
 import { getDefaultModel } from "@synara/shared/model";
+import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
 import { type Thread } from "../types";
 import { stripEmbeddedAssistantSelections } from "./assistantSelections";
 import { randomUUID } from "./utils";
@@ -40,7 +41,11 @@ function isImportableThreadMessage(
 ): message is Thread["messages"][number] & {
   role: "user" | "assistant";
 } {
-  return (message.role === "user" || message.role === "assistant") && message.streaming === false;
+  return (
+    (message.role === "user" || message.role === "assistant") &&
+    message.streaming === false &&
+    !(message.role === "assistant" && isProviderProtocolOnlyText(message.text))
+  );
 }
 
 function isImportableThreadActivity(

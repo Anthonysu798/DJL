@@ -867,6 +867,7 @@
       "moreToolCalls_one": "{{count}} 更多工具呼叫",
       "moreToolCalls_other": "{{count}} 更多工具呼叫",
       "pinToPanel": "釘入面板",
+      "protocolRecovery": "較早版本的 DJL 將工具呼叫儲存成了文字，因此並未執行。如果仍需要結果，請重新傳送該要求。",
       "showLess": "顯示更少",
       "showMore": "顯示更多",
       "showMoreCount_one": "顯示{{count}} 更多",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "此裝置目前正在執行的確切建置。",
+          "development": "開發建置",
+          "developmentWithCommit": "開發建置 · {{commit}}"
+        },
         "keybindings": {
           "description": "開啟持久化的 keybindings.json 檔案，直接編輯進階按鍵繫結。",
           "editorHint": "將在偏好的編輯器中開啟。",
           "openFile": "開啟檔案",
           "opening": "正在開啟...",
           "resolvingPath": "正在解析按鍵繫結路徑..."
+        },
+        "latestGithubRelease": {
+          "description": "Anthonysu798/DJL 發布的最新穩定版本。",
+          "loading": "正在檢查…",
+          "retry": "重試",
+          "title": "最新 GitHub 發行版本"
         },
         "recovery": {
           "description": "當本機狀態不同步時重建本機專案索引，而不清除現有聊天。",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "關于",
           "developerTools": "開發人員工具"
-        },
-        "version": {
-          "description": "目前應用程式版本。"
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "應用程式版本 關於",
-            "title": "版本"
+            "title": "已安裝建置"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "返回最新功能",
       "close": "關閉",
       "gotIt": "知道了",
-      "viewChangelog": "檢視變更記錄"
+      "retry": "重試",
+      "viewChangelog": "檢視變更記錄",
+      "viewOnGithub": "在 GitHub 上檢視"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "完整變更記錄",
-      "description": "所有精選版本，最新版本優先。",
+      "description": "GitHub 上發布的 DJL 版本，最新版本優先。",
       "empty": "目前沒有版本說明，請在下次更新後再查看。",
+      "githubLanguageNotice": "GitHub 版本說明以原文顯示。",
+      "loading": "正在從 GitHub 載入版本…",
       "olderEntriesNotice": "較舊的版本說明僅提供英文。",
+      "prerelease": "預發行版本",
       "releaseTitle": "版本歷史",
+      "unavailable": "暫時無法取得版本資訊。",
       "updateCount_one": "{{count}} 項更新",
       "updateCount_other": "{{count}} 項更新",
       "version": "版本 {{version}}"

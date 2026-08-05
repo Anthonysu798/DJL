@@ -12,9 +12,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeftIcon, ArrowRightIcon } from "~/lib/icons";
 import { DjlLogo } from "~/components/DjlLogo";
 
-import { ChangelogAccordion } from "../whatsNew/ChangelogAccordion";
-import { FeatureSection } from "../whatsNew/FeatureSection";
-import { localizeWhatsNewEntry, type WhatsNewEntry } from "../whatsNew/logic";
+import { ChangelogAccordion, ReleaseNoteContent } from "../whatsNew/ChangelogAccordion";
+import { formatReleaseDate, type WhatsNewEntry } from "../whatsNew/logic";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -72,19 +71,16 @@ export default function WhatsNewDialog({
       </Dialog>
     );
   }
-  const localizedCurrentEntry = localizeWhatsNewEntry(
-    currentEntry,
-    t,
-    true,
-    i18n.resolvedLanguage ?? i18n.language,
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-lg gap-0 p-0" showCloseButton={false}>
         <DialogHeader className="gap-1 p-4 pr-12">
           {view === "current" ? (
-            <CurrentHeader entry={localizedCurrentEntry} currentVersion={currentVersion} />
+            <CurrentHeader
+              entry={currentEntry}
+              currentVersion={currentVersion}
+              locale={i18n.resolvedLanguage ?? i18n.language}
+            />
           ) : (
             <ChangelogHeader onBack={() => setView("current")} />
           )}
@@ -92,16 +88,11 @@ export default function WhatsNewDialog({
 
         <DialogPanel className="max-h-[min(62vh,520px)] px-4 py-3">
           {view === "current" ? (
-            <div className="flex flex-col gap-8 py-1">
-              {localizedCurrentEntry.features.map((feature) => (
-                <FeatureSection key={feature.id} feature={feature} />
-              ))}
-            </div>
+            <ReleaseNoteContent entry={currentEntry} className="py-1" />
           ) : (
             <ChangelogAccordion
               entries={allEntries}
               defaultExpandedVersion={currentEntry.version}
-              currentVersion={currentVersion}
             />
           )}
         </DialogPanel>
@@ -130,9 +121,11 @@ export default function WhatsNewDialog({
 function CurrentHeader({
   entry,
   currentVersion,
+  locale,
 }: {
   readonly entry: WhatsNewEntry;
   readonly currentVersion: string;
+  readonly locale: string;
 }) {
   const { t } = useTranslation("whatsNew");
   return (
@@ -143,7 +136,7 @@ function CurrentHeader({
         <DialogDescription className="text-xs">
           v{currentVersion}
           <span aria-hidden="true"> · </span>
-          {entry.date}
+          {formatReleaseDate(entry.publishedAt, locale)}
         </DialogDescription>
       </div>
     </div>

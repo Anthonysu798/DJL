@@ -6,6 +6,44 @@ import { buildBootstrapInput } from "./historyBootstrap";
 const messageId = (value: string) => MessageId.makeUnsafe(value);
 
 describe("buildBootstrapInput", () => {
+  it("excludes protocol-only assistant messages from replay context", () => {
+    const leakedDsml = [
+      "<｜｜DSML｜｜tool_calls>",
+      '<｜｜DSML｜｜invoke name="websearch">',
+      '<｜｜DSML｜｜parameter name="query" string="true">MiniMax 0100.HK 收盘 2026年8月1日 或 7月31日 股价</｜｜DSML｜｜parameter>',
+      '<｜｜DSML｜｜parameter name="numResults" string="false">6</｜｜DSML｜｜parameter>',
+      "</｜｜DSML｜｜invoke>",
+      "</｜｜DSML｜｜tool_calls>",
+    ].join("\n");
+
+    const result = buildBootstrapInput(
+      [
+        {
+          id: messageId("u-1"),
+          role: "user",
+          text: "Check the closing price.",
+          createdAt: "2026-08-01T00:00:00.000Z",
+          streaming: false,
+        },
+        {
+          id: messageId("a-1"),
+          role: "assistant",
+          text: leakedDsml,
+          createdAt: "2026-08-01T00:00:01.000Z",
+          streaming: false,
+        },
+      ],
+      "Try again.",
+      1_500,
+    );
+
+    expect(result.text).toContain("USER:\nCheck the closing price.");
+    expect(result.text).not.toContain("DSML");
+    expect(result.text).not.toContain("websearch");
+    expect(result.includedCount).toBe(1);
+    expect(result.omittedCount).toBe(1);
+  });
+
   it("includes full transcript when under budget", () => {
     const result = buildBootstrapInput(
       [

@@ -867,6 +867,7 @@
       "moreToolCalls_one": "+{{count}} 더 도구 호출",
       "moreToolCalls_other": "+{{count}} 더 도구 호출",
       "pinToPanel": "Pin에 패널",
+      "protocolRecovery": "이전 DJL 빌드가 도구 호출을 텍스트로 저장하여 실행되지 않았습니다. 결과가 계속 필요하면 요청을 다시 보내세요.",
       "showLess": "더보기",
       "showMore": "더 보기",
       "showMoreCount_one": "{{count}} 더보기",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "이 기기에서 현재 실행 중인 정확한 빌드입니다.",
+          "development": "개발 빌드",
+          "developmentWithCommit": "개발 빌드 · {{commit}}"
+        },
         "keybindings": {
           "description": "저장된 keybindings.json 파일을 열어 고급 키 바인딩을 직접 편집합니다.",
           "editorHint": "선호하는 편집기에서 엽니다.",
           "openFile": "파일 열기",
           "opening": "여는 중...",
           "resolvingPath": "키 바인딩 경로 확인 중..."
+        },
+        "latestGithubRelease": {
+          "description": "Anthonysu798/DJL에서 게시한 최신 안정 릴리스입니다.",
+          "loading": "확인 중…",
+          "retry": "다시 시도",
+          "title": "최신 GitHub 릴리스"
         },
         "recovery": {
           "description": "로컬 상태가 맞지 않을 때 기존 채팅을 지우지 않고 프로젝트 인덱스를 다시 만듭니다.",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "정보",
           "developerTools": "개발자 도구"
-        },
-        "version": {
-          "description": "현재 애플리케이션 버전입니다."
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "앱 버전 정보",
-            "title": "버전"
+            "title": "설치된 빌드"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "새로운 기능으로 돌아가기",
       "close": "닫기",
       "gotIt": "확인",
-      "viewChangelog": "변경 기록 보기"
+      "retry": "다시 시도",
+      "viewChangelog": "변경 기록 보기",
+      "viewOnGithub": "GitHub에서 보기"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "전체 변경 기록",
-      "description": "모든 주요 릴리스를 최신순으로 표시합니다.",
+      "description": "GitHub에 게시된 DJL 릴리스를 최신순으로 표시합니다.",
       "empty": "아직 릴리스 노트가 없습니다. 다음 업데이트 후 다시 확인하세요.",
+      "githubLanguageNotice": "GitHub 릴리스 노트는 원문으로 표시됩니다.",
+      "loading": "GitHub에서 릴리스를 불러오는 중…",
       "olderEntriesNotice": "이전 릴리스 노트는 영어로만 제공됩니다.",
+      "prerelease": "프리릴리스",
       "releaseTitle": "릴리스 기록",
+      "unavailable": "현재 릴리스 정보를 사용할 수 없습니다.",
       "updateCount_one": "업데이트 {{count}}개",
       "updateCount_other": "업데이트 {{count}}개",
       "version": "버전 {{version}}"

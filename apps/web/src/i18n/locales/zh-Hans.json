@@ -867,6 +867,7 @@
       "moreToolCalls_one": "{{count}} 更多工具调用",
       "moreToolCalls_other": "{{count}} 更多工具调用",
       "pinToPanel": "钉入面板",
+      "protocolRecovery": "较早版本的 DJL 将工具调用保存成了文本，因此并未执行。如果仍需要结果，请重新发送该请求。",
       "showLess": "显示更少",
       "showMore": "显示更多",
       "showMoreCount_one": "显示{{count}} 更多",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "此设备当前正在运行的确切构建。",
+          "development": "开发构建",
+          "developmentWithCommit": "开发构建 · {{commit}}"
+        },
         "keybindings": {
           "description": "打开持久化的 keybindings.json 文件，直接编辑高级按键绑定。",
           "editorHint": "将在首选编辑器中打开。",
           "openFile": "打开文件",
           "opening": "正在打开...",
           "resolvingPath": "正在解析按键绑定路径..."
+        },
+        "latestGithubRelease": {
+          "description": "Anthonysu798/DJL 发布的最新稳定版本。",
+          "loading": "正在检查…",
+          "retry": "重试",
+          "title": "最新 GitHub 发行版"
         },
         "recovery": {
           "description": "当本地状态不同步时重建本地项目索引，而不清除现有聊天。",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "关于",
           "developerTools": "开发者工具"
-        },
-        "version": {
-          "description": "当前应用版本。"
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "应用版本 关于",
-            "title": "版本"
+            "title": "已安装构建"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "返回新功能",
       "close": "关闭",
       "gotIt": "知道了",
-      "viewChangelog": "查看更新日志"
+      "retry": "重试",
+      "viewChangelog": "查看更新日志",
+      "viewOnGithub": "在 GitHub 上查看"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "完整更新日志",
-      "description": "所有精选版本，最新的排在前面。",
+      "description": "GitHub 上发布的 DJL 版本，最新的排在前面。",
       "empty": "暂无发行说明，请在下次更新后再来查看。",
+      "githubLanguageNotice": "GitHub 发行说明以原文显示。",
+      "loading": "正在从 GitHub 加载发行版本…",
       "olderEntriesNotice": "较早的发行说明仅提供英文版本。",
+      "prerelease": "预发行版",
       "releaseTitle": "发行历史",
+      "unavailable": "暂时无法获取发行版本信息。",
       "updateCount_one": "{{count}} 项更新",
       "updateCount_other": "{{count}} 项更新",
       "version": "版本 {{version}}"
