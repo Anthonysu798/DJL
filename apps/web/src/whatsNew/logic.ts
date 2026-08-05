@@ -7,100 +7,19 @@
 // That lets us unit-test version arithmetic and selection rules in isolation
 // and keeps the hook thin.
 
-import type { TFunction } from "i18next";
 import { formatLocaleDateTime } from "../i18n/intl";
+import { selectLatestStableRelease, type GithubReleaseNote } from "./githubReleases";
 
-/**
- * A single feature highlight inside a release. Modelled after the
- * IndieDevs "feature card" format so each bullet can carry a screenshot and
- * a longer technical blurb, not just a title.
- *
- * `image`, `imageAlt`, and `details` are optional — a release can still ship
- * text-only notes when visuals aren't available yet.
- */
-export interface WhatsNewFeature {
-  readonly id: string;
-  readonly title: string;
-  readonly description: string;
-  readonly image?: string;
-  readonly imageAlt?: string;
-  readonly details?: string;
-}
+export type WhatsNewEntry = GithubReleaseNote;
 
-/**
- * A single release entry. `version` is a semver-like `MAJOR.MINOR.PATCH`
- * string that matches the `version` field in `apps/web/package.json` (mirrored
- * into `import.meta.env.APP_VERSION`). `date` is a human-readable label
- * rendered verbatim (e.g. `"Apr 18"`), so authors control the format.
- *
- * `heroImage` / `heroImageAlt` are optional artwork shown on the post-update
- * popout card (the little "New: ..." pill in the bottom-left corner). When
- * omitted, the card falls back to a gradient + icon — so a release without a
- * screenshot still gets a polished entry point.
- */
-export interface WhatsNewEntry {
-  readonly version: string;
-  readonly date: string;
-  readonly features: readonly WhatsNewFeature[];
-  readonly heroImage?: string;
-  readonly heroImageAlt?: string;
-}
-
-/** Localize only the actively installed release; historical author copy remains immutable. */
-export function localizeWhatsNewEntry(
-  entry: WhatsNewEntry,
-  t: TFunction,
-  isCurrentRelease: boolean,
-  locale?: string,
-): WhatsNewEntry {
-  if (!isCurrentRelease) return entry;
-
-  return {
-    ...entry,
-    date: formatReleaseDate(entry.date, locale),
-    features: entry.features.map((feature) => ({
-      ...feature,
-      title: t(`currentRelease.features.${feature.id}.title`, {
-        ns: "whatsNew",
-        defaultValue: feature.title,
-      }),
-      description: t(`currentRelease.features.${feature.id}.description`, {
-        ns: "whatsNew",
-        defaultValue: feature.description,
-      }),
-      ...(feature.details === undefined
-        ? {}
-        : {
-            details: t(`currentRelease.features.${feature.id}.details`, {
-              ns: "whatsNew",
-              defaultValue: feature.details,
-            }),
-          }),
-      ...(feature.imageAlt === undefined
-        ? {}
-        : {
-            imageAlt: t(`currentRelease.features.${feature.id}.imageAlt`, {
-              ns: "whatsNew",
-              defaultValue: feature.imageAlt,
-            }),
-          }),
-    })),
-  };
-}
-
-function formatReleaseDate(date: string, locale?: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) return date;
-  const [, year, month, day] = match;
-  return formatLocaleDateTime(
-    new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))),
-    locale ?? "en",
-    {
-      month: "short",
-      day: "numeric",
-      timeZone: "UTC",
-    },
-  );
+export function formatReleaseDate(publishedAt: string, locale?: string): string {
+  const date = new Date(publishedAt);
+  if (Number.isNaN(date.getTime())) return publishedAt;
+  return formatLocaleDateTime(date, locale ?? "en", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 /**
@@ -144,13 +63,23 @@ export function sortEntriesByVersionDesc(
   return entries.toSorted((left, right) => compareVersions(right.version, left.version));
 }
 
+export function resolveDefaultReleaseVersion(
+  entries: readonly WhatsNewEntry[],
+  installedVersion: string | null,
+): string | null {
+  const installedRelease = installedVersion
+    ? entries.find((entry) => entry.version === installedVersion)
+    : null;
+  return (installedRelease ?? selectLatestStableRelease(entries))?.version ?? null;
+}
+
 /**
  * Inputs to `resolveWhatsNewState`. Kept as a plain object so the hook can
  * pass the same shape it already has — no parameter juggling.
  */
 export interface WhatsNewInputs {
   /** All changelog entries known at build time. Order is not assumed. */
-  readonly entries: readonly WhatsNewEntry[];
+  readonly entries: readonly WhatsNewEntry[] | null;
   /** The currently installed app version (`import.meta.env.APP_VERSION`). */
   readonly currentVersion: string;
   /**
@@ -176,6 +105,7 @@ export interface WhatsNewInputs {
  *   current version is older than what they've seen (e.g. a downgrade).
  */
 export type WhatsNewState =
+  | { readonly kind: "pending" }
   | {
       readonly kind: "show";
       readonly currentEntry: WhatsNewEntry;
@@ -201,6 +131,10 @@ export type WhatsNewState =
  */
 export function resolveWhatsNewState(inputs: WhatsNewInputs): WhatsNewState {
   const { entries, currentVersion, lastSeenVersion } = inputs;
+
+  if (entries === null) {
+    return { kind: "pending" };
+  }
 
   // First-ever launch: record the current version and stay quiet. Showing a
   // "What's new" dialog to a brand-new user on their first boot would feel

@@ -8,8 +8,12 @@
 
 import { ChangelogAccordion } from "../whatsNew/ChangelogAccordion";
 import { useTranslation } from "react-i18next";
-import { WHATS_NEW_ENTRIES } from "../whatsNew/entries";
-import { sortEntriesByVersionDesc, type WhatsNewEntry } from "../whatsNew/logic";
+import {
+  resolveDefaultReleaseVersion,
+  sortEntriesByVersionDesc,
+  type WhatsNewEntry,
+} from "../whatsNew/logic";
+import { useGithubReleases } from "../whatsNew/useGithubReleases";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -34,18 +38,27 @@ export interface ReleaseHistoryDialogProps {
    * leaves every row collapsed so the user scans dates-first.
    */
   readonly defaultExpandedVersion?: string | null;
+  readonly currentVersion?: string | null;
 }
 
 export default function ReleaseHistoryDialog({
   open,
   onOpenChange,
-  entries = WHATS_NEW_ENTRIES,
-  defaultExpandedVersion = null,
+  entries,
+  defaultExpandedVersion,
+  currentVersion = null,
 }: ReleaseHistoryDialogProps) {
   const { t } = useTranslation("whatsNew");
-  // Sort at render time so the source of truth (`entries.ts`) stays free of
-  // ordering rules — authors can prepend, append, or reorder entries freely.
-  const sorted = sortEntriesByVersionDesc(entries);
+  const releaseFeed = useGithubReleases();
+  const resolvedEntries = entries ?? releaseFeed.releases;
+  const sorted = sortEntriesByVersionDesc(resolvedEntries);
+  const resolvedExpandedVersion =
+    defaultExpandedVersion !== undefined
+      ? defaultExpandedVersion
+      : resolveDefaultReleaseVersion(sorted, currentVersion);
+  const showLoading =
+    entries === undefined && releaseFeed.status === "loading" && sorted.length === 0;
+  const showError = entries === undefined && releaseFeed.status === "error" && sorted.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,11 +69,27 @@ export default function ReleaseHistoryDialog({
         </DialogHeader>
 
         <DialogPanel className="max-h-[min(62vh,520px)] px-4 py-3">
-          <ChangelogAccordion
-            entries={sorted}
-            defaultExpandedVersion={defaultExpandedVersion}
-            currentVersion={import.meta.env.APP_VERSION}
-          />
+          {showLoading ? (
+            <p className="text-xs text-muted-foreground">{t("history.loading")}</p>
+          ) : showError ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{t("history.unavailable")}</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={releaseFeed.retry}>
+                  {t("actions.retry")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  render={<a href={releaseFeed.releasesUrl} target="_blank" rel="noreferrer" />}
+                >
+                  {t("actions.viewOnGithub")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ChangelogAccordion entries={sorted} defaultExpandedVersion={resolvedExpandedVersion} />
+          )}
         </DialogPanel>
 
         <DialogFooter>

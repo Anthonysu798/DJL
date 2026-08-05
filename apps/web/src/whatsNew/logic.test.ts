@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createInstance } from "i18next";
-import { initReactI18next } from "react-i18next";
-import englishCatalog from "../i18n/locales/en.json";
-import frenchCatalog from "../i18n/locales/fr.json";
-
 import {
   compareVersions,
-  localizeWhatsNewEntry,
   parseVersion,
+  resolveDefaultReleaseVersion,
   resolveWhatsNewState,
   sortEntriesByVersionDesc,
   type WhatsNewEntry,
@@ -15,31 +10,12 @@ import {
 
 const entry = (version: string, overrides?: Partial<WhatsNewEntry>): WhatsNewEntry => ({
   version,
-  date: "Jan 1",
-  features: [
-    {
-      id: `feature-${version}`,
-      title: `Release ${version}`,
-      description: `Notes for ${version}`,
-    },
-  ],
+  publishedAt: "2026-08-02T06:17:26Z",
+  htmlUrl: `https://github.com/Anthonysu798/DJL/releases/tag/v${version}`,
+  prerelease: false,
+  intro: [],
+  sections: [{ heading: "Fixed", items: [`Notes for ${version}`] }],
   ...overrides,
-});
-
-describe("localizeWhatsNewEntry", () => {
-  it("formats only the current release ISO date with the selected locale", async () => {
-    const i18n = createInstance();
-    await i18n.use(initReactI18next).init({
-      fallbackLng: "en",
-      lng: "fr",
-      resources: { en: englishCatalog, fr: frenchCatalog },
-    });
-    const current = entry("0.5.0", { date: "2026-07-11" });
-    const older = entry("0.4.2", { date: "Jul 9" });
-
-    expect(localizeWhatsNewEntry(current, i18n.t, true, "fr").date).toBe("11 juil.");
-    expect(localizeWhatsNewEntry(older, i18n.t, false, "fr")).toBe(older);
-  });
 });
 
 describe("parseVersion", () => {
@@ -86,6 +62,16 @@ describe("sortEntriesByVersionDesc", () => {
   });
 });
 
+describe("resolveDefaultReleaseVersion", () => {
+  it("prefers the installed release and otherwise falls back to the latest stable release", () => {
+    const releases = [entry("0.6.0-rc.1", { prerelease: true }), entry("0.5.9"), entry("0.5.8")];
+
+    expect(resolveDefaultReleaseVersion(releases, "0.5.8")).toBe("0.5.8");
+    expect(resolveDefaultReleaseVersion(releases, "0.5.0")).toBe("0.5.9");
+    expect(resolveDefaultReleaseVersion(releases, null)).toBe("0.5.9");
+  });
+});
+
 describe("resolveWhatsNewState", () => {
   const entries: readonly WhatsNewEntry[] = [
     entry("0.0.27"),
@@ -93,6 +79,12 @@ describe("resolveWhatsNewState", () => {
     entry("0.0.29"),
     entry("0.1.0"),
   ];
+
+  it("waits without marking anything seen until the GitHub feed is available", () => {
+    expect(
+      resolveWhatsNewState({ entries: null, currentVersion: "0.0.29", lastSeenVersion: "0.0.28" }),
+    ).toEqual({ kind: "pending" });
+  });
 
   it("silently bootstraps when lastSeenVersion is null (first launch)", () => {
     const state = resolveWhatsNewState({

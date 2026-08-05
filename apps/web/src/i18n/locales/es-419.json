@@ -867,6 +867,7 @@
       "moreToolCalls_one": "+{{count}} más llamada herramienta",
       "moreToolCalls_other": "+{{count}} más llamadas herramienta",
       "pinToPanel": "Pin a panel",
+      "protocolRecovery": "Una versión anterior de DJL guardó una llamada de herramienta como texto y no la ejecutó. Vuelve a enviar la solicitud si aún necesitas el resultado.",
       "showLess": "Mostrar menos",
       "showMore": "Mostrar más",
       "showMoreCount_one": "Mostrar {{count}} más",
@@ -1669,12 +1670,23 @@
     },
     "route": {
       "advanced": {
+        "installedBuild": {
+          "description": "La compilación exacta que se ejecuta en este dispositivo.",
+          "development": "Compilación de desarrollo",
+          "developmentWithCommit": "Compilación de desarrollo · {{commit}}"
+        },
         "keybindings": {
           "description": "Abre el archivo persistente keybindings.json para editar directamente los atajos avanzados.",
           "editorHint": "Se abre en tu editor preferido.",
           "openFile": "Abrir archivo",
           "opening": "Abriendo...",
           "resolvingPath": "Resolviendo la ruta de los atajos..."
+        },
+        "latestGithubRelease": {
+          "description": "Versión estable más reciente publicada por Anthonysu798/DJL.",
+          "loading": "Comprobando…",
+          "retry": "Reintentar",
+          "title": "Última versión de GitHub"
         },
         "recovery": {
           "description": "Reconstruye los índices locales de proyectos sin borrar los chats cuando el estado local pierde sincronización.",
@@ -1694,9 +1706,6 @@
         "sections": {
           "about": "Acerca de",
           "developerTools": "Herramientas para desarrolladores"
-        },
-        "version": {
-          "description": "Versión actual de la aplicación."
         }
       },
       "archived": {
@@ -2023,7 +2032,7 @@
           },
           "version": {
             "keywords": "versión aplicación acerca de",
-            "title": "Versión"
+            "title": "Compilación instalada"
           }
         },
         "appearance": {
@@ -3090,7 +3099,9 @@
       "backAriaLabel": "Volver a Novedades",
       "close": "Cerrar",
       "gotIt": "Entendido",
-      "viewChangelog": "Ver registro de cambios"
+      "retry": "Reintentar",
+      "viewChangelog": "Ver registro de cambios",
+      "viewOnGithub": "Ver en GitHub"
     },
     "currentRelease": {
       "features": {
@@ -3128,10 +3139,14 @@
     },
     "history": {
       "completeTitle": "Registro de cambios completo",
-      "description": "Todas las versiones seleccionadas, de la más reciente a la más antigua.",
+      "description": "Versiones publicadas de DJL en GitHub, de la más reciente a la más antigua.",
       "empty": "Aún no hay notas de versión. Vuelve después de la próxima actualización.",
+      "githubLanguageNotice": "Las notas de GitHub se muestran en su idioma original.",
+      "loading": "Cargando versiones desde GitHub…",
       "olderEntriesNotice": "Las notas de versiones anteriores solo están disponibles en inglés.",
+      "prerelease": "Versión preliminar",
       "releaseTitle": "Historial de versiones",
+      "unavailable": "La información de versiones no está disponible en este momento.",
       "updateCount_one": "{{count}} actualización",
       "updateCount_other": "{{count}} actualizaciones",
       "version": "Versión {{version}}"

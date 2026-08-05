@@ -12,7 +12,7 @@ import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { DjlLogo } from "~/components/DjlLogo";
 
-import { localizeWhatsNewEntry, type WhatsNewEntry } from "./logic";
+import { type WhatsNewEntry } from "./logic";
 
 export interface WhatsNewPopoutCardProps {
   readonly entry: WhatsNewEntry;
@@ -39,15 +39,8 @@ export function WhatsNewPopoutCard({
   onDismiss,
   className,
 }: WhatsNewPopoutCardProps) {
-  const { t, i18n } = useTranslation("whatsNew");
-  const localizedEntry = localizeWhatsNewEntry(
-    entry,
-    t,
-    true,
-    i18n.resolvedLanguage ?? i18n.language,
-  );
-  const heroAlt = localizedEntry.heroImageAlt ?? t("popout.heroAlt", { version: currentVersion });
-  const primaryFeatureTitle = localizedEntry.features[0]?.title;
+  const { t } = useTranslation("whatsNew");
+  const primaryNote = entry.sections[0]?.items[0] ?? entry.intro[0];
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -110,22 +103,12 @@ export function WhatsNewPopoutCard({
             branded gradient + icon so every release still gets a polished
             visual. */}
         <div className="relative h-24 w-full overflow-hidden">
-          {localizedEntry.heroImage !== undefined ? (
-            <img
-              src={localizedEntry.heroImage}
-              alt={heroAlt}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div
-              aria-hidden="true"
-              className="flex h-full w-full items-center justify-center bg-[radial-gradient(120%_140%_at_10%_0%,color-mix(in_srgb,var(--color-primary)_38%,transparent)_0%,transparent_60%),radial-gradient(100%_120%_at_100%_100%,color-mix(in_srgb,var(--color-primary)_22%,transparent)_0%,transparent_70%)]"
-            >
-              <DjlLogo aria-hidden className="size-9 text-foreground" />
-            </div>
-          )}
+          <div
+            aria-hidden="true"
+            className="flex h-full w-full items-center justify-center bg-[radial-gradient(120%_140%_at_10%_0%,color-mix(in_srgb,var(--color-primary)_38%,transparent)_0%,transparent_60%),radial-gradient(100%_120%_at_100%_100%,color-mix(in_srgb,var(--color-primary)_22%,transparent)_0%,transparent_70%)]"
+          >
+            <DjlLogo aria-hidden className="size-9 text-foreground" />
+          </div>
           {/* Subtle bottom gradient so text below the band always reads. */}
           <div
             aria-hidden="true"
@@ -138,7 +121,7 @@ export function WhatsNewPopoutCard({
             {t("popout.newVersion", { version: currentVersion })}
           </p>
           <p className="truncate text-sm font-semibold text-foreground">
-            {primaryFeatureTitle ?? t("popout.heroAlt", { version: currentVersion })}
+            {primaryNote ?? t("popout.heroAlt", { version: currentVersion })}
           </p>
           <p className="text-xs text-muted-foreground">
             {t("popout.findOutMore")} <span aria-hidden="true">→</span>

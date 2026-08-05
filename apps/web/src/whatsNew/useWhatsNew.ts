@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { APP_VERSION } from "../branding";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { WHATS_NEW_ENTRIES } from "./entries";
+import { useGithubReleases } from "./useGithubReleases";
 import {
   resolveWhatsNewState,
   type WhatsNewEntry,
@@ -82,7 +82,9 @@ export function useWhatsNew(options?: {
   readonly entries?: readonly WhatsNewEntry[];
   readonly currentVersion?: string;
 }): UseWhatsNewResult {
-  const entries = options?.entries ?? WHATS_NEW_ENTRIES;
+  const releaseFeed = useGithubReleases();
+  const entries =
+    options?.entries ?? (releaseFeed.status === "ready" ? releaseFeed.releases : null);
   const currentVersion = options?.currentVersion ?? APP_VERSION;
 
   const [storage, setStorage] = useLocalStorage(
@@ -91,11 +93,8 @@ export function useWhatsNew(options?: {
     WhatsNewStorageSchema,
   );
 
-  // Snapshot the decision once per mount using the initial storage value so
-  // that updating localStorage (e.g. acknowledging the dialog) doesn't flip
-  // the UI back and forth while animations are still running.
   const initialStorageRef = useRef(storage);
-  const initialState = useMemo<WhatsNewState>(
+  const decision = useMemo<WhatsNewState>(
     () =>
       resolveWhatsNewState({
         entries,
@@ -106,33 +105,39 @@ export function useWhatsNew(options?: {
   );
 
   // The popout starts visible only when we actually have something to show.
-  const [isPopoutVisible, setIsPopoutVisible] = useState(initialState.kind === "show");
+  const [isPopoutVisible, setIsPopoutVisible] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const handledVersionRef = useRef<string | null>(null);
 
   // Silent bootstrap (first launch or no curated notes for this upgrade):
   // advance the marker in the background so the next upgrade is correctly
   // detected. Done in an effect so we only touch storage once per mount.
   useEffect(() => {
-    if (initialState.kind === "silent-bootstrap") {
-      setStorage({ lastSeenVersion: initialState.nextLastSeenVersion });
+    if (decision.kind === "pending" || decision.kind === "noop") return;
+    if (handledVersionRef.current === decision.nextLastSeenVersion) return;
+    handledVersionRef.current = decision.nextLastSeenVersion;
+    if (decision.kind === "show") {
+      setIsPopoutVisible(true);
+    } else {
+      setStorage({ lastSeenVersion: decision.nextLastSeenVersion });
     }
-  }, [initialState, setStorage]);
+  }, [decision, setStorage]);
 
   const currentEntry = useMemo<WhatsNewEntry | null>(
-    () => (initialState.kind === "show" ? initialState.currentEntry : null),
-    [initialState],
+    () => (decision.kind === "show" ? decision.currentEntry : null),
+    [decision],
   );
 
   const allEntries = useMemo<readonly WhatsNewEntry[]>(
-    () => (initialState.kind === "show" ? initialState.allEntries : []),
-    [initialState],
+    () => (decision.kind === "show" ? decision.allEntries : []),
+    [decision],
   );
 
   const markSeen = useCallback(() => {
-    if (initialState.kind === "show") {
-      setStorage({ lastSeenVersion: initialState.nextLastSeenVersion });
+    if (decision.kind === "show") {
+      setStorage({ lastSeenVersion: decision.nextLastSeenVersion });
     }
-  }, [initialState, setStorage]);
+  }, [decision, setStorage]);
 
   const openDialog = useCallback(() => {
     // Just open the dialog. The user is about to read the notes — don't mark
