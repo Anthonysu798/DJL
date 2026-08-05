@@ -15,8 +15,6 @@ import {
   buildTaskCompletionCopy,
 } from "../notifications/taskCompletion.logic";
 import { showDesktopThreadNotification } from "../notifications/taskCompletion";
-import { WHATS_NEW_ENTRIES } from "../whatsNew/entries";
-import { localizeWhatsNewEntry } from "../whatsNew/logic";
 import {
   formatSettingsRouteDiagnostic,
   localizeCustomModelValidationError,
@@ -295,20 +293,5 @@ describe("settings, profile, notifications, and release localization", () => {
       title: "Tâche terminée",
       body: "User-authored thread title : raw assistant detail",
     });
-  });
-
-  it("localizes only the current release entry and leaves older authored content unchanged", async () => {
-    const instance = await createTestI18n();
-    const current = WHATS_NEW_ENTRIES[0]!;
-    const older = WHATS_NEW_ENTRIES[1]!;
-    const originalOlderTitle = older.features[0]!.title;
-
-    await instance.changeLanguage("zh-Hans");
-    const localizedCurrent = localizeWhatsNewEntry(current, instance.t, true);
-    const localizedOlder = localizeWhatsNewEntry(older, instance.t, false);
-
-    expect(localizedCurrent.features[0]!.title).toBe("全面统一为 DJL");
-    expect(localizedCurrent.features[0]!.description).not.toBe(current.features[0]!.description);
-    expect(localizedOlder.features[0]!.title).toBe(originalOlderTitle);
   });
 });

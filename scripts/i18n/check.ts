@@ -490,89 +490,9 @@ export function validateLocaleReviewStatus(
   return errors;
 }
 
-function objectProperty(
-  object: ts.ObjectLiteralExpression,
-  name: string,
-): ts.PropertyAssignment | undefined {
-  return object.properties.find(
-    (property): property is ts.PropertyAssignment =>
-      ts.isPropertyAssignment(property) &&
-      (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
-      property.name.text === name,
-  );
-}
-
-/** Ensures the only release copy shown as localized has a complete catalog representation. */
-export function validateCurrentWhatsNewCatalog(
-  source: string,
-  currentVersion: string,
-  catalog: JsonValue,
-): string[] {
-  const file = ts.createSourceFile(
-    "entries.ts",
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
-  let entries: ts.ArrayLiteralExpression | undefined;
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "WHATS_NEW_ENTRIES" &&
-      node.initializer
-    ) {
-      let initializer: ts.Expression = node.initializer;
-      while (ts.isAsExpression(initializer) || ts.isSatisfiesExpression(initializer)) {
-        initializer = initializer.expression;
-      }
-      if (ts.isArrayLiteralExpression(initializer)) entries = initializer;
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(file);
-  if (!entries) return ["whatsNew/entries.ts: WHATS_NEW_ENTRIES was not found"];
-
-  const currentEntry = entries.elements.find((element): element is ts.ObjectLiteralExpression => {
-    if (!ts.isObjectLiteralExpression(element)) return false;
-    const version = objectProperty(element, "version")?.initializer;
-    return version !== undefined && ts.isStringLiteral(version) && version.text === currentVersion;
-  });
-  if (!currentEntry) {
-    return [`whatsNew/entries.ts: no entry matches current app version ${currentVersion}`];
-  }
-
-  const catalogLeaves = flatten(catalog);
-  const errors: string[] = [];
-  const features = objectProperty(currentEntry, "features")?.initializer;
-  if (!features || !ts.isArrayLiteralExpression(features)) {
-    return [`whatsNew/entries.ts: ${currentVersion} has no literal features array`];
-  }
-  for (const element of features.elements) {
-    if (!ts.isObjectLiteralExpression(element)) continue;
-    const id = objectProperty(element, "id")?.initializer;
-    if (!id || !ts.isStringLiteral(id)) {
-      errors.push(`whatsNew/entries.ts: ${currentVersion} has a feature without a literal id`);
-      continue;
-    }
-    for (const field of ["title", "description", "details", "imageAlt"] as const) {
-      const authoredField = objectProperty(element, field)?.initializer;
-      if (!authoredField) continue;
-      const key = `whatsNew.currentRelease.features.${id.text}.${field}`;
-      const translated = catalogLeaves.get(key);
-      if (typeof translated !== "string" || translated.trim().length === 0) {
-        errors.push(`whatsNew/entries.ts: ${currentVersion} field ${key} has no catalog key`);
-      }
-    }
-  }
-  return errors;
-}
-
 export function isProductionSourceFile(path: string): boolean {
   const normalized = path.replaceAll("\\", "/");
   if (/(?:\.test\.|\.browser\.|\.spec\.|\.gen\.)/.test(normalized)) return false;
-  if (normalized.endsWith("apps/web/src/whatsNew/entries.ts")) return false;
   // These modules are reachable only behind import.meta.env.DEV; their authored
   // fixture copy previews failure states and is deliberately absent from release bundles.
   if (DEV_ONLY_SOURCE_FILE_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) return false;
@@ -632,21 +552,6 @@ export function checkRepositoryI18n(
       webLocales = Object.keys(catalogs);
       webEnglishCatalog = catalogs.en!;
       catalogLeaves = flatten(catalogs.en!).size;
-      const packageJson = JSON.parse(readFileSync(join(root, "apps/web/package.json"), "utf8")) as {
-        version?: unknown;
-      };
-      const currentVersion = packageJson.version;
-      if (typeof currentVersion !== "string") {
-        errors.push("apps/web/package.json: version must be a string");
-      } else {
-        errors.push(
-          ...validateCurrentWhatsNewCatalog(
-            readFileSync(join(root, "apps/web/src/whatsNew/entries.ts"), "utf8"),
-            currentVersion,
-            catalogs.en!,
-          ),
-        );
-      }
     }
   }
   const reviewPath = join(root, "packages/shared/src/localeReviewStatus.json");

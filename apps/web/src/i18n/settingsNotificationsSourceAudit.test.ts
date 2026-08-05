@@ -67,8 +67,6 @@ function scopedFiles(directory: string): string[] {
     if (entry.isDirectory()) return scopedFiles(path);
     if (![".ts", ".tsx"].includes(extname(entry.name))) return [];
     if (/\.(?:test|browser)\.[^.]+$/.test(entry.name)) return [];
-    // Historical release bodies intentionally stay English and are localized only when current.
-    if (path.endsWith(join("whatsNew", "entries.ts"))) return [];
     return [path];
   });
 }
