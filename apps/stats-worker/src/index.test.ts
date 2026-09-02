@@ -1,0 +1,216 @@
+import { describe, expect, it } from "vitest";
+
+import { handleRequest, type Env } from "./index";
+
+interface Executed {
+  readonly sql: string;
+  readonly args: readonly unknown[];
+}
+
+class FakeStatement {
+  constructor(
+    private readonly db: FakeD1,
+    readonly sql: string,
+    readonly args: readonly unknown[] = [],
+  ) {}
+
+  bind(...args: unknown[]): FakeStatement {
+    return new FakeStatement(this.db, this.sql, args);
+  }
+
+  async run(): Promise<{ success: boolean }> {
+    this.db.executed.push({ sql: this.sql, args: this.args });
+    return { success: true };
+  }
+}
+
+class FakeD1 {
+  readonly executed: Executed[] = [];
+
+  constructor(private readonly canned: ReadonlyArray<readonly [string, unknown[]]> = []) {}
+
+  prepare(sql: string): FakeStatement {
+    return new FakeStatement(this, sql);
+  }
+
+  async batch(statements: readonly FakeStatement[]): Promise<Array<{ results: unknown[] }>> {
+    return statements.map((statement) => {
+      this.executed.push({ sql: statement.sql, args: statement.args });
+      const match = this.canned.find(([needle]) => statement.sql.includes(needle));
+      return { results: match ? match[1] : [] };
+    });
+  }
+}
+
+const NOW = new Date("2026-09-02T15:04:05.000Z");
+const INSTALL_ID = "6f1c2c0e-2b3a-4c4d-9e8f-0a1b2c3d4e5f";
+
+function env(db: FakeD1, token?: string): Env {
+  return { DB: db as unknown as D1Database, ...(token ? { STATS_READ_TOKEN: token } : {}) };
+}
+
+function post(path: string, body: unknown, cf?: { country: string }): Request {
+  const request = new Request(`https://stats.djl.test${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return cf ? Object.assign(request, { cf }) : request;
+}
+
+describe("POST /v1/downloads", () => {
+  it("stores a valid event with the caller-supplied country", async () => {
+    const db = new FakeD1();
+    const response = await handleRequest(
+      post("/v1/downloads", {
+        platform: "mac",
+        arch: "arm64",
+        source: "oss",
+        country: "CN",
+        version: "0.5.6",
+      }),
+      env(db),
+      NOW,
+    );
+    expect(response.status).toBe(204);
+    expect(db.executed).toHaveLength(1);
+    expect(db.executed[0]?.sql).toContain("INSERT INTO downloads");
+    expect(db.executed[0]?.args).toEqual([NOW.toISOString(), "mac", "arm64", "oss", "CN", "0.5.6"]);
+  });
+
+  it("rejects an invalid event without touching the database", async () => {
+    const db = new FakeD1();
+    const response = await handleRequest(
+      post("/v1/downloads", { platform: "linux", arch: "x64", source: "github" }),
+      env(db),
+      NOW,
+    );
+    expect(response.status).toBe(400);
+    expect(db.executed).toHaveLength(0);
+  });
+
+  it("rejects malformed JSON and oversized bodies", async () => {
+    const db = new FakeD1();
+    const malformed = new Request("https://stats.djl.test/v1/downloads", {
+      method: "POST",
+      body: "{not json",
+    });
+    expect((await handleRequest(malformed, env(db), NOW)).status).toBe(400);
+    const oversized = post("/v1/downloads", {
+      platform: "mac",
+      arch: "x64",
+      source: "github",
+      pad: "x".repeat(5000),
+    });
+    expect((await handleRequest(oversized, env(db), NOW)).status).toBe(400);
+    expect(db.executed).toHaveLength(0);
+  });
+});
+
+describe("POST /v1/installs", () => {
+  it("stores the install keyed by id and takes the country from Cloudflare", async () => {
+    const db = new FakeD1();
+    const response = await handleRequest(
+      post(
+        "/v1/installs",
+        {
+          installId: INSTALL_ID,
+          version: "0.5.6",
+          platform: "darwin",
+          arch: "arm64",
+          channel: "djl",
+        },
+        { country: "CN" },
+      ),
+      env(db),
+      NOW,
+    );
+    expect(response.status).toBe(204);
+    expect(db.executed[0]?.sql).toContain("INSERT OR IGNORE INTO installs");
+    expect(db.executed[0]?.args).toEqual([
+      INSTALL_ID,
+      NOW.toISOString(),
+      "0.5.6",
+      "darwin",
+      "arm64",
+      "djl",
+      "CN",
+    ]);
+  });
+
+  it("stores a null country when Cloudflare provides none", async () => {
+    const db = new FakeD1();
+    await handleRequest(
+      post("/v1/installs", {
+        installId: INSTALL_ID,
+        version: "0.5.6",
+        platform: "win32",
+        arch: "x64",
+      }),
+      env(db),
+      NOW,
+    );
+    expect(db.executed[0]?.args).toEqual([
+      INSTALL_ID,
+      NOW.toISOString(),
+      "0.5.6",
+      "win32",
+      "x64",
+      null,
+      null,
+    ]);
+  });
+});
+
+describe("GET /v1/stats", () => {
+  const get = (token?: string) =>
+    new Request("https://stats.djl.test/v1/stats", {
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+
+  it("requires the configured bearer token", async () => {
+    const db = new FakeD1();
+    expect((await handleRequest(get(), env(db, "secret"), NOW)).status).toBe(401);
+    expect((await handleRequest(get("wrong"), env(db, "secret"), NOW)).status).toBe(401);
+    expect((await handleRequest(get("secret"), env(db), NOW)).status).toBe(401);
+    expect(db.executed).toHaveLength(0);
+  });
+
+  it("returns the summary built from the batched queries", async () => {
+    const db = new FakeD1([
+      ["SELECT count(*) AS count FROM installs", [{ count: 2 }]],
+      ["country AS key, count(*) AS count FROM installs", [{ key: "CN", count: 2 }]],
+      ["SELECT count(*) AS count FROM downloads", [{ count: 5 }]],
+      [
+        "source AS key",
+        [
+          { key: "github", count: 3 },
+          { key: "oss", count: 2 },
+        ],
+      ],
+    ]);
+    const response = await handleRequest(get("secret"), env(db, "secret"), NOW);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      installs: { total: number; byCountry: Record<string, number> };
+      downloads: { total: number; bySource: Record<string, number>; byDay: unknown[] };
+    };
+    expect(body.installs.total).toBe(2);
+    expect(body.installs.byCountry).toEqual({ CN: 2 });
+    expect(body.downloads.total).toBe(5);
+    expect(body.downloads.bySource).toEqual({ github: 3, oss: 2 });
+    expect(body.downloads.byDay).toHaveLength(30);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("routing", () => {
+  it("returns 404 for unknown paths and 405 for wrong methods", async () => {
+    const db = new FakeD1();
+    const at = (path: string, init?: RequestInit) =>
+      handleRequest(new Request(`https://stats.djl.test${path}`, init), env(db), NOW);
+    expect((await at("/")).status).toBe(404);
+    expect((await at("/v1/downloads")).status).toBe(405);
+    expect((await at("/v1/stats", { method: "POST" })).status).toBe(405);
+  });
+});
