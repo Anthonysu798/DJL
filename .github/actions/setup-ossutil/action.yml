@@ -1,0 +1,22 @@
+name: Setup ossutil
+description: Install the pinned Alibaba Cloud OSS command-line client
+
+runs:
+  using: composite
+  steps:
+    - name: Download and verify ossutil
+      shell: bash
+      env:
+        OSSUTIL_ARCHIVE: ossutil-2.4.0-linux-amd64.zip
+        OSSUTIL_SHA256: 85edf66b2fb7238f5c7e25cab820cf29312319fe4935b7c86a6b8485eb434f3c
+      run: |
+        set -euo pipefail
+        archive="$RUNNER_TEMP/$OSSUTIL_ARCHIVE"
+        directory="$RUNNER_TEMP/${OSSUTIL_ARCHIVE%.zip}"
+        curl -fsSLo "$archive" \
+          "https://gosspublic.alicdn.com/ossutil/v2/2.4.0/$OSSUTIL_ARCHIVE"
+        echo "$OSSUTIL_SHA256  $archive" | sha256sum -c -
+        unzip -q "$archive" -d "$RUNNER_TEMP"
+        install -m 0755 "$directory/ossutil" "$RUNNER_TEMP/ossutil"
+        echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/ossutil" version

@@ -71,7 +71,8 @@ Fail-closed. Fix the cause; never work around a refusal.
 
 ## Release contract
 
-- Repository and updater origin: `Anthonysu798/DJL`
+- Canonical repository: `Anthonysu798/DJL`
+- Primary updater origin: Hong Kong OSS `djl-china-releases/stable`, with one GitHub fallback
 - Source: a commit contained in protected `main` with full Desktop CI success
 - macOS ARM64 on `macos-14`, macOS x64 on `macos-15-intel`, Windows x64 on `windows-2022`
 - macOS: Developer ID signed, notarized, stapled, Gatekeeper verified
@@ -92,7 +93,9 @@ release token.
 4. finalize — receipts validated against GitHub digests, `SHA256SUMS` then manifests uploaded last
 5. exact 13-asset inventory verification
 6. `production` approval
-7. publication as Latest, or as a prerelease excluded from Latest
+7. immutable Hong Kong OSS mirror and verification
+8. publication as Latest, or as a prerelease excluded from Latest
+9. stable OSS manifest promotion for stable releases only
 
 Approval is the user's to give. Only approve on their behalf when they have explicitly authorized
 it for that release.
@@ -118,20 +121,25 @@ it for that release.
 ```bash
 gh release view vX.Y.Z --repo Anthonysu798/DJL --json assets --jq '.assets|length'   # 13
 gh attestation verify DJL-X.Y.Z-x64.exe --repo Anthonysu798/DJL
+curl -fsSI -H 'Range: bytes=0-1023' \
+  https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/X.Y.Z/DJL-X.Y.Z-x64.exe
 curl -sI https://slcor.com/download/windows                                          # 307 to the new version
 ```
 
 Confirm both macOS builds report the Developer ID authority and Team ID `U76N9JSK4M`. Confirm the
 Windows installer reports a `Valid` Authenticode signature from `CN=Anthony Su` with an RFC 3161
 timestamp, three schema-version-1 receipts validated, four manifests uploaded last, and stable
-releases set as Latest.
+releases set as Latest. For a stable release, confirm `stable/djl-mac.yml` and `stable/djl.yml`
+declare the new version and resolve their payload URLs under `releases/X.Y.Z/`.
 
 The landing site needs no change: its Download buttons resolve the newest release at request time
 and follow automatically.
 
 ## Failure handling
 
-A failure before promotion leaves a private draft. Never publish a partial feed.
+A failure before GitHub publication leaves a private draft. Never publish a partial feed. A failure
+while advancing stable OSS metadata leaves affected clients on the last complete stable manifest
+and keeps the workflow red.
 
 - Diagnose from the first failed job; keep the draft as evidence.
 - Never hand-upload a missing manifest or asset.

@@ -53,6 +53,18 @@ on every push to `main` rather than mid-release.
 Version pins are read from `scripts/lib/desktop-stage-dependency-overrides.ts` and
 `scripts/lib/vendored-opencode.ts`, never repeated in a workflow or the verifier.
 
+## Hong Kong OSS updater mirror
+
+Configure these repository secrets for the bucket-scoped `djl-release-publisher` RAM user:
+
+- `OSS_ACCESS_KEY_ID`
+- `OSS_ACCESS_KEY_SECRET`
+
+The identity may list, read, write, and delete objects only in `djl-china-releases`. Public access
+is read-only. Production packages embed the credential-free HTTPS feed
+`https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable`; secrets are used only by the
+release workflow and are never embedded in the application.
+
 Expect Intel to be the long pole: roughly 20–23 minutes, since notarization is a round-trip to Apple
 and the runner is slower than ARM64.
 

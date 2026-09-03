@@ -1,5 +1,5 @@
 // FILE: release-smoke.ts
-// Purpose: Verifies the checked-in GitHub-first desktop release architecture.
+// Purpose: Verifies the checked-in GitHub-canonical, OSS-primary desktop release architecture.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";

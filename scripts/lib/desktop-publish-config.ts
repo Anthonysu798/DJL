@@ -1,5 +1,5 @@
 // FILE: desktop-publish-config.ts
-// Purpose: Resolves deterministic Electron Builder GitHub publish metadata.
+// Purpose: Resolves deterministic Electron Builder update-provider metadata.
 // Layer: Release/build helper
 
 export interface DesktopGitHubPublishConfig {
@@ -27,7 +27,7 @@ export interface ResolveDesktopGitHubPublishConfigInput {
 }
 
 export interface ResolveDesktopPublishConfigInput extends ResolveDesktopGitHubPublishConfigInput {
-  readonly configuredUpdateUrl?: string | undefined;
+  readonly configuredUpdateBaseUrl?: string | undefined;
 }
 
 function packageRepositoryUrl(repository: unknown): string | undefined {
@@ -83,11 +83,15 @@ function resolveGenericUpdateUrl(raw: string | undefined): string | undefined {
       url.search ||
       url.hash
     ) {
-      return undefined;
+      throw new Error(
+        "DJL_DESKTOP_UPDATE_BASE_URL must be a credential-free HTTPS base URL without a query or fragment.",
+      );
     }
-    return url.toString().replace(/\/$/, "");
+    return url.toString().replace(/\/+$/, "");
   } catch {
-    return undefined;
+    throw new Error(
+      "DJL_DESKTOP_UPDATE_BASE_URL must be a credential-free HTTPS base URL without a query or fragment.",
+    );
   }
 }
 
@@ -99,7 +103,7 @@ function resolveGenericUpdateUrl(raw: string | undefined): string | undefined {
 export function resolveDesktopPublishConfig(
   input: ResolveDesktopPublishConfigInput,
 ): DesktopPublishConfig | undefined {
-  const genericUrl = resolveGenericUpdateUrl(input.configuredUpdateUrl);
+  const genericUrl = resolveGenericUpdateUrl(input.configuredUpdateBaseUrl);
   if (genericUrl) return { provider: "generic", url: genericUrl };
   return resolveDesktopGitHubPublishConfig(input);
 }

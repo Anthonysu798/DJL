@@ -388,6 +388,10 @@ describe("public desktop release preparation", () => {
       resolve(REPOSITORY_ROOT, ".github/actions/setup-desktop/action.yml"),
       "utf8",
     );
+    const setupOssAction = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/actions/setup-ossutil/action.yml"),
+      "utf8",
+    );
     const landingWorkflow = readFileSync(
       resolve(REPOSITORY_ROOT, ".github/workflows/landing-deploy.yml"),
       "utf8",
@@ -428,6 +432,9 @@ describe("public desktop release preparation", () => {
     assert.match(ciWorkflow, /package-smoke:[\s\S]*needs: desktop-ci/);
     for (const secret of ["AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"]) {
       assert.match(ciWorkflow, new RegExp(`secrets\\.${secret}`));
+      assert.match(releaseWorkflow, new RegExp(`secrets\\.${secret}`));
+    }
+    for (const secret of ["OSS_ACCESS_KEY_ID", "OSS_ACCESS_KEY_SECRET"]) {
       assert.match(releaseWorkflow, new RegExp(`secrets\\.${secret}`));
     }
     assert.equal(ciWorkflow.includes("AZURE_CLIENT_SECRET"), false);
@@ -495,6 +502,21 @@ describe("public desktop release preparation", () => {
     assert.match(ciWorkflow, /djl-windows-release-prod/);
     assert.match(releaseWorkflow, /djl-windows-release-prod/);
     assert.match(releaseWorkflow, /http:\/\/timestamp\.acs\.microsoft\.com/);
+    assert.match(
+      releaseWorkflow,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+    );
+    assert.match(
+      ciWorkflow,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+    );
+    assert.match(ciWorkflow, /uses: \.\/\.github\/actions\/setup-ossutil/);
+    assert.match(ciWorkflow, /ossutil cp README\.md/);
+    assert.match(setupOssAction, /ossutil-2\.4\.0-linux-amd64\.zip/);
+    assert.match(
+      setupOssAction,
+      /85edf66b2fb7238f5c7e25cab820cf29312319fe4935b7c86a6b8485eb434f3c/,
+    );
     assert.match(releaseWorkflow, /xcrun stapler validate "\$dmg"/);
     assert.match(releaseWorkflow, /TeamIdentifier=U76N9JSK4M/);
     // The bundle contract now lives in one script that both the release build and the CI package
@@ -533,6 +555,18 @@ describe("public desktop release preparation", () => {
       releaseWorkflow.indexOf("Verify exact 13-asset draft inventory") <
         releaseWorkflow.indexOf("environment: production"),
     );
+    assert.ok(
+      releaseWorkflow.indexOf("Mirror immutable release to Hong Kong OSS") <
+        releaseWorkflow.indexOf("Publish verified release"),
+    );
+    assert.ok(
+      releaseWorkflow.indexOf("Publish verified release") <
+        releaseWorkflow.indexOf("Advance stable Hong Kong OSS updater feed"),
+    );
+    assert.match(
+      releaseWorkflow,
+      /Advance stable Hong Kong OSS updater feed[\s\S]*IS_PRERELEASE[\s\S]*\[\[ "\$IS_PRERELEASE" == "false" \]\]/,
+    );
 
     for (const workflow of [ciWorkflow, releaseWorkflow, setupAction]) {
       const actionReferences = [...workflow.matchAll(/uses:\s+[^@\s]+@([^\s]+)/g)].map(
@@ -551,6 +585,9 @@ describe("public desktop release preparation", () => {
       ]) {
         assert.equal(workflow.includes(forbidden), false);
       }
+    }
+    for (const forbidden of ["platform: linux", "AppImage", "apps/ios", "bun publish"]) {
+      assert.equal(setupOssAction.includes(forbidden), false);
     }
   });
 
@@ -573,6 +610,14 @@ describe("public desktop release preparation", () => {
     assert.match(workflow, /target_version:[\s\S]*required: true/);
     assert.match(workflow, /RELEASE_REPOSITORY: Anthonysu798\/DJL/);
     assert.match(workflow, /SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798\/DJL/);
+    assert.match(
+      workflow,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+    );
+    assert.match(
+      workflow,
+      /curl -fsSLo target-release\/oss-djl-mac\.yml[\s\S]*djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable\/djl-mac\.yml/,
+    );
     assert.match(workflow, /repos\/\$RELEASE_REPOSITORY\/releases\/latest/);
     assert.match(workflow, /compareReleaseVersions/);
     assert.match(workflow, /--target dmg --arch arm64/);
