@@ -89,6 +89,22 @@ jobs:
       - name: Install frozen dependencies
         uses: ./.github/actions/setup-desktop
 
+      - name: Setup pinned ossutil
+        uses: ./.github/actions/setup-ossutil
+
+      - name: Verify Hong Kong OSS mirror command in dry-run mode
+        env:
+          OSS_ACCESS_KEY_ID: test-only
+          OSS_ACCESS_KEY_SECRET: test-only
+          OSS_BUCKET: djl-china-releases
+          OSS_ENDPOINT: https://oss-cn-hongkong.aliyuncs.com
+          OSS_REGION: cn-hongkong
+        run: |
+          ossutil cp README.md \
+            "oss://$OSS_BUCKET/ci-dry-run/README.md" \
+            --dry-run \
+            --force
+
       - name: Run release helper tests
         run: bun run ci:desktop:release-tests
 
@@ -212,6 +228,7 @@ jobs:
         shell: bash
         env:
           SMOKE_VERSION: 0.0.0-ci.${{ github.run_number }}
+          DJL_DESKTOP_UPDATE_BASE_URL: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable
           SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

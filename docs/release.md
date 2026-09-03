@@ -88,7 +88,9 @@ flowchart TD
   Receipts --> Finalize
   Finalize --> Metadata["Upload SHA256SUMS, then four updater manifests last"]
   Metadata --> Gate["production environment approval"]
-  Gate --> Publish["Publish stable Latest or prerelease"]
+  Gate --> Immutable["Mirror and verify immutable Hong Kong OSS objects"]
+  Immutable --> Publish["Publish stable Latest or prerelease"]
+  Publish --> Stable["Advance stable OSS manifests for stable releases"]
 ```
 
 ## Desktop CI
@@ -194,6 +196,8 @@ Repository secrets:
 | `AZURE_CLIENT_ID` | Entra application ID used by GitHub OIDC |
 | `AZURE_TENANT_ID` | Entra tenant containing the signing application |
 | `AZURE_SUBSCRIPTION_ID` | Subscription containing the Artifact Signing account |
+| `OSS_ACCESS_KEY_ID` | RAM AccessKey ID for the bucket-scoped Hong Kong release publisher |
+| `OSS_ACCESS_KEY_SECRET` | RAM AccessKey secret for the bucket-scoped Hong Kong release publisher |
 
 Optional repository variable:
 
@@ -213,6 +217,21 @@ that it could not deploy instead of failing.
 Normal publication uses the workflow-scoped `GITHUB_TOKEN`. Windows signing uses short-lived OIDC
 tokens plus the three Azure identifiers above; there is no Azure client secret or steady-state
 cross-repository release token.
+
+Before GitHub publication, the release workflow verifies and mirrors the exact 13 draft assets to
+`djl-china-releases/releases/<version>/` in China (Hong Kong). Stable releases then publish on
+GitHub and advance only the four small manifests under `stable/`; those manifests point to the
+immutable versioned payloads. Prereleases never modify `stable/`.
+
+Packaged clients use `https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable` as their
+primary generic updater feed. Eligible network and download failures retry once through the
+canonical `Anthonysu798/DJL` GitHub release. Checksum, manifest-integrity, signature, and installer
+failures do not switch sources. Clients on 0.5.10 still discover the first migration release through
+their baked GitHub feed; later updates use OSS first.
+
+If the immutable OSS upload fails, GitHub remains a private draft. If stable-manifest promotion
+fails after GitHub publication, the workflow is red and OSS clients remain on the last successfully
+promoted platform manifest; every promoted manifest points only to a complete immutable release.
 
 ## Shipping a release
 

@@ -45,18 +45,26 @@ describe("desktop publish config", () => {
   it("uses an explicit validated HTTPS download origin before GitHub metadata", () => {
     expect(
       resolveDesktopPublishConfig({
-        configuredUpdateUrl: "https://downloads.slcor.com/stable/",
+        configuredUpdateBaseUrl: "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable/",
         configuredRepository: "configured/djl",
       }),
-    ).toEqual({ provider: "generic", url: "https://downloads.slcor.com/stable" });
+    ).toEqual({
+      provider: "generic",
+      url: "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
+    });
   });
 
-  it("rejects unsafe generic update origins and retains the GitHub fallback", () => {
-    expect(
+  it.each([
+    "http://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
+    "https://user:password@djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
+    "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable?token=secret",
+    "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable#fragment",
+  ])("fails closed for an unsafe explicit update origin: %s", (configuredUpdateBaseUrl) => {
+    expect(() =>
       resolveDesktopPublishConfig({
-        configuredUpdateUrl: "http://downloads.slcor.com/stable",
+        configuredUpdateBaseUrl,
         configuredRepository: "configured/djl",
       }),
-    ).toMatchObject({ provider: "github", owner: "configured", repo: "djl" });
+    ).toThrow("DJL_DESKTOP_UPDATE_BASE_URL must be a credential-free HTTPS base URL");
   });
 });
