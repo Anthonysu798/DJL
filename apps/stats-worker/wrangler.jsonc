@@ -7,8 +7,7 @@
     {
       "binding": "DB",
       "database_name": "djl-stats",
-      // Replace with the ID printed by `wrangler d1 create djl-stats` before the first deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "9470b59e-c69e-4f9c-8a84-47b0c6ace02a",
       "migrations_dir": "migrations",
     },
   ],

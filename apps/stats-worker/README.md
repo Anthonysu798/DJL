@@ -13,6 +13,9 @@ buttons, and unique desktop installs. Both are stored in a D1 database named `dj
 
 No IP address, hostname, username, or project data is ever received or stored.
 
+Deployed at `https://djl-stats.slcor.workers.dev` (D1 database `djl-stats`, account subdomain
+`slcor.workers.dev`). The read token lives outside the repository.
+
 ## Endpoints
 
 - `POST /v1/downloads` — called by the landing site's download routes.
