@@ -2,10 +2,10 @@
 // FILE: build-desktop-artifact.ts
 // Purpose: Stages and builds packaged desktop artifacts plus updater metadata for GitHub releases.
 // Layer: Release/build script
-// Depends on: apps/desktop package metadata, electron-builder, and GitHub release config.
+// Depends on: apps/desktop package metadata, electron-builder, and desktop update config.
 
 import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import rootPackageJson from "../package.json" with { type: "json" };
@@ -24,6 +24,10 @@ import {
   resolveDesktopRuntimeDependencies,
 } from "./lib/desktop-runtime-dependencies.ts";
 import { resolveDesktopPublishConfig } from "./lib/desktop-publish-config.ts";
+import {
+  assertPackagedDesktopUpdateConfig,
+  findPackagedDesktopUpdateConfigs,
+} from "./lib/desktop-update-config.ts";
 import {
   createDesktopPlatformBuildConfig,
   validateDesktopNativeBuildHost,
@@ -561,7 +565,8 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       : {}),
   };
   const publishConfig = resolveDesktopPublishConfig({
-    configuredUpdateUrl: process.env.DJL_DESKTOP_UPDATE_URL,
+    configuredUpdateBaseUrl:
+      process.env.DJL_DESKTOP_UPDATE_BASE_URL ?? process.env.DJL_DESKTOP_UPDATE_URL,
     configuredRepository: process.env.SYNARA_DESKTOP_UPDATE_REPOSITORY,
     githubRepository: process.env.GITHUB_REPOSITORY,
     packageRepository: serverPackageJson.repository,
@@ -810,6 +815,14 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       new BuildScriptError({ message: "Could not stage the bundled OpenCode runtime.", cause }),
   });
 
+  const desktopBuildConfig = yield* createBuildConfig(
+    options.platform,
+    options.target,
+    desktopPackageJson.productName ?? "DJL",
+    options.signed,
+    options.mockUpdates,
+    options.mockUpdateServerPort,
+  );
   const stagePackageJson: StagePackageJson = {
     name: "synara-desktop",
     version: appVersion,
@@ -819,14 +832,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     description: "DJL desktop build",
     author: "Emanuele Di Pietro",
     main: "apps/desktop/dist-electron/main.js",
-    build: yield* createBuildConfig(
-      options.platform,
-      options.target,
-      desktopPackageJson.productName ?? "DJL",
-      options.signed,
-      options.mockUpdates,
-      options.mockUpdateServerPort,
-    ),
+    build: desktopBuildConfig,
     dependencies: {
       ...resolvedServerDependencies,
       ...resolvedDesktopRuntimeDependencies,
@@ -929,6 +935,38 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   if (!(yield* fs.exists(stageDistDir))) {
     return yield* new BuildScriptError({
       message: `Build completed but dist directory was not found at ${stageDistDir}`,
+    });
+  }
+
+  const publishConfigs = desktopBuildConfig.publish;
+  const primaryPublishConfig = Array.isArray(publishConfigs) ? publishConfigs[0] : undefined;
+  if (
+    primaryPublishConfig &&
+    typeof primaryPublishConfig === "object" &&
+    "provider" in primaryPublishConfig &&
+    primaryPublishConfig.provider === "generic" &&
+    "url" in primaryPublishConfig &&
+    typeof primaryPublishConfig.url === "string" &&
+    options.platform !== "linux"
+  ) {
+    yield* Effect.try({
+      try: () => {
+        const updateConfigs = findPackagedDesktopUpdateConfigs(stageDistDir);
+        if (updateConfigs.length !== 1 || !updateConfigs[0]) {
+          throw new Error(
+            `Expected one packaged app-update.yml, found ${updateConfigs.length}: ${updateConfigs.join(", ")}`,
+          );
+        }
+        assertPackagedDesktopUpdateConfig(
+          readFileSync(updateConfigs[0], "utf8"),
+          primaryPublishConfig.url,
+        );
+      },
+      catch: (cause) =>
+        new BuildScriptError({
+          message: "Packaged desktop updater configuration verification failed.",
+          cause,
+        }),
     });
   }
 

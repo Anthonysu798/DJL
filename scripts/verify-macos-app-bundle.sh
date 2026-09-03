@@ -69,8 +69,10 @@ grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${expected_onnx//./\\.}\"" "$onn
   exit 1
 }
 
-grep -qF "owner: Anthonysu798" "$app/Contents/Resources/app-update.yml"
-grep -qF "repo: DJL" "$app/Contents/Resources/app-update.yml"
+grep -qF "provider: generic" "$app/Contents/Resources/app-update.yml"
+grep -qF \
+  "url: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable" \
+  "$app/Contents/Resources/app-update.yml"
 
 expected_opencode="$(
   sed -nE 's/.*DJL_OPENCODE_VERSION = "([^"]+)".*/\1/p' \

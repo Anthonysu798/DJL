@@ -137,6 +137,12 @@ import {
 } from "./updateInstallMarker";
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
 import {
+  CANONICAL_GITHUB_UPDATE_FEED,
+  type GenericUpdateFeed,
+  resolveGenericUpdateFeed,
+  runWithUpdateFeedFallback,
+} from "./updateFeedFailover";
+import {
   isArm64HostRunningIntelBuild,
   resolveDesktopRuntimeInfo,
   resolveLocalAiRuntimeInfo,
@@ -307,6 +313,8 @@ let browserPerfInterval: ReturnType<typeof setInterval> | null = null;
 const browserManager = new DesktopBrowserManager();
 let browserUsePipeServer: BrowserUsePipeServer | null = null;
 let configuredGitHubUpdateSource: ReturnType<typeof resolveGitHubUpdateSource> = null;
+let configuredGenericUpdateFeed: GenericUpdateFeed | null = null;
+let activeUpdateFeedSource: "primary" | "github" = "primary";
 let configuredUpdaterCacheDirName: string | null = null;
 
 browserManager.subscribe((state) => {
@@ -1889,6 +1897,19 @@ async function clearPendingUpdateCache(reason: string): Promise<void> {
   }
 }
 
+async function clearPendingUpdateCacheForFeedFallback(reason: string): Promise<void> {
+  const pendingDir = getPendingUpdateCacheDir();
+  if (!pendingDir) return;
+  try {
+    await FS.promises.rm(pendingDir, { recursive: true, force: true });
+    console.info(`[desktop-updater] Cleared pending update cache (${reason}).`);
+  } catch (error) {
+    console.warn(
+      `[desktop-updater] Failed to clear pending update cache (${reason}): ${formatErrorMessage(error)}`,
+    );
+  }
+}
+
 // Terminal updater events can arrive before downloadUpdate() settles; defer cache deletion
 // until the updater has released its in-flight download bookkeeping.
 function clearPendingUpdateCacheWhenSafe(reason: string): void {
@@ -2070,7 +2091,30 @@ async function checkForUpdates(reason: string): Promise<void> {
   console.info(`[desktop-updater] Checking for updates (${reason})...`);
 
   try {
-    await autoUpdater.checkForUpdates();
+    const checkResult = await runWithUpdateFeedFallback({
+      primary: async () => {
+        if (configuredGenericUpdateFeed) {
+          autoUpdater.setFeedURL(configuredGenericUpdateFeed);
+          activeUpdateFeedSource = "primary";
+        }
+        return autoUpdater.checkForUpdates();
+      },
+      fallback: configuredGenericUpdateFeed
+        ? async () => {
+            clearUpdateCheckTimeoutTimer();
+            autoUpdater.setFeedURL({ ...CANONICAL_GITHUB_UPDATE_FEED });
+            activeUpdateFeedSource = "github";
+            armUpdateCheckTimeout(`${reason} GitHub fallback`);
+            console.warn(
+              `[desktop-updater] OSS update check failed; retrying through GitHub (${reason}).`,
+            );
+            return autoUpdater.checkForUpdates();
+          }
+        : undefined,
+    });
+    if (checkResult.source === "github") {
+      console.info(`[desktop-updater] GitHub update fallback succeeded (${reason}).`);
+    }
   } catch (error: unknown) {
     clearUpdateCheckTimeoutTimer();
     const message = error instanceof Error ? error.message : String(error);
@@ -2080,6 +2124,46 @@ async function checkForUpdates(reason: string): Promise<void> {
     console.error(`[desktop-updater] Failed to check for updates: ${message}`);
   } finally {
     updateCheckInFlight = false;
+  }
+}
+
+async function runUpdateDownloadAttempt(): Promise<void> {
+  lastUpdateDownloadProgressSample = null;
+  const cancellationToken = new CancellationToken();
+  updateDownloadCancellationToken = cancellationToken;
+  const downloadStalled = new Promise<never>((_, reject) => {
+    rejectUpdateDownloadStall = reject;
+  });
+  armUpdateDownloadStallTimer("download start");
+
+  let updaterDownloadSettled = false;
+  const updaterDownloadPromise = autoUpdater.downloadUpdate(cancellationToken);
+  const updaterDownloadSettledPromise = updaterDownloadPromise.then(
+    () => {
+      updaterDownloadSettled = true;
+    },
+    () => {
+      updaterDownloadSettled = true;
+    },
+  );
+
+  try {
+    await Promise.race([updaterDownloadPromise, downloadStalled]);
+  } finally {
+    clearUpdateDownloadStallTimer();
+    if (!updaterDownloadSettled) {
+      await Promise.race([
+        updaterDownloadSettledPromise,
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, AUTO_UPDATE_DOWNLOAD_SETTLE_TIMEOUT_MS).unref();
+        }),
+      ]);
+    }
+    if (updateDownloadCancellationToken === cancellationToken) {
+      updateDownloadCancellationToken = null;
+    }
+    rejectUpdateDownloadStall = null;
+    lastUpdateDownloadProgressSample = null;
   }
 }
 
@@ -2097,6 +2181,15 @@ async function downloadAvailableUpdate(): Promise<{
     await checkForUpdates("renderer");
     return { accepted: true, completed: false };
   }
+  if (
+    updaterConfigured &&
+    configuredGenericUpdateFeed &&
+    updateState.status === "available" &&
+    updateState.errorContext === "download"
+  ) {
+    await checkForUpdates("renderer download retry");
+    return { accepted: true, completed: false };
+  }
   if (!updaterConfigured || updateDownloadInFlight || updateState.status !== "available") {
     return { accepted: false, completed: false };
   }
@@ -2110,35 +2203,31 @@ async function downloadAvailableUpdate(): Promise<{
   }
   updateDownloadInFlight = true;
   setUpdateState(reduceDesktopUpdateStateOnDownloadStart(updateState));
-  // Keep existing cancellation suppressions across immediate retries; the old
-  // updater cancellation can arrive after a new download has already started.
-  lastUpdateDownloadProgressSample = null;
-  const cancellationToken = new CancellationToken();
-  updateDownloadCancellationToken = cancellationToken;
-  const downloadStalled = new Promise<never>((_, reject) => {
-    rejectUpdateDownloadStall = reject;
-  });
-  armUpdateDownloadStallTimer("download start");
   console.info("[desktop-updater] Downloading update...");
 
-  // Track electron-updater's own download promise separately from the stall race.
-  // When the stall timer wins the race it cancels this promise, but the updater
-  // keeps its internal download promise set until that cancellation unwinds. We
-  // observe its settlement here (so a late rejection can't surface as an unhandled
-  // rejection) and wait on it before releasing the in-flight flag below.
-  let updaterDownloadSettled = false;
-  const updaterDownloadPromise = autoUpdater.downloadUpdate(cancellationToken);
-  const updaterDownloadSettledPromise = updaterDownloadPromise.then(
-    () => {
-      updaterDownloadSettled = true;
-    },
-    () => {
-      updaterDownloadSettled = true;
-    },
-  );
-
   try {
-    await Promise.race([updaterDownloadPromise, downloadStalled]);
+    const downloadResult = await runWithUpdateFeedFallback({
+      primary: runUpdateDownloadAttempt,
+      fallback:
+        configuredGenericUpdateFeed && activeUpdateFeedSource === "primary"
+          ? async () => {
+              await clearPendingUpdateCacheForFeedFallback("OSS download fallback");
+              autoUpdater.setFeedURL({ ...CANONICAL_GITHUB_UPDATE_FEED });
+              activeUpdateFeedSource = "github";
+              console.warn(
+                "[desktop-updater] OSS update download failed; retrying through GitHub.",
+              );
+              await autoUpdater.checkForUpdates();
+              if (updateState.status !== "available" && updateState.status !== "downloading") {
+                throw new Error("GitHub fallback did not return the available update.");
+              }
+              return runUpdateDownloadAttempt();
+            }
+          : undefined,
+    });
+    if (downloadResult.source === "github") {
+      console.info("[desktop-updater] GitHub update download fallback succeeded.");
+    }
     return { accepted: true, completed: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -2147,20 +2236,6 @@ async function downloadAvailableUpdate(): Promise<{
     return { accepted: true, completed: false };
   } finally {
     clearUpdateDownloadStallTimer();
-    // Hold the in-flight flag until the updater download actually settles, so an
-    // immediate retry can't grab the still-cancelling promise (which would reject
-    // as "cancelled"). Bounded so a stuck updater promise can't wedge updates.
-    if (!updaterDownloadSettled) {
-      await Promise.race([
-        updaterDownloadSettledPromise,
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, AUTO_UPDATE_DOWNLOAD_SETTLE_TIMEOUT_MS).unref();
-        }),
-      ]);
-    }
-    if (updateDownloadCancellationToken === cancellationToken) {
-      updateDownloadCancellationToken = null;
-    }
     rejectUpdateDownloadStall = null;
     lastUpdateDownloadProgressSample = null;
     updateDownloadInFlight = false;
@@ -2265,14 +2340,24 @@ function configureAutoUpdater(): void {
   processInstallMarkerOnStartup();
   if (!enabled) {
     configuredGitHubUpdateSource = null;
+    configuredGenericUpdateFeed = null;
+    activeUpdateFeedSource = "primary";
     configuredUpdaterCacheDirName = null;
     return;
   }
   updaterConfigured = true;
   hardenElectronUpdater({ BaseUpdater }, autoUpdater);
-  configuredGitHubUpdateSource = resolveGitHubUpdateSource(appUpdateYml);
+  configuredGenericUpdateFeed = resolveGenericUpdateFeed(appUpdateYml);
+  activeUpdateFeedSource = configuredGenericUpdateFeed ? "primary" : "github";
+  if (configuredGenericUpdateFeed) {
+    autoUpdater.setFeedURL(configuredGenericUpdateFeed);
+  }
+  configuredGitHubUpdateSource = resolveGitHubUpdateSource({
+    ...CANONICAL_GITHUB_UPDATE_FEED,
+  });
   if (configuredGitHubUpdateSource !== null) {
-    // The updater itself uses app-update.yml; this URL is only the human fallback.
+    // The updater uses OSS first when app-update.yml carries the generic feed;
+    // this URL remains the human fallback after repeated update failures.
     setUpdateState({ releaseUrl: buildGitHubReleasesPageUrl(configuredGitHubUpdateSource) });
   }
 

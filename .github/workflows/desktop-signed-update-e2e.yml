@@ -103,6 +103,9 @@ jobs:
             --dir target-release
           grep -Fx "version: $TARGET_VERSION" target-release/djl-mac.yml
           grep -F "url: DJL-$TARGET_VERSION-arm64.zip" target-release/djl-mac.yml
+          curl -fsSLo target-release/oss-djl-mac.yml \
+            "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable/djl-mac.yml"
+          grep -Fx "version: $TARGET_VERSION" target-release/oss-djl-mac.yml
 
       - name: Require all Apple signing credentials
         shell: bash
@@ -134,6 +137,7 @@ jobs:
           BASELINE_VERSION: ${{ inputs.baseline_version }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
+          DJL_DESKTOP_UPDATE_BASE_URL: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable
           DJL_REMOTE_RELAY_URL: ${{ vars.DJL_REMOTE_RELAY_URL }}
           SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
         run: |
