@@ -26,6 +26,7 @@
 ### Task 1: Restore and extend the Cloudflare stats Worker
 
 **Files:**
+
 - Create: `apps/stats-worker/package.json`
 - Create: `apps/stats-worker/tsconfig.json`
 - Create: `apps/stats-worker/wrangler.jsonc`
@@ -41,6 +42,7 @@
 - Modify: `bun.lock`
 
 **Interfaces:**
+
 - Produces: `POST /v1/visits`, `POST /v1/downloads`, `POST /v1/installs`, `GET /v1/stats`, and `GET /v1/public-stats`.
 - Produces: `parseVisitEvent(value): VisitEvent | null`, preserving existing download/install parsers.
 - Produces: full `StatsSummary` and sanitized `PublicStatsSummary` response types.
@@ -133,7 +135,10 @@ Extend `SummaryRows` and `StatsSummary` with visits. Add:
 
 ```ts
 export interface PublicStatsSummary {
-  readonly downloads: Pick<StatsSummary["downloads"], "total" | "bySource" | "byPlatform" | "byDay">;
+  readonly downloads: Pick<
+    StatsSummary["downloads"],
+    "total" | "bySource" | "byPlatform" | "byDay"
+  >;
 }
 
 export function buildPublicSummary(summary: StatsSummary): PublicStatsSummary;
@@ -183,6 +188,7 @@ git commit -m "feat(stats-worker): track visits and publish download aggregates"
 ### Task 2: Add landing download reporting without changing destinations
 
 **Files:**
+
 - Create: `apps/landing/app/lib/downloadStats.ts`
 - Create: `apps/landing/app/lib/downloadStats.test.ts`
 - Modify: `apps/landing/app/lib/downloadRegion.ts`
@@ -195,6 +201,7 @@ git commit -m "feat(stats-worker): track visits and publish download aggregates"
 - Modify: `apps/landing/app/download/mac/[arch]/route.test.ts`
 
 **Interfaces:**
+
 - Produces: `DesktopDownloadDecision { destination, report }` from `resolveDesktopDownload`.
 - Produces: `reportDownload(report, options): Promise<void>` and `scheduleAfterResponse(task): void`.
 
@@ -252,6 +259,7 @@ git commit -m "feat(landing): track GitHub and OSS download redirects"
 ### Task 3: Add anonymous landing visit tracking
 
 **Files:**
+
 - Create: `apps/landing/app/lib/visitTracking.ts`
 - Create: `apps/landing/app/lib/visitTracking.test.ts`
 - Create: `apps/landing/app/api/visits/route.ts`
@@ -260,6 +268,7 @@ git commit -m "feat(landing): track GitHub and OSS download redirects"
 - Modify: `apps/landing/app/layout.tsx`
 
 **Interfaces:**
+
 - Produces: `normalizeVisitorId`, `normalizeVisitPath`, `resolveVisitorIdentity`, and
   `reportVisitToWorker` pure helpers.
 - Produces: same-origin `POST /api/visits` and a route-aware `VisitReporter` client component.
@@ -319,6 +328,7 @@ git commit -m "feat(landing): count anonymous visits"
 ### Task 4: Restore one-time desktop install tracking
 
 **Files:**
+
 - Create: `apps/desktop/src/installPing.ts`
 - Create: `apps/desktop/src/installPing.test.ts`
 - Create: `scripts/lib/desktop-stats-url.ts`
@@ -330,6 +340,7 @@ git commit -m "feat(landing): count anonymous visits"
 - Modify: `package.json`
 
 **Interfaces:**
+
 - Produces: `reportInstallOnce(deps): Promise<'reported' | 'already-reported' | 'deferred'>`.
 - Produces: validated `extraMetadata.djlStatsUrl` in packaged artifacts.
 
@@ -367,11 +378,13 @@ git commit -m "feat(desktop): report each fresh install once"
 ### Task 5: Deploy safely, verify production, and update PR #15
 
 **Files:**
+
 - Modify: `apps/stats-worker/README.md`
 - Modify: `docs/superpowers/specs/2026-09-03-download-install-traffic-tracking-design.md`
 - Create: `docs/superpowers/plans/2026-09-03-download-install-traffic-tracking.md`
 
 **Interfaces:**
+
 - Consumes: all tests and artifacts from Tasks 1-4.
 - Produces: deployed backward-compatible Worker/D1 schema and an updated PR #15 branch/body.
 
@@ -423,4 +436,3 @@ and the distinction between clicks, unique browser cookies, and unique install I
 
 Read PR #15 back from GitHub, confirm the head SHA equals local `HEAD`, and inspect required checks.
 Report red or pending checks as pending; do not merge, tag, or release.
-

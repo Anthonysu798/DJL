@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPublicSummary, buildSummary, fillDays, summaryWindowStart, toCountMap } from "./summary";
+import {
+  buildPublicSummary,
+  buildSummary,
+  fillDays,
+  summaryWindowStart,
+  toCountMap,
+} from "./summary";
 
 const NOW = new Date("2026-09-02T15:04:05.000Z");
 

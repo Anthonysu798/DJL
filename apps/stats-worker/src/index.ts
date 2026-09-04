@@ -87,9 +87,7 @@ async function recordVisit(request: Request, env: Env, now: Date): Promise<Respo
   if (!body.ok) return errorResponse(400, "invalid_body");
   const event = parseVisitEvent(body.value);
   if (!event) return errorResponse(400, "invalid_event");
-  await env.DB.prepare(
-    "INSERT INTO visits (ts, visitor_id, path, country) VALUES (?1, ?2, ?3, ?4)",
-  )
+  await env.DB.prepare("INSERT INTO visits (ts, visitor_id, path, country) VALUES (?1, ?2, ?3, ?4)")
     .bind(now.toISOString(), event.visitorId, event.path, event.country)
     .run();
   return emptyResponse();

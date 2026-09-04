@@ -6,7 +6,9 @@ describe("parseVisitEvent", () => {
   const visitorId = "f4d1b4dc-3ff4-4fcf-89b8-658884d0be87";
 
   it("accepts a private anonymous visit and normalizes its country and id", () => {
-    expect(parseVisitEvent({ visitorId: visitorId.toUpperCase(), path: "/guide", country: "ca" })).toEqual({
+    expect(
+      parseVisitEvent({ visitorId: visitorId.toUpperCase(), path: "/guide", country: "ca" }),
+    ).toEqual({
       visitorId,
       path: "/guide",
       country: "CA",

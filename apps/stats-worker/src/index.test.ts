@@ -203,7 +203,9 @@ describe("GET /v1/stats", () => {
   it("requires the configured bearer token", async () => {
     const db = new FakeD1();
     expect((await handleRequest(get("/v1/stats"), env(db, "secret"), NOW)).status).toBe(401);
-    expect((await handleRequest(get("/v1/stats", "wrong"), env(db, "secret"), NOW)).status).toBe(401);
+    expect((await handleRequest(get("/v1/stats", "wrong"), env(db, "secret"), NOW)).status).toBe(
+      401,
+    );
     expect((await handleRequest(get("/v1/stats", "secret"), env(db), NOW)).status).toBe(401);
     expect(db.executed).toHaveLength(0);
   });
@@ -250,8 +252,20 @@ describe("GET /v1/public-stats", () => {
   it("returns only public download aggregates without a token", async () => {
     const db = new FakeD1([
       ["SELECT count(*) AS count FROM downloads", [{ count: 5 }]],
-      ["source AS key", [{ key: "github", count: 3 }, { key: "oss", count: 2 }]],
-      ["platform AS key", [{ key: "mac", count: 4 }, { key: "windows", count: 1 }]],
+      [
+        "source AS key",
+        [
+          { key: "github", count: 3 },
+          { key: "oss", count: 2 },
+        ],
+      ],
+      [
+        "platform AS key",
+        [
+          { key: "mac", count: 4 },
+          { key: "windows", count: 1 },
+        ],
+      ],
     ]);
 
     const response = await handleRequest(
