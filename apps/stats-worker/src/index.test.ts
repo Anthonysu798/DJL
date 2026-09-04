@@ -59,6 +59,12 @@ function post(path: string, body: unknown, cf?: { country: string }): Request {
   return cf ? Object.assign(request, { cf }) : request;
 }
 
+function get(path: string, token?: string): Request {
+  return new Request(`https://stats.djl.test${path}`, {
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  });
+}
+
 describe("POST /v1/visits", () => {
   it("stores a normalized anonymous page view", async () => {
     const db = new FakeD1();
@@ -195,11 +201,6 @@ describe("POST /v1/installs", () => {
 });
 
 describe("GET /v1/stats", () => {
-  const get = (path: string, token?: string) =>
-    new Request(`https://stats.djl.test${path}`, {
-      headers: token ? { authorization: `Bearer ${token}` } : {},
-    });
-
   it("requires the configured bearer token", async () => {
     const db = new FakeD1();
     expect((await handleRequest(get("/v1/stats"), env(db, "secret"), NOW)).status).toBe(401);
