@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2024", "WebWorker"] },
+  "include": ["src", "worker-configuration.d.ts"]
+}

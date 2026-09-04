@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { VisitReporter } from "./VisitReporter";
 import "./globals.css";
 
 // One family for everything, 64px display down to 12px eyebrow — no serif, no mono display face.
@@ -42,7 +43,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <VisitReporter />
+        {children}
+      </body>
     </html>
   );
 }

@@ -80,6 +80,12 @@ routing metadata, not plaintext task content. Read the
 [remote architecture](docs/remote/architecture.md), [threat model](docs/security/threat-model.md),
 and [security policy](SECURITY.md).
 
+On its first launch a release build sends one anonymous message to a counter we run: a random
+install ID generated on your machine, the app version, operating system, CPU architecture, and
+update channel. Cloudflare records the country of the request. Nothing else is sent afterwards,
+and the message contains no project data, hostname, username, or account information. Builds made
+without a configured counter URL send nothing.
+
 Do not report vulnerabilities in a public issue. Use
 [GitHub private vulnerability reporting](https://github.com/Anthonysu798/DJL/security/advisories/new).
 

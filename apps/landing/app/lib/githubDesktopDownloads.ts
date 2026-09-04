@@ -4,11 +4,17 @@
 // Exports: latest-release installer and release-page resolution for the download routes.
 // Depends on: the public GitHub Releases API for the canonical DJL repository.
 
-import type { DesktopDownloadTarget } from "./vpsDesktopDownloads";
+export type MacArchitecture = "arm64" | "x64";
+
+export type DesktopDownloadTarget =
+  | { readonly platform: "windows"; readonly arch: "x64" }
+  | { readonly platform: "mac"; readonly arch: MacArchitecture };
 
 export const GITHUB_RELEASE_REPOSITORY = "Anthonysu798/DJL";
 
 export const GITHUB_REPOSITORY_URL = `https://github.com/${GITHUB_RELEASE_REPOSITORY}`;
+
+export const GITHUB_LATEST_RELEASE_PAGE_URL = `${GITHUB_REPOSITORY_URL}/releases/latest`;
 
 export const GITHUB_LATEST_RELEASE_API_URL = `https://api.github.com/repos/${GITHUB_RELEASE_REPOSITORY}/releases/latest`;
 
@@ -43,6 +49,12 @@ interface GithubRelease {
   readonly html_url?: string;
   readonly tag_name?: string;
   readonly assets?: readonly GithubReleaseAsset[];
+}
+
+export interface GithubDesktopDownloadAsset {
+  readonly url: string;
+  readonly name: string;
+  readonly version: string | null;
 }
 
 type CachingRequestInit = RequestInit & {
@@ -88,10 +100,16 @@ async function readLatestRelease(fetchImpl: ReleaseFetch): Promise<GithubRelease
   }
 }
 
-export async function resolveGithubDesktopDownload(
+function normalizeReleaseVersion(tag: string | undefined): string | null {
+  if (typeof tag !== "string") return null;
+  const version = tag.replace(/^v/, "");
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ? version : null;
+}
+
+export async function resolveGithubDesktopDownloadAsset(
   target: DesktopDownloadTarget,
   fetchImpl: ReleaseFetch = fetch,
-): Promise<string | null> {
+): Promise<GithubDesktopDownloadAsset | null> {
   const release = await readLatestRelease(fetchImpl);
   if (!release?.assets) {
     return null;
@@ -103,7 +121,20 @@ export async function resolveGithubDesktopDownload(
       typeof candidate.browser_download_url === "string" &&
       pattern.test(candidate.name),
   );
-  return asset?.browser_download_url ?? null;
+  return asset
+    ? {
+        url: asset.browser_download_url,
+        name: asset.name,
+        version: normalizeReleaseVersion(release.tag_name),
+      }
+    : null;
+}
+
+export async function resolveGithubDesktopDownload(
+  target: DesktopDownloadTarget,
+  fetchImpl: ReleaseFetch = fetch,
+): Promise<string | null> {
+  return (await resolveGithubDesktopDownloadAsset(target, fetchImpl))?.url ?? null;
 }
 
 // Used by the architecture-agnostic macOS entry point: sending a visitor to the release page lets
@@ -121,10 +152,5 @@ export async function resolveGithubLatestReleaseVersion(
   fetchImpl: ReleaseFetch = fetch,
 ): Promise<string | null> {
   const release = await readLatestRelease(fetchImpl);
-  const tag = release?.tag_name;
-  if (typeof tag !== "string") {
-    return null;
-  }
-  const version = tag.replace(/^v/, "");
-  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ? version : null;
+  return normalizeReleaseVersion(release?.tag_name);
 }

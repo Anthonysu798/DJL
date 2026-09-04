@@ -308,6 +308,7 @@ jobs:
         shell: bash
         env:
           DJL_REMOTE_RELAY_URL: ${{ vars.DJL_REMOTE_RELAY_URL }}
+          DJL_STATS_URL: ${{ vars.DJL_STATS_URL }}
           DJL_DESKTOP_UPDATE_BASE_URL: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable
           SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
           CSC_LINK: ${{ secrets.CSC_LINK }}
