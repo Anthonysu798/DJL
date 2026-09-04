@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSummary, fillDays, summaryWindowStart, toCountMap } from "./summary";
+import { buildPublicSummary, buildSummary, fillDays, summaryWindowStart, toCountMap } from "./summary";
 
 const NOW = new Date("2026-09-02T15:04:05.000Z");
 
@@ -32,9 +32,20 @@ describe("fillDays", () => {
 });
 
 describe("buildSummary", () => {
-  it("assembles installs and downloads sections", () => {
+  it("assembles private visits, installs, and downloads sections", () => {
     const summary = buildSummary(
       {
+        visitPageViews: 4,
+        visitUniqueVisitors: 2,
+        visitsByCountry: [
+          { key: "CA", count: 3 },
+          { key: "US", count: 1 },
+        ],
+        visitsByPath: [
+          { key: "/", count: 2 },
+          { key: "/guide", count: 2 },
+        ],
+        visitsByDay: [{ day: "2026-09-02", count: 4 }],
         installsTotal: 2,
         installsByCountry: [{ key: "CN", count: 2 }],
         installsByPlatform: [{ key: "darwin", count: 2 }],
@@ -51,11 +62,52 @@ describe("buildSummary", () => {
       },
       NOW,
     );
+    expect(summary.visits.pageViews).toBe(4);
+    expect(summary.visits.uniqueVisitors).toBe(2);
+    expect(summary.visits.byCountry).toEqual({ CA: 3, US: 1 });
+    expect(summary.visits.byPath).toEqual({ "/": 2, "/guide": 2 });
+    expect(summary.visits.byDay.at(-1)).toEqual({ day: "2026-09-02", count: 4 });
     expect(summary.installs.total).toBe(2);
     expect(summary.installs.byVersion).toEqual({ "0.5.6": 2 });
     expect(summary.installs.byDay.at(-1)).toEqual({ day: "2026-09-02", count: 2 });
     expect(summary.downloads.bySource).toEqual({ github: 3, oss: 2 });
     expect(summary.downloads.byCountry).toEqual({ unknown: 5 });
     expect(summary.downloads.byDay.every((row) => row.count === 0)).toBe(true);
+  });
+
+  it("publishes only sanitized download aggregates", () => {
+    const privateSummary = buildSummary(
+      {
+        visitPageViews: 4,
+        visitUniqueVisitors: 2,
+        visitsByCountry: [{ key: "CA", count: 4 }],
+        visitsByPath: [{ key: "/private", count: 4 }],
+        visitsByDay: [],
+        installsTotal: 2,
+        installsByCountry: [{ key: "CA", count: 2 }],
+        installsByPlatform: [{ key: "darwin", count: 2 }],
+        installsByVersion: [{ key: "0.5.10", count: 2 }],
+        installsByDay: [],
+        downloadsTotal: 5,
+        downloadsBySource: [{ key: "github", count: 5 }],
+        downloadsByCountry: [{ key: "CA", count: 5 }],
+        downloadsByPlatform: [{ key: "mac", count: 5 }],
+        downloadsByDay: [{ day: "2026-09-02", count: 5 }],
+      },
+      NOW,
+    );
+
+    expect(buildPublicSummary(privateSummary)).toEqual({
+      downloads: {
+        total: 5,
+        bySource: { github: 5 },
+        byPlatform: { mac: 5 },
+        byDay: expect.any(Array),
+      },
+    });
+    expect(buildPublicSummary(privateSummary).downloads.byDay.at(-1)).toEqual({
+      day: "2026-09-02",
+      count: 5,
+    });
   });
 });

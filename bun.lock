@@ -152,7 +152,6 @@
       "name": "@synara/stats-worker",
       "version": "0.1.0",
       "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260718.1",
         "typescript": "catalog:",
         "vitest": "catalog:",
         "wrangler": "^4.112.0",

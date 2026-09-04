@@ -14,6 +14,11 @@ export interface DayRow {
 }
 
 export interface SummaryRows {
+  readonly visitPageViews: number;
+  readonly visitUniqueVisitors: number;
+  readonly visitsByCountry: readonly CountRow[];
+  readonly visitsByPath: readonly CountRow[];
+  readonly visitsByDay: readonly DayRow[];
   readonly installsTotal: number;
   readonly installsByCountry: readonly CountRow[];
   readonly installsByPlatform: readonly CountRow[];
@@ -27,6 +32,13 @@ export interface SummaryRows {
 }
 
 export interface StatsSummary {
+  readonly visits: {
+    readonly pageViews: number;
+    readonly uniqueVisitors: number;
+    readonly byCountry: Record<string, number>;
+    readonly byPath: Record<string, number>;
+    readonly byDay: readonly DayRow[];
+  };
   readonly installs: {
     readonly total: number;
     readonly byCountry: Record<string, number>;
@@ -41,6 +53,13 @@ export interface StatsSummary {
     readonly byPlatform: Record<string, number>;
     readonly byDay: readonly DayRow[];
   };
+}
+
+export interface PublicStatsSummary {
+  readonly downloads: Pick<
+    StatsSummary["downloads"],
+    "total" | "bySource" | "byPlatform" | "byDay"
+  >;
 }
 
 export function toCountMap(rows: readonly CountRow[]): Record<string, number> {
@@ -74,6 +93,13 @@ export function fillDays(rows: readonly DayRow[], now: Date): DayRow[] {
 
 export function buildSummary(rows: SummaryRows, now: Date): StatsSummary {
   return {
+    visits: {
+      pageViews: rows.visitPageViews,
+      uniqueVisitors: rows.visitUniqueVisitors,
+      byCountry: toCountMap(rows.visitsByCountry),
+      byPath: toCountMap(rows.visitsByPath),
+      byDay: fillDays(rows.visitsByDay, now),
+    },
     installs: {
       total: rows.installsTotal,
       byCountry: toCountMap(rows.installsByCountry),
@@ -87,6 +113,17 @@ export function buildSummary(rows: SummaryRows, now: Date): StatsSummary {
       byCountry: toCountMap(rows.downloadsByCountry),
       byPlatform: toCountMap(rows.downloadsByPlatform),
       byDay: fillDays(rows.downloadsByDay, now),
+    },
+  };
+}
+
+export function buildPublicSummary(summary: StatsSummary): PublicStatsSummary {
+  return {
+    downloads: {
+      total: summary.downloads.total,
+      bySource: summary.downloads.bySource,
+      byPlatform: summary.downloads.byPlatform,
+      byDay: summary.downloads.byDay,
     },
   };
 }

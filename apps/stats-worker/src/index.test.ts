@@ -44,6 +44,7 @@ class FakeD1 {
 
 const NOW = new Date("2026-09-02T15:04:05.000Z");
 const INSTALL_ID = "6f1c2c0e-2b3a-4c4d-9e8f-0a1b2c3d4e5f";
+const VISITOR_ID = "f4d1b4dc-3ff4-4fcf-89b8-658884d0be87";
 
 function env(db: FakeD1, token?: string): Env {
   return { DB: db as unknown as D1Database, ...(token ? { STATS_READ_TOKEN: token } : {}) };
@@ -57,6 +58,37 @@ function post(path: string, body: unknown, cf?: { country: string }): Request {
   });
   return cf ? Object.assign(request, { cf }) : request;
 }
+
+describe("POST /v1/visits", () => {
+  it("stores a normalized anonymous page view", async () => {
+    const db = new FakeD1();
+    const response = await handleRequest(
+      post("/v1/visits", { visitorId: VISITOR_ID.toUpperCase(), path: "/guide", country: "ca" }),
+      env(db),
+      NOW,
+    );
+
+    expect(response.status).toBe(204);
+    expect(db.executed).toEqual([
+      {
+        sql: expect.stringContaining("INSERT INTO visits"),
+        args: [NOW.toISOString(), VISITOR_ID, "/guide", "CA"],
+      },
+    ]);
+  });
+
+  it("rejects unsafe paths without touching D1", async () => {
+    const db = new FakeD1();
+    const response = await handleRequest(
+      post("/v1/visits", { visitorId: VISITOR_ID, path: "/guide?token=secret" }),
+      env(db),
+      NOW,
+    );
+
+    expect(response.status).toBe(400);
+    expect(db.executed).toHaveLength(0);
+  });
+});
 
 describe("POST /v1/downloads", () => {
   it("stores a valid event with the caller-supplied country", async () => {
@@ -163,21 +195,25 @@ describe("POST /v1/installs", () => {
 });
 
 describe("GET /v1/stats", () => {
-  const get = (token?: string) =>
-    new Request("https://stats.djl.test/v1/stats", {
+  const get = (path: string, token?: string) =>
+    new Request(`https://stats.djl.test${path}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {},
     });
 
   it("requires the configured bearer token", async () => {
     const db = new FakeD1();
-    expect((await handleRequest(get(), env(db, "secret"), NOW)).status).toBe(401);
-    expect((await handleRequest(get("wrong"), env(db, "secret"), NOW)).status).toBe(401);
-    expect((await handleRequest(get("secret"), env(db), NOW)).status).toBe(401);
+    expect((await handleRequest(get("/v1/stats"), env(db, "secret"), NOW)).status).toBe(401);
+    expect((await handleRequest(get("/v1/stats", "wrong"), env(db, "secret"), NOW)).status).toBe(401);
+    expect((await handleRequest(get("/v1/stats", "secret"), env(db), NOW)).status).toBe(401);
     expect(db.executed).toHaveLength(0);
   });
 
   it("returns the summary built from the batched queries", async () => {
     const db = new FakeD1([
+      ["SELECT count(*) AS count FROM visits", [{ count: 4 }]],
+      ["count(DISTINCT visitor_id)", [{ count: 2 }]],
+      ["country AS key, count(*) AS count FROM visits", [{ key: "CA", count: 4 }]],
+      ["path AS key, count(*) AS count FROM visits", [{ key: "/guide", count: 4 }]],
       ["SELECT count(*) AS count FROM installs", [{ count: 2 }]],
       ["country AS key, count(*) AS count FROM installs", [{ key: "CN", count: 2 }]],
       ["SELECT count(*) AS count FROM downloads", [{ count: 5 }]],
@@ -189,12 +225,18 @@ describe("GET /v1/stats", () => {
         ],
       ],
     ]);
-    const response = await handleRequest(get("secret"), env(db, "secret"), NOW);
+    const response = await handleRequest(get("/v1/stats", "secret"), env(db, "secret"), NOW);
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
+      visits: { pageViews: number; uniqueVisitors: number; byPath: Record<string, number> };
       installs: { total: number; byCountry: Record<string, number> };
       downloads: { total: number; bySource: Record<string, number>; byDay: unknown[] };
     };
+    expect(body.visits).toMatchObject({
+      pageViews: 4,
+      uniqueVisitors: 2,
+      byPath: { "/guide": 4 },
+    });
     expect(body.installs.total).toBe(2);
     expect(body.installs.byCountry).toEqual({ CN: 2 });
     expect(body.downloads.total).toBe(5);
@@ -204,13 +246,44 @@ describe("GET /v1/stats", () => {
   });
 });
 
+describe("GET /v1/public-stats", () => {
+  it("returns only public download aggregates without a token", async () => {
+    const db = new FakeD1([
+      ["SELECT count(*) AS count FROM downloads", [{ count: 5 }]],
+      ["source AS key", [{ key: "github", count: 3 }, { key: "oss", count: 2 }]],
+      ["platform AS key", [{ key: "mac", count: 4 }, { key: "windows", count: 1 }]],
+    ]);
+
+    const response = await handleRequest(
+      new Request("https://stats.djl.test/v1/public-stats"),
+      env(db, "secret"),
+      NOW,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      downloads: {
+        total: 5,
+        bySource: { github: 3, oss: 2 },
+        byPlatform: { mac: 4, windows: 1 },
+        byDay: expect.any(Array),
+      },
+    });
+    expect(response.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(db.executed).toHaveLength(4);
+    expect(db.executed.every(({ sql }) => sql.includes("downloads"))).toBe(true);
+  });
+});
+
 describe("routing", () => {
   it("returns 404 for unknown paths and 405 for wrong methods", async () => {
     const db = new FakeD1();
     const at = (path: string, init?: RequestInit) =>
       handleRequest(new Request(`https://stats.djl.test${path}`, init), env(db), NOW);
     expect((await at("/")).status).toBe(404);
+    expect((await at("/v1/visits")).status).toBe(405);
     expect((await at("/v1/downloads")).status).toBe(405);
     expect((await at("/v1/stats", { method: "POST" })).status).toBe(405);
+    expect((await at("/v1/public-stats", { method: "POST" })).status).toBe(405);
   });
 });

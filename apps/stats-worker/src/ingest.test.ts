@@ -1,6 +1,39 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeCountry, parseDownloadEvent, parseInstallEvent } from "./ingest";
+import { normalizeCountry, parseDownloadEvent, parseInstallEvent, parseVisitEvent } from "./ingest";
+
+describe("parseVisitEvent", () => {
+  const visitorId = "f4d1b4dc-3ff4-4fcf-89b8-658884d0be87";
+
+  it("accepts a private anonymous visit and normalizes its country and id", () => {
+    expect(parseVisitEvent({ visitorId: visitorId.toUpperCase(), path: "/guide", country: "ca" })).toEqual({
+      visitorId,
+      path: "/guide",
+      country: "CA",
+    });
+  });
+
+  it("accepts a visit without a country", () => {
+    expect(parseVisitEvent({ visitorId, path: "/" })).toEqual({
+      visitorId,
+      path: "/",
+      country: null,
+    });
+  });
+
+  it.each([
+    { visitorId: "not-a-uuid", path: "/guide" },
+    { visitorId, path: "guide" },
+    { visitorId, path: "https://djl.test/guide" },
+    { visitorId, path: "/guide?token=secret" },
+    { visitorId, path: "/guide#private" },
+    { visitorId, path: `/${"x".repeat(256)}` },
+    { visitorId, path: "/guide", country: "Canada" },
+    null,
+  ])("rejects an unsafe visit payload %#", (input) => {
+    expect(parseVisitEvent(input)).toBeNull();
+  });
+});
 
 describe("parseDownloadEvent", () => {
   it("accepts a complete event and normalizes the country", () => {
@@ -16,10 +49,10 @@ describe("parseDownloadEvent", () => {
   });
 
   it("treats country and version as optional", () => {
-    expect(parseDownloadEvent({ platform: "windows", arch: "x64", source: "vps" })).toEqual({
+    expect(parseDownloadEvent({ platform: "windows", arch: "x64", source: "github" })).toEqual({
       platform: "windows",
       arch: "x64",
-      source: "vps",
+      source: "github",
       country: null,
       version: null,
     });
@@ -29,6 +62,7 @@ describe("parseDownloadEvent", () => {
     expect(parseDownloadEvent({ platform: "linux", arch: "x64", source: "github" })).toBeNull();
     expect(parseDownloadEvent({ platform: "mac", arch: "sparc", source: "github" })).toBeNull();
     expect(parseDownloadEvent({ platform: "mac", arch: "x64", source: "torrent" })).toBeNull();
+    expect(parseDownloadEvent({ platform: "mac", arch: "x64", source: "vps" })).toBeNull();
     expect(
       parseDownloadEvent({ platform: "mac", arch: "x64", source: "github", version: "latest" }),
     ).toBeNull();
