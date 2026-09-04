@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   resolveGithubDesktopDownload,
+  resolveGithubDesktopDownloadAsset,
   resolveGithubLatestReleasePage,
   resolveGithubLatestReleaseVersion,
   type ReleaseFetch,
+  type DesktopDownloadTarget,
 } from "./githubDesktopDownloads";
-import type { DesktopDownloadTarget } from "./vpsDesktopDownloads";
 
 const RELEASE_ASSETS = [
   { name: "DJL-0.5.6-arm64.dmg", browser_download_url: "https://example.test/arm64.dmg" },
@@ -109,6 +110,21 @@ describe("resolveGithubDesktopDownload", () => {
     );
 
     expect(resolved).toBeNull();
+  });
+});
+
+describe("resolveGithubDesktopDownloadAsset", () => {
+  it("returns the canonical URL, exact asset name, and normalized version", async () => {
+    await expect(
+      resolveGithubDesktopDownloadAsset(
+        { platform: "windows", arch: "x64" },
+        releaseFetch({ tag_name: "v0.5.6", assets: RELEASE_ASSETS }),
+      ),
+    ).resolves.toEqual({
+      url: "https://example.test/x64.exe",
+      name: "DJL-0.5.6-x64.exe",
+      version: "0.5.6",
+    });
   });
 });
 

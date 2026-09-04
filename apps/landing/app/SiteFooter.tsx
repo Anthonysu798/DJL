@@ -8,7 +8,7 @@ import type { Content, Locale } from "./content";
 import { GITHUB_REPOSITORY_URL } from "./lib/githubDesktopDownloads";
 import { localeHref } from "./localeHref";
 import { RuixenGradientFooter } from "./ui/ruixen-gradient-footer";
-import { useDownloadTarget } from "./useDownloadTarget";
+import { chinaMirrorHref, useDownloadTarget } from "./useDownloadTarget";
 import "./site-footer.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -55,6 +55,13 @@ export function SiteFooter({ t, locale }: { t: Content; locale: Locale }) {
               </a>
               <a className="lp-btn lp-btn--ghost-dark lp-btn--lg" href={secondary.href}>
                 {secondary.label}
+              </a>
+              <a
+                className="lp-btn lp-btn--ghost-dark lp-btn--lg"
+                href={chinaMirrorHref(primary.href)}
+                title={primary.label}
+              >
+                {hero.downloadChina}
               </a>
             </div>
           </div>

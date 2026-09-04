@@ -22,3 +22,8 @@ export function useDownloadTarget(labels: { mac: string; windows: string }): Dow
     ? { platform, href: "/download/windows", label: labels.windows }
     : { platform, href: "/download/mac/arm64", label: labels.mac };
 }
+
+// The China mirror button reuses the platform route and asks the server for OSS explicitly.
+export function chinaMirrorHref(href: string): string {
+  return `${href}?mirror=cn`;
+}

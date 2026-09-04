@@ -9,7 +9,7 @@ import type { Content } from "./content";
 import { AppWindowFrame } from "./AppWindowFrame";
 import { HeroAppDemo } from "./HeroAppDemo";
 import { AuroraBackground } from "./ui/aurora-background";
-import { useDownloadTarget } from "./useDownloadTarget";
+import { chinaMirrorHref, useDownloadTarget } from "./useDownloadTarget";
 import "./cinematic-hero.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -114,6 +114,14 @@ export function CinematicHero({ t }: { t: Content }) {
           <a className="lp-btn lp-btn--outline lp-btn--lg" href={secondary.href}>
             <Download size={16} aria-hidden="true" />
             {secondary.label}
+          </a>
+          <a
+            className="lp-btn lp-btn--outline lp-btn--lg"
+            href={chinaMirrorHref(primary.href)}
+            title={primary.label}
+          >
+            <Download size={16} aria-hidden="true" />
+            {hero.downloadChina}
           </a>
         </div>
         <p className="lp-hero-caption" data-hero-rise>

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { resolveGithubDesktopDownload } from "../../lib/githubDesktopDownloads";
-import { resolveVpsDesktopDownload, type DesktopDownloadTarget } from "../../lib/vpsDesktopDownloads";
+import type { DesktopDownloadTarget } from "../../lib/githubDesktopDownloads";
+import { resolveDesktopDownload } from "../../lib/resolveDesktopDownload";
 
 const TARGET: DesktopDownloadTarget = { platform: "windows", arch: "x64" };
 
-export async function GET() {
-  const destination =
-    (await resolveGithubDesktopDownload(TARGET)) ?? resolveVpsDesktopDownload(TARGET);
+export async function GET(request: Request) {
+  const destination = await resolveDesktopDownload(TARGET, request);
   return NextResponse.redirect(destination, 307);
 }
