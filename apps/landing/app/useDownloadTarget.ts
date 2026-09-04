@@ -27,3 +27,10 @@ export function useDownloadTarget(labels: { mac: string; windows: string }): Dow
 export function chinaMirrorHref(href: string): string {
   return `${href}?mirror=cn`;
 }
+
+export function chinaMirrorTargets(labels: { mac: string; windows: string }) {
+  return [
+    { href: chinaMirrorHref("/download/mac/arm64"), label: labels.mac },
+    { href: chinaMirrorHref("/download/windows"), label: labels.windows },
+  ] as const;
+}

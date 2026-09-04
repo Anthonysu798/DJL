@@ -8,7 +8,7 @@ import type { Content, Locale } from "./content";
 import { GITHUB_REPOSITORY_URL } from "./lib/githubDesktopDownloads";
 import { localeHref } from "./localeHref";
 import { RuixenGradientFooter } from "./ui/ruixen-gradient-footer";
-import { chinaMirrorHref, useDownloadTarget } from "./useDownloadTarget";
+import { chinaMirrorTargets, useDownloadTarget } from "./useDownloadTarget";
 import "./site-footer.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -24,6 +24,10 @@ export function SiteFooter({ t, locale }: { t: Content; locale: Locale }) {
   const windowsTarget = { href: "/download/windows", label: hero.downloadWindows };
   const [primary, secondary] =
     download.platform === "windows" ? [windowsTarget, macTarget] : [macTarget, windowsTarget];
+  const chinaDownloads = chinaMirrorTargets({
+    mac: hero.downloadChinaMac,
+    windows: hero.downloadChinaWindows,
+  });
 
   useGSAP(
     () => {
@@ -56,13 +60,15 @@ export function SiteFooter({ t, locale }: { t: Content; locale: Locale }) {
               <a className="lp-btn lp-btn--ghost-dark lp-btn--lg" href={secondary.href}>
                 {secondary.label}
               </a>
-              <a
-                className="lp-btn lp-btn--ghost-dark lp-btn--lg"
-                href={chinaMirrorHref(primary.href)}
-                title={primary.label}
-              >
-                {hero.downloadChina}
-              </a>
+              {chinaDownloads.map((target) => (
+                <a
+                  className="lp-btn lp-btn--ghost-dark lp-btn--lg"
+                  href={target.href}
+                  key={target.href}
+                >
+                  {target.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>

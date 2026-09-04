@@ -9,7 +9,7 @@ import type { Content } from "./content";
 import { AppWindowFrame } from "./AppWindowFrame";
 import { HeroAppDemo } from "./HeroAppDemo";
 import { AuroraBackground } from "./ui/aurora-background";
-import { chinaMirrorHref, useDownloadTarget } from "./useDownloadTarget";
+import { chinaMirrorTargets, useDownloadTarget } from "./useDownloadTarget";
 import "./cinematic-hero.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -27,6 +27,10 @@ export function CinematicHero({ t }: { t: Content }) {
   const windowsTarget = { href: "/download/windows", label: hero.downloadWindows };
   const [primary, secondary] =
     download.platform === "windows" ? [windowsTarget, macTarget] : [macTarget, windowsTarget];
+  const chinaDownloads = chinaMirrorTargets({
+    mac: hero.downloadChinaMac,
+    windows: hero.downloadChinaWindows,
+  });
 
   useGSAP(
     () => {
@@ -115,14 +119,12 @@ export function CinematicHero({ t }: { t: Content }) {
             <Download size={16} aria-hidden="true" />
             {secondary.label}
           </a>
-          <a
-            className="lp-btn lp-btn--outline lp-btn--lg"
-            href={chinaMirrorHref(primary.href)}
-            title={primary.label}
-          >
-            <Download size={16} aria-hidden="true" />
-            {hero.downloadChina}
-          </a>
+          {chinaDownloads.map((target) => (
+            <a className="lp-btn lp-btn--outline lp-btn--lg" href={target.href} key={target.href}>
+              <Download size={16} aria-hidden="true" />
+              {target.label}
+            </a>
+          ))}
         </div>
         <p className="lp-hero-caption" data-hero-rise>
           {hero.caption}
