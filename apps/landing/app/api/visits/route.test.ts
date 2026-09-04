@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { handleVisitRequest } from "./route";
+import { handleVisitRequest } from "../../lib/visitRoute";
 
 const VISITOR_ID = "f4d1b4dc-3ff4-4fcf-89b8-658884d0be87";
 
