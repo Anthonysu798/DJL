@@ -21,7 +21,7 @@ describe("GET /download/mac", () => {
     );
   });
 
-  it("falls back to the VPS compatibility page when GitHub is unreachable", async () => {
+  it("uses the GitHub release page rather than the retired VPS when GitHub is unreachable", async () => {
     vi.stubGlobal("fetch", async () => {
       throw new Error("network down");
     });
@@ -30,6 +30,8 @@ describe("GET /download/mac", () => {
     const response = await GET();
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://downloads.slcor.com/download/mac");
+    expect(response.headers.get("location")).toBe(
+      "https://github.com/Anthonysu798/DJL/releases/latest",
+    );
   });
 });

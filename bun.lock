@@ -148,6 +148,15 @@
         "vitest": "catalog:",
       },
     },
+    "apps/stats-worker": {
+      "name": "@synara/stats-worker",
+      "version": "0.1.0",
+      "devDependencies": {
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+        "wrangler": "^4.112.0",
+      },
+    },
     "apps/web": {
       "name": "@synara/web",
       "version": "0.5.0",
@@ -1381,6 +1390,8 @@
     "@synara/scripts": ["@synara/scripts@workspace:scripts"],
 
     "@synara/shared": ["@synara/shared@workspace:packages/shared"],
+
+    "@synara/stats-worker": ["@synara/stats-worker@workspace:apps/stats-worker"],
 
     "@synara/web": ["@synara/web@workspace:apps/web"],
 

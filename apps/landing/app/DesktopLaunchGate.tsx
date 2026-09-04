@@ -81,7 +81,7 @@ const launchCopy = {
       "macOS 13+（Apple Silicon / Intel）或 Windows 10 / 11 x64；建议 8 GB 内存与 2 GB 可用空间。",
     verifyTitle: "安装包安全说明",
     verifyBody:
-      "DJL macOS 安装包已使用 Developer ID 签名并通过 Apple 公证。Windows 安装包已通过 Microsoft Artifact Signing 进行 Authenticode 签名并添加时间戳，发布者为 Anthony Su。请只从 downloads.slcor.com 下载。",
+      "DJL macOS 安装包已使用 Developer ID 签名并通过 Apple 公证。Windows 安装包已通过 Microsoft Artifact Signing 进行 Authenticode 签名并添加时间戳，发布者为 Anthony Su。请只从 DJL 官方 GitHub Releases 或国内下载镜像获取安装包。",
     checksumTitle: "校验值与备用下载",
     checksumBody:
       "每个版本的下载存档都附带 SHA256SUMS。若自动下载暂时不可用，请从 DJL 官方下载存档重试。",
@@ -127,7 +127,7 @@ const launchCopy = {
       "macOS 13+ (Apple Silicon / Intel) or Windows 10 / 11 x64; 8 GB memory and 2 GB free space recommended.",
     verifyTitle: "Package security",
     verifyBody:
-      "DJL for macOS is Developer ID signed and Apple notarized. The Windows installer is Authenticode signed and timestamped by Anthony Su through Microsoft Artifact Signing. Download only from downloads.slcor.com.",
+      "DJL for macOS is Developer ID signed and Apple notarized. The Windows installer is Authenticode signed and timestamped by Anthony Su through Microsoft Artifact Signing. Download only from DJL's official GitHub Releases or China mirror.",
     checksumTitle: "Checksums and fallback downloads",
     checksumBody:
       "Every version archive includes SHA256SUMS. If the automatic download is temporarily unavailable, retry from DJL’s official download archive.",
