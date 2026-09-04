@@ -56,7 +56,8 @@ four independently testable pieces:
 4. A one-time desktop install ping whose URL is embedded by the signed release build.
 
 No dashboard UI is added to the public landing site. Owners read the protected JSON summary or run
-read-only D1 queries.
+read-only D1 queries. A second read-only endpoint exposes sanitized download aggregates for public
+use without exposing raw events, visitor IDs, country breakdowns, or install data.
 
 ## D1 schema
 
@@ -142,6 +143,25 @@ Daily arrays cover the latest 30 UTC days and fill missing days with zero. Inges
 limited to 4 KiB. Invalid bodies return 400, wrong methods return 405, unknown paths return 404,
 and all responses use `cache-control: no-store`, a restrictive CSP, and `nosniff`.
 
+### `GET /v1/public-stats`
+
+Requires no token and returns only sanitized download aggregates:
+
+```json
+{
+  "downloads": {
+    "total": 0,
+    "bySource": {},
+    "byPlatform": {},
+    "byDay": []
+  }
+}
+```
+
+Raw rows, countries, visitor metrics, visitor IDs, and install metrics remain private. The response
+uses `cache-control: public, max-age=60` so public consumers cannot cause one D1 query per page
+view. The private endpoint remains `no-store`.
+
 ## Landing visit flow
 
 `VisitReporter` is a client component mounted once in the root layout. It watches `usePathname()`
@@ -197,6 +217,8 @@ packaged application reads. The public README discloses the one-time anonymous m
 - No user agent, referrer, query string, hostname, account identity, device name, or application
   content is collected.
 - The anonymous visitor cookie is first-party and HttpOnly; it is not a cross-site advertising ID.
+- Public analytics contain only aggregate download counts by source, platform, and day. Detailed
+  country data, traffic data, install data, and all raw rows remain private.
 - Public ingest endpoints cannot safely contain a shared secret. Strict validation, body limits,
   de-duplication of install IDs, and owner-side comparison with GitHub/OSS origin metrics are the
   intended integrity controls.
