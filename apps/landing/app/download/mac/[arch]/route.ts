@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reportDownload, scheduleAfterResponse } from "../../../lib/downloadStats";
 import {
   GITHUB_LATEST_RELEASE_CHECKSUMS_URL,
   type MacArchitecture,
@@ -19,6 +20,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     return NextResponse.redirect(GITHUB_LATEST_RELEASE_CHECKSUMS_URL, 307);
   }
 
-  const destination = await resolveDesktopDownload({ platform: "mac", arch }, request);
-  return NextResponse.redirect(destination, 307);
+  const decision = await resolveDesktopDownload({ platform: "mac", arch }, request);
+  scheduleAfterResponse(() => reportDownload(decision.report));
+  return NextResponse.redirect(decision.destination, 307);
 }

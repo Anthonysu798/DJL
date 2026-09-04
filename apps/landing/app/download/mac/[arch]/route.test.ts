@@ -77,6 +77,8 @@ describe("GET /download/mac/[arch]", () => {
   );
 
   it("rejects an unknown architecture instead of guessing one", async () => {
+    const fetchSpy = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchSpy);
     const { GET } = await import("./route");
 
     const response = await GET(new Request("https://djl.test"), {
@@ -87,5 +89,34 @@ describe("GET /download/mac/[arch]", () => {
     expect(response.headers.get("location")).toBe(
       "https://github.com/Anthonysu798/DJL/releases/latest/download/SHA256SUMS",
     );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("reports the resolved OSS redirect", async () => {
+    const reports: Request[] = [];
+    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).includes("api.github.com")) {
+        return { ok: true, json: async () => RELEASE };
+      }
+      reports.push(new Request(input, init));
+      return new Response(null, { status: 204 });
+    });
+    const { GET } = await import("./route");
+
+    await GET(
+      new Request("https://djl.test/download/mac/arm64?mirror=cn", {
+        headers: { "x-vercel-ip-country": "cn" },
+      }),
+      { params: Promise.resolve({ arch: "arm64" }) },
+    );
+
+    await vi.waitFor(() => expect(reports).toHaveLength(1));
+    expect(await reports[0]?.json()).toEqual({
+      platform: "mac",
+      arch: "arm64",
+      source: "oss",
+      country: "CN",
+      version: "0.5.6",
+    });
   });
 });
