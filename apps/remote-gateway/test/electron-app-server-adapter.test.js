@@ -749,3 +749,191 @@ test("Electron adapter reconciles a completed phone-originated turn when a subsc
   );
   transport.shutdown();
 });
+
+// Backend fake that records requests and lets a test push subscription chunks.
+function createStreamingBackend(initialSnapshot) {
+  const requests = [];
+  const threadSubscribers = new Map();
+  let shellSubscriber = null;
+  let startedHandler = null;
+  const backend = {
+    onStarted(handler) {
+      startedHandler = handler;
+    },
+    onError() {},
+    onClose() {},
+    request: async (tag, payload) => {
+      requests.push({ tag, payload });
+      return initialSnapshot;
+    },
+    subscribe(tag, payload, handlers) {
+      if (tag === "orchestration.subscribeShell") {
+        shellSubscriber = handlers;
+        return () => {
+          shellSubscriber = null;
+        };
+      }
+      threadSubscribers.set(payload.threadId, handlers);
+      return () => {
+        threadSubscribers.delete(payload.threadId);
+      };
+    },
+    shutdown() {},
+  };
+  return {
+    backend,
+    requests,
+    start: () => startedHandler?.(),
+    pushThread: (threadId, values) => threadSubscribers.get(threadId)?.onChunk(values),
+    failThread: (threadId) => threadSubscribers.get(threadId)?.onError?.(new Error("dropped")),
+    pushShell: (values) => shellSubscriber?.onChunk(values),
+    subscribedThreadIds: () => Array.from(threadSubscribers.keys()),
+  };
+}
+
+function detailSnapshotChunk(thread, snapshotSequence) {
+  return { kind: "snapshot", snapshot: { snapshotSequence, thread } };
+}
+
+function assistantEvent(sequence, text, streaming) {
+  return {
+    kind: "event",
+    event: {
+      sequence,
+      eventId: `event-${sequence}`,
+      aggregateKind: "thread",
+      aggregateId: "electron-thread",
+      occurredAt: "2026-07-19T12:02:00.000Z",
+      commandId: null,
+      causationEventId: null,
+      correlationId: null,
+      metadata: {},
+      type: "thread.message-sent",
+      payload: {
+        threadId: "electron-thread",
+        messageId: "assistant-2",
+        role: "assistant",
+        text,
+        turnId: "turn-2",
+        streaming,
+        createdAt: "2026-07-19T12:02:00.000Z",
+        updatedAt: "2026-07-19T12:02:00.000Z",
+      },
+    },
+  };
+}
+
+const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test("Electron adapter streams deltas from thread events without snapshot refreshes", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  fake.start();
+  await flushMicrotasks();
+  fake.pushShell([
+    {
+      kind: "snapshot",
+      snapshot: {
+        snapshotSequence: 5,
+        projects: [],
+        threads: [{ id: "electron-thread", runtimeMode: "approval-required" }],
+        updatedAt: "x",
+      },
+    },
+  ]);
+  fake.pushThread("electron-thread", [detailSnapshotChunk(snapshot.threads[0], 5)]);
+  const snapshotCallsBefore = fake.requests.filter(
+    (r) => r.tag === "orchestration.getSnapshot",
+  ).length;
+
+  fake.pushThread("electron-thread", [assistantEvent(6, "Hel", true), assistantEvent(7, "lo", true)]);
+  fake.pushThread("electron-thread", [assistantEvent(8, "Hello", false)]);
+  await flushMicrotasks();
+
+  const deltas = outbound.filter((m) => m.method === "item/agentMessage/delta");
+  assert.deepEqual(
+    deltas.map((m) => m.params.delta),
+    ["Hel", "lo"],
+  );
+  assert.equal(deltas[0].params.itemId, "assistant-2");
+  assert.equal(deltas[0].params.djlEmittedAt, "2026-07-19T12:02:00.000Z");
+  const completed = outbound.filter((m) => m.method === "item/completed");
+  assert.equal(completed.length, 1);
+  assert.equal(completed[0].params.item.content[0].text, "Hello");
+  const snapshotCallsAfter = fake.requests.filter(
+    (r) => r.tag === "orchestration.getSnapshot",
+  ).length;
+  assert.equal(snapshotCallsAfter, snapshotCallsBefore, "streaming must not call getSnapshot");
+  transport.shutdown();
+});
+
+test("Electron adapter re-hydrates a thread after its stream fails", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+  fake.pushThread("electron-thread", [detailSnapshotChunk(snapshot.threads[0], 5)]);
+
+  fake.failThread("electron-thread");
+  await flushMicrotasks();
+
+  assert.deepEqual(fake.subscribedThreadIds(), ["electron-thread"]);
+  const resumed = structuredClone(snapshot.threads[0]);
+  resumed.session = { activeTurnId: "turn-3" };
+  fake.pushThread("electron-thread", [detailSnapshotChunk(resumed, 9)]);
+  assert.equal(
+    outbound.filter((m) => m.method === "turn/started").at(-1)?.params.turnId,
+    "turn-3",
+  );
+  transport.shutdown();
+});
+
+test("Electron adapter subscribes to threads announced on the shell stream", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  fake.start();
+  await flushMicrotasks();
+
+  fake.pushShell([
+    { kind: "thread-upserted", sequence: 6, thread: { id: "brand-new", runtimeMode: "full-access" } },
+  ]);
+  assert.ok(fake.subscribedThreadIds().includes("brand-new"));
+  fake.pushShell([{ kind: "thread-removed", sequence: 7, threadId: "brand-new" }]);
+  assert.ok(!fake.subscribedThreadIds().includes("brand-new"));
+  transport.shutdown();
+});
+
+test("Electron adapter asks for streaming delivery on phone-started turns", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-streaming-turn",
+      method: "turn/start",
+      params: { threadId: "electron-thread", input: [{ type: "text", text: "Stream please" }] },
+    }),
+  );
+  await flushMicrotasks();
+
+  const dispatched = fake.requests.find((r) => r.tag === "orchestration.dispatchCommand");
+  assert.equal(dispatched.payload.assistantDeliveryMode, "streaming");
+  transport.shutdown();
+});

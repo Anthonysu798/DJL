@@ -6,6 +6,7 @@
 
 const { createHash, randomUUID } = require("crypto");
 const { createElectronBackendRpcClient } = require("./electron-backend-rpc");
+const { createThreadEventProjection } = require("./electron-event-projection");
 
 const ORCHESTRATION = {
   dispatchCommand: "orchestration.dispatchCommand",
@@ -42,6 +43,7 @@ function createElectronAppServerTransport({
   const listeners = createListenerBag();
   const activeThreadSubscriptions = new Map();
   const threadStates = new Map();
+  const projection = createThreadEventProjection();
   const turnReconcileTimers = new Map();
   const pendingApprovalResponses = new Map();
   let stopped = false;
@@ -53,13 +55,21 @@ function createElectronAppServerTransport({
       mode: "djl-electron",
       launchDescription: "DJL Electron embedded backend",
     });
-    void refreshSnapshot();
+    void hydrateFromSnapshot();
     if (!shellUnsubscribe) {
       shellUnsubscribe = rpc.subscribe(
         ORCHESTRATION.subscribeShell,
         {},
         {
-          onChunk: () => void refreshSnapshot(),
+          onChunk(values) {
+            for (const value of values) handleShellItem(value);
+          },
+          onEnd() {
+            shellUnsubscribe = null;
+          },
+          onError() {
+            shellUnsubscribe = null;
+          },
         },
       );
     }
@@ -70,7 +80,9 @@ function createElectronAppServerTransport({
   rpc.onError(() => {});
   rpc.onClose(() => {});
 
-  async function refreshSnapshot() {
+  // One full snapshot per backend (re)start: it seeds the thread list and the
+  // per-thread subscriptions. Everything after that arrives as events.
+  async function hydrateFromSnapshot() {
     if (stopped) return;
     let snapshot;
     try {
@@ -82,11 +94,33 @@ function createElectronAppServerTransport({
     const threads = readableThreads(snapshot);
     logDiagnostic(diagnostics, `snapshot threads=${threads.length}`);
     for (const thread of threads) {
-      subscribeToThread(thread.id);
       applyThreadSnapshot(thread, {
         announceExisting: false,
         snapshotSequence: snapshot.snapshotSequence,
       });
+      subscribeToThread(thread.id);
+    }
+  }
+
+  function handleShellItem(value) {
+    if (!value || typeof value !== "object") return;
+    if (value.kind === "snapshot") {
+      for (const thread of value.snapshot?.threads || []) {
+        if (thread?.id && !thread.archivedAt && !thread.deletedAt) subscribeToThread(thread.id);
+      }
+      return;
+    }
+    if (value.kind === "thread-upserted" && value.thread?.id) {
+      if (value.thread.archivedAt || value.thread.deletedAt) {
+        unsubscribeFromThread(value.thread.id);
+        return;
+      }
+      subscribeToThread(value.thread.id);
+      for (const output of projection.applyShellThread(value.thread)) emitOutput(output);
+      return;
+    }
+    if (value.kind === "thread-removed" && value.threadId) {
+      unsubscribeFromThread(value.threadId);
     }
   }
 
@@ -105,8 +139,8 @@ function createElectronAppServerTransport({
               });
               continue;
             }
-            if (value?.kind === "event") {
-              void refreshThread(threadId);
+            if (value?.kind === "event" && value.event) {
+              handleThreadEvent(threadId, value.event);
             }
           }
         },
@@ -114,13 +148,49 @@ function createElectronAppServerTransport({
           activeThreadSubscriptions.delete(threadId);
         },
         onError() {
+          // The server ends a lagging stream so the client resyncs from a
+          // fresh detail snapshot; resubscribing delivers that snapshot first.
           activeThreadSubscriptions.delete(threadId);
+          projection.forget(threadId);
+          if (!stopped) subscribeToThread(threadId);
         },
       },
     );
     activeThreadSubscriptions.set(threadId, unsubscribe);
   }
 
+  function unsubscribeFromThread(threadId) {
+    const unsubscribe = activeThreadSubscriptions.get(threadId);
+    if (unsubscribe) unsubscribe();
+    activeThreadSubscriptions.delete(threadId);
+    projection.forget(threadId);
+    threadStates.delete(threadId);
+    stopTurnReconciliation(threadId);
+  }
+
+  function handleThreadEvent(threadId, event) {
+    const outputs = projection.applyThreadEvent(event);
+    for (const output of outputs) {
+      if (output.kind === "notification" && output.method === "turn/started") {
+        stopTurnReconciliation(threadId);
+      }
+      emitOutput(output);
+    }
+    const state = threadStates.get(threadId);
+    if (state) state.activeTurnId = projection.activeTurnId(threadId);
+  }
+
+  function emitOutput(output) {
+    if (output.kind === "request") {
+      pendingApprovalResponses.set(output.id, output.approval);
+      emitRaw({ id: output.id, method: output.method, params: output.params });
+      return;
+    }
+    emitNotification(output.method, output.params);
+  }
+
+  // Used by request handlers that still need a current thread (turn/start,
+  // runtime mode). It is not on the streaming path.
   async function refreshThread(threadId) {
     if (stopped) return null;
     try {
@@ -260,6 +330,7 @@ function createElectronAppServerTransport({
     }
     if (!activeTurnId) stopTurnReconciliation(thread.id);
     threadStates.set(thread.id, next);
+    projection.hydrate(thread, snapshotSequence);
     return true;
   }
 
@@ -476,6 +547,7 @@ function createElectronAppServerTransport({
         },
         modelSelection,
         dispatchMode: "queue",
+        assistantDeliveryMode: "streaming",
         runtimeMode,
         interactionMode: "default",
         createdAt: now(),
