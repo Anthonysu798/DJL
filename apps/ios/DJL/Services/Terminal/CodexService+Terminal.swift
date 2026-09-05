@@ -47,6 +47,9 @@ extension CodexService {
         var profileForSave = normalizedProfile
         profileForSave.cwd = ""
         let instanceId = UUID().uuidString
+        // An SSH session replaces any desktop mirror that used this id.
+        desktopTerminalBindings.removeValue(forKey: terminalId)
+        desktopTerminalsAwaitingReattach.remove(terminalId)
         let terminal = nativeTerminal(for: terminalId)
         terminalProfile = profileForSave
         DJLTerminalProfileStore.save(profileForSave)
@@ -126,6 +129,10 @@ extension CodexService {
 
     func writeTerminalInput(_ data: Data, terminalId: String) async throws {
         guard !data.isEmpty else { return }
+        if desktopTerminalBindings[terminalId] != nil {
+            try await writeDesktopTerminalInput(data, terminalId: terminalId)
+            return
+        }
         try await nativeTerminal(for: terminalId).write(data)
     }
 
@@ -143,6 +150,10 @@ extension CodexService {
             snapshot.rows = rows
         }
         guard terminalSnapshot(for: terminalId).status == .running else { return }
+        if desktopTerminalBindings[terminalId] != nil {
+            try await resizeDesktopTerminal(terminalId: terminalId, cols: cols, rows: rows)
+            return
+        }
         try await nativeTerminal(for: terminalId).resize(cols: cols, rows: rows)
     }
 
@@ -179,6 +190,10 @@ extension CodexService {
     }
 
     func closeTerminal(terminalId: String) async throws {
+        if desktopTerminalBindings[terminalId] != nil {
+            await closeDesktopTerminal(terminalId: terminalId)
+            return
+        }
         await nativeTerminal(for: terminalId).close()
         updateTerminalSnapshot(for: terminalId) { snapshot in
             snapshot.status = .closed
@@ -214,7 +229,7 @@ extension CodexService {
         }
     }
 
-    private func isCurrentTerminalInstance(_ instanceId: String, terminalId: String) -> Bool {
+    func isCurrentTerminalInstance(_ instanceId: String, terminalId: String) -> Bool {
         terminalSnapshot(for: terminalId).instanceId == instanceId
     }
 
@@ -230,14 +245,14 @@ extension CodexService {
         return terminal
     }
 
-    private func setTerminalSnapshot(_ snapshot: DJLTerminalSnapshot, for terminalId: String) {
+    func setTerminalSnapshot(_ snapshot: DJLTerminalSnapshot, for terminalId: String) {
         terminalSnapshotsById[terminalId] = snapshot
         if terminalId == Self.defaultTerminalId {
             terminalSnapshot = snapshot
         }
     }
 
-    private func updateTerminalSnapshot(
+    func updateTerminalSnapshot(
         for terminalId: String,
         mutate: (inout DJLTerminalSnapshot) -> Void
     ) {

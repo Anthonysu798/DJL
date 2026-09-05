@@ -34,6 +34,7 @@ extension CodexService {
             stopHostPresenceFallbackResolve()
             requestImmediateSync(threadId: activeThreadId)
         }
+        reattachDesktopTerminalsIfNeeded()
     }
 
     // Relay control frame: the host socket connected or closed at the relay.
@@ -58,6 +59,7 @@ extension CodexService {
         hostPresenceSilenceTask?.cancel()
         hostPresenceSilenceTask = nil
         startHostPresenceFallbackResolveIfNeeded()
+        markDesktopTerminalsOffline()
     }
 
     func resetHostPresence() {
@@ -66,6 +68,7 @@ extension CodexService {
         stopHostPresenceFallbackResolve()
         hostPresence = .unknown
         lastHostActivityAt = nil
+        markDesktopTerminalsOffline()
     }
 
     // Called from setForegroundState: the fallback poll only runs while visible.

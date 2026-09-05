@@ -444,6 +444,9 @@ extension CodexService {
         case Self.desktopGitActionProgressMethod:
             handleDesktopGitActionProgress(paramsObject)
 
+        case Self.desktopTerminalEventMethod:
+            handleDesktopTerminalEvent(paramsObject)
+
         case "terminal/event":
             handleTerminalEvent(paramsObject)
 

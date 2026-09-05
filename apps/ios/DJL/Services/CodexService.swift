@@ -616,6 +616,11 @@ final class CodexService {
     var terminalProfile: DJLTerminalProfile = DJLTerminalProfileStore.load()
     @ObservationIgnored let nativeSSHTerminal = DJLNativeSSHTerminal()
     @ObservationIgnored var nativeSSHTerminalsById: [String: DJLNativeSSHTerminal] = [:]
+    // Desktop terminals mirrored over the relay, keyed by the phone-side terminal id.
+    var desktopTerminalBindings: [String: DesktopTerminalBinding] = [:]
+    @ObservationIgnored var desktopTerminalsAwaitingReattach = Set<String>()
+    @ObservationIgnored var desktopTerminalPendingAckBytes: [String: Int] = [:]
+    @ObservationIgnored var desktopTerminalAckFlushTask: Task<Void, Never>?
 
     // --- Internal wiring ------------------------------------------------------
 
@@ -690,6 +695,9 @@ final class CodexService {
     var rateLimitsErrorMessage: String?
     var threadIdByTurnID: [String: String] = [:]
     var hydratedThreadIDs: Set<String> = []
+    // Last live (non-replay) assistant delta per thread; while these keep arriving the
+    // running-thread poll stays quiet instead of re-reading the thread every few seconds.
+    @ObservationIgnored var lastStreamedThreadActivityAt: [String: Date] = [:]
     var loadingThreadIDs: Set<String> = []
     // Cursor-backed history pages let large chats open from the recent tail first.
     var olderThreadHistoryCursorByThreadID: [String: JSONValue] = [:]
