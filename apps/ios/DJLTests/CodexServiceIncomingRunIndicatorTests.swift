@@ -1894,6 +1894,29 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertEqual(merged, "prefix-" + overlap + "-suffix")
     }
 
+    func testMergeAssistantDeltaKeepsShortNaturalOverlaps() {
+        let service = makeService()
+
+        XCTAssertEqual(service.mergeAssistantDelta(existingText: "Hel", incomingDelta: "lo"), "Hello")
+        XCTAssertEqual(
+            service.mergeAssistantDelta(existingText: "I said the", incomingDelta: " same thing"),
+            "I said the same thing"
+        )
+    }
+
+    func testRecentStreamedActivitySkipsRunningCatchupPolls() {
+        let service = makeService()
+        let threadID = "thread-\(UUID().uuidString)"
+        let now = Date()
+
+        XCTAssertFalse(service.hasRecentStreamedThreadActivity(threadID, now: now))
+
+        service.noteStreamedThreadActivity(threadId: threadID, at: now)
+
+        XCTAssertTrue(service.hasRecentStreamedThreadActivity(threadID, now: now.addingTimeInterval(3)))
+        XCTAssertFalse(service.hasRecentStreamedThreadActivity(threadID, now: now.addingTimeInterval(10)))
+    }
+
     func testMarkTurnCompletedFinalizesAllAssistantItemsForTurn() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"

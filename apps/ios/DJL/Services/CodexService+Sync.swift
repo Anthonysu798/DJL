@@ -920,6 +920,17 @@ extension CodexService {
     }
 
     // Prioritizes only desktop-mirrored runs that still lack authoritative assistant deltas.
+    static let streamedThreadActivityQuietWindow: TimeInterval = 5
+
+    func noteStreamedThreadActivity(threadId: String, at date: Date = Date()) {
+        lastStreamedThreadActivityAt[threadId] = date
+    }
+
+    func hasRecentStreamedThreadActivity(_ threadId: String, now: Date = Date()) -> Bool {
+        guard let last = lastStreamedThreadActivityAt[threadId] else { return false }
+        return now.timeIntervalSince(last) < Self.streamedThreadActivityQuietWindow
+    }
+
     func shouldPrioritizeMirroredRunningCatchup(_ threadId: String) -> Bool {
         mirroredRunningCatchupThreadIDs.contains(threadId) && threadHasActiveOrRunningTurn(threadId)
     }
@@ -981,6 +992,11 @@ extension CodexService {
                 }
                 return
             }
+        }
+
+        // Live deltas prove the stream is healthy; the poll is only a fallback for silence.
+        if wasRunning, hasRecentStreamedThreadActivity(threadId) {
+            return
         }
 
         let shouldRunMirroredCatchup = wasRunning && takeMirroredRunningCatchupPermit(for: threadId)
