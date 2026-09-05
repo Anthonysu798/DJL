@@ -18,6 +18,9 @@ const RUNTIME_MODES = new Set([
 // snapshot sequence mutate it and yield phone notifications.
 function createThreadEventProjection() {
   const states = new Map();
+  // turnId -> checkpoint turn count, so the adapter can answer a phone's
+  // workspace/checkpointDiff for desktop turns from the backend's turn diff.
+  const checkpointCountByThreadTurn = new Map();
 
   function hydrate(thread, snapshotSequence) {
     const threadId = stringValue(thread?.id);
@@ -40,6 +43,16 @@ function createThreadEventProjection() {
       ),
       activityIds: new Set((thread.activities || []).map((activity) => activity.id)),
     });
+    for (const checkpoint of thread.checkpoints || []) {
+      rememberCheckpointCount(threadId, checkpoint.turnId, checkpoint.checkpointTurnCount);
+    }
+  }
+
+  function rememberCheckpointCount(threadId, turnId, count) {
+    const normalizedTurnId = stringValue(turnId);
+    const normalizedCount = normalizeSequence(count);
+    if (!normalizedTurnId || normalizedCount == null) return;
+    checkpointCountByThreadTurn.set(`${threadId}|${normalizedTurnId}`, normalizedCount);
   }
 
   function applyThreadEvent(event) {
@@ -59,9 +72,21 @@ function createThreadEventProjection() {
         return projectActivity(threadId, state, event);
       case "thread.meta-updated":
         return projectMeta(threadId, state, event);
+      case "thread.turn-diff-completed":
+        return projectTurnDiff(threadId, event);
       default:
         return [];
     }
+  }
+
+  function projectTurnDiff(threadId, event) {
+    const payload = event.payload || {};
+    const turnId = stringValue(payload.turnId);
+    if (!turnId) return [];
+    rememberCheckpointCount(threadId, turnId, payload.checkpointTurnCount);
+    const item = checkpointFileChangeItem(payload);
+    if (!item) return [];
+    return [notification("item/completed", { threadId, turnId, item })];
   }
 
   function applyShellThread(threadShell) {
@@ -89,6 +114,8 @@ function createThreadEventProjection() {
       states.delete(threadId);
     },
     activeTurnId: (threadId) => states.get(threadId)?.activeTurnId ?? null,
+    checkpointTurnCount: (threadId, turnId) =>
+      checkpointCountByThreadTurn.get(`${threadId}|${stringValue(turnId)}`) ?? null,
   };
 }
 
@@ -193,6 +220,9 @@ function projectActivity(threadId, state, event) {
   const activityId = stringValue(activity?.id);
   if (!activityId || state.activityIds.has(activityId)) return [];
   state.activityIds.add(activityId);
+  if (activity.tone === "tool") {
+    return projectToolActivity(threadId, state, activity);
+  }
   if (activity.kind !== "approval.requested") return [];
   const requestId = stringValue(activity.payload?.requestId);
   if (!requestId) return [];
@@ -213,6 +243,95 @@ function projectActivity(threadId, state, event) {
       approval: { threadId, requestId },
     },
   ];
+}
+
+// Tool lifecycle activities carry the provider item type plus the command,
+// output, or patch in `payload.data`. They map onto the same item shapes the
+// phone already renders for Codex app-server tool items.
+function projectToolActivity(threadId, state, activity) {
+  const item = toolItemFromActivity(activity);
+  if (!item) return [];
+  const method = activity.kind === "tool.started" ? "item/started" : "item/completed";
+  return [
+    notification(method, {
+      threadId,
+      turnId: stringValue(activity.turnId) || state.activeTurnId,
+      item,
+    }),
+  ];
+}
+
+function toolItemFromActivity(activity) {
+  const payload = activity.payload || {};
+  const itemType = stringValue(payload.itemType);
+  if (!itemType) return null;
+  const data = payload.data && typeof payload.data === "object" ? payload.data : {};
+  const id = stringValue(data.toolCallId) || stringValue(data.callID) || stringValue(activity.id);
+  const status = stringValue(payload.status) === "inProgress" ? "inProgress" : "completed";
+  const detail = stringValue(payload.detail);
+
+  if (itemType === "command_execution") {
+    const item = {
+      id,
+      type: "commandExecution",
+      status,
+      command: stringValue(data.command) || (status === "inProgress" ? detail : ""),
+      aggregatedOutput: stringValue(data.output) || (status === "completed" ? detail : ""),
+    };
+    if (Number.isInteger(data.exitCode)) item.exitCode = data.exitCode;
+    return item;
+  }
+
+  if (itemType === "file_change") {
+    const changes = Array.isArray(data.changes) && data.changes.length > 0
+      ? data.changes
+      : fileChangeFromPatch(data);
+    return { id, type: "fileChange", status, changes };
+  }
+
+  return {
+    id,
+    type: "toolCall",
+    status,
+    name: stringValue(payload.title) || itemType,
+    output: detail,
+  };
+}
+
+function fileChangeFromPatch(data) {
+  const diff = stringValue(data.unifiedDiff) || stringValue(data.patch) || stringValue(data.diff);
+  if (!diff) return [];
+  return [
+    {
+      path: stringValue(data.path) || "workspace",
+      kind: stringValue(data.kind) || "update",
+      diff,
+    },
+  ];
+}
+
+// One phone file-change card per backend checkpoint: paths and totals only;
+// the unified diff is fetched on demand through workspace/checkpointDiff.
+function checkpointFileChangeItem(checkpoint) {
+  const turnId = stringValue(checkpoint?.turnId);
+  const files = Array.isArray(checkpoint?.files) ? checkpoint.files : [];
+  if (!turnId || files.length === 0) return null;
+  return {
+    id: `turn-diff-${turnId}`,
+    type: "fileChange",
+    status: "completed",
+    changes: files.map((file) => ({
+      path: stringValue(file.path),
+      kind: stringValue(file.kind) || "update",
+      additions: Number.isInteger(file.additions) ? file.additions : 0,
+      deletions: Number.isInteger(file.deletions) ? file.deletions : 0,
+    })),
+  };
+}
+
+function desktopGitProgressNotification(event) {
+  if (!event || typeof event !== "object") return null;
+  return notification("djl/git/desktopActionProgress", { ...event });
 }
 
 function projectMeta(threadId, state, event) {
@@ -258,4 +377,8 @@ function stringValue(value) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
-module.exports = { createThreadEventProjection };
+module.exports = {
+  checkpointFileChangeItem,
+  createThreadEventProjection,
+  desktopGitProgressNotification,
+};

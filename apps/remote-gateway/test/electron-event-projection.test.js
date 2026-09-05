@@ -305,3 +305,198 @@ test("events for unknown threads are ignored and forget drops state", () => {
   projection.forget("thread-1");
   assert.equal(projection.has("thread-1"), false);
 });
+
+function toolActivityEvent(id, kind, payload, sequence, turnId = "turn-1") {
+  return threadEvent(
+    "thread.activity-appended",
+    {
+      threadId: "thread-1",
+      activity: {
+        id,
+        tone: "tool",
+        kind,
+        summary: "Ran command",
+        payload,
+        turnId,
+        createdAt: "2026-09-04T10:00:03.000Z",
+      },
+    },
+    sequence,
+  );
+}
+
+test("command activities become started and completed command items", () => {
+  const projection = createThreadEventProjection();
+  projection.hydrate(THREAD, 10);
+
+  const started = projection.applyThreadEvent(
+    toolActivityEvent(
+      "a1",
+      "tool.started",
+      {
+        itemType: "command_execution",
+        status: "inProgress",
+        detail: "npm test",
+        data: { toolCallId: "call-1", command: "npm test" },
+      },
+      11,
+    ),
+  );
+  const done = projection.applyThreadEvent(
+    toolActivityEvent(
+      "a2",
+      "tool.completed",
+      {
+        itemType: "command_execution",
+        status: "completed",
+        detail: "ok",
+        data: { toolCallId: "call-1", output: "ok", exitCode: 0 },
+      },
+      12,
+    ),
+  );
+
+  assert.equal(started[0].method, "item/started");
+  assert.deepEqual(started[0].params.item, {
+    id: "call-1",
+    type: "commandExecution",
+    status: "inProgress",
+    command: "npm test",
+    aggregatedOutput: "",
+  });
+  assert.equal(done[0].method, "item/completed");
+  assert.equal(done[0].params.item.id, "call-1");
+  assert.equal(done[0].params.item.aggregatedOutput, "ok");
+  assert.equal(done[0].params.item.exitCode, 0);
+  assert.equal(done[0].params.turnId, "turn-1");
+});
+
+test("file change activities and turn diffs become fileChange items", () => {
+  const projection = createThreadEventProjection();
+  projection.hydrate(THREAD, 10);
+
+  const edit = projection.applyThreadEvent(
+    toolActivityEvent(
+      "a3",
+      "tool.completed",
+      {
+        itemType: "file_change",
+        status: "completed",
+        data: { toolCallId: "call-2", path: "src/a.ts", unifiedDiff: "@@ -1 +1 @@\n-a\n+b" },
+      },
+      11,
+    ),
+  );
+  assert.equal(edit[0].params.item.type, "fileChange");
+  assert.deepEqual(edit[0].params.item.changes, [
+    { path: "src/a.ts", kind: "update", diff: "@@ -1 +1 @@\n-a\n+b" },
+  ]);
+
+  const diff = projection.applyThreadEvent(
+    threadEvent(
+      "thread.turn-diff-completed",
+      {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        checkpointTurnCount: 4,
+        checkpointRef: "ref",
+        status: "ready",
+        files: [{ path: "src/a.ts", kind: "update", additions: 2, deletions: 1 }],
+        assistantMessageId: null,
+        completedAt: "x",
+      },
+      12,
+    ),
+  );
+  assert.equal(diff[0].method, "item/completed");
+  assert.equal(diff[0].params.item.id, "turn-diff-turn-1");
+  assert.deepEqual(diff[0].params.item.changes, [
+    { path: "src/a.ts", kind: "update", additions: 2, deletions: 1 },
+  ]);
+  assert.equal(projection.checkpointTurnCount("thread-1", "turn-1"), 4);
+  assert.equal(projection.checkpointTurnCount("thread-1", "nope"), null);
+});
+
+test("other tools become toolCall items and non-tool activities are ignored", () => {
+  const projection = createThreadEventProjection();
+  projection.hydrate(THREAD, 10);
+
+  const search = projection.applyThreadEvent(
+    toolActivityEvent(
+      "a4",
+      "tool.completed",
+      { itemType: "web_search", status: "completed", title: "Web search", detail: "3 results", data: {} },
+      11,
+    ),
+  );
+  assert.deepEqual(search[0].params.item, {
+    id: "a4",
+    type: "toolCall",
+    status: "completed",
+    name: "Web search",
+    output: "3 results",
+  });
+
+  const info = projection.applyThreadEvent(
+    threadEvent(
+      "thread.activity-appended",
+      {
+        threadId: "thread-1",
+        activity: {
+          id: "a5",
+          tone: "info",
+          kind: "context-window.updated",
+          summary: "ctx",
+          payload: {},
+          turnId: null,
+          createdAt: "x",
+        },
+      },
+      12,
+    ),
+  );
+  assert.deepEqual(info, []);
+});
+
+test("checkpoint history items and desktop git progress helpers", () => {
+  const {
+    checkpointFileChangeItem,
+    desktopGitProgressNotification,
+  } = require("../src/electron-event-projection");
+
+  assert.deepEqual(
+    checkpointFileChangeItem({
+      turnId: "t",
+      checkpointTurnCount: 2,
+      files: [{ path: "a", kind: "add", additions: 1, deletions: 0 }],
+    }),
+    {
+      id: "turn-diff-t",
+      type: "fileChange",
+      status: "completed",
+      changes: [{ path: "a", kind: "add", additions: 1, deletions: 0 }],
+    },
+  );
+  assert.deepEqual(
+    desktopGitProgressNotification({
+      actionId: "g1",
+      cwd: "/w",
+      action: "push",
+      kind: "phase_started",
+      phase: "push",
+      label: "Pushing",
+    }),
+    {
+      kind: "notification",
+      method: "djl/git/desktopActionProgress",
+      params: {
+        actionId: "g1",
+        cwd: "/w",
+        action: "push",
+        kind: "phase_started",
+        phase: "push",
+        label: "Pushing",
+      },
+    },
+  );
+});
