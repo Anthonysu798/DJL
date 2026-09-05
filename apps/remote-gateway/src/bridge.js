@@ -30,6 +30,7 @@ const { handleDesktopRequest } = require("./desktop-handler");
 const { readDaemonConfig, writeDaemonConfig } = require("./daemon-state");
 const { handleGitRequest } = require("./git-handler");
 const { RELAY_CLOSE_RATE_LIMITED, relayReconnectDelayMs } = require("./relay-reconnect-policy");
+const { createPresenceHeartbeat } = require("./presence-heartbeat");
 const { handleThreadContextRequest } = require("./thread-context-handler");
 const { handleWorkspaceRequest } = require("./workspace-handler");
 const { handleProjectRequest } = require("./project-handler");
@@ -843,12 +844,19 @@ function startBridge({
       sendRelayRegistrationUpdate(nextDeviceState);
     },
     onSecureSessionReady(session) {
+      presenceHeartbeat.start();
       activePhoneSummary = buildActivePhoneSummary(session, deviceState);
       const lastPublishedBridgeStatus = bridgeStatusPublisher.latest();
       if (lastPublishedBridgeStatus) {
         publishBridgeStatus(lastPublishedBridgeStatus);
       }
     },
+  });
+  // Proves the laptop is awake to the phone even when no turn is running. Sent
+  // through the normal outbound path so it batches and replays like anything else.
+  const presenceHeartbeat = createPresenceHeartbeat({
+    send: (payloadText) => sendApplicationResponse(payloadText),
+    isReady: () => socket?.readyState === WebSocket.OPEN && secureTransport.isSecureChannelReady(),
   });
   // Keeps one stable sender identity across reconnects so buffered replay state
   // reflects what actually made it onto the current relay socket.
@@ -999,6 +1007,7 @@ function startBridge({
 
   function prepareBridgeShutdown() {
     isShuttingDown = true;
+    presenceHeartbeat.stop();
     secureTransport.flushOutbound?.();
     bridgeWakeAssertion.stop();
     clearReconnectTimer();
