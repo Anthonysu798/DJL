@@ -21,6 +21,8 @@ private struct CommandExecutionMessageContext {
 nonisolated enum WireMessagePreDecoder {
     enum Result: Sendable {
         case message(RPCMessage)
+        case batch([RPCMessage])
+        case batchWithFailures([RPCMessage])
         case decodeFailed
         case invalidUTF8
     }
@@ -36,12 +38,41 @@ nonisolated enum WireMessagePreDecoder {
 
     static func decodeRPCMessage(from text: String) -> Result {
         guard let data = text.data(using: .utf8) else { return .invalidUTF8 }
+        if isBatchText(text) {
+            return decodeBatch(from: data)
+        }
         do {
             let message = try JSONDecoder().decode(RPCMessage.self, from: data)
             return .message(message)
         } catch {
             return .decodeFailed
         }
+    }
+
+    // The bridge coalesces notifications into a JSON-RPC batch array. Decode
+    // element by element so one malformed entry cannot drop the whole frame.
+    static func decodeBatch(from data: Data) -> Result {
+        guard let elements = try? JSONDecoder().decode([JSONValue].self, from: data) else {
+            return .decodeFailed
+        }
+        var messages: [RPCMessage] = []
+        var sawFailure = false
+        for element in elements {
+            guard let elementData = try? JSONEncoder().encode(element),
+                  let message = try? JSONDecoder().decode(RPCMessage.self, from: elementData) else {
+                sawFailure = true
+                continue
+            }
+            messages.append(message)
+        }
+        if messages.isEmpty {
+            return .decodeFailed
+        }
+        return sawFailure ? .batchWithFailures(messages) : .batch(messages)
+    }
+
+    static func isBatchText(_ text: String) -> Bool {
+        text.first(where: { !$0.isWhitespace }) == "["
     }
 
     static func classify(_ text: String) -> Classification {
@@ -58,16 +89,7 @@ nonisolated enum WireMessagePreDecoder {
 
 extension CodexService {
     func processIncomingText(_ text: String) {
-        guard let payloadData = text.data(using: .utf8) else {
-            return
-        }
-
-        do {
-            let message = try decoder.decode(RPCMessage.self, from: payloadData)
-            handleIncomingRPCMessage(message)
-        } catch {
-            lastErrorMessage = "Unable to decode server payload"
-        }
+        handleDecodedRPCResult(WireMessagePreDecoder.decodeRPCMessage(from: text), rawText: text)
     }
 
     // Handles a pre-decoded RPC message from off-actor transport paths.
@@ -76,6 +98,17 @@ extension CodexService {
         case .message(let message):
             lastRawMessage = rawText
             handleIncomingRPCMessage(message)
+        case .batch(let messages):
+            lastRawMessage = rawText
+            for message in messages {
+                handleIncomingRPCMessage(message)
+            }
+        case .batchWithFailures(let messages):
+            lastRawMessage = rawText
+            for message in messages {
+                handleIncomingRPCMessage(message)
+            }
+            lastErrorMessage = "Unable to decode server payload"
         case .decodeFailed:
             lastErrorMessage = "Unable to decode server payload"
         case .invalidUTF8:
