@@ -933,12 +933,11 @@ private func appendUniqueURL(_ url: URL?, to candidates: inout [URL]) {
 }
 
 private extension CodexService {
-    // Centralizes the bridge-update guidance so every mismatch shows the same Mac command.
+    // Centralizes the bridge-update guidance so every mismatch points at DJL desktop.
     func presentBridgeUpdatePrompt(message: String) {
         bridgeUpdatePrompt = CodexBridgeUpdatePrompt(
-            title: "Update the DJL package on your device",
-            message: message,
-            command: "npm install -g djl@latest"
+            title: "Update DJL on your Mac",
+            message: message
         )
     }
 

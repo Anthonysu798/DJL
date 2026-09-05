@@ -385,14 +385,14 @@ private struct SettingsBridgeVersionCard: View {
         }
 
         if installedVersion == latestVersion {
-            return "Your Mac bridge matches the latest published package."
+            return "DJL on your Mac matches the latest release."
         }
 
         if installedVersion.compare(latestVersion, options: .numeric) == .orderedAscending {
-            return "A newer DJL package is available."
+            return "A newer DJL release is available. Update DJL on your Mac."
         }
 
-        return "This device is running a different build than npm latest."
+        return "Your Mac is running a different build than the latest release."
     }
 
     private var versionStatusColor: Color {

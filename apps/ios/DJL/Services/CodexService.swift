@@ -139,20 +139,27 @@ final class CodexURLSessionWebSocketDelegate: NSObject, URLSessionWebSocketDeleg
     }
 }
 
+// Which side needs the update: the DJL desktop app on the Mac (which runs the
+// bridge) or this iPhone app.
+enum CodexBridgeUpdateTarget: Equatable, Sendable {
+    case mac
+    case iPhone
+}
+
 struct CodexBridgeUpdatePrompt: Identifiable, Equatable, Sendable {
     let id = UUID()
     let title: String
     let message: String
-    let command: String?
+    let target: CodexBridgeUpdateTarget
 
     init(
         title: String,
         message: String,
-        command: String?
+        target: CodexBridgeUpdateTarget = .mac
     ) {
         self.title = title
         self.message = message
-        self.command = command
+        self.target = target
     }
 }
 
@@ -602,7 +609,7 @@ final class CodexService {
     var hasPresentedServiceTierBridgeUpdatePrompt = false
     var hasPresentedThreadForkBridgeUpdatePrompt = false
     var hasPresentedMinimumBridgePackageUpdatePrompt = false
-    // Remembers the latest optional npm update we already surfaced so foreground refreshes stay non-spammy.
+    // Remembers the latest optional DJL desktop update we already surfaced so foreground refreshes stay non-spammy.
     var lastPresentedAvailableBridgePackageVersion: String?
     // Mirrors the sidebar ready-dot with a tappable in-app banner when another chat finishes.
     var threadCompletionBanner: CodexThreadCompletionBanner?

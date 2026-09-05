@@ -21,8 +21,8 @@ final class QRScannerPairingValidatorTests: XCTestCase {
         }
 
         XCTAssertEqual(prompt.title, "Update DJL on your Mac before scanning")
-        XCTAssertEqual(prompt.command, "npm install -g djl@latest")
-        XCTAssertTrue(prompt.message.contains("different DJL npm version"))
+        XCTAssertEqual(prompt.target, .mac)
+        XCTAssertTrue(prompt.message.contains("different DJL version"))
     }
 
     func testLegacyBridgePayloadRequiresBridgeUpdateBeforeScanning() {
@@ -34,7 +34,7 @@ final class QRScannerPairingValidatorTests: XCTestCase {
             return XCTFail("Expected a bridge update prompt for legacy pairing payloads.")
         }
 
-        XCTAssertEqual(prompt.command, "npm install -g djl@latest")
+        XCTAssertEqual(prompt.target, .mac)
         XCTAssertTrue(prompt.message.contains("older DJL bridge"))
     }
 

@@ -469,7 +469,7 @@ extension CodexService {
         bridgeUpdatePrompt = CodexBridgeUpdatePrompt(
             title: "Update DJL on your iPhone to reconnect",
             message: promptMessage,
-            command: nil
+            target: .iPhone
         )
 
         if !message.isEmpty {

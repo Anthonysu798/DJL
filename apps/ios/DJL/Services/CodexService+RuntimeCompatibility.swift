@@ -58,9 +58,8 @@ extension CodexService {
 private extension CodexService {
     var serviceTierBridgeUpdatePrompt: CodexBridgeUpdatePrompt {
         CodexBridgeUpdatePrompt(
-            title: "Update DJL on your device to use Speed controls",
-            message: "This device bridge does not support the selected speed setting yet. Update the DJL npm package to use Fast Mode and other speed controls.",
-            command: "npm install -g djl@latest"
+            title: "Update DJL on your Mac to use Speed controls",
+            message: "DJL on your Mac does not support the selected speed setting yet. Update DJL desktop to use Fast Mode and other speed controls."
         )
     }
 }

@@ -6,10 +6,8 @@
 
 import Foundation
 
-private let minimumBridgePackageUpdateCommand = "npm install -g djl@latest"
 private let forcedBridgeUpgradeFromVersion = "1.3.8"
 private let forcedBridgeUpgradeTargetVersion = "1.3.9"
-private let forcedBridgeUpgradeCommand = "npm install -g djl@1.3.9"
 
 enum CodexGPTAccountStatus: String, Codable, Sendable {
     case unknown
@@ -785,8 +783,8 @@ extension CodexService {
         }
     }
 
-    // Prompts for a bridge package upgrade once per session when bridge-managed status
-    // reports an older npm package or omits the version entirely.
+    // Prompts for a DJL desktop upgrade once per session when bridge-managed status
+    // reports an older bridge or omits the version entirely.
     private func evaluateRequiredBridgePackageVersion(
         from payloadObject: IncomingParamsObject,
         allowMissingVersionPrompt: Bool
@@ -853,20 +851,19 @@ extension CodexService {
         if let currentVersion = currentVersion?.trimmingCharacters(in: .whitespacesAndNewlines),
            !currentVersion.isEmpty {
             message =
-                "This device bridge is running DJL \(currentVersion), but this iPhone app requires DJL \(CodexService.minimumSupportedBridgePackageVersion) or newer. Update the npm package on your device, then reconnect."
+                "Your Mac is running DJL \(currentVersion), but this iPhone app requires DJL \(CodexService.minimumSupportedBridgePackageVersion) or newer. Update DJL on your Mac, then reconnect."
         } else {
             message =
-                "This device bridge is too old for this version of DJL iPhone. Update the DJL npm package on your device to \(CodexService.minimumSupportedBridgePackageVersion) or newer, then reconnect."
+                "DJL on your Mac is too old for this version of DJL iPhone. Update DJL on your Mac to \(CodexService.minimumSupportedBridgePackageVersion) or newer, then reconnect."
         }
 
         return CodexBridgeUpdatePrompt(
-            title: "Update DJL on your device to reconnect",
-            message: message,
-            command: minimumBridgePackageUpdateCommand
+            title: "Update DJL on your Mac to reconnect",
+            message: message
         )
     }
 
-    // Surfaces a softer "npm update available" prompt without overriding stricter compatibility prompts.
+    // Surfaces a softer "update available" prompt without overriding stricter compatibility prompts.
     private func evaluateAvailableBridgePackageVersionPromptIfNeeded() {
         guard isAppInForeground else {
             return
@@ -921,17 +918,15 @@ extension CodexService {
         latestVersion: String
     ) -> CodexBridgeUpdatePrompt {
         CodexBridgeUpdatePrompt(
-            title: "A newer DJL update is available on your device",
-            message: "This device bridge is running DJL \(currentVersion), and npm now has DJL \(latestVersion). Update the package on your device when you're ready, then reconnect to start using the newer build.",
-            command: minimumBridgePackageUpdateCommand
+            title: "A newer DJL update is available for your Mac",
+            message: "Your Mac is running DJL \(currentVersion), and DJL \(latestVersion) is available. Update DJL on your Mac when you're ready, then reconnect to start using the newer build."
         )
     }
 
     private func forcedBridgePackageUpdatePrompt(currentVersion: String) -> CodexBridgeUpdatePrompt {
         CodexBridgeUpdatePrompt(
-            title: "Update DJL on your device to reconnect",
-            message: "This device bridge is running DJL \(currentVersion). Update the DJL CLI on your device to \(forcedBridgeUpgradeTargetVersion), then reconnect.",
-            command: forcedBridgeUpgradeCommand
+            title: "Update DJL on your Mac to reconnect",
+            message: "Your Mac is running DJL \(currentVersion). Update DJL on your Mac to \(forcedBridgeUpgradeTargetVersion), then reconnect."
         )
     }
 
