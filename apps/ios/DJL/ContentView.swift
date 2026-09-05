@@ -26,7 +26,7 @@ enum ContentNavigationRoute: Hashable {
     case newChatOpening
     case thread(id: String)
     case settings
-    case terminal(preferredWorkingDirectory: String?)
+    case terminal(preferredWorkingDirectory: String?, threadID: String?)
 
     var isTerminalRoute: Bool {
         if case .terminal = self {
@@ -622,8 +622,8 @@ struct ContentView: View {
         case .settings:
             SettingsView()
                 .adaptiveNavigationBar()
-        case .terminal(let preferredWorkingDirectory):
-            TerminalScreen(preferredWorkingDirectory: preferredWorkingDirectory)
+        case .terminal(let preferredWorkingDirectory, let threadID):
+            TerminalScreen(preferredWorkingDirectory: preferredWorkingDirectory, threadID: threadID)
                 .adaptiveNavigationBar()
         }
     }
@@ -750,7 +750,7 @@ struct ContentView: View {
                     threadIDsAwaitingInitialAssistantResponse.remove(thread.id)
                 },
                 onOpenTerminal: { workingDirectory in
-                    openTerminal(preferredWorkingDirectory: workingDirectory)
+                    openTerminal(preferredWorkingDirectory: workingDirectory, threadID: thread.id)
                 }
             )
             .id(thread.id)
@@ -820,7 +820,7 @@ struct ContentView: View {
                     threadIDsAwaitingInitialAssistantResponse.remove(thread.id)
                 },
                 onOpenTerminal: { workingDirectory in
-                    openTerminal(preferredWorkingDirectory: workingDirectory)
+                    openTerminal(preferredWorkingDirectory: workingDirectory, threadID: thread.id)
                 }
             )
                 .id(thread.id)
@@ -1158,8 +1158,11 @@ struct ContentView: View {
 
     // Terminal can be opened from several surfaces with different cwd payloads;
     // replace the active terminal route instead of stacking near-identical pages.
-    private func appendTerminalNavigationRoute(preferredWorkingDirectory: String?) {
-        let route = ContentNavigationRoute.terminal(preferredWorkingDirectory: preferredWorkingDirectory)
+    private func appendTerminalNavigationRoute(preferredWorkingDirectory: String?, threadID: String? = nil) {
+        let route = ContentNavigationRoute.terminal(
+            preferredWorkingDirectory: preferredWorkingDirectory,
+            threadID: threadID
+        )
         if navigationPath.last?.isTerminalRoute == true {
             navigationPath[navigationPath.count - 1] = route
         } else {
@@ -1364,8 +1367,8 @@ struct ContentView: View {
         }
     }
 
-    private func openTerminal(preferredWorkingDirectory: String?) {
-        appendTerminalNavigationRoute(preferredWorkingDirectory: preferredWorkingDirectory)
+    private func openTerminal(preferredWorkingDirectory: String?, threadID: String? = nil) {
+        appendTerminalNavigationRoute(preferredWorkingDirectory: preferredWorkingDirectory, threadID: threadID)
     }
 
     private func openTerminalFromSidebar(preferredWorkingDirectory: String?) {
