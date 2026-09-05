@@ -33,7 +33,8 @@ nonisolated enum WireMessagePreDecoder {
     }
 
     private static let secureKindValues = [
-        "\"serverHello\"", "\"secureReady\"", "\"secureError\"", "\"encryptedEnvelope\""
+        "\"serverHello\"", "\"secureReady\"", "\"secureError\"", "\"encryptedEnvelope\"",
+        "\"hostPresence\""
     ]
 
     static func decodeRPCMessage(from text: String) -> Result {
@@ -117,6 +118,10 @@ extension CodexService {
     }
 
     func handleIncomingRPCMessage(_ message: RPCMessage) {
+        if message.method == Self.presenceHeartbeatMethod {
+            noteHostActivity()
+            return
+        }
         if let method = message.method {
             let normalizedMethod = normalizedIncomingMethodName(method)
             if let requestID = message.id {

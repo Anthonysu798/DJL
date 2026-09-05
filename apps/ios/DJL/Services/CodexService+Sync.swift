@@ -123,6 +123,7 @@ extension CodexService {
                 stopSyncLoop()
             }
         }
+        updateHostPresenceFallbackForForegroundChange()
         updateBackgroundRunGraceTask()
     }
 

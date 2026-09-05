@@ -228,6 +228,9 @@ extension CodexService {
             case "encryptedEnvelope":
                 handleEncryptedEnvelopeText(text)
                 return
+            case "hostPresence":
+                applyHostPresenceFrame(text)
+                return
             default:
                 break
             }
@@ -1077,6 +1080,7 @@ private extension CodexService {
                 advanceBridgeOutboundReplayCursor(to: bridgeOutboundSeq)
             }
 
+            noteHostActivity()
             lastRawMessage = payload.payloadText
             processIncomingText(payload.payloadText)
         } catch {
@@ -1202,10 +1206,11 @@ private extension CodexService {
         }
 
         let errorResponse = try? JSONDecoder().decode(CodexRelayErrorResponse.self, from: data)
-        switch errorResponse?.code {
-        case "session_unavailable":
+        if Self.trustedResolveErrorCodeIsMacOffline(errorResponse?.code) {
             secureConnectionState = .liveSessionUnresolved
             throw CodexTrustedSessionResolveError.macOffline("Your trusted device is offline right now.")
+        }
+        switch errorResponse?.code {
         case "phone_not_trusted", "invalid_signature":
             secureConnectionState = .rePairRequired
             throw CodexTrustedSessionResolveError.rePairRequired(

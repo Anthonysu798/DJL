@@ -118,6 +118,7 @@ extension CodexService {
             }
 
             startWebSocketKeepAliveLoop()
+            noteHostActivity()
             startSyncLoop()
             // Push registration is best-effort and talks to the bridge, so it must not
             // hold the main connect path hostage when the managed backend is slow.
@@ -154,6 +155,7 @@ extension CodexService {
 
         isConnected = false
         isInitialized = false
+        resetHostPresence()
         isLoadingThreads = false
         isLoadingModels = false
         pendingRuntimeOptionRefresh = false
@@ -504,6 +506,7 @@ extension CodexService {
         let disposition = receiveErrorDisposition(for: error, relayCloseCode: relayCloseCode)
         isConnected = false
         isInitialized = false
+        resetHostPresence()
         supportsThreadRuntimeModeSync = false
         shouldAutoReconnectOnForeground = disposition.shouldAutoReconnectOnForeground
         if disposition.shouldClearSavedRelaySession {

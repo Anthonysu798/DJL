@@ -310,6 +310,8 @@ enum CodexConnectionPhase: Equatable, Sendable {
     case loadingChats
     case syncing
     case connected
+    // The relay socket is up but the paired device is asleep or unreachable.
+    case hostOffline
 }
 
 enum CodexPendingThreadComposerAction: Equatable, Sendable {
@@ -450,6 +452,14 @@ final class CodexService {
         }
     }
     var isConnected = false
+    // Whether the paired device is reachable through the relay, as reported by
+    // relay presence frames, the bridge heartbeat, and a silence timer.
+    var hostPresence: CodexHostPresence = .unknown
+    var lastHostActivityAt: Date?
+    @ObservationIgnored var hostPresenceSilenceTask: Task<Void, Never>?
+    @ObservationIgnored var hostPresenceSilenceOverrideNanoseconds: UInt64?
+    @ObservationIgnored var hostPresenceFallbackResolveTask: Task<Void, Never>?
+    @ObservationIgnored var hostPresenceFallbackResolveOverrideNanoseconds: UInt64?
     var isConnecting = false
     var isInitialized = false
     var isLoadingThreads = false
@@ -1164,6 +1174,10 @@ final class CodexService {
             return .offline
         }
 
+        if case .offline = hostPresence {
+            return .hostOffline
+        }
+
         if threads.isEmpty && (isBootstrappingConnectionSync || isLoadingThreads) {
             return .loadingChats
         }
@@ -1187,6 +1201,8 @@ final class CodexService {
             return "Syncing"
         case .connected:
             return "Connected"
+        case .hostOffline:
+            return "Device offline"
         }
     }
 

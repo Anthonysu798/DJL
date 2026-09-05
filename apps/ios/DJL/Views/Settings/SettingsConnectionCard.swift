@@ -93,7 +93,7 @@ struct SettingsConnectionCard: View {
         switch codex.connectionPhase {
         case .connecting, .loadingChats, .syncing:
             return true
-        case .offline, .connected:
+        case .offline, .connected, .hostOffline:
             return false
         }
     }
@@ -102,6 +102,11 @@ struct SettingsConnectionCard: View {
         switch codex.connectionPhase {
         case .offline:
             return "Offline"
+        case .hostOffline:
+            if case .offline(let since) = codex.hostPresence {
+                return "Device offline · since \(since.formatted(date: .omitted, time: .shortened))"
+            }
+            return "Device offline"
         case .connecting:
             return "Connecting"
         case .loadingChats:
@@ -121,7 +126,7 @@ struct SettingsConnectionCard: View {
             return "Loading chats…"
         case .syncing:
             return "Syncing workspace…"
-        case .offline, .connected:
+        case .offline, .connected, .hostOffline:
             return ""
         }
     }
