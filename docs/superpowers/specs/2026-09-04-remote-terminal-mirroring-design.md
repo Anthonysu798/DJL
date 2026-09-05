@@ -154,3 +154,9 @@ cost is that the desktop view may show narrow-wrapped output until it refits.
   creates for a thread.
 - Mirroring the phone's SSH sessions to the desktop.
 - Desktop-side awareness of phone resizes.
+
+## Verified
+
+- Gateway: `node --test ./test/*.test.js` — 710 tests, 0 failures (mirror 8, adapter 23, coalescer 8).
+- iOS: full unit suite 856 tests; 1 order-dependent failure (`testSavedRelaySessionRequiresBothSessionIdAndRelayURL`, asserts a fresh service has no saved relay session) passes when run alone and is unrelated to terminal changes. Desktop terminal tests 7/7, binding tests 3/3.
+- Not measured on hardware: attach latency and output throughput against a live DJL desktop.

@@ -51,3 +51,8 @@ sync, and terminal hot paths after sub-projects 1–4 landed.
   reads from the projection cache remains a gateway-side follow-up.
 - Foreground list sync (10 s) and running-badge watch (2 s) intervals are
   unchanged; both are lightweight list calls.
+
+## Verified
+
+- New tests: short natural overlaps are kept; recent streamed activity suppresses the running catch-up poll (`CodexServiceIncomingRunIndicatorTests`, 96/96).
+- Full iOS unit suite: 856 tests, one order-dependent failure unrelated to this change (passes alone).
