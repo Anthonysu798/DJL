@@ -19,6 +19,7 @@ import {
   validateRegistration,
 } from "./policy";
 import { type TrustedResolveRequest, verifyTrustedResolveRequest } from "./registryAuth";
+import { serializeHostPresenceFrame } from "./presence";
 import { finalizeRelaySocketClose } from "./socketLifecycle";
 
 interface Env {
@@ -222,8 +223,6 @@ export class DJLRelaySession extends DurableObject<Env> {
       if (!registered) {
         return errorResponse(503, "registry_unavailable", "The relay registry is unavailable.");
       }
-    } else if (this.ctx.getWebSockets("role:mac").length === 0) {
-      return errorResponse(409, "host_offline", "The paired computer is offline.");
     }
 
     for (const existing of this.ctx.getWebSockets(`role:${role}`)) {
@@ -240,7 +239,27 @@ export class DJLRelaySession extends DurableObject<Env> {
     };
     server.serializeAttachment(attachment);
     this.ctx.acceptWebSocket(server, [`role:${role}`]);
+    if (role === "mac") {
+      this.broadcastHostPresence(true);
+    } else {
+      // A phone may wait for an absent host; tell it the current state at once.
+      const hostOnline = this.openSockets("role:mac").length > 0;
+      server.send(serializeHostPresenceFrame(hostOnline, Date.now()));
+    }
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  private openSockets(tag: string, except?: WebSocket): WebSocket[] {
+    return this.ctx
+      .getWebSockets(tag)
+      .filter((socket) => socket !== except && socket.readyState === WebSocket.OPEN);
+  }
+
+  private broadcastHostPresence(online: boolean): void {
+    const frame = serializeHostPresenceFrame(online, Date.now());
+    for (const phone of this.openSockets("role:iphone")) {
+      phone.send(frame);
+    }
   }
 
   override async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
@@ -293,6 +312,9 @@ export class DJLRelaySession extends DurableObject<Env> {
     _wasClean: boolean,
   ): Promise<void> {
     const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+    if (attachment?.role === "mac" && this.openSockets("role:mac", socket).length === 0) {
+      this.broadcastHostPresence(false);
+    }
     await finalizeRelaySocketClose(attachment?.role, () => this.markRegistryOffline());
   }
 
