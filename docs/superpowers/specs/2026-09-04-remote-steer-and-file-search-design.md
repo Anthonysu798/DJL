@@ -30,9 +30,26 @@ entries to the phone's `{ root, path, fileName, score, indices: null }` shape,
 scoring by rank so the backend's order is preserved across roots. A root whose
 search fails is skipped and logged; the others still return.
 
+## Skills, plugins, and usage (follow-up, 2026-09-05)
+
+Three more phone requests fell through the adapter. Each maps to an existing
+backend method:
+
+| Phone method | Backend | Mapping |
+| --- | --- | --- |
+| `skills/list {cwds?|cwd?, forceReload?}` | `provider.listSkillsCatalog {cwd?}` once per cwd (max 4; none → global) | `{skills: [{name, description, path, scope, enabled}]}`, duplicates collapsed by path |
+| `plugin/list {cwds?, forceReload?}` | `provider.listPlugins {provider: "codex", cwd?, forceReload?}` | `{marketplaces}` passed through; the backend descriptor is a superset of the Codex shape the phone decodes |
+| `account/rateLimits/read` | `server.listProviderUsage {}` | `{rateLimitsByLimitId: {"<provider>:<window>": {limitName, primary: {usedPercent, windowDurationMins?, resetsAt?}}}}`; providers whose status is not `ok` are omitted |
+
+Plugins use the Codex provider because marketplaces are a Codex concept. The
+usage mapping produces one row per provider window, labelled "Codex · 5h" and
+so on, which the phone's status sheet sorts by window length.
+
 ## Testing
 
-Adapter tests: steer dispatches `thread.turn.start` with `dispatchMode: "steer"`
+Adapter tests: skills merge across cwds and collapse shared paths; plugin list
+sends the Codex provider and passes marketplaces through; usage snapshots map
+to keyed buckets and skip providers that need auth. Steer dispatches `thread.turn.start` with `dispatchMode: "steer"`
 and answers with the running turn id; steer without a running turn is refused
 without dispatching; fuzzy search maps entries per root and skips a failing
 root.
@@ -42,3 +59,4 @@ root.
 - Adapter tests 26/26 (three new); full gateway suite `node --test ./test/*.test.js` 713 pass, 0 fail.
 - No phone changes were needed: the phone already sends both requests and parses these response shapes.
 - Not measured on hardware: steering a live DJL desktop turn and autocomplete results against a real workspace.
+- Follow-up (skills, plugins, usage): adapter tests 29/29 (three new). Full gateway run showed 3 failures in the load-sensitive bridge and live-mirror files; those two files pass 138/138 when run alone.

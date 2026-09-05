@@ -1279,3 +1279,108 @@ test("Electron adapter serves fuzzy file search from desktop workspace search", 
   assert.ok(response.result.files[0].score > response.result.files[1].score);
   transport.shutdown();
 });
+
+function createDiscoveryTransport(handlers) {
+  const fake = createStreamingBackend(snapshot);
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (handlers[tag]) {
+      fake.requests.push({ tag, payload });
+      return handlers[tag](payload);
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  return { fake, transport, outbound };
+}
+
+test("Electron adapter lists skills from the cross-provider catalog per cwd", async () => {
+  const { fake, transport, outbound } = createDiscoveryTransport({
+    "provider.listSkillsCatalog": (payload) => ({
+      skills: [
+        { name: "Deploy", path: `${payload.cwd}/.skills/deploy`, enabled: true, scope: "synara" },
+        { name: "Shared", path: "/home/.skills/shared", enabled: false, interface: { shortDescription: "Shared skill" } },
+      ],
+    }),
+  });
+
+  transport.send(
+    JSON.stringify({ id: "ios-skills", method: "skills/list", params: { cwds: ["/a", "/b"] } }),
+  );
+  await flushMicrotasks();
+
+  const calls = fake.requests.filter((r) => r.tag === "provider.listSkillsCatalog");
+  assert.deepEqual(calls.map((c) => c.payload), [{ cwd: "/a" }, { cwd: "/b" }]);
+  const skills = outbound.find((m) => m.id === "ios-skills").result.skills;
+  assert.equal(skills.length, 3, "shared skill collapses across cwds");
+  assert.deepEqual(skills[1], {
+    name: "Shared",
+    description: "Shared skill",
+    path: "/home/.skills/shared",
+    scope: null,
+    enabled: false,
+  });
+  transport.shutdown();
+});
+
+test("Electron adapter lists Codex plugin marketplaces", async () => {
+  const { fake, transport, outbound } = createDiscoveryTransport({
+    "provider.listPlugins": () => ({
+      marketplaces: [
+        {
+          name: "openai",
+          path: "/m",
+          plugins: [{ id: "p1", name: "Linear", installed: true, enabled: true, installPolicy: "INSTALLED_BY_DEFAULT", source: {}, authPolicy: "x" }],
+        },
+      ],
+      marketplaceLoadErrors: [],
+      remoteSyncError: null,
+      featuredPluginIds: [],
+    }),
+  });
+
+  transport.send(
+    JSON.stringify({ id: "ios-plugins", method: "plugin/list", params: { cwds: ["/a"], forceReload: true } }),
+  );
+  await flushMicrotasks();
+
+  const call = fake.requests.find((r) => r.tag === "provider.listPlugins");
+  assert.deepEqual(call.payload, { provider: "codex", cwd: "/a", forceReload: true });
+  const marketplaces = outbound.find((m) => m.id === "ios-plugins").result.marketplaces;
+  assert.equal(marketplaces[0].plugins[0].name, "Linear");
+  transport.shutdown();
+});
+
+test("Electron adapter maps provider usage into rate limit buckets", async () => {
+  const { transport, outbound } = createDiscoveryTransport({
+    "server.listProviderUsage": () => [
+      {
+        provider: "codex",
+        updatedAt: "x",
+        source: "oauth",
+        usageLines: [],
+        limits: [
+          { window: "5h", usedPercent: 42.4, windowDurationMins: 300, resetsAt: "2026-09-05T00:00:00.000Z" },
+          { window: "weekly", usedPercent: 10 },
+        ],
+      },
+      { provider: "claudeAgent", updatedAt: "x", source: "s", usageLines: [], status: "needs-auth", limits: [{ window: "5h", usedPercent: 1 }] },
+    ],
+  });
+
+  transport.send(JSON.stringify({ id: "ios-limits", method: "account/rateLimits/read", params: null }));
+  await flushMicrotasks();
+
+  const buckets = outbound.find((m) => m.id === "ios-limits").result.rateLimitsByLimitId;
+  assert.deepEqual(Object.keys(buckets), ["codex:5h", "codex:weekly"]);
+  assert.deepEqual(buckets["codex:5h"], {
+    limitName: "Codex · 5h",
+    primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: "2026-09-05T00:00:00.000Z" },
+  });
+  transport.shutdown();
+});

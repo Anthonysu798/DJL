@@ -28,6 +28,24 @@ const GIT_SUBSCRIBE_ACTION_PROGRESS = "git.subscribeActionProgress";
 const PROJECTS_SEARCH_ENTRIES = "projects.searchEntries";
 const FUZZY_FILE_SEARCH_MAX_ROOTS = 4;
 const FUZZY_FILE_SEARCH_LIMIT_PER_ROOT = 50;
+// Composer discovery and the status sheet's usage rows.
+const PROVIDER_LIST_SKILLS_CATALOG = "provider.listSkillsCatalog";
+const PROVIDER_LIST_PLUGINS = "provider.listPlugins";
+const SERVER_LIST_PROVIDER_USAGE = "server.listProviderUsage";
+const SKILLS_MAX_CWDS = 4;
+// Plugin marketplaces are a Codex concept; other providers have no plugin list.
+const PLUGIN_PROVIDER = "codex";
+const PROVIDER_LABELS = {
+  codex: "Codex",
+  claudeAgent: "Claude",
+  cursor: "Cursor",
+  gemini: "Gemini",
+  grok: "Grok",
+  droid: "Droid",
+  kilo: "Kilo",
+  opencode: "OpenCode",
+  pi: "Pi",
+};
 
 const RUNTIME_MODES = new Set([
   "approval-required",
@@ -548,6 +566,12 @@ function createElectronAppServerTransport({
         return steerTurn(params, mutation);
       case "fuzzyFileSearch":
         return fuzzyFileSearch(params);
+      case "skills/list":
+        return listSkills(params);
+      case "plugin/list":
+        return listPlugins(params);
+      case "account/rateLimits/read":
+        return readRateLimits();
       case "turn/interrupt":
         return interruptTurn(params, mutation);
       case "djl/thread/runtimeMode/set":
@@ -745,6 +769,83 @@ function createElectronAppServerTransport({
       }
     }
     return { files };
+  }
+
+  // Unified skills catalog across providers, one request per cwd the phone
+  // names (none means the global catalog). Duplicates by path collapse.
+  async function listSkills(params) {
+    const cwds = (Array.isArray(params?.cwds) ? params.cwds : [params?.cwd])
+      .map(stringValue)
+      .filter(Boolean)
+      .slice(0, SKILLS_MAX_CWDS);
+    const requests = cwds.length > 0 ? cwds.map((cwd) => ({ cwd })) : [{}];
+    const byKey = new Map();
+    for (const payload of requests) {
+      let result;
+      try {
+        result = await rpc.request(PROVIDER_LIST_SKILLS_CATALOG, payload);
+      } catch (error) {
+        logDiagnostic(diagnostics, `skills-list-failed cwd=${payload.cwd || ""}`, error);
+        continue;
+      }
+      for (const skill of Array.isArray(result?.skills) ? result.skills : []) {
+        const name = stringValue(skill?.name);
+        if (!name) continue;
+        const path = stringValue(skill?.path);
+        const key = path || name.toLowerCase();
+        if (byKey.has(key)) continue;
+        byKey.set(key, {
+          name,
+          description: stringValue(skill?.description) || stringValue(skill?.interface?.shortDescription) || null,
+          path: path || null,
+          scope: stringValue(skill?.scope) || null,
+          enabled: skill?.enabled !== false,
+        });
+      }
+    }
+    return { skills: Array.from(byKey.values()) };
+  }
+
+  async function listPlugins(params) {
+    const cwd = (Array.isArray(params?.cwds) ? params.cwds : [params?.cwd])
+      .map(stringValue)
+      .find(Boolean);
+    const result = await rpc.request(PROVIDER_LIST_PLUGINS, {
+      provider: PLUGIN_PROVIDER,
+      ...(cwd ? { cwd } : {}),
+      ...(params?.forceReload ? { forceReload: true } : {}),
+    });
+    // The backend descriptor is a superset of the Codex marketplace shape the
+    // phone decodes; unknown fields are ignored on the phone.
+    return { marketplaces: Array.isArray(result?.marketplaces) ? result.marketplaces : [] };
+  }
+
+  // One bucket per provider usage window, keyed so the phone renders a row
+  // each. Providers without a fetchable usage source are left out.
+  async function readRateLimits() {
+    const snapshots = await rpc.request(SERVER_LIST_PROVIDER_USAGE, {});
+    const rateLimitsByLimitId = {};
+    for (const snapshot of Array.isArray(snapshots) ? snapshots : []) {
+      const provider = stringValue(snapshot?.provider);
+      if (!provider) continue;
+      if (snapshot.status && snapshot.status !== "ok") continue;
+      const label = PROVIDER_LABELS[provider] || provider;
+      for (const limit of Array.isArray(snapshot.limits) ? snapshot.limits : []) {
+        const window = stringValue(limit?.window);
+        if (!window || typeof limit.usedPercent !== "number") continue;
+        rateLimitsByLimitId[`${provider}:${window}`] = {
+          limitName: `${label} · ${window}`,
+          primary: {
+            usedPercent: Math.round(limit.usedPercent),
+            ...(Number.isInteger(limit.windowDurationMins)
+              ? { windowDurationMins: limit.windowDurationMins }
+              : {}),
+            ...(stringValue(limit.resetsAt) ? { resetsAt: limit.resetsAt } : {}),
+          },
+        };
+      }
+    }
+    return { rateLimitsByLimitId };
   }
 
   async function setThreadRuntimeMode(params, mutation) {
