@@ -7,6 +7,9 @@
 const DEFAULT_COALESCE_WINDOW_MS = 40;
 // Relay frames are capped at 1 MiB; keep batches far below that.
 const DEFAULT_MAX_BATCH_MESSAGES = 64;
+// Terminal output chunks are large; cap batch bytes so a burst of them never
+// approaches the relay frame limit.
+const DEFAULT_MAX_BATCH_BYTES = 262_144;
 const DELTA_METHOD = "item/agentMessage/delta";
 
 // Streaming produces dozens of tiny notifications a second. The relay budgets
@@ -15,6 +18,7 @@ const DELTA_METHOD = "item/agentMessage/delta";
 function createOutboundCoalescer({
   windowMs = DEFAULT_COALESCE_WINDOW_MS,
   maxBatchMessages = DEFAULT_MAX_BATCH_MESSAGES,
+  maxBatchBytes = DEFAULT_MAX_BATCH_BYTES,
   setTimeoutFn = setTimeout,
   clearTimeoutFn = clearTimeout,
   flush,
@@ -23,6 +27,7 @@ function createOutboundCoalescer({
     throw new Error("outbound coalescer requires a flush callback");
   }
   const pending = [];
+  let pendingBytes = 0;
   let timer = null;
 
   function push(payloadText) {
@@ -38,6 +43,10 @@ function createOutboundCoalescer({
       flush(payloadText);
       return;
     }
+    if (pending.length > 0 && pendingBytes + payloadText.length > maxBatchBytes) {
+      flushPending();
+    }
+    pendingBytes += payloadText.length;
     const last = pending[pending.length - 1];
     if (last && canMergeDeltas(last, parsed)) {
       last.params = {
@@ -67,6 +76,7 @@ function createOutboundCoalescer({
     }
     if (pending.length === 0) return;
     const batch = pending.splice(0, pending.length);
+    pendingBytes = 0;
     flush(JSON.stringify(batch.length === 1 ? batch[0] : batch));
   }
 
@@ -101,4 +111,5 @@ module.exports = {
   createOutboundCoalescer,
   DEFAULT_COALESCE_WINDOW_MS,
   DEFAULT_MAX_BATCH_MESSAGES,
+  DEFAULT_MAX_BATCH_BYTES,
 };

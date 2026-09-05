@@ -150,3 +150,26 @@ test("stop flushes what is pending and cancels the timer", () => {
   assert.equal(flushed.length, 1);
   assert.equal(timers.hasPending(), false);
 });
+
+test("a batch flushes early when the next notification would exceed the byte cap", () => {
+  const timers = createFakeTimers();
+  const flushed = [];
+  const coalescer = createOutboundCoalescer({
+    ...timers,
+    maxBatchBytes: 250,
+    flush: (text) => flushed.push(text),
+  });
+
+  const chunk = (data) =>
+    JSON.stringify({ method: "djl/terminal/event", params: { type: "output", data } });
+  coalescer.push(chunk("a".repeat(40)));
+  coalescer.push(chunk("b".repeat(40)));
+  assert.equal(flushed.length, 0);
+  coalescer.push(chunk("c".repeat(40)));
+
+  assert.equal(flushed.length, 1);
+  assert.equal(JSON.parse(flushed[0]).length, 2);
+  timers.fire();
+  assert.equal(flushed.length, 2);
+  assert.equal(JSON.parse(flushed[1]).params.data, "c".repeat(40));
+});
