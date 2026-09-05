@@ -24,6 +24,10 @@ const ORCHESTRATION = {
   subscribeThread: "orchestration.subscribeThread",
 };
 const GIT_SUBSCRIBE_ACTION_PROGRESS = "git.subscribeActionProgress";
+// Desktop workspace search backs the phone's @-file autocomplete.
+const PROJECTS_SEARCH_ENTRIES = "projects.searchEntries";
+const FUZZY_FILE_SEARCH_MAX_ROOTS = 4;
+const FUZZY_FILE_SEARCH_LIMIT_PER_ROOT = 50;
 
 const RUNTIME_MODES = new Set([
   "approval-required",
@@ -35,6 +39,7 @@ const RUNTIME_MODES = new Set([
 const MUTATION_METHODS = new Set([
   "thread/start",
   "turn/start",
+  "turn/steer",
   "turn/interrupt",
   "djl/thread/runtimeMode/set",
   "thread/archive",
@@ -539,6 +544,10 @@ function createElectronAppServerTransport({
         return startThread(params, mutation);
       case "turn/start":
         return startTurn(params, mutation);
+      case "turn/steer":
+        return steerTurn(params, mutation);
+      case "fuzzyFileSearch":
+        return fuzzyFileSearch(params);
       case "turn/interrupt":
         return interruptTurn(params, mutation);
       case "djl/thread/runtimeMode/set":
@@ -642,18 +651,31 @@ function createElectronAppServerTransport({
   }
 
   async function startTurn(params, mutation) {
+    return dispatchTurn(params, mutation, "queue");
+  }
+
+  // Codex-style steer: an urgent redirect of the running turn. The backend
+  // models it as a turn start with the "steer" dispatch mode.
+  async function steerTurn(params, mutation) {
+    return dispatchTurn(params, mutation, "steer");
+  }
+
+  async function dispatchTurn(params, mutation, dispatchMode) {
     const snapshot = await readSnapshot();
     const threadId = readThreadId(params);
     const thread = readableThreads(snapshot).find((entry) => entry.id === threadId);
     if (!thread) throw new Error("DJL Electron chat was not found.");
     const messageText = extractInputText(params.input);
     if (!messageText) throw new Error("A message is required.");
+    if (dispatchMode === "steer" && !thread.session?.activeTurnId) {
+      throw new Error("No active turn available to steer.");
+    }
     const modelSelection = modelSelectionFor(params, snapshot, thread);
     const runtimeMode = runtimeModeForAppServerParams(params, thread.runtimeMode);
     await dispatchCommand(
       {
         type: "thread.turn.start",
-        commandId: mutation.commandId("turn-start"),
+        commandId: mutation.commandId(dispatchMode === "steer" ? "turn-steer" : "turn-start"),
         threadId,
         message: {
           messageId: mutation.entityId("djl-message", "message"),
@@ -662,7 +684,7 @@ function createElectronAppServerTransport({
           attachments: [],
         },
         modelSelection,
-        dispatchMode: "queue",
+        dispatchMode,
         assistantDeliveryMode: "streaming",
         runtimeMode,
         interactionMode: "default",
@@ -684,6 +706,45 @@ function createElectronAppServerTransport({
       ...(turnId ? { turn: { id: turnId, status: "inProgress" } } : {}),
       runtimeMode,
     };
+  }
+
+  // Maps the phone's Codex-shaped fuzzy search onto the desktop's workspace
+  // entry search, one request per root, preserving the backend's ranking.
+  async function fuzzyFileSearch(params) {
+    const query = stringValue(params?.query);
+    const roots = (Array.isArray(params?.roots) ? params.roots : [])
+      .map(stringValue)
+      .filter(Boolean)
+      .slice(0, FUZZY_FILE_SEARCH_MAX_ROOTS);
+    if (!query || roots.length === 0) return { files: [] };
+    const files = [];
+    for (const root of roots) {
+      let result;
+      try {
+        result = await rpc.request(PROJECTS_SEARCH_ENTRIES, {
+          cwd: root,
+          query,
+          limit: FUZZY_FILE_SEARCH_LIMIT_PER_ROOT,
+          kind: "file",
+        });
+      } catch (error) {
+        logDiagnostic(diagnostics, `fuzzy-file-search-failed root=${root}`, error);
+        continue;
+      }
+      const entries = Array.isArray(result?.entries) ? result.entries : [];
+      for (const entry of entries) {
+        const path = stringValue(entry?.path);
+        if (!path) continue;
+        files.push({
+          root,
+          path,
+          fileName: path.split("/").pop(),
+          score: Math.max(1, 1000 - files.length),
+          indices: null,
+        });
+      }
+    }
+    return { files };
   }
 
   async function setThreadRuntimeMode(params, mutation) {

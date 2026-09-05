@@ -1171,3 +1171,111 @@ test("Electron adapter mirrors desktop terminal output for attached terminals", 
   transport.shutdown();
   assert.equal(terminalSubscriber, null, "shutdown unsubscribes from terminal events");
 });
+
+test("Electron adapter steers the running turn with the steer dispatch mode", async () => {
+  const runningSnapshot = structuredClone(snapshot);
+  runningSnapshot.threads[0].session = {
+    ...(runningSnapshot.threads[0].session || {}),
+    activeTurnId: "turn-live",
+  };
+  const fake = createStreamingBackend(runningSnapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-steer",
+      method: "turn/steer",
+      params: {
+        threadId: "electron-thread",
+        expectedTurnId: "turn-live",
+        input: [{ type: "text", text: "Focus on the tests" }],
+      },
+    }),
+  );
+  await flushMicrotasks();
+
+  const dispatched = fake.requests.find((r) => r.tag === "orchestration.dispatchCommand");
+  assert.equal(dispatched.payload.type, "thread.turn.start");
+  assert.equal(dispatched.payload.dispatchMode, "steer");
+  assert.equal(dispatched.payload.message.text, "Focus on the tests");
+  const response = outbound.find((m) => m.id === "ios-steer");
+  assert.equal(response.result.turn.id, "turn-live");
+  transport.shutdown();
+});
+
+test("Electron adapter refuses to steer when no turn is running", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-steer-idle",
+      method: "turn/steer",
+      params: { threadId: "electron-thread", input: [{ type: "text", text: "x" }] },
+    }),
+  );
+  await flushMicrotasks();
+
+  const response = outbound.find((m) => m.id === "ios-steer-idle");
+  assert.match(response.error.message, /No active turn/);
+  assert.equal(fake.requests.some((r) => r.tag === "orchestration.dispatchCommand"), false);
+  transport.shutdown();
+});
+
+test("Electron adapter serves fuzzy file search from desktop workspace search", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "projects.searchEntries") {
+      fake.requests.push({ tag, payload });
+      if (payload.cwd === "/broken") throw new Error("nope");
+      return {
+        entries: [
+          { path: "src/app.ts", kind: "file" },
+          { path: "src/app.test.ts", kind: "file", parentPath: "src" },
+        ],
+        truncated: false,
+      };
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-fuzzy",
+      method: "fuzzyFileSearch",
+      params: { query: "app", roots: ["/work", "/broken"], cancellationToken: null },
+    }),
+  );
+  await flushMicrotasks();
+
+  const searches = fake.requests.filter((r) => r.tag === "projects.searchEntries");
+  assert.deepEqual(searches[0].payload, { cwd: "/work", query: "app", limit: 50, kind: "file" });
+  const response = outbound.find((m) => m.id === "ios-fuzzy");
+  assert.equal(response.result.files.length, 2);
+  assert.deepEqual(response.result.files[0], {
+    root: "/work",
+    path: "src/app.ts",
+    fileName: "app.ts",
+    score: 1000,
+    indices: null,
+  });
+  assert.ok(response.result.files[0].score > response.result.files[1].score);
+  transport.shutdown();
+});
