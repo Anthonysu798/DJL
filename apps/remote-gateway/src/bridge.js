@@ -29,6 +29,7 @@ const { rememberActiveThread } = require("./session-state");
 const { handleDesktopRequest } = require("./desktop-handler");
 const { readDaemonConfig, writeDaemonConfig } = require("./daemon-state");
 const { handleGitRequest } = require("./git-handler");
+const { RELAY_CLOSE_RATE_LIMITED, relayReconnectDelayMs } = require("./relay-reconnect-policy");
 const { handleThreadContextRequest } = require("./thread-context-handler");
 const { handleWorkspaceRequest } = require("./workspace-handler");
 const { handleProjectRequest } = require("./project-handler");
@@ -1091,9 +1092,10 @@ function startBridge({
     }
 
     reconnectAttempt += 1;
-    const baseDelayMs = Math.min(1_000 * reconnectAttempt, 5_000);
-    const jitterMs = Math.floor(Math.random() * Math.min(baseDelayMs, 2_000));
-    const delayMs = baseDelayMs + jitterMs;
+    if (closeCode === RELAY_CLOSE_RATE_LIMITED) {
+      console.warn("[djl] relay rate limit hit; reconnecting immediately");
+    }
+    const delayMs = relayReconnectDelayMs({ closeCode, attempt: reconnectAttempt });
     logConnectionStatus("connecting");
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
