@@ -17,7 +17,6 @@ private struct SettingsComputerNamePresentation: Identifiable, Equatable {
 private enum SettingsSheet: Identifiable, Equatable {
     case computerName(SettingsComputerNamePresentation)
     case commandReference
-    case macLoginInfo
 
     var id: String {
         switch self {
@@ -25,8 +24,6 @@ private enum SettingsSheet: Identifiable, Equatable {
             return "computerName-\(presentation.id)"
         case .commandReference:
             return "commandReference"
-        case .macLoginInfo:
-            return "macLoginInfo"
         }
     }
 }
@@ -47,9 +44,6 @@ struct SettingsView: View {
                 presentSettingsSheet(.commandReference)
             }
             SettingsUsageCard()
-            SettingsGPTAccountCard {
-                presentSettingsSheet(.macLoginInfo)
-            }
             SettingsArchivedChatsCard()
             SettingsAboutCard {
                 showAboutDJL()
@@ -84,8 +78,6 @@ struct SettingsView: View {
             )
         case .commandReference:
             SettingsCommandReferenceSheet()
-        case .macLoginInfo:
-            GPTVoiceSetupSheet()
         }
     }
 
@@ -248,104 +240,11 @@ private struct SettingsAppearanceCard: View {
                 Toggle("Liquid Glass", isOn: $useLiquidGlass)
                     .tint(settingsToggleTintColor)
             }
-
-            SettingsPetCompanionSection(settingsAccentColor: settingsAccentColor)
         }
     }
 
     private var selectedUserBubbleColor: UserBubbleColor {
         UserBubbleColor(rawValue: userBubbleColorRawValue) ?? .default
-    }
-}
-
-private struct SettingsPetCompanionSection: View {
-    @Environment(CodexService.self) private var codex
-    @Environment(PetCompanionStore.self) private var petStore
-
-    let settingsAccentColor: Color
-
-    var body: some View {
-        Group {
-            Toggle(isOn: petEnabledBinding) {
-                HStack(spacing: 8) {
-                    Text("Companion Pet")
-                    Text("BETA")
-                        .font(.system(size: 10, weight: .semibold))
-                        .tracking(0.5)
-                        .foregroundStyle(settingsAccentColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule().fill(settingsAccentColor.opacity(0.15))
-                        )
-                }
-            }
-            .tint(settingsToggleTintColor)
-
-            if petStore.isEnabled {
-                if petStore.availablePets.isEmpty {
-                    SettingsInlineMessage(
-                        text: petStore.isLoading
-                            ? "Loading pets from your device…"
-                            : "No local pets found in ~/.codex/pets."
-                    )
-                } else {
-                    Picker("Pet", selection: selectedPetBinding) {
-                        ForEach(petStore.availablePets) { pet in
-                            Text(pet.displayName).tag(pet.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .tint(settingsAccentColor)
-                }
-
-                if let errorMessage = petStore.errorMessage {
-                    SettingsInlineMessage(text: errorMessage, tint: .red)
-                }
-
-                SettingsButton("Refresh Pets", isLoading: petStore.isLoading) {
-                    HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                    Task {
-                        await petStore.refreshPets(codex: codex)
-                    }
-                }
-            }
-        }
-        .task(id: codex.isConnected) {
-            guard codex.isConnected, petStore.isEnabled else {
-                return
-            }
-            await petStore.loadPetsIfNeeded(codex: codex)
-            await petStore.loadSelectedPet(codex: codex)
-        }
-    }
-
-    private var petEnabledBinding: Binding<Bool> {
-        Binding(
-            get: { petStore.isEnabled },
-            set: { isEnabled in
-                petStore.setEnabled(isEnabled)
-                guard isEnabled else {
-                    return
-                }
-                Task {
-                    await petStore.loadPetsIfNeeded(codex: codex)
-                    await petStore.loadSelectedPet(codex: codex)
-                }
-            }
-        )
-    }
-
-    private var selectedPetBinding: Binding<String> {
-        Binding(
-            get: { petStore.selectedPet?.id ?? "" },
-            set: { selectedID in
-                petStore.selectPet(id: selectedID.isEmpty ? nil : selectedID)
-                Task {
-                    await petStore.loadSelectedPet(codex: codex)
-                }
-            }
-        )
     }
 }
 
@@ -413,26 +312,6 @@ private struct SettingsNotificationsCard: View {
         case .ephemeral: "Ephemeral"
         case .notDetermined: "Not requested"
         @unknown default: "Unknown"
-        }
-    }
-}
-
-private struct SettingsGPTAccountCard: View {
-    let onShowInfo: () -> Void
-
-    var body: some View {
-        SettingsCard(title: "Voice") {
-            Button {
-                HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                onShowInfo()
-            } label: {
-                SettingsLinkRow(
-                    title: "ChatGPT Setup",
-                    subtitle: "Auth and transcription on your paired Mac"
-                ) {
-                    DJLIcon.image(systemName: "waveform")
-                }
-            }
         }
     }
 }

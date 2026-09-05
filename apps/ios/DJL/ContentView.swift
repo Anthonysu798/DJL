@@ -528,15 +528,6 @@ struct ContentView: View {
     private var nativeNavigationAppBody: some View {
         ZStack(alignment: .leading) {
             nativeSidebarNavigationLayer
-
-            PetCompanionStatusSyncView()
-
-            if !navigationPath.isEmpty {
-                PetCompanionOverlay(
-                    isInteractionEnabled: true,
-                    bottomExclusionHeight: 16
-                )
-            }
         }
     }
 
@@ -559,14 +550,6 @@ struct ContentView: View {
                 ZStack(alignment: .leading) {
                     mainNavigationLayer
                         .frame(width: proxy.size.width, alignment: .leading)
-
-                    PetCompanionStatusSyncView()
-
-                    PetCompanionOverlay(
-                        isInteractionEnabled: !sidebarVisible,
-                        bottomExclusionHeight: 16
-                    )
-                    .frame(width: proxy.size.width, height: proxy.size.height)
 
                     if sidebarVisible {
                         (colorScheme == .dark ? Color.white : Color.black)

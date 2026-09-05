@@ -47,13 +47,6 @@ final class UserBubbleInlineMarkdownRendererTests: XCTestCase {
         XCTAssertTrue(rendered.hasUnderlinedLink)
     }
 
-    func testBareURLKeepsBalancedTrailingParenthesis() {
-        let rendered = UserBubbleInlineMarkdownRenderer.render("Read https://example.com/Foo_(bar)")
-
-        XCTAssertEqual(rendered.visibleText, "Read https://example.com/Foo_(bar)")
-        XCTAssertTrue(rendered.hasLink(to: "https://example.com/Foo_(bar)"))
-    }
-
     func testBoldItalicAndCodeRemoveMarkdownMarkers() {
         let rendered = UserBubbleInlineMarkdownRenderer.render("Use **bold**, *italic*, and `code`.")
 

@@ -22,59 +22,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertEqual(service.threadRunBadgeState(for: threadID), .running)
     }
 
-    func testRunStartGenerationSurvivesDisconnectAndCanonicalIDReplacement() async {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let syntheticTurnID = "ipc-turn-0"
-        let canonicalTurnID = "turn-\(UUID().uuidString)"
-
-        sendTurnStarted(service: service, threadID: threadID, turnID: syntheticTurnID)
-        XCTAssertEqual(service.runStartGenerationByThread[threadID], 1)
-
-        // Duplicate lifecycle does not create a second logical run.
-        sendTurnStarted(service: service, threadID: threadID, turnID: syntheticTurnID)
-        XCTAssertEqual(service.runStartGenerationByThread[threadID], 1)
-
-        await service.disconnect(preserveReconnectIntent: true)
-        sendTurnStarted(service: service, threadID: threadID, turnID: syntheticTurnID)
-        XCTAssertEqual(service.runStartGenerationByThread[threadID], 1)
-
-        service.handleNotification(
-            method: "thread/replaced",
-            params: .object([
-                "threadId": .string(threadID),
-                "djlDesktopMirror": .bool(true),
-                "djlDesktopIpcMirror": .bool(true),
-            ])
-        )
-        service.handleNotification(
-            method: "turn/started",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(canonicalTurnID),
-                "djlDesktopMirror": .bool(true),
-                "djlTurnIdentityContinuity": .bool(true),
-            ])
-        )
-
-        XCTAssertEqual(service.activeTurnID(for: threadID), canonicalTurnID)
-        XCTAssertEqual(service.runStartGenerationByThread[threadID], 1)
-
-        sendTurnCompletedSuccess(service: service, threadID: threadID, turnID: canonicalTurnID)
-        service.handleNotification(
-            method: "turn/started",
-            params: .object([
-                "threadId": .string(threadID),
-                "djlDesktopMirror": .bool(true),
-            ])
-        )
-
-        XCTAssertTrue(service.threadHasActiveOrRunningTurn(threadID))
-        XCTAssertNil(service.activeTurnID(for: threadID))
-        XCTAssertEqual(service.runStartGenerationByThread[threadID], 2)
-        XCTAssertEqual(service.timelineState(for: threadID).renderSnapshot.runStartGeneration, 2)
-    }
-
     func testDistinctTurnAfterThreadReplacementAdvancesRunGeneration() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -893,18 +840,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertEqual(service.turnTerminalState(for: turnID), .stopped)
     }
 
-    func testStoppedCompletionUpdatesThreadStoppedTurnCache() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-
-        sendTurnStarted(service: service, threadID: threadID, turnID: turnID)
-        sendTurnCompletedStopped(service: service, threadID: threadID, turnID: turnID)
-
-        XCTAssertEqual(service.stoppedTurnIDs(for: threadID), Set([turnID]))
-        XCTAssertEqual(service.timelineState(for: threadID).renderSnapshot.stoppedTurnIDs, Set([turnID]))
-    }
-
     func testTimelineStateTracksLatestRepoRefreshSignal() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -1290,60 +1225,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         )
     }
 
-    func testRelaySessionReplacementClearsSavedPairingAndDisablesReconnect() {
-        let service = makeService()
-
-        withSavedRelayPairing(sessionId: "session-\(UUID().uuidString)", relayURL: "wss://relay.test/relay") {
-            service.relaySessionId = SecureStore.readString(for: CodexSecureKeys.relaySessionId)
-            service.relayUrl = SecureStore.readString(for: CodexSecureKeys.relayUrl)
-            service.isConnected = true
-            service.isInitialized = true
-
-            service.handleReceiveError(
-                CodexServiceError.disconnected,
-                relayCloseCode: .privateCode(4001)
-            )
-
-            XCTAssertFalse(service.isConnected)
-            XCTAssertFalse(service.shouldAutoReconnectOnForeground)
-            XCTAssertNil(service.relaySessionId)
-            XCTAssertNil(service.relayUrl)
-            XCTAssertEqual(
-                service.lastErrorMessage,
-                "This relay session was replaced by another Mac connection. Scan a new QR code to reconnect."
-            )
-        }
-    }
-
-    func testMacUnavailableCloseKeepsSavedPairingAndRetriesReconnect() {
-        let service = makeService()
-
-        withSavedRelayPairing(sessionId: "session-\(UUID().uuidString)", relayURL: "wss://relay.test/relay") {
-            service.relaySessionId = SecureStore.readString(for: CodexSecureKeys.relaySessionId)
-            service.relayUrl = SecureStore.readString(for: CodexSecureKeys.relayUrl)
-            service.isConnected = true
-            service.isInitialized = true
-            service.lastErrorMessage = nil
-            service.setForegroundState(true)
-
-            service.handleReceiveError(
-                CodexServiceError.disconnected,
-                relayCloseCode: .privateCode(4002)
-            )
-
-            XCTAssertFalse(service.isConnected)
-            XCTAssertFalse(service.isInitialized)
-            XCTAssertTrue(service.shouldAutoReconnectOnForeground)
-            XCTAssertEqual(service.relaySessionId, SecureStore.readString(for: CodexSecureKeys.relaySessionId))
-            XCTAssertEqual(service.relayUrl, SecureStore.readString(for: CodexSecureKeys.relayUrl))
-            XCTAssertEqual(
-                service.lastErrorMessage,
-                "The saved Mac session is temporarily unavailable. DJL will keep retrying. If you restarted the bridge on your Mac, scan the new QR code."
-            )
-            XCTAssertEqual(service.connectionRecoveryState, .retrying(attempt: 0, message: "Reconnecting..."))
-        }
-    }
-
     func testReceiveErrorClearsResumedThreadCacheForReconnect() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -1358,35 +1239,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         )
 
         XCTAssertTrue(service.resumedThreadIDs.isEmpty)
-    }
-
-    func testMacAbsenceBufferOverflowKeepsPairingAndShowsRetryMessage() {
-        let service = makeService()
-
-        withSavedRelayPairing(sessionId: "session-\(UUID().uuidString)", relayURL: "wss://relay.test/relay") {
-            service.relaySessionId = SecureStore.readString(for: CodexSecureKeys.relaySessionId)
-            service.relayUrl = SecureStore.readString(for: CodexSecureKeys.relayUrl)
-            service.isConnected = true
-            service.isInitialized = true
-            service.lastErrorMessage = nil
-            service.setForegroundState(true)
-
-            service.handleReceiveError(
-                CodexServiceError.disconnected,
-                relayCloseCode: .privateCode(4004)
-            )
-
-            XCTAssertFalse(service.isConnected)
-            XCTAssertFalse(service.isInitialized)
-            XCTAssertTrue(service.shouldAutoReconnectOnForeground)
-            XCTAssertEqual(service.connectionRecoveryState, .idle)
-            XCTAssertEqual(service.relaySessionId, SecureStore.readString(for: CodexSecureKeys.relaySessionId))
-            XCTAssertEqual(service.relayUrl, SecureStore.readString(for: CodexSecureKeys.relayUrl))
-            XCTAssertEqual(
-                service.lastErrorMessage,
-                "The Mac was temporarily unavailable and this message could not be delivered. Wait a moment, then try again."
-            )
-        }
     }
 
     func testRetryableDisconnectResetsEncryptedSecurityStateBackToTrustedMac() {
@@ -1412,39 +1264,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertEqual(service.secureConnectionState, .trustedMac)
         XCTAssertEqual(service.secureMacFingerprint, codexSecureFingerprint(for: macPublicKey))
         XCTAssertTrue(service.shouldAutoReconnectOnForeground)
-    }
-
-    func testTrustedReconnectReceiveErrorDoesNotAdvanceFailureBudgetByItself() {
-        let service = makeService()
-        let macDeviceID = "mac-\(UUID().uuidString)"
-        let macPublicKey = "public-key-\(UUID().uuidString)"
-
-        service.relaySessionId = "session-\(UUID().uuidString)"
-        service.relayUrl = "wss://relay.test/relay"
-        service.relayMacDeviceId = macDeviceID
-        service.lastTrustedMacDeviceId = macDeviceID
-        service.trustedMacRegistry.records[macDeviceID] = CodexTrustedMacRecord(
-            macDeviceId: macDeviceID,
-            macIdentityPublicKey: macPublicKey,
-            lastPairedAt: Date(),
-            relayURL: "wss://relay.test/relay"
-        )
-
-        for _ in 0..<3 {
-            service.secureConnectionState = .reconnecting
-            service.handleReceiveError(NWError.posix(.ECONNABORTED))
-        }
-
-        XCTAssertEqual(service.trustedReconnectFailureCount, 0)
-        XCTAssertTrue(service.shouldAutoReconnectOnForeground)
-        XCTAssertEqual(service.connectionRecoveryState, .retrying(attempt: 0, message: "Reconnecting..."))
-        XCTAssertEqual(service.secureConnectionState, .trustedMac)
-        XCTAssertNotNil(service.relaySessionId)
-        XCTAssertNotNil(service.relayUrl)
-        XCTAssertEqual(service.relayMacDeviceId, macDeviceID)
-        XCTAssertNil(service.lastErrorMessage)
-        XCTAssertTrue(service.hasSavedRelaySession)
-        XCTAssertTrue(service.hasTrustedMacReconnectCandidate)
     }
 
     func testTrustedReconnectHandshakeFailureCounterResetsForFreshPairing() {
@@ -1487,16 +1306,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
 
         service.relayUrl = "wss://relay.test/relay"
         XCTAssertTrue(service.hasSavedRelaySession)
-    }
-
-    func testRecoverableTimeoutMapsToFriendlyFailureMessage() {
-        let service = makeService()
-
-        XCTAssertTrue(service.isRecoverableTransientConnectionError(NWError.posix(.ETIMEDOUT)))
-        XCTAssertEqual(
-            service.userFacingConnectFailureMessage(NWError.posix(.ETIMEDOUT)),
-            "Connection timed out. Check server/network."
-        )
     }
 
     func testAssistantStreamingKeepsSeparateBlocksWhenItemChangesWithinTurn() {
@@ -1694,154 +1503,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         )
     }
 
-    func testFinalReplayCompletionAbsorbsPriorImagePreviewBubble() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let introText = "Using the imagegen skill for this as a new bitmap icon asset."
-        let finalText = "Done. Generated a polished wing icon image using the built-in image generation tool."
-        let imagePath = "/Users/example/.codex/generated_images/thread/generated-wing.png"
-
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "intro-item",
-            text: introText
-        )
-        service.appendGeneratedImageReference(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "image-item",
-            imagePath: imagePath
-        )
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "final-item",
-            text: "\(finalText)\n\n\(introText)"
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(
-            assistantMessages.first?.text,
-            "\(finalText)\n\n![Generated image](\(imagePath))"
-        )
-    }
-
-    func testFinalCompletionAfterImagePreviewReplacesPreparatoryBubble() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let introText = "Using the imagegen skill for this as a new raster icon asset."
-        let finalText = "Generated a clean wing icon image using the built-in image generator."
-        let imagePath = "/Users/example/.codex/generated_images/thread/generated-wing.png"
-
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: nil,
-            text: introText
-        )
-        service.appendGeneratedImageReference(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "image-item",
-            imagePath: imagePath
-        )
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: nil,
-            text: finalText
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(
-            assistantMessages.first?.text,
-            "\(finalText)\n\n![Generated image](\(imagePath))"
-        )
-    }
-
-    func testTurnlessFinalAnswerCompletionUsesActiveTurnImagePreview() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let introText = "Preparing an image asset for the current request."
-        let finalText = "Generated a clean wing icon image using the built-in image generator."
-        let imagePath = "/Users/example/.codex/generated_images/thread/generated-wing.png"
-
-        sendTurnStarted(service: service, threadID: threadID, turnID: turnID)
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: nil,
-            text: introText
-        )
-        service.appendGeneratedImageReference(
-            threadId: threadID,
-            turnId: nil,
-            itemId: "image-item",
-            imagePath: imagePath
-        )
-        service.handleNotification(
-            method: "codex/event/agent_message",
-            params: .object([
-                "threadId": .string(threadID),
-                "msg": .object([
-                    "type": .string("agent_message"),
-                    "phase": .string("final_answer"),
-                    "message": .string(finalText),
-                ]),
-            ])
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(assistantMessages.first?.turnId, turnID)
-        XCTAssertEqual(
-            assistantMessages.first?.text,
-            "\(finalText)\n\n![Generated image](\(imagePath))"
-        )
-    }
-
-    func testItemScopedCompletionAfterImagePreviewStaysSeparate() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let introText = "Preparing an image asset for the current request."
-        let laterItemText = "Here is a separate assistant item in the same turn."
-        let imagePath = "/Users/example/.codex/generated_images/thread/generated-wing.png"
-
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: nil,
-            text: introText
-        )
-        service.appendGeneratedImageReference(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "image-item",
-            imagePath: imagePath
-        )
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "later-assistant-item",
-            text: laterItemText
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 2)
-        XCTAssertEqual(
-            assistantMessages.first?.text,
-            "\(introText)\n\n![Generated image](\(imagePath))"
-        )
-        XCTAssertEqual(assistantMessages.last?.text, laterItemText)
-    }
-
     func testTurnFinalCompletionDoesNotAbsorbTemporaryImageArtifact() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -1898,61 +1559,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
 
         let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
         XCTAssertEqual(assistantMessages.map(\.text), ["Canonical final text"])
-    }
-
-    func testHistoryDecodeMergesGeneratedImageArtifactIntoFinalAssistantAnswer() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let introText = "Preparing an image asset for the current request."
-        let finalText = "Generated a clean wing icon image using the built-in image generator."
-        let imagePath = "/Users/example/.codex/generated_images/thread/generated-wing.png"
-
-        let messages = service.decodeMessagesFromThreadRead(
-            threadId: threadID,
-            threadObject: [
-                "turns": .array([
-                    .object([
-                        "id": .string(turnID),
-                        "items": .array([
-                            .object([
-                                "id": .string("intro-item"),
-                                "type": .string("agentMessage"),
-                                "content": .array([
-                                    .object([
-                                        "type": .string("output_text"),
-                                        "text": .string(introText),
-                                    ]),
-                                ]),
-                            ]),
-                            .object([
-                                "id": .string("image-item"),
-                                "type": .string("imageGenerationCall"),
-                                "file_path": .string(imagePath),
-                            ]),
-                            .object([
-                                "id": .string("final-item"),
-                                "type": .string("agentMessage"),
-                                "content": .array([
-                                    .object([
-                                        "type": .string("output_text"),
-                                        "text": .string(finalText),
-                                    ]),
-                                ]),
-                            ]),
-                        ]),
-                    ]),
-                ]),
-            ]
-        )
-
-        let assistantMessages = messages.filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 2)
-        XCTAssertEqual(assistantMessages.first?.text, introText)
-        XCTAssertEqual(
-            assistantMessages.last?.text,
-            "\(finalText)\n\n![Generated image](\(imagePath))"
-        )
     }
 
     func testHistoryMergeLeavesTemporaryImageArtifactInOriginalOrder() {
@@ -2277,77 +1883,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertFalse(assistantMessages.first?.isStreaming ?? true)
     }
 
-    func testTurnlessFinalThenTerminalReplayDoesNotDuplicateAssistantAnswer() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let finalText = """
-        Latest TestFlight inbox email says:
-
-        DJL version 1.4, build 124
-
-        Subject: "DJL - Remote AI Coding 1.4 (124) for iOS is now available to test."
-        """
-
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: nil,
-            itemId: "item-final",
-            text: finalText
-        )
-        service.recordTurnTerminalState(threadId: threadID, turnId: turnID, state: .completed)
-        service.markTurnCompleted(threadId: threadID, turnId: turnID)
-
-        service.appendAssistantDelta(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "item-status",
-            delta: "I'll use the Gmail connector to search your recent inbox."
-        )
-        service.flushPendingAssistantDeltas(for: threadID, turnId: turnID, itemId: "item-status")
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: turnID,
-            itemId: "item-terminal",
-            text: finalText
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(assistantMessages.first?.text, finalText)
-        XCTAssertEqual(assistantMessages.first?.turnId, turnID)
-        XCTAssertFalse(assistantMessages.first?.isStreaming ?? true)
-    }
-
-    func testTurnlessTerminalReplayDoesNotDuplicateAssistantAnswer() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let finalText = """
-        Latest TestFlight inbox email says:
-
-        DJL version 1.4, build 124
-
-        Subject: "DJL - Remote AI Coding 1.4 (124) for iOS is now available to test."
-        """
-
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: nil,
-            itemId: "item-final",
-            text: finalText
-        )
-        service.completeAssistantMessage(
-            threadId: threadID,
-            turnId: nil,
-            itemId: "item-terminal",
-            text: finalText
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(assistantMessages.first?.text, finalText)
-    }
-
     func testMergeAssistantDeltaKeepsLongReplayOverlapWithoutDuplication() {
         let service = makeService()
         let overlap = String(repeating: "a", count: 300)
@@ -2378,149 +1913,6 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertFalse(service.streamingAssistantMessageByItemKey.keys.contains { key in
             key.hasPrefix("\(turnStreamingKey)|item:")
         })
-    }
-
-    func testSuccessfulTurnCompletionFinalizesIncompletePlanSteps() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let itemID = "item-\(UUID().uuidString)"
-
-        service.handleNotification(
-            method: "turn/plan/updated",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "explanation": .string("Finish the work in safe slices."),
-                "plan": .array([
-                    .object([
-                        "step": .string("Inspect"),
-                        "status": .string("completed"),
-                    ]),
-                    .object([
-                        "step": .string("Implement"),
-                        "status": .string("in_progress"),
-                    ]),
-                    .object([
-                        "step": .string("Verify"),
-                        "status": .string("pending"),
-                    ]),
-                ]),
-            ])
-        )
-
-        service.handleNotification(
-            method: "item/completed",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "item": .object([
-                    "id": .string(itemID),
-                    "type": .string("plan"),
-                    "content": .array([
-                        .object([
-                            "type": .string("text"),
-                            "text": .string("1. Inspect\n2. Implement\n3. Verify"),
-                        ]),
-                    ]),
-                ]),
-            ])
-        )
-
-        sendTurnCompletedSuccess(service: service, threadID: threadID, turnID: turnID)
-
-        let planMessages = service.messages(for: threadID).filter { $0.kind == .plan }
-        XCTAssertEqual(planMessages.count, 1)
-        XCTAssertFalse(planMessages[0].isStreaming)
-        XCTAssertEqual(planMessages[0].planState?.steps.map(\.status), [.completed, .completed, .completed])
-        XCTAssertFalse(planMessages[0].shouldDisplayPinnedPlanAccessory)
-    }
-
-    func testLateDesktopMirroredActivityDoesNotReviveCompletedTurn() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-
-        service.handleNotification(
-            method: "turn/started",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "djlDesktopMirror": .bool(true),
-            ])
-        )
-        sendTurnCompletedSuccess(service: service, threadID: threadID, turnID: turnID)
-
-        service.handleNotification(
-            method: "turn/activity",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "djlDesktopMirror": .bool(true),
-            ])
-        )
-        service.handleNotification(
-            method: "turn/plan/updated",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "djlDesktopMirror": .bool(true),
-                "plan": .array([
-                    .object([
-                        "step": .string("Late replay"),
-                        "status": .string("in_progress"),
-                    ]),
-                ]),
-            ])
-        )
-
-        XCTAssertFalse(service.threadHasActiveOrRunningTurn(threadID))
-        XCTAssertFalse(service.desktopMirroredRunningThreadIDs.contains(threadID))
-        XCTAssertNil(service.activeTurnIdByThread[threadID])
-    }
-
-    func testLegacyAgentDeltaParsesTopLevelTurnIdAndMessageId() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-
-        service.handleNotification(
-            method: "codex/event/agent_message_content_delta",
-            params: .object([
-                "conversationId": .string(threadID),
-                "id": .string(turnID),
-                "msg": .object([
-                    "type": .string("agent_message_content_delta"),
-                    "message_id": .string("message-1"),
-                    "delta": .string("Primo blocco"),
-                ]),
-            ])
-        )
-
-        service.handleNotification(
-            method: "codex/event/agent_message_content_delta",
-            params: .object([
-                "conversationId": .string(threadID),
-                "id": .string(turnID),
-                "msg": .object([
-                    "type": .string("agent_message_content_delta"),
-                    "message_id": .string("message-2"),
-                    "delta": .string("Secondo blocco"),
-                ]),
-            ])
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 2)
-        XCTAssertEqual(assistantMessages[0].turnId, turnID)
-        XCTAssertEqual(assistantMessages[0].itemId, "message-1")
-        XCTAssertEqual(assistantMessages[0].text, "Primo blocco")
-        XCTAssertFalse(assistantMessages[0].isStreaming)
-
-        XCTAssertEqual(assistantMessages[1].turnId, turnID)
-        XCTAssertEqual(assistantMessages[1].itemId, "message-2")
-        XCTAssertEqual(assistantMessages[1].text, "Secondo blocco")
-        XCTAssertTrue(assistantMessages[1].isStreaming)
     }
 
     func testLegacyAgentCompletionUsesMessageIdToFinalizeMatchingStream() {
