@@ -5,6 +5,8 @@
 // Depends on: nothing
 
 const DEFAULT_COALESCE_WINDOW_MS = 40;
+// Relay frames are capped at 1 MiB; keep batches far below that.
+const DEFAULT_MAX_BATCH_MESSAGES = 64;
 const DELTA_METHOD = "item/agentMessage/delta";
 
 // Streaming produces dozens of tiny notifications a second. The relay budgets
@@ -12,6 +14,7 @@ const DELTA_METHOD = "item/agentMessage/delta";
 // while responses and approval prompts keep their exact position in the order.
 function createOutboundCoalescer({
   windowMs = DEFAULT_COALESCE_WINDOW_MS,
+  maxBatchMessages = DEFAULT_MAX_BATCH_MESSAGES,
   setTimeoutFn = setTimeout,
   clearTimeoutFn = clearTimeout,
   flush,
@@ -43,6 +46,10 @@ function createOutboundCoalescer({
       };
     } else {
       pending.push(parsed);
+    }
+    if (pending.length >= maxBatchMessages) {
+      flushPending();
+      return;
     }
     if (timer == null) {
       timer = setTimeoutFn(() => {
@@ -90,4 +97,8 @@ function safeParse(text) {
   }
 }
 
-module.exports = { createOutboundCoalescer, DEFAULT_COALESCE_WINDOW_MS };
+module.exports = {
+  createOutboundCoalescer,
+  DEFAULT_COALESCE_WINDOW_MS,
+  DEFAULT_MAX_BATCH_MESSAGES,
+};

@@ -29,6 +29,7 @@ const {
   secureNonce,
 } = require("@synara/remote-protocol");
 const { getTrustedPhonePublicKey, rememberTrustedPhone } = require("./secure-device-state");
+const { createOutboundCoalescer } = require("./outbound-coalescer");
 
 const PAIRING_QR_VERSION = DJL_PAIRING_QR_VERSION;
 const SECURE_PROTOCOL_VERSION = DJL_SECURE_PROTOCOL_VERSION;
@@ -50,6 +51,9 @@ function createBridgeSecureTransport({
   onSecureSessionReady = null,
   persistTrustedPhone = true,
   diagnostics = false,
+  coalesceWindowMs = undefined,
+  setTimeoutFn = setTimeout,
+  clearTimeoutFn = clearTimeout,
 }) {
   let currentDeviceState = deviceState;
   const bridgeDisplayName = normalizeNonEmptyString(displayName);
@@ -128,12 +132,37 @@ function createBridgeSecureTransport({
     }
   }
 
+  let pendingSendWireMessage = null;
+  let drainingToBufferOnly = false;
+  const outboundCoalescer = createOutboundCoalescer({
+    ...(coalesceWindowMs == null ? {} : { windowMs: coalesceWindowMs }),
+    setTimeoutFn,
+    clearTimeoutFn,
+    flush: (payloadText) => enqueueOutboundPayload(payloadText, pendingSendWireMessage),
+  });
+
+  // Session transitions (handshake, resume, socket rebind) must see every
+  // queued notification in the replay buffer, but must not push it down a
+  // socket that is being replaced: the replay path delivers it instead.
+  function drainPendingOutboundToBuffer() {
+    drainingToBufferOnly = true;
+    try {
+      outboundCoalescer.flushNow();
+    } finally {
+      drainingToBufferOnly = false;
+    }
+  }
+
   function queueOutboundApplicationMessage(payloadText, sendWireMessage) {
     const normalizedPayload = normalizeNonEmptyString(payloadText);
     if (!normalizedPayload) {
       return;
     }
+    pendingSendWireMessage = sendWireMessage;
+    outboundCoalescer.push(normalizedPayload);
+  }
 
+  function enqueueOutboundPayload(normalizedPayload, sendWireMessage) {
     const bufferEntry = {
       bridgeOutboundSeq: nextBridgeOutboundSeq,
       payloadText: normalizedPayload,
@@ -144,6 +173,9 @@ function createBridgeSecureTransport({
     outboundBufferBytes += bufferEntry.sizeBytes;
     trimOutboundBuffer();
 
+    if (drainingToBufferOnly) {
+      return;
+    }
     const liveSessionSender = activeSession?.sendWireMessage;
     const effectiveSendWireMessage =
       typeof liveSessionSender === "function" ? liveSessionSender : sendWireMessage;
@@ -157,6 +189,7 @@ function createBridgeSecureTransport({
   }
 
   function handleClientHello(message, sendControlMessage) {
+    drainPendingOutboundToBuffer();
     const protocolVersion = Number(message.protocolVersion);
     const incomingSessionId = normalizeNonEmptyString(message.sessionId);
     const handshakeMode = normalizeNonEmptyString(message.handshakeMode);
@@ -451,6 +484,7 @@ function createBridgeSecureTransport({
   }
 
   function handleResumeState(message) {
+    drainPendingOutboundToBuffer();
     if (!activeSession) {
       return;
     }
@@ -580,6 +614,7 @@ function createBridgeSecureTransport({
   }
 
   function bindLiveSendWireMessage(sendWireMessage) {
+    drainPendingOutboundToBuffer();
     liveSendWireMessage = sendWireMessage;
     if (activeSession) {
       activeSession.sendWireMessage = sendWireMessage;
@@ -832,6 +867,9 @@ function createBridgeSecureTransport({
     SECURE_PROTOCOL_VERSION,
     bindLiveSendWireMessage,
     createPairingPayload,
+    flushOutbound() {
+      outboundCoalescer.flushNow();
+    },
     handleIncomingWireMessage,
     isSecureChannelReady,
     queueOutboundApplicationMessage,

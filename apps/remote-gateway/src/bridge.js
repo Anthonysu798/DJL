@@ -998,6 +998,7 @@ function startBridge({
 
   function prepareBridgeShutdown() {
     isShuttingDown = true;
+    secureTransport.flushOutbound?.();
     bridgeWakeAssertion.stop();
     clearReconnectTimer();
     clearRelayWatchdog();

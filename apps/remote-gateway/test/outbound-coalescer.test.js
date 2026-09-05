@@ -120,6 +120,25 @@ test("unparseable text passes through immediately", () => {
   assert.deepEqual(flushed, ["not json"]);
 });
 
+test("a full batch flushes before the window elapses", () => {
+  const timers = createFakeTimers();
+  const flushed = [];
+  const coalescer = createOutboundCoalescer({
+    ...timers,
+    maxBatchMessages: 3,
+    flush: (text) => flushed.push(text),
+  });
+
+  coalescer.push(JSON.stringify({ method: "a", params: {} }));
+  coalescer.push(JSON.stringify({ method: "b", params: {} }));
+  assert.equal(flushed.length, 0);
+  coalescer.push(JSON.stringify({ method: "c", params: {} }));
+
+  assert.equal(flushed.length, 1);
+  assert.equal(JSON.parse(flushed[0]).length, 3);
+  assert.equal(timers.hasPending(), false);
+});
+
 test("stop flushes what is pending and cancels the timer", () => {
   const timers = createFakeTimers();
   const flushed = [];
