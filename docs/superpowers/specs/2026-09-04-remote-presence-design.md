@@ -57,7 +57,7 @@ enum CodexHostPresence: Equatable, Sendable {
 
 | Input | Effect |
 | --- | --- |
-| Relay `hostPresence` frame, `online: true` | `hostPresence = .online`; if it was `.offline`, run the existing trusted reconnect |
+| Relay `hostPresence` frame, `online: true` | `hostPresence = .online`; if it was `.offline`, request an immediate sync. The secure session survives a laptop sleep, and the gateway replays unacknowledged frames on its own reconnect, so no new handshake is needed |
 | Relay `hostPresence` frame, `online: false` | `hostPresence = .offline(since: now)` |
 | Any decrypted application frame | `lastHostActivityAt = now`; `hostPresence = .online` |
 | `djl/presence/heartbeat` notification | same as above; the notification is consumed, never routed to handlers |
