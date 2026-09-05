@@ -441,6 +441,9 @@ extension CodexService {
         case "git/stackedAction/progress":
             handleGitStackedActionProgress(paramsObject)
 
+        case Self.desktopGitActionProgressMethod:
+            handleDesktopGitActionProgress(paramsObject)
+
         case "terminal/event":
             handleTerminalEvent(paramsObject)
 

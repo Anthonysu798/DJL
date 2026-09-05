@@ -460,6 +460,8 @@ final class CodexService {
     @ObservationIgnored var hostPresenceSilenceOverrideNanoseconds: UInt64?
     @ObservationIgnored var hostPresenceFallbackResolveTask: Task<Void, Never>?
     @ObservationIgnored var hostPresenceFallbackResolveOverrideNanoseconds: UInt64?
+    // Git actions running on the paired desktop, keyed by their working directory.
+    var desktopGitActionProgressByCwd: [String: TurnGitActionProgress] = [:]
     var isConnecting = false
     var isInitialized = false
     var isLoadingThreads = false
