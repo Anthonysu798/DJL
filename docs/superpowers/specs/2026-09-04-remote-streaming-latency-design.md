@@ -54,8 +54,11 @@ same event with `streaming: false` and `text` equal to the full message.
 | `thread.session-set` with a new `activeTurnId` | `turn/started` |
 | `thread.session-set` clearing `activeTurnId` | `turn/completed` with status from the latest turn |
 | `thread.activity-appended` with `approval.requested` | approval server request (unchanged shape) |
-| `thread.runtime-mode-set` | `djl/thread/runtimeMode/updated` |
+| `thread-upserted` shell event with a changed `runtimeMode` | `djl/thread/runtimeMode/updated` |
 | `thread.meta-updated` name change | `thread/name/updated` |
+
+`thread.runtime-mode-set` is not forwarded on the per-thread stream, so runtime
+mode changes are read from the shell stream's `thread-upserted` items instead.
 
 Rules:
 
