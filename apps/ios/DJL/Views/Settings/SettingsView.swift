@@ -16,14 +16,11 @@ private struct SettingsComputerNamePresentation: Identifiable, Equatable {
 
 private enum SettingsSheet: Identifiable, Equatable {
     case computerName(SettingsComputerNamePresentation)
-    case commandReference
 
     var id: String {
         switch self {
         case .computerName(let presentation):
             return "computerName-\(presentation.id)"
-        case .commandReference:
-            return "commandReference"
         }
     }
 }
@@ -40,9 +37,7 @@ struct SettingsView: View {
             SettingsNotificationsCard()
             SettingsSecurityCard()
             SettingsRuntimeDefaultsCard()
-            SettingsBridgeVersionCard {
-                presentSettingsSheet(.commandReference)
-            }
+            SettingsBridgeVersionCard()
             SettingsUsageCard()
             SettingsArchivedChatsCard()
             SettingsAboutCard {
@@ -76,8 +71,6 @@ struct SettingsView: View {
                 currentName: presentation.currentName,
                 systemName: presentation.systemName
             )
-        case .commandReference:
-            SettingsCommandReferenceSheet()
         }
     }
 
@@ -319,7 +312,6 @@ private struct SettingsNotificationsCard: View {
 private struct SettingsBridgeVersionCard: View {
     @Environment(CodexService.self) private var codex
     @Environment(\.scenePhase) private var scenePhase
-    let onShowCommands: () -> Void
     @State private var isUpdatingBridge = false
     @State private var bridgeUpdateMessage: String?
     @State private var bridgeUpdateFailed = false
@@ -355,18 +347,6 @@ private struct SettingsBridgeVersionCard: View {
                     }
                 }
                 .disabled(!codex.isConnected || isUpdatingBridge)
-            }
-
-            Button {
-                HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                onShowCommands()
-            } label: {
-                SettingsLinkRow(
-                    title: "Terminal Commands",
-                    subtitle: "Start, repair, or inspect the bridge on your Mac"
-                ) {
-                    DJLIcon.image(systemName: "terminal")
-                }
             }
 
             if let bridgeUpdateMessage {

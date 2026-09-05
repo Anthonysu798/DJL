@@ -68,7 +68,7 @@ struct OnboardingCommandCard: View {
 #Preview("Short") {
     ZStack {
         Color.black.ignoresSafeArea()
-        OnboardingCommandCard(command: "djl up")
+        OnboardingCommandCard(command: "npm install -g @openai/codex@latest")
             .padding()
     }
     .preferredColorScheme(.dark)
