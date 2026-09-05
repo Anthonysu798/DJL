@@ -95,3 +95,10 @@ change; they render in existing cards.
 ## Out of scope
 
 Terminal mirroring and the iOS profiling pass.
+
+## Verified
+
+- `bun run --cwd packages/contracts build`: OK; `bun run --cwd apps/server typecheck`: 0 errors.
+- Gateway: `node --test ./test/*.test.js` — all pass when run without concurrent load. Two rollout-live-mirror timing tests fail only under CPU load (5 ms poll / 30 ms waits) and pass 49/49 when the file runs alone.
+- iOS: full unit suite 844 tests, 0 failures (iPhone 17 simulator, iOS 26.5).
+- Not measured on hardware: end-to-end phone latency for tool cards and checkpoint diffs.
