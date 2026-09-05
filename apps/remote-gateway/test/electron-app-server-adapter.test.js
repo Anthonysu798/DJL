@@ -1078,3 +1078,96 @@ test("Electron adapter forwards desktop git progress to the phone", async () => 
   transport.shutdown();
   assert.equal(gitSubscriber, null, "shutdown unsubscribes");
 });
+
+test("Electron adapter mirrors desktop terminal output for attached terminals", async () => {
+  const fake = createStreamingBackend(snapshot);
+  let terminalSubscriber = null;
+  const originalSubscribe = fake.backend.subscribe;
+  fake.backend.subscribe = (tag, payload, handlers) => {
+    if (tag === "terminal.subscribeEvents") {
+      terminalSubscriber = handlers;
+      return () => {
+        terminalSubscriber = null;
+      };
+    }
+    return originalSubscribe(tag, payload, handlers);
+  };
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "terminal.open") {
+      fake.requests.push({ tag, payload });
+      return {
+        threadId: payload.threadId,
+        terminalId: payload.terminalId,
+        cwd: payload.cwd,
+        status: "running",
+        pid: 1,
+        history: "$ ",
+        exitCode: null,
+        exitSignal: null,
+        updatedAt: "x",
+      };
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+  assert.ok(terminalSubscriber, "adapter subscribes to terminal events on start");
+  fake.pushThread("electron-thread", [
+    detailSnapshotChunk({ ...snapshot.threads[0], worktreePath: "/work/electron" }, 5),
+  ]);
+
+  terminalSubscriber.onChunk([
+    {
+      threadId: "electron-thread",
+      terminalId: "default",
+      type: "output",
+      createdAt: "x",
+      data: "ignored",
+      byteLength: 7,
+    },
+  ]);
+  assert.equal(outbound.some((m) => m.method === "djl/terminal/event"), false);
+
+  transport.send(
+    JSON.stringify({
+      id: "t1",
+      method: "djl/terminal/open",
+      params: { threadId: "electron-thread", terminalId: "default", cols: 80, rows: 24 },
+    }),
+  );
+  await flushMicrotasks();
+
+  const openRequest = fake.requests.find((r) => r.tag === "terminal.open");
+  assert.deepEqual(openRequest.payload, {
+    threadId: "electron-thread",
+    terminalId: "default",
+    cwd: "/work/electron",
+    cols: 80,
+    rows: 24,
+  });
+  const response = outbound.find((m) => m.id === "t1");
+  assert.equal(response.result.snapshot.history, "$ ");
+
+  terminalSubscriber.onChunk([
+    {
+      threadId: "electron-thread",
+      terminalId: "default",
+      type: "output",
+      createdAt: "x",
+      data: "hello",
+      byteLength: 5,
+    },
+  ]);
+  const forwarded = outbound.find((m) => m.method === "djl/terminal/event");
+  assert.equal(forwarded.params.data, "hello");
+
+  transport.shutdown();
+  assert.equal(terminalSubscriber, null, "shutdown unsubscribes from terminal events");
+});

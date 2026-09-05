@@ -11,6 +11,10 @@ const {
   createThreadEventProjection,
   desktopGitProgressNotification,
 } = require("./electron-event-projection");
+const {
+  createDesktopTerminalMirror,
+  TERMINAL_BACKEND_TAGS,
+} = require("./desktop-terminal-mirror");
 
 const ORCHESTRATION = {
   dispatchCommand: "orchestration.dispatchCommand",
@@ -55,6 +59,13 @@ function createElectronAppServerTransport({
   let stopped = false;
   let shellUnsubscribe = null;
   let gitProgressUnsubscribe = null;
+  let terminalEventsUnsubscribe = null;
+  const threadCwdById = new Map();
+  const terminalMirror = createDesktopTerminalMirror({
+    request: (tag, payload) => rpc.request(tag, payload),
+    emit: (method, params) => emitNotification(method, params),
+    resolveCwd: (threadId) => threadCwdById.get(threadId) ?? "",
+  });
 
   rpc.onStarted(() => {
     if (stopped) return;
@@ -81,6 +92,25 @@ function createElectronAppServerTransport({
           },
           onError() {
             gitProgressUnsubscribe = null;
+          },
+        },
+      );
+    }
+    if (!terminalEventsUnsubscribe) {
+      // Desktop terminals: one stream for every session; the mirror forwards
+      // only the terminals the phone has attached to.
+      terminalEventsUnsubscribe = rpc.subscribe(
+        TERMINAL_BACKEND_TAGS.subscribeEvents,
+        {},
+        {
+          onChunk(values) {
+            for (const value of values) terminalMirror.handleEvent(value);
+          },
+          onEnd() {
+            terminalEventsUnsubscribe = null;
+          },
+          onError() {
+            terminalEventsUnsubscribe = null;
           },
         },
       );
@@ -269,6 +299,7 @@ function createElectronAppServerTransport({
 
   function applyThreadSnapshot(thread, { announceExisting, snapshotSequence = null }) {
     const previous = threadStates.get(thread.id) || emptyThreadState();
+    if (stringValue(thread.worktreePath)) threadCwdById.set(thread.id, thread.worktreePath);
     if (isStaleThreadSnapshot(previous, thread, snapshotSequence)) return false;
     const next = snapshotThreadState(thread, snapshotSequence);
     const activeTurnId = thread.session?.activeTurnId || null;
@@ -519,6 +550,18 @@ function createElectronAppServerTransport({
         return renameThread(params, mutation);
       case "thread/unsubscribe":
         return {};
+      case "djl/terminal/list":
+        return terminalMirror.list(params);
+      case "djl/terminal/open":
+        return terminalMirror.open(params);
+      case "djl/terminal/write":
+        return terminalMirror.write(params);
+      case "djl/terminal/resize":
+        return terminalMirror.resize(params);
+      case "djl/terminal/ack":
+        return terminalMirror.ack(params);
+      case "djl/terminal/close":
+        return terminalMirror.close(params);
       default:
         throw new Error(`DJL Electron does not support remote method: ${method}`);
     }
@@ -755,6 +798,9 @@ function createElectronAppServerTransport({
       shellUnsubscribe?.();
       gitProgressUnsubscribe?.();
       gitProgressUnsubscribe = null;
+      terminalEventsUnsubscribe?.();
+      terminalEventsUnsubscribe = null;
+      terminalMirror.reset();
       for (const unsubscribe of activeThreadSubscriptions.values()) unsubscribe?.();
       activeThreadSubscriptions.clear();
       for (const timer of turnReconcileTimers.values()) clearTimeout(timer);
