@@ -1271,6 +1271,11 @@ function startBridge({
     if (handleThreadContextRequest(rawMessage, sendApplicationResponse, parsedMessage)) {
       return;
     }
+    // An Electron-backed transport answers desktop-turn diffs from the backend
+    // before the local git checkpoint handler gets a chance to miss them.
+    if (typeof codex.interceptRequest === "function" && codex.interceptRequest(rawMessage)) {
+      return;
+    }
     if (handleWorkspaceRequest(rawMessage, sendApplicationResponse)) {
       return;
     }

@@ -773,6 +773,9 @@ function createStreamingBackend(initialSnapshot) {
           shellSubscriber = null;
         };
       }
+      if (tag !== "orchestration.subscribeThread") {
+        return () => {};
+      }
       threadSubscribers.set(payload.threadId, handlers);
       return () => {
         threadSubscribers.delete(payload.threadId);
@@ -936,4 +939,142 @@ test("Electron adapter asks for streaming delivery on phone-started turns", asyn
   const dispatched = fake.requests.find((r) => r.tag === "orchestration.dispatchCommand");
   assert.equal(dispatched.payload.assistantDeliveryMode, "streaming");
   transport.shutdown();
+});
+
+test("Electron adapter adds checkpoint file-change cards to turn history", () => {
+  const thread = structuredClone(snapshot.threads[0]);
+  thread.checkpoints = [
+    {
+      turnId: "turn-1",
+      checkpointTurnCount: 3,
+      checkpointRef: "ref",
+      status: "ready",
+      files: [{ path: "src/a.ts", kind: "update", additions: 2, deletions: 1 }],
+      assistantMessageId: null,
+      completedAt: "2026-07-19T12:00:03.000Z",
+    },
+  ];
+
+  const result = appServerThreadWithHistory(thread, snapshot);
+
+  const fileChange = result.turns[0].items.find((item) => item.type === "fileChange");
+  assert.equal(fileChange.id, "turn-diff-turn-1");
+  assert.deepEqual(fileChange.changes, [
+    { path: "src/a.ts", kind: "update", additions: 2, deletions: 1 },
+  ]);
+});
+
+test("Electron adapter answers checkpoint diffs for desktop turns from the backend", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "orchestration.getTurnDiff") {
+      fake.requests.push({ tag, payload });
+      return { threadId: payload.threadId, fromTurnCount: payload.fromTurnCount, toTurnCount: payload.toTurnCount, diff: "@@ -1 +1 @@" };
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+  fake.pushThread("electron-thread", [detailSnapshotChunk(snapshot.threads[0], 5)]);
+  fake.pushThread("electron-thread", [
+    {
+      kind: "event",
+      event: {
+        sequence: 6,
+        eventId: "event-6",
+        aggregateKind: "thread",
+        aggregateId: "electron-thread",
+        occurredAt: "2026-07-19T12:02:00.000Z",
+        commandId: null,
+        causationEventId: null,
+        correlationId: null,
+        metadata: {},
+        type: "thread.turn-diff-completed",
+        payload: {
+          threadId: "electron-thread",
+          turnId: "turn-2",
+          checkpointTurnCount: 4,
+          checkpointRef: "ref",
+          status: "ready",
+          files: [{ path: "src/a.ts", kind: "update", additions: 1, deletions: 0 }],
+          assistantMessageId: null,
+          completedAt: "x",
+        },
+      },
+    },
+  ]);
+
+  const handled = transport.interceptRequest(
+    JSON.stringify({
+      id: "d1",
+      method: "workspace/checkpointDiff",
+      params: { threadId: "electron-thread", fromTurnId: "turn-2", toTurnId: "turn-2", cwd: "/x" },
+    }),
+  );
+  await flushMicrotasks();
+
+  assert.equal(handled, true);
+  const diffRequest = fake.requests.find((r) => r.tag === "orchestration.getTurnDiff");
+  assert.deepEqual(diffRequest.payload, { threadId: "electron-thread", fromTurnCount: 3, toTurnCount: 4 });
+  const response = outbound.find((m) => m.id === "d1");
+  assert.equal(response.result.diff, "@@ -1 +1 @@");
+  assert.equal(response.result.repoRoot, "/x");
+  assert.equal(response.result.fromCheckpointRef, "turnStart:turn-2");
+
+  const unknown = transport.interceptRequest(
+    JSON.stringify({
+      id: "d2",
+      method: "workspace/checkpointDiff",
+      params: { threadId: "electron-thread", fromTurnId: "turn-9", toTurnId: "turn-9" },
+    }),
+  );
+  assert.equal(unknown, false);
+  transport.shutdown();
+});
+
+test("Electron adapter forwards desktop git progress to the phone", async () => {
+  const fake = createStreamingBackend(snapshot);
+  let gitSubscriber = null;
+  const originalSubscribe = fake.backend.subscribe;
+  fake.backend.subscribe = (tag, payload, handlers) => {
+    if (tag === "git.subscribeActionProgress") {
+      gitSubscriber = handlers;
+      return () => {
+        gitSubscriber = null;
+      };
+    }
+    return originalSubscribe(tag, payload, handlers);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+
+  assert.ok(gitSubscriber, "adapter subscribes to git action progress on start");
+  gitSubscriber.onChunk([
+    { actionId: "g1", cwd: "/w", action: "push", kind: "phase_started", phase: "push", label: "Pushing" },
+  ]);
+
+  const forwarded = outbound.find((m) => m.method === "djl/git/desktopActionProgress");
+  assert.deepEqual(forwarded.params, {
+    actionId: "g1",
+    cwd: "/w",
+    action: "push",
+    kind: "phase_started",
+    phase: "push",
+    label: "Pushing",
+  });
+  transport.shutdown();
+  assert.equal(gitSubscriber, null, "shutdown unsubscribes");
 });

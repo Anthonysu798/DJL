@@ -6,14 +6,20 @@
 
 const { createHash, randomUUID } = require("crypto");
 const { createElectronBackendRpcClient } = require("./electron-backend-rpc");
-const { createThreadEventProjection } = require("./electron-event-projection");
+const {
+  checkpointFileChangeItem,
+  createThreadEventProjection,
+  desktopGitProgressNotification,
+} = require("./electron-event-projection");
 
 const ORCHESTRATION = {
   dispatchCommand: "orchestration.dispatchCommand",
   getSnapshot: "orchestration.getSnapshot",
+  getTurnDiff: "orchestration.getTurnDiff",
   subscribeShell: "orchestration.subscribeShell",
   subscribeThread: "orchestration.subscribeThread",
 };
+const GIT_SUBSCRIBE_ACTION_PROGRESS = "git.subscribeActionProgress";
 
 const RUNTIME_MODES = new Set([
   "approval-required",
@@ -48,6 +54,7 @@ function createElectronAppServerTransport({
   const pendingApprovalResponses = new Map();
   let stopped = false;
   let shellUnsubscribe = null;
+  let gitProgressUnsubscribe = null;
 
   rpc.onStarted(() => {
     if (stopped) return;
@@ -56,6 +63,28 @@ function createElectronAppServerTransport({
       launchDescription: "DJL Electron embedded backend",
     });
     void hydrateFromSnapshot();
+    if (!gitProgressUnsubscribe) {
+      // Desktop-started git actions: forward every progress event so the phone
+      // can show the same toast it shows for its own actions.
+      gitProgressUnsubscribe = rpc.subscribe(
+        GIT_SUBSCRIBE_ACTION_PROGRESS,
+        {},
+        {
+          onChunk(values) {
+            for (const value of values) {
+              const output = desktopGitProgressNotification(value);
+              if (output) emitOutput(output);
+            }
+          },
+          onEnd() {
+            gitProgressUnsubscribe = null;
+          },
+          onError() {
+            gitProgressUnsubscribe = null;
+          },
+        },
+      );
+    }
     if (!shellUnsubscribe) {
       shellUnsubscribe = rpc.subscribe(
         ORCHESTRATION.subscribeShell,
@@ -331,6 +360,50 @@ function createElectronAppServerTransport({
     if (!activeTurnId) stopTurnReconciliation(thread.id);
     threadStates.set(thread.id, next);
     projection.hydrate(thread, snapshotSequence);
+    return true;
+  }
+
+  // Phone checkpoint diffs for desktop turns come from the backend's turn
+  // checkpoints, not from git refs the phone never captured. Returns true when
+  // this adapter will answer; false lets the local git handler try.
+  function interceptRequest(rawMessage) {
+    const message = safeParse(rawMessage);
+    if (!message || message.method !== "workspace/checkpointDiff" || message.id == null) {
+      return false;
+    }
+    const params = message.params || {};
+    const threadId = stringValue(params.threadId) || stringValue(params.thread_id);
+    const turnId = stringValue(params.toTurnId) || stringValue(params.fromTurnId);
+    const count = threadId && turnId ? projection.checkpointTurnCount(threadId, turnId) : null;
+    if (count == null) return false;
+
+    void (async () => {
+      try {
+        const result = await rpc.request(ORCHESTRATION.getTurnDiff, {
+          threadId,
+          fromTurnCount: Math.max(0, count - 1),
+          toTurnCount: count,
+        });
+        emitRaw({
+          id: message.id,
+          result: {
+            repoRoot: stringValue(params.cwd) || threadStates.get(threadId)?.cwd || "",
+            fromCheckpointRef: `turnStart:${turnId}`,
+            toCheckpointRef: `turnEnd:${turnId}`,
+            diff: typeof result?.diff === "string" ? result.diff : "",
+          },
+        });
+      } catch (error) {
+        emitRaw({
+          id: message.id,
+          error: {
+            code: -32000,
+            message: error instanceof Error ? error.message : String(error),
+            data: { errorCode: "checkpoint_missing" },
+          },
+        });
+      }
+    })();
     return true;
   }
 
@@ -664,6 +737,7 @@ function createElectronAppServerTransport({
     send(rawMessage) {
       void handleRequest(rawMessage);
     },
+    interceptRequest,
     onMessage(handler) {
       listeners.onMessage = handler;
     },
@@ -679,6 +753,8 @@ function createElectronAppServerTransport({
     shutdown() {
       stopped = true;
       shellUnsubscribe?.();
+      gitProgressUnsubscribe?.();
+      gitProgressUnsubscribe = null;
       for (const unsubscribe of activeThreadSubscriptions.values()) unsubscribe?.();
       activeThreadSubscriptions.clear();
       for (const timer of turnReconcileTimers.values()) clearTimeout(timer);
@@ -809,6 +885,20 @@ function appServerTurns(thread) {
     entry.items.push(appServerMessageItem(message));
     byTurn.set(turnId, entry);
   }
+  // Reopened threads show their edits: one file-change card per checkpoint.
+  for (const checkpoint of thread.checkpoints || []) {
+    const item = checkpointFileChangeItem(checkpoint);
+    const turnId = stringValue(checkpoint?.turnId);
+    if (!item || !turnId) continue;
+    const entry = byTurn.get(turnId) || {
+      id: turnId,
+      status: "completed",
+      createdAt: stringValue(checkpoint.completedAt),
+      items: [],
+    };
+    entry.items.push(item);
+    byTurn.set(turnId, entry);
+  }
   return Array.from(byTurn.values());
 }
 
@@ -852,6 +942,7 @@ function snapshotThreadState(thread, snapshotSequence = null) {
   return {
     snapshotSequence: normalizeSnapshotSequence(snapshotSequence),
     updatedAt: stringValue(thread.updatedAt),
+    cwd: stringValue(thread.worktreePath),
     activeTurnId: thread.session?.activeTurnId || null,
     runtimeMode: normalizeRuntimeMode(thread.runtimeMode),
     messages: new Map(
