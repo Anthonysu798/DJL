@@ -20,7 +20,10 @@ final class CodexServiceTierTests: XCTestCase {
 
         var capturedTurnStartParams: [JSONValue] = []
         service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "turn/start")
+            // Checkpoint capture runs before each turn; only the turn start matters here.
+            guard method == "turn/start" else {
+                return RPCMessage(id: .string(UUID().uuidString), result: .object([:]), includeJSONRPC: false)
+            }
             capturedTurnStartParams.append(params ?? .null)
             return RPCMessage(
                 id: .string(UUID().uuidString),
@@ -164,7 +167,10 @@ final class CodexServiceTierTests: XCTestCase {
 
         var capturedTurnStartParams: [JSONValue] = []
         service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "turn/start")
+            // Checkpoint capture runs before each turn; only the turn start matters here.
+            guard method == "turn/start" else {
+                return RPCMessage(id: .string(UUID().uuidString), result: .object([:]), includeJSONRPC: false)
+            }
             let safeParams = params ?? .null
             capturedTurnStartParams.append(safeParams)
 
