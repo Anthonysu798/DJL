@@ -283,9 +283,10 @@ function toolItemFromActivity(activity) {
   }
 
   if (itemType === "file_change") {
-    const changes = Array.isArray(data.changes) && data.changes.length > 0
-      ? data.changes
-      : fileChangeFromPatch(data);
+    const changes =
+      Array.isArray(data.changes) && data.changes.length > 0
+        ? data.changes
+        : fileChangeFromPatch(data);
     return { id, type: "fileChange", status, changes };
   }
 

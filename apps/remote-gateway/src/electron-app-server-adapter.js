@@ -11,10 +11,7 @@ const {
   createThreadEventProjection,
   desktopGitProgressNotification,
 } = require("./electron-event-projection");
-const {
-  createDesktopTerminalMirror,
-  TERMINAL_BACKEND_TAGS,
-} = require("./desktop-terminal-mirror");
+const { createDesktopTerminalMirror, TERMINAL_BACKEND_TAGS } = require("./desktop-terminal-mirror");
 
 const ORCHESTRATION = {
   dispatchCommand: "orchestration.dispatchCommand",
@@ -796,7 +793,10 @@ function createElectronAppServerTransport({
         if (byKey.has(key)) continue;
         byKey.set(key, {
           name,
-          description: stringValue(skill?.description) || stringValue(skill?.interface?.shortDescription) || null,
+          description:
+            stringValue(skill?.description) ||
+            stringValue(skill?.interface?.shortDescription) ||
+            null,
           path: path || null,
           scope: stringValue(skill?.scope) || null,
           enabled: skill?.enabled !== false,

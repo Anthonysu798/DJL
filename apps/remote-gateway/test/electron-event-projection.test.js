@@ -16,7 +16,13 @@ const THREAD = {
   session: null,
   latestTurn: null,
   messages: [
-    { id: "user-0", role: "user", text: "Hi", turnId: "turn-0", createdAt: "2026-09-04T09:59:00.000Z" },
+    {
+      id: "user-0",
+      role: "user",
+      text: "Hi",
+      turnId: "turn-0",
+      createdAt: "2026-09-04T09:59:00.000Z",
+    },
     {
       id: "assistant-0",
       role: "assistant",
@@ -195,7 +201,11 @@ test("session errors and interruptions map to failed and interrupted", () => {
     updatedAt: "2026-09-04T10:00:02.000Z",
   };
   const sessionEvent = (session, sequence) =>
-    threadEvent("thread.session-set", { threadId: "thread-1", session: { ...base, ...session } }, sequence);
+    threadEvent(
+      "thread.session-set",
+      { threadId: "thread-1", session: { ...base, ...session } },
+      sequence,
+    );
 
   projection.applyThreadEvent(
     sessionEvent({ status: "running", activeTurnId: "turn-1", lastError: null }, 11),
@@ -425,7 +435,13 @@ test("other tools become toolCall items and non-tool activities are ignored", ()
     toolActivityEvent(
       "a4",
       "tool.completed",
-      { itemType: "web_search", status: "completed", title: "Web search", detail: "3 results", data: {} },
+      {
+        itemType: "web_search",
+        status: "completed",
+        title: "Web search",
+        detail: "3 results",
+        data: {},
+      },
       11,
     ),
   );

@@ -58,11 +58,22 @@ async function flushMicrotasks() {
 test("open attaches with the thread cwd and returns the backend snapshot", async () => {
   const { mirror, requests } = createHarness();
 
-  const result = await mirror.open({ threadId: "thread-1", terminalId: "default", cols: 80, rows: 24 });
+  const result = await mirror.open({
+    threadId: "thread-1",
+    terminalId: "default",
+    cols: 80,
+    rows: 24,
+  });
 
   assert.deepEqual(requests[0], {
     tag: "terminal.open",
-    payload: { threadId: "thread-1", terminalId: "default", cwd: "/work/thread-1", cols: 80, rows: 24 },
+    payload: {
+      threadId: "thread-1",
+      terminalId: "default",
+      cwd: "/work/thread-1",
+      cols: 80,
+      rows: 24,
+    },
   });
   assert.equal(result.snapshot.history, "history-1");
   assert.equal(mirror.isWatching("thread-1", "default"), true);
@@ -126,7 +137,11 @@ test("oversized snapshot history is trimmed to its tail on a line boundary", () 
 });
 
 test("output past the lag limit is dropped until an ack triggers a resync", async () => {
-  const { mirror, emitted, requests } = createHarness({ lagLimitBytes: 10, resyncBytes: 4, maxOutputChunkBytes: 100 });
+  const { mirror, emitted, requests } = createHarness({
+    lagLimitBytes: 10,
+    resyncBytes: 4,
+    maxOutputChunkBytes: 100,
+  });
   await mirror.open({ threadId: "thread-1", terminalId: "default" });
 
   mirror.handleEvent(outputEvent("123456789012"));

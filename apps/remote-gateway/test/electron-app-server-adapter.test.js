@@ -855,7 +855,10 @@ test("Electron adapter streams deltas from thread events without snapshot refres
     (r) => r.tag === "orchestration.getSnapshot",
   ).length;
 
-  fake.pushThread("electron-thread", [assistantEvent(6, "Hel", true), assistantEvent(7, "lo", true)]);
+  fake.pushThread("electron-thread", [
+    assistantEvent(6, "Hel", true),
+    assistantEvent(7, "lo", true),
+  ]);
   fake.pushThread("electron-thread", [assistantEvent(8, "Hello", false)]);
   await flushMicrotasks();
 
@@ -895,10 +898,7 @@ test("Electron adapter re-hydrates a thread after its stream fails", async () =>
   const resumed = structuredClone(snapshot.threads[0]);
   resumed.session = { activeTurnId: "turn-3" };
   fake.pushThread("electron-thread", [detailSnapshotChunk(resumed, 9)]);
-  assert.equal(
-    outbound.filter((m) => m.method === "turn/started").at(-1)?.params.turnId,
-    "turn-3",
-  );
+  assert.equal(outbound.filter((m) => m.method === "turn/started").at(-1)?.params.turnId, "turn-3");
   transport.shutdown();
 });
 
@@ -912,7 +912,11 @@ test("Electron adapter subscribes to threads announced on the shell stream", asy
   await flushMicrotasks();
 
   fake.pushShell([
-    { kind: "thread-upserted", sequence: 6, thread: { id: "brand-new", runtimeMode: "full-access" } },
+    {
+      kind: "thread-upserted",
+      sequence: 6,
+      thread: { id: "brand-new", runtimeMode: "full-access" },
+    },
   ]);
   assert.ok(fake.subscribedThreadIds().includes("brand-new"));
   fake.pushShell([{ kind: "thread-removed", sequence: 7, threadId: "brand-new" }]);
@@ -970,7 +974,12 @@ test("Electron adapter answers checkpoint diffs for desktop turns from the backe
   fake.backend.request = async (tag, payload) => {
     if (tag === "orchestration.getTurnDiff") {
       fake.requests.push({ tag, payload });
-      return { threadId: payload.threadId, fromTurnCount: payload.fromTurnCount, toTurnCount: payload.toTurnCount, diff: "@@ -1 +1 @@" };
+      return {
+        threadId: payload.threadId,
+        fromTurnCount: payload.fromTurnCount,
+        toTurnCount: payload.toTurnCount,
+        diff: "@@ -1 +1 @@",
+      };
     }
     return originalRequest(tag, payload);
   };
@@ -1022,7 +1031,11 @@ test("Electron adapter answers checkpoint diffs for desktop turns from the backe
 
   assert.equal(handled, true);
   const diffRequest = fake.requests.find((r) => r.tag === "orchestration.getTurnDiff");
-  assert.deepEqual(diffRequest.payload, { threadId: "electron-thread", fromTurnCount: 3, toTurnCount: 4 });
+  assert.deepEqual(diffRequest.payload, {
+    threadId: "electron-thread",
+    fromTurnCount: 3,
+    toTurnCount: 4,
+  });
   const response = outbound.find((m) => m.id === "d1");
   assert.equal(response.result.diff, "@@ -1 +1 @@");
   assert.equal(response.result.repoRoot, "/x");
@@ -1063,7 +1076,14 @@ test("Electron adapter forwards desktop git progress to the phone", async () => 
 
   assert.ok(gitSubscriber, "adapter subscribes to git action progress on start");
   gitSubscriber.onChunk([
-    { actionId: "g1", cwd: "/w", action: "push", kind: "phase_started", phase: "push", label: "Pushing" },
+    {
+      actionId: "g1",
+      cwd: "/w",
+      action: "push",
+      kind: "phase_started",
+      phase: "push",
+      label: "Pushing",
+    },
   ]);
 
   const forwarded = outbound.find((m) => m.method === "djl/git/desktopActionProgress");
@@ -1133,7 +1153,10 @@ test("Electron adapter mirrors desktop terminal output for attached terminals", 
       byteLength: 7,
     },
   ]);
-  assert.equal(outbound.some((m) => m.method === "djl/terminal/event"), false);
+  assert.equal(
+    outbound.some((m) => m.method === "djl/terminal/event"),
+    false,
+  );
 
   transport.send(
     JSON.stringify({
@@ -1228,7 +1251,10 @@ test("Electron adapter refuses to steer when no turn is running", async () => {
 
   const response = outbound.find((m) => m.id === "ios-steer-idle");
   assert.match(response.error.message, /No active turn/);
-  assert.equal(fake.requests.some((r) => r.tag === "orchestration.dispatchCommand"), false);
+  assert.equal(
+    fake.requests.some((r) => r.tag === "orchestration.dispatchCommand"),
+    false,
+  );
   transport.shutdown();
 });
 
@@ -1304,7 +1330,12 @@ test("Electron adapter lists skills from the cross-provider catalog per cwd", as
     "provider.listSkillsCatalog": (payload) => ({
       skills: [
         { name: "Deploy", path: `${payload.cwd}/.skills/deploy`, enabled: true, scope: "synara" },
-        { name: "Shared", path: "/home/.skills/shared", enabled: false, interface: { shortDescription: "Shared skill" } },
+        {
+          name: "Shared",
+          path: "/home/.skills/shared",
+          enabled: false,
+          interface: { shortDescription: "Shared skill" },
+        },
       ],
     }),
   });
@@ -1315,7 +1346,10 @@ test("Electron adapter lists skills from the cross-provider catalog per cwd", as
   await flushMicrotasks();
 
   const calls = fake.requests.filter((r) => r.tag === "provider.listSkillsCatalog");
-  assert.deepEqual(calls.map((c) => c.payload), [{ cwd: "/a" }, { cwd: "/b" }]);
+  assert.deepEqual(
+    calls.map((c) => c.payload),
+    [{ cwd: "/a" }, { cwd: "/b" }],
+  );
   const skills = outbound.find((m) => m.id === "ios-skills").result.skills;
   assert.equal(skills.length, 3, "shared skill collapses across cwds");
   assert.deepEqual(skills[1], {
@@ -1335,7 +1369,17 @@ test("Electron adapter lists Codex plugin marketplaces", async () => {
         {
           name: "openai",
           path: "/m",
-          plugins: [{ id: "p1", name: "Linear", installed: true, enabled: true, installPolicy: "INSTALLED_BY_DEFAULT", source: {}, authPolicy: "x" }],
+          plugins: [
+            {
+              id: "p1",
+              name: "Linear",
+              installed: true,
+              enabled: true,
+              installPolicy: "INSTALLED_BY_DEFAULT",
+              source: {},
+              authPolicy: "x",
+            },
+          ],
         },
       ],
       marketplaceLoadErrors: [],
@@ -1345,7 +1389,11 @@ test("Electron adapter lists Codex plugin marketplaces", async () => {
   });
 
   transport.send(
-    JSON.stringify({ id: "ios-plugins", method: "plugin/list", params: { cwds: ["/a"], forceReload: true } }),
+    JSON.stringify({
+      id: "ios-plugins",
+      method: "plugin/list",
+      params: { cwds: ["/a"], forceReload: true },
+    }),
   );
   await flushMicrotasks();
 
@@ -1365,15 +1413,29 @@ test("Electron adapter maps provider usage into rate limit buckets", async () =>
         source: "oauth",
         usageLines: [],
         limits: [
-          { window: "5h", usedPercent: 42.4, windowDurationMins: 300, resetsAt: "2026-09-05T00:00:00.000Z" },
+          {
+            window: "5h",
+            usedPercent: 42.4,
+            windowDurationMins: 300,
+            resetsAt: "2026-09-05T00:00:00.000Z",
+          },
           { window: "weekly", usedPercent: 10 },
         ],
       },
-      { provider: "claudeAgent", updatedAt: "x", source: "s", usageLines: [], status: "needs-auth", limits: [{ window: "5h", usedPercent: 1 }] },
+      {
+        provider: "claudeAgent",
+        updatedAt: "x",
+        source: "s",
+        usageLines: [],
+        status: "needs-auth",
+        limits: [{ window: "5h", usedPercent: 1 }],
+      },
     ],
   });
 
-  transport.send(JSON.stringify({ id: "ios-limits", method: "account/rateLimits/read", params: null }));
+  transport.send(
+    JSON.stringify({ id: "ios-limits", method: "account/rateLimits/read", params: null }),
+  );
   await flushMicrotasks();
 
   const buckets = outbound.find((m) => m.id === "ios-limits").result.rateLimitsByLimitId;

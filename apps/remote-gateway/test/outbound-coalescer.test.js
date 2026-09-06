@@ -45,7 +45,9 @@ test("notifications inside one window are sent as one batch array", () => {
   const coalescer = createOutboundCoalescer({ ...timers, flush: (text) => flushed.push(text) });
 
   coalescer.push(JSON.stringify({ method: "turn/started", params: { threadId: "t" } }));
-  coalescer.push(JSON.stringify({ method: "item/plan/delta", params: { threadId: "t", delta: "x" } }));
+  coalescer.push(
+    JSON.stringify({ method: "item/plan/delta", params: { threadId: "t", delta: "x" } }),
+  );
   assert.deepEqual(flushed, []);
   assert.equal(timers.hasPending(), true);
 
