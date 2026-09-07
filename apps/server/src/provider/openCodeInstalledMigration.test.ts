@@ -70,7 +70,9 @@ describe("migrateInstalledOpenCodeSession", () => {
       );
       await migrateInstalledOpenCodeSession(f.options);
       const files = await readdir(f.options.legacyRootDir, { recursive: true });
-      const backupPath = files.find((file) => file.endsWith("backup/opencode/opencode.db"));
+      const backupPath = files.find((file) =>
+        file.endsWith(join("backup", "opencode", "opencode.db")),
+      );
       expect(backupPath).toBeDefined();
       const copied = new DatabaseSync(join(f.options.legacyRootDir, backupPath!), {
         readOnly: true,

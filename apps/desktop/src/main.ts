@@ -3678,6 +3678,12 @@ function createWindow(): BrowserWindow {
     window.setTitle(APP_DISPLAY_NAME);
     emitUpdateState();
     emitRemoteGatewayState();
+    if (
+      process.env.DJL_DESKTOP_SMOKE_TEST === "1" &&
+      window.webContents.getURL() === SYNARA_DESKTOP_ENTRY_URL
+    ) {
+      console.info("[desktop-smoke] renderer ready");
+    }
   });
   window.once("ready-to-show", () => {
     // Launch filling the screen work area; the 1100x780 size above stays as the

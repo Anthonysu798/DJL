@@ -48,16 +48,18 @@ describe.skipIf(process.platform === "win32")("persistent profile shell", () => 
         env: { HOME: root, PATH: "/usr/bin:/bin", TERM: "xterm", ...launch.env },
       });
       let output = "";
+      let diagnosticOutput = "";
       child.stdout.on("data", (chunk) => {
         output += chunk;
       });
       child.stderr.on("data", (chunk) => {
-        output += chunk;
+        diagnosticOutput += chunk;
       });
       const closed = new Promise<number | null>((resolve) => child.on("close", resolve));
-      // Native /exit returns from the CLI. Subsequent commands go to the existing shell.
-      child.stdin.end('/exit\nprintf "SHELL_CWD=%s\\n" "$PWD"\ncodex\n/exit\nexit\n');
-      expect(await closed).toBe(0);
+      // Native /exit returns from the CLI. Bash echoes interactive/verbose input to
+      // stderr, so parse only actual command stdout, never the echoed printf source.
+      child.stdin.end('/exit\nset -v\nprintf "SHELL_CWD=%s\\n" "$PWD"\ncodex\n/exit\nexit\n');
+      expect(await closed, diagnosticOutput).toBe(0);
       expect(await realpath(output.match(/SHELL_CWD=([^\r\n]+)/)![1]!)).toBe(await realpath(root));
       expect(output.match(/AGENT_EXIT/g)).toHaveLength(2);
       expect(output.match(/KEY=unset/g)).toHaveLength(2);

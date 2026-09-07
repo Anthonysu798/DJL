@@ -312,6 +312,7 @@
     },
   },
   "trustedDependencies": [
+    "electron",
     "node-pty",
   ],
   "patchedDependencies": {
