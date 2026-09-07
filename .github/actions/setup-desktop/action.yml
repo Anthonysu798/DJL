@@ -22,10 +22,10 @@ runs:
 
     - name: Install dependencies from the lockfile
       shell: bash
-      run: bun install --frozen-lockfile --backend=copyfile --concurrent-scripts=1
+      run: bash "$GITHUB_ACTION_PATH/retry.sh" bun install --frozen-lockfile --backend=copyfile --concurrent-scripts=1
 
     - name: Ensure official Electron runtime is fully extracted
       shell: bash
       run: |
-        bun apps/desktop/node_modules/electron/install.js
+        bash "$GITHUB_ACTION_PATH/retry.sh" bun apps/desktop/node_modules/electron/install.js
         node -e 'const fs = require("node:fs"); const binary = require("./apps/desktop/node_modules/electron"); if (!fs.statSync(binary).isFile()) throw new Error("Electron runtime is missing");'
