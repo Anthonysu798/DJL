@@ -93,6 +93,18 @@ describe("decideWorkTurnPolicy", () => {
     expect(prompt).toContain("What is today's NVDA price?");
   });
 
+  it("uses native tools for Work while retaining evidence requirements", () => {
+    const prompt = buildGroundedWorkPrompt(
+      "Read /tmp/report.docx",
+      decideWorkTurnPolicy({ prompt: "Read /tmp/report.docx" }),
+      "native",
+    );
+    expect(prompt).toContain("native tools");
+    expect(prompt).toContain("visible tool succeeds");
+    expect(prompt).not.toContain("call djl_read_document");
+    expect(prompt).toContain("/tmp/report.docx");
+  });
+
   it("keeps ordinary chat conversational without implying project context", () => {
     const prompt = buildGroundedWorkPrompt("hi", decideWorkTurnPolicy({ prompt: "hi" }));
 

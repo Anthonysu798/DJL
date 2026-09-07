@@ -1,3 +1,64 @@
+async function awaitCanonicalOutcome(canonicalOutcomePromise) {
+  const outcome = await canonicalOutcomePromise;
+  if (!outcome.ok) {
+    throw outcome.error;
+  }
+  return outcome.response;
+}
+
+function parseBridgeMessage(rawMessage) {
+  try {
+    return JSON.parse(rawMessage);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeAccountRead(payload) {
+  if (!payload || typeof payload !== "object") {
+    return {
+      account: null,
+      requiresOpenaiAuth: true,
+    };
+  }
+
+  return {
+    account: payload.account && typeof payload.account === "object" ? payload.account : null,
+    requiresOpenaiAuth: Boolean(payload.requiresOpenaiAuth),
+  };
+}
+
+function createJsonRpcErrorResponse(requestId, error, defaultErrorCode) {
+  return JSON.stringify({
+    id: requestId,
+    error: {
+      code: -32000,
+      message: error?.userMessage || error?.message || "Bridge request failed.",
+      data: {
+        errorCode: error?.errorCode || defaultErrorCode,
+      },
+    },
+  });
+}
+
+function safeParseJSON(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+// Normalizes private app-server responses before the bridge re-wraps them for iOS.
+function readBridgeManagedSuccessPayload(parsed) {
+  if (Object.prototype.hasOwnProperty.call(parsed, "result")) {
+    return parsed.result ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(parsed, "payload")) {
+    return parsed.payload ?? null;
+  }
+  return null;
+}
 // FILE: bridge.js
 // Purpose: Runs Codex locally, bridges relay traffic, and coordinates desktop refreshes for Codex.app.
 // Layer: CLI service
@@ -255,14 +316,6 @@ function createThreadTurnsListFastPageCoordinator({
       "";
     const entry = token ? handoffsByToken.get(token) : null;
     return entry?.threadId === threadId ? entry : null;
-  }
-
-  async function awaitCanonicalOutcome(canonicalOutcomePromise) {
-    const outcome = await canonicalOutcomePromise;
-    if (!outcome.ok) {
-      throw outcome.error;
-    }
-    return outcome.response;
   }
 
   async function extendCanonicalResponseThroughAnchor(
@@ -552,7 +605,7 @@ function threadTurnsListHandoffDescriptor(cursor) {
 }
 
 function canonicalThreadTurnsListRequest(request) {
-  const params = { ...(request?.params || {}) };
+  const params = { ...request?.params };
   delete params.djlRequireCanonical;
   delete params.djlTurnStateOnly;
   if (
@@ -583,7 +636,7 @@ function sortJsonValueForCacheKey(value) {
   }
   return Object.fromEntries(
     Object.keys(value)
-      .sort()
+      .toSorted()
       .map((key) => [key, sortJsonValueForCacheKey(value[key])]),
   );
 }
@@ -1353,14 +1406,6 @@ function startBridge({
     return `${method}:${threadId}:${String(parsed.id)}`;
   }
 
-  function parseBridgeMessage(rawMessage) {
-    try {
-      return JSON.parse(rawMessage);
-    } catch {
-      return null;
-    }
-  }
-
   // Encrypts bridge-generated responses instead of letting the relay see plaintext.
   function sendApplicationResponse(rawMessage) {
     secureTransport.queueOutboundApplicationMessage(
@@ -1684,33 +1729,6 @@ function startBridge({
     };
   }
 
-  function normalizeAccountRead(payload) {
-    if (!payload || typeof payload !== "object") {
-      return {
-        account: null,
-        requiresOpenaiAuth: true,
-      };
-    }
-
-    return {
-      account: payload.account && typeof payload.account === "object" ? payload.account : null,
-      requiresOpenaiAuth: Boolean(payload.requiresOpenaiAuth),
-    };
-  }
-
-  function createJsonRpcErrorResponse(requestId, error, defaultErrorCode) {
-    return JSON.stringify({
-      id: requestId,
-      error: {
-        code: -32000,
-        message: error?.userMessage || error?.message || "Bridge request failed.",
-        data: {
-          errorCode: error?.errorCode || defaultErrorCode,
-        },
-      },
-    });
-  }
-
   function rememberForwardedRequestMethod(rawMessage) {
     const parsed = safeParseJSON(rawMessage);
     const method = typeof parsed?.method === "string" ? parsed.method.trim() : "";
@@ -1874,14 +1892,6 @@ function startBridge({
     evictOldestEntries(jsonlTurnsListRolloutCacheByThread, JSONL_ROLLOUT_PATH_CACHE_MAX_SIZE);
     evictOldestEntries(jsonlTurnsListRolloutMissCacheByThread, JSONL_ROLLOUT_PATH_CACHE_MAX_SIZE);
     evictOldestEntries(jsonlThreadCwdCacheByThread, JSONL_ROLLOUT_PATH_CACHE_MAX_SIZE);
-  }
-
-  function safeParseJSON(value) {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return null;
-    }
   }
 
   function rememberThreadFromMessage(source, rawMessage, parsedMessage = null) {
@@ -2177,17 +2187,6 @@ function startBridge({
 
     waiter.resolve(readBridgeManagedSuccessPayload(parsed));
     return true;
-  }
-
-  // Normalizes private app-server responses before the bridge re-wraps them for iOS.
-  function readBridgeManagedSuccessPayload(parsed) {
-    if (Object.prototype.hasOwnProperty.call(parsed, "result")) {
-      return parsed.result ?? null;
-    }
-    if (Object.prototype.hasOwnProperty.call(parsed, "payload")) {
-      return parsed.payload ?? null;
-    }
-    return null;
   }
 
   function failBridgeManagedCodexRequests(error) {
@@ -2563,13 +2562,8 @@ function normalizeTurnStartForCodex(rawMessage) {
       continue;
     }
 
-    nextParams = {
-      ...nextParams,
-      [collaborationKey]: {
-        ...collaborationMode,
-        settings: nextSettings,
-      },
-    };
+    if (!changed) nextParams = { ...params };
+    nextParams[collaborationKey] = { ...collaborationMode, settings: nextSettings };
     changed = true;
   }
 
@@ -2754,7 +2748,7 @@ async function fetchAdaptiveThreadTurnsListForRelay(
 
     try {
       page = await fetchMeasuredAdaptiveTurnsListPage(fetchPage, pageParams, now);
-    } catch (error) {
+    } catch {
       if (response) {
         return response;
       }
@@ -3232,7 +3226,7 @@ function selectEmergencyHistoryItemsForRelay(items, maxItems) {
   for (let index = items.length - 1; index >= 0 && selectedIndices.size < maxItems; index -= 1) {
     selectedIndices.add(index);
   }
-  return [...selectedIndices].sort((left, right) => left - right).map((index) => items[index]);
+  return [...selectedIndices].toSorted((left, right) => left - right).map((index) => items[index]);
 }
 
 function buildAdaptiveTurnsListResult(firstResult, lastResult, turnsKey, turns) {
@@ -3330,7 +3324,7 @@ function normalizeRelayBoundJsonRpcMessage(
     const isTrackedResponse =
       trackedRequest?.method === parsed.method && (hasResult || hasError || hasPayload);
     if (isTrackedResponse) {
-      const { method, payload, ...rest } = parsed;
+      const { method: _method, payload, ...rest } = parsed;
       if (!hasResult && !hasError && hasPayload) {
         return JSON.stringify({
           ...rest,
@@ -4587,7 +4581,7 @@ function sanitizeNestedGeneratedImagePayloads(value, threadId) {
     const sanitizedNested = sanitizeNestedGeneratedImagePayloads(nested, threadId);
     if (sanitizedNested !== nested) {
       if (!didChange) {
-        nextValue = { ...nextValue };
+        nextValue = { ...value };
         didChange = true;
       }
       nextValue[key] = sanitizedNested;
@@ -4629,7 +4623,7 @@ function omitCompactionReplacementHistory(value) {
   for (const key of ["replacement_history", "replacementHistory"]) {
     if (Object.prototype.hasOwnProperty.call(nextValue, key)) {
       if (!didChange) {
-        nextValue = { ...nextValue };
+        nextValue = { ...value };
         didChange = true;
       }
       delete nextValue[key];
@@ -5134,10 +5128,8 @@ function truncateHistoryItemTextForRelay(item, maxChars) {
 
   for (const key of textKeys) {
     if (typeof item[key] === "string" && item[key].length > maxChars) {
-      nextItem = {
-        ...nextItem,
-        [key]: truncateRelayTextTail(item[key], maxChars),
-      };
+      if (!didChange) nextItem = { ...item };
+      nextItem[key] = truncateRelayTextTail(item[key], maxChars);
       didChange = true;
     }
   }
@@ -5242,7 +5234,7 @@ function persistBridgePreferences(
   { readDaemonConfigImpl = readDaemonConfig, writeDaemonConfigImpl = writeDaemonConfig } = {},
 ) {
   writeDaemonConfigImpl({
-    ...(readDaemonConfigImpl() || {}),
+    ...readDaemonConfigImpl(),
     keepMacAwakeEnabled,
   });
 }

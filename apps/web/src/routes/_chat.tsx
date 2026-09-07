@@ -207,7 +207,9 @@ function ChatRouteGlobalShortcuts() {
   const navigate = useNavigate();
   const isStudioRoute = useLocation({
     select: (location) =>
-      location.pathname.startsWith("/work") || location.pathname.startsWith("/studio"),
+      location.pathname === "/work" ||
+      location.pathname.startsWith("/work/") ||
+      location.pathname.startsWith("/studio"),
   });
   const { toggleSidebar } = useSidebar();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);

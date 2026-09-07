@@ -1,4 +1,16 @@
 import type {
+  HarnessTool,
+  HarnessToolsResult,
+  HarnessMaintainToolInput,
+  HarnessProfileAccountInput,
+  HarnessProfileAccount,
+  HarnessAccountsResult,
+  HarnessLegacyOpenCodeCredentialsResult,
+  HarnessLoginInput,
+  HarnessLoginResult,
+  HarnessEndLoginInput,
+} from "./harnessAccounts";
+import type {
   AuthBearerBootstrapResult,
   AuthBootstrapInput,
   AuthBootstrapResult,
@@ -714,6 +726,16 @@ export interface NativeApi {
     getProfileTokenStats: (
       input: StatsGetProfileTokenStatsInput,
     ) => Promise<StatsGetProfileTokenStatsResult>;
+  };
+  harnesses: {
+    getProfileAccount: (input: HarnessProfileAccountInput) => Promise<HarnessProfileAccount>;
+    listTools: () => Promise<HarnessToolsResult>;
+    maintainTool: (input: HarnessMaintainToolInput) => Promise<HarnessTool>;
+    listAccounts: () => Promise<HarnessAccountsResult>;
+    listLegacyOpenCodeCredentials: () => Promise<HarnessLegacyOpenCodeCredentialsResult>;
+    transferLegacyOpenCodeCredentials: () => Promise<HarnessLegacyOpenCodeCredentialsResult>;
+    startLogin: (input: HarnessLoginInput) => Promise<HarnessLoginResult>;
+    endLogin: (input: HarnessEndLoginInput) => Promise<void>;
   };
   provider: {
     getComposerCapabilities: (

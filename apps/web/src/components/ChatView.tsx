@@ -1,3 +1,4 @@
+import { effectiveRuntimeMode } from "@synara/contracts";
 import {
   type AutomationDefinition,
   type AutomationSchedule,
@@ -341,7 +342,7 @@ import {
 } from "../appSettings";
 import { resolveTerminalNewAction } from "../lib/terminalNewAction";
 import { isTerminalFocused } from "../lib/terminalFocus";
-import { compareProvidersByOrder } from "../providerOrdering";
+import { compareProvidersByOrder, isProviderKind } from "../providerOrdering";
 import {
   type ComposerFileAttachment,
   type ComposerImageAttachment,
@@ -391,7 +392,7 @@ import {
   deriveContextWindowSelectionStatus,
   deriveCumulativeCostUsd,
   deriveLatestContextWindowSnapshot,
-  deriveSelectedContextWindowSnapshot,
+  derivePendingContextWindowSnapshot,
 } from "../lib/contextWindow";
 import { formatVoiceRecordingDuration, useVoiceRecorder } from "../lib/voiceRecorder";
 import {
@@ -1756,8 +1757,13 @@ export default function ChatView({
       setIsRevertingCheckpoint(false);
     }
   }, [activeThread, pendingFileUndo]);
-  const runtimeMode =
-    composerDraft.runtimeMode ?? activeThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE;
+  const runtimeMode = effectiveRuntimeMode(
+    activeThread?.session?.provider ??
+      composerDraft.activeProvider ??
+      activeThread?.modelSelection.provider ??
+      settings.defaultProvider,
+    composerDraft.runtimeMode ?? activeThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
+  );
   const interactionMode =
     composerDraft.interactionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE;
   const isServerThread = serverThread !== undefined;
@@ -2093,7 +2099,10 @@ export default function ChatView({
     ? (sessionProvider ?? threadProvider ?? selectedProviderByThreadId ?? null)
     : null;
   const selectedProvider: ProviderKind =
-    lockedProvider ?? selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+    lockedProvider ??
+    selectedProviderByThreadId ??
+    (isStudioContainer && !isServerThread ? settings.defaultProvider : threadProvider) ??
+    settings.defaultProvider;
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -2141,10 +2150,21 @@ export default function ChatView({
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
   const claudeDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({ provider: "claudeAgent", enabled: false }),
+    providerModelsQueryOptions({
+      provider: "claudeAgent",
+      binaryPath: settings.claudeBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "claudeAgent" || isModelPickerOpen,
+    }),
   );
   const codexDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({ provider: "codex", enabled: false }),
+    providerModelsQueryOptions({
+      provider: "codex",
+      binaryPath: settings.codexBinaryPath || null,
+      homePath: settings.codexHomePath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "codex" || isModelPickerOpen,
+    }),
   );
   const openCodeModelDiscoveryEnabled =
     !hasThreadStarted ||
@@ -2158,9 +2178,10 @@ export default function ChatView({
   const cursorDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "cursor",
+      cwd: providerModelDiscoveryCwd,
       binaryPath: settings.cursorBinaryPath || null,
       apiEndpoint: settings.cursorApiEndpoint || null,
-      enabled: false,
+      enabled: selectedProvider === "cursor" || isModelPickerOpen,
     }),
   );
   const geminiModelsQuery = useQuery(
@@ -2839,8 +2860,9 @@ export default function ChatView({
     ],
   );
   const isSendBusy = localDispatch !== null && !serverAcknowledgedLocalDispatch;
-  const hasConfiguredOpenCodeModel = modelOptionsByProvider.opencode.length > 0;
-  const isLegacyReadOnlyThread = lockedProvider !== null && lockedProvider !== "opencode";
+  const hasConfiguredOpenCodeModel =
+    selectedProvider !== "opencode" || modelOptionsByProvider.opencode.length > 0;
+  const isLegacyReadOnlyThread = lockedProvider !== null && !isProviderKind(lockedProvider);
   const activeWorktreeSetup = localDispatch?.worktreeSetup ?? null;
   const isPreparingWorktree = activeWorktreeSetup !== null;
   const hasLiveTurn = phase === "running";
@@ -4142,25 +4164,7 @@ export default function ChatView({
   }, [diffEnvironmentPending, diffOpen, navigate, onToggleDiffPanel, threadId]);
   // Open-only diff action (no toggle): used by affordances like the live-changes
   // "Review" strip where a second click should never close an already-open panel.
-  const onOpenDiff = useCallback(() => {
-    if (diffEnvironmentPending || resolvedDiffOpen) {
-      return;
-    }
-    if (onToggleDiffPanel) {
-      onToggleDiffPanel();
-      return;
-    }
-    void navigate({
-      to: "/$threadId",
-      params: { threadId },
-      replace: true,
-      search: (previous) => ({
-        ...stripDiffSearchParams(previous),
-        panel: "diff",
-        diff: "1",
-      }),
-    });
-  }, [diffEnvironmentPending, navigate, onToggleDiffPanel, resolvedDiffOpen, threadId]);
+
   const onToggleBrowser = useCallback(() => {
     if (onToggleBrowserPanel) {
       onToggleBrowserPanel();
@@ -4719,7 +4723,6 @@ export default function ChatView({
       removeThreadFromSplitViews,
       storeClearTerminalState,
       storeCloseTerminal,
-      syncServerShellSnapshot,
       settings.confirmTerminalTabClose,
       workspaceT,
       terminalState.entryPoint,
@@ -6321,6 +6324,12 @@ export default function ChatView({
         provider,
         model: resolvedModel,
       };
+      if (
+        provider !== selectedProvider &&
+        (composerDraft.runtimeMode ?? activeThread.runtimeMode) === "bypass-permissions"
+      ) {
+        setComposerDraftRuntimeMode(activeThread.id, "approval-required");
+      }
       setComposerDraftModelSelectionAndSticky(activeThread.id, nextModelSelection);
       if (provider === "cursor" && !showExpandedCursorModelVariants) {
         setComposerDraftProviderModelOptions(activeThread.id, provider, undefined, {
@@ -6333,6 +6342,9 @@ export default function ChatView({
     [
       activeThread,
       lockedProvider,
+      selectedProvider,
+      composerDraft.runtimeMode,
+      setComposerDraftRuntimeMode,
       scheduleComposerFocus,
       setComposerDraftModelSelectionAndSticky,
       setComposerDraftProviderModelOptions,
@@ -9385,19 +9397,25 @@ export default function ChatView({
   const runtimeUsageContextWindow = useMemo(
     () =>
       activeContextWindow ??
-      (selectedProvider === "claudeAgent"
-        ? deriveSelectedContextWindowSnapshot(composerTraitSelection.contextWindow)
-        : null),
-    [activeContextWindow, composerTraitSelection.contextWindow, selectedProvider],
+      derivePendingContextWindowSnapshot(
+        selectedRuntimeModel?.contextLimitTokens ??
+          composerTraitSelection.caps.contextWindowTokens ??
+          null,
+      ),
+    [
+      activeContextWindow,
+      selectedRuntimeModel?.contextLimitTokens,
+      composerTraitSelection.caps.contextWindowTokens,
+    ],
   );
   const contextWindowSelectionStatus = useMemo(
     () =>
       deriveContextWindowSelectionStatus({
         activeSnapshot: runtimeUsageContextWindow,
-        selectedValue:
-          selectedProvider === "claudeAgent" ? composerTraitSelection.contextWindow : null,
+        // Auto-compact budgets do not change the model's actual context capacity.
+        selectedValue: null,
       }),
-    [runtimeUsageContextWindow, composerTraitSelection.contextWindow, selectedProvider],
+    [runtimeUsageContextWindow],
   );
   const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   const composerFooterControlsPlan = useMemo(
@@ -10750,6 +10768,17 @@ export default function ChatView({
   };
 
   const runtimeUsageControlsProps = {
+    disabled:
+      hasLiveTurn ||
+      isConnecting ||
+      isSendBusy ||
+      pendingApprovals.length > 0 ||
+      pendingUserInputs.length > 0,
+    onPermissionMenuOpen: () => {
+      void providerComposerCapabilitiesQuery.refetch();
+    },
+    permissionModes: providerComposerCapabilitiesQuery.data?.permissionModes,
+    supportsAutoMode: selectedRuntimeModel?.supportsAutoMode,
     runtimeMode,
     provider: selectedProvider,
     onRuntimeModeChange: handleRuntimeModeChange,

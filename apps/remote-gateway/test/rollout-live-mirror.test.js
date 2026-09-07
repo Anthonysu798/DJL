@@ -335,9 +335,9 @@ test("suppression lift re-bootstraps the muted tail so a running thread recovers
   suppressed = false;
   await wait(30);
 
-  const methods = outbound.map((message) => message.method);
-  assert.equal(methods.includes("turn/started"), true);
-  assert.equal(methods.includes("codex/event/user_message"), true);
+  const methods = new Set(outbound.map((message) => message.method));
+  assert.equal(methods.has("turn/started"), true);
+  assert.equal(methods.has("codex/event/user_message"), true);
   const bootstrapComplete = outbound.find(
     (message) => message.params?.djlRolloutBootstrapComplete === true,
   );
@@ -970,7 +970,8 @@ test("desktop-origin sibling terminal does not hijack a synthetic active turn", 
 
   const prematureSyntheticCompleted = outbound.find(
     (message) =>
-      message.method === "turn/completed" && /^rollout-turn:/.test(String(message.params.turnId)),
+      message.method === "turn/completed" &&
+      String(message.params.turnId).startsWith("rollout-turn:"),
   );
   assert.equal(
     prematureSyntheticCompleted,
@@ -997,7 +998,8 @@ test("desktop-origin sibling terminal does not hijack a synthetic active turn", 
 
   const syntheticCompleted = outbound.find(
     (message) =>
-      message.method === "turn/completed" && /^rollout-turn:/.test(String(message.params.turnId)),
+      message.method === "turn/completed" &&
+      String(message.params.turnId).startsWith("rollout-turn:"),
   );
   assert.equal(syntheticCompleted, undefined, "sibling terminal must not close the synthetic run");
 });
@@ -1046,7 +1048,8 @@ test("desktop-origin terminal-only real id closes the synthetic active turn", as
 
   const syntheticCompleted = outbound.find(
     (message) =>
-      message.method === "turn/completed" && /^rollout-turn:/.test(String(message.params.turnId)),
+      message.method === "turn/completed" &&
+      String(message.params.turnId).startsWith("rollout-turn:"),
   );
   assert.ok(syntheticCompleted, "terminal-only real id must also close the synthetic active turn");
 });

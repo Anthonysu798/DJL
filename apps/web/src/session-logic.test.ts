@@ -3517,8 +3517,13 @@ describe("hasLiveTurnTailWork", () => {
 });
 
 describe("PROVIDER_OPTIONS", () => {
-  it("lists DJL as the sole runtime for new turns", () => {
-    expect(PROVIDER_OPTIONS).toEqual([{ value: "opencode", label: "DJL", available: true }]);
+  it("lists the supported native runtimes for new turns", () => {
+    expect(PROVIDER_OPTIONS).toEqual([
+      { value: "opencode", label: "OpenCode", available: true },
+      { value: "codex", label: "Codex", available: true },
+      { value: "claudeAgent", label: "Claude Code", available: true },
+      { value: "cursor", label: "Cursor", available: true },
+    ]);
   });
 
   it("humanizes Codex find commands from real DB payload (regression)", () => {

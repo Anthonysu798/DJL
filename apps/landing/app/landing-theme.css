@@ -40,8 +40,9 @@ html:has(.landing-light) body {
   --lp-terminal-green: #27c93f;
 
   /* type — design.md: SF Pro Rounded display, system/Inter body, system mono code */
-  --lp-font-display: ui-rounded, "SF Pro Rounded", var(--font-inter), Inter, -apple-system,
-    system-ui, "Segoe UI", var(--cjk);
+  --lp-font-display:
+    ui-rounded, "SF Pro Rounded", var(--font-inter), Inter, -apple-system, system-ui, "Segoe UI",
+    var(--cjk);
   --lp-font-body: var(--font-inter), Inter, -apple-system, system-ui, "Segoe UI", var(--cjk);
   --lp-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -129,7 +130,10 @@ html:has(.landing-light) body {
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .lp-btn:active {

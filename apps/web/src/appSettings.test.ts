@@ -62,6 +62,7 @@ describe("getAppModelOptions", () => {
     const options = getAppModelOptions("codex", ["custom/internal-model"]);
 
     expect(options.map((option) => option.slug)).toEqual([
+      "gpt-6-astra",
       "gpt-5.5",
       "gpt-5.4",
       "gpt-5.4-mini",
@@ -343,6 +344,20 @@ describe("sidebar sort defaults", () => {
 });
 
 describe("normalizeStoredAppSettings", () => {
+  it("keeps choices for the freshly implemented native harnesses", () => {
+    const settings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))(
+      JSON.stringify({
+        defaultProvider: "codex",
+        providerOrder: ["cursor", "codex"],
+        hiddenProviders: ["claudeAgent"],
+      }),
+    );
+    expect(normalizeStoredAppSettings(settings)).toMatchObject({
+      defaultProvider: "codex",
+      providerOrder: ["cursor", "codex", "opencode", "claudeAgent"],
+      hiddenProviders: ["claudeAgent"],
+    });
+  });
   it("reads the stored language before React bootstrap and safely handles corrupt storage", () => {
     const storage = new Map<string, string>();
     const reader = { getItem: (key: string) => storage.get(key) ?? null };
@@ -445,11 +460,11 @@ describe("provider-specific custom models", () => {
 });
 
 describe("getProviderStartOptions", () => {
-  it("drops historical provider overrides now that OpenCode is the sole runtime", () => {
+  it("retains active native profile options and drops inactive provider overrides", () => {
     expect(
       getProviderStartOptions({
         claudeBinaryPath: "/usr/local/bin/claude",
-        codexBinaryPath: "",
+        codexBinaryPath: "/usr/local/bin/codex",
         codexHomePath: "/Users/you/.codex",
         cursorApiEndpoint: "http://localhost:3000",
         cursorBinaryPath: "/usr/local/bin/agent",
@@ -466,7 +481,11 @@ describe("getProviderStartOptions", () => {
         piAgentDir: "",
         piBinaryPath: "",
       }),
-    ).toBeUndefined();
+    ).toEqual({
+      claudeAgent: { binaryPath: "/usr/local/bin/claude" },
+      codex: { binaryPath: "/usr/local/bin/codex", homePath: "/Users/you/.codex" },
+      cursor: { binaryPath: "/usr/local/bin/agent", apiEndpoint: "http://localhost:3000" },
+    });
   });
 
   it("returns undefined when no provider overrides are configured", () => {

@@ -487,7 +487,7 @@ it.effect("rejects legacy providers for new turns while historical payloads rema
         text: "continue",
         attachments: [],
       },
-      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      modelSelection: { provider: "grok", model: "grok-test" },
       runtimeMode: "full-access",
       createdAt: "2026-01-01T00:00:00.000Z",
     }).pipe(Effect.flip);

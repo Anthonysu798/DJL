@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -42,9 +43,9 @@ export function DjlHero({ t }: { t: Content }) {
       window.history.scrollRestoration = "manual";
     }
     const resumeInteractiveSection =
-      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone)
-      || window.location.hash === "#start"
-      || window.location.hash.startsWith("#capability-");
+      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone) ||
+      window.location.hash === "#start" ||
+      window.location.hash.startsWith("#capability-");
     if (resumeInteractiveSection) return;
     window.scrollTo(0, 0);
   }, []);
@@ -62,9 +63,9 @@ export function DjlHero({ t }: { t: Content }) {
   useEffect(() => {
     if (!booting) return;
     const resumeInteractiveSection =
-      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone)
-      || window.location.hash === "#start"
-      || window.location.hash.startsWith("#capability-");
+      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone) ||
+      window.location.hash === "#start" ||
+      window.location.hash.startsWith("#capability-");
     if (resumeInteractiveSection) {
       const resumeTimer = window.setTimeout(() => {
         setBooting(false);
@@ -82,15 +83,7 @@ export function DjlHero({ t }: { t: Content }) {
     // overflow:hidden only blocks the scrollbar; also swallow the actual scroll
     // input (wheel / touch / scroll keys) so nothing moves during the intro.
     const prevent = (event: Event) => event.preventDefault();
-    const scrollKeys = new Set([
-      " ",
-      "PageDown",
-      "PageUp",
-      "ArrowDown",
-      "ArrowUp",
-      "Home",
-      "End",
-    ]);
+    const scrollKeys = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
     const preventKey = (event: KeyboardEvent) => {
       if (scrollKeys.has(event.key)) event.preventDefault();
     };
@@ -102,10 +95,7 @@ export function DjlHero({ t }: { t: Content }) {
     // scroll lock after the reveal has played (~2.6s + buffer). Reduced motion
     // skips the intro, so it unlocks on the next tick instead.
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const unlockTimer = window.setTimeout(
-      () => setBooting(false),
-      reduce ? 0 : 2900,
-    );
+    const unlockTimer = window.setTimeout(() => setBooting(false), reduce ? 0 : 2900);
     return () => {
       window.clearTimeout(unlockTimer);
       window.removeEventListener("wheel", prevent);
@@ -263,11 +253,7 @@ export function DjlHero({ t }: { t: Content }) {
           scale: 1,
           duration: 0.85,
         })
-        .to(
-          boot.querySelector(".dh-boot-scan"),
-          { x: "115%", duration: 0.95 },
-          "-=0.35",
-        )
+        .to(boot.querySelector(".dh-boot-scan"), { x: "115%", duration: 0.95 }, "-=0.35")
         .to(
           boot.querySelector(".dh-boot-logo"),
           {
@@ -312,11 +298,7 @@ export function DjlHero({ t }: { t: Content }) {
           },
           0,
         )
-        .to(
-          root.querySelector(".dh-giant"),
-          { y: -150, opacity: 0, duration: 1 },
-          0,
-        )
+        .to(root.querySelector(".dh-giant"), { y: -150, opacity: 0, duration: 1 }, 0)
         .fromTo(
           root.querySelector(".dh-transfer-flare"),
           { autoAlpha: 0, scaleX: 0.22, scaleY: 0.56 },
@@ -351,8 +333,15 @@ export function DjlHero({ t }: { t: Content }) {
         ref={bootRef}
         aria-hidden="true"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/djl-logo.png" alt="" className="dh-boot-logo" />
+        <NextImage
+          unoptimized
+          loading="eager"
+          width={512}
+          height={512}
+          src="/djl-logo.png"
+          alt=""
+          className="dh-boot-logo"
+        />
         <div className="dh-boot-scan" />
       </div>
 
@@ -364,9 +353,7 @@ export function DjlHero({ t }: { t: Content }) {
         <div className="dh-glow" />
         <div className="dh-motion">
           <div className="dh-frame">
-            {robotMounted ? (
-              <RobotLab embedded onReady={handleRobotReady} />
-            ) : null}
+            {robotMounted ? <RobotLab embedded onReady={handleRobotReady} /> : null}
             {!robotMounted || !robotReady ? (
               <div className="dh-spline-placeholder" aria-hidden="true">
                 <span />
@@ -392,7 +379,9 @@ export function DjlHero({ t }: { t: Content }) {
         </div>
         <div className="dh-auto-scroll-hint" aria-hidden="true">
           <Mouse size={15} strokeWidth={1.65} />
-          <span>{t.htmlLang.startsWith("zh") ? "轻滑一次 · 自动穿越" : "One flick · Auto transfer"}</span>
+          <span>
+            {t.htmlLang.startsWith("zh") ? "轻滑一次 · 自动穿越" : "One flick · Auto transfer"}
+          </span>
         </div>
       </section>
     </div>

@@ -21,7 +21,6 @@ import {
   checkCodexProviderStatus,
   checkCursorProviderStatus,
   checkGrokProviderStatus,
-  checkOpenCodeProviderStatus,
   checkPiProviderStatus,
   hasCustomModelProvider,
   makeDisabledProviderStatus,
@@ -172,15 +171,6 @@ const disabledProviderHealthLayer = ProviderHealthLive.pipe(
   ),
 );
 
-const cachedReadyCodexStatus = {
-  provider: "codex" as const,
-  status: "ready" as const,
-  available: true,
-  authStatus: "authenticated" as const,
-  checkedAt: "2026-06-16T12:00:00.000Z",
-  message: "Codex CLI is installed and authenticated.",
-} satisfies ServerProviderStatus;
-
 const cachedReadyOpenCodeStatus = {
   provider: "opencode" as const,
   status: "ready" as const,
@@ -266,7 +256,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       );
       const opencode = statuses.find((status) => status.provider === "opencode");
 
-      assert.strictEqual(statuses.length, 1);
+      assert.deepEqual(
+        new Set(statuses.map((status) => status.provider)),
+        new Set(["opencode", "codex", "claudeAgent", "cursor"]),
+      );
       assert.strictEqual(opencode?.available, false);
       assert.strictEqual(opencode?.message, "Provider is disabled in DJL settings.");
     });
@@ -403,7 +396,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         const providerHealth = yield* ProviderHealth;
         const statuses = yield* providerHealth.refresh;
 
-        assert.strictEqual(statuses.length, 1);
+        assert.deepEqual(
+          new Set(statuses.map((status) => status.provider)),
+          new Set(["opencode", "codex", "claudeAgent", "cursor"]),
+        );
         for (const status of statuses) {
           assert.strictEqual(status.available, false);
           assert.strictEqual(status.message, "Provider is disabled in DJL settings.");
@@ -1613,7 +1609,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.message, "DJL's bundled model runtime is missing.");
+        assert.strictEqual(
+          status.message,
+          "OpenCode is not installed. Install it in Settings > Accounts > Provider tools or choose its executable path.",
+        );
       }).pipe(Effect.provide(failingSpawnerLayer("spawn opencode ENOENT"))),
     );
   });
@@ -2127,5 +2126,45 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       assert.strictEqual(parsed.status, "warning");
       assert.strictEqual(parsed.authStatus, "unknown");
     });
+  });
+});
+
+describe("fresh installed OpenCode readiness", () => {
+  it("refreshes a fresh enabled CLI in the background without requiring a Settings click", async () => {
+    const settings = {
+      ...allProvidersDisabledSettings,
+      enableProviderUpdateChecks: false,
+      providers: {
+        ...allProvidersDisabledSettings.providers,
+        opencode: {
+          ...allProvidersDisabledSettings.providers.opencode,
+          enabled: true,
+          binaryPath: "/configured/opencode",
+        },
+      },
+    };
+    const layer = ProviderHealthLive.pipe(
+      Layer.provide(ServerSettingsService.layerTest(settings)),
+      Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "opencode-fresh-health-" })),
+      Layer.provide(mockSpawnerLayer(() => ({ stdout: "1.18.29", stderr: "", code: 0 }))),
+      Layer.provide(NodeServices.layer),
+    );
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const health = yield* ProviderHealth;
+        yield* Effect.promise(() =>
+          vi.waitFor(
+            async () => {
+              const statuses = await Effect.runPromise(health.getStatuses);
+              assert.strictEqual(
+                statuses.find((status) => status.provider === "opencode")?.available,
+                true,
+              );
+            },
+            { timeout: 1000, interval: 20 },
+          ),
+        );
+      }).pipe(Effect.provide(layer)),
+    );
   });
 });

@@ -141,11 +141,6 @@ describe("rankSettingsSearchEntries", () => {
       latinAmericanSpanishCatalog,
       frenchCatalog,
     ];
-    const makeT = (catalog: (typeof catalogs)[number]) => (key: string) => {
-      let value: unknown = catalog.settings;
-      for (const segment of key.split(".")) value = (value as Record<string, unknown>)?.[segment];
-      return typeof value === "string" ? value : key;
-    };
 
     for (const catalog of catalogs) {
       for (const entry of SETTINGS_SEARCH_ENTRIES) {
@@ -202,3 +197,9 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Apparence");
   });
 });
+
+const makeT = (catalog: typeof englishCatalog) => (key: string) => {
+  let value: unknown = catalog.settings;
+  for (const segment of key.split(".")) value = (value as Record<string, unknown>)?.[segment];
+  return typeof value === "string" ? value : key;
+};

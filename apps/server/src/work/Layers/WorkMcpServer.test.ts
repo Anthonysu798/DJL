@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { ProjectId, ThreadId } from "@synara/contracts";
-import { Effect, Exit, Layer, ManagedRuntime, Scope } from "effect";
+import { Effect, Exit, ManagedRuntime, Scope } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { WorkMcpServer } from "../Services/WorkMcpServer.ts";

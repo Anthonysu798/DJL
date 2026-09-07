@@ -65,17 +65,29 @@ export function useProviderModelCatalog(input: {
   const customModelsByProvider = useMemo(() => getCustomModelsByProvider(settings), [settings]);
 
   const claudeDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({ provider: "claudeAgent", enabled: false }),
+    providerModelsQueryOptions({
+      provider: "claudeAgent",
+      binaryPath: settings.claudeBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "claudeAgent" || discoveryEnabled,
+    }),
   );
   const codexDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({ provider: "codex", enabled: false }),
+    providerModelsQueryOptions({
+      provider: "codex",
+      binaryPath: settings.codexBinaryPath || null,
+      homePath: settings.codexHomePath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "codex" || discoveryEnabled,
+    }),
   );
   const cursorDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "cursor",
+      cwd: discoveryCwd,
       binaryPath: settings.cursorBinaryPath || null,
       apiEndpoint: settings.cursorApiEndpoint || null,
-      enabled: false,
+      enabled: selectedProvider === "cursor" || discoveryEnabled,
     }),
   );
   const geminiModelsQuery = useQuery(

@@ -5,8 +5,8 @@ This document is the source of truth for testing and releasing the DJL desktop p
 that one repository.
 
 The workflows do not test or release iOS, the remote relay, landing site, marketing site, Linux
-installers, npm packages, or standalone OpenCode. OpenCode is verified only as the pinned runtime
-embedded in DJL.
+installers or npm packages. OpenCode is installed separately and verified in normal CI; its runtime
+is not embedded in DJL.
 
 ## Release discipline
 
@@ -104,7 +104,7 @@ flowchart TD
 4. **Release/security/public source:** release helpers, credential/path audit, retained license
    checks, and brand verification.
 5. **Desktop runtime smoke:** `node-pty`, desktop build, preload verification, Electron startup
-   under Xvfb, and the pinned OpenCode runtime embedded in DJL.
+   under Xvfb, plus installed OpenCode compatibility on Linux, Windows, and both Mac architectures.
 
 The small `desktop-ci` job depends on all five lanes and fails closed if any lane fails, is
 cancelled, or is skipped. It is the only status required by branch protection.
@@ -309,7 +309,7 @@ Both Mac runners must verify:
 - app and native dependency architecture;
 - pinned `onnxruntime-node` `1.23.2`, including the Intel native runtime;
 - updater owner `Anthonysu798` and repository `DJL`;
-- embedded OpenCode `1.17.18` launches on the target host.
+- no bundled OpenCode executable/source is present; the separately installed official CLI passes protocol and behavior checks in normal CI.
 
 The Windows job removes Apple signing variables, authenticates to Azure through GitHub OIDC, and
 passes the Microsoft Artifact Signing account and certificate profile to Electron Builder before

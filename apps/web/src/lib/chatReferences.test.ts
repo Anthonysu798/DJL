@@ -141,9 +141,7 @@ describe("computeSelectionColumns", () => {
 
 describe("buildWhyChangedPrompt", () => {
   it("uses localized canned prompt copy while preserving the exact mention token", () => {
-    const t = (key: string, values?: Record<string, unknown>) =>
-      `localized:${key}:${values?.reference}`;
-    expect((buildWhyChangedPrompt as Function)("src/exact file.ts", t)).toBe(
+    expect((buildWhyChangedPrompt as Function)("src/exact file.ts", localizedT)).toBe(
       'localized:references.prompts.whyChanged:@"src/exact file.ts"',
     );
   });
@@ -221,3 +219,6 @@ describe("computeSelectionLineRange", () => {
     });
   });
 });
+
+const localizedT = (key: string, values?: Record<string, unknown>) =>
+  `localized:${key}:${values?.reference}`;

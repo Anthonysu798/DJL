@@ -3,9 +3,8 @@
 // Layer: Server git/text-generation adapter
 // Depends on: OpenCode SDK runtime, prompt builders, attachment projection, and server config.
 
-import { Effect, Exit, Fiber, Layer, Schema, Scope } from "effect";
+import { Effect, Exit, Fiber, Layer, Option, Schema, Scope } from "effect";
 import * as Semaphore from "effect/Semaphore";
-import { join } from "node:path";
 
 import type {
   ChatAttachment,
@@ -20,11 +19,13 @@ import { getModelSelectionStringOptionValue } from "@synara/shared/model";
 
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import { appendFileAttachmentsPromptBlock } from "../../provider/attachmentProjection.ts";
 import {
   OpenCodeRuntime,
   KILO_CLI_SPEC,
   OPENCODE_CLI_SPEC,
+  resolveDjlOpenCodeBinaryPath,
   type OpenCodeCompatibleCliSpec,
   type OpenCodeServerConnection,
   type OpenCodeServerProcess,
@@ -152,6 +153,7 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
     const openCodeRuntime = yield* OpenCodeRuntime;
+    const settingsService = yield* Effect.serviceOption(ServerSettingsService);
     const managedRootDir =
       config.provider === "opencode" ? serverConfig.managedOpenCodeRootDir : undefined;
     const idleFiberScope = yield* Effect.acquireRelease(Scope.make(), (scope) =>
@@ -352,7 +354,18 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
       }
 
       const providerOptions = input.providerOptions?.[config.provider];
-      const binaryPath = providerOptions?.binaryPath?.trim() || config.cliSpec.defaultBinaryPath;
+      const configuredBinary =
+        config.provider === "opencode" && Option.isSome(settingsService)
+          ? yield* settingsService.value.getSettings.pipe(
+              Effect.map((settings) => settings.providers.opencode.binaryPath),
+              Effect.orElseSucceed(() => ""),
+            )
+          : "";
+      const binaryPath =
+        providerOptions?.binaryPath?.trim() ||
+        (config.provider === "opencode"
+          ? resolveDjlOpenCodeBinaryPath(configuredBinary)
+          : config.cliSpec.defaultBinaryPath);
       const serverUrl = providerOptions?.serverUrl?.trim() || "";
       const serverPassword = providerOptions?.serverPassword?.trim() || "";
       const providerId = parsedModel.providerID;

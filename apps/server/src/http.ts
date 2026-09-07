@@ -1337,7 +1337,7 @@ const serveEditorIcon = Effect.fn(function* (input: {
   const payload = yield* resolveEditorIconHttpPayload(input);
   input.respond(
     payload.statusCode,
-    { "Content-Type": payload.contentType, ...(payload.headers ?? {}) },
+    { "Content-Type": payload.contentType, ...payload.headers },
     payload.body,
   );
 });

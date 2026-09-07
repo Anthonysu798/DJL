@@ -112,6 +112,7 @@ describe("Work task decider", () => {
     const readModel = await createWorkReadModel();
     const developerModel = {
       ...readModel,
+      // eslint-disable-next-line oxc/no-map-spread -- Keep caller-owned records immutable.
       projects: readModel.projects.map((project) => ({ ...project, kind: "project" as const })),
     };
 
@@ -137,6 +138,7 @@ describe("Work task decider", () => {
     const cancelledAt = "2026-07-13T10:02:00.000Z";
     const cancelledModel = {
       ...readModel,
+      // eslint-disable-next-line oxc/no-map-spread -- Keep caller-owned records immutable.
       threads: readModel.threads.map((thread) => ({
         ...thread,
         messages: [

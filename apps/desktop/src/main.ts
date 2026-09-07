@@ -58,7 +58,6 @@ import { acquireSharedStateLock } from "@synara/shared/sharedStateLock";
 import { ensureStaticSnapshot, findAsarArchivePath } from "@synara/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
-import { resolveBundledOpenCodePath } from "./bundledOpenCode";
 import {
   bundleSignatureFromStats,
   isBundleStable,
@@ -245,6 +244,8 @@ const LOG_DIR = Path.join(STATE_DIR, "logs");
 const LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;
 const LOG_FILE_MAX_FILES = 10;
 const APP_RUN_ID = Crypto.randomBytes(6).toString("hex");
+// Scope the lock to DJL's profile, rather than Electron's shared default profile.
+app.setPath("userData", resolveUserDataPath());
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 const AUTO_UPDATE_STARTUP_DELAY_MS = 15_000;
 const AUTO_UPDATE_POLL_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -969,22 +970,6 @@ function resolveAboutCommitHash(): string | null {
   aboutCommitHashCache = resolveEmbeddedCommitHash();
 
   return aboutCommitHashCache;
-}
-
-function resolveDiagnosticVersion(): string {
-  if (app.isPackaged) {
-    return app.getVersion();
-  }
-  try {
-    const raw = FS.readFileSync(Path.join(ROOT_DIR, "apps", "desktop", "package.json"), "utf8");
-    const parsed = JSON.parse(raw) as { version?: unknown };
-    if (typeof parsed.version === "string" && parsed.version.trim()) {
-      return parsed.version.trim();
-    }
-  } catch {
-    // The renderer build still exposes APP_VERSION if a development checkout is incomplete.
-  }
-  return app.getVersion();
 }
 
 function resolveBackendEntry(): string {
@@ -2549,9 +2534,6 @@ function backendEnv(): NodeJS.ProcessEnv {
       : {}),
     DJL_RUNNING_UNDER_TRANSLATION: localAiRuntimeInfo.runningUnderArm64Translation ? "1" : "0",
     SYNARA_AUTH_TOKEN: backendAuthToken,
-    ...(app.isPackaged
-      ? { DJL_OPENCODE_BINARY_PATH: resolveBundledOpenCodePath(process.resourcesPath) }
-      : {}),
     [SYNARA_BROWSER_USE_PIPE_ENV]: SYNARA_BROWSER_USE_PIPE_PATH,
   };
 }

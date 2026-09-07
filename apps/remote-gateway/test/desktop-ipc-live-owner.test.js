@@ -3108,7 +3108,7 @@ test("live owner applies Desktop thread settings and broadcasts phone read state
     serverSocket,
     (frame) => frame.type === "response" && frame.requestId === "settings-start-1",
   );
-  const startedTurn = codexRequests.filter((request) => request.method === "turn/start").at(-1);
+  const startedTurn = codexRequests.findLast((request) => request.method === "turn/start");
   assert.equal(startedTurn.params.model, "gpt-desktop-settings");
   assert.equal(startedTurn.params.effort, "high");
   assert.equal(startedTurn.params.serviceTier, "fast");
@@ -3692,13 +3692,16 @@ test("live owner keeps ownership when peer sends non-owner patch broadcasts", as
     (frame) => frame.type === "response" && frame.requestId === "peer-patch-start-1",
   );
   assert.equal(response.resultType, "success");
-  assert.deepEqual(codexRequests.filter((request) => request.method === "turn/start").at(-1), {
-    method: "turn/start",
-    params: {
-      threadId: "thread-peer-patch",
-      input: [{ type: "text", text: "still bridge-owned" }],
+  assert.deepEqual(
+    codexRequests.findLast((request) => request.method === "turn/start"),
+    {
+      method: "turn/start",
+      params: {
+        threadId: "thread-peer-patch",
+        input: [{ type: "text", text: "still bridge-owned" }],
+      },
     },
-  });
+  );
 });
 
 test("live owner yields ownership when a peer sends an untagged snapshot", async (t) => {

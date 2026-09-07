@@ -5,6 +5,7 @@
 
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
+import { RuntimeMode } from "./runtimePermissions";
 import { ProviderOptionDescriptor } from "./model";
 
 const ProviderDiscoveryKind = Schema.Literals([
@@ -23,6 +24,7 @@ export const OpenCodeModelProviderConnection = Schema.Struct({
   id: TrimmedNonEmptyString,
   name: TrimmedNonEmptyString,
   supportsApiKey: Schema.Boolean,
+  hasStoredCredential: Schema.optional(Schema.Boolean),
   connected: Schema.Boolean,
   modelCount: Schema.Number,
   error: Schema.optional(TrimmedNonEmptyString),
@@ -93,6 +95,15 @@ export const ProviderMentionReference = Schema.Struct({
 export type ProviderMentionReference = typeof ProviderMentionReference.Type;
 
 export const ProviderComposerCapabilities = Schema.Struct({
+  permissionModes: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        mode: RuntimeMode,
+        available: Schema.Boolean,
+        reason: Schema.optional(TrimmedNonEmptyString),
+      }),
+    ),
+  ),
   provider: ProviderDiscoveryKind,
   supportsSkillMentions: Schema.Boolean,
   supportsSkillDiscovery: Schema.Boolean,
@@ -289,6 +300,7 @@ export type ProviderReadPluginResult = typeof ProviderReadPluginResult.Type;
 export const ProviderListModelsInput = Schema.Struct({
   provider: ProviderDiscoveryKind,
   binaryPath: Schema.optional(TrimmedNonEmptyString),
+  homePath: Schema.optional(TrimmedNonEmptyString),
   apiEndpoint: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
   cwd: Schema.optional(TrimmedNonEmptyString),
@@ -329,6 +341,7 @@ export const ProviderModelDescriptor = Schema.Struct({
   defaultReasoningEffort: Schema.optional(TrimmedNonEmptyString),
   supportsFastMode: Schema.optional(Schema.Boolean),
   supportsThinkingToggle: Schema.optional(Schema.Boolean),
+  supportsAutoMode: Schema.optional(Schema.Boolean),
   contextWindowOptions: Schema.optional(Schema.Array(ProviderContextWindowDescriptor)),
   defaultContextWindow: Schema.optional(TrimmedNonEmptyString),
   inputModalities: Schema.optional(Schema.Array(ProviderModelModality)),

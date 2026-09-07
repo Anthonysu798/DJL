@@ -650,7 +650,7 @@ function listThreads(snapshot, params = {}) {
     : undefined;
   const data = readableThreads(snapshot)
     .slice()
-    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+    .toSorted((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
     .slice(0, limit)
     .map((thread) => appServerThread(thread, snapshot));
   return { data, nextCursor: null };
@@ -667,7 +667,7 @@ function listTurns(snapshot, threadId, params = {}) {
   if (!thread) throw new Error("DJL Electron chat was not found.");
   const turns = appServerTurns(thread);
   const direction = String(params.sortDirection || "desc").toLowerCase();
-  const ordered = direction === "asc" ? turns : turns.slice().reverse();
+  const ordered = direction === "asc" ? turns : turns.slice().toReversed();
   const limit = Number.isFinite(Number(params.limit))
     ? Math.max(1, Number(params.limit))
     : ordered.length;

@@ -313,6 +313,8 @@ export class WsTransport {
   }
 
   private async getClient(): Promise<RpcClientInstance> {
+    // During reconnect backoff clientPromise still belongs to the disposed session.
+    if (this.reconnectPromise) return this.reconnectPromise;
     try {
       return await this.clientPromise;
     } catch {

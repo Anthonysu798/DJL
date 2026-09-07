@@ -12,6 +12,7 @@ export interface TerminalModeReplayTracker {
   feed(data: string): void;
   resize(cols: number, rows: number): void;
   buildPreamble(): string;
+  buildScreen(): string;
   dispose(): void;
 }
 
@@ -31,6 +32,7 @@ interface KittyKeyboardReplayState {
   stack: number[];
 }
 
+// eslint-disable-next-line no-control-regex -- Parse Kitty keyboard terminal escapes.
 const KITTY_KEYBOARD_SEQUENCE_PATTERN = /(?:\u001b\[|\u009b)([<>=])([0-9;]*)u/g;
 
 function parseKittyFlags(rawParams: string): number {
@@ -72,6 +74,7 @@ function feedKittyKeyboardReplayState(state: KittyKeyboardReplayState, data: str
 export function createTerminalModeReplayTracker(
   cols: number,
   rows: number,
+  onResponse?: (data: string) => void,
 ): TerminalModeReplayTracker {
   const terminal = new HeadlessTerminal({
     cols,
@@ -88,6 +91,7 @@ export function createTerminalModeReplayTracker(
     throw new Error("@xterm/headless internals unavailable for terminal mode replay");
   }
 
+  if (onResponse) terminal.onData(onResponse);
   rawOptions.vtExtensions = { kittyKeyboard: true };
   const kittyKeyboardState: KittyKeyboardReplayState = {
     flags: 0,
@@ -103,6 +107,49 @@ export function createTerminalModeReplayTracker(
     resize(cols, rows) {
       if (terminal.cols === cols && terminal.rows === rows) return;
       terminal.resize(cols, rows);
+    },
+    buildScreen() {
+      const buffer = terminal.buffer.active;
+      const parts = [
+        buffer.type === "alternate" ? "\u001b[?1049h" : "\u001b[?1049l",
+        "\u001b[0m\u001b[?6l\u001b[4l\u001b[?7l\u001b[2J",
+      ];
+      let previousStyle = "";
+      for (let row = 0; row < terminal.rows; row++) {
+        const line = buffer.getLine(buffer.baseY + row);
+        if (!line) continue;
+        parts.push(`\u001b[${row + 1};1H`);
+        for (let col = 0; col < terminal.cols; col++) {
+          const cell = line.getCell(col);
+          if (!cell || cell.getWidth() === 0) continue;
+          const attrs = [0];
+          if (cell.isBold()) attrs.push(1);
+          if (cell.isDim()) attrs.push(2);
+          if (cell.isItalic()) attrs.push(3);
+          if (cell.isUnderline()) attrs.push(4);
+          if (cell.isInverse()) attrs.push(7);
+          if (cell.isInvisible()) attrs.push(8);
+          if (cell.isStrikethrough()) attrs.push(9);
+          for (const [mode, color, rgb, palette] of [
+            [38, cell.getFgColor(), cell.isFgRGB(), cell.isFgPalette()],
+            [48, cell.getBgColor(), cell.isBgRGB(), cell.isBgPalette()],
+          ] as const) {
+            if (rgb) attrs.push(mode, 2, (color >>> 16) & 255, (color >>> 8) & 255, color & 255);
+            else if (palette) attrs.push(mode, 5, color);
+          }
+          const style = attrs.join(";");
+          if (style !== previousStyle) {
+            parts.push(`\u001b[${style}m`);
+            previousStyle = style;
+          }
+          parts.push(cell.getChars() || " ");
+        }
+      }
+      parts.push(
+        `\u001b[0m\u001b[${buffer.cursorY + 1};${buffer.cursorX + 1}H\u001b[?7h`,
+        this.buildPreamble(),
+      );
+      return parts.join("");
     },
     buildPreamble() {
       const modes = terminal.modes;

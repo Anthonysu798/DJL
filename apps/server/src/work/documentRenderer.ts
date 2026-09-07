@@ -634,7 +634,7 @@ export class DocumentRenderManager {
             return { filePath, size: info.size, modifiedAt: info.mtimeMs };
           }),
       )
-    ).sort((left, right) => left.modifiedAt - right.modifiedAt);
+    ).toSorted((left, right) => left.modifiedAt - right.modifiedAt);
     let total = entries.reduce((sum, entry) => sum + entry.size, 0);
     for (const entry of entries) {
       if (now - entry.modifiedAt > CACHE_MAX_AGE_MS || total > MAX_CACHE_BYTES) {

@@ -19,6 +19,11 @@ import {
 } from "./lib/public-desktop-release.ts";
 import { preparePublicDesktopReleaseDirectory } from "./prepare-public-desktop-release.ts";
 
+const payload = (name: string): PublicDesktopReleaseAsset => ({
+  name,
+  contents: Buffer.from(`contents:${name}`),
+});
+
 const VERSION = "1.2.3";
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -36,10 +41,6 @@ function manifest(version: string, payloads: readonly PublicDesktopReleaseAsset[
 }
 
 function completeFixture(version = VERSION): PublicDesktopReleaseAsset[] {
-  const payload = (name: string): PublicDesktopReleaseAsset => ({
-    name,
-    contents: Buffer.from(`contents:${name}`),
-  });
   const armZip = payload(`DJL-${version}-arm64.zip`);
   const armDmg = payload(`DJL-${version}-arm64.dmg`);
   const x64Zip = payload(`DJL-${version}-x64.zip`);
@@ -430,6 +431,13 @@ describe("public desktop release preparation", () => {
       /desktop-ci:\n    name: desktop-ci\n    if: always\(\)\n    needs:[\s\S]*- runtime-smoke/,
     );
     assert.match(ciWorkflow, /package-smoke:[\s\S]*needs: desktop-ci/);
+    assert.match(ciWorkflow, /needs:[\s\S]*- installed-opencode/);
+    assert.match(
+      ciWorkflow,
+      /INSTALLED_OPENCODE_RESULT: \$\{\{ needs\.installed-opencode\.result \}\}/,
+    );
+    assert.match(ciWorkflow, /probe-installed-opencode\.ts/);
+    assert.match(ciWorkflow, /--compatibility/);
     for (const secret of ["AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"]) {
       assert.match(ciWorkflow, new RegExp(`secrets\\.${secret}`));
       assert.match(releaseWorkflow, new RegExp(`secrets\\.${secret}`));
@@ -466,7 +474,7 @@ describe("public desktop release preparation", () => {
       "build:desktop",
       "ci:desktop:preload",
       "test:desktop-smoke",
-      "ci:desktop:embedded-runtime",
+      "ci:desktop:no-bundled-opencode",
     ]) {
       assert.match(ciWorkflow, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }

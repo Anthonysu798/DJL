@@ -138,8 +138,62 @@ jobs:
       - name: Smoke-test Electron
         run: xvfb-run -a bun run test:desktop-smoke
 
-      - name: Verify embedded OpenCode runtime
-        run: bun run ci:desktop:embedded-runtime
+      - name: Verify OpenCode remains externally installed
+        run: bun run ci:desktop:no-bundled-opencode
+
+  installed-opencode:
+    name: Installed OpenCode compatibility (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            package: opencode-linux-x64
+          - runner: macos-14
+            package: opencode-darwin-arm64
+          - runner: macos-15-intel
+            package: opencode-darwin-x64
+          - runner: windows-2022
+            package: opencode-windows-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install frozen dependencies
+        uses: ./.github/actions/setup-desktop
+
+      # This isolated test dependency is never staged into the DJL application.
+      - name: Install official CLI fixture
+        shell: bash
+        run: npm install --prefix "$RUNNER_TEMP/djl-installed-opencode" --ignore-scripts --no-save "${{ matrix.package }}@1.18.29"
+
+      - name: Verify installed CLI compatibility
+        shell: bash
+        env:
+          OPENCODE_FIXTURE_PACKAGE: ${{ matrix.package }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { spawnSync } from "node:child_process";
+          import { join } from "node:path";
+          import { inspectInstalledOpenCodeProtocol } from "./apps/server/src/provider/openCodeInstalledProtocol.ts";
+          const binary = join(process.env.RUNNER_TEMP, "djl-installed-opencode", "node_modules", process.env.OPENCODE_FIXTURE_PACKAGE, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
+          const protocol = await inspectInstalledOpenCodeProtocol(binary, "1.18.29");
+          if (!protocol.compatible) throw new Error(protocol.compatibilityMessage);
+          for (const [provider, format] of [["ollama", "json"], ["lmstudio", "tagged"], ["deepseek", "dsml"]]) {
+            const result = spawnSync(process.execPath, ["scripts/probe-installed-opencode.ts", binary, "--compatibility", `--provider=${provider}`, `--format=${format}`], { stdio: "inherit" });
+            if (result.error) throw result.error;
+            if (result.status !== 0) process.exit(result.status ?? 1);
+          }
+          for (const flags of [["--native-scope"], ["--no-tools"], ["--native-scope", "--no-tools"]]) {
+            const result = spawnSync(process.execPath, ["scripts/probe-installed-opencode.ts", binary, "--compatibility", ...flags], { stdio: "inherit" });
+            if (result.error) throw result.error;
+            if (result.status !== 0) process.exit(result.status ?? 1);
+          }
+          NODE
 
   desktop-ci:
     name: desktop-ci
@@ -150,6 +204,7 @@ jobs:
       - renderer-tests
       - release-audit
       - runtime-smoke
+      - installed-opencode
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -160,6 +215,7 @@ jobs:
           RENDERER_TESTS_RESULT: ${{ needs.renderer-tests.result }}
           RELEASE_AUDIT_RESULT: ${{ needs.release-audit.result }}
           RUNTIME_SMOKE_RESULT: ${{ needs.runtime-smoke.result }}
+          INSTALLED_OPENCODE_RESULT: ${{ needs.installed-opencode.result }}
         run: |
           set -euo pipefail
           for result in \
@@ -167,7 +223,8 @@ jobs:
             "$DESKTOP_TESTS_RESULT" \
             "$RENDERER_TESTS_RESULT" \
             "$RELEASE_AUDIT_RESULT" \
-            "$RUNTIME_SMOKE_RESULT"
+            "$RUNTIME_SMOKE_RESULT" \
+            "$INSTALLED_OPENCODE_RESULT"
           do
             [[ "$result" == "success" ]] || {
               echo "A required desktop CI lane finished with: $result" >&2

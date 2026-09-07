@@ -590,7 +590,7 @@ function createDesktopIpcRouterServer({
         return canHandle ? { client: candidate, index } : null;
       }),
     );
-    return results.filter(Boolean).sort(compareDiscoveryTargets)[0]?.client || null;
+    return results.filter(Boolean).toSorted(compareDiscoveryTargets)[0]?.client || null;
   }
 
   function compareDiscoveryTargets(left, right) {

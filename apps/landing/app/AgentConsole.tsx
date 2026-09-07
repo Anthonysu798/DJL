@@ -132,6 +132,7 @@ export function AgentConsole({ c, initialTab }: { c: Content["console"]; initial
               </div>
               <pre className="font-mono text-[11.5px] leading-[1.75] text-[color:var(--paper-dim)]">
                 {codeLines.map((line, i) => (
+                  // oxlint-disable-next-line react/no-array-index-key -- Code rows are identified by their fixed line number, including duplicate blank lines.
                   <div key={i} className="grid grid-cols-[22px_1fr] gap-3">
                     <span className="text-right text-[color:var(--mute-2)]">{i + 1}</span>
                     <span>{line || " "}</span>

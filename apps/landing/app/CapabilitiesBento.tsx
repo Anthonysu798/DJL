@@ -179,8 +179,16 @@ export function CapabilitiesBento({ t }: { t: Content }) {
           <figure className="lp-cap-media">
             <div className="lp-cap-video-shell">
               <div className="lp-cap-video-bar" aria-hidden="true">
-                <span className="lp-cap-video-lights"><i /><i /><i /></span>
-                <span>{isZh ? "模型、语言与主题，一处切换" : "Models, languages, and themes — one place"}</span>
+                <span className="lp-cap-video-lights">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span>
+                  {isZh
+                    ? "模型、语言与主题，一处切换"
+                    : "Models, languages, and themes — one place"}
+                </span>
                 <span className="lp-cap-video-time">01:09</span>
               </div>
               <div className="lp-cap-video-viewport">

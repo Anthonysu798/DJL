@@ -25,7 +25,7 @@ export function DocsShell({ locale }: { locale: Locale }) {
       (entries) => {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          .toSorted((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]) setActiveId(visible[0].target.id);
       },
       // Active = section crossing the upper third of the viewport.

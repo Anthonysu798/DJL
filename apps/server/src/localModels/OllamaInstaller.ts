@@ -414,9 +414,12 @@ export async function installOllamaRuntime(
         try {
           await rename(backupPath, currentPath);
         } catch (restoreCause) {
+          // Both the replacement and restoration failures are retained by AggregateError.
+          // eslint-disable-next-line preserve-caught-error
           throw new AggregateError(
             [cause, restoreCause],
             `Could not replace Ollama. The previous installation is preserved at ${backupPath}.`,
+            { cause: restoreCause },
           );
         }
       }

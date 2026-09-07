@@ -92,7 +92,7 @@ function helperFindings(source: string, fileName: string): Omit<Finding, "file">
   const add = (node: ts.Node, value: string) => {
     const literal = value.replace(/\s+/g, " ").trim();
     if (!/[A-Za-z]{2,}/.test(literal) || /^[A-Z0-9]{2,6}$/.test(literal)) return;
-    if (!literal.includes(" ") && /[-_./:@\[\]{}]/.test(literal)) return;
+    if (!literal.includes(" ") && /[-_./:@[\]{}]/.test(literal)) return;
     findings.push({
       line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
       literal,
@@ -210,9 +210,12 @@ describe("Work, Kanban, Studio, and automation localization source audit classif
   it("finds no ordinary English UI copy in the active production scope", () => {
     const findings = productionFiles().flatMap((file) => {
       const source = readFileSync(join(ROOT, file), "utf8");
-      return collectWorkAutomationVisibleEnglish(source, file)
-        .filter((finding) => !NONTRANSLATABLE.has(`${file}:${finding.literal}`))
-        .map((finding) => ({ file, ...finding }));
+      return (
+        collectWorkAutomationVisibleEnglish(source, file)
+          .filter((finding) => !NONTRANSLATABLE.has(`${file}:${finding.literal}`))
+          // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
+          .map((finding) => ({ file, ...finding }))
+      );
     });
     const byArea = findings.reduce<Record<string, number>>((counts, finding) => {
       const area = finding.file.split("/").slice(0, 2).join("/");

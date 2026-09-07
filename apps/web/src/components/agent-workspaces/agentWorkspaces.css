@@ -1,0 +1,52 @@
+.agent-terminal-canvas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(340px, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  gap: 12px;
+  padding: 14px;
+  align-content: stretch;
+}
+.agent-terminal-cell {
+  min-width: 0;
+  min-height: 0;
+}
+.agent-terminal-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--background);
+}
+.agent-terminal-pane:focus-within {
+  border-color: var(--ring);
+}
+.agent-terminal-split {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+.agent-terminal-split > .agent-terminal-cell:first-child:nth-last-child(n + 3) {
+  grid-row: span 2;
+}
+.agent-terminal-canvas > .agent-terminal-cell:only-child {
+  grid-column: 1 / -1;
+}
+.agent-terminal-maximized {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(340px, 1fr);
+}
+.agent-terminal-maximized > .agent-terminal-cell {
+  grid-row: 1 !important;
+}
+@media (max-width: 1100px) {
+  .agent-terminal-canvas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-terminal-split > .agent-terminal-cell:first-child:nth-last-child(n + 3) {
+    grid-row: auto;
+  }
+}

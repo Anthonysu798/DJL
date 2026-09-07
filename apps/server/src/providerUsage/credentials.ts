@@ -7,6 +7,14 @@ import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import { promisify } from "node:util";
 
+const tryParse = (candidate: string): unknown | null => {
+  try {
+    return JSON.parse(candidate) as unknown;
+  } catch {
+    return null;
+  }
+};
+
 const execFileAsync = promisify(execFile);
 
 const KEYCHAIN_TIMEOUT_MS = 5_000;
@@ -127,13 +135,6 @@ export async function readKeychainPassword(input: {
  */
 export function decodeKeychainJson(value: string): unknown | null {
   const trimmed = value.trim();
-  const tryParse = (candidate: string): unknown | null => {
-    try {
-      return JSON.parse(candidate) as unknown;
-    } catch {
-      return null;
-    }
-  };
 
   const direct = tryParse(trimmed);
   if (direct !== null) {

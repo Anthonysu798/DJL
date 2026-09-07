@@ -50,6 +50,17 @@ class TerminalRuntimeRegistry {
     };
   }
 
+  peek(runtimeKey: string) {
+    const entry = this.entries.get(runtimeKey);
+    return entry
+      ? {
+          terminal: entry.terminal,
+          runtimeStatus: entry.runtimeStatus,
+          exited: entry.hasHandledExit,
+        }
+      : undefined;
+  }
+
   syncConfig(runtimeKey: string, config: TerminalRuntimeConfig): void {
     const entry = this.entries.get(runtimeKey);
     if (!entry) return;
@@ -80,7 +91,7 @@ class TerminalRuntimeRegistry {
   }
 
   disposeThread(threadId: string): void {
-    for (const runtimeKey of [...this.entries.keys()]) {
+    for (const runtimeKey of this.entries.keys()) {
       if (runtimeKey.startsWith(`${threadId}::`)) {
         this.dispose(runtimeKey);
       }
@@ -88,7 +99,8 @@ class TerminalRuntimeRegistry {
   }
 
   focus(runtimeKey: string): void {
-    this.entries.get(runtimeKey)?.terminal.focus();
+    const entry = this.entries.get(runtimeKey);
+    if (entry?.container?.getClientRects().length) entry.terminal.focus();
   }
 }
 

@@ -281,7 +281,10 @@ export const content = {
       body: "Install DJL, give it a model that runs on your own hardware, and keep approval over every change.",
       steps: [
         { k: "Install DJL", v: "One download for macOS or Windows." },
-        { k: "Add a local model", v: "DJL detects your hardware and installs the runtime for you." },
+        {
+          k: "Add a local model",
+          v: "DJL detects your hardware and installs the runtime for you.",
+        },
         { k: "Describe a task", v: "Read the plan, watch the tools, approve the diff." },
       ],
       cta: "Read the guide",

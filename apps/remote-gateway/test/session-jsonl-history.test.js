@@ -1,3 +1,6 @@
+const nestedTurn = (turnId) => ({
+  internal_chat_message_metadata_passthrough: { turn_id: turnId },
+});
 // FILE: session-jsonl-history.test.js
 // Purpose: Verifies local Codex JSONL history fallback pages for empty app-server turn lists.
 
@@ -379,9 +382,6 @@ test("parseSessionJsonlTurns keeps the active turn when a parallel sibling turn 
 });
 
 test("parseSessionJsonlTurns uses nested response-item turn ownership across interleaved turns", () => {
-  const nestedTurn = (turnId) => ({
-    internal_chat_message_metadata_passthrough: { turn_id: turnId },
-  });
   const content = [
     JSON.stringify({
       timestamp: "2026-07-08T18:00:00.000Z",

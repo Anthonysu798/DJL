@@ -82,7 +82,7 @@ export function usePdfViewerActions(previewUrl: string) {
     // entire desktop window/Space and is inconsistently permitted in embedded
     // development surfaces. A fixed viewer layer is immediate and reversible.
     setFallbackFullscreen((fullscreen) => !fullscreen);
-  }, [fallbackFullscreen, root]);
+  }, [root]);
 
   const print = useCallback(async () => {
     setPrintErrorState(null);

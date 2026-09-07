@@ -22,6 +22,23 @@ import {
   shouldGiveUp,
 } from "./resumableUpdateDownload";
 
+function makeCancellationToken() {
+  return {
+    cancelled: false,
+    createPromise<T>(
+      executor: (
+        resolve: (value: T) => void,
+        reject: (error: Error) => void,
+        onCancel: (handler: () => void) => void,
+      ) => void,
+    ): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
+        executor(resolve, reject, () => {});
+      });
+    },
+  };
+}
+
 describe("computeProgressInfo", () => {
   it("computes percent and throughput", () => {
     const info = computeProgressInfo({
@@ -435,23 +452,6 @@ describe("installResumableUpdateDownloader (integration)", () => {
         ) as unknown as ReturnType<UpdaterHttpExecutorLike["createRequest"]>,
       download: () => {
         throw new Error("download must be replaced by installResumableUpdateDownloader");
-      },
-    };
-  }
-
-  function makeCancellationToken() {
-    return {
-      cancelled: false,
-      createPromise<T>(
-        executor: (
-          resolve: (value: T) => void,
-          reject: (error: Error) => void,
-          onCancel: (handler: () => void) => void,
-        ) => void,
-      ): Promise<T> {
-        return new Promise<T>((resolve, reject) => {
-          executor(resolve, reject, () => {});
-        });
       },
     };
   }

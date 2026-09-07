@@ -127,6 +127,7 @@ export function isToolLifecycleItemType(value: string): value is ToolLifecycleIt
 }
 
 export const CanonicalItemType = Schema.Literals([
+  "approval_review",
   "user_message",
   "assistant_message",
   "reasoning",

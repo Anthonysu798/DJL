@@ -44,6 +44,38 @@ it.layer(NodeServices.layer)("ensureNodePtySpawnHelperExecutable", (it) => {
     }),
   );
 
+  it.effect("preserves Windows batch command-line encoding at the node-pty boundary", () => {
+    let capturedArgs: string | string[] | undefined;
+    const args = ["/d", "/s", "/v:off", "/c", 'call "C:\\Program Files\\codex.cmd" "login"'];
+    return Effect.gen(function* () {
+      const adapter = yield* PtyAdapter;
+      yield* adapter
+        .spawn({
+          shell: "cmd.exe",
+          args,
+          windowsVerbatimArguments: true,
+          cwd: process.cwd(),
+          cols: 80,
+          rows: 24,
+          env: {},
+        })
+        .pipe(Effect.flip);
+      assert.equal(capturedArgs, args.join(" "));
+    }).pipe(
+      Effect.provide(
+        makeNodePtyLayer(
+          async () =>
+            ({
+              spawn: (_file: string, args: string[] | string) => {
+                capturedArgs = args;
+                throw new Error("stop after capturing launch arguments");
+              },
+            }) as typeof import("node-pty"),
+        ),
+      ),
+    );
+  });
+
   it.effect("defers node-pty native loading until a terminal is spawned", () => {
     let loadCalls = 0;
 

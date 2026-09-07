@@ -319,7 +319,10 @@ function ProviderUpdateNotifications() {
               })
             : t("providerUpdates.updatingCount", { count: providers.length }),
         actionProps: undefined,
-        data: { onClose: dismissProgressToast },
+        data: {
+          onClose: dismissProgressToast,
+          providerUpdate: providers.map((entry) => entry.provider),
+        },
         timeout: 0,
       });
 
@@ -406,6 +409,7 @@ function ProviderUpdateNotifications() {
               : failureLines,
           data: {
             onClose: dismissProgressToast,
+            providerUpdate: providers.map((entry) => entry.provider),
             ...(manualCommands.length > 0 ? { copyText: manualCommands.join("\n") } : {}),
           },
           timeout: 0,
@@ -423,7 +427,10 @@ function ProviderUpdateNotifications() {
               })
             : t("providerUpdates.updatedCount", { count: providers.length }),
         description: t("providerUpdates.refreshedDescription"),
-        data: { onClose: dismissProgressToast },
+        data: {
+          onClose: dismissProgressToast,
+          providerUpdate: providers.map((entry) => entry.provider),
+        },
         timeout: 6000,
       });
     },
@@ -488,11 +495,12 @@ function ProviderUpdateNotifications() {
           }
           void navigate({
             to: "/settings",
-            search: { section: "providers", target: SETTINGS_TARGETS.providerUpdates },
+            search: { section: "accounts", target: SETTINGS_TARGETS.providerUpdates },
           });
         },
       },
       data: {
+        providerUpdate: outdatedProviders.map((entry) => entry.provider),
         onClose: closeTrackedPrompt,
         secondaryActionProps: {
           children: t("providerUpdates.updateAll"),

@@ -1905,30 +1905,36 @@ function flushPendingUserMessageNotifications(state, turnId) {
   }
 
   const resolvedTurnId = readString(turnId) || readString(state.activeTurnId);
-  return messages
-    .map((pending) => ({ ...pending, message: visibleUserPromptFromInputEntries(pending.message) }))
-    .filter((pending) => pending.message)
-    .filter((pending) => {
-      const dedupeKey = userMessageOccurrenceKey(state, resolvedTurnId, pending.message, {
-        isResponseItem: pending.isResponseItem === true,
-      });
-      if (state.emittedUserMessageKeys.has(dedupeKey)) {
-        return false;
-      }
-      state.emittedUserMessageKeys.add(dedupeKey);
-      return true;
-    })
-    .map((pending) =>
-      createNotification("codex/event/user_message", {
-        threadId: state.threadId,
-        // An empty turnId reads as "no turn identity" on the phone and blocks
-        // dedup against the turn-bound row of the same prompt; omit it instead.
-        ...(resolvedTurnId ? { turnId: resolvedTurnId } : {}),
-        message: pending.message,
-        ...(pending.id ? { id: pending.id } : {}),
-        ...timestampParams(pending.timestamp),
-      }),
-    );
+  return (
+    messages
+      // eslint-disable-next-line oxc/no-map-spread -- Preserve source records while creating normalized copies.
+      .map((pending) => ({
+        ...pending,
+        message: visibleUserPromptFromInputEntries(pending.message),
+      }))
+      .filter((pending) => pending.message)
+      .filter((pending) => {
+        const dedupeKey = userMessageOccurrenceKey(state, resolvedTurnId, pending.message, {
+          isResponseItem: pending.isResponseItem === true,
+        });
+        if (state.emittedUserMessageKeys.has(dedupeKey)) {
+          return false;
+        }
+        state.emittedUserMessageKeys.add(dedupeKey);
+        return true;
+      })
+      .map((pending) =>
+        createNotification("codex/event/user_message", {
+          threadId: state.threadId,
+          // An empty turnId reads as "no turn identity" on the phone and blocks
+          // dedup against the turn-bound row of the same prompt; omit it instead.
+          ...(resolvedTurnId ? { turnId: resolvedTurnId } : {}),
+          message: pending.message,
+          ...(pending.id ? { id: pending.id } : {}),
+          ...timestampParams(pending.timestamp),
+        }),
+      )
+  );
 }
 
 function readUserMessageTimestamp(entry, payload = {}) {

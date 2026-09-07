@@ -243,7 +243,6 @@ export function useKanbanBoard(): KanbanBoard {
       projectIdAliases,
       terminalEntryThreadIds,
       optimisticDispatchByThreadId,
-      t,
     ],
   );
 }

@@ -5,7 +5,12 @@
 
 import type { ProviderKind } from "@synara/contracts";
 
-export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = ["opencode"];
+export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = [
+  "opencode",
+  "codex",
+  "claudeAgent",
+  "cursor",
+];
 
 const PROVIDER_KIND_SET: ReadonlySet<ProviderKind> = new Set(DEFAULT_PROVIDER_ORDER);
 

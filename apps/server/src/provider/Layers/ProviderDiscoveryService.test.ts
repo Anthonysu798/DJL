@@ -1,7 +1,7 @@
 // FILE: ProviderDiscoveryService.test.ts
 // Purpose: Verifies the discovery service merges provider-native skills with the
 //          unified Synara catalog, filters user-disabled skills, and reports
-//          skill discovery as supported for every provider.
+//          skill support consistently with adapter metadata acceptance.
 // Layer: Server provider tests
 
 import { mkdtempSync, rmSync } from "node:fs";
@@ -31,6 +31,8 @@ import { ProviderAdapterRequestError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "../Services/ProviderAdapter.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import { ProviderDiscoveryService } from "../Services/ProviderDiscoveryService.ts";
+import { makeNativeAdapter } from "../../harnesses/native/adapter";
+import { ThreadId } from "@synara/contracts";
 import { clearSkillsCatalogCacheForTests } from "../skillsCatalog.ts";
 import { ProviderDiscoveryServiceLive } from "./ProviderDiscoveryService.ts";
 
@@ -179,6 +181,52 @@ describe("ProviderDiscoveryService.listSkills", () => {
 });
 
 describe("ProviderDiscoveryService.getComposerCapabilities", () => {
+  it.each(["codex", "claudeAgent", "cursor"] as const)(
+    "does not advertise skill metadata rejected by fresh %s sends",
+    async (provider) => {
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* makeNativeAdapter(provider, async () => ({
+              id: "native",
+              send: async () => {},
+              close: () => {},
+              interrupt: async () => {},
+              models: async () => ({ models: [] }),
+            }));
+            const layer = ProviderDiscoveryServiceLive.pipe(
+              Layer.provideMerge(
+                Layer.mergeAll(
+                  makeConfigLayer(),
+                  ServerSettingsService.layerTest(),
+                  makeRegistryLayer(adapter),
+                ).pipe(Layer.provideMerge(NodeServices.layer)),
+              ),
+            );
+            const capabilities = yield* Effect.gen(function* () {
+              const discovery = yield* ProviderDiscoveryService;
+              return yield* discovery.getComposerCapabilities({ provider });
+            }).pipe(Effect.provide(layer));
+            expect(capabilities.supportsSkillMentions).toBe(false);
+            expect(capabilities.supportsSkillDiscovery).toBe(false);
+            expect(capabilities.supportsRuntimeModelList).toBe(true);
+            const threadId = ThreadId.makeUnsafe("skill-contract");
+            yield* adapter.startSession({ threadId, cwd, runtimeMode: "approval-required" });
+            const failed = yield* adapter
+              .sendTurn({
+                threadId,
+                input: "hello",
+                skills: [{ name: "review", path: "/tmp/SKILL.md" }],
+              })
+              .pipe(Effect.result);
+            expect(failed._tag).toBe("Failure");
+            yield* adapter.sendTurn({ threadId, input: "hello without skills" });
+          }),
+        ),
+      );
+    },
+  );
+
   it("reports skill discovery as supported even when the adapter declines it", async () => {
     const baseLayer = Layer.mergeAll(
       makeConfigLayer(),

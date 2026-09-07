@@ -178,7 +178,9 @@ describe("contextWindow", () => {
 
     expect(snapshot?.usedTokens).toBe(0);
     expect(snapshot?.maxTokens).toBe(1_000_000);
-    expect(snapshot?.usedPercentage).toBe(0);
+    expect(snapshot?.usedPercentage).toBeNull();
+    expect(snapshot?.usageAvailable).toBe(false);
+    expect(deriveContextWindowMeterDisplay(snapshot!).hasReliableTokenRatio).toBe(false);
   });
 
   it("derives meter display labels without inventing token ratios", () => {

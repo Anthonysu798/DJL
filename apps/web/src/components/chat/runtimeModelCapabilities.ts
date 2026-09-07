@@ -76,11 +76,9 @@ export function getRuntimeAwareModelCapabilities(input: {
   runtimeModel?: ProviderModelDescriptor | undefined;
 }): ModelCapabilities {
   const staticCapabilities = getModelCapabilities(input.provider, input.model);
-  // Runtime discovery is authoritative when available; the static table is only a startup fallback.
+  // Explicit runtime flags override the static table; omitted metadata keeps known capabilities.
   const supportsFastMode =
-    (input.provider === "codex" || input.provider === "cursor") && input.runtimeModel
-      ? input.runtimeModel.supportsFastMode === true
-      : staticCapabilities.supportsFastMode;
+    input.runtimeModel?.supportsFastMode ?? staticCapabilities.supportsFastMode;
   const supportsThinkingToggle =
     input.runtimeModel?.supportsThinkingToggle ?? staticCapabilities.supportsThinkingToggle;
   const contextWindowOptions =
@@ -94,13 +92,13 @@ export function getRuntimeAwareModelCapabilities(input: {
   const runtimeEfforts = input.runtimeModel?.supportedReasoningEfforts;
   if (
     (input.provider !== "codex" &&
+      input.provider !== "claudeAgent" &&
       input.provider !== "cursor" &&
       input.provider !== "grok" &&
       input.provider !== "kilo" &&
       input.provider !== "opencode" &&
       input.provider !== "pi") ||
-    !runtimeEfforts ||
-    runtimeEfforts.length === 0
+    !runtimeEfforts
   ) {
     return {
       ...staticCapabilities,
@@ -127,6 +125,16 @@ export function getRuntimeAwareModelCapabilities(input: {
       ...(effort.value === runtimeDefaultEffort ? { isDefault: true as const } : {}),
     };
   });
+  if (input.provider === "claudeAgent") {
+    runtimeOptions.push(
+      ...staticCapabilities.reasoningEffortLevels.filter(
+        (option) =>
+          (option.value === "ultracode" &&
+            runtimeEfforts.some((effort) => effort.value === "xhigh")) ||
+          (option.value === "ultrathink" && runtimeEfforts.length > 0),
+      ),
+    );
+  }
 
   if (input.provider === "kilo" || input.provider === "opencode") {
     return {

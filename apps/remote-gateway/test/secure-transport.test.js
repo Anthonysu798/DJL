@@ -50,7 +50,7 @@ test("pairing QR contains public bootstrap metadata but no relay authentication 
 
   const payload = secureTransport.createPairingPayload();
 
-  assert.deepEqual(Object.keys(payload).sort(), [
+  assert.deepEqual(Object.keys(payload).toSorted(), [
     "displayName",
     "expiresAt",
     "macDeviceId",

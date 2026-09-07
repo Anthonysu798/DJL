@@ -4313,6 +4313,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
               ...state.draftsByThreadId,
               [threadId]: {
                 ...current,
+                // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
                 browserFindings: current.browserFindings.map((entry) =>
                   entry.id === findingId &&
                   Schema.is(BrowserFindingDraft)({ ...entry, comment: normalized })

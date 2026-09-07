@@ -24,8 +24,8 @@ export function usePdfSearch(input: {
   const [matchIndex, setMatchIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
 
+  const { document, numPages, onJumpToPage } = input;
   useEffect(() => {
-    const document = input.document;
     const normalizedQuery = query.trim().toLocaleLowerCase();
     let cancelled = false;
     if (!document || normalizedQuery.length === 0) {
@@ -40,7 +40,7 @@ export function usePdfSearch(input: {
     setIsSearching(true);
     void (async () => {
       const nextMatches: number[] = [];
-      for (let pageNumber = 1; pageNumber <= input.numPages; pageNumber += 1) {
+      for (let pageNumber = 1; pageNumber <= numPages; pageNumber += 1) {
         const page = await document.getPage(pageNumber);
         const content = await page.getTextContent();
         const text = content.items
@@ -53,7 +53,7 @@ export function usePdfSearch(input: {
       if (cancelled) return;
       setMatches(nextMatches);
       setMatchIndex(nextMatches.length > 0 ? 0 : -1);
-      if (nextMatches[0]) input.onJumpToPage(nextMatches[0]);
+      if (nextMatches[0]) onJumpToPage(nextMatches[0]);
     })()
       .catch(() => {
         if (!cancelled) {
@@ -68,7 +68,7 @@ export function usePdfSearch(input: {
     return () => {
       cancelled = true;
     };
-  }, [input.document, input.numPages, input.onJumpToPage, query]);
+  }, [document, numPages, onJumpToPage, query]);
 
   const move = useCallback(
     (direction: 1 | -1) => {
@@ -77,9 +77,9 @@ export function usePdfSearch(input: {
         matchIndex < 0 ? 0 : (matchIndex + direction + matches.length) % matches.length;
       setMatchIndex(nextIndex);
       const pageNumber = matches[nextIndex];
-      if (pageNumber) input.onJumpToPage(pageNumber);
+      if (pageNumber) onJumpToPage(pageNumber);
     },
-    [input, matchIndex, matches],
+    [onJumpToPage, matchIndex, matches],
   );
 
   return {

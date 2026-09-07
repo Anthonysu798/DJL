@@ -749,6 +749,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           threadId,
           provider: parsed.provider ?? "codex",
         };
+        if (input.runtimeMode === "bypass-permissions" && input.provider !== "claudeAgent")
+          return yield* toValidationError(
+            "ProviderService.startSession",
+            "Bypass permissions is only supported by Claude Code",
+          );
         clearRuntimeIdleTimer(threadId);
         yield* waitForRuntimeIdleStop(threadId);
         const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));

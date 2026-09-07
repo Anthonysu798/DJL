@@ -1,5 +1,5 @@
 // FILE: OpenCodeModelsSettingsPanel.tsx
-// Purpose: Manage DJL-owned OpenCode API credentials and the authenticated model catalog.
+// Purpose: Manage shared OpenCode provider credentials and the authenticated model catalog.
 
 import type { OpenCodeModelProviderConnection } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -111,49 +111,64 @@ function ProviderCredentialRow(props: {
       <DisclosureRegion open={props.open}>
         <div className="border-t border-[color:var(--color-border)] px-4 py-3">
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              type="password"
-              size="sm"
-              variant="soft"
-              value={props.apiKey}
-              onChange={(event) => props.onApiKeyChange(event.target.value)}
-              placeholder={
-                props.provider.connected
-                  ? t("models.replacementKeyPlaceholder")
-                  : t("models.keyPlaceholder")
-              }
-              aria-label={t("models.keyAriaLabel", { provider: props.provider.name })}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={props.busy || props.apiKey.trim().length === 0}
-              onClick={props.onSave}
-            >
-              {props.provider.connected
-                ? t("models.replace", { ns: "settings" })
-                : t("actions.save", { ns: "common" })}
-            </Button>
+            {props.provider.supportsApiKey ? (
+              <>
+                <Input
+                  type="password"
+                  size="sm"
+                  variant="soft"
+                  value={props.apiKey}
+                  onChange={(event) => props.onApiKeyChange(event.target.value)}
+                  placeholder={
+                    props.provider.connected
+                      ? t("models.replacementKeyPlaceholder")
+                      : t("models.keyPlaceholder")
+                  }
+                  aria-label={t("models.keyAriaLabel", { provider: props.provider.name })}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={props.busy || props.apiKey.trim().length === 0}
+                  onClick={props.onSave}
+                >
+                  {props.provider.connected
+                    ? t("models.replace", { ns: "settings" })
+                    : t("actions.save", { ns: "common" })}
+                </Button>
+              </>
+            ) : null}
             {props.provider.connected ? (
               <>
                 <Button size="sm" variant="outline" disabled={props.busy} onClick={props.onTest}>
                   {t("models.test")}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive-outline"
-                  disabled={props.busy}
-                  onClick={props.onDisconnect}
-                >
-                  {t("models.disconnect")}
-                </Button>
+                {props.provider.hasStoredCredential !== false ? (
+                  <Button
+                    size="sm"
+                    variant="destructive-outline"
+                    disabled={props.busy}
+                    onClick={props.onDisconnect}
+                  >
+                    {t("models.disconnect")}
+                  </Button>
+                ) : null}
               </>
             ) : null}
           </div>
+          {!props.provider.supportsApiKey ? (
+            <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "mt-2")}>
+              {t("accounts.openCodeSharedLogin")}
+            </p>
+          ) : null}
           <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "mt-2")}>
-            {t("models.keyPrivacy")}
+            {t(
+              props.provider.hasStoredCredential === false
+                ? "models.externalCredential"
+                : "models.keyPrivacy",
+            )}
           </p>
           {props.provider.connected && props.models.length > 0 ? (
             <div className={cn(SETTINGS_INSET_LIST_CLASS_NAME, "mt-3 max-h-44 overflow-y-auto")}>
@@ -196,7 +211,7 @@ export function OpenCodeModelsSettingsPanel(props: {
       enabled: connectedCount > 0,
     }),
   );
-  const models = modelsQuery.data?.models ?? [];
+  const models = useMemo(() => modelsQuery.data?.models ?? [], [modelsQuery.data?.models]);
 
   useEffect(() => {
     const providerData = connectionsQuery.data;

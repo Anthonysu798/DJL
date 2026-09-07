@@ -5,7 +5,7 @@
 // Depends on: apps/desktop package metadata, electron-builder, and desktop update config.
 
 import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import rootPackageJson from "../package.json" with { type: "json" };
@@ -37,12 +37,7 @@ import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeMacDmgUpdateMetadata } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
-import {
-  DJL_OPENCODE_VERSION,
-  prepareVendoredOpenCode,
-  type OpenCodeTargetArch,
-  type OpenCodeTargetPlatform,
-} from "./lib/vendored-opencode.ts";
+import { assertNoBundledOpenCode } from "./check-no-bundled-opencode.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -559,7 +554,6 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     directories: {
       buildResources: "apps/desktop/resources",
     },
-    extraResources: [{ from: "apps/desktop/prod-resources/opencode", to: "opencode" }],
     ...(configuredRemoteRelayUrl
       ? { extraMetadata: { djlRemoteRelayUrl: configuredRemoteRelayUrl } }
       : {}),
@@ -623,53 +617,6 @@ const assertPlatformBuildResources = Effect.fn("assertPlatformBuildResources")(f
     return;
   }
 });
-
-function resolveOpenCodeTargetPlatform(
-  platform: typeof BuildPlatform.Type,
-): OpenCodeTargetPlatform {
-  if (platform === "mac") return "darwin";
-  if (platform === "win") return "win32";
-  return "linux";
-}
-
-function stageBundledOpenCode(input: {
-  repoRoot: string;
-  stageAppDir: string;
-  platform: typeof BuildPlatform.Type;
-  arch: typeof BuildArch.Type;
-}): void {
-  const platform = resolveOpenCodeTargetPlatform(input.platform);
-  const outputDir = join(input.stageAppDir, "apps", "desktop", "prod-resources", "opencode");
-  const output = join(outputDir, platform === "win32" ? "opencode.exe" : "opencode");
-  mkdirSync(outputDir, { recursive: true });
-
-  if (input.arch === "universal") {
-    if (platform !== "darwin") throw new Error("Universal OpenCode builds are macOS-only.");
-    const arm64 = prepareVendoredOpenCode({ repoRoot: input.repoRoot, platform, arch: "arm64" });
-    const x64 = prepareVendoredOpenCode({ repoRoot: input.repoRoot, platform, arch: "x64" });
-    const lipo = spawnSync("lipo", ["-create", arm64, x64, "-output", output], {
-      stdio: "inherit",
-    });
-    if (lipo.status !== 0) throw new Error("Could not create the universal OpenCode binary.");
-  } else {
-    const binary = prepareVendoredOpenCode({
-      repoRoot: input.repoRoot,
-      platform,
-      arch: input.arch as OpenCodeTargetArch,
-    });
-    copyFileSync(binary, output);
-  }
-  if (platform !== "win32") chmodSync(output, 0o755);
-
-  if (platform === process.platform && input.arch !== "universal" && input.arch === process.arch) {
-    const version = spawnSync(output, ["--version"], { encoding: "utf8" });
-    if (version.status !== 0 || version.stdout.trim() !== DJL_OPENCODE_VERSION) {
-      throw new Error(
-        `Bundled OpenCode version mismatch: expected ${DJL_OPENCODE_VERSION}, received ${version.stdout.trim() || "no output"}.`,
-      );
-    }
-  }
-}
 
 const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   options: ResolvedBuildOptions,
@@ -802,19 +749,6 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   // electron-builder is filtering out stageResourcesDir directory in the AppImage for production
   yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
 
-  yield* Effect.log(`[desktop-artifact] Building bundled OpenCode ${DJL_OPENCODE_VERSION}...`);
-  yield* Effect.try({
-    try: () =>
-      stageBundledOpenCode({
-        repoRoot,
-        stageAppDir,
-        platform: options.platform,
-        arch: options.arch,
-      }),
-    catch: (cause) =>
-      new BuildScriptError({ message: "Could not stage the bundled OpenCode runtime.", cause }),
-  });
-
   const desktopBuildConfig = yield* createBuildConfig(
     options.platform,
     options.target,
@@ -885,6 +819,12 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
         message: "Staged production dependencies failed target architecture verification.",
         cause,
       }),
+  });
+
+  yield* Effect.try({
+    try: () => assertNoBundledOpenCode(stageAppDir),
+    catch: (cause) =>
+      new BuildScriptError({ message: "Packaged OpenCode must be externally installed.", cause }),
   });
 
   if (options.platform === "linux") {

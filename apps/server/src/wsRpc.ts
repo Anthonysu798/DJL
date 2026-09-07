@@ -1,3 +1,16 @@
+import {
+  listLegacyOpenCodeCredentials,
+  transferLegacyOpenCodeCredentials,
+} from "./harnesses/openCodeCredentialTransfer";
+import { resolveDjlOpenCodeBinaryPath } from "./provider/opencodeRuntime";
+import { createAutomaticHarnessUpdater } from "./harnesses/automaticUpdates";
+import { readProfileAccount } from "./harnesses/profileAccounts";
+import {
+  createHarnessToolsController,
+  inspectHarnessTool,
+  maintainHarnessTool,
+} from "./harnesses/tools";
+import { openProfileTerminal } from "./harnesses/terminalProfiles";
 import { execFile } from "node:child_process";
 
 import {
@@ -30,6 +43,8 @@ import { SessionCredentialService } from "./auth/Services/SessionCredentialServi
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
 import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
 import { ServerConfig } from "./config";
+import { listHarnessAccounts } from "./harnesses/accounts";
+import { createHarnessLoginController } from "./harnesses/login";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { listStudioThreadOutputs } from "./studioOutputs";
 import {
@@ -336,12 +351,77 @@ export const makeWsRpcLayer = () =>
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
       const providerHealth = yield* ProviderHealth;
+      const isHarnessMaintenanceIdle = () =>
+        Effect.runPromise(
+          Effect.gen(function* () {
+            if (yield* terminalManager.hasRunningProcesses) return false;
+            const sessions = yield* providerService.listSessions();
+            return !sessions.some(
+              (session) =>
+                session.status === "running" ||
+                session.status === "connecting" ||
+                session.activeTurnId !== undefined,
+            );
+          }),
+        );
+      const harnessTools = createHarnessToolsController({
+        isIdle: isHarnessMaintenanceIdle,
+        inspect: (id) =>
+          Effect.runPromise(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) => inspectHarnessTool(id, settings)),
+              Effect.provideService(FileSystem.FileSystem, fileSystem),
+            ),
+          ),
+        run: (before) =>
+          Effect.runPromise(
+            before.installed && before.id !== "opencode"
+              ? providerHealth.updateProvider({ provider: before.id }).pipe(
+                  Effect.flatMap((result) => {
+                    const state = result.providers.find(
+                      (item) => item.provider === before.id,
+                    )?.updateState;
+                    return state?.status === "succeeded"
+                      ? Effect.void
+                      : Effect.fail(new Error(state?.message ?? "Provider update failed."));
+                  }),
+                )
+              : serverSettings.getSettings.pipe(
+                  Effect.flatMap((settings) => maintainHarnessTool(before, settings)),
+                  Effect.provideService(FileSystem.FileSystem, fileSystem),
+                ),
+          ),
+      });
       const providerService = yield* ProviderService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
       const runtimeStartup = yield* ServerRuntimeStartup;
       const serverEnvironment = yield* ServerEnvironment;
       const serverSettings = yield* ServerSettingsService;
       const terminalManager = yield* TerminalManager;
+      const automaticUpdater = createAutomaticHarnessUpdater({
+        settings: () => Effect.runPromise(serverSettings.getSettings),
+        isIdle: isHarnessMaintenanceIdle,
+        list: harnessTools.list,
+        maintain: (input) => harnessTools.maintain(input),
+        report: (provider, succeeded) => {
+          void Effect.runPromise(
+            Effect.logInfo("Automatic provider maintenance", { provider, succeeded }),
+          );
+          if (succeeded) void Effect.runPromise(providerHealth.refresh).catch(() => undefined);
+        },
+      });
+      yield* Effect.addFinalizer(() => Effect.sync(() => automaticUpdater.stop()));
+      yield* Effect.forever(
+        Effect.sleep(60_000).pipe(Effect.andThen(Effect.promise(() => automaticUpdater.tick()))),
+      ).pipe(Effect.forkScoped);
+      const harnessLogin = createHarnessLoginController({
+        terminal: terminalManager,
+        cwd: config.homeDir,
+        managedRootDir: config.managedOpenCodeRootDir,
+      });
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(() => harnessLogin.dispose()).pipe(Effect.catchCause(() => Effect.void)),
+      );
       const textGeneration = yield* TextGeneration;
       const workspaceEntries = yield* WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem;
@@ -471,6 +551,9 @@ export const makeWsRpcLayer = () =>
         terminalId: string;
         data: string;
       }) {
+        // Workspace PTYs are not orchestration threads. Avoid chat-title work
+        // on every keystroke in a multi-terminal workspace.
+        if (input.threadId.startsWith("agent-workspace-")) return;
         const readModel = yield* orchestrationEngine.getReadModel();
         const thread = readModel.threads.find((entry) => entry.id === input.threadId);
         if (!thread) {
@@ -1015,11 +1098,12 @@ export const makeWsRpcLayer = () =>
         [WS_METHODS.projectMemoryList]: (input) =>
           rpcEffect(
             projectMemory
-              .list(input.projectId, {
-                ...(input.includeTaskHistory === undefined
+              .list(
+                input.projectId,
+                input.includeTaskHistory === undefined
                   ? {}
-                  : { includeTaskHistory: input.includeTaskHistory }),
-              })
+                  : { includeTaskHistory: input.includeTaskHistory },
+              )
               .pipe(Effect.map((items) => ({ items: [...items] }))),
             "Failed to list project memory",
           ),
@@ -1203,7 +1287,18 @@ export const makeWsRpcLayer = () =>
         [WS_METHODS.terminalOpen]: (input) =>
           rpcEffect(
             resetTerminalTitleBuffer(input.threadId, input.terminalId ?? DEFAULT_TERMINAL_ID).pipe(
-              Effect.andThen(terminalManager.open(input)),
+              Effect.andThen(
+                serverSettings.getSettings.pipe(
+                  Effect.flatMap((settings) =>
+                    openProfileTerminal(
+                      input,
+                      settings,
+                      path.join(config.baseDir, "userdata", "terminal-accounts"),
+                      terminalManager,
+                    ),
+                  ),
+                ),
+              ),
             ),
             "Failed to open terminal",
           ),
@@ -1518,6 +1613,93 @@ export const makeWsRpcLayer = () =>
               ),
             ),
             "Failed to list OpenCode model providers",
+          ),
+        [WS_METHODS.harnessListTools]: () =>
+          rpcEffect(
+            Effect.tryPromise(() => harnessTools.list()),
+            "Failed to check provider tools",
+          ),
+        [WS_METHODS.harnessMaintainTool]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => harnessTools.maintain(input)).pipe(
+              Effect.tap(() => providerHealth.refresh),
+            ),
+            "Failed to install or update provider tool",
+          ),
+        [WS_METHODS.harnessProfileAccount]: (input) =>
+          rpcEffect(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) =>
+                Effect.tryPromise(() =>
+                  readProfileAccount(
+                    input,
+                    settings,
+                    path.join(config.baseDir, "userdata", "terminal-accounts"),
+                  ),
+                ),
+              ),
+            ),
+            "Failed to check profile account",
+          ),
+        [WS_METHODS.harnessListAccounts]: () =>
+          rpcEffect(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) =>
+                Effect.promise(() => listHarnessAccounts(settings, config.managedOpenCodeRootDir)),
+              ),
+            ),
+            "Failed to check harness accounts",
+          ),
+        [WS_METHODS.harnessListLegacyOpenCodeCredentials]: () =>
+          rpcEffect(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) =>
+                Effect.tryPromise(() =>
+                  listLegacyOpenCodeCredentials({
+                    legacyRootDir: config.managedOpenCodeRootDir,
+                    binaryPath: resolveDjlOpenCodeBinaryPath(
+                      settings.providers.opencode.binaryPath,
+                    ),
+                  }),
+                ),
+              ),
+            ),
+            "Failed to check legacy OpenCode credentials",
+          ),
+        [WS_METHODS.harnessTransferLegacyOpenCodeCredentials]: () =>
+          rpcEffect(
+            serverSettings.getSettings.pipe(
+              Effect.flatMap((settings) =>
+                Effect.tryPromise(() =>
+                  transferLegacyOpenCodeCredentials({
+                    legacyRootDir: config.managedOpenCodeRootDir,
+                    binaryPath: resolveDjlOpenCodeBinaryPath(
+                      settings.providers.opencode.binaryPath,
+                    ),
+                  }),
+                ),
+              ),
+              Effect.tap(() => providerHealth.refresh),
+            ),
+            "Failed to transfer legacy OpenCode credentials",
+          ),
+        [WS_METHODS.harnessStartLogin]: (input) =>
+          rpcEffect(
+            Effect.tryPromise((signal) =>
+              harnessLogin.start(
+                input,
+                () => Effect.runPromise(serverSettings.getSettings),
+                signal,
+              ),
+            ),
+            "Failed to start sign-in",
+          ),
+        [WS_METHODS.harnessEndLogin]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => harnessLogin.end(input.harness)).pipe(
+              Effect.tap(() => providerHealth.refresh),
+            ),
+            "Failed to close sign-in",
           ),
         [WS_METHODS.openCodeSetApiKey]: (input) =>
           rpcEffect(providerDiscoveryService.setApiKey(input), "Failed to save API key"),

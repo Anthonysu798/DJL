@@ -105,7 +105,9 @@ export function HeroStage({
         <div className="hs-robot-glow" />
         <div className="hs-robotwrap">
           <motion.div className="hs-robot-anim" variants={ROBOT} initial={initial} animate={target}>
+            {/* oxlint-disable react/iframe-missing-sandbox -- The fixed Spline origin is cross-origin; its scripts need their own origin for assets/storage, while sandbox still blocks top navigation and popups. */}
             <iframe
+              sandbox="allow-scripts allow-same-origin"
               className="hs-robot"
               src="https://my.spline.design/nexbotrobotcharacterconcept-Nk9PfU4UDu1vmRbuCfnFwHef/"
               title="DJL agent robot"
@@ -115,6 +117,7 @@ export function HeroStage({
               tabIndex={-1}
               aria-hidden="true"
             />
+            {/* oxlint-enable react/iframe-missing-sandbox */}
           </motion.div>
         </div>
       </div>

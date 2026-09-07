@@ -439,6 +439,11 @@ type ModelDefinition = {
 export const MODEL_OPTIONS_BY_PROVIDER = {
   codex: [
     {
+      slug: "gpt-6-astra",
+      name: "GPT-6 Astra",
+      capabilities: CODEX_GPT_5_5_CAPABILITIES,
+    },
+    {
       slug: "gpt-5.5",
       name: "GPT-5.5",
       capabilities: CODEX_GPT_5_5_CAPABILITIES,
@@ -475,6 +480,11 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
   claudeAgent: [
+    {
+      slug: "claude-fable-5-1",
+      name: "Claude Fable 5.1",
+      capabilities: CLAUDE_FABLE_CAPABILITIES,
+    },
     {
       slug: "claude-fable-5",
       name: "Claude Fable 5",

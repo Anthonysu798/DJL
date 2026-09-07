@@ -15,7 +15,7 @@ function stableOptions(options: object): string {
   return JSON.stringify(
     Object.entries(options)
       .filter(([, value]) => value !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right)),
+      .toSorted(([left], [right]) => left.localeCompare(right)),
   );
 }
 

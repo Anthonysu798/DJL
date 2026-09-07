@@ -419,7 +419,9 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
     language: normalizeReleaseLocalePreference(settings.language, import.meta.env.PROD),
-    defaultProvider: "opencode",
+    defaultProvider: DEFAULT_PROVIDER_ORDER.includes(settings.defaultProvider)
+      ? settings.defaultProvider
+      : "opencode",
     textGenerationProvider: "opencode",
     ...(settings.textGenerationProvider === "opencode" ? {} : { textGenerationModel: undefined }),
     claudeBinaryPath: normalizeProviderBinaryPathOverride("claudeAgent", settings.claudeBinaryPath),
@@ -446,8 +448,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customKiloModels: normalizeCustomModelSlugs(settings.customKiloModels, "kilo"),
     customOpenCodeModels: normalizeCustomModelSlugs(settings.customOpenCodeModels, "opencode"),
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
-    hiddenProviders: [],
-    providerOrder: ["opencode"],
+    hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
+    providerOrder: normalizeProviderOrder(settings.providerOrder),
     hiddenModels: [],
   };
 }
@@ -921,9 +923,37 @@ export function getProviderStartOptions(
     | "piBinaryPath"
   >,
 ): ProviderStartOptions | undefined {
-  return settings.openCodeExperimentalWebSockets
-    ? { opencode: { experimentalWebSockets: true } }
-    : undefined;
+  const codexBinaryPath = normalizeProviderBinaryPathOverride("codex", settings.codexBinaryPath);
+  const claudeBinaryPath = normalizeProviderBinaryPathOverride(
+    "claudeAgent",
+    settings.claudeBinaryPath,
+  );
+  const cursorBinaryPath = normalizeProviderBinaryPathOverride("cursor", settings.cursorBinaryPath);
+  const homePath = settings.codexHomePath.trim();
+  const apiEndpoint = settings.cursorApiEndpoint.trim();
+  const options: ProviderStartOptions = {
+    ...(codexBinaryPath || homePath
+      ? {
+          codex: {
+            ...(codexBinaryPath ? { binaryPath: codexBinaryPath } : {}),
+            ...(homePath ? { homePath } : {}),
+          },
+        }
+      : {}),
+    ...(claudeBinaryPath ? { claudeAgent: { binaryPath: claudeBinaryPath } } : {}),
+    ...(cursorBinaryPath || apiEndpoint
+      ? {
+          cursor: {
+            ...(cursorBinaryPath ? { binaryPath: cursorBinaryPath } : {}),
+            ...(apiEndpoint ? { apiEndpoint } : {}),
+          },
+        }
+      : {}),
+    ...(settings.openCodeExperimentalWebSockets
+      ? { opencode: { experimentalWebSockets: true } }
+      : {}),
+  };
+  return Object.keys(options).length ? options : undefined;
 }
 
 /**

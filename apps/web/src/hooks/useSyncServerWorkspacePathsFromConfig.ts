@@ -22,10 +22,5 @@ export function useSyncServerWorkspacePathsFromConfig(): void {
       chatWorkspaceRoot: config.chatWorkspaceRoot,
       studioWorkspaceRoot: config.studioWorkspaceRoot,
     });
-  }, [
-    serverConfigQuery.data?.chatWorkspaceRoot,
-    serverConfigQuery.data?.homeDir,
-    serverConfigQuery.data?.studioWorkspaceRoot,
-    setServerWorkspacePaths,
-  ]);
+  }, [serverConfigQuery.data, setServerWorkspacePaths]);
 }

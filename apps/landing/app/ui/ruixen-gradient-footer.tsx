@@ -8,14 +8,7 @@
 //
 // Gradient design inspired by Dia Browser — https://www.diabrowser.com
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 type Stop = { offset: number; color: string };
 
@@ -107,8 +100,7 @@ export function RuixenGradientFooter({
       const h = el.offsetHeight || 1;
       // How much scroll is left before the end of the page. The glow starts
       // rising once that's within its own height, and is full at the bottom.
-      const left =
-        doc.documentElement.scrollHeight - win.innerHeight - win.scrollY;
+      const left = doc.documentElement.scrollHeight - win.innerHeight - win.scrollY;
       const t = clamp01((h - left) / h);
       setProgress(minReveal + (1 - minReveal) * t);
     };
@@ -126,10 +118,7 @@ export function RuixenGradientFooter({
   return (
     // The glow is pinned to the viewport, so the footer reserves the same
     // height beneath its content for the glow to land in.
-    <footer
-      className={className}
-      style={{ paddingBottom: gradientHeight, ...style }}
-    >
+    <footer className={className} style={{ paddingBottom: gradientHeight, ...style }}>
       {children}
 
       {/* ponytail: fixed to the viewport — a transformed/filtered ancestor
@@ -158,21 +147,16 @@ export function RuixenGradientFooter({
         >
           <defs>
             <linearGradient id={`grad-${uid}`} x1="0" y1="1" x2="0" y2="0">
-              {stops.map((s, i) => (
-                <stop key={i} offset={s.offset} stopColor={s.color} />
+              {stops.map((s) => (
+                <stop key={`${s.offset}:${s.color}`} offset={s.offset} stopColor={s.color} />
               ))}
             </linearGradient>
-            <filter
-              id={`blur-${uid}`}
-              x="-50%"
-              y="-50%"
-              width="200%"
-              height="200%"
-            >
+            <filter id={`blur-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation={blur} />
             </filter>
           </defs>
           {bellHeights(bars, peak, valley).map((barH, i) => (
+            // oxlint-disable-next-line react/no-array-index-key -- Fixed SVG column position is the identity while its height animates.
             <g key={i} filter={`url(#blur-${uid})`}>
               <rect
                 x={i * colW}

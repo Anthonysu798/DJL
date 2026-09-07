@@ -511,7 +511,10 @@ export default function DiffPanel({
   const gitRepoStatusErrorDetail =
     gitBranchesQuery.error instanceof Error ? gitBranchesQuery.error.message : null;
   const isGitRepo = gitRepoStatus === true;
-  const turnDiffSummaries = activeThreadContext?.turnDiffSummaries ?? [];
+  const turnDiffSummaries = useMemo(
+    () => activeThreadContext?.turnDiffSummaries ?? [],
+    [activeThreadContext?.turnDiffSummaries],
+  );
   const inferredCheckpointTurnCountByTurnId = useMemo(
     () => inferCheckpointTurnCountByTurnId(turnDiffSummaries),
     [turnDiffSummaries],

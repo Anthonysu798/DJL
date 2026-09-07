@@ -10,6 +10,33 @@ afterEach(() => {
 });
 
 describe("providerModelsQueryOptions", () => {
+  it("sends the configured Codex executable/home and isolates its model cache by profile", async () => {
+    const listModels = vi.fn().mockResolvedValue({ models: [], source: "codex" });
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listModels },
+    } as unknown as NativeApi);
+    const first = providerModelsQueryOptions({
+      provider: "codex",
+      binaryPath: "/custom/codex",
+      homePath: "/accounts/a",
+      cwd: "/workspace",
+    });
+    const second = providerModelsQueryOptions({
+      provider: "codex",
+      binaryPath: "/custom/codex",
+      homePath: "/accounts/b",
+      cwd: "/workspace",
+    });
+    expect(first.queryKey).not.toEqual(second.queryKey);
+    await new QueryClient().fetchQuery(first);
+    expect(listModels).toHaveBeenCalledWith({
+      provider: "codex",
+      binaryPath: "/custom/codex",
+      homePath: "/accounts/a",
+      cwd: "/workspace",
+    });
+  });
+
   it("uses a stable global OpenCode catalog with a bounded retry budget", () => {
     const options = providerModelsQueryOptions({
       provider: "opencode",

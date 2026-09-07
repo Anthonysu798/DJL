@@ -1,4 +1,5 @@
 import { Option, Schema, SchemaIssue, Struct } from "effect";
+import { HarnessId } from "./harnessAccounts";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
@@ -163,9 +164,9 @@ export type ModelSelection = typeof ModelSelection.Type;
 export const NewTaskModelSelection = ModelSelection.check(
   Schema.makeFilter(
     (selection) =>
-      selection.provider === "opencode" ||
+      Schema.is(HarnessId)(selection.provider) ||
       new SchemaIssue.InvalidValue(Option.some(selection.provider), {
-        message: "New tasks and turns must use the DJL model backend",
+        message: "This harness does not have an active DJL runtime implementation",
       }),
     { identifier: "NewTaskModelSelection" },
   ),
@@ -232,7 +233,7 @@ export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   Schema.makeFilter(
     (options) =>
-      Object.keys(options).every((provider) => provider === "opencode") ||
+      Object.keys(options).every((provider) => Schema.is(HarnessId)(provider)) ||
       new SchemaIssue.InvalidValue(Option.some(options), {
         message: "New turns accept DJL runtime options only",
       }),
@@ -240,13 +241,8 @@ export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   ),
 );
 
-export const RuntimeMode = Schema.Literals([
-  "approval-required",
-  "accept-edits",
-  "auto-approval",
-  "full-access",
-]);
-export type RuntimeMode = typeof RuntimeMode.Type;
+import { RuntimeMode } from "./runtimePermissions";
+export { RuntimeMode } from "./runtimePermissions";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 export const ProviderInteractionMode = Schema.Literals(["default", "plan"]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;

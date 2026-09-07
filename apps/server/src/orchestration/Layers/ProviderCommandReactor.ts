@@ -2,11 +2,13 @@
 // Purpose: Routes orchestration intents into provider sessions and maintains replay-safe context.
 // Layer: Orchestration provider reactor
 
-import { mkdir } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
+import { isAbsolute } from "node:path";
 
 import {
   type ChatAttachment,
   CommandId,
+  effectiveRuntimeMode,
   EventId,
   type ModelSelection,
   MessageId,
@@ -52,6 +54,7 @@ import {
 import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
 import { claudeSelectionRequiresRestart } from "@synara/shared/model";
 import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
+import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 import { resolveThreadWorkspaceState } from "@synara/shared/threadEnvironment";
 
 import {
@@ -59,6 +62,7 @@ import {
   checkpointRefForThreadTurn,
   resolveThreadWorkspaceCwd,
 } from "../../checkpointing/Utils.ts";
+import { ServerConfig } from "../../config";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import {
@@ -96,6 +100,22 @@ import {
 } from "../Services/ProviderCommandReactor.ts";
 import { StudioOutputReactor } from "../Services/StudioOutputReactor.ts";
 import { WorkPreparationQueue } from "../Services/WorkPreparationQueue.ts";
+
+const resolveSubagentProviderThreadId = (
+  threadId: ThreadId,
+  parentThreadId: ThreadId | null | undefined,
+): string | undefined => {
+  if (!parentThreadId) {
+    return undefined;
+  }
+
+  const prefix = `subagent:${parentThreadId}:`;
+  const rawThreadId = threadId as string;
+  return rawThreadId.startsWith(prefix) ? rawThreadId.slice(prefix.length) : undefined;
+};
+
+const editResendTurnStartKey = (threadId: ThreadId, messageId: string) =>
+  `${threadId}:${messageId}`;
 
 type ProviderIntentEvent = Extract<
   OrchestrationEvent,
@@ -141,6 +161,8 @@ export function attachmentsForPreparedWorkTurn(
   thread: Pick<OrchestrationThread, "modelSelection">,
 ): ReadonlyArray<ChatAttachment> {
   const modelSelection = job.request.modelSelection ?? thread.modelSelection;
+  // Native bridges consume the cited text/OCR in preparedPrompt, not OpenCode file parts.
+  if (["codex", "claudeAgent", "cursor"].includes(modelSelection.provider)) return [];
   const routing = resolveWorkModelDocumentRouting(modelSelection);
   // A nonvision or unknown model receives normalized cited OCR/text only. This
   // avoids unsupported file parts and prevents an image from being sent to a
@@ -338,6 +360,7 @@ const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
+  const serverConfig = yield* ServerConfig;
   const checkpointStore = yield* CheckpointStore;
   const studioOutputReactor = yield* StudioOutputReactor;
   const git = yield* GitCore;
@@ -612,19 +635,6 @@ const make = Effect.gen(function* () {
     return parentThread ?? thread;
   });
 
-  const resolveSubagentProviderThreadId = (
-    threadId: ThreadId,
-    parentThreadId: ThreadId | null | undefined,
-  ): string | undefined => {
-    if (!parentThreadId) {
-      return undefined;
-    }
-
-    const prefix = `subagent:${parentThreadId}:`;
-    const rawThreadId = threadId as string;
-    return rawThreadId.startsWith(prefix) ? rawThreadId.slice(prefix.length) : undefined;
-  };
-
   const enqueueQueuedTurnStart = (
     payload: Extract<ProviderIntentEvent, { type: "thread.turn-queued" }>["payload"],
   ) =>
@@ -690,9 +700,6 @@ const make = Effect.gen(function* () {
       .pipe(Effect.map((sessions) => sessions.find((entry) => entry.threadId === threadId)));
     return session?.status === "running" && session.activeTurnId !== undefined;
   });
-
-  const editResendTurnStartKey = (threadId: ThreadId, messageId: string) =>
-    `${threadId}:${messageId}`;
 
   const clearEditResendTurnStartKeysForThread = (threadId: ThreadId) =>
     Effect.sync(() => {
@@ -859,7 +866,6 @@ const make = Effect.gen(function* () {
       thread.session?.status !== "stopped" &&
       !suppressContextBootstrapOnNextStartThreadIds.has(threadId);
 
-    const desiredRuntimeMode = options?.runtimeMode ?? thread.runtimeMode;
     const currentProvider: ProviderKind | undefined = Schema.is(ProviderKind)(
       thread.session?.providerName,
     )
@@ -867,6 +873,10 @@ const make = Effect.gen(function* () {
       : undefined;
     const requestedModelSelection = options?.modelSelection;
     const threadProvider: ProviderKind = currentProvider ?? thread.modelSelection.provider;
+    const desiredRuntimeMode = effectiveRuntimeMode(
+      requestedModelSelection?.provider ?? threadProvider,
+      options?.runtimeMode ?? thread.runtimeMode,
+    );
     if (
       requestedModelSelection !== undefined &&
       requestedModelSelection.provider !== threadProvider
@@ -879,8 +889,33 @@ const make = Effect.gen(function* () {
     }
     const preferredProvider: ProviderKind = currentProvider ?? threadProvider;
     const desiredModelSelection = requestedModelSelection ?? thread.modelSelection;
-    const effectiveCwd = yield* resolveProjectedThreadWorkspaceCwd(thread);
+    const projectedCwd = yield* resolveProjectedThreadWorkspaceCwd(thread);
     const workspaceProject = yield* resolveThreadWorkspaceProject(thread);
+    const workspaceState = resolveThreadWorkspaceState({
+      envMode: thread.envMode,
+      worktreePath: thread.worktreePath,
+    });
+    // Checkpoint resolution suppresses chat projects; native runtimes still need
+    // the task's existing materialized folder, never the shared Home/container root.
+    const nativeChatRoot = workspaceProject?.workspaceRoot;
+    const canUseNativeChatRoot =
+      projectedCwd === undefined &&
+      workspaceProject?.kind === "chat" &&
+      workspaceState === "local" &&
+      (preferredProvider === "codex" ||
+        preferredProvider === "claudeAgent" ||
+        preferredProvider === "cursor") &&
+      nativeChatRoot !== undefined &&
+      isAbsolute(nativeChatRoot) &&
+      ![serverConfig.homeDir, serverConfig.chatWorkspaceRoot, serverConfig.cwd].some((root) =>
+        workspaceRootsEqual(root, nativeChatRoot),
+      );
+    const nativeChatRootExists = canUseNativeChatRoot
+      ? yield* Effect.tryPromise(() =>
+          stat(nativeChatRoot).then((entry) => entry.isDirectory()),
+        ).pipe(Effect.catch(() => Effect.succeed(false)))
+      : false;
+    const effectiveCwd = projectedCwd ?? (nativeChatRootExists ? nativeChatRoot : undefined);
     if (!thread.worktreePath) {
       yield* prepareManagedWorkTaskDirectory(workspaceProject, effectiveCwd).pipe(
         Effect.mapError(
@@ -893,10 +928,6 @@ const make = Effect.gen(function* () {
         ),
       );
     }
-    const workspaceState = resolveThreadWorkspaceState({
-      envMode: thread.envMode,
-      worktreePath: thread.worktreePath,
-    });
     if (workspaceState === "worktree-pending") {
       return yield* new ProviderAdapterRequestError({
         provider: threadProvider,
@@ -1785,7 +1816,22 @@ const make = Effect.gen(function* () {
     }
 
     const project = yield* resolveThreadWorkspaceProject(thread);
-    const isWorkSurface = project?.kind === "studio" || project?.kind === "chat";
+    const selectedProvider =
+      event.payload.modelSelection?.provider ??
+      thread.session?.providerName ??
+      thread.modelSelection.provider;
+    const isNativeProvider = ["codex", "claudeAgent", "cursor"].includes(selectedProvider);
+    const isPlainNativeChat =
+      project?.kind === "chat" &&
+      (selectedProvider === "codex" ||
+        selectedProvider === "claudeAgent" ||
+        selectedProvider === "cursor") &&
+      !preparedJob &&
+      (message.attachments?.length ?? 0) === 0 &&
+      event.payload.memoryContext?.searchProject !== true &&
+      (event.payload.memoryContext?.references.length ?? 0) === 0;
+    const isWorkSurface =
+      project?.kind === "studio" || (project?.kind === "chat" && !isPlainNativeChat);
     const requiresWorkPreparation =
       project?.kind === "studio" ||
       (message.attachments?.length ?? 0) > 0 ||
@@ -1922,10 +1968,11 @@ const make = Effect.gen(function* () {
       messageId: message.id,
       messageText: workTurnPolicy
         ? buildGroundedWorkPrompt(
-            preparedJob && hasExplicitWorkContext
+            preparedJob && (hasExplicitWorkContext || isNativeProvider)
               ? (preparedJob.preparedPrompt ?? message.text)
               : message.text,
             workTurnPolicy,
+            isNativeProvider ? "native" : "opencode",
           )
         : message.text,
       ...(providerAttachments !== undefined ? { attachments: providerAttachments } : {}),
@@ -1945,7 +1992,7 @@ const make = Effect.gen(function* () {
         : {}),
       interactionMode: event.payload.interactionMode,
       dispatchMode: immediateDispatchMode,
-      ...(workTurnPolicy ? { workTurnPolicy } : {}),
+      ...(workTurnPolicy && !isNativeProvider ? { workTurnPolicy } : {}),
       createdAt: event.payload.createdAt,
     }).pipe(
       Effect.tap(() =>

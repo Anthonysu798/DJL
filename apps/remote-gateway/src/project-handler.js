@@ -349,7 +349,9 @@ async function readDirectoryEntries(directoryPath, options = {}) {
   }
 
   return entries
-    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }))
+    .toSorted((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+    )
     .slice(0, options.limit || DEFAULT_DIRECTORY_LIMIT);
 }
 
@@ -596,7 +598,7 @@ function normalizeSearchVisitedLimit(rawLimit) {
 }
 
 function sortedDirents(dirents) {
-  return [...dirents].sort((left, right) =>
+  return [...dirents].toSorted((left, right) =>
     left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
   );
 }

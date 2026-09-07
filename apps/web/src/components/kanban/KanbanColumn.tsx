@@ -48,7 +48,7 @@ function SortableKanbanCard({
   onContextMenu?: ((card: KanbanCard, event: React.MouseEvent) => void) | undefined;
   nowMs?: number;
 }) {
-  const { t } = useTranslation("work");
+  useTranslation("work");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.cardId,
   });

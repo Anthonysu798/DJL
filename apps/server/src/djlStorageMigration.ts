@@ -11,7 +11,6 @@ import {
   readdir,
   rename,
   rm,
-  writeFile,
 } from "node:fs/promises";
 import { constants } from "node:fs";
 import { createHash } from "node:crypto";

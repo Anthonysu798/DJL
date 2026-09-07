@@ -21,7 +21,7 @@ let codexEnvQueue = Promise.resolve();
 
 function acquireCodexEnvLock() {
   return Effect.promise(async () => {
-    let releaseLock = () => {};
+    let releaseLock!: () => void;
     const previous = codexEnvQueue;
     codexEnvQueue = new Promise<void>((resolve) => {
       releaseLock = resolve;

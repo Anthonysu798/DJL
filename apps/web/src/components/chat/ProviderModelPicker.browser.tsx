@@ -173,15 +173,25 @@ describe("ProviderModelPicker", () => {
     localStorage.clear();
   });
 
-  it("shows the authenticated OpenCode catalog directly", async () => {
+  it("opens the authenticated OpenCode catalog from its harness submenu", async () => {
     const mounted = await mountPicker({
       provider: "opencode",
       model: "openai/gpt-5",
       lockedProvider: null,
+      providers: [
+        {
+          provider: "opencode",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-09-04T00:00:00.000Z",
+        },
+      ],
     });
 
     try {
       await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "OpenCode", exact: true }).hover();
 
       await vi.waitFor(() => {
         const text = document.body.textContent ?? "";
@@ -529,7 +539,7 @@ describe("ProviderModelPicker", () => {
     }
   });
 
-  it("does not render legacy provider health rows", async () => {
+  it("shows sign-in status for the freshly implemented native harnesses", async () => {
     const mounted = await mountPicker({
       provider: "codex",
       model: "gpt-5-codex",
@@ -558,7 +568,8 @@ describe("ProviderModelPicker", () => {
       await vi.waitFor(() => {
         const text = document.body.textContent ?? "";
         expect(text).toContain("OpenCode");
-        expect(text).not.toContain("Sign in");
+        expect(text).toContain("Claude Code");
+        expect(text).toContain("Sign in");
         expect(text).not.toContain("Unavailable");
       });
     } finally {

@@ -808,6 +808,7 @@ export function createWorktreeSetupSnapshot(
   const stepDefinitions = worktreeSetupStepDefinitions(activeStepId, options);
   const activeIndex = stepDefinitions.findIndex((step) => step.id === activeStepId);
   return {
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     steps: stepDefinitions.map((step, index) => ({
       ...step,
       status: index < activeIndex ? "done" : index === activeIndex ? "active" : "pending",

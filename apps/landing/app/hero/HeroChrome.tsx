@@ -43,12 +43,13 @@ export function HeroChrome({
 
   const slides = [
     {
+      id: "intro",
       eyebrow: locale === "zh" ? "了解 DJL" : "DISCOVER DJL",
       title: t.hero.titleLines.join(" "),
     },
-    { eyebrow: t.routing.tag, title: t.routing.title },
-    { eyebrow: t.bilingual.tag, title: t.bilingual.title },
-    { eyebrow: t.pipeline.tag, title: t.pipeline.title },
+    { id: "routing", eyebrow: t.routing.tag, title: t.routing.title },
+    { id: "bilingual", eyebrow: t.bilingual.tag, title: t.bilingual.title },
+    { id: "pipeline", eyebrow: t.pipeline.tag, title: t.pipeline.title },
   ];
   const count = slides.length;
   const go = (dir: number) => setI((prev) => (prev + dir + count) % count);
@@ -130,7 +131,7 @@ export function HeroChrome({
             const state = k === i ? "active" : k < i ? "seen" : "upcoming";
             return (
               <button
-                key={slide.eyebrow + k}
+                key={slide.id}
                 type="button"
                 className={`hc-seg ${state}`}
                 onClick={() => setI(k)}

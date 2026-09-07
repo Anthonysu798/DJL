@@ -35,7 +35,7 @@ export function desktopCatalogShape(value: unknown): unknown {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return typeof value;
   return Object.fromEntries(
     Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .toSorted(([left], [right]) => left.localeCompare(right))
       .map(([key, nested]) => [key, desktopCatalogShape(nested)]),
   );
 }

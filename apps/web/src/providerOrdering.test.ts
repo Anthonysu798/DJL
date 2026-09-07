@@ -13,13 +13,18 @@ import {
 } from "./providerOrdering";
 
 describe("providerOrdering", () => {
-  it("exposes only OpenCode in the runtime provider order", () => {
-    expect(DEFAULT_PROVIDER_ORDER).toEqual(["opencode"]);
+  it("exposes the active OpenCode runtime and newly built native harnesses", () => {
+    expect(DEFAULT_PROVIDER_ORDER).toEqual(["opencode", "codex", "claudeAgent", "cursor"]);
   });
 
   it("drops historical providers from picker order and visibility settings", () => {
     expect(isProviderKind("pi")).toBe(false);
-    expect(normalizeProviderOrder(["pi", "codex"])).toEqual(["opencode"]);
+    expect(normalizeProviderOrder(["pi", "codex"])).toEqual([
+      "codex",
+      "opencode",
+      "claudeAgent",
+      "cursor",
+    ]);
     expect(normalizeHiddenProviders(["bogus", "pi", "pi"])).toEqual([]);
   });
 });

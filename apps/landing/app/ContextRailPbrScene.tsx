@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
   Apple,
@@ -20,11 +21,7 @@ import "./context-rail-pbr-scene.css";
 
 type Locale = "zh" | "en";
 type Platform = "mac" | "windows";
-type HitKey =
-  | `capability-${number}`
-  | `terminal-${Platform}`
-  | `robot-${number}`
-  | "task";
+type HitKey = `capability-${number}` | `terminal-${Platform}` | `robot-${number}` | "task";
 
 export type ContextRailPbrSceneProps = {
   locale: Locale;
@@ -164,9 +161,8 @@ const ROBOT_STRIDE_LENGTH = 0.09;
 const ROBOT_LEG_LENGTH = 0.17;
 const ROBOT_FOOT_LIFT = 0.058;
 const ROBOT_PLATFORM_COUNT = 5;
-const robotPlatformForIndex = (index: number): Platform => (
-  index < ROBOT_PLATFORM_COUNT ? "mac" : "windows"
-);
+const robotPlatformForIndex = (index: number): Platform =>
+  index < ROBOT_PLATFORM_COUNT ? "mac" : "windows";
 
 // Disjoint patrol islands keep the fleet physically clear without runtime
 // position pushes (which would make the feet slide). At desktop scale the
@@ -396,30 +392,22 @@ const clampIndex = (value: number) => Math.max(0, Math.min(5, Math.round(value))
 const damp = (from: number, to: number, lambda: number, dt: number) =>
   THREE.MathUtils.lerp(from, to, 1 - Math.exp(-lambda * dt));
 const dampAngle = (from: number, to: number, lambda: number, dt: number) =>
-  from
-  + Math.atan2(Math.sin(to - from), Math.cos(to - from))
-  * (1 - Math.exp(-lambda * dt));
+  from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * (1 - Math.exp(-lambda * dt));
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const smootherStep = (value: number) => {
   const t = clamp01(value);
   return t * t * t * (t * (t * 6 - 15) + 10);
 };
-const walkCycle = (phase: number) => (
-  ((phase / (Math.PI * 2)) % 1) + 1
-) % 1;
+const walkCycle = (phase: number) => (((phase / (Math.PI * 2)) % 1) + 1) % 1;
 const walkStridePosition = (cycle: number) => {
   if (cycle < ROBOT_STANCE_RATIO) {
     return 0.5 - cycle / ROBOT_STANCE_RATIO;
   }
-  return -0.5 + smootherStep(
-    (cycle - ROBOT_STANCE_RATIO) / (1 - ROBOT_STANCE_RATIO),
-  );
+  return -0.5 + smootherStep((cycle - ROBOT_STANCE_RATIO) / (1 - ROBOT_STANCE_RATIO));
 };
 const walkFootLift = (cycle: number) => {
   if (cycle < ROBOT_STANCE_RATIO) return 0;
-  const swing = (
-    cycle - ROBOT_STANCE_RATIO
-  ) / (1 - ROBOT_STANCE_RATIO);
+  const swing = (cycle - ROBOT_STANCE_RATIO) / (1 - ROBOT_STANCE_RATIO);
   return Math.pow(Math.max(0, Math.sin(Math.PI * swing)), 1.15);
 };
 
@@ -429,16 +417,11 @@ function disposeObjectResources(root: THREE.Object3D) {
   const textures = new Set<THREE.Texture>();
 
   root.traverse((object) => {
-    if (
-      !(object instanceof THREE.Mesh)
-      && !(object instanceof THREE.LineSegments)
-    ) {
+    if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.LineSegments)) {
       return;
     }
     if (object.geometry) geometries.add(object.geometry);
-    const objectMaterials = Array.isArray(object.material)
-      ? object.material
-      : [object.material];
+    const objectMaterials = Array.isArray(object.material) ? object.material : [object.material];
     objectMaterials.forEach((material) => {
       if (!material) return;
       materials.add(material);
@@ -479,7 +462,13 @@ function rounded(
   z = 0,
   segments = 4,
 ) {
-  const geometry = new RoundedBoxGeometry(width, height, depth, segments, Math.min(radius, width / 2, height / 2, depth / 2));
+  const geometry = new RoundedBoxGeometry(
+    width,
+    height,
+    depth,
+    segments,
+    Math.min(radius, width / 2, height / 2, depth / 2),
+  );
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
@@ -496,7 +485,10 @@ function cylinder(
   z = 0,
   radialSegments = 28,
 ) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, radialSegments), material);
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, height, radialSegments),
+    material,
+  );
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -557,7 +549,12 @@ function ring(
   return mesh;
 }
 
-function tubeThrough(points: THREE.Vector3[], radius: number, material: THREE.Material, segments = 160) {
+function tubeThrough(
+  points: THREE.Vector3[],
+  radius: number,
+  material: THREE.Material,
+  segments = 160,
+) {
   const curve = new THREE.CatmullRomCurve3(points);
   curve.curveType = "centripetal";
   const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, segments, radius, 16, false), material);
@@ -577,37 +574,64 @@ function roundedRectTube(
   const x = width / 2;
   const z = depth / 2;
   const path = new THREE.CurvePath<THREE.Vector3>();
-  path.add(new THREE.LineCurve3(new THREE.Vector3(-x + radius, y, -z), new THREE.Vector3(x - radius, y, -z)));
-  path.add(new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(x - radius, y, -z),
-    new THREE.Vector3(x, y, -z),
-    new THREE.Vector3(x, y, -z + radius),
-  ));
-  path.add(new THREE.LineCurve3(new THREE.Vector3(x, y, -z + radius), new THREE.Vector3(x, y, z - radius)));
-  path.add(new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(x, y, z - radius),
-    new THREE.Vector3(x, y, z),
-    new THREE.Vector3(x - radius, y, z),
-  ));
-  path.add(new THREE.LineCurve3(new THREE.Vector3(x - radius, y, z), new THREE.Vector3(-x + radius, y, z)));
-  path.add(new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(-x + radius, y, z),
-    new THREE.Vector3(-x, y, z),
-    new THREE.Vector3(-x, y, z - radius),
-  ));
-  path.add(new THREE.LineCurve3(new THREE.Vector3(-x, y, z - radius), new THREE.Vector3(-x, y, -z + radius)));
-  path.add(new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(-x, y, -z + radius),
-    new THREE.Vector3(-x, y, -z),
-    new THREE.Vector3(-x + radius, y, -z),
-  ));
+  path.add(
+    new THREE.LineCurve3(
+      new THREE.Vector3(-x + radius, y, -z),
+      new THREE.Vector3(x - radius, y, -z),
+    ),
+  );
+  path.add(
+    new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(x - radius, y, -z),
+      new THREE.Vector3(x, y, -z),
+      new THREE.Vector3(x, y, -z + radius),
+    ),
+  );
+  path.add(
+    new THREE.LineCurve3(new THREE.Vector3(x, y, -z + radius), new THREE.Vector3(x, y, z - radius)),
+  );
+  path.add(
+    new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(x, y, z - radius),
+      new THREE.Vector3(x, y, z),
+      new THREE.Vector3(x - radius, y, z),
+    ),
+  );
+  path.add(
+    new THREE.LineCurve3(new THREE.Vector3(x - radius, y, z), new THREE.Vector3(-x + radius, y, z)),
+  );
+  path.add(
+    new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(-x + radius, y, z),
+      new THREE.Vector3(-x, y, z),
+      new THREE.Vector3(-x, y, z - radius),
+    ),
+  );
+  path.add(
+    new THREE.LineCurve3(
+      new THREE.Vector3(-x, y, z - radius),
+      new THREE.Vector3(-x, y, -z + radius),
+    ),
+  );
+  path.add(
+    new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(-x, y, -z + radius),
+      new THREE.Vector3(-x, y, -z),
+      new THREE.Vector3(-x + radius, y, -z),
+    ),
+  );
   const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, 128, tubeRadius, 16, true), material);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
 }
 
-function ribbonGeometry(curve: THREE.Curve<THREE.Vector3>, width: number, thickness: number, samples = 180) {
+function ribbonGeometry(
+  curve: THREE.Curve<THREE.Vector3>,
+  width: number,
+  thickness: number,
+  samples = 180,
+) {
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
@@ -619,14 +643,25 @@ function ribbonGeometry(curve: THREE.Curve<THREE.Vector3>, width: number, thickn
     const t = index / samples;
     curve.getPointAt(t, point);
     curve.getTangentAt(t, tangent);
-    side.set(-tangent.z, 0, tangent.x).normalize().multiplyScalar(width / 2);
+    side
+      .set(-tangent.z, 0, tangent.x)
+      .normalize()
+      .multiplyScalar(width / 2);
     const left = point.clone().add(side);
     const right = point.clone().sub(side);
     positions.push(
-      left.x, left.y + thickness / 2, left.z,
-      right.x, right.y + thickness / 2, right.z,
-      left.x, left.y - thickness / 2, left.z,
-      right.x, right.y - thickness / 2, right.z,
+      left.x,
+      left.y + thickness / 2,
+      left.z,
+      right.x,
+      right.y + thickness / 2,
+      right.z,
+      left.x,
+      left.y - thickness / 2,
+      left.z,
+      right.x,
+      right.y - thickness / 2,
+      right.z,
     );
     uvs.push(t, 0, t, 1, t, 0, t, 1);
   }
@@ -635,17 +670,34 @@ function ribbonGeometry(curve: THREE.Curve<THREE.Vector3>, width: number, thickn
     const a = index * 4;
     const b = a + 4;
     indices.push(
-      a, b, a + 1, a + 1, b, b + 1,
-      a + 2, a + 3, b + 2, a + 3, b + 3, b + 2,
-      a, a + 2, b, a + 2, b + 2, b,
-      a + 1, b + 1, a + 3, a + 3, b + 1, b + 3,
+      a,
+      b,
+      a + 1,
+      a + 1,
+      b,
+      b + 1,
+      a + 2,
+      a + 3,
+      b + 2,
+      a + 3,
+      b + 3,
+      b + 2,
+      a,
+      a + 2,
+      b,
+      a + 2,
+      b + 2,
+      b,
+      a + 1,
+      b + 1,
+      a + 3,
+      a + 3,
+      b + 1,
+      b + 3,
     );
   }
   const end = samples * 4;
-  indices.push(
-    0, 2, 1, 1, 2, 3,
-    end, end + 1, end + 2, end + 1, end + 3, end + 2,
-  );
+  indices.push(0, 2, 1, 1, 2, 3, end, end + 1, end + 2, end + 1, end + 3, end + 2);
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -718,7 +770,16 @@ function addContactShadow(group: THREE.Group, radiusX: number, radiusZ: number) 
 
 function bolt(material: THREE.Material, x: number, z: number, y = 0.7) {
   const mesh = cylinder(0.055, 0.055, material, x, y, z, 20);
-  const slot = rounded(0.06, 0.025, 0.012, 0.003, physical(0x33363b, { roughness: 0.3 }), x, y + 0.031, z);
+  const slot = rounded(
+    0.06,
+    0.025,
+    0.012,
+    0.003,
+    physical(0x33363b, { roughness: 0.3 }),
+    x,
+    y + 0.031,
+    z,
+  );
   return [mesh, slot] as const;
 }
 
@@ -767,7 +828,11 @@ function buildLocalWell(): CapabilityNode {
   group.add(glassBed);
   glowMaterials.push(glass);
 
-  const torusMaterial = physical(0xb8c1ca, { metalness: 0.94, roughness: 0.08, envMapIntensity: 2.05 });
+  const torusMaterial = physical(0xb8c1ca, {
+    metalness: 0.94,
+    roughness: 0.08,
+    envMapIntensity: 2.05,
+  });
   const torus = new THREE.Mesh(new THREE.TorusGeometry(0.69, 0.12, 16, 72), torusMaterial);
   torus.position.y = 0.74;
   torus.rotation.x = Math.PI / 2;
@@ -1019,7 +1084,10 @@ function buildOnlineBeacon(): CapabilityNode {
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const particle = new THREE.Mesh(new THREE.SphereGeometry(0.018 + (index % 3) * 0.006, 10, 10), particleMaterial);
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018 + (index % 3) * 0.006, 10, 10),
+      particleMaterial,
+    );
     const angle = index * 2.31;
     particle.position.set(
       Math.cos(angle) * (0.14 + (index % 4) * 0.045),
@@ -1056,7 +1124,11 @@ function buildPrecisionSocket(index: number): CapabilityNode {
   const white = physical(0xebe6df, { metalness: 0.1, roughness: 0.28 });
   const warm = physical(0xc6c0b9, { metalness: 0.34, roughness: 0.29 });
   const chrome = physical(0xb4bac0, { metalness: 0.88, roughness: 0.14, envMapIntensity: 1.72 });
-  const chromeBright = physical(0xd8dde0, { metalness: 0.82, roughness: 0.14, envMapIntensity: 1.78 });
+  const chromeBright = physical(0xd8dde0, {
+    metalness: 0.82,
+    roughness: 0.14,
+    envMapIntensity: 1.78,
+  });
   const inset = physical(0x8f989f, { metalness: 0.52, roughness: 0.27 });
   const blue = physical(0x355f8f, {
     metalness: 0.62,
@@ -1199,7 +1271,16 @@ function buildTerminal(platform: Platform): TerminalNode {
     }
   }
   for (let index = 0; index < 4; index += 1) {
-    const key = rounded(0.22, 0.07, 0.22, 0.025, index === 0 ? chrome : warm, -0.39 + index * 0.27, 0.52, 0.46);
+    const key = rounded(
+      0.22,
+      0.07,
+      0.22,
+      0.025,
+      index === 0 ? chrome : warm,
+      -0.39 + index * 0.27,
+      0.52,
+      0.46,
+    );
     group.add(key);
   }
 
@@ -1249,9 +1330,8 @@ function buildRobotDownloadToken(platform: Platform): RobotDownloadToken {
     panelGradient.addColorStop(1, platform === "mac" ? "#b9d9ff" : "#061a3d");
     context.fillStyle = panelGradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.strokeStyle = platform === "mac"
-      ? "rgba(42, 119, 220, 0.72)"
-      : "rgba(137, 211, 255, 0.92)";
+    context.strokeStyle =
+      platform === "mac" ? "rgba(42, 119, 220, 0.72)" : "rgba(137, 211, 255, 0.92)";
     context.lineWidth = 18;
     context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
     context.fillStyle = platform === "mac" ? "#0a2347" : "#ffffff";
@@ -1324,10 +1404,7 @@ function buildRobotDownloadToken(platform: Platform): RobotDownloadToken {
     opacity: 0.9,
     toneMapped: false,
   });
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.36, 0.014, 10, 56),
-    edgeMaterial,
-  );
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.014, 10, 56), edgeMaterial);
   ring.position.z = -0.13;
   ring.userData.ignoreHit = true;
   group.add(ring);
@@ -1412,14 +1489,7 @@ export function createTaskCore() {
   const innerDark = physical(0x03142f, { metalness: 0.58, roughness: 0.19 });
   [0.15, 0.3, 0.45].forEach((y, index) => {
     const size = 0.58 - index * 0.055;
-    const plate = chamferedPlate(
-      size,
-      size,
-      0.055,
-      index === 1 ? alloy : innerDark,
-      0.075,
-      0.015,
-    );
+    const plate = chamferedPlate(size, size, 0.055, index === 1 ? alloy : innerDark, 0.075, 0.015);
     plate.position.y = y;
     plate.castShadow = false;
     plate.renderOrder = 6;
@@ -1563,10 +1633,18 @@ export function ContextRailPbrScene({
   const hoverRef = useRef<HitKey | null>(null);
   const [hovered, setHovered] = useState<HitKey | null>(null);
 
-  useEffect(() => { progressRef.current = clampProgress(progress); }, [progress]);
-  useEffect(() => { activeRef.current = clampIndex(activeIndex); }, [activeIndex]);
-  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
-  useEffect(() => { onTerminalRef.current = onTerminal; }, [onTerminal]);
+  useEffect(() => {
+    progressRef.current = clampProgress(progress);
+  }, [progress]);
+  useEffect(() => {
+    activeRef.current = clampIndex(activeIndex);
+  }, [activeIndex]);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+  useEffect(() => {
+    onTerminalRef.current = onTerminal;
+  }, [onTerminal]);
 
   useEffect(() => {
     const mount = canvasHostRef.current;
@@ -1587,7 +1665,14 @@ export function ContextRailPbrScene({
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xfff9f4);
     const orthographicHeight = 11;
-    const camera = new THREE.OrthographicCamera(-9, 9, orthographicHeight / 2, -orthographicHeight / 2, 0.1, 80);
+    const camera = new THREE.OrthographicCamera(
+      -9,
+      9,
+      orthographicHeight / 2,
+      -orthographicHeight / 2,
+      0.1,
+      80,
+    );
     const compositionOffset = new THREE.Vector3(-0.47, 1.08, -0.77);
     const cameraBase = new THREE.Vector3(2.8, 18, 23).add(compositionOffset);
     const lookBase = compositionOffset.clone();
@@ -1701,7 +1786,11 @@ export function ContextRailPbrScene({
     innerTrack.receiveShadow = true;
     scene.add(innerTrack);
 
-    const edgeMaterial = physical(0x858b91, { metalness: 0.9, roughness: 0.18, envMapIntensity: 1.46 });
+    const edgeMaterial = physical(0x858b91, {
+      metalness: 0.9,
+      roughness: 0.18,
+      envMapIntensity: 1.46,
+    });
     const leftEdge = new THREE.Mesh(
       new THREE.TubeGeometry(offsetCurve(deckRoute, 1.17), 180, 0.045, 16, false),
       edgeMaterial,
@@ -1713,7 +1802,11 @@ export function ContextRailPbrScene({
     leftEdge.position.y = rightEdge.position.y = 0.29;
     leftEdge.castShadow = rightEdge.castShadow = true;
     scene.add(leftEdge, rightEdge);
-    const insetRailMaterial = physical(0x969ca1, { metalness: 0.96, roughness: 0.14, envMapIntensity: 1.62 });
+    const insetRailMaterial = physical(0x969ca1, {
+      metalness: 0.96,
+      roughness: 0.14,
+      envMapIntensity: 1.62,
+    });
     const insetLeft = new THREE.Mesh(
       new THREE.TubeGeometry(offsetCurve(deckRoute, 0.98), 180, 0.018, 14, false),
       insetRailMaterial,
@@ -1768,7 +1861,12 @@ export function ContextRailPbrScene({
       new THREE.TubeGeometry(offsetCurve(deckRoute, -0.14), 180, 0.04, 12, false),
       energy.clone(),
     );
-    energyHalo.position.y = energyMid.position.y = energyCore.position.y = energyLeft.position.y = energyRight.position.y = 0.31;
+    energyHalo.position.y =
+      energyMid.position.y =
+      energyCore.position.y =
+      energyLeft.position.y =
+      energyRight.position.y =
+        0.31;
     scene.add(energyHalo, energyMid, energyCore, energyLeft, energyRight);
 
     const routeSignals = new THREE.Group();
@@ -1783,12 +1881,10 @@ export function ContextRailPbrScene({
     const chevronGeometry = new THREE.BufferGeometry();
     chevronGeometry.setAttribute(
       "position",
-      new THREE.Float32BufferAttribute([
-        -0.12, 0, -0.12,
-        0.16, 0, 0,
-        -0.12, 0, 0.12,
-        -0.02, 0, 0,
-      ], 3),
+      new THREE.Float32BufferAttribute(
+        [-0.12, 0, -0.12, 0.16, 0, 0, -0.12, 0, 0.12, -0.02, 0, 0],
+        3,
+      ),
     );
     chevronGeometry.setIndex([0, 1, 3, 3, 1, 2]);
     chevronGeometry.computeVertexNormals();
@@ -1810,10 +1906,7 @@ export function ContextRailPbrScene({
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-      const spark = new THREE.Mesh(
-        new THREE.SphereGeometry(0.045, 12, 12),
-        sparkMaterial,
-      );
+      const spark = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), sparkMaterial);
       spark.position.copy(point);
       spark.position.y += 0.31;
       routeSignals.add(spark);
@@ -1858,20 +1951,23 @@ export function ContextRailPbrScene({
       markInteractive(node.group, `capability-${index}`, interactiveMeshes);
     });
 
-    const terminalNodes = (["mac", "windows"] as const).reduce<Record<Platform, TerminalNode>>((all, platform) => {
-      const node = buildTerminal(platform);
-      node.group.position.copy(node.base);
-      // Preserve a narrow, readable centre seam instead of letting the two
-      // chamfered module bases overlap into a white wedge.
-      node.group.position.x += platform === "mac" ? -0.015 : 0.095;
-      node.group.position.z += 0.19;
-      node.group.scale.set(0.93, 0.93, 1.12);
-      node.group.rotation.y = -0.02;
-      scene.add(node.group);
-      markInteractive(node.group, `terminal-${platform}`, interactiveMeshes);
-      all[platform] = node;
-      return all;
-    }, {} as Record<Platform, TerminalNode>);
+    const terminalNodes = (["mac", "windows"] as const).reduce<Record<Platform, TerminalNode>>(
+      (all, platform) => {
+        const node = buildTerminal(platform);
+        node.group.position.copy(node.base);
+        // Preserve a narrow, readable centre seam instead of letting the two
+        // chamfered module bases overlap into a white wedge.
+        node.group.position.x += platform === "mac" ? -0.015 : 0.095;
+        node.group.position.z += 0.19;
+        node.group.scale.set(0.93, 0.93, 1.12);
+        node.group.rotation.y = -0.02;
+        scene.add(node.group);
+        markInteractive(node.group, `terminal-${platform}`, interactiveMeshes);
+        all[platform] = node;
+        return all;
+      },
+      {} as Record<Platform, TerminalNode>,
+    );
 
     const terminalDock = new THREE.Group();
     const terminalDockLower = chamferedPlate(
@@ -1903,7 +1999,16 @@ export function ContextRailPbrScene({
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const terminalDockSeam = rounded(0.055, 0.05, 2.06, 0.015, terminalDockSeamMaterial, 0, 0.54, 0.02);
+    const terminalDockSeam = rounded(
+      0.055,
+      0.05,
+      2.06,
+      0.015,
+      terminalDockSeamMaterial,
+      0,
+      0.54,
+      0.02,
+    );
     terminalDock.add(terminalDockSeam);
     terminalDock.position.set(4.905, 0, -6.895);
     terminalDock.rotation.y = -0.02;
@@ -1962,14 +2067,9 @@ export function ContextRailPbrScene({
       // One deterministic full turn per capability interval makes forward and
       // reverse scrolling exact inverses. The sinusoidal phase bias keeps the
       // half-step visibly tilted while every integer stop returns upright.
-      const rollPhase = (
-        segmentProgress * Math.PI * 2
-        + Math.sin(segmentProgress * Math.PI) * Math.PI * 0.25
-      );
-      taskRollDelta.setFromAxisAngle(
-        taskRollAxis,
-        rollPhase,
-      );
+      const rollPhase =
+        segmentProgress * Math.PI * 2 + Math.sin(segmentProgress * Math.PI) * Math.PI * 0.25;
+      taskRollDelta.setFromAxisAngle(taskRollAxis, rollPhase);
       task.body.quaternion.copy(taskBaseOrientation).premultiply(taskRollDelta);
     };
     task.body.quaternion.copy(taskBaseOrientation);
@@ -2013,30 +2113,28 @@ export function ContextRailPbrScene({
     const robotOutgoingTangent = new THREE.Vector3();
     const robotScreenRight = new THREE.Vector3();
     const hiddenRobotScale = new THREE.Vector3(0.00001, 0.00001, 0.00001);
-    const robotMotionStates: RobotMotionState[] = robotPatrolConfigs.map(
-      (config, index) => ({
-        travel: config.phase,
-        travelSpeed: config.speed,
-        gaitPhase: index * 1.47,
-        previousPoint: new THREE.Vector3(),
-        initialized: false,
-        bodyYaw: 0,
-        headYaw: 0,
-        turnRate: 0,
-        leftLeg: 0,
-        rightLeg: 0,
-        leftArm: 0,
-        rightArm: 0,
-        leftElbow: 0,
-        rightElbow: 0,
-        leftFootLift: 0,
-        rightFootLift: 0,
-        shoulderSpread: 0,
-        bodyBob: 0,
-        bodyPitch: 0,
-        bodyRoll: 0,
-      }),
-    );
+    const robotMotionStates: RobotMotionState[] = robotPatrolConfigs.map((config, index) => ({
+      travel: config.phase,
+      travelSpeed: config.speed,
+      gaitPhase: index * 1.47,
+      previousPoint: new THREE.Vector3(),
+      initialized: false,
+      bodyYaw: 0,
+      headYaw: 0,
+      turnRate: 0,
+      leftLeg: 0,
+      rightLeg: 0,
+      leftArm: 0,
+      rightArm: 0,
+      leftElbow: 0,
+      rightElbow: 0,
+      leftFootLift: 0,
+      rightFootLift: 0,
+      shoulderSpread: 0,
+      bodyBob: 0,
+      bodyPitch: 0,
+      bodyRoll: 0,
+    }));
     const robotPartMotionMatrix = new THREE.Matrix4();
     const robotPartRotationMatrix = new THREE.Matrix4();
     const robotPartTiltMatrix = new THREE.Matrix4();
@@ -2052,7 +2150,8 @@ export function ContextRailPbrScene({
       if (robotLoadStarted || !robotLoadAlive || viewportWidth < 700) return;
       robotLoadStarted = true;
 
-      void robotLoader.loadAsync(ROBOT_MODEL_URL)
+      void robotLoader
+        .loadAsync(ROBOT_MODEL_URL)
         .then((gltf) => {
           if (!robotLoadAlive) {
             disposeObjectResources(gltf.scene);
@@ -2063,8 +2162,8 @@ export function ContextRailPbrScene({
           const sourceParts: THREE.Mesh[] = [];
           gltf.scene.traverse((object) => {
             if (
-              object instanceof THREE.Mesh
-              && (object.geometry.getAttribute("position")?.count ?? 0) > 100
+              object instanceof THREE.Mesh &&
+              (object.geometry.getAttribute("position")?.count ?? 0) > 100
             ) {
               sourceParts.push(object);
             }
@@ -2093,16 +2192,11 @@ export function ContextRailPbrScene({
             -sourceBounds.min.y,
             -sourceCenter.z,
           );
-          const modelHeight = Math.max(
-            0.001,
-            sourceBounds.getSize(new THREE.Vector3()).y,
-          );
+          const modelHeight = Math.max(0.001, sourceBounds.getSize(new THREE.Vector3()).y);
 
           const robotMaterials = new Set<THREE.Material>();
           sourceParts.forEach((part) => {
-            const materials = Array.isArray(part.material)
-              ? part.material
-              : [part.material];
+            const materials = Array.isArray(part.material) ? part.material : [part.material];
             materials.forEach((material) => robotMaterials.add(material));
           });
           robotMaterials.forEach((material) => {
@@ -2182,13 +2276,14 @@ export function ContextRailPbrScene({
           sourceParts.forEach((sourcePart) => sourcePart.parent?.remove(sourcePart));
           disposeObjectResources(gltf.scene);
 
-          const paths = robotPatrolConfigs.map((config) => (
-            new THREE.CatmullRomCurve3(
-              config.points.map(([x, z]) => new THREE.Vector3(x, 0, z)),
-              true,
-              "centripetal",
-            )
-          ));
+          const paths = robotPatrolConfigs.map(
+            (config) =>
+              new THREE.CatmullRomCurve3(
+                config.points.map(([x, z]) => new THREE.Vector3(x, 0, z)),
+                true,
+                "centripetal",
+              ),
+          );
           robotFleet = {
             parts,
             modelHeight,
@@ -2212,9 +2307,8 @@ export function ContextRailPbrScene({
     const dragCandidate = new THREE.Vector3();
     const dragRouteProbe = new THREE.Vector3();
     const dragRouteSampleCount = 160;
-    const dragRouteSamples = Array.from(
-      { length: dragRouteSampleCount + 1 },
-      (_, index) => route.getPoint(index / dragRouteSampleCount),
+    const dragRouteSamples = Array.from({ length: dragRouteSampleCount + 1 }, (_, index) =>
+      route.getPoint(index / dragRouteSampleCount),
     );
     const distanceToRouteSq = (routeT: number, point: THREE.Vector3) => {
       route.getPoint(routeT, dragRouteProbe);
@@ -2323,10 +2417,7 @@ export function ContextRailPbrScene({
         draggingTask = true;
         dragProgress = smoothProgress;
         dragNearestIndex = clampIndex(dragProgress);
-        dragPlane.setFromNormalAndCoplanarPoint(
-          new THREE.Vector3(0, 1, 0),
-          task.group.position,
-        );
+        dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), task.group.position);
         if (raycaster.ray.intersectPlane(dragPlane, dragWorld)) {
           dragGrabOffset.copy(task.group.position).sub(dragWorld);
         } else {
@@ -2356,11 +2447,11 @@ export function ContextRailPbrScene({
       const pressed = pressState;
       pressState = null;
       if (
-        !pressed
-        || pressed.pointerId !== event.pointerId
-        || !pressed.hit
-        || releasedHit !== pressed.hit
-        || Math.hypot(event.clientX - pressed.startX, event.clientY - pressed.startY) >= 6
+        !pressed ||
+        pressed.pointerId !== event.pointerId ||
+        !pressed.hit ||
+        releasedHit !== pressed.hit ||
+        Math.hypot(event.clientX - pressed.startX, event.clientY - pressed.startY) >= 6
       ) {
         return;
       }
@@ -2386,7 +2477,9 @@ export function ContextRailPbrScene({
       setHover(null);
     };
 
-    const onReduced = () => { reduced = reducedQuery.matches; };
+    const onReduced = () => {
+      reduced = reducedQuery.matches;
+    };
     reducedQuery.addEventListener("change", onReduced);
     renderer.domElement.addEventListener("pointermove", onPointerMove, { passive: false });
     renderer.domElement.addEventListener("pointerleave", onPointerLeave);
@@ -2449,9 +2542,7 @@ export function ContextRailPbrScene({
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(mount);
     const onGatewayState = (event: Event) => {
-      gatewayState = (
-        event as CustomEvent<{ state?: string }>
-      ).detail?.state ?? gatewayState;
+      gatewayState = (event as CustomEvent<{ state?: string }>).detail?.state ?? gatewayState;
       transitionSnapshotRendered = false;
       lastTime = performance.now();
     };
@@ -2463,10 +2554,8 @@ export function ContextRailPbrScene({
         lastTime = time;
         return;
       }
-      const transitionBudget = (
-        gatewayState.startsWith("playing")
-        || gatewayState.startsWith("settling")
-      );
+      const transitionBudget =
+        gatewayState.startsWith("playing") || gatewayState.startsWith("settling");
       // During the gateway, the canvas is already being animated by the outer
       // 60fps clip/transform layer. Keep one crisp PBR snapshot underneath it
       // instead of re-running shadows, robots and materials on every frame.
@@ -2488,11 +2577,7 @@ export function ContextRailPbrScene({
       const taskPoint = route.getPoint(routeT);
       const localBlend = 1 - THREE.MathUtils.smoothstep(routeT, 0, 0.12);
       const taskHeight = 0.28 - localBlend * 0.12;
-      task.group.position.set(
-        taskPoint.x - 0.09,
-        taskPoint.y + taskHeight,
-        taskPoint.z,
-      );
+      task.group.position.set(taskPoint.x - 0.09, taskPoint.y + taskHeight, taskPoint.z);
       if (reduced) {
         task.body.quaternion.copy(taskBaseOrientation);
       } else {
@@ -2509,9 +2594,15 @@ export function ContextRailPbrScene({
         const selected = active === index;
         const hover = hoverRef.current === `capability-${index}`;
         const lift = hover ? 0.21 : selected ? 0.08 : 0;
-        node.group.position.y = reduced ? node.base.y + lift : damp(node.group.position.y, node.base.y + lift, 11, dt);
-        node.group.rotation.z = reduced ? 0 : damp(node.group.rotation.z, hover ? -pointer.x * 0.04 : 0, 10, dt);
-        node.group.rotation.x = reduced ? 0 : damp(node.group.rotation.x, hover ? pointer.y * 0.028 : 0, 10, dt);
+        node.group.position.y = reduced
+          ? node.base.y + lift
+          : damp(node.group.position.y, node.base.y + lift, 11, dt);
+        node.group.rotation.z = reduced
+          ? 0
+          : damp(node.group.rotation.z, hover ? -pointer.x * 0.04 : 0, 10, dt);
+        node.group.rotation.x = reduced
+          ? 0
+          : damp(node.group.rotation.x, hover ? pointer.y * 0.028 : 0, 10, dt);
         const shellGlow = selected ? 0.08 : hover ? 0.04 : 0;
         node.shellMaterials.forEach((material) => {
           material.emissive.setHex(0x176cff);
@@ -2521,9 +2612,10 @@ export function ContextRailPbrScene({
         });
         node.glowMaterials.forEach((material) => {
           if ("opacity" in material && typeof material.opacity === "number") {
-            const opacityScale = typeof material.userData.opacityScale === "number"
-              ? material.userData.opacityScale
-              : 1;
+            const opacityScale =
+              typeof material.userData.opacityScale === "number"
+                ? material.userData.opacityScale
+                : 1;
             const baseOpacity = (selected ? 0.84 : hover ? 0.68 : 0.34) * opacityScale;
             material.opacity = reduced ? baseOpacity : damp(material.opacity, baseOpacity, 9, dt);
           }
@@ -2542,25 +2634,31 @@ export function ContextRailPbrScene({
         const hoveredRobot = hoverRef.current?.startsWith("robot-")
           ? Number(hoverRef.current.replace("robot-", ""))
           : -1;
-        const hover = (
-          hoverRef.current === `terminal-${platform}`
-          || (
-            hoveredRobot >= 0
-            && robotPlatformForIndex(hoveredRobot) === platform
-          )
-        );
+        const hover =
+          hoverRef.current === `terminal-${platform}` ||
+          (hoveredRobot >= 0 && robotPlatformForIndex(hoveredRobot) === platform);
         const lift = hover ? 0.2 : 0;
-        node.group.position.y = reduced ? node.base.y + lift : damp(node.group.position.y, node.base.y + lift, 11, dt);
-        node.group.rotation.z = reduced ? 0 : damp(node.group.rotation.z, hover ? -pointer.x * 0.035 : 0, 10, dt);
+        node.group.position.y = reduced
+          ? node.base.y + lift
+          : damp(node.group.position.y, node.base.y + lift, 11, dt);
+        node.group.rotation.z = reduced
+          ? 0
+          : damp(node.group.rotation.z, hover ? -pointer.x * 0.035 : 0, 10, dt);
         node.shellMaterials.forEach((material) => {
           material.emissive.setHex(0x176cff);
           material.emissiveIntensity = reduced
-            ? (hover ? 0.18 : 0)
+            ? hover
+              ? 0.18
+              : 0
             : damp(material.emissiveIntensity, hover ? 0.18 : 0, 9, dt);
         });
         node.glowMaterials.forEach((material) => {
           if ("opacity" in material && typeof material.opacity === "number") {
-            material.opacity = reduced ? (hover ? 0.55 : 0.12) : damp(material.opacity, hover ? 0.55 : 0.12, 9, dt);
+            material.opacity = reduced
+              ? hover
+                ? 0.55
+                : 0.12
+              : damp(material.opacity, hover ? 0.55 : 0.12, 9, dt);
           }
         });
       });
@@ -2569,12 +2667,8 @@ export function ContextRailPbrScene({
       if (robotFleet) {
         const fleet = robotFleet;
         camera.updateMatrixWorld();
-        robotScreenRight
-          .setFromMatrixColumn(camera.matrixWorld, 0)
-          .normalize();
-        const visibleRobotCount = viewportWidth >= 1021
-          ? robotPatrolConfigs.length
-          : 0;
+        robotScreenRight.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+        const visibleRobotCount = viewportWidth >= 1021 ? robotPatrolConfigs.length : 0;
         renderedRobotCount = visibleRobotCount;
         robotDownloadTokens.forEach((token, index) => {
           token.group.visible = index < visibleRobotCount;
@@ -2592,30 +2686,14 @@ export function ContextRailPbrScene({
           const path = fleet.paths[index];
           const robotScale = config.targetHeight / fleet.modelHeight;
           path.getPointAt(state.travel, robotPoint);
-          path.getPointAt(
-            (state.travel - 0.012 + 1) % 1,
-            robotTurnPreviousPoint,
+          path.getPointAt((state.travel - 0.012 + 1) % 1, robotTurnPreviousPoint);
+          path.getPointAt((state.travel + 0.012) % 1, robotTurnAheadPoint);
+          robotIncomingTangent.subVectors(robotPoint, robotTurnPreviousPoint).setY(0).normalize();
+          robotOutgoingTangent.subVectors(robotTurnAheadPoint, robotPoint).setY(0).normalize();
+          const turnAngle = Math.acos(
+            THREE.MathUtils.clamp(robotIncomingTangent.dot(robotOutgoingTangent), -1, 1),
           );
-          path.getPointAt(
-            (state.travel + 0.012) % 1,
-            robotTurnAheadPoint,
-          );
-          robotIncomingTangent
-            .subVectors(robotPoint, robotTurnPreviousPoint)
-            .setY(0)
-            .normalize();
-          robotOutgoingTangent
-            .subVectors(robotTurnAheadPoint, robotPoint)
-            .setY(0)
-            .normalize();
-          const turnAngle = Math.acos(THREE.MathUtils.clamp(
-            robotIncomingTangent.dot(robotOutgoingTangent),
-            -1,
-            1,
-          ));
-          const turnSeverity = smootherStep(
-            clamp01((turnAngle - 0.035) / 0.24),
-          );
+          const turnSeverity = smootherStep(clamp01((turnAngle - 0.035) / 0.24));
           const pace = 0.98 + Math.sin(time * 0.00024 + index * 1.7) * 0.05;
           const robotHovered = hoverRef.current === `robot-${index}`;
           const targetTravelSpeed = robotHovered
@@ -2634,10 +2712,7 @@ export function ContextRailPbrScene({
           }
 
           path.getPointAt(state.travel, robotPoint);
-          path.getPointAt(
-            (state.travel + 0.0005) % 1,
-            robotNextPoint,
-          );
+          path.getPointAt((state.travel + 0.0005) % 1, robotNextPoint);
           robotTangent.subVectors(robotNextPoint, robotPoint);
           if (viewportWidth < 900 && index === 0) {
             const compactOrbit = state.travel * Math.PI * 2;
@@ -2646,11 +2721,7 @@ export function ContextRailPbrScene({
               0,
               taskPoint.z + 1.1 + Math.sin(compactOrbit) * 0.22,
             );
-            robotTangent.set(
-              -Math.sin(compactOrbit),
-              0,
-              Math.cos(compactOrbit),
-            );
+            robotTangent.set(-Math.sin(compactOrbit), 0, Math.cos(compactOrbit));
           }
           robotTangent.y = 0;
           robotTangent.normalize();
@@ -2667,18 +2738,11 @@ export function ContextRailPbrScene({
             const travelledDistance = state.previousPoint.distanceTo(robotPoint);
             const cycleDistance = Math.max(
               0.001,
-              robotScale * ROBOT_STRIDE_LENGTH / ROBOT_STANCE_RATIO,
+              (robotScale * ROBOT_STRIDE_LENGTH) / ROBOT_STANCE_RATIO,
             );
-            state.gaitPhase = (
-              state.gaitPhase
-              + (travelledDistance / cycleDistance) * Math.PI * 2
-            ) % (Math.PI * 2);
-            state.bodyYaw = dampAngle(
-              state.bodyYaw,
-              targetBodyYaw,
-              13,
-              dt,
-            );
+            state.gaitPhase =
+              (state.gaitPhase + (travelledDistance / cycleDistance) * Math.PI * 2) % (Math.PI * 2);
+            state.bodyYaw = dampAngle(state.bodyYaw, targetBodyYaw, 13, dt);
           }
           if (!wasInitialized || reduced) {
             state.turnRate = 0;
@@ -2687,32 +2751,21 @@ export function ContextRailPbrScene({
               Math.sin(state.bodyYaw - previousBodyYaw),
               Math.cos(state.bodyYaw - previousBodyYaw),
             );
-            state.turnRate = damp(
-              state.turnRate,
-              yawDelta / Math.max(dt, 0.001),
-              10,
-              dt,
-            );
+            state.turnRate = damp(state.turnRate, yawDelta / Math.max(dt, 0.001), 10, dt);
           }
           state.previousPoint.copy(robotPoint);
 
-          const taskFacingYaw = Math.atan2(
-            taskPoint.x - robotPoint.x,
-            taskPoint.z - robotPoint.z,
-          );
+          const taskFacingYaw = Math.atan2(taskPoint.x - robotPoint.x, taskPoint.z - robotPoint.z);
           const taskFacingDelta = Math.atan2(
             Math.sin(taskFacingYaw - state.bodyYaw),
             Math.cos(taskFacingYaw - state.bodyYaw),
           );
           const targetHeadYaw = THREE.MathUtils.clamp(
-            taskFacingDelta
-            + (reduced ? 0 : Math.sin(time * 0.00078 + index * 1.37) * 0.065),
+            taskFacingDelta + (reduced ? 0 : Math.sin(time * 0.00078 + index * 1.37) * 0.065),
             -0.85,
             0.85,
           );
-          state.headYaw = reduced
-            ? targetHeadYaw
-            : damp(state.headYaw, targetHeadYaw, 4.2, dt);
+          state.headYaw = reduced ? targetHeadYaw : damp(state.headYaw, targetHeadYaw, 4.2, dt);
 
           const gaitPhase = state.gaitPhase;
           if (reduced) {
@@ -2731,113 +2784,44 @@ export function ContextRailPbrScene({
           } else {
             const leftCycle = walkCycle(gaitPhase);
             const rightCycle = walkCycle(gaitPhase + Math.PI);
-            const leftFootZ = walkStridePosition(leftCycle)
-              * ROBOT_STRIDE_LENGTH;
-            const rightFootZ = walkStridePosition(rightCycle)
-              * ROBOT_STRIDE_LENGTH;
+            const leftFootZ = walkStridePosition(leftCycle) * ROBOT_STRIDE_LENGTH;
+            const rightFootZ = walkStridePosition(rightCycle) * ROBOT_STRIDE_LENGTH;
             const leftLegTarget = -Math.atan2(leftFootZ, ROBOT_LEG_LENGTH);
             const rightLegTarget = -Math.atan2(rightFootZ, ROBOT_LEG_LENGTH);
-            const leftFootLiftTarget = walkFootLift(leftCycle) * ROBOT_FOOT_LIFT
-              + Math.max(0, leftLegTarget) * 0.065;
-            const rightFootLiftTarget = walkFootLift(rightCycle) * ROBOT_FOOT_LIFT
-              + Math.max(0, rightLegTarget) * 0.065;
-            const leftArmTarget = THREE.MathUtils.clamp(
-              -leftLegTarget * 1.32,
-              -0.42,
-              0.42,
-            );
-            const rightArmTarget = THREE.MathUtils.clamp(
-              -rightLegTarget * 1.32,
-              -0.42,
-              0.42,
-            );
-            const leftArmForward = clamp01(
-              (leftArmTarget / 0.42 + 1) * 0.5,
-            );
-            const rightArmForward = clamp01(
-              (rightArmTarget / 0.42 + 1) * 0.5,
-            );
+            const leftFootLiftTarget =
+              walkFootLift(leftCycle) * ROBOT_FOOT_LIFT + Math.max(0, leftLegTarget) * 0.065;
+            const rightFootLiftTarget =
+              walkFootLift(rightCycle) * ROBOT_FOOT_LIFT + Math.max(0, rightLegTarget) * 0.065;
+            const leftArmTarget = THREE.MathUtils.clamp(-leftLegTarget * 1.32, -0.42, 0.42);
+            const rightArmTarget = THREE.MathUtils.clamp(-rightLegTarget * 1.32, -0.42, 0.42);
+            const leftArmForward = clamp01((leftArmTarget / 0.42 + 1) * 0.5);
+            const rightArmForward = clamp01((rightArmTarget / 0.42 + 1) * 0.5);
             const leftElbowTarget = -(0.1 + leftArmForward * 0.14);
             const rightElbowTarget = -(0.1 + rightArmForward * 0.14);
-            const shoulderSpreadTarget = 0.028
-              + Math.abs(leftArmTarget - rightArmTarget) * 0.02;
-            const speedRatio = THREE.MathUtils.clamp(
-              state.travelSpeed / config.speed,
-              0,
-              1.2,
-            );
-            const bodyBobTarget = config.targetHeight * (
-              0.009
-              + 0.015 * (0.5 + Math.cos(gaitPhase * 2) * 0.5)
-            );
-            const bodyPitchTarget = 0.02
-              + speedRatio * 0.018
-              + Math.cos(gaitPhase * 2) * 0.007;
-            const bodyRollTarget = THREE.MathUtils.clamp(
-              -state.turnRate * 0.055,
-              -0.055,
-              0.055,
-            ) + Math.sin(gaitPhase) * 0.017;
+            const shoulderSpreadTarget = 0.028 + Math.abs(leftArmTarget - rightArmTarget) * 0.02;
+            const speedRatio = THREE.MathUtils.clamp(state.travelSpeed / config.speed, 0, 1.2);
+            const bodyBobTarget =
+              config.targetHeight * (0.009 + 0.015 * (0.5 + Math.cos(gaitPhase * 2) * 0.5));
+            const bodyPitchTarget = 0.02 + speedRatio * 0.018 + Math.cos(gaitPhase * 2) * 0.007;
+            const bodyRollTarget =
+              THREE.MathUtils.clamp(-state.turnRate * 0.055, -0.055, 0.055) +
+              Math.sin(gaitPhase) * 0.017;
 
             state.leftLeg = damp(state.leftLeg, leftLegTarget, 18, dt);
             state.rightLeg = damp(state.rightLeg, rightLegTarget, 18, dt);
             state.leftArm = damp(state.leftArm, leftArmTarget, 14, dt);
             state.rightArm = damp(state.rightArm, rightArmTarget, 14, dt);
-            state.leftElbow = damp(
-              state.leftElbow,
-              leftElbowTarget,
-              15,
-              dt,
-            );
-            state.rightElbow = damp(
-              state.rightElbow,
-              rightElbowTarget,
-              15,
-              dt,
-            );
-            state.leftFootLift = damp(
-              state.leftFootLift,
-              leftFootLiftTarget,
-              24,
-              dt,
-            );
-            state.rightFootLift = damp(
-              state.rightFootLift,
-              rightFootLiftTarget,
-              24,
-              dt,
-            );
-            state.shoulderSpread = damp(
-              state.shoulderSpread,
-              shoulderSpreadTarget,
-              8,
-              dt,
-            );
+            state.leftElbow = damp(state.leftElbow, leftElbowTarget, 15, dt);
+            state.rightElbow = damp(state.rightElbow, rightElbowTarget, 15, dt);
+            state.leftFootLift = damp(state.leftFootLift, leftFootLiftTarget, 24, dt);
+            state.rightFootLift = damp(state.rightFootLift, rightFootLiftTarget, 24, dt);
+            state.shoulderSpread = damp(state.shoulderSpread, shoulderSpreadTarget, 8, dt);
             state.bodyBob = damp(state.bodyBob, bodyBobTarget, 14, dt);
-            state.bodyPitch = damp(
-              state.bodyPitch,
-              bodyPitchTarget,
-              9,
-              dt,
-            );
-            state.bodyRoll = damp(
-              state.bodyRoll,
-              bodyRollTarget,
-              10,
-              dt,
-            );
+            state.bodyPitch = damp(state.bodyPitch, bodyPitchTarget, 9, dt);
+            state.bodyRoll = damp(state.bodyRoll, bodyRollTarget, 10, dt);
           }
-          robotDummy.position.set(
-            robotPoint.x,
-            -0.42 + state.bodyBob,
-            robotPoint.z,
-          );
-          robotDummy.rotation.set(
-            state.bodyPitch,
-            state.bodyYaw,
-            state.bodyRoll,
-            "XYZ",
-          );
+          robotDummy.position.set(robotPoint.x, -0.42 + state.bodyBob, robotPoint.z);
+          robotDummy.rotation.set(state.bodyPitch, state.bodyYaw, state.bodyRoll, "XYZ");
           robotDummy.scale.setScalar(robotScale);
           robotDummy.updateMatrix();
 
@@ -2853,20 +2837,20 @@ export function ContextRailPbrScene({
 
           const downloadToken = robotDownloadTokens[index];
           const tokenHovered = hoverRef.current === `robot-${index}`;
-          const tokenScaleTarget = (
-            (tokenHovered ? 1.04 : 0.86)
-            * THREE.MathUtils.clamp(config.targetHeight / 1.12, 0.92, 1.08)
-          );
-          downloadToken.group.position.copy(robotPoint).addScaledVector(
-            robotScreenRight,
-            0.38 * THREE.MathUtils.clamp(config.targetHeight / 1.12, 0.9, 1.1),
-          );
-          downloadToken.group.position.y = (
-            -0.42
-            + config.targetHeight * 0.46
-            + state.bodyBob
-            + (reduced ? 0 : Math.sin(time * 0.0032 + index) * 0.018)
-          );
+          const tokenScaleTarget =
+            (tokenHovered ? 1.04 : 0.86) *
+            THREE.MathUtils.clamp(config.targetHeight / 1.12, 0.92, 1.08);
+          downloadToken.group.position
+            .copy(robotPoint)
+            .addScaledVector(
+              robotScreenRight,
+              0.38 * THREE.MathUtils.clamp(config.targetHeight / 1.12, 0.9, 1.1),
+            );
+          downloadToken.group.position.y =
+            -0.42 +
+            config.targetHeight * 0.46 +
+            state.bodyBob +
+            (reduced ? 0 : Math.sin(time * 0.0032 + index) * 0.018);
           downloadToken.group.lookAt(
             camera.position.x,
             downloadToken.group.position.y,
@@ -2882,24 +2866,17 @@ export function ContextRailPbrScene({
             ? tokenScaleTarget
             : damp(downloadToken.group.scale.z, tokenScaleTarget, 11, dt);
           downloadToken.glowMaterial.opacity = reduced
-            ? (tokenHovered ? 0.56 : 0.2)
-            : damp(
-              downloadToken.glowMaterial.opacity,
-              tokenHovered ? 0.56 : 0.2,
-              9,
-              dt,
-            );
+            ? tokenHovered
+              ? 0.56
+              : 0.2
+            : damp(downloadToken.glowMaterial.opacity, tokenHovered ? 0.56 : 0.2, 9, dt);
           if (!reduced) {
             downloadToken.ring.rotation.z += dt * (tokenHovered ? 2.4 : 0.72);
           }
 
           robotShadowDummy.position.set(robotPoint.x, -0.412, robotPoint.z);
           robotShadowDummy.rotation.set(0, state.bodyYaw, 0);
-          robotShadowDummy.scale.set(
-            robotScale * 1.15,
-            robotScale,
-            robotScale * 0.78,
-          );
+          robotShadowDummy.scale.set(robotScale * 1.15, robotScale, robotScale * 0.78);
           robotShadowDummy.updateMatrix();
           fleet.shadow.setMatrixAt(index, robotShadowDummy.matrix);
 
@@ -2909,9 +2886,7 @@ export function ContextRailPbrScene({
               case "head":
                 robotPartRotationMatrix.makeRotationY(state.headYaw);
                 robotPartTiltMatrix.makeRotationX(
-                  reduced
-                    ? 0
-                    : Math.sin(time * 0.00092 + index * 0.81) * 0.022,
+                  reduced ? 0 : Math.sin(time * 0.00092 + index * 0.81) * 0.022,
                 );
                 robotPartRotationMatrix.multiply(robotPartTiltMatrix);
                 break;
@@ -2977,26 +2952,18 @@ export function ContextRailPbrScene({
                   -part.parentPivot.y,
                   -part.parentPivot.z,
                 );
-                robotPartParentMotionMatrix.multiply(
-                  robotPartParentNegativePivotMatrix,
-                );
+                robotPartParentMotionMatrix.multiply(robotPartParentNegativePivotMatrix);
                 robotPartParentMotionMatrix.multiply(robotPartMotionMatrix);
                 robotPartLocalMatrix.multiplyMatrices(
                   robotPartParentMotionMatrix,
                   part.localMatrix,
                 );
               } else {
-                robotPartLocalMatrix.multiplyMatrices(
-                  robotPartMotionMatrix,
-                  part.localMatrix,
-                );
+                robotPartLocalMatrix.multiplyMatrices(robotPartMotionMatrix, part.localMatrix);
               }
             }
 
-            robotInstanceMatrix.multiplyMatrices(
-              robotDummy.matrix,
-              robotPartLocalMatrix,
-            );
+            robotInstanceMatrix.multiplyMatrices(robotDummy.matrix, robotPartLocalMatrix);
             part.mesh.setMatrixAt(index, robotInstanceMatrix);
           });
         }
@@ -3012,7 +2979,9 @@ export function ContextRailPbrScene({
       task.group.scale.y = reduced ? taskScale : damp(task.group.scale.y, taskScale, 12, dt);
       task.group.scale.z = reduced ? taskScale : damp(task.group.scale.z, taskScale, 12, dt);
       task.light.intensity = reduced
-        ? (taskHovered ? 12.5 : 9.2)
+        ? taskHovered
+          ? 12.5
+          : 9.2
         : damp(task.light.intensity, taskHovered ? 12.5 : 9.2, 10, dt);
 
       if (viewportWidth < 900) {
@@ -3042,9 +3011,7 @@ export function ContextRailPbrScene({
           // Keep the selected capability name readable while the physical
           // task core is seated on top of that module. The local well only
           // needs a small lift; the compact rail modules need more clearance.
-          const selectedLift = activeRef.current === index
-            ? (index === 0 ? 0 : 48)
-            : 0;
+          const selectedLift = activeRef.current === index ? (index === 0 ? 0 : 48) : 0;
           placeDesignOverlay(capabilityLabelRefs.current[index], x, y - selectedLift);
         });
         project(
@@ -3060,7 +3027,9 @@ export function ContextRailPbrScene({
           "translate(-50%, -50%) rotate(5deg)",
         );
       } else {
-        nodes.forEach((node, index) => project(capabilityLabelRefs.current[index], node.labelAnchor, -5));
+        nodes.forEach((node, index) =>
+          project(capabilityLabelRefs.current[index], node.labelAnchor, -5),
+        );
         project(terminalLabelRefs.current.mac ?? null, terminalNodes.mac.labelAnchor, -2);
         project(terminalLabelRefs.current.windows ?? null, terminalNodes.windows.labelAnchor, -2);
       }
@@ -3070,12 +3039,7 @@ export function ContextRailPbrScene({
           if (element) element.style.visibility = "hidden";
           return;
         }
-        project(
-          element,
-          token.labelAnchor,
-          0,
-          "translate(-50%, -50%)",
-        );
+        project(element, token.labelAnchor, 0, "translate(-50%, -50%)");
       });
       project(taskLabelRef.current, task.labelAnchor, 0, "translate(-50%, -50%)");
       project(
@@ -3132,14 +3096,30 @@ export function ContextRailPbrScene({
       data-active={safeActive}
       data-hovered={hovered ?? ""}
       role="group"
-      aria-label={locale === "zh" ? "DJL 高精度六能力物理轨道" : "DJL high-detail six-capability physical rail"}
+      aria-label={
+        locale === "zh"
+          ? "DJL 高精度六能力物理轨道"
+          : "DJL high-detail six-capability physical rail"
+      }
     >
       <div ref={canvasHostRef} className="crp-canvas-host" />
       <div className="crp-overlay">
         <div className="crp-source-title">
           <small>CONTEXT IN MOTION</small>
           <h1>
-            {locale === "zh" ? <>让任务<br />开始流动</> : <>Put tasks<br />in motion</>}
+            {locale === "zh" ? (
+              <>
+                让任务
+                <br />
+                开始流动
+              </>
+            ) : (
+              <>
+                Put tasks
+                <br />
+                in motion
+              </>
+            )}
           </h1>
           <p>
             {locale === "zh"
@@ -3157,7 +3137,9 @@ export function ContextRailPbrScene({
         {labels[locale].map((label, index) => (
           <button
             key={label}
-            ref={(element) => { capabilityLabelRefs.current[index] = element; }}
+            ref={(element) => {
+              capabilityLabelRefs.current[index] = element;
+            }}
             type="button"
             className="crp-module-label"
             data-index={index}
@@ -3183,7 +3165,9 @@ export function ContextRailPbrScene({
         {(["mac", "windows"] as const).map((platform) => (
           <button
             key={platform}
-            ref={(element) => { terminalLabelRefs.current[platform] = element; }}
+            ref={(element) => {
+              terminalLabelRefs.current[platform] = element;
+            }}
             type="button"
             className="crp-terminal-label"
             data-platform={platform}
@@ -3198,14 +3182,16 @@ export function ContextRailPbrScene({
             }}
             onClick={() => onTerminal(platform)}
           >
-            <span aria-hidden="true">
-              {platform === "mac" ? <Apple /> : <PanelsTopLeft />}
-            </span>
+            <span aria-hidden="true">{platform === "mac" ? <Apple /> : <PanelsTopLeft />}</span>
             <strong>{locale === "zh" ? "下载" : "Download"}</strong>
             <small>
               {platform === "mac"
-                ? (locale === "zh" ? "macOS 版" : "macOS")
-                : (locale === "zh" ? "Windows 版" : "Windows")}
+                ? locale === "zh"
+                  ? "macOS 版"
+                  : "macOS"
+                : locale === "zh"
+                  ? "Windows 版"
+                  : "Windows"}
             </small>
           </button>
         ))}
@@ -3218,7 +3204,9 @@ export function ContextRailPbrScene({
           return (
             <button
               key={robotKey}
-              ref={(element) => { robotDownloadRefs.current[index] = element; }}
+              ref={(element) => {
+                robotDownloadRefs.current[index] = element;
+              }}
               type="button"
               className="crp-robot-download-hit"
               data-platform={platform}
@@ -3248,9 +3236,11 @@ export function ContextRailPbrScene({
               onClick={() => onTerminal(platform)}
             >
               <span>
-                {platform === "mac"
-                  ? <Apple aria-hidden="true" />
-                  : <PanelsTopLeft aria-hidden="true" />}
+                {platform === "mac" ? (
+                  <Apple aria-hidden="true" />
+                ) : (
+                  <PanelsTopLeft aria-hidden="true" />
+                )}
                 <strong>{platformName}</strong>
                 <small>{locale === "zh" ? "点击下载" : "Download"}</small>
                 <Download aria-hidden="true" />
@@ -3260,12 +3250,16 @@ export function ContextRailPbrScene({
         })}
 
         <div className="crp-robot-download-guide">
-          <span aria-hidden="true"><Download /></span>
+          <span aria-hidden="true">
+            <Download />
+          </span>
           <p>
             <strong>
               {locale === "zh" ? "点击机器人手中的下载芯片" : "Click a robot download chip"}
             </strong>
-            <small>{ROBOT_PLATFORM_COUNT} macOS · {ROBOT_PLATFORM_COUNT} Windows</small>
+            <small>
+              {ROBOT_PLATFORM_COUNT} macOS · {ROBOT_PLATFORM_COUNT} Windows
+            </small>
           </p>
         </div>
 
@@ -3284,8 +3278,15 @@ export function ContextRailPbrScene({
           }}
           onClick={() => onSelect(safeActive)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/djl-logo.png" alt="" aria-hidden="true" />
+          <NextImage
+            unoptimized
+            loading="eager"
+            width={512}
+            height={512}
+            src="/djl-logo.png"
+            alt=""
+            aria-hidden="true"
+          />
           <small>{locale === "zh" ? "任务核" : "TASK CORE"}</small>
         </button>
 
@@ -3299,13 +3300,17 @@ export function ContextRailPbrScene({
           <ul>
             {current.facts.map((fact, index) => (
               <li key={fact}>
-                {safeActive === 0
-                  ? (index === 0
-                    ? <Monitor aria-hidden="true" />
-                    : index === 1
-                      ? <WifiOff aria-hidden="true" />
-                      : <LockKeyhole aria-hidden="true" />)
-                  : <i />}
+                {safeActive === 0 ? (
+                  index === 0 ? (
+                    <Monitor aria-hidden="true" />
+                  ) : index === 1 ? (
+                    <WifiOff aria-hidden="true" />
+                  ) : (
+                    <LockKeyhole aria-hidden="true" />
+                  )
+                ) : (
+                  <i />
+                )}
                 {fact}
               </li>
             ))}
@@ -3313,11 +3318,14 @@ export function ContextRailPbrScene({
           <div className="crp-dossier-flow">
             {current.flow.map((step, index) => (
               <span key={step}>
-                {safeActive === 0 && (index === 0
-                  ? <FileText aria-hidden="true" />
-                  : index === 1
-                    ? <Cpu aria-hidden="true" />
-                    : <ScanSearch aria-hidden="true" />)}
+                {safeActive === 0 &&
+                  (index === 0 ? (
+                    <FileText aria-hidden="true" />
+                  ) : index === 1 ? (
+                    <Cpu aria-hidden="true" />
+                  ) : (
+                    <ScanSearch aria-hidden="true" />
+                  ))}
                 <b>{step}</b>
                 {index < 2 && <i aria-hidden="true">→</i>}
               </span>
@@ -3327,7 +3335,10 @@ export function ContextRailPbrScene({
       </div>
 
       <div className="crp-scroll-status" aria-hidden="true">
-        <span><i />{locale === "zh" ? "任务核沿轨道流动" : "Task core on rail"}</span>
+        <span>
+          <i />
+          {locale === "zh" ? "任务核沿轨道流动" : "Task core on rail"}
+        </span>
         <b>{String(safeActive + 1).padStart(2, "0")} / 06</b>
       </div>
     </div>
