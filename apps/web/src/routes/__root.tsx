@@ -12,6 +12,7 @@ import { isThreadDetailEventForThread } from "@synara/shared/orchestrationThread
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
 import {
   Outlet,
+  DefaultGlobalNotFound,
   createRootRouteWithContext,
   type ErrorComponentProps,
   useNavigate,
@@ -24,6 +25,7 @@ import { Throttler } from "@tanstack/react-pacer";
 import { useTranslation } from "react-i18next";
 
 import { APP_DISPLAY_NAME } from "../branding";
+import { useDesktopReady } from "../hooks/useDesktopReady";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
@@ -144,6 +146,7 @@ export const Route = createRootRouteWithContext<{
 }>()({
   component: RootRouteView,
   errorComponent: RootRouteErrorView,
+  notFoundComponent: RootRouteNotFoundView,
   head: () => ({
     meta: [{ name: "title", content: APP_DISPLAY_NAME }],
   }),
@@ -615,7 +618,13 @@ function GlobalWhatsNewSurface() {
   );
 }
 
+function RootRouteNotFoundView() {
+  useDesktopReady();
+  return <DefaultGlobalNotFound />;
+}
+
 function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
+  useDesktopReady();
   const { t } = useTranslation("shell");
   const details = errorDetails(error, t("error.noDetails"));
 

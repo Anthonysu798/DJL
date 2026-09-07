@@ -166,9 +166,8 @@ import {
   applyAutomationEvent,
   automationAttentionCount,
   automationQueryKey,
-  formatCadence,
-  groupHeartbeatAutomationsByTargetThread,
-} from "../routes/-automations.shared";
+} from "../lib/automationState";
+import { formatCadence, groupHeartbeatAutomationsByTargetThread } from "../lib/automationForm";
 import { shouldRenderTerminalWorkspace } from "./ChatView.logic";
 import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
 import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";

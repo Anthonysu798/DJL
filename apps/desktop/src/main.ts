@@ -86,6 +86,7 @@ import {
 } from "./macIconCacheRefresh";
 import { collectMacUpdateDiagnostics } from "./macUpdateDiagnostics";
 import { openInitialBackendWindow } from "./initialBackendWindowOpen";
+import { createWindowRevealGate, RENDERER_READY_CHANNEL } from "./windowReveal";
 import {
   reportInstallOnce,
   resolveInstallRecordPath,
@@ -1393,8 +1394,10 @@ function clearUnreadNotificationBadge(): void {
 
 // Reuse the existing desktop window when the app is launched again so users
 // don't end up with multiple packaged instances racing the same local state.
+const revealedWindows = new WeakSet<BrowserWindow>();
+
 function focusMainWindow(): void {
-  if (!mainWindow) {
+  if (!mainWindow || !revealedWindows.has(mainWindow)) {
     return;
   }
   if (mainWindow.isMinimized()) {
@@ -3685,27 +3688,43 @@ function createWindow(): BrowserWindow {
       console.info("[desktop-smoke] renderer ready");
     }
   });
-  window.once("ready-to-show", () => {
+  const revealGate = createWindowRevealGate(() => {
+    if (window.isDestroyed()) return;
+    revealedWindows.add(window);
     // Launch filling the screen work area; the 1100x780 size above stays as the
     // restore bounds when the user toggles the window back out of maximized.
     window.maximize();
     window.show();
     emitDesktopWindowState(window);
   });
+  const onRendererReady = (event: Electron.IpcMainEvent) => {
+    if (event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame) {
+      revealGate.shellReady();
+    }
+  };
+  ipcMain.on(RENDERER_READY_CHANNEL, onRendererReady);
+  window.once("ready-to-show", () => revealGate.firstPaint());
 
   window.on("maximize", () => emitDesktopWindowState(window));
   window.on("unmaximize", () => emitDesktopWindowState(window));
   window.on("enter-full-screen", () => emitDesktopWindowState(window));
   window.on("leave-full-screen", () => emitDesktopWindowState(window));
 
-  if (isDevelopment) {
-    void window.loadURL(process.env.VITE_DEV_SERVER_URL as string);
-    window.webContents.openDevTools({ mode: "detach" });
-  } else {
-    void window.loadURL(SYNARA_DESKTOP_ENTRY_URL);
-  }
+  // Opening DevTools here competes with the app's first render. It remains
+  // available from the View menu and keyboard shortcut.
+  const entryUrl = isDevelopment
+    ? (process.env.VITE_DEV_SERVER_URL as string)
+    : SYNARA_DESKTOP_ENTRY_URL;
+  void window.loadURL(entryUrl).catch((error: unknown) => {
+    // Reloads can supersede an in-flight dev navigation. A real load failure
+    // must surface a native error rather than leave a hidden window forever.
+    if (window.isDestroyed() || (error as { code?: string })?.code === "ERR_ABORTED") return;
+    handleFatalStartupError("renderer load", error);
+  });
 
   window.on("closed", () => {
+    revealGate.cancel();
+    ipcMain.removeListener(RENDERER_READY_CHANNEL, onRendererReady);
     if (mainWindow === window) {
       mainWindow = null;
     }
@@ -3790,31 +3809,6 @@ async function bootstrap(): Promise<void> {
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");
 
-  if (isDevelopment) {
-    void waitForBackendWindowReady(backendHttpUrl)
-      .then((source) => {
-        writeDesktopLogHeader(`bootstrap backend ready source=${source}`);
-        if (!mainWindow) {
-          mainWindow = createWindow();
-          writeDesktopLogHeader("bootstrap main window created");
-        }
-      })
-      .catch((error) => {
-        if (isBackendReadinessAborted(error)) {
-          return;
-        }
-        writeDesktopLogHeader(
-          `bootstrap backend readiness warning message=${formatErrorMessage(error)}`,
-        );
-        console.warn("[desktop] backend readiness check timed out during dev bootstrap", error);
-        if (!mainWindow) {
-          mainWindow = createWindow();
-          writeDesktopLogHeader("bootstrap main window created after readiness warning");
-        }
-      });
-    return;
-  }
-
   ensureInitialBackendWindowOpen(backendHttpUrl);
 }
 
@@ -3891,25 +3885,7 @@ if (hasSingleInstanceLock) {
       app.on("activate", () => {
         handleDesktopAppForegrounded();
         if (BrowserWindow.getAllWindows().length === 0) {
-          if (!isDevelopment) {
-            ensureInitialBackendWindowOpen(backendHttpUrl);
-            return;
-          }
-          void waitForBackendWindowReady(backendHttpUrl)
-            .catch((error) => {
-              if (isBackendReadinessAborted(error)) {
-                return;
-              }
-              console.warn(
-                "[desktop] backend readiness check timed out during dev activate",
-                error,
-              );
-            })
-            .finally(() => {
-              if (!mainWindow) {
-                mainWindow = createWindow();
-              }
-            });
+          ensureInitialBackendWindowOpen(backendHttpUrl);
           return;
         }
         focusMainWindow();
