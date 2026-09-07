@@ -1088,6 +1088,7 @@
   },
   "settings": {
     "tools": {
+      "nativeSetupRequired": "請使用適用於你系統的官方安裝程式。",
       "automatic": "自動更新服務商工具",
       "automaticDescription": "每六小時檢查一次，在沒有執行中的對話且所有終端機已關閉時更新已安裝的工具。",
       "automaticError": "無法儲存自動更新設定。",
@@ -1115,6 +1116,8 @@
       "accessNote": "模型存取權取決於供應商帳號。請在設定中啟用供應商更新檢查，以偵測最新版本。"
     },
     "subscriptions": {
+      "kimiRegion": "Kimi 帳號地區",
+      "existingRegion": "使用 CLI 目前地區",
       "title": "訂閱與程式開發方案",
       "international": "國際版",
       "china": "中國大陸版",
@@ -1128,6 +1131,7 @@
       "modelPicker": "連線後，在模型選擇器中選擇 OpenCode，即可使用方案。其他服務商仍可在「模型與 API 金鑰」中設定。"
     },
     "accounts": {
+      "loginFor": "登入 {{provider}}",
       "openCodeSharedLogin": "OpenCode 與已安裝的 OpenCode CLI 共用登入資訊。在此登入也會更新 CLI 的登入資訊。",
       "openCodeLegacyAvailable": "DJL 中有可複製的已儲存登入資訊：{{providers}}。現有 CLI 登入資訊將保留，原始 DJL 憑證也會備份保留。",
       "openCodeTransfer": "將 DJL 已儲存的登入資訊複製到 OpenCode",

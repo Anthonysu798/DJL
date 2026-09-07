@@ -1854,12 +1854,16 @@ export function flattenOpenCodeProviderConnections(input: {
         provider,
         input.authMethods[provider.id] ?? [],
       );
-      if (!supportsApiKey && !connected.has(provider.id)) return [];
+      const supportsOAuth = (input.authMethods[provider.id] ?? []).some(
+        (method) => method.type === "oauth",
+      );
+      if (!supportsApiKey && !supportsOAuth && !connected.has(provider.id)) return [];
       return [
         {
           id: provider.id,
           name: provider.name,
           supportsApiKey,
+          ...(supportsOAuth ? { supportsOAuth: true } : {}),
           ...(input.storedCredentialProviderIds
             ? { hasStoredCredential: input.storedCredentialProviderIds.includes(provider.id) }
             : {}),

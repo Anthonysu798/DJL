@@ -6,6 +6,8 @@ import { Schema } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCodexDriver } from "./codex";
 import { createCursorDriver } from "./cursor";
+import { createGrokDriver } from "./grok";
+import { createKimiDriver } from "./kimi";
 import type { NativeSink } from "./types";
 
 const dirs: string[] = [];
@@ -35,6 +37,118 @@ const sink = (
 ): NativeSink => ({ emit: (event) => events.push(event), request, fail: () => {} });
 
 describe("new official protocol drivers", () => {
+  it("Kimi resumes, uses advertised permission choices, and cancels an active turn", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'login'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate')reply(m,{});
+      if(m.method==='session/load'){if(m.params.sessionId!=='kimi-resume')throw Error('bad resume');reply(m,{configOptions:[{id:'model',options:[{value:'kimi-code/k3',name:'Kimi K3'}]}],modes:{availableModes:[{id:'default'},{id:'plan'}]}})}
+      if(m.method==='session/set_model'||m.method==='session/set_mode')reply(m,{});
+      if(m.method==='session/prompt'){global.prompt=m.id;send({id:77,method:'session/request_permission',params:{sessionId:'kimi-resume',toolCall:{kind:'execute'},options:[{optionId:'reject-tool',kind:'reject_once'},{optionId:'allow-tool',kind:'allow_once'}]}})}
+      if(m.id===77&&!m.method){if(m.result.outcome.optionId!=='reject-tool')throw Error('wrong permission');global.reviewed=true}
+      if(m.method==='session/cancel'){if(!global.reviewed)throw Error('permission missing');send({id:global.prompt,result:{stopReason:'cancelled'}})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const request = vi.fn(async () => "decline" as const);
+    const driver = await createKimiDriver(
+      {
+        ...input,
+        resumeCursor: { nativeSessionId: "kimi-resume" },
+        providerOptions: { kimi: { binaryPath: binary } },
+      },
+      sink(events, request),
+    );
+    try {
+      const turn = driver.send({ threadId: input.threadId, input: "Hello" });
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      await driver.interrupt();
+      await turn;
+      expect(driver.id).toBe("kimi-resume");
+      expect(events).toContainEqual({ type: "turn.completed", payload: { state: "interrupted" } });
+    } finally {
+      driver.close();
+    }
+  });
+  it("Kimi validates existing OAuth and discovers only managed subscription models", async () => {
+    vi.stubEnv("KIMI_MODEL_NAME", "metered-override");
+    const binary = fixture(`
+      if(process.argv[2]!=='acp'||process.env.KIMI_MODEL_NAME||process.env.KIMI_CODE_NO_AUTO_UPDATE!=='1')throw Error('wrong Kimi invocation');
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'login',type:'terminal'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate'){if(m.params.methodId!=='login')throw Error('wrong auth');global.auth=true;reply(m,{})}
+      if(m.method==='session/new'){if(!global.auth)throw Error('missing auth');reply(m,{sessionId:'kimi-test',configOptions:[{id:'model',category:'model',options:[{value:'openai/paid',name:'API model'},{value:'kimi-code/k3',name:'Kimi K3'}]}],modes:{currentModeId:'default',availableModes:[{id:'default'},{id:'plan'}]}})}
+      if(m.method==='session/set_model'){if(m.params.modelId!=='kimi-code/k3')throw Error('API fallback');reply(m,{})}
+      if(m.method==='session/set_mode')reply(m,{});
+      if(m.method==='session/prompt'){note('session/update',{sessionId:'kimi-test',update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'hello kimi'}}});reply(m,{stopReason:'end_turn'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const driver = await createKimiDriver(
+      { ...input, providerOptions: { kimi: { binaryPath: binary } } },
+      sink(events),
+    );
+    try {
+      expect((await driver.models()).models).toEqual([{ slug: "kimi-code/k3", name: "Kimi K3" }]);
+      await driver.send({ threadId: input.threadId, input: "Hello" });
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello kimi" },
+        }),
+      );
+      await expect(
+        driver.send({
+          threadId: input.threadId,
+          input: "Hello",
+          modelSelection: { provider: "kimi", model: "openai/paid" },
+        }),
+      ).rejects.toThrow("subscription model");
+    } finally {
+      driver.close();
+    }
+  });
+  it("Grok uses cached subscription authentication and advertised modes without API-key fallback", async () => {
+    vi.stubEnv("XAI_API_KEY", "must-not-use-metered-api");
+    const binary = fixture(`
+      if(process.env.XAI_API_KEY)throw Error('API key leaked into subscription runtime');
+      if(process.argv.slice(2).join(' ')!=='--no-auto-update agent stdio')throw Error('bad command');
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'cached_token'},{id:'xai.api_key'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate'){if(m.params.methodId!=='cached_token'||m.params._meta.headless!==true)throw Error('unsafe auth');global.auth=true;reply(m,{})}
+      if(m.method==='session/load'){if(!global.auth)throw Error('missing auth');reply(m,{models:{availableModels:[{modelId:'grok-test',name:'Grok'}]},modes:{currentModeId:'default',availableModes:[{id:'default'},{id:'plan'}]}})}
+      if(m.method==='session/set_model')reply(m,{});
+      if(m.method==='session/set_mode'){if(m.params.modeId!=='default')throw Error('invented mode');reply(m,{})}
+      if(m.method==='session/prompt'){note('session/update',{sessionId:'grok-resume',update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'hello grok'}}});reply(m,{stopReason:'end_turn'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const driver = await createGrokDriver(
+      {
+        ...input,
+        resumeCursor: { nativeSessionId: "grok-resume" },
+        providerOptions: { grok: { binaryPath: binary } },
+      },
+      sink(events),
+    );
+    try {
+      expect((await driver.models()).models[0]?.slug).toBe("grok-test");
+      await driver.send({ threadId: input.threadId, input: "Hello" });
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello grok" },
+        }),
+      );
+    } finally {
+      driver.close();
+    }
+  });
+
+  it("Grok refuses browser authentication during background discovery", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'oauth'},{id:'xai.api_key'}],agentCapabilities:{}});
+      if(m.method==='authenticate'||m.method==='session/new')throw Error('must not authenticate interactively');
+    `);
+    await expect(
+      createGrokDriver({ ...input, providerOptions: { grok: { binaryPath: binary } } }, sink([])),
+    ).rejects.toThrow("Sign in to Grok");
+  });
+
   it("runs a configured Cursor editor launcher through its agent subcommand", async () => {
     vi.stubEnv("PATH", "");
     const binary = fixture(

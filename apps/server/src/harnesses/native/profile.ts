@@ -7,6 +7,15 @@ export function nativeProfileOptions(
   settings: ServerSettings,
 ): ProviderStartOptions {
   switch (provider) {
+    case "kimi":
+      return {
+        kimi: {
+          binaryPath: settings.providers.kimi.binaryPath.trim() || "kimi",
+          region: settings.providers.kimi.region,
+        },
+      };
+    case "grok":
+      return { grok: { binaryPath: settings.providers.grok.binaryPath.trim() || "grok" } };
     case "codex":
       return {
         codex: {

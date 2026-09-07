@@ -14,7 +14,14 @@ import {
 
 describe("providerOrdering", () => {
   it("exposes the active OpenCode runtime and newly built native harnesses", () => {
-    expect(DEFAULT_PROVIDER_ORDER).toEqual(["opencode", "codex", "claudeAgent", "cursor"]);
+    expect(DEFAULT_PROVIDER_ORDER).toEqual([
+      "opencode",
+      "codex",
+      "claudeAgent",
+      "cursor",
+      "grok",
+      "kimi",
+    ]);
   });
 
   it("drops historical providers from picker order and visibility settings", () => {
@@ -24,6 +31,8 @@ describe("providerOrdering", () => {
       "opencode",
       "claudeAgent",
       "cursor",
+      "grok",
+      "kimi",
     ]);
     expect(normalizeHiddenProviders(["bogus", "pi", "pi"])).toEqual([]);
   });

@@ -1,7 +1,14 @@
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
 
-export const HarnessId = Schema.Literals(["codex", "claudeAgent", "cursor", "opencode"]);
+export const HarnessId = Schema.Literals([
+  "codex",
+  "claudeAgent",
+  "cursor",
+  "opencode",
+  "grok",
+  "kimi",
+]);
 export type HarnessId = typeof HarnessId.Type;
 
 export const HarnessAccount = Schema.Struct({
@@ -30,7 +37,14 @@ export const HarnessEndLoginInput = Schema.Struct({ harness: HarnessId });
 export type HarnessEndLoginInput = typeof HarnessEndLoginInput.Type;
 
 // Standalone installed CLI tools.
-export const HarnessToolId = Schema.Literals(["codex", "claudeAgent", "opencode"]);
+export const HarnessToolId = Schema.Literals([
+  "codex",
+  "claudeAgent",
+  "opencode",
+  "grok",
+  "kimi",
+  "cursor",
+]);
 export type HarnessToolId = typeof HarnessToolId.Type;
 export const HarnessTool = Schema.Struct({
   id: HarnessToolId,
@@ -51,7 +65,8 @@ export const HarnessMaintainToolInput = Schema.Struct({ harness: HarnessToolId }
 export type HarnessMaintainToolInput = typeof HarnessMaintainToolInput.Type;
 
 export const HarnessProfileAccountInput = Schema.Struct({
-  provider: HarnessId,
+  // Only runtimes with isolated workspace credential profiles belong here.
+  provider: Schema.Literals(["codex", "claudeAgent", "cursor", "opencode"]),
   profileId: Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_-]{1,80}$/)),
 });
 export type HarnessProfileAccountInput = typeof HarnessProfileAccountInput.Type;

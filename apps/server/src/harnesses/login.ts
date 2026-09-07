@@ -101,7 +101,7 @@ export function createHarnessLoginController(input: {
         ),
       );
       const removeEnv =
-        request.harness === "opencode"
+        request.harness === "opencode" || request.harness === "grok" || request.harness === "kimi"
           ? Object.keys(process.env).filter((key) => invocation.env[key] === undefined)
           : [];
       try {

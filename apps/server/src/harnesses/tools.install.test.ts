@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect } from "effect";
-import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS, type HarnessToolId } from "@synara/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { createHarnessToolsController, inspectHarnessTool, maintainHarnessTool } from "./tools";
 import { inspectInstalledOpenCodeProtocol } from "../provider/openCodeInstalledProtocol";
@@ -42,7 +42,7 @@ esac
       vi.fn(async () => new Response(JSON.stringify({ version: "2.0.0" }))),
     );
     const settings = { ...DEFAULT_SERVER_SETTINGS, enableProviderUpdateChecks: true };
-    const inspect = (id: "codex" | "claudeAgent" | "opencode") =>
+    const inspect = (id: HarnessToolId) =>
       Effect.runPromise(inspectHarnessTool(id, settings).pipe(Effect.provide(NodeServices.layer)));
     const controller = createHarnessToolsController({
       inspect,

@@ -42,6 +42,15 @@ export const GrokServerProviderSettings = Schema.Struct({
 });
 export type GrokServerProviderSettings = typeof GrokServerProviderSettings.Type;
 
+export const KimiServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "kimi")),
+  region: Schema.Literals(["existing", "global", "mainland-cn"]).pipe(
+    Schema.withDecodingDefault(() => "existing"),
+  ),
+});
+export type KimiServerProviderSettings = typeof KimiServerProviderSettings.Type;
+
 export const DroidServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "droid")),
@@ -108,6 +117,7 @@ export const ServerSettings = Schema.Struct({
     cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     gemini: GeminiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    kimi: KimiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -160,6 +170,12 @@ export const ServerSettingsPatch = Schema.Struct({
       ),
       gemini: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       grok: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      kimi: Schema.optionalKey(
+        Schema.Struct({
+          ...ProviderSettingsBasePatch,
+          region: Schema.optionalKey(Schema.Literals(["existing", "global", "mainland-cn"])),
+        }),
+      ),
       droid: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       kilo: Schema.optionalKey(
         Schema.Struct({

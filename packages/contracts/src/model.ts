@@ -143,6 +143,8 @@ export const GrokModelOptions = Schema.Struct({
   reasoningEffort: Schema.optional(Schema.Literals(GROK_REASONING_EFFORT_OPTIONS)),
 });
 export type GrokModelOptions = typeof GrokModelOptions.Type;
+export const KimiModelOptions = Schema.Struct({});
+export type KimiModelOptions = typeof KimiModelOptions.Type;
 
 export const DroidModelOptions = Schema.Struct({
   reasoningEffort: Schema.optional(Schema.Literals(DROID_REASONING_EFFORT_OPTIONS)),
@@ -155,6 +157,7 @@ export const ProviderModelOptions = Schema.Struct({
   cursor: Schema.optional(CursorModelOptions),
   gemini: Schema.optional(GeminiModelOptions),
   grok: Schema.optional(GrokModelOptions),
+  kimi: Schema.optional(KimiModelOptions),
   droid: Schema.optional(DroidModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
@@ -437,6 +440,19 @@ type ModelDefinition = {
  * should return its own model list over the WS API.
  */
 export const MODEL_OPTIONS_BY_PROVIDER = {
+  kimi: [
+    {
+      slug: "kimi-code/kimi-for-coding",
+      name: "Kimi For Coding",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
   codex: [
     {
       slug: "gpt-6-astra",
@@ -623,6 +639,28 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
   grok: [
+    {
+      slug: "grok-4.6",
+      name: "Grok 4.6",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+    {
+      slug: "grok-4.5",
+      name: "Grok 4.5",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
     {
       slug: "grok-build-0.1",
       name: "Grok Build 0.1",
@@ -895,11 +933,12 @@ export type ModelSlug = BuiltInModelSlug | (string & {});
 export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
+  kimi: "kimi-code/kimi-for-coding",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
   cursor: "auto",
   gemini: "auto-gemini-3",
-  grok: "grok-build",
+  grok: "grok-4.6",
   droid: "claude-opus-4-8",
   kilo: "kilo/kilo-auto/free",
   opencode: "openai/gpt-5",
@@ -911,6 +950,7 @@ export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "openai/gpt-5" as const;
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
+  kimi: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1009,14 +1049,16 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     minimax: "minimax-m3",
   },
   grok: {
-    grok: "grok-build-0.1",
-    build: "grok-build-0.1",
+    grok: "grok-4.6",
+    build: "grok-4.6",
+    "4.6": "grok-4.6",
+    "4.5": "grok-4.5",
     "grok-build-0.1": "grok-build-0.1",
     "grok-build": "grok-build",
     "4.3": "grok-build",
     "grok-4": "grok-build",
     "grok-4.3": "grok-build",
-    "grok-latest": "grok-build",
+    "grok-latest": "grok-4.6",
     "grok-code-fast": "grok-build-0.1",
     "grok-code-fast-1": "grok-build-0.1",
     "grok-code-fast-1-0825": "grok-build-0.1",
@@ -1052,6 +1094,7 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
 // ── Provider display names ────────────────────────────────────────────
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
+  kimi: "Kimi Code",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

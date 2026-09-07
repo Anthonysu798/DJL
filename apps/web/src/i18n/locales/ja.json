@@ -1088,6 +1088,7 @@
   },
   "settings": {
     "tools": {
+      "nativeSetupRequired": "お使いのシステム用の公式インストーラーを使用してください。",
       "automatic": "プロバイダーツールを自動更新",
       "automaticDescription": "6 時間ごとに確認し、チャットが実行中でなく、すべてのターミナルが閉じているときにインストール済みのツールを更新します。",
       "automaticError": "自動更新の設定を保存できませんでした。",
@@ -1115,6 +1116,8 @@
       "accessNote": "モデルへのアクセスはプロバイダーのアカウントによって異なります。最新版を検出するには設定でプロバイダーの更新確認を有効にしてください。"
     },
     "subscriptions": {
+      "kimiRegion": "Kimi アカウントの地域",
+      "existingRegion": "CLI の現在の地域を使用",
       "title": "サブスクリプションとコーディングプラン",
       "international": "国際版",
       "china": "中国本土版",
@@ -1128,6 +1131,7 @@
       "modelPicker": "接続後、モデル選択で OpenCode を選ぶとプランを利用できます。他のプロバイダーは「モデルと API キー」で設定できます。"
     },
     "accounts": {
+      "loginFor": "{{provider}} にログイン",
       "openCodeSharedLogin": "OpenCode は、インストール済みの OpenCode CLI とログイン情報を共有します。ここでログインすると、CLI のログイン情報も更新されます。",
       "openCodeLegacyAvailable": "DJL にコピー可能な保存済みログイン情報があります：{{providers}}。既存の CLI のログイン情報は維持され、元の DJL の認証情報もバックアップとして残ります。",
       "openCodeTransfer": "DJL の保存済みログイン情報を OpenCode にコピー",

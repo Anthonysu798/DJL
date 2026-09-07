@@ -1,5 +1,5 @@
 import { HarnessToolsPanel } from "./HarnessToolsPanel";
-import { SubscriptionPlansPanel } from "./SubscriptionPlansPanel";
+import { SubscriptionPlansPanel, SUBSCRIPTION_PLANS } from "./SubscriptionPlansPanel";
 import "@xterm/xterm/css/xterm.css";
 import type { HarnessId, HarnessLoginInput, HarnessLoginResult } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { useAppSettings } from "~/appSettings";
 import { Button } from "~/components/ui/button";
 import { ensureNativeApi } from "~/nativeApi";
 import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
-import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
+import { serverConfigQueryOptions, serverQueryKeys } from "~/lib/serverReactQuery";
 import {
   terminalRuntimeRegistry,
   buildTerminalRuntimeKey,
@@ -23,6 +23,12 @@ const HARNESSES: { id: HarnessId; label: string; docs: string }[] = [
   { id: "codex", label: "Codex", docs: "https://developers.openai.com/codex/cli/" },
   { id: "claudeAgent", label: "Claude Code", docs: "https://code.claude.com/docs/en/setup" },
   { id: "cursor", label: "Cursor", docs: "https://cursor.com/docs/cli/installation" },
+  { id: "grok", label: "Grok Build", docs: "https://docs.x.ai/build/overview" },
+  {
+    id: "kimi",
+    label: "Kimi Code",
+    docs: "https://www.kimi.com/code/docs/en/kimi-code-cli/guides/getting-started.html",
+  },
   { id: "opencode", label: "OpenCode", docs: "https://opencode.ai/docs/providers/" },
 ];
 
@@ -64,7 +70,22 @@ export function HarnessAccountsPanel() {
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const { settings, updateSettings } = useAppSettings();
+  const saveKimiRegion = useMutation({
+    mutationFn: (region: "existing" | "global" | "mainland-cn") =>
+      ensureNativeApi().server.updateSettings({ providers: { kimi: { region } } }),
+    onSuccess: async (next) => {
+      queryClient.setQueryData(serverQueryKeys.settings(), next);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ACCOUNTS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all }),
+      ]);
+    },
+  });
   const [session, setSession] = useState<HarnessLoginResult | null>(null);
+  const loginSection = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (session) loginSection.current?.scrollIntoView({ block: "center" });
+  }, [session]);
   const sessionRef = useRef<HarnessLoginResult | null>(null);
   const pendingHarness = useRef<HarnessId | null>(null);
   const mounted = useRef(false);
@@ -174,6 +195,23 @@ export function HarnessAccountsPanel() {
                   {account ? t(`accounts.status.${account.status}`) : t("accounts.checking")}
                 </div>
               </div>
+              {harness.id === "kimi" ? (
+                <select
+                  aria-label={t("subscriptions.kimiRegion")}
+                  className="max-w-44 rounded-md border bg-background px-2 py-1.5 text-xs"
+                  value={settings.kimiRegion ?? "existing"}
+                  disabled={connect.isPending || session !== null || saveKimiRegion.isPending}
+                  onChange={(event) =>
+                    saveKimiRegion.mutate(
+                      event.target.value as "existing" | "global" | "mainland-cn",
+                    )
+                  }
+                >
+                  <option value="existing">{t("subscriptions.existingRegion")}</option>
+                  <option value="global">{t("subscriptions.international")}</option>
+                  <option value="mainland-cn">{t("subscriptions.china")}</option>
+                </select>
+              ) : null}
               <a
                 href={harness.docs}
                 target="_blank"
@@ -190,6 +228,7 @@ export function HarnessAccountsPanel() {
                   account.status === "incompatible" ||
                   !account.enabled ||
                   connect.isPending ||
+                  saveKimiRegion.isPending ||
                   session !== null
                 }
                 onClick={() => connect.mutate({ harness: harness.id })}
@@ -257,13 +296,25 @@ export function HarnessAccountsPanel() {
           </p>
         ) : null}
       </div>
-      {connect.isError || finish.isError ? (
+      {connect.isError || finish.isError || saveKimiRegion.isError ? (
         <p role="alert" className="text-sm text-destructive">
-          {settingsLoadErrorDetail(connect.error ?? finish.error, t("accounts.loadError"))}
+          {settingsLoadErrorDetail(
+            connect.error ?? finish.error ?? saveKimiRegion.error,
+            t("accounts.loadError"),
+          )}
         </p>
       ) : null}
       {session ? (
-        <section className="space-y-3">
+        <section ref={loginSection} className="space-y-3">
+          <h3 className="text-sm font-medium">
+            {t("accounts.loginFor", {
+              provider:
+                SUBSCRIPTION_PLANS.find((plan) => plan.id === connect.variables?.modelProviderId)
+                  ?.name ??
+                HARNESSES.find((harness) => harness.id === session.harness)?.label ??
+                session.harness,
+            })}
+          </h3>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">{t("accounts.loginInstructions")}</p>
             <Button

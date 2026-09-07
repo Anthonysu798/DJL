@@ -34,6 +34,7 @@ const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> =
   cursor: new Set(MODEL_OPTIONS_BY_PROVIDER.cursor.map((option) => option.slug)),
   gemini: new Set(MODEL_OPTIONS_BY_PROVIDER.gemini.map((option) => option.slug)),
   grok: new Set(MODEL_OPTIONS_BY_PROVIDER.grok.map((option) => option.slug)),
+  kimi: new Set(MODEL_OPTIONS_BY_PROVIDER.kimi.map((option) => option.slug)),
   droid: new Set(MODEL_OPTIONS_BY_PROVIDER.droid.map((option) => option.slug)),
   kilo: new Set(MODEL_OPTIONS_BY_PROVIDER.kilo.map((option) => option.slug)),
   opencode: new Set(MODEL_OPTIONS_BY_PROVIDER.opencode.map((option) => option.slug)),

@@ -818,6 +818,8 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.gemini?.binaryPath);
     case "grok":
       return normalizeCustomBinaryPath(providerOptions?.grok?.binaryPath);
+    case "kimi":
+      return normalizeCustomBinaryPath(providerOptions?.kimi?.binaryPath);
     case "droid":
       return normalizeCustomBinaryPath(providerOptions?.droid?.binaryPath);
     case "kilo":
@@ -2134,6 +2136,7 @@ export default function ChatView({
       cursor: resolveHint("cursor"),
       gemini: resolveHint("gemini"),
       grok: resolveHint("grok"),
+      kimi: resolveHint("kimi"),
       droid: resolveHint("droid"),
       kilo: resolveHint("kilo"),
       opencode: resolveHint("opencode"),
@@ -2195,7 +2198,16 @@ export default function ChatView({
     providerModelsQueryOptions({
       provider: "grok",
       binaryPath: settings.grokBinaryPath || null,
-      enabled: false,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "grok" || isModelPickerOpen,
+    }),
+  );
+  const kimiDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "kimi",
+      binaryPath: settings.kimiBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "kimi" || isModelPickerOpen,
     }),
   );
   const droidModelDiscoveryEnabled =
@@ -2329,6 +2341,11 @@ export default function ChatView({
         customModelsByProvider.grok,
         composerModelHintByProvider.grok,
       ),
+      kimi: getAppModelOptions(
+        "kimi",
+        customModelsByProvider.kimi,
+        composerModelHintByProvider.kimi,
+      ),
       droid: getAppModelOptions(
         "droid",
         customModelsByProvider.droid,
@@ -2356,6 +2373,7 @@ export default function ChatView({
           : { ...cursorDynamicModelsQuery.data, models: cursorRuntimeModels },
       gemini: geminiModelsQuery.data,
       grok: grokDynamicModelsQuery.data,
+      kimi: kimiDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
@@ -2368,6 +2386,7 @@ export default function ChatView({
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -2397,6 +2416,7 @@ export default function ChatView({
     droidDynamicModelsQuery.data,
     geminiModelsQuery.data,
     grokDynamicModelsQuery.data,
+    kimiDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
@@ -2416,6 +2436,7 @@ export default function ChatView({
       cursor: cursorRuntimeModels,
       gemini: geminiModelsQuery.data?.models ?? [],
       grok: grokDynamicModelsQuery.data?.models ?? [],
+      kimi: kimiDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
@@ -2428,6 +2449,7 @@ export default function ChatView({
       droidDynamicModelsQuery.data?.models,
       geminiModelsQuery.data?.models,
       grokDynamicModelsQuery.data?.models,
+      kimiDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
@@ -2439,6 +2461,7 @@ export default function ChatView({
     cursor: cursorDynamicModelsQuery,
     gemini: geminiModelsQuery,
     grok: grokDynamicModelsQuery,
+    kimi: kimiDynamicModelsQuery,
     droid: droidDynamicModelsQuery,
     kilo: kiloDynamicModelsQuery,
     opencode: openCodeDynamicModelsQuery,

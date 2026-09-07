@@ -435,6 +435,7 @@ export interface DesktopBuildInfo {
 }
 
 export interface DesktopBridge {
+  notifyReady?: () => void;
   getWsUrl: () => string | null;
   getBuildInfo: () => DesktopBuildInfo;
   locale: {

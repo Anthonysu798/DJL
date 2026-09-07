@@ -7,6 +7,7 @@ import {
   GeminiModelOptions,
   DroidModelOptions,
   GrokModelOptions,
+  KimiModelOptions,
   OpenCodeModelOptions,
   PiModelOptions,
 } from "./model";
@@ -64,6 +65,7 @@ export const ProviderKind = Schema.Literals([
   "cursor",
   "gemini",
   "grok",
+  "kimi",
   "droid",
   "kilo",
   "opencode",
@@ -120,6 +122,13 @@ export const GrokModelSelection = Schema.Struct({
 });
 export type GrokModelSelection = typeof GrokModelSelection.Type;
 
+export const KimiModelSelection = Schema.Struct({
+  provider: Schema.Literal("kimi"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(KimiModelOptions),
+});
+export type KimiModelSelection = typeof KimiModelSelection.Type;
+
 export const DroidModelSelection = Schema.Struct({
   provider: Schema.Literal("droid"),
   model: TrimmedNonEmptyString,
@@ -154,6 +163,7 @@ export const ModelSelection = Schema.Union([
   CursorModelSelection,
   GeminiModelSelection,
   GrokModelSelection,
+  KimiModelSelection,
   DroidModelSelection,
   KiloModelSelection,
   OpenCodeModelSelection,
@@ -196,6 +206,11 @@ export const GrokProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const KimiProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  region: Schema.optional(Schema.Literals(["existing", "global", "mainland-cn"])),
+});
+
 export const DroidProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
@@ -224,6 +239,7 @@ export const ProviderStartOptions = Schema.Struct({
   cursor: Schema.optional(CursorProviderStartOptions),
   gemini: Schema.optional(GeminiProviderStartOptions),
   grok: Schema.optional(GrokProviderStartOptions),
+  kimi: Schema.optional(KimiProviderStartOptions),
   droid: Schema.optional(DroidProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),

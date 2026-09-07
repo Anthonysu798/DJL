@@ -245,7 +245,7 @@ describe("mergeOpenCodeAssistantText", () => {
 });
 
 describe("flattenOpenCodeProviderConnections", () => {
-  it("returns API-key providers with credential state and model counts only", () => {
+  it("returns API-key and OAuth providers with credential metadata and model counts", () => {
     const providers = flattenOpenCodeProviderConnections({
       providers: [
         makeProvider({
@@ -263,6 +263,14 @@ describe("flattenOpenCodeProviderConnections", () => {
     });
 
     expect(providers).toEqual([
+      {
+        id: "github-copilot",
+        name: "GitHub Copilot",
+        supportsApiKey: false,
+        supportsOAuth: true,
+        connected: false,
+        modelCount: 0,
+      },
       {
         id: "openai",
         name: "OpenAI",

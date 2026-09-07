@@ -186,6 +186,7 @@ describe("resolveAppModelSelection", () => {
           cursor: [],
           gemini: [],
           grok: [],
+          kimi: [],
           droid: [],
           kilo: [],
           opencode: [],
@@ -206,6 +207,7 @@ describe("resolveAppModelSelection", () => {
           cursor: [],
           gemini: [],
           grok: [],
+          kimi: [],
           droid: [],
           kilo: [],
           opencode: [],
@@ -226,6 +228,7 @@ describe("resolveAppModelSelection", () => {
           cursor: [],
           gemini: [],
           grok: [],
+          kimi: [],
           droid: [],
           kilo: [],
           opencode: [],
@@ -246,6 +249,7 @@ describe("resolveAppModelSelection", () => {
           cursor: [],
           gemini: [],
           grok: [],
+          kimi: [],
           droid: [],
           kilo: [],
           opencode: [],
@@ -266,6 +270,7 @@ describe("resolveAppModelSelection", () => {
           cursor: [],
           gemini: [],
           grok: [],
+          kimi: [],
           droid: [],
           kilo: [],
           opencode: [],
@@ -354,7 +359,7 @@ describe("normalizeStoredAppSettings", () => {
     );
     expect(normalizeStoredAppSettings(settings)).toMatchObject({
       defaultProvider: "codex",
-      providerOrder: ["cursor", "codex", "opencode", "claudeAgent"],
+      providerOrder: ["cursor", "codex", "opencode", "claudeAgent", "grok", "kimi"],
       hiddenProviders: ["claudeAgent"],
     });
   });
@@ -428,6 +433,7 @@ describe("normalizeStoredAppSettings", () => {
         cursorBinaryPath: "cursor-agent",
         geminiBinaryPath: "gemini",
         grokBinaryPath: "grok",
+        kimiBinaryPath: "kimi",
         droidBinaryPath: "droid",
         kiloBinaryPath: "kilo",
         openCodeBinaryPath: "opencode",
@@ -442,6 +448,7 @@ describe("normalizeStoredAppSettings", () => {
       cursorBinaryPath: "",
       geminiBinaryPath: "",
       grokBinaryPath: "",
+      kimiBinaryPath: "",
       droidBinaryPath: "",
       kiloBinaryPath: "",
       openCodeBinaryPath: "",
@@ -470,6 +477,7 @@ describe("getProviderStartOptions", () => {
         cursorBinaryPath: "/usr/local/bin/agent",
         geminiBinaryPath: "/usr/local/bin/gemini",
         grokBinaryPath: "/usr/local/bin/grok",
+        kimiBinaryPath: "/usr/local/bin/kimi",
         droidBinaryPath: "",
         kiloBinaryPath: "",
         kiloServerPassword: "",
@@ -485,6 +493,8 @@ describe("getProviderStartOptions", () => {
       claudeAgent: { binaryPath: "/usr/local/bin/claude" },
       codex: { binaryPath: "/usr/local/bin/codex", homePath: "/Users/you/.codex" },
       cursor: { binaryPath: "/usr/local/bin/agent", apiEndpoint: "http://localhost:3000" },
+      grok: { binaryPath: "/usr/local/bin/grok" },
+      kimi: { binaryPath: "/usr/local/bin/kimi" },
     });
   });
 
@@ -498,6 +508,7 @@ describe("getProviderStartOptions", () => {
         cursorBinaryPath: "",
         geminiBinaryPath: "",
         grokBinaryPath: "",
+        kimiBinaryPath: "",
         droidBinaryPath: "",
         kiloBinaryPath: "",
         kiloServerPassword: "",
@@ -522,6 +533,7 @@ describe("getProviderStartOptions", () => {
         cursorBinaryPath: "cursor-agent",
         geminiBinaryPath: "gemini",
         grokBinaryPath: "grok",
+        kimiBinaryPath: "kimi",
         droidBinaryPath: "droid",
         kiloBinaryPath: "kilo",
         kiloServerPassword: "",
@@ -544,6 +556,7 @@ describe("provider-indexed custom model settings", () => {
     customCursorModels: ["cursor/custom-model"],
     customGeminiModels: ["gemini/custom-flash"],
     customGrokModels: ["grok/custom-fast"],
+    customKimiModels: ["kimi/custom-fast"],
     customDroidModels: ["claude-opus-4-8-custom"],
     customKiloModels: ["kilo/kilo-auto/free"],
     customOpenCodeModels: ["openrouter/gpt-oss-120b"],
@@ -557,6 +570,7 @@ describe("provider-indexed custom model settings", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -583,6 +597,7 @@ describe("provider-indexed custom model settings", () => {
       customCursorModels: ["cursor/default-model"],
       customGeminiModels: ["gemini/default-flash"],
       customGrokModels: ["grok/default-fast"],
+      customKimiModels: ["kimi/default-fast"],
       customDroidModels: ["droid/default-model"],
       customKiloModels: ["kilo/default-auto"],
       customOpenCodeModels: ["openai/gpt-5"],
@@ -625,6 +640,11 @@ describe("provider-indexed custom model settings", () => {
       customGrokModels: ["grok/custom-fast"],
     });
   });
+  it("patches Kimi models without changing other provider models", () => {
+    expect(patchCustomModels("kimi", ["kimi-code/k3"])).toEqual({
+      customKimiModels: ["kimi-code/k3"],
+    });
+  });
 
   it("patches custom models for droid", () => {
     expect(patchCustomModels("droid", ["droid/custom-model"])).toEqual({
@@ -663,6 +683,7 @@ describe("provider-indexed custom model settings", () => {
       cursor: ["cursor/custom-model"],
       gemini: ["gemini/custom-flash"],
       grok: ["grok/custom-fast"],
+      kimi: ["kimi/custom-fast"],
       droid: ["claude-opus-4-8-custom"],
       kilo: ["kilo/kilo-auto/free"],
       opencode: ["openrouter/gpt-oss-120b"],
@@ -706,6 +727,7 @@ describe("provider-indexed custom model settings", () => {
       customCursorModels: [" composer-2 ", "cursor/custom-model", "cursor/custom-model"],
       customGeminiModels: [" auto-gemini-3 ", "gemini/custom-flash", "gemini/custom-flash"],
       customGrokModels: [" grok-build ", "grok/custom-fast", "grok/custom-fast"],
+      customKimiModels: [" kimi-build ", "kimi/custom-fast", "kimi/custom-fast"],
       customDroidModels: [" opus ", "droid/custom-model", "droid/custom-model"],
       customKiloModels: [" kilo/kilo-auto/free ", "kilo/kilo-auto/free"],
       customOpenCodeModels: [
@@ -789,6 +811,7 @@ describe("AppSettingsSchema", () => {
       codexHomePath: "",
       geminiBinaryPath: "",
       grokBinaryPath: "",
+      kimiBinaryPath: "",
       defaultThreadEnvMode: "local",
       confirmThreadDelete: false,
       confirmTerminalTabClose: true,
@@ -802,6 +825,7 @@ describe("AppSettingsSchema", () => {
       customCursorModels: [],
       customGeminiModels: [],
       customGrokModels: [],
+      customKimiModels: [],
       customDroidModels: [],
       customKiloModels: [],
       customOpenCodeModels: [],

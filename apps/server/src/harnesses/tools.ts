@@ -8,6 +8,10 @@ import type {
 } from "@synara/contracts";
 import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
 import { probe } from "./accounts";
+import { inspectGrokTool, maintainGrokTool } from "./grokTools";
+import { inspectCursorTool, maintainCursorTool } from "./cursorTools";
+import { inspectKimiNativeTool, maintainKimiNativeTool } from "./kimiTools";
+import { isNativeKimiPath, resolveKimiBinaryPath } from "./kimiExecutable";
 import { inspectInstalledOpenCodeProtocol } from "../provider/openCodeInstalledProtocol";
 import { resolveDjlOpenCodeBinaryPath } from "../provider/opencodeRuntime";
 import { PACKAGE_MANAGED_PROVIDER_UPDATES } from "../provider/Layers/ProviderHealth";
@@ -19,7 +23,14 @@ import {
   type PackageManagedProviderMaintenanceDefinition,
 } from "../provider/providerMaintenance";
 
-const TOOL_IDS = ["codex", "claudeAgent", "opencode"] as const;
+const TOOL_IDS = ["codex", "claudeAgent", "opencode", "grok", "kimi", "cursor"] as const;
+const KIMI_TOOL: PackageManagedProviderMaintenanceDefinition = {
+  provider: "kimi",
+  binaryName: "kimi",
+  npmPackageName: "@moonshot-ai/kimi-code",
+  homebrew: null,
+  nativeUpdate: null,
+};
 const OPENCODE_TOOL: PackageManagedProviderMaintenanceDefinition = {
   provider: "opencode",
   binaryName: "opencode",
@@ -35,11 +46,13 @@ const OPENCODE_TOOL: PackageManagedProviderMaintenanceDefinition = {
 };
 
 function definition(id: HarnessToolId) {
+  if (id === "kimi") return KIMI_TOOL;
   return id === "opencode" ? OPENCODE_TOOL : PACKAGE_MANAGED_PROVIDER_UPDATES[id]!;
 }
 
 // Tool maintenance uses the same executable as accounts and chat.
 function binaryPath(id: HarnessToolId, settings: ServerSettings) {
+  if (id === "kimi") return resolveKimiBinaryPath(settings.providers.kimi.binaryPath);
   return id === "opencode"
     ? resolveDjlOpenCodeBinaryPath(settings.providers.opencode.binaryPath)
     : settings.providers[id].binaryPath.trim() || definition(id).binaryName;
@@ -49,8 +62,14 @@ export const inspectHarnessTool = Effect.fn("inspectHarnessTool")(function* (
   id: HarnessToolId,
   settings: ServerSettings,
 ) {
+  if (id === "grok") return yield* Effect.promise(() => inspectGrokTool(settings));
+  if (id === "cursor") return yield* Effect.promise(() => inspectCursorTool(settings));
   const binary = binaryPath(id, settings);
   const result = yield* Effect.promise(() => probe(binary, ["--version"], process.env));
+  if (id === "kimi") {
+    const native = yield* Effect.promise(() => inspectKimiNativeTool(settings, binary, result));
+    if (native) return native;
+  }
   const capabilities = yield* resolveProviderMaintenanceCapabilitiesEffect(definition(id), {
     binaryPath: binary,
   });
@@ -79,9 +98,13 @@ export const inspectHarnessTool = Effect.fn("inspectHarnessTool")(function* (
   } satisfies HarnessTool;
 });
 
-export function runToolCommand(command: string, args: readonly string[]): Promise<void> {
+export function runToolCommand(
+  command: string,
+  args: readonly string[],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
   const launch = prepareWindowsSafeProcess(command, args, {
-    env: process.env,
+    env,
     platform: process.platform,
   });
   return new Promise((resolve, reject) => {
@@ -90,7 +113,7 @@ export function runToolCommand(command: string, args: readonly string[]): Promis
       launch.args,
       {
         ...launch,
-        env: process.env,
+        env,
         timeout: 8 * 60_000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
@@ -102,7 +125,7 @@ export function runToolCommand(command: string, args: readonly string[]): Promis
             new Error(
               error.killed
                 ? "Installation timed out. Check the provider setup guide and try again."
-                : "Installation failed. Check Node.js/npm, network access and installation permissions in the setup guide.",
+                : "Installation failed. Check network access and installation permissions in the provider setup guide.",
             ),
           );
         else resolve();
@@ -115,6 +138,12 @@ export const maintainHarnessTool = Effect.fn("maintainHarnessTool")(function* (
   before: HarnessTool,
   settings: ServerSettings,
 ) {
+  if (before.id === "grok")
+    return yield* Effect.tryPromise(() => maintainGrokTool(before, settings, runToolCommand));
+  if (before.id === "cursor")
+    return yield* Effect.tryPromise(() => maintainCursorTool(before, settings, runToolCommand));
+  if (before.id === "kimi" && (!before.installed || isNativeKimiPath(binaryPath("kimi", settings))))
+    return yield* Effect.tryPromise(() => maintainKimiNativeTool(before, runToolCommand));
   if (!before.installed) {
     yield* Effect.tryPromise(() =>
       runToolCommand("npm", ["install", "-g", `${definition(before.id).npmPackageName}@latest`]),
@@ -160,9 +189,7 @@ export function createHarnessToolsController(deps: {
             "Finish running chats and close terminals before updating provider tools.",
           );
         if (!(before.installed ? before.canUpdate : before.canInstall))
-          throw new Error(
-            "Use the provider setup guide for this installation. Node.js/npm is required for one-click installation.",
-          );
+          throw new Error("Use the provider setup guide for this installation.");
         await deps.run(before);
         const after = await deps.inspect(input.harness);
         if (!after.installed || !after.currentVersion)

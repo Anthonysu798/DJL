@@ -1232,6 +1232,8 @@ function makeModelSelection(
   options?: ProviderModelOptions[ProviderKind],
 ): ModelSelection {
   switch (provider) {
+    case "kimi":
+      return { provider, model };
     case "codex":
       return {
         provider,

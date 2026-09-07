@@ -102,6 +102,7 @@ type CustomModelSettingsKey =
   | "customCursorModels"
   | "customGeminiModels"
   | "customGrokModels"
+  | "customKimiModels"
   | "customDroidModels"
   | "customKiloModels"
   | "customOpenCodeModels"
@@ -120,6 +121,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   cursor: new Set(getModelOptions("cursor").map((option) => option.slug)),
   gemini: new Set(getModelOptions("gemini").map((option) => option.slug)),
   grok: new Set(getModelOptions("grok").map((option) => option.slug)),
+  kimi: new Set(getModelOptions("kimi").map((option) => option.slug)),
   droid: new Set(getModelOptions("droid").map((option) => option.slug)),
   kilo: new Set(getModelOptions("kilo").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
@@ -161,6 +163,10 @@ export const AppSettingsSchema = Schema.Struct({
   cursorApiEndpoint: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   geminiBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   grokBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  kimiRegion: Schema.Literals(["existing", "global", "mainland-cn"]).pipe(
+    withDefaults(() => "existing" as const),
+  ),
+  kimiBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   droidBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloServerUrl: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -217,6 +223,7 @@ export const AppSettingsSchema = Schema.Struct({
   customCursorModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customGeminiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customGrokModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customKimiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customDroidModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customKiloModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customOpenCodeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
@@ -289,6 +296,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     defaultSettingsKey: "customGrokModels",
     title: "Grok",
     example: "grok-build-0.1",
+  },
+  kimi: {
+    provider: "kimi",
+    settingsKey: "customKimiModels",
+    defaultSettingsKey: "customKimiModels",
+    title: "Kimi Code",
+    example: "kimi-code/k3",
   },
   droid: {
     provider: "droid",
@@ -429,6 +443,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     cursorBinaryPath: normalizeProviderBinaryPathOverride("cursor", settings.cursorBinaryPath),
     geminiBinaryPath: normalizeProviderBinaryPathOverride("gemini", settings.geminiBinaryPath),
     grokBinaryPath: normalizeProviderBinaryPathOverride("grok", settings.grokBinaryPath),
+    kimiBinaryPath: normalizeProviderBinaryPathOverride("kimi", settings.kimiBinaryPath),
     droidBinaryPath: normalizeProviderBinaryPathOverride("droid", settings.droidBinaryPath),
     kiloBinaryPath: normalizeProviderBinaryPathOverride("kilo", settings.kiloBinaryPath),
     openCodeBinaryPath: "",
@@ -444,6 +459,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customCursorModels: normalizeCustomModelSlugs(settings.customCursorModels, "cursor"),
     customGeminiModels: normalizeCustomModelSlugs(settings.customGeminiModels, "gemini"),
     customGrokModels: normalizeCustomModelSlugs(settings.customGrokModels, "grok"),
+    customKimiModels: normalizeCustomModelSlugs(settings.customKimiModels, "kimi"),
     customDroidModels: normalizeCustomModelSlugs(settings.customDroidModels, "droid"),
     customKiloModels: normalizeCustomModelSlugs(settings.customKiloModels, "kilo"),
     customOpenCodeModels: normalizeCustomModelSlugs(settings.customOpenCodeModels, "opencode"),
@@ -466,6 +482,8 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     enableProviderUpdateChecks: settings.enableProviderUpdateChecks,
     geminiBinaryPath: settings.providers.gemini.binaryPath,
     grokBinaryPath: settings.providers.grok.binaryPath,
+    kimiBinaryPath: settings.providers.kimi.binaryPath,
+    kimiRegion: settings.providers.kimi.region,
     droidBinaryPath: settings.providers.droid.binaryPath,
     kiloBinaryPath: settings.providers.kilo.binaryPath,
     kiloServerPassword: settings.providers.kilo.serverPassword,
@@ -481,6 +499,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customCursorModels: settings.providers.cursor.customModels,
     customGeminiModels: settings.providers.gemini.customModels,
     customGrokModels: settings.providers.grok.customModels,
+    customKimiModels: settings.providers.kimi.customModels,
     customDroidModels: settings.providers.droid.customModels,
     customKiloModels: settings.providers.kilo.customModels,
     customOpenCodeModels: settings.providers.opencode.customModels,
@@ -592,6 +611,17 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       ...(hasOwn(patch, "customGrokModels") ? { customModels: patch.customGrokModels ?? [] } : {}),
     };
   }
+  if (
+    hasOwn(patch, "kimiBinaryPath") ||
+    hasOwn(patch, "customKimiModels") ||
+    hasOwn(patch, "kimiRegion")
+  ) {
+    providers.kimi = {
+      ...(hasOwn(patch, "kimiRegion") ? { region: patch.kimiRegion ?? "existing" } : {}),
+      ...(hasOwn(patch, "kimiBinaryPath") ? { binaryPath: patch.kimiBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customKimiModels") ? { customModels: patch.customKimiModels ?? [] } : {}),
+    };
+  }
   if (hasOwn(patch, "droidBinaryPath") || hasOwn(patch, "customDroidModels")) {
     providers.droid = {
       ...(hasOwn(patch, "droidBinaryPath") ? { binaryPath: patch.droidBinaryPath ?? "" } : {}),
@@ -676,6 +706,8 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "enableProviderUpdateChecks",
     "geminiBinaryPath",
     "grokBinaryPath",
+    "kimiBinaryPath",
+    "kimiRegion",
     "droidBinaryPath",
     "kiloBinaryPath",
     "kiloServerPassword",
@@ -700,6 +732,7 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "customCursorModels",
     "customGeminiModels",
     "customGrokModels",
+    "customKimiModels",
     "customDroidModels",
     "customKiloModels",
     "customOpenCodeModels",
@@ -749,6 +782,7 @@ export function getCustomModelsByProvider(
     cursor: getCustomModelsForProvider(settings, "cursor"),
     gemini: getCustomModelsForProvider(settings, "gemini"),
     grok: getCustomModelsForProvider(settings, "grok"),
+    kimi: getCustomModelsForProvider(settings, "kimi"),
     droid: getCustomModelsForProvider(settings, "droid"),
     kilo: getCustomModelsForProvider(settings, "kilo"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
@@ -894,6 +928,7 @@ export function getCustomModelOptionsByProvider(
     cursor: getAppModelOptions("cursor", customModelsByProvider.cursor),
     gemini: getAppModelOptions("gemini", customModelsByProvider.gemini),
     grok: getAppModelOptions("grok", customModelsByProvider.grok),
+    kimi: getAppModelOptions("kimi", customModelsByProvider.kimi),
     droid: getAppModelOptions("droid", customModelsByProvider.droid),
     kilo: getAppModelOptions("kilo", customModelsByProvider.kilo),
     opencode: getAppModelOptions("opencode", customModelsByProvider.opencode),
@@ -911,6 +946,7 @@ export function getProviderStartOptions(
     | "cursorBinaryPath"
     | "geminiBinaryPath"
     | "grokBinaryPath"
+    | "kimiBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
     | "kiloServerPassword"
@@ -929,9 +965,13 @@ export function getProviderStartOptions(
     settings.claudeBinaryPath,
   );
   const cursorBinaryPath = normalizeProviderBinaryPathOverride("cursor", settings.cursorBinaryPath);
+  const grokBinaryPath = normalizeProviderBinaryPathOverride("grok", settings.grokBinaryPath);
+  const kimiBinaryPath = normalizeProviderBinaryPathOverride("kimi", settings.kimiBinaryPath);
   const homePath = settings.codexHomePath.trim();
   const apiEndpoint = settings.cursorApiEndpoint.trim();
   const options: ProviderStartOptions = {
+    ...(grokBinaryPath ? { grok: { binaryPath: grokBinaryPath } } : {}),
+    ...(kimiBinaryPath ? { kimi: { binaryPath: kimiBinaryPath } } : {}),
     ...(codexBinaryPath || homePath
       ? {
           codex: {
@@ -974,6 +1014,7 @@ export function getCustomBinaryPathForProvider(
     | "cursorBinaryPath"
     | "geminiBinaryPath"
     | "grokBinaryPath"
+    | "kimiBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
     | "openCodeBinaryPath"
@@ -992,6 +1033,8 @@ export function getCustomBinaryPathForProvider(
       return normalizeProviderBinaryPathOverride(provider, settings.geminiBinaryPath);
     case "grok":
       return normalizeProviderBinaryPathOverride(provider, settings.grokBinaryPath);
+    case "kimi":
+      return normalizeProviderBinaryPathOverride(provider, settings.kimiBinaryPath);
     case "droid":
       return normalizeProviderBinaryPathOverride(provider, settings.droidBinaryPath);
     case "kilo":

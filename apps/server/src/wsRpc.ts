@@ -389,7 +389,10 @@ export const makeWsRpcLayer = () =>
           ),
         run: (before) =>
           Effect.runPromise(
-            before.installed && before.id !== "opencode"
+            before.installed &&
+              before.id !== "opencode" &&
+              before.id !== "grok" &&
+              before.id !== "kimi"
               ? providerHealth.updateProvider({ provider: before.id }).pipe(
                   Effect.flatMap((result) => {
                     const state = result.providers.find(

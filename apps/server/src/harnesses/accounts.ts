@@ -1,4 +1,8 @@
 import { inspectInstalledOpenCodeProtocol } from "../provider/openCodeInstalledProtocol";
+import { grokSubscriptionEnvironment, probeGrokSubscriptionAccount } from "./native/grok";
+import { resolveGrokBinaryPath } from "./grokExecutable";
+import { resolveKimiBinaryPath } from "./kimiExecutable";
+import { kimiSubscriptionEnvironment, probeKimiSubscriptionAccount } from "./native/kimi";
 import { parseGenericCliVersion } from "../provider/providerMaintenance";
 // Fresh account probes and official-runtime login invocations. No credential values leave this module.
 import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
@@ -16,7 +20,7 @@ import {
   resolveDjlOpenCodeBinaryPath,
 } from "../provider/opencodeRuntime";
 
-export const NATIVE_HARNESS_IDS = ["codex", "claudeAgent", "cursor"] as const;
+export const NATIVE_HARNESS_IDS = ["codex", "claudeAgent", "cursor", "grok", "kimi"] as const;
 const HARNESS_IDS = [...NATIVE_HARNESS_IDS, "opencode"] as const;
 
 export function buildHarnessInvocation(
@@ -26,6 +30,23 @@ export function buildHarnessInvocation(
   baseEnv: NodeJS.ProcessEnv = process.env,
 ) {
   const env = { ...baseEnv };
+  if (harness === "kimi")
+    return {
+      binary: resolveKimiBinaryPath(settings.providers.kimi.binaryPath),
+      prefixArgs: [] as string[],
+      loginArgs: ["login"],
+      statusArgs: ["doctor"],
+      env: kimiSubscriptionEnvironment(env, settings.providers.kimi.region),
+    };
+  if (harness === "grok") {
+    return {
+      binary: resolveGrokBinaryPath(settings.providers.grok.binaryPath),
+      prefixArgs: ["--no-auto-update"],
+      loginArgs: ["login"],
+      statusArgs: ["inspect", "--json"],
+      env: grokSubscriptionEnvironment(env),
+    };
+  }
   if (harness === "codex") {
     if (settings.providers.codex.homePath.trim())
       env.CODEX_HOME = settings.providers.codex.homePath.trim();
@@ -139,6 +160,26 @@ export async function probeHarnessAccount(
   if (version.missing) return { id: harness, installed: false, enabled: true, status: "missing" };
   if (version.code !== 0)
     return { id: harness, installed: false, enabled: true, status: "unknown" };
+  if (harness === "kimi")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probeKimiSubscriptionAccount(
+        invocation.binary,
+        process.cwd(),
+        settings.providers.kimi.region,
+      ),
+      version: version.stdout.trim().slice(0, 100),
+    };
+  if (harness === "grok")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probeGrokSubscriptionAccount(invocation.binary, process.cwd()),
+      version: version.stdout.trim().slice(0, 100),
+    };
   if (harness === "opencode") {
     const compatibility = await inspectInstalledOpenCodeProtocol(
       invocation.binary,

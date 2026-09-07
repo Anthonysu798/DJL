@@ -6,7 +6,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { HarnessAccountsPanel } from "./HarnessAccountsPanel";
 
 const appSettings = vi.hoisted(() => ({
-  settings: { defaultProvider: "opencode" },
+  settings: { defaultProvider: "opencode", kimiRegion: "existing" },
   updateSettings: vi.fn(),
 }));
 
@@ -30,6 +30,7 @@ const api = vi.hoisted(() => ({
     endLogin: vi.fn(async () => undefined),
   },
   server: {
+    updateSettings: vi.fn(),
     refreshProviders: vi.fn(async () => undefined),
     getSettings: vi.fn(async () => ({
       enableAutomaticProviderUpdates: false,
@@ -61,9 +62,39 @@ afterEach(async () => {
   await cleanup();
   vi.clearAllMocks();
   appSettings.settings.defaultProvider = "opencode";
+  appSettings.settings.kimiRegion = "existing";
 });
 
 describe("HarnessAccountsPanel login lifecycle", () => {
+  it("saves the Kimi region before allowing sign-in", async () => {
+    api.harnesses.listAccounts.mockResolvedValueOnce({
+      accounts: [{ id: "kimi", installed: true, enabled: true, status: "required" }],
+    });
+    let finish!: () => void;
+    api.server.updateSettings.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = () => {
+            appSettings.settings.kimiRegion = "global";
+            resolve({ providers: { kimi: { region: "global" } } });
+          };
+        }),
+    );
+    await mount();
+    await page.getByRole("combobox", { name: "Kimi account region" }).selectOptions("global");
+    await expect
+      .poll(() => api.server.updateSettings.mock.calls)
+      .toEqual([[{ providers: { kimi: { region: "global" } } }]]);
+    await expect
+      .element(page.getByRole("combobox", { name: "Kimi account region" }))
+      .toBeDisabled();
+    expect(api.harnesses.startLogin).not.toHaveBeenCalled();
+    finish();
+    await expect.element(page.getByRole("combobox", { name: "Kimi account region" })).toBeEnabled();
+    await expect
+      .element(page.getByRole("combobox", { name: "Kimi account region" }))
+      .toHaveValue("global");
+  });
   it("blocks incompatible OpenCode actions while preserving unknown native provider behavior", async () => {
     appSettings.settings.defaultProvider = "claudeAgent";
     api.harnesses.listAccounts.mockResolvedValueOnce({

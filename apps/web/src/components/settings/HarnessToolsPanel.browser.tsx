@@ -47,6 +47,14 @@ afterEach(async () => {
   vi.resetAllMocks();
 });
 describe("provider tools", () => {
+  it("includes Grok, Kimi and Cursor in Update all", async () => {
+    api.harnesses.maintainTool.mockImplementation(async ({ harness }) => tool(harness));
+    await mount([tool("grok"), tool("kimi"), tool("cursor")]);
+    await page.getByRole("button", { name: "Update all", exact: true }).click();
+    await expect
+      .poll(() => api.harnesses.maintainTool.mock.calls)
+      .toEqual([[{ harness: "grok" }], [{ harness: "kimi" }], [{ harness: "cursor" }]]);
+  });
   it("persists automatic updates on the server without starting a manual update", async () => {
     await mount([tool("codex")]);
     const toggle = page.getByRole("switch", { name: "Automatically update provider tools" });

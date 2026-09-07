@@ -65,9 +65,13 @@ export function resolveAuthenticatedModelSelection(
 }
 
 export function resolveGuidedProviderId(
-  providers: ReadonlyArray<Pick<OpenCodeModelProviderConnection, "connected" | "id">>,
+  providers: ReadonlyArray<
+    Pick<OpenCodeModelProviderConnection, "connected" | "id"> &
+      Partial<Pick<OpenCodeModelProviderConnection, "supportsApiKey">>
+  >,
 ): string | null {
-  return providers.find((provider) => !provider.connected)?.id ?? providers[0]?.id ?? null;
+  const candidates = providers.filter((provider) => provider.supportsApiKey !== false);
+  return candidates.find((provider) => !provider.connected)?.id ?? candidates[0]?.id ?? null;
 }
 
 function ProviderCredentialRow(props: {

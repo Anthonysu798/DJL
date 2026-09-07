@@ -114,6 +114,8 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.gemini.binaryPath;
     case "grok":
       return settings.providers.grok.binaryPath;
+    case "kimi":
+      return settings.providers.kimi.binaryPath;
     case "droid":
       return settings.providers.droid.binaryPath;
     case "kilo":

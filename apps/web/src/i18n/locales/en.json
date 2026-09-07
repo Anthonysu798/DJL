@@ -1088,6 +1088,7 @@
   },
   "settings": {
     "tools": {
+      "nativeSetupRequired": "Use the official installer for your system.",
       "automatic": "Automatically update provider tools",
       "automaticDescription": "Check every six hours and update installed tools when no chats are running and all terminals are closed.",
       "automaticError": "Could not save automatic-update settings.",
@@ -1115,6 +1116,8 @@
       "accessNote": "Model access depends on your provider account. Enable provider update checks in Settings to detect the latest versions."
     },
     "subscriptions": {
+      "kimiRegion": "Kimi account region",
+      "existingRegion": "Use existing CLI region",
       "title": "Subscriptions and coding plans",
       "international": "International",
       "china": "Mainland China",
@@ -1128,6 +1131,7 @@
       "modelPicker": "After connecting, choose OpenCode in the model picker to use your plan. Other providers remain available in Models & API keys."
     },
     "accounts": {
+      "loginFor": "Sign in to {{provider}}",
       "openCodeSharedLogin": "OpenCode uses the same login as your installed OpenCode CLI. Signing in here also updates that CLI.",
       "openCodeLegacyAvailable": "DJL has saved logins available to copy: {{providers}}. Existing CLI logins will be kept, and the original DJL credentials will remain backed up.",
       "openCodeTransfer": "Copy saved DJL logins to OpenCode",

@@ -56,6 +56,9 @@ async function mount(enabled = true) {
 
 it("keeps regional connection status separate and connects the exact selected plan", async () => {
   const connect = await mount();
+  await expect
+    .poll(() => api.provider.listModelProviders.mock.calls)
+    .toEqual([[{ forceReload: true }]]);
   const international = page.getByRole("group", { name: "Z.AI Coding Plan", exact: true });
   const china = page.getByRole("group", { name: "Zhipu AI Coding Plan", exact: true });
   await expect.element(international.getByText("Connected", { exact: true })).toBeVisible();

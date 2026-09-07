@@ -438,6 +438,7 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   cursor: ["cursor", "agents", "claude", "codex"],
   gemini: ["agents", "gemini"],
   grok: ["grok", "claude", "agents"],
+  kimi: ["agents"],
   droid: ["factory", "agents", "claude", "codex"],
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],

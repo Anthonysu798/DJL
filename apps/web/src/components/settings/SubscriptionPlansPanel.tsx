@@ -9,7 +9,7 @@ import { SettingsLoadError, settingsLoadErrorDetail } from "./SettingsLoadError"
 
 // IDs come from the official OpenCode provider catalog. Regional subscriptions
 // are distinct credentials; never fall back to a metered/general API provider.
-const PLANS = [
+export const SUBSCRIPTION_PLANS = [
   {
     id: "zai-coding-plan",
     name: "Z.AI Coding Plan",
@@ -73,7 +73,9 @@ export function SubscriptionPlansPanel({
   const { t } = useTranslation("settings");
   const catalog = useQuery({
     queryKey: providerDiscoveryQueryKeys.openCodeModelProviders(),
-    queryFn: () => ensureNativeApi().provider.listModelProviders({}),
+    // Account status must reflect CLI sign-ins immediately, not a persisted
+    // model-catalog snapshot from before credentials changed.
+    queryFn: () => ensureNativeApi().provider.listModelProviders({ forceReload: true }),
     enabled,
     staleTime: 15_000,
   });
@@ -90,7 +92,7 @@ export function SubscriptionPlansPanel({
           />
         </div>
       ) : null}
-      {PLANS.map((plan) => {
+      {SUBSCRIPTION_PLANS.map((plan) => {
         const provider = catalog.data?.providers.find((item) => item.id === plan.id);
         const available = enabled && !!provider && !catalog.isError && !provider.error;
         const status = !enabled
@@ -113,7 +115,9 @@ export function SubscriptionPlansPanel({
               <div className="text-sm font-medium">{plan.name}</div>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 {plan.region ? <span>{t(`subscriptions.${plan.region}`)}</span> : null}
-                <span>{t(`subscriptions.${plan.auth}`)}</span>
+                <span>
+                  {t(`subscriptions.${provider?.supportsOAuth ? "providerLogin" : plan.auth}`)}
+                </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{status}</p>
               {available && provider.connected ? (

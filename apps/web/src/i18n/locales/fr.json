@@ -1088,6 +1088,7 @@
   },
   "settings": {
     "tools": {
+      "nativeSetupRequired": "Utilisez le programme d’installation officiel adapté à votre système.",
       "automatic": "Mettre à jour automatiquement les outils des fournisseurs",
       "automaticDescription": "Vérifier toutes les six heures et mettre à jour les outils installés lorsqu’aucune conversation n’est en cours et que tous les terminaux sont fermés.",
       "automaticError": "Impossible d’enregistrer les paramètres de mise à jour automatique.",
@@ -1115,6 +1116,8 @@
       "accessNote": "L’accès aux modèles dépend de votre compte fournisseur. Activez la recherche de mises à jour dans les paramètres pour détecter les dernières versions."
     },
     "subscriptions": {
+      "kimiRegion": "Région du compte Kimi",
+      "existingRegion": "Utiliser la région actuelle du CLI",
       "title": "Abonnements et forfaits de programmation",
       "international": "International",
       "china": "Chine continentale",
@@ -1128,6 +1131,7 @@
       "modelPicker": "Après la connexion, choisissez OpenCode dans le sélecteur de modèles pour utiliser votre forfait. Les autres fournisseurs restent accessibles dans Modèles et clés API."
     },
     "accounts": {
+      "loginFor": "Se connecter à {{provider}}",
       "openCodeSharedLogin": "OpenCode partage la connexion de votre CLI OpenCode installé. Vous connecter ici met aussi à jour la connexion du CLI.",
       "openCodeLegacyAvailable": "Des connexions enregistrées dans DJL peuvent être copiées : {{providers}}. Les connexions existantes du CLI seront conservées, ainsi que les identifiants DJL d’origine dans une sauvegarde.",
       "openCodeTransfer": "Copier les connexions DJL vers OpenCode",

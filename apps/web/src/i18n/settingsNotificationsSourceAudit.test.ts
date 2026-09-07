@@ -52,6 +52,8 @@ const TECHNICAL_ALLOWLIST = new Set([
   "Cursor",
   "Gemini",
   "Grok",
+  "Grok Build",
+  "Kimi Code",
   "Droid",
   "Kilo",
   "Pi",

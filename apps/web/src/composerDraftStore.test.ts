@@ -204,6 +204,7 @@ describe("resolvePreferredComposerModelSelection", () => {
         draft: {
           modelSelectionByProvider: {
             grok: modelSelection("grok", "grok-build"),
+            kimi: modelSelection("kimi", "kimi-build"),
           },
           activeProvider: "grok",
         },
@@ -1347,6 +1348,9 @@ describe("composerDraftStore terminal contexts", () => {
               grok: {
                 reasoningEffort: "xhigh",
               },
+              kimi: {
+                reasoningEffort: "xhigh",
+              },
             },
           },
         },
@@ -2107,6 +2111,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -2135,6 +2140,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -2168,6 +2174,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -2201,6 +2208,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],

@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 import { NewTaskModelSelection, NewTaskProviderStartOptions } from "./orchestration";
 import { HarnessLoginInput } from "./harnessAccounts";
+import { DEFAULT_MODEL_BY_PROVIDER } from "./model";
 
 describe("fresh harness command contracts", () => {
-  it.each(["codex", "claudeAgent", "cursor", "opencode"])(
+  it("defaults Grok to a model advertised by the current official CLI", () => {
+    expect(DEFAULT_MODEL_BY_PROVIDER.grok).toBe("grok-4.6");
+  });
+  it.each(["codex", "claudeAgent", "cursor", "opencode", "grok", "kimi"])(
     "accepts %s for a new chat turn",
     (provider) => {
       expect(
@@ -14,7 +18,7 @@ describe("fresh harness command contracts", () => {
   );
   it("keeps historical runtimes without a new implementation out of new chat turns", () => {
     expect(() =>
-      Schema.decodeUnknownSync(NewTaskModelSelection)({ provider: "grok", model: "test-model" }),
+      Schema.decodeUnknownSync(NewTaskModelSelection)({ provider: "pi", model: "test-model" }),
     ).toThrow();
   });
   it("rejects arbitrary executable names as login harness IDs", () => {

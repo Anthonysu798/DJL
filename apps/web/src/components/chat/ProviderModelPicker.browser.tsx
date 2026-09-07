@@ -28,6 +28,10 @@ const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "grok-build-0.1", name: "Grok Build 0.1" },
     { slug: "grok-build", name: "Grok 4.3" },
   ],
+  kimi: [
+    { slug: "kimi-build-0.1", name: "Kimi Build 0.1" },
+    { slug: "kimi-build", name: "Kimi 4.3" },
+  ],
   droid: [
     {
       slug: "gpt-5.6-luna",

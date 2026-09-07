@@ -15,6 +15,13 @@ const TOOLS = [
   { id: "codex", label: "Codex", docs: "https://developers.openai.com/codex/cli/" },
   { id: "claudeAgent", label: "Claude Code", docs: "https://code.claude.com/docs/en/setup" },
   { id: "opencode", label: "OpenCode", docs: "https://opencode.ai/docs/" },
+  { id: "grok", label: "Grok Build", docs: "https://docs.x.ai/build/overview" },
+  {
+    id: "kimi",
+    label: "Kimi Code",
+    docs: "https://www.kimi.com/code/docs/en/kimi-code-cli/guides/getting-started.html",
+  },
+  { id: "cursor", label: "Cursor", docs: "https://cursor.com/docs/cli/installation" },
 ] as const;
 
 export function HarnessToolsPanel({ disabled = false }: { disabled?: boolean }) {
@@ -184,7 +191,13 @@ export function HarnessToolsPanel({ disabled = false }: { disabled?: boolean }) 
                 </p>
               ) : null}
               {tool && !tool.installed && !tool.canInstall ? (
-                <p className="mt-2 text-xs text-muted-foreground">{t("tools.setupRequired")}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t(
+                    ["grok", "kimi", "cursor"].includes(id)
+                      ? "tools.nativeSetupRequired"
+                      : "tools.setupRequired",
+                  )}
+                </p>
               ) : null}
             </div>
             <a
