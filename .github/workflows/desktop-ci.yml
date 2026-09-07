@@ -193,6 +193,12 @@ jobs:
             if (result.error) throw result.error;
             if (result.status !== 0) process.exit(result.status ?? 1);
           }
+          const integration = spawnSync("bun", ["run", "--cwd", "apps/server", "test", "--", "src/provider/openCodeInstalledAdapter.integration.test.ts", "src/provider/openCodeInstalledMigration.test.ts", "src/harnesses/openCodeCredentialTransfer.test.ts"], {
+            stdio: "inherit",
+            env: { ...process.env, DJL_TEST_OPENCODE_BINARY: binary },
+          });
+          if (integration.error) throw integration.error;
+          if (integration.status !== 0) process.exit(integration.status ?? 1);
           NODE
 
   desktop-ci:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import type { Content, Locale } from "../content";
@@ -38,8 +38,8 @@ export function HeroChrome({
 
   // Was the chrome already revealed on first mount? If so (or reduced motion),
   // skip the entrance and render the final state.
-  const wasActiveOnMount = useRef(active);
-  const entrance = active && !reduced && !wasActiveOnMount.current;
+  const [wasActiveOnMount] = useState(active);
+  const entrance = active && !reduced && !wasActiveOnMount;
 
   const slides = [
     {

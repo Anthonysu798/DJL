@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Content } from "./content";
+import { useMediaQuery } from "./useMediaQuery";
 import "./capabilities-bento.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -22,7 +23,7 @@ export function CapabilitiesBento({ t }: { t: Content }) {
   const caps = t.landing.capabilities;
   const root = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [manualStarted, setManualStarted] = useState(false);
   const isZh = t.htmlLang === "zh-CN";
   const proofLabels = isZh ? PROOF_LABELS.zh : PROOF_LABELS.en;
@@ -34,10 +35,7 @@ export function CapabilitiesBento({ t }: { t: Content }) {
     : "DJL model picker showing API, LM Studio, and Ollama models";
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(media.matches);
-
-    if (media.matches) return;
+    if (reduceMotion) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -51,7 +49,7 @@ export function CapabilitiesBento({ t }: { t: Content }) {
 
     observer.observe(video);
     return () => observer.disconnect();
-  }, []);
+  }, [reduceMotion]);
 
   useGSAP(
     () => {

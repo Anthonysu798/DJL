@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
 import { AppWindowSkeleton } from "./AppWindowSkeleton";
+import { useMediaQuery } from "./useMediaQuery";
 import "./app-window-video.css";
 
 // The product-loop demo video. Drop the assets at:
@@ -16,12 +17,11 @@ const POSTER_SRC = "/demo/product-loop-poster.webp";
 
 export function AppWindowVideo({ label }: { label: string }) {
   const [status, setStatus] = useState<"checking" | "ready" | "missing">("checking");
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [manualStarted, setManualStarted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     let cancelled = false;
     fetch(VIDEO_SRC, { method: "HEAD" })
       .then((response) => {

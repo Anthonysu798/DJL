@@ -29,7 +29,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/three": "^0.184.1",
-    "eslint": "latest",
+    "eslint": "^9.39.0",
     "eslint-config-next": "16.2.9",
     "remotion": "^4.0.481",
     "tailwindcss": "4.3.1",

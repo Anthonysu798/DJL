@@ -205,7 +205,8 @@ export function GuideDoc({ locale }: { locale: Locale }) {
                 curveIntensity={40}
               />
               <p>{g.cta.body}</p>
-              <a className="btn" data-variant="primary" href="/download/mac/arm64">
+              {/* HTTP download handler: preserve browser navigation rather than client routing. */}
+              <a className="btn" data-variant="primary" href={"/download/mac/arm64"}>
                 {g.cta.download}
               </a>
             </section>

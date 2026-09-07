@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { cn } from "../cn";
+import { useMediaQuery } from "../useMediaQuery";
 
 export function MaskContainer({
   children,
@@ -37,17 +38,8 @@ export function MaskContainer({
   // upstream's {0,0} default parks a visible dot in the top-left corner. Hold the mask closed.
   const [hasPointer, setHasPointer] = useState(false);
   // Starts null so the first paint does not commit to either branch before matchMedia is read.
-  const [canHover, setCanHover] = useState<boolean | null>(null);
+  const canHover = useMediaQuery("(hover: hover) and (pointer: fine)", null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const query = window.matchMedia("(hover: hover) and (pointer: fine)");
-    setCanHover(query.matches);
-
-    const onChange = (event: MediaQueryListEvent) => setCanHover(event.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
 
   useEffect(() => {
     const element = containerRef.current;

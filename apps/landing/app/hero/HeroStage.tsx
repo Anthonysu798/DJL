@@ -20,7 +20,7 @@
      later flips true.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { useRef } from "react";
+import { useState } from "react";
 import { motion, type Variants } from "motion/react";
 import { useReducedMotion } from "../effects";
 import "./hero-stage.css";
@@ -63,9 +63,9 @@ export function HeroStage({
 
   // Did we mount behind the boot overlay? Only then is there an entrance to
   // play; a stage that mounts already-active (or under reduced motion) jumps
-  // straight to the final frame. useRef captures the first-render value once.
-  const startedInactive = useRef(!active);
-  const shouldAnimate = !reduced && startedInactive.current;
+  // straight to the final frame. State captures the first-render value once.
+  const [startedInactive] = useState(!active);
+  const shouldAnimate = !reduced && startedInactive;
 
   // Reduced motion always rests on the final state regardless of `active`.
   const target = reduced || active ? "in" : "boot";

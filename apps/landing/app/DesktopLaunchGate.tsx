@@ -518,7 +518,8 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
                 </button>
               </header>
               <div className="dl-mac-options">
-                <a ref={macChoiceRef} href="/download/mac/arm64">
+                {/* Download handlers require browser navigation, without client routing or prefetch. */}
+                <a ref={macChoiceRef} href={"/download/mac/arm64"}>
                   <Cpu aria-hidden="true" />
                   <span>
                     <strong>{copy.appleSilicon}</strong>
@@ -527,7 +528,7 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
                   <em>{copy.recommended}</em>
                   <ChevronRight aria-hidden="true" />
                 </a>
-                <a href="/download/mac/x64">
+                <a href={"/download/mac/x64"}>
                   <Command aria-hidden="true" />
                   <span>
                     <strong>{copy.intel}</strong>

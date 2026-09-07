@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import "./app-window-frame.css";
 
 // design.md terminal-card: white surface, 1px hairline, 12px radius, macOS
@@ -24,7 +25,7 @@ export function AppWindowFrame({
       </div>
       <div className="awf-body">
         {src ? (
-          <img className="awf-shot" src={src} alt={alt} />
+          <Image className="awf-shot" src={src} alt={alt} width={1600} height={1000} unoptimized />
         ) : (
           (children ?? (
             <span className="awf-placeholder" role="img" aria-label={alt}>
