@@ -22,7 +22,16 @@ describe("resolveDesktopDownload", () => {
       resolveDesktopDownload(target, new Request("https://djl.test/download/mac/arm64"), {
         fetchImpl: release,
       }),
-    ).resolves.toBe(GITHUB_URL);
+    ).resolves.toEqual({
+      destination: GITHUB_URL,
+      report: {
+        platform: "mac",
+        arch: "arm64",
+        source: "github",
+        country: null,
+        version: "0.5.10",
+      },
+    });
   });
 
   it("uses the immutable Hong Kong OSS object for an explicit China request", async () => {
@@ -30,7 +39,10 @@ describe("resolveDesktopDownload", () => {
       resolveDesktopDownload(target, new Request("https://djl.test/download/mac/arm64?mirror=cn"), {
         fetchImpl: release,
       }),
-    ).resolves.toBe(OSS_URL);
+    ).resolves.toEqual({
+      destination: OSS_URL,
+      report: { platform: "mac", arch: "arm64", source: "oss", country: null, version: "0.5.10" },
+    });
   });
 
   it("keeps an unknown mirror on GitHub", async () => {
@@ -40,7 +52,16 @@ describe("resolveDesktopDownload", () => {
         new Request("https://djl.test/download/mac/arm64?mirror=other"),
         { fetchImpl: release },
       ),
-    ).resolves.toBe(GITHUB_URL);
+    ).resolves.toEqual({
+      destination: GITHUB_URL,
+      report: {
+        platform: "mac",
+        arch: "arm64",
+        source: "github",
+        country: null,
+        version: "0.5.10",
+      },
+    });
   });
 
   it("uses the GitHub release page when the release cannot be resolved", async () => {
@@ -48,6 +69,30 @@ describe("resolveDesktopDownload", () => {
       resolveDesktopDownload(target, new Request("https://djl.test/download/mac/arm64?mirror=cn"), {
         fetchImpl: async () => ({ ok: false, json: async () => null }),
       }),
-    ).resolves.toBe(RELEASE_PAGE);
+    ).resolves.toEqual({
+      destination: RELEASE_PAGE,
+      report: { platform: "mac", arch: "arm64", source: "github", country: null, version: null },
+    });
+  });
+
+  it("includes the visitor country without changing mirror selection", async () => {
+    await expect(
+      resolveDesktopDownload(
+        target,
+        new Request("https://djl.test/download/mac/arm64", {
+          headers: { "x-vercel-ip-country": "cn" },
+        }),
+        { fetchImpl: release },
+      ),
+    ).resolves.toEqual({
+      destination: GITHUB_URL,
+      report: {
+        platform: "mac",
+        arch: "arm64",
+        source: "github",
+        country: "CN",
+        version: "0.5.10",
+      },
+    });
   });
 });

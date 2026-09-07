@@ -682,6 +682,8 @@ test("truncated resume replay discards the partial tail and declares a canonical
       }),
       () => false,
     );
+    // Each notification must become its own replay entry to overflow the buffer.
+    secureTransport.flushOutbound();
   }
 
   const reconnectEphemeral = createOkpKeyPair("x25519");
@@ -1148,3 +1150,91 @@ function base64UrlToBase64(value) {
 function base64ToBase64Url(value) {
   return value.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
+
+test("secure transport batches notifications into one encrypted frame per window", () => {
+  const macIdentity = createOkpKeyPair("ed25519");
+  const phoneIdentity = createOkpKeyPair("ed25519");
+  const phoneEphemeral = createOkpKeyPair("x25519");
+  let pendingTimer = null;
+  const secureTransport = createTestBridgeSecureTransport({
+    sessionId: "session-batch",
+    relayUrl: "wss://relay.example/relay",
+    deviceState: {
+      macDeviceId: "mac-batch",
+      macIdentityPrivateKey: macIdentity.privateKey,
+      macIdentityPublicKey: macIdentity.publicKey,
+      trustedPhones: { "phone-batch": phoneIdentity.publicKey },
+    },
+    setTimeoutFn(callback) {
+      pendingTimer = callback;
+      return 1;
+    },
+    clearTimeoutFn() {
+      pendingTimer = null;
+    },
+  });
+  const wireMessages = [];
+  secureTransport.bindLiveSendWireMessage((message) => {
+    wireMessages.push(message);
+  });
+  const { serverHello, transcriptBytes } = finishHandshake({
+    secureTransport,
+    sessionId: "session-batch",
+    macDeviceId: "mac-batch",
+    phoneDeviceId: "phone-batch",
+    macIdentity,
+    phoneIdentity,
+    phoneEphemeral,
+    handshakeMode: HANDSHAKE_MODE_TRUSTED_RECONNECT,
+    lastAppliedBridgeOutboundSeq: 0,
+  });
+  const macToPhoneKey = deriveMacToPhoneKey({
+    transcriptBytes,
+    serverHello,
+    phoneEphemeral,
+    sessionId: "session-batch",
+    macDeviceId: "mac-batch",
+    phoneDeviceId: "phone-batch",
+  });
+  wireMessages.length = 0;
+
+  const send = (message) => wireMessages.push(message);
+  secureTransport.queueOutboundApplicationMessage(
+    JSON.stringify({
+      method: "item/agentMessage/delta",
+      params: { threadId: "t", turnId: "u", itemId: "i", delta: "Hel" },
+    }),
+    send,
+  );
+  secureTransport.queueOutboundApplicationMessage(
+    JSON.stringify({
+      method: "item/agentMessage/delta",
+      params: { threadId: "t", turnId: "u", itemId: "i", delta: "lo" },
+    }),
+    send,
+  );
+  secureTransport.queueOutboundApplicationMessage(
+    JSON.stringify({ method: "turn/completed", params: { threadId: "t", turnId: "u" } }),
+    send,
+  );
+  assert.equal(wireMessages.length, 0, "notifications wait for the window");
+
+  pendingTimer();
+
+  assert.equal(wireMessages.length, 1);
+  const payload = decryptEnvelope(JSON.parse(wireMessages[0]), macToPhoneKey);
+  assert.equal(payload.bridgeOutboundSeq, 1);
+  const batch = JSON.parse(payload.payloadText);
+  assert.deepEqual(
+    batch.map((m) => m.method),
+    ["item/agentMessage/delta", "turn/completed"],
+  );
+  assert.equal(batch[0].params.delta, "Hello");
+
+  secureTransport.queueOutboundApplicationMessage(
+    JSON.stringify({ id: "resp-1", result: { ok: true } }),
+    send,
+  );
+  assert.equal(wireMessages.length, 2, "responses bypass the window");
+  assert.equal(decryptEnvelope(JSON.parse(wireMessages[1]), macToPhoneKey).bridgeOutboundSeq, 2);
+});

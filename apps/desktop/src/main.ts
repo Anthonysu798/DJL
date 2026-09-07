@@ -86,6 +86,12 @@ import {
 } from "./macIconCacheRefresh";
 import { collectMacUpdateDiagnostics } from "./macUpdateDiagnostics";
 import { openInitialBackendWindow } from "./initialBackendWindowOpen";
+import {
+  reportInstallOnce,
+  resolveInstallRecordPath,
+  resolveStatsUrl,
+  type InstallPingPackageMetadata,
+} from "./installPing";
 import { shouldAllowMediaPermissionRequest } from "./mediaPermissions";
 import { resolveNotificationIconAssetName } from "./notificationIcon";
 import {
@@ -1587,6 +1593,42 @@ function refreshMacIconCacheOnVersionChange(): void {
   });
 }
 
+// One anonymous message per fresh install, disclosed in the README privacy section. Runs only in
+// packaged builds that were built with DJL_STATS_URL, never blocks startup, and never throws.
+function reportInstallInBackground(): void {
+  if (!app.isPackaged) {
+    return;
+  }
+  const statsUrl = resolveStatsUrl(process.env, readRemoteGatewayPackageMetadata());
+  if (statsUrl === null) {
+    return;
+  }
+  void reportInstallOnce({
+    recordPath: resolveInstallRecordPath(app.getPath("userData")),
+    statsUrl,
+    runtime: {
+      version: app.getVersion(),
+      platform: process.platform,
+      arch: process.arch,
+      channel: SYNARA_DESKTOP_UPDATE_CHANNEL,
+    },
+    readFile: (recordPath) => {
+      try {
+        return FS.readFileSync(recordPath, "utf8");
+      } catch {
+        return null;
+      }
+    },
+    writeFile: (recordPath, contents) => {
+      FS.mkdirSync(Path.dirname(recordPath), { recursive: true });
+      FS.writeFileSync(recordPath, contents);
+    },
+    fetch,
+    now: () => new Date(),
+    warn: (message) => console.warn(`[desktop-install-ping] ${message}`),
+  });
+}
+
 // How often the bundle-swap watcher stats app.asar. A stat is cheap; the cost of
 // missing a swap is every subsequent asar read returning bytes from the wrong
 // file (invisible icons, corrupted lazy-loaded route chunks), so poll briskly.
@@ -2718,14 +2760,18 @@ async function stopBackendAndWaitForExit(timeoutMs = BACKEND_SHUTDOWN_TIMEOUT_MS
   });
 }
 
-function readRemoteGatewayPackageMetadata(): RemoteGatewayPackageMetadata | null {
+function readRemoteGatewayPackageMetadata():
+  | (RemoteGatewayPackageMetadata & InstallPingPackageMetadata)
+  | null {
   for (const candidate of [
     Path.join(app.getAppPath(), "package.json"),
     Path.join(ROOT_DIR, "apps", "desktop", "package.json"),
   ]) {
     try {
       const parsed = JSON.parse(FS.readFileSync(candidate, "utf8"));
-      if (parsed && typeof parsed === "object") return parsed as RemoteGatewayPackageMetadata;
+      if (parsed && typeof parsed === "object") {
+        return parsed as RemoteGatewayPackageMetadata & InstallPingPackageMetadata;
+      }
     } catch {
       // Development and unpacked builds may not have both package paths.
     }
@@ -3804,6 +3850,7 @@ if (hasSingleInstanceLock) {
       configureAppIdentity();
       applyLegacyMacDockIcon();
       refreshMacIconCacheOnVersionChange();
+      reportInstallInBackground();
       configureMediaPermissions();
       const localePreferencePath = resolveDesktopLocalePreferencePath(app.getPath("userData"));
       await initializeDesktopI18n(

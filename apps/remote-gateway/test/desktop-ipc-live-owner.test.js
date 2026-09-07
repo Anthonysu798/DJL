@@ -1966,6 +1966,7 @@ test("live owner cancels initial hydration when the originating turn is rejected
   const { tempDir, socketPath } = createIpcTestSocket("djl-live-owner-hydrate-rejected-");
   let serverSocket = null;
   let readAttempts = 0;
+  let rejectThreadRead = null;
 
   const server = net.createServer((socket) => {
     serverSocket = socket;
@@ -1994,12 +1995,14 @@ test("live owner cancels initial hydration when the originating turn is rejected
     socketPath,
     snapshotDebounceMs: 1,
     initialHistoryRetryMs: 5,
-    async sendCodexRequest(method) {
+    sendCodexRequest(method) {
       if (method === "thread/read") {
         readAttempts += 1;
-        throw new Error("thread not found");
+        return new Promise((_, reject) => {
+          rejectThreadRead = reject;
+        });
       }
-      return { ok: true };
+      return Promise.resolve({ ok: true });
     },
     sendRawCodexMessage() {},
   });
@@ -2014,7 +2017,7 @@ test("live owner cancels initial hydration when the originating turn is rejected
       },
     }),
   );
-  await waitFor(() => readAttempts === 1);
+  await waitFor(() => rejectThreadRead != null);
   owner.observeOutbound(
     JSON.stringify({
       id: "turn-start-hydrate-rejected",
@@ -2023,6 +2026,7 @@ test("live owner cancels initial hydration when the originating turn is rejected
   );
 
   await waitFor(() => !owner.isThreadOwned("thread-hydrate-rejected"));
+  rejectThreadRead(new Error("thread not found"));
   await wait(25);
   assert.equal(readAttempts, 1);
 });

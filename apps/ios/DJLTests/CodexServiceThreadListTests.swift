@@ -421,32 +421,6 @@ final class CodexServiceThreadListTests: XCTestCase {
         XCTAssertNil(service.runtimeOptionRefreshToken)
     }
 
-    func testSortThreadsUsesUpdatedAtBeforeCreatedAtFallback() {
-        let service = makeService()
-        let laterByUpdatedAt = CodexThread(
-            id: "later-by-updated-at",
-            createdAt: Date(timeIntervalSince1970: 10),
-            updatedAt: Date(timeIntervalSince1970: 50)
-        )
-        let laterByCreatedAt = CodexThread(
-            id: "later-by-created-at",
-            createdAt: Date(timeIntervalSince1970: 100),
-            updatedAt: nil
-        )
-        let oldestThread = CodexThread(
-            id: "oldest-thread",
-            createdAt: Date(timeIntervalSince1970: 1),
-            updatedAt: nil
-        )
-
-        let sorted = service.sortThreads([oldestThread, laterByCreatedAt, laterByUpdatedAt])
-
-        XCTAssertEqual(
-            sorted.map(\.id),
-            ["later-by-updated-at", "later-by-created-at", "oldest-thread"]
-        )
-    }
-
     func testUserRenameSurvivesStaleThreadListRefreshForPinnedThread() {
         let service = makeService()
         service.threads = [

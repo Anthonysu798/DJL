@@ -6,6 +6,15 @@
 
 import Foundation
 
+// Backend event timestamps carry fractional seconds; the default formatter drops them.
+private extension ISO8601DateFormatter {
+    static let djlFractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+}
+
 private struct AssistantEventIdentity {
     let turnId: String?
     let itemId: String?
@@ -22,6 +31,13 @@ extension CodexService {
     // Appends streaming assistant text deltas from stable + legacy namespaces.
     func appendAgentDelta(from paramsObject: IncomingParamsObject?) {
         guard let paramsObject else { return }
+        #if DEBUG
+        if let emittedAt = paramsObject["djlEmittedAt"]?.stringValue,
+           let emittedDate = ISO8601DateFormatter.djlFractional.date(from: emittedAt) {
+            let latencyMs = Int(Date().timeIntervalSince(emittedDate) * 1000)
+            debugRuntimeLog("[djl-latency] delta latency_ms=\(latencyMs)")
+        }
+        #endif
         let eventObject = envelopeEventObject(from: paramsObject)
 
         guard let delta = extractAssistantDeltaText(

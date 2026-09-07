@@ -6,12 +6,42 @@
 
 const { createHash, randomUUID } = require("crypto");
 const { createElectronBackendRpcClient } = require("./electron-backend-rpc");
+const {
+  checkpointFileChangeItem,
+  createThreadEventProjection,
+  desktopGitProgressNotification,
+} = require("./electron-event-projection");
+const { createDesktopTerminalMirror, TERMINAL_BACKEND_TAGS } = require("./desktop-terminal-mirror");
 
 const ORCHESTRATION = {
   dispatchCommand: "orchestration.dispatchCommand",
   getSnapshot: "orchestration.getSnapshot",
+  getTurnDiff: "orchestration.getTurnDiff",
   subscribeShell: "orchestration.subscribeShell",
   subscribeThread: "orchestration.subscribeThread",
+};
+const GIT_SUBSCRIBE_ACTION_PROGRESS = "git.subscribeActionProgress";
+// Desktop workspace search backs the phone's @-file autocomplete.
+const PROJECTS_SEARCH_ENTRIES = "projects.searchEntries";
+const FUZZY_FILE_SEARCH_MAX_ROOTS = 4;
+const FUZZY_FILE_SEARCH_LIMIT_PER_ROOT = 50;
+// Composer discovery and the status sheet's usage rows.
+const PROVIDER_LIST_SKILLS_CATALOG = "provider.listSkillsCatalog";
+const PROVIDER_LIST_PLUGINS = "provider.listPlugins";
+const SERVER_LIST_PROVIDER_USAGE = "server.listProviderUsage";
+const SKILLS_MAX_CWDS = 4;
+// Plugin marketplaces are a Codex concept; other providers have no plugin list.
+const PLUGIN_PROVIDER = "codex";
+const PROVIDER_LABELS = {
+  codex: "Codex",
+  claudeAgent: "Claude",
+  cursor: "Cursor",
+  gemini: "Gemini",
+  grok: "Grok",
+  droid: "Droid",
+  kilo: "Kilo",
+  opencode: "OpenCode",
+  pi: "Pi",
 };
 
 const RUNTIME_MODES = new Set([
@@ -24,6 +54,7 @@ const RUNTIME_MODES = new Set([
 const MUTATION_METHODS = new Set([
   "thread/start",
   "turn/start",
+  "turn/steer",
   "turn/interrupt",
   "djl/thread/runtimeMode/set",
   "thread/archive",
@@ -42,10 +73,19 @@ function createElectronAppServerTransport({
   const listeners = createListenerBag();
   const activeThreadSubscriptions = new Map();
   const threadStates = new Map();
+  const projection = createThreadEventProjection();
   const turnReconcileTimers = new Map();
   const pendingApprovalResponses = new Map();
   let stopped = false;
   let shellUnsubscribe = null;
+  let gitProgressUnsubscribe = null;
+  let terminalEventsUnsubscribe = null;
+  const threadCwdById = new Map();
+  const terminalMirror = createDesktopTerminalMirror({
+    request: (tag, payload) => rpc.request(tag, payload),
+    emit: (method, params) => emitNotification(method, params),
+    resolveCwd: (threadId) => threadCwdById.get(threadId) ?? "",
+  });
 
   rpc.onStarted(() => {
     if (stopped) return;
@@ -53,13 +93,62 @@ function createElectronAppServerTransport({
       mode: "djl-electron",
       launchDescription: "DJL Electron embedded backend",
     });
-    void refreshSnapshot();
+    void hydrateFromSnapshot();
+    if (!gitProgressUnsubscribe) {
+      // Desktop-started git actions: forward every progress event so the phone
+      // can show the same toast it shows for its own actions.
+      gitProgressUnsubscribe = rpc.subscribe(
+        GIT_SUBSCRIBE_ACTION_PROGRESS,
+        {},
+        {
+          onChunk(values) {
+            for (const value of values) {
+              const output = desktopGitProgressNotification(value);
+              if (output) emitOutput(output);
+            }
+          },
+          onEnd() {
+            gitProgressUnsubscribe = null;
+          },
+          onError() {
+            gitProgressUnsubscribe = null;
+          },
+        },
+      );
+    }
+    if (!terminalEventsUnsubscribe) {
+      // Desktop terminals: one stream for every session; the mirror forwards
+      // only the terminals the phone has attached to.
+      terminalEventsUnsubscribe = rpc.subscribe(
+        TERMINAL_BACKEND_TAGS.subscribeEvents,
+        {},
+        {
+          onChunk(values) {
+            for (const value of values) terminalMirror.handleEvent(value);
+          },
+          onEnd() {
+            terminalEventsUnsubscribe = null;
+          },
+          onError() {
+            terminalEventsUnsubscribe = null;
+          },
+        },
+      );
+    }
     if (!shellUnsubscribe) {
       shellUnsubscribe = rpc.subscribe(
         ORCHESTRATION.subscribeShell,
         {},
         {
-          onChunk: () => void refreshSnapshot(),
+          onChunk(values) {
+            for (const value of values) handleShellItem(value);
+          },
+          onEnd() {
+            shellUnsubscribe = null;
+          },
+          onError() {
+            shellUnsubscribe = null;
+          },
         },
       );
     }
@@ -70,7 +159,9 @@ function createElectronAppServerTransport({
   rpc.onError(() => {});
   rpc.onClose(() => {});
 
-  async function refreshSnapshot() {
+  // One full snapshot per backend (re)start: it seeds the thread list and the
+  // per-thread subscriptions. Everything after that arrives as events.
+  async function hydrateFromSnapshot() {
     if (stopped) return;
     let snapshot;
     try {
@@ -82,11 +173,33 @@ function createElectronAppServerTransport({
     const threads = readableThreads(snapshot);
     logDiagnostic(diagnostics, `snapshot threads=${threads.length}`);
     for (const thread of threads) {
-      subscribeToThread(thread.id);
       applyThreadSnapshot(thread, {
         announceExisting: false,
         snapshotSequence: snapshot.snapshotSequence,
       });
+      subscribeToThread(thread.id);
+    }
+  }
+
+  function handleShellItem(value) {
+    if (!value || typeof value !== "object") return;
+    if (value.kind === "snapshot") {
+      for (const thread of value.snapshot?.threads || []) {
+        if (thread?.id && !thread.archivedAt && !thread.deletedAt) subscribeToThread(thread.id);
+      }
+      return;
+    }
+    if (value.kind === "thread-upserted" && value.thread?.id) {
+      if (value.thread.archivedAt || value.thread.deletedAt) {
+        unsubscribeFromThread(value.thread.id);
+        return;
+      }
+      subscribeToThread(value.thread.id);
+      for (const output of projection.applyShellThread(value.thread)) emitOutput(output);
+      return;
+    }
+    if (value.kind === "thread-removed" && value.threadId) {
+      unsubscribeFromThread(value.threadId);
     }
   }
 
@@ -105,8 +218,8 @@ function createElectronAppServerTransport({
               });
               continue;
             }
-            if (value?.kind === "event") {
-              void refreshThread(threadId);
+            if (value?.kind === "event" && value.event) {
+              handleThreadEvent(threadId, value.event);
             }
           }
         },
@@ -114,13 +227,49 @@ function createElectronAppServerTransport({
           activeThreadSubscriptions.delete(threadId);
         },
         onError() {
+          // The server ends a lagging stream so the client resyncs from a
+          // fresh detail snapshot; resubscribing delivers that snapshot first.
           activeThreadSubscriptions.delete(threadId);
+          projection.forget(threadId);
+          if (!stopped) subscribeToThread(threadId);
         },
       },
     );
     activeThreadSubscriptions.set(threadId, unsubscribe);
   }
 
+  function unsubscribeFromThread(threadId) {
+    const unsubscribe = activeThreadSubscriptions.get(threadId);
+    if (unsubscribe) unsubscribe();
+    activeThreadSubscriptions.delete(threadId);
+    projection.forget(threadId);
+    threadStates.delete(threadId);
+    stopTurnReconciliation(threadId);
+  }
+
+  function handleThreadEvent(threadId, event) {
+    const outputs = projection.applyThreadEvent(event);
+    for (const output of outputs) {
+      if (output.kind === "notification" && output.method === "turn/started") {
+        stopTurnReconciliation(threadId);
+      }
+      emitOutput(output);
+    }
+    const state = threadStates.get(threadId);
+    if (state) state.activeTurnId = projection.activeTurnId(threadId);
+  }
+
+  function emitOutput(output) {
+    if (output.kind === "request") {
+      pendingApprovalResponses.set(output.id, output.approval);
+      emitRaw({ id: output.id, method: output.method, params: output.params });
+      return;
+    }
+    emitNotification(output.method, output.params);
+  }
+
+  // Used by request handlers that still need a current thread (turn/start,
+  // runtime mode). It is not on the streaming path.
   async function refreshThread(threadId) {
     if (stopped) return null;
     try {
@@ -170,6 +319,7 @@ function createElectronAppServerTransport({
 
   function applyThreadSnapshot(thread, { announceExisting, snapshotSequence = null }) {
     const previous = threadStates.get(thread.id) || emptyThreadState();
+    if (stringValue(thread.worktreePath)) threadCwdById.set(thread.id, thread.worktreePath);
     if (isStaleThreadSnapshot(previous, thread, snapshotSequence)) return false;
     const next = snapshotThreadState(thread, snapshotSequence);
     const activeTurnId = thread.session?.activeTurnId || null;
@@ -260,6 +410,51 @@ function createElectronAppServerTransport({
     }
     if (!activeTurnId) stopTurnReconciliation(thread.id);
     threadStates.set(thread.id, next);
+    projection.hydrate(thread, snapshotSequence);
+    return true;
+  }
+
+  // Phone checkpoint diffs for desktop turns come from the backend's turn
+  // checkpoints, not from git refs the phone never captured. Returns true when
+  // this adapter will answer; false lets the local git handler try.
+  function interceptRequest(rawMessage) {
+    const message = safeParse(rawMessage);
+    if (!message || message.method !== "workspace/checkpointDiff" || message.id == null) {
+      return false;
+    }
+    const params = message.params || {};
+    const threadId = stringValue(params.threadId) || stringValue(params.thread_id);
+    const turnId = stringValue(params.toTurnId) || stringValue(params.fromTurnId);
+    const count = threadId && turnId ? projection.checkpointTurnCount(threadId, turnId) : null;
+    if (count == null) return false;
+
+    void (async () => {
+      try {
+        const result = await rpc.request(ORCHESTRATION.getTurnDiff, {
+          threadId,
+          fromTurnCount: Math.max(0, count - 1),
+          toTurnCount: count,
+        });
+        emitRaw({
+          id: message.id,
+          result: {
+            repoRoot: stringValue(params.cwd) || threadStates.get(threadId)?.cwd || "",
+            fromCheckpointRef: `turnStart:${turnId}`,
+            toCheckpointRef: `turnEnd:${turnId}`,
+            diff: typeof result?.diff === "string" ? result.diff : "",
+          },
+        });
+      } catch (error) {
+        emitRaw({
+          id: message.id,
+          error: {
+            code: -32000,
+            message: error instanceof Error ? error.message : String(error),
+            data: { errorCode: "checkpoint_missing" },
+          },
+        });
+      }
+    })();
     return true;
   }
 
@@ -364,6 +559,16 @@ function createElectronAppServerTransport({
         return startThread(params, mutation);
       case "turn/start":
         return startTurn(params, mutation);
+      case "turn/steer":
+        return steerTurn(params, mutation);
+      case "fuzzyFileSearch":
+        return fuzzyFileSearch(params);
+      case "skills/list":
+        return listSkills(params);
+      case "plugin/list":
+        return listPlugins(params);
+      case "account/rateLimits/read":
+        return readRateLimits();
       case "turn/interrupt":
         return interruptTurn(params, mutation);
       case "djl/thread/runtimeMode/set":
@@ -375,6 +580,18 @@ function createElectronAppServerTransport({
         return renameThread(params, mutation);
       case "thread/unsubscribe":
         return {};
+      case "djl/terminal/list":
+        return terminalMirror.list(params);
+      case "djl/terminal/open":
+        return terminalMirror.open(params);
+      case "djl/terminal/write":
+        return terminalMirror.write(params);
+      case "djl/terminal/resize":
+        return terminalMirror.resize(params);
+      case "djl/terminal/ack":
+        return terminalMirror.ack(params);
+      case "djl/terminal/close":
+        return terminalMirror.close(params);
       default:
         throw new Error(`DJL Electron does not support remote method: ${method}`);
     }
@@ -455,18 +672,31 @@ function createElectronAppServerTransport({
   }
 
   async function startTurn(params, mutation) {
+    return dispatchTurn(params, mutation, "queue");
+  }
+
+  // Codex-style steer: an urgent redirect of the running turn. The backend
+  // models it as a turn start with the "steer" dispatch mode.
+  async function steerTurn(params, mutation) {
+    return dispatchTurn(params, mutation, "steer");
+  }
+
+  async function dispatchTurn(params, mutation, dispatchMode) {
     const snapshot = await readSnapshot();
     const threadId = readThreadId(params);
     const thread = readableThreads(snapshot).find((entry) => entry.id === threadId);
     if (!thread) throw new Error("DJL Electron chat was not found.");
     const messageText = extractInputText(params.input);
     if (!messageText) throw new Error("A message is required.");
+    if (dispatchMode === "steer" && !thread.session?.activeTurnId) {
+      throw new Error("No active turn available to steer.");
+    }
     const modelSelection = modelSelectionFor(params, snapshot, thread);
     const runtimeMode = runtimeModeForAppServerParams(params, thread.runtimeMode);
     await dispatchCommand(
       {
         type: "thread.turn.start",
-        commandId: mutation.commandId("turn-start"),
+        commandId: mutation.commandId(dispatchMode === "steer" ? "turn-steer" : "turn-start"),
         threadId,
         message: {
           messageId: mutation.entityId("djl-message", "message"),
@@ -475,7 +705,8 @@ function createElectronAppServerTransport({
           attachments: [],
         },
         modelSelection,
-        dispatchMode: "queue",
+        dispatchMode,
+        assistantDeliveryMode: "streaming",
         runtimeMode,
         interactionMode: "default",
         createdAt: now(),
@@ -496,6 +727,125 @@ function createElectronAppServerTransport({
       ...(turnId ? { turn: { id: turnId, status: "inProgress" } } : {}),
       runtimeMode,
     };
+  }
+
+  // Maps the phone's Codex-shaped fuzzy search onto the desktop's workspace
+  // entry search, one request per root, preserving the backend's ranking.
+  async function fuzzyFileSearch(params) {
+    const query = stringValue(params?.query);
+    const roots = (Array.isArray(params?.roots) ? params.roots : [])
+      .map(stringValue)
+      .filter(Boolean)
+      .slice(0, FUZZY_FILE_SEARCH_MAX_ROOTS);
+    if (!query || roots.length === 0) return { files: [] };
+    const files = [];
+    for (const root of roots) {
+      let result;
+      try {
+        result = await rpc.request(PROJECTS_SEARCH_ENTRIES, {
+          cwd: root,
+          query,
+          limit: FUZZY_FILE_SEARCH_LIMIT_PER_ROOT,
+          kind: "file",
+        });
+      } catch (error) {
+        logDiagnostic(diagnostics, `fuzzy-file-search-failed root=${root}`, error);
+        continue;
+      }
+      const entries = Array.isArray(result?.entries) ? result.entries : [];
+      for (const entry of entries) {
+        const path = stringValue(entry?.path);
+        if (!path) continue;
+        files.push({
+          root,
+          path,
+          fileName: path.split("/").pop(),
+          score: Math.max(1, 1000 - files.length),
+          indices: null,
+        });
+      }
+    }
+    return { files };
+  }
+
+  // Unified skills catalog across providers, one request per cwd the phone
+  // names (none means the global catalog). Duplicates by path collapse.
+  async function listSkills(params) {
+    const cwds = (Array.isArray(params?.cwds) ? params.cwds : [params?.cwd])
+      .map(stringValue)
+      .filter(Boolean)
+      .slice(0, SKILLS_MAX_CWDS);
+    const requests = cwds.length > 0 ? cwds.map((cwd) => ({ cwd })) : [{}];
+    const byKey = new Map();
+    for (const payload of requests) {
+      let result;
+      try {
+        result = await rpc.request(PROVIDER_LIST_SKILLS_CATALOG, payload);
+      } catch (error) {
+        logDiagnostic(diagnostics, `skills-list-failed cwd=${payload.cwd || ""}`, error);
+        continue;
+      }
+      for (const skill of Array.isArray(result?.skills) ? result.skills : []) {
+        const name = stringValue(skill?.name);
+        if (!name) continue;
+        const path = stringValue(skill?.path);
+        const key = path || name.toLowerCase();
+        if (byKey.has(key)) continue;
+        byKey.set(key, {
+          name,
+          description:
+            stringValue(skill?.description) ||
+            stringValue(skill?.interface?.shortDescription) ||
+            null,
+          path: path || null,
+          scope: stringValue(skill?.scope) || null,
+          enabled: skill?.enabled !== false,
+        });
+      }
+    }
+    return { skills: Array.from(byKey.values()) };
+  }
+
+  async function listPlugins(params) {
+    const cwd = (Array.isArray(params?.cwds) ? params.cwds : [params?.cwd])
+      .map(stringValue)
+      .find(Boolean);
+    const result = await rpc.request(PROVIDER_LIST_PLUGINS, {
+      provider: PLUGIN_PROVIDER,
+      ...(cwd ? { cwd } : {}),
+      ...(params?.forceReload ? { forceReload: true } : {}),
+    });
+    // The backend descriptor is a superset of the Codex marketplace shape the
+    // phone decodes; unknown fields are ignored on the phone.
+    return { marketplaces: Array.isArray(result?.marketplaces) ? result.marketplaces : [] };
+  }
+
+  // One bucket per provider usage window, keyed so the phone renders a row
+  // each. Providers without a fetchable usage source are left out.
+  async function readRateLimits() {
+    const snapshots = await rpc.request(SERVER_LIST_PROVIDER_USAGE, {});
+    const rateLimitsByLimitId = {};
+    for (const snapshot of Array.isArray(snapshots) ? snapshots : []) {
+      const provider = stringValue(snapshot?.provider);
+      if (!provider) continue;
+      if (snapshot.status && snapshot.status !== "ok") continue;
+      const label = PROVIDER_LABELS[provider] || provider;
+      for (const limit of Array.isArray(snapshot.limits) ? snapshot.limits : []) {
+        const window = stringValue(limit?.window);
+        if (!window || typeof limit.usedPercent !== "number") continue;
+        rateLimitsByLimitId[`${provider}:${window}`] = {
+          limitName: `${label} · ${window}`,
+          primary: {
+            usedPercent: Math.round(limit.usedPercent),
+            ...(Number.isInteger(limit.windowDurationMins)
+              ? { windowDurationMins: limit.windowDurationMins }
+              : {}),
+            ...(stringValue(limit.resetsAt) ? { resetsAt: limit.resetsAt } : {}),
+          },
+        };
+      }
+    }
+    return { rateLimitsByLimitId };
   }
 
   async function setThreadRuntimeMode(params, mutation) {
@@ -592,6 +942,7 @@ function createElectronAppServerTransport({
     send(rawMessage) {
       void handleRequest(rawMessage);
     },
+    interceptRequest,
     onMessage(handler) {
       listeners.onMessage = handler;
     },
@@ -607,6 +958,11 @@ function createElectronAppServerTransport({
     shutdown() {
       stopped = true;
       shellUnsubscribe?.();
+      gitProgressUnsubscribe?.();
+      gitProgressUnsubscribe = null;
+      terminalEventsUnsubscribe?.();
+      terminalEventsUnsubscribe = null;
+      terminalMirror.reset();
       for (const unsubscribe of activeThreadSubscriptions.values()) unsubscribe?.();
       activeThreadSubscriptions.clear();
       for (const timer of turnReconcileTimers.values()) clearTimeout(timer);
@@ -737,6 +1093,20 @@ function appServerTurns(thread) {
     entry.items.push(appServerMessageItem(message));
     byTurn.set(turnId, entry);
   }
+  // Reopened threads show their edits: one file-change card per checkpoint.
+  for (const checkpoint of thread.checkpoints || []) {
+    const item = checkpointFileChangeItem(checkpoint);
+    const turnId = stringValue(checkpoint?.turnId);
+    if (!item || !turnId) continue;
+    const entry = byTurn.get(turnId) || {
+      id: turnId,
+      status: "completed",
+      createdAt: stringValue(checkpoint.completedAt),
+      items: [],
+    };
+    entry.items.push(item);
+    byTurn.set(turnId, entry);
+  }
   return Array.from(byTurn.values());
 }
 
@@ -780,6 +1150,7 @@ function snapshotThreadState(thread, snapshotSequence = null) {
   return {
     snapshotSequence: normalizeSnapshotSequence(snapshotSequence),
     updatedAt: stringValue(thread.updatedAt),
+    cwd: stringValue(thread.worktreePath),
     activeTurnId: thread.session?.activeTurnId || null,
     runtimeMode: normalizeRuntimeMode(thread.runtimeMode),
     messages: new Map(

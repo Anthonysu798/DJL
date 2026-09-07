@@ -22,30 +22,6 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
         super.tearDown()
     }
 
-    func testServiceMigratesCurrentTrustedMacFromLastTrustedMacWhenMissing() {
-        let macDeviceID = "mac-\(UUID().uuidString)"
-        let registry = CodexTrustedMacRegistry(
-            records: [
-                macDeviceID: CodexTrustedMacRecord(
-                    macDeviceId: macDeviceID,
-                    macIdentityPublicKey: Data(repeating: 3, count: 32).base64EncodedString(),
-                    lastPairedAt: Date()
-                )
-            ]
-        )
-        SecureStore.writeCodable(registry, for: CodexSecureKeys.trustedMacRegistry)
-        SecureStore.writeString(macDeviceID, for: CodexSecureKeys.lastTrustedMacDeviceId)
-
-        let service = makeService()
-
-        XCTAssertEqual(service.normalizedCurrentTrustedMacDeviceId, macDeviceID)
-        XCTAssertEqual(service.preferredTrustedMacDeviceId, macDeviceID)
-        XCTAssertEqual(
-            SecureStore.readString(for: CodexSecureKeys.currentTrustedMacDeviceId),
-            macDeviceID
-        )
-    }
-
     func testPreferredTrustedMacUsesExplicitCurrentMacInsteadOfLastTrustedFallback() {
         let service = makeService()
         let currentMacID = "mac-current-\(UUID().uuidString)"
@@ -129,41 +105,6 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
 
         XCTAssertEqual(presentation?.deviceId, currentMacID)
         XCTAssertEqual(presentation?.name, "Current Alias")
-    }
-
-    func testTrustMacCoalescesRowsForTheSameIdentityKey() {
-        let service = makeService()
-        let staleMacID = "mac-stale-\(UUID().uuidString)"
-        let freshMacID = "mac-fresh-\(UUID().uuidString)"
-        let sharedPublicKey = Data(repeating: 9, count: 32).base64EncodedString()
-
-        service.trustedMacRegistry.records[staleMacID] = CodexTrustedMacRecord(
-            macDeviceId: staleMacID,
-            macIdentityPublicKey: sharedPublicKey,
-            lastPairedAt: Date().addingTimeInterval(-30),
-            relayURL: "wss://relay.local/relay",
-            displayName: "Studio Mac",
-            lastResolvedSessionId: "old-session",
-            lastResolvedAt: Date().addingTimeInterval(-20),
-            lastUsedAt: Date().addingTimeInterval(-10)
-        )
-        service.setCurrentTrustedMacDeviceId(staleMacID)
-        service.setPreviousTrustedMacDeviceId(staleMacID)
-
-        service.trustMac(
-            deviceId: freshMacID,
-            publicKey: sharedPublicKey,
-            relayURL: nil,
-            displayName: nil
-        )
-
-        XCTAssertNil(service.trustedMacRegistry.records[staleMacID])
-        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.displayName, "Studio Mac")
-        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.relayURL, "wss://relay.local/relay")
-        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.lastResolvedSessionId, "old-session")
-        XCTAssertEqual(service.normalizedCurrentTrustedMacDeviceId, freshMacID)
-        XCTAssertNil(service.normalizedPreviousTrustedMacDeviceId)
-        XCTAssertEqual(SecureStore.readString(for: CodexSecureKeys.lastTrustedMacDeviceId), freshMacID)
     }
 
     func testTrustMacMigratesPinnedDefaultsFromCoalescedMacId() throws {

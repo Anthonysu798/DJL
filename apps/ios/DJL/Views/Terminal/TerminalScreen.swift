@@ -23,6 +23,9 @@ struct TerminalScreen: View {
     @State private var isNativeTerminalAvailable = true
     @State private var actionErrorMessage: String?
     @State private var didApplyPreferredWorkingDirectory = false
+    @State private var terminalSource: DJLTerminalSource = DJLTerminalProfileStore.load().source
+    @State private var didResolveDefaultTerminalSource = false
+    @State private var desktopTerminalIds: [String] = []
     @State private var pendingModifier: TerminalPendingModifier?
     @State private var selectedModifier: TerminalPendingModifier = .ctrl
     @State private var terminalTextReader = GhosttyTerminalTextReader()
@@ -30,6 +33,22 @@ struct TerminalScreen: View {
     @AppStorage("codex.terminal.fontSize") private var terminalFontSize = djlTerminalDefaultFontSize
 
     let preferredWorkingDirectory: String?
+    let threadID: String?
+
+    // Desktop mirroring needs a thread: the route's thread first, else the active chat.
+    private var resolvedThreadID: String? {
+        let candidate = threadID ?? codex.activeThreadId
+        let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var isDesktopSourceAvailable: Bool {
+        resolvedThreadID != nil
+    }
+
+    private var usesDesktopSource: Bool {
+        terminalSource == .desktop && isDesktopSourceAvailable
+    }
 
     private var theme: DJLTerminalTheme {
         DJLTerminalTheme.resolved(for: colorScheme)
@@ -54,6 +73,9 @@ struct TerminalScreen: View {
     }
 
     private var hasConnectionConfiguration: Bool {
+        if usesDesktopSource {
+            return true
+        }
         let profile = profileResolvedFromConnection
         return !profile.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !profile.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -85,7 +107,10 @@ struct TerminalScreen: View {
     }
 
     private var terminalHostTitle: String {
-        firstNonEmpty([
+        if usesDesktopSource {
+            return firstNonEmpty([codex.trustedPairPresentation?.name]) ?? "DJL desktop"
+        }
+        return firstNonEmpty([
             profileResolvedFromConnection.nickname,
             codex.trustedPairPresentation?.name,
             profileResolvedFromConnection.displayTarget,
@@ -180,8 +205,15 @@ struct TerminalScreen: View {
         if !snapshots.contains(where: { $0.terminalId == activeTerminalId }) {
             snapshots.append(activeSnapshot)
         }
+        if usesDesktopSource {
+            // Terminals the desktop already runs for this thread show up as attachable.
+            for terminalId in desktopTerminalIds where !snapshots.contains(where: { $0.terminalId == terminalId }) {
+                snapshots.append(DJLTerminalSnapshot.idleSnapshot(terminalId: terminalId))
+            }
+        }
 
         return snapshots.filter { snapshot in
+            (usesDesktopSource && desktopTerminalIds.contains(snapshot.terminalId)) ||
             snapshot.terminalId == activeTerminalId || snapshot.status.isRunning
         }.map { snapshot in
             TerminalMenuSessionItem(
@@ -233,12 +265,15 @@ struct TerminalScreen: View {
                     sessions: terminalMenuSessions,
                     activeTerminalId: activeTerminalId,
                     isRunning: isRunning,
+                    source: usesDesktopSource ? .desktop : .ssh,
+                    canUseDesktopSource: isDesktopSourceAvailable,
                     hasConnectionConfiguration: hasConnectionConfiguration,
                     canPaste: canPasteIntoActiveTerminal,
                     canSelectText: canSelectTerminalText,
                     canClear: !activeSnapshot.bufferData.isEmpty,
                     canResetKnownHost: !profileResolvedFromConnection.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                     onSelectSession: selectTerminalSession,
+                    onSelectSource: selectTerminalSource,
                     onOpenNewTerminal: openNewTerminalFromMenu,
                     onToggleConnection: toggleTerminalConnection,
                     onOpenConnectionEditor: showConnectionEditor,
@@ -341,12 +376,16 @@ struct TerminalScreen: View {
     }
 
     private func bootstrapTerminalRoute() async {
+        resolveDefaultTerminalSourceIfNeeded()
         if restoreRunningTerminalIfNeeded() {
             return
         }
         applyPreferredWorkingDirectoryIfNeeded()
         connectionDraft = draftProfile.connectionString
         try? await codex.refreshTerminalSnapshot()
+        if usesDesktopSource, let resolvedThreadID {
+            desktopTerminalIds = (try? await codex.listDesktopTerminalIds(threadId: resolvedThreadID)) ?? []
+        }
 
         guard hasConnectionConfiguration else {
             isShowingConnectionEditor = true
@@ -380,6 +419,53 @@ struct TerminalScreen: View {
 
     private func selectTerminalSession(_ terminalId: String) {
         activeTerminalId = terminalId
+    }
+
+    // First visit with no SSH host saved: mirror the desktop when a thread is known.
+    private func resolveDefaultTerminalSourceIfNeeded() {
+        guard !didResolveDefaultTerminalSource else { return }
+        didResolveDefaultTerminalSource = true
+        let savedHost = draftProfile.host.trimmingCharacters(in: .whitespacesAndNewlines)
+        if terminalSource == .ssh, savedHost.isEmpty, isDesktopSourceAvailable {
+            terminalSource = .desktop
+        }
+    }
+
+    private func selectTerminalSource(_ source: DJLTerminalSource) {
+        guard source != terminalSource else { return }
+        terminalSource = source
+        draftProfile.source = source
+        var profileForSave = draftProfile.normalizedForSave
+        profileForSave.cwd = ""
+        DJLTerminalProfileStore.save(profileForSave)
+        actionErrorMessage = nil
+        Task { @MainActor in
+            if isRunning {
+                await closeTerminal()
+            }
+            userClosedTerminalIds.remove(activeTerminalId)
+            bootstrappedTerminalIds.insert(activeTerminalId)
+            await openTerminal()
+        }
+    }
+
+    private func openDesktopTerminal() async {
+        guard let resolvedThreadID else {
+            actionErrorMessage = "Open a chat first to mirror its desktop terminal."
+            return
+        }
+        actionErrorMessage = nil
+        do {
+            try await codex.openDesktopTerminal(
+                terminalId: activeTerminalId,
+                threadId: resolvedThreadID,
+                cwd: nil,
+                cols: activeSnapshot.cols,
+                rows: activeSnapshot.rows
+            )
+        } catch {
+            actionErrorMessage = terminalErrorText(error)
+        }
     }
 
     private func openNewTerminalFromMenu() {
@@ -434,6 +520,10 @@ struct TerminalScreen: View {
     }
 
     private func openTerminal() async {
+        if usesDesktopSource {
+            await openDesktopTerminal()
+            return
+        }
         var connectionProfile = profileResolvedFromConnection
         connectionProfile.cwd = ""
         draftProfile = connectionProfile
@@ -506,6 +596,8 @@ struct TerminalScreen: View {
     private func applyPreferredWorkingDirectoryIfNeeded() {
         guard !didApplyPreferredWorkingDirectory else { return }
         didApplyPreferredWorkingDirectory = true
+        // A mirrored desktop shell keeps the directory the desktop chose.
+        guard !usesDesktopSource else { return }
         guard let trimmedCWD = routeInitialWorkingDirectory,
               activeSnapshot.status == .running,
               activeSnapshot.cwd != trimmedCWD else {

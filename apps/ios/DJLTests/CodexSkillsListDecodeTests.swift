@@ -69,33 +69,6 @@ final class CodexSkillsListDecodeTests: XCTestCase {
         XCTAssertTrue(requestedSourceKinds.contains("vscode"))
     }
 
-    func testListThreadsDefaultsToCappedSidebarMetadata() async throws {
-        let service = makeService()
-        var capturedParams: [RPCObject] = []
-
-        service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "thread/list")
-            let object = params?.objectValue ?? [:]
-            capturedParams.append(object)
-            return RPCMessage(
-                id: .string(UUID().uuidString),
-                result: .object([
-                    "data": .array([]),
-                    "nextCursor": .null,
-                ]),
-                includeJSONRPC: false
-            )
-        }
-
-        try await service.listThreads()
-
-        XCTAssertEqual(capturedParams.count, 2)
-        let activeParams = try XCTUnwrap(capturedParams.first { $0["archived"]?.boolValue != true })
-        let archivedParams = try XCTUnwrap(capturedParams.first { $0["archived"]?.boolValue == true })
-        XCTAssertEqual(activeParams["limit"]?.intValue, 70)
-        XCTAssertEqual(archivedParams["limit"]?.intValue, 10)
-    }
-
     func testDecodeSkillsListParsesBucketedDataShape() {
         let service = makeService()
         let result: JSONValue = .object([

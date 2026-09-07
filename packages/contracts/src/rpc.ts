@@ -854,6 +854,15 @@ export const WsSubscribeTerminalEventsRpc = Rpc.make(WS_METHODS.subscribeTermina
   stream: true,
 });
 
+// Every stacked git action's progress, not just the caller's own, so remote
+// observers such as the phone bridge can follow desktop-started actions.
+export const WsSubscribeGitActionProgressRpc = Rpc.make(WS_METHODS.subscribeGitActionProgress, {
+  payload: Schema.Struct({}),
+  success: GitActionProgressEvent,
+  error: WsRpcError,
+  stream: true,
+});
+
 export const WsServerGetConfigRpc = Rpc.make(WS_METHODS.serverGetConfig, {
   payload: Schema.Struct({}),
   success: ServerConfig,
@@ -1273,6 +1282,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsTerminalRestartRpc,
   WsTerminalCloseRpc,
   WsSubscribeTerminalEventsRpc,
+  WsSubscribeGitActionProgressRpc,
   WsServerGetConfigRpc,
   WsServerGetEnvironmentRpc,
   WsServerGetSettingsRpc,

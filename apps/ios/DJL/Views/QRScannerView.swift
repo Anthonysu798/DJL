@@ -14,7 +14,6 @@ struct QRScannerView: View {
 
     @State private var scannerError: String?
     @State private var bridgeUpdatePrompt: CodexBridgeUpdatePrompt?
-    @State private var didCopyBridgeUpdateCommand = false
     @State private var hasCameraPermission = false
     @State private var isCheckingPermission = true
 
@@ -76,7 +75,7 @@ struct QRScannerView: View {
         }
     }
 
-    // Blocks repeated scans when the camera spots a bridge QR from an incompatible npm release.
+    // Blocks repeated scans when the camera spots a bridge QR from an incompatible DJL release.
     private func bridgeUpdateView(prompt: CodexBridgeUpdatePrompt) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -93,14 +92,14 @@ struct QRScannerView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 14) {
-                    if let command = prompt.command, !command.isEmpty {
-                        Text("Do these steps on your device")
+                    if prompt.target == .mac {
+                        Text("Do these steps on your Mac")
                             .font(AppFont.caption(weight: .semibold))
                             .foregroundStyle(.white.opacity(0.7))
 
-                        bridgeUpdateStep(number: "1", title: "Update DJL", detail: command, showsCopyButton: true)
-                        bridgeUpdateStep(number: "2", title: "Start it again", detail: "Run djl up")
-                        bridgeUpdateStep(number: "3", title: "Make a new QR code", detail: "Use the new QR shown in the terminal")
+                        bridgeUpdateStep(number: "1", title: "Update DJL", detail: "In DJL, open the DJL menu and choose Check for Updates…")
+                        bridgeUpdateStep(number: "2", title: "Relaunch DJL", detail: "Install the update and open DJL again")
+                        bridgeUpdateStep(number: "3", title: "Make a new QR code", detail: "Open Settings › Remote in DJL")
                         bridgeUpdateStep(number: "4", title: "Come back here", detail: "Then scan the new QR code from the iPhone")
                     } else {
                         Text("Do these steps on your iPhone")
@@ -114,7 +113,6 @@ struct QRScannerView: View {
 
                 Button("I Updated It") {
                     bridgeUpdatePrompt = nil
-                    didCopyBridgeUpdateCommand = false
                 }
                 .font(AppFont.body(weight: .semibold))
                 .frame(maxWidth: .infinity)
@@ -134,8 +132,7 @@ struct QRScannerView: View {
     private func bridgeUpdateStep(
         number: String,
         title: String,
-        detail: String,
-        showsCopyButton: Bool = false
+        detail: String
     ) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number)
@@ -152,7 +149,7 @@ struct QRScannerView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(detail)
-                    .font(showsCopyButton ? AppFont.mono(.caption) : AppFont.caption())
+                    .font(AppFont.caption())
                     .foregroundStyle(.white.opacity(0.82))
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
@@ -162,24 +159,6 @@ struct QRScannerView: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .fill(Color.white.opacity(0.08))
                     )
-
-                if showsCopyButton {
-                    Button(didCopyBridgeUpdateCommand ? "Copied" : "Copy Command") {
-                        UIPasteboard.general.string = detail
-                        HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            didCopyBridgeUpdateCommand = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                didCopyBridgeUpdateCommand = false
-                            }
-                        }
-                    }
-                    .font(AppFont.caption(weight: .semibold))
-                    .foregroundStyle(.white)
-                    .buttonStyle(.plain)
-                }
             }
         }
     }
@@ -276,7 +255,6 @@ struct QRScannerView: View {
             scannerError = message
             resetScanLock()
         case .bridgeUpdateRequired(let prompt):
-            didCopyBridgeUpdateCommand = false
             bridgeUpdatePrompt = prompt
             resetScanLock()
         }
@@ -286,8 +264,7 @@ struct QRScannerView: View {
 private extension CodexBridgeUpdatePrompt {
     static let previewScannerMismatch = CodexBridgeUpdatePrompt(
         title: "Update DJL on your Mac before scanning",
-        message: "This QR code was generated by a different DJL npm version. Update the package on your Mac to the latest release before scanning a new QR code.",
-        command: "npm install -g djl@latest"
+        message: "This QR code was generated by a different DJL version. Update DJL on your Mac to the latest release before scanning a new QR code."
     )
 }
 

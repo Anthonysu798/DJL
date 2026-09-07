@@ -65,4 +65,44 @@ describe("GET /download/windows", () => {
       "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/0.5.6/DJL-0.5.6-x64.exe",
     );
   });
+
+  it("reports the resolved GitHub redirect with the visitor country", async () => {
+    const reports: Request[] = [];
+    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).includes("api.github.com")) {
+        return {
+          ok: true,
+          json: async () => ({
+            tag_name: "v0.5.6",
+            assets: [
+              {
+                name: "DJL-0.5.6-x64.exe",
+                browser_download_url:
+                  "https://github.com/Anthonysu798/DJL/releases/download/v0.5.6/DJL-0.5.6-x64.exe",
+              },
+            ],
+          }),
+        };
+      }
+      reports.push(new Request(input, init));
+      return new Response(null, { status: 204 });
+    });
+    const { GET } = await import("./route");
+
+    await GET(
+      new Request("https://djl.test/download/windows", {
+        headers: { "x-vercel-ip-country": "ca" },
+      }),
+    );
+
+    await vi.waitFor(() => expect(reports).toHaveLength(1));
+    expect(reports[0]?.url).toBe("https://djl-stats.slcor.workers.dev/v1/downloads");
+    expect(await reports[0]?.json()).toEqual({
+      platform: "windows",
+      arch: "x64",
+      source: "github",
+      country: "CA",
+      version: "0.5.6",
+    });
+  });
 });

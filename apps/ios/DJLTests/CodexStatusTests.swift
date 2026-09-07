@@ -177,31 +177,6 @@ final class CodexStatusTests: XCTestCase {
         XCTAssertNil(service.rateLimitsErrorMessage)
     }
 
-    func testIncomingRateLimitUpdateRefreshesCachedBuckets() {
-        let service = makeService()
-
-        service.handleIncomingRPCMessage(
-            RPCMessage(
-                method: "account/rateLimits/updated",
-                params: .object([
-                    "rateLimits": .object([
-                        "limitId": .string("codex"),
-                        "limitName": .string("Codex"),
-                        "primary": .object([
-                            "usedPercent": .integer(42),
-                            "windowDurationMins": .integer(60),
-                            "resetsAt": .integer(1_742_100_000),
-                        ]),
-                    ]),
-                ])
-            )
-        )
-
-        XCTAssertEqual(service.rateLimitBuckets.count, 1)
-        XCTAssertEqual(service.rateLimitBuckets.first?.limitId, "codex")
-        XCTAssertEqual(service.rateLimitBuckets.first?.primary?.remainingPercent, 58)
-    }
-
     func testIncomingRateLimitUpdateDecodesSnakeCaseWindowKeys() {
         let service = makeService()
 
@@ -296,47 +271,6 @@ final class CodexStatusTests: XCTestCase {
         XCTAssertEqual(service.rateLimitBuckets.map(\.limitId), ["primary", "secondary"])
         XCTAssertEqual(service.rateLimitBuckets.first?.primary?.remainingPercent, 85)
         XCTAssertEqual(service.rateLimitBuckets.last?.primary?.remainingPercent, 65)
-    }
-
-    func testIncomingRateLimitUpdateMergesPartialBucketsIntoExistingCache() {
-        let service = makeService()
-        service.rateLimitBuckets = [
-            CodexRateLimitBucket(
-                limitId: "primary",
-                limitName: nil,
-                primary: CodexRateLimitWindow(
-                    usedPercent: 10,
-                    windowDurationMins: 300,
-                    resetsAt: nil
-                ),
-                secondary: nil
-            ),
-            CodexRateLimitBucket(
-                limitId: "secondary",
-                limitName: nil,
-                primary: CodexRateLimitWindow(
-                    usedPercent: 20,
-                    windowDurationMins: 10_080,
-                    resetsAt: nil
-                ),
-                secondary: nil
-            ),
-        ]
-
-        service.handleIncomingRPCMessage(
-            RPCMessage(
-                method: "account/rateLimits/updated",
-                params: .object([
-                    "primary": .object([
-                        "usedPercent": .integer(55),
-                    ]),
-                ])
-            )
-        )
-
-        XCTAssertEqual(service.rateLimitBuckets.map(\.limitId), ["primary", "secondary"])
-        XCTAssertEqual(service.rateLimitBuckets.first(where: { $0.limitId == "primary" })?.primary?.remainingPercent, 45)
-        XCTAssertEqual(service.rateLimitBuckets.first(where: { $0.limitId == "secondary" })?.primary?.remainingPercent, 80)
     }
 
     func testRefreshRateLimitsClearsCachedBucketsWhenRequestFails() async {

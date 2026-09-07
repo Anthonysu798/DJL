@@ -32,7 +32,18 @@ import {
 } from "@synara/contracts";
 import { isThreadDetailEvent } from "@synara/shared/orchestrationThreadEvents";
 import { clamp } from "effect/Number";
-import { Cause, Effect, FileSystem, Layer, Option, Path, Queue, Schema, Stream } from "effect";
+import {
+  Cause,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  PubSub,
+  Queue,
+  Schema,
+  Stream,
+} from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
@@ -331,6 +342,9 @@ export const makeWsRpcLayer = () =>
     Effect.gen(function* () {
       const checkpointDiffQuery = yield* CheckpointDiffQuery;
       const automationService = yield* AutomationService;
+      // Desktop-started git actions fan out here so remote observers (the
+      // phone bridge) can follow progress that used to reach only the caller.
+      const gitActionProgressPubSub = yield* PubSub.unbounded<GitActionProgressEvent>();
       const config = yield* ServerConfig;
       const devServerManager = yield* DevServerManager;
       const documentIntelligence = yield* DocumentIntelligence;
@@ -1184,7 +1198,11 @@ export const makeWsRpcLayer = () =>
                 .runStackedAction(input, {
                   actionId: input.actionId,
                   progressReporter: {
-                    publish: (event) => Queue.offer(queue, event).pipe(Effect.asVoid),
+                    publish: (event) =>
+                      Queue.offer(queue, event).pipe(
+                        Effect.andThen(PubSub.publish(gitActionProgressPubSub, event)),
+                        Effect.asVoid,
+                      ),
                   },
                 })
                 .pipe(
@@ -1335,6 +1353,10 @@ export const makeWsRpcLayer = () =>
             ),
             "Failed to close terminal",
           ),
+        [WS_METHODS.subscribeGitActionProgress]: () =>
+          bufferLiveUiStream(Stream.fromPubSub(gitActionProgressPubSub), {
+            label: "git.action-progress",
+          }),
         [WS_METHODS.subscribeTerminalEvents]: () =>
           // Terminal output is an ordered byte stream with renderer ACK accounting.
           // Keep this lossless: dropping chunks would create holes until reattach.

@@ -324,7 +324,8 @@ struct TurnView: View {
         .overlay(alignment: .top) {
             TurnGitActionToastOverlay(
                 success: viewModel.gitActionSuccess,
-                progress: viewModel.gitActionProgress,
+                progress: viewModel.gitActionProgress
+                    ?? codex.desktopGitActionProgress(for: gitWorkingDirectory),
                 onDismissSuccess: {
                     viewModel.dismissGitActionSuccess()
                 }

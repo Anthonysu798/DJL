@@ -24,6 +24,7 @@ import {
   resolveDesktopRuntimeDependencies,
 } from "./lib/desktop-runtime-dependencies.ts";
 import { resolveDesktopPublishConfig } from "./lib/desktop-publish-config.ts";
+import { validateDesktopStatsUrl } from "./lib/desktop-stats-url.ts";
 import {
   assertPackagedDesktopUpdateConfig,
   findPackagedDesktopUpdateConfigs,
@@ -542,6 +543,19 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       });
     }
   }
+  let configuredStatsUrl: string | null;
+  try {
+    configuredStatsUrl = validateDesktopStatsUrl(process.env.DJL_STATS_URL);
+  } catch (cause) {
+    return yield* new BuildScriptError({
+      message: "DJL_STATS_URL is not a safe HTTPS stats URL.",
+      cause,
+    });
+  }
+  const extraMetadata: Record<string, string> = {
+    ...(configuredRemoteRelayUrl ? { djlRemoteRelayUrl: configuredRemoteRelayUrl } : {}),
+    ...(configuredStatsUrl ? { djlStatsUrl: configuredStatsUrl } : {}),
+  };
 
   const buildConfig: Record<string, unknown> = {
     appId: SYNARA_PRODUCTION_BUNDLE_ID,
@@ -554,9 +568,7 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     directories: {
       buildResources: "apps/desktop/resources",
     },
-    ...(configuredRemoteRelayUrl
-      ? { extraMetadata: { djlRemoteRelayUrl: configuredRemoteRelayUrl } }
-      : {}),
+    ...(Object.keys(extraMetadata).length > 0 ? { extraMetadata } : {}),
   };
   const publishConfig = resolveDesktopPublishConfig({
     configuredUpdateBaseUrl:
