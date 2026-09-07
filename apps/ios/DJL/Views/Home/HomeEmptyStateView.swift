@@ -128,7 +128,7 @@ struct HomeEmptyStateView<AuthSection: View, Footer: View>: View {
         switch connectionPhase {
         case .connecting, .loadingChats, .syncing:
             return true
-        case .offline, .connected:
+        case .offline, .connected, .hostOffline:
             return false
         }
     }
@@ -139,7 +139,7 @@ struct HomeEmptyStateView<AuthSection: View, Footer: View>: View {
             return .orange
         case .connected:
             return .green
-        case .offline:
+        case .offline, .hostOffline:
             return Color(.tertiaryLabel)
         }
     }
@@ -159,6 +159,8 @@ struct HomeEmptyStateView<AuthSection: View, Footer: View>: View {
             return "Connected"
         case .offline:
             return "Offline"
+        case .hostOffline:
+            return "Device offline"
         }
     }
 
@@ -172,6 +174,8 @@ struct HomeEmptyStateView<AuthSection: View, Footer: View>: View {
             return "Syncing..."
         case .connected:
             return "Disconnect"
+        case .hostOffline:
+            return "Waiting for device…"
         case .offline:
             return offlinePrimaryButtonTitle
         }
@@ -187,7 +191,7 @@ struct HomeEmptyStateView<AuthSection: View, Footer: View>: View {
 
     private var isSocketReady: Bool {
         switch connectionPhase {
-        case .loadingChats, .syncing, .connected:
+        case .loadingChats, .syncing, .connected, .hostOffline:
             return true
         case .offline, .connecting:
             return false

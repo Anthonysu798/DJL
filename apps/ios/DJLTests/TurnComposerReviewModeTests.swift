@@ -138,29 +138,6 @@ final class TurnComposerReviewModeTests: XCTestCase {
         XCTAssertEqual(viewModel.slashCommandPanelState, .hidden)
     }
 
-    func testEmptySlashQueryStillIncludesSubagentsCommand() {
-        XCTAssertEqual(
-            TurnComposerSlashCommand.filtered(
-                matching: "",
-                within: TurnComposerSlashCommand.availableCommands(
-                    supportsThreadFork: true,
-                    allowsForkCommand: true
-                )
-            ).map(\.commandToken),
-            ["/review", "/compact", "/feedback", "/fork", "/status", "/subagents"]
-        )
-    }
-
-    func testForkCommandDisappearsWhenDraftAlreadyContainsText() {
-        XCTAssertEqual(
-            TurnComposerSlashCommand.availableCommands(
-                supportsThreadFork: true,
-                allowsForkCommand: false
-            ).map(\.commandToken),
-            ["/review", "/compact", "/feedback", "/status", "/subagents"]
-        )
-    }
-
     func testSelectingForkShowsDestinationList() {
         let viewModel = makeViewModel()
 

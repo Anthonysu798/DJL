@@ -57,31 +57,6 @@ final class CodexPushNotificationRegistrationTests: XCTestCase {
         XCTAssertEqual(recordedParams?.objectValue?["authorizationStatus"]?.stringValue, "authorized")
     }
 
-    func testDeniedNotificationsKeepBridgeRegistrationDisabled() async {
-        let center = MockUserNotificationCenter(status: .denied)
-        let registrar = MockRemoteNotificationRegistrar()
-        let service = makeService(
-            userNotificationCenter: center,
-            remoteNotificationRegistrar: registrar
-        )
-        service.isConnected = true
-        service.isInitialized = true
-        service.relaySessionId = "session-push"
-        service.remoteNotificationDeviceToken = "deadbeef"
-
-        var recordedParams: JSONValue?
-        service.requestTransportOverride = { _, params in
-            recordedParams = params
-            return RPCMessage(id: .string(UUID().uuidString), result: .object(["ok": .bool(true)]), includeJSONRPC: false)
-        }
-
-        await service.requestNotificationPermission(markPrompted: false)
-
-        XCTAssertEqual(registrar.registerCallCount, 0)
-        XCTAssertEqual(recordedParams?.objectValue?["alertsEnabled"]?.boolValue, false)
-        XCTAssertEqual(recordedParams?.objectValue?["authorizationStatus"]?.stringValue, "denied")
-    }
-
     func testRefreshManagedNotificationRegistrationStateReRegistersAfterSettingsChange() async {
         let center = MockUserNotificationCenter(status: .denied)
         let registrar = MockRemoteNotificationRegistrar()

@@ -15,12 +15,15 @@ struct TerminalOptionsMenu: View {
     let sessions: [TerminalMenuSessionItem]
     let activeTerminalId: String
     let isRunning: Bool
+    let source: DJLTerminalSource
+    let canUseDesktopSource: Bool
     let hasConnectionConfiguration: Bool
     let canPaste: Bool
     let canSelectText: Bool
     let canClear: Bool
     let canResetKnownHost: Bool
     let onSelectSession: (String) -> Void
+    let onSelectSource: (DJLTerminalSource) -> Void
     let onOpenNewTerminal: () -> Void
     let onToggleConnection: () -> Void
     let onOpenConnectionEditor: () -> Void
@@ -117,22 +120,57 @@ struct TerminalOptionsMenu: View {
 
     private var connectionSection: some View {
         Section {
+            if canUseDesktopSource {
+                Button {
+                    onSelectSource(.desktop)
+                } label: {
+                    DJLIcon.menuLabel(
+                        "DJL desktop terminal",
+                        systemName: source == .desktop ? "checkmark" : "desktopcomputer"
+                    )
+                }
+
+                Button {
+                    onSelectSource(.ssh)
+                } label: {
+                    DJLIcon.menuLabel("SSH terminal", systemName: source == .ssh ? "checkmark" : "network")
+                }
+            }
+
             Button(action: onToggleConnection) {
-                DJLIcon.menuLabel(isRunning ? "Disconnect" : "Connect", systemName: isRunning ? "xmark" : "terminal")
+                DJLIcon.menuLabel(toggleConnectionLabel, systemName: isRunning ? "xmark" : "terminal")
             }
             .disabled(!hasConnectionConfiguration && !isRunning)
 
-            Button(action: onOpenConnectionEditor) {
-                DJLIcon.menuLabel("SSH connection", systemName: "lock.shield")
+            if source == .ssh {
+                Button(action: onOpenConnectionEditor) {
+                    DJLIcon.menuLabel("SSH connection", systemName: "lock.shield")
+                }
             }
 
             Button("Clear", systemImage: "trash", action: onClear)
                 .disabled(!canClear)
 
-            Button(action: onResetKnownHost) {
-                DJLIcon.menuLabel("Reset host key", systemName: "key")
+            if source == .ssh {
+                Button(action: onResetKnownHost) {
+                    DJLIcon.menuLabel("Reset host key", systemName: "key")
+                }
+                    .disabled(!canResetKnownHost)
             }
-                .disabled(!canResetKnownHost)
+        }
+    }
+
+    // A desktop mirror only attaches and detaches; the desktop keeps its shell.
+    private var toggleConnectionLabel: String {
+        switch (source, isRunning) {
+        case (.desktop, true):
+            return "Detach"
+        case (.desktop, false):
+            return "Attach"
+        case (.ssh, true):
+            return "Disconnect"
+        case (.ssh, false):
+            return "Connect"
         }
     }
 

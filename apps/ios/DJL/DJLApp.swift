@@ -12,8 +12,6 @@ struct DJLApp: App {
     @UIApplicationDelegateAdaptor(DJLAppDelegate.self) private var appDelegate
     @State private var codexService: CodexService
     @State private var appLockController: DJLAppLockController
-    @State private var petCompanionStore: PetCompanionStore
-    @State private var petCompanionStatusStore: PetCompanionStatusStore
     @AppStorage(DJLAppLockPreference.storageKey) private var biometricLockEnabled = DJLAppLockPreference.defaultEnabled
 
     init() {
@@ -34,8 +32,6 @@ struct DJLApp: App {
                 )
             )
         )
-        _petCompanionStore = State(initialValue: PetCompanionStore())
-        _petCompanionStatusStore = State(initialValue: PetCompanionStatusStore())
     }
 
     var body: some Scene {
@@ -75,8 +71,6 @@ struct DJLApp: App {
         ZStack {
             ContentView()
                 .environment(codexService)
-                .environment(petCompanionStore)
-                .environment(petCompanionStatusStore)
                 .allowsHitTesting(!appLockController.isPrivacyShieldVisible)
                 .accessibilityHidden(appLockController.isPrivacyShieldVisible)
 

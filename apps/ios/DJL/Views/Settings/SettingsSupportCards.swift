@@ -26,16 +26,10 @@ struct SettingsAboutCard: View {
 
             Button {
                 HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                if let url = URL(string: "https://x.com/emanueledpt") {
-                    UIApplication.shared.open(url)
-                }
+                UIApplication.shared.open(AppEnvironment.supportURL)
             } label: {
                 SettingsLinkRow(title: "Chat & Support") {
-                    Image("x-icon")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 16, height: 16)
+                    DJLIcon.image(systemName: "globe")
                 }
             }
 

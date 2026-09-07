@@ -31,6 +31,9 @@ enum AppEnvironment {
         return defaultRelayURLString
     }
 
+    // Landing page, used for the Settings "Chat & Support" link.
+    static let supportURL = URL(string: "https://www.slcor.com/")!
+
     // Legal links shown in Settings.
     // Keep these pointed at a public source-of-truth until the website serves dedicated legal routes.
     static let privacyPolicyURL = URL(
