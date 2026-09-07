@@ -14,8 +14,6 @@ struct BridgeUpdateSheet: View {
     let onScanNewQR: () -> Void
     let onDismiss: () -> Void
 
-    @State private var didCopyCommand = false
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -25,9 +23,9 @@ struct BridgeUpdateSheet: View {
 
                         updateInstructions
 
-                        Text(prompt.command == nil
-                            ? "After the app finishes updating on your iPhone, reconnect to the device bridge."
-                            : "After the package finishes updating, restart the bridge on your device and come back here."
+                        Text(prompt.target == .iPhone
+                            ? "After the app finishes updating on your iPhone, reconnect to your Mac."
+                            : "After DJL relaunches on your Mac, come back here and reconnect."
                         )
                             .font(AppFont.caption())
                             .foregroundStyle(.secondary)
@@ -65,45 +63,18 @@ struct BridgeUpdateSheet: View {
     @ViewBuilder
     private var updateInstructions: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let command = prompt.command, !command.isEmpty {
-                Text("Run this on your device")
+            if prompt.target == .mac {
+                Text("Do this on your Mac")
                     .font(AppFont.caption(weight: .semibold))
                     .foregroundStyle(.secondary)
 
-                HStack(alignment: .top, spacing: 12) {
-                    Text(command)
-                        .font(AppFont.mono(.subheadline))
-                        .foregroundStyle(.primary)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .layoutPriority(1)
-
-                    Button {
-                        UIPasteboard.general.string = command
-                        HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            didCopyCommand = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                didCopyCommand = false
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            DJLIcon.image(systemName: didCopyCommand ? "checkmark" : "doc.on.doc", size: 13, weight: .semibold)
-                            Text(didCopyCommand ? "Copied" : "Copy")
-                                .font(AppFont.caption(weight: .semibold))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(Color(.secondarySystemFill), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Copy bridge update command")
+                VStack(alignment: .leading, spacing: 8) {
+                    macUpdateStep("1", "In DJL, open the DJL menu and choose Check for Updates…")
+                    macUpdateStep("2", "Install the update and let DJL relaunch.")
+                    macUpdateStep("3", "Come back here and tap I Updated It.")
                 }
                 .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color(.tertiarySystemFill).opacity(0.75))
@@ -114,6 +85,19 @@ struct BridgeUpdateSheet: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    private func macUpdateStep(_ number: String, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(number)
+                .font(AppFont.caption2(weight: .bold))
+                .frame(width: 20, height: 20)
+                .background(Color(.secondarySystemFill), in: Circle())
+            Text(text)
+                .font(AppFont.body())
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

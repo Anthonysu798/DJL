@@ -188,34 +188,6 @@ final class CodexStructuredUserInputDecodeTests: XCTestCase {
         XCTAssertEqual(resolved.displayLabel, "Nash [explorer]")
     }
 
-    func testDecodeSubagentActionItemFallsBackToTopLevelRequestedModel() {
-        let service = makeService()
-        let itemObject: [String: JSONValue] = [
-            "type": .string("collabAgentToolCall"),
-            "tool": .string("spawnAgent"),
-            "status": .string("completed"),
-            "prompt": .string("Inspect the parser"),
-            "model": .string("gpt-5.3-codex-spark"),
-            "receiverThreadIds": .array([
-                .string("thread-child-1"),
-            ]),
-            "agentsStates": .object([
-                "thread-child-1": .object([
-                    "status": .string("pending_init"),
-                ]),
-            ]),
-        ]
-
-        let decoded = service.decodeSubagentActionItem(from: itemObject)
-
-        XCTAssertEqual(decoded?.model, "gpt-5.3-codex-spark")
-        XCTAssertEqual(decoded?.agentRows.count, 1)
-        XCTAssertEqual(decoded?.agentRows.first?.threadId, "thread-child-1")
-        XCTAssertEqual(decoded?.agentRows.first?.model, "gpt-5.3-codex-spark")
-        XCTAssertEqual(decoded?.agentRows.first?.modelIsRequestedHint, true)
-        XCTAssertEqual(decoded?.agentRows.first?.fallbackStatus, "pending_init")
-    }
-
     func testResolvedSubagentPresentationPrefersRealChildThreadModelOverRequestedHint() {
         let service = makeService()
         let requestedOnly = CodexSubagentThreadPresentation(

@@ -57,9 +57,8 @@ extension CodexService {
 private extension CodexService {
     var threadForkBridgeUpdatePrompt: CodexBridgeUpdatePrompt {
         CodexBridgeUpdatePrompt(
-            title: "Update DJL on your device to use /fork",
-            message: "This device bridge does not support native conversation forks yet. Update the DJL npm package to use /fork and worktree fork flows.",
-            command: "npm install -g djl@latest"
+            title: "Update DJL on your Mac to use /fork",
+            message: "DJL on your Mac does not support native conversation forks yet. Update DJL desktop to use /fork and worktree fork flows."
         )
     }
 }

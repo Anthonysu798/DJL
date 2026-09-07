@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   consumeMessageBudget,
+  type MessageBudgetState,
   normalizePairingCode,
   parseRelayRoute,
   readRelayRole,
@@ -102,5 +103,15 @@ describe("remote relay policy", () => {
     expect(third.allowed).toBe(true);
     expect(fourth.allowed).toBe(false);
     expect(consumeMessageBudget(fourth.state, 11_001, 3).allowed).toBe(true);
+  });
+
+  it("allows 600 frames per ten-second window by default", () => {
+    let state: MessageBudgetState | undefined;
+    for (let index = 0; index < 600; index += 1) {
+      const result = consumeMessageBudget(state, 1_000 + index);
+      expect(result.allowed).toBe(true);
+      state = result.state;
+    }
+    expect(consumeMessageBudget(state, 1_601).allowed).toBe(false);
   });
 });

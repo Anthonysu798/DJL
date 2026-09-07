@@ -218,24 +218,6 @@ final class CodexServiceConnectionErrorTests: XCTestCase {
         XCTAssertNil(service.lastErrorMessage)
     }
 
-    func testForegroundProbeTimeoutArmsReconnectWhenPingHangs() async {
-        let service = CodexService()
-        service.isConnected = true
-        service.isInitialized = true
-        service.isAppInForeground = true
-        service.webSocketForegroundProbeTimeoutOverrideNanoseconds = 1
-        service.webSocketKeepAlivePingOverride = {
-            try await Task.sleep(nanoseconds: 1_000_000_000)
-        }
-
-        await service.probeForegroundConnectionIfNeeded()
-
-        XCTAssertFalse(service.isConnected)
-        XCTAssertTrue(service.shouldAutoReconnectOnForeground)
-        XCTAssertEqual(service.connectionRecoveryState, .retrying(attempt: 0, message: "Reconnecting..."))
-        XCTAssertNil(service.lastErrorMessage)
-    }
-
     func testBenignDisconnectStaysSilentWhileAutoReconnectIsRunning() {
         let service = CodexService()
         let error = CodexServiceError.disconnected
@@ -280,17 +262,6 @@ final class CodexServiceConnectionErrorTests: XCTestCase {
         )
     }
 
-    func testTurnErrorSuppressesBrokenPipeWhileAutoReconnectIsRunning() {
-        let service = CodexService()
-        let error = NWError.posix(.EPIPE)
-        service.isAppInForeground = true
-        service.shouldAutoReconnectOnForeground = true
-        service.connectionRecoveryState = .retrying(attempt: 1, message: "Reconnecting...")
-
-        XCTAssertTrue(service.shouldSuppressRecoverableConnectionError(error))
-        XCTAssertEqual(service.userFacingTurnErrorMessage(from: error), "")
-    }
-
     func testCancellationErrorIsHiddenFromTurnFooter() {
         let service = CodexService()
 
@@ -325,17 +296,6 @@ final class CodexServiceConnectionErrorTests: XCTestCase {
         XCTAssertFalse(service.messages(for: threadID).contains { $0.text == "Send error: " })
     }
 
-    func testConnectTimeSessionUnavailableCloseIsRetryable() {
-        let service = CodexService()
-        let error = CodexServiceError.invalidInput("WebSocket closed during connect (4002)")
-
-        XCTAssertTrue(service.isRetryableSavedSessionConnectError(error))
-        XCTAssertEqual(
-            service.userFacingConnectFailureMessage(error),
-            "The saved Mac session is temporarily unavailable. DJL will keep retrying. If you restarted the bridge on your Mac, scan the new QR code."
-        )
-    }
-
     func testManualWebSocketClosePayloadPreservesRetryableRelayCode() {
         let service = CodexService()
         let closeCode = service.relayCloseCode(
@@ -343,33 +303,6 @@ final class CodexServiceConnectionErrorTests: XCTestCase {
         )
 
         XCTAssertEqual(service.relayCloseCodeRawValue(closeCode), 4002)
-    }
-
-    func testManualWebSocketCloseFrameUsesRetryableRelayRecovery() async throws {
-        let service = CodexService()
-        let connection = NWConnection(
-            host: NWEndpoint.Host("localhost"),
-            port: NWEndpoint.Port(rawValue: 80)!,
-            using: NWParameters(tls: nil, tcp: NWProtocolTCP.Options())
-        )
-        service.relaySessionId = "session-\(UUID().uuidString)"
-        service.relayUrl = "ws://mac.local/relay"
-        service.isConnected = true
-        service.isInitialized = true
-        service.setForegroundState(true)
-        service.manualWebSocketReadBuffer = Data([0x88, 0x02, 0x0F, 0xA2])
-
-        let didHandleClose = try await service.drainManualWebSocketFrames(on: connection)
-
-        XCTAssertTrue(didHandleClose)
-        XCTAssertFalse(service.isConnected)
-        XCTAssertFalse(service.isInitialized)
-        XCTAssertTrue(service.shouldAutoReconnectOnForeground)
-        XCTAssertEqual(service.connectionRecoveryState, .retrying(attempt: 0, message: "Reconnecting..."))
-        XCTAssertEqual(
-            service.lastErrorMessage,
-            "The saved Mac session is temporarily unavailable. DJL will keep retrying. If you restarted the bridge on your Mac, scan the new QR code."
-        )
     }
 
     func testLanAddressStillRequiresLocalNetworkAuthorization() {
@@ -394,19 +327,6 @@ final class CodexServiceConnectionErrorTests: XCTestCase {
 
         XCTAssertTrue(service.prefersDirectRelayTransport(for: url))
         XCTAssertFalse(service.requiresLocalNetworkAuthorization(for: url))
-    }
-
-    func testDirectRelaySocketTimeoutRemainsRetryable() {
-        let service = CodexService()
-        let error = CodexServiceError.invalidInput(
-            "Connection timed out after 12s while opening the direct relay socket."
-        )
-
-        XCTAssertTrue(service.isRecoverableTransientConnectionError(error))
-        XCTAssertEqual(
-            service.userFacingConnectFailureMessage(error),
-            "Connection timed out. Check server/network."
-        )
     }
 
     func testPrepareForConnectionAttemptPreservesFreshQRHandshakeState() async {

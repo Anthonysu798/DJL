@@ -71,7 +71,7 @@ struct SidebarConnectionStatusBadge: View {
         switch connectionPhase {
         case .connecting, .loadingChats, .syncing:
             return true
-        case .offline, .connected:
+        case .offline, .connected, .hostOffline:
             return false
         }
     }
@@ -82,7 +82,7 @@ struct SidebarConnectionStatusBadge: View {
             return .orange
         case .connected:
             return .green
-        case .offline:
+        case .offline, .hostOffline:
             return Color(.tertiaryLabel)
         }
     }
@@ -102,6 +102,8 @@ struct SidebarConnectionStatusBadge: View {
             return "Connected"
         case .offline:
             return "Offline"
+        case .hostOffline:
+            return "Device offline"
         }
     }
 }

@@ -119,30 +119,14 @@ struct OnboardingStepPage: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("Step 2 — Bridge") {
+#Preview("Step 2 — Pair") {
     ZStack {
         Color.black.ignoresSafeArea()
         OnboardingStepPage(
             stepNumber: 2,
-            icon: "link",
-            title: "Install the Bridge",
-            description: "A lightweight relay that securely connects your device to your iPhone.",
-            command: "npm install -g djl@latest",
-            commandCaption: "DJL can keep your device awake with macOS caffeinate while the bridge is running, but it starts disabled by default. You can enable it later in Settings if you want."
-        )
-    }
-    .preferredColorScheme(.dark)
-}
-
-#Preview("Step 3 — Pair") {
-    ZStack {
-        Color.black.ignoresSafeArea()
-        OnboardingStepPage(
-            stepNumber: 3,
             icon: "qrcode.viewfinder",
-            title: "Start Pairing",
-            description: "Run this on your device. A QR code will appear in your terminal — scan it next.",
-            command: "djl up"
+            title: "Pair with DJL Desktop",
+            description: "Open DJL on your Mac and go to Settings › Remote. A QR code appears there — scan it next."
         )
     }
     .preferredColorScheme(.dark)

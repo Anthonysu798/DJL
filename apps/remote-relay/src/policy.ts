@@ -5,7 +5,9 @@ import { DJL_PAIRING_QR_VERSION, DJL_PAIRING_TTL_MS } from "@synara/remote-proto
 
 export const MAX_RELAY_MESSAGE_BYTES = 1_048_576;
 export const MESSAGE_RATE_WINDOW_MS = 10_000;
-export const DEFAULT_MESSAGES_PER_WINDOW = 200;
+// The gateway coalesces notifications into at most 25 frames/s; 600 per
+// 10 s leaves headroom for responses and approvals on top of that.
+export const DEFAULT_MESSAGES_PER_WINDOW = 600;
 
 const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,256}$/;

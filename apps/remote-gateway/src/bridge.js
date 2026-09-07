@@ -29,6 +29,8 @@ const { rememberActiveThread } = require("./session-state");
 const { handleDesktopRequest } = require("./desktop-handler");
 const { readDaemonConfig, writeDaemonConfig } = require("./daemon-state");
 const { handleGitRequest } = require("./git-handler");
+const { RELAY_CLOSE_RATE_LIMITED, relayReconnectDelayMs } = require("./relay-reconnect-policy");
+const { createPresenceHeartbeat } = require("./presence-heartbeat");
 const { handleThreadContextRequest } = require("./thread-context-handler");
 const { handleWorkspaceRequest } = require("./workspace-handler");
 const { handleProjectRequest } = require("./project-handler");
@@ -842,12 +844,19 @@ function startBridge({
       sendRelayRegistrationUpdate(nextDeviceState);
     },
     onSecureSessionReady(session) {
+      presenceHeartbeat.start();
       activePhoneSummary = buildActivePhoneSummary(session, deviceState);
       const lastPublishedBridgeStatus = bridgeStatusPublisher.latest();
       if (lastPublishedBridgeStatus) {
         publishBridgeStatus(lastPublishedBridgeStatus);
       }
     },
+  });
+  // Proves the laptop is awake to the phone even when no turn is running. Sent
+  // through the normal outbound path so it batches and replays like anything else.
+  const presenceHeartbeat = createPresenceHeartbeat({
+    send: (payloadText) => sendApplicationResponse(payloadText),
+    isReady: () => socket?.readyState === WebSocket.OPEN && secureTransport.isSecureChannelReady(),
   });
   // Keeps one stable sender identity across reconnects so buffered replay state
   // reflects what actually made it onto the current relay socket.
@@ -998,6 +1007,8 @@ function startBridge({
 
   function prepareBridgeShutdown() {
     isShuttingDown = true;
+    presenceHeartbeat.stop();
+    secureTransport.flushOutbound?.();
     bridgeWakeAssertion.stop();
     clearReconnectTimer();
     clearRelayWatchdog();
@@ -1090,9 +1101,10 @@ function startBridge({
     }
 
     reconnectAttempt += 1;
-    const baseDelayMs = Math.min(1_000 * reconnectAttempt, 5_000);
-    const jitterMs = Math.floor(Math.random() * Math.min(baseDelayMs, 2_000));
-    const delayMs = baseDelayMs + jitterMs;
+    if (closeCode === RELAY_CLOSE_RATE_LIMITED) {
+      console.warn("[djl] relay rate limit hit; reconnecting immediately");
+    }
+    const delayMs = relayReconnectDelayMs({ closeCode, attempt: reconnectAttempt });
     logConnectionStatus("connecting");
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
@@ -1257,6 +1269,11 @@ function startBridge({
       return;
     }
     if (handleThreadContextRequest(rawMessage, sendApplicationResponse, parsedMessage)) {
+      return;
+    }
+    // An Electron-backed transport answers desktop-turn diffs from the backend
+    // before the local git checkpoint handler gets a chance to miss them.
+    if (typeof codex.interceptRequest === "function" && codex.interceptRequest(rawMessage)) {
       return;
     }
     if (handleWorkspaceRequest(rawMessage, sendApplicationResponse)) {

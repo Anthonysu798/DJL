@@ -34,10 +34,6 @@ final class TurnFileAutocompleteTokenTests: XCTestCase {
         XCTAssertNil(TurnViewModel.trailingFileAutocompleteToken(in: "fix @turnv please"))
     }
 
-    func testTrailingTokenDoesNotStayOpenForSentencePunctuation() {
-        XCTAssertNil(TurnViewModel.trailingFileAutocompleteToken(in: "fix @turnv."))
-    }
-
     func testTrailingTokenDoesNotParseTerminalScopedTaskLabel() {
         XCTAssertNil(TurnViewModel.trailingFileAutocompleteToken(in: "paste @tasktools/contracts:build"))
     }

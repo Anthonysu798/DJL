@@ -12,7 +12,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var isShowingCodexInstallReminder = false
 
-    private let pageCount = 5
+    private let pageCount = 4
     private let codexInstallStepIndex = 2
     private let codexInstallCommand = "npm install -g @openai/codex@latest"
 
@@ -37,24 +37,14 @@ struct OnboardingView: View {
                     )
                     .tag(2)
 
+                    // DJL desktop starts and pairs the bridge itself; the phone only scans.
                     OnboardingStepPage(
                         stepNumber: 2,
-                        icon: "link",
-                        title: "Install the Bridge",
-                        description: "A lightweight relay that securely connects your device to your iPhone.",
-                        command: "npm install -g djl@latest",
-                        commandCaption: "DJL can keep your device awake with macOS caffeinate while the bridge is running, but it starts disabled by default. You can enable it later in Settings if you want."
+                        icon: "qrcode.viewfinder",
+                        title: "Pair with DJL Desktop",
+                        description: "Open DJL on your Mac and go to Settings › Remote. A QR code appears there — scan it next."
                     )
                     .tag(3)
-
-                    OnboardingStepPage(
-                        stepNumber: 3,
-                        icon: "qrcode.viewfinder",
-                        title: "Start Pairing",
-                        description: "Run this on your device. A QR code will appear in your terminal — scan it next.",
-                        command: "djl up"
-                    )
-                    .tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 

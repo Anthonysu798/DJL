@@ -40,12 +40,36 @@ enum DJLTerminalStatus: String, Codable, Equatable, Sendable {
     }
 }
 
+// Where a phone terminal gets its shell from: an SSH host the phone dials
+// itself, or a terminal DJL desktop already runs for a thread.
+enum DJLTerminalSource: String, Codable, Equatable, Sendable {
+    case ssh
+    case desktop
+}
+
+// Links a phone-side terminal id to the desktop session it mirrors.
+struct DesktopTerminalBinding: Equatable, Sendable {
+    static let desktopDefaultTerminalId = "default"
+
+    let threadId: String
+    let terminalId: String
+
+    static func desktopTerminalId(forPhoneTerminalId terminalId: String) -> String {
+        terminalId == djlDefaultTerminalId ? desktopDefaultTerminalId : terminalId
+    }
+
+    static func phoneTerminalId(forDesktopTerminalId terminalId: String) -> String {
+        terminalId == desktopDefaultTerminalId ? djlDefaultTerminalId : terminalId
+    }
+}
+
 struct DJLTerminalProfile: Codable, Equatable, Sendable {
     var host: String
     var username: String
     var port: Int
     var cwd: String
     var nickname: String
+    var source: DJLTerminalSource
 
     enum CodingKeys: String, CodingKey {
         case host
@@ -53,14 +77,23 @@ struct DJLTerminalProfile: Codable, Equatable, Sendable {
         case port
         case cwd
         case nickname
+        case source
     }
 
-    init(host: String, username: String, port: Int, cwd: String, nickname: String = "") {
+    init(
+        host: String,
+        username: String,
+        port: Int,
+        cwd: String,
+        nickname: String = "",
+        source: DJLTerminalSource = .ssh
+    ) {
         self.host = host
         self.username = username
         self.port = port
         self.cwd = cwd
         self.nickname = nickname
+        self.source = source
     }
 
     init(from decoder: Decoder) throws {
@@ -70,6 +103,7 @@ struct DJLTerminalProfile: Codable, Equatable, Sendable {
         port = try container.decodeIfPresent(Int.self, forKey: .port) ?? 22
         cwd = try container.decodeIfPresent(String.self, forKey: .cwd) ?? ""
         nickname = try container.decodeIfPresent(String.self, forKey: .nickname) ?? ""
+        source = try container.decodeIfPresent(DJLTerminalSource.self, forKey: .source) ?? .ssh
     }
 
     static var empty: DJLTerminalProfile {
@@ -111,7 +145,8 @@ struct DJLTerminalProfile: Codable, Equatable, Sendable {
             username: username.trimmingCharacters(in: .whitespacesAndNewlines),
             port: max(1, min(65535, port)),
             cwd: cwd.trimmingCharacters(in: .whitespacesAndNewlines),
-            nickname: nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+            nickname: nickname.trimmingCharacters(in: .whitespacesAndNewlines),
+            source: source
         )
     }
 
@@ -315,7 +350,10 @@ struct DJLTerminalSnapshot: Equatable, Sendable {
     }
 
     private static func trimmedBuffer(_ value: String) -> String {
-        guard value.count > djlTerminalMaxBufferCharacters else {
+        // `count` walks every grapheme on each append; the UTF-8 length is O(1)
+        // and bounds the character count, so most appends skip the walk.
+        guard value.utf8.count > djlTerminalMaxBufferCharacters,
+              value.count > djlTerminalMaxBufferCharacters else {
             return value
         }
         return String(value.suffix(djlTerminalMaxBufferCharacters))

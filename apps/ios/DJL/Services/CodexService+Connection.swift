@@ -14,6 +14,7 @@ extension CodexService {
     // close so `4002` can stay available for "session unavailable right now" cases.
     private static let permanentRelayCloseCodeRawValues: Set<UInt16> = [4000, 4001, 4003]
     private static let explicitRelayDropCloseCodeRawValues: Set<UInt16> = [4004]
+    private static let rateLimitedRelayCloseCodeRawValue: UInt16 = 4008
     private static let maxTrustedReconnectFailures = 3
     private static let connectionBootstrapRequestTimeoutNanoseconds: UInt64 = 12_000_000_000
     private static let planModeProbeTimeoutNanoseconds: UInt64 = 5_000_000_000
@@ -117,6 +118,7 @@ extension CodexService {
             }
 
             startWebSocketKeepAliveLoop()
+            noteHostActivity()
             startSyncLoop()
             // Push registration is best-effort and talks to the bridge, so it must not
             // hold the main connect path hostage when the managed backend is slow.
@@ -153,6 +155,7 @@ extension CodexService {
 
         isConnected = false
         isInitialized = false
+        resetHostPresence()
         isLoadingThreads = false
         isLoadingModels = false
         pendingRuntimeOptionRefresh = false
@@ -466,7 +469,7 @@ extension CodexService {
         bridgeUpdatePrompt = CodexBridgeUpdatePrompt(
             title: "Update DJL on your iPhone to reconnect",
             message: promptMessage,
-            command: nil
+            target: .iPhone
         )
 
         if !message.isEmpty {
@@ -503,6 +506,7 @@ extension CodexService {
         let disposition = receiveErrorDisposition(for: error, relayCloseCode: relayCloseCode)
         isConnected = false
         isInitialized = false
+        resetHostPresence()
         supportsThreadRuntimeModeSync = false
         shouldAutoReconnectOnForeground = disposition.shouldAutoReconnectOnForeground
         if disposition.shouldClearSavedRelaySession {
@@ -848,16 +852,21 @@ extension CodexService {
             : nil
         let explicitRelayDropMessage = explicitRelayDropMessage(for: relayCloseCode)
         let isBenignDisconnect = isBenignBackgroundDisconnect(error)
+        let isRateLimitedClose = isRateLimitedRelayClose(relayCloseCode)
         let shouldSuppressMessage = isBenignDisconnect && !isActivelyForegroundedForConnectionUI()
         // Foreground relay drops should reconnect too, otherwise Stop disappears mid-run.
         let shouldAttemptAutoRecovery = !shouldClearSavedRelaySession
             && explicitRelayDropMessage == nil
             && (retryableSessionUnavailableMessage != nil
+                || isRateLimitedClose
                 || isRecoverableTransientConnectionError(error)
                 || isBenignDisconnect)
 
         let connectionRecoveryState: CodexConnectionRecoveryState = shouldAttemptAutoRecovery
-            ? .retrying(attempt: 0, message: recoveryStatusMessage(for: error))
+            ? .retrying(
+                attempt: 0,
+                message: isRateLimitedClose ? "Catching up…" : recoveryStatusMessage(for: error)
+            )
             : .idle
 
         let lastErrorMessage: String?
@@ -1232,6 +1241,12 @@ extension CodexService {
         }
 
         return "The paired device was temporarily unavailable and this message could not be delivered. Wait a moment, then try again."
+    }
+
+    // The relay closed the socket for sending too fast. The pairing and the
+    // session are still valid; the bridge replays what was missed on reconnect.
+    func isRateLimitedRelayClose(_ closeCode: NWProtocolWebSocket.CloseCode?) -> Bool {
+        relayCloseCodeRawValue(closeCode) == Self.rateLimitedRelayCloseCodeRawValue
     }
 
     func shouldClearSavedRelaySession(for closeCode: NWProtocolWebSocket.CloseCode?) -> Bool {

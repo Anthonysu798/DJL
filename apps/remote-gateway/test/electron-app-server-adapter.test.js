@@ -749,3 +749,700 @@ test("Electron adapter reconciles a completed phone-originated turn when a subsc
   );
   transport.shutdown();
 });
+
+// Backend fake that records requests and lets a test push subscription chunks.
+function createStreamingBackend(initialSnapshot) {
+  const requests = [];
+  const threadSubscribers = new Map();
+  let shellSubscriber = null;
+  let startedHandler = null;
+  const backend = {
+    onStarted(handler) {
+      startedHandler = handler;
+    },
+    onError() {},
+    onClose() {},
+    request: async (tag, payload) => {
+      requests.push({ tag, payload });
+      return initialSnapshot;
+    },
+    subscribe(tag, payload, handlers) {
+      if (tag === "orchestration.subscribeShell") {
+        shellSubscriber = handlers;
+        return () => {
+          shellSubscriber = null;
+        };
+      }
+      if (tag !== "orchestration.subscribeThread") {
+        return () => {};
+      }
+      threadSubscribers.set(payload.threadId, handlers);
+      return () => {
+        threadSubscribers.delete(payload.threadId);
+      };
+    },
+    shutdown() {},
+  };
+  return {
+    backend,
+    requests,
+    start: () => startedHandler?.(),
+    pushThread: (threadId, values) => threadSubscribers.get(threadId)?.onChunk(values),
+    failThread: (threadId) => threadSubscribers.get(threadId)?.onError?.(new Error("dropped")),
+    pushShell: (values) => shellSubscriber?.onChunk(values),
+    subscribedThreadIds: () => Array.from(threadSubscribers.keys()),
+  };
+}
+
+function detailSnapshotChunk(thread, snapshotSequence) {
+  return { kind: "snapshot", snapshot: { snapshotSequence, thread } };
+}
+
+function assistantEvent(sequence, text, streaming) {
+  return {
+    kind: "event",
+    event: {
+      sequence,
+      eventId: `event-${sequence}`,
+      aggregateKind: "thread",
+      aggregateId: "electron-thread",
+      occurredAt: "2026-07-19T12:02:00.000Z",
+      commandId: null,
+      causationEventId: null,
+      correlationId: null,
+      metadata: {},
+      type: "thread.message-sent",
+      payload: {
+        threadId: "electron-thread",
+        messageId: "assistant-2",
+        role: "assistant",
+        text,
+        turnId: "turn-2",
+        streaming,
+        createdAt: "2026-07-19T12:02:00.000Z",
+        updatedAt: "2026-07-19T12:02:00.000Z",
+      },
+    },
+  };
+}
+
+const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test("Electron adapter streams deltas from thread events without snapshot refreshes", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  fake.start();
+  await flushMicrotasks();
+  fake.pushShell([
+    {
+      kind: "snapshot",
+      snapshot: {
+        snapshotSequence: 5,
+        projects: [],
+        threads: [{ id: "electron-thread", runtimeMode: "approval-required" }],
+        updatedAt: "x",
+      },
+    },
+  ]);
+  fake.pushThread("electron-thread", [detailSnapshotChunk(snapshot.threads[0], 5)]);
+  const snapshotCallsBefore = fake.requests.filter(
+    (r) => r.tag === "orchestration.getSnapshot",
+  ).length;
+
+  fake.pushThread("electron-thread", [
+    assistantEvent(6, "Hel", true),
+    assistantEvent(7, "lo", true),
+  ]);
+  fake.pushThread("electron-thread", [assistantEvent(8, "Hello", false)]);
+  await flushMicrotasks();
+
+  const deltas = outbound.filter((m) => m.method === "item/agentMessage/delta");
+  assert.deepEqual(
+    deltas.map((m) => m.params.delta),
+    ["Hel", "lo"],
+  );
+  assert.equal(deltas[0].params.itemId, "assistant-2");
+  assert.equal(deltas[0].params.djlEmittedAt, "2026-07-19T12:02:00.000Z");
+  const completed = outbound.filter((m) => m.method === "item/completed");
+  assert.equal(completed.length, 1);
+  assert.equal(completed[0].params.item.content[0].text, "Hello");
+  const snapshotCallsAfter = fake.requests.filter(
+    (r) => r.tag === "orchestration.getSnapshot",
+  ).length;
+  assert.equal(snapshotCallsAfter, snapshotCallsBefore, "streaming must not call getSnapshot");
+  transport.shutdown();
+});
+
+test("Electron adapter re-hydrates a thread after its stream fails", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+  fake.pushThread("electron-thread", [detailSnapshotChunk(snapshot.threads[0], 5)]);
+
+  fake.failThread("electron-thread");
+  await flushMicrotasks();
+
+  assert.deepEqual(fake.subscribedThreadIds(), ["electron-thread"]);
+  const resumed = structuredClone(snapshot.threads[0]);
+  resumed.session = { activeTurnId: "turn-3" };
+  fake.pushThread("electron-thread", [detailSnapshotChunk(resumed, 9)]);
+  assert.equal(outbound.filter((m) => m.method === "turn/started").at(-1)?.params.turnId, "turn-3");
+  transport.shutdown();
+});
+
+test("Electron adapter subscribes to threads announced on the shell stream", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  fake.start();
+  await flushMicrotasks();
+
+  fake.pushShell([
+    {
+      kind: "thread-upserted",
+      sequence: 6,
+      thread: { id: "brand-new", runtimeMode: "full-access" },
+    },
+  ]);
+  assert.ok(fake.subscribedThreadIds().includes("brand-new"));
+  fake.pushShell([{ kind: "thread-removed", sequence: 7, threadId: "brand-new" }]);
+  assert.ok(!fake.subscribedThreadIds().includes("brand-new"));
+  transport.shutdown();
+});
+
+test("Electron adapter asks for streaming delivery on phone-started turns", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-streaming-turn",
+      method: "turn/start",
+      params: { threadId: "electron-thread", input: [{ type: "text", text: "Stream please" }] },
+    }),
+  );
+  await flushMicrotasks();
+
+  const dispatched = fake.requests.find((r) => r.tag === "orchestration.dispatchCommand");
+  assert.equal(dispatched.payload.assistantDeliveryMode, "streaming");
+  transport.shutdown();
+});
+
+test("Electron adapter adds checkpoint file-change cards to turn history", () => {
+  const thread = structuredClone(snapshot.threads[0]);
+  thread.checkpoints = [
+    {
+      turnId: "turn-1",
+      checkpointTurnCount: 3,
+      checkpointRef: "ref",
+      status: "ready",
+      files: [{ path: "src/a.ts", kind: "update", additions: 2, deletions: 1 }],
+      assistantMessageId: null,
+      completedAt: "2026-07-19T12:00:03.000Z",
+    },
+  ];
+
+  const result = appServerThreadWithHistory(thread, snapshot);
+
+  const fileChange = result.turns[0].items.find((item) => item.type === "fileChange");
+  assert.equal(fileChange.id, "turn-diff-turn-1");
+  assert.deepEqual(fileChange.changes, [
+    { path: "src/a.ts", kind: "update", additions: 2, deletions: 1 },
+  ]);
+});
+
+test("Electron adapter answers checkpoint diffs for desktop turns from the backend", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "orchestration.getTurnDiff") {
+      fake.requests.push({ tag, payload });
+      return {
+        threadId: payload.threadId,
+        fromTurnCount: payload.fromTurnCount,
+        toTurnCount: payload.toTurnCount,
+        diff: "@@ -1 +1 @@",
+      };
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+  fake.pushThread("electron-thread", [detailSnapshotChunk(snapshot.threads[0], 5)]);
+  fake.pushThread("electron-thread", [
+    {
+      kind: "event",
+      event: {
+        sequence: 6,
+        eventId: "event-6",
+        aggregateKind: "thread",
+        aggregateId: "electron-thread",
+        occurredAt: "2026-07-19T12:02:00.000Z",
+        commandId: null,
+        causationEventId: null,
+        correlationId: null,
+        metadata: {},
+        type: "thread.turn-diff-completed",
+        payload: {
+          threadId: "electron-thread",
+          turnId: "turn-2",
+          checkpointTurnCount: 4,
+          checkpointRef: "ref",
+          status: "ready",
+          files: [{ path: "src/a.ts", kind: "update", additions: 1, deletions: 0 }],
+          assistantMessageId: null,
+          completedAt: "x",
+        },
+      },
+    },
+  ]);
+
+  const handled = transport.interceptRequest(
+    JSON.stringify({
+      id: "d1",
+      method: "workspace/checkpointDiff",
+      params: { threadId: "electron-thread", fromTurnId: "turn-2", toTurnId: "turn-2", cwd: "/x" },
+    }),
+  );
+  await flushMicrotasks();
+
+  assert.equal(handled, true);
+  const diffRequest = fake.requests.find((r) => r.tag === "orchestration.getTurnDiff");
+  assert.deepEqual(diffRequest.payload, {
+    threadId: "electron-thread",
+    fromTurnCount: 3,
+    toTurnCount: 4,
+  });
+  const response = outbound.find((m) => m.id === "d1");
+  assert.equal(response.result.diff, "@@ -1 +1 @@");
+  assert.equal(response.result.repoRoot, "/x");
+  assert.equal(response.result.fromCheckpointRef, "turnStart:turn-2");
+
+  const unknown = transport.interceptRequest(
+    JSON.stringify({
+      id: "d2",
+      method: "workspace/checkpointDiff",
+      params: { threadId: "electron-thread", fromTurnId: "turn-9", toTurnId: "turn-9" },
+    }),
+  );
+  assert.equal(unknown, false);
+  transport.shutdown();
+});
+
+test("Electron adapter forwards desktop git progress to the phone", async () => {
+  const fake = createStreamingBackend(snapshot);
+  let gitSubscriber = null;
+  const originalSubscribe = fake.backend.subscribe;
+  fake.backend.subscribe = (tag, payload, handlers) => {
+    if (tag === "git.subscribeActionProgress") {
+      gitSubscriber = handlers;
+      return () => {
+        gitSubscriber = null;
+      };
+    }
+    return originalSubscribe(tag, payload, handlers);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+
+  assert.ok(gitSubscriber, "adapter subscribes to git action progress on start");
+  gitSubscriber.onChunk([
+    {
+      actionId: "g1",
+      cwd: "/w",
+      action: "push",
+      kind: "phase_started",
+      phase: "push",
+      label: "Pushing",
+    },
+  ]);
+
+  const forwarded = outbound.find((m) => m.method === "djl/git/desktopActionProgress");
+  assert.deepEqual(forwarded.params, {
+    actionId: "g1",
+    cwd: "/w",
+    action: "push",
+    kind: "phase_started",
+    phase: "push",
+    label: "Pushing",
+  });
+  transport.shutdown();
+  assert.equal(gitSubscriber, null, "shutdown unsubscribes");
+});
+
+test("Electron adapter mirrors desktop terminal output for attached terminals", async () => {
+  const fake = createStreamingBackend(snapshot);
+  let terminalSubscriber = null;
+  const originalSubscribe = fake.backend.subscribe;
+  fake.backend.subscribe = (tag, payload, handlers) => {
+    if (tag === "terminal.subscribeEvents") {
+      terminalSubscriber = handlers;
+      return () => {
+        terminalSubscriber = null;
+      };
+    }
+    return originalSubscribe(tag, payload, handlers);
+  };
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "terminal.open") {
+      fake.requests.push({ tag, payload });
+      return {
+        threadId: payload.threadId,
+        terminalId: payload.terminalId,
+        cwd: payload.cwd,
+        status: "running",
+        pid: 1,
+        history: "$ ",
+        exitCode: null,
+        exitSignal: null,
+        updatedAt: "x",
+      };
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  fake.start();
+  await flushMicrotasks();
+  assert.ok(terminalSubscriber, "adapter subscribes to terminal events on start");
+  fake.pushThread("electron-thread", [
+    detailSnapshotChunk({ ...snapshot.threads[0], worktreePath: "/work/electron" }, 5),
+  ]);
+
+  terminalSubscriber.onChunk([
+    {
+      threadId: "electron-thread",
+      terminalId: "default",
+      type: "output",
+      createdAt: "x",
+      data: "ignored",
+      byteLength: 7,
+    },
+  ]);
+  assert.equal(
+    outbound.some((m) => m.method === "djl/terminal/event"),
+    false,
+  );
+
+  transport.send(
+    JSON.stringify({
+      id: "t1",
+      method: "djl/terminal/open",
+      params: { threadId: "electron-thread", terminalId: "default", cols: 80, rows: 24 },
+    }),
+  );
+  await flushMicrotasks();
+
+  const openRequest = fake.requests.find((r) => r.tag === "terminal.open");
+  assert.deepEqual(openRequest.payload, {
+    threadId: "electron-thread",
+    terminalId: "default",
+    cwd: "/work/electron",
+    cols: 80,
+    rows: 24,
+  });
+  const response = outbound.find((m) => m.id === "t1");
+  assert.equal(response.result.snapshot.history, "$ ");
+
+  terminalSubscriber.onChunk([
+    {
+      threadId: "electron-thread",
+      terminalId: "default",
+      type: "output",
+      createdAt: "x",
+      data: "hello",
+      byteLength: 5,
+    },
+  ]);
+  const forwarded = outbound.find((m) => m.method === "djl/terminal/event");
+  assert.equal(forwarded.params.data, "hello");
+
+  transport.shutdown();
+  assert.equal(terminalSubscriber, null, "shutdown unsubscribes from terminal events");
+});
+
+test("Electron adapter steers the running turn with the steer dispatch mode", async () => {
+  const runningSnapshot = structuredClone(snapshot);
+  runningSnapshot.threads[0].session = {
+    ...(runningSnapshot.threads[0].session || {}),
+    activeTurnId: "turn-live",
+  };
+  const fake = createStreamingBackend(runningSnapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-steer",
+      method: "turn/steer",
+      params: {
+        threadId: "electron-thread",
+        expectedTurnId: "turn-live",
+        input: [{ type: "text", text: "Focus on the tests" }],
+      },
+    }),
+  );
+  await flushMicrotasks();
+
+  const dispatched = fake.requests.find((r) => r.tag === "orchestration.dispatchCommand");
+  assert.equal(dispatched.payload.type, "thread.turn.start");
+  assert.equal(dispatched.payload.dispatchMode, "steer");
+  assert.equal(dispatched.payload.message.text, "Focus on the tests");
+  const response = outbound.find((m) => m.id === "ios-steer");
+  assert.equal(response.result.turn.id, "turn-live");
+  transport.shutdown();
+});
+
+test("Electron adapter refuses to steer when no turn is running", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-steer-idle",
+      method: "turn/steer",
+      params: { threadId: "electron-thread", input: [{ type: "text", text: "x" }] },
+    }),
+  );
+  await flushMicrotasks();
+
+  const response = outbound.find((m) => m.id === "ios-steer-idle");
+  assert.match(response.error.message, /No active turn/);
+  assert.equal(
+    fake.requests.some((r) => r.tag === "orchestration.dispatchCommand"),
+    false,
+  );
+  transport.shutdown();
+});
+
+test("Electron adapter serves fuzzy file search from desktop workspace search", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "projects.searchEntries") {
+      fake.requests.push({ tag, payload });
+      if (payload.cwd === "/broken") throw new Error("nope");
+      return {
+        entries: [
+          { path: "src/app.ts", kind: "file" },
+          { path: "src/app.test.ts", kind: "file", parentPath: "src" },
+        ],
+        truncated: false,
+      };
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-fuzzy",
+      method: "fuzzyFileSearch",
+      params: { query: "app", roots: ["/work", "/broken"], cancellationToken: null },
+    }),
+  );
+  await flushMicrotasks();
+
+  const searches = fake.requests.filter((r) => r.tag === "projects.searchEntries");
+  assert.deepEqual(searches[0].payload, { cwd: "/work", query: "app", limit: 50, kind: "file" });
+  const response = outbound.find((m) => m.id === "ios-fuzzy");
+  assert.equal(response.result.files.length, 2);
+  assert.deepEqual(response.result.files[0], {
+    root: "/work",
+    path: "src/app.ts",
+    fileName: "app.ts",
+    score: 1000,
+    indices: null,
+  });
+  assert.ok(response.result.files[0].score > response.result.files[1].score);
+  transport.shutdown();
+});
+
+function createDiscoveryTransport(handlers) {
+  const fake = createStreamingBackend(snapshot);
+  const originalRequest = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (handlers[tag]) {
+      fake.requests.push({ tag, payload });
+      return handlers[tag](payload);
+    }
+    return originalRequest(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend: fake.backend,
+  });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  return { fake, transport, outbound };
+}
+
+test("Electron adapter lists skills from the cross-provider catalog per cwd", async () => {
+  const { fake, transport, outbound } = createDiscoveryTransport({
+    "provider.listSkillsCatalog": (payload) => ({
+      skills: [
+        { name: "Deploy", path: `${payload.cwd}/.skills/deploy`, enabled: true, scope: "synara" },
+        {
+          name: "Shared",
+          path: "/home/.skills/shared",
+          enabled: false,
+          interface: { shortDescription: "Shared skill" },
+        },
+      ],
+    }),
+  });
+
+  transport.send(
+    JSON.stringify({ id: "ios-skills", method: "skills/list", params: { cwds: ["/a", "/b"] } }),
+  );
+  await flushMicrotasks();
+
+  const calls = fake.requests.filter((r) => r.tag === "provider.listSkillsCatalog");
+  assert.deepEqual(
+    calls.map((c) => c.payload),
+    [{ cwd: "/a" }, { cwd: "/b" }],
+  );
+  const skills = outbound.find((m) => m.id === "ios-skills").result.skills;
+  assert.equal(skills.length, 3, "shared skill collapses across cwds");
+  assert.deepEqual(skills[1], {
+    name: "Shared",
+    description: "Shared skill",
+    path: "/home/.skills/shared",
+    scope: null,
+    enabled: false,
+  });
+  transport.shutdown();
+});
+
+test("Electron adapter lists Codex plugin marketplaces", async () => {
+  const { fake, transport, outbound } = createDiscoveryTransport({
+    "provider.listPlugins": () => ({
+      marketplaces: [
+        {
+          name: "openai",
+          path: "/m",
+          plugins: [
+            {
+              id: "p1",
+              name: "Linear",
+              installed: true,
+              enabled: true,
+              installPolicy: "INSTALLED_BY_DEFAULT",
+              source: {},
+              authPolicy: "x",
+            },
+          ],
+        },
+      ],
+      marketplaceLoadErrors: [],
+      remoteSyncError: null,
+      featuredPluginIds: [],
+    }),
+  });
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-plugins",
+      method: "plugin/list",
+      params: { cwds: ["/a"], forceReload: true },
+    }),
+  );
+  await flushMicrotasks();
+
+  const call = fake.requests.find((r) => r.tag === "provider.listPlugins");
+  assert.deepEqual(call.payload, { provider: "codex", cwd: "/a", forceReload: true });
+  const marketplaces = outbound.find((m) => m.id === "ios-plugins").result.marketplaces;
+  assert.equal(marketplaces[0].plugins[0].name, "Linear");
+  transport.shutdown();
+});
+
+test("Electron adapter maps provider usage into rate limit buckets", async () => {
+  const { transport, outbound } = createDiscoveryTransport({
+    "server.listProviderUsage": () => [
+      {
+        provider: "codex",
+        updatedAt: "x",
+        source: "oauth",
+        usageLines: [],
+        limits: [
+          {
+            window: "5h",
+            usedPercent: 42.4,
+            windowDurationMins: 300,
+            resetsAt: "2026-09-05T00:00:00.000Z",
+          },
+          { window: "weekly", usedPercent: 10 },
+        ],
+      },
+      {
+        provider: "claudeAgent",
+        updatedAt: "x",
+        source: "s",
+        usageLines: [],
+        status: "needs-auth",
+        limits: [{ window: "5h", usedPercent: 1 }],
+      },
+    ],
+  });
+
+  transport.send(
+    JSON.stringify({ id: "ios-limits", method: "account/rateLimits/read", params: null }),
+  );
+  await flushMicrotasks();
+
+  const buckets = outbound.find((m) => m.id === "ios-limits").result.rateLimitsByLimitId;
+  assert.deepEqual(Object.keys(buckets), ["codex:5h", "codex:weekly"]);
+  assert.deepEqual(buckets["codex:5h"], {
+    limitName: "Codex · 5h",
+    primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: "2026-09-05T00:00:00.000Z" },
+  });
+  transport.shutdown();
+});

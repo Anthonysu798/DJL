@@ -248,7 +248,7 @@ struct SidebarConnectionEmptyStatePanel: View {
         switch connectionPhase {
         case .connecting, .loadingChats, .syncing:
             return true
-        case .offline, .connected:
+        case .offline, .connected, .hostOffline:
             return false
         }
     }
@@ -263,6 +263,8 @@ struct SidebarConnectionEmptyStatePanel: View {
             return "Syncing…"
         case .connected:
             return "Disconnect"
+        case .hostOffline:
+            return "Waiting for device…"
         case .offline:
             return offlinePrimaryButtonTitle
         }
@@ -278,7 +280,7 @@ struct SidebarConnectionEmptyStatePanel: View {
 
     private var isSocketReady: Bool {
         switch connectionPhase {
-        case .loadingChats, .syncing, .connected:
+        case .loadingChats, .syncing, .connected, .hostOffline:
             return true
         case .offline, .connecting:
             return false

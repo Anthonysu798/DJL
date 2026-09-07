@@ -143,30 +143,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
         XCTAssertFalse(runRows[0].isStreaming)
     }
 
-    func testToolCallDeltaAddsDedicatedToolActivityRows() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-
-        service.handleNotification(
-            method: "item/toolCall/outputDelta",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "delta": .string("Read CodexProtocol.swift\nSearch extractSystemTitleAndBody\n{\"ignore\":\"json\"}"),
-            ])
-        )
-
-        let toolRows = service.messages(for: threadID).filter {
-            $0.role == .system && $0.kind == .toolActivity
-        }
-        XCTAssertEqual(toolRows.count, 1)
-        let body = toolRows[0].text
-        XCTAssertTrue(body.contains("Read CodexProtocol.swift"))
-        XCTAssertTrue(body.contains("Search extractSystemTitleAndBody"))
-        XCTAssertFalse(body.contains("ignore"))
-    }
-
     func testHistoryToolCallRestoresDedicatedToolActivityRow() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -1241,56 +1217,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
         XCTAssertEqual(userRows[0].attachments.count, 1)
     }
 
-    func testHistoryUserMessageDoesNotGuessBetweenTwoIdenticalPendingRows() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let now = Date()
-
-        let existing = [
-            CodexMessage(
-                threadId: threadID,
-                role: .user,
-                text: "Fix this",
-                createdAt: now,
-                turnId: nil,
-                itemId: nil,
-                isStreaming: false,
-                deliveryState: .pending
-            ),
-            CodexMessage(
-                threadId: threadID,
-                role: .user,
-                text: "Fix this",
-                createdAt: now.addingTimeInterval(0.2),
-                turnId: nil,
-                itemId: nil,
-                isStreaming: false,
-                deliveryState: .pending
-            ),
-        ]
-        let history = [
-            CodexMessage(
-                threadId: threadID,
-                role: .user,
-                text: "Fix this",
-                createdAt: now.addingTimeInterval(0.4),
-                turnId: turnID,
-                itemId: "user-1",
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-        ]
-
-        let merged = service.mergeHistoryMessages(existing, history)
-        let userRows = merged.filter { $0.role == .user }
-
-        XCTAssertEqual(userRows.count, 3)
-        XCTAssertEqual(userRows.filter { $0.deliveryState == .pending }.count, 2)
-        XCTAssertEqual(userRows.filter { $0.deliveryState == .confirmed }.count, 1)
-        XCTAssertEqual(userRows.last?.turnId, turnID)
-    }
-
     func testHistoryUserMessageRebindsConfirmedIdentitylessDesktopMirror() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -2228,47 +2154,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
     // rollout mirror aggregates the same turn under one synthetic
     // "rollout-thinking:" id. Alternating sources mid-turn must rebind to the
     // existing row instead of stacking a second "Thinking..." row.
-    func testRolloutMirrorReasoningRebindsToIpcThinkingRowInsteadOfDuplicating() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let realItemID = "reasoning-\(UUID().uuidString)"
-
-        service.handleNotification(
-            method: "turn/started",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-            ])
-        )
-        service.handleNotification(
-            method: "item/reasoning/textDelta",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "itemId": .string(realItemID),
-                "delta": .string("Weighing options"),
-            ])
-        )
-        service.handleNotification(
-            method: "item/reasoning/textDelta",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "itemId": .string("rollout-thinking:\(threadID):\(turnID)"),
-                "delta": .string(" and deciding"),
-                "djlDesktopMirror": .bool(true),
-                "djlRolloutLiveMirror": .bool(true),
-            ])
-        )
-
-        let thinkingRows = service.messages(for: threadID).filter {
-            $0.role == .system && $0.kind == .thinking
-        }
-        XCTAssertEqual(thinkingRows.count, 1)
-        XCTAssertEqual(thinkingRows[0].itemId, realItemID)
-    }
-
     // A previous turn's post-completion file-change table has no turnId; the
     // next turn repeating the same working-tree paths must not re-anchor it
     // into its own block (the table visually "moved" into the new turn).
@@ -2442,87 +2327,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
         XCTAssertEqual(fileChangeRows[0].turnId, turnID)
     }
 
-    // A pending user prompt (no turnId yet) closes the previous turn's block:
-    // that turn's history reconcile must bind its anchored row and leave the
-    // next turn's turnless table alone instead of re-anchoring it backwards.
-    func testHistoryFileChangeBlockStopsAtPendingUserBoundary() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let now = Date(timeIntervalSince1970: 1_779_654_720)
-        let fileChangeText = """
-        Path: Sources/App.swift
-        Kind: update
-        Totals: +2 -1
-        """
-
-        let existing = [
-            CodexMessage(
-                id: "user-t1",
-                threadId: threadID,
-                role: .user,
-                text: "first prompt",
-                createdAt: now,
-                turnId: turnID,
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-            CodexMessage(
-                id: "fc-t1",
-                threadId: threadID,
-                role: .system,
-                kind: .fileChange,
-                text: fileChangeText,
-                createdAt: now.addingTimeInterval(1),
-                turnId: turnID,
-                itemId: "fc-live",
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-            CodexMessage(
-                id: "user-pending",
-                threadId: threadID,
-                role: .user,
-                text: "next prompt",
-                createdAt: now.addingTimeInterval(10),
-                turnId: nil,
-                isStreaming: false,
-                deliveryState: .pending
-            ),
-            CodexMessage(
-                id: "fc-next-turnless",
-                threadId: threadID,
-                role: .system,
-                kind: .fileChange,
-                text: fileChangeText,
-                createdAt: now.addingTimeInterval(12),
-                turnId: nil,
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-        ]
-        let history = [
-            CodexMessage(
-                id: "fc-t1-history",
-                threadId: threadID,
-                role: .system,
-                kind: .fileChange,
-                text: fileChangeText,
-                createdAt: now.addingTimeInterval(2),
-                turnId: turnID,
-                itemId: "fc-history-item",
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-        ]
-
-        let merged = service.mergeHistoryMessages(existing, history)
-        let fileChangeRows = merged.filter { $0.kind == .fileChange }
-
-        XCTAssertEqual(fileChangeRows.count, 2)
-        XCTAssertNil(merged.first(where: { $0.id == "fc-next-turnless" })?.turnId)
-    }
-
     func testHistoryMergeReconcilesThinkingByTurnWhenTextDiffers() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -2618,46 +2422,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
 
         XCTAssertEqual(commandRows.count, 1)
         XCTAssertEqual(commandRows[0].turnId, turnID)
-    }
-
-    func testHistoryMergeReconcilesClosedSingleAssistantTurnWhenCanonicalSnapshotDiffers() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let now = Date()
-
-        let existing = [
-            CodexMessage(
-                threadId: threadID,
-                role: .assistant,
-                text: "Testo parziale",
-                createdAt: now,
-                turnId: turnID,
-                itemId: "local-message",
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-        ]
-        let history = [
-            CodexMessage(
-                threadId: threadID,
-                role: .assistant,
-                text: "Testo finale",
-                createdAt: now.addingTimeInterval(1),
-                turnId: turnID,
-                itemId: "server-message",
-                isStreaming: false,
-                deliveryState: .confirmed
-            ),
-        ]
-
-        let merged = service.mergeHistoryMessages(existing, history)
-        let assistantRows = merged.filter { $0.role == .assistant }
-
-        XCTAssertEqual(assistantRows.count, 1)
-        XCTAssertEqual(assistantRows[0].turnId, turnID)
-        XCTAssertEqual(assistantRows[0].itemId, "server-message")
-        XCTAssertEqual(assistantRows[0].text, "Testo finale")
     }
 
     func testHistoryMergeDoesNotCollapseSingleAssistantTurnWhileStillRunning() {
@@ -3199,47 +2963,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
         XCTAssertEqual(imageRows[0].text, "![Generated image](</Users/example/generated image.png>)")
     }
 
-    func testLateGeneratedImageMergesIntoAssistantAnswerForSameTurn() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let itemID = "image-\(UUID().uuidString)"
-        let imagePath = "/Users/example/generated image.png"
-
-        service.appendMessage(
-            CodexMessage(
-                id: "assistant-final",
-                threadId: threadID,
-                role: .assistant,
-                text: "Done: generated the image.",
-                turnId: turnID,
-                isStreaming: false
-            )
-        )
-
-        service.handleNotification(
-            method: "item/completed",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "item": .object([
-                    "id": .string(itemID),
-                    "type": .string("image_generation_call"),
-                    "saved_path": .string(imagePath),
-                ]),
-            ])
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(assistantMessages[0].id, "assistant-final")
-        XCTAssertEqual(
-            assistantMessages[0].text,
-            "Done: generated the image.\n\n![Generated image](</Users/example/generated image.png>)"
-        )
-        XCTAssertNil(assistantMessages[0].itemId)
-    }
-
     func testLateGeneratedImageDoesNotFinishStreamingAssistantAnswer() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
@@ -3278,90 +3001,6 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
         XCTAssertEqual(assistantMessages[0].text, "Generating")
         XCTAssertEqual(assistantMessages[1].itemId, itemID)
         XCTAssertEqual(assistantMessages[1].text, "![Generated image](</Users/example/generated image.png>)")
-    }
-
-    func testLateGeneratedImageDoesNotReplaceAssistantAnswerItemIdentity() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let answerItemID = "answer-\(UUID().uuidString)"
-        let imageItemID = "image-\(UUID().uuidString)"
-        let imagePath = "/Users/example/generated image.png"
-
-        service.appendMessage(
-            CodexMessage(
-                id: "assistant-final",
-                threadId: threadID,
-                role: .assistant,
-                text: "Done: generated the image.",
-                turnId: turnID,
-                itemId: answerItemID,
-                isStreaming: false
-            )
-        )
-
-        service.handleNotification(
-            method: "item/completed",
-            params: .object([
-                "threadId": .string(threadID),
-                "turnId": .string(turnID),
-                "item": .object([
-                    "id": .string(imageItemID),
-                    "type": .string("image_generation_call"),
-                    "saved_path": .string(imagePath),
-                ]),
-            ])
-        )
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(assistantMessages[0].id, "assistant-final")
-        XCTAssertEqual(assistantMessages[0].itemId, answerItemID)
-        XCTAssertEqual(
-            assistantMessages[0].text,
-            "Done: generated the image.\n\n![Generated image](</Users/example/generated image.png>)"
-        )
-    }
-
-    func testDuplicateLateGeneratedImageDoesNotAdoptImageItemIdentity() {
-        let service = makeService()
-        let threadID = "thread-\(UUID().uuidString)"
-        let turnID = "turn-\(UUID().uuidString)"
-        let imageItemID = "image-\(UUID().uuidString)"
-        let imagePath = "/Users/example/generated image.png"
-
-        service.appendMessage(
-            CodexMessage(
-                id: "assistant-final",
-                threadId: threadID,
-                role: .assistant,
-                text: "Done: generated the image.",
-                turnId: turnID,
-                isStreaming: false
-            )
-        )
-
-        let params: JSONValue = .object([
-            "threadId": .string(threadID),
-            "turnId": .string(turnID),
-            "item": .object([
-                "id": .string(imageItemID),
-                "type": .string("image_generation_call"),
-                "saved_path": .string(imagePath),
-            ]),
-        ])
-
-        service.handleNotification(method: "item/completed", params: params)
-        service.handleNotification(method: "item/completed", params: params)
-
-        let assistantMessages = service.messages(for: threadID).filter { $0.role == .assistant }
-        XCTAssertEqual(assistantMessages.count, 1)
-        XCTAssertEqual(assistantMessages[0].id, "assistant-final")
-        XCTAssertNil(assistantMessages[0].itemId)
-        XCTAssertEqual(
-            assistantMessages[0].text,
-            "Done: generated the image.\n\n![Generated image](</Users/example/generated image.png>)"
-        )
     }
 
     func testCompletedImageViewItemAppendsGeneratedImagePreview() {

@@ -86,7 +86,7 @@ extension CodexService {
             }
             if consumeUnsupportedThreadFork(error) {
                 throw CodexServiceError.invalidInput(
-                    "This device bridge does not support native thread forks yet. Update DJL on your device and retry."
+                    "DJL on your Mac does not support native thread forks yet. Update DJL desktop and retry."
                 )
             }
             throw error

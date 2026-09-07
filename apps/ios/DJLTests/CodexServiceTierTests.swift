@@ -20,7 +20,10 @@ final class CodexServiceTierTests: XCTestCase {
 
         var capturedTurnStartParams: [JSONValue] = []
         service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "turn/start")
+            // Checkpoint capture runs before each turn; only the turn start matters here.
+            guard method == "turn/start" else {
+                return RPCMessage(id: .string(UUID().uuidString), result: .object([:]), includeJSONRPC: false)
+            }
             capturedTurnStartParams.append(params ?? .null)
             return RPCMessage(
                 id: .string(UUID().uuidString),
@@ -164,7 +167,10 @@ final class CodexServiceTierTests: XCTestCase {
 
         var capturedTurnStartParams: [JSONValue] = []
         service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "turn/start")
+            // Checkpoint capture runs before each turn; only the turn start matters here.
+            guard method == "turn/start" else {
+                return RPCMessage(id: .string(UUID().uuidString), result: .object([:]), includeJSONRPC: false)
+            }
             let safeParams = params ?? .null
             capturedTurnStartParams.append(safeParams)
 
@@ -192,9 +198,9 @@ final class CodexServiceTierTests: XCTestCase {
         XCTAssertEqual(service.bridgeUpdatePrompt?.title, "Update DJL on your Mac to use Speed controls")
         XCTAssertEqual(
             service.bridgeUpdatePrompt?.message,
-            "This Mac bridge does not support the selected speed setting yet. Update the DJL npm package to use Fast Mode and other speed controls."
+            "DJL on your Mac does not support the selected speed setting yet. Update DJL desktop to use Fast Mode and other speed controls."
         )
-        XCTAssertEqual(service.bridgeUpdatePrompt?.command, "npm install -g djl@1.1.4")
+        XCTAssertEqual(service.bridgeUpdatePrompt?.target, .mac)
     }
 
     private func makeService() -> CodexService {

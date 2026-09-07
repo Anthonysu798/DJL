@@ -3735,6 +3735,9 @@ extension CodexService {
             return
         }
 
+        if !isReplay {
+            noteStreamedThreadActivity(threadId: threadId)
+        }
         enqueueAssistantDelta(
             threadId: threadId,
             turnId: turnId,
@@ -6582,6 +6585,8 @@ extension CodexService {
 
     // Supports both incremental deltas ("+ token") and cumulative snapshots
     // ("full content so far"), while discarding duplicate chunks.
+    static let minimumReplayOverlapCharacters = 16
+
     func mergeAssistantDelta(existingText: String, incomingDelta: String) -> String {
         if existingText.isEmpty {
             return incomingDelta
@@ -6604,9 +6609,11 @@ extension CodexService {
         }
 
         // Preserve reconnect/replay correctness by checking the full overlap window.
+        // Replayed chunks overlap by many characters; a short overlap is far more
+        // likely to be real text ("Hel" + "lo"), so never strip those.
         let maxOverlap = min(existingText.count, incomingDelta.count)
-        if maxOverlap > 0 {
-            for overlap in stride(from: maxOverlap, through: 1, by: -1) {
+        if maxOverlap >= Self.minimumReplayOverlapCharacters {
+            for overlap in stride(from: maxOverlap, through: Self.minimumReplayOverlapCharacters, by: -1) {
                 if existingText.suffix(overlap) == incomingDelta.prefix(overlap) {
                     return existingText + incomingDelta.dropFirst(overlap)
                 }

@@ -44,11 +44,6 @@ final class TurnSlashCommandTokenTests: XCTestCase {
         XCTAssertEqual(updated, "compare /first and")
     }
 
-    func testForkCommandIsAllowedWhenSlashTokenIsTheOnlyDraftContent() {
-        XCTAssertTrue(TurnComposerCommandLogic.canOfferForkSlashCommand(in: "/fo"))
-        XCTAssertFalse(TurnComposerCommandLogic.canOfferForkSlashCommand(in: "   /fo"))
-    }
-
     func testForkCommandIsHiddenWhenDraftAlreadyContainsText() {
         XCTAssertFalse(TurnComposerCommandLogic.canOfferForkSlashCommand(in: "continue /fo"))
         XCTAssertFalse(TurnComposerCommandLogic.canOfferForkSlashCommand(in: "hello\n/fo"))

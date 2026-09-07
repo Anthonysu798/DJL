@@ -139,20 +139,27 @@ final class CodexURLSessionWebSocketDelegate: NSObject, URLSessionWebSocketDeleg
     }
 }
 
+// Which side needs the update: the DJL desktop app on the Mac (which runs the
+// bridge) or this iPhone app.
+enum CodexBridgeUpdateTarget: Equatable, Sendable {
+    case mac
+    case iPhone
+}
+
 struct CodexBridgeUpdatePrompt: Identifiable, Equatable, Sendable {
     let id = UUID()
     let title: String
     let message: String
-    let command: String?
+    let target: CodexBridgeUpdateTarget
 
     init(
         title: String,
         message: String,
-        command: String?
+        target: CodexBridgeUpdateTarget = .mac
     ) {
         self.title = title
         self.message = message
-        self.command = command
+        self.target = target
     }
 }
 
@@ -310,6 +317,8 @@ enum CodexConnectionPhase: Equatable, Sendable {
     case loadingChats
     case syncing
     case connected
+    // The relay socket is up but the paired device is asleep or unreachable.
+    case hostOffline
 }
 
 enum CodexPendingThreadComposerAction: Equatable, Sendable {
@@ -450,6 +459,16 @@ final class CodexService {
         }
     }
     var isConnected = false
+    // Whether the paired device is reachable through the relay, as reported by
+    // relay presence frames, the bridge heartbeat, and a silence timer.
+    var hostPresence: CodexHostPresence = .unknown
+    var lastHostActivityAt: Date?
+    @ObservationIgnored var hostPresenceSilenceTask: Task<Void, Never>?
+    @ObservationIgnored var hostPresenceSilenceOverrideNanoseconds: UInt64?
+    @ObservationIgnored var hostPresenceFallbackResolveTask: Task<Void, Never>?
+    @ObservationIgnored var hostPresenceFallbackResolveOverrideNanoseconds: UInt64?
+    // Git actions running on the paired desktop, keyed by their working directory.
+    var desktopGitActionProgressByCwd: [String: TurnGitActionProgress] = [:]
     var isConnecting = false
     var isInitialized = false
     var isLoadingThreads = false
@@ -590,7 +609,7 @@ final class CodexService {
     var hasPresentedServiceTierBridgeUpdatePrompt = false
     var hasPresentedThreadForkBridgeUpdatePrompt = false
     var hasPresentedMinimumBridgePackageUpdatePrompt = false
-    // Remembers the latest optional npm update we already surfaced so foreground refreshes stay non-spammy.
+    // Remembers the latest optional DJL desktop update we already surfaced so foreground refreshes stay non-spammy.
     var lastPresentedAvailableBridgePackageVersion: String?
     // Mirrors the sidebar ready-dot with a tappable in-app banner when another chat finishes.
     var threadCompletionBanner: CodexThreadCompletionBanner?
@@ -604,6 +623,11 @@ final class CodexService {
     var terminalProfile: DJLTerminalProfile = DJLTerminalProfileStore.load()
     @ObservationIgnored let nativeSSHTerminal = DJLNativeSSHTerminal()
     @ObservationIgnored var nativeSSHTerminalsById: [String: DJLNativeSSHTerminal] = [:]
+    // Desktop terminals mirrored over the relay, keyed by the phone-side terminal id.
+    var desktopTerminalBindings: [String: DesktopTerminalBinding] = [:]
+    @ObservationIgnored var desktopTerminalsAwaitingReattach = Set<String>()
+    @ObservationIgnored var desktopTerminalPendingAckBytes: [String: Int] = [:]
+    @ObservationIgnored var desktopTerminalAckFlushTask: Task<Void, Never>?
 
     // --- Internal wiring ------------------------------------------------------
 
@@ -678,6 +702,9 @@ final class CodexService {
     var rateLimitsErrorMessage: String?
     var threadIdByTurnID: [String: String] = [:]
     var hydratedThreadIDs: Set<String> = []
+    // Last live (non-replay) assistant delta per thread; while these keep arriving the
+    // running-thread poll stays quiet instead of re-reading the thread every few seconds.
+    @ObservationIgnored var lastStreamedThreadActivityAt: [String: Date] = [:]
     var loadingThreadIDs: Set<String> = []
     // Cursor-backed history pages let large chats open from the recent tail first.
     var olderThreadHistoryCursorByThreadID: [String: JSONValue] = [:]
@@ -1164,6 +1191,10 @@ final class CodexService {
             return .offline
         }
 
+        if case .offline = hostPresence {
+            return .hostOffline
+        }
+
         if threads.isEmpty && (isBootstrappingConnectionSync || isLoadingThreads) {
             return .loadingChats
         }
@@ -1187,6 +1218,8 @@ final class CodexService {
             return "Syncing"
         case .connected:
             return "Connected"
+        case .hostOffline:
+            return "Device offline"
         }
     }
 

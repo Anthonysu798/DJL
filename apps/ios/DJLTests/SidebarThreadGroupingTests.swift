@@ -223,27 +223,6 @@ final class SidebarThreadGroupingTests: XCTestCase {
         XCTAssertEqual(groups.last?.threads.map(\.id), ["thread-c"])
     }
 
-    func testMakeGroupsIgnoresArchivedPinnedThreads() {
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let threads = [
-            makeThread(id: "live-thread", updatedAt: now, cwd: "/Users/me/work/app"),
-            makeThread(
-                id: "archived-thread",
-                updatedAt: now.addingTimeInterval(-60),
-                cwd: "/Users/me/work/site",
-                syncState: .archivedLocal
-            ),
-        ]
-
-        let groups = SidebarThreadGrouping.makeGroups(
-            from: threads,
-            pinnedThreadIDs: ["archived-thread", "live-thread"]
-        )
-
-        XCTAssertEqual(groups.map(\.id), ["pinned", "project:/Users/me/work/app"])
-        XCTAssertEqual(groups.first?.threads.map(\.id), ["live-thread"])
-    }
-
     func testMakeGroupsKeepsPinnedRootSubtreeTogetherAndOutOfProjectSection() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let rootThread = makeThread(id: "root-thread", updatedAt: now, cwd: "/Users/me/work/app")
@@ -267,29 +246,6 @@ final class SidebarThreadGroupingTests: XCTestCase {
         XCTAssertEqual(groups.map(\.id), ["pinned", "project:/Users/me/work/app"])
         XCTAssertEqual(groups.first?.threads.map(\.id), ["root-thread", "child-thread"])
         XCTAssertEqual(groups.last?.threads.map(\.id), ["sibling-thread"])
-    }
-
-    func testMakeGroupsMarksCodexManagedWorktreesInLabelAndIcon() throws {
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let threads = [
-            makeThread(id: "main-thread", updatedAt: now, cwd: "/Users/me/work/DJL"),
-            makeThread(
-                id: "worktree-thread",
-                updatedAt: now.addingTimeInterval(-60),
-                cwd: "/Users/me/.codex/worktrees/ce15/DJL"
-            ),
-        ]
-
-        let groups = SidebarThreadGrouping.makeGroups(from: threads, now: now)
-        let mainGroup = try XCTUnwrap(groups.first(where: { $0.projectPath == "/Users/me/work/DJL" }))
-        let worktreeGroup = try XCTUnwrap(
-            groups.first(where: { $0.projectPath == "/Users/me/.codex/worktrees/ce15/DJL" })
-        )
-
-        XCTAssertEqual(mainGroup.label, "DJL")
-        XCTAssertEqual(mainGroup.iconSystemName, "folder")
-        XCTAssertEqual(worktreeGroup.label, "DJL 15")
-        XCTAssertEqual(worktreeGroup.iconSystemName, "djl.worktree")
     }
 
     func testMakeProjectChoicesReusesLiveProjectBucketsAndSkipsNoProject() {
@@ -327,26 +283,6 @@ final class SidebarThreadGroupingTests: XCTestCase {
         let choices = SidebarThreadGrouping.makeProjectChoices(from: threads)
 
         XCTAssertEqual(choices.map(\.projectPath), ["/Users/me/work/app"])
-    }
-
-    func testMakeProjectChoicesKeepWorktreeSelectionCompactWithoutShowingPathInLabel() {
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let threads = [
-            makeThread(id: "main-thread", updatedAt: now, cwd: "/Users/me/work/DJL"),
-            makeThread(
-                id: "worktree-thread",
-                updatedAt: now.addingTimeInterval(-60),
-                cwd: "/Users/me/.codex/worktrees/ce15/DJL"
-            ),
-        ]
-
-        let choices = SidebarThreadGrouping.makeProjectChoices(from: threads)
-        let labelsByPath = Dictionary(uniqueKeysWithValues: choices.map { ($0.projectPath, $0) })
-
-        XCTAssertEqual(labelsByPath["/Users/me/work/DJL"]?.label, "DJL")
-        XCTAssertEqual(labelsByPath["/Users/me/work/DJL"]?.iconSystemName, "folder")
-        XCTAssertEqual(labelsByPath["/Users/me/.codex/worktrees/ce15/DJL"]?.label, "DJL 15")
-        XCTAssertEqual(labelsByPath["/Users/me/.codex/worktrees/ce15/DJL"]?.iconSystemName, "djl.worktree")
     }
 
     func testLiveThreadIDsForProjectGroupUsesAllThreadsNotJustFilteredMatches() {

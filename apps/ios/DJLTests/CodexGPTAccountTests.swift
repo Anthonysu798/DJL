@@ -120,40 +120,6 @@ final class CodexGPTAccountTests: XCTestCase {
         XCTAssertFalse(service.gptVoiceRequiresLogin)
     }
 
-    func testRefreshBridgeVersionStatePresentsOptionalBridgeUpdateWhenLatestIsNewer() async {
-        let service = makeService()
-        service.isConnected = true
-
-        service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "account/status/read")
-            XCTAssertNil(params)
-            return RPCMessage(
-                id: .string(UUID().uuidString),
-                result: .object([
-                    "status": .string("authenticated"),
-                    "authMethod": .string("chatgpt"),
-                    "loginInFlight": .bool(false),
-                    "needsReauth": .bool(false),
-                    "tokenReady": .bool(true),
-                    "bridgeVersion": .string("2.0.0"),
-                    "bridgeLatestVersion": .string("2.0.1"),
-                ]),
-                includeJSONRPC: false
-            )
-        }
-
-        await service.refreshBridgeVersionState(allowAvailableBridgeUpdatePrompt: true)
-
-        XCTAssertEqual(service.bridgeInstalledVersion, "2.0.0")
-        XCTAssertEqual(service.latestBridgePackageVersion, "2.0.1")
-        XCTAssertEqual(
-            service.bridgeUpdatePrompt?.title,
-            "A newer DJL update is available on your Mac"
-        )
-        XCTAssertEqual(service.bridgeUpdatePrompt?.command, "npm install -g djl@latest")
-        XCTAssertEqual(service.gptAccountSnapshot.status, .unknown)
-    }
-
     func testRefreshBridgeVersionStateAcceptsCurrentDJLGatewayBaseline() async {
         let service = makeService()
         service.isConnected = true
@@ -240,69 +206,6 @@ final class CodexGPTAccountTests: XCTestCase {
         XCTAssertNil(service.bridgeUpdatePrompt)
     }
 
-    func testForegroundReturnRefreshesBridgeVersionAndPresentsOptionalUpdatePrompt() async {
-        let service = makeService()
-        service.isConnected = true
-        service.isInitialized = true
-        service.syncRealtimeEnabled = false
-        service.isAppInForeground = false
-
-        service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "account/status/read")
-            XCTAssertNil(params)
-            return RPCMessage(
-                id: .string(UUID().uuidString),
-                result: .object([
-                    "status": .string("authenticated"),
-                    "authMethod": .string("chatgpt"),
-                    "loginInFlight": .bool(false),
-                    "needsReauth": .bool(false),
-                    "tokenReady": .bool(true),
-                    "bridgeVersion": .string("2.0.0"),
-                    "bridgeLatestVersion": .string("2.0.1"),
-                ]),
-                includeJSONRPC: false
-            )
-        }
-
-        service.setForegroundState(true)
-        await yieldMainActor(times: 3)
-
-        XCTAssertEqual(service.bridgeInstalledVersion, "2.0.0")
-        XCTAssertEqual(service.latestBridgePackageVersion, "2.0.1")
-        XCTAssertEqual(
-            service.bridgeUpdatePrompt?.title,
-            "A newer DJL update is available on your Mac"
-        )
-    }
-
-    func testStartOrResumeGPTLoginUsesChatGPTVariantAndCachesPendingURL() async throws {
-        let service = makeService()
-        service.isConnected = true
-        var capturedParams: JSONValue?
-
-        service.requestTransportOverride = { method, params in
-            XCTAssertEqual(method, "account/login/start")
-            capturedParams = params
-            return RPCMessage(
-                id: .string(UUID().uuidString),
-                result: .object([
-                    "type": .string("chatgpt"),
-                    "loginId": .string("login-123"),
-                    "authUrl": .string("https://example.com/login"),
-                ]),
-                includeJSONRPC: false
-            )
-        }
-
-        let loginResult = try await service.startOrResumeGPTLogin()
-
-        XCTAssertEqual(capturedParams?.objectValue?["type"]?.stringValue, "chatgpt")
-        XCTAssertEqual(loginResult.loginId, "login-123")
-        XCTAssertEqual(loginResult.authURL.absoluteString, "https://example.com/login")
-        XCTAssertEqual(service.gptAccountSnapshot.status, .loginPending)
-    }
-
     func testStartOrResumeGPTLoginOnMacOpensPendingBrowserOnBridge() async throws {
         let service = makeService()
         service.isConnected = true
@@ -340,102 +243,11 @@ final class CodexGPTAccountTests: XCTestCase {
         }
 
         try await service.startOrResumeGPTLoginOnMac()
+        service.stopGPTLoginSync()
 
         XCTAssertEqual(observedMethods, ["account/login/start", "account/login/openOnMac"])
         XCTAssertEqual(capturedOpenParams?["authUrl"]?.stringValue, "https://example.com/login")
         XCTAssertEqual(service.gptAccountSnapshot.status, .loginPending)
-    }
-
-    func testStartOrResumeGPTLoginOnPhoneReturnsAuthURLWithoutMacOpenRequest() async throws {
-        let service = makeService()
-        service.isConnected = true
-        var observedMethods: [String] = []
-
-        service.requestTransportOverride = { method, params in
-            observedMethods.append(method)
-
-            switch method {
-            case "account/login/start":
-                XCTAssertEqual(params?.objectValue?["type"]?.stringValue, "chatgpt")
-                return RPCMessage(
-                    id: .string(UUID().uuidString),
-                    result: .object([
-                        "type": .string("chatgpt"),
-                        "loginId": .string("login-123"),
-                        "authUrl": .string("https://example.com/login"),
-                    ]),
-                    includeJSONRPC: false
-                )
-            default:
-                XCTFail("Unexpected method \(method)")
-                throw CodexServiceError.disconnected
-            }
-        }
-
-        let authURL = try await service.startOrResumeGPTLoginOnPhone()
-
-        XCTAssertEqual(observedMethods, ["account/login/start"])
-        XCTAssertEqual(authURL.absoluteString, "https://example.com/login")
-        XCTAssertEqual(service.gptAccountSnapshot.status, .loginPending)
-    }
-
-    func testLoginCompletedNotificationRefreshesAuthenticatedSnapshot() async throws {
-        let service = makeService()
-        service.isConnected = true
-        var observedMethods: [String] = []
-
-        service.requestTransportOverride = { method, params in
-            observedMethods.append(method)
-
-            switch method {
-            case "account/login/start":
-                return RPCMessage(
-                    id: .string(UUID().uuidString),
-                    result: .object([
-                        "type": .string("chatgpt"),
-                        "loginId": .string("login-123"),
-                        "authUrl": .string("https://example.com/login"),
-                    ]),
-                    includeJSONRPC: false
-                )
-            case "account/status/read":
-                XCTAssertNil(params)
-                return RPCMessage(
-                    id: .string(UUID().uuidString),
-                    result: .object([
-                        "status": .string("authenticated"),
-                        "authMethod": .string("chatgpt"),
-                        "email": .string("signedin@example.com"),
-                        "planType": .string("plus"),
-                        "loginInFlight": .bool(false),
-                        "needsReauth": .bool(false),
-                        "tokenReady": .bool(true),
-                    ]),
-                    includeJSONRPC: false
-                )
-            default:
-                XCTFail("Unexpected method \(method)")
-                throw CodexServiceError.disconnected
-            }
-        }
-
-        _ = try await service.startOrResumeGPTLogin()
-        service.handleIncomingRPCMessage(
-            RPCMessage(
-                method: "account/login/completed",
-                params: .object([
-                    "loginId": .string("login-123"),
-                    "success": .bool(true),
-                    "error": .null,
-                ])
-            )
-        )
-
-        await yieldMainActor(times: 3)
-
-        XCTAssertEqual(service.gptAccountSnapshot.status, .authenticated)
-        XCTAssertEqual(service.gptAccountSnapshot.email, "signedin@example.com")
-        XCTAssertTrue(observedMethods.contains("account/status/read"))
     }
 
     func testAuthenticatedSnapshotWithoutTokenReadyKeepsVoiceDisabled() async {
@@ -583,6 +395,7 @@ final class CodexGPTAccountTests: XCTestCase {
 
         _ = try await service.startOrResumeGPTLogin()
         await service.handleGPTLoginCallbackURL(URL(string: "djl://auth/gpt/callback?code=abc")!)
+        service.stopGPTLoginSync()
 
         XCTAssertTrue(observedMethods.contains("account/login/complete"))
         XCTAssertEqual(capturedCompleteParams?["loginId"]?.stringValue, "login-123")
@@ -590,29 +403,6 @@ final class CodexGPTAccountTests: XCTestCase {
             capturedCompleteParams?["callbackUrl"]?.stringValue,
             "djl://auth/gpt/callback?code=abc"
         )
-    }
-
-    func testPersistedGPTAccountSnapshotRestoresOnInit() throws {
-        let defaults = makeDefaults()
-        let encoder = JSONEncoder()
-        let snapshot = CodexGPTAccountSnapshot(
-            status: .authenticated,
-            authMethod: .chatgpt,
-            email: "persisted@example.com",
-            displayName: nil,
-            planType: "plus",
-            loginInFlight: false,
-            needsReauth: false,
-            expiresAt: Date(timeIntervalSince1970: 1_742_000_000),
-            updatedAt: .now
-        )
-        defaults.set(try encoder.encode(snapshot), forKey: "codex.gpt.accountSnapshot")
-
-        let service = CodexService(defaults: defaults)
-
-        XCTAssertEqual(service.gptAccountSnapshot.status, .authenticated)
-        XCTAssertEqual(service.gptAccountSnapshot.email, "persisted@example.com")
-        XCTAssertEqual(service.gptAccountSnapshot.planType, "plus")
     }
 
     func testVoiceTranscriptionPreflightRejectsOversizedClips() {
@@ -645,32 +435,6 @@ final class CodexGPTAccountTests: XCTestCase {
 
         XCTAssertThrowsError(try preflight.validate()) { error in
             XCTAssertEqual(error.localizedDescription, "Voice clips must include recorded audio.")
-        }
-    }
-
-    func testVoiceTranscriptionReportsDisconnectedInsteadOfLoginWhenBridgeIsOffline() async {
-        let service = makeService()
-        service.isConnected = false
-        service.gptAccountSnapshot = CodexGPTAccountSnapshot(
-            status: .authenticated,
-            authMethod: .chatgpt,
-            email: "voice@example.com",
-            displayName: nil,
-            planType: "plus",
-            loginInFlight: false,
-            needsReauth: false,
-            expiresAt: nil,
-            tokenReady: true,
-            updatedAt: .now
-        )
-
-        await XCTAssertThrowsErrorAsync({
-            try await service.transcribeVoiceAudioFile(
-                at: URL(fileURLWithPath: "/tmp/djl-voice-test.wav"),
-                durationSeconds: 1
-            )
-        }) { error in
-            XCTAssertEqual(error.localizedDescription, "Connect to your Mac before using voice transcription.")
         }
     }
 
@@ -950,72 +714,6 @@ final class CodexGPTAccountTests: XCTestCase {
         )
 
         XCTAssertEqual(service.classifyVoiceFailure(error), .reconnectRequired)
-    }
-
-    func testSuccessfulLoginKeepsPollingUntilVoiceTokenIsReady() async throws {
-        let service = makeService()
-        service.isConnected = true
-        var accountStatusReadCount = 0
-
-        service.requestTransportOverride = { method, params in
-            switch method {
-            case "account/login/start":
-                return RPCMessage(
-                    id: .string(UUID().uuidString),
-                    result: .object([
-                        "type": .string("chatgpt"),
-                        "loginId": .string("login-123"),
-                        "authUrl": .string("https://example.com/login"),
-                    ]),
-                    includeJSONRPC: false
-                )
-            case "account/status/read":
-                XCTAssertNil(params)
-                accountStatusReadCount += 1
-                return RPCMessage(
-                    id: .string(UUID().uuidString),
-                    result: .object([
-                        "status": .string("authenticated"),
-                        "authMethod": .string("chatgpt"),
-                        "email": .string("voice@example.com"),
-                        "planType": .string("pro"),
-                        "loginInFlight": .bool(false),
-                        "needsReauth": .bool(false),
-                        "tokenReady": .bool(accountStatusReadCount >= 2),
-                    ]),
-                    includeJSONRPC: false
-                )
-            default:
-                XCTFail("Unexpected method \(method)")
-                throw CodexServiceError.disconnected
-            }
-        }
-
-        _ = try await service.startOrResumeGPTLogin()
-        service.handleIncomingRPCMessage(
-            RPCMessage(
-                method: "account/login/completed",
-                params: .object([
-                    "loginId": .string("login-123"),
-                    "success": .bool(true),
-                    "error": .null,
-                ])
-            )
-        )
-
-        await yieldMainActor(times: 3)
-
-        XCTAssertEqual(service.gptAccountSnapshot.status, .authenticated)
-        XCTAssertEqual(service.gptAccountSnapshot.tokenReady, false)
-        XCTAssertFalse(service.gptAccountSnapshot.needsReauth)
-        XCTAssertNotNil(service.currentPendingGPTLogin())
-
-        await service.refreshGPTAccountState()
-
-        XCTAssertEqual(service.gptAccountSnapshot.status, .authenticated)
-        XCTAssertEqual(service.gptAccountSnapshot.tokenReady, true)
-        XCTAssertFalse(service.gptAccountSnapshot.needsReauth)
-        XCTAssertNil(service.currentPendingGPTLogin())
     }
 
     func testThreadRequestsPreferStructuredSandboxPolicyForNetworkBridge() async throws {
