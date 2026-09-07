@@ -106,6 +106,7 @@ let child: ReturnType<typeof spawn> | undefined;
 let childClosed: Promise<unknown> | undefined;
 try {
   const port = await listen(mock);
+  let cliOutput = "";
   await mkdir(project);
   await writeFile(join(project, "AGENTS.md"), instructionMarker);
   await writeFile(join(project, "fixture.txt"), toolResultMarker);
@@ -131,6 +132,8 @@ try {
     OPENCODE_SERVER_PASSWORD: password,
     OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
     OPENCODE_DISABLE_AUTOUPDATE: "true",
+    // Models are explicitly defined by this loopback fixture; catalog refresh is unrelated.
+    OPENCODE_DISABLE_MODELS_FETCH: "true",
     OPENCODE_CONFIG_CONTENT: JSON.stringify({
       autoupdate: false,
       ...(nativeScope
@@ -158,7 +161,7 @@ try {
     timeout: 30_000,
   });
   if (version.error || version.status !== 0) throw new Error("Official CLI version probe failed");
-  child = spawn(binary, ["serve", "--hostname", "127.0.0.1", "--port", "0"], {
+  child = spawn(binary, ["serve", "--print-logs", "--hostname", "127.0.0.1", "--port", "0"], {
     cwd: project,
     env,
     stdio: ["ignore", "pipe", "pipe"],
@@ -167,10 +170,9 @@ try {
   const processHandle = child;
   const url = await new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("OpenCode startup timed out")), 60_000);
-    let output = "";
     const receive = (chunk: Buffer) => {
-      output = (output + String(chunk)).slice(-16_384);
-      const match = output.match(/opencode server listening on (http:\/\/127\.0\.0\.1:\d+)/);
+      cliOutput = (cliOutput + String(chunk)).slice(-16_384);
+      const match = cliOutput.match(/opencode server listening on (http:\/\/127\.0\.0\.1:\d+)/);
       if (match?.[1]) {
         clearTimeout(timer);
         resolve(match[1]);
@@ -188,6 +190,7 @@ try {
     });
   });
   const call = async <T>(path: string, body: unknown): Promise<T> => {
+    console.log(`OpenCode fixture POST ${path}`);
     const response = await fetch(url + path, {
       method: "POST",
       headers: {
@@ -196,6 +199,12 @@ try {
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(60_000),
+    }).catch((cause: unknown) => {
+      const diagnostics = cliOutput.replaceAll(password, "[REDACTED]");
+      throw new Error(
+        `OpenCode fixture POST ${path} failed after ${requests.length} model requests. CLI output: ${diagnostics}`,
+        { cause },
+      );
     });
     if (!response.ok) throw new Error(`OpenCode fixture request failed: ${response.status}`);
     return (await response.json()) as T;
