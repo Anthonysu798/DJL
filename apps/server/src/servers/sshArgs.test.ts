@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { buildSshArgs, buildSshEnv, knownHostsOptionValue } from "./sshArgs";
 
 const base = {
-  host: "203.0.113.10",
+  host: "edge.example.test",
   port: 2222,
   username: "deploy",
   auth: { type: "agent" as const },
 };
-const knownHostsFiles = ["/state/ssh/known_hosts", "/home/me/.ssh/known_hosts"];
+const knownHostsFiles = ["/state/ssh/known_hosts", "/opt/djl-home/known_hosts"];
 
 describe("buildSshArgs", () => {
   it("always enforces strict host key checking and both known_hosts files", () => {
@@ -21,7 +21,7 @@ describe("buildSshArgs", () => {
     expect(plan.args).toContain("StrictHostKeyChecking=yes");
     expect(plan.args).toContain(`UserKnownHostsFile=${knownHostsOptionValue(knownHostsFiles)}`);
     expect(plan.args.at(-1)).toBe("echo ok");
-    expect(plan.args).toContain("deploy@203.0.113.10");
+    expect(plan.args).toContain("deploy@edge.example.test");
     expect(plan.args.slice(plan.args.indexOf("-p"), plan.args.indexOf("-p") + 2)).toEqual([
       "-p",
       "2222",

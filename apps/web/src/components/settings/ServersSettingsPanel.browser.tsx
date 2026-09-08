@@ -49,7 +49,7 @@ const now = Date.now();
 const hk: ServerRecord = {
   id: "srv-hk" as ServerRecord["id"],
   name: "hk-edge",
-  host: "203.0.113.10",
+  host: "edge.example.test",
   port: 2222,
   username: "deploy",
   auth: { type: "keyPath", path: "~/.ssh/id_ed25519", hasPassphrase: false },
@@ -75,7 +75,7 @@ const hk: ServerRecord = {
 const fresh: ServerRecord = {
   id: "srv-new" as ServerRecord["id"],
   name: "tokyo-db",
-  host: "198.51.100.7",
+  host: "db.example.test",
   port: 22,
   username: "root",
   auth: { type: "password" },
@@ -128,11 +128,11 @@ describe("ServersSettingsPanel", () => {
   it("lists servers with address, tags, tier and stats", async () => {
     await mount();
     await expect.element(page.getByRole("button", { name: /hk-edge/ })).toBeVisible();
-    await expect.element(page.getByText("deploy@203.0.113.10:2222")).toBeVisible();
+    await expect.element(page.getByText("deploy@edge.example.test:2222")).toBeVisible();
     await expect.element(page.getByText("prod", { exact: true })).toBeVisible();
     await expect.element(page.getByText("Read-only", { exact: true })).toBeVisible();
     await expect.element(page.getByText("Approve each", { exact: true })).toBeVisible();
-    await expect.element(page.getByText("root@198.51.100.7")).toBeVisible();
+    await expect.element(page.getByText("root@db.example.test")).toBeVisible();
     await expect.element(page.getByText("38%", { exact: true })).toBeInTheDocument();
   });
 
@@ -212,7 +212,7 @@ describe("ServersSettingsPanel", () => {
 
   it("imports selected hosts from the SSH config preview", async () => {
     mocks.importPreview.mockResolvedValue({
-      configPath: "/Users/me/.ssh/config",
+      configPath: "/opt/djl-home/.ssh/config",
       candidates: [
         { alias: "hk", host: "203.0.113.10", port: 22, username: "deploy", alreadyImported: true },
         { alias: "work", host: "10.0.0.2", port: 22, alreadyImported: false },
