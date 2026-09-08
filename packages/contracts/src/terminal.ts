@@ -38,12 +38,23 @@ const TerminalSessionInput = Schema.Struct({
 });
 export type TerminalSessionInput = Schema.Codec.Encoded<typeof TerminalSessionInput>;
 
+export const TerminalAgentProfile = Schema.Struct({
+  provider: Schema.Literals(["codex", "claudeAgent", "cursor", "opencode"]),
+  profileId: Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_-]{1,80}$/)),
+  action: Schema.Literals(["run", "login", "status"]),
+});
+export type TerminalAgentProfile = typeof TerminalAgentProfile.Type;
+
 export const TerminalOpenInput = Schema.Struct({
   ...TerminalSessionInput.fields,
   cwd: TrimmedNonEmptyStringSchema,
   cols: Schema.optional(TerminalColsSchema),
   rows: Schema.optional(TerminalRowsSchema),
   env: Schema.optional(TerminalEnvSchema),
+  agentProfile: Schema.optional(TerminalAgentProfile),
+  includeHistory: Schema.optional(Schema.Boolean),
+  screenSnapshot: Schema.optional(Schema.Boolean),
+  headlessQueries: Schema.optional(Schema.Boolean),
   // When false, the PTY is still drained and history is still maintained, but
   // live `output` events are not broadcast. Used for headless background
   // sessions (e.g. dev servers) whose output no renderer consumes. Defaults to
@@ -100,6 +111,8 @@ export const TerminalSessionSnapshot = Schema.Struct({
   status: TerminalSessionStatus,
   pid: Schema.NullOr(Schema.Int.check(Schema.isGreaterThan(0))),
   history: Schema.String,
+  screen: Schema.optional(Schema.String),
+  headlessQueries: Schema.optional(Schema.Boolean),
   replayPreamble: Schema.optional(Schema.String.check(Schema.isMaxLength(4_096))),
   exitCode: Schema.NullOr(Schema.Int),
   exitSignal: Schema.NullOr(Schema.Int),

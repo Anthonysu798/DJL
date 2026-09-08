@@ -712,7 +712,7 @@ async function mapWithConcurrency<T, R>(
   limit: number,
   mapper: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  const results = new Array<R>(items.length);
+  const results = Array<R>(items.length);
   let nextIndex = 0;
   async function worker(): Promise<void> {
     while (nextIndex < items.length) {

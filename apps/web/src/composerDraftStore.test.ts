@@ -204,6 +204,7 @@ describe("resolvePreferredComposerModelSelection", () => {
         draft: {
           modelSelectionByProvider: {
             grok: modelSelection("grok", "grok-build"),
+            kimi: modelSelection("kimi", "kimi-build"),
           },
           activeProvider: "grok",
         },
@@ -235,19 +236,6 @@ describe("resolvePreferredComposerModelSelection", () => {
 
 describe("composerDraftStore browser findings", () => {
   const findingThreadId = ThreadId.makeUnsafe("thread-browser-findings");
-  const makeFinding = (imageId: string) => ({
-    version: 1 as const,
-    id: `finding-${imageId}`,
-    imageId,
-    screenshotName: `${imageId}.png`,
-    markerNumber: 1,
-    comment: "Tighten this spacing",
-    target: { kind: "area" as const, rect: { x: 1, y: 2, width: 30, height: 40 } },
-    page: { url: "https://example.com", title: "Example" },
-    viewport: { width: 800, height: 600, deviceScaleFactor: 1, scrollX: 0, scrollY: 0 },
-    adjustments: {},
-    createdAt: "2026-07-13T00:00:00.000Z",
-  });
 
   beforeEach(() => {
     useComposerDraftStore.getState().clearDraftThread(findingThreadId);
@@ -1360,6 +1348,9 @@ describe("composerDraftStore terminal contexts", () => {
               grok: {
                 reasoningEffort: "xhigh",
               },
+              kimi: {
+                reasoningEffort: "xhigh",
+              },
             },
           },
         },
@@ -2120,6 +2111,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -2148,6 +2140,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -2181,6 +2174,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -2214,6 +2208,7 @@ describe("composerDraftStore modelSelection", () => {
         cursor: [],
         gemini: [],
         grok: [],
+        kimi: [],
         droid: [],
         kilo: [],
         opencode: [],
@@ -3080,4 +3075,18 @@ describe("createDebouncedStorage", () => {
     expect(base.setItem).toHaveBeenCalledTimes(1);
     expect(base.setItem).toHaveBeenCalledWith("key", "v2");
   });
+});
+
+const makeFinding = (imageId: string) => ({
+  version: 1 as const,
+  id: `finding-${imageId}`,
+  imageId,
+  screenshotName: `${imageId}.png`,
+  markerNumber: 1,
+  comment: "Tighten this spacing",
+  target: { kind: "area" as const, rect: { x: 1, y: 2, width: 30, height: 40 } },
+  page: { url: "https://example.com", title: "Example" },
+  viewport: { width: 800, height: 600, deviceScaleFactor: 1, scrollX: 0, scrollY: 0 },
+  adjustments: {},
+  createdAt: "2026-07-13T00:00:00.000Z",
 });

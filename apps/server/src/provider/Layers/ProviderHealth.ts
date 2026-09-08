@@ -9,6 +9,7 @@
  * @module ProviderHealthLive
  */
 import * as OS from "node:os";
+import { NATIVE_HARNESS_IDS, probeNativeHarnessStatuses } from "../../harnesses/accounts";
 import type {
   ProviderKind,
   ServerSettings,
@@ -96,11 +97,62 @@ import {
   parseGenericCliVersion,
   resolveProviderMaintenanceCapabilitiesEffect,
   type PackageManagedProviderMaintenanceDefinition,
-  type ProviderMaintenanceCapabilities,
 } from "../providerMaintenance";
 import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
 import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
 import { buildOpenCodeProcessInvocation, resolveDjlOpenCodeBinaryPath } from "../opencodeRuntime";
+
+const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings) => {
+  switch (provider) {
+    case "codex":
+      return settings.providers.codex.binaryPath;
+    case "claudeAgent":
+      return settings.providers.claudeAgent.binaryPath;
+    case "cursor":
+      return settings.providers.cursor.binaryPath;
+    case "gemini":
+      return settings.providers.gemini.binaryPath;
+    case "grok":
+      return settings.providers.grok.binaryPath;
+    case "kimi":
+      return settings.providers.kimi.binaryPath;
+    case "droid":
+      return settings.providers.droid.binaryPath;
+    case "kilo":
+      return settings.providers.kilo.binaryPath;
+    case "opencode":
+      return settings.providers.opencode.binaryPath;
+    case "pi":
+      return settings.providers.pi.binaryPath;
+  }
+};
+
+const makeUpdateState = (input: {
+  readonly status: ServerProviderUpdateState["status"];
+  readonly startedAt: string | null;
+  readonly finishedAt: string | null;
+  readonly message: string | null;
+  readonly output?: string | null;
+}): ServerProviderUpdateState => ({
+  status: input.status,
+  startedAt: input.startedAt,
+  finishedAt: input.finishedAt,
+  message: input.message,
+  output: input.output ?? null,
+});
+
+const describeUpdateCommandError = (error: unknown): string => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    if (error.message.includes("initial is not a function")) {
+      return "Update command failed before producing output. Try running the provider update command from a terminal.";
+    }
+    return error.message;
+  }
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+  return "Update command could not be started.";
+};
 
 export { parseClaudeAuthStatusFromOutput } from "../claudeAuthStatus";
 export type { CommandResult } from "../providerCliOutput";
@@ -120,7 +172,10 @@ const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in DJL settings.";
 
-const PROVIDERS = [OPENCODE_PROVIDER] as const satisfies ReadonlyArray<ProviderKind>;
+const PROVIDERS = [
+  OPENCODE_PROVIDER,
+  ...NATIVE_HARNESS_IDS,
+] as const satisfies ReadonlyArray<ProviderKind>;
 
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 const UPDATE_TIMEOUT_MS = 5 * 60_000;
@@ -134,15 +189,7 @@ function isClaudeNativeCommandPath(commandPath: string): boolean {
   );
 }
 
-function isOpenCodeNativeCommandPath(commandPath: string): boolean {
-  const normalized = normalizeCommandPath(commandPath);
-  return (
-    normalized.endsWith("/.opencode/bin/opencode") ||
-    normalized.endsWith("/.opencode/bin/opencode.exe")
-  );
-}
-
-const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
+export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
   Record<ProviderKind, PackageManagedProviderMaintenanceDefinition>
 > = {
   codex: {
@@ -776,9 +823,7 @@ const runPiCommand = (args: ReadonlyArray<string>, executable = "pi") =>
 
 function makeCodexProbeEnv(homePath?: string): NodeJS.ProcessEnv {
   const normalizedHomePath = nonEmptyTrimmed(homePath);
-  return buildCodexProcessEnv({
-    ...(normalizedHomePath ? { homePath: normalizedHomePath } : {}),
-  });
+  return buildCodexProcessEnv(normalizedHomePath ? { homePath: normalizedHomePath } : {});
 }
 
 const readCodexConfigModelProviderForEnv = (env: NodeJS.ProcessEnv) =>
@@ -1405,8 +1450,8 @@ export const makeCheckOpenCodeProviderStatus = (
         authStatus: "unknown" as const,
         checkedAt,
         message: isCommandMissingCause(error)
-          ? "DJL's bundled model runtime is missing."
-          : `Failed to execute DJL's model runtime health check: ${error instanceof Error ? error.message : String(error)}.`,
+          ? "OpenCode is not installed. Install it in Settings > Accounts > Provider tools or choose its executable path."
+          : `Failed to execute OpenCode health check: ${error instanceof Error ? error.message : String(error)}.`,
       } satisfies ServerProviderStatus;
     }
 
@@ -1417,7 +1462,7 @@ export const makeCheckOpenCodeProviderStatus = (
         available: false,
         authStatus: "unknown" as const,
         checkedAt,
-        message: `DJL's model runtime is installed but failed to run. ${PROVIDER_COMMAND_TIMEOUT_DETAIL}`,
+        message: `OpenCode is installed but failed to run. ${PROVIDER_COMMAND_TIMEOUT_DETAIL}`,
       } satisfies ServerProviderStatus;
     }
 
@@ -1431,8 +1476,8 @@ export const makeCheckOpenCodeProviderStatus = (
         authStatus: "unknown" as const,
         checkedAt,
         message: detail
-          ? `DJL's model runtime is installed but failed to run. ${detail}`
-          : "DJL's model runtime is installed but failed to run.",
+          ? `OpenCode is installed but failed to run. ${detail}`
+          : "OpenCode is installed but failed to run.",
       } satisfies ServerProviderStatus;
     }
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
@@ -1444,7 +1489,7 @@ export const makeCheckOpenCodeProviderStatus = (
       authStatus: "unknown" as const,
       version: parsedVersion,
       checkedAt,
-      message: "DJL's managed model runtime is ready.",
+      message: "The installed OpenCode CLI is ready.",
     } satisfies ServerProviderStatus;
   });
 
@@ -2042,32 +2087,6 @@ export const ProviderHealthLive = Layer.effect(
       timeToLive: Duration.minutes(5),
       lookup: (_: "claude") => probeClaudeSubscription(),
     });
-    const resolveClaudeSubscription = Cache.get(claudeSubscriptionCache, "claude").pipe(
-      Effect.map((probe) => probe?.subscriptionType),
-    );
-
-    const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings) => {
-      switch (provider) {
-        case "codex":
-          return settings.providers.codex.binaryPath;
-        case "claudeAgent":
-          return settings.providers.claudeAgent.binaryPath;
-        case "cursor":
-          return settings.providers.cursor.binaryPath;
-        case "gemini":
-          return settings.providers.gemini.binaryPath;
-        case "grok":
-          return settings.providers.grok.binaryPath;
-        case "droid":
-          return settings.providers.droid.binaryPath;
-        case "kilo":
-          return settings.providers.kilo.binaryPath;
-        case "opencode":
-          return settings.providers.opencode.binaryPath;
-        case "pi":
-          return settings.providers.pi.binaryPath;
-      }
-    };
 
     const getProviderMaintenanceCapabilities = Effect.fn("getProviderMaintenanceCapabilities")(
       function* (provider: ProviderKind) {
@@ -2227,8 +2246,26 @@ export const ProviderHealthLive = Layer.effect(
               checkProviderWhenEnabled(
                 settings,
                 OPENCODE_PROVIDER,
-                makeCheckOpenCodeProviderStatus(resolveDjlOpenCodeBinaryPath()),
+                makeCheckOpenCodeProviderStatus(
+                  resolveDjlOpenCodeBinaryPath(settings.providers.opencode.binaryPath),
+                ),
               ),
+              Effect.promise(() =>
+                probeNativeHarnessStatuses(
+                  settings,
+                  serverConfig.managedOpenCodeRootDir,
+                  (binary, args, env) =>
+                    Effect.runPromise(
+                      runProviderCommand(binary, args, env).pipe(
+                        Effect.timeout("10 seconds"),
+                        Effect.catch(() =>
+                          Effect.succeed({ code: 1, stdout: "", stderr: "", missing: true }),
+                        ),
+                        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+                      ),
+                    ),
+                ),
+              ).pipe(Effect.map((statuses) => statuses.map(Option.some))),
             ],
             {
               concurrency: "unbounded",
@@ -2242,7 +2279,7 @@ export const ProviderHealthLive = Layer.effect(
         Effect.provideService(Path.Path, path),
         Effect.map((statuses) =>
           orderProviderStatuses(
-            statuses.flatMap((status) => (Option.isSome(status) ? [status.value] : [])),
+            statuses.flat().flatMap((status) => (Option.isSome(status) ? [status.value] : [])),
           ),
         ),
         Effect.flatMap(enrichStatuses),
@@ -2320,7 +2357,9 @@ export const ProviderHealthLive = Layer.effect(
     );
 
     yield* serverSettings.streamChanges.pipe(
-      Stream.runForEach(() => publishProjectedStatuses().pipe(Effect.asVoid)),
+      Stream.runForEach(() =>
+        publishProjectedStatuses().pipe(Effect.andThen(ensureRefreshFiber), Effect.asVoid),
+      ),
       Effect.forkIn(refreshScope),
     );
 
@@ -2329,33 +2368,6 @@ export const ProviderHealthLive = Layer.effect(
     );
 
     const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
-
-    const makeUpdateState = (input: {
-      readonly status: ServerProviderUpdateState["status"];
-      readonly startedAt: string | null;
-      readonly finishedAt: string | null;
-      readonly message: string | null;
-      readonly output?: string | null;
-    }): ServerProviderUpdateState => ({
-      status: input.status,
-      startedAt: input.startedAt,
-      finishedAt: input.finishedAt,
-      message: input.message,
-      output: input.output ?? null,
-    });
-
-    const describeUpdateCommandError = (error: unknown): string => {
-      if (error instanceof Error && error.message.trim().length > 0) {
-        if (error.message.includes("initial is not a function")) {
-          return "Update command failed before producing output. Try running the provider update command from a terminal.";
-        }
-        return error.message;
-      }
-      if (typeof error === "string" && error.trim().length > 0) {
-        return error;
-      }
-      return "Update command could not be started.";
-    };
 
     const runUpdateCommand = Effect.fn("runProviderUpdateCommand")(function* (input: {
       readonly command: string;
@@ -2509,8 +2521,13 @@ export const ProviderHealthLive = Layer.effect(
       });
     });
 
+    // A fresh installed CLI has no cached readiness. Start the single-flight
+    // probe without blocking boot, so the first composer does not mistake it
+    // for a missing local model and launch local-model setup.
+    yield* ensureRefreshFiber;
+
     return {
-      // Mirror upstream's behavior here: reads consume the latest stable
+      // Reads consume the latest stable
       // snapshot, while refreshes happen explicitly or from provider streams.
       getStatuses: Ref.get(statusesRef).pipe(Effect.flatMap(projectStatusesForCurrentSettings)),
       refresh,

@@ -225,7 +225,7 @@ function normalizeState(rawState) {
 function pruneState(storeState, { now, maxThreads, maxAgeMs }) {
   const entries = Object.entries(storeState.threads)
     .filter(([, settings]) => !maxAgeMs || now - settings.updatedAt <= maxAgeMs)
-    .sort((left, right) => right[1].updatedAt - left[1].updatedAt)
+    .toSorted((left, right) => right[1].updatedAt - left[1].updatedAt)
     .slice(0, Math.max(1, maxThreads));
   storeState.threads = Object.fromEntries(entries);
 }

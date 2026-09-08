@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import KanbanView from "~/components/kanban/KanbanView";
+import AgentWorkspacesView from "~/components/agent-workspaces/AgentWorkspacesView";
 
 function KanbanOverviewRouteView() {
-  return <KanbanView projectId={null} />;
+  return <AgentWorkspacesView projectId={null} />;
 }
 
 export const Route = createFileRoute("/_chat/kanban/")({

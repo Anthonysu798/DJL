@@ -1,7 +1,6 @@
 import { type ChildProcessWithoutNullStreams, spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
-import path from "node:path";
 import readline from "node:readline";
 
 import {
@@ -813,9 +812,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        env: buildCodexProcessEnv({
-          ...(codexHomePath ? { homePath: codexHomePath } : {}),
-        }),
+        env: buildCodexProcessEnv(codexHomePath ? { homePath: codexHomePath } : {}),
       });
       const output = readline.createInterface({ input: child.stdout });
 
@@ -1436,9 +1433,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        env: buildCodexProcessEnv({
-          ...(codexHomePath ? { homePath: codexHomePath } : {}),
-        }),
+        env: buildCodexProcessEnv(codexHomePath ? { homePath: codexHomePath } : {}),
       });
       const output = readline.createInterface({ input: child.stdout });
 
@@ -2956,7 +2951,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private findLatestReviewTurnId(snapshot: CodexThreadSnapshot): TurnId | undefined {
     const latestReviewTurn = [...snapshot.turns]
-      .reverse()
+      .toReversed()
       .find((turn) => this.turnHasReviewItem(turn, "entered"));
     return latestReviewTurn?.id;
   }
@@ -3382,9 +3377,7 @@ function assertSupportedCodexCliVersion(input: {
   readonly cwd: string;
   readonly homePath?: string;
 }): void {
-  const env = buildCodexProcessEnv({
-    ...(input.homePath ? { homePath: input.homePath } : {}),
-  });
+  const env = buildCodexProcessEnv(input.homePath ? { homePath: input.homePath } : {});
   const prepared = prepareWindowsSafeProcess(input.binaryPath, ["--version"], {
     cwd: input.cwd,
     env,

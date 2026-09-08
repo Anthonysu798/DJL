@@ -1,3 +1,40 @@
+const buildPatchCall = (turnId, callId, fileName) =>
+  [
+    JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "task_started",
+        turn_id: turnId,
+      },
+    }),
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call",
+        status: "completed",
+        name: "apply_patch",
+        call_id: callId,
+        input: [
+          "*** Begin Patch",
+          `*** Update File: Sources/${fileName}`,
+          "@@",
+          '-let title = "Old"',
+          '+let title = "New"',
+          "*** End Patch",
+          "",
+        ].join("\n"),
+      },
+    }),
+    JSON.stringify({
+      type: "response_item",
+      payload: {
+        id: `${turnId}-final`,
+        type: "message",
+        role: "assistant",
+        content: [{ type: "output_text", text: "Done." }],
+      },
+    }),
+  ].join("\n");
 // FILE: bridge.test.js
 // Purpose: Verifies relay watchdog helpers used to recover from stale sleep/wake sockets.
 // Layer: Unit test
@@ -269,7 +306,8 @@ test("thread turns-list fast page returns JSONL once and reuses the late canonic
   };
 
   const fastSelectionPromise = coordinator.resolve(request, resolveOptions);
-  for (let attempt = 0; attempt < 10 && !releaseDeadline; attempt += 1) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (releaseDeadline) break;
     await Promise.resolve();
   }
   assert.ok(releaseDeadline);
@@ -606,7 +644,8 @@ test("thread turns-list handoff never returns newer canonical turns as older his
   };
 
   const firstSelectionPromise = coordinator.resolve(request, options);
-  for (let attempt = 0; attempt < 10 && !releaseDeadline; attempt += 1) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (releaseDeadline) break;
     await Promise.resolve();
   }
   releaseDeadline();
@@ -694,7 +733,8 @@ test("canonical reconciliation follows the canonical cursor until it reaches the
   };
 
   const firstSelectionPromise = coordinator.resolve(request, options);
-  for (let attempt = 0; attempt < 10 && !releaseDeadline; attempt += 1) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (releaseDeadline) break;
     await Promise.resolve();
   }
   releaseDeadline();
@@ -788,7 +828,8 @@ test("canonical reconciliation compacts every turn through the anchor under the 
   };
 
   const firstSelectionPromise = coordinator.resolve(request, options);
-  for (let attempt = 0; attempt < 10 && !releaseDeadline; attempt += 1) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (releaseDeadline) break;
     await Promise.resolve();
   }
   releaseDeadline();
@@ -869,7 +910,8 @@ test("canonical reconciliation does not search forever for a synthetic JSONL anc
   };
 
   const firstSelectionPromise = coordinator.resolve(request, options);
-  for (let attempt = 0; attempt < 10 && !releaseDeadline; attempt += 1) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (releaseDeadline) break;
     await Promise.resolve();
   }
   releaseDeadline();
@@ -1417,6 +1459,7 @@ test("fetchAdaptiveThreadTurnsListForRelay stops after a huge second turns-list 
   const pages = [
     { data: makeTurns(1, 1), nextCursor: "cursor-after-1" },
     {
+      // eslint-disable-next-line oxc/no-map-spread -- Preserve source records while creating normalized copies.
       data: makeTurns(2, 4).map((turn) => ({
         ...turn,
         items: [
@@ -1672,6 +1715,7 @@ test("fetchAdaptiveThreadTurnsListForRelay stops at the previous cursor boundary
           };
         }
         return {
+          // eslint-disable-next-line oxc/no-map-spread -- Preserve source records while creating normalized copies.
           data: makeTurns(2, 10).map((turn, index) => ({
             ...turn,
             items: turn.items.map((item) => ({
@@ -1713,6 +1757,7 @@ test("fetchAdaptiveThreadTurnsListForRelay falls back to one turn when five are 
           };
         }
         return {
+          // eslint-disable-next-line oxc/no-map-spread -- Preserve source records while creating normalized copies.
           data: makeTurns(2, 10).map((turn) => ({
             ...turn,
             items: turn.items.map((item) => ({
@@ -2852,44 +2897,6 @@ test("sanitizeThreadHistoryImagesForRelay caches JSONL artifact scans until the 
   const sessionsDir = path.join(codexHome, "sessions", "2026", "05", "19");
   const rolloutPath = path.join(sessionsDir, `rollout-2026-05-19T19-40-00-${threadId}.jsonl`);
   fs.mkdirSync(sessionsDir, { recursive: true });
-
-  const buildPatchCall = (turnId, callId, fileName) =>
-    [
-      JSON.stringify({
-        type: "event_msg",
-        payload: {
-          type: "task_started",
-          turn_id: turnId,
-        },
-      }),
-      JSON.stringify({
-        type: "response_item",
-        payload: {
-          type: "custom_tool_call",
-          status: "completed",
-          name: "apply_patch",
-          call_id: callId,
-          input: [
-            "*** Begin Patch",
-            `*** Update File: Sources/${fileName}`,
-            "@@",
-            '-let title = "Old"',
-            '+let title = "New"',
-            "*** End Patch",
-            "",
-          ].join("\n"),
-        },
-      }),
-      JSON.stringify({
-        type: "response_item",
-        payload: {
-          id: `${turnId}-final`,
-          type: "message",
-          role: "assistant",
-          content: [{ type: "output_text", text: "Done." }],
-        },
-      }),
-    ].join("\n");
 
   fs.writeFileSync(
     rolloutPath,
@@ -4035,7 +4042,7 @@ test("sanitizeThreadHistoryImagesForRelay bounds an extreme provisional JSONL tu
   });
   const sanitized = JSON.parse(sanitizedRaw);
   const keptItems = sanitized.result.data[0].items;
-  const itemIds = keptItems.map((item) => item.id);
+  const itemIds = new Set(keptItems.map((item) => item.id));
   const itemById = new Map(keptItems.map((item) => [item.id, item]));
 
   assert.ok(Buffer.byteLength(sanitizedRaw, "utf8") <= 4 * 1024 * 1024);
@@ -4045,10 +4052,10 @@ test("sanitizeThreadHistoryImagesForRelay bounds an extreme provisional JSONL tu
   assert.equal(sanitized.result.nextCursor, "djl-jsonl-handoff-v1:turn-line-4096:extreme-token");
   assert.equal(sanitized.result.data[0].id, "turn-line-4096");
   assert.ok(sanitized.result.data[0].items.length <= 64);
-  assert.equal(itemIds.includes("critical-user"), true);
-  assert.equal(itemIds.includes("critical-plan"), true);
-  assert.equal(itemIds.includes("critical-file-change"), true);
-  assert.equal(itemIds.includes(fillerItems.at(-1).id), true);
+  assert.equal(itemIds.has("critical-user"), true);
+  assert.equal(itemIds.has("critical-plan"), true);
+  assert.equal(itemIds.has("critical-file-change"), true);
+  assert.equal(itemIds.has(fillerItems.at(-1).id), true);
   assert.equal(itemById.get("critical-user")?.text, "Keep the prompt");
   assert.equal(itemById.get("critical-plan")?.text, "Keep the latest plan");
   assert.equal(itemById.get("critical-file-change")?.text, "Keep the file change");

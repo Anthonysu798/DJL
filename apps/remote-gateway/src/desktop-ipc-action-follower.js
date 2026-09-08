@@ -1,3 +1,15 @@
+function appServerResultForFollowerRequest(method, result) {
+  if (
+    method === "thread-follower-start-turn" &&
+    result &&
+    typeof result === "object" &&
+    !Array.isArray(result) &&
+    Object.prototype.hasOwnProperty.call(result, "result")
+  ) {
+    return result.result ?? null;
+  }
+  return result ?? null;
+}
 // FILE: desktop-ipc-action-follower.js
 // Purpose: Mirrors live Codex Desktop IPC pending actions to the phone and routes replies back to the desktop runtime.
 // Layer: CLI helper
@@ -99,7 +111,7 @@ function buildDesktopTurnsListResult(turns, params = {}) {
   const direction =
     normalizeToken(readString(params?.sortDirection) || "desc") === "asc" ? "asc" : "desc";
   const orderedTurns =
-    direction === "asc" ? chronologicalTurns.slice() : chronologicalTurns.slice().reverse();
+    direction === "asc" ? chronologicalTurns.slice() : chronologicalTurns.slice().toReversed();
 
   let startIndex = 0;
   const cursor = readString(params?.cursor);
@@ -1201,15 +1213,16 @@ function createDesktopIpcActionFollower({
   function buildDesktopLiveTurnStateResult(turns) {
     const data = (Array.isArray(turns) ? turns : [])
       .slice()
-      .reverse()
+      .toReversed()
       .map((turn) => {
         const id = readString(turn?.id) || readString(turn?.turnId) || readString(turn?.turn_id);
-        return {
-          ...(id ? { id } : {}),
+        const result = {
           // Unknown status must never invent an interruptible turn. Live
           // activity still carries explicit inProgress/running statuses.
           status: readString(turn?.status) || "completed",
         };
+        if (id) result.id = id;
+        return result;
       });
     return {
       data,
@@ -1768,19 +1781,6 @@ function createDesktopIpcActionFollower({
           }),
         );
       });
-  }
-
-  function appServerResultForFollowerRequest(method, result) {
-    if (
-      method === "thread-follower-start-turn" &&
-      result &&
-      typeof result === "object" &&
-      !Array.isArray(result) &&
-      Object.prototype.hasOwnProperty.call(result, "result")
-    ) {
-      return result.result ?? null;
-    }
-    return result ?? null;
   }
 
   function readTurnIdFromAppServerResult(result) {
@@ -2833,7 +2833,7 @@ function boundedDesktopLiveTurns(
     selectedIndexes.add(index);
   }
   const selectedTurns = Array.from(selectedIndexes)
-    .sort((left, right) => left - right)
+    .toSorted((left, right) => left - right)
     .map((index) => withStableProjectedTurnId(orderedTurns[index], index));
   return normalizeBoundedTurnsForRuntime(selectedTurns, state);
 }
@@ -2872,7 +2872,8 @@ function boundedIndexedDesktopLiveTurns(state, index, nowValue, retainedTurnIds)
   const selectedTurns = Array.from(selectedTurnIds)
     .map((turnId) => index.entryIndexByTurnId.get(turnId))
     .filter((entryIndex) => entryIndex != null)
-    .sort((left, right) => left - right)
+    .toSorted((left, right) => left - right)
+    // eslint-disable-next-line oxc/no-map-spread -- Preserve source records while creating normalized copies.
     .map((entryIndex) => {
       const entry = index.entries[entryIndex];
       const turn = resolveIndexedTurn(state, entry);
@@ -2948,7 +2949,7 @@ function notificationWithTurnIdentityContinuity(notification) {
   return {
     ...notification,
     params: {
-      ...(notification.params || {}),
+      ...notification.params,
       // This is the same logical run re-announced under canonical Desktop IDs,
       // not a new turn. The phone keeps its recovered-turn viewport ownership.
       djlTurnIdentityContinuity: true,

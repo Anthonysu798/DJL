@@ -55,6 +55,7 @@ export function needsDocumentReview(artifact: DocumentArtifactPreview): boolean 
   );
 }
 
+/* oxlint-disable react/no-array-index-key -- These read-only snapshot rows have no state and may contain identical repeated content. Position distinguishes duplicates. */
 export function DocumentArtifactPreviewContent(props: {
   readonly artifact: DocumentArtifactPreview;
   readonly showTitle?: boolean;
@@ -139,3 +140,4 @@ export function DocumentArtifactPreviewContent(props: {
     </article>
   );
 }
+/* oxlint-enable react/no-array-index-key */

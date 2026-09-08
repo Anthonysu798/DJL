@@ -54,8 +54,7 @@ export function activateThreadFromSidebarIntent(
     activeSplitView,
     clearSelection,
     navigate,
-    openChatThreadPage,
-    openTerminalThreadPage,
+
     prewarmThreadDetailForIntent,
     rememberLastThreadRouteNow,
     routeSplitViewId,
@@ -66,7 +65,6 @@ export function activateThreadFromSidebarIntent(
     setSplitFocusedPane,
     sidebarThreadSummaryById,
     splitViewsById,
-    terminalStateByThreadId,
   } = input;
 
   // Active split wins first; otherwise every persisted split block can restore deterministically.

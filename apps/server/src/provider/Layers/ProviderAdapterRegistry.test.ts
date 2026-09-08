@@ -1,12 +1,19 @@
+import {
+  NativeCodexAdapter,
+  NativeClaudeAdapter,
+  NativeCursorAdapter,
+  NativeGrokAdapter,
+  NativeKimiAdapter,
+} from "../../harnesses/native/layer";
 import type { ProviderKind } from "@synara/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 
 import { Effect, Layer, Stream } from "effect";
 
-import { ClaudeAdapter, ClaudeAdapterShape } from "../Services/ClaudeAdapter.ts";
-import { CodexAdapter, CodexAdapterShape } from "../Services/CodexAdapter.ts";
-import { CursorAdapter, CursorAdapterShape } from "../Services/CursorAdapter.ts";
+import type { ClaudeAdapterShape } from "../Services/ClaudeAdapter.ts";
+import type { CodexAdapterShape } from "../Services/CodexAdapter.ts";
+import type { CursorAdapterShape } from "../Services/CursorAdapter.ts";
 import { DroidAdapter, DroidAdapterShape } from "../Services/DroidAdapter.ts";
 import { GeminiAdapter, GeminiAdapterShape } from "../Services/GeminiAdapter.ts";
 import { GrokAdapter, GrokAdapterShape } from "../Services/GrokAdapter.ts";
@@ -182,9 +189,11 @@ const layer = it.layer(
     Layer.provide(
       ProviderAdapterRegistryLive,
       Layer.mergeAll(
-        Layer.succeed(CodexAdapter, fakeCodexAdapter),
-        Layer.succeed(ClaudeAdapter, fakeClaudeAdapter),
-        Layer.succeed(CursorAdapter, fakeCursorAdapter),
+        Layer.succeed(NativeCodexAdapter, fakeCodexAdapter),
+        Layer.succeed(NativeClaudeAdapter, fakeClaudeAdapter),
+        Layer.succeed(NativeCursorAdapter, fakeCursorAdapter),
+        Layer.succeed(NativeGrokAdapter, fakeGrokAdapter),
+        Layer.succeed(NativeKimiAdapter, { ...fakeGrokAdapter, provider: "kimi" }),
         Layer.succeed(GeminiAdapter, fakeGeminiAdapter),
         Layer.succeed(GrokAdapter, fakeGrokAdapter),
         Layer.succeed(DroidAdapter, fakeDroidAdapter),
@@ -198,14 +207,18 @@ const layer = it.layer(
 );
 
 layer("ProviderAdapterRegistryLive", (it) => {
-  it.effect("registers OpenCode as the sole runtime adapter", () =>
+  it.effect("registers OpenCode alongside the fresh native runtime adapters", () =>
     Effect.gen(function* () {
       const registry = yield* ProviderAdapterRegistry;
       const opencode = yield* registry.getByProvider("opencode");
       assert.equal(opencode, fakeOpenCodeAdapter);
 
       const providers = yield* registry.listProviders();
-      assert.deepEqual(providers, ["opencode"]);
+      assert.deepEqual(providers, ["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi"]);
+      assert.equal(yield* registry.getByProvider("codex"), fakeCodexAdapter);
+      assert.equal(yield* registry.getByProvider("claudeAgent"), fakeClaudeAdapter);
+      assert.equal(yield* registry.getByProvider("cursor"), fakeCursorAdapter);
+      assert.equal(yield* registry.getByProvider("grok"), fakeGrokAdapter);
     }),
   );
 

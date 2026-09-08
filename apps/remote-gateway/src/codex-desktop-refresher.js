@@ -546,7 +546,7 @@ class CodexDesktopRefresher {
 
 function readBridgeConfig({
   env = process.env,
-  platform = process.platform,
+  platform: _platform = process.platform,
   runtimeRoot = path.resolve(__dirname, ".."),
   fsImpl = fs,
 } = {}) {

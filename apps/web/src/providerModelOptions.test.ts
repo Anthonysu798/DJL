@@ -20,6 +20,17 @@ import {
 } from "./providerModelOptions";
 
 describe("formatProviderModelOptionName", () => {
+  it("shows runtime-advertised Grok models while retaining explicit custom models", () => {
+    const options = mergeDynamicModelOptions({
+      provider: "grok",
+      staticOptions: [
+        { slug: "grok-build", name: "Legacy Grok" },
+        { slug: "private-model", name: "Custom", isCustom: true },
+      ],
+      dynamicModels: [{ slug: "grok-4.6", name: "Grok 4.6" }],
+    });
+    expect(options.map((model) => model.slug).toSorted()).toEqual(["grok-4.6", "private-model"]);
+  });
   it("prefers a measured local capability tier over advertised support", () => {
     expect(
       modelCapabilityTier({

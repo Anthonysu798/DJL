@@ -263,7 +263,7 @@ function completeHeartbeatRun(input: {
 }
 
 function holdCompletionEvaluation() {
-  let releaseEvaluation: () => void = () => undefined;
+  let releaseEvaluation: () => void;
   const started = new Promise<void>((resolve) => {
     completionEvaluationGate = {
       started: resolve,

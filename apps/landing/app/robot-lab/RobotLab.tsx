@@ -124,18 +124,13 @@ const smooth = (value: number) => {
   const t = clamp01(value);
   return t * t * (3 - 2 * t);
 };
-const modelName = (name: string) =>
-  name.replace(/_\d+$/, "").replaceAll("_", " ");
+const modelName = (name: string) => name.replace(/_\d+$/, "").replaceAll("_", " ");
 const isModelPart = (name: string, expected: string) => {
   const normalized = name.replaceAll("_", " ");
   return normalized === expected || normalized.startsWith(`${expected} `);
 };
 
-function makePivot(
-  parent: THREE.Object3D,
-  worldPosition: THREE.Vector3,
-  name: string,
-) {
+function makePivot(parent: THREE.Object3D, worldPosition: THREE.Vector3, name: string) {
   parent.updateMatrixWorld(true);
   const pivot = new THREE.Group();
   pivot.name = name;
@@ -287,11 +282,7 @@ function applyJoint(
 function addVisorReflection(head: THREE.Object3D): VisorReflection | null {
   let visor: THREE.Mesh | null = null;
   head.traverse((object) => {
-    if (
-      !visor
-      && object instanceof THREE.Mesh
-      && isModelPart(object.name, "Head 2")
-    ) {
+    if (!visor && object instanceof THREE.Mesh && isModelPart(object.name, "Head 2")) {
       visor = object;
     }
   });
@@ -451,11 +442,7 @@ function addMatrixEyes(headPivot: THREE.Object3D, head: THREE.Object3D) {
   return eyeGroup;
 }
 
-function attachFittedCap(
-  headPivot: THREE.Object3D,
-  robot: THREE.Group,
-  cap: THREE.Group,
-) {
+function attachFittedCap(headPivot: THREE.Object3D, robot: THREE.Group, cap: THREE.Group) {
   cap.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
     object.castShadow = true;
@@ -480,8 +467,7 @@ function attachFittedHoodie(robot: THREE.Group, hoodie: THREE.Group) {
       parent = parent.parent;
     }
 
-    const isUpperArmShell =
-      part === "Cube 2" && parents.some((name) => name === "arm");
+    const isUpperArmShell = part === "Cube 2" && parents.some((name) => name === "arm");
     if (isUpperArmShell) object.visible = false;
   });
 
@@ -514,9 +500,9 @@ function makeCarbonMaterial(texture: THREE.Texture) {
 
     for (let offset = 0; offset < pixels.data.length; offset += 4) {
       const luma =
-        pixels.data[offset] * 0.299
-        + pixels.data[offset + 1] * 0.587
-        + pixels.data[offset + 2] * 0.114;
+        pixels.data[offset] * 0.299 +
+        pixels.data[offset + 1] * 0.587 +
+        pixels.data[offset + 2] * 0.114;
       const weave = clamp01((luma - 8) / 61);
       const graphite = Math.round(188 + weave * 34);
       pixels.data[offset] = graphite;
@@ -630,10 +616,10 @@ function materializeRobot(root: THREE.Group, carbonTexture: THREE.Texture) {
     const ancestry = parentNames.join("/");
     const name = modelName(object.name);
     const shell =
-      isModelPart(object.name, "Body")
-      || isModelPart(object.name, "Cube 2")
-      || isModelPart(object.name, "Cube 3")
-      || isModelPart(object.name, "Cube 4");
+      isModelPart(object.name, "Body") ||
+      isModelPart(object.name, "Cube 2") ||
+      isModelPart(object.name, "Cube 3") ||
+      isModelPart(object.name, "Cube 4");
 
     if (isModelPart(object.name, "Head 2")) {
       object.material = visor;
@@ -683,11 +669,7 @@ function makeRuntimeCodeTexture(tokens: RuntimeCodeToken[], index: number) {
   context.font = '600 15px "Consolas", monospace';
   context.textAlign = "left";
   context.textBaseline = "alphabetic";
-  context.fillText(
-    `DJL.RUNTIME / ${String(index + 1).padStart(2, "0")}`,
-    86,
-    65,
-  );
+  context.fillText(`DJL.RUNTIME / ${String(index + 1).padStart(2, "0")}`, 86, 65);
 
   context.strokeStyle = "rgba(47, 119, 170, 0.24)";
   context.lineWidth = 1;
@@ -754,8 +736,7 @@ export function RobotLab({
     if (!mount) return;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const includeHoodie =
-      new URLSearchParams(window.location.search).get("hoodie") === "1";
+    const includeHoodie = new URLSearchParams(window.location.search).get("hoodie") === "1";
     const scene = new THREE.Scene();
     const dark = new THREE.Color(0x020304);
     const light = new THREE.Color(0xf2f4f6);
@@ -858,11 +839,7 @@ export function RobotLab({
     let visorReflection: VisorReflection | null = null;
     let introStart = 0;
     let bootTimer = 0;
-    const ownedMaterials: THREE.Material[] = [
-      floorMaterial,
-      plinthMaterial,
-      ringMaterial,
-    ];
+    const ownedMaterials: THREE.Material[] = [floorMaterial, plinthMaterial, ringMaterial];
     const ownedTextures: THREE.Texture[] = [environment];
     const codeField = new THREE.Group();
     const codeRibbons: CodeRibbon[] = [];
@@ -875,10 +852,7 @@ export function RobotLab({
       const spacing = 6.8;
       const copies = 3;
       const span = spacing * copies;
-      const maxAnisotropy = Math.min(
-        4,
-        renderer.capabilities.getMaxAnisotropy(),
-      );
+      const maxAnisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
 
       RUNTIME_CODE_TRACKS.forEach((tokens, trackIndex) => {
         const texture = makeRuntimeCodeTexture(tokens, trackIndex);
@@ -900,10 +874,7 @@ export function RobotLab({
 
         const stagger = (trackIndex * 1.13) % spacing;
         for (let copy = 0; copy < copies; copy += 1) {
-          const mesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(6.2, 0.32),
-            material,
-          );
+          const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 0.32), material);
           mesh.name = `DJL code ribbon ${trackIndex + 1}.${copy + 1}`;
           mesh.position.set(
             -10.2 + copy * spacing - stagger,
@@ -985,17 +956,9 @@ export function RobotLab({
     const bodyPointer = new THREE.Vector2();
     const cameraTarget = new THREE.Vector3(0, 5.02, 0.16);
     const background = dark.clone();
-    const closeCamera = new THREE.Vector3(
-      0,
-      embedded ? 5.1 : 5.02,
-      embedded ? 2.76 : 2.42,
-    );
+    const closeCamera = new THREE.Vector3(0, embedded ? 5.1 : 5.02, embedded ? 2.76 : 2.42);
     const endCamera = new THREE.Vector3();
-    const closeTarget = new THREE.Vector3(
-      0,
-      embedded ? 5.12 : 5.02,
-      0.15,
-    );
+    const closeTarget = new THREE.Vector3(0, embedded ? 5.12 : 5.02, 0.15);
     const endTarget = new THREE.Vector3();
     const euler = new THREE.Euler();
     const delta = new THREE.Quaternion();
@@ -1004,11 +967,8 @@ export function RobotLab({
     let disposed = false;
     let robotVisible = true;
     let gatewayState = document.documentElement.dataset.djlGatewayState ?? "hero-ready";
-    const frozenForGateway = (value: string) => (
-      value.startsWith("playing")
-      || value.startsWith("settling")
-      || value === "rail-ready"
-    );
+    const frozenForGateway = (value: string) =>
+      value.startsWith("playing") || value.startsWith("settling") || value === "rail-ready";
     const onPointerMove = (event: PointerEvent) => {
       const rect = mount.getBoundingClientRect();
       targetPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1051,9 +1011,7 @@ export function RobotLab({
     visibilityObserver.observe(mount);
     const onGatewayState = (event: Event) => {
       const wasFrozen = frozenForGateway(gatewayState);
-      const nextState = (
-        event as CustomEvent<{ state?: string }>
-      ).detail?.state ?? gatewayState;
+      const nextState = (event as CustomEvent<{ state?: string }>).detail?.state ?? gatewayState;
       gatewayState = nextState;
       if (wasFrozen && !frozenForGateway(nextState)) {
         lastFrameTime = performance.now();
@@ -1071,23 +1029,9 @@ export function RobotLab({
       const dt = Math.min((now - lastFrameTime) / 1000, 0.05);
       lastFrameTime = now;
       const pointerDistance = headPointer.distanceTo(targetPointer);
-      const headResponse = THREE.MathUtils.lerp(
-        19,
-        36,
-        clamp01(pointerDistance * 1.65),
-      );
-      headPointer.x = THREE.MathUtils.damp(
-        headPointer.x,
-        targetPointer.x,
-        headResponse,
-        dt,
-      );
-      headPointer.y = THREE.MathUtils.damp(
-        headPointer.y,
-        targetPointer.y,
-        headResponse,
-        dt,
-      );
+      const headResponse = THREE.MathUtils.lerp(19, 36, clamp01(pointerDistance * 1.65));
+      headPointer.x = THREE.MathUtils.damp(headPointer.x, targetPointer.x, headResponse, dt);
+      headPointer.y = THREE.MathUtils.damp(headPointer.y, targetPointer.y, headResponse, dt);
       bodyPointer.x = THREE.MathUtils.damp(bodyPointer.x, targetPointer.x, 10, dt);
       bodyPointer.y = THREE.MathUtils.damp(bodyPointer.y, targetPointer.y, 10, dt);
       if (visorReflection) {
@@ -1132,8 +1076,7 @@ export function RobotLab({
 
       if (rig) {
         const idle = reduceMotion ? 0 : Math.sin(now * 0.00165) * 0.018;
-        const armPhase =
-          introStart > 0 ? ((now - introStart) / 10800) * Math.PI * 2 : 0;
+        const armPhase = introStart > 0 ? ((now - introStart) / 10800) * Math.PI * 2 : 0;
         const armLift = reduceMotion ? 0.22 : 0.5 + Math.sin(armPhase) * 0.5;
         const armEase = smooth(armLift);
         const palmTurn = smooth((armEase - 0.16) / 0.84);
@@ -1241,7 +1184,11 @@ export function RobotLab({
 
   return (
     <main className={`robot-lab${embedded ? " robot-lab--embedded" : ""}`}>
-      <div ref={mountRef} className="robot-lab__viewport" aria-label="DJL robot interactive preview" />
+      <div
+        ref={mountRef}
+        className="robot-lab__viewport"
+        aria-label="DJL robot interactive preview"
+      />
 
       {!embedded ? (
         <>

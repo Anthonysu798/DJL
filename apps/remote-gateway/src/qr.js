@@ -71,7 +71,7 @@ function shouldPrintPairingJson({ env = process.env, explicitValue } = {}) {
     return explicitValue;
   }
 
-  const rawValue = env?.DJL_PRINT_PAIRING_JSON || env?.DJL_PRINT_PAIRING_JSON || "";
+  const rawValue = env?.DJL_PRINT_PAIRING_JSON || "";
   return ["1", "true", "yes", "on"].includes(String(rawValue).trim().toLowerCase());
 }
 

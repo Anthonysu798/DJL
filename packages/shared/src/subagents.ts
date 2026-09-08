@@ -652,7 +652,7 @@ export function resolveSubagentIdentityFromDirectory(
   }
 
   return mergeSubagentIdentityHints(agentEntry, {
-    ...(threadEntry ?? {}),
+    ...threadEntry,
     providerThreadId:
       threadEntry?.providerThreadId ?? agentEntry?.providerThreadId ?? normalizedProviderThreadId,
     agentId: threadEntry?.agentId ?? agentEntry?.agentId ?? normalizedAgentId,

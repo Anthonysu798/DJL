@@ -217,7 +217,6 @@ describe("settings, profile, notifications, and release localization", () => {
       "project-order",
       "thread-order",
       "project-instructions",
-      "git-writing-model",
       "keybindings",
       "release-history",
     ]) {
@@ -225,7 +224,8 @@ describe("settings, profile, notifications, and release localization", () => {
     }
     expect(source).toContain("id={SETTINGS_TARGETS.environmentPanel}");
     expect(source).toContain("id={SETTINGS_TARGETS.providerUpdates}");
-    expect(source).toContain("id={SETTINGS_TARGETS.providerInstalls}");
+    expect(source).toContain("<HarnessAccountsPanel />");
+    expect(source).toContain("<OpenCodeModelsSettingsPanel");
     expect(source).not.toContain('t("search.entries.general.default-provider.title")');
   });
 

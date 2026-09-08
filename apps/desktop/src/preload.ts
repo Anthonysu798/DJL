@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, DesktopBuildInfo } from "@synara/contracts";
+import { RENDERER_READY_CHANNEL } from "./windowReveal";
 import { BROWSER_IPC_CHANNELS } from "./browserIpcChannels";
 import { DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";
 import {
@@ -52,6 +53,7 @@ function getDesktopWsUrl(): string | null {
 }
 
 contextBridge.exposeInMainWorld("desktopBridge", {
+  notifyReady: () => ipcRenderer.send(RENDERER_READY_CHANNEL),
   getWsUrl: getDesktopWsUrl,
   getBuildInfo: () => ipcRenderer.sendSync(DESKTOP_BUILD_INFO_CHANNEL) as DesktopBuildInfo,
   locale: {

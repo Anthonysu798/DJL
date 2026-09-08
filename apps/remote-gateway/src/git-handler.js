@@ -435,7 +435,7 @@ async function threadGenerateTitle(params, options = {}) {
 async function gitPush(cwd) {
   try {
     const statusOutput = await git(cwd, "status", "--porcelain=v1", "-b");
-    const branchLine = statusOutput.trim().split("\n").filter(Boolean)[0] || "";
+    const branchLine = statusOutput.trim().split("\n").find(Boolean) || "";
     const tracking = parseTrackingFromStatus(branchLine);
     if (!(await pushRemoteAvailable(cwd, tracking))) {
       throw gitError("no_remote", "Add a Git remote before pushing.");
@@ -541,12 +541,12 @@ async function gitBranches(cwd) {
       }
     }
   }
-  const resolvedBranches = [...branchSet].sort();
+  const resolvedBranches = [...branchSet].toSorted();
   const defaultBranch = await detectDefaultBranch(cwd, resolvedBranches);
 
   return {
     branches: resolvedBranches,
-    branchesCheckedOutElsewhere: [...branchesCheckedOutElsewhere].sort(),
+    branchesCheckedOutElsewhere: [...branchesCheckedOutElsewhere].toSorted(),
     worktreePathByBranch,
     localCheckoutPath,
     current,
@@ -1736,8 +1736,7 @@ function normalizeDraftErrorDetail(error) {
     trimmed
       .split("\n")
       .map((line) => line.trim())
-      .filter(Boolean)
-      .pop() || trimmed;
+      .findLast(Boolean) || trimmed;
   return singleLine.endsWith(".") ? singleLine : `${singleLine}.`;
 }
 
@@ -1909,8 +1908,7 @@ function createCodexExecFailure(code, signal, stdout, stderr) {
     .filter(Boolean)
     .flatMap((value) => value.split("\n"))
     .map((line) => line.trim())
-    .filter(Boolean)
-    .pop();
+    .findLast(Boolean);
 
   const suffix = detail ? ` ${detail}` : "";
   const error = new Error(
@@ -2551,7 +2549,7 @@ async function gitDiffNoIndexNumstat(cwd, filePath) {
       return err.stdout || "";
     }
     const msg = (err.stderr || err.message || "").trim();
-    throw new Error(msg || "git diff --no-index failed");
+    throw new Error(msg || "git diff --no-index failed", { cause: err });
   }
 }
 
@@ -2579,7 +2577,7 @@ async function gitDiffNoIndexPatch(cwd, filePath) {
       return err.stdout || "";
     }
     const msg = (err.stderr || err.message || "").trim();
-    throw new Error(msg || "git diff --no-index failed");
+    throw new Error(msg || "git diff --no-index failed", { cause: err });
   }
 }
 
@@ -2734,7 +2732,7 @@ function gitError(errorCode, userMessage) {
   return err;
 }
 
-function nonRepositoryStatus(cwd) {
+function nonRepositoryStatus(_cwd) {
   return {
     isRepo: false,
     repoRoot: null,
@@ -2765,7 +2763,7 @@ async function isInsideGitWorkTree(cwd) {
 
 async function currentBranchFromStatus(cwd) {
   const output = await git(cwd, "status", "--porcelain=v1", "-b");
-  const branchLine = output.trim().split("\n").filter(Boolean)[0] || "";
+  const branchLine = output.trim().split("\n").find(Boolean) || "";
   return parseBranchFromStatus(branchLine);
 }
 

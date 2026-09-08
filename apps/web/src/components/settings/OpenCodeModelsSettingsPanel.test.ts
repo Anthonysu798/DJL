@@ -17,6 +17,14 @@ describe("modelProviderStatusText", () => {
 });
 
 describe("resolveGuidedProviderId", () => {
+  it("does not send the API-key guide to an OAuth-only connection", () => {
+    expect(
+      resolveGuidedProviderId([
+        { id: "github-copilot", connected: false, supportsApiKey: false },
+        { id: "zai-coding-plan", connected: false, supportsApiKey: true },
+      ]),
+    ).toBe("zai-coding-plan");
+  });
   it("prefers the first unconnected provider and falls back to the first provider", () => {
     expect(
       resolveGuidedProviderId([

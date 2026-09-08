@@ -1,3 +1,13 @@
+const snapshot = (threadId) => ({
+  turns: [
+    {
+      turnId: `turn-${threadId}`,
+      status: "inProgress",
+      items: [{ id: `assistant-${threadId}`, type: "agentMessage", text: "hello" }],
+    },
+  ],
+});
+
 // FILE: desktop-ipc-conversation-projector.test.js
 // Purpose: Unit tests for projecting Desktop conversationState into mobile app-server notifications.
 // Layer: Unit test
@@ -638,15 +648,6 @@ test("desktop conversation projector keeps running items open until they finish"
 
 test("desktop conversation projector reseeds evicted threads without replaying history", () => {
   const projector = createDesktopConversationProjector({ maxCacheSize: 1 });
-  const snapshot = (threadId) => ({
-    turns: [
-      {
-        turnId: `turn-${threadId}`,
-        status: "inProgress",
-        items: [{ id: `assistant-${threadId}`, type: "agentMessage", text: "hello" }],
-      },
-    ],
-  });
 
   projector.project("thread-evict-a", snapshot("thread-evict-a"));
   // Filling the cache with a second thread evicts the first.
@@ -675,6 +676,7 @@ test("desktop conversation projector reseeds evicted threads without replaying h
 
 test("desktop conversation projector bootstraps fresh after explicit removal", () => {
   const projector = createDesktopConversationProjector({ maxCacheSize: 1 });
+
   const snapshot = {
     turns: [
       {
@@ -684,7 +686,6 @@ test("desktop conversation projector bootstraps fresh after explicit removal", (
       },
     ],
   };
-
   projector.project("thread-remove", snapshot);
   projector.remove("thread-remove");
 

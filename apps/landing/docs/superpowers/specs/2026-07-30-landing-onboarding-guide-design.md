@@ -55,14 +55,14 @@ least {{required}}K to use tools."
 
 ### Curated catalog (source of truth: `catalog.ts`)
 
-| Model | Min memory | Ollama download | Drives the agent |
-|---|---|---|---|
-| Qwen3 1.7B | 4 GB | 1.4 GB | No — chat only |
-| Qwen3.5 2B | 8 GB | 1.9 GB | No — chat only |
-| Granite 4.1 3B | 8 GB | 2.1 GB | Yes |
-| Qwen2.5 Coder 7B | 16 GB | 4.36 GB | Yes |
-| GPT-OSS 20B | 16 GB | 13 GB | Yes |
-| Qwen3 Coder 30B | 32 GB | 19 GB | Yes |
+| Model            | Min memory | Ollama download | Drives the agent |
+| ---------------- | ---------- | --------------- | ---------------- |
+| Qwen3 1.7B       | 4 GB       | 1.4 GB          | No — chat only   |
+| Qwen3.5 2B       | 8 GB       | 1.9 GB          | No — chat only   |
+| Granite 4.1 3B   | 8 GB       | 2.1 GB          | Yes              |
+| Qwen2.5 Coder 7B | 16 GB      | 4.36 GB         | Yes              |
+| GPT-OSS 20B      | 16 GB      | 13 GB           | Yes              |
+| Qwen3 Coder 30B  | 32 GB      | 19 GB           | Yes              |
 
 ## Approach
 
@@ -88,7 +88,7 @@ Reuses the existing bilingual `workflow` and `console.review` copy that is curre
 1. Describe the task in either language.
 2. **Plan** — work is decomposed into ordered steps you read before anything runs.
 3. **Tools** — each tool executes sandboxed, streaming output so nothing happens off-screen.
-4. **Review** — every diff waits: *Approve & apply*, *Request changes*, or *Cancel / rollback*.
+4. **Review** — every diff waits: _Approve & apply_, _Request changes_, or _Cancel / rollback_.
 
 ### Content, part 2 — Installing a local model
 

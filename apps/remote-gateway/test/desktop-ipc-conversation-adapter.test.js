@@ -1,3 +1,7 @@
+function fixedClock(value) {
+  return () => value;
+}
+
 // FILE: desktop-ipc-conversation-adapter.test.js
 // Purpose: Unit tests for the app-server to Desktop conversationState adapter and patch engine.
 // Layer: Unit test
@@ -130,7 +134,7 @@ test("conversation adapter supplies receiverThreads required by Desktop collab r
 test("conversation adapter evicts pre-existing contextual items on merge", () => {
   const conversations = new Map();
   const owned = new Set(["thread-context-merge"]);
-  const now = () => 9;
+  const now = fixedClock(9);
   const contextualItem = {
     id: "ctx-stale",
     type: "userMessage",
@@ -180,7 +184,7 @@ test("conversation adapter strips injected context carried inside turn.items", (
   const envText = "<environment_context>\n  <cwd>/Users/me/proj</cwd>\n</environment_context>";
   const conversations = new Map();
   const owned = new Set(["thread-turn-items"]);
-  const now = () => 3;
+  const now = fixedClock(3);
 
   // turn/completed carries the full turn.items on turn 1, injected context first.
   applyAppServerMessageToConversationState({
@@ -291,7 +295,7 @@ test("conversation adapter adopts live mixed context prompt item into params inp
   ].join("\n");
   const conversations = new Map();
   const owned = new Set(["thread-live-wrapper"]);
-  const now = () => 7;
+  const now = fixedClock(7);
 
   applyAppServerMessageToConversationState({
     conversations,
@@ -334,7 +338,7 @@ test("conversation adapter adopts live mixed context prompt item into params inp
 test("conversation adapter drops injected context user items from live item events", () => {
   const conversations = new Map();
   const owned = new Set(["thread-context-live"]);
-  const now = () => 5;
+  const now = fixedClock(5);
 
   applyAppServerMessageToConversationState({
     conversations,
@@ -399,7 +403,7 @@ test("conversation state patch builder falls back when patches are too large", (
 test("conversation adapter streams fileChange output deltas into fileChange items", () => {
   const conversations = new Map();
   const owned = new Set(["thread-file-change"]);
-  const now = () => 42;
+  const now = fixedClock(42);
 
   let update = applyAppServerMessageToConversationState({
     conversations,
@@ -578,7 +582,7 @@ test("conversation adapter keeps turnless fileChange events off optimistic pendi
 test("conversation adapter tracks requests and resolved notifications", () => {
   const conversations = new Map();
   const owned = new Set(["thread-adapter"]);
-  const now = () => 42;
+  const now = fixedClock(42);
   let update = applyAppServerMessageToConversationState({
     conversations,
     now,
@@ -653,7 +657,7 @@ test("conversation adapter keeps the prompt in params and drops the echoed userM
     ],
   ]);
   const owned = new Set(["thread-canonical-user"]);
-  const now = () => 42;
+  const now = fixedClock(42);
 
   let update = applyAppServerMessageToConversationState({
     conversations,
@@ -769,7 +773,7 @@ test("conversation adapter dedupes the echoed prompt after fallback turn id prom
     ],
   ]);
   const owned = new Set(["thread-promoted-user"]);
-  const now = () => 7;
+  const now = fixedClock(7);
 
   // turn/started arrives without a usable turn id, so the turn is created
   // under a fallback id with the prompt held in params.input only.
@@ -907,7 +911,7 @@ test("conversation adapter propagates phone turn model and effort to composer fi
     ],
   ]);
   const owned = new Set(["thread-model-meta"]);
-  const now = () => 21;
+  const now = fixedClock(21);
 
   applyAppServerMessageToConversationState({
     conversations,
@@ -959,7 +963,7 @@ test("conversation adapter consumes pending turn starts FIFO for rapid consecuti
     ],
   ]);
   const owned = new Set(["thread-fifo"]);
-  const now = () => 11;
+  const now = fixedClock(11);
 
   for (const turnId of ["turn-fifo-1", "turn-fifo-2"]) {
     applyAppServerMessageToConversationState({

@@ -11,7 +11,6 @@ const { randomBytes, randomUUID, generateKeyPairSync } = require("crypto");
 const { execFileSync } = require("child_process");
 
 const DEFAULT_STORE_DIR = path.join(os.homedir(), ".djl", "remote");
-const DEFAULT_STORE_FILE = path.join(DEFAULT_STORE_DIR, "device-state.json");
 const KEYCHAIN_SERVICE = "app.djl.remote-gateway.device-state";
 const KEYCHAIN_ACCOUNT = "default";
 let hasLoggedKeychainMismatch = false;
@@ -106,7 +105,7 @@ function resetBridgeTrustState() {
 }
 
 // Generates a fresh relay session for every bridge launch so QR pairing stays explicit per-run.
-function resolveBridgeRelaySession(state, { persist = true } = {}) {
+function resolveBridgeRelaySession(state, { persist: _persist = true } = {}) {
   return {
     deviceState: state,
     isPersistent: false,
@@ -177,10 +176,6 @@ function getTrustedPhonePublicKey(state, phoneDeviceId) {
     return null;
   }
   return state.trustedPhones?.[normalizedDeviceId] || null;
-}
-
-function hasTrustedPhones(state) {
-  return Object.keys(state?.trustedPhones || {}).length > 0;
 }
 
 function createBridgeDeviceState() {

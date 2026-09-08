@@ -262,9 +262,9 @@ function diagnoseSessionJsonl(filePath, options = {}) {
     }
   }
 
-  const sortedTurns = turns.sort((a, b) => a.firstLine - b.firstLine);
-  summary.observed.threadIds = Array.from(threadIds).sort();
-  summary.observed.turnIds = Array.from(turnIds).sort();
+  const sortedTurns = turns.toSorted((a, b) => a.firstLine - b.firstLine);
+  summary.observed.threadIds = Array.from(threadIds).toSorted();
+  summary.observed.turnIds = Array.from(turnIds).toSorted();
   summary.history.turnCount = sortedTurns.length;
   summary.history.itemCount = sortedTurns.reduce((total, turn) => total + turn.items.length, 0);
   summary.history.turnsWithNoItems = sortedTurns.filter((turn) => turn.items.length === 0).length;
@@ -275,7 +275,7 @@ function diagnoseSessionJsonl(filePath, options = {}) {
   const recentPage = {
     id: "diagnostic-thread-turns-list",
     result: {
-      data: sortedTurns.slice(-recentTurnsLimit).reverse().map(toWireTurn),
+      data: sortedTurns.slice(-recentTurnsLimit).toReversed().map(toWireTurn),
       nextCursor: sortedTurns.length > recentTurnsLimit ? "diagnostic-has-older-turns" : null,
     },
   };
@@ -380,19 +380,23 @@ function summarizeTurn(turn, includeText) {
     firstLine: turn.firstLine,
     lastLine: turn.lastLine,
     status: turn.status || null,
-    sourceKinds: Array.from(turn.sourceKinds).sort(),
+    sourceKinds: Array.from(turn.sourceKinds).toSorted(),
     itemCount: turn.items.length,
     rawItemBytes: turn.items.reduce((total, item) => total + item.rawBytes, 0),
     textBytes: turn.items.reduce((total, item) => total + item.textBytes, 0),
-    items: turn.items.slice(-5).map((item) => ({
-      id: item.id,
-      type: item.type,
-      role: item.role,
-      line: item.line,
-      textBytes: item.textBytes,
-      rawBytes: item.rawBytes,
-      ...(includeText && item.textPreview !== undefined ? { textPreview: item.textPreview } : {}),
-    })),
+    items: turn.items.slice(-5).map((item) =>
+      Object.assign(
+        {
+          id: item.id,
+          type: item.type,
+          role: item.role,
+          line: item.line,
+          textBytes: item.textBytes,
+          rawBytes: item.rawBytes,
+        },
+        includeText && item.textPreview !== undefined ? { textPreview: item.textPreview } : {},
+      ),
+    ),
   };
 }
 

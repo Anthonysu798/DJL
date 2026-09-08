@@ -1,3 +1,4 @@
+import type { TerminalAgentProfile } from "@synara/contracts";
 // FILE: terminalRuntimeTypes.ts
 // Purpose: Shared types and stable identity helpers for persistent terminal runtimes.
 // Layer: Terminal runtime infrastructure
@@ -34,6 +35,11 @@ export interface TerminalRuntimeConfig {
   terminalCliKind?: TerminalCliKind | null;
   cwd: string;
   runtimeEnv?: Record<string, string>;
+  agentProfile?: TerminalAgentProfile;
+  imageSupport?: boolean;
+  lightweight?: boolean;
+  screenSnapshot?: boolean;
+  serverHandlesQueries?: boolean;
   callbacks: TerminalRuntimeCallbacks;
 }
 
@@ -58,6 +64,11 @@ export interface TerminalRuntimeEntry {
   terminalCliKind: TerminalCliKind | null;
   cwd: string;
   runtimeEnv?: Record<string, string>;
+  agentProfile?: TerminalAgentProfile;
+  imageSupport?: boolean;
+  lightweight?: boolean;
+  screenSnapshot?: boolean;
+  serverHandlesQueries?: boolean;
   callbacks: TerminalRuntimeCallbacks;
   wrapper: HTMLDivElement;
   container: HTMLDivElement | null;
@@ -82,6 +93,7 @@ export interface TerminalRuntimeEntry {
   pendingWrites: TerminalPendingWrite[];
   pendingWriteLength: number;
   pendingWriteBytes: number;
+  flushNextOutput?: boolean;
   linkMatchCache: Map<string, TerminalLinkMatch[]>;
   outputEventVersion: number;
   snapshotReconcileRequestId: number;

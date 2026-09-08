@@ -48,9 +48,12 @@ const TECHNICAL_ALLOWLIST = new Set([
   "KILO_API_KEY",
   "Codex",
   "Claude",
+  "Claude Code",
   "Cursor",
   "Gemini",
   "Grok",
+  "Grok Build",
+  "Kimi Code",
   "Droid",
   "Kilo",
   "Pi",
@@ -85,7 +88,7 @@ function substantialEnglish(value: string): boolean {
   const text = value.replace(/\s+/g, " ").trim();
   if (!/[A-Za-z]{2,}/.test(text)) return false;
   if (TECHNICAL_ALLOWLIST.has(text)) return false;
-  if (/^[A-Z0-9_./:@{}\[\]-]{2,}$/.test(text)) return false;
+  if (/^[A-Z0-9_./:@{}[\]-]{2,}$/.test(text)) return false;
   if (/^(?:https?:\/\/|\/|\.|@)/.test(text)) return false;
   return text.includes(" ") || /^[A-Z][a-z]{2,}$/.test(text);
 }
@@ -227,6 +230,15 @@ export function collectSettingsNotificationsEnglish(
 }
 
 describe("settings/notifications source audit classifier", () => {
+  it("allows the exact provider brand while still flagging surrounding English copy", () => {
+    expect(collectSettingsNotificationsEnglish(`const item = { label: "Claude Code" };`)).toEqual(
+      [],
+    );
+    expect(
+      collectSettingsNotificationsEnglish(`const item = { label: "Install Claude Code" };`),
+    ).not.toEqual([]);
+  });
+
   it.each([
     ["JSX", `<p>Unable to load settings</p>`],
     ["visible prop", `<Card description="No models are configured" />`],

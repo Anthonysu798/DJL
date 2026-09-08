@@ -1,4 +1,5 @@
 import { Option, Schema, SchemaIssue, Struct } from "effect";
+import { HarnessId } from "./harnessAccounts";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
@@ -6,6 +7,7 @@ import {
   GeminiModelOptions,
   DroidModelOptions,
   GrokModelOptions,
+  KimiModelOptions,
   OpenCodeModelOptions,
   PiModelOptions,
 } from "./model";
@@ -63,6 +65,7 @@ export const ProviderKind = Schema.Literals([
   "cursor",
   "gemini",
   "grok",
+  "kimi",
   "droid",
   "kilo",
   "opencode",
@@ -119,6 +122,13 @@ export const GrokModelSelection = Schema.Struct({
 });
 export type GrokModelSelection = typeof GrokModelSelection.Type;
 
+export const KimiModelSelection = Schema.Struct({
+  provider: Schema.Literal("kimi"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(KimiModelOptions),
+});
+export type KimiModelSelection = typeof KimiModelSelection.Type;
+
 export const DroidModelSelection = Schema.Struct({
   provider: Schema.Literal("droid"),
   model: TrimmedNonEmptyString,
@@ -153,6 +163,7 @@ export const ModelSelection = Schema.Union([
   CursorModelSelection,
   GeminiModelSelection,
   GrokModelSelection,
+  KimiModelSelection,
   DroidModelSelection,
   KiloModelSelection,
   OpenCodeModelSelection,
@@ -163,9 +174,9 @@ export type ModelSelection = typeof ModelSelection.Type;
 export const NewTaskModelSelection = ModelSelection.check(
   Schema.makeFilter(
     (selection) =>
-      selection.provider === "opencode" ||
+      Schema.is(HarnessId)(selection.provider) ||
       new SchemaIssue.InvalidValue(Option.some(selection.provider), {
-        message: "New tasks and turns must use the DJL model backend",
+        message: "This harness does not have an active DJL runtime implementation",
       }),
     { identifier: "NewTaskModelSelection" },
   ),
@@ -193,6 +204,11 @@ export const CursorProviderStartOptions = Schema.Struct({
 
 export const GrokProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const KimiProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  region: Schema.optional(Schema.Literals(["existing", "global", "mainland-cn"])),
 });
 
 export const DroidProviderStartOptions = Schema.Struct({
@@ -223,6 +239,7 @@ export const ProviderStartOptions = Schema.Struct({
   cursor: Schema.optional(CursorProviderStartOptions),
   gemini: Schema.optional(GeminiProviderStartOptions),
   grok: Schema.optional(GrokProviderStartOptions),
+  kimi: Schema.optional(KimiProviderStartOptions),
   droid: Schema.optional(DroidProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),
@@ -232,7 +249,7 @@ export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   Schema.makeFilter(
     (options) =>
-      Object.keys(options).every((provider) => provider === "opencode") ||
+      Object.keys(options).every((provider) => Schema.is(HarnessId)(provider)) ||
       new SchemaIssue.InvalidValue(Option.some(options), {
         message: "New turns accept DJL runtime options only",
       }),
@@ -240,13 +257,8 @@ export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   ),
 );
 
-export const RuntimeMode = Schema.Literals([
-  "approval-required",
-  "accept-edits",
-  "auto-approval",
-  "full-access",
-]);
-export type RuntimeMode = typeof RuntimeMode.Type;
+import { RuntimeMode } from "./runtimePermissions";
+export { RuntimeMode } from "./runtimePermissions";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 export const ProviderInteractionMode = Schema.Literals(["default", "plan"]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;

@@ -2,11 +2,6 @@
 
 import { homedir } from "node:os";
 import { delimiter as pathDelimiter, join as pathJoin } from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  resolveBunExecutable,
-  resolveVendoredOpenCodeCacheBinary,
-} from "./lib/vendored-opencode.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -20,7 +15,6 @@ const BASE_SERVER_PORT = 3773;
 const BASE_WEB_PORT = 5733;
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
-const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 export const DEFAULT_DJL_HOME = Effect.sync(() => resolveDjlHome({}, homedir()));
 
@@ -464,31 +458,6 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
 
     if (input.dryRun) {
       return;
-    }
-
-    if (input.mode !== "dev:web") {
-      yield* Effect.logInfo("[dev-runner] Preparing pinned OpenCode 1.17.18 runtime...");
-      const prepare = yield* ChildProcess.make(
-        resolveBunExecutable(),
-        ["run", "scripts/prepare-vendored-opencode.ts"],
-        {
-          stdin: "inherit",
-          stdout: "inherit",
-          stderr: "inherit",
-          cwd: REPO_ROOT,
-          detached: false,
-          shell: process.platform === "win32",
-        },
-      );
-      const prepareExitCode = yield* prepare.exitCode;
-      if (prepareExitCode !== 0) {
-        return yield* new DevRunnerError({
-          message: `OpenCode preparation exited with code ${prepareExitCode}`,
-        });
-      }
-      env.DJL_OPENCODE_BINARY_PATH = resolveVendoredOpenCodeCacheBinary({
-        repoRoot: REPO_ROOT,
-      });
     }
 
     const child = yield* ChildProcess.make(

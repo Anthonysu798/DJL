@@ -35,7 +35,7 @@ const DiffFileJumpRow = memo(function DiffFileJumpRow(props: {
   isSelected: boolean;
   onSelect: (filePath: string) => void;
 }) {
-  const { t } = useTranslation("workspace");
+  useTranslation("workspace");
   const filePath = resolveFileDiffPath(props.fileDiff);
   const { dir, name } = splitRepoRelativePath(filePath);
   const stat = useMemo(() => summarizeFileDiffStats([props.fileDiff]), [props.fileDiff]);

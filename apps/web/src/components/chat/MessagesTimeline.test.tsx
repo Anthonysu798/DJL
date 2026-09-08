@@ -72,10 +72,8 @@ beforeAll(async () => {
       offsetHeight: 0,
     },
   });
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-    callback(0);
-    return 0;
-  });
+  // Static rendering does not paint frames. Synchronous callbacks recurse in GSAP's ticker.
+  vi.stubGlobal("requestAnimationFrame", () => 0);
 });
 
 describe("MessagesTimeline", () => {

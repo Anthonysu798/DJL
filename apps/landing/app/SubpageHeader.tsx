@@ -3,6 +3,7 @@
 // Slim white sticky header shared by /docs and /changelog. Imports the landing
 // theme so these routes carry the same token layer as the home page.
 import "./landing-theme.css";
+import Image from "next/image";
 import type { Content, Locale } from "./content";
 import { GITHUB_REPOSITORY_URL } from "./lib/githubDesktopDownloads";
 import { localeHref } from "./localeHref";
@@ -31,7 +32,7 @@ export function SubpageHeader({
       <div className="sph-inner">
         <div className="sph-left">
           <a className="sph-brand" href={localeHref("/", locale)}>
-            <img src="/djl-logo.png" alt="DJL" />
+            <Image src="/djl-logo.png" alt="DJL" width={256} height={256} unoptimized />
           </a>
           <span className="sph-divider" aria-hidden="true" />
           <span className="sph-label">{pageLabel}</span>

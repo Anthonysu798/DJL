@@ -2473,7 +2473,7 @@ export function removeDeletedThreadFromClientState(state: AppState, threadId: Th
     state.deletedThreadIdsById?.[threadId] === true
       ? state.deletedThreadIdsById
       : {
-          ...(state.deletedThreadIdsById ?? {}),
+          ...state.deletedThreadIdsById,
           [threadId]: true,
         };
   const nextState = removeThreadState(state, threadId);
@@ -2528,7 +2528,7 @@ export function removeDeletedProjectFromClientState(
     state.deletedProjectIdsById?.[projectId] === true
       ? state.deletedProjectIdsById
       : {
-          ...(state.deletedProjectIdsById ?? {}),
+          ...state.deletedProjectIdsById,
           [projectId]: true,
         };
   const nextState = removeProjectState(state, projectId);

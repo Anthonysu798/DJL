@@ -114,7 +114,7 @@ export function providerDisplayName(provider: ProviderKind): string {
 }
 
 export function sortProviderStack(providers: ReadonlyArray<ProviderKind>): ProviderKind[] {
-  return [...providers].sort(
+  return providers.toSorted(
     (left, right) => PROVIDER_STACK_ORDER.indexOf(left) - PROVIDER_STACK_ORDER.indexOf(right),
   );
 }
@@ -169,7 +169,7 @@ export function buildSettingsSkillGroups(
 
   return [...groups.entries()]
     .map(([key, unsortedSources]): SettingsSkillGroup | null => {
-      const sources = [...unsortedSources].sort((left, right) =>
+      const sources = unsortedSources.toSorted((left, right) =>
         sourceSortKey(left).localeCompare(sourceSortKey(right)),
       );
       const primarySkill = sources[0]?.skill;
@@ -199,7 +199,7 @@ export function buildSettingsSkillGroups(
       } satisfies SettingsSkillGroup;
     })
     .filter((group): group is SettingsSkillGroup => group !== null)
-    .sort((left, right) => left.displayName.localeCompare(right.displayName));
+    .toSorted((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
 export function buildSettingsSkillSections(
@@ -217,5 +217,5 @@ export function buildSettingsSkillSections(
       title: sectionTitle(key, t),
       groups,
     }))
-    .sort((left, right) => sectionRank(left.key) - sectionRank(right.key));
+    .toSorted((left, right) => sectionRank(left.key) - sectionRank(right.key));
 }

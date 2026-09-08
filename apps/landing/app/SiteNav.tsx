@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
@@ -17,20 +18,20 @@ export function SiteNav({ t }: { t: Content }) {
     () =>
       isZh
         ? [
-        { id: "capability-local", label: "本地" },
-        { id: "capability-online", label: "在线" },
-        { id: "capability-bilingual", label: "双语处理" },
-        { id: "capability-tools", label: "工具生态" },
-        { id: "capability-production", label: "生产环境" },
-        { id: "capability-secret", label: "密钥" },
+            { id: "capability-local", label: "本地" },
+            { id: "capability-online", label: "在线" },
+            { id: "capability-bilingual", label: "双语处理" },
+            { id: "capability-tools", label: "工具生态" },
+            { id: "capability-production", label: "生产环境" },
+            { id: "capability-secret", label: "密钥" },
           ]
         : [
-        { id: "capability-local", label: "Local" },
-        { id: "capability-online", label: "Online" },
-        { id: "capability-bilingual", label: "Bilingual" },
-        { id: "capability-tools", label: "Tools" },
-        { id: "capability-production", label: "Production" },
-        { id: "capability-secret", label: "Keys" },
+            { id: "capability-local", label: "Local" },
+            { id: "capability-online", label: "Online" },
+            { id: "capability-bilingual", label: "Bilingual" },
+            { id: "capability-tools", label: "Tools" },
+            { id: "capability-production", label: "Production" },
+            { id: "capability-secret", label: "Keys" },
           ],
     [isZh],
   );
@@ -45,13 +46,10 @@ export function SiteNav({ t }: { t: Content }) {
   // Stay hidden during the hero splash; reveal once the intro signals it's done.
   useEffect(() => {
     const resumesBelowHero =
-      window.location.hash === "#start"
-      || window.location.hash.startsWith("#capability-")
-      || window.scrollY > window.innerHeight * 0.5;
-    if (
-      (window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone
-      || resumesBelowHero
-    ) {
+      window.location.hash === "#start" ||
+      window.location.hash.startsWith("#capability-") ||
+      window.scrollY > window.innerHeight * 0.5;
+    if ((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone || resumesBelowHero) {
       const frame = window.requestAnimationFrame(() => setRevealed(true));
       return () => window.cancelAnimationFrame(frame);
     }
@@ -67,10 +65,10 @@ export function SiteNav({ t }: { t: Content }) {
     let ticking = false;
     let frame: number | null = null;
     let lastPast: boolean | null = null;
-    let gatewayBusy = (
-      document.documentElement.dataset.djlGatewayState?.startsWith("playing")
-      || document.documentElement.dataset.djlGatewayState?.startsWith("settling")
-    ) ?? false;
+    let gatewayBusy =
+      (document.documentElement.dataset.djlGatewayState?.startsWith("playing") ||
+        document.documentElement.dataset.djlGatewayState?.startsWith("settling")) ??
+      false;
     const syncScrolledThreshold = () => {
       const past = window.scrollY > window.innerHeight * 0.5;
       if (past !== lastPast) {
@@ -89,7 +87,9 @@ export function SiteNav({ t }: { t: Content }) {
       // scanning every capability anchor on each synthetic scroll frame.
       if (gatewayBusy) return;
       const line = window.innerHeight * 0.4;
-      const field = document.querySelector<HTMLElement>(".context-rail-field, .magnetic-assembly-field");
+      const field = document.querySelector<HTMLElement>(
+        ".context-rail-field, .magnetic-assembly-field",
+      );
       const fieldRect = field?.getBoundingClientRect();
       if (fieldRect && fieldRect.top <= line && fieldRect.bottom >= line) return;
       let current = "";
@@ -168,13 +168,8 @@ export function SiteNav({ t }: { t: Content }) {
     return () => window.removeEventListener("resize", onResize);
   }, [active]);
 
-  const scrollTo = (
-    event: React.MouseEvent<HTMLAnchorElement>,
-    id: string,
-  ) => {
-    const capability = id.startsWith("capability-")
-      ? id.slice("capability-".length)
-      : null;
+  const scrollTo = (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    const capability = id.startsWith("capability-") ? id.slice("capability-".length) : null;
     if (capability) {
       event.preventDefault();
       window.history.replaceState(
@@ -212,8 +207,14 @@ export function SiteNav({ t }: { t: Content }) {
           aria-label="DJL home"
           onClick={(event) => scrollTo(event, "top")}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/djl-logo.png" alt="DJL" />
+          <NextImage
+            unoptimized
+            loading="eager"
+            width={512}
+            height={512}
+            src="/djl-logo.png"
+            alt="DJL"
+          />
         </a>
 
         <nav className="site-nav-links" aria-label="Primary">

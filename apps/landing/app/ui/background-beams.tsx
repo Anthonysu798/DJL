@@ -43,9 +43,9 @@ export const BackgroundBeams = memo(function BackgroundBeams({
             <stop offset="1" stopColor="#5aa9ff" />
           </linearGradient>
         </defs>
-        {paths.map((d, i) => (
+        {paths.map((d) => (
           <path
-            key={`base-${i}`}
+            key={`base-${d}`}
             d={d}
             stroke="rgba(236,237,244,0.05)"
             strokeWidth="1"
@@ -54,7 +54,7 @@ export const BackgroundBeams = memo(function BackgroundBeams({
         ))}
         {paths.map((d, i) => (
           <motion.path
-            key={`beam-${i}`}
+            key={`beam-${d}`}
             d={d}
             stroke="url(#bb-grad)"
             strokeWidth="1.2"

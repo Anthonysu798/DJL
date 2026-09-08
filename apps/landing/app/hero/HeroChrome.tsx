@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import type { Content, Locale } from "../content";
@@ -38,17 +38,18 @@ export function HeroChrome({
 
   // Was the chrome already revealed on first mount? If so (or reduced motion),
   // skip the entrance and render the final state.
-  const wasActiveOnMount = useRef(active);
-  const entrance = active && !reduced && !wasActiveOnMount.current;
+  const [wasActiveOnMount] = useState(active);
+  const entrance = active && !reduced && !wasActiveOnMount;
 
   const slides = [
     {
+      id: "intro",
       eyebrow: locale === "zh" ? "了解 DJL" : "DISCOVER DJL",
       title: t.hero.titleLines.join(" "),
     },
-    { eyebrow: t.routing.tag, title: t.routing.title },
-    { eyebrow: t.bilingual.tag, title: t.bilingual.title },
-    { eyebrow: t.pipeline.tag, title: t.pipeline.title },
+    { id: "routing", eyebrow: t.routing.tag, title: t.routing.title },
+    { id: "bilingual", eyebrow: t.bilingual.tag, title: t.bilingual.title },
+    { id: "pipeline", eyebrow: t.pipeline.tag, title: t.pipeline.title },
   ];
   const count = slides.length;
   const go = (dir: number) => setI((prev) => (prev + dir + count) % count);
@@ -130,7 +131,7 @@ export function HeroChrome({
             const state = k === i ? "active" : k < i ? "seen" : "upcoming";
             return (
               <button
-                key={slide.eyebrow + k}
+                key={slide.id}
                 type="button"
                 className={`hc-seg ${state}`}
                 onClick={() => setI(k)}

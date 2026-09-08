@@ -59,8 +59,9 @@ describe("WorkTaskPanel deliverables", () => {
 
   it("opens a deliverable in the right-side workspace pane", async () => {
     const openFile = vi.fn(() => true);
+    const fileOpener = createFileOpener(openFile);
     await render(
-      <WorkspaceFileOpenerContext.Provider value={{ openFile }}>
+      <WorkspaceFileOpenerContext.Provider value={fileOpener}>
         <WorkTaskPanel
           task={task}
           activities={activities}
@@ -82,3 +83,7 @@ describe("WorkTaskPanel deliverables", () => {
     expect(mocks.resolveArtifactPath).not.toHaveBeenCalled();
   });
 });
+
+function createFileOpener(openFile: () => boolean) {
+  return { openFile };
+}

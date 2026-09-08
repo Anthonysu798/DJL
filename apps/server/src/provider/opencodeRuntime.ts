@@ -4,9 +4,12 @@
 // Exports: OpenCodeRuntime, OpenCodeRuntimeLive, model/auth parsers, SDK helpers
 
 import { randomBytes } from "node:crypto";
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { prepareInstalledOpenCodeEnvironment } from "./openCodeInstalledEnvironment";
+import { assertOpenCodeServerCompatibility } from "./openCodeInstalledProtocol";
 import { pathToFileURL } from "node:url";
 
 import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@synara/contracts";
@@ -54,63 +57,16 @@ const STARTUP_OUTPUT_AUTHORIZATION_PATTERN =
 const STARTUP_OUTPUT_SECRET_ASSIGNMENT_PATTERN =
   /(["']?)([A-Za-z0-9_-]*(?:api[_-]?key|apikey|access[_-]?token|refresh[_-]?token|id[_-]?token|auth[_-]?token|bearer[_-]?token|token|secret|password)[A-Za-z0-9_-]*)\1(\s*[:=]\s*)(["']?)[^"'\s,;}]+\4/gi;
 
-interface ResolveDjlOpenCodeBinaryPathOptions {
-  readonly repoRoot?: string;
-  readonly platform?: NodeJS.Platform;
-  readonly arch?: string;
-  readonly pathExists?: (path: string) => boolean;
-}
-
-export function resolveDjlOpenCodeBinaryPath(
-  env: NodeJS.ProcessEnv = process.env,
-  options: ResolveDjlOpenCodeBinaryPathOptions = {},
-): string {
-  const packaged = env.DJL_OPENCODE_BINARY_PATH?.trim();
-  if (packaged) return packaged;
-
-  const platform = options.platform ?? process.platform;
-  const arch = options.arch ?? process.arch;
-  const preparedBinary = join(
-    options.repoRoot ?? process.cwd(),
-    ".cache",
-    "djl",
-    "opencode",
-    `${platform}-${arch}`,
-    platform === "win32" ? "opencode.exe" : "opencode",
-  );
-  if ((options.pathExists ?? existsSync)(preparedBinary)) {
-    return preparedBinary;
-  }
-
-  return join(import.meta.dirname, "../../../../vendor/opencode/packages/opencode/src/index.ts");
-}
-
-function resolveBunExecutable(execPath: string, env: NodeJS.ProcessEnv): string {
-  const executableName = basename(execPath).toLowerCase();
-  if (executableName === "bun" || executableName === "bun.exe") {
-    return execPath;
-  }
-
-  const bunInstall = env.BUN_INSTALL?.trim();
-  return bunInstall
-    ? join(bunInstall, "bin", process.platform === "win32" ? "bun.exe" : "bun")
-    : process.platform === "win32"
-      ? "bun.exe"
-      : "bun";
+// All installed-runtime entrypoints resolve through the same setting/PATH rule.
+export function resolveDjlOpenCodeBinaryPath(configuredPath?: string): string {
+  return configuredPath?.trim() || "opencode";
 }
 
 export function buildOpenCodeProcessInvocation(
   binaryPath: string,
   args: ReadonlyArray<string>,
-  execPath: string = process.execPath,
-  env: NodeJS.ProcessEnv = process.env,
 ): { readonly command: string; readonly args: ReadonlyArray<string> } {
-  return binaryPath.endsWith(".ts")
-    ? {
-        command: resolveBunExecutable(execPath, env),
-        args: ["run", "--conditions=browser", binaryPath, ...args],
-      }
-    : { command: binaryPath, args };
+  return { command: binaryPath, args };
 }
 
 export interface OpenCodeCompatibleCliSpec {
@@ -214,7 +170,16 @@ function lowLevelOpenCodeClient(client: OpencodeClient): OpenCodeLowLevelClient 
 }
 
 function promptRequest(input: DjlOpenCodePromptInput, async: boolean): Record<string, unknown> {
-  const { sessionID, directory, workspace, ...body } = input as DjlOpenCodePromptInput & {
+  // Work policy is applied by the DJL plugin/permissions, not private fork-only HTTP fields.
+  const {
+    sessionID,
+    directory,
+    workspace,
+    visibleTools: _visibleTools,
+    requiredToolCall: _requiredToolCall,
+    instructionScope: _instructionScope,
+    ...body
+  } = input as DjlOpenCodePromptInput & {
     readonly directory?: string;
     readonly workspace?: string;
   };
@@ -415,6 +380,30 @@ function formatOpenCodeServerStartupDetail(input: {
   ].join("\n\n");
 }
 
+function installedExecutableRevision(binaryPath: string, cwd?: string): string {
+  const candidates = isAbsolute(binaryPath)
+    ? [binaryPath]
+    : /[/\\]/u.test(binaryPath)
+      ? [resolve(cwd ?? process.cwd(), binaryPath)]
+      : (process.env.PATH ?? "")
+          .split(delimiter)
+          .flatMap((directory) =>
+            (process.platform === "win32" ? ["", ".exe", ".cmd", ".bat"] : [""]).map((extension) =>
+              join(directory, binaryPath + extension),
+            ),
+          );
+  for (const candidate of candidates) {
+    try {
+      const stat = statSync(candidate);
+      if (stat.isFile())
+        return `${candidate}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+    } catch {
+      /* Continue searching the same PATH used by the process launcher. */
+    }
+  }
+  return `${binaryPath}:missing:${process.env.PATH ?? ""}`;
+}
+
 function pooledOpenCodeServerKey(input: {
   readonly binaryPath: string;
   readonly cliSpec?: OpenCodeCompatibleCliSpec;
@@ -443,26 +432,32 @@ function pooledOpenCodeServerKey(input: {
         }
       })()
     : null;
-  const managedCredentialRevision = input.managedRootDir
-    ? (() => {
-        try {
-          const stat = statSync(
-            join(input.managedRootDir, "data", cliSpec.dataDirectoryName, "auth.json"),
-          );
-          return `${stat.mtimeMs}:${stat.size}:${stat.ino}`;
-        } catch {
-          return null;
-        }
-      })()
-    : null;
+  const sharedConfigRoot = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
+  const sharedDataRoot = process.env.XDG_DATA_HOME || join(homedir(), ".local", "share");
+  const sharedRevisions = [
+    join(sharedDataRoot, cliSpec.dataDirectoryName, "auth.json"),
+    join(sharedConfigRoot, cliSpec.dataDirectoryName, "opencode.json"),
+    join(sharedConfigRoot, cliSpec.dataDirectoryName, "opencode.jsonc"),
+    process.env.OPENCODE_CONFIG,
+  ].map((path) => {
+    if (!path) return null;
+    try {
+      const stat = statSync(path);
+      return `${path}:${stat.mtimeMs}:${stat.size}:${stat.ino}`;
+    } catch {
+      return `${path}:missing`;
+    }
+  });
   return JSON.stringify({
     binaryPath: input.binaryPath,
+    executableRevision: installedExecutableRevision(input.binaryPath, input.cwd),
     managedRootDir: input.managedRootDir ?? null,
     hostname: input.hostname ?? DEFAULT_HOSTNAME,
     port: input.port ?? null,
     experimentalWebSockets: input.experimentalWebSockets === true,
     managedConfigRevision,
-    managedCredentialRevision,
+    sharedRevisions,
+    configContent: process.env.OPENCODE_CONFIG_CONTENT ?? null,
     cliSpec: {
       defaultBinaryPath: cliSpec.defaultBinaryPath,
       displayName: cliSpec.displayName,
@@ -612,7 +607,7 @@ function resolveOpenCodeDataDirectory(
   homeDirectory: string,
   dataDirectoryName = "opencode",
 ): string {
-  if (process.platform === "win32") {
+  if (dataDirectoryName !== "opencode" && process.platform === "win32") {
     const appDataDirectory =
       trimToNull(process.env.APPDATA) ?? join(homeDirectory, "AppData", "Roaming");
     return join(appDataDirectory, dataDirectoryName);
@@ -767,7 +762,7 @@ function parseOpenCodeCliModelJson(
     variants,
     supportedReasoningEfforts,
     ...(defaultReasoningEffort ? { defaultReasoningEffort } : {}),
-    ...(contextWindowOptions ?? {}),
+    ...contextWindowOptions,
     ...(typeof isFree === "boolean" ? { isFree } : {}),
   };
 }
@@ -943,42 +938,18 @@ export function buildOpenCodeServerProcessEnv(input: {
   const env: NodeJS.ProcessEnv = {
     ...(input.baseEnv ?? process.env),
     ...(input.experimentalWebSockets ? { OPENCODE_EXPERIMENTAL_WEBSOCKETS: "true" } : {}),
-    ...(input.serverPassword ? { OPENCODE_SERVER_PASSWORD: input.serverPassword } : {}),
+    ...(input.serverPassword
+      ? {
+          OPENCODE_SERVER_PASSWORD: input.serverPassword,
+          OPENCODE_SERVER_USERNAME: (input.cliSpec ?? OPENCODE_CLI_SPEC).serverAuthUsername,
+        }
+      : {}),
   };
 
-  if (!input.managedRootDir) {
-    return env;
-  }
-
-  for (const key of Object.keys(env)) {
-    const normalized = key.toUpperCase();
-    if (
-      normalized === "OPENCODE_CONFIG" ||
-      normalized === "OPENCODE_CONFIG_DIR" ||
-      normalized === "OPENCODE_CONFIG_CONTENT" ||
-      normalized === "GOOGLE_APPLICATION_CREDENTIALS" ||
-      normalized === "AWS_PROFILE" ||
-      normalized === "AWS_DEFAULT_PROFILE" ||
-      normalized.endsWith("_API_KEY") ||
-      normalized.endsWith("_ACCESS_KEY_ID") ||
-      normalized.endsWith("_SECRET_ACCESS_KEY") ||
-      normalized.endsWith("_SESSION_TOKEN") ||
-      normalized.endsWith("_BEARER_TOKEN")
-    ) {
-      delete env[key];
-    }
-  }
-
-  return {
-    ...env,
-    XDG_DATA_HOME: join(input.managedRootDir, "data"),
-    XDG_CONFIG_HOME: join(input.managedRootDir, "config"),
-    XDG_CACHE_HOME: join(input.managedRootDir, "cache"),
-    XDG_STATE_HOME: join(input.managedRootDir, "state"),
-    DJL_MANAGED_AUTH: "1",
-    OPENCODE_ENABLE_EXA: "true",
-    OPENCODE_WEBSEARCH_PROVIDER: "exa",
-  };
+  // Keep the installed CLI's home, configuration and credentials. The legacy root
+  // is now used only for DJL's process-local compatibility and local-model overlay.
+  delete env.DJL_MANAGED_AUTH;
+  return env;
 }
 
 export function toOpenCodePermissionReply(
@@ -1106,19 +1077,35 @@ const makeOpenCodeRuntime = Effect.gen(function* () {
       const args = ["serve", "--hostname", hostname, "--port", String(port)];
       const invocation = buildOpenCodeProcessInvocation(input.binaryPath, args);
 
+      const baseEnv = buildOpenCodeServerProcessEnv({
+        cliSpec,
+        ...(input.experimentalWebSockets !== undefined
+          ? { experimentalWebSockets: input.experimentalWebSockets }
+          : {}),
+        serverPassword,
+      });
+      const env =
+        input.managedRootDir && cliSpec.dataDirectoryName === "opencode"
+          ? yield* Effect.tryPromise({
+              try: () => prepareInstalledOpenCodeEnvironment(input.managedRootDir!, baseEnv),
+              catch: (cause) =>
+                new OpenCodeRuntimeError({
+                  operation: "prepareInstalledOpenCodeEnvironment",
+                  detail: "Could not prepare the installed OpenCode compatibility configuration.",
+                  cause,
+                }),
+            })
+          : baseEnv;
+      const prepared = prepareWindowsSafeProcess(invocation.command, invocation.args, {
+        env,
+        ...(input.cwd ? { cwd: input.cwd } : {}),
+      });
       const child = yield* spawner
         .spawn(
-          ChildProcess.make(invocation.command, invocation.args, {
-            env: buildOpenCodeServerProcessEnv({
-              cliSpec,
-              ...(input.managedRootDir !== undefined
-                ? { managedRootDir: input.managedRootDir }
-                : {}),
-              ...(input.experimentalWebSockets !== undefined
-                ? { experimentalWebSockets: input.experimentalWebSockets }
-                : {}),
-              serverPassword,
-            }),
+          ChildProcess.make(prepared.command, prepared.args, {
+            env,
+            shell: prepared.shell,
+            ...(prepared.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
             ...(input.cwd ? { cwd: input.cwd } : {}),
             detached: false,
             killSignal: "SIGKILL",
@@ -1254,6 +1241,18 @@ const makeOpenCodeRuntime = Effect.gen(function* () {
         });
       }
 
+      if (cliSpec.dataDirectoryName === "opencode") {
+        yield* Effect.tryPromise({
+          try: () => assertOpenCodeServerCompatibility(readyOption.value, serverPassword),
+          catch: (cause) =>
+            new OpenCodeRuntimeError({
+              operation: "verifyInstalledOpenCodeProtocol",
+              detail:
+                "The installed OpenCode CLI did not pass DJL's protocol compatibility check. Check Settings > Accounts > Provider tools.",
+              cause,
+            }),
+        });
+      }
       return {
         url: readyOption.value,
         serverPassword,
@@ -1593,13 +1592,9 @@ const makeOpenCodeRuntime = Effect.gen(function* () {
     );
 
   const loadOpenCodeCredentialProviderIDs: OpenCodeRuntimeShape["loadOpenCodeCredentialProviderIDs"] =
-    (client, cliSpec = OPENCODE_CLI_SPEC, managedRootDir) =>
-      (managedRootDir
-        ? Effect.succeed(join(managedRootDir, "data", cliSpec.dataDirectoryName, "auth.json"))
-        : loadOpenCodePaths(client).pipe(
-            Effect.map((pathInfo) => resolveOpenCodeAuthFilePath(pathInfo, cliSpec)),
-          )
-      ).pipe(
+    (client, cliSpec = OPENCODE_CLI_SPEC) =>
+      loadOpenCodePaths(client).pipe(
+        Effect.map((pathInfo) => resolveOpenCodeAuthFilePath(pathInfo, cliSpec)),
         Effect.flatMap((authFilePath) =>
           Effect.tryPromise({
             try: () => readFile(authFilePath, "utf8"),

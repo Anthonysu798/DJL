@@ -34,6 +34,16 @@ function createOptions(
 }
 
 describe("openInitialBackendWindow", () => {
+  it("starts the development renderer while backend readiness is still pending", () => {
+    const options = createOptions({
+      isDevelopment: true,
+      waitForBackendWindowReady: vi.fn(() => new Promise<"listening">(() => {})),
+    });
+    openInitialBackendWindow(options);
+    expect(options.createWindow).toHaveBeenCalledTimes(1);
+    expect(options.waitForBackendWindowReady).toHaveBeenCalledTimes(1);
+  });
+
   it("creates the packaged window before backend readiness resolves", async () => {
     const order: string[] = [];
     let resolveBackendReady!: () => void;

@@ -67,6 +67,20 @@ DJL desktop installers for macOS Apple Silicon, macOS Intel, and Windows x64.
 
 **Full Changelog**: https://github.com/Anthonysu798/DJL/commits/v0.5.6`;
 
+const release = (over: Record<string, unknown> = {}) => ({
+  tag_name: "v1.2.3",
+  body: "DJL v1.2.3\n\n### Added\n\n- Something",
+  html_url: "https://github.com/Anthonysu798/DJL/releases/tag/v1.2.3",
+  published_at: "2026-07-30T03:10:50Z",
+  draft: false,
+  prerelease: false,
+  ...over,
+});
+
+const stub =
+  (payload: unknown, ok = true) =>
+  async () => ({ ok, json: async () => payload });
+
 describe("parseReleaseNotes — v0.5.7 (the canonical shape)", () => {
   const parsed = parseReleaseNotes(V057_BODY, "0.5.7");
 
@@ -106,7 +120,9 @@ describe("parseReleaseNotes — v0.5.6 (prose, a non-canonical heading, a table)
   });
 
   it("rejoins a hard-wrapped paragraph into one string", () => {
-    expect(parsed.intro[1]).toContain("coding agents. It brings chats, terminals, browser previews");
+    expect(parsed.intro[1]).toContain(
+      "coding agents. It brings chats, terminals, browser previews",
+    );
     expect(parsed.intro[1]).not.toContain("\n");
   });
 
@@ -134,18 +150,6 @@ describe("parseReleaseNotes — degenerate input", () => {
 });
 
 describe("fetchChangelogReleases", () => {
-  const release = (over: Record<string, unknown> = {}) => ({
-    tag_name: "v1.2.3",
-    body: "DJL v1.2.3\n\n### Added\n\n- Something",
-    html_url: "https://github.com/Anthonysu798/DJL/releases/tag/v1.2.3",
-    published_at: "2026-07-30T03:10:50Z",
-    draft: false,
-    prerelease: false,
-    ...over,
-  });
-
-  const stub = (payload: unknown, ok = true) => async () => ({ ok, json: async () => payload });
-
   it("excludes drafts, which are failed or in-progress releases", async () => {
     const result = await fetchChangelogReleases(
       stub([release(), release({ tag_name: "v9.9.9", draft: true })]),
@@ -164,7 +168,9 @@ describe("fetchChangelogReleases", () => {
   });
 
   it("skips entries whose tag is not a version", async () => {
-    const result = await fetchChangelogReleases(stub([release({ tag_name: "nightly" }), release()]));
+    const result = await fetchChangelogReleases(
+      stub([release({ tag_name: "nightly" }), release()]),
+    );
 
     expect(result.map((r) => r.version)).toEqual(["1.2.3"]);
   });

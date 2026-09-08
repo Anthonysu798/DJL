@@ -75,14 +75,21 @@ function truncateTerminalTitle(title: string): string {
 }
 
 function normalizeTextForIdentityDetection(value: string): string {
-  return value
-    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, " ")
-    .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, " ")
-    .replace(/\u001b[P^_].*?(?:\u001b\\|\u0007|\u009c)/g, " ")
-    .replace(/\u001b[@-_]/g, " ")
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    value
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, " ")
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, " ")
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b[P^_].*?(?:\u001b\\|\u0007|\u009c)/g, " ")
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b[@-_]/g, " ")
+      // eslint-disable-next-line no-control-regex -- Strip terminal control bytes.
+      .replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 function normalizeCommandToken(token: string): string {

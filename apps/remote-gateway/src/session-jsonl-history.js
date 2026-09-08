@@ -55,7 +55,7 @@ function readThreadTurnsListPageFromSessionJsonl(
   const requestedLimit = Number.isInteger(limit) && limit > 0 ? limit : 5;
   const requestedMaxLimit = Number.isInteger(maxLimit) && maxLimit > 0 ? maxLimit : 5;
   const safeLimit = Math.min(requestedLimit, requestedMaxLimit, 5);
-  const pageTurns = turns.slice(-safeLimit).reverse();
+  const pageTurns = turns.slice(-safeLimit).toReversed();
   return {
     data: pageTurns,
     nextCursor:
@@ -1430,19 +1430,6 @@ function responseItemMessageText(payload) {
   return sharedResponseItemMessageText(payload);
 }
 
-function responseItemContentText(item) {
-  const type = normalizeHistoryToken(item?.type);
-  if (type === "skill") {
-    const skillName = normalizeString(item.id) || normalizeString(item.name);
-    return skillName ? `$${skillName}` : "";
-  }
-  if (type === "mention") {
-    const mentionName = normalizeString(item.name) || normalizeString(item.id);
-    return mentionName ? `@${mentionName}` : "";
-  }
-  return normalizeString(item.text) || normalizeString(objectValue(item.data)?.text);
-}
-
 function canonicalUserHistoryTextKey(text) {
   const mentions = { skills: new Set(), plugins: new Set() };
   let body = normalizeString(text).replace(
@@ -1471,8 +1458,8 @@ function canonicalUserHistoryTextKey(text) {
   }
 
   const normalizedBody = body.trim().replace(/\s+/g, " ").toLowerCase();
-  const skills = [...mentions.skills].sort();
-  const plugins = [...mentions.plugins].sort();
+  const skills = [...mentions.skills].toSorted();
+  const plugins = [...mentions.plugins].toSorted();
   return {
     hasMentions: skills.length > 0 || plugins.length > 0,
     text: normalizedBody,

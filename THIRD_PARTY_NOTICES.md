@@ -11,9 +11,9 @@ Emanuele Di Pietro and Anthony Su.
   [apps/ios/UPSTREAM_LICENSE](apps/ios/UPSTREAM_LICENSE),
   [apps/remote-gateway/UPSTREAM.md](apps/remote-gateway/UPSTREAM.md), and
   [apps/remote-gateway/UPSTREAM_LICENSE](apps/remote-gateway/UPSTREAM_LICENSE).
-- **OpenCode** — DJL packages a pinned, locally patched OpenCode runtime. Its upstream manifest is
-  [vendor/opencode/DJL_UPSTREAM.md](vendor/opencode/DJL_UPSTREAM.md) and its MIT license is
-  [vendor/opencode/LICENSE](vendor/opencode/LICENSE).
+- **OpenCode** — DJL connects to a separately installed OpenCode CLI using the official
+  `@opencode-ai/sdk` dependency. DJL does not distribute the CLI executable or its source fork.
+  The retained MIT license is [docs/licenses/OPENCODE_LICENSE](docs/licenses/OPENCODE_LICENSE).
 - **Ghostty** — the iOS terminal framework contains Ghostty-derived headers and static libraries.
   Ghostty is copyright Mitchell Hashimoto and Ghostty contributors and is licensed under the MIT
   license retained at

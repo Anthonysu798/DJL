@@ -522,7 +522,7 @@ function mergeCustomAvatars(avatars) {
       byID.set(avatar.id, avatar);
     }
   }
-  return Array.from(byID.values()).sort((left, right) =>
+  return Array.from(byID.values()).toSorted((left, right) =>
     left.displayName.localeCompare(right.displayName),
   );
 }

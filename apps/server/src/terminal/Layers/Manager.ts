@@ -18,6 +18,7 @@ import {
   type TerminalEvent,
   type TerminalSessionSnapshot,
 } from "@synara/contracts";
+import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
 import { describeErrorMessage } from "@synara/shared/errorMessages";
 import {
   consumeTerminalIdentityInput,
@@ -41,6 +42,7 @@ import {
 } from "../managedTerminalWrappers";
 import {
   ShellCandidate,
+  type TerminalCommand,
   TerminalError,
   TerminalManager,
   TerminalManagerShape,
@@ -106,6 +108,12 @@ const TERMINAL_ENV_BLOCKLIST = new Set([
   // spawned shells use wrong/missing terminfo — "unknown terminal type"
   // errors and garbled line-editor redraw.
   "TERM",
+  // Color policy from a launcher/CI process does not describe our interactive PTY.
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "CLICOLOR",
+  "CLICOLOR_FORCE",
+  "COLORTERM",
   "TERMINFO",
   "TERMINFO_DIRS",
   "TERM_PROGRAM",
@@ -187,14 +195,20 @@ function isProviderSessionBusy(session: TerminalSessionState, now: number): bool
 }
 
 function normalizeProviderOutputSignature(visibleText: string): string {
-  return visibleText
-    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
-    .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, "")
-    .replace(/\u001b[P^_].*?(?:\u001b\\|\u0007|\u009c)/g, "")
-    .replace(/[\u0000-\u001f\u007f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(-256);
+  return (
+    visibleText
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, "")
+      // eslint-disable-next-line no-control-regex -- Match terminal control sequences.
+      .replace(/\u001b[P^_].*?(?:\u001b\\|\u0007|\u009c)/g, "")
+      // eslint-disable-next-line no-control-regex -- Strip terminal control bytes.
+      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(-256)
+  );
 }
 
 const WINDOWS_DEFAULT_TERMINAL_SHELL = "powershell.exe";
@@ -877,6 +891,7 @@ function createTerminalSpawnEnv(
   // Pin TERM to the embedded renderer's capabilities; a caller-provided
   // runtimeEnv may still override it deliberately below.
   spawnEnv.TERM = TERMINAL_SPAWN_TERM;
+  spawnEnv.COLORTERM = "truecolor";
   if (runtimeEnv) {
     for (const [key, value] of Object.entries(runtimeEnv)) {
       spawnEnv[key] = value;
@@ -1047,7 +1062,15 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     return { maxLines: this.historyLineLimit, maxBytes: this.historyByteLimit };
   }
 
-  async open(raw: TerminalOpenInput): Promise<TerminalSessionSnapshot> {
+  isRunning(input: { threadId: string; terminalId: string }): boolean {
+    return Boolean(this.sessions.get(toSessionKey(input.threadId, input.terminalId))?.process);
+  }
+
+  hasRunningProcesses(): boolean {
+    return [...this.sessions.values()].some((session) => Boolean(session.process));
+  }
+
+  async open(raw: TerminalOpenInput, command?: TerminalCommand): Promise<TerminalSessionSnapshot> {
     const input = decodeTerminalOpenInput(raw);
     return this.runWithThreadLock(input.threadId, async () => {
       await this.assertValidCwd(input.cwd);
@@ -1082,6 +1105,8 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           managedAgentState: null,
           managedAgentObserved: false,
           runtimeEnv: normalizedRuntimeEnv(input.env),
+          headlessQueries: input.headlessQueries ?? false,
+          ...(command ? { command } : {}),
           pendingInputBuffer: "",
           modeReplayTracker: null,
           pendingOutputChunks: [],
@@ -1101,7 +1126,23 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
         this.sessions.set(sessionKey, session);
         this.evictInactiveSessionsIfNeeded();
         await this.startSession(session, { ...input, cols, rows }, "started");
-        return this.snapshot(session);
+        return this.snapshot(session, input);
+      }
+
+      if (input.headlessQueries !== undefined) existing.headlessQueries = input.headlessQueries;
+
+      // Direct commands are one-shot login processes. Reattaching after exit
+      // displays their final output; only the owning service starts another login.
+      if (existing.command && !existing.process) {
+        if (!command?.persistentShell) return this.snapshot(existing, input);
+        existing.command = command;
+        existing.runtimeEnv = { ...normalizedRuntimeEnv(input.env), DJL_AGENT_SKIP_START: "1" };
+        await this.startSession(
+          existing,
+          { ...input, cols: input.cols ?? existing.cols, rows: input.rows ?? existing.rows },
+          "started",
+        );
+        return this.snapshot(existing, input);
       }
 
       // A re-open may flip headless mode (e.g. a viewer attaching later); honor it
@@ -1109,7 +1150,8 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       if (input.streamOutput !== undefined) {
         existing.streamOutput = input.streamOutput;
       }
-      const nextRuntimeEnv = normalizedRuntimeEnv(input.env);
+      const nextRuntimeEnv =
+        input.env === undefined ? existing.runtimeEnv : normalizedRuntimeEnv(input.env);
       const currentRuntimeEnv = existing.runtimeEnv;
       const targetCols = input.cols ?? existing.cols;
       const targetRows = input.rows ?? existing.rows;
@@ -1146,8 +1188,6 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           existing.terminalId,
           existing.history.toString(),
         );
-      } else if (runtimeEnvChanged) {
-        existing.runtimeEnv = nextRuntimeEnv;
       }
 
       if (!existing.process) {
@@ -1156,7 +1196,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           { ...input, cols: targetCols, rows: targetRows },
           "started",
         );
-        return this.snapshot(existing);
+        return this.snapshot(existing, input);
       }
 
       // Reattaching a renderer to a still-running session: discard the previous
@@ -1175,7 +1215,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       // Drain any batched-but-unparsed output so the reconnect snapshot carries
       // the latest history and an up-to-date mode-replay preamble.
       this.flushOutputBuffer(existing);
-      return this.snapshot(existing);
+      return this.snapshot(existing, input);
     });
   }
 
@@ -1206,6 +1246,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       this.emitActivityEvent(session);
     }
     session.lastInputAt = Date.now();
+    session.flushNextOutput = true;
     // Typing may spawn a subprocess; restore fast subprocess polling promptly.
     this.bumpSubprocessPolling();
     session.process.write(input.data);
@@ -1265,6 +1306,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
 
       const sessionKey = toSessionKey(input.threadId, input.terminalId);
       let session = this.sessions.get(sessionKey);
+      if (session?.command) return this.snapshot(session);
       if (!session) {
         const cols = input.cols ?? DEFAULT_OPEN_COLS;
         const rows = input.rows ?? DEFAULT_OPEN_ROWS;
@@ -1433,11 +1475,26 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     let ptyProcess: PtyProcess | null = null;
     let startedShell: string | null = null;
     try {
-      const shellCandidates = resolveShellCandidates(this.shellResolver);
-      const terminalEnv = createTerminalSpawnEnv(process.env, session.runtimeEnv, {
-        binDir: this.managedWrapperBinDir,
-        zshDir: this.managedWrapperZshDir,
-      });
+      const terminalEnv = createTerminalSpawnEnv(
+        process.env,
+        session.runtimeEnv,
+        session.command
+          ? undefined
+          : {
+              binDir: this.managedWrapperBinDir,
+              zshDir: this.managedWrapperZshDir,
+            },
+      );
+      for (const key of session.command?.removeEnv ?? []) delete terminalEnv[key];
+      const direct = session.command
+        ? prepareWindowsSafeProcess(session.command.executable, session.command.args, {
+            env: terminalEnv,
+            cwd: session.cwd,
+          })
+        : undefined;
+      const shellCandidates = direct
+        ? [{ shell: direct.command, args: direct.args }]
+        : resolveShellCandidates(this.shellResolver);
       let lastSpawnError: unknown = null;
 
       const spawnWithCandidate = (candidate: ShellCandidate) =>
@@ -1449,6 +1506,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             cols: session.cols,
             rows: session.rows,
             env: terminalEnv,
+            ...(direct?.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
           }),
         );
 
@@ -1563,7 +1621,10 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       this.syncOutputReadPause(session);
     }
 
-    if (session.pendingOutputLength >= OUTPUT_BATCH_SIZE_LIMIT) {
+    const interactiveEcho = session.flushNextOutput && session.pendingOutputLength <= 4096;
+    session.flushNextOutput = false;
+    if (interactiveEcho || session.pendingOutputLength >= OUTPUT_BATCH_SIZE_LIMIT) {
+      // Key echoes should not wait behind the bulk-output timer.
       // Large burst — flush immediately to avoid excessive latency.
       this.flushOutputBuffer(session);
     } else if (session.outputFlushTimer === null) {
@@ -1743,7 +1804,13 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
 
   private ensureModeReplayTracker(session: TerminalSessionState): void {
     try {
-      session.modeReplayTracker = createTerminalModeReplayTracker(session.cols, session.rows);
+      session.modeReplayTracker = createTerminalModeReplayTracker(
+        session.cols,
+        session.rows,
+        (data) => {
+          if (session.headlessQueries && session.status === "running") session.process?.write(data);
+        },
+      );
     } catch (error) {
       session.modeReplayTracker = null;
       this.logger.warn("terminal mode replay tracker unavailable", {
@@ -2395,7 +2462,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
 
   private async deleteAllHistoryForThread(threadId: string): Promise<void> {
     const threadPrefix = `${toSafeThreadId(threadId)}_`;
-    for (const key of [...this.persistedHistoryByKey.keys()]) {
+    for (const key of this.persistedHistoryByKey.keys()) {
       if (key.startsWith(`${threadId}\u0000`)) {
         this.persistedHistoryByKey.delete(key);
       }
@@ -2429,15 +2496,29 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     return session;
   }
 
-  private snapshot(session: TerminalSessionState): TerminalSessionSnapshot {
-    const replayPreamble = this.buildModeReplayPreamble(session);
+  private snapshot(
+    session: TerminalSessionState,
+    options: Pick<TerminalOpenInput, "includeHistory" | "screenSnapshot"> = {},
+  ): TerminalSessionSnapshot {
+    const includeHistory = options.includeHistory !== false;
+    const replayPreamble = includeHistory ? this.buildModeReplayPreamble(session) : "";
+    const tracker = session.status === "running" ? session.modeReplayTracker : null;
+    const screen = includeHistory && options.screenSnapshot ? tracker?.buildScreen() : undefined;
     return {
       threadId: session.threadId,
       terminalId: session.terminalId,
       cwd: session.cwd,
       status: session.status,
       pid: session.pid,
-      history: session.history.toString(),
+      ...(session.headlessQueries ? { headlessQueries: true } : {}),
+      history: !includeHistory
+        ? ""
+        : session.command && tracker
+          ? options.screenSnapshot
+            ? ""
+            : tracker.buildScreen()
+          : session.history.toString(),
+      ...(screen !== undefined ? { screen } : {}),
       ...(replayPreamble.length > 0 ? { replayPreamble } : {}),
       exitCode: session.exitCode,
       exitSignal: session.exitSignal,
@@ -2504,9 +2585,11 @@ export const TerminalManagerLive = Layer.effect(
     );
 
     return {
-      open: (input) =>
+      isRunning: (input) => Effect.sync(() => runtime.isRunning(input)),
+      hasRunningProcesses: Effect.sync(() => runtime.hasRunningProcesses()),
+      open: (input, command) =>
         Effect.tryPromise({
-          try: () => runtime.open(input),
+          try: () => runtime.open(input, command),
           catch: (cause) => terminalErrorFromCause("Failed to open terminal", cause),
         }),
       write: (input) =>

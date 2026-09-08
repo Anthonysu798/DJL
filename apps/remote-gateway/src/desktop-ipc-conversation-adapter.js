@@ -565,7 +565,7 @@ function mergeConversationTurnsFromThread(
   });
 
   return Array.from(mergedById.values())
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       const leftStartedAt = Number(left.turn?.turnStartedAtMs);
       const rightStartedAt = Number(right.turn?.turnStartedAtMs);
       if (
@@ -1042,7 +1042,7 @@ function upsertItem(turn, item) {
   }
   if (index >= 0) {
     turn.items[index] = {
-      ...(existingItem || {}),
+      ...existingItem,
       ...cloneJSON(sanitizedItem),
     };
     return;

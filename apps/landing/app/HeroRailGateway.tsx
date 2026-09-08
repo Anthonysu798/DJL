@@ -39,7 +39,13 @@ function disposeScene(root: THREE.Object3D) {
   const textures = new Set<THREE.Texture>();
 
   root.traverse((object) => {
-    if (!(object instanceof THREE.Mesh || object instanceof THREE.Line || object instanceof THREE.Points)) {
+    if (
+      !(
+        object instanceof THREE.Mesh ||
+        object instanceof THREE.Line ||
+        object instanceof THREE.Points
+      )
+    ) {
       return;
     }
     geometries.add(object.geometry);
@@ -94,12 +100,11 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
       return window.scrollY + rail.getBoundingClientRect().top;
     };
 
-    const introReady = () => (
-      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone)
-      || document.querySelector(".site-nav")?.getAttribute("data-revealed") === "true"
-      || window.location.hash === "#start"
-      || window.location.hash.startsWith("#capability-")
-    );
+    const introReady = () =>
+      Boolean((window as unknown as { __djlIntroDone?: boolean }).__djlIntroDone) ||
+      document.querySelector(".site-nav")?.getAttribute("data-revealed") === "true" ||
+      window.location.hash === "#start" ||
+      window.location.hash.startsWith("#capability-");
 
     const setState = (next: GatewayAutoState) => {
       state = next;
@@ -109,9 +114,11 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
         "aria-busy",
         next.startsWith("playing") || next.startsWith("settling") ? "true" : "false",
       );
-      window.dispatchEvent(new CustomEvent("djl:gateway-state", {
-        detail: { state: next },
-      }));
+      window.dispatchEvent(
+        new CustomEvent("djl:gateway-state", {
+          detail: { state: next },
+        }),
+      );
     };
 
     const clearGesture = () => {
@@ -182,10 +189,7 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
       const distance = Math.abs(destination - startY);
       const total = Math.max(1, railTop());
       const span = clamp01(distance / total);
-      const duration = Math.max(
-        direction > 0 ? 760 : 640,
-        (direction > 0 ? 1760 : 1440) * span,
-      );
+      const duration = Math.max(direction > 0 ? 760 : 640, (direction > 0 ? 1760 : 1440) * span);
 
       const tick = (now: number) => {
         const elapsed = clamp01((now - start) / duration);
@@ -204,11 +208,12 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
     };
 
     const normalizedDelta = (event: WheelEvent) => {
-      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
-        ? 16
-        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-          ? window.innerHeight
-          : 1;
+      const unit =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? window.innerHeight
+            : 1;
       return event.deltaY * unit;
     };
 
@@ -219,13 +224,13 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
 
     const onWheel = (event: WheelEvent) => {
       if (
-        event.defaultPrevented
-        || !desktopPointer.matches
-        || !introReady()
-        || event.ctrlKey
-        || event.metaKey
-        || event.buttons !== 0
-        || Math.abs(event.deltaY) <= Math.abs(event.deltaX) * 1.25
+        event.defaultPrevented ||
+        !desktopPointer.matches ||
+        !introReady() ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.buttons !== 0 ||
+        Math.abs(event.deltaY) <= Math.abs(event.deltaX) * 1.25
       ) {
         return;
       }
@@ -252,11 +257,10 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
 
       const forwardZone = direction > 0 && window.scrollY < targetTop - 2;
       const reverseZone = direction < 0 && window.scrollY > 2 && window.scrollY <= targetTop + 4;
-      const isRailTail = (
-        reverseZone
-        && railGestureDirection === direction
-        && now - railGestureLastAt < railGestureIdle
-      );
+      const isRailTail =
+        reverseZone &&
+        railGestureDirection === direction &&
+        now - railGestureLastAt < railGestureIdle;
       if (isRailTail) {
         railGestureLastAt = now;
         absorb(event);
@@ -288,10 +292,7 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (!introReady()) return;
       const target = event.target as HTMLElement | null;
-      if (
-        target?.isContentEditable
-        || target?.matches("input, textarea, select")
-      ) {
+      if (target?.isContentEditable || target?.matches("input, textarea, select")) {
         return;
       }
 
@@ -311,10 +312,11 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
       }
 
       const targetTop = railTop();
-      const forwardKey = ["ArrowDown", "PageDown", " ", "Spacebar"].includes(event.key)
-        && !event.shiftKey;
-      const reverseKey = ["ArrowUp", "PageUp"].includes(event.key)
-        || ((event.key === " " || event.key === "Spacebar") && event.shiftKey);
+      const forwardKey =
+        ["ArrowDown", "PageDown", " ", "Spacebar"].includes(event.key) && !event.shiftKey;
+      const reverseKey =
+        ["ArrowUp", "PageUp"].includes(event.key) ||
+        ((event.key === " " || event.key === "Spacebar") && event.shiftKey);
 
       if (forwardKey && window.scrollY < targetTop - 2) {
         event.preventDefault();
@@ -353,21 +355,21 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
         lastObservedY = currentY;
         const delta = currentY - previousY;
         if (
-          Math.abs(delta) < 1
-          || !desktopPointer.matches
-          || !introReady()
-          || state.startsWith("playing")
-          || state.startsWith("settling")
-          || performance.now() < navigationBypassUntil
+          Math.abs(delta) < 1 ||
+          !desktopPointer.matches ||
+          !introReady() ||
+          state.startsWith("playing") ||
+          state.startsWith("settling") ||
+          performance.now() < navigationBypassUntil
         ) {
           return;
         }
 
         const targetTop = railTop();
         if (
-          delta > 0
-          && previousY < targetTop - 2
-          && !window.location.hash.startsWith("#capability-")
+          delta > 0 &&
+          previousY < targetTop - 2 &&
+          !window.location.hash.startsWith("#capability-")
         ) {
           window.scrollTo({
             top: Math.max(0, Math.min(previousY, targetTop - 4)),
@@ -380,16 +382,14 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
           return;
         }
 
-        const railTailActive = (
-          railGestureDirection < 0
-          && performance.now() - railGestureLastAt < railGestureIdle
-        );
+        const railTailActive =
+          railGestureDirection < 0 && performance.now() - railGestureLastAt < railGestureIdle;
         if (
-          delta < 0
-          && currentY > 2
-          && currentY < targetTop - 2
-          && previousY <= targetTop + 4
-          && !railTailActive
+          delta < 0 &&
+          currentY > 2 &&
+          currentY < targetTop - 2 &&
+          previousY <= targetTop + 4 &&
+          !railTailActive
         ) {
           lastWheelAt = performance.now();
           play(-1);
@@ -480,11 +480,7 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
         outer,
         outer.clone().lerp(bend, 0.45),
         bend,
-        new THREE.Vector3(
-          Math.cos(angle - 0.3) * 0.62,
-          Math.sin(angle - 0.3) * 0.36,
-          0.16,
-        ),
+        new THREE.Vector3(Math.cos(angle - 0.3) * 0.62, Math.sin(angle - 0.3) * 0.36, 0.16),
         new THREE.Vector3(0, 0, 0.32),
       ]);
       const curvePoints = curve.getPoints(96);
@@ -536,10 +532,7 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
       depth: ((index * 17) % 23) / 23,
     }));
     const streakGeometry = new THREE.BufferGeometry();
-    streakGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(streakPositions, 3),
-    );
+    streakGeometry.setAttribute("position", new THREE.BufferAttribute(streakPositions, 3));
     const streakMaterial = new THREE.LineBasicMaterial({
       color: 0x5ba2ff,
       transparent: true,
@@ -574,8 +567,7 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
 
       const rect = root.getBoundingClientRect();
       const progress = clamp01(
-        (window.innerHeight - rect.top)
-        / Math.max(1, window.innerHeight + rect.height),
+        (window.innerHeight - rect.top) / Math.max(1, window.innerHeight + rect.height),
       );
       const entry = smoothRange(0.015, 0.19, progress);
       const gather = smoothRange(0.11, 0.43, progress);
@@ -640,11 +632,7 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
       energyGroup.rotation.z = progress * -0.86;
       const energyVisible = gather * (1 - smoothRange(0.47, 0.62, progress));
       energyLines.forEach(({ geometry, material, points }, index) => {
-        const lineProgress = smoothRange(
-          0.1 + index * 0.018,
-          0.34 + index * 0.018,
-          progress,
-        );
+        const lineProgress = smoothRange(0.1 + index * 0.018, 0.34 + index * 0.018, progress);
         geometry.setDrawRange(0, Math.max(0, Math.floor(points * lineProgress)));
         material.opacity = energyVisible * (0.42 + (index % 3) * 0.1);
       });
@@ -656,16 +644,11 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
         mesh.rotation.z = -progress * (0.5 + offset * 2);
       });
 
-      const streakAttribute = streakGeometry.getAttribute(
-        "position",
-      ) as THREE.BufferAttribute;
+      const streakAttribute = streakGeometry.getAttribute("position") as THREE.BufferAttribute;
       const warpStrength = gather * (1 - smoothRange(0.55, 0.79, progress));
       streakSeeds.forEach((seed, index) => {
-        const travel = (
-          seed.phase
-          + progress * seed.speed * 2.7
-          + time * 0.000018 * seed.speed
-        ) % 1;
+        const travel =
+          (seed.phase + progress * seed.speed * 2.7 + time * 0.000018 * seed.speed) % 1;
         const radius = 0.48 + travel * 5.5;
         const length = 0.05 + warpStrength * (0.18 + travel * 0.34);
         const squash = 0.55 + seed.depth * 0.12;
@@ -748,7 +731,9 @@ export function HeroRailGateway({ stats }: { stats: readonly GatewayStat[] }) {
 
       <div className="hrg-progress" aria-hidden="true">
         <span>ONE FLICK · AUTO TRANSFER</span>
-        <i><b /></i>
+        <i>
+          <b />
+        </i>
         <em>01 / 06</em>
       </div>
     </section>

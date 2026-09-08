@@ -262,7 +262,10 @@ export function HeroAppDemo({ t }: { t: Content }) {
 
               {phase === "planning" && <p className="had-line had-dim">{demo.run.planning}</p>}
 
-              {(phase === "working" || phase === "review" || phase === "changes" || phase === "done") && (
+              {(phase === "working" ||
+                phase === "review" ||
+                phase === "changes" ||
+                phase === "done") && (
                 <>
                   {demo.run.planLines.map((line) => (
                     <p key={line} className="had-line">
@@ -289,7 +292,9 @@ export function HeroAppDemo({ t }: { t: Content }) {
                       {demo.run.approve}
                     </button>
                   </div>
-                  {phase === "changes" && <p className="had-line had-dim">{demo.run.changesPrompt}</p>}
+                  {phase === "changes" && (
+                    <p className="had-line had-dim">{demo.run.changesPrompt}</p>
+                  )}
                 </div>
               )}
 
@@ -331,13 +336,11 @@ export function HeroAppDemo({ t }: { t: Content }) {
                 {openMenu === "access" && (
                   <div className="had-menu had-menu--access" role="menu">
                     <p className="had-menu-title">{menus.accessTitle}</p>
-                    {(
-                      [
-                        { key: "ask" as const, label: menus.ask, desc: menus.askDesc },
-                        { key: "auto" as const, label: menus.auto, desc: menus.autoDesc },
-                        { key: "full" as const, label: demo.fullAccess, desc: menus.fullDesc },
-                      ]
-                    ).map((option) => {
+                    {[
+                      { key: "ask" as const, label: menus.ask, desc: menus.askDesc },
+                      { key: "auto" as const, label: menus.auto, desc: menus.autoDesc },
+                      { key: "full" as const, label: demo.fullAccess, desc: menus.fullDesc },
+                    ].map((option) => {
                       const Icon = ACCESS_ICONS[option.key];
                       return (
                         <button

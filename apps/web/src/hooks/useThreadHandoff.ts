@@ -5,7 +5,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
-import { type ProviderKind } from "@synara/contracts";
+import { effectiveRuntimeMode, type ProviderKind } from "@synara/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useProviderStatusesForLocalConfig } from "./useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "./useProviderStatusRefresh";
@@ -81,7 +81,7 @@ export function useThreadHandoff() {
           projectDefaultModelSelection: project.defaultModelSelection,
           stickyModelSelectionByProvider,
         }),
-        runtimeMode: thread.runtimeMode,
+        runtimeMode: effectiveRuntimeMode(targetProvider, thread.runtimeMode),
         interactionMode: thread.interactionMode,
         envMode: thread.envMode ?? (thread.worktreePath ? "worktree" : "local"),
         branch: thread.branch,

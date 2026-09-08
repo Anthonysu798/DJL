@@ -12,6 +12,7 @@ import { isThreadDetailEventForThread } from "@synara/shared/orchestrationThread
 import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
 import {
   Outlet,
+  DefaultGlobalNotFound,
   createRootRouteWithContext,
   type ErrorComponentProps,
   useNavigate,
@@ -24,6 +25,7 @@ import { Throttler } from "@tanstack/react-pacer";
 import { useTranslation } from "react-i18next";
 
 import { APP_DISPLAY_NAME } from "../branding";
+import { useDesktopReady } from "../hooks/useDesktopReady";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
@@ -144,6 +146,7 @@ export const Route = createRootRouteWithContext<{
 }>()({
   component: RootRouteView,
   errorComponent: RootRouteErrorView,
+  notFoundComponent: RootRouteNotFoundView,
   head: () => ({
     meta: [{ name: "title", content: APP_DISPLAY_NAME }],
   }),
@@ -319,7 +322,10 @@ function ProviderUpdateNotifications() {
               })
             : t("providerUpdates.updatingCount", { count: providers.length }),
         actionProps: undefined,
-        data: { onClose: dismissProgressToast },
+        data: {
+          onClose: dismissProgressToast,
+          providerUpdate: providers.map((entry) => entry.provider),
+        },
         timeout: 0,
       });
 
@@ -406,6 +412,7 @@ function ProviderUpdateNotifications() {
               : failureLines,
           data: {
             onClose: dismissProgressToast,
+            providerUpdate: providers.map((entry) => entry.provider),
             ...(manualCommands.length > 0 ? { copyText: manualCommands.join("\n") } : {}),
           },
           timeout: 0,
@@ -423,7 +430,10 @@ function ProviderUpdateNotifications() {
               })
             : t("providerUpdates.updatedCount", { count: providers.length }),
         description: t("providerUpdates.refreshedDescription"),
-        data: { onClose: dismissProgressToast },
+        data: {
+          onClose: dismissProgressToast,
+          providerUpdate: providers.map((entry) => entry.provider),
+        },
         timeout: 6000,
       });
     },
@@ -488,11 +498,12 @@ function ProviderUpdateNotifications() {
           }
           void navigate({
             to: "/settings",
-            search: { section: "providers", target: SETTINGS_TARGETS.providerUpdates },
+            search: { section: "accounts", target: SETTINGS_TARGETS.providerUpdates },
           });
         },
       },
       data: {
+        providerUpdate: outdatedProviders.map((entry) => entry.provider),
         onClose: closeTrackedPrompt,
         secondaryActionProps: {
           children: t("providerUpdates.updateAll"),
@@ -607,7 +618,13 @@ function GlobalWhatsNewSurface() {
   );
 }
 
+function RootRouteNotFoundView() {
+  useDesktopReady();
+  return <DefaultGlobalNotFound />;
+}
+
 function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
+  useDesktopReady();
   const { t } = useTranslation("shell");
   const details = errorDetails(error, t("error.noDetails"));
 

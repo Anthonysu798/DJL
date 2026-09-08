@@ -34,6 +34,7 @@ const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> =
   cursor: new Set(MODEL_OPTIONS_BY_PROVIDER.cursor.map((option) => option.slug)),
   gemini: new Set(MODEL_OPTIONS_BY_PROVIDER.gemini.map((option) => option.slug)),
   grok: new Set(MODEL_OPTIONS_BY_PROVIDER.grok.map((option) => option.slug)),
+  kimi: new Set(MODEL_OPTIONS_BY_PROVIDER.kimi.map((option) => option.slug)),
   droid: new Set(MODEL_OPTIONS_BY_PROVIDER.droid.map((option) => option.slug)),
   kilo: new Set(MODEL_OPTIONS_BY_PROVIDER.kilo.map((option) => option.slug)),
   opencode: new Set(MODEL_OPTIONS_BY_PROVIDER.opencode.map((option) => option.slug)),
@@ -466,12 +467,13 @@ function legacyCapabilityDescriptors(
       id: reasoningDescriptorId(provider, caps),
       label: provider === "kilo" || provider === "opencode" ? "Variant" : "Reasoning",
       type: "select",
-      options: primaryOptions.map((option) => ({
-        id: option.value,
-        label: option.label,
-        ...(option.description ? { description: option.description } : {}),
-        ...(option.isDefault ? { isDefault: true as const } : {}),
-      })),
+      options: primaryOptions.map((option) =>
+        Object.assign(
+          { id: option.value, label: option.label },
+          option.description ? { description: option.description } : {},
+          option.isDefault ? { isDefault: true as const } : {},
+        ),
+      ),
       ...(defaultPrimaryOption ? { currentValue: defaultPrimaryOption.value } : {}),
       ...(caps.promptInjectedEffortLevels.length > 0
         ? { promptInjectedValues: [...caps.promptInjectedEffortLevels] }

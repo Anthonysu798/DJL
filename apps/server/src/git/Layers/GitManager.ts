@@ -1151,7 +1151,7 @@ export const makeGitManager = Effect.gen(function* () {
           branch,
           ...(commitMessage ? { commitMessage } : {}),
           ...(filePaths ? { filePaths } : {}),
-          ...(textGenerationParams ?? {}),
+          ...textGenerationParams,
         });
       }
       if (!suggestion) {
@@ -2428,7 +2428,7 @@ The local stash entry was kept for recovery.`,
         ...(commitMessage ? { commitMessage } : {}),
         ...(filePaths ? { filePaths } : {}),
         includeBranch: true,
-        ...(textGenerationParams ?? {}),
+        ...textGenerationParams,
       });
       if (!suggestion && !options?.allowCommittedHead) {
         return yield* gitManagerError(

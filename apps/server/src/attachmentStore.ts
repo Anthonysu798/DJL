@@ -117,7 +117,7 @@ export function resolveAttachmentPathById(input: {
         entry.isFile() && new RegExp(`^${escapedId}\\.[a-z0-9]{1,8}$`, "i").test(entry.name),
     )
     .map((entry) => entry.name)
-    .sort();
+    .toSorted();
   if (candidateNames.length !== 1) {
     return null;
   }

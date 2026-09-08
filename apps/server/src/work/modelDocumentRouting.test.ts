@@ -33,6 +33,20 @@ describe("resolveWorkModelDocumentRouting", () => {
     });
   });
 
+  it.each(["codex", "claudeAgent", "cursor"] as const)(
+    "prepares cited OCR for the text-only %s bridge",
+    (provider) => {
+      recordProviderModelDocumentCapabilities(provider, [
+        { slug: "vision-model", name: "Vision model", supportsVision: true, supportsPdf: true },
+      ]);
+      expect(resolveWorkModelDocumentRouting({ provider, model: "vision-model" })).toMatchObject({
+        supportsVision: false,
+        supportsPdf: false,
+        requireOcrForImages: true,
+      });
+    },
+  );
+
   it("allows a vision model to receive an original image when OCR is unavailable", () => {
     recordProviderModelDocumentCapabilities("opencode", [
       {

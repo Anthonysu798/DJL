@@ -15,6 +15,9 @@ import {
   ThreadId,
   TurnId,
   type WorkTask,
+  type ProviderModelDescriptor,
+  permissionModesForProvider,
+  type ProviderKind,
   type WsWelcomePayload,
   WS_METHODS,
   OrchestrationSessionStatus,
@@ -22,7 +25,7 @@ import {
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { HttpResponse, http, ws } from "msw";
 import { setupWorker } from "msw/browser";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -85,6 +88,7 @@ interface TestFixture {
   serverConfig: ServerConfig;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
+  providerModels?: Record<string, ReadonlyArray<ProviderModelDescriptor>>;
 }
 
 let fixture: TestFixture;
@@ -435,6 +439,7 @@ function createSnapshotWithReviewWorkTask(): OrchestrationReadModel {
 
   return {
     ...snapshot,
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     threads: snapshot.threads.map((thread) =>
       thread.id === THREAD_ID ? { ...thread, workTask } : thread,
     ),
@@ -501,16 +506,6 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
       bootstrapThreadId: THREAD_ID,
     },
   };
-}
-
-function getThreadDetailFromFixtureSnapshot(
-  threadId: ThreadId,
-): OrchestrationReadModel["threads"][number] {
-  const thread = fixture.snapshot.threads.find((entry) => entry.id === threadId);
-  if (!thread) {
-    throw new Error(`Missing thread fixture for ${threadId}`);
-  }
-  return thread;
 }
 
 function findThreadDetailFromFixtureSnapshot(
@@ -762,6 +757,7 @@ function createSnapshotWithActiveInlinePlan(): OrchestrationReadModel {
 
   return {
     ...snapshot,
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     threads: snapshot.threads.map((thread) =>
       thread.id === THREAD_ID
         ? {
@@ -833,6 +829,7 @@ function createSnapshotWithSettledInlinePlan(): OrchestrationReadModel {
 
   return {
     ...snapshot,
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     threads: snapshot.threads.map((thread) =>
       thread.id === THREAD_ID
         ? {
@@ -879,6 +876,7 @@ function createSnapshotWithSettledCompletedInlinePlan(): OrchestrationReadModel 
 
   return {
     ...snapshot,
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     threads: snapshot.threads.map((thread) =>
       thread.id === THREAD_ID
         ? {
@@ -925,6 +923,7 @@ function createSnapshotWithSettledPlanAwaitingFollowUp(): OrchestrationReadModel
 
   return {
     ...snapshot,
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     threads: snapshot.threads.map((thread) =>
       thread.id === THREAD_ID
         ? {
@@ -961,6 +960,7 @@ function createSnapshotWithInlineToolOverflow(options: {
 
   return {
     ...snapshot,
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     threads: snapshot.threads.map((thread) =>
       thread.id === THREAD_ID
         ? {
@@ -1087,7 +1087,26 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
   }
+  if (tag === WS_METHODS.providerGetComposerCapabilities) {
+    const provider = body.provider as ProviderKind;
+    return {
+      provider,
+      supportsSkillMentions: false,
+      supportsSkillDiscovery: false,
+      supportsNativeSlashCommandDiscovery: false,
+      supportsPluginMentions: false,
+      supportsPluginDiscovery: false,
+      supportsRuntimeModelList: true,
+      permissionModes: permissionModesForProvider(provider).map((mode) => ({
+        mode,
+        available: true,
+      })),
+    };
+  }
   if (tag === WS_METHODS.providerListModels) {
+    const models =
+      typeof body.provider === "string" ? fixture.providerModels?.[body.provider] : undefined;
+    if (models) return { models, source: "native", cached: false };
     return body.provider === "opencode"
       ? {
           models: [
@@ -3703,6 +3722,254 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it.each(["codex", "claudeAgent", "cursor", "opencode"] as const)(
+    "keeps the selected %s harness when sending a Work draft",
+    async (provider) => {
+      const models = {
+        codex: "gpt-6-astra",
+        claudeAgent: "claude-fable-5-1",
+        cursor: "auto",
+        opencode: "openai/gpt-5",
+      };
+      const store = useComposerDraftStore.getState();
+      store.registerDraftThread(STUDIO_DRAFT_THREAD_ID, {
+        projectId: STUDIO_PROJECT_ID,
+        createdAt: NOW_ISO,
+        runtimeMode: "full-access",
+        interactionMode: "default",
+        entryPoint: "chat",
+        branch: null,
+        worktreePath: null,
+        envMode: "local",
+      });
+      store.setModelSelectionAndSticky(STUDIO_DRAFT_THREAD_ID, {
+        provider,
+        model: models[provider],
+      });
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: withStudioProject(
+          createSnapshotForTargetUser({
+            targetMessageId: MessageId.makeUnsafe("other"),
+            targetText: "other",
+          }),
+        ),
+        initialEntry: `/${STUDIO_DRAFT_THREAD_ID}`,
+        configureFixture: (next) => {
+          next.welcome = {
+            ...next.welcome,
+            studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+          };
+          next.serverConfig = {
+            ...next.serverConfig,
+            providers: ["codex", "claudeAgent", "cursor", "opencode"].map((kind) => ({
+              provider: kind as typeof provider,
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            })),
+          };
+        },
+      });
+      try {
+        const composer = await waitForComposerEditor();
+        await waitForServerConfigToApply();
+        composer.focus();
+        dispatchComposerPickerShortcut(composer, "m");
+        for (const name of ["OpenCode", "Codex", "Claude Code", "Cursor"]) {
+          await expect
+            .element(page.getByRole("menuitem", { name, exact: true }))
+            .toBeInTheDocument();
+        }
+        await userEvent.keyboard("{Escape}");
+        const editor = page.getByRole("textbox");
+        await editor.fill("hi");
+        await page.getByRole("button", { name: "Send message", exact: true }).click();
+        await vi.waitFor(() => {
+          const turn = wsRequests
+            .map(readDispatchedCommand)
+            .find((command) => command?.type === "thread.turn.start");
+          expect(turn?.modelSelection).toMatchObject({ provider, model: models[provider] });
+          const creation = wsRequests
+            .map(readDispatchedCommand)
+            .find((command) => command?.type === "thread.create");
+          expect(creation?.projectId).toBe(STUDIO_PROJECT_ID);
+        });
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it.each(
+    (["project", "studio"] as const).flatMap((surface) =>
+      (["codex", "claudeAgent"] as const).map((provider) => ({ surface, provider })),
+    ),
+  )(
+    "changes $provider thinking and shows context usage in an existing $surface thread",
+    async ({ surface, provider }) => {
+      const model = provider === "codex" ? "gpt-5.6-sol" : "claude-fable-5-1";
+      const base = withStudioProject(
+        createSnapshotForTargetUser({
+          targetMessageId: MessageId.makeUnsafe("thinking-context"),
+          targetText: "hi",
+        }),
+      );
+      const snapshot = {
+        ...base,
+        // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
+        threads: base.threads.map((thread) => ({
+          ...thread,
+          projectId: surface === "studio" ? STUDIO_PROJECT_ID : PROJECT_ID,
+          session: null,
+          modelSelection: { provider, model },
+          activities: [
+            {
+              id: EventId.makeUnsafe("context-snapshot"),
+              turnId: null,
+              createdAt: NOW_ISO,
+              kind: "context-window.updated",
+              summary: "Context window updated",
+              tone: "info" as const,
+              payload: { usedTokens: 12000, maxTokens: 200000 },
+            },
+          ],
+        })),
+      };
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot,
+        configureFixture: (next) => {
+          next.serverConfig = {
+            ...next.serverConfig,
+            providers: [
+              {
+                provider,
+                available: true,
+                status: "ready",
+                authStatus: "authenticated",
+                checkedAt: NOW_ISO,
+              },
+            ],
+          };
+          next.welcome = {
+            ...next.welcome,
+            studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+          };
+          next.providerModels = {
+            [provider]: [
+              {
+                slug: model,
+                name: model,
+                supportedReasoningEfforts: [
+                  { value: "high" },
+                  { value: provider === "codex" ? "ultra" : "xhigh" },
+                ],
+                defaultReasoningEffort: "high",
+              },
+            ],
+          };
+        },
+      });
+      try {
+        await expect
+          .element(page.getByRole("button", { name: /Context window.*6%/ }))
+          .toBeInTheDocument();
+        await page.getByRole("button", { name: "Change model and reasoning", exact: true }).click();
+        await page
+          .getByRole("menuitemradio", { name: provider === "codex" ? "Ultra" : /Ultracode/ })
+          .click();
+        await page.getByRole("textbox").fill("hi again");
+        await page.getByRole("button", { name: "Send message", exact: true }).click();
+        await vi.waitFor(() => {
+          const turn = wsRequests
+            .map(readDispatchedCommand)
+            .find((command) => command?.type === "thread.turn.start");
+          expect(turn?.modelSelection).toMatchObject({
+            provider,
+            model,
+            options: provider === "codex" ? { reasoningEffort: "ultra" } : { effort: "ultracode" },
+          });
+        });
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it.each(
+    (["project", "studio"] as const).flatMap((surface) =>
+      (["codex", "claudeAgent"] as const).map((provider) => ({ surface, provider })),
+    ),
+  )("dispatches native permissions for $provider in $surface", async ({ surface, provider }) => {
+    const base = withStudioProject(
+      createSnapshotForTargetUser({
+        targetMessageId: MessageId.makeUnsafe("permission-turn"),
+        targetText: "hi",
+      }),
+    );
+    const model = provider === "codex" ? "gpt-6-astra" : "claude-fable-5-1";
+    const snapshot = {
+      ...base,
+      // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
+      threads: base.threads.map((thread) => ({
+        ...thread,
+        projectId: surface === "studio" ? STUDIO_PROJECT_ID : PROJECT_ID,
+        session: null,
+        modelSelection: { provider, model },
+        runtimeMode: "full-access" as const,
+      })),
+    };
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot,
+      configureFixture: (next) => {
+        next.welcome = {
+          ...next.welcome,
+          studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+        };
+        next.serverConfig = {
+          ...next.serverConfig,
+          providers: [
+            {
+              provider,
+              available: true,
+              status: "ready",
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+      },
+    });
+    try {
+      await page
+        .getByRole("button", {
+          name: provider === "claudeAgent" ? "Ask for approval" : "Full access",
+          exact: true,
+        })
+        .click();
+      await page
+        .getByRole("menuitemradio", {
+          name: provider === "claudeAgent" ? /Bypass permissions/ : /Approve for me/,
+        })
+        .click();
+      await page.getByRole("textbox").fill("hi");
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await vi.waitFor(() => {
+        const turn = wsRequests
+          .map(readDispatchedCommand)
+          .find((c) => c?.type === "thread.turn.start");
+        expect(turn?.runtimeMode).toBe(
+          provider === "claudeAgent" ? "bypass-permissions" : "auto-approval",
+        );
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("coalesces repeated Studio new-chat clicks and stays in Studio after navigation settles", async () => {
     useComposerDraftStore.setState({
       draftThreadsByThreadId: {
@@ -5155,6 +5422,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       viewport: DEFAULT_VIEWPORT,
       snapshot: {
         ...settledSnapshot,
+        // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
         threads: settledSnapshot.threads.map((thread) =>
           thread.id === THREAD_ID
             ? {

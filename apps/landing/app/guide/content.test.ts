@@ -3,6 +3,19 @@ import { content, formatGb, localModelCatalog } from "../content";
 
 // The guide's whole purpose is steering readers away from a model that cannot drive the agent, so
 // the chat-only facts are asserted rather than trusted to survive a future copy edit.
+const keysOf = (value: unknown): string =>
+  JSON.stringify(value, (_key, node) =>
+    node && typeof node === "object" && !Array.isArray(node)
+      ? Object.fromEntries(
+          Object.keys(node)
+            .toSorted()
+            .map((key) => [key, (node as Record<string, unknown>)[key]]),
+        )
+      : Array.isArray(node)
+        ? node.map(() => 0)
+        : 0,
+  );
+
 describe("local model catalog", () => {
   it("keeps Qwen3 1.7B and Qwen3.5 2B marked as unable to drive the agent", () => {
     const chatOnly = localModelCatalog.filter(({ agent }) => !agent).map(({ id }) => id);
@@ -30,7 +43,7 @@ describe("local model catalog", () => {
   it("stays ordered by ascending weight, which is what makes the table scannable", () => {
     const weights = localModelCatalog.map(({ downloadGb }) => downloadGb);
 
-    expect(weights).toEqual([...weights].sort((a, b) => a - b));
+    expect(weights).toEqual([...weights].toSorted((a, b) => a - b));
   });
 });
 
@@ -49,19 +62,6 @@ describe("formatGb", () => {
 // A half-translated guide is the realistic failure: someone adds an English step and the Chinese
 // reader silently gets a shorter list.
 describe("guide translation parity", () => {
-  const keysOf = (value: unknown): string =>
-    JSON.stringify(value, (_key, node) =>
-      node && typeof node === "object" && !Array.isArray(node)
-        ? Object.fromEntries(
-            Object.keys(node)
-              .sort()
-              .map((key) => [key, (node as Record<string, unknown>)[key]]),
-          )
-        : Array.isArray(node)
-          ? node.map(() => 0)
-          : 0,
-    );
-
   it("gives en and zh the same guide shape", () => {
     expect(keysOf(content.zh.guide)).toBe(keysOf(content.en.guide));
   });

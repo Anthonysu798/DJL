@@ -63,7 +63,7 @@ export function buildLocalModelCardViewModels(
   const catalogOrder = new Map(
     snapshot.recommendations.map((recommendation, index) => [recommendation.id, index]),
   );
-  const recommendations = [...snapshot.recommendations].sort((left, right) => {
+  const recommendations = snapshot.recommendations.toSorted((left, right) => {
     if (left.id === snapshot.recommendedModelId) return -1;
     if (right.id === snapshot.recommendedModelId) return 1;
     return (

@@ -38,7 +38,7 @@ export function IconCloud({ images = [], size = 340 }: IconCloudProps) {
   // build offscreen circular icon canvases from image URLs
   useEffect(() => {
     if (!images.length) return;
-    loadedRef.current = new Array(images.length).fill(false);
+    loadedRef.current = Array.from({ length: images.length }, () => false);
     iconCanvasesRef.current = images.map((src, index) => {
       const off = document.createElement("canvas");
       off.width = 44;
@@ -47,12 +47,16 @@ export function IconCloud({ images = [], size = 340 }: IconCloudProps) {
       if (ctx) {
         const img = new Image();
         img.crossOrigin = "anonymous";
+        img.addEventListener(
+          "load",
+          () => {
+            ctx.clearRect(0, 0, 44, 44);
+            ctx.drawImage(img, 4, 4, 36, 36);
+            loadedRef.current[index] = true;
+          },
+          { once: true },
+        );
         img.src = src;
-        img.onload = () => {
-          ctx.clearRect(0, 0, 44, 44);
-          ctx.drawImage(img, 4, 4, 36, 36);
-          loadedRef.current[index] = true;
-        };
       }
       return off;
     });

@@ -15,6 +15,13 @@ import {
   ProviderAdapterRegistry,
   type ProviderAdapterRegistryShape,
 } from "../Services/ProviderAdapterRegistry.ts";
+import {
+  NativeCodexAdapter,
+  NativeClaudeAdapter,
+  NativeCursorAdapter,
+  NativeGrokAdapter,
+  NativeKimiAdapter,
+} from "../../harnesses/native/layer";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 
 export interface ProviderAdapterRegistryLiveOptions {
@@ -23,7 +30,17 @@ export interface ProviderAdapterRegistryLiveOptions {
 
 const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOptions) =>
   Effect.gen(function* () {
-    const adapters = options?.adapters !== undefined ? options.adapters : [yield* OpenCodeAdapter];
+    const adapters =
+      options?.adapters !== undefined
+        ? options.adapters
+        : [
+            yield* OpenCodeAdapter,
+            yield* NativeCodexAdapter,
+            yield* NativeClaudeAdapter,
+            yield* NativeCursorAdapter,
+            yield* NativeGrokAdapter,
+            yield* NativeKimiAdapter,
+          ];
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
 
     const getByProvider: ProviderAdapterRegistryShape["getByProvider"] = (provider) => {

@@ -112,6 +112,7 @@ export function buildThreadHandoffImportedMessages(
 export function buildThreadHandoffImportedActivities(
   thread: Pick<Thread, "activities">,
 ): ReadonlyArray<OrchestrationThreadActivity> {
+  // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
   return thread.activities.filter(isImportableThreadActivity).map((activity) => {
     const { sequence: _sequence, ...rest } = activity;
     return {
