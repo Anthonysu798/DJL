@@ -100,7 +100,7 @@ function centralIconPrunePlugin(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     tanstackRouter({
       target: "react",
@@ -120,6 +120,27 @@ export default defineConfig({
   ],
   optimizeDeps: {
     include: [
+      // Prebundle our named icon exports, not tens of MB of unused icon packs.
+      ...(command === "serve"
+        ? [
+            "@tabler/icons-react",
+            ...[
+              "bs",
+              "fa6",
+              "fi",
+              "go",
+              "hi2",
+              "io",
+              "io5",
+              "lu",
+              "pi",
+              "ri",
+              "si",
+              "tb",
+              "vsc",
+            ].map((pack) => `react-icons/${pack}`),
+          ]
+        : []),
       "@pierre/diffs",
       "@pierre/diffs/react",
       "@pierre/diffs/worker/worker.js",
@@ -132,11 +153,25 @@ export default defineConfig({
     "import.meta.env.APP_VERSION": JSON.stringify(pkg.version),
   },
   resolve: {
+    alias:
+      command === "serve"
+        ? [
+            {
+              find: /^(?:@tabler\/icons-react|react-icons\/(?:bs|fa6|fi|go|gr|hi2|io|io5|lu|pi|ri|si|tb|vsc))$/,
+              replacement: path.resolve(import.meta.dirname, "dev/icons.mjs"),
+            },
+          ]
+        : [],
     tsconfigPaths: true,
   },
   server: {
     port,
     strictPort: true,
+    // Compile the shell while Electron/backend bundles are starting, instead
+    // of paying the transform waterfall after the first window is created.
+    warmup: {
+      clientFiles: ["./src/main.tsx", "./src/components/Sidebar.tsx"],
+    },
     hmr: {
       // Explicit config so Vite's HMR WebSocket connects reliably
       // inside Electron's BrowserWindow. Vite 8 uses console.debug for
@@ -150,4 +185,4 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: buildSourcemap,
   },
-});
+}));

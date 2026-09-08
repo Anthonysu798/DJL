@@ -75,15 +75,21 @@ export function SoccerBall({ className }: SoccerBallProps) {
       <circle cx={CENTER} cy={CENTER} r={RIM_RADIUS} fill="url(#ball-sphere)" />
 
       <g stroke="#0f1115" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round">
-        {SEAMS.map((seam, index) => (
-          <line key={`seam-${index}`} x1={seam.x1} y1={seam.y1} x2={seam.x2} y2={seam.y2} />
+        {SEAMS.map((seam) => (
+          <line
+            key={`${seam.x1}:${seam.y1}:${seam.x2}:${seam.y2}`}
+            x1={seam.x1}
+            y1={seam.y1}
+            x2={seam.x2}
+            y2={seam.y2}
+          />
         ))}
       </g>
 
       <g fill="#15171c" stroke="#0a0b0e" strokeWidth={1} strokeLinejoin="round">
         <polygon points={CENTER_PENTAGON} />
-        {OUTER_PENTAGONS.map((points, index) => (
-          <polygon key={`pentagon-${index}`} points={points} />
+        {OUTER_PENTAGONS.map((points) => (
+          <polygon key={points} points={points} />
         ))}
       </g>
 

@@ -197,7 +197,7 @@ function substantialAuthoredEnglish(value: string, node: ts.Node, fileName: stri
   if (/^(?:[\w.-]+\/)+[\w.-]+$/.test(text)) return false;
   if (/^(?:bun|npm|pnpm|yarn|git|codex|claude|node)\s+[-\w]/i.test(text)) return false;
   if (/^[a-z0-9]+(?:[-_.:/][a-z0-9]+)+$/i.test(text)) return false;
-  if (/^[A-Z0-9_./:@{}\[\]-]{2,}$/.test(text)) return false;
+  if (/^[A-Z0-9_./:@{}[\]-]{2,}$/.test(text)) return false;
   if (/^(?:[a-z]+:)?\/\//i.test(text)) return false;
   if (
     /^(?:(?:text|font|bg|flex|grid|items|justify|gap|leading|tracking|rounded|border|shadow|space|p[trblxy]?|m[trblxy]?|w|h|min-w|max-w|min-h|max-h|overflow|opacity|tabular|whitespace)-[^\s]+\s*){2,}$/i.test(
@@ -341,7 +341,7 @@ export function collectVisibleEnglish(
 function flatten(value: JsonValue, path: readonly string[] = []): Map<string, JsonValue> {
   if (value !== null && typeof value === "object" && !Array.isArray(value)) {
     return new Map(
-      Object.entries(value).flatMap(([key, child]) => [...flatten(child, [...path, key])]),
+      Object.entries(value).flatMap(([key, child]) => Array.from(flatten(child, path.concat(key)))),
     );
   }
   return new Map([[path.join("."), value]]);
@@ -460,7 +460,7 @@ function canonicalize(value: JsonValue): JsonValue {
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right, "en"))
+        .toSorted(([left], [right]) => left.localeCompare(right, "en"))
         .map(([key, child]) => [key, canonicalize(child)]),
     );
   }

@@ -34,6 +34,16 @@ export function resolveWorkModelDocumentRouting(
   selection: ModelSelection,
 ): WorkModelDocumentRouting {
   const descriptor = capabilitiesByModel.get(key(selection.provider, selection.model));
+  // These bridges currently transport text only, even when the underlying model has vision.
+  if (["codex", "claudeAgent", "cursor"].includes(selection.provider)) {
+    return {
+      capabilitiesKnown: true,
+      supportsVision: false,
+      supportsPdf: false,
+      processingLocality: descriptor?.processingLocality ?? "unknown",
+      requireOcrForImages: true,
+    };
+  }
   if (descriptor) {
     const supportsVision = descriptor.supportsVision === true;
     return {

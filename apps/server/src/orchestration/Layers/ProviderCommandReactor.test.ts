@@ -505,6 +505,255 @@ describe("ProviderCommandReactor", () => {
     };
   }
 
+  it.each(["codex", "claudeAgent", "cursor"] as const)(
+    "starts and restarts %s standalone chats in their materialized folder without enabling checkpoints",
+    async (provider) => {
+      const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-chat-cwd-"));
+      const workspaceRoot = path.join(baseDir, "materialized-chat");
+      fs.mkdirSync(workspaceRoot);
+      const harness = await createHarness({
+        baseDir,
+        projectKind: "chat",
+        projectWorkspaceRoot: workspaceRoot,
+        threadModelSelection: { provider, model: "native" },
+      });
+      const now = new Date().toISOString();
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("native-chat-start"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("native-chat-message"),
+            role: "user",
+            text: "Hello",
+            attachments: [],
+          },
+          interactionMode: "default",
+          runtimeMode: "approval-required",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        provider,
+        cwd: workspaceRoot,
+      });
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("attachments");
+      expect(harness.isGitRepository).not.toHaveBeenCalled();
+      expect(harness.captureCheckpoint).not.toHaveBeenCalled();
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.runtime-mode.set",
+          commandId: CommandId.makeUnsafe("native-chat-restart"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          runtimeMode: "auto-approval",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.startSession.mock.calls.length === 2);
+      expect(harness.startSession.mock.calls[1]?.[1]).toMatchObject({
+        provider,
+        cwd: workspaceRoot,
+      });
+    },
+  );
+
+  it.each(["project", "worktree", "pending"] as const)(
+    "preserves %s workspace semantics for native runtime startup",
+    async (mode) => {
+      const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-project-cwd-"));
+      const workspaceRoot = path.join(baseDir, "project");
+      const worktreePath = path.join(baseDir, "materialized-worktree");
+      fs.mkdirSync(workspaceRoot);
+      fs.mkdirSync(worktreePath);
+      const harness = await createHarness({
+        baseDir,
+        projectKind: mode === "project" ? "project" : "chat",
+        projectWorkspaceRoot: workspaceRoot,
+      });
+      const now = new Date().toISOString();
+      if (mode !== "project")
+        await Effect.runPromise(
+          harness.engine.dispatch({
+            type: "thread.meta.update",
+            commandId: CommandId.makeUnsafe("native-worktree-state"),
+            threadId: ThreadId.makeUnsafe("thread-1"),
+            envMode: "worktree",
+            worktreePath: mode === "pending" ? null : worktreePath,
+          }),
+        );
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("native-workspace-start"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("native-workspace-message"),
+            role: "user",
+            text: "Hello",
+            attachments: [],
+          },
+          interactionMode: "default",
+          runtimeMode: "approval-required",
+          createdAt: now,
+        }),
+      );
+      if (mode === "pending") {
+        await waitFor(
+          async () =>
+            (await Effect.runPromise(harness.engine.getReadModel())).threads[0]?.activities.some(
+              (activity) => activity.kind === "provider.turn.start.failed",
+            ) === true,
+        );
+        expect(harness.startSession).not.toHaveBeenCalled();
+        expect(harness.sendTurn).not.toHaveBeenCalled();
+        expect(harness.captureCheckpoint).not.toHaveBeenCalled();
+      } else {
+        await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+        const cwd = mode === "worktree" ? worktreePath : workspaceRoot;
+        expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({ cwd });
+        expect(harness.isGitRepository).toHaveBeenCalledWith(cwd);
+      }
+    },
+  );
+
+  it.each(
+    (["codex", "claudeAgent", "cursor"] as const).flatMap((provider) =>
+      (["attachment", "memory", "studio"] as const).map((kind) => ({ provider, kind })),
+    ),
+  )(
+    "retains prepared context for $provider $kind without OpenCode wire fields",
+    async ({ provider, kind }) => {
+      const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-work-boundary-"));
+      const workspaceRoot = path.join(baseDir, "task");
+      fs.mkdirSync(workspaceRoot);
+      const harness = await createHarness({
+        baseDir,
+        projectKind: kind === "studio" ? "studio" : "chat",
+        projectWorkspaceRoot: workspaceRoot,
+        threadModelSelection: { provider, model: "native-test" },
+      });
+      const now = new Date().toISOString();
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("native-explicit-work"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("native-work-message"),
+            role: "user",
+            text: "Read the context",
+            ...(kind === "memory"
+              ? { memoryContext: { searchProject: true, references: [] } }
+              : {}),
+            attachments:
+              kind === "attachment"
+                ? [
+                    {
+                      type: "file",
+                      id: "native-file" as never,
+                      name: "report.pdf",
+                      mimeType: "application/pdf",
+                      sizeBytes: 10,
+                    },
+                  ]
+                : [],
+          },
+
+          interactionMode: "default",
+          runtimeMode: "approval-required",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.enqueueWorkPreparation.mock.calls.length === 1);
+      expect(harness.sendTurn).not.toHaveBeenCalled();
+      const queued = harness.enqueueWorkPreparation.mock.calls[0]![0];
+      await harness.emitPreparedWorkTurn({
+        id: "native-prepared",
+        sourceEventId: queued.event.eventId,
+        threadId: queued.event.payload.threadId,
+        projectId: queued.projectId,
+        messageId: queued.message.id,
+        request: queued.event.payload,
+        messageText: queued.message.text,
+        attachments: queued.message.attachments ?? [],
+        status: "completed",
+        preparedPrompt: "Prepared context",
+        error: null,
+        attemptCount: 1,
+        createdAt: now,
+        updatedAt: now,
+        completedAt: now,
+        dispatchedAt: null,
+      });
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+      expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("attachments");
+      expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+        input: expect.stringContaining("Prepared context"),
+      });
+      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+        cwd: expect.stringContaining(workspaceRoot),
+      });
+    },
+  );
+
+  it("passes the materialized standalone chat folder to native fork startup", async () => {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "native-chat-fork-"));
+    const workspaceRoot = path.join(baseDir, "task");
+    fs.mkdirSync(workspaceRoot);
+    const forkId = ThreadId.makeUnsafe("native-fork");
+    const harness = await createHarness({
+      baseDir,
+      projectKind: "chat",
+      projectWorkspaceRoot: workspaceRoot,
+      forkThreadResult: { threadId: forkId, resumeCursor: { nativeSessionId: "fork-session" } },
+    });
+    const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.fork.create",
+        commandId: CommandId.makeUnsafe("native-fork-create"),
+        threadId: forkId,
+        sourceThreadId: ThreadId.makeUnsafe("thread-1"),
+        projectId: asProjectId("project-1"),
+        title: "Fork",
+        modelSelection: { provider: "codex", model: "native" },
+        runtimeMode: "approval-required",
+        interactionMode: "default",
+        envMode: "local",
+        branch: null,
+        worktreePath: null,
+        importedMessages: [],
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("native-fork-turn"),
+        threadId: forkId,
+        message: {
+          messageId: asMessageId("native-fork-message"),
+          role: "user",
+          text: "Hello",
+          attachments: [],
+        },
+        interactionMode: "default",
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.forkThread.mock.calls[0]?.[0]).toMatchObject({
+      threadId: forkId,
+      cwd: workspaceRoot,
+    });
+    expect(harness.startSession).not.toHaveBeenCalled();
+  });
+
   async function seedRollbackTarget(
     harness: Awaited<ReturnType<typeof createHarness>>,
     input: {
@@ -2552,7 +2801,7 @@ describe("ProviderCommandReactor", () => {
         projectId: asProjectId("project-home"),
         kind: "chat",
         title: "Home",
-        workspaceRoot: "/Users/tester",
+        workspaceRoot: os.homedir(),
         defaultModelSelection: {
           provider: "codex",
           model: "gpt-5-codex",
@@ -2609,12 +2858,9 @@ describe("ProviderCommandReactor", () => {
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
       input: "hello from home chat",
-      workTurnPolicy: {
-        route: "chat",
-        visibleTools: [],
-        instructionScope: "work-isolated",
-      },
     });
+    expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("workTurnPolicy");
+    expect(harness.sendTurn.mock.calls[0]?.[0]).not.toHaveProperty("attachments");
   });
 
   it("renames a generic first-turn thread title using text generation", async () => {
@@ -3583,7 +3829,6 @@ describe("ProviderCommandReactor", () => {
     };
     const harness = await createHarness({ threadModelSelection: initialSelection });
     const threadId = ThreadId.makeUnsafe("thread-1");
-    const now = new Date().toISOString();
 
     // Mirrors native import: ProviderService owns the runtime start directly,
     // while the reactor learns the original selection from thread.created.

@@ -34,9 +34,7 @@
     linear-gradient(90deg, rgba(36, 123, 255, 0.06) 1px, transparent 1px);
   background-size: 64px 64px;
   opacity: calc(0.18 + var(--hrg-gather) * 0.42);
-  transform:
-    perspective(900px)
-    rotateX(calc(3deg + var(--hrg-gather) * 11deg))
+  transform: perspective(900px) rotateX(calc(3deg + var(--hrg-gather) * 11deg))
     scale(calc(1 + var(--hrg-gather) * 0.22));
   transform-origin: 50% 55%;
   -webkit-mask-image: radial-gradient(circle at 50% 48%, black 0 48%, transparent 86%);
@@ -45,7 +43,8 @@
 
 .hero-rail-gateway::after {
   background:
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent) 50% 50% / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent) 50% 50% / 100% 1px
+      no-repeat,
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 0 38%, rgba(255, 255, 255, 0.76) 78%);
   opacity: calc(0.3 + var(--hrg-exit) * 0.7);
 }
@@ -73,12 +72,11 @@
 
 .hrg-grid {
   z-index: 1;
-  background:
-    repeating-conic-gradient(
-      from 0deg at 50% 50%,
-      rgba(36, 123, 255, 0.12) 0deg 0.12deg,
-      transparent 0.12deg 30deg
-    );
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(36, 123, 255, 0.12) 0deg 0.12deg,
+    transparent 0.12deg 30deg
+  );
   opacity: calc(var(--hrg-gather) * 0.48 * (1 - var(--hrg-exit)));
   transform: rotate(calc(var(--hrg-progress) * -18deg)) scale(calc(0.7 + var(--hrg-gather) * 0.5));
   -webkit-mask-image: radial-gradient(circle, transparent 0 8%, black 25%, transparent 74%);
@@ -92,8 +90,12 @@
   left: 0;
   z-index: 8;
   height: calc(100svh + 48px);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(216, 237, 255, 0.98), rgba(34, 126, 255, 0.96) 35%, #0b55d4 100%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(216, 237, 255, 0.98),
+    rgba(34, 126, 255, 0.96) 35%,
+    #0b55d4 100%
+  );
   opacity: var(--hrg-veil);
   mix-blend-mode: normal;
 }
@@ -148,11 +150,7 @@
   top: 18%;
   left: clamp(28px, 5.2vw, 82px);
   opacity: calc(var(--hrg-entry) * (1 - var(--hrg-gather)));
-  transform: translate3d(
-    0,
-    calc((1 - var(--hrg-entry)) * 34px - var(--hrg-gather) * 46px),
-    0
-  );
+  transform: translate3d(0, calc((1 - var(--hrg-entry)) * 34px - var(--hrg-gather) * 46px), 0);
 }
 
 .hrg-copy-exit {
@@ -197,9 +195,7 @@
   letter-spacing: 0.1em;
   color: rgba(11, 17, 24, 0.68);
   opacity: calc(var(--hrg-gather) * (1 - var(--hrg-post)));
-  transform:
-    rotate(var(--hrg-angle))
-    translateX(clamp(150px, 24vw, 360px))
+  transform: rotate(var(--hrg-angle)) translateX(clamp(150px, 24vw, 360px))
     rotate(calc(var(--hrg-angle) * -1));
   transform-origin: 0 0;
 }
@@ -210,7 +206,9 @@
   border: 1px solid #fff;
   border-radius: 50%;
   background: #176df5;
-  box-shadow: 0 0 0 4px rgba(23, 109, 245, 0.12), 0 0 20px rgba(23, 109, 245, 0.75);
+  box-shadow:
+    0 0 0 4px rgba(23, 109, 245, 0.12),
+    0 0 20px rgba(23, 109, 245, 0.75);
 }
 
 .hrg-stats {
@@ -318,9 +316,7 @@
   }
 
   .hrg-capabilities span {
-    transform:
-      rotate(var(--hrg-angle))
-      translateX(clamp(118px, 35vw, 220px))
+    transform: rotate(var(--hrg-angle)) translateX(clamp(118px, 35vw, 220px))
       rotate(calc(var(--hrg-angle) * -1));
   }
 

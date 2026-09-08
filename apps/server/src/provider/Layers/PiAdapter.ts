@@ -48,6 +48,35 @@ import { classifyPiTurnFailure } from "../piTurnFailure.ts";
 import { clampUsagePercent, nonNegativeFiniteNumber, positiveFiniteNumber } from "../tokenUsage.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
+const resolvePiExtensionUserInput = (
+  context: PiSessionContext,
+  requestId: ApprovalRequestId,
+  answers: ProviderUserInputAnswers,
+) => {
+  const pending = context.pendingUserInputs.get(requestId);
+  if (!pending) return false;
+  pending.resolve(answers);
+  return true;
+};
+
+const recordItem = (context: PiSessionContext, item: unknown) => {
+  const turn = context.activeTurnId
+    ? context.turns.find((candidate) => candidate.id === context.activeTurnId)
+    : context.turns.at(-1);
+  turn?.items.push(item);
+};
+
+const disposeSessionContext = async (context: PiSessionContext) => {
+  context.unsubscribe?.();
+  context.unsubscribe = undefined;
+  for (const pending of Array.from(context.pendingUserInputs.values())) {
+    pending.resolve({});
+  }
+  context.pendingUserInputs.clear();
+  context.stopped = true;
+  await context.runtime.dispose();
+};
+
 const PROVIDER = "pi" as const;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const PI_THINKING_OPTIONS: ReadonlyArray<{
@@ -627,6 +656,7 @@ function toolLifecycleData(input: {
         ...base,
         kind: "edit",
         ...(path ? { path, filePath: path, files: [{ path }], changes: [{ path }] } : {}),
+        // eslint-disable-next-line oxc/no-map-spread -- Keep caller-owned records immutable.
         ...(edits ? { edits: edits.map((edit) => ({ ...edit, ...(path ? { path } : {}) })) } : {}),
         ...(unifiedDiff ? { unifiedDiff } : {}),
       };
@@ -935,17 +965,6 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       } satisfies ProviderRuntimeEvent);
     };
 
-    const resolvePiExtensionUserInput = (
-      context: PiSessionContext,
-      requestId: ApprovalRequestId,
-      answers: ProviderUserInputAnswers,
-    ) => {
-      const pending = context.pendingUserInputs.get(requestId);
-      if (!pending) return false;
-      pending.resolve(answers);
-      return true;
-    };
-
     const requestPiExtensionUserInput = (
       context: PiSessionContext,
       input: {
@@ -965,7 +984,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       return new Promise((resolve) => {
         let settled = false;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
-        let abort: () => void = () => undefined;
+        let abort: () => void;
 
         const cleanup = () => {
           if (timeoutId !== undefined) {
@@ -1227,13 +1246,6 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       } satisfies ProviderRuntimeEvent);
     };
 
-    const recordItem = (context: PiSessionContext, item: unknown) => {
-      const turn = context.activeTurnId
-        ? context.turns.find((candidate) => candidate.id === context.activeTurnId)
-        : context.turns.at(-1);
-      turn?.items.push(item);
-    };
-
     const requireSession = Effect.fn("PiAdapter.requireSession")(function* (threadId: ThreadId) {
       const context = sessions.get(threadId);
       if (!context) {
@@ -1244,17 +1256,6 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       }
       return context;
     });
-
-    const disposeSessionContext = async (context: PiSessionContext) => {
-      context.unsubscribe?.();
-      context.unsubscribe = undefined;
-      for (const pending of Array.from(context.pendingUserInputs.values())) {
-        pending.resolve({});
-      }
-      context.pendingUserInputs.clear();
-      context.stopped = true;
-      await context.runtime.dispose();
-    };
 
     const handleMessageUpdate = (
       context: PiSessionContext,
@@ -2123,12 +2124,14 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           const extensionCount = services.resourceLoader.getExtensions().extensions.length;
           const models = services.modelRegistry.getAvailable().map((model) => {
             const supportedThinkingOptions = getPiSupportedThinkingOptions(model);
-            return {
-              slug: `${model.provider}/${model.id}`,
-              name: model.name,
-              upstreamProviderId: model.provider,
-              upstreamProviderName: services.modelRegistry.getProviderDisplayName(model.provider),
-              ...(supportedThinkingOptions.length > 0
+            return Object.assign(
+              {
+                slug: `${model.provider}/${model.id}`,
+                name: model.name,
+                upstreamProviderId: model.provider,
+                upstreamProviderName: services.modelRegistry.getProviderDisplayName(model.provider),
+              },
+              supportedThinkingOptions.length > 0
                 ? {
                     supportedReasoningEfforts: supportedThinkingOptions.map((option) => ({
                       value: option.value,
@@ -2141,8 +2144,8 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                       ? { defaultReasoningEffort: DEFAULT_PI_THINKING_LEVEL }
                       : {}),
                   }
-                : {}),
-            };
+                : {},
+            );
           });
           return {
             models,
@@ -2191,13 +2194,12 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             skills: result.skills.map((skill) => {
               const description = trimToUndefined(skill.description);
               const scope = trimToUndefined(skill.sourceInfo.source);
-              return {
-                name: skill.name,
-                ...(description ? { description } : {}),
-                path: skill.filePath,
-                enabled: !skill.disableModelInvocation,
-                ...(scope ? { scope } : {}),
-              };
+              return Object.assign(
+                { name: skill.name },
+                description ? { description } : {},
+                { path: skill.filePath, enabled: !skill.disableModelInvocation },
+                scope ? { scope } : {},
+              );
             }),
             source: "pi.sdk",
             cached: false,

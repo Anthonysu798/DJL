@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 export type DownloadTarget = {
   platform: "mac" | "windows";
@@ -9,14 +9,16 @@ export type DownloadTarget = {
 };
 
 // The server and first client render always show the macOS variant; the Windows
-// swap happens in an effect so hydration never mismatches. The hrefs are the
+// swap happens after hydration through the browser snapshot. The hrefs are the
 // existing release-resolving route handlers, so no version is pinned here.
-export function useDownloadTarget(labels: { mac: string; windows: string }): DownloadTarget {
-  const [platform, setPlatform] = useState<"mac" | "windows">("mac");
+const subscribe = () => () => {};
 
-  useEffect(() => {
-    if (navigator.userAgent.includes("Windows")) setPlatform("windows");
-  }, []);
+export function useDownloadTarget(labels: { mac: string; windows: string }): DownloadTarget {
+  const platform = useSyncExternalStore<DownloadTarget["platform"]>(
+    subscribe,
+    () => (navigator.userAgent.includes("Windows") ? "windows" : "mac"),
+    () => "mac",
+  );
 
   return platform === "windows"
     ? { platform, href: "/download/windows", label: labels.windows }

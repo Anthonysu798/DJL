@@ -124,7 +124,7 @@ function WorkTaskTimestampProbe() {
       <button type="button" onClick={() => setTimestampFormat("24-hour")}>
         24-hour
       </button>
-      <WorkspaceFileOpenerContext.Provider value={{ openFile: () => false }}>
+      <WorkspaceFileOpenerContext.Provider value={noFileOpener}>
         <WorkTaskPanel
           task={task}
           activities={activities}
@@ -273,3 +273,5 @@ describe("live locale and formatting controls", () => {
     await screen.unmount();
   });
 });
+
+const noFileOpener = { openFile: () => false };

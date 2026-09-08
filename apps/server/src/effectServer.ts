@@ -154,7 +154,7 @@ export const createEffectServer = Effect.fn(function* () {
       homeDir: config.homeDir,
       chatWorkspaceRoot: config.chatWorkspaceRoot,
       studioWorkspaceRoot: config.studioWorkspaceRoot,
-      projectName: config.cwd.split(/[\\/]/).filter(Boolean).at(-1) ?? config.cwd,
+      projectName: config.cwd.split(/[\\/]/).findLast(Boolean) ?? config.cwd,
     },
   });
   yield* lifecycleEvents.publish({

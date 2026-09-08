@@ -1,4 +1,10 @@
 import { Schema, Struct } from "effect";
+import {
+  HarnessProfileAccountInput,
+  HarnessLoginInput,
+  HarnessEndLoginInput,
+  HarnessMaintainToolInput,
+} from "./harnessAccounts";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 import {
@@ -253,6 +259,14 @@ export const WS_METHODS = {
   subscribeGitActionProgress: "git.subscribeActionProgress",
 
   // Provider discovery
+  harnessListTools: "harnesses.listTools",
+  harnessMaintainTool: "harnesses.maintainTool",
+  harnessProfileAccount: "harnesses.getProfileAccount",
+  harnessListAccounts: "harnesses.listAccounts",
+  harnessListLegacyOpenCodeCredentials: "harnesses.listLegacyOpenCodeCredentials",
+  harnessTransferLegacyOpenCodeCredentials: "harnesses.transferLegacyOpenCodeCredentials",
+  harnessStartLogin: "harnesses.startLogin",
+  harnessEndLogin: "harnesses.endLogin",
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
   providerCompactThread: "provider.compactThread",
   providerListCommands: "provider.listCommands",
@@ -461,6 +475,14 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
   tagRequestBody(WS_METHODS.openCodeListModelProviders, OpenCodeListModelProvidersInput),
   tagRequestBody(WS_METHODS.openCodeSetApiKey, OpenCodeSetApiKeyInput),
+  tagRequestBody(WS_METHODS.harnessProfileAccount, HarnessProfileAccountInput),
+  tagRequestBody(WS_METHODS.harnessListAccounts, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.harnessListLegacyOpenCodeCredentials, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.harnessTransferLegacyOpenCodeCredentials, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.harnessListTools, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.harnessMaintainTool, HarnessMaintainToolInput),
+  tagRequestBody(WS_METHODS.harnessStartLogin, HarnessLoginInput),
+  tagRequestBody(WS_METHODS.harnessEndLogin, HarnessEndLoginInput),
   tagRequestBody(WS_METHODS.openCodeRemoveCredential, OpenCodeRemoveCredentialInput),
 
   // Desktop local-model runtimes

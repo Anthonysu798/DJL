@@ -50,7 +50,6 @@ describe("resolveTerminalCloseTitle", () => {
 
 describe("buildTerminalCloseConfirmationMessage", () => {
   it("uses the caller translation function while preserving the terminal title", () => {
-    const keyT = (key: string, values?: Record<string, unknown>) => `${key}:${values?.title ?? ""}`;
     expect(
       buildTerminalCloseConfirmationMessage({
         terminalTitle: "Deploy shell",
@@ -183,3 +182,5 @@ describe("shouldPromptForTerminalClose", () => {
     ).toBe(false);
   });
 });
+
+const keyT = (key: string, values?: Record<string, unknown>) => `${key}:${values?.title ?? ""}`;

@@ -1,4 +1,4 @@
-import type { GitBranch, ProviderKind, RuntimeMode } from "@synara/contracts";
+import type { GitBranch } from "@synara/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   type AssociatedWorktreeMetadata,
@@ -8,11 +8,7 @@ import { Schema } from "effect";
 export const EnvMode = Schema.Literals(["local", "worktree"]);
 export type EnvMode = typeof EnvMode.Type;
 
-export function runtimeModeOptionsForProvider(provider: ProviderKind): ReadonlyArray<RuntimeMode> {
-  return provider === "opencode"
-    ? ["approval-required", "auto-approval", "full-access"]
-    : ["full-access", "approval-required"];
-}
+export { permissionModesForProvider as runtimeModeOptionsForProvider } from "@synara/contracts";
 
 export function resolveEffectiveEnvMode(input: {
   activeWorktreePath: string | null;

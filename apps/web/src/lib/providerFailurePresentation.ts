@@ -3,6 +3,7 @@
 // Layer: Pure web presentation logic
 
 export type ProviderFailureKind =
+  | "workspaceMissing"
   | "authentication"
   | "commandMissing"
   | "permission"
@@ -12,6 +13,7 @@ export type ProviderFailureKind =
 
 export function classifyProviderFailure(detail: string | null | undefined): ProviderFailureKind {
   const normalized = detail?.toLowerCase() ?? "";
+  if (normalized.includes("working folder is unavailable")) return "workspaceMissing";
   if (
     /\b(unauthori[sz]ed|authentication|credentials?|api[ _-]?key|sign[ -]?in|login)\b/.test(
       normalized,

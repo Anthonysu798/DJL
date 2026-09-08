@@ -341,7 +341,7 @@ function joinedBufferedReasoningSummary(
   }
   return readableReasoningDetail(
     Array.from(summary.parts.entries())
-      .sort(([left], [right]) => left - right)
+      .toSorted(([left], [right]) => left - right)
       .map(([, text]) => text.trim())
       .filter((text) => text.length > 0)
       .join("\n\n"),
@@ -988,6 +988,30 @@ function runtimeEventToActivities(
       ? { sequence: eventWithSequence.sessionSequence }
       : {};
   })();
+  if (
+    (event.type === "item.started" || event.type === "item.completed") &&
+    event.payload.itemType === "approval_review"
+  ) {
+    return [
+      {
+        id: event.eventId,
+        createdAt: event.createdAt,
+        tone: "approval",
+        kind:
+          event.type === "item.started" ? "approval.review.started" : "approval.review.completed",
+        summary: event.payload.title ?? "Native approval review",
+        payload: toActivityPayload({
+          itemType: "approval_review",
+          ...(event.payload.status ? { status: event.payload.status } : {}),
+          ...(event.itemId ? { reviewId: String(event.itemId) } : {}),
+          ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail) } : {}),
+          ...activityDataField(event.payload.data),
+        }),
+        turnId: toTurnId(event.turnId) ?? null,
+        ...maybeSequence,
+      },
+    ];
+  }
   // Codex only renders completed reasoning items with a readable summary.
   // Empty starts/completions are private/encrypted reasoning boundaries, not
   // transcript rows. Waiting for the authoritative completion also avoids

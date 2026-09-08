@@ -609,6 +609,7 @@ const fetchHomebrewLatestVersion = Effect.fn("fetchHomebrewLatestVersion")(funct
 
 export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVersion")(function* (
   maintenanceCapabilities: ProviderMaintenanceCapabilities,
+  forceRefresh = false,
 ) {
   const source = maintenanceCapabilities.latestVersionSource;
   if (!source) {
@@ -621,7 +622,7 @@ export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVers
       : `npm:${source.name}`;
   const cached = latestVersionCache.get(cacheKey);
   const now = DateTime.toEpochMillis(yield* DateTime.now);
-  if (cached && cached.expiresAt > now) {
+  if (!forceRefresh && cached && cached.expiresAt > now) {
     return cached.version;
   }
 

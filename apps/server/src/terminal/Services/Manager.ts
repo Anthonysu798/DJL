@@ -55,6 +55,9 @@ export interface TerminalSessionState {
   /** True once at least one hook event (Start/Stop/PermissionRequest) has been observed. */
   managedAgentObserved: boolean;
   runtimeEnv: Record<string, string> | null;
+  headlessQueries?: boolean;
+  /** Internal direct process launch; renderer reattachment must not start a shell. */
+  command?: TerminalCommand;
   /** Buffered shell input used to detect canonical CLI commands at submit time. */
   pendingInputBuffer: string;
   /** Live terminal-mode mirror used to replay input modes after renderer reattach. */
@@ -89,6 +92,8 @@ export interface TerminalSessionState {
   outputAckResumeTimer: ReturnType<typeof setTimeout> | null;
   /** Latest wall-clock timestamp when the user wrote to this PTY. */
   lastInputAt: number | null;
+  /** Allow the next small key echo to bypass the bulk-output timer. */
+  flushNextOutput?: boolean;
   /** Latest wall-clock timestamp when the PTY emitted output. */
   lastOutputAt: number | null;
   /** Normalized visible output used to ignore redraw-only PTY noise. */
@@ -98,6 +103,14 @@ export interface TerminalSessionState {
 export interface ShellCandidate {
   shell: string;
   args?: string[];
+}
+
+/** Server-owned argv launch. Never accepted through the public terminal RPC schema. */
+export interface TerminalCommand {
+  executable: string;
+  args: string[];
+  removeEnv?: string[];
+  persistentShell?: boolean;
 }
 
 export interface TerminalStartInput extends TerminalOpenInput {
@@ -117,11 +130,15 @@ export interface TerminalManagerShape {
    */
   readonly open: (
     input: TerminalOpenInput,
+    command?: TerminalCommand,
   ) => Effect.Effect<TerminalSessionSnapshot, TerminalError>;
 
-  /**
-   * Write input bytes to a terminal session.
-   */
+  /** Read process liveness without opening or restarting a terminal. */
+  readonly isRunning: (input: { threadId: string; terminalId: string }) => Effect.Effect<boolean>;
+  /** Read liveness across all terminals, including background workspaces. */
+  readonly hasRunningProcesses: Effect.Effect<boolean>;
+
+  /** Write input bytes to a terminal session. */
   readonly write: (input: TerminalWriteInput) => Effect.Effect<void, TerminalError>;
 
   /**

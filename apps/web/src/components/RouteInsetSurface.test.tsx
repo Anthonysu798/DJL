@@ -39,6 +39,7 @@ function renderRouteSurface(route: string, open: boolean): string {
 describe("RouteInsetSurface", () => {
   it.each(
     DEFAULT_ROUTE_SURFACES.flatMap((route) =>
+      // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
       SIDEBAR_STATES.map((state) => ({
         route,
         ...state,

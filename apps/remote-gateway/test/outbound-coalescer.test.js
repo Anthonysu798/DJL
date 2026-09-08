@@ -8,6 +8,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createOutboundCoalescer } = require("../src/outbound-coalescer");
 
+const chunk = (data) =>
+  JSON.stringify({ method: "djl/terminal/event", params: { type: "output", data } });
+
 function createFakeTimers() {
   let pending = null;
   return {
@@ -162,8 +165,6 @@ test("a batch flushes early when the next notification would exceed the byte cap
     flush: (text) => flushed.push(text),
   });
 
-  const chunk = (data) =>
-    JSON.stringify({ method: "djl/terminal/event", params: { type: "output", data } });
   coalescer.push(chunk("a".repeat(40)));
   coalescer.push(chunk("b".repeat(40)));
   assert.equal(flushed.length, 0);

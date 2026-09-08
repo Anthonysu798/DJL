@@ -5,7 +5,6 @@ import {
   type AppLocalePreference,
 } from "@synara/contracts";
 import {
-  normalizeAppLocalePreference,
   normalizeReleaseLocalePreference,
   resolveAppLocalePreference,
 } from "@synara/shared/locale";

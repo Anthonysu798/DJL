@@ -3,6 +3,8 @@
 // Layer: Web chat presentation component
 // Exports: MessagesTimeline
 
+import { Link } from "@tanstack/react-router";
+import { classifyProviderFailure } from "../../lib/providerFailurePresentation";
 import {
   type MessageId,
   type ProviderMentionReference,
@@ -3383,6 +3385,17 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                   </p>
                 )}
               </div>
+              {workEntry.tone === "error" &&
+              classifyProviderFailure(displayText) === "commandMissing" ? (
+                <Link
+                  to="/settings"
+                  search={{ section: "accounts" }}
+                  className="shrink-0 text-xs underline"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {t("common:actions.settings")}
+                </Link>
+              ) : null}
             </>
           );
           if (canOpenToolDetails && workEntry.toolDetails) {

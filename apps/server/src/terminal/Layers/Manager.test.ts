@@ -255,6 +255,118 @@ describe("TerminalManager", () => {
     return { logsDir, ptyAdapter, manager };
   }
 
+  it("reports running background terminals until they are closed", async () => {
+    const { manager } = makeManager();
+    try {
+      expect(manager.hasRunningProcesses()).toBe(false);
+      await manager.open(openInput());
+      expect(manager.hasRunningProcesses()).toBe(true);
+      await manager.close({ threadId: "thread-1", terminalId: "default", deleteHistory: true });
+      expect(manager.hasRunningProcesses()).toBe(false);
+    } finally {
+      await manager.dispose();
+    }
+  });
+
+  it("delivers the first key echo immediately while continuing to batch subsequent bulk output", async () => {
+    const { manager, ptyAdapter } = makeManager();
+    try {
+      await manager.open(openInput());
+      const output: string[] = [];
+      manager.on("event", (event: TerminalEvent) => {
+        if (event.type === "output") output.push(event.data);
+      });
+      await manager.write({ threadId: "thread-1", terminalId: "default", data: "x" });
+      ptyAdapter.processes[0]!.emitData("x");
+      expect(output).toEqual(["x"]);
+      ptyAdapter.processes[0]!.emitData("background output");
+      expect(output).toEqual(["x"]);
+      await waitFor(() => output.length === 2);
+    } finally {
+      manager.dispose();
+    }
+  });
+
+  it("reattaches a workspace screen without spawning, resizing, or replaying history for metadata opens", async () => {
+    const { manager, ptyAdapter } = makeManager();
+    try {
+      await manager.open(openInput({ headlessQueries: true, cols: 80, rows: 24 }));
+      const process = ptyAdapter.processes[0]!;
+      process.emitData("old\r\n\x1b[2J\x1b[4;9HLATEST\x1b[6n");
+      await waitFor(() => process.writes.includes("\x1b[4;15R"));
+      const metadata = await manager.open(openInput({ includeHistory: false }));
+      expect(metadata.history).toBe("");
+      expect(metadata.screen).toBeUndefined();
+      const visible = await manager.open(openInput({ screenSnapshot: true }));
+      expect(visible.screen).toContain("LATEST");
+      expect(visible.headlessQueries).toBe(true);
+      expect(ptyAdapter.processes).toHaveLength(1);
+    } finally {
+      await manager.dispose();
+    }
+  });
+
+  it("launches official login argv directly with sanitized env and keeps exited reattachments inert", async () => {
+    const { manager, ptyAdapter } = makeManager();
+    const input = openInput({ env: { CODEX_HOME: "/tmp/official-profile" } });
+    const originalTerm = process.env.TERM;
+    const originalElectron = process.env.ELECTRON_RUN_AS_NODE;
+    const originalKey = process.env.ANTHROPIC_API_KEY;
+    process.env.TERM = "xterm-ghostty";
+    process.env.ELECTRON_RUN_AS_NODE = "1";
+    process.env.ANTHROPIC_API_KEY = "remove-me";
+    try {
+      await manager.open(input, {
+        executable: "/tmp/Codex CLI/codex",
+        args: ["login"],
+        removeEnv: ["ANTHROPIC_API_KEY"],
+      });
+      const child = ptyAdapter.spawnInputs[0]!;
+      expect(child.shell).toBe("/tmp/Codex CLI/codex");
+      expect(child.args).toEqual(["login"]);
+      expect(child.env.CODEX_HOME).toBe("/tmp/official-profile");
+      expect(child.env.TERM).toBe("xterm-256color");
+      expect(child.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+      expect(child.env.ANTHROPIC_API_KEY).toBeUndefined();
+      expect(child.env.ZDOTDIR ?? "").not.toContain("managed");
+      expect(child.env.PATH).not.toContain("terminal-agent-bin");
+      expect(manager.isRunning({ threadId: "thread-1", terminalId: "default" })).toBe(true);
+      ptyAdapter.processes[0]!.emitExit({ exitCode: 0, signal: null });
+      expect(manager.isRunning({ threadId: "thread-1", terminalId: "default" })).toBe(false);
+      expect((await manager.open(openInput())).status).toBe("exited");
+      expect(ptyAdapter.spawnInputs).toHaveLength(1);
+      await manager.close({ threadId: "thread-1", deleteHistory: true });
+      expect(manager.isRunning({ threadId: "thread-1", terminalId: "default" })).toBe(false);
+    } finally {
+      for (const [key, value] of Object.entries({
+        TERM: originalTerm,
+        ELECTRON_RUN_AS_NODE: originalElectron,
+        ANTHROPIC_API_KEY: originalKey,
+      })) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      manager.dispose();
+    }
+  });
+
+  it("reattaches an old exited agent as a shell without replaying the initial agent command", async () => {
+    const { manager, ptyAdapter } = makeManager();
+    await manager.open(openInput(), { executable: "codex", args: [] });
+    ptyAdapter.processes[0]!.emitExit({ exitCode: 0, signal: null });
+    const recovered = await manager.open(openInput(), {
+      executable: "/bin/zsh",
+      args: ["-i"],
+      persistentShell: true,
+    });
+    expect(recovered.status).toBe("running");
+    expect(ptyAdapter.spawnInputs[1]?.env.DJL_AGENT_SKIP_START).toBe("1");
+    expect(ptyAdapter.spawnInputs[1]?.cwd).toBe(openInput().cwd);
+    await manager.write({ threadId: "thread-1", data: "pwd\r" });
+    expect(ptyAdapter.processes[1]?.writes).toContain("pwd\r");
+    manager.dispose();
+  });
+
   it("spawns lazily and reuses running terminal per thread", async () => {
     const { manager, ptyAdapter } = makeManager();
     const [first, second] = await Promise.all([
@@ -1199,6 +1311,45 @@ describe("TerminalManager", () => {
       manager.dispose();
     } finally {
       restoreEnv();
+    }
+  });
+
+  it("advertises true color instead of inheriting the launcher's no-color flags", async () => {
+    const keys = ["NO_COLOR", "FORCE_COLOR", "CLICOLOR", "CLICOLOR_FORCE", "COLORTERM"];
+    const previous = new Map(keys.map((key) => [key, process.env[key]]));
+    Object.assign(process.env, {
+      NO_COLOR: "1",
+      FORCE_COLOR: "0",
+      CLICOLOR: "0",
+      CLICOLOR_FORCE: "0",
+      COLORTERM: "",
+    });
+    const { manager, ptyAdapter } = makeManager();
+    try {
+      await manager.open(openInput());
+      const env = ptyAdapter.spawnInputs[0]!.env;
+      expect(env.NO_COLOR).toBeUndefined();
+      expect(env.FORCE_COLOR).toBeUndefined();
+      expect(env.CLICOLOR).toBeUndefined();
+      expect(env.CLICOLOR_FORCE).toBeUndefined();
+      expect(env.COLORTERM).toBe("truecolor");
+    } finally {
+      manager.dispose();
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
+  it("preserves deliberately configured terminal color overrides", async () => {
+    const { manager, ptyAdapter } = makeManager();
+    try {
+      await manager.open(openInput({ env: { NO_COLOR: "1", COLORTERM: "custom" } }));
+      expect(ptyAdapter.spawnInputs[0]!.env.NO_COLOR).toBe("1");
+      expect(ptyAdapter.spawnInputs[0]!.env.COLORTERM).toBe("custom");
+    } finally {
+      manager.dispose();
     }
   });
 

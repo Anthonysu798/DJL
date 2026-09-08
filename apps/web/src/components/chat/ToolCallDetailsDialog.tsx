@@ -71,6 +71,7 @@ export function ToolCallDetailsDialog({ entry, open, onOpenChange }: ToolCallDet
   );
 }
 
+/* oxlint-disable react/no-array-index-key -- These read-only snapshot rows have no state and may contain identical repeated content. Position distinguishes duplicates. */
 export function ToolCallDetailsContent({ details }: { details: WorkLogToolDetails | undefined }) {
   const { t } = useTranslation("chat");
   if (!details) {
@@ -155,6 +156,7 @@ export function ToolCallDetailsContent({ details }: { details: WorkLogToolDetail
     </>
   );
 }
+/* oxlint-enable react/no-array-index-key */
 
 function MarkdownToolCodeBlock(props: { language: string; children: string }) {
   return (
@@ -273,6 +275,7 @@ function ToolCodeBlock(props: { children: string; tone?: "default" | "command"; 
   );
 }
 
+/* oxlint-disable react/no-array-index-key -- These read-only snapshot rows have no state and may contain identical repeated content. Position distinguishes duplicates. */
 function DiffCodeBlock({ children }: { children: string }) {
   const lines = children.split(/\r?\n/);
   return (
@@ -298,3 +301,4 @@ function DiffCodeBlock({ children }: { children: string }) {
     </pre>
   );
 }
+/* oxlint-enable react/no-array-index-key */

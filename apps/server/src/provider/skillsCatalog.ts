@@ -193,7 +193,7 @@ export async function collectSkillMarkdownPaths(
           )
             .filter((entry) => entry.isMarkdownFile)
             .map((entry) => nodePath.join(dir, entry.name))
-            .sort()
+            .toSorted()
         : [];
     const subdirNames = (
       await Promise.all(
@@ -205,7 +205,7 @@ export async function collectSkillMarkdownPaths(
     )
       .filter((entry) => entry.isDirectory)
       .map((entry) => entry.name)
-      .sort();
+      .toSorted();
     const nested = await Promise.all(
       subdirNames.map((name) => visit(nodePath.join(dir, name), depth + 1)),
     );
@@ -438,6 +438,7 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   cursor: ["cursor", "agents", "claude", "codex"],
   gemini: ["agents", "gemini"],
   grok: ["grok", "claude", "agents"],
+  kimi: ["agents"],
   droid: ["factory", "agents", "claude", "codex"],
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],
@@ -492,11 +493,9 @@ function rootsForOrderedOrigins(
   orderedOrigins: ReadonlyArray<SkillsHomeOrigin>,
 ): SkillRoot[] {
   const homeRoots = orderedOrigins.flatMap((origin) =>
-    homeRootsForOrigin(origin, input).map((path) => ({
-      path,
-      scope: origin,
-      ...(origin === "pi" ? { includeMarkdownFiles: true } : {}),
-    })),
+    homeRootsForOrigin(origin, input).map((path) =>
+      Object.assign({ path, scope: origin }, origin === `pi` ? { includeMarkdownFiles: true } : {}),
+    ),
   );
   const homeRootPaths = new Set(homeRoots.map((root) => nodePath.resolve(root.path)));
 

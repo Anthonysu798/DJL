@@ -14,43 +14,23 @@ import {
 } from "@synara/contracts";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getModelOptions, normalizeModelSlug } from "@synara/shared/model";
+
 import type { TFunction } from "i18next";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatLocaleRelativeTime } from "../i18n/intl";
-import {
-  closestCenter,
-  DndContext,
-  PointerSensor,
-  type DragEndEvent,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { CSS } from "@dnd-kit/utilities";
+
 import {
   type AppSettings,
   DEFAULT_UI_DENSITY,
   type UiDensity,
   MAX_CHAT_FONT_SIZE_PX,
   MAX_TERMINAL_FONT_SIZE_PX,
-  getCustomModelsForProvider,
-  getGitTextGenerationModelOptions,
-  MAX_CUSTOM_MODEL_LENGTH,
   MIN_CHAT_FONT_SIZE_PX,
   MIN_TERMINAL_FONT_SIZE_PX,
-  MODEL_PROVIDER_SETTINGS,
   normalizeChatFontSizePx,
   normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
-  patchCustomModels,
   TERMINAL_FONT_FAMILY_SUGGESTIONS,
   useAppSettings,
 } from "../appSettings";
@@ -66,24 +46,23 @@ import {
   AutocompletePopup,
 } from "../components/ui/autocomplete";
 import { Button } from "../components/ui/button";
-import { Collapsible, CollapsibleContent } from "../components/ui/collapsible";
+
 import { Input } from "../components/ui/input";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
   SettingsSelectControl,
 } from "../components/settings/SettingControls";
-import { Select, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { SelectItem } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { toastManager } from "../components/ui/toast";
 import { ThemePackEditor } from "../components/ThemePackEditor";
-import { DebouncedSettingTextInput } from "../components/settings/DebouncedSettingTextInput";
+
 import {
   SettingsCard,
   SettingsListRow,
   SettingsRow,
   SettingsSection,
-  SettingsSelectPopup,
 } from "../components/settings/SettingsPanelPrimitives";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
@@ -91,6 +70,7 @@ import { RemoteSettingsPanel } from "../components/settings/RemoteSettingsPanel"
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
 import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel";
 import { OpenCodeModelsSettingsPanel } from "../components/settings/OpenCodeModelsSettingsPanel";
+import { HarnessAccountsPanel } from "../components/settings/HarnessAccountsPanel";
 import { LocalModelsSettingsPanel } from "../components/settings/LocalModelsSettingsPanel";
 import {
   CHAT_CONTENT_CARD_CLASS_NAME,
@@ -106,7 +86,7 @@ import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { isElectron } from "../env";
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
-import { CentralIcon } from "../lib/central-icons";
+
 import { gitRemoveWorktreeMutationOptions } from "../lib/gitReactQuery";
 import {
   deleteArchivedThreadFromClient,
@@ -117,13 +97,10 @@ import {
   ChevronDownIcon,
   DeviceLaptopIcon,
   DownloadIcon,
-  ExternalLinkIcon,
   Loader2Icon,
   MoonIcon,
-  PlusIcon,
   RotateCcwIcon,
   SunIcon,
-  XIcon,
 } from "../lib/icons";
 import {
   serverConfigQueryOptions,
@@ -148,13 +125,11 @@ import {
 import {
   SETTINGS_CARD_ROW_CLASS_NAME,
   SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
-  SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME,
   SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
   SETTINGS_EMPTY_STATE_CLASS_NAME,
   SETTINGS_INSET_LIST_CLASS_NAME,
   SETTINGS_PAGE_BACKGROUND_CLASS_NAME,
   SETTINGS_PANEL_SECTION_CLASS_NAME,
-  SETTINGS_RADIUS_CLASS_NAME,
   SETTINGS_SECTION_LABEL_CLASS_NAME,
 } from "../settingsPanelStyles";
 import { useStore } from "../store";
@@ -165,10 +140,7 @@ import { sameProviderOrder } from "../providerOrdering";
 import { requestFirstRunTourReplay, requestSettingsTourReplay } from "../onboarding/firstRunTour";
 import { changeRendererLocale } from "../i18n";
 import { APP_LANGUAGE_NATIVE_LABELS, selectableLanguageOptions } from "../i18n/appLocaleOptions";
-import {
-  getVisibleProviderUpdateStatuses,
-  shouldShowProviderUpdateStatus,
-} from "../providerUpdates";
+import { getVisibleProviderUpdateStatuses } from "../providerUpdates";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -219,272 +191,12 @@ const SIDEBAR_THREAD_SORT_ORDER_KEYS = {
   created_at: "route.general.sortOptions.newestFirst",
 } as const;
 
-type InstallBinarySettingsKey =
-  | "claudeBinaryPath"
-  | "codexBinaryPath"
-  | "cursorBinaryPath"
-  | "geminiBinaryPath"
-  | "grokBinaryPath"
-  | "droidBinaryPath"
-  | "kiloBinaryPath"
-  | "openCodeBinaryPath"
-  | "piBinaryPath";
-type InstallProviderSettings = {
-  provider: ProviderKind;
-  title: string;
-  docs: ReadonlyArray<{
-    labelKey: "install" | "update" | "config" | "headless" | "quickstart";
-    href: string;
-  }>;
-  binaryPathKey: InstallBinarySettingsKey;
-  binaryCommand: string;
-  homePathKey?: "codexHomePath";
-  homePlaceholder?: string;
-  apiEndpointKey?: "cursorApiEndpoint";
-  apiEndpointPlaceholder?: string;
-  serverUrlKey?: "kiloServerUrl" | "openCodeServerUrl";
-  serverUrlPlaceholder?: string;
-  serverPasswordKey?: "kiloServerPassword" | "openCodeServerPassword";
-  serverPasswordPlaceholder?: string;
-  experimentalWebSocketsKey?: "openCodeExperimentalWebSockets";
-  agentDirKey?: "piAgentDir";
-  agentDirPlaceholder?: string;
-};
-
-const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title: string }> = [
-  { provider: "codex", title: PROVIDER_DISPLAY_NAMES.codex },
-  { provider: "claudeAgent", title: PROVIDER_DISPLAY_NAMES.claudeAgent },
-  { provider: "cursor", title: PROVIDER_DISPLAY_NAMES.cursor },
-  { provider: "gemini", title: PROVIDER_DISPLAY_NAMES.gemini },
-  { provider: "grok", title: PROVIDER_DISPLAY_NAMES.grok },
-  { provider: "droid", title: PROVIDER_DISPLAY_NAMES.droid },
-  { provider: "kilo", title: PROVIDER_DISPLAY_NAMES.kilo },
-  { provider: "opencode", title: PROVIDER_DISPLAY_NAMES.opencode },
-  { provider: "pi", title: PROVIDER_DISPLAY_NAMES.pi },
-];
-
 // Pure helper kept at module scope so the toggle handler stays trivial and the
 // dedupe logic is shared between the toggle and the schema normalizer.
-function setProviderHidden(
-  current: ReadonlyArray<ProviderKind>,
-  provider: ProviderKind,
-  hidden: boolean,
-): ProviderKind[] {
-  const withoutTarget = current.filter((entry) => entry !== provider);
-  return hidden ? [...withoutTarget, provider] : withoutTarget;
-}
-
-function SortableProviderVisibilityRow(props: {
-  option: { provider: ProviderKind; title: string };
-  isHidden: boolean;
-  onHiddenChange: (hidden: boolean) => void;
-}) {
-  const { t } = useTranslation("settings");
-  const {
-    attributes,
-    listeners,
-    setActivatorNodeRef,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: props.option.provider });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Translate.toString(transform),
-        transition,
-      }}
-      className={cn(
-        `flex items-center justify-between gap-3 ${SETTINGS_RADIUS_CLASS_NAME} border border-[color:var(--color-border)] bg-transparent px-3 py-2.5`,
-        isDragging && "z-10 opacity-80 shadow-lg",
-      )}
-    >
-      <div className="flex min-w-0 items-center gap-2.5">
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          className={cn(
-            "inline-flex size-6 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground active:cursor-grabbing",
-            SETTINGS_RADIUS_CLASS_NAME,
-          )}
-          aria-label={t("route.providerVisibility.reorderAriaLabel", {
-            provider: props.option.title,
-          })}
-          {...attributes}
-          {...listeners}
-        >
-          <CentralIcon name="dot-grid-2x3" className="size-4" />
-        </button>
-        <span className="min-w-0 text-sm text-foreground">{props.option.title}</span>
-      </div>
-      <Switch
-        checked={!props.isHidden}
-        onCheckedChange={(checked) => props.onHiddenChange(!Boolean(checked))}
-        aria-label={t("route.providerVisibility.showAriaLabel", {
-          provider: props.option.title,
-        })}
-      />
-    </div>
-  );
-}
-
-const INSTALL_PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
-  {
-    provider: "codex",
-    title: "Codex",
-    docs: [
-      { labelKey: "install", href: "https://help.openai.com/en/articles/11096431" },
-      { labelKey: "update", href: "https://help.openai.com/en/articles/11096431" },
-      { labelKey: "config", href: "https://github.com/openai/codex/blob/main/docs/config.md" },
-    ],
-    binaryPathKey: "codexBinaryPath",
-    binaryCommand: "codex",
-    homePathKey: "codexHomePath",
-    homePlaceholder: "CODEX_HOME",
-  },
-  {
-    provider: "claudeAgent",
-    title: "Claude",
-    docs: [
-      { labelKey: "install", href: "https://code.claude.com/docs/en/installation" },
-      {
-        labelKey: "update",
-        href: "https://code.claude.com/docs/en/installation#update-claude-code",
-      },
-      { labelKey: "config", href: "https://code.claude.com/docs/en/settings" },
-    ],
-    binaryPathKey: "claudeBinaryPath",
-    binaryCommand: "claude",
-  },
-  {
-    provider: "cursor",
-    title: "Cursor",
-    docs: [
-      { labelKey: "install", href: "https://docs.cursor.com/en/cli/installation" },
-      { labelKey: "update", href: "https://docs.cursor.com/en/cli/installation#updates" },
-      { labelKey: "config", href: "https://docs.cursor.com/en/cli/overview" },
-    ],
-    binaryPathKey: "cursorBinaryPath",
-    binaryCommand: "cursor-agent",
-    apiEndpointKey: "cursorApiEndpoint",
-    apiEndpointPlaceholder: "https://api2.cursor.sh",
-  },
-  {
-    provider: "gemini",
-    title: "Gemini",
-    docs: [
-      { labelKey: "install", href: "https://google-gemini.github.io/gemini-cli/docs/get-started/" },
-      { labelKey: "update", href: "https://github.com/google-gemini/gemini-cli" },
-      {
-        labelKey: "config",
-        href: "https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html",
-      },
-    ],
-    binaryPathKey: "geminiBinaryPath",
-    binaryCommand: "gemini",
-  },
-  {
-    provider: "grok",
-    title: "Grok",
-    docs: [
-      { labelKey: "install", href: "https://docs.x.ai/build/overview" },
-      { labelKey: "headless", href: "https://docs.x.ai/build/cli/headless-scripting" },
-      { labelKey: "config", href: "https://docs.x.ai/build/overview" },
-    ],
-    binaryPathKey: "grokBinaryPath",
-    binaryCommand: "grok",
-  },
-  {
-    provider: "droid",
-    title: "Droid",
-    docs: [
-      {
-        labelKey: "quickstart",
-        href: "https://docs.factory.ai/cli/getting-started/quickstart.md",
-      },
-    ],
-    binaryPathKey: "droidBinaryPath",
-    binaryCommand: "droid",
-  },
-  {
-    provider: "kilo",
-    title: "Kilo",
-    docs: [
-      { labelKey: "install", href: "https://kilo.ai/docs/cli" },
-      { labelKey: "update", href: "https://kilo.ai/docs/cli" },
-      { labelKey: "config", href: "https://kilo.ai/docs/cli#configuration" },
-    ],
-    binaryPathKey: "kiloBinaryPath",
-    binaryCommand: "kilo",
-    serverUrlKey: "kiloServerUrl",
-    serverUrlPlaceholder: "http://127.0.0.1:4096",
-    serverPasswordKey: "kiloServerPassword",
-  },
-  {
-    provider: "opencode",
-    title: "DJL",
-    docs: [
-      { labelKey: "install", href: "https://opencode.ai/docs/" },
-      { labelKey: "update", href: "https://opencode.ai/docs/cli/" },
-      { labelKey: "config", href: "https://opencode.ai/docs/config/" },
-    ],
-    binaryPathKey: "openCodeBinaryPath",
-    binaryCommand: "opencode",
-    serverUrlKey: "openCodeServerUrl",
-    serverUrlPlaceholder: "http://127.0.0.1:4096",
-    serverPasswordKey: "openCodeServerPassword",
-    experimentalWebSocketsKey: "openCodeExperimentalWebSockets",
-  },
-  {
-    provider: "pi",
-    title: "Pi",
-    docs: [
-      { labelKey: "install", href: "https://pi.dev/docs/latest" },
-      { labelKey: "update", href: "https://pi.dev/docs/latest/settings" },
-      { labelKey: "config", href: "https://pi.dev/docs/latest/settings" },
-    ],
-    binaryPathKey: "piBinaryPath",
-    binaryCommand: "pi",
-    agentDirKey: "piAgentDir",
-  },
-];
 
 // ── Settings UI primitives ────────────────────────────────────────────────
 
 // Shared settings controls live in ~/components/settings/SettingControls.
-
-function ProviderDocsLinks({ docs }: { docs: InstallProviderSettings["docs"] }) {
-  const { t } = useTranslation("settings");
-  return (
-    <div className={cn(SETTINGS_INSET_LIST_CLASS_NAME, "px-3 py-2.5")}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-xs font-medium text-foreground">
-          {t("route.providers.tools.cliDocs")}
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {docs.map((doc) => (
-            <a
-              key={`${doc.labelKey}:${doc.href}`}
-              href={doc.href}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "inline-flex h-7 items-center gap-1.5 border border-[color:var(--color-border)] bg-transparent px-2.5 text-xs text-muted-foreground transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground",
-                SETTINGS_RADIUS_CLASS_NAME,
-              )}
-            >
-              <span>{t(`route.providers.tools.docs.${doc.labelKey}`)}</span>
-              <ExternalLinkIcon className="size-3" />
-            </a>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function normalizeManagedWorktreePath(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -652,6 +364,7 @@ function SettingsRouteView() {
 
   const { isDefaultActiveTheme, resetAllThemes, resolvedTheme, theme, setTheme } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
+  // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
   const themeOptions = THEME_OPTIONS.map((option) => ({
     ...option,
     label: t(option.labelKey),
@@ -674,7 +387,7 @@ function SettingsRouteView() {
   const removeDeletedThreadFromClientState = useStore(
     (store) => store.removeDeletedThreadFromClientState,
   );
-  const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
+
   const syncServerReadModel = useStore((store) => store.syncServerReadModel);
   // Shell-level subscription on purpose: the full-thread selector invalidates on every
   // streaming message/activity tick, which would re-render this whole route while a
@@ -702,14 +415,15 @@ function SettingsRouteView() {
     null,
   );
   const providerUpdatesRef = useRef<HTMLDivElement | null>(null);
-  const providerInstallsRef = useRef<HTMLDivElement | null>(null);
+
   const environmentPanelRef = useRef<HTMLDivElement | null>(null);
-  const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>({
+  const [, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>({
     codex: Boolean(settings.codexBinaryPath || settings.codexHomePath),
     claudeAgent: Boolean(settings.claudeBinaryPath),
     cursor: Boolean(settings.cursorBinaryPath || settings.cursorApiEndpoint),
     gemini: Boolean(settings.geminiBinaryPath),
     grok: Boolean(settings.grokBinaryPath),
+    kimi: Boolean(settings.kimiBinaryPath),
     droid: Boolean(settings.droidBinaryPath),
     kilo: Boolean(settings.kiloBinaryPath || settings.kiloServerUrl || settings.kiloServerPassword),
     opencode: Boolean(
@@ -723,25 +437,23 @@ function SettingsRouteView() {
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
   );
-  const [selectedCustomModelProvider, setSelectedCustomModelProvider] =
-    useState<ProviderKind>("codex");
-  const [customModelInputByProvider, setCustomModelInputByProvider] = useState<
-    Record<ProviderKind, string>
-  >({
+  const [, setSelectedCustomModelProvider] = useState<ProviderKind>("codex");
+  const [, setCustomModelInputByProvider] = useState<Record<ProviderKind, string>>({
     codex: "",
     claudeAgent: "",
     cursor: "",
     gemini: "",
     grok: "",
+    kimi: "",
     droid: "",
     kilo: "",
     opencode: "",
     pi: "",
   });
-  const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState<
+  const [, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, CustomModelValidationError | null>>
   >({});
-  const [showAllCustomModels, setShowAllCustomModels] = useState(false);
+  const [, setShowAllCustomModels] = useState(false);
   const [browserNotificationPermission, setBrowserNotificationPermission] = useState(
     readBrowserNotificationPermissionState(),
   );
@@ -761,50 +473,12 @@ function SettingsRouteView() {
     [settings.hiddenProviders],
   );
   const hiddenProviderCount = hiddenProviderSet.size;
-  const providerVisibilityOptionsByProvider = useMemo(
-    () => new Map(PROVIDER_VISIBILITY_OPTIONS.map((option) => [option.provider, option])),
-    [],
-  );
-  const orderedProviderVisibilityOptions = useMemo(
-    () =>
-      settings.providerOrder.flatMap((provider) => {
-        const option = providerVisibilityOptionsByProvider.get(provider);
-        return option ? [option] : [];
-      }),
-    [providerVisibilityOptionsByProvider, settings.providerOrder],
-  );
-  const providerVisibilitySensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 4,
-      },
-    }),
-  );
+
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
-  const codexBinaryPath = settings.codexBinaryPath;
-  const codexHomePath = settings.codexHomePath;
-  const claudeBinaryPath = settings.claudeBinaryPath;
-  const cursorBinaryPath = settings.cursorBinaryPath;
-  const cursorApiEndpoint = settings.cursorApiEndpoint;
-  const geminiBinaryPath = settings.geminiBinaryPath;
-  const grokBinaryPath = settings.grokBinaryPath;
-  const droidBinaryPath = settings.droidBinaryPath;
-  const kiloBinaryPath = settings.kiloBinaryPath;
-  const kiloServerUrl = settings.kiloServerUrl;
-  const kiloServerPassword = settings.kiloServerPassword;
-  const openCodeBinaryPath = settings.openCodeBinaryPath;
-  const openCodeExperimentalWebSockets = settings.openCodeExperimentalWebSockets;
-  const openCodeServerUrl = settings.openCodeServerUrl;
-  const openCodeServerPassword = settings.openCodeServerPassword;
-  const piBinaryPath = settings.piBinaryPath;
-  const piAgentDir = settings.piAgentDir;
+
   const keybindingsConfigPath = serverConfigQuery.data?.keybindingsConfigPath ?? null;
   const availableEditors = serverConfigQuery.data?.availableEditors;
-  const providerStatusByProvider = useMemo(
-    () =>
-      new Map((serverConfigQuery.data?.providers ?? []).map((status) => [status.provider, status])),
-    [serverConfigQuery.data?.providers],
-  );
+
   const providerUpdateServerSettings = useMemo(
     () =>
       serverSettingsQuery.data
@@ -826,7 +500,7 @@ function SettingsRouteView() {
   );
   const outdatedProviderCount = outdatedProviderStatuses.length;
   useSettingsTargetScroll(
-    activeSection === "providers" && settingsTarget === SETTINGS_TARGETS.providerUpdates,
+    activeSection === "accounts" && settingsTarget === SETTINGS_TARGETS.providerUpdates,
     providerUpdatesRef,
     serverConfigQuery.data?.providers,
   );
@@ -891,13 +565,7 @@ function SettingsRouteView() {
   // narrow inputs the helper actually uses (destructured so exhaustive-deps stays exact) so
   // typing in any other settings field — every keystroke re-renders this monolithic route —
   // doesn't rebuild these lists.
-  const {
-    customCodexModels,
-    customKiloModels,
-    customOpenCodeModels,
-    textGenerationModel,
-    textGenerationProvider,
-  } = settings;
+  const { textGenerationModel, textGenerationProvider } = settings;
   const currentGitTextGenerationProvider = textGenerationProvider ?? "codex";
   const currentGitTextGenerationModel = textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
@@ -909,82 +577,20 @@ function SettingsRouteView() {
     activeProjectCwd: null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
-  const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } = useProviderModelCatalog({
+  useProviderModelCatalog({
     selectedProvider: currentGitTextGenerationProvider,
     discoveryEnabled: activeSection === "models",
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: gitWritingModelHintByProvider,
   });
-  const gitTextGenerationModelOptions = useMemo(
-    () =>
-      getGitTextGenerationModelOptions(
-        {
-          customCodexModels,
-          customKiloModels,
-          customOpenCodeModels,
-          textGenerationModel,
-          textGenerationProvider,
-        },
-        {
-          codex: gitWritingCatalogOptionsByProvider.codex,
-          kilo: gitWritingCatalogOptionsByProvider.kilo,
-          opencode: gitWritingCatalogOptionsByProvider.opencode,
-        },
-      ),
-    [
-      customCodexModels,
-      customKiloModels,
-      customOpenCodeModels,
-      gitWritingCatalogOptionsByProvider.codex,
-      gitWritingCatalogOptionsByProvider.kilo,
-      gitWritingCatalogOptionsByProvider.opencode,
-      textGenerationModel,
-      textGenerationProvider,
-    ],
-  );
-  const currentGitTextGenerationValue = `${currentGitTextGenerationProvider}:${currentGitTextGenerationModel}`;
+
   const defaultGitTextGenerationProvider = defaults.textGenerationProvider ?? "codex";
   const defaultGitTextGenerationModel =
     defaults.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const isGitTextGenerationModelDirty =
     currentGitTextGenerationProvider !== defaultGitTextGenerationProvider ||
     currentGitTextGenerationModel !== defaultGitTextGenerationModel;
-  const selectedGitTextGenerationModelLabel =
-    gitTextGenerationModelOptions.find(
-      (option) =>
-        option.provider === currentGitTextGenerationProvider &&
-        option.slug === currentGitTextGenerationModel,
-    )?.name ?? currentGitTextGenerationModel;
-  const selectedCustomModelProviderSettings = MODEL_PROVIDER_SETTINGS.find(
-    (providerSettings) => providerSettings.provider === selectedCustomModelProvider,
-  )!;
-  const selectedCustomModelInput = customModelInputByProvider[selectedCustomModelProvider];
-  const selectedCustomModelError = customModelErrorByProvider[selectedCustomModelProvider] ?? null;
-  const totalCustomModels =
-    settings.customCodexModels.length +
-    settings.customClaudeModels.length +
-    settings.customCursorModels.length +
-    settings.customGeminiModels.length +
-    settings.customGrokModels.length +
-    settings.customDroidModels.length +
-    settings.customKiloModels.length +
-    settings.customOpenCodeModels.length +
-    settings.customPiModels.length;
-  const savedCustomModelRows = useMemo(
-    () =>
-      MODEL_PROVIDER_SETTINGS.flatMap((providerSettings) =>
-        getCustomModelsForProvider(settings, providerSettings.provider).map((slug) => ({
-          key: `${providerSettings.provider}:${slug}`,
-          provider: providerSettings.provider,
-          providerTitle: providerSettings.title,
-          slug,
-        })),
-      ),
-    [settings],
-  );
-  const visibleCustomModelRows = showAllCustomModels
-    ? savedCustomModelRows
-    : savedCustomModelRows.slice(0, 5);
+
   const isInstallSettingsDirty =
     settings.claudeBinaryPath !== defaults.claudeBinaryPath ||
     settings.cursorBinaryPath !== defaults.cursorBinaryPath ||
@@ -1119,88 +725,6 @@ function SettingsRouteView() {
     setBrowserNotificationPermission(readBrowserNotificationPermissionState());
   }, []);
 
-  const addCustomModel = useCallback(
-    (provider: ProviderKind) => {
-      const customModelInput = customModelInputByProvider[provider];
-      const customModels = getCustomModelsForProvider(settings, provider);
-      const normalized = normalizeModelSlug(customModelInput, provider);
-      if (!normalized) {
-        setCustomModelErrorByProvider((existing) => ({
-          ...existing,
-          [provider]: { kind: "required" },
-        }));
-        return;
-      }
-      if (getModelOptions(provider).some((option) => option.slug === normalized)) {
-        setCustomModelErrorByProvider((existing) => ({
-          ...existing,
-          [provider]: { kind: "builtIn" },
-        }));
-        return;
-      }
-      if (normalized.length > MAX_CUSTOM_MODEL_LENGTH) {
-        setCustomModelErrorByProvider((existing) => ({
-          ...existing,
-          [provider]: { kind: "tooLong", count: MAX_CUSTOM_MODEL_LENGTH },
-        }));
-        return;
-      }
-      if (customModels.includes(normalized)) {
-        setCustomModelErrorByProvider((existing) => ({
-          ...existing,
-          [provider]: { kind: "duplicate" },
-        }));
-        return;
-      }
-
-      updateSettings(patchCustomModels(provider, [...customModels, normalized]));
-      setCustomModelInputByProvider((existing) => ({
-        ...existing,
-        [provider]: "",
-      }));
-      setCustomModelErrorByProvider((existing) => ({
-        ...existing,
-        [provider]: null,
-      }));
-    },
-    [customModelInputByProvider, settings, updateSettings],
-  );
-
-  const removeCustomModel = useCallback(
-    (provider: ProviderKind, slug: string) => {
-      const customModels = getCustomModelsForProvider(settings, provider);
-      updateSettings(
-        patchCustomModels(
-          provider,
-          customModels.filter((model) => model !== slug),
-        ),
-      );
-      setCustomModelErrorByProvider((existing) => ({
-        ...existing,
-        [provider]: null,
-      }));
-    },
-    [settings, updateSettings],
-  );
-
-  const handleProviderOrderDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) {
-        return;
-      }
-      const fromIndex = settings.providerOrder.indexOf(active.id as ProviderKind);
-      const toIndex = settings.providerOrder.indexOf(over.id as ProviderKind);
-      if (fromIndex < 0 || toIndex < 0) {
-        return;
-      }
-      updateSettings({
-        providerOrder: arrayMove([...settings.providerOrder], fromIndex, toIndex),
-      });
-    },
-    [settings.providerOrder, updateSettings],
-  );
-
   const runProviderUpdate = useCallback(
     async (provider: ProviderKind) => {
       if (updatingProviders.has(provider)) {
@@ -1288,6 +812,7 @@ function SettingsRouteView() {
       cursor: false,
       gemini: false,
       grok: false,
+      kimi: false,
       droid: false,
       kilo: false,
       opencode: false,
@@ -1300,6 +825,7 @@ function SettingsRouteView() {
       cursor: "",
       gemini: "",
       grok: "",
+      kimi: "",
       droid: "",
       kilo: "",
       opencode: "",
@@ -2624,276 +2150,6 @@ function SettingsRouteView() {
     );
   };
 
-  const renderModelsPanel = () => (
-    <div className="space-y-6">
-      <SettingsSection title={t("route.models.sections.generationDefaults")}>
-        <SettingsRow
-          settingId="git-writing-model"
-          title={t("search.entries.models.git-writing-model.title")}
-          description={t("route.models.gitWriting.description")}
-          resetAction={
-            isGitTextGenerationModelDirty ? (
-              <SettingResetButton
-                label={t("route.models.gitWriting.resetLabel")}
-                onClick={() =>
-                  updateSettings({
-                    textGenerationProvider: defaults.textGenerationProvider,
-                    textGenerationModel: defaults.textGenerationModel,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={currentGitTextGenerationValue}
-              onValueChange={(value) => {
-                if (!value) return;
-                const separatorIndex = value.indexOf(":");
-                const provider = value.slice(0, separatorIndex) as ProviderKind;
-                const model = value.slice(separatorIndex + 1);
-                if (!provider || !model) return;
-                updateSettings({
-                  textGenerationProvider: provider,
-                  textGenerationModel: model,
-                });
-              }}
-              ariaLabel={t("route.models.gitWriting.ariaLabel")}
-              triggerClassName="w-full sm:w-52"
-              valueContent={selectedGitTextGenerationModelLabel}
-            >
-              {gitTextGenerationModelOptions.map((option) => (
-                <SelectItem
-                  hideIndicator
-                  key={`${option.provider}:${option.slug}`}
-                  value={`${option.provider}:${option.slug}`}
-                >
-                  {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
-                </SelectItem>
-              ))}
-            </SettingsSelectControl>
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection title={t("route.models.customModels.title")}>
-        <SettingsRow
-          title={t("route.models.customModels.savedTitle")}
-          description={t("route.models.customModels.description")}
-          resetAction={
-            totalCustomModels > 0 ? (
-              <SettingResetButton
-                label={t("route.models.customModels.resetLabel")}
-                onClick={() => {
-                  updateSettings({
-                    customCodexModels: defaults.customCodexModels,
-                    customClaudeModels: defaults.customClaudeModels,
-                    customCursorModels: defaults.customCursorModels,
-                    customGeminiModels: defaults.customGeminiModels,
-                    customGrokModels: defaults.customGrokModels,
-                    customDroidModels: defaults.customDroidModels,
-                    customKiloModels: defaults.customKiloModels,
-                    customOpenCodeModels: defaults.customOpenCodeModels,
-                    customPiModels: defaults.customPiModels,
-                  });
-                  setCustomModelErrorByProvider({});
-                  setShowAllCustomModels(false);
-                }}
-              />
-            ) : null
-          }
-        >
-          <div className={cn("mt-4 pt-4", SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME)}>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Select
-                value={selectedCustomModelProvider}
-                onValueChange={(value) => {
-                  if (
-                    value !== "codex" &&
-                    value !== "claudeAgent" &&
-                    value !== "cursor" &&
-                    value !== "gemini" &&
-                    value !== "grok" &&
-                    value !== "droid" &&
-                    value !== "kilo" &&
-                    value !== "opencode" &&
-                    value !== "pi"
-                  ) {
-                    return;
-                  }
-                  setSelectedCustomModelProvider(value);
-                }}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-full sm:w-40"
-                  aria-label={t("route.models.customModels.providerAriaLabel")}
-                >
-                  <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
-                </SelectTrigger>
-                <SettingsSelectPopup align="start">
-                  {MODEL_PROVIDER_SETTINGS.map((providerSettings) => (
-                    <SelectItem
-                      hideIndicator
-                      key={providerSettings.provider}
-                      value={providerSettings.provider}
-                    >
-                      {providerSettings.title}
-                    </SelectItem>
-                  ))}
-                </SettingsSelectPopup>
-              </Select>
-              <Input
-                id="custom-model-slug"
-                size="sm"
-                variant="soft"
-                value={selectedCustomModelInput}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setCustomModelInputByProvider((existing) => ({
-                    ...existing,
-                    [selectedCustomModelProvider]: value,
-                  }));
-                  if (selectedCustomModelError) {
-                    setCustomModelErrorByProvider((existing) => ({
-                      ...existing,
-                      [selectedCustomModelProvider]: null,
-                    }));
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") return;
-                  event.preventDefault();
-                  addCustomModel(selectedCustomModelProvider);
-                }}
-                placeholder={selectedCustomModelProviderSettings.example}
-                spellCheck={false}
-              />
-              <Button
-                className="shrink-0"
-                variant="outline"
-                onClick={() => addCustomModel(selectedCustomModelProvider)}
-              >
-                <PlusIcon className="size-3.5" />
-                {t("route.models.customModels.add")}
-              </Button>
-            </div>
-
-            {selectedCustomModelError ? (
-              <p className="mt-2 text-xs text-destructive">
-                {localizeCustomModelValidationError(selectedCustomModelError, t)}
-              </p>
-            ) : null}
-
-            {totalCustomModels > 0 ? (
-              <div className={cn("mt-3", SETTINGS_INSET_LIST_CLASS_NAME)}>
-                {visibleCustomModelRows.map((row) => (
-                  <div
-                    key={row.key}
-                    className="group grid grid-cols-[minmax(5rem,6rem)_minmax(0,1fr)_auto] items-center gap-3 border-t border-[color:var(--color-border)] px-4 py-2 first:border-t-0"
-                  >
-                    <span className="truncate text-xs text-muted-foreground">
-                      {row.providerTitle}
-                    </span>
-                    <code className="min-w-0 truncate text-sm text-foreground">{row.slug}</code>
-                    <button
-                      type="button"
-                      className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100"
-                      aria-label={t("route.models.customModels.removeAriaLabel", {
-                        model: row.slug,
-                      })}
-                      onClick={() => removeCustomModel(row.provider, row.slug)}
-                    >
-                      <XIcon className="size-3.5 text-muted-foreground hover:text-foreground" />
-                    </button>
-                  </div>
-                ))}
-
-                {savedCustomModelRows.length > 5 ? (
-                  <button
-                    type="button"
-                    className="mt-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                    onClick={() => setShowAllCustomModels((value) => !value)}
-                  >
-                    {showAllCustomModels
-                      ? t("route.models.customModels.showLess")
-                      : t("route.models.customModels.showMore", {
-                          count: savedCustomModelRows.length - 5,
-                        })}
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </SettingsRow>
-      </SettingsSection>
-    </div>
-  );
-
-  const renderProvidersPanel = () => (
-    <div className="space-y-6">
-      {renderProviderUpdatesSection()}
-      <SettingsSection title={t("route.providers.picker.sectionTitle")}>
-        <SettingsRow
-          title={t("route.providers.picker.title")}
-          description={t("route.providers.picker.description")}
-          status={
-            hiddenProviderCount > 0
-              ? t("route.providers.picker.hiddenCount", { count: hiddenProviderCount })
-              : isProviderOrderDirty
-                ? t("route.providers.picker.customOrder")
-                : t("route.providers.picker.allVisible")
-          }
-          resetAction={
-            hiddenProviderCount > 0 || isProviderOrderDirty ? (
-              <SettingResetButton
-                label={t("route.providers.picker.resetLabel")}
-                onClick={() =>
-                  updateSettings({
-                    hiddenProviders: defaults.hiddenProviders,
-                    providerOrder: defaults.providerOrder,
-                  })
-                }
-              />
-            ) : null
-          }
-        >
-          <DndContext
-            sensors={providerVisibilitySensors}
-            collisionDetection={closestCenter}
-            modifiers={[restrictToVerticalAxis]}
-            onDragEnd={handleProviderOrderDragEnd}
-          >
-            <SortableContext
-              items={orderedProviderVisibilityOptions.map((option) => option.provider)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="mt-4 space-y-2">
-                {orderedProviderVisibilityOptions.map((option) => (
-                  <SortableProviderVisibilityRow
-                    key={option.provider}
-                    option={option}
-                    isHidden={hiddenProviderSet.has(option.provider)}
-                    onHiddenChange={(hidden) =>
-                      updateSettings({
-                        hiddenProviders: setProviderHidden(
-                          settings.hiddenProviders,
-                          option.provider,
-                          hidden,
-                        ),
-                      })
-                    }
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </SettingsRow>
-      </SettingsSection>
-      {renderProviderInstallsSection()}
-    </div>
-  );
-
   const renderProviderUpdatesSection = () => (
     <div ref={providerUpdatesRef} id={SETTINGS_TARGETS.providerUpdates}>
       <SettingsSection title={t("route.providers.updates.sectionTitle")}>
@@ -2976,506 +2232,6 @@ function SettingsRouteView() {
               })}
             </div>
           ) : null}
-        </SettingsRow>
-      </SettingsSection>
-    </div>
-  );
-
-  const renderProviderInstallsSection = () => (
-    <div ref={providerInstallsRef} id={SETTINGS_TARGETS.providerInstalls}>
-      <SettingsSection title={t("route.providers.tools.sectionTitle")}>
-        <SettingsRow
-          title={t("route.providers.tools.title")}
-          description={t("route.providers.tools.description")}
-          status={
-            !settings.enableProviderUpdateChecks
-              ? t("route.providers.updates.checksOff")
-              : outdatedProviderCount > 0
-                ? t("route.providers.updates.availableCount", { count: outdatedProviderCount })
-                : t("route.providers.updates.none")
-          }
-          resetAction={
-            isInstallSettingsDirty ? (
-              <SettingResetButton
-                label={t("route.providers.tools.resetLabel")}
-                onClick={() => {
-                  updateSettings({
-                    claudeBinaryPath: defaults.claudeBinaryPath,
-                    codexBinaryPath: defaults.codexBinaryPath,
-                    codexHomePath: defaults.codexHomePath,
-                    cursorBinaryPath: defaults.cursorBinaryPath,
-                    cursorApiEndpoint: defaults.cursorApiEndpoint,
-                    geminiBinaryPath: defaults.geminiBinaryPath,
-                    grokBinaryPath: defaults.grokBinaryPath,
-                    droidBinaryPath: defaults.droidBinaryPath,
-                    kiloBinaryPath: defaults.kiloBinaryPath,
-                    kiloServerUrl: defaults.kiloServerUrl,
-                    kiloServerPassword: defaults.kiloServerPassword,
-                    openCodeBinaryPath: defaults.openCodeBinaryPath,
-                    openCodeExperimentalWebSockets: defaults.openCodeExperimentalWebSockets,
-                    openCodeServerUrl: defaults.openCodeServerUrl,
-                    openCodeServerPassword: defaults.openCodeServerPassword,
-                    piAgentDir: defaults.piAgentDir,
-                    piBinaryPath: defaults.piBinaryPath,
-                  });
-                  setOpenInstallProviders({
-                    codex: false,
-                    claudeAgent: false,
-                    cursor: false,
-                    gemini: false,
-                    grok: false,
-                    droid: false,
-                    kilo: false,
-                    opencode: false,
-                    pi: false,
-                  });
-                }}
-              />
-            ) : null
-          }
-        >
-          <div className="mt-4">
-            <div className={SETTINGS_INSET_LIST_CLASS_NAME}>
-              {INSTALL_PROVIDER_SETTINGS.map((providerSettings) => {
-                const isOpen = openInstallProviders[providerSettings.provider];
-                const isDirty =
-                  providerSettings.provider === "codex"
-                    ? settings.codexBinaryPath !== defaults.codexBinaryPath ||
-                      settings.codexHomePath !== defaults.codexHomePath
-                    : providerSettings.provider === "claudeAgent"
-                      ? settings.claudeBinaryPath !== defaults.claudeBinaryPath
-                      : providerSettings.provider === "cursor"
-                        ? settings.cursorBinaryPath !== defaults.cursorBinaryPath ||
-                          settings.cursorApiEndpoint !== defaults.cursorApiEndpoint
-                        : providerSettings.provider === "gemini"
-                          ? settings.geminiBinaryPath !== defaults.geminiBinaryPath
-                          : providerSettings.provider === "grok"
-                            ? settings.grokBinaryPath !== defaults.grokBinaryPath
-                            : providerSettings.provider === "droid"
-                              ? settings.droidBinaryPath !== defaults.droidBinaryPath
-                              : providerSettings.provider === "kilo"
-                                ? settings.kiloBinaryPath !== defaults.kiloBinaryPath ||
-                                  settings.kiloServerUrl !== defaults.kiloServerUrl ||
-                                  settings.kiloServerPassword !== defaults.kiloServerPassword
-                                : providerSettings.provider === "pi"
-                                  ? settings.piBinaryPath !== defaults.piBinaryPath ||
-                                    settings.piAgentDir !== defaults.piAgentDir
-                                  : settings.openCodeBinaryPath !== defaults.openCodeBinaryPath ||
-                                    settings.openCodeExperimentalWebSockets !==
-                                      defaults.openCodeExperimentalWebSockets ||
-                                    settings.openCodeServerUrl !== defaults.openCodeServerUrl ||
-                                    settings.openCodeServerPassword !==
-                                      defaults.openCodeServerPassword;
-                const binaryPathValue =
-                  providerSettings.binaryPathKey === "claudeBinaryPath"
-                    ? claudeBinaryPath
-                    : providerSettings.binaryPathKey === "cursorBinaryPath"
-                      ? cursorBinaryPath
-                      : providerSettings.binaryPathKey === "geminiBinaryPath"
-                        ? geminiBinaryPath
-                        : providerSettings.binaryPathKey === "grokBinaryPath"
-                          ? grokBinaryPath
-                          : providerSettings.binaryPathKey === "droidBinaryPath"
-                            ? droidBinaryPath
-                            : providerSettings.binaryPathKey === "kiloBinaryPath"
-                              ? kiloBinaryPath
-                              : providerSettings.binaryPathKey === "openCodeBinaryPath"
-                                ? openCodeBinaryPath
-                                : providerSettings.binaryPathKey === "piBinaryPath"
-                                  ? piBinaryPath
-                                  : codexBinaryPath;
-                const providerStatus = providerStatusByProvider.get(providerSettings.provider);
-                const showProviderUpdateStatus = providerStatus
-                  ? shouldShowProviderUpdateStatus({
-                      provider: providerStatus,
-                      hiddenProviderSet,
-                      serverSettings: providerUpdateServerSettings,
-                    })
-                  : false;
-                const providerUpdateSuppressed =
-                  providerStatus?.versionAdvisory?.status === "behind_latest" &&
-                  !showProviderUpdateStatus;
-                const currentProviderVersion = formatProviderVersion(providerStatus?.version);
-                const providerUpdateLabel = providerStatus
-                  ? !settings.enableProviderUpdateChecks
-                    ? currentProviderVersion
-                      ? t("route.providers.updates.status.current", {
-                          version: currentProviderVersion,
-                        })
-                      : null
-                    : providerUpdateSuppressed
-                      ? null
-                      : providerUpdateStatusLabel(providerStatus, t)
-                  : null;
-                const updateAdvisory = providerStatus?.versionAdvisory;
-                const providerUpdateState = providerStatus?.updateState?.status;
-                const isProviderUpdateActive =
-                  providerUpdateState === "queued" ||
-                  providerUpdateState === "running" ||
-                  updatingProviders.has(providerSettings.provider);
-                const canUpdateProvider =
-                  showProviderUpdateStatus &&
-                  updateAdvisory?.status === "behind_latest" &&
-                  updateAdvisory.canUpdate &&
-                  !isProviderUpdateActive;
-                const shouldShowProviderUpdateButton =
-                  showProviderUpdateStatus &&
-                  updateAdvisory?.status === "behind_latest" &&
-                  updateAdvisory.canUpdate;
-
-                return (
-                  <Collapsible
-                    key={providerSettings.provider}
-                    open={isOpen}
-                    onOpenChange={(open) =>
-                      setOpenInstallProviders((existing) => ({
-                        ...existing,
-                        [providerSettings.provider]: open,
-                      }))
-                    }
-                  >
-                    <div className="border-t border-border/70 first:border-t-0">
-                      <div className="flex min-h-11 items-center gap-2 px-3 py-2">
-                        <button
-                          type="button"
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                          onClick={() =>
-                            setOpenInstallProviders((existing) => ({
-                              ...existing,
-                              [providerSettings.provider]: !existing[providerSettings.provider],
-                            }))
-                          }
-                        >
-                          <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-                            {providerSettings.title}
-                          </span>
-                          {isDirty ? (
-                            <span className="shrink-0 text-[11px] text-muted-foreground">
-                              {t("route.providers.tools.custom")}
-                            </span>
-                          ) : null}
-                          {providerUpdateLabel ? (
-                            <span
-                              className={cn(
-                                "shrink-0 text-[11px]",
-                                updateAdvisory?.status === "behind_latest"
-                                  ? "text-foreground"
-                                  : "text-muted-foreground",
-                              )}
-                            >
-                              {providerUpdateLabel}
-                            </span>
-                          ) : null}
-                          <ChevronDownIcon
-                            className={cn(
-                              "size-4 shrink-0 text-muted-foreground transition-transform",
-                              isOpen && "rotate-180",
-                            )}
-                          />
-                        </button>
-                        {shouldShowProviderUpdateButton ? (
-                          <Button
-                            type="button"
-                            size="xs"
-                            variant="outline"
-                            disabled={!canUpdateProvider}
-                            title={
-                              updateAdvisory.updateCommand
-                                ? t("route.providers.updates.runCommand", {
-                                    command: updateAdvisory.updateCommand,
-                                  })
-                                : undefined
-                            }
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void runProviderUpdate(providerSettings.provider);
-                            }}
-                          >
-                            {isProviderUpdateActive ? (
-                              <Loader2Icon className="size-3.5 animate-spin" />
-                            ) : (
-                              <DownloadIcon className="size-3.5" />
-                            )}
-                            {isProviderUpdateActive
-                              ? t("route.providers.updates.updating")
-                              : t("route.providers.updates.update")}
-                          </Button>
-                        ) : null}
-                      </div>
-
-                      <CollapsibleContent>
-                        <div className="border-t border-border/70 bg-muted/20 px-3 py-3">
-                          <div className="space-y-3">
-                            <ProviderDocsLinks docs={providerSettings.docs} />
-                            {showProviderUpdateStatus &&
-                            updateAdvisory?.status === "behind_latest" ? (
-                              <div className="text-xs text-muted-foreground">
-                                {updateAdvisory.canUpdate && updateAdvisory.updateCommand ? (
-                                  <>
-                                    <span>{t("route.providers.tools.commandLabel")} </span>
-                                    <code className="font-mono">
-                                      {updateAdvisory.updateCommand}
-                                    </code>
-                                  </>
-                                ) : (
-                                  t("route.providers.tools.noSafeUpdateCommand")
-                                )}
-                              </div>
-                            ) : null}
-
-                            <label
-                              htmlFor={`provider-install-${providerSettings.binaryPathKey}`}
-                              className="block"
-                            >
-                              <span className="block text-xs font-medium text-foreground">
-                                {t("route.providers.tools.binaryPathLabel", {
-                                  provider: providerSettings.title,
-                                })}
-                              </span>
-                              <DebouncedSettingTextInput
-                                id={`provider-install-${providerSettings.binaryPathKey}`}
-                                size="sm"
-                                variant="soft"
-                                className="mt-1"
-                                value={binaryPathValue}
-                                onCommit={(nextValue) =>
-                                  updateSettings(
-                                    providerSettings.binaryPathKey === "claudeBinaryPath"
-                                      ? { claudeBinaryPath: nextValue }
-                                      : providerSettings.binaryPathKey === "cursorBinaryPath"
-                                        ? { cursorBinaryPath: nextValue }
-                                        : providerSettings.binaryPathKey === "geminiBinaryPath"
-                                          ? { geminiBinaryPath: nextValue }
-                                          : providerSettings.binaryPathKey === "grokBinaryPath"
-                                            ? { grokBinaryPath: nextValue }
-                                            : providerSettings.binaryPathKey === "droidBinaryPath"
-                                              ? { droidBinaryPath: nextValue }
-                                              : providerSettings.binaryPathKey === "kiloBinaryPath"
-                                                ? { kiloBinaryPath: nextValue }
-                                                : providerSettings.binaryPathKey ===
-                                                    "openCodeBinaryPath"
-                                                  ? { openCodeBinaryPath: nextValue }
-                                                  : providerSettings.binaryPathKey ===
-                                                      "piBinaryPath"
-                                                    ? { piBinaryPath: nextValue }
-                                                    : { codexBinaryPath: nextValue },
-                                  )
-                                }
-                                placeholder={t("route.providers.tools.binaryPathPlaceholder", {
-                                  provider: providerSettings.title,
-                                })}
-                                spellCheck={false}
-                              />
-                              <span className="mt-1 block text-xs text-muted-foreground">
-                                {t(
-                                  providerSettings.provider === "cursor"
-                                    ? "route.providers.tools.cursorBinaryDescription"
-                                    : "route.providers.tools.binaryDescription",
-                                  { command: providerSettings.binaryCommand },
-                                )}
-                              </span>
-                            </label>
-
-                            {providerSettings.homePathKey ? (
-                              <label
-                                htmlFor={`provider-install-${providerSettings.homePathKey}`}
-                                className="block"
-                              >
-                                <span className="block text-xs font-medium text-foreground">
-                                  {t("route.providers.tools.pathLabel", { name: "CODEX_HOME" })}
-                                </span>
-                                <DebouncedSettingTextInput
-                                  id={`provider-install-${providerSettings.homePathKey}`}
-                                  size="sm"
-                                  variant="soft"
-                                  className="mt-1"
-                                  value={codexHomePath}
-                                  onCommit={(nextValue) =>
-                                    updateSettings({
-                                      codexHomePath: nextValue,
-                                    })
-                                  }
-                                  placeholder={providerSettings.homePlaceholder}
-                                  spellCheck={false}
-                                />
-                                <span className="mt-1 block text-xs text-muted-foreground">
-                                  {t("route.providers.tools.codexHomeDescription")}
-                                </span>
-                              </label>
-                            ) : null}
-
-                            {providerSettings.agentDirKey ? (
-                              <label
-                                htmlFor={`provider-install-${providerSettings.agentDirKey}`}
-                                className="block"
-                              >
-                                <span className="block text-xs font-medium text-foreground">
-                                  {t("route.providers.tools.piAgentDirectoryLabel")}
-                                </span>
-                                <DebouncedSettingTextInput
-                                  id={`provider-install-${providerSettings.agentDirKey}`}
-                                  size="sm"
-                                  variant="soft"
-                                  className="mt-1"
-                                  value={piAgentDir}
-                                  onCommit={(nextValue) =>
-                                    updateSettings({
-                                      piAgentDir: nextValue,
-                                    })
-                                  }
-                                  placeholder={t(
-                                    "route.providers.tools.piAgentDirectoryPlaceholder",
-                                  )}
-                                  spellCheck={false}
-                                />
-                                <span className="mt-1 block text-xs text-muted-foreground">
-                                  {t("route.providers.tools.piAgentDirectoryDescription")}
-                                </span>
-                              </label>
-                            ) : null}
-
-                            {providerSettings.apiEndpointKey ? (
-                              <label
-                                htmlFor={`provider-install-${providerSettings.apiEndpointKey}`}
-                                className="block"
-                              >
-                                <span className="block text-xs font-medium text-foreground">
-                                  {t("route.providers.tools.cursorApiEndpointLabel")}
-                                </span>
-                                <DebouncedSettingTextInput
-                                  id={`provider-install-${providerSettings.apiEndpointKey}`}
-                                  size="sm"
-                                  variant="soft"
-                                  className="mt-1"
-                                  value={cursorApiEndpoint}
-                                  onCommit={(nextValue) =>
-                                    updateSettings({
-                                      cursorApiEndpoint: nextValue,
-                                    })
-                                  }
-                                  placeholder={providerSettings.apiEndpointPlaceholder}
-                                  spellCheck={false}
-                                />
-                                <span className="mt-1 block text-xs text-muted-foreground">
-                                  {t("route.providers.tools.cursorApiEndpointDescription")}
-                                </span>
-                              </label>
-                            ) : null}
-
-                            {providerSettings.serverUrlKey ? (
-                              <label
-                                htmlFor={`provider-install-${providerSettings.serverUrlKey}`}
-                                className="block"
-                              >
-                                <span className="block text-xs font-medium text-foreground">
-                                  {t("route.providers.tools.serverUrlLabel", {
-                                    provider: providerSettings.title,
-                                  })}
-                                </span>
-                                <DebouncedSettingTextInput
-                                  id={`provider-install-${providerSettings.serverUrlKey}`}
-                                  size="sm"
-                                  variant="soft"
-                                  className="mt-1"
-                                  value={
-                                    providerSettings.serverUrlKey === "kiloServerUrl"
-                                      ? kiloServerUrl
-                                      : openCodeServerUrl
-                                  }
-                                  onCommit={(nextValue) =>
-                                    updateSettings(
-                                      providerSettings.serverUrlKey === "kiloServerUrl"
-                                        ? { kiloServerUrl: nextValue }
-                                        : { openCodeServerUrl: nextValue },
-                                    )
-                                  }
-                                  placeholder={providerSettings.serverUrlPlaceholder}
-                                  spellCheck={false}
-                                />
-                                <span className="mt-1 block text-xs text-muted-foreground">
-                                  {t("route.providers.tools.serverUrlDescription", {
-                                    provider: providerSettings.title,
-                                  })}
-                                </span>
-                              </label>
-                            ) : null}
-
-                            {providerSettings.serverPasswordKey ? (
-                              <label
-                                htmlFor={`provider-install-${providerSettings.serverPasswordKey}`}
-                                className="block"
-                              >
-                                <span className="block text-xs font-medium text-foreground">
-                                  {t("route.providers.tools.serverPasswordLabel", {
-                                    provider: providerSettings.title,
-                                  })}
-                                </span>
-                                <DebouncedSettingTextInput
-                                  id={`provider-install-${providerSettings.serverPasswordKey}`}
-                                  size="sm"
-                                  variant="soft"
-                                  className="mt-1"
-                                  value={
-                                    providerSettings.serverPasswordKey === "kiloServerPassword"
-                                      ? kiloServerPassword
-                                      : openCodeServerPassword
-                                  }
-                                  onCommit={(nextValue) =>
-                                    updateSettings(
-                                      providerSettings.serverPasswordKey === "kiloServerPassword"
-                                        ? { kiloServerPassword: nextValue }
-                                        : { openCodeServerPassword: nextValue },
-                                    )
-                                  }
-                                  placeholder={t(
-                                    "route.providers.tools.serverPasswordPlaceholder",
-                                    {
-                                      provider: providerSettings.title,
-                                    },
-                                  )}
-                                  spellCheck={false}
-                                />
-                                <span className="mt-1 block text-xs text-muted-foreground">
-                                  {t("route.providers.tools.serverPasswordDescription", {
-                                    provider: providerSettings.title,
-                                  })}
-                                </span>
-                              </label>
-                            ) : null}
-
-                            {providerSettings.experimentalWebSocketsKey ? (
-                              <label
-                                htmlFor={`provider-install-${providerSettings.experimentalWebSocketsKey}`}
-                                className="flex items-start justify-between gap-3 rounded-md border border-border/70 bg-background/60 px-3 py-2"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block text-xs font-medium text-foreground">
-                                    {t("route.providers.tools.webSocketsLabel")}
-                                  </span>
-                                  <span className="mt-1 block text-xs text-muted-foreground">
-                                    {t("route.providers.tools.webSocketsDescription")}
-                                  </span>
-                                </span>
-                                <Switch
-                                  id={`provider-install-${providerSettings.experimentalWebSocketsKey}`}
-                                  checked={openCodeExperimentalWebSockets}
-                                  onCheckedChange={(checked) =>
-                                    updateSettings({
-                                      openCodeExperimentalWebSockets: Boolean(checked),
-                                    })
-                                  }
-                                />
-                              </label>
-                            ) : null}
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </div>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          </div>
         </SettingsRow>
       </SettingsSection>
     </div>
@@ -3646,6 +2402,15 @@ function SettingsRouteView() {
         return renderWorktreesPanel();
       case "archived":
         return renderArchivedPanel();
+      case "accounts":
+        return (
+          <div className="space-y-6">
+            {settingsTarget === SETTINGS_TARGETS.providerUpdates
+              ? renderProviderUpdatesSection()
+              : null}
+            <HarnessAccountsPanel />
+          </div>
+        );
       case "models":
         return (
           <OpenCodeModelsSettingsPanel

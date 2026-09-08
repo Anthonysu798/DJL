@@ -50,7 +50,7 @@ function releaseNotesBeforeBoilerplate(body: string): string[] {
   const lines = body.replace(/\r\n/gu, "\n").split("\n");
   const cut = lines.findIndex(
     (line) =>
-      /^\s*---\s*$/u.test(line) || /^##\s+/u.test(line) || /^\*\*Full Changelog\*\*/u.test(line),
+      /^\s*---\s*$/u.test(line) || /^##\s+/u.test(line) || line.startsWith("**Full Changelog**"),
   );
   return cut === -1 ? lines : lines.slice(0, cut);
 }

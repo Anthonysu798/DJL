@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
@@ -111,7 +113,7 @@ export function GlassNav({ t }: { t: Content }) {
     <header className="glass-nav" data-scrolled={scrolled || undefined}>
       <div className="glass-nav-pill">
         <a className="glass-nav-brand" href={isZh ? "/" : "/en"}>
-          <img src="/djl-logo.png" alt="DJL" />
+          <Image src="/djl-logo.png" alt="DJL" width={256} height={256} unoptimized />
         </a>
 
         <nav className="glass-nav-links" aria-label={isZh ? "主导航" : "Primary"}>
@@ -141,9 +143,9 @@ export function GlassNav({ t }: { t: Content }) {
             </button>
             {langOpen ? (
               <div className="glass-nav-lang-menu">
-                <a href="/" className={isZh ? "active" : undefined}>
+                <Link href="/" className={isZh ? "active" : undefined}>
                   中文
-                </a>
+                </Link>
                 <a href="/en" className={isZh ? undefined : "active"}>
                   English
                 </a>
@@ -215,9 +217,13 @@ export function GlassNav({ t }: { t: Content }) {
           GitHub
         </a>
         <div className="glass-nav-sheet-lang">
-          <a href="/" className={isZh ? "active" : undefined} tabIndex={menuOpen ? undefined : -1}>
+          <Link
+            href="/"
+            className={isZh ? "active" : undefined}
+            tabIndex={menuOpen ? undefined : -1}
+          >
             中文
-          </a>
+          </Link>
           <a
             href="/en"
             className={isZh ? undefined : "active"}

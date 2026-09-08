@@ -196,7 +196,7 @@ function createElectronBackendRpcClient({
         pending.set(requestId, { tag, payload, resolve, reject, timer });
         try {
           sendRequest(tag, payload, requestId);
-        } catch (error) {
+        } catch {
           // Keep the request pending while the reconnect timer is active. The
           // same Effect-RPC request is resent after open; orchestration writes
           // remain safe because their command IDs are stable and persisted.
@@ -218,7 +218,7 @@ function createElectronBackendRpcClient({
       subscriptions.set(subscriptionId, entry);
       try {
         startSubscription(entry);
-      } catch (error) {
+      } catch {
         if (entry.requestId) streams.delete(entry.requestId);
         entry.requestId = null;
         if (!reconnectTimer && !socket) scheduleReconnect();

@@ -10,7 +10,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { page } from "vitest/browser";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -132,6 +132,10 @@ function createTourRouter(initialEntry = "/") {
 }
 
 describe("FirstRunTour", () => {
+  beforeEach(async () => {
+    await page.viewport(1440, 900);
+  });
+
   afterEach(async () => {
     await cleanup();
     queryClient.clear();
@@ -269,7 +273,7 @@ describe("FirstRunTour", () => {
     await render(<RouterProvider router={router} />);
 
     requestSettingsTourReplay();
-    await expect.element(page.getByText("General", { exact: true }).last()).toBeVisible();
+    await expect.element(page.getByText("Accounts", { exact: true }).last()).toBeVisible();
     const persistentTutorial = document.querySelector<HTMLElement>(
       '[aria-label="DJL settings tutorial"]',
     );
@@ -300,10 +304,10 @@ describe("FirstRunTour", () => {
         expect(persistentTutorial?.isConnected).toBe(true);
 
         await page.getByRole("button", { name: "Back" }).click();
-        await expect.element(page.getByText("General", { exact: true }).last()).toBeVisible();
+        await expect.element(page.getByText("Accounts", { exact: true }).last()).toBeVisible();
         await expect
           .element(page.getByTestId("active-settings-section"))
-          .toHaveTextContent("general");
+          .toHaveTextContent("accounts");
         expect(persistentTutorial?.isConnected).toBe(true);
         await page.getByRole("button", { name: "Next" }).click();
       }
@@ -329,7 +333,7 @@ describe("FirstRunTour", () => {
     await render(<RouterProvider router={router} />);
 
     requestSettingsTourReplay();
-    await expect.element(page.getByText("General", { exact: true }).last()).toBeVisible();
+    await expect.element(page.getByText("Accounts", { exact: true }).last()).toBeVisible();
     await expect.poll(() => router.state.location.pathname).toBe("/settings");
     await page.getByRole("button", { name: "Skip" }).click();
 

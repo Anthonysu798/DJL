@@ -898,7 +898,7 @@ test("Electron adapter re-hydrates a thread after its stream fails", async () =>
   const resumed = structuredClone(snapshot.threads[0]);
   resumed.session = { activeTurnId: "turn-3" };
   fake.pushThread("electron-thread", [detailSnapshotChunk(resumed, 9)]);
-  assert.equal(outbound.filter((m) => m.method === "turn/started").at(-1)?.params.turnId, "turn-3");
+  assert.equal(outbound.findLast((m) => m.method === "turn/started")?.params.turnId, "turn-3");
   transport.shutdown();
 });
 
@@ -1198,7 +1198,7 @@ test("Electron adapter mirrors desktop terminal output for attached terminals", 
 test("Electron adapter steers the running turn with the steer dispatch mode", async () => {
   const runningSnapshot = structuredClone(snapshot);
   runningSnapshot.threads[0].session = {
-    ...(runningSnapshot.threads[0].session || {}),
+    ...runningSnapshot.threads[0].session,
     activeTurnId: "turn-live",
   };
   const fake = createStreamingBackend(runningSnapshot);
@@ -1291,8 +1291,8 @@ test("Electron adapter serves fuzzy file search from desktop workspace search", 
   );
   await flushMicrotasks();
 
-  const searches = fake.requests.filter((r) => r.tag === "projects.searchEntries");
-  assert.deepEqual(searches[0].payload, { cwd: "/work", query: "app", limit: 50, kind: "file" });
+  const search = fake.requests.find((r) => r.tag === "projects.searchEntries");
+  assert.deepEqual(search.payload, { cwd: "/work", query: "app", limit: 50, kind: "file" });
   const response = outbound.find((m) => m.id === "ios-fuzzy");
   assert.equal(response.result.files.length, 2);
   assert.deepEqual(response.result.files[0], {

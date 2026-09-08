@@ -1,3 +1,16 @@
+const patchBroadcast = (value) => ({
+  type: "broadcast",
+  method: "thread-stream-state-changed",
+  sourceClientId: "desktop",
+  version: 5,
+  params: {
+    conversationId: "thread-backoff",
+    change: {
+      type: "patches",
+      patches: [{ op: "replace", path: ["turns", 0, "items", 0, "text"], value }],
+    },
+  },
+});
 // FILE: desktop-ipc-action-follower.test.js
 // Purpose: Verifies Codex Desktop IPC pending actions are projected and routed without using rollout text.
 // Layer: Unit test
@@ -734,20 +747,6 @@ test("desktop IPC follower backs off baseline recovery instead of hot-looping", 
     }),
   );
   await waitFor(() => serverSocket);
-
-  const patchBroadcast = (value) => ({
-    type: "broadcast",
-    method: "thread-stream-state-changed",
-    sourceClientId: "desktop",
-    version: 5,
-    params: {
-      conversationId: "thread-backoff",
-      change: {
-        type: "patches",
-        patches: [{ op: "replace", path: ["turns", 0, "items", 0, "text"], value }],
-      },
-    },
-  });
 
   // A burst of patch-only broadcasts must trigger at most one immediate read
   // attempt; retries wait for the backoff window instead of running per patch.

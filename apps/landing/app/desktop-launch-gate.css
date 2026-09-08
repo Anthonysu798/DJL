@@ -693,8 +693,7 @@
   border-radius: 12px;
   color: #f5f6f8;
   background:
-    linear-gradient(110deg, rgba(255, 255, 255, 0.07), transparent 34%),
-    rgba(8, 10, 15, 0.96);
+    linear-gradient(110deg, rgba(255, 255, 255, 0.07), transparent 34%), rgba(8, 10, 15, 0.96);
   box-shadow:
     0 30px 76px rgba(0, 0, 0, 0.68),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),

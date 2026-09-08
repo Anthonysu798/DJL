@@ -1029,6 +1029,7 @@ test("voice/transcribe accepts valid M4A clips and uploads them as audio/mp4", a
         formAppends.push(args);
       }
     },
+    // eslint-disable-next-line no-extraneous-class -- Injectable stand-in must support new BlobImpl().
     BlobImpl: class FakeBlob {
       constructor(parts, options) {
         this.parts = parts;

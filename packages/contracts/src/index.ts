@@ -27,3 +27,6 @@ export * from "./work";
 export * from "./document";
 export * from "./filesystem";
 export * from "./rpc";
+export * from "./harnessAccounts";
+
+export * from "./runtimePermissions";

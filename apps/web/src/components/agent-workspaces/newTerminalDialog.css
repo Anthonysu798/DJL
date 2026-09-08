@@ -1,0 +1,295 @@
+.terminal-launch-dialog {
+  --launch-surface: color-mix(in srgb, var(--background) 96%, #8393a2 4%);
+  --launch-field: color-mix(in srgb, var(--background) 97%, var(--foreground) 3%);
+  --launch-muted: color-mix(in srgb, var(--foreground) 73%, var(--background));
+  width: min(460px, calc(100vw - 32px));
+  max-width: 460px;
+  max-height: calc(100dvh - 48px);
+  padding: 36px 30px 28px;
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--foreground) 34%, transparent);
+  border-radius: 20px;
+  background: var(--launch-surface);
+  color: var(--foreground);
+  font-family: "Geist Variable", sans-serif;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 7%, transparent),
+    0 24px 80px -16px rgb(0 0 0 / 45%);
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-duration: 220ms;
+}
+.terminal-launch-dialog .terminal-launch-title {
+  padding-right: 28px;
+  font:
+    600 26px/1.25 "Geist Variable",
+    sans-serif;
+  letter-spacing: -0.65px;
+}
+.terminal-launch-dialog .terminal-launch-description {
+  margin-top: 9px;
+  color: var(--launch-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.terminal-launch-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: var(--launch-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    color 150ms,
+    transform 150ms;
+}
+.terminal-launch-close:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.terminal-launch-close:active {
+  transform: scale(0.91);
+}
+.terminal-launch-close:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.terminal-launch-form {
+  display: grid;
+  gap: 17px;
+  margin-top: 36px;
+}
+.terminal-launch-form .terminal-launch-field {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+  min-height: 86px;
+  padding: 17px 19px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 19%, transparent);
+  border-radius: 15px;
+  background: var(--launch-field);
+  color: var(--foreground);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 5%);
+  transition:
+    border-color 160ms,
+    background-color 160ms,
+    box-shadow 160ms,
+    transform 160ms;
+}
+.terminal-launch-form .terminal-launch-field:hover {
+  border-color: color-mix(in srgb, var(--foreground) 36%, transparent);
+  background: color-mix(in srgb, var(--launch-field) 96%, var(--foreground) 4%);
+}
+.terminal-launch-form .terminal-launch-field:active {
+  transform: scale(0.992);
+}
+.terminal-launch-form .terminal-launch-field:focus-visible,
+.terminal-launch-form .terminal-launch-field[data-popup-open] {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent);
+  outline: none;
+}
+.terminal-launch-field .terminal-launch-field-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--launch-muted);
+  opacity: 1;
+  transition:
+    transform 180ms,
+    color 180ms;
+}
+.terminal-launch-field:hover .terminal-launch-field-icon {
+  transform: translateY(-1px);
+  color: var(--foreground);
+}
+.terminal-launch-field-copy {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.terminal-launch-field-label {
+  color: var(--launch-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.3;
+}
+.terminal-launch-field-value {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 560;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.terminal-launch-field [data-slot="select-icon"] {
+  margin-left: 2px;
+  transition: transform 180ms;
+}
+.terminal-launch-field [data-slot="select-icon"] svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+.terminal-launch-field[data-popup-open] [data-slot="select-icon"] {
+  transform: rotate(180deg);
+}
+.terminal-launch-menu {
+  background: color-mix(in srgb, var(--background) 94%, #8393a2 6%);
+  border-color: color-mix(in srgb, var(--foreground) 24%, transparent);
+  border-radius: 14px;
+  font-family: "Geist Variable", sans-serif;
+}
+.terminal-launch-menu .terminal-launch-option {
+  min-height: 39px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: background-color 120ms;
+}
+.terminal-launch-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: -7px;
+  margin-inline: -7px;
+}
+.terminal-launch-signin-actions {
+  display: flex;
+  gap: 0;
+}
+.terminal-launch-account-actions .terminal-launch-link {
+  height: 29px;
+  min-height: 29px;
+  padding-inline: 7px;
+  font-size: 11px;
+  color: var(--launch-muted);
+  gap: 4px;
+  border-radius: 7px;
+}
+.terminal-launch-account-actions .terminal-launch-link:hover {
+  color: var(--foreground);
+}
+.terminal-launch-footer {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 14px;
+  margin-top: 7px;
+}
+.terminal-launch-footer .terminal-launch-cancel {
+  min-height: 52px;
+  height: auto;
+  border-radius: 13px;
+  font-size: 14px;
+  color: var(--launch-muted);
+}
+.terminal-launch-footer .terminal-launch-submit {
+  min-height: 52px;
+  height: auto;
+  padding: 12px 20px;
+  gap: 9px;
+  border-radius: 13px;
+  background: var(--foreground);
+  color: var(--background);
+  border: 1px solid color-mix(in srgb, var(--foreground) 80%, var(--background));
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 14%),
+    0 3px 8px rgb(0 0 0 / 10%);
+  transition:
+    transform 150ms,
+    opacity 150ms,
+    box-shadow 150ms;
+}
+.terminal-launch-footer .terminal-launch-submit:hover {
+  transform: translateY(-1px);
+  opacity: 0.93;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 14%),
+    0 5px 12px rgb(0 0 0 / 15%);
+}
+.terminal-launch-footer .terminal-launch-submit:active {
+  transform: translateY(0) scale(0.975);
+}
+.terminal-launch-footer .terminal-launch-submit svg {
+  transition: transform 170ms;
+}
+.terminal-launch-footer .terminal-launch-submit:hover svg {
+  transform: translateX(2px);
+}
+.terminal-workspace-editor > [data-slot="dialog-title"] {
+  padding-right: 26px;
+  margin-bottom: 10px;
+}
+.terminal-workspace-editor [data-slot="dialog-footer"] {
+  padding-inline: 0;
+  padding-bottom: 0;
+}
+.terminal-workspace-editor > button:last-child {
+  top: 17px;
+  right: 17px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .terminal-launch-value-change {
+    animation: terminal-launch-value-in 160ms ease-out;
+  }
+  @keyframes terminal-launch-value-in {
+    from {
+      opacity: 0.35;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .terminal-launch-dialog,
+  .terminal-launch-dialog *,
+  .terminal-launch-menu * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (max-width: 480px) {
+  .terminal-launch-dialog {
+    padding: 30px 22px 22px;
+    border-radius: 18px;
+  }
+  .terminal-launch-dialog .terminal-launch-title {
+    font-size: 24px;
+  }
+  .terminal-launch-form {
+    margin-top: 28px;
+  }
+  .terminal-launch-form .terminal-launch-field {
+    gap: 14px;
+    padding-inline: 16px;
+    min-height: 80px;
+  }
+  .terminal-launch-footer {
+    gap: 8px;
+    grid-template-columns: 0.8fr 1.8fr;
+  }
+  .terminal-launch-footer .terminal-launch-submit {
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+}
+
+.terminal-profile-signin {
+  max-width: 680px;
+}

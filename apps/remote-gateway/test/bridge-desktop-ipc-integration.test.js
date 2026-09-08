@@ -568,6 +568,8 @@ test("bridge serves Desktop-owned thread history from cached IPC state", async (
   const readResponse = await waitForMessage(
     relayMessages,
     (message) => message.id === "read-cached-desktop-thread",
+    // The full suite also runs Git subprocess fixtures; allow IPC response scheduling to catch up.
+    2_000,
   );
   assert.equal(readResponse.result.thread.id, "thread-ipc-read");
   assert.equal(readResponse.result.thread.name, "Cached Desktop Thread");

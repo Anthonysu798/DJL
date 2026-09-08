@@ -28,6 +28,7 @@ type NullableContextWindowUsage = {
 };
 
 export type ContextWindowSnapshot = NullableContextWindowUsage & {
+  readonly usageAvailable?: boolean;
   readonly remainingTokens: number | null;
   readonly usedPercentage: number | null;
   readonly remainingPercentage: number | null;
@@ -142,6 +143,8 @@ export function deriveLatestContextWindowSnapshot(
     return null;
   }
 
+  if (!usageSnapshot) return derivePendingContextWindowSnapshot(configuredMaxTokens);
+
   const usedTokens = usageSnapshot?.usedTokens ?? 0;
   const maxTokens = configuredMaxTokens ?? usageSnapshot?.maxTokens ?? null;
   const usedPercentage =
@@ -196,14 +199,21 @@ export function deriveSelectedContextWindowSnapshot(
     return null;
   }
 
+  return derivePendingContextWindowSnapshot(maxTokens);
+}
+
+export function derivePendingContextWindowSnapshot(
+  maxTokens: number | null = null,
+): ContextWindowSnapshot {
   return {
+    usageAvailable: false,
     usedTokens: 0,
     usedPercent: null,
     totalProcessedTokens: null,
     maxTokens,
-    remainingTokens: maxTokens,
-    usedPercentage: 0,
-    remainingPercentage: 100,
+    remainingTokens: null,
+    usedPercentage: null,
+    remainingPercentage: null,
     inputTokens: null,
     cachedInputTokens: null,
     outputTokens: null,
@@ -233,6 +243,17 @@ function formatPercentage(value: number | null): string | null {
 export function deriveContextWindowMeterDisplay(
   usage: ContextWindowSnapshot,
 ): ContextWindowMeterDisplay {
+  if (usage.usageAvailable === false) {
+    const label = translateRendererCopy("chat:context.awaitingUsage", "Usage not reported yet");
+    return {
+      usedPercentageLabel: null,
+      tokenUsageLabel: label,
+      hasReliableTokenRatio: false,
+      normalizedPercentage: 0,
+      compactLabel: "—",
+      ariaLabel: label,
+    };
+  }
   const usedPercentageLabel = formatPercentage(usage.usedPercentage);
   const tokenUsageLabel = formatContextWindowTokens(usage.usedTokens);
   const hasReliableTokenRatio =

@@ -26,6 +26,7 @@ const ENGLISH_EQUAL_INVARIANTS = new Map<string, string>([
 function collectLeaves(value: unknown, path: readonly string[] = []): Map<string, unknown> {
   if (value !== null && typeof value === "object") {
     return new Map(
+      // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
       Object.entries(value).flatMap(([key, nested]) => [...collectLeaves(nested, [...path, key])]),
     );
   }
@@ -111,7 +112,7 @@ describe("secondary locale catalog translations", () => {
 
   it.each(Object.entries(SECONDARY_CATALOGS))(
     "%s leaves only genuine invariants equal to English",
-    (_locale, catalog) => {
+    (locale, catalog) => {
       const englishLeaves = collectLeaves(englishCatalog);
       const secondaryLeaves = collectLeaves(catalog);
       const equalPaths = [...englishLeaves]
@@ -119,7 +120,22 @@ describe("secondary locale catalog translations", () => {
         .map(([path]) => path)
         .toSorted();
 
-      expect(equalPaths).toEqual([...ENGLISH_EQUAL_INVARIANTS.keys()].toSorted());
+      // These ordinary words are also the natural French/Spanish translations.
+      const sharedWords =
+        locale === "es-419"
+          ? [
+              "workspace.agents.error",
+              "workspace.agents.shell",
+              "workspace.agents.terminalCount_one",
+            ]
+          : locale === "fr"
+            ? [
+                "settings.subscriptions.international",
+                "workspace.agents.shell",
+                "workspace.agents.terminalCount_one",
+              ]
+            : [];
+      expect(equalPaths).toEqual([...ENGLISH_EQUAL_INVARIANTS.keys(), ...sharedWords].toSorted());
       for (const [path, expectedValue] of ENGLISH_EQUAL_INVARIANTS) {
         expect(englishLeaves.get(path)).toBe(expectedValue);
         expect(secondaryLeaves.get(path)).toBe(expectedValue);

@@ -74,19 +74,6 @@ grep -qF \
   "url: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable" \
   "$app/Contents/Resources/app-update.yml"
 
-expected_opencode="$(
-  sed -nE 's/.*DJL_OPENCODE_VERSION = "([^"]+)".*/\1/p' \
-    "$repo_root/scripts/lib/vendored-opencode.ts" | head -1
-)"
-[[ -n "$expected_opencode" ]] || {
-  echo "Could not read the pinned OpenCode version." >&2
-  exit 1
-}
-actual_opencode="$("$app/Contents/Resources/opencode/opencode" --version)"
-[[ "$actual_opencode" == "$expected_opencode" ]] || {
-  echo "Embedded OpenCode must be $expected_opencode, received $actual_opencode." >&2
-  exit 1
-}
+node "$repo_root/scripts/check-no-bundled-opencode.ts" "$app"
 
-echo "Verified $expected_arch bundle: $native_count native module(s), onnxruntime-node" \
-  "$expected_onnx, OpenCode $expected_opencode."
+echo "Verified $expected_arch bundle: $native_count native module(s), onnxruntime-node $expected_onnx."

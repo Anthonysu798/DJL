@@ -155,11 +155,15 @@ function resetForSnapshotReplay(entry: TerminalRuntimeEntry): void {
 }
 
 function snapshotReplayPayload(snapshot: TerminalSessionSnapshot): string {
-  return `${snapshot.replayPreamble ?? ""}${snapshot.history}`;
+  return `${snapshot.replayPreamble ?? ""}${snapshot.history}${snapshot.screen ?? ""}`;
 }
 
 function snapshotHasReplayPayload(snapshot: TerminalSessionSnapshot): boolean {
-  return snapshot.history.length > 0 || (snapshot.replayPreamble?.length ?? 0) > 0;
+  return (
+    snapshot.history.length > 0 ||
+    (snapshot.screen?.length ?? 0) > 0 ||
+    (snapshot.replayPreamble?.length ?? 0) > 0
+  );
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -189,6 +193,9 @@ function buildOpenInput(entry: TerminalRuntimeEntry) {
     cols: entry.terminal.cols,
     rows: entry.terminal.rows,
     ...(entry.runtimeEnv ? { env: entry.runtimeEnv } : {}),
+    ...(entry.agentProfile ? { agentProfile: entry.agentProfile } : {}),
+    ...(entry.screenSnapshot ? { screenSnapshot: true } : {}),
+    ...(entry.lightweight ? { headlessQueries: true } : {}),
   };
 }
 
@@ -270,22 +277,31 @@ function scheduleWrite(entry: TerminalRuntimeEntry, data: string, byteLength: nu
   entry.pendingWriteLength += data.length;
   entry.pendingWriteBytes += byteLength;
 
-  if (entry.pendingWriteBytes >= WRITE_BATCH_SIZE_LIMIT) {
+  const interactiveEcho =
+    entry.lightweight &&
+    entry.viewState.isVisible &&
+    entry.flushNextOutput &&
+    entry.pendingWriteBytes <= 4096;
+  entry.flushNextOutput = false;
+  if (interactiveEcho || entry.pendingWriteBytes >= WRITE_BATCH_SIZE_LIMIT) {
     flushPendingWrites(entry);
     return;
   }
 
-  if (entry.writeRafHandle === null) {
+  if (entry.viewState.isVisible && entry.writeRafHandle === null) {
     entry.writeRafHandle = window.requestAnimationFrame(() => {
       entry.writeRafHandle = null;
       flushPendingWrites(entry);
     });
   }
   if (entry.writeFlushTimeout === null) {
-    entry.writeFlushTimeout = window.setTimeout(() => {
-      entry.writeFlushTimeout = null;
-      flushPendingWrites(entry);
-    }, WRITE_BATCH_MAX_LATENCY_MS);
+    entry.writeFlushTimeout = window.setTimeout(
+      () => {
+        entry.writeFlushTimeout = null;
+        flushPendingWrites(entry);
+      },
+      entry.lightweight && !entry.viewState.isVisible ? 100 : WRITE_BATCH_MAX_LATENCY_MS,
+    );
   }
 }
 
@@ -553,6 +569,7 @@ function disposeWebglAddon(entry: TerminalRuntimeEntry): void {
 function maybeLoadWebglAddon(entry: TerminalRuntimeEntry): void {
   if (
     entry.disposed ||
+    entry.lightweight ||
     !ENABLE_TERMINAL_WEBGL ||
     suggestedRendererType === "dom" ||
     entry.webglAddon !== null ||
@@ -566,6 +583,7 @@ function maybeLoadWebglAddon(entry: TerminalRuntimeEntry): void {
     entry.webglLoadFrame = null;
     if (
       entry.disposed ||
+      entry.lightweight ||
       !ENABLE_TERMINAL_WEBGL ||
       suggestedRendererType === "dom" ||
       entry.webglAddon !== null ||
@@ -607,10 +625,12 @@ function applyInitialVisualResize(entry: TerminalRuntimeEntry): void {
       refresh: true,
     });
 
-    secondFrame = window.requestAnimationFrame(() => {
-      entry.lastVisualResizeAt = Date.now();
-      runTerminalResize(entry, { refresh: true });
-    });
+    if (!entry.lightweight) {
+      secondFrame = window.requestAnimationFrame(() => {
+        entry.lastVisualResizeAt = Date.now();
+        runTerminalResize(entry, { refresh: true });
+      });
+    }
   });
 
   entry.attachDisposables.push(() => {
@@ -677,6 +697,7 @@ async function sendTerminalInput(
   const api = readNativeApi();
   if (!api) return;
   try {
+    entry.flushNextOutput = true;
     await api.terminal.write({ threadId: entry.threadId, terminalId: entry.terminalId, data });
   } catch (error) {
     writeSystemMessage(entry.terminal, describeErrorMessage(error, fallbackError));
@@ -746,6 +767,11 @@ export function syncRuntimeConfig(
   } else {
     entry.runtimeEnv = config.runtimeEnv;
   }
+  entry.screenSnapshot = config.screenSnapshot ?? false;
+  entry.lightweight = config.lightweight ?? false;
+  entry.serverHandlesQueries = config.serverHandlesQueries ?? false;
+  if (config.agentProfile) entry.agentProfile = config.agentProfile;
+  else delete entry.agentProfile;
   entry.callbacks = config.callbacks;
 }
 
@@ -755,11 +781,10 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
 
   const fitAddon = new FitAddon();
   const clipboardAddon = new ClipboardAddon();
-  const imageAddon = new ImageAddon();
   const searchAddon = new SearchAddon();
   const unicode11Addon = new Unicode11Addon();
   const terminalOptions: SynaraTerminalOptions = {
-    cursorBlink: true,
+    cursorBlink: !config.lightweight,
     fontSize: getTerminalFontSizePx(),
     fontWeight: getTerminalFontWeight(),
     fontWeightBold: getTerminalBoldFontWeight(),
@@ -780,12 +805,12 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
   const terminal = new Terminal(terminalOptions);
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(clipboardAddon);
-  terminal.loadAddon(imageAddon);
+  if (config.imageSupport !== false) terminal.loadAddon(new ImageAddon());
   terminal.loadAddon(searchAddon);
   terminal.loadAddon(unicode11Addon);
   terminal.unicode.activeVersion = "11";
   try {
-    terminal.loadAddon(new LigaturesAddon());
+    if (!config.lightweight) terminal.loadAddon(new LigaturesAddon());
   } catch {
     // Keep terminal startup resilient when the active font doesn't support ligatures.
   }
@@ -839,12 +864,29 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
     },
     unsubscribeTerminalEvents: null,
   };
+  entry.screenSnapshot = config.screenSnapshot ?? false;
+  entry.lightweight = config.lightweight ?? false;
+  entry.serverHandlesQueries = config.serverHandlesQueries ?? false;
+  if (config.agentProfile) entry.agentProfile = config.agentProfile;
   if (config.runtimeEnv !== undefined) {
     entry.runtimeEnv = config.runtimeEnv;
   }
 
   scheduleFontSettleRefit(entry);
   entry.querySuppressionDispose = suppressQueryResponses(terminal);
+  // The server answers these queries while workspace renderers are absent.
+  // Suppress duplicate parser-generated replies, never user keyboard input.
+  for (const identifier of [
+    { final: "n" },
+    { prefix: "?", final: "n" },
+    { final: "c" },
+    { prefix: ">", final: "c" },
+    { intermediates: "$", final: "p" },
+    { prefix: "?", intermediates: "$", final: "p" },
+  ])
+    entry.terminalDisposables.push(
+      terminal.parser.registerCsiHandler(identifier, () => entry.serverHandlesQueries === true),
+    );
 
   const handleCopy = (event: ClipboardEvent) => {
     const selection = terminal.getSelection();
@@ -866,9 +908,10 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
   });
 
   const unsubscribeTransportState = addWsTransportStateListener((state) => {
-    if (entry.disposed || !entry.opened || entry.hasHandledExit) return;
+    if (entry.disposed || entry.hasHandledExit) return;
     if (state === "open") {
-      reconcileTerminalSnapshot(entry);
+      if (entry.opened) reconcileTerminalSnapshot(entry);
+      else if (entry.container) openTerminal(entry);
       return;
     }
     if (state === "connecting" || state === "closed") {
@@ -982,6 +1025,7 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
       }
       const api = readNativeApi();
       if (!api) return;
+      entry.flushNextOutput = true;
       void api.terminal
         .write({ threadId: entry.threadId, terminalId: entry.terminalId, data })
         .catch((error) =>
@@ -1101,6 +1145,7 @@ function openTerminal(entry: TerminalRuntimeEntry): void {
     .open(openInput)
     .then((snapshot) => {
       if (entry.disposed) return;
+      entry.serverHandlesQueries = snapshot.headlessQueries === true;
       if (
         snapshotHasReplayPayload(snapshot) &&
         entry.outputEventVersion === outputEventVersionAtOpen
@@ -1159,9 +1204,15 @@ export function attachRuntimeToContainer(
   }
 
   updateRuntimeViewState(entry, viewState);
+  if (viewState.isVisible && entry.pendingResize) {
+    entry.pendingResize = null;
+    queueBackendResize(entry, entry.terminal.cols, entry.terminal.rows);
+  }
   maybeLoadWebglAddon(entry);
-  ensureResizeObserver(entry);
-  startVisibilityRecovery(entry);
+  if (viewState.isVisible) {
+    ensureResizeObserver(entry);
+    startVisibilityRecovery(entry);
+  }
   openTerminal(entry);
 }
 
@@ -1174,6 +1225,7 @@ export function updateRuntimeViewState(
 
   if (entry.container) {
     if (nextViewState.isVisible && !wasVisible) {
+      flushPendingWrites(entry);
       maybeLoadWebglAddon(entry);
       applyInitialVisualResize(entry);
       ensureResizeObserver(entry);
@@ -1188,19 +1240,24 @@ export function updateRuntimeViewState(
 
   if (nextViewState.autoFocus) {
     window.requestAnimationFrame(() => {
-      entry.terminal.focus();
+      if (entry.container && entry.viewState.isVisible && entry.viewState.autoFocus)
+        entry.terminal.focus();
     });
   }
 }
 
 export function detachRuntimeFromContainer(entry: TerminalRuntimeEntry): void {
+  entry.viewState = { autoFocus: false, isVisible: false };
+  if (entry.writeRafHandle !== null) {
+    window.cancelAnimationFrame(entry.writeRafHandle);
+    entry.writeRafHandle = null;
+  }
   cancelScheduledVisualResize(entry);
   stopVisibilityRecovery(entry);
   disposeWebglAddon(entry);
   clearAttachDisposables(entry);
   clearBackendResizeTimer(entry);
-  entry.pendingResize = null;
-  entry.lastSentResize = null;
+  // Retain pending/last-sent dimensions across parking. Reattach sends only real changes.
   entry.lastVisualResizeAt = 0;
   getTerminalParkingContainer().append(entry.wrapper);
   entry.container = null;

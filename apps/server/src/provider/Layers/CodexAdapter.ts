@@ -464,13 +464,10 @@ function toUserInputQuestions(payload: Record<string, unknown> | undefined) {
       if (!id || !header || !prompt || !options || options.length === 0) {
         return undefined;
       }
-      return {
-        id,
-        header,
-        question: prompt,
-        options,
-        ...(question.multiSelect === true ? { multiSelect: true } : {}),
-      };
+      return Object.assign(
+        { id, header, question: prompt, options },
+        question.multiSelect === true ? { multiSelect: true } : {},
+      );
     })
     .filter(
       (

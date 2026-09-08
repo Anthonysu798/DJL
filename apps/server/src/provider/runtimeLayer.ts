@@ -2,6 +2,7 @@ import { Effect, FileSystem, Layer, Path } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
+import { NativeHarnessesLive } from "../harnesses/native/layer";
 import { ServerConfig } from "../config";
 import { ServerSettingsLive } from "../serverSettings";
 import { AnalyticsService } from "../telemetry/Services/AnalyticsService";
@@ -55,9 +56,10 @@ export function makeServerProviderLayer(): Layer.Layer<
       ensureLocalRuntime: localModels.ensureRuntimeForModel,
       localToolSupport: localModels.toolSupportForModel,
       localModelInventory: () => localModels.refresh,
-    });
+    }).pipe(Layer.provide(ServerSettingsLive));
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(openCodeAdapterLayer),
+      Layer.provide(NativeHarnessesLive.pipe(Layer.provide(ServerSettingsLive))),
       Layer.provideMerge(providerSessionDirectoryLayer),
     );
     const providerServiceLayer = makeProviderServiceLive(

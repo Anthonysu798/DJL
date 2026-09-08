@@ -97,7 +97,7 @@ function substantialEnglish(value: string): boolean {
   if (!/[A-Za-z]{2,}/.test(normalized)) return false;
   if (normalized === "Aa") return false;
   if (/^[A-Z0-9]{2,6}$/.test(normalized)) return false;
-  if (!normalized.includes(" ") && /[-_./:@\[\]{}]/.test(normalized)) return false;
+  if (!normalized.includes(" ") && /[-_./:@[\]{}]/.test(normalized)) return false;
   return true;
 }
 

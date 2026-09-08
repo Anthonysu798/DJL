@@ -329,14 +329,6 @@ describe("real locale catalogs", () => {
       latinAmericanSpanishCatalog,
       frenchCatalog,
     ];
-    const shape = (value: unknown): unknown =>
-      value !== null && typeof value === "object" && !Array.isArray(value)
-        ? Object.fromEntries(
-            Object.entries(value)
-              .sort(([left], [right]) => left.localeCompare(right))
-              .map(([key, nested]) => [key, shape(nested)]),
-          )
-        : typeof value;
 
     expect(Object.keys(englishCatalog)).toEqual([...I18N_NAMESPACES]);
     for (const catalog of catalogs) {
@@ -344,3 +336,12 @@ describe("real locale catalogs", () => {
     }
   });
 });
+
+const shape = (value: unknown): unknown =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+    ? Object.fromEntries(
+        Object.entries(value)
+          .toSorted(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, shape(nested)]),
+      )
+    : typeof value;

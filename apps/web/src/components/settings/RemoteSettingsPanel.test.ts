@@ -34,7 +34,7 @@ describe("encodeManualPairingPayload", () => {
 
     expect(remote.access.title).toBe("iPhone remote access");
     expect(remote.pairing.title).toBe("Pair your iPhone");
-    expect(Object.keys(remote.status).sort()).toEqual([
+    expect(Object.keys(remote.status).toSorted()).toEqual([
       "connected",
       "disabled",
       "error",

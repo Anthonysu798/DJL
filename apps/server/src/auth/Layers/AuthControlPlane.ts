@@ -58,6 +58,7 @@ export const makeAuthControlPlane = Effect.gen(function* () {
         pairingLinks
           .filter((pairingLink) => (input?.role ? pairingLink.role === input.role : true))
           .filter((pairingLink) => !input?.excludeSubjects?.includes(pairingLink.subject))
+          // eslint-disable-next-line oxc/no-map-spread -- Return copies without exposing stored pairing links.
           .map((pairingLink) =>
             pairingLink.label
               ? ({ ...pairingLink, label: pairingLink.label } satisfies AuthPairingLink)
@@ -118,7 +119,7 @@ export const makeAuthControlPlane = Effect.gen(function* () {
 
   const listSessions: AuthControlPlaneShape["listSessions"] = () =>
     sessions.listActive().pipe(
-      Effect.map((activeSessions) => [...activeSessions].sort(bySessionPriority)),
+      Effect.map((activeSessions) => [...activeSessions].toSorted(bySessionPriority)),
       Effect.mapError(toAuthControlPlaneError("Failed to list sessions.")),
     );
 

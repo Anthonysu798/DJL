@@ -11,7 +11,6 @@
   border-top: 1px solid var(--line);
 }
 
-
 .gs-inner {
   position: relative;
   z-index: 1;
@@ -127,7 +126,6 @@
   align-items: center;
   gap: 0.75rem 1.5rem;
 }
-
 
 [lang="zh-CN"] .gs-flip {
   letter-spacing: -0.01em;

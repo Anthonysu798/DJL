@@ -178,11 +178,6 @@ describe("computeStableMessagesTimelineRows", () => {
   type MessageTimelineRow = Extract<MessagesTimelineRow, { kind: "message" }>;
   type WorkTimelineRow = Extract<MessagesTimelineRow, { kind: "work" }>;
 
-  const emptyStableRows = (): StableMessagesTimelineRowsState => ({
-    byId: new Map(),
-    result: [],
-  });
-
   it("replaces work rows when later tool metadata adds visible details", () => {
     const firstRows: MessagesTimelineRow[] = [
       {
@@ -230,16 +225,6 @@ describe("computeStableMessagesTimelineRows", () => {
   });
 
   it("reuses worktree-setup rows until a step status or open state changes", () => {
-    const makeRow = (
-      status: "active" | "done",
-      open: boolean,
-    ): Extract<MessagesTimelineRow, { kind: "worktree-setup" }> => ({
-      kind: "worktree-setup",
-      id: "worktree-setup-row",
-      open,
-      steps: [{ id: "create-worktree", label: "Creating branch and worktree", status }],
-    });
-
     const first = computeStableMessagesTimelineRows([makeRow("active", true)], emptyStableRows());
     const unchanged = computeStableMessagesTimelineRows([makeRow("active", true)], first);
     expect(unchanged).toBe(first);
@@ -857,18 +842,6 @@ describe("deriveMessagesTimelineRows", () => {
     },
   });
 
-  const workEntry = (
-    id: string,
-    createdAt: string,
-    label: string,
-    tone: "thinking" | "tool" | "info" | "error" = "tool",
-  ): TimelineEntry => ({
-    id: `entry-${id}`,
-    kind: "work",
-    createdAt,
-    entry: { id, createdAt, label, tone },
-  });
-
   const proposedPlanEntry = (id: string, createdAt: string, turnId: string): TimelineEntry => ({
     id: `entry-${id}`,
     kind: "proposed-plan",
@@ -889,9 +862,6 @@ describe("deriveMessagesTimelineRows", () => {
       (row): row is MessageTimelineRow =>
         row.kind === "message" && row.message.id === MessageId.makeUnsafe(id),
     );
-
-  const collapsedSignature = (row: MessageTimelineRow): string[] =>
-    (row.collapsedTurnItems ?? []).map((item) => `${item.kind}:${String(item.id)}`);
 
   it("folds a settled turn's narration and work into one collapsed group on the terminal message", () => {
     const rows = deriveMessagesTimelineRows({
@@ -1171,14 +1141,6 @@ describe("deriveMessagesTimelineRows", () => {
     expect(collapsedSignature(messageRow(rows, "a2")!)).toEqual(["narration:a1", "work:w1"]);
   });
 
-  const worktreeSetupSnapshot = (): WorktreeSetupSnapshot => ({
-    steps: [
-      { id: "create-worktree", label: "Creating branch and worktree", status: "done" },
-      { id: "prepare-thread", label: "Linking thread workspace", status: "active" },
-      { id: "start-session", label: "Starting session", status: "pending" },
-    ],
-  });
-
   it("appends an open worktree-setup row and suppresses the generic working shimmer", () => {
     const setup = worktreeSetupSnapshot();
     const rows = deriveMessagesTimelineRows({
@@ -1221,4 +1183,42 @@ describe("deriveMessagesTimelineRows", () => {
 
     expect(rows.map((row) => row.kind)).toEqual(["message", "working"]);
   });
+});
+
+const worktreeSetupSnapshot = (): WorktreeSetupSnapshot => ({
+  steps: [
+    { id: "create-worktree", label: "Creating branch and worktree", status: "done" },
+    { id: "prepare-thread", label: "Linking thread workspace", status: "active" },
+    { id: "start-session", label: "Starting session", status: "pending" },
+  ],
+});
+
+const collapsedSignature = (row: Extract<MessagesTimelineRow, { kind: "message" }>): string[] =>
+  (row.collapsedTurnItems ?? []).map((item) => `${item.kind}:${String(item.id)}`);
+
+const workEntry = (
+  id: string,
+  createdAt: string,
+  label: string,
+  tone: "thinking" | "tool" | "info" | "error" = "tool",
+): TimelineEntry => ({
+  id: `entry-${id}`,
+  kind: "work",
+  createdAt,
+  entry: { id, createdAt, label, tone },
+});
+
+const makeRow = (
+  status: "active" | "done",
+  open: boolean,
+): Extract<MessagesTimelineRow, { kind: "worktree-setup" }> => ({
+  kind: "worktree-setup",
+  id: "worktree-setup-row",
+  open,
+  steps: [{ id: "create-worktree", label: "Creating branch and worktree", status }],
+});
+
+const emptyStableRows = (): StableMessagesTimelineRowsState => ({
+  byId: new Map(),
+  result: [],
 });

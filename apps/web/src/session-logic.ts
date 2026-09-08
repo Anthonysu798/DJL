@@ -48,7 +48,12 @@ export const PROVIDER_OPTIONS: Array<{
   value: ProviderPickerKind;
   label: string;
   available: boolean;
-}> = [{ value: "opencode", label: "DJL", available: true }];
+}> = [
+  { value: "opencode", label: "OpenCode", available: true },
+  { value: "codex", label: "Codex", available: true },
+  { value: "claudeAgent", label: "Claude Code", available: true },
+  { value: "cursor", label: "Cursor", available: true },
+];
 
 export interface WorkLogEntry {
   id: string;
@@ -219,7 +224,7 @@ function orderedActivities(
 
   const ordered = isActivityOrderStable(activities)
     ? activities
-    : [...activities].sort(compareActivitiesByOrder);
+    : activities.toSorted(compareActivitiesByOrder);
   orderedActivitiesCache.set(activities, ordered);
   return ordered;
 }
@@ -447,6 +452,7 @@ function parseUserInputQuestions(
     return null;
   }
   const parsed = questions
+    // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
     .map<UserInputQuestion | null>((entry) => {
       if (!entry || typeof entry !== "object") return null;
       const question = entry as Record<string, unknown>;
@@ -1546,6 +1552,7 @@ function extractCollabSubagents(
   }
 
   const receiverThreadIds = decodeSubagentReceiverThreadIds(item);
+  // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
   const receiverAgents = decodeSubagentReceiverAgents(item, receiverThreadIds).map((agent) => ({
     threadId: agent.providerThreadId,
     providerThreadId: agent.providerThreadId,
@@ -2241,7 +2248,7 @@ export function deriveTimelineEntries(
 export function inferCheckpointTurnCountByTurnId(
   summaries: TurnDiffSummary[],
 ): Record<TurnId, number> {
-  const sorted = [...summaries].toSorted((a, b) => a.completedAt.localeCompare(b.completedAt));
+  const sorted = summaries.toSorted((a, b) => a.completedAt.localeCompare(b.completedAt));
   const result: Record<TurnId, number> = {};
   for (let index = 0; index < sorted.length; index += 1) {
     const summary = sorted[index];

@@ -121,6 +121,7 @@ export function SettingsSidebarNav(props: {
           isSettingsSectionVisible(entry.section) &&
           (isElectron || entry.section !== "local-models"),
       ),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- Locale changes must refresh labels read through stable translation helpers.
     [i18n.resolvedLanguage, translateSettings, trimmedQuery],
   );
 

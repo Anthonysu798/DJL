@@ -52,7 +52,10 @@ export function LayoutTextFlip({
       <span className={className}>{text}</span>
 
       <span
-        className={cn("relative inline-block w-fit overflow-hidden whitespace-nowrap", wordClassName)}
+        className={cn(
+          "relative inline-block w-fit overflow-hidden whitespace-nowrap",
+          wordClassName,
+        )}
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.span

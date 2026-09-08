@@ -970,11 +970,12 @@ export function buildCursorAcpModelDescriptors(
   );
   const contextWindowOptions =
     contextOption?.type === "select"
-      ? flattenSessionConfigSelectOptions(contextOption).map((entry) => ({
-          value: entry.value,
-          label: entry.name || entry.value,
-          ...(contextOption.currentValue === entry.value ? { isDefault: true as const } : {}),
-        }))
+      ? flattenSessionConfigSelectOptions(contextOption).map((entry) =>
+          Object.assign(
+            { value: entry.value, label: entry.name || entry.value },
+            contextOption.currentValue === entry.value ? { isDefault: true as const } : {},
+          ),
+        )
       : [];
   const defaultContextWindow = contextWindowOptions.find((option) => option.isDefault)?.value;
 
@@ -1235,8 +1236,8 @@ function mergeCursorModelOptions(
   override: CursorModelOptions | null | undefined,
 ): CursorModelOptions | undefined {
   const merged: CursorModelOptions = {
-    ...(base ?? {}),
-    ...(override ?? {}),
+    ...base,
+    ...override,
   };
   return Object.keys(merged).length > 0 ? merged : undefined;
 }

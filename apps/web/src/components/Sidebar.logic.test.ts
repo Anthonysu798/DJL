@@ -60,10 +60,10 @@ import englishCatalog from "../i18n/locales/en.json";
 import frenchCatalog from "../i18n/locales/fr.json";
 
 describe("sidebar provider branding", () => {
-  it("does not render provider logos in sidebar rows", () => {
+  it("renders the thread provider identity in sidebar rows", () => {
     const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
 
-    expect(source).not.toContain("ProviderIcon");
+    expect(source).toContain("<ThreadProviderIcon");
   });
 });
 

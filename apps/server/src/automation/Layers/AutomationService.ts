@@ -47,6 +47,39 @@ import {
   computeNextAutomationRunAtAfter,
 } from "../schedule.ts";
 
+const findRunCompletionMessages = (input: {
+  readonly run: AutomationRun;
+  readonly thread: {
+    readonly messages: ReadonlyArray<{
+      readonly id: string;
+      readonly role: string;
+      readonly text: string;
+      readonly turnId: string | null;
+    }>;
+  };
+}) => {
+  const runMessages = input.thread.messages.filter(
+    (message) =>
+      message.id === input.run.messageId ||
+      (input.run.turnId !== null && message.turnId === input.run.turnId),
+  );
+  const userMessage =
+    input.thread.messages.find((message) => message.id === input.run.messageId)?.text ?? "";
+  const assistantMessages = runMessages.filter((message) => message.role === "assistant");
+  const runThreadContext = runMessages
+    .slice(-8)
+    .map((message) => `${message.role}: ${message.text}`)
+    .join("\n\n");
+  return {
+    runUserMessage: userMessage,
+    runAssistantText:
+      assistantMessages.length > 0
+        ? assistantMessages.map((message) => message.text).join("\n\n")
+        : "",
+    runThreadContext,
+  };
+};
+
 const AUTOMATION_ERROR_MAX_CHARS = 4_000;
 const FAST_INTERVAL_ACKNOWLEDGED_MINIMUM_SECONDS = 1;
 const AUTOMATION_COMPLETION_EVALUATION_WORKERS = 2;
@@ -1167,38 +1200,6 @@ export const AutomationServiceLive = Layer.effect(
       );
 
     // Stop checks must only evaluate evidence from the just-finished heartbeat turn.
-    const findRunCompletionMessages = (input: {
-      readonly run: AutomationRun;
-      readonly thread: {
-        readonly messages: ReadonlyArray<{
-          readonly id: string;
-          readonly role: string;
-          readonly text: string;
-          readonly turnId: string | null;
-        }>;
-      };
-    }) => {
-      const runMessages = input.thread.messages.filter(
-        (message) =>
-          message.id === input.run.messageId ||
-          (input.run.turnId !== null && message.turnId === input.run.turnId),
-      );
-      const userMessage =
-        input.thread.messages.find((message) => message.id === input.run.messageId)?.text ?? "";
-      const assistantMessages = runMessages.filter((message) => message.role === "assistant");
-      const runThreadContext = runMessages
-        .slice(-8)
-        .map((message) => `${message.role}: ${message.text}`)
-        .join("\n\n");
-      return {
-        runUserMessage: userMessage,
-        runAssistantText:
-          assistantMessages.length > 0
-            ? assistantMessages.map((message) => message.text).join("\n\n")
-            : "",
-        runThreadContext,
-      };
-    };
 
     const staleStopCheckEvaluation = (rawEvaluation: AutomationCompletionEvaluation) => ({
       ...rawEvaluation,

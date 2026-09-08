@@ -363,7 +363,7 @@ function encodeRefSegment(value) {
 }
 
 function uniqueSorted(values) {
-  return [...new Set(values.filter(Boolean))].sort();
+  return [...new Set(values.filter(Boolean))].toSorted();
 }
 
 function firstNonEmptyString(candidates) {

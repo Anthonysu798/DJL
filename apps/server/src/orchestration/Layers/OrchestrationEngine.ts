@@ -42,6 +42,27 @@ import {
   type OrchestrationEngineShape,
 } from "../Services/OrchestrationEngine.ts";
 
+const overlayThread = (
+  model: OrchestrationReadModel,
+  thread: OrchestrationReadModel["threads"][number],
+): OrchestrationReadModel => {
+  const existingThread = model.threads.find((entry) => entry.id === thread.id);
+  const mergedThread =
+    existingThread && existingThread.messages.length > 0
+      ? {
+          ...thread,
+          messages: existingThread.messages,
+        }
+      : thread;
+  const hasThread = existingThread !== undefined;
+  return {
+    ...model,
+    threads: hasThread
+      ? model.threads.map((entry) => (entry.id === thread.id ? mergedThread : entry))
+      : [...model.threads, mergedThread],
+  };
+};
+
 const ORCHESTRATION_DISPATCH_TIMEOUT_MS = 45_000;
 
 type CommandExecutionState = "queued" | "in-flight" | "abandoned";
@@ -217,27 +238,6 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       ),
     ),
   );
-
-  const overlayThread = (
-    model: OrchestrationReadModel,
-    thread: OrchestrationReadModel["threads"][number],
-  ): OrchestrationReadModel => {
-    const existingThread = model.threads.find((entry) => entry.id === thread.id);
-    const mergedThread =
-      existingThread && existingThread.messages.length > 0
-        ? {
-            ...thread,
-            messages: existingThread.messages,
-          }
-        : thread;
-    const hasThread = existingThread !== undefined;
-    return {
-      ...model,
-      threads: hasThread
-        ? model.threads.map((entry) => (entry.id === thread.id ? mergedThread : entry))
-        : [...model.threads, mergedThread],
-    };
-  };
 
   const loadThreadDetailForDecider = (
     command: OrchestrationCommand,

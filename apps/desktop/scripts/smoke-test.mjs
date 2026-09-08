@@ -4,16 +4,17 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import electronBin from "electron";
 
 import {
   buildSmokeEnvironment,
   buildSmokeLaunchArguments,
+  findSmokeFailures,
   terminateSmokeProcessTree,
 } from "./smoke-test-process.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const desktopDir = resolve(__dirname, "..");
-const electronBin = resolve(desktopDir, "node_modules/.bin/electron");
 const mainJs = resolve(desktopDir, "dist-electron/main.js");
 const smokeRoot = mkdtempSync(join(tmpdir(), "djl-desktop-smoke-"));
 const userDataDirectory = join(smokeRoot, "profile");
@@ -43,6 +44,7 @@ child.stderr.on("data", (chunk) => {
 });
 
 let forceKillTimeout;
+let observationCompleted = false;
 
 async function cleanupSmokeRoot() {
   let lastError;
@@ -62,13 +64,18 @@ async function cleanupSmokeRoot() {
 }
 
 const timeout = setTimeout(() => {
+  observationCompleted = true;
   terminateSmokeProcessTree(child);
   forceKillTimeout = setTimeout(() => {
     terminateSmokeProcessTree(child, "SIGKILL");
   }, 2_000);
 }, 8_000);
 
-child.on("exit", async () => {
+child.on("error", (error) => {
+  output += `\nElectron launch failed: ${error.message}`;
+});
+
+child.on("close", async (exitCode) => {
   clearTimeout(timeout);
   clearTimeout(forceKillTimeout);
   try {
@@ -78,15 +85,7 @@ child.on("exit", async () => {
     process.exit(1);
   }
 
-  const fatalPatterns = [
-    "Cannot find module",
-    "MODULE_NOT_FOUND",
-    "Refused to execute",
-    "Uncaught Error",
-    "Uncaught TypeError",
-    "Uncaught ReferenceError",
-  ];
-  const failures = fatalPatterns.filter((pattern) => output.includes(pattern));
+  const failures = findSmokeFailures(output, exitCode, observationCompleted);
 
   if (failures.length > 0) {
     console.error("\nDesktop smoke test failed:");

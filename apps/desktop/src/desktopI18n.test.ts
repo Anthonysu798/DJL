@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APP_LOCALES, type AppLocale } from "@synara/contracts";
+import { APP_LOCALES } from "@synara/contracts";
 import { createDesktopI18n, DESKTOP_CATALOGS, desktopCatalogShape } from "./desktopI18n";
 
 describe("desktop i18n", () => {

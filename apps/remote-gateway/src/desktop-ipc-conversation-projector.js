@@ -141,7 +141,7 @@ function createDesktopConversationProjector({ now = () => Date.now(), maxCacheSi
 
   function evictOldest() {
     while (cacheByThreadId.size > maxCacheSize) {
-      const oldest = Array.from(cacheByThreadId.entries()).sort(
+      const oldest = Array.from(cacheByThreadId.entries()).toSorted(
         (left, right) => left[1].lastUpdated - right[1].lastUpdated,
       )[0];
       if (!oldest) {
@@ -801,7 +801,7 @@ function itemCompletedNotification(threadId, turnId, item) {
 // live wire shape is the dedicated `item/autoApprovalReview/*` notification.
 // Re-emit that shape so mobile reuses one decoder for owned and mirrored threads.
 function autoApprovalReviewNotification(method, threadId, turnId, item) {
-  const { type, id, status, ...payload } = item;
+  const { type: _type, id: _id, status: _status, ...payload } = item;
   return tagNotification({
     method,
     params: {
@@ -1368,7 +1368,7 @@ function latestThreadGoal(rawState, threadId) {
   const candidates = [rawState?.threadGoal, rawState?.completedThreadGoal]
     .map((goal) => normalizeProjectedThreadGoal(goal, threadId))
     .filter(Boolean);
-  return candidates.sort((left, right) => right.updatedAt - left.updatedAt)[0] || null;
+  return candidates.toSorted((left, right) => right.updatedAt - left.updatedAt)[0] || null;
 }
 
 function normalizeProjectedThreadGoal(value, fallbackThreadId) {

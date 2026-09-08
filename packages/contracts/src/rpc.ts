@@ -1,4 +1,16 @@
 import { Schema } from "effect";
+import {
+  HarnessTool,
+  HarnessToolsResult,
+  HarnessMaintainToolInput,
+  HarnessProfileAccountInput,
+  HarnessProfileAccount,
+  HarnessAccountsResult,
+  HarnessLegacyOpenCodeCredentialsResult,
+  HarnessLoginInput,
+  HarnessLoginResult,
+  HarnessEndLoginInput,
+} from "./harnessAccounts";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
 import { CommandId } from "./baseSchemas";
@@ -1059,6 +1071,54 @@ export const WsOpenCodeListModelProvidersRpc = Rpc.make(WS_METHODS.openCodeListM
   error: WsRpcError,
 });
 
+export const WsHarnessListToolsRpc = Rpc.make(WS_METHODS.harnessListTools, {
+  payload: Schema.Struct({}),
+  success: HarnessToolsResult,
+  error: WsRpcError,
+});
+export const WsHarnessMaintainToolRpc = Rpc.make(WS_METHODS.harnessMaintainTool, {
+  payload: HarnessMaintainToolInput,
+  success: HarnessTool,
+  error: WsRpcError,
+});
+
+export const WsHarnessProfileAccountRpc = Rpc.make(WS_METHODS.harnessProfileAccount, {
+  payload: HarnessProfileAccountInput,
+  success: HarnessProfileAccount,
+  error: WsRpcError,
+});
+export const WsHarnessListAccountsRpc = Rpc.make(WS_METHODS.harnessListAccounts, {
+  payload: Schema.Struct({}),
+  success: HarnessAccountsResult,
+  error: WsRpcError,
+});
+export const WsHarnessListLegacyOpenCodeCredentialsRpc = Rpc.make(
+  WS_METHODS.harnessListLegacyOpenCodeCredentials,
+  {
+    payload: Schema.Struct({}),
+    success: HarnessLegacyOpenCodeCredentialsResult,
+    error: WsRpcError,
+  },
+);
+export const WsHarnessTransferLegacyOpenCodeCredentialsRpc = Rpc.make(
+  WS_METHODS.harnessTransferLegacyOpenCodeCredentials,
+  {
+    payload: Schema.Struct({}),
+    success: HarnessLegacyOpenCodeCredentialsResult,
+    error: WsRpcError,
+  },
+);
+export const WsHarnessStartLoginRpc = Rpc.make(WS_METHODS.harnessStartLogin, {
+  payload: HarnessLoginInput,
+  success: HarnessLoginResult,
+  error: WsRpcError,
+});
+export const WsHarnessEndLoginRpc = Rpc.make(WS_METHODS.harnessEndLogin, {
+  payload: HarnessEndLoginInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+
 export const WsOpenCodeSetApiKeyRpc = Rpc.make(WS_METHODS.openCodeSetApiKey, {
   payload: OpenCodeSetApiKeyInput,
   success: OpenCodeCredentialMutationResult,
@@ -1255,6 +1315,14 @@ export const WsRpcGroup = RpcGroup.make(
   WsProviderListModelsRpc,
   WsOpenCodeListModelProvidersRpc,
   WsOpenCodeSetApiKeyRpc,
+  WsHarnessListToolsRpc,
+  WsHarnessMaintainToolRpc,
+  WsHarnessProfileAccountRpc,
+  WsHarnessListAccountsRpc,
+  WsHarnessListLegacyOpenCodeCredentialsRpc,
+  WsHarnessTransferLegacyOpenCodeCredentialsRpc,
+  WsHarnessStartLoginRpc,
+  WsHarnessEndLoginRpc,
   WsOpenCodeRemoveCredentialRpc,
   WsProviderListAgentsRpc,
   WsAutomationListRpc,

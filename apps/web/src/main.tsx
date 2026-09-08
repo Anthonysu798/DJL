@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 
 import "@fontsource-variable/jetbrains-mono";
+import "./bundledFonts.css";
 import "./index.css";
 
 import { appHistory } from "./appNavigation";

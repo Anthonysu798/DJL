@@ -184,7 +184,9 @@ button.had-side-row:hover {
   color: var(--had-mute);
   font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .had-suggestions button:hover {

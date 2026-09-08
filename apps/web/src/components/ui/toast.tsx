@@ -4,7 +4,8 @@ import { Toast, type ToastObject } from "@base-ui/react/toast";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "@tanstack/react-router";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId, type ProviderKind } from "@synara/contracts";
+import { ProviderUpdateToastSurface } from "./ProviderUpdateToastSurface";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
@@ -34,6 +35,7 @@ import {
 } from "./toastRouteVisibility";
 
 type ThreadToastData = {
+  providerUpdate?: readonly ProviderKind[];
   allowCrossThreadVisibility?: boolean;
   copyText?: string;
   onClose?: () => void;
@@ -61,7 +63,12 @@ const TOAST_ICONS = {
 } as const;
 
 function shouldUseCompactToast(toast: ToastObject<ThreadToastData>): boolean {
-  return !toast.data?.copyText && !toast.actionProps && !toast.data?.secondaryActionProps;
+  return (
+    !toast.data?.providerUpdate &&
+    !toast.data?.copyText &&
+    !toast.actionProps &&
+    !toast.data?.secondaryActionProps
+  );
 }
 
 function isArchiveUndoToast(toast: ToastObject<ThreadToastData>): boolean {
@@ -212,10 +219,12 @@ function ToastActions({
   actionProps,
   copyText,
   secondaryActionProps,
+  providerUpdate = false,
 }: {
   actionProps: ToastObject<ThreadToastData>["actionProps"];
   copyText: string | undefined;
   secondaryActionProps: ThreadToastData["secondaryActionProps"];
+  providerUpdate?: boolean;
 }) {
   const { copyToClipboard, isCopied } = useCopyToClipboard();
   const { t } = useTranslation(["common", "notifications"]);
@@ -223,7 +232,9 @@ function ToastActions({
   if (!actionProps && !copyText && !secondaryActionProps) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+    <div
+      className={providerUpdate ? "djl-update-actions" : "mt-2 flex flex-wrap items-center gap-1.5"}
+    >
       {copyText && (
         <Button
           aria-label={
@@ -253,10 +264,16 @@ function ToastActions({
       )}
       {actionProps && (
         <Toast.Action
-          {...actionProps}
+          // Toast.Action already merges the root's actionProps; passing them
+          // again runs the same click handler twice.
+          disabled={actionProps.disabled}
           className={cn(
-            buttonVariants({ size: "xs", variant: "outline" }),
-            "self-start rounded-md border-[var(--notification-fg)]/20 bg-[var(--notification-fg)]/10 text-[var(--notification-fg)] hover:bg-[var(--notification-fg)]/20",
+            buttonVariants({
+              size: providerUpdate ? "sm" : "xs",
+              variant: providerUpdate ? "ghost" : "outline",
+            }),
+            !providerUpdate &&
+              "self-start rounded-md border-[var(--notification-fg)]/20 bg-[var(--notification-fg)]/10 text-[var(--notification-fg)] hover:bg-[var(--notification-fg)]/20",
             actionProps.className,
           )}
           data-slot="toast-action"
@@ -268,11 +285,12 @@ function ToastActions({
         <Button
           {...secondaryActionProps}
           className={cn(
-            "self-start rounded-md border-[var(--notification-fg)]/20 bg-[var(--notification-fg)]/10 text-[var(--notification-fg)] hover:bg-[var(--notification-fg)]/20",
+            !providerUpdate &&
+              "self-start rounded-md border-[var(--notification-fg)]/20 bg-[var(--notification-fg)]/10 text-[var(--notification-fg)] hover:bg-[var(--notification-fg)]/20",
             secondaryActionProps.className,
           )}
-          size={secondaryActionProps.size ?? "xs"}
-          variant={secondaryActionProps.variant ?? "outline"}
+          size={secondaryActionProps.size ?? (providerUpdate ? "sm" : "xs")}
+          variant={secondaryActionProps.variant ?? (providerUpdate ? "default" : "outline")}
         />
       )}
     </div>
@@ -411,6 +429,25 @@ function ToastSurface({
 }) {
   const Icon = toast.type ? TOAST_ICONS[toast.type as keyof typeof TOAST_ICONS] : null;
 
+  if (toast.data?.providerUpdate) {
+    return (
+      <ProviderUpdateToastSurface
+        providers={toast.data.providerUpdate}
+        status={toast.type}
+        hidden={hideCollapsedContent}
+        actions={
+          <ToastActions
+            actionProps={toast.actionProps}
+            copyText={toast.data.copyText}
+            secondaryActionProps={toast.data.secondaryActionProps}
+            providerUpdate
+          />
+        }
+        close={<ToastCloseButton onClose={toast.data.onClose} onDismiss={onDismiss} />}
+      />
+    );
+  }
+
   return (
     <Toast.Content
       className={cn(
@@ -535,7 +572,9 @@ function Toasts({ position = "top-center" }: { position: ToastPosition }) {
                       ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME,
                       position.includes("center") ? "mx-auto" : "",
                     )
-                  : toastRootClassName(position, compact),
+                  : toast.data?.providerUpdate
+                    ? "djl-provider-update-toast"
+                    : toastRootClassName(position, compact),
                 // Base positioning using data-position
                 "data-[position*=right]:right-0 data-[position*=right]:left-auto",
                 "data-[position*=left]:right-auto data-[position*=left]:left-0",

@@ -82,6 +82,27 @@ afterEach(() => {
 });
 
 describe("WsTransport", () => {
+  it("waits for an in-flight reconnect before opening more terminal RPCs", async () => {
+    const transport = new WsTransport();
+    const internal = transport as unknown as {
+      getClient: () => Promise<unknown>;
+      clientPromise: Promise<unknown>;
+      reconnectPromise: Promise<unknown> | null;
+    };
+    const previous = internal.clientPromise;
+    internal.clientPromise = Promise.resolve({ stale: true });
+    let finish!: (value: unknown) => void;
+    internal.reconnectPromise = new Promise((resolve) => {
+      finish = resolve;
+    });
+    const requests = Array.from({ length: 10 }, () => internal.getClient());
+    const connected = { connected: true };
+    finish(connected);
+    expect(await Promise.all(requests)).toEqual(Array(10).fill(connected));
+    internal.clientPromise = previous;
+    internal.reconnectPromise = null;
+    await transport.dispose();
+  });
   it("keeps the shared lifecycle stream while either lifecycle channel is active", () => {
     expect(shouldKeepServerLifecycleStream(new Set([WS_CHANNELS.serverWelcome]))).toBe(true);
     expect(shouldKeepServerLifecycleStream(new Set([WS_CHANNELS.serverMaintenanceUpdated]))).toBe(

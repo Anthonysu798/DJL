@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ThreadId } from "@synara/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { Agent, Model, OpencodeClient, Part, Provider } from "@opencode-ai/sdk/v2";
@@ -243,7 +245,7 @@ describe("mergeOpenCodeAssistantText", () => {
 });
 
 describe("flattenOpenCodeProviderConnections", () => {
-  it("returns API-key providers with credential state and model counts only", () => {
+  it("returns API-key and OAuth providers with credential metadata and model counts", () => {
     const providers = flattenOpenCodeProviderConnections({
       providers: [
         makeProvider({
@@ -261,6 +263,14 @@ describe("flattenOpenCodeProviderConnections", () => {
     });
 
     expect(providers).toEqual([
+      {
+        id: "github-copilot",
+        name: "GitHub Copilot",
+        supportsApiKey: false,
+        supportsOAuth: true,
+        connected: false,
+        modelCount: 0,
+      },
       {
         id: "openai",
         name: "OpenAI",
@@ -494,7 +504,7 @@ function createMockOpenCodeRuntime(options?: {
           throw options.sessionGetError;
         }
         return {
-          data: { directory: process.cwd(), ...(options?.session ?? {}) },
+          data: { directory: process.cwd(), ...options?.session },
         };
       },
       revert: async () => ({ data: null }),
@@ -742,18 +752,6 @@ function assistantMessageUpdated(input?: {
   };
 }
 
-function idleStatusEvent() {
-  return {
-    type: "session.status",
-    properties: {
-      sessionID: "opencode-session-1",
-      status: {
-        type: "idle",
-      },
-    },
-  };
-}
-
 describe("normalizeOpenCodeTokenUsage", () => {
   it("converts OpenCode assistant tokens into a context usage snapshot", () => {
     expect(
@@ -854,7 +852,7 @@ describe("normalizeOpenCodeTokenUsage", () => {
 });
 
 describe("resolvePreferredOpenCodeModelProviders", () => {
-  it("can require explicit DJL-managed credentials", () => {
+  it("recognizes connections from the installed CLI alongside stored credentials", () => {
     const providers = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
@@ -871,7 +869,11 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       requireCredentials: true,
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["openai"]);
+    expect(providers.map((provider) => provider.id)).toEqual([
+      "openai",
+      "opencode",
+      "github-copilot",
+    ]);
   });
 
   it("keeps localhost providers available without synthetic API credentials", () => {
@@ -891,7 +893,7 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       requireCredentials: true,
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["ollama", "lmstudio"]);
+    expect(providers.map((provider) => provider.id)).toEqual(["ollama", "lmstudio", "openai"]);
   });
 
   it("excludes disconnected localhost provider catalogs", () => {
@@ -2125,12 +2127,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     });
   });
 
-  it("replaces a missing persisted OpenCode session before the first prompt", async () => {
+  it("does not replace a missing persisted OpenCode conversation with an empty session", async () => {
     const runtime = createMockOpenCodeRuntime({
       sessionGetError: new Error("Session not found: ses_removed_by_opencode"),
     });
 
-    const result = await Effect.runPromise(
+    const result = await Effect.runPromiseExit(
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         return yield* adapter.startSession({
@@ -2156,13 +2158,10 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       ),
     );
 
-    expect(runtime.createCalls).toHaveLength(1);
+    expect(runtime.createCalls).toHaveLength(0);
     expect(runtime.getCalls).toEqual([{ sessionID: "ses_removed_by_opencode" }]);
     expect(runtime.updateCalls).toEqual([]);
-    expect(result.resumeCursor).toMatchObject({
-      openCodeSessionId: "opencode-session-1",
-      cwd: "/repo/stale-resume",
-    });
+    expect(result._tag).toBe("Failure");
   });
 
   it("does not report a session ready when resume validation has an unrelated error", async () => {
@@ -4739,4 +4738,258 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       "turn.completed",
     ]);
   });
+});
+
+describe("OpenCodeAdapter queued session policies", () => {
+  const turn = (threadId: string, tool: string) => ({
+    threadId: asThreadId(threadId),
+    input: "Use the requested tool.",
+    attachments: [],
+    modelSelection: { provider: "opencode" as const, model: "ollama/fixture" },
+    workTurnPolicy: {
+      route: "system-info" as const,
+      visibleTools: [tool],
+      requireSuccessfulTool: true,
+      evidenceRequired: true,
+      instructionScope: "work-isolated" as const,
+    },
+  });
+
+  it("reserves concurrent submissions before setup and delays the next policy until interruption", async () => {
+    const runtime = createMockOpenCodeRuntime();
+    let releaseSetup!: () => void;
+    const setup = new Promise<void>((resolve) => {
+      releaseSetup = resolve;
+    });
+    let enterSetup!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      enterSetup = resolve;
+    });
+    let preparations = 0;
+    const layer = makeOpenCodeAdapterLive({
+      runtime: runtime.runtime,
+      ensureLocalRuntime: () =>
+        Effect.promise(async () => {
+          preparations++;
+          enterSetup();
+          await setup;
+        }),
+    }).pipe(
+      Layer.provideMerge(
+        ServerConfig.layerTest(process.cwd(), { prefix: "opencode-queued-policy-" }),
+      ),
+      Layer.provideMerge(NodeServices.layer),
+    );
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        const config = yield* ServerConfig;
+        const readPolicy = () =>
+          Effect.promise(
+            async () =>
+              JSON.parse(
+                await readFile(
+                  join(config.managedOpenCodeRootDir, "compatibility", "policies.json"),
+                  "utf8",
+                ),
+              ) as Record<string, { visibleTools: string[] }>,
+          );
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId: asThreadId("queued"),
+          runtimeMode: "full-access",
+        });
+        const first = yield* adapter.sendTurn(turn("queued", "read")).pipe(Effect.forkChild);
+        yield* Effect.promise(() => entered);
+        const second = yield* adapter.sendTurn(turn("queued", "websearch")).pipe(Effect.forkChild);
+        yield* Effect.sleep("20 millis");
+        expect(preparations).toBe(1);
+        expect(runtime.updateCalls).toHaveLength(0);
+        releaseSetup();
+        yield* Fiber.join(first);
+        yield* Effect.sleep("20 millis");
+        expect(runtime.updateCalls).toHaveLength(1);
+        expect(runtime.promptCalls).toHaveLength(1);
+        expect((yield* readPolicy())["opencode-session-1"]?.visibleTools).toEqual(["read"]);
+        expect(runtime.updateCalls[0]?.permission).toEqual([
+          { permission: "*", pattern: "*", action: "deny" },
+          { permission: "read", pattern: "*", action: "allow" },
+        ]);
+        yield* adapter.interruptTurn(asThreadId("queued"));
+        yield* Fiber.join(second);
+        expect(runtime.updateCalls).toHaveLength(2);
+        expect(runtime.promptCalls).toHaveLength(2);
+        expect((yield* readPolicy())["opencode-session-1"]?.visibleTools).toEqual(["websearch"]);
+        expect(runtime.updateCalls[1]?.permission).toEqual([
+          { permission: "*", pattern: "*", action: "deny" },
+          { permission: "websearch", pattern: "*", action: "allow" },
+        ]);
+        yield* adapter.interruptTurn(asThreadId("queued"));
+      }).pipe(Effect.provide(layer)),
+    );
+  });
+
+  it("releases a failed setup reservation so the next submission can start", async () => {
+    const runtime = createMockOpenCodeRuntime();
+    let preparations = 0;
+    const layer = makeOpenCodeAdapterLive({
+      runtime: runtime.runtime,
+      ensureLocalRuntime: () =>
+        Effect.tryPromise({
+          try: async () => {
+            preparations++;
+            await Promise.resolve();
+            if (preparations === 1) throw new Error("Fixture setup failed");
+          },
+          catch: (cause) => cause,
+        }),
+    }).pipe(
+      Layer.provideMerge(
+        ServerConfig.layerTest(process.cwd(), { prefix: "opencode-failed-policy-" }),
+      ),
+      Layer.provideMerge(NodeServices.layer),
+    );
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId: asThreadId("failed"),
+          runtimeMode: "full-access",
+        });
+        const first = yield* adapter
+          .sendTurn(turn("failed", "read"))
+          .pipe(Effect.exit, Effect.forkChild);
+        const second = yield* adapter.sendTurn(turn("failed", "read")).pipe(Effect.forkChild);
+        expect((yield* Fiber.join(first))._tag).toBe("Failure");
+        yield* Fiber.join(second);
+        expect(runtime.updateCalls).toHaveLength(1);
+        expect(runtime.promptCalls).toHaveLength(1);
+        yield* adapter.interruptTurn(asThreadId("failed"));
+      }).pipe(Effect.provide(layer)),
+    );
+  });
+
+  it("wakes a stopped session's queued submission without applying another policy", async () => {
+    const runtime = createMockOpenCodeRuntime();
+    const layer = makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
+      Layer.provideMerge(
+        ServerConfig.layerTest(process.cwd(), { prefix: "opencode-stopped-policy-" }),
+      ),
+      Layer.provideMerge(NodeServices.layer),
+    );
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId: asThreadId("stopped"),
+          runtimeMode: "full-access",
+        });
+        yield* adapter.sendTurn(turn("stopped", "read"));
+        const second = yield* adapter
+          .sendTurn(turn("stopped", "websearch"))
+          .pipe(Effect.exit, Effect.forkChild);
+        yield* Effect.sleep("20 millis");
+        expect(runtime.updateCalls).toHaveLength(1);
+        yield* adapter.stopSession(asThreadId("stopped"));
+        expect((yield* Fiber.join(second))._tag).toBe("Failure");
+        expect(runtime.updateCalls).toHaveLength(1);
+        expect(runtime.promptCalls).toHaveLength(1);
+      }).pipe(Effect.provide(layer)),
+    );
+  });
+  it("does not apply a policy when stopped during initial preparation", async () => {
+    const runtime = createMockOpenCodeRuntime();
+    let enter!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      enter = resolve;
+    });
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const layer = makeOpenCodeAdapterLive({
+      runtime: runtime.runtime,
+      ensureLocalRuntime: () =>
+        Effect.promise(async () => {
+          enter();
+          await ready;
+        }),
+    }).pipe(
+      Layer.provideMerge(
+        ServerConfig.layerTest(process.cwd(), { prefix: "opencode-stop-preparation-" }),
+      ),
+      Layer.provideMerge(NodeServices.layer),
+    );
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId: asThreadId("preparing"),
+          runtimeMode: "full-access",
+        });
+        const sending = yield* adapter
+          .sendTurn(turn("preparing", "read"))
+          .pipe(Effect.exit, Effect.forkChild);
+        yield* Effect.promise(() => entered);
+        yield* adapter.stopSession(asThreadId("preparing"));
+        release();
+        expect((yield* Fiber.join(sending))._tag).toBe("Failure");
+        expect(runtime.updateCalls).toHaveLength(0);
+        expect(runtime.promptCalls).toHaveLength(0);
+      }).pipe(Effect.provide(layer)),
+    );
+  });
+});
+
+it("withholds native tools from a chat-only custom provider without relying on a local transport wrapper", async () => {
+  const runtime = createMockOpenCodeRuntime({
+    inventory: {
+      providerList: {
+        connected: ["custom"],
+        default: {},
+        all: [
+          makeProvider({
+            id: "custom",
+            name: "Custom",
+            models: { chat: { id: "chat", name: "Chat", capabilities: { toolcall: false } } },
+          }),
+        ],
+      },
+      agents: [],
+      consoleState: null,
+    },
+  });
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const adapter = yield* OpenCodeAdapter;
+      const threadId = asThreadId("chat-only-custom-provider");
+      yield* adapter.startSession({
+        provider: "opencode",
+        threadId,
+        runtimeMode: "full-access",
+        modelSelection: { provider: "opencode", model: "custom/chat" },
+      });
+      yield* adapter.sendTurn({
+        threadId,
+        input: "Hello",
+        attachments: [],
+        modelSelection: { provider: "opencode", model: "custom/chat" },
+      });
+      expect(runtime.updateCalls.at(-1)?.permission).toEqual([
+        { permission: "*", pattern: "*", action: "deny" },
+      ]);
+    }).pipe(
+      Effect.provide(
+        makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
+          Layer.provideMerge(
+            ServerConfig.layerTest(process.cwd(), { prefix: "opencode-chat-only-" }),
+          ),
+          Layer.provideMerge(NodeServices.layer),
+        ),
+      ),
+    ),
+  );
 });

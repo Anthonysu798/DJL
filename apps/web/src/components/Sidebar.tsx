@@ -15,7 +15,6 @@ import {
   FolderOpenIcon,
   GitMergedSimpleIcon,
   GitPullRequestIcon,
-  KanbanIcon,
   BrainIcon,
   type LucideIcon,
   NewThreadIcon,
@@ -157,6 +156,7 @@ import {
   isStudioContainerProject,
   prewarmStudioProject,
 } from "../lib/studioProjects";
+import { ThreadProviderIcon } from "./ThreadProviderIcon";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { dispatchThreadRename } from "../lib/threadRename";
@@ -166,9 +166,8 @@ import {
   applyAutomationEvent,
   automationAttentionCount,
   automationQueryKey,
-  formatCadence,
-  groupHeartbeatAutomationsByTargetThread,
-} from "../routes/-automations.shared";
+} from "../lib/automationState";
+import { formatCadence, groupHeartbeatAutomationsByTargetThread } from "../lib/automationForm";
 import { shouldRenderTerminalWorkspace } from "./ChatView.logic";
 import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
 import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";
@@ -1497,9 +1496,10 @@ export default function Sidebar() {
   const isOnSettings = useLocation({
     select: (loc) => loc.pathname === "/settings",
   });
-  const isOnWorkspace = pathname.startsWith("/workspace");
-  const isOnStudioRoute = pathname.startsWith("/work") || pathname.startsWith("/studio");
-  const isOnKanban = pathname.startsWith("/kanban");
+  const isOnWorkspace = pathname === "/workspace" || pathname.startsWith("/workspace/");
+  const isOnStudioRoute =
+    pathname === "/work" || pathname.startsWith("/work/") || pathname.startsWith("/studio");
+  const isOnKanban = pathname.startsWith("/workspaces") || pathname.startsWith("/kanban");
   const isOnAutomations = pathname.startsWith("/automations");
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
@@ -2360,8 +2360,8 @@ export default function Sidebar() {
     },
     [
       openExistingProjectFromSnapshot,
-      syncServerShellSnapshot,
       waitForProjectWorkspaceRootInSnapshot,
+      syncServerShellSnapshot,
     ],
   );
 
@@ -2790,8 +2790,8 @@ export default function Sidebar() {
       openOrCreateProjectThreadFromSnapshot,
       openExistingProjectFromSnapshot,
       setProjectExpanded,
-      syncServerShellSnapshot,
       t,
+      syncServerShellSnapshot,
     ],
   );
 
@@ -3215,7 +3215,6 @@ export default function Sidebar() {
       removeThreadFromSplitViews,
       clearTemporaryThread,
       sidebarThreads,
-      syncServerShellSnapshot,
       t,
       unpinThread,
     ],
@@ -4157,7 +4156,7 @@ export default function Sidebar() {
         return;
       }
       if (clicked === "open-in-kanban") {
-        void navigate({ to: "/kanban/$projectId", params: { projectId } });
+        void navigate({ to: "/workspaces/$projectId", params: { projectId } });
         return;
       }
       if (clicked === "copy-path") {
@@ -5412,6 +5411,12 @@ export default function Sidebar() {
               });
             }}
           >
+            <ThreadProviderIcon
+              threadId={thread.id}
+              provider={thread.modelSelection.provider}
+              sessionProvider={thread.session?.provider}
+              isDraft={Boolean(draftThreadsByThreadId[thread.id])}
+            />
             {threadEntryPoint === "terminal" ? (
               <SidebarGlyph icon={TerminalIcon} variant="chrome" />
             ) : (
@@ -5673,6 +5678,12 @@ export default function Sidebar() {
                 terminalCount={terminalCount}
               />
             )}
+            <ThreadProviderIcon
+              threadId={thread.id}
+              provider={thread.modelSelection.provider}
+              sessionProvider={thread.session?.provider}
+              isDraft={Boolean(draftThreadsByThreadId[thread.id])}
+            />
             <div
               className={cn(
                 "flex min-w-0 flex-1 items-center text-left",
@@ -6887,11 +6898,11 @@ export default function Sidebar() {
                         shortcutLabel={searchShortcutLabel}
                       />
                       <SidebarPrimaryAction
-                        icon={KanbanIcon}
+                        icon={TerminalIcon}
                         label={t("sidebar.actions.kanban", { ns: "shell" })}
                         active={isOnKanban}
                         onClick={() => {
-                          void navigate({ to: "/kanban" });
+                          void navigate({ to: "/workspaces" });
                         }}
                       />
                       <SidebarPrimaryAction
@@ -7445,7 +7456,7 @@ export default function Sidebar() {
                   )
                 }
               >
-                <ProjectContextMenuIcon icon={KanbanIcon} />
+                <ProjectContextMenuIcon icon={TerminalIcon} />
                 <span>{t("sidebar.projectMenu.openKanban", { ns: "shell" })}</span>
               </MenuItem>
               <MenuItem

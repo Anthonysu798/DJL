@@ -83,7 +83,18 @@ export const providerDiscoveryQueryKeys = {
     apiEndpoint: string | null,
     agentDir: string | null,
     cwd: string | null,
-  ) => ["provider-discovery", "models", provider, binaryPath, apiEndpoint, agentDir, cwd] as const,
+    homePath: string | null = null,
+  ) =>
+    [
+      "provider-discovery",
+      "models",
+      provider,
+      binaryPath,
+      apiEndpoint,
+      agentDir,
+      cwd,
+      homePath,
+    ] as const,
   agentsForProvider: (provider: ProviderKind) =>
     ["provider-discovery", "agents", provider] as const,
   agents: (provider: ProviderKind, binaryPath: string | null, cwd: string | null) =>
@@ -115,7 +126,7 @@ export function providerComposerCapabilitiesQueryOptions(provider: ProviderKind)
       const api = ensureNativeApi();
       return api.provider.getComposerCapabilities({ provider });
     },
-    staleTime: Infinity,
+    staleTime: 30_000,
   });
 }
 
@@ -215,6 +226,7 @@ export function providerCommandsQueryOptions(input: {
 export function providerModelsQueryOptions(input: {
   provider: ProviderKind;
   binaryPath?: string | null;
+  homePath?: string | null;
   apiEndpoint?: string | null;
   agentDir?: string | null;
   cwd?: string | null;
@@ -229,6 +241,7 @@ export function providerModelsQueryOptions(input: {
       input.apiEndpoint ?? null,
       input.agentDir ?? null,
       discoveryCwd,
+      input.homePath ?? null,
     ),
     queryFn: async () => {
       const api = ensureNativeApi();
@@ -236,6 +249,7 @@ export function providerModelsQueryOptions(input: {
         provider: input.provider,
         ...(input.provider === "opencode" ? { forceReload: true } : {}),
         ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
+        ...(input.homePath ? { homePath: input.homePath } : {}),
         ...(input.apiEndpoint ? { apiEndpoint: input.apiEndpoint } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
         ...(discoveryCwd ? { cwd: discoveryCwd } : {}),

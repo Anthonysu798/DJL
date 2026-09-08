@@ -116,7 +116,8 @@ const launchCopy = {
     intel: "Intel Mac",
     intelMeta: "Intel Core processor",
     recommended: "Recommended",
-    downloadFallback: "If an automatic download is temporarily unavailable, retry from DJL’s official download archive.",
+    downloadFallback:
+      "If an automatic download is temporarily unavailable, retry from DJL’s official download archive.",
     releaseLink: "View checksums",
     close: "Close notification",
     requirements: "System requirements",
@@ -178,10 +179,10 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { rootMargin: "18% 0px", threshold: 0.02 },
-    );
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), {
+      rootMargin: "18% 0px",
+      threshold: 0.02,
+    });
     observer.observe(section);
     return () => observer.disconnect();
   }, []);
@@ -220,10 +221,19 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
       section.style.setProperty("--dl-scroll-percent", `${(progress * 100).toFixed(2)}%`);
       const utilityProgress = Math.min(1, Math.max(0, (progress - 0.42) / 0.42));
       section.style.setProperty("--dl-scroll-heading-y", `${((1 - eased) * 24).toFixed(2)}px`);
-      section.style.setProperty("--dl-scroll-heading-opacity", `${(0.78 + eased * 0.22).toFixed(3)}`);
-      section.style.setProperty("--dl-scroll-heading-scale", `${(0.965 + eased * 0.035).toFixed(4)}`);
+      section.style.setProperty(
+        "--dl-scroll-heading-opacity",
+        `${(0.78 + eased * 0.22).toFixed(3)}`,
+      );
+      section.style.setProperty(
+        "--dl-scroll-heading-scale",
+        `${(0.965 + eased * 0.035).toFixed(4)}`,
+      );
       section.style.setProperty("--dl-scroll-environment-y", `${(38 - eased * 56).toFixed(2)}px`);
-      section.style.setProperty("--dl-scroll-environment-scale", `${(1.065 - eased * 0.035).toFixed(4)}`);
+      section.style.setProperty(
+        "--dl-scroll-environment-scale",
+        `${(1.065 - eased * 0.035).toFixed(4)}`,
+      );
       section.style.setProperty("--dl-scroll-machine-y", `${((1 - eased) * 30).toFixed(2)}px`);
       section.style.setProperty("--dl-scroll-machine-scale", `${(0.94 + eased * 0.14).toFixed(4)}`);
       section.style.setProperty("--dl-scroll-machine-rotate", `${(-7 + eased * 16).toFixed(2)}deg`);
@@ -232,11 +242,23 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
       section.style.setProperty("--dl-scroll-portal-y", `${((1 - eased) * 20).toFixed(2)}px`);
       section.style.setProperty("--dl-scroll-mac-x", `${((1 - eased) * 16).toFixed(2)}px`);
       section.style.setProperty("--dl-scroll-windows-x", `${((1 - eased) * -16).toFixed(2)}px`);
-      section.style.setProperty("--dl-scroll-portal-opacity", `${(0.82 + eased * 0.18).toFixed(3)}`);
+      section.style.setProperty(
+        "--dl-scroll-portal-opacity",
+        `${(0.82 + eased * 0.18).toFixed(3)}`,
+      );
       section.style.setProperty("--dl-scroll-beam-opacity", `${(0.34 + eased * 0.66).toFixed(3)}`);
-      section.style.setProperty("--dl-scroll-utility-y", `${((1 - utilityProgress) * 12).toFixed(2)}px`);
-      section.style.setProperty("--dl-scroll-utility-opacity", `${(0.55 + utilityProgress * 0.45).toFixed(3)}`);
-      section.style.setProperty("--dl-scroll-hint-opacity", `${Math.max(0, 1 - progress * 4.5).toFixed(3)}`);
+      section.style.setProperty(
+        "--dl-scroll-utility-y",
+        `${((1 - utilityProgress) * 12).toFixed(2)}px`,
+      );
+      section.style.setProperty(
+        "--dl-scroll-utility-opacity",
+        `${(0.55 + utilityProgress * 0.45).toFixed(3)}`,
+      );
+      section.style.setProperty(
+        "--dl-scroll-hint-opacity",
+        `${Math.max(0, 1 - progress * 4.5).toFixed(3)}`,
+      );
     };
 
     const requestUpdate = () => {
@@ -339,243 +361,271 @@ export function DesktopLaunchGate({ t }: { t: Content }) {
         onPointerMove={handlePointerMove}
         onPointerLeave={resetPointer}
       >
-      <div className="dl-environment-depth" aria-hidden="true">
-        <div className="dl-environment-motion">
-          <Image
-            src="/generated/djl-desktop-launch-bg-v1.png"
-            alt=""
-            fill
-            priority={false}
-            sizes="100vw"
-          />
-        </div>
-      </div>
-
-      <div className="dl-atmosphere" aria-hidden="true">
-        <span className="dl-scan dl-scan-one" />
-        <span className="dl-scan dl-scan-two" />
-        <span className="dl-scan dl-scan-three" />
-        <span className="dl-axis-beam" />
-      </div>
-
-      <div className="dl-frame">
-        <header className="dl-heading">
-          <p className="dl-eyebrow">
-            <Sparkles aria-hidden="true" />
-            <span>
-              {desktopVersion
-                ? copy.eyebrow.replace("{version}", `V${desktopVersion}`)
-                : copy.eyebrow.replace(" {version} ", " ")}
-            </span>
-            <strong>{copy.stable}</strong>
-          </p>
-          <h2 id="desktop-launch-title">{copy.title}</h2>
-          <p className="dl-subtitle">
-            {copy.subtitle}
-            <strong>{copy.subtitleAccent}</strong>
-          </p>
-        </header>
-
-        <div className="dl-machine" aria-hidden="true">
-          <div className="dl-orbit dl-orbit-back">
+        <div className="dl-environment-depth" aria-hidden="true">
+          <div className="dl-environment-motion">
             <Image
-              src="/generated/djl-context-orbits.png"
+              src="/generated/djl-desktop-launch-bg-v1.png"
               alt=""
-              width={1254}
-              height={1254}
-              sizes="(max-width: 760px) 360px, 720px"
-            />
-          </div>
-          <div className="dl-orbit dl-orbit-front">
-            <Image
-              src="/generated/djl-context-orbits.png"
-              alt=""
-              width={1254}
-              height={1254}
-              sizes="(max-width: 760px) 320px, 610px"
+              fill
+              priority={false}
+              sizes="100vw"
             />
           </div>
         </div>
 
-        <div ref={coreRef} className="dl-core-anchor">
-          <div className="dl-core-depth">
-            <div className="dl-core-aura" aria-hidden="true" />
-            <Image
-              className="dl-core-image"
-              src="/generated/djl-context-core.png"
-              alt={isZh ? "DJL 上下文核心" : "DJL context core"}
-              width={1254}
-              height={1254}
-              sizes="(max-width: 760px) 190px, 300px"
-            />
-          </div>
-          <span className="dl-core-state dl-core-state-local" aria-hidden="true">
-            <i />
-            <b>{copy.local}</b>
-            <small>{copy.localValue}</small>
-          </span>
-          <span className="dl-core-state dl-core-state-online" aria-hidden="true">
-            <i />
-            <b>{copy.online}</b>
-            <small>{copy.onlineValue}</small>
-          </span>
+        <div className="dl-atmosphere" aria-hidden="true">
+          <span className="dl-scan dl-scan-one" />
+          <span className="dl-scan dl-scan-two" />
+          <span className="dl-scan dl-scan-three" />
+          <span className="dl-axis-beam" />
         </div>
 
-        {animationActive && (
-          <>
-            <AnimatedBeam
-              containerRef={sceneRef}
-              fromRef={coreRef}
-              toRef={macRef}
-              curvature={-96}
-              duration={activePlatform === "mac" ? 1.05 : 2.35}
-              pathColor="rgba(247, 232, 207, 0.18)"
-              pathWidth={2}
-              gradientStartColor="#fff8e9"
-              gradientStopColor="#b7b7ba"
-              startYOffset={42}
-              endYOffset={-24}
-              className="dl-energy-beam dl-energy-beam-mac"
-            />
-            <AnimatedBeam
-              containerRef={sceneRef}
-              fromRef={coreRef}
-              toRef={windowsRef}
-              curvature={-96}
-              duration={activePlatform === "windows" ? 0.95 : 2.15}
-              delay={0.22}
-              pathColor="rgba(45, 130, 255, 0.22)"
-              pathWidth={2.2}
-              gradientStartColor="#d9f2ff"
-              gradientStopColor="#0878ff"
-              startYOffset={42}
-              endYOffset={-24}
-              className="dl-energy-beam dl-energy-beam-windows"
-            />
-          </>
-        )}
+        <div className="dl-frame">
+          <header className="dl-heading">
+            <p className="dl-eyebrow">
+              <Sparkles aria-hidden="true" />
+              <span>
+                {desktopVersion
+                  ? copy.eyebrow.replace("{version}", `V${desktopVersion}`)
+                  : copy.eyebrow.replace(" {version} ", " ")}
+              </span>
+              <strong>{copy.stable}</strong>
+            </p>
+            <h2 id="desktop-launch-title">{copy.title}</h2>
+            <p className="dl-subtitle">
+              {copy.subtitle}
+              <strong>{copy.subtitleAccent}</strong>
+            </p>
+          </header>
 
-        <PlatformPortal
-          platform="mac"
-          anchorRef={macRef}
-          icon={Apple}
-          commandIcon={Command}
-          copy={copy.mac}
-          href={releaseUrls.mac}
-          buttonRef={macTriggerRef}
-          expanded={macChooserOpen}
-          controls="dl-mac-chooser"
-          active={activePlatform === "mac"}
-          onActive={setActivePlatform}
-          onRequest={requestDownload}
-        />
-
-        {macChooserOpen && (
-          <aside
-            id="dl-mac-chooser"
-            className="dl-mac-chooser"
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="dl-mac-chooser-title"
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") return;
-              event.preventDefault();
-              closeMacChooser(true);
-            }}
-          >
-            <header>
-              <span><Apple aria-hidden="true" /></span>
-              <div>
-                <strong id="dl-mac-chooser-title">{copy.macChoiceTitle}</strong>
-                <p>{copy.macChoiceBody}</p>
-              </div>
-              <button type="button" aria-label={copy.close} onClick={() => closeMacChooser(true)}>
-                <X aria-hidden="true" />
-              </button>
-            </header>
-            <div className="dl-mac-options">
-              <a ref={macChoiceRef} href="/download/mac/arm64">
-                <Cpu aria-hidden="true" />
-                <span>
-                  <strong>{copy.appleSilicon}</strong>
-                  <small>{copy.appleSiliconMeta}</small>
-                </span>
-                <em>{copy.recommended}</em>
-                <ChevronRight aria-hidden="true" />
-              </a>
-              <a href="/download/mac/x64">
-                <Command aria-hidden="true" />
-                <span>
-                  <strong>{copy.intel}</strong>
-                  <small>{copy.intelMeta}</small>
-                </span>
-                <ChevronRight aria-hidden="true" />
-              </a>
+          <div className="dl-machine" aria-hidden="true">
+            <div className="dl-orbit dl-orbit-back">
+              <Image
+                src="/generated/djl-context-orbits.png"
+                alt=""
+                width={1254}
+                height={1254}
+                sizes="(max-width: 760px) 360px, 720px"
+              />
             </div>
-            <p className="dl-mac-fallback">{copy.downloadFallback}</p>
-          </aside>
-        )}
-        <PlatformPortal
-          platform="windows"
-          anchorRef={windowsRef}
-          icon={MonitorDown}
-          commandIcon={Cpu}
-          copy={copy.windows}
-          href={releaseUrls.windows}
-          active={activePlatform === "windows"}
-          onActive={setActivePlatform}
-          onRequest={requestDownload}
-        />
+            <div className="dl-orbit dl-orbit-front">
+              <Image
+                src="/generated/djl-context-orbits.png"
+                alt=""
+                width={1254}
+                height={1254}
+                sizes="(max-width: 760px) 320px, 610px"
+              />
+            </div>
+          </div>
 
-        <nav className="dl-utility-links" aria-label={isZh ? "下载信息" : "Download information"}>
-          <button type="button" onClick={() => openDetail("requirements")} aria-expanded={detail === "requirements"}>
-            <Cpu aria-hidden="true" />
-            {copy.requirements}
-          </button>
-          <i aria-hidden="true" />
-          <button type="button" onClick={() => openDetail("verify")} aria-expanded={detail === "verify"}>
-            <ShieldCheck aria-hidden="true" />
-            {copy.verify}
-          </button>
-          <i aria-hidden="true" />
-          <button type="button" onClick={() => openDetail("checksum")} aria-expanded={detail === "checksum"}>
-            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-            {copied ? copy.copyStatus : copy.checksum}
-          </button>
-        </nav>
+          <div ref={coreRef} className="dl-core-anchor">
+            <div className="dl-core-depth">
+              <div className="dl-core-aura" aria-hidden="true" />
+              <Image
+                className="dl-core-image"
+                src="/generated/djl-context-core.png"
+                alt={isZh ? "DJL 上下文核心" : "DJL context core"}
+                width={1254}
+                height={1254}
+                sizes="(max-width: 760px) 190px, 300px"
+              />
+            </div>
+            <span className="dl-core-state dl-core-state-local" aria-hidden="true">
+              <i />
+              <b>{copy.local}</b>
+              <small>{copy.localValue}</small>
+            </span>
+            <span className="dl-core-state dl-core-state-online" aria-hidden="true">
+              <i />
+              <b>{copy.online}</b>
+              <small>{copy.onlineValue}</small>
+            </span>
+          </div>
 
-        <aside className="dl-detail-panel" data-open={Boolean(detailCopy)} aria-live="polite">
-          {detailCopy && (
+          {animationActive && (
             <>
-              <ShieldCheck aria-hidden="true" />
-              <div>
-                <strong>{detailCopy.title}</strong>
-                <p>{detailCopy.body}</p>
-                {detail !== "requirements" && (
-                  <a href={PUBLIC_RELEASES_URL} target="_blank" rel="noreferrer">
-                    {copy.releaseLink}
-                    <ChevronRight aria-hidden="true" />
-                  </a>
-                )}
-              </div>
-              <button type="button" aria-label={copy.close} onClick={() => setDetail(null)}>
-                <X aria-hidden="true" />
-              </button>
+              <AnimatedBeam
+                containerRef={sceneRef}
+                fromRef={coreRef}
+                toRef={macRef}
+                curvature={-96}
+                duration={activePlatform === "mac" ? 1.05 : 2.35}
+                pathColor="rgba(247, 232, 207, 0.18)"
+                pathWidth={2}
+                gradientStartColor="#fff8e9"
+                gradientStopColor="#b7b7ba"
+                startYOffset={42}
+                endYOffset={-24}
+                className="dl-energy-beam dl-energy-beam-mac"
+              />
+              <AnimatedBeam
+                containerRef={sceneRef}
+                fromRef={coreRef}
+                toRef={windowsRef}
+                curvature={-96}
+                duration={activePlatform === "windows" ? 0.95 : 2.15}
+                delay={0.22}
+                pathColor="rgba(45, 130, 255, 0.22)"
+                pathWidth={2.2}
+                gradientStartColor="#d9f2ff"
+                gradientStopColor="#0878ff"
+                startYOffset={42}
+                endYOffset={-24}
+                className="dl-energy-beam dl-energy-beam-windows"
+              />
             </>
           )}
+
+          <PlatformPortal
+            platform="mac"
+            anchorRef={macRef}
+            icon={Apple}
+            commandIcon={Command}
+            copy={copy.mac}
+            href={releaseUrls.mac}
+            buttonRef={macTriggerRef}
+            expanded={macChooserOpen}
+            controls="dl-mac-chooser"
+            active={activePlatform === "mac"}
+            onActive={setActivePlatform}
+            onRequest={requestDownload}
+          />
+
+          {macChooserOpen && (
+            <aside
+              id="dl-mac-chooser"
+              className="dl-mac-chooser"
+              role="dialog"
+              aria-modal="false"
+              aria-labelledby="dl-mac-chooser-title"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                closeMacChooser(true);
+              }}
+            >
+              <header>
+                <span>
+                  <Apple aria-hidden="true" />
+                </span>
+                <div>
+                  <strong id="dl-mac-chooser-title">{copy.macChoiceTitle}</strong>
+                  <p>{copy.macChoiceBody}</p>
+                </div>
+                <button type="button" aria-label={copy.close} onClick={() => closeMacChooser(true)}>
+                  <X aria-hidden="true" />
+                </button>
+              </header>
+              <div className="dl-mac-options">
+                {/* Download handlers require browser navigation, without client routing or prefetch. */}
+                <a ref={macChoiceRef} href={"/download/mac/arm64"}>
+                  <Cpu aria-hidden="true" />
+                  <span>
+                    <strong>{copy.appleSilicon}</strong>
+                    <small>{copy.appleSiliconMeta}</small>
+                  </span>
+                  <em>{copy.recommended}</em>
+                  <ChevronRight aria-hidden="true" />
+                </a>
+                <a href={"/download/mac/x64"}>
+                  <Command aria-hidden="true" />
+                  <span>
+                    <strong>{copy.intel}</strong>
+                    <small>{copy.intelMeta}</small>
+                  </span>
+                  <ChevronRight aria-hidden="true" />
+                </a>
+              </div>
+              <p className="dl-mac-fallback">{copy.downloadFallback}</p>
+            </aside>
+          )}
+          <PlatformPortal
+            platform="windows"
+            anchorRef={windowsRef}
+            icon={MonitorDown}
+            commandIcon={Cpu}
+            copy={copy.windows}
+            href={releaseUrls.windows}
+            active={activePlatform === "windows"}
+            onActive={setActivePlatform}
+            onRequest={requestDownload}
+          />
+
+          <nav className="dl-utility-links" aria-label={isZh ? "下载信息" : "Download information"}>
+            <button
+              type="button"
+              onClick={() => openDetail("requirements")}
+              aria-expanded={detail === "requirements"}
+            >
+              <Cpu aria-hidden="true" />
+              {copy.requirements}
+            </button>
+            <i aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => openDetail("verify")}
+              aria-expanded={detail === "verify"}
+            >
+              <ShieldCheck aria-hidden="true" />
+              {copy.verify}
+            </button>
+            <i aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => openDetail("checksum")}
+              aria-expanded={detail === "checksum"}
+            >
+              {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+              {copied ? copy.copyStatus : copy.checksum}
+            </button>
+          </nav>
+
+          <aside className="dl-detail-panel" data-open={Boolean(detailCopy)} aria-live="polite">
+            {detailCopy && (
+              <>
+                <ShieldCheck aria-hidden="true" />
+                <div>
+                  <strong>{detailCopy.title}</strong>
+                  <p>{detailCopy.body}</p>
+                  {detail !== "requirements" && (
+                    <a href={PUBLIC_RELEASES_URL} target="_blank" rel="noreferrer">
+                      {copy.releaseLink}
+                      <ChevronRight aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
+                <button type="button" aria-label={copy.close} onClick={() => setDetail(null)}>
+                  <X aria-hidden="true" />
+                </button>
+              </>
+            )}
+          </aside>
+        </div>
+
+        <aside className="dl-scroll-telemetry" aria-hidden="true">
+          <span className="dl-scroll-track">
+            <i />
+          </span>
+          <ol>
+            <li data-phase="entry">
+              <b>01</b>
+              <span>{scrollCopy.entry}</span>
+            </li>
+            <li data-phase="sync">
+              <b>02</b>
+              <span>{scrollCopy.sync}</span>
+            </li>
+            <li data-phase="download">
+              <b>03</b>
+              <span>{scrollCopy.download}</span>
+            </li>
+          </ol>
+          <small>
+            <ChevronsDown />
+            {scrollCopy.hint}
+          </small>
         </aside>
-
-      </div>
-
-      <aside className="dl-scroll-telemetry" aria-hidden="true">
-        <span className="dl-scroll-track"><i /></span>
-        <ol>
-          <li data-phase="entry"><b>01</b><span>{scrollCopy.entry}</span></li>
-          <li data-phase="sync"><b>02</b><span>{scrollCopy.sync}</span></li>
-          <li data-phase="download"><b>03</b><span>{scrollCopy.download}</span></li>
-        </ol>
-        <small><ChevronsDown />{scrollCopy.hint}</small>
-      </aside>
       </div>
     </section>
   );
@@ -598,7 +648,12 @@ function PlatformPortal({
   anchorRef: RefObject<HTMLDivElement | null>;
   icon: LucideIcon;
   commandIcon: LucideIcon;
-  copy: { readonly label: string; readonly title: string; readonly meta: string; readonly aria: string };
+  copy: {
+    readonly label: string;
+    readonly title: string;
+    readonly meta: string;
+    readonly aria: string;
+  };
   href?: string;
   buttonRef?: RefObject<HTMLButtonElement | null>;
   expanded?: boolean;
@@ -609,7 +664,9 @@ function PlatformPortal({
 }) {
   const content = (
     <>
-      <span className="dl-portal-icon"><PlatformIcon aria-hidden="true" /></span>
+      <span className="dl-portal-icon">
+        <PlatformIcon aria-hidden="true" />
+      </span>
       <span className="dl-portal-copy">
         <small>{copy.label}</small>
         <strong>{copy.title}</strong>
@@ -634,9 +691,13 @@ function PlatformPortal({
     >
       <div className="dl-portal-motion">
         <div className="dl-platform-disc" aria-hidden="true">
-          <i /><i /><i />
+          <i />
+          <i />
+          <i />
         </div>
-        <span className="dl-portal-signal" aria-hidden="true"><CommandIcon /></span>
+        <span className="dl-portal-signal" aria-hidden="true">
+          <CommandIcon />
+        </span>
         {href ? (
           <a className="dl-portal" href={href} aria-label={copy.aria}>
             {content}

@@ -639,17 +639,6 @@ export const ChatHeader = memo(function ChatHeader({
     return () => observer.disconnect();
   }, [isSplitPane]);
 
-  const renderProviderIcon = (provider: ProviderKind | null, className: string) => {
-    return (
-      <ProviderIcon
-        provider={provider}
-        tone="header"
-        className={className}
-        fallback={<FiGitBranch className={className} />}
-      />
-    );
-  };
-
   // The launcher itself never inherits an individual pane's disabled state. Browser and Diff
   // availability live on their menu rows so one unavailable pane cannot block the other.
   const panelLauncherControl = showPanelLauncher ? (
@@ -910,3 +899,14 @@ export const ChatHeader = memo(function ChatHeader({
     </div>
   );
 });
+
+const renderProviderIcon = (provider: ProviderKind | null, className: string) => {
+  return (
+    <ProviderIcon
+      provider={provider}
+      tone="header"
+      className={className}
+      fallback={<FiGitBranch className={className} />}
+    />
+  );
+};

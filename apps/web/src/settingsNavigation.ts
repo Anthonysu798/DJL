@@ -14,6 +14,7 @@ export const SETTINGS_SECTION_IDS = [
   "worktrees",
   "archived",
   "models",
+  "accounts",
   "local-models",
   "providers",
   "skills",
@@ -64,6 +65,14 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
 ] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
+  {
+    id: "accounts",
+    group: "synara",
+    labelKey: "navigation.items.accounts.label",
+    descriptionKey: "navigation.items.accounts.description",
+    icon: "user",
+    eyebrowKey: "navigation.items.accounts.eyebrow",
+  },
   {
     id: "general",
     group: "app",

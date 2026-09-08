@@ -1653,9 +1653,7 @@ function createDesktopIpcLiveOwner({
       : null;
     const liveOverrides = followerRuntimeOverridesByThreadId.get(conversationId) || null;
     const overrides =
-      persistedOverrides || liveOverrides
-        ? { ...(persistedOverrides || {}), ...(liveOverrides || {}) }
-        : null;
+      persistedOverrides || liveOverrides ? { ...persistedOverrides, ...liveOverrides } : null;
     if (!overrides) {
       return params;
     }

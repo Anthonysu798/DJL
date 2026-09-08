@@ -235,7 +235,7 @@ export function KanbanProjectBoardView({
         });
       }
     },
-    [board, handleDispatchDrop, releaseClickSuppression, setDraftOrder],
+    [board, handleDispatchDrop, releaseClickSuppression, setDraftOrder, t],
   );
 
   return (

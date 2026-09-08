@@ -12,7 +12,7 @@ import {
 } from "./BranchToolbar.logic";
 
 describe("runtimeModeOptionsForProvider", () => {
-  it("offers Codex-style automatic approval only for OpenCode-backed threads", () => {
+  it("offers each provider its native permission profiles", () => {
     const resolver = (branchToolbarLogic as Record<string, unknown>)[
       "runtimeModeOptionsForProvider"
     ];
@@ -20,7 +20,13 @@ describe("runtimeModeOptionsForProvider", () => {
     if (typeof resolver !== "function") return;
 
     expect(resolver("opencode")).toEqual(["approval-required", "auto-approval", "full-access"]);
-    expect(resolver("claudeAgent")).toEqual(["full-access", "approval-required"]);
+    expect(resolver("claudeAgent")).toEqual([
+      "approval-required",
+      "accept-edits",
+      "auto-approval",
+      "bypass-permissions",
+    ]);
+    expect(resolver("codex")).toEqual(["approval-required", "auto-approval", "full-access"]);
   });
 });
 

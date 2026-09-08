@@ -21,7 +21,7 @@ const REQUIRED_PUBLIC_LICENSE_MARKERS = new Map<string, readonly string[]>([
   ["THIRD_PARTY_NOTICES.md", ["Synara", "Remodex", "OpenCode", "Ghostty"]],
   ["apps/ios/UPSTREAM_LICENSE", ["Apache License", "Version 2.0"]],
   ["apps/remote-gateway/UPSTREAM_LICENSE", ["Apache License", "Version 2.0"]],
-  ["vendor/opencode/LICENSE", ["MIT License", "Copyright (c) 2025 opencode"]],
+  ["docs/licenses/OPENCODE_LICENSE", ["MIT License", "Copyright (c) 2025 opencode"]],
   [
     "apps/ios/DJL/Terminal/Vendor/GHOSTTY_LICENSE",
     ["MIT License", "Mitchell Hashimoto", "Ghostty contributors"],

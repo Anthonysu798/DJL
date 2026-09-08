@@ -3,7 +3,7 @@
 // Layer: UI hook
 // Exports: useRecentViewSwitcher
 
-import { ThreadId, type ProjectId } from "@synara/contracts";
+import { ThreadId } from "@synara/contracts";
 import type { ResolvedTerminalVisualIdentity } from "@synara/shared/terminalThreads";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -159,6 +159,7 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
       workspacePages,
       terminalVisualIdentityByThreadId,
     });
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- Locale changes must refresh labels read through stable translation helpers.
   }, [
     input.activeContextThreadId,
     input.activeDraftThread,

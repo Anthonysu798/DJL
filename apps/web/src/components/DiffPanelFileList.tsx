@@ -128,6 +128,7 @@ const DiffPanelFileRow = memo(function DiffPanelFileRow(props: {
     ),
     [chatActions, filePath, isCollapsed],
   );
+  const { onToggleFileCollapsed } = props;
   const handleClickCapture = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const nativeEvent = event.nativeEvent;
@@ -144,9 +145,9 @@ const DiffPanelFileRow = memo(function DiffPanelFileRow(props: {
       });
       if (!clickedHeader) return;
       event.stopPropagation();
-      props.onToggleFileCollapsed(fileKey);
+      onToggleFileCollapsed(fileKey);
     },
-    [fileKey, props.onToggleFileCollapsed],
+    [fileKey, onToggleFileCollapsed],
   );
 
   return (

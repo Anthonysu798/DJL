@@ -32,8 +32,12 @@ function blobToDataUrl(blob: Blob): Promise<string | null> {
 
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onerror = () => resolve(null);
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    reader.addEventListener("error", () => resolve(null), { once: true });
+    reader.addEventListener(
+      "load",
+      () => resolve(typeof reader.result === "string" ? reader.result : null),
+      { once: true },
+    );
     reader.readAsDataURL(blob);
   });
 }

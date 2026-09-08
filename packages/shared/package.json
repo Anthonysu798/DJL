@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./openCodeCompatibility": {
+      "types": "./src/openCodeCompatibility.ts",
+      "import": "./src/openCodeCompatibility.ts"
+    },
     "./djlStoragePaths": {
       "types": "./src/djlStoragePaths.ts",
       "import": "./src/djlStoragePaths.ts"

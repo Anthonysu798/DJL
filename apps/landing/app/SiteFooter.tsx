@@ -78,7 +78,8 @@ export function SiteFooter({ t, locale }: { t: Content; locale: Locale }) {
       <RuixenGradientFooter className="lp-footer" gradientHeight="40vh" minReveal={0}>
         <div className="lp-container lp-footer-row">
           <nav className="lp-footer-links" aria-label="Footer">
-            <a href="/download/mac">{footer.download}</a>
+            {/* HTTP download handler: preserve browser navigation rather than client routing. */}
+            <a href={"/download/mac"}>{footer.download}</a>
             <a href={localeHref("/docs", locale)}>{footer.docs}</a>
             <a href={localeHref("/changelog", locale)}>{footer.changelog}</a>
             <a href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer">

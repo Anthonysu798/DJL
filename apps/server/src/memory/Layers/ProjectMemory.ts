@@ -289,7 +289,7 @@ function redactedDurableExcerpt(value: string, limit: number): string {
       "[private key redacted]",
     ],
     [/\b(?:sk|pk|api|token|key)[-_][A-Za-z0-9_-]{16,}\b/gi, "[credential redacted]"],
-    [/\b(?:bearer\s+)[A-Za-z0-9._~+\/-]{12,}/gi, "Bearer [credential redacted]"],
+    [/\b(?:bearer\s+)[A-Za-z0-9._~+/-]{12,}/gi, "Bearer [credential redacted]"],
     [
       /(\b(?:password|passwd|secret|api[_ -]?key|access[_ -]?token)\s*[:=]\s*)\S+/gi,
       "$1[redacted]",
@@ -838,7 +838,7 @@ const make = Effect.gen(function* () {
               linkScore * 0.02;
             return [{ candidate, score }];
           })
-          .sort((left, right) => right.score - left.score)
+          .toSorted((left, right) => right.score - left.score)
           .slice(0, MAX_RETRIEVAL_RESULTS);
         const maxChars = Math.min(16_000, Math.max(2_000, input.maxChars ?? 12_000));
         const queryTokens = tokenize(input.query, 12);

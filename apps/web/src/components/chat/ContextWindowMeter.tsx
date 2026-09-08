@@ -30,9 +30,13 @@ export function ContextWindowMeter(props: {
           <button
             type="button"
             className="group inline-flex shrink-0 items-center justify-center rounded-full p-0.5 transition-opacity hover:opacity-80"
-            aria-label={t("context.ariaLabel", {
-              usage: display.usedPercentageLabel ?? display.tokenUsageLabel,
-            })}
+            aria-label={
+              usage.usageAvailable === false
+                ? `${t("context.title")}: ${t("context.awaitingUsage")}`
+                : t("context.ariaLabel", {
+                    usage: display.usedPercentageLabel ?? display.tokenUsageLabel,
+                  })
+            }
           >
             <span className="relative flex h-4 w-4 items-center justify-center">
               <svg
@@ -74,7 +78,9 @@ export function ContextWindowMeter(props: {
               {t("context.currentSession", { window: activeWindowLabel ?? t("context.unknown") })}
             </div>
           ) : null}
-          {display.usedPercentageLabel ? (
+          {usage.usageAvailable === false ? (
+            <div className="text-xs text-muted-foreground">{t("context.awaitingUsage")}</div>
+          ) : display.usedPercentageLabel ? (
             <div className="whitespace-nowrap text-xs font-medium text-foreground">
               <span>{display.usedPercentageLabel}</span>
               {display.hasReliableTokenRatio ? (

@@ -15,7 +15,7 @@ describe("public source audit", () => {
     expect(
       findPublicSourceViolations([
         file("apps/desktop/src/main.ts"),
-        file("vendor/opencode/LICENSE", "MIT License"),
+        file("docs/licenses/OPENCODE_LICENSE", "MIT License"),
         file("apps/ios/UPSTREAM_LICENSE", "Apache License"),
       ]),
     ).toEqual([]);
@@ -95,7 +95,7 @@ describe("public source audit", () => {
       file("THIRD_PARTY_NOTICES.md", "Synara Remodex OpenCode Ghostty"),
       file("apps/ios/UPSTREAM_LICENSE", "Apache License Version 2.0"),
       file("apps/remote-gateway/UPSTREAM_LICENSE", "Apache License Version 2.0"),
-      file("vendor/opencode/LICENSE", "MIT License Copyright (c) 2025 opencode"),
+      file("docs/licenses/OPENCODE_LICENSE", "MIT License Copyright (c) 2025 opencode"),
       file(
         "apps/ios/DJL/Terminal/Vendor/GHOSTTY_LICENSE",
         "MIT License Mitchell Hashimoto Ghostty contributors",

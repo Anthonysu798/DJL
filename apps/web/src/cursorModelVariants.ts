@@ -169,6 +169,7 @@ export function collapseCursorModelVariants(
     }
   }
 
+  // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
   return Array.from(groups.entries()).map(([baseSlug, variants]) => {
     const preferredName =
       variants.find((variant) => variant.slug === baseSlug)?.name ??
@@ -217,6 +218,7 @@ export function collapseCursorModelVariants(
         : {}),
       ...(efforts.length > 0
         ? {
+            // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
             supportedReasoningEfforts: efforts.map((effort) => ({
               value: effort.value,
               label: effort.label,

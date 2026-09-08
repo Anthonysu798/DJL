@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripVTControlCharacters } from "node:util";
 
 import { createTerminalModeReplayTracker } from "./terminalModeReplay";
 
@@ -14,6 +15,44 @@ function withTracker<T>(
 }
 
 describe("createTerminalModeReplayTracker", () => {
+  it("answers cursor and device queries without a visible renderer", () => {
+    const responses: string[] = [];
+    const tracker = createTerminalModeReplayTracker(80, 24, (data) => responses.push(data));
+    try {
+      tracker.feed("\x1b[4;9H\x1b[6n\x1b[c");
+      expect(responses).toContain("\x1b[4;9R");
+      expect(responses.some((reply) => reply.startsWith("\x1b[?") && reply.endsWith("c"))).toBe(
+        true,
+      );
+    } finally {
+      tracker.dispose();
+    }
+  });
+  it("replays the current agent screen with cursor-positioned spaces and colors", () => {
+    withTracker((tracker) => {
+      tracker.feed("old screen\u001b[2J\u001b[H\u001b[32mHello\u001b[4Cworld\u001b[0m");
+      const screen = tracker.buildScreen();
+      expect(stripVTControlCharacters(screen)).toContain("Hello    world");
+      expect(screen).not.toContain("old screen");
+      expect(screen).toContain("38;5;2");
+      withTracker((restored) => {
+        restored.feed(screen);
+        expect(restored.buildScreen()).toBe(screen);
+      });
+    });
+  });
+  it("preserves provider true-color foreground and background through screen replay", () => {
+    withTracker((tracker) => {
+      tracker.feed("\x1b[38;2;217;119;87mClaude\x1b[0m \x1b[48;2;30;80;130mCodex\x1b[0m");
+      const screen = tracker.buildScreen();
+      expect(screen).toContain("38;2;217;119;87");
+      expect(screen).toContain("48;2;30;80;130");
+      withTracker((restored) => {
+        restored.feed(screen);
+        expect(restored.buildScreen()).toBe(screen);
+      });
+    });
+  });
   it("returns no preamble for default terminal modes", () => {
     withTracker((tracker) => {
       expect(tracker.buildPreamble()).toBe("");

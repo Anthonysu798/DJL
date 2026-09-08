@@ -38,6 +38,8 @@ export interface PtyProcess {
 export interface PtySpawnInput {
   shell: string;
   args?: string[];
+  /** Preserve cmd.exe batch argument encoding on Windows. */
+  windowsVerbatimArguments?: true;
   cwd: string;
   cols: number;
   rows: number;

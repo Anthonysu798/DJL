@@ -22,6 +22,10 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { ServerConfig } from "./config";
 
+function profileStatsErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 const HEATMAP_WINDOW_DAYS = 274; // ~9 months, GitHub-style contribution grid.
 const SKILL_RESULT_LIMIT = 12;
 const PROVIDER_KINDS = new Set<ProviderKind>([
@@ -616,10 +620,6 @@ export class ProfileStatsQuery extends ServiceMap.Service<
 const makeProfileStatsQuery = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   const config = yield* ServerConfig;
-
-  function profileStatsErrorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
-  }
 
   function isMissingLegacyColumnError(error: unknown): boolean {
     return /\bno such column\b/iu.test(profileStatsErrorMessage(error));

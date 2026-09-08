@@ -7,34 +7,36 @@ import viteConfig from "./vite.config";
 const srcPath = fileURLToPath(new URL("./src", import.meta.url));
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
-export default mergeConfig(
-  viteConfig,
-  defineConfig({
-    resolve: {
-      alias: {
-        "~": srcPath,
+export default defineConfig((env) =>
+  mergeConfig(
+    viteConfig(env),
+    defineConfig({
+      resolve: {
+        alias: {
+          "~": srcPath,
+        },
       },
-    },
-    test: {
-      setupFiles: ["./src/test/browserSetup.ts"],
-      include: [
-        "src/components/**/*.browser.tsx",
-        "src/lib/**/*.browser.ts",
-        "src/lib/**/*.browser.tsx",
-      ],
-      browser: {
-        enabled: true,
-        provider: playwright(
-          chromiumExecutablePath
-            ? { launchOptions: { executablePath: chromiumExecutablePath } }
-            : undefined,
-        ),
-        instances: [{ browser: "chromium" }],
-        headless: true,
-        fileParallelism: false,
+      test: {
+        setupFiles: ["./src/test/browserSetup.ts"],
+        include: [
+          "src/components/**/*.browser.tsx",
+          "src/lib/**/*.browser.ts",
+          "src/lib/**/*.browser.tsx",
+        ],
+        browser: {
+          enabled: true,
+          provider: playwright(
+            chromiumExecutablePath
+              ? { launchOptions: { executablePath: chromiumExecutablePath } }
+              : undefined,
+          ),
+          instances: [{ browser: "chromium" }],
+          headless: true,
+          fileParallelism: false,
+        },
+        testTimeout: 60_000,
+        hookTimeout: 30_000,
       },
-      testTimeout: 60_000,
-      hookTimeout: 30_000,
-    },
-  }),
+    }),
+  ),
 );

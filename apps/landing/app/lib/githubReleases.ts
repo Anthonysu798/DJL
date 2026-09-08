@@ -58,7 +58,7 @@ function releaseNotesBeforeBoilerplate(body: string): string[] {
       /^\s*---\s*$/u.test(line) ||
       // Defensive: if the rule is ever dropped, GitHub's h2 sections still terminate our notes.
       /^##\s+/u.test(line) ||
-      /^\*\*Full Changelog\*\*/u.test(line),
+      line.startsWith("**Full Changelog**"),
   );
   return cut === -1 ? lines : lines.slice(0, cut);
 }
@@ -71,7 +71,10 @@ function releaseNotesBeforeBoilerplate(body: string): string[] {
  * dangerouslySetInnerHTML sink out of the page. Anything it cannot represent — notably the markdown
  * download table in the first public release — is dropped rather than shown broken.
  */
-export function parseReleaseNotes(body: string | null | undefined, version = ""): ParsedReleaseNotes {
+export function parseReleaseNotes(
+  body: string | null | undefined,
+  version = "",
+): ParsedReleaseNotes {
   if (typeof body !== "string" || body.trim() === "") {
     return { intro: [], sections: [] };
   }
@@ -182,7 +185,9 @@ export async function fetchChangelogReleases(
     return payload
       .filter(
         (release): release is GithubReleaseListItem =>
-          release !== null && typeof release === "object" && (release as GithubReleaseListItem).draft !== true,
+          release !== null &&
+          typeof release === "object" &&
+          (release as GithubReleaseListItem).draft !== true,
       )
       .map(toChangelogRelease)
       .filter((release): release is ChangelogRelease => release !== null);

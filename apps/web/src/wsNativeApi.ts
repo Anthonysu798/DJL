@@ -763,6 +763,30 @@ export function createWsNativeApi(): NativeApi {
       getProfileTokenStats: (input) =>
         transport.request(WS_METHODS.statsGetProfileTokenStats, input),
     },
+    harnesses: {
+      getProfileAccount: (input) =>
+        transport.request(WS_METHODS.harnessProfileAccount, input, { timeoutMs: 35_000 }),
+      listTools: () => transport.request(WS_METHODS.harnessListTools, {}, { timeoutMs: 30_000 }),
+      maintainTool: (input) =>
+        transport.request(WS_METHODS.harnessMaintainTool, input, { timeoutMs: null }),
+      listAccounts: () =>
+        transport.request(WS_METHODS.harnessListAccounts, {}, { timeoutMs: 30_000 }),
+      listLegacyOpenCodeCredentials: () =>
+        transport.request(
+          WS_METHODS.harnessListLegacyOpenCodeCredentials,
+          {},
+          { timeoutMs: 30_000 },
+        ),
+      transferLegacyOpenCodeCredentials: () =>
+        transport.request(
+          WS_METHODS.harnessTransferLegacyOpenCodeCredentials,
+          {},
+          { timeoutMs: 30_000 },
+        ),
+      startLogin: (input) =>
+        transport.request(WS_METHODS.harnessStartLogin, input, { timeoutMs: 30_000 }),
+      endLogin: (input) => transport.request(WS_METHODS.harnessEndLogin, input),
+    },
     provider: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),

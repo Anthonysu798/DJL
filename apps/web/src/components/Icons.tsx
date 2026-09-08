@@ -393,6 +393,18 @@ export const AntigravityIcon: Icon = (props) => (
   </svg>
 );
 
+export const KimiIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M5 4v16M19 4l-9 8 9 8"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const GrokIcon: Icon = (props) => (
   <svg {...props} viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

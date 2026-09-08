@@ -1,5 +1,5 @@
 // FILE: initialBackendWindowOpen.ts
-// Purpose: Coordinates first packaged-window reveal without waiting on backend readiness.
+// Purpose: Starts the renderer alongside the backend in both desktop modes.
 // Layer: Desktop startup utility
 // Exports: openInitialBackendWindow
 
@@ -20,12 +20,12 @@ export interface InitialBackendWindowOpenOptions {
 }
 
 export function openInitialBackendWindow(options: InitialBackendWindowOpenOptions): void {
-  if (options.isDevelopment || options.baseUrl.length === 0 || options.hasExistingWindow()) {
+  if (options.baseUrl.length === 0 || options.hasExistingWindow()) {
     return;
   }
 
-  // The packaged renderer is served from local files, so surface the window
-  // while the backend finishes startup instead of leaving macOS menu-bar-only.
+  // Both the local-file renderer and the dev server can load independently of
+  // the backend. The renderer's WebSocket reconnects when the backend listens.
   options.createWindow();
   options.writeLog("bootstrap main window created");
 
@@ -45,7 +45,7 @@ export function openInitialBackendWindow(options: InitialBackendWindowOpenOption
       options.writeLog(
         `bootstrap backend readiness warning message=${options.formatErrorMessage(error)}`,
       );
-      options.warn("[desktop] backend readiness check timed out during packaged bootstrap", error);
+      options.warn("[desktop] backend readiness check timed out during bootstrap", error);
     })
     .finally(() => {
       if (options.getReadinessInFlight() === nextOpen) {

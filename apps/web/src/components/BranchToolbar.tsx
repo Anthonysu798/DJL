@@ -1,7 +1,13 @@
 // FILE: BranchToolbar.tsx
 // Purpose: Renders the chat thread's compact workspace controls, including the
 // local usage popover, inline workspace handoff actions, and runtime access toggle.
-import type { ProviderKind, ThreadId, RuntimeMode } from "@synara/contracts";
+import {
+  effectiveRuntimeMode,
+  type ProviderComposerCapabilities,
+  type ProviderKind,
+  type ThreadId,
+  type RuntimeMode,
+} from "@synara/contracts";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -124,6 +130,10 @@ export interface BranchToolbarProps {
 }
 
 export interface RuntimeUsageControlsProps {
+  disabled?: boolean | undefined;
+  permissionModes?: ProviderComposerCapabilities["permissionModes"];
+  supportsAutoMode?: boolean | undefined;
+  onPermissionMenuOpen?: (() => void) | undefined;
   runtimeMode?: RuntimeMode | undefined;
   provider: ProviderKind;
   onRuntimeModeChange?: ((mode: RuntimeMode) => void) | undefined;
@@ -139,30 +149,44 @@ export interface RuntimeUsageControlsProps {
 }
 
 export function RuntimeUsageControls({
-  runtimeMode,
+  runtimeMode: storedRuntimeMode,
+  disabled = false,
+  permissionModes,
+  supportsAutoMode,
+  onPermissionMenuOpen,
   provider,
   onRuntimeModeChange,
   className,
   hideLabel = false,
 }: RuntimeUsageControlsProps) {
   const { t } = useTranslation("workspace");
+  const [permissionMenuOpen, setPermissionMenuOpen] = useState(false);
   const runtimeModeOptions = runtimeModeOptionsForProvider(provider);
-  const runtimeModeLabel =
-    runtimeMode === "full-access"
-      ? t("branch.permissions.fullAccess")
-      : runtimeMode === "auto-approval"
-        ? t("branch.permissions.approveForMe")
-        : runtimeMode === "accept-edits"
-          ? t("branch.permissions.acceptEdits")
-          : t("branch.permissions.askForApproval");
-  const runtimeModeTitle =
-    runtimeMode === "full-access"
-      ? t("branch.permissions.fullAccessTitle")
-      : runtimeMode === "auto-approval"
-        ? t("branch.permissions.approveForMeTitle")
-        : runtimeMode === "accept-edits"
-          ? t("branch.permissions.acceptEditsTitle")
-          : t("branch.permissions.askForApprovalTitle");
+  const runtimeMode = storedRuntimeMode
+    ? effectiveRuntimeMode(provider, storedRuntimeMode)
+    : undefined;
+  const modeKey = (mode: RuntimeMode | undefined) =>
+    mode === "full-access"
+      ? "fullAccess"
+      : mode === "bypass-permissions"
+        ? "bypassPermissions"
+        : mode === "accept-edits"
+          ? "acceptEdits"
+          : mode === "auto-approval"
+            ? provider === "claudeAgent"
+              ? "autoMode"
+              : "approveForMe"
+            : "askForApproval";
+  const titleKey = (mode: RuntimeMode | undefined) =>
+    provider === "codex" && mode === "auto-approval"
+      ? "codexAutoTitle"
+      : provider === "codex" && mode === "approval-required"
+        ? "codexAskTitle"
+        : provider === "claudeAgent" && mode === "approval-required"
+          ? "claudeAskTitle"
+          : (`${modeKey(mode)}Title` as const);
+  const runtimeModeLabel = t(`branch.permissions.${modeKey(runtimeMode)}`);
+  const runtimeModeTitle = t(`branch.permissions.${titleKey(runtimeMode)}`);
   return (
     <div
       className={cn(
@@ -171,7 +195,13 @@ export function RuntimeUsageControls({
       )}
     >
       {runtimeMode && onRuntimeModeChange ? (
-        <Menu>
+        <Menu
+          open={permissionMenuOpen}
+          onOpenChange={(open) => {
+            setPermissionMenuOpen(open);
+            if (open) onPermissionMenuOpen?.();
+          }}
+        >
           <MenuTrigger
             render={
               <Button
@@ -180,14 +210,16 @@ export function RuntimeUsageControls({
                 className={cn(
                   "min-w-0 shrink-0 justify-start gap-1.5 whitespace-nowrap px-2 [&_svg]:mx-0 sm:px-2.5",
                   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
-                  runtimeMode === "full-access" && RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
+                  (runtimeMode === "full-access" || runtimeMode === "bypass-permissions") &&
+                    RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
                 )}
-                title={runtimeModeTitle}
+                disabled={disabled}
+                title={disabled ? t("branch.permissions.finishTurn") : runtimeModeTitle}
               />
             }
           >
             <span className="inline-flex items-center gap-1.5">
-              {runtimeMode === "full-access" ? (
+              {runtimeMode === "full-access" || runtimeMode === "bypass-permissions" ? (
                 <CentralIcon name="shield-access" className="size-3.5 shrink-0" />
               ) : runtimeMode === "auto-approval" ? (
                 <HiOutlineCommandLine className="size-3.5 shrink-0" />
@@ -221,46 +253,40 @@ export function RuntimeUsageControls({
                     return;
                   }
                   onRuntimeModeChange(value);
+                  setPermissionMenuOpen(false);
                 }}
               >
-                <MenuRadioItem value="approval-required" className="items-start py-2.5">
-                  <span className="inline-flex min-w-0 items-start gap-2.5">
-                    <HiOutlineHandRaised className="mt-0.5 size-4 shrink-0" />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span>{t("branch.permissions.askForApproval")}</span>
-                      <span className="text-xs font-normal text-[var(--color-text-foreground-tertiary)]">
-                        {t("branch.permissions.askForApprovalTitle")}
-                      </span>
-                    </span>
-                  </span>
-                </MenuRadioItem>
-                {provider === "opencode" ? (
-                  <MenuRadioItem value="auto-approval" className="items-start py-2.5">
-                    <span className="inline-flex min-w-0 items-start gap-2.5">
-                      <HiOutlineCommandLine className="mt-0.5 size-4 shrink-0" />
+                {runtimeModeOptions.map((mode) => {
+                  const capability = permissionModes?.find((entry) => entry.mode === mode);
+                  const modelBlocked =
+                    provider === "claudeAgent" &&
+                    mode === "auto-approval" &&
+                    supportsAutoMode === false;
+                  const unverified =
+                    (provider === "codex" || provider === "claudeAgent") &&
+                    (mode === "auto-approval" || mode === "bypass-permissions") &&
+                    !capability;
+                  const disabled = capability?.available === false || modelBlocked || unverified;
+                  return (
+                    <MenuRadioItem
+                      key={mode}
+                      value={mode}
+                      disabled={disabled}
+                      className="items-start py-2.5"
+                    >
                       <span className="flex min-w-0 flex-col gap-0.5">
-                        <span>{t("branch.permissions.approveForMe")}</span>
+                        <span>{t(`branch.permissions.${modeKey(mode)}`)}</span>
                         <span className="text-xs font-normal text-[var(--color-text-foreground-tertiary)]">
-                          {t("branch.permissions.approveForMeTitle")}
+                          {modelBlocked
+                            ? t("branch.permissions.autoModelUnavailable")
+                            : unverified
+                              ? t("branch.permissions.checkingSupport")
+                              : (capability?.reason ?? t(`branch.permissions.${titleKey(mode)}`))}
                         </span>
                       </span>
-                    </span>
-                  </MenuRadioItem>
-                ) : null}
-                <MenuRadioItem
-                  value="full-access"
-                  className="items-start py-2.5 data-checked:text-[var(--runtime-full-access-accent)]"
-                >
-                  <span className="inline-flex min-w-0 items-start gap-2.5">
-                    <CentralIcon name="shield-access" className="mt-0.5 size-4 shrink-0" />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span>{t("branch.permissions.fullAccess")}</span>
-                      <span className="text-xs font-normal text-[var(--color-text-foreground-tertiary)]">
-                        {t("branch.permissions.fullAccessTitle")}
-                      </span>
-                    </span>
-                  </span>
-                </MenuRadioItem>
+                    </MenuRadioItem>
+                  );
+                })}
               </MenuRadioGroup>
             </MenuGroup>
           </MenuPopup>

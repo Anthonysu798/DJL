@@ -22,6 +22,7 @@ interface FileCommentsSummaryChipProps {
   onRemove?: (() => void) | undefined;
 }
 
+/* oxlint-disable react/no-array-index-key -- These read-only snapshot rows have no state and may contain identical repeated content. Position distinguishes duplicates. */
 export function FileCommentsSummaryChip(props: FileCommentsSummaryChipProps) {
   const { t } = useTranslation("chat");
   if (props.comments.length === 0) {
@@ -45,3 +46,4 @@ export function FileCommentsSummaryChip(props: FileCommentsSummaryChipProps) {
     />
   );
 }
+/* oxlint-enable react/no-array-index-key */

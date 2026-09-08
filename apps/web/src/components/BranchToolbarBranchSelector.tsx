@@ -246,7 +246,7 @@ function handleCheckoutError(
   const dirtyWorktree = parseDirtyWorktreeError(error);
   if (dirtyWorktree) {
     const copyText = toBranchActionErrorMessage(error);
-    const dirtyToastId = addBranchRecoveryToast({
+    addBranchRecoveryToast({
       type: "warning",
       title: input.t("branch.errors.dirtyTitle"),
       description: formatDirtyWorktreeDescription(input.t, dirtyWorktree.files),
@@ -270,7 +270,7 @@ function handleCheckoutError(
               if (isStashConflictError(stashError)) {
                 await invalidateGitQueries(input.queryClient);
                 input.onSuccess();
-                const stashConflictToastId = addBranchRecoveryToast({
+                addBranchRecoveryToast({
                   type: "warning",
                   title: input.t("branch.errors.stashConflictTitle"),
                   description: input.t("branch.errors.stashConflictDescription"),
@@ -477,12 +477,15 @@ export function BranchToolbarBranchSelector({
     onSetThreadWorkspace,
   ]);
 
-  const runBranchAction = (action: () => Promise<void>) => {
-    startBranchActionTransition(async () => {
-      await action().catch(() => undefined);
-      await invalidateGitQueries(queryClient).catch(() => undefined);
-    });
-  };
+  const runBranchAction = useCallback(
+    (action: () => Promise<void>) => {
+      startBranchActionTransition(async () => {
+        await action().catch(() => undefined);
+        await invalidateGitQueries(queryClient).catch(() => undefined);
+      });
+    },
+    [queryClient],
+  );
 
   const openCreateBranchDialog = useCallback(() => {
     setCreateBranchName(canPrefillCreateBranch && !hasExactBranchMatch ? trimmedBranchQuery : "");

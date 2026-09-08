@@ -30,8 +30,14 @@ export class AvatarImageError extends Error {
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(new AvatarImageError("readFailed"));
+    reader.addEventListener(
+      "load",
+      () => resolve(typeof reader.result === "string" ? reader.result : ""),
+      { once: true },
+    );
+    reader.addEventListener("error", () => reject(new AvatarImageError("readFailed")), {
+      once: true,
+    });
     reader.readAsDataURL(file);
   });
 }
@@ -39,8 +45,8 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new AvatarImageError("unreadable"));
+    img.addEventListener("load", () => resolve(img), { once: true });
+    img.addEventListener("error", () => reject(new AvatarImageError("unreadable")), { once: true });
     img.src = src;
   });
 }

@@ -71,7 +71,7 @@ describe("normalizeModelSlug", () => {
     expect(normalizeModelSlug("opus-4.6", "claudeAgent")).toBe("claude-opus-4-6");
     expect(normalizeModelSlug("claude-haiku-4-5-20251001", "claudeAgent")).toBe("claude-haiku-4-5");
     expect(normalizeModelSlug("4.3", "grok")).toBe("grok-build");
-    expect(normalizeModelSlug("grok-latest", "grok")).toBe("grok-build");
+    expect(normalizeModelSlug("grok-latest", "grok")).toBe("grok-4.6");
     expect(normalizeModelSlug("grok-code-fast-1", "grok")).toBe("grok-build-0.1");
     expect(normalizeModelSlug("grok-code-fast-1-0825", "grok")).toBe("grok-build-0.1");
   });

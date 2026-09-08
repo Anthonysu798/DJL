@@ -130,6 +130,7 @@ describe("electronUpdaterSecurity", () => {
   });
 
   it("patches electron-updater BaseUpdater spawnSyncLog only on Windows", () => {
+    // oxlint-disable-next-line typescript/no-extraneous-class -- The test patches a constructor prototype, matching electron-updater.
     class FakeBaseUpdater {}
     const updaterModule = { BaseUpdater: FakeBaseUpdater };
     const prototype = FakeBaseUpdater.prototype as {
@@ -156,6 +157,7 @@ describe("electronUpdaterSecurity", () => {
     };
     const oldVerifier = updater.verifyUpdateCodeSignature;
 
+    // oxlint-disable-next-line typescript/no-extraneous-class -- A minimal constructor fixture exercises updater prototype patching.
     hardenElectronUpdater({ BaseUpdater: class {} }, updater, "win32");
 
     expect(updater.verifyUpdateCodeSignature).not.toBe(oldVerifier);

@@ -11,7 +11,7 @@ import { Duration, Effect, Exit, Layer, Scope, Sink, Stream } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
 import type { ChatAttachment } from "@synara/contracts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildOpenCodePermissionRules,
@@ -24,9 +24,15 @@ import {
   parseOpenCodeCliModelsOutput,
   parseOpenCodeCredentialProviderIDs,
   resolveDjlOpenCodeBinaryPath,
+  resolveOpenCodeAuthFilePath,
   sendOpenCodePromptAsync,
   toOpenCodeFileParts,
 } from "./opencodeRuntime.ts";
+
+// Pool/lifecycle unit tests use a synthetic process; protocol has separate live tests.
+vi.mock("./openCodeInstalledProtocol", () => ({
+  assertOpenCodeServerCompatibility: async () => undefined,
+}));
 
 const encoder = new TextEncoder();
 
@@ -49,7 +55,7 @@ describe("buildOpenCodePermissionRules", () => {
 });
 
 describe("sendOpenCodePromptAsync", () => {
-  it("preserves DJL per-turn policy fields that the generated 1.17 SDK drops", async () => {
+  it("keeps fork-only policy fields off the official OpenCode wire format", async () => {
     const requests: Array<Record<string, unknown>> = [];
     const client = {
       client: {
@@ -79,9 +85,6 @@ describe("sendOpenCodePromptAsync", () => {
         path: { sessionID: "ses_test" },
         body: {
           parts: [{ type: "text", text: "Check RAM." }],
-          visibleTools: ["djl_system_info"],
-          requiredToolCall: true,
-          instructionScope: "work-isolated",
         },
         headers: { "Content-Type": "application/json" },
       },
@@ -210,126 +213,55 @@ describe("toOpenCodeFileParts", () => {
 });
 
 describe("buildOpenCodeServerProcessEnv", () => {
-  it("does not override file-based config with synthetic empty config content", () => {
+  it("shares CLI config and credentials while retaining process-local authentication", () => {
     const env = buildOpenCodeServerProcessEnv({
+      managedRootDir: "/tmp/djl/legacy",
+      serverPassword: "process-secret",
       baseEnv: {
-        PATH: "/usr/bin",
-      },
-    });
-
-    expect(env.OPENCODE_CONFIG_CONTENT).toBeUndefined();
-    expect(env.PATH).toBe("/usr/bin");
-  });
-
-  it("preserves an explicitly configured config-content environment value", () => {
-    const env = buildOpenCodeServerProcessEnv({
-      baseEnv: {
-        OPENCODE_CONFIG_CONTENT: '{"provider":{"openai":{}}}',
-      },
-    });
-
-    expect(env.OPENCODE_CONFIG_CONTENT).toBe('{"provider":{"openai":{}}}');
-  });
-
-  it("isolates managed OpenCode state and removes host provider credentials", () => {
-    const env = buildOpenCodeServerProcessEnv({
-      managedRootDir: "/tmp/djl/opencode",
-      serverPassword: "process-local-secret",
-      baseEnv: {
-        PATH: "/usr/bin",
         HOME: "/Users/example",
-        OPENAI_API_KEY: "sk-host-openai",
-        ANTHROPIC_API_KEY: "sk-host-anthropic",
-        AWS_PROFILE: "company-production",
-        AWS_ACCESS_KEY_ID: "host-access-key",
-        GOOGLE_APPLICATION_CREDENTIALS: "/host/google.json",
-        XDG_DATA_HOME: "/host/data",
-        OPENCODE_CONFIG_CONTENT: '{"provider":{"openai":{"options":{"apiKey":"host"}}}}',
+        XDG_DATA_HOME: "/shared/data",
+        OPENAI_API_KEY: "shared",
+        OPENCODE_CONFIG: "/shared/config.json",
+        OPENCODE_SERVER_USERNAME: "custom-user",
+        DJL_MANAGED_AUTH: "1",
       },
     });
-
     expect(env).toMatchObject({
-      PATH: "/usr/bin",
       HOME: "/Users/example",
-      XDG_DATA_HOME: "/tmp/djl/opencode/data",
-      XDG_CONFIG_HOME: "/tmp/djl/opencode/config",
-      XDG_CACHE_HOME: "/tmp/djl/opencode/cache",
-      XDG_STATE_HOME: "/tmp/djl/opencode/state",
-      DJL_MANAGED_AUTH: "1",
-      OPENCODE_SERVER_PASSWORD: "process-local-secret",
-      OPENCODE_ENABLE_EXA: "true",
-      OPENCODE_WEBSEARCH_PROVIDER: "exa",
+      XDG_DATA_HOME: "/shared/data",
+      OPENAI_API_KEY: "shared",
+      OPENCODE_CONFIG: "/shared/config.json",
+      OPENCODE_SERVER_PASSWORD: "process-secret",
+      OPENCODE_SERVER_USERNAME: "opencode",
     });
-    expect(env.OPENAI_API_KEY).toBeUndefined();
-    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
-    expect(env.AWS_PROFILE).toBeUndefined();
-    expect(env.AWS_ACCESS_KEY_ID).toBeUndefined();
-    expect(env.GOOGLE_APPLICATION_CREDENTIALS).toBeUndefined();
-    expect(env.OPENCODE_CONFIG_CONTENT).toBeUndefined();
+    expect(env.DJL_MANAGED_AUTH).toBeUndefined();
+    expect(env.XDG_CONFIG_HOME).toBeUndefined();
   });
 });
 
 describe("buildOpenCodeProcessInvocation", () => {
-  it("runs vendored TypeScript through Bun during development", () => {
-    expect(
-      buildOpenCodeProcessInvocation(
-        "/repo/vendor/opencode/packages/opencode/src/index.ts",
-        ["serve", "--port", "4096"],
-        "/opt/bun/bin/bun",
-      ),
-    ).toEqual({
-      command: "/opt/bun/bin/bun",
-      args: [
-        "run",
-        "--conditions=browser",
-        "/repo/vendor/opencode/packages/opencode/src/index.ts",
-        "serve",
-        "--port",
-        "4096",
-      ],
-    });
-  });
-
-  it("executes packaged OpenCode binaries directly", () => {
-    expect(buildOpenCodeProcessInvocation("/app/resources/opencode", ["--version"])).toEqual({
-      command: "/app/resources/opencode",
+  it("executes installed CLI paths directly without a bundled TypeScript fallback", () => {
+    expect(buildOpenCodeProcessInvocation("/opt/OpenCode CLI/opencode", ["--version"])).toEqual({
+      command: "/opt/OpenCode CLI/opencode",
       args: ["--version"],
     });
   });
-
-  it("never asks Electron's Node runtime to execute Bun's run subcommand", () => {
-    const invocation = buildOpenCodeProcessInvocation(
-      "/repo/vendor/opencode/packages/opencode/src/index.ts",
-      ["--version"],
-      "/Applications/DJL (Dev).app/Contents/MacOS/Electron",
-      { BUN_INSTALL: "/Users/example/.bun" },
-    );
-
-    expect(invocation).toEqual({
-      command: "/Users/example/.bun/bin/bun",
-      args: [
-        "run",
-        "--conditions=browser",
-        "/repo/vendor/opencode/packages/opencode/src/index.ts",
-        "--version",
-      ],
-    });
+  it("preserves a Windows npm shim for the existing safe process launcher", () => {
+    expect(
+      buildOpenCodeProcessInvocation("C:\\Program Files\\OpenCode\\opencode.cmd", ["serve"]),
+    ).toEqual({ command: "C:\\Program Files\\OpenCode\\opencode.cmd", args: ["serve"] });
   });
 });
 
 describe("resolveDjlOpenCodeBinaryPath", () => {
-  it("prefers DJL's prepared development binary when no explicit path is configured", () => {
-    expect(
-      resolveDjlOpenCodeBinaryPath(
-        {},
-        {
-          repoRoot: "/repo",
-          platform: "darwin",
-          arch: "arm64",
-          pathExists: (path) => path === "/repo/.cache/djl/opencode/darwin-arm64/opencode",
-        },
-      ),
-    ).toBe("/repo/.cache/djl/opencode/darwin-arm64/opencode");
+  it("honors a configured executable before PATH", () => {
+    expect(resolveDjlOpenCodeBinaryPath(" /opt/OpenCode CLI/opencode ")).toBe(
+      "/opt/OpenCode CLI/opencode",
+    );
+  });
+  it("uses the installed PATH command when no executable is configured", () => {
+    expect(resolveDjlOpenCodeBinaryPath()).toBe("opencode");
+    expect(resolveDjlOpenCodeBinaryPath("  ")).toBe("opencode");
   });
 });
 
@@ -519,9 +451,10 @@ describe("OpenCodeRuntime local server pool", () => {
     }
   });
 
-  it("starts a fresh managed server after an atomic credential revision", async () => {
+  it("starts a fresh server after shared CLI credentials change", async () => {
     const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
     const managedRootDir = await mkdtemp(join(tmpdir(), "synara-opencode-auth-"));
+    vi.stubEnv("XDG_DATA_HOME", join(managedRootDir, "data"));
     const authDir = join(managedRootDir, "data", "opencode");
     const authPath = join(authDir, "auth.json");
     await mkdir(authDir, { recursive: true });
@@ -557,7 +490,39 @@ describe("OpenCodeRuntime local server pool", () => {
         ).pipe(Effect.provide(openCodeRuntimePoolTestLayer(state))),
       );
     } finally {
+      vi.unstubAllEnvs();
       await rm(managedRootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("starts a new runtime after the installed executable changes without stopping active users", async () => {
+    const root = await mkdtemp(join(tmpdir(), "djl-cli-update-"));
+    const binaryPath = join(root, "opencode");
+    const state = { spawnUrls: [] as string[], killUrls: [] as string[] };
+    await writeFile(binaryPath, "old-cli");
+    try {
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const runtime = yield* OpenCodeRuntime;
+            const firstScope = yield* Scope.make();
+            const secondScope = yield* Scope.make();
+            const first = yield* runtime
+              .connectToOpenCodeServer({ binaryPath })
+              .pipe(Effect.provideService(Scope.Scope, firstScope));
+            yield* Effect.promise(() => writeFile(binaryPath, "new-cli-version"));
+            const second = yield* runtime
+              .connectToOpenCodeServer({ binaryPath })
+              .pipe(Effect.provideService(Scope.Scope, secondScope));
+            expect(first.url).not.toBe(second.url);
+            expect(state.killUrls).toEqual([]);
+            yield* Scope.close(firstScope, Exit.void);
+            yield* Scope.close(secondScope, Exit.void);
+          }),
+        ).pipe(Effect.provide(openCodeRuntimePoolTestLayer(state))),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 
@@ -978,5 +943,19 @@ describe("parseOpenCodeCredentialProviderIDs", () => {
 }`);
 
     expect(providerIDs).toEqual(["openai"]);
+  });
+});
+
+describe("shared OpenCode credential paths", () => {
+  it("uses XDG data on every platform even when Windows APPDATA is present", () => {
+    vi.stubEnv("XDG_DATA_HOME", join(tmpdir(), "shared-cli-data"));
+    vi.stubEnv("APPDATA", join(tmpdir(), "legacy-windows-data"));
+    try {
+      expect(resolveOpenCodeAuthFilePath({ home: tmpdir() })).toBe(
+        join(tmpdir(), "shared-cli-data", "opencode", "auth.json"),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -284,35 +284,20 @@ export function ContextRailField({ t }: { t: Content }) {
     // Read all layout metrics before writing the entry CSS variables so the
     // browser can keep this scroll frame in one read phase and one write phase.
     const travel = Math.max(1, root.offsetHeight - viewportHeight);
-    const entryProgress = clamp(
-      1 - rect.top / viewportHeight,
-      0,
-      1,
-    );
+    const entryProgress = clamp(1 - rect.top / viewportHeight, 0, 1);
     root.style.setProperty("--crf-entry", entryProgress.toFixed(4));
-    root.style.setProperty(
-      "--crf-entry-clip",
-      `${12 + entryProgress * 140}%`,
+    root.style.setProperty("--crf-entry-clip", `${12 + entryProgress * 140}%`);
+    root.style.setProperty("--crf-entry-scale", (1.028 - entryProgress * 0.028).toFixed(4));
+    root.style.setProperty("--crf-entry-y", `${(1 - entryProgress) * 22}px`);
+    root.style.setProperty("--crf-entry-blur", `${(1 - entryProgress) * 2.4}px`);
+    root.style.setProperty("--crf-entry-opacity", (0.34 + entryProgress * 0.66).toFixed(4));
+    const nextProgress = clamp(
+      (-rect.top / travel) * (capabilities.length - 1),
+      0,
+      capabilities.length - 1,
     );
-    root.style.setProperty(
-      "--crf-entry-scale",
-      (1.028 - entryProgress * 0.028).toFixed(4),
-    );
-    root.style.setProperty(
-      "--crf-entry-y",
-      `${(1 - entryProgress) * 22}px`,
-    );
-    root.style.setProperty(
-      "--crf-entry-blur",
-      `${(1 - entryProgress) * 2.4}px`,
-    );
-    root.style.setProperty(
-      "--crf-entry-opacity",
-      (0.34 + entryProgress * 0.66).toFixed(4),
-    );
-    const nextProgress = clamp((-rect.top / travel) * (capabilities.length - 1), 0, capabilities.length - 1);
     const nextIndex = clamp(Math.round(nextProgress), 0, capabilities.length - 1);
-    setProgress((current) => Math.abs(current - nextProgress) > 0.002 ? nextProgress : current);
+    setProgress((current) => (Math.abs(current - nextProgress) > 0.002 ? nextProgress : current));
     if (nextIndex !== activeRef.current) {
       activeRef.current = nextIndex;
       setActiveIndex(nextIndex);
@@ -346,24 +331,29 @@ export function ContextRailField({ t }: { t: Content }) {
   }, [updateFromScroll]);
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("djl:capability-active", {
-      detail: { id: active.anchor },
-    }));
+    window.dispatchEvent(
+      new CustomEvent("djl:capability-active", {
+        detail: { id: active.anchor },
+      }),
+    );
   }, [active.anchor]);
 
-  const scrollToIndex = useCallback((index: number) => {
-    const root = rootRef.current;
-    if (!root) return;
-    const safeIndex = clamp(index, 0, capabilities.length - 1);
-    wheelTargetRef.current = safeIndex;
-    const rootTop = window.scrollY + root.getBoundingClientRect().top;
-    const travel = Math.max(0, root.offsetHeight - window.innerHeight);
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({
-      top: rootTop + (travel * safeIndex) / (capabilities.length - 1),
-      behavior: reduceMotion ? "auto" : "smooth",
-    });
-  }, [capabilities.length]);
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const root = rootRef.current;
+      if (!root) return;
+      const safeIndex = clamp(index, 0, capabilities.length - 1);
+      wheelTargetRef.current = safeIndex;
+      const rootTop = window.scrollY + root.getBoundingClientRect().top;
+      const travel = Math.max(0, root.offsetHeight - window.innerHeight);
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({
+        top: rootTop + (travel * safeIndex) / (capabilities.length - 1),
+        behavior: reduceMotion ? "auto" : "smooth",
+      });
+    },
+    [capabilities.length],
+  );
 
   useEffect(() => {
     wheelTargetRef.current = activeIndex;
@@ -391,10 +381,10 @@ export function ContextRailField({ t }: { t: Content }) {
 
     const onWheel = (event: WheelEvent) => {
       if (
-        !desktopPointer.matches
-        || event.ctrlKey
-        || event.metaKey
-        || Math.abs(event.deltaX) > Math.abs(event.deltaY)
+        !desktopPointer.matches ||
+        event.ctrlKey ||
+        event.metaKey ||
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
       ) {
         return;
       }
@@ -422,11 +412,12 @@ export function ContextRailField({ t }: { t: Content }) {
         return;
       }
 
-      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
-        ? 16
-        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-          ? window.innerHeight
-          : 1;
+      const unit =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? window.innerHeight
+            : 1;
       const delta = event.deltaY * unit;
       if (Math.abs(delta) < 0.1) return;
 
@@ -460,32 +451,35 @@ export function ContextRailField({ t }: { t: Content }) {
     };
   }, [capabilities.length, scrollToIndex]);
 
-  const selectFromScene = useCallback((index: number) => {
-    const root = rootRef.current;
-    if (!root) return;
-    const safeIndex = clamp(index, 0, capabilities.length - 1);
-    wheelTargetRef.current = safeIndex;
-    const rootTop = window.scrollY + root.getBoundingClientRect().top;
-    const travel = Math.max(0, root.offsetHeight - window.innerHeight);
+  const selectFromScene = useCallback(
+    (index: number) => {
+      const root = rootRef.current;
+      if (!root) return;
+      const safeIndex = clamp(index, 0, capabilities.length - 1);
+      wheelTargetRef.current = safeIndex;
+      const rootTop = window.scrollY + root.getBoundingClientRect().top;
+      const travel = Math.max(0, root.offsetHeight - window.innerHeight);
 
-    activeRef.current = safeIndex;
-    setActiveIndex(safeIndex);
-    setProgress(safeIndex);
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${window.location.search}#${capabilities[safeIndex].anchor}`,
-    );
+      activeRef.current = safeIndex;
+      setActiveIndex(safeIndex);
+      setProgress(safeIndex);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}#${capabilities[safeIndex].anchor}`,
+      );
 
-    // A physical drop must settle immediately. Native smooth scrolling can
-    // keep a wheel/pointer gesture alive after release and unexpectedly return
-    // the page to the hero, so scene interactions use an atomic jump while
-    // header/keyboard navigation retains the cinematic smooth transition.
-    window.scrollTo({
-      top: rootTop + (travel * safeIndex) / (capabilities.length - 1),
-      behavior: "auto",
-    });
-  }, [capabilities]);
+      // A physical drop must settle immediately. Native smooth scrolling can
+      // keep a wheel/pointer gesture alive after release and unexpectedly return
+      // the page to the hero, so scene interactions use an atomic jump while
+      // header/keyboard navigation retains the cinematic smooth transition.
+      window.scrollTo({
+        top: rootTop + (travel * safeIndex) / (capabilities.length - 1),
+        behavior: "auto",
+      });
+    },
+    [capabilities],
+  );
 
   useEffect(() => {
     const onSelect = (event: Event) => {
@@ -557,18 +551,21 @@ export function ContextRailField({ t }: { t: Content }) {
     };
   }, [selectFromScene]);
 
-  const handleDownload = useCallback((platform: Platform) => {
-    const url = releaseUrls[platform];
-    if (url) {
-      window.location.assign(url);
-      return;
-    }
-    setNotice(
-      isZh
-        ? `${platform === "mac" ? "macOS" : "Windows"} 下载包正在接入发布通道。`
-        : `${platform === "mac" ? "macOS" : "Windows"} release package is being connected.`,
-    );
-  }, [isZh]);
+  const handleDownload = useCallback(
+    (platform: Platform) => {
+      const url = releaseUrls[platform];
+      if (url) {
+        window.location.assign(url);
+        return;
+      }
+      setNotice(
+        isZh
+          ? `${platform === "mac" ? "macOS" : "Windows"} 下载包正在接入发布通道。`
+          : `${platform === "mac" ? "macOS" : "Windows"} release package is being connected.`,
+      );
+    },
+    [isZh],
+  );
 
   const handleStageKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (["ArrowDown", "ArrowRight", "PageDown"].includes(event.key)) {
@@ -608,7 +605,11 @@ export function ContextRailField({ t }: { t: Content }) {
         className="crf-stage"
         tabIndex={0}
         onKeyDown={handleStageKeyDown}
-        aria-label={isZh ? "滚动或使用方向键切换六项能力" : "Scroll or use arrow keys to move through six capabilities"}
+        aria-label={
+          isZh
+            ? "滚动或使用方向键切换六项能力"
+            : "Scroll or use arrow keys to move through six capabilities"
+        }
       >
         <div className="crf-studio-light" aria-hidden="true" />
 
@@ -623,14 +624,23 @@ export function ContextRailField({ t }: { t: Content }) {
         </div>
 
         <p className="crf-live" aria-live="polite">
-          {active.signal} · {isZh ? `第 ${activeIndex + 1} 项能力` : `capability ${activeIndex + 1}`}
+          {active.signal} ·{" "}
+          {isZh ? `第 ${activeIndex + 1} 项能力` : `capability ${activeIndex + 1}`}
         </p>
 
         {notice && (
           <div className="crf-notice" role="status">
-            <span><Download aria-hidden="true" /></span>
+            <span>
+              <Download aria-hidden="true" />
+            </span>
             <p>{notice}</p>
-            <button type="button" onClick={() => setNotice(null)} aria-label={isZh ? "关闭通知" : "Close notification"}><X /></button>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              aria-label={isZh ? "关闭通知" : "Close notification"}
+            >
+              <X />
+            </button>
           </div>
         )}
       </div>

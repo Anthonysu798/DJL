@@ -52,11 +52,6 @@ describe("getDropZoneFromPointer", () => {
   });
 
   it("chooses the nearest allowed edge when some directions are disabled", () => {
-    const onlyVertical = (zone: "top" | "bottom" | "left" | "right") =>
-      zone === "top" || zone === "bottom";
-    const onlyHorizontal = (zone: "top" | "bottom" | "left" | "right") =>
-      zone === "left" || zone === "right";
-
     expect(getDropZoneFromPointer(RECT, 5, 55, onlyVertical)).toBe("bottom");
     expect(getDropZoneFromPointer(RECT, 60, 5, onlyHorizontal)).toBe("right");
   });
@@ -100,3 +95,9 @@ describe("isThreadDragPayloadAllowed", () => {
     ).toBe(true);
   });
 });
+
+const onlyHorizontal = (zone: "top" | "bottom" | "left" | "right") =>
+  zone === "left" || zone === "right";
+
+const onlyVertical = (zone: "top" | "bottom" | "left" | "right") =>
+  zone === "top" || zone === "bottom";

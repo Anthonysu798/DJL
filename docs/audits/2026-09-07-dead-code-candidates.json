@@ -1,0 +1,200 @@
+[
+  {
+    "file": "apps/server/src/git/Layers/GitCore.ts",
+    "line": 673,
+    "message": "Parameter 'cwd' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/hooks/useThreadActivationController.ts",
+    "line": 57,
+    "message": "Variable 'openChatThreadPage' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/hooks/useThreadActivationController.ts",
+    "line": 58,
+    "message": "Variable 'openTerminalThreadPage' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/hooks/useThreadActivationController.ts",
+    "line": 69,
+    "message": "Variable 'terminalStateByThreadId' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/components/ChatView.browser.tsx",
+    "line": 508,
+    "message": "Function 'getThreadDetailFromFixtureSnapshot' is declared but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/components/DiffPanelFileJumpMenu.tsx",
+    "line": 38,
+    "message": "Variable 't' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/theme/theme.logic.ts",
+    "line": 685,
+    "message": "Variable 'sidebarRaisedSurface' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/routes/_chat.settings.tsx",
+    "line": 678,
+    "message": "Variable 'syncServerShellSnapshot' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/routes/_chat.settings.tsx",
+    "line": 2628,
+    "message": "Variable 'renderModelsPanel' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/routes/_chat.settings.tsx",
+    "line": 2834,
+    "message": "Variable 'renderProvidersPanel' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/keybindings.ts",
+    "line": 724,
+    "message": "Parameter 'platform' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/components/ChatView.tsx",
+    "line": 4164,
+    "message": "Variable 'onOpenDiff' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/rollout-watch.js",
+    "line": 353,
+    "message": "Parameter 'lookbackMs' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/rollout-watch.js",
+    "line": 354,
+    "message": "Parameter 'now' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/desktop/src/main.ts",
+    "line": 976,
+    "message": "Function 'resolveDiagnosticVersion' is declared but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/web/src/components/kanban/KanbanColumn.tsx",
+    "line": 51,
+    "message": "Variable 't' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/git-handler.js",
+    "line": 2737,
+    "message": "Parameter 'cwd' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/server/src/orchestration/Layers/ProviderCommandReactor.test.ts",
+    "line": 3825,
+    "message": "Variable 'now' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/electron-backend-rpc.js",
+    "line": 199,
+    "message": "Catch parameter 'error' is caught but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/electron-backend-rpc.js",
+    "line": 221,
+    "message": "Catch parameter 'error' is caught but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/landing/Demo/script.js",
+    "line": 5,
+    "message": "Variable 'sceneFrame' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/secure-device-state.js",
+    "line": 108,
+    "message": "Parameter 'persist' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/desktop-ipc-conversation-projector.js",
+    "line": 804,
+    "message": "Variable 'type' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/desktop-ipc-conversation-projector.js",
+    "line": 804,
+    "message": "Variable 'id' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/desktop-ipc-conversation-projector.js",
+    "line": 804,
+    "message": "Variable 'status' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/codex-desktop-refresher.js",
+    "line": 549,
+    "message": "Parameter 'platform' is declared but never used. Unused parameters should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/bridge.js",
+    "line": 2757,
+    "message": "Catch parameter 'error' is caught but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/remote-gateway/src/bridge.js",
+    "line": 3333,
+    "message": "Variable 'method' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/server/src/provider/Layers/ProviderHealth.test.ts",
+    "line": 24,
+    "message": "Identifier 'checkOpenCodeProviderStatus' is imported but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/server/src/provider/Layers/ProviderHealth.test.ts",
+    "line": 175,
+    "message": "Variable 'cachedReadyCodexStatus' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/server/src/provider/Layers/ProviderHealth.ts",
+    "line": 100,
+    "message": "Type 'ProviderMaintenanceCapabilities' is imported but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/server/src/provider/Layers/ProviderHealth.ts",
+    "line": 141,
+    "message": "Function 'isOpenCodeNativeCommandPath' is declared but never used.",
+    "disposition": "Review required; not automatically safe to delete."
+  },
+  {
+    "file": "apps/server/src/provider/Layers/ProviderHealth.ts",
+    "line": 2049,
+    "message": "Variable 'resolveClaudeSubscription' is declared but never used. Unused variables should start with a '_'.",
+    "disposition": "Review required; not automatically safe to delete."
+  }
+]

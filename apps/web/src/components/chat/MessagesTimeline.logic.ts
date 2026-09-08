@@ -231,21 +231,6 @@ function mergeTurnDiffSummaries(
   existing: TurnDiffSummary | undefined,
   next: TurnDiffSummary,
 ): TurnDiffSummary {
-  const checkpointTurnCountsFor = (summary: TurnDiffSummary): number[] => {
-    if (
-      summary.files.length === 0 ||
-      summary.status === "missing" ||
-      summary.status === "error" ||
-      summary.checkpointRef === undefined ||
-      summary.checkpointRef.startsWith("provider-diff:")
-    ) {
-      return [];
-    }
-    return (
-      summary.checkpointTurnCounts ??
-      (summary.checkpointTurnCount === undefined ? [] : [summary.checkpointTurnCount])
-    );
-  };
   if (!existing) {
     const checkpointTurnCounts = checkpointTurnCountsFor(next);
     return { ...next, checkpointTurnCounts };
@@ -326,11 +311,6 @@ export function deriveMessagesTimelineRows(input: {
   const durationStartByMessageId = computeMessageDurationStart(timelineMessages);
   const terminalAssistantMessageIds = deriveTerminalAssistantMessageIds(timelineMessages);
   let pendingWorkGroup: Extract<MessagesTimelineRow, { kind: "work" }> | null = null;
-
-  const groupedEntriesEqual = (
-    left: ReadonlyArray<WorkLogEntry>,
-    right: ReadonlyArray<WorkLogEntry>,
-  ) => left.length === right.length && left.every((entry, index) => entry === right[index]);
 
   const appendWorkEntriesToPreviousAssistant = (
     groupedEntries: WorkLogEntry[],
@@ -549,20 +529,6 @@ function collapseSettledTurns(
     ? findTailTerminalAssistantMessageId(rows, terminalAssistantMessageIds)
     : null;
 
-  const collectWorkItems = (entries: ReadonlyArray<WorkLogEntry>, into: CollapsedTurnItem[]) => {
-    for (const entry of entries) {
-      into.push({ kind: "work", id: entry.id, entry });
-    }
-  };
-
-  const earliestTimestamp = (a: string, b: string): string => {
-    const aMs = Date.parse(a);
-    const bMs = Date.parse(b);
-    if (Number.isNaN(aMs)) return b;
-    if (Number.isNaN(bMs)) return a;
-    return bMs < aMs ? b : a;
-  };
-
   for (let pass = rows.length - 1; pass >= 0; pass -= 1) {
     const row = rows[pass]!;
     if (row.kind !== "message" || row.message.role !== "assistant") continue;
@@ -643,7 +609,7 @@ function collapseSettledTurns(
       delete row.inlineWorkEntries;
       delete row.inlineWorkGroupId;
 
-      for (const index of [...foldIndices].sort((a, b) => b - a)) {
+      for (const index of foldIndices.toSorted((a, b) => b - a)) {
         rows.splice(index, 1);
       }
       pass -= foldIndices.length;
@@ -835,15 +801,6 @@ function collapsedTurnItemsEqual(
   });
 }
 
-function shallowEqualEntryArray<T>(
-  left: ReadonlyArray<T> | undefined,
-  right: ReadonlyArray<T> | undefined,
-) {
-  if (left === right) return true;
-  if (!left || !right) return false;
-  return left.length === right.length && left.every((entry, index) => entry === right[index]);
-}
-
 function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean {
   if (a.kind !== b.kind || a.id !== b.id) return false;
 
@@ -895,3 +852,38 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
     }
   }
 }
+
+const earliestTimestamp = (a: string, b: string): string => {
+  const aMs = Date.parse(a);
+  const bMs = Date.parse(b);
+  if (Number.isNaN(aMs)) return b;
+  if (Number.isNaN(bMs)) return a;
+  return bMs < aMs ? b : a;
+};
+
+const collectWorkItems = (entries: ReadonlyArray<WorkLogEntry>, into: CollapsedTurnItem[]) => {
+  for (const entry of entries) {
+    into.push({ kind: "work", id: entry.id, entry });
+  }
+};
+
+const groupedEntriesEqual = (
+  left: ReadonlyArray<WorkLogEntry>,
+  right: ReadonlyArray<WorkLogEntry>,
+) => left.length === right.length && left.every((entry, index) => entry === right[index]);
+
+const checkpointTurnCountsFor = (summary: TurnDiffSummary): number[] => {
+  if (
+    summary.files.length === 0 ||
+    summary.status === "missing" ||
+    summary.status === "error" ||
+    summary.checkpointRef === undefined ||
+    summary.checkpointRef.startsWith("provider-diff:")
+  ) {
+    return [];
+  }
+  return (
+    summary.checkpointTurnCounts ??
+    (summary.checkpointTurnCount === undefined ? [] : [summary.checkpointTurnCount])
+  );
+};

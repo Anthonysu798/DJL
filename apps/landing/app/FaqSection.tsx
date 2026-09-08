@@ -7,12 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Content, Locale } from "./content";
 import { GITHUB_REPOSITORY_URL } from "./lib/githubDesktopDownloads";
 import { localeHref } from "./localeHref";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "./ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import "./faq-section.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -52,8 +47,7 @@ export function FaqSection({ t, locale }: { t: Content; locale: Locale }) {
           <p className="lp-eyebrow">{faq.eyebrow}</p>
           <h2 className="lp-faq-title">{faq.title}</h2>
           <p className="lp-faq-support">
-            {faq.moreQuestions}{" "}
-            <a href={localeHref("/docs", locale)}>{faq.guideLink}</a>
+            {faq.moreQuestions} <a href={localeHref("/docs", locale)}>{faq.guideLink}</a>
             {" · "}
             <a href={`${GITHUB_REPOSITORY_URL}/issues`} target="_blank" rel="noreferrer">
               {faq.githubLink}

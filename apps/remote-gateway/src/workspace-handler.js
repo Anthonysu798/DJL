@@ -555,7 +555,7 @@ function previewPixelDimensionCandidates(maxPixelDimension) {
     }
   }
 
-  return Array.from(new Set(dimensions)).sort((a, b) => b - a);
+  return Array.from(new Set(dimensions)).toSorted((a, b) => b - a);
 }
 
 function usesNativeImagePreview() {
@@ -970,8 +970,8 @@ function analyzeUnifiedPatch(rawPatch) {
   }
 
   return {
-    affectedFiles: [...new Set(affectedFiles)].sort(),
-    unsupportedReasons: [...unsupportedReasons].sort(),
+    affectedFiles: [...new Set(affectedFiles)].toSorted(),
+    unsupportedReasons: [...unsupportedReasons].toSorted(),
   };
 }
 
@@ -1094,7 +1094,7 @@ async function findStagedTargetedFiles(cwd, affectedFiles) {
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
-      .sort();
+      .toSorted();
   } catch {
     return [];
   }
@@ -1282,7 +1282,7 @@ function isIndexMismatch(result) {
 }
 
 function uniqueSorted(values) {
-  return [...new Set(values.filter(Boolean))].sort();
+  return [...new Set(values.filter(Boolean))].toSorted();
 }
 
 async function runGitApply(cwd, args, patchText) {

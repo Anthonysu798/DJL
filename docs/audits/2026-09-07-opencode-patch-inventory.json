@@ -1,0 +1,30 @@
+{
+  "upstreamCommit": "b1fc8113948b518835c2a39ece49553cffe9b30c",
+  "archiveSha256": "9fd7fbbf2babc616228a17b4883d186e31bbbcbe7035e6522a6493bbbf6216ed",
+  "method": "Compare regular files and symlink targets against the pinned upstream commit archive; normalize supported text files with repository oxfmt; manually inspect remaining differences. Formatting-only classification is not a semantic equivalence proof.",
+  "byteDifferentRegularFiles": 3418,
+  "substantivelyChangedFiles": [
+    "packages/opencode/script/build.ts",
+    "packages/opencode/src/provider/provider.ts",
+    "packages/opencode/src/session/llm.ts",
+    "packages/opencode/src/session/llm/request.ts",
+    "packages/opencode/src/session/prompt.ts",
+    "packages/opencode/src/session/tools.ts",
+    "packages/opencode/src/tool/websearch.ts",
+    "packages/opencode/test/tool/websearch.test.ts",
+    "packages/schema/src/v1/session.ts",
+    "packages/sdk/js/src/v2/gen/types.gen.ts"
+  ],
+  "addedFiles": [
+    "DJL_UPSTREAM.md",
+    "packages/opencode/src/session/llm/local-model-prompt.ts",
+    "packages/opencode/src/session/llm/local-tool-call-middleware.ts",
+    "packages/opencode/test/session/chat-only-model-tools.test.ts",
+    "packages/opencode/test/session/local-model-prompt.test.ts",
+    "packages/opencode/test/session/local-tool-call-middleware.test.ts",
+    "packages/opencode/test/session/tool-visibility.test.ts"
+  ],
+  "removedFiles": [],
+  "changedSymlinks": [],
+  "formattingOnlyFiles": 3408
+}

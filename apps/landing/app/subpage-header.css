@@ -56,7 +56,9 @@
   text-decoration: none;
   padding: 6px 10px;
   border-radius: 9999px;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .sph-link:hover {
@@ -96,7 +98,9 @@
   height: 32px;
   border-radius: 9999px;
   color: var(--lp-charcoal);
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .sph-github:hover {

@@ -1,0 +1,116 @@
+.djl-provider-update-toast {
+  --notification-fg: var(--foreground);
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  color: var(--foreground);
+  background: linear-gradient(
+    145deg,
+    color-mix(
+      in srgb,
+      var(--color-icon-accent) 4%,
+      var(--color-background-elevated-primary-opaque)
+    ),
+    var(--color-background-elevated-primary-opaque) 65%
+  );
+  box-shadow:
+    0 16px 44px -12px #0006,
+    0 3px 10px -4px #0003,
+    inset 0 1px 0 #ffffff08;
+  font-family: "Geist Variable", var(--font-ui-family);
+  -webkit-app-region: no-drag;
+}
+
+.djl-update-content {
+  position: relative;
+  padding: 18px;
+  pointer-events: auto;
+}
+.djl-update-content[data-collapsed-hidden]:not([data-expanded]) {
+  opacity: 0;
+  pointer-events: none;
+}
+.djl-update-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-right: 20px;
+}
+.djl-update-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.djl-update-title {
+  margin: 1px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.djl-update-description {
+  margin-top: 5px;
+  max-height: 160px;
+  overflow-y: auto;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.djl-update-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding-top: 8px;
+}
+.djl-update-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+}
+.djl-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  border-top: 1px solid var(--color-border-light);
+  padding-top: 13px;
+}
+.djl-update-actions > * {
+  flex: 1;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: 12px;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+.djl-update-actions > *:active {
+  transform: translateY(1px);
+}
+.djl-provider-update-toast [data-slot="toast-close"] {
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+.djl-provider-update-toast button {
+  font-family: inherit;
+}
+@media (prefers-reduced-motion: reduce) {
+  .djl-provider-update-toast,
+  .djl-update-actions > * {
+    transition: none !important;
+  }
+}

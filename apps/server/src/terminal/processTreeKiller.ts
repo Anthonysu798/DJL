@@ -81,7 +81,7 @@ export function collectDescendantProcesses(
   childrenByParentPid: ProcessChildrenMap,
 ): CapturedProcess[] {
   const descendants: CapturedProcess[] = [];
-  const stack = [...(childrenByParentPid.get(parentPid) ?? [])].reverse();
+  const stack = [...(childrenByParentPid.get(parentPid) ?? [])].toReversed();
   const visited = new Set<number>([parentPid]);
 
   while (stack.length > 0 && descendants.length < POSIX_TREE_WALK_MAX_VISITED) {
@@ -93,7 +93,7 @@ export function collectDescendantProcesses(
     descendants.push(child);
 
     const nestedChildren = childrenByParentPid.get(child.pid) ?? [];
-    for (const nestedChild of [...nestedChildren].reverse()) {
+    for (const nestedChild of [...nestedChildren].toReversed()) {
       stack.push(nestedChild);
     }
   }

@@ -2,7 +2,6 @@ const root = document.documentElement;
 const particleCanvas = document.getElementById("particleCanvas");
 const ctx = particleCanvas.getContext("2d");
 const sceneMotion = document.getElementById("sceneMotion");
-const sceneFrame = document.getElementById("sceneFrame");
 const giantWord = document.getElementById("giantWord");
 const bootScreen = document.getElementById("bootScreen");
 

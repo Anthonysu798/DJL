@@ -249,11 +249,12 @@ function droidModelDescriptor(
     slug: model.value,
     name: model.name,
     ...(model.description ? { description: model.description } : {}),
-    supportedReasoningEfforts: efforts.map((effort) => ({
-      value: effort.value,
-      label: effort.name,
-      ...(effort.description ? { description: effort.description } : {}),
-    })),
+    supportedReasoningEfforts: efforts.map((effort) =>
+      Object.assign(
+        { value: effort.value, label: effort.name },
+        effort.description ? { description: effort.description } : {},
+      ),
+    ),
     ...(reasoning?.currentValue ? { defaultReasoningEffort: reasoning.currentValue } : {}),
     supportsFastMode: false,
     supportsThinkingToggle: false,

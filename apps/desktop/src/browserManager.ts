@@ -378,7 +378,7 @@ export class DesktopBrowserManager {
         const requestHeaders = withRequestHeadersCaseInsensitive(details.requestHeaders, {
           "User-Agent": userAgent,
           ...(acceptLanguage ? { "Accept-Language": acceptLanguage } : {}),
-          ...(clientHints ?? {}),
+          ...clientHints,
         });
         callback({ requestHeaders });
       });
@@ -556,6 +556,7 @@ export class DesktopBrowserManager {
   }
 
   private closePopupWindowsWhere(shouldClose: (runtime: OAuthPopupRuntime) => boolean): void {
+    // oxlint-disable-next-line unicorn/no-useless-spread -- Closing a popup mutates the registry; newly opened popups must not join this iteration.
     for (const runtime of [...this.popupRuntimes.values()]) {
       if (shouldClose(runtime)) {
         this.closePopupRuntime(runtime);
@@ -1197,7 +1198,7 @@ export class DesktopBrowserManager {
       return await webContents.debugger.sendCommand(input.method, input.params ?? {});
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`CDP ${input.method} failed: ${error.message}`);
+        throw new Error(`CDP ${input.method} failed: ${error.message}`, { cause: error });
       }
       throw error;
     }
@@ -1360,7 +1361,7 @@ export class DesktopBrowserManager {
     const inactiveRuntimeTabIds = state.tabs
       .filter((tab) => tab.id !== activeTabId)
       .filter((tab) => this.runtimes.has(buildRuntimeKey(threadId, tab.id)))
-      .sort((left, right) => {
+      .toSorted((left, right) => {
         const leftKey = buildRuntimeKey(threadId, left.id);
         const rightKey = buildRuntimeKey(threadId, right.id);
         return (

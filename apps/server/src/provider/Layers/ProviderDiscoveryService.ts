@@ -226,12 +226,13 @@ const make = Effect.gen(function* () {
       const capabilities = adapter.getComposerCapabilities
         ? yield* adapter.getComposerCapabilities()
         : disabledCapabilitiesForProvider(parsed.provider);
-      // The unified Synara skills catalog backs skill discovery for every
-      // provider, including ones without native skill support.
+      // Portable skills remain available unless the adapter explicitly rejects skill metadata.
       return {
         ...capabilities,
-        supportsSkillMentions: true,
-        supportsSkillDiscovery: true,
+        supportsSkillMentions: adapter.capabilities?.supportsSkillMentions ?? true,
+        supportsSkillDiscovery: adapter.capabilities?.supportsSkillDiscovery ?? true,
+        supportsRuntimeModelList:
+          adapter.capabilities?.supportsRuntimeModelList ?? capabilities.supportsRuntimeModelList,
       };
     });
 

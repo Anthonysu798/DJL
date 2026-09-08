@@ -123,7 +123,7 @@ function findBridgeBrowserPartitionPaths(sourceProfilePath: string): string[] {
         FS.existsSync(Path.join(partitionPath, entryName)),
       ),
     )
-    .sort((left, right) => FS.statSync(right).mtimeMs - FS.statSync(left).mtimeMs);
+    .toSorted((left, right) => FS.statSync(right).mtimeMs - FS.statSync(left).mtimeMs);
 }
 
 /**
@@ -220,7 +220,7 @@ export function repairBrowserProfileFromBridgeManifest(
           }
         } catch (installError) {
           const rollbackErrors: unknown[] = [];
-          for (const entryName of installedSourceEntries.reverse()) {
+          for (const entryName of installedSourceEntries.toReversed()) {
             try {
               FS.rmSync(Path.join(targetPartitionPath, entryName), {
                 recursive: true,
@@ -241,9 +241,11 @@ export function repairBrowserProfileFromBridgeManifest(
             }
           }
           if (rollbackErrors.length > 0) {
+            // oxlint-disable-next-line eslint/preserve-caught-error -- Both install and rollback failures are retained in AggregateError.errors.
             throw new AggregateError(
               [installError, ...rollbackErrors],
               "Browser profile bridge repair and rollback failed",
+              { cause: installError },
             );
           }
           throw installError;

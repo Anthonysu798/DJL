@@ -8,6 +8,7 @@
    Framer Motion handles the pointer-parallax once we hand off to the hero.
    Reduced-motion users get the final awake frame, no pin, no scrub. */
 
+import NextImage from "next/image";
 import { useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -127,8 +128,16 @@ export function IntroStage({ boot, descend }: { boot: Content["boot"]; descend: 
       aria-label={boot.label}
     >
       <div className="intro-inner">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="intro-nebula" src="/img/nebula.jpg" alt="" aria-hidden="true" />
+        <NextImage
+          unoptimized
+          loading="eager"
+          width={512}
+          height={512}
+          className="intro-nebula"
+          src="/img/nebula.jpg"
+          alt=""
+          aria-hidden="true"
+        />
         <div className="intro-stars" aria-hidden="true" />
         <div className="intro-scrim" aria-hidden="true" />
 
