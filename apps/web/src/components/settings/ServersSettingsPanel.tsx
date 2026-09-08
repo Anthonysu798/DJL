@@ -93,13 +93,48 @@ export function ServersSettingsPanel() {
   const setPending = (id: string, action: ServerPendingAction) =>
     setPendingById((current) => ({ ...current, [id]: action }));
 
+  const refreshStats = useMutation({
+    mutationFn: (id: ServerId) => ensureNativeApi().servers.refreshStats({ id }),
+    onMutate: (id) => setPending(id, "refresh"),
+    onSuccess: (result, id) =>
+      queryClient.setQueryData<ServerListResult>(SERVERS_QUERY_KEY, (list) => ({
+        // eslint-disable-next-line oxc/no-map-spread -- Replace one record without mutating cached query data.
+        servers: (list?.servers ?? []).map((server) =>
+          server.id !== id
+            ? server
+            : result.ok
+              ? {
+                  ...server,
+                  lastStats: result.stats,
+                  lastTest: {
+                    at: result.stats.collectedAt,
+                    outcome: "ok" as const,
+                    ...(server.lastTest?.latencyMs !== undefined
+                      ? { latencyMs: server.lastTest.latencyMs }
+                      : {}),
+                  },
+                }
+              : { ...server, lastTest: result.test },
+        ),
+      })),
+    onError: (error) =>
+      toastManager.add({
+        type: "error",
+        title: settingsLoadErrorDetail(error, t("servers.errors.loadFailed")),
+      }),
+    onSettled: (_result, _error, id) => setPending(id, null),
+  });
+
   const testConnection = useMutation({
     mutationFn: (id: ServerId) => ensureNativeApi().servers.testConnection({ id }),
     onMutate: (id) => setPending(id, "test"),
-    onSuccess: (test, id) =>
+    onSuccess: (test, id) => {
       queryClient.setQueryData<ServerListResult>(SERVERS_QUERY_KEY, (list) =>
         withTest(list, id, test),
-      ),
+      );
+      // A reachable server immediately loads its stats; nobody wants a second click.
+      if (test.outcome === "ok") refreshStats.mutate(id);
+    },
     onError: (error) =>
       toastManager.add({
         type: "error",
@@ -117,6 +152,7 @@ export function ServersSettingsPanel() {
         withTest(list, id, test),
       );
       toastManager.add({ type: "success", title: t("servers.toasts.trusted") });
+      if (test.outcome === "ok") refreshStats.mutate(id);
     },
     onError: (error) =>
       toastManager.add({
@@ -124,32 +160,6 @@ export function ServersSettingsPanel() {
         title: settingsLoadErrorDetail(error, t("servers.errors.loadFailed")),
       }),
     onSettled: (_result, _error, { id }) => setPending(id, null),
-  });
-
-  const refreshStats = useMutation({
-    mutationFn: (id: ServerId) => ensureNativeApi().servers.refreshStats({ id }),
-    onMutate: (id) => setPending(id, "refresh"),
-    onSuccess: (result, id) =>
-      queryClient.setQueryData<ServerListResult>(SERVERS_QUERY_KEY, (list) => ({
-        // eslint-disable-next-line oxc/no-map-spread -- Replace one record without mutating cached query data.
-        servers: (list?.servers ?? []).map((server) =>
-          server.id !== id
-            ? server
-            : result.ok
-              ? {
-                  ...server,
-                  lastStats: result.stats,
-                  lastTest: { at: result.stats.collectedAt, outcome: "ok" as const },
-                }
-              : { ...server, lastTest: result.test },
-        ),
-      })),
-    onError: (error) =>
-      toastManager.add({
-        type: "error",
-        title: settingsLoadErrorDetail(error, t("servers.errors.loadFailed")),
-      }),
-    onSettled: (_result, _error, id) => setPending(id, null),
   });
 
   const save = useMutation({
@@ -162,6 +172,7 @@ export function ServersSettingsPanel() {
         replaceServer(list, record),
       );
       if (mode.mode === "create") {
+        testConnection.mutate(record.id);
         setJustAddedIds((current) => new Set(current).add(record.id));
         window.setTimeout(
           () =>

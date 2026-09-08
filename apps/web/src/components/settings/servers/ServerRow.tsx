@@ -10,8 +10,18 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { DisclosureRegion } from "~/components/ui/DisclosureRegion";
-import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
-import { CheckIcon, ChevronDownIcon, CopyIcon, EllipsisIcon, LoaderCircleIcon } from "~/lib/icons";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "~/components/ui/menu";
+import { CentralIcon } from "~/lib/central-icons";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  EllipsisIcon,
+  LoaderCircleIcon,
+  PencilIcon,
+  RefreshCwIcon,
+  ZapIcon,
+} from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 
@@ -252,8 +262,8 @@ export function ServerRow({
               <span
                 className={cn(
                   tone === "danger" && "text-destructive",
-                  tone === "warning" && "text-warning-foreground",
-                  tone === "success" && "text-success-foreground",
+                  tone === "warning" && "text-warning",
+                  tone === "success" && "text-success",
                 )}
               >
                 {statusLabel}
@@ -290,11 +300,26 @@ export function ServerRow({
             >
               <EllipsisIcon />
             </MenuTrigger>
-            <MenuPopup align="end" className="min-w-44">
-              <MenuItem onClick={onTest}>{t("servers.actions.test")}</MenuItem>
-              <MenuItem onClick={onRefresh}>{t("servers.actions.refresh")}</MenuItem>
-              <MenuItem onClick={onEdit}>{t("servers.actions.edit")}</MenuItem>
-              <MenuItem onClick={onRemove} className="text-destructive">
+            <MenuPopup align="end" className="min-w-52 p-1">
+              <MenuItem onClick={onTest} className="gap-2.5 px-2.5 py-2 text-[13px]">
+                <ZapIcon className="size-4 text-muted-foreground" />
+                {t("servers.actions.test")}
+              </MenuItem>
+              <MenuItem onClick={onRefresh} className="gap-2.5 px-2.5 py-2 text-[13px]">
+                <RefreshCwIcon className="size-4 text-muted-foreground" />
+                {t("servers.actions.refresh")}
+              </MenuItem>
+              <MenuItem onClick={onEdit} className="gap-2.5 px-2.5 py-2 text-[13px]">
+                <PencilIcon className="size-4 text-muted-foreground" />
+                {t("servers.actions.edit")}
+              </MenuItem>
+              <MenuSeparator className="my-1" />
+              <MenuItem
+                onClick={onRemove}
+                variant="destructive"
+                className="gap-2.5 px-2.5 py-2 text-[13px]"
+              >
+                <CentralIcon name="trash-can-simple" className="size-4" />
                 {t("servers.actions.remove")}
               </MenuItem>
             </MenuPopup>

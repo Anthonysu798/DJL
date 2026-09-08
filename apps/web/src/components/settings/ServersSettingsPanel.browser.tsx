@@ -92,6 +92,8 @@ const queryClient = () => new QueryClient({ defaultOptions: { queries: { retry: 
 async function mount(list: ServerListResult = { servers: [hk, fresh] }) {
   mocks.list.mockResolvedValue(list);
   mocks.listLocalKeys.mockResolvedValue({ keys: [] });
+  mocks.testConnection.mockResolvedValue({ at: now, outcome: "ok", latencyMs: 50 });
+  mocks.refreshStats.mockResolvedValue({ ok: true, stats: { collectedAt: now } });
   const i18n = createInstance();
   await i18n.use(initReactI18next).init({
     defaultNS: "common",
@@ -146,6 +148,7 @@ describe("ServersSettingsPanel", () => {
   });
 
   it("runs a connection test and shows the host key prompt, then trusts it", async () => {
+    await mount({ servers: [fresh] });
     mocks.testConnection.mockResolvedValue({
       at: now,
       outcome: "host-key-unknown",
@@ -155,7 +158,6 @@ describe("ServersSettingsPanel", () => {
       },
     });
     mocks.trustHostKey.mockResolvedValue({ at: now, outcome: "ok", latencyMs: 40 });
-    await mount({ servers: [fresh] });
     await page.getByRole("button", { name: /tokyo-db/ }).click();
     await page.getByRole("button", { name: "Test connection" }).click();
     await expect.element(page.getByRole("alert")).toBeVisible();
