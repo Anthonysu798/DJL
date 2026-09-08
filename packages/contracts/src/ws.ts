@@ -19,6 +19,15 @@ import {
   AutomationUpdateInput,
 } from "./automation";
 import {
+  EmptyServersInput,
+  ServerByIdInput,
+  ServerCreateInput,
+  ServerDeleteInput,
+  ServerImportApplyInput,
+  ServerTrustHostKeyInput,
+  ServerUpdateInput,
+} from "./servers";
+import {
   ClientOrchestrationCommand,
   OrchestrationEvent,
   OrchestrationImportThreadInput,
@@ -308,6 +317,19 @@ export const WS_METHODS = {
   aiDetectorClearCache: "aiDetector.clearCache",
   subscribeAiDetectorEvents: "aiDetector.subscribe",
 
+  // Server registry methods
+  serversList: "servers.list",
+  serversCreate: "servers.create",
+  serversUpdate: "servers.update",
+  serversDelete: "servers.delete",
+  serversTestConnection: "servers.testConnection",
+  serversTrustHostKey: "servers.trustHostKey",
+  serversRefreshStats: "servers.refreshStats",
+  serversImportPreview: "servers.importSshConfig.preview",
+  serversImportApply: "servers.importSshConfig.apply",
+  serversCheckCapabilities: "servers.checkCapabilities",
+  serversListLocalKeys: "servers.listLocalKeys",
+
   // Automation methods
   automationList: "automation.list",
   automationCreate: "automation.create",
@@ -512,6 +534,19 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.aiDetectorRemoveModel, AiDetectorRemoveModelInput),
   tagRequestBody(WS_METHODS.aiDetectorClearCache, Schema.Struct({})),
   tagRequestBody(WS_METHODS.subscribeAiDetectorEvents, Schema.Struct({})),
+
+  // Server registry methods
+  tagRequestBody(WS_METHODS.serversList, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversCreate, ServerCreateInput),
+  tagRequestBody(WS_METHODS.serversUpdate, ServerUpdateInput),
+  tagRequestBody(WS_METHODS.serversDelete, ServerDeleteInput),
+  tagRequestBody(WS_METHODS.serversTestConnection, ServerByIdInput),
+  tagRequestBody(WS_METHODS.serversTrustHostKey, ServerTrustHostKeyInput),
+  tagRequestBody(WS_METHODS.serversRefreshStats, ServerByIdInput),
+  tagRequestBody(WS_METHODS.serversImportPreview, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversImportApply, ServerImportApplyInput),
+  tagRequestBody(WS_METHODS.serversCheckCapabilities, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversListLocalKeys, EmptyServersInput),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),

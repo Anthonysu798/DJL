@@ -47,6 +47,22 @@ import type {
 } from "./automation";
 import type { AppLocale, AppLocalePreference } from "./locale";
 import type {
+  ServerByIdInput,
+  ServerCapabilities,
+  ServerConnectionTest,
+  ServerCreateInput,
+  ServerDeleteInput,
+  ServerImportApplyInput,
+  ServerImportApplyResult,
+  ServerImportPreviewResult,
+  ServerListLocalKeysResult,
+  ServerListResult,
+  ServerRecord,
+  ServerRefreshStatsResult,
+  ServerTrustHostKeyInput,
+  ServerUpdateInput,
+} from "./servers";
+import type {
   GitCheckoutInput,
   GitActionProgressEvent,
   GitCreateBranchInput,
@@ -778,6 +794,19 @@ export interface NativeApi {
     onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
     onShellEvent: (callback: (event: OrchestrationShellStreamItem) => void) => () => void;
     onThreadEvent: (callback: (event: OrchestrationThreadStreamItem) => void) => () => void;
+  };
+  servers: {
+    list: () => Promise<ServerListResult>;
+    create: (input: ServerCreateInput) => Promise<ServerRecord>;
+    update: (input: ServerUpdateInput) => Promise<ServerRecord>;
+    delete: (input: ServerDeleteInput) => Promise<void>;
+    testConnection: (input: ServerByIdInput) => Promise<ServerConnectionTest>;
+    trustHostKey: (input: ServerTrustHostKeyInput) => Promise<ServerConnectionTest>;
+    refreshStats: (input: ServerByIdInput) => Promise<ServerRefreshStatsResult>;
+    importPreview: () => Promise<ServerImportPreviewResult>;
+    importApply: (input: ServerImportApplyInput) => Promise<ServerImportApplyResult>;
+    checkCapabilities: () => Promise<ServerCapabilities>;
+    listLocalKeys: () => Promise<ServerListLocalKeysResult>;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;

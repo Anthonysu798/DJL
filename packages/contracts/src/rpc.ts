@@ -13,6 +13,23 @@ import {
 } from "./harnessAccounts";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
+import {
+  EmptyServersInput,
+  ServerByIdInput,
+  ServerCapabilities,
+  ServerConnectionTest,
+  ServerCreateInput,
+  ServerDeleteInput,
+  ServerImportApplyInput,
+  ServerImportApplyResult,
+  ServerImportPreviewResult,
+  ServerListLocalKeysResult,
+  ServerListResult,
+  ServerRecord,
+  ServerRefreshStatsResult,
+  ServerTrustHostKeyInput,
+  ServerUpdateInput,
+} from "./servers";
 import { CommandId } from "./baseSchemas";
 
 import {
@@ -1131,6 +1148,72 @@ export const WsOpenCodeRemoveCredentialRpc = Rpc.make(WS_METHODS.openCodeRemoveC
   error: WsRpcError,
 });
 
+export const WsServersListRpc = Rpc.make(WS_METHODS.serversList, {
+  payload: EmptyServersInput,
+  success: ServerListResult,
+  error: WsRpcError,
+});
+
+export const WsServersCreateRpc = Rpc.make(WS_METHODS.serversCreate, {
+  payload: ServerCreateInput,
+  success: ServerRecord,
+  error: WsRpcError,
+});
+
+export const WsServersUpdateRpc = Rpc.make(WS_METHODS.serversUpdate, {
+  payload: ServerUpdateInput,
+  success: ServerRecord,
+  error: WsRpcError,
+});
+
+export const WsServersDeleteRpc = Rpc.make(WS_METHODS.serversDelete, {
+  payload: ServerDeleteInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+
+export const WsServersTestConnectionRpc = Rpc.make(WS_METHODS.serversTestConnection, {
+  payload: ServerByIdInput,
+  success: ServerConnectionTest,
+  error: WsRpcError,
+});
+
+export const WsServersTrustHostKeyRpc = Rpc.make(WS_METHODS.serversTrustHostKey, {
+  payload: ServerTrustHostKeyInput,
+  success: ServerConnectionTest,
+  error: WsRpcError,
+});
+
+export const WsServersRefreshStatsRpc = Rpc.make(WS_METHODS.serversRefreshStats, {
+  payload: ServerByIdInput,
+  success: ServerRefreshStatsResult,
+  error: WsRpcError,
+});
+
+export const WsServersImportPreviewRpc = Rpc.make(WS_METHODS.serversImportPreview, {
+  payload: EmptyServersInput,
+  success: ServerImportPreviewResult,
+  error: WsRpcError,
+});
+
+export const WsServersImportApplyRpc = Rpc.make(WS_METHODS.serversImportApply, {
+  payload: ServerImportApplyInput,
+  success: ServerImportApplyResult,
+  error: WsRpcError,
+});
+
+export const WsServersCheckCapabilitiesRpc = Rpc.make(WS_METHODS.serversCheckCapabilities, {
+  payload: EmptyServersInput,
+  success: ServerCapabilities,
+  error: WsRpcError,
+});
+
+export const WsServersListLocalKeysRpc = Rpc.make(WS_METHODS.serversListLocalKeys, {
+  payload: EmptyServersInput,
+  success: ServerListLocalKeysResult,
+  error: WsRpcError,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1325,6 +1408,17 @@ export const WsRpcGroup = RpcGroup.make(
   WsHarnessEndLoginRpc,
   WsOpenCodeRemoveCredentialRpc,
   WsProviderListAgentsRpc,
+  WsServersListRpc,
+  WsServersCreateRpc,
+  WsServersUpdateRpc,
+  WsServersDeleteRpc,
+  WsServersTestConnectionRpc,
+  WsServersTrustHostKeyRpc,
+  WsServersRefreshStatsRpc,
+  WsServersImportPreviewRpc,
+  WsServersImportApplyRpc,
+  WsServersCheckCapabilitiesRpc,
+  WsServersListLocalKeysRpc,
   WsAutomationListRpc,
   WsAutomationCreateRpc,
   WsAutomationUpdateRpc,
