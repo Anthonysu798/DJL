@@ -849,6 +849,22 @@ export function createWsNativeApi(): NativeApi {
         };
       },
     },
+    servers: {
+      list: () => transport.request(WS_METHODS.serversList, {}),
+      create: (input) => transport.request(WS_METHODS.serversCreate, input),
+      update: (input) => transport.request(WS_METHODS.serversUpdate, input),
+      delete: (input) => transport.request(WS_METHODS.serversDelete, input),
+      testConnection: (input) =>
+        transport.request(WS_METHODS.serversTestConnection, input, { timeoutMs: 45_000 }),
+      trustHostKey: (input) =>
+        transport.request(WS_METHODS.serversTrustHostKey, input, { timeoutMs: 45_000 }),
+      refreshStats: (input) =>
+        transport.request(WS_METHODS.serversRefreshStats, input, { timeoutMs: 45_000 }),
+      importPreview: () => transport.request(WS_METHODS.serversImportPreview, {}),
+      importApply: (input) => transport.request(WS_METHODS.serversImportApply, input),
+      checkCapabilities: () => transport.request(WS_METHODS.serversCheckCapabilities, {}),
+      listLocalKeys: () => transport.request(WS_METHODS.serversListLocalKeys, {}),
+    },
     automation: {
       list: (input) => transport.request(WS_METHODS.automationList, input),
       create: (input) => transport.request(WS_METHODS.automationCreate, input),

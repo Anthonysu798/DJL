@@ -36,6 +36,9 @@ import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
 import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
 import { AutomationRepositoryLive } from "./persistence/Layers/AutomationRepository";
+import { ServerRepositoryLive } from "./persistence/Layers/ServerRepository";
+import { ServerServiceLive } from "./servers/Layers/ServerService";
+import { SshRunnerLive } from "./servers/SshRunner";
 import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
 import { WorkPreparationRepositoryLive } from "./persistence/Layers/WorkPreparationRepository";
 import { DocumentIntelligenceLive } from "./work/Layers/DocumentIntelligence";
@@ -142,9 +145,15 @@ export function makeServerRuntimeServicesLayer() {
   const automationRunReactorLayer = AutomationRunReactorLive.pipe(
     Layer.provideMerge(automationServiceLayer),
   );
+  const serverRegistryLayer = ServerServiceLive.pipe(
+    Layer.provideMerge(ServerRepositoryLive),
+    Layer.provideMerge(SshRunnerLive),
+    Layer.provideMerge(authServicesLayer),
+  );
 
   return Layer.mergeAll(
     automationServiceLayer,
+    serverRegistryLayer,
     automationSchedulerLayer,
     automationRunReactorLayer,
     AutomationRepositoryLive,
