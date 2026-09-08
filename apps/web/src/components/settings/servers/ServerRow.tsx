@@ -316,8 +316,7 @@ export function ServerRow({
               <MenuSeparator className="my-1" />
               <MenuItem
                 onClick={onRemove}
-                variant="destructive"
-                className="gap-2.5 px-2.5 py-2 text-[13px]"
+                className="gap-2.5 px-2.5 py-2 text-[13px] text-destructive"
               >
                 <CentralIcon name="trash-can-simple" className="size-4" />
                 {t("servers.actions.remove")}
