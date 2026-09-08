@@ -217,7 +217,7 @@ export function ServerEditorDialog({
 
         <DialogPanel className="max-h-[min(70vh,640px)] px-4 py-3">
           <form
-            className="grid gap-5 md:grid-cols-[1fr_minmax(0,18rem)]"
+            className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]"
             onSubmit={(event) => {
               event.preventDefault();
               submit();
@@ -383,7 +383,7 @@ export function ServerEditorDialog({
                           rows={4}
                           spellCheck={false}
                           value={values.privateKey}
-                          className="font-mono text-[11px]"
+                          className="min-w-0 font-mono text-[11px] break-all"
                           placeholder={t("servers.form.importKeyPlaceholder")}
                           onChange={(event) => set("privateKey", event.target.value)}
                         />

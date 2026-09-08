@@ -141,21 +141,23 @@ export function ServerRow({
   const outcome = server.lastTest?.outcome;
   const needsHostKeyDecision = outcome === "host-key-unknown" || outcome === "host-key-changed";
 
-  // Flash a check mark for 900 ms after an action finishes successfully.
+  // Remember which action was running so its button can flash a check mark when it succeeds.
   useEffect(() => {
     if (pending) {
       setWasPending(pending);
       return;
     }
-    if (wasPending && outcome === "ok") {
-      setRecentSuccess(wasPending);
-      const timer = window.setTimeout(() => setRecentSuccess(null), 900);
+    if (wasPending) {
       setWasPending(null);
-      return () => window.clearTimeout(timer);
+      if (outcome === "ok") setRecentSuccess(wasPending);
     }
-    setWasPending(null);
-    return undefined;
   }, [pending, wasPending, outcome]);
+
+  useEffect(() => {
+    if (!recentSuccess) return;
+    const timer = window.setTimeout(() => setRecentSuccess(null), 900);
+    return () => window.clearTimeout(timer);
+  }, [recentSuccess]);
 
   // A host-key decision is never hidden inside a collapsed row.
   useEffect(() => {

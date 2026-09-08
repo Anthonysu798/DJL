@@ -132,6 +132,7 @@ export function ServersSettingsPanel() {
     onMutate: (id) => setPending(id, "refresh"),
     onSuccess: (result, id) =>
       queryClient.setQueryData<ServerListResult>(SERVERS_QUERY_KEY, (list) => ({
+        // eslint-disable-next-line oxc/no-map-spread -- Replace one record without mutating cached query data.
         servers: (list?.servers ?? []).map((server) =>
           server.id !== id
             ? server
