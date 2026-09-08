@@ -126,4 +126,31 @@ describe("knownHostsOptionValue", () => {
       '"/a b/known_hosts" "/c/known_hosts"',
     );
   });
+
+  it("refuses flag-like host, username and key paths", () => {
+    expect(() =>
+      buildSshArgs({
+        server: { ...base, host: "-oProxyCommand=x" },
+        command: "true",
+        knownHostsFiles,
+        importedKeyPath: null,
+      }),
+    ).toThrow(/unsafe host/);
+    expect(() =>
+      buildSshArgs({
+        server: { ...base, username: "-l" },
+        command: "true",
+        knownHostsFiles,
+        importedKeyPath: null,
+      }),
+    ).toThrow(/unsafe username/);
+    expect(() =>
+      buildSshArgs({
+        server: { ...base, auth: { type: "keyPath", path: "-F/evil", hasPassphrase: false } },
+        command: "true",
+        knownHostsFiles,
+        importedKeyPath: null,
+      }),
+    ).toThrow(/unsafe key path/);
+  });
 });

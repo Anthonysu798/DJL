@@ -7,10 +7,12 @@ import {
   type ServerRecord,
   type ServerSecretKind,
   type SshConfigCandidate,
+  ServerHost,
+  ServerUsername,
 } from "@synara/contracts";
 import * as Crypto from "node:crypto";
 import * as os from "node:os";
-import { Effect, FileSystem, Layer, Option, Path } from "effect";
+import { Effect, FileSystem, Layer, Option, Path, Schema } from "effect";
 
 import { ServerSecretStore } from "../../auth/Services/ServerSecretStore";
 import { ServerConfig } from "../../config";
@@ -270,11 +272,15 @@ export const makeServerService = (options: ServerServiceOptions = {}) =>
         const created: ServerRecord[] = [];
         for (const candidate of preview.candidates) {
           if (!wanted.has(candidate.alias) || candidate.alreadyImported) continue;
+          const username = candidate.username ?? fallbackUser;
+          // Entries come from the user's own config, but they still must not smuggle ssh flags.
+          if (!Schema.is(ServerHost)(candidate.host) || !Schema.is(ServerUsername)(username))
+            continue;
           const record = yield* create({
             name: candidate.alias,
             host: candidate.host,
             port: candidate.port,
-            username: candidate.username ?? fallbackUser,
+            username,
             auth: candidate.identityFile
               ? {
                   type: "keyPath",

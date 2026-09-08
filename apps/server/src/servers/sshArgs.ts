@@ -22,12 +22,23 @@ export interface SshArgsInput {
   readonly connectTimeoutSeconds?: number;
 }
 
+function assertNotFlagLike(label: string, value: string): void {
+  if (value.length === 0 || value.startsWith("-") || /\s/.test(value)) {
+    throw new Error(`Refusing to pass an unsafe ${label} to ssh.`);
+  }
+}
+
 export function knownHostsOptionValue(files: ReadonlyArray<string>): string {
   return files.map((file) => `"${file.replace(/"/g, '\\"')}"`).join(" ");
 }
 
 export function buildSshArgs(input: SshArgsInput): SshInvocationPlan {
   const { server, command, knownHostsFiles, importedKeyPath } = input;
+  // Defense in depth: nothing that reaches ssh as a positional or option value may look like a flag.
+  assertNotFlagLike("host", server.host);
+  assertNotFlagLike("username", server.username);
+  if (server.auth.type === "keyPath") assertNotFlagLike("key path", server.auth.path);
+  if (importedKeyPath !== null) assertNotFlagLike("imported key path", importedKeyPath);
   const timeout = input.connectTimeoutSeconds ?? 10;
   const auth = server.auth;
 
