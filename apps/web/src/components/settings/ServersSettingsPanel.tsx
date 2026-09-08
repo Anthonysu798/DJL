@@ -26,7 +26,6 @@ import {
 import { Button } from "~/components/ui/button";
 import { PlusIcon } from "~/lib/icons";
 import { ensureNativeApi } from "~/nativeApi";
-import { SETTINGS_CARD_ROW_CLASS_NAME } from "~/settingsPanelStyles";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { toastManager } from "../ui/toast";
@@ -272,9 +271,11 @@ export function ServersSettingsPanel() {
   return (
     <>
       <SettingsSection title={t("servers.title")}>
-        <div className={SETTINGS_CARD_ROW_CLASS_NAME} data-slot="settings-row">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">{t("servers.subtitle")}</p>
+        {list.length > 0 ? (
+          <div className="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <p className="text-xs text-muted-foreground">
+              {t("servers.list.count", { count: list.length })}
+            </p>
             {list.length > 0 ? (
               <div className="flex shrink-0 gap-2">
                 <Button size="sm" variant="outline" className="servers-press" onClick={openImport}>
@@ -291,7 +292,7 @@ export function ServersSettingsPanel() {
               </div>
             ) : null}
           </div>
-        </div>
+        ) : null}
 
         {servers.isPending ? (
           <div className="space-y-3 px-4 py-4 sm:px-5">

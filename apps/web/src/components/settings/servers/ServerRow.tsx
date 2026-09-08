@@ -11,10 +11,9 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { DisclosureRegion } from "~/components/ui/DisclosureRegion";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
-import { CheckIcon, CopyIcon, EllipsisIcon, LoaderCircleIcon } from "~/lib/icons";
+import { CheckIcon, ChevronDownIcon, CopyIcon, EllipsisIcon, LoaderCircleIcon } from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
-import { SETTINGS_CARD_ROW_CLASS_NAME } from "~/settingsPanelStyles";
 
 import { formatBytes, percent, statusKey, statusTone, uptimeParts } from "./serverPanelModel";
 import { ServerStatusDot } from "./ServerStatusDot";
@@ -72,7 +71,7 @@ function Bar({ label, used, total }: { label: string; used: number; total: numbe
     return () => window.cancelAnimationFrame(frame);
   }, [target]);
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-baseline justify-between text-[11px]">
         <span className="text-muted-foreground">{label}</span>
         <span className="font-mono tabular-nums text-[var(--color-text-foreground)]">
@@ -169,6 +168,9 @@ export function ServerRow({
   const stats = server.lastStats;
   const address = `${server.username}@${server.host}${server.port === 22 ? "" : `:${server.port}`}`;
   const locale = i18n.language;
+  const testedWhen = server.lastTest
+    ? formatRelativeTime(new Date(server.lastTest.at).toISOString(), locale)
+    : null;
 
   const stripItems: Array<{ key: string; label: string; value: string }> = [];
   if (stats?.load)
@@ -196,59 +198,85 @@ export function ServerRow({
       value: formatUptime(stats.uptimeSeconds, t),
     });
 
+  const details: Array<[string, string | undefined]> = [
+    [t("servers.stats.hostname"), stats?.hostname],
+    [t("servers.stats.os"), stats?.os],
+    [t("servers.stats.kernel"), stats?.kernel],
+    [
+      t("servers.stats.load"),
+      stats?.load
+        ? `${stats.load.one.toFixed(2)}  ${stats.load.five.toFixed(2)}  ${stats.load.fifteen.toFixed(2)}`
+        : undefined,
+    ],
+    [
+      t("servers.stats.uptime"),
+      stats?.uptimeSeconds !== undefined ? formatUptime(stats.uptimeSeconds, t) : undefined,
+    ],
+  ];
+
   return (
     <div
-      className={cn(
-        SETTINGS_CARD_ROW_CLASS_NAME,
-        justAdded && "servers-row-enter servers-highlight-sweep",
-      )}
+      className={cn("px-4 py-4 sm:px-5", justAdded && "servers-row-enter servers-highlight-sweep")}
       data-slot="settings-row"
       data-server-id={server.id}
     >
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+          className="group flex min-w-0 flex-1 items-start gap-3 text-left"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className="mt-1.5 inline-flex">
+          <span className="mt-[7px] inline-flex">
             <ServerStatusDot tone={tone} busy={pending !== null} label={statusLabel} />
           </span>
-          <span className="min-w-0 flex-1 space-y-0.5">
-            <span className="block truncate text-sm font-medium text-[var(--color-text-foreground)]">
-              {server.name}
+          <span className="min-w-0 flex-1 space-y-1">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold text-[var(--color-text-foreground)]">
+                {server.name}
+              </span>
+              {server.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="hidden px-1.5 py-0 text-[10px] font-normal sm:inline-flex"
+                >
+                  {tag}
+                </Badge>
+              ))}
             </span>
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
               {address}
             </span>
-            {server.tags.length > 0 ? (
-              <span className="flex flex-wrap gap-1 pt-1">
-                {server.tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="outline"
-                    className="px-1.5 py-0 text-[10px] font-normal"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
+            <span className="block text-[11px] text-muted-foreground">
+              <span
+                className={cn(
+                  tone === "danger" && "text-destructive",
+                  tone === "warning" && "text-warning-foreground",
+                  tone === "success" && "text-success-foreground",
+                )}
+              >
+                {statusLabel}
               </span>
-            ) : null}
+              {server.lastTest?.latencyMs !== undefined && outcome === "ok"
+                ? ` · ${t("servers.status.latency", { ms: server.lastTest.latencyMs })}`
+                : ""}
+              {testedWhen ? ` · ${t("servers.status.lastTested", { when: testedWhen })}` : ""}
+            </span>
           </span>
         </button>
 
         <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto sm:justify-end">
           {stripItems.length > 0 ? (
-            <dl className="hidden items-center gap-3 font-mono text-[11px] tabular-nums md:flex">
+            <dl className="hidden items-center gap-4 font-mono text-[11px] tabular-nums lg:flex">
               {stripItems.map((item, index) => (
                 <div
                   key={item.key}
-                  className="servers-stat-enter flex items-baseline gap-1"
+                  className="servers-stat-enter flex flex-col items-end leading-tight"
                   style={{ ["--servers-stat-index" as string]: index }}
                 >
-                  <dt className="text-muted-foreground">{item.label}</dt>
                   <dd className="text-[var(--color-text-foreground)]">{item.value}</dd>
+                  <dt className="text-[10px] text-muted-foreground">{item.label}</dt>
                 </div>
               ))}
             </dl>
@@ -271,15 +299,26 @@ export function ServerRow({
               </MenuItem>
             </MenuPopup>
           </Menu>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={statusLabel}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <ChevronDownIcon
+              className={cn("transition-transform duration-200", open && "rotate-180")}
+            />
+          </Button>
         </div>
       </div>
 
       <DisclosureRegion open={open}>
-        <div className="space-y-4 pt-4">
+        <div className="space-y-5 pt-5 sm:pl-5">
           {needsHostKeyDecision && server.lastTest ? (
             <div
               className={cn(
-                "rounded-lg border p-3 text-xs",
+                "rounded-lg border p-3.5 text-xs",
                 outcome === "host-key-unknown"
                   ? "border-warning/40 bg-warning/8"
                   : "border-destructive/40 bg-destructive/8",
@@ -333,7 +372,7 @@ export function ServerRow({
           ) : null}
 
           {stats?.memory || stats?.disk ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {stats.memory ? (
                 <Bar
                   label={t("servers.stats.memory")}
@@ -351,25 +390,9 @@ export function ServerRow({
             </div>
           ) : null}
 
-          <dl className="grid gap-x-6 gap-y-1.5 text-[11px] sm:grid-cols-2">
-            {[
-              [t("servers.stats.hostname"), stats?.hostname],
-              [t("servers.stats.os"), stats?.os],
-              [t("servers.stats.kernel"), stats?.kernel],
-              [
-                t("servers.stats.load"),
-                stats?.load
-                  ? `${stats.load.one.toFixed(2)} ${stats.load.five.toFixed(2)} ${stats.load.fifteen.toFixed(2)}`
-                  : undefined,
-              ],
-              [
-                t("servers.stats.uptime"),
-                stats?.uptimeSeconds !== undefined
-                  ? formatUptime(stats.uptimeSeconds, t)
-                  : undefined,
-              ],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between gap-3">
+          <dl className="grid gap-y-2 text-[11px] sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-6">
+            {details.map(([label, value]) => (
+              <div key={label} className="contents">
                 <dt className="text-muted-foreground">{label}</dt>
                 <dd className="truncate font-mono text-[var(--color-text-foreground)]">
                   {value ?? (
@@ -382,29 +405,8 @@ export function ServerRow({
             ))}
           </dl>
 
-          <div className="flex flex-col gap-2 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-0.5">
-              {server.lastTest ? (
-                <p>
-                  {t("servers.status.lastTested", {
-                    when: formatRelativeTime(new Date(server.lastTest.at).toISOString(), locale),
-                  })}
-                  {" · "}
-                  <span
-                    className={cn(
-                      tone === "danger" && "text-destructive",
-                      tone === "warning" && "text-warning-foreground",
-                    )}
-                  >
-                    {statusLabel}
-                  </span>
-                  {server.lastTest.latencyMs !== undefined
-                    ? ` · ${t("servers.status.latency", { ms: server.lastTest.latencyMs })}`
-                    : ""}
-                </p>
-              ) : (
-                <p>{t("servers.status.neverTested")}</p>
-              )}
               {server.lastTest?.message && !needsHostKeyDecision ? (
                 <p className="font-mono text-[10px] break-words text-muted-foreground/80">
                   {server.lastTest.message}

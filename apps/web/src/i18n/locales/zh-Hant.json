@@ -2326,9 +2326,13 @@
           "agent": "SSH 代理程式",
           "agentHint": "使用你的 ssh-agent 與 ~/.ssh/config。",
           "importedKey": "匯入金鑰",
+          "importedKeyHint": "貼上或拖入金鑰。DJL 會保存在本機的密鑰庫中。",
           "keyPath": "金鑰檔案",
-          "password": "密碼"
+          "keyPathHint": "使用這台電腦上既有的私密金鑰檔案。",
+          "password": "密碼",
+          "passwordHint": "儲存在這台電腦上，並透過 askpass 交給 ssh。"
         },
+        "authHint": "DJL 登入此主機的方式。",
         "authLabel": "驗證方式",
         "editTitle": "編輯伺服器",
         "host": "主機",
@@ -2342,7 +2346,9 @@
         "keyPath": "私密金鑰路徑",
         "keyPathPlaceholder": "~/.ssh/id_ed25519",
         "name": "名稱",
+        "nameHint": "顯示在清單中並提供給代理程式。",
         "notes": "備註",
+        "notesHint": "關於此主機值得記住的內容。",
         "passphrase": "通關密語",
         "passphraseHint": "僅加密的金鑰需要。儲存在這台電腦上。",
         "passphraseKeep": "保留已儲存的通關密語",
@@ -2353,9 +2359,12 @@
         "preview": "DJL 將執行的指令",
         "previewHint": "機密資訊絕不會出現在命令列中。",
         "tags": "標籤",
+        "tagsHint": "為代理程式與篩選條件將伺服器分組。",
         "tagsPlaceholder": "輸入標籤並按 Enter",
         "tier": "代理權限",
-        "username": "使用者名稱"
+        "tierHint": "連線後代理程式可以在這裡做什麼。",
+        "username": "使用者名稱",
+        "usernameHint": "ssh 登入時使用的帳號。"
       },
       "hostKey": {
         "body": "信任前，請將指紋與服務供應商顯示的指紋比對。",
@@ -2369,6 +2378,9 @@
         "body": "在 {{path}} 中找到 {{count}} 個主機。在你要求之前不會進行任何測試。",
         "none": "{{path}} 中沒有可匯入的主機。",
         "title": "從 SSH 設定匯入"
+      },
+      "list": {
+        "count": "已登錄 {{count}} 台"
       },
       "remove": {
         "body": "DJL 會忘記此伺服器、其儲存的機密資訊與已信任的主機金鑰。伺服器本身不會有任何變更。",

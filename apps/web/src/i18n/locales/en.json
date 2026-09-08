@@ -2326,9 +2326,13 @@
           "agent": "SSH agent",
           "agentHint": "Uses your ssh-agent and ~/.ssh/config.",
           "importedKey": "Import key",
+          "importedKeyHint": "Paste or drop a key. DJL keeps it in its local secret store.",
           "keyPath": "Key file",
-          "password": "Password"
+          "keyPathHint": "Use a private key file already on this computer.",
+          "password": "Password",
+          "passwordHint": "Stored on this computer and handed to ssh through askpass."
         },
+        "authHint": "How DJL signs in to this host.",
         "authLabel": "Authentication",
         "editTitle": "Edit server",
         "host": "Host",
@@ -2342,7 +2346,9 @@
         "keyPath": "Private key path",
         "keyPathPlaceholder": "~/.ssh/id_ed25519",
         "name": "Name",
+        "nameHint": "Shown in the list and to agents.",
         "notes": "Notes",
+        "notesHint": "Anything worth remembering about this host.",
         "passphrase": "Passphrase",
         "passphraseHint": "Only needed for encrypted keys. Stored on this computer.",
         "passphraseKeep": "Keep the saved passphrase",
@@ -2353,9 +2359,12 @@
         "preview": "What DJL will run",
         "previewHint": "Secrets are never placed on the command line.",
         "tags": "Tags",
+        "tagsHint": "Group servers for agents and filters.",
         "tagsPlaceholder": "Add a tag and press Enter",
         "tier": "Agent permissions",
-        "username": "Username"
+        "tierHint": "What agents may do here once connected.",
+        "username": "Username",
+        "usernameHint": "The account ssh signs in as."
       },
       "hostKey": {
         "body": "Compare the fingerprint with the one your provider shows before trusting it.",
@@ -2369,6 +2378,9 @@
         "body": "Found {{count}} hosts in {{path}}. Nothing is tested until you ask.",
         "none": "No importable hosts in {{path}}.",
         "title": "Import from SSH config"
+      },
+      "list": {
+        "count": "{{count}} registered"
       },
       "remove": {
         "body": "DJL forgets this server, its saved secrets and its trusted host key. Nothing changes on the server itself.",

@@ -2326,9 +2326,13 @@
           "agent": "Agente SSH",
           "agentHint": "Usa tu ssh-agent y ~/.ssh/config.",
           "importedKey": "Importar clave",
+          "importedKeyHint": "Pega o arrastra una clave. DJL la guarda en su almacén local de secretos.",
           "keyPath": "Archivo de clave",
-          "password": "Contraseña"
+          "keyPathHint": "Usa un archivo de clave privada que ya esté en esta computadora.",
+          "password": "Contraseña",
+          "passwordHint": "Se guarda en esta computadora y se entrega a ssh mediante askpass."
         },
+        "authHint": "Cómo DJL inicia sesión en este host.",
         "authLabel": "Autenticación",
         "editTitle": "Editar servidor",
         "host": "Host remoto",
@@ -2342,7 +2346,9 @@
         "keyPath": "Ruta de la clave privada",
         "keyPathPlaceholder": "~/.ssh/id_ed25519",
         "name": "Nombre",
+        "nameHint": "Se muestra en la lista y a los agentes.",
         "notes": "Notas",
+        "notesHint": "Cualquier cosa que valga la pena recordar sobre este host.",
         "passphrase": "Frase de contraseña",
         "passphraseHint": "Solo se necesita para claves cifradas. Se guarda en esta computadora.",
         "passphraseKeep": "Conservar la frase de contraseña guardada",
@@ -2353,9 +2359,12 @@
         "preview": "Lo que DJL ejecutará",
         "previewHint": "Los secretos nunca se colocan en la línea de comandos.",
         "tags": "Etiquetas",
+        "tagsHint": "Agrupa servidores para agentes y filtros.",
         "tagsPlaceholder": "Escribe una etiqueta y presiona Enter",
         "tier": "Permisos de los agentes",
-        "username": "Nombre de usuario"
+        "tierHint": "Qué pueden hacer los agentes aquí una vez conectados.",
+        "username": "Nombre de usuario",
+        "usernameHint": "La cuenta con la que ssh inicia sesión."
       },
       "hostKey": {
         "body": "Compara la huella digital con la que muestra tu proveedor antes de confiar en ella.",
@@ -2369,6 +2378,9 @@
         "body": "Se encontraron {{count}} hosts en {{path}}. No se prueba nada hasta que lo pidas.",
         "none": "No hay hosts importables en {{path}}.",
         "title": "Importar desde la configuración de SSH"
+      },
+      "list": {
+        "count": "{{count}} registrados"
       },
       "remove": {
         "body": "DJL olvida este servidor, sus secretos guardados y su clave de host de confianza. Nada cambia en el servidor en sí.",

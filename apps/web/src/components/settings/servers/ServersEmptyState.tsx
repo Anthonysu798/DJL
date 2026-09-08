@@ -42,25 +42,25 @@ export function ServersEmptyState({
 }) {
   const { t } = useTranslation("settings");
   return (
-    <div className="flex flex-col gap-4 px-4 py-8 sm:flex-row sm:items-start sm:gap-5 sm:px-5">
-      <PromptGlyph />
-      <div className="min-w-0 space-y-3">
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium text-[var(--color-text-foreground)]">
-            {t("servers.empty.title")}
-          </h3>
-          <p className="max-w-[52ch] text-xs leading-relaxed text-muted-foreground">
-            {t("servers.empty.body")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" className="servers-press" onClick={onAdd}>
-            {t("servers.actions.add")}
-          </Button>
-          <Button size="sm" variant="outline" className="servers-press" onClick={onImport}>
-            {t("servers.actions.import")}
-          </Button>
-        </div>
+    <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
+      <span className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--color-background-elevated-secondary)]">
+        <PromptGlyph />
+      </span>
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-[var(--color-text-foreground)]">
+          {t("servers.empty.title")}
+        </h3>
+        <p className="max-w-[44ch] text-xs leading-relaxed text-muted-foreground">
+          {t("servers.empty.body")}
+        </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-2 pt-1">
+        <Button size="sm" className="servers-press" onClick={onAdd}>
+          {t("servers.actions.add")}
+        </Button>
+        <Button size="sm" variant="outline" className="servers-press" onClick={onImport}>
+          {t("servers.actions.import")}
+        </Button>
       </div>
     </div>
   );

@@ -2326,9 +2326,13 @@
           "agent": "SSH エージェント",
           "agentHint": "ssh-agent と ~/.ssh/config を使用します。",
           "importedKey": "鍵をインポート",
+          "importedKeyHint": "鍵を貼り付けるかドロップします。DJL はローカルの秘密ストアに保管します。",
           "keyPath": "鍵ファイル",
-          "password": "パスワード"
+          "keyPathHint": "このコンピューターにある秘密鍵ファイルを使います。",
+          "password": "パスワード",
+          "passwordHint": "このコンピューターに保存し、askpass 経由で ssh に渡します。"
         },
+        "authHint": "DJL がこのホストにサインインする方法。",
         "authLabel": "認証",
         "editTitle": "サーバーを編集",
         "host": "ホスト",
@@ -2342,7 +2346,9 @@
         "keyPath": "秘密鍵のパス",
         "keyPathPlaceholder": "~/.ssh/id_ed25519",
         "name": "名前",
+        "nameHint": "一覧とエージェントに表示されます。",
         "notes": "メモ",
+        "notesHint": "このホストについて覚えておきたいこと。",
         "passphrase": "パスフレーズ",
         "passphraseHint": "暗号化された鍵にのみ必要です。このコンピューターに保存されます。",
         "passphraseKeep": "保存済みのパスフレーズを使う",
@@ -2353,9 +2359,12 @@
         "preview": "DJL が実行するコマンド",
         "previewHint": "シークレットがコマンドラインに置かれることはありません。",
         "tags": "タグ",
+        "tagsHint": "エージェントやフィルター用にサーバーをまとめます。",
         "tagsPlaceholder": "タグを入力して Enter を押してください",
         "tier": "エージェントの権限",
-        "username": "ユーザー名"
+        "tierHint": "接続後にエージェントがここで行えること。",
+        "username": "ユーザー名",
+        "usernameHint": "ssh がサインインに使うアカウント。"
       },
       "hostKey": {
         "body": "信頼する前に、プロバイダーが表示するフィンガープリントと一致するか比較してください。",
@@ -2369,6 +2378,9 @@
         "body": "{{path}} に {{count}} 件のホストが見つかりました。要求するまでテストは行われません。",
         "none": "{{path}} にインポート可能なホストはありません。",
         "title": "SSH 設定からインポート"
+      },
+      "list": {
+        "count": "{{count}} 台登録済み"
       },
       "remove": {
         "body": "DJL はこのサーバー、保存済みのシークレット、信頼済みのホスト鍵を忘れます。サーバー自体には何も変更を加えません。",

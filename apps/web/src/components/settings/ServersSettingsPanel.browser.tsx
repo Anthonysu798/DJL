@@ -129,7 +129,7 @@ describe("ServersSettingsPanel", () => {
     await mount();
     await expect.element(page.getByRole("button", { name: /hk-edge/ })).toBeVisible();
     await expect.element(page.getByText("deploy@edge.example.test:2222")).toBeVisible();
-    await expect.element(page.getByText("prod", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("prod", { exact: true })).toBeInTheDocument();
     await expect.element(page.getByText("Read-only", { exact: true })).toBeVisible();
     await expect.element(page.getByText("Approve each", { exact: true })).toBeVisible();
     await expect.element(page.getByText("root@db.example.test")).toBeVisible();

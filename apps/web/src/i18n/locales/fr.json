@@ -2326,9 +2326,13 @@
           "agent": "Agent SSH",
           "agentHint": "Utilise votre ssh-agent et ~/.ssh/config.",
           "importedKey": "Importer une clé",
+          "importedKeyHint": "Collez ou déposez une clé. DJL la conserve dans son coffre local.",
           "keyPath": "Fichier de clé",
-          "password": "Mot de passe"
+          "keyPathHint": "Utilisez un fichier de clé privée déjà présent sur cet ordinateur.",
+          "password": "Mot de passe",
+          "passwordHint": "Enregistré sur cet ordinateur et transmis à ssh via askpass."
         },
+        "authHint": "Comment DJL se connecte à cet hôte.",
         "authLabel": "Authentification",
         "editTitle": "Modifier le serveur",
         "host": "Hôte",
@@ -2342,7 +2346,9 @@
         "keyPath": "Chemin de la clé privée",
         "keyPathPlaceholder": "~/.ssh/id_ed25519",
         "name": "Nom",
+        "nameHint": "Affiché dans la liste et aux agents.",
         "notes": "Remarques",
+        "notesHint": "Tout ce qui mérite d’être retenu sur cet hôte.",
         "passphrase": "Phrase secrète",
         "passphraseHint": "Nécessaire uniquement pour les clés chiffrées. Conservée sur cet ordinateur.",
         "passphraseKeep": "Conserver la phrase secrète enregistrée",
@@ -2353,9 +2359,12 @@
         "preview": "Ce que DJL exécutera",
         "previewHint": "Les secrets ne sont jamais placés sur la ligne de commande.",
         "tags": "Étiquettes",
+        "tagsHint": "Regroupez les serveurs pour les agents et les filtres.",
         "tagsPlaceholder": "Saisissez une étiquette et appuyez sur Entrée",
         "tier": "Permissions des agents",
-        "username": "Nom d’utilisateur"
+        "tierHint": "Ce que les agents peuvent faire ici une fois connectés.",
+        "username": "Nom d’utilisateur",
+        "usernameHint": "Le compte avec lequel ssh se connecte."
       },
       "hostKey": {
         "body": "Comparez l’empreinte avec celle affichée par votre fournisseur avant de lui faire confiance.",
@@ -2369,6 +2378,9 @@
         "body": "{{count}} hôtes trouvés dans {{path}}. Rien n’est testé tant que vous ne le demandez pas.",
         "none": "Aucun hôte importable dans {{path}}.",
         "title": "Importer depuis la configuration SSH"
+      },
+      "list": {
+        "count": "{{count}} enregistrés"
       },
       "remove": {
         "body": "DJL oublie ce serveur, ses secrets enregistrés et sa clé d’hôte approuvée. Rien ne change sur le serveur lui-même.",

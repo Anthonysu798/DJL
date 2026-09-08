@@ -2326,9 +2326,13 @@
           "agent": "SSH 代理",
           "agentHint": "使用你的 ssh-agent 和 ~/.ssh/config。",
           "importedKey": "导入密钥",
+          "importedKeyHint": "粘贴或拖入密钥。DJL 会保存在本地的密钥库中。",
           "keyPath": "密钥文件",
-          "password": "密码"
+          "keyPathHint": "使用这台电脑上已有的私钥文件。",
+          "password": "密码",
+          "passwordHint": "保存在这台电脑上，并通过 askpass 交给 ssh。"
         },
+        "authHint": "DJL 登录此主机的方式。",
         "authLabel": "身份验证",
         "editTitle": "编辑服务器",
         "host": "主机",
@@ -2342,7 +2346,9 @@
         "keyPath": "私钥路径",
         "keyPathPlaceholder": "~/.ssh/id_ed25519",
         "name": "名称",
+        "nameHint": "显示在列表中并提供给智能体。",
         "notes": "备注",
+        "notesHint": "关于此主机值得记住的内容。",
         "passphrase": "密码短语",
         "passphraseHint": "仅加密密钥需要。存储在这台电脑上。",
         "passphraseKeep": "保留已保存的密码短语",
@@ -2353,9 +2359,12 @@
         "preview": "DJL 将运行的命令",
         "previewHint": "密钥信息绝不会出现在命令行中。",
         "tags": "标签",
+        "tagsHint": "为智能体和筛选对服务器分组。",
         "tagsPlaceholder": "输入标签并按 Enter",
         "tier": "代理权限",
-        "username": "用户名"
+        "tierHint": "连接后智能体可以在这里做什么。",
+        "username": "用户名",
+        "usernameHint": "ssh 登录时使用的账户。"
       },
       "hostKey": {
         "body": "信任前，请将指纹与服务商显示的指纹进行比对。",
@@ -2369,6 +2378,9 @@
         "body": "在 {{path}} 中找到 {{count}} 个主机。在你要求之前不会进行任何测试。",
         "none": "{{path}} 中没有可导入的主机。",
         "title": "从 SSH 配置导入"
+      },
+      "list": {
+        "count": "已登记 {{count}} 台"
       },
       "remove": {
         "body": "DJL 会忘记此服务器、其保存的密钥信息以及已信任的主机密钥。服务器本身不会有任何变化。",
