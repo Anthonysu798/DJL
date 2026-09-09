@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 
 /** Warms the code-split settings route chunk once the browser is idle.
  *
@@ -9,8 +9,16 @@ import { useRouter } from "@tanstack/react-router";
  */
 export function usePreloadSettingsRoute() {
   const router = useRouter();
+  const canPreload = useRouterState({
+    select: (state) =>
+      state.status === "idle" &&
+      !["/", "/work", "/studio", "/workspace"].includes(
+        (state.resolvedLocation?.pathname ?? "/").replace(/\/$/, "") || "/",
+      ),
+  });
 
   useEffect(() => {
+    if (!canPreload) return;
     const preload = () => {
       router.preloadRoute({ to: "/settings" }).catch(() => {
         // Preloading is best-effort; navigation falls back to loading on demand.
@@ -23,5 +31,5 @@ export function usePreloadSettingsRoute() {
     }
     const timeoutId = setTimeout(preload, 1500);
     return () => clearTimeout(timeoutId);
-  }, [router]);
+  }, [router, canPreload]);
 }

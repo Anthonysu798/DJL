@@ -272,7 +272,7 @@ export function useHandleNewThread() {
       }
 
       return runDraftNavigationOnce(draftNavigationSlotKey(projectId, entryPoint), async () => {
-        const threadId = newThreadId();
+        const threadId = options?.startupDraftId ?? newThreadId();
         if (wantsTemporaryThread) {
           markTemporaryThread(threadId);
         }
@@ -282,7 +282,11 @@ export function useHandleNewThread() {
           // Keep the previous routed draft alive while the destination loads. Replacing the
           // project's primary slot earlier makes the route guard redirect the old URL to Home.
           stage: () => {
-            registerDraftThread(threadId, { projectId, ...draftSeed });
+            const existingDraft = getDraftThread(threadId);
+            if (existingDraft && existingDraft.projectId !== projectId) {
+              throw new Error("The saved startup draft belongs to another project.");
+            }
+            if (!existingDraft) registerDraftThread(threadId, { projectId, ...draftSeed });
             activateThreadEntryPoint(threadId);
             applyStickyState(threadId);
             applyProviderOverride(threadId);

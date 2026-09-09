@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { syncShellEnvironment } from "./syncShellEnvironment";
 
 describe("syncShellEnvironment", () => {
-  it("hydrates PATH and missing SSH_AUTH_SOCK from the login shell on macOS", () => {
+  it("hydrates PATH and missing SSH_AUTH_SOCK from the login shell on macOS", async () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/Users/test/.local/bin:/usr/bin",
@@ -14,7 +14,7 @@ describe("syncShellEnvironment", () => {
       HOMEBREW_PREFIX: "/opt/homebrew",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "darwin",
       readEnvironment,
     });
@@ -33,7 +33,7 @@ describe("syncShellEnvironment", () => {
     expect(env.HOMEBREW_PREFIX).toBe("/opt/homebrew");
   });
 
-  it("preserves an inherited SSH_AUTH_SOCK value", () => {
+  it("preserves an inherited SSH_AUTH_SOCK value", async () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/usr/bin",
@@ -44,7 +44,7 @@ describe("syncShellEnvironment", () => {
       SSH_AUTH_SOCK: "/tmp/login-shell.sock",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "darwin",
       readEnvironment,
     });
@@ -53,7 +53,7 @@ describe("syncShellEnvironment", () => {
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/inherited.sock");
   });
 
-  it("preserves inherited values when the login shell omits them", () => {
+  it("preserves inherited values when the login shell omits them", async () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/usr/bin",
@@ -63,7 +63,7 @@ describe("syncShellEnvironment", () => {
       PATH: "/opt/homebrew/bin:/usr/bin",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "darwin",
       readEnvironment,
     });
@@ -72,7 +72,7 @@ describe("syncShellEnvironment", () => {
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/inherited.sock");
   });
 
-  it("hydrates PATH and missing SSH_AUTH_SOCK from the login shell on Linux", () => {
+  it("hydrates PATH and missing SSH_AUTH_SOCK from the login shell on Linux", async () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/usr/bin",
@@ -82,7 +82,7 @@ describe("syncShellEnvironment", () => {
       SSH_AUTH_SOCK: "/tmp/ssh.sock",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "linux",
       readEnvironment,
     });
@@ -100,7 +100,7 @@ describe("syncShellEnvironment", () => {
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/ssh.sock");
   });
 
-  it("falls back to a user login shell when SHELL is missing", () => {
+  it("falls back to a user login shell when SHELL is missing", async () => {
     const env: NodeJS.ProcessEnv = {
       PATH: "/usr/bin",
     };
@@ -108,7 +108,7 @@ describe("syncShellEnvironment", () => {
       PATH: "/usr/local/bin:/usr/bin",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "linux",
       readEnvironment,
       userShell: "/bin/bash",
@@ -126,7 +126,7 @@ describe("syncShellEnvironment", () => {
     expect(env.PATH).toBe("/usr/local/bin:/usr/bin");
   });
 
-  it("falls back to launchctl PATH on macOS when shell probing does not return one", () => {
+  it("falls back to launchctl PATH on macOS when shell probing does not return one", async () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/opt/homebrew/bin/nu",
       PATH: "/usr/bin",
@@ -140,7 +140,7 @@ describe("syncShellEnvironment", () => {
     const readLaunchctlPath = vi.fn(() => "/opt/homebrew/bin:/usr/bin");
     const logWarning = vi.fn();
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "darwin",
       readEnvironment,
       readLaunchctlPath,
@@ -174,7 +174,7 @@ describe("syncShellEnvironment", () => {
     expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin");
   });
 
-  it("hydrates PATH and missing variables from the Windows registry", () => {
+  it("hydrates PATH and missing variables from the Windows registry", async () => {
     const env: NodeJS.ProcessEnv = {
       PATH: "C:\\Windows\\system32",
     };
@@ -183,7 +183,7 @@ describe("syncShellEnvironment", () => {
       CLAUDE_CONFIG_DIR: "C:\\Users\\ramar\\.config\\claude",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "win32",
       readWindowsEnvironment,
     });
@@ -193,7 +193,7 @@ describe("syncShellEnvironment", () => {
     expect(env.CLAUDE_CONFIG_DIR).toBe("C:\\Users\\ramar\\.config\\claude");
   });
 
-  it("merges Windows PATH but preserves variables already in the environment", () => {
+  it("merges Windows PATH but preserves variables already in the environment", async () => {
     const env: NodeJS.ProcessEnv = {
       PATH: "C:\\Windows\\system32",
       CLAUDE_CONFIG_DIR: "C:\\already\\set",
@@ -204,7 +204,7 @@ describe("syncShellEnvironment", () => {
       GEMINI_API_KEY: "from-registry",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "win32",
       readWindowsEnvironment,
     });
@@ -214,7 +214,7 @@ describe("syncShellEnvironment", () => {
     expect(env.GEMINI_API_KEY).toBe("from-registry");
   });
 
-  it("logs a warning and leaves the environment intact when the Windows reader throws", () => {
+  it("logs a warning and leaves the environment intact when the Windows reader throws", async () => {
     const env: NodeJS.ProcessEnv = {
       PATH: "C:\\Windows\\system32",
     };
@@ -223,7 +223,7 @@ describe("syncShellEnvironment", () => {
     });
     const logWarning = vi.fn();
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "win32",
       readWindowsEnvironment,
       logWarning,
@@ -237,7 +237,7 @@ describe("syncShellEnvironment", () => {
     expect(env.PATH).toBe("C:\\Windows\\system32");
   });
 
-  it("does nothing on unsupported platforms", () => {
+  it("does nothing on unsupported platforms", async () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/usr/bin",
@@ -248,7 +248,7 @@ describe("syncShellEnvironment", () => {
       SSH_AUTH_SOCK: "/tmp/secretive.sock",
     }));
 
-    syncShellEnvironment(env, {
+    await syncShellEnvironment(env, {
       platform: "freebsd",
       readEnvironment,
     });
@@ -257,4 +257,50 @@ describe("syncShellEnvironment", () => {
     expect(env.PATH).toBe("/usr/bin");
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/inherited.sock");
   });
+});
+
+it("waits for asynchronous shell capture before merging provider paths", async () => {
+  let resolveEnvironment!: (value: Record<string, string>) => void;
+  const env: NodeJS.ProcessEnv = { SHELL: "/bin/bash", PATH: "/usr/bin" };
+  const pending = syncShellEnvironment(env, {
+    platform: "linux",
+    readEnvironment: () =>
+      new Promise<Record<string, string>>((resolve) => {
+        resolveEnvironment = resolve;
+      }),
+  });
+  expect(env.PATH).toBe("/usr/bin");
+  resolveEnvironment({ PATH: "/tools/bin:/usr/bin", SSH_AUTH_SOCK: "/tmp/agent.sock" });
+  await pending;
+  expect(env.PATH).toBe("/tools/bin:/usr/bin");
+  expect(env.SSH_AUTH_SOCK).toBe("/tmp/agent.sock");
+});
+
+it("stops shell fallback and preserves inherited values when startup is cancelled", async () => {
+  const controller = new AbortController();
+  const env: NodeJS.ProcessEnv = { SHELL: "/bin/custom-shell", PATH: "/usr/bin" };
+  const readEnvironment = vi.fn(async () => {
+    controller.abort();
+    throw new Error("capture cancelled");
+  });
+  const logWarning = vi.fn();
+  await syncShellEnvironment(env, {
+    platform: "linux",
+    signal: controller.signal,
+    readEnvironment,
+    logWarning,
+  });
+  expect(readEnvironment).toHaveBeenCalledTimes(1);
+  expect(env.PATH).toBe("/usr/bin");
+  expect(logWarning).not.toHaveBeenCalled();
+});
+
+it("preserves synchronous Linux profile-path hydration before single-instance locking", async () => {
+  const env: NodeJS.ProcessEnv = { SHELL: "/bin/bash", PATH: "/usr/bin" };
+  const result = syncShellEnvironment(env, {
+    platform: "linux",
+    readEnvironment: () => ({ PATH: "/usr/bin", XDG_CONFIG_HOME: "/custom/config" }),
+  });
+  expect(env.XDG_CONFIG_HOME).toBe("/custom/config");
+  await result;
 });

@@ -2,6 +2,7 @@
 // Purpose: Shares the desktop WebSocket bridge channel and env fallback rules.
 // Exports: channel name plus helpers used by Electron main, preload, and tests.
 
+export const DESKTOP_STARTUP_SCOPE_CHANNEL = "desktop:get-startup-scope";
 export const DESKTOP_WS_URL_CHANNEL = "desktop:get-ws-url";
 
 export function normalizeDesktopWsUrl(value: unknown): string | null {

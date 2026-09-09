@@ -5,11 +5,8 @@ import { randomUUID } from "node:crypto";
 import { link, lstat, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
-import ExcelJS from "exceljs";
 import JSZip from "jszip";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import PptxGenJS from "pptxgenjs";
+import type { PDFDocument } from "pdf-lib";
 
 import { validateOfficeArchive } from "./documentExtraction.ts";
 
@@ -183,6 +180,7 @@ function wrapPdfLine(text: string, maxChars = 88): string[] {
 }
 
 async function createPdfBytes(title: string, paragraphs: readonly string[]): Promise<Uint8Array> {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -264,6 +262,7 @@ export async function createOfficeDeliverable(input: {
   let bytes: Uint8Array;
   switch (input.format) {
     case "docx": {
+      const { Document, HeadingLevel, Packer, Paragraph, TextRun } = await import("docx");
       const document = new Document({
         sections: [
           {
@@ -287,6 +286,7 @@ export async function createOfficeDeliverable(input: {
       if (rows.length > MAX_CREATE_ROWS) {
         throw new WorkToolValidationError(`Spreadsheets are limited to ${MAX_CREATE_ROWS} rows.`);
       }
+      const { default: ExcelJS } = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
       workbook.creator = "DJL Work";
       const sheet = workbook.addWorksheet("Work Output");
@@ -322,6 +322,7 @@ export async function createOfficeDeliverable(input: {
           `Presentations are limited to ${MAX_CREATE_SLIDES} slides.`,
         );
       }
+      const { default: PptxGenJS } = await import("pptxgenjs");
       const presentation = new PptxGenJS();
       presentation.author = "DJL Work";
       presentation.subject = input.title;
@@ -570,6 +571,7 @@ export async function modifyOfficeDeliverable(input: {
       compression: "DEFLATE",
       compressionOptions: { level: 6 },
     });
+    const { default: ExcelJS } = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(
       Buffer.from(sanitizedSource) as unknown as Parameters<typeof workbook.xlsx.load>[0],
@@ -673,6 +675,7 @@ async function loadPdfWithinRoot(
   if (path.extname(inputPath).toLowerCase() !== ".pdf") {
     throw new WorkToolValidationError("Only PDF inputs are accepted for this operation.");
   }
+  const { PDFDocument } = await import("pdf-lib");
   return PDFDocument.load(await readFile(inputPath), {
     ignoreEncryption: false,
     throwOnInvalidObject: true,
@@ -689,6 +692,7 @@ export async function mergePdfDeliverable(input: {
   if (input.inputPaths.length < 2 || input.inputPaths.length > MAX_PDF_INPUTS) {
     throw new WorkToolValidationError(`PDF merge accepts 2 to ${MAX_PDF_INPUTS} files.`);
   }
+  const { PDFDocument } = await import("pdf-lib");
   const output = await PDFDocument.create();
   let pageCount = 0;
   for (const requestedPath of input.inputPaths) {
@@ -738,6 +742,7 @@ export async function splitPdfDeliverable(input: {
   ) {
     throw new WorkToolValidationError("The requested PDF page selection is invalid.");
   }
+  const { PDFDocument } = await import("pdf-lib");
   const paths: string[] = [];
   for (const pageNumber of unique) {
     const output = await PDFDocument.create();

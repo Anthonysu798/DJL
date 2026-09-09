@@ -13,13 +13,11 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const DIRECTORIES = ["components/settings", "components/profile", "notifications", "whatsNew"];
 const EXPLICIT_FILES = [
   "routes/_chat.settings.tsx",
-  "components/RateLimitsPanel.tsx",
   "components/WhatsNewDialog.tsx",
   "components/ReleaseHistoryDialog.tsx",
   "components/ProviderUsageLimitRows.tsx",
   "components/ProviderUsageMenuControl.tsx",
   "components/ProviderUsagePanelContent.tsx",
-  "components/RateLimitSummaryList.tsx",
   "lib/providerUsageDisplay.ts",
   "lib/rateLimits.ts",
   "lib/usagePace.ts",

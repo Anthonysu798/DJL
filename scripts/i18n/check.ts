@@ -102,7 +102,6 @@ const THEME_NAME_EXACT = new Set([
 ]);
 const DEV_ONLY_SOURCE_FILE_SUFFIXES = [
   "apps/web/src/components/DebugFeatureFlagsMenu.tsx",
-  "apps/web/src/components/GitProgressToastPreviewToggle.tsx",
   "apps/web/src/components/useGitProgressToastPreview.ts",
 ] as const;
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ThreadId } from "@synara/contracts";
+import { MessageId, ThreadId } from "@synara/contracts";
 import { useStore } from "./store";
 import {
   getRetainedThreadDetailIdsSnapshot,
@@ -42,6 +42,19 @@ describe("threadDetailSubscriptionRetention", () => {
     expect(getRetainedThreadDetailIdsSnapshot()).toEqual([threadId]);
 
     vi.advanceTimersByTime(15 * 60 * 1000);
+
+    expect(getRetainedThreadDetailIdsSnapshot()).toEqual([]);
+  });
+
+  it("expires idle threads even while other store updates continue", () => {
+    vi.useFakeTimers();
+    const release = retainThreadDetailSubscription(ThreadId.makeUnsafe("idle-during-stream"));
+    release();
+
+    for (let minute = 0; minute < 15; minute += 1) {
+      vi.advanceTimersByTime(60_000);
+      useStore.setState({ threadsHydrated: true });
+    }
 
     expect(getRetainedThreadDetailIdsSnapshot()).toEqual([]);
   });
@@ -131,6 +144,33 @@ describe("threadDetailSubscriptionRetention", () => {
 
     vi.advanceTimersByTime(15 * 60 * 1000);
 
+    expect(getRetainedThreadDetailIdsSnapshot()).toEqual([]);
+  });
+
+  it("bounds cached message payloads after visiting 1000 idle threads", () => {
+    vi.useFakeTimers();
+    const messageId = MessageId.makeUnsafe("message");
+    for (let index = 0; index < 1000; index += 1) {
+      const threadId = ThreadId.makeUnsafe(`visited-${index}`);
+      useStore.setState((state) => ({
+        messageByThreadId: {
+          ...state.messageByThreadId,
+          [threadId]: {
+            [messageId]: {
+              id: messageId,
+              role: "assistant",
+              text: "history".repeat(1000),
+              createdAt: "2026-01-01T00:00:00.000Z",
+              streaming: false,
+            },
+          },
+        },
+      }));
+      retainThreadDetailSubscription(threadId)();
+    }
+    expect(Object.keys(useStore.getState().messageByThreadId ?? {}).length).toBeLessThanOrEqual(32);
+    vi.advanceTimersByTime(15 * 60 * 1000);
+    expect(useStore.getState().messageByThreadId).toEqual({});
     expect(getRetainedThreadDetailIdsSnapshot()).toEqual([]);
   });
 

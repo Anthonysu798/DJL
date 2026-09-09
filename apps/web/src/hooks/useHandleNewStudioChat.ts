@@ -1,3 +1,4 @@
+import type { ThreadId } from "@synara/contracts";
 // FILE: useHandleNewStudioChat.ts
 // Purpose: Starts ordinary AI threads inside the hidden Studio project container.
 // Layer: Web hook
@@ -19,12 +20,18 @@ export function useHandleNewStudioChat() {
   const { handleNewThread } = useHandleNewThread();
 
   const handleNewStudioChat = useCallback(
-    async (options?: { fresh?: boolean }): Promise<StartContainerChatResult> =>
+    async (options?: {
+      fresh?: boolean;
+      startupDraftId?: ThreadId;
+      shouldNavigate?: () => boolean;
+    }): Promise<StartContainerChatResult> =>
       startContainerChat({
         ensureProjectId: () =>
           ensureStudioProject({ homeDir, chatWorkspaceRoot, studioWorkspaceRoot }),
         handleNewThread,
         fresh: options?.fresh,
+        startupDraftId: options?.startupDraftId,
+        shouldNavigate: options?.shouldNavigate,
         errorLabel: t("studio.errors.prepareTask"),
       }),
     [chatWorkspaceRoot, handleNewThread, homeDir, studioWorkspaceRoot, t],

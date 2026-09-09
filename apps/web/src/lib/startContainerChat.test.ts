@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProjectId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 
 import {
   startContainerChat,
@@ -117,4 +117,31 @@ describe("startFreshChatForActiveSurface", () => {
       expect(handleNewStudioChat).not.toHaveBeenCalled();
     }
   });
+});
+
+it("carries the stable startup draft identity into fresh thread creation", async () => {
+  const create = vi.fn(async () => undefined);
+  await startContainerChat({
+    ensureProjectId: async () => ProjectId.makeUnsafe("project"),
+    handleNewThread: create,
+    fresh: true,
+    startupDraftId: ThreadId.makeUnsafe("startup-thread"),
+    errorLabel: "failure",
+  });
+  expect(create).toHaveBeenCalledWith(
+    "project",
+    expect.objectContaining({ startupDraftId: "startup-thread", fresh: true }),
+  );
+});
+
+it("does not steal navigation after the user chooses another cached route", async () => {
+  const create = vi.fn(async () => undefined);
+  await startContainerChat({
+    ensureProjectId: async () => ProjectId.makeUnsafe("project"),
+    handleNewThread: create,
+    fresh: true,
+    shouldNavigate: () => false,
+    errorLabel: "failure",
+  });
+  expect(create).not.toHaveBeenCalled();
 });
