@@ -204,7 +204,7 @@ export async function ensureStudioProject(paths: ServerWorkspacePaths): Promise<
         commandId: newCommandId(),
         projectId,
         kind: "studio",
-        title: translateRendererCopy("work:title", "Work"),
+        title: translateRendererCopy("work:title", "Agent mode"),
         workspaceRoot,
         createWorkspaceRootIfMissing: true,
         createdAt: new Date().toISOString(),
@@ -250,7 +250,7 @@ export async function ensureStudioProject(paths: ServerWorkspacePaths): Promise<
       throw new ContainerChatFailureError({
         summary: translateRendererCopy(
           "work:studio.errors.syncing",
-          "Work was created but hasn't finished syncing yet. Try again in a moment.",
+          "Agent mode was created but hasn't finished syncing yet. Try again in a moment.",
         ),
         detail: null,
       });

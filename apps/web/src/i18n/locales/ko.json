@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "폴더 찾아보기",
+      "continueTask": "이전 에이전트가 멈춘 지점부터 이 작업을 계속하세요.",
+      "continueWithContext": "맥락을 이어서 계속",
       "files": "파일",
       "fork": {
         "local": "로컬로 포크",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "새 작업 트리에서 계속"
       },
       "groups": {
+        "agentModels": "다른 에이전트로 계속",
         "builtIn": "내장",
         "local": "지역",
         "plugins": "플러그인",
@@ -107,10 +110,13 @@
         "skills": "기술",
         "subagents": "하위 에이전트"
       },
+      "handoffReady": "에이전트 준비 완료",
+      "handoffReadyDescription": "대화, 메모, 초안이 유지됩니다. 다음 지시를 보내 계속하세요.",
+      "handoffWait": "현재 응답이 끝난 후 인계해 주세요",
       "loadingCommands": "로딩 명령...",
       "loadingSkills": "로딩...",
       "noMatchingCommand": "일치하는 명령 없음.",
-      "noMatchingMention": "일치하는 플러그인 또는 파일 없음.",
+      "noMatchingMention": "일치하는 에이전트, 서버, 플러그인 또는 파일이 없습니다.",
       "noMatchingSkill": "일치하는 기술 없음.",
       "review": {
         "base": "기본 지점에 대한 검토",
@@ -152,7 +158,7 @@
         "answer": "계속하려면 답변을 입력하세요",
         "approval": "계속하려면 이 승인 요청을 처리하세요",
         "configureModel": "시작하려면 설정에서 모델을 구성하세요",
-        "default": "질문하거나, @로 파일/폴더를 태그하거나, /로 사용 가능한 명령을 확인하세요",
+        "default": "질문 입력, @로 파일이나 에이전트 선택, /로 명령 보기",
         "followUp": "후속 변경 요청",
         "followUpAttachments": "후속 변경 요청 또는 이미지 첨부",
         "ownAnswer": "직접 답변하거나 비워 두어 선택한 옵션을 사용하세요",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "프로젝트 및 최근 폴더",
         "chooseFolder": "다른 폴더를 선택하십시오",
-        "managed": "관리 작업 폴더",
+        "managed": "에이전트 작업 폴더",
         "managedDetail": "이 작업을 위한 개인 폴더",
         "search": "검색 작업 위치",
-        "trigger": "관리 작업 폴더"
+        "trigger": "에이전트 작업 폴더"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "제공자 업데이트 확인",
         "providerVisibility": "제공자 표시",
         "themePack": "{{theme}} 테마 팩",
-        "workSection": "작업 섹션",
+        "workSection": "에이전트 모드 영역",
         "workspaceSection": "워크스페이스 섹션"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "사이드바에 {{section}} 섹션 표시",
           "work": {
-            "description": "비기술적이고 작업 중심인 업무를 위한 작업 탭을 표시합니다."
+            "description": "작업을 수행하고 다른 제공자로 이어갈 수 있는 에이전트 모드를 표시합니다."
           },
           "workspace": {
             "description": "사이드바 전환기에 워크스페이스 탭을 표시합니다. 스레드 탭은 항상 표시됩니다."
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "태스크 문서 사이드바",
-            "title": "작업"
+            "title": "에이전트 모드"
           },
           "thread-order": {
             "keywords": "사이드바 정렬 최근 생성",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "튜토리얼 시작",
         "basicTitle": "기본 기능 튜토리얼",
-        "description": "작업 모드, 프로젝트 모드, 로컬 AI 추천 및 설정 안내를 다시 봅니다.",
+        "description": "에이전트 모드, 프로젝트, 로컬 AI 추천 및 설정 안내를 다시 봅니다.",
         "section": "시작하기",
         "title": "초보자 튜토리얼"
       },
@@ -2734,8 +2740,8 @@
           "title": "언제든지 튜토리얼 다시 보기"
         },
         "work-mode": {
-          "description": "글쓰기, 조사, 파일 처리처럼 목표가 분명한 작업에는 작업 모드를 사용하세요.",
-          "title": "작업 모드"
+          "description": "작업을 시작한 후 @를 입력하면 맥락을 유지하면서 다른 에이전트로 이어갈 수 있습니다.",
+          "title": "에이전트 모드"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "작업 중"
       },
       "studio": {
-        "loading": "로딩...",
+        "loading": "에이전트 모드 불러오는 중…",
         "noTasks": "아직 작업 없음"
       },
       "temporaryChat": "임시 채팅",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "프로젝트",
-        "work": "일하기",
+        "work": "에이전트 모드",
         "workspace": "작업 공간"
       },
       "workspace": "작업 공간",
@@ -4073,13 +4079,13 @@
       "title": "칸반"
     },
     "route": {
-      "loadTimeout": "작업을 불러오는 데 시간이 오래 걸립니다. 서버가 관리하는 Work 폴더를 아직 보고하지 않았습니다."
+      "loadTimeout": "불러오는 데 시간이 오래 걸립니다. 서버가 관리되는 작업 폴더를 아직 반환하지 않았습니다."
     },
     "studio": {
       "errors": {
-        "folderConflict": "다른 프로젝트가 같은 폴더를 사용하므로 Work에서 \"{{path}}\"을(를) 사용할 수 없습니다. 해당 프로젝트를 이동하거나 제거한 후 다시 시도하세요.",
-        "prepareTask": "새 Work 작업을 준비할 수 없습니다.",
-        "syncing": "Work가 생성되었지만 아직 동기화되지 않았습니다. 잠시 후 다시 시도하세요."
+        "folderConflict": "다른 프로젝트가 \"{{path}}\" 폴더를 사용 중입니다. 해당 프로젝트를 제거하거나 이동한 후 다시 시도하세요.",
+        "prepareTask": "새 에이전트 작업을 준비할 수 없습니다.",
+        "syncing": "에이전트 모드가 생성되었지만 동기화가 끝나지 않았습니다. 잠시 후 다시 시도하세요."
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "작업 중"
       }
     },
-    "title": "작업"
+    "title": "에이전트 모드"
   },
   "workspace": {
     "actions": {

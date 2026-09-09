@@ -1132,7 +1132,7 @@ export default function ChatView({
   const navigate = useNavigate();
   const { handleNewThread } = useHandleNewThread();
   const { handleNewChat } = useHandleNewChat();
-  const { createThreadHandoff } = useThreadHandoff();
+  const { createThreadHandoff, isCreatingHandoff } = useThreadHandoff();
   const rawSearch = useDiffRouteSearch();
   const activeSplitView = useSplitViewStore(selectSplitView(rawSearch.splitViewId ?? null));
   const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
@@ -2170,12 +2170,13 @@ export default function ChatView({
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
+  const isAgentMentionPickerOpen = composerTrigger?.kind === "mention";
   const claudeDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "claudeAgent",
       binaryPath: settings.claudeBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "claudeAgent" || isModelPickerOpen,
+      enabled: selectedProvider === "claudeAgent" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const codexDynamicModelsQuery = useQuery(
@@ -2184,32 +2185,39 @@ export default function ChatView({
       binaryPath: settings.codexBinaryPath || null,
       homePath: settings.codexHomePath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "codex" || isModelPickerOpen,
+      enabled: selectedProvider === "codex" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const openCodeModelDiscoveryEnabled =
     !hasThreadStarted ||
     selectedProvider === "opencode" ||
     lockedProvider === "opencode" ||
-    isModelPickerOpen;
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const kiloModelDiscoveryEnabled =
-    selectedProvider === "kilo" || lockedProvider === "kilo" || isModelPickerOpen;
+    selectedProvider === "kilo" ||
+    lockedProvider === "kilo" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const piModelDiscoveryEnabled =
-    selectedProvider === "pi" || lockedProvider === "pi" || isModelPickerOpen;
+    selectedProvider === "pi" ||
+    lockedProvider === "pi" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const cursorDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "cursor",
       cwd: providerModelDiscoveryCwd,
       binaryPath: settings.cursorBinaryPath || null,
       apiEndpoint: settings.cursorApiEndpoint || null,
-      enabled: selectedProvider === "cursor" || isModelPickerOpen,
+      enabled: selectedProvider === "cursor" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const geminiModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "gemini",
       binaryPath: settings.geminiBinaryPath || null,
-      enabled: false,
+      enabled: isAgentMentionPickerOpen,
     }),
   );
   const grokDynamicModelsQuery = useQuery(
@@ -2217,7 +2225,7 @@ export default function ChatView({
       provider: "grok",
       binaryPath: settings.grokBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "grok" || isModelPickerOpen,
+      enabled: selectedProvider === "grok" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const kimiDynamicModelsQuery = useQuery(
@@ -2225,7 +2233,7 @@ export default function ChatView({
       provider: "kimi",
       binaryPath: settings.kimiBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "kimi" || isModelPickerOpen,
+      enabled: selectedProvider === "kimi" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const iflowDynamicModelsQuery = useQuery(
@@ -2253,13 +2261,16 @@ export default function ChatView({
     }),
   );
   const droidModelDiscoveryEnabled =
-    selectedProvider === "droid" || lockedProvider === "droid" || isModelPickerOpen;
+    selectedProvider === "droid" ||
+    lockedProvider === "droid" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const droidDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "droid",
       binaryPath: settings.droidBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: false,
+      enabled: droidModelDiscoveryEnabled,
     }),
   );
   const openCodeDynamicModelsQuery = useQuery(
@@ -2275,7 +2286,7 @@ export default function ChatView({
       provider: "kilo",
       binaryPath: settings.kiloBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: false,
+      enabled: kiloModelDiscoveryEnabled,
     }),
   );
   const piDynamicModelsQuery = useQuery(
@@ -2284,7 +2295,7 @@ export default function ChatView({
       binaryPath: settings.piBinaryPath || null,
       agentDir: settings.piAgentDir || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: false,
+      enabled: piModelDiscoveryEnabled,
     }),
   );
   const claudeDynamicAgentsQuery = useQuery(
@@ -2644,6 +2655,28 @@ export default function ChatView({
     () => new Set<ProviderKind>(settings.hiddenProviders),
     [settings.hiddenProviders],
   );
+  const agentModelOptions = useMemo(
+    () =>
+      AVAILABLE_PROVIDER_OPTIONS.filter(
+        (option) => !hiddenProviderSet.has(option.value) || option.value === selectedProvider,
+      )
+        .toSorted((left, right) =>
+          compareProvidersByOrder(settings.providerOrder, left.value, right.value),
+        )
+        .flatMap((option) =>
+          modelOptionsByProvider[option.value].map(({ slug, name }) => ({
+            provider: option.value,
+            providerLabel: option.label,
+            slug,
+            name,
+            searchSlug: slug.toLowerCase(),
+            searchName: name.toLowerCase(),
+            searchProvider: option.label.toLowerCase(),
+            searchUpstreamProvider: "",
+          })),
+        ),
+    [hiddenProviderSet, modelOptionsByProvider, selectedProvider, settings.providerOrder],
+  );
   const searchableModelOptions = useMemo(
     () =>
       AVAILABLE_PROVIDER_OPTIONS.toSorted((left, right) =>
@@ -2957,7 +2990,8 @@ export default function ChatView({
       phase,
     ],
   );
-  const isSendBusy = localDispatch !== null && !serverAcknowledgedLocalDispatch;
+  const isSendBusy =
+    isCreatingHandoff || (localDispatch !== null && !serverAcknowledgedLocalDispatch);
   const hasConfiguredOpenCodeModel =
     selectedProvider !== "opencode" || modelOptionsByProvider.opencode.length > 0;
   const isLegacyReadOnlyThread = lockedProvider !== null && !isProviderKind(lockedProvider);
@@ -3640,7 +3674,9 @@ export default function ChatView({
         ? (kiloDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
         : selectedProvider === "opencode"
           ? (openCodeDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
-          : (codexDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS);
+          : selectedProvider === "codex"
+            ? (codexDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
+            : EMPTY_PROVIDER_AGENTS;
   const dynamicAgents = useMemo(
     () =>
       selectedDynamicAgents.map((agent) =>
@@ -3658,6 +3694,7 @@ export default function ChatView({
     providerSkills,
     workspaceEntries,
     searchableModelOptions,
+    agentModelOptions,
     supportsFastSlashCommand,
     canOfferCompactCommand:
       supportsThreadCompaction(providerComposerCapabilitiesQuery.data) &&
@@ -9778,7 +9815,7 @@ export default function ChatView({
             studioWorkspaceRoot,
           });
           if (!studioProjectId) {
-            throw new Error("Unable to prepare Work.");
+            throw new Error("Unable to prepare Agent mode.");
           }
           const api = readNativeApi();
           if (!api) {
@@ -10358,6 +10395,40 @@ export default function ChatView({
         });
         return;
       }
+      if (item.type === "handoff-model") {
+        if (!activeThread) return;
+        if (!lockedProvider || item.provider === lockedProvider) {
+          onProviderModelSelect(item.provider, item.model);
+          applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
+          return;
+        }
+        if (handoffDisabled) {
+          toastManager.add({ type: "info", title: t("commandMenu.handoffWait") });
+          return;
+        }
+        const nextPrompt =
+          snapshot.value.slice(0, trigger.rangeStart) + snapshot.value.slice(trigger.rangeEnd);
+        void createThreadHandoff(activeThread, item.provider, {
+          modelSelection: { provider: item.provider, model: item.model },
+          prompt: nextPrompt.trim().length > 0 ? nextPrompt : t("commandMenu.continueTask"),
+        })
+          .then(() => {
+            toastManager.add({
+              type: "success",
+              title: t("commandMenu.handoffReady"),
+              description: t("commandMenu.handoffReadyDescription"),
+            });
+          })
+          .catch((error: unknown) => {
+            toastManager.add({
+              type: "error",
+              title: t("errors.createHandoff"),
+              description:
+                error instanceof Error ? error.message : t("errors.createHandoffFallback"),
+            });
+          });
+        return;
+      }
       if (item.type === "model") {
         onProviderModelSelect(item.provider, item.model);
         applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
@@ -10374,6 +10445,11 @@ export default function ChatView({
       }
     },
     [
+      activeThread,
+      lockedProvider,
+      handoffDisabled,
+      createThreadHandoff,
+      t,
       applyComposerTriggerReplacement,
       scheduleComposerFocus,
       handleForkTargetSelection,

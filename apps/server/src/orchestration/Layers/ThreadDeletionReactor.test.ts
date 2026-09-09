@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   cleanupSucceededUnlessInterrupted,
   logCleanupCauseUnlessInterrupted,
+  prepareThreadForPurge,
 } from "./ThreadDeletionReactor";
 
 describe("logCleanupCauseUnlessInterrupted", () => {
@@ -78,5 +79,37 @@ describe("cleanupSucceededUnlessInterrupted", () => {
     if (Exit.isFailure(exit)) {
       expect(Cause.hasInterruptsOnly(exit.cause)).toBe(true);
     }
+  });
+});
+
+describe("prepareThreadForPurge", () => {
+  it("removes the handoff archive after runtime cleanup and before allowing purge", async () => {
+    const order: string[] = [];
+    const ready = await Effect.runPromise(
+      prepareThreadForPurge({
+        cleanup: Effect.sync(() => {
+          order.push("runtime-cleanup");
+          return true;
+        }),
+        removeArchive: Effect.sync(() => {
+          order.push("archive-removal");
+          return true;
+        }),
+      }),
+    );
+
+    expect(ready).toBe(true);
+    expect(order).toEqual(["runtime-cleanup", "archive-removal"]);
+  });
+
+  it("blocks purge when archive removal fails", async () => {
+    await expect(
+      Effect.runPromise(
+        prepareThreadForPurge({
+          cleanup: Effect.succeed(true),
+          removeArchive: Effect.succeed(false),
+        }),
+      ),
+    ).resolves.toBe(false);
   });
 });

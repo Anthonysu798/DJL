@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "フォルダーを参照",
+      "continueTask": "前のエージェントが中断したところから、このタスクを続けてください。",
+      "continueWithContext": "コンテキストを引き継ぐ",
       "files": "ファイル",
       "fork": {
         "local": "ローカルへのフォーク",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "新しいワークツリーで続行する"
       },
       "groups": {
+        "agentModels": "別のエージェントで続ける",
         "builtIn": "内蔵",
         "local": "ローカル",
         "plugins": "プラグイン",
@@ -107,10 +110,13 @@
         "skills": "スキル",
         "subagents": "サブエージェント"
       },
+      "handoffReady": "エージェントの準備ができました",
+      "handoffReadyDescription": "会話、メモ、下書きを引き継ぎました。次の指示を送信して続けてください。",
+      "handoffWait": "現在の応答が完了してから引き継いでください",
       "loadingCommands": "コマンドの読み込み",
       "loadingSkills": "ローディングスキル...",
       "noMatchingCommand": "マッチングコマンドはありません。",
-      "noMatchingMention": "マッチングプラグインやファイルはありません。",
+      "noMatchingMention": "一致するエージェント、サーバー、プラグイン、ファイルはありません。",
       "noMatchingSkill": "マッチングスキルはありません。",
       "review": {
         "base": "Base ブランチに対するレビュー",
@@ -152,7 +158,7 @@
         "answer": "続行するには回答を入力してください",
         "approval": "続行するにはこの承認リクエストを処理してください",
         "configureModel": "開始するには設定でモデルを構成してください",
-        "default": "質問を入力、@ でファイル/フォルダーを指定、または / でコマンドを表示",
+        "default": "質問を入力、@ でファイルやエージェントを選択、/ でコマンドを表示",
         "followUp": "追加の変更を依頼",
         "followUpAttachments": "追加の変更を依頼または画像を添付",
         "ownAnswer": "独自の回答を入力するか、空欄にして選択した項目を使用",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "プロジェクトと最近のフォルダ",
         "chooseFolder": "別のフォルダーを選択",
-        "managed": "管理された作業フォルダ",
+        "managed": "エージェントのタスクフォルダー",
         "managedDetail": "このタスクのプライベートフォルダ",
         "search": "職場検索",
-        "trigger": "管理された作業フォルダ"
+        "trigger": "エージェントのタスクフォルダー"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "プロバイダー更新チェック",
         "providerVisibility": "プロバイダーの表示",
         "themePack": "{{theme}}テーマパック",
-        "workSection": "作業セクション",
+        "workSection": "エージェントモードの表示",
         "workspaceSection": "ワークスペースセクション"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "サイドバーに{{section}}セクションを表示",
           "work": {
-            "description": "非技術的なタスク向けの作業タブを表示します。"
+            "description": "タスクを実行し、別のプロバイダーに引き継げるエージェントモードを表示します。"
           },
           "workspace": {
             "description": "サイドバー切り替えにワークスペースタブを表示します。スレッドタブは常に表示されます。"
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "タスク ドキュメント サイドバー",
-            "title": "作業"
+            "title": "エージェントモード"
           },
           "thread-order": {
             "keywords": "サイドバー 並び替え 最近 作成",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "チュートリアルを開始",
         "basicTitle": "基本機能チュートリアル",
-        "description": "作業モード、プロジェクトモード、ローカル AI の推奨、設定のガイドをもう一度表示します。",
+        "description": "エージェントモード、プロジェクト、ローカル AI のおすすめ、設定のガイドをもう一度表示します。",
         "section": "はじめに",
         "title": "初心者向けチュートリアル"
       },
@@ -2734,8 +2740,8 @@
           "title": "いつでもチュートリアルを再確認"
         },
         "work-mode": {
-          "description": "文章作成、調査、ファイル処理など目的が明確な作業には、作業モードを使います。",
-          "title": "作業モード"
+          "description": "タスクを開始し、@ を入力すると、コンテキストを保ったまま別のエージェントで続けられます。",
+          "title": "エージェントモード"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "作業中"
       },
       "studio": {
-        "loading": "ローディングワーク...",
+        "loading": "エージェントモードを読み込み中…",
         "noTasks": "タスクはまだありません"
       },
       "temporaryChat": "一時チャット",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "プロジェクト",
-        "work": "業務内容",
+        "work": "エージェントモード",
         "workspace": "ワークスペース"
       },
       "workspace": "ワークスペース",
@@ -4073,13 +4079,13 @@
       "title": "カンバン"
     },
     "route": {
-      "loadTimeout": "作業の読み込みに時間がかかっています。サーバーから管理対象の Work フォルダーがまだ報告されていません。"
+      "loadTimeout": "読み込みに時間がかかっています。サーバーから管理対象のタスクフォルダーがまだ返されていません。"
     },
     "studio": {
       "errors": {
-        "folderConflict": "別のプロジェクトが同じフォルダーを使用しているため、Work は「{{path}}」を使用できません。そのプロジェクトを移動または削除してから再試行してください。",
-        "prepareTask": "新しい Work タスクを準備できませんでした。",
-        "syncing": "Work は作成されましたが、同期がまだ完了していません。しばらくしてから再試行してください。"
+        "folderConflict": "別のプロジェクトが「{{path}}」を使用しています。そのプロジェクトを削除または移動してから再試行してください。",
+        "prepareTask": "新しいエージェントタスクを準備できません。",
+        "syncing": "エージェントモードは作成されましたが、同期が完了していません。しばらくしてから再試行してください。"
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "作業中"
       }
     },
-    "title": "作業"
+    "title": "エージェントモード"
   },
   "workspace": {
     "actions": {

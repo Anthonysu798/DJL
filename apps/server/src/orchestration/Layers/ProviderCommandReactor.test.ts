@@ -4,6 +4,7 @@
 // Depends on: ProviderCommandReactorLive with in-memory provider and persistence services.
 
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 
@@ -807,6 +808,96 @@ describe("ProviderCommandReactor", () => {
       }),
     );
   }
+
+  it.each(["claudeAgent", "cursor", "grok"] as const)(
+    "hands Codex context to %s with a lossless archive",
+    async (provider) => {
+      const harness = await createHarness();
+      const now = new Date().toISOString();
+      const threadId = ThreadId.makeUnsafe(`handoff-${provider}`);
+      const original = "Detailed constraint. ".repeat(200) + "FINAL REQUIREMENT";
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.messages.import",
+          commandId: CommandId.makeUnsafe(`source-context-${provider}`),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          messages: [
+            {
+              messageId: asMessageId(`source-context-${provider}`),
+              role: "user",
+              text: original,
+              skills: [{ name: "review", path: "/project/SKILL.md" }],
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+          createdAt: now,
+        }),
+      );
+      const sourceThread = (await Effect.runPromise(harness.engine.getReadModel())).threads.find(
+        (thread) => thread.id === ThreadId.makeUnsafe("thread-1"),
+      )!;
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.handoff.create",
+          commandId: CommandId.makeUnsafe(`create-${provider}`),
+          threadId,
+          sourceThreadId: ThreadId.makeUnsafe("thread-1"),
+          expectedSourceUpdatedAt: sourceThread.updatedAt,
+          projectId: asProjectId("project-1"),
+          title: "Agent continuation",
+          modelSelection: { provider, model: `${provider}-selected-model` },
+          runtimeMode: "approval-required",
+          interactionMode: "default",
+          envMode: "local",
+          branch: null,
+          worktreePath: null,
+          createBranchFlowCompleted: false,
+          createdAt: now,
+        }),
+      );
+      const archiveDirectory = path.join(harness.stateDir, "handoff-context");
+      const archivePath = path.join(
+        archiveDirectory,
+        `${createHash("sha256").update(threadId).digest("hex")}.json`,
+      );
+      await waitFor(() => fs.existsSync(archivePath));
+      const eagerArchive = JSON.parse(fs.readFileSync(archivePath, "utf8"));
+      expect(eagerArchive.messages[0].text).toBe(original);
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe(`send-${provider}`),
+          threadId,
+          message: {
+            messageId: asMessageId(`next-${provider}`),
+            role: "user",
+            text: "Continue the task",
+            attachments: [],
+          },
+          runtimeMode: "approval-required",
+          interactionMode: "default",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      const sent = harness.sendTurn.mock.calls[0]?.[0] as {
+        input: string;
+        modelSelection: ModelSelection;
+      };
+      expect(sent.input).toContain(original);
+      expect(sent.input).toContain("Continue the task");
+      expect(sent.input).toContain("<handoff_context>");
+      const archiveMatch = sent.input.match(/Full saved context \(JSON\): ("[^\n]+")/);
+      expect(archiveMatch).not.toBeNull();
+      const archive = JSON.parse(fs.readFileSync(JSON.parse(archiveMatch![1]!), "utf8"));
+      expect(archive.messages[0].text).toBe(original);
+      expect(archive.messages[0].skills).toEqual([{ name: "review", path: "/project/SKILL.md" }]);
+      expect(harness.startSession.mock.calls.at(-1)?.[1]).toMatchObject({
+        modelSelection: { provider, model: `${provider}-selected-model` },
+      });
+    },
+  );
 
   it("bootstraps sidechat context when the provider cannot fork natively", async () => {
     const harness = await createHarness();

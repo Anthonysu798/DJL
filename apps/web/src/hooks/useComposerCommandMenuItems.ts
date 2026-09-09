@@ -64,6 +64,7 @@ export function useComposerCommandMenuItems(input: {
   providerSkills: readonly ProviderSkillDescriptor[];
   workspaceEntries: readonly ProjectEntry[];
   searchableModelOptions: readonly SearchableModelOption[];
+  agentModelOptions?: readonly SearchableModelOption[];
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
   canOfferReviewCommand: boolean;
@@ -86,6 +87,7 @@ export function useComposerCommandMenuItems(input: {
     providerSkills,
     workspaceEntries,
     searchableModelOptions,
+    agentModelOptions,
     supportsFastSlashCommand,
     canOfferCompactCommand,
     canOfferReviewCommand,
@@ -102,6 +104,32 @@ export function useComposerCommandMenuItems(input: {
     // Keep trigger-specific discovery outside ChatView so the view mostly orchestrates state.
     if (composerTrigger.kind === "mention") {
       const query = normalizeProviderDiscoveryText(composerTrigger.query);
+      const seenProviders = new Set<ProviderKind>();
+
+      const handoffItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
+        agentModelOptions ?? [],
+        query,
+        (option) => [
+          { value: option.name },
+          { value: option.slug },
+          { value: option.providerLabel },
+          { value: option.searchProvider },
+        ],
+      )
+        .filter((option) => {
+          if (query.length > 0) return true;
+          if (seenProviders.has(option.provider)) return false;
+          seenProviders.add(option.provider);
+          return true;
+        })
+        .map(({ provider: targetProvider, providerLabel, slug, name }) => ({
+          id: `handoff-model:${targetProvider}:${slug}`,
+          type: "handoff-model" as const,
+          provider: targetProvider,
+          model: slug,
+          label: `@${providerLabel}`,
+          description: name,
+        }));
 
       const agentItems: ComposerCommandItem[] = (() => {
         // Use dynamic agents when available, fallback to static
@@ -183,9 +211,16 @@ export function useComposerCommandMenuItems(input: {
         label: basenameOfPath(entry.path),
         description: entry.parentPath ?? "",
       }));
-      // Keep mention suggestions ordered by primary intent: plugins first,
-      // then servers, then local context, then subagent delegation targets.
-      return [...pluginItems, ...serverItems, ...localRootItems, ...pathItems, ...agentItems];
+      // Keep mention suggestions ordered by primary intent: agent handoffs first,
+      // then plugins, servers, local context, and subagent delegation targets.
+      return [
+        ...handoffItems,
+        ...pluginItems,
+        ...serverItems,
+        ...localRootItems,
+        ...pathItems,
+        ...agentItems,
+      ];
     }
 
     if (composerTrigger.kind === "slash-command") {
@@ -288,6 +323,7 @@ export function useComposerCommandMenuItems(input: {
       description: `${providerLabel} · ${slug}`,
     }));
   }, [
+    agentModelOptions,
     canOfferForkCommand,
     canOfferCompactCommand,
     canOfferReviewCommand,
