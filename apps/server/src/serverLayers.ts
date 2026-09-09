@@ -36,6 +36,12 @@ import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
 import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
 import { AutomationRepositoryLive } from "./persistence/Layers/AutomationRepository";
+import { ServerCommandRepositoryLive } from "./persistence/Layers/ServerCommandRepository";
+import { ServerRepositoryLive } from "./persistence/Layers/ServerRepository";
+import { ServerCommandServiceLive } from "./servers/Layers/ServerCommandService";
+import { ServerServiceLive } from "./servers/Layers/ServerService";
+import { ShimRuntimeLive } from "./servers/shimRuntime";
+import { SshRunnerLive } from "./servers/SshRunner";
 import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
 import { WorkPreparationRepositoryLive } from "./persistence/Layers/WorkPreparationRepository";
 import { DocumentIntelligenceLive } from "./work/Layers/DocumentIntelligence";
@@ -84,6 +90,7 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
+    Layer.provideMerge(ServerRepositoryLive),
   );
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
@@ -142,9 +149,24 @@ export function makeServerRuntimeServicesLayer() {
   const automationRunReactorLayer = AutomationRunReactorLive.pipe(
     Layer.provideMerge(automationServiceLayer),
   );
+  const serverRegistryLayer = ServerServiceLive.pipe(
+    Layer.provideMerge(ServerRepositoryLive),
+    Layer.provideMerge(SshRunnerLive),
+    Layer.provideMerge(authServicesLayer),
+  );
+  // ShimRuntimeLive is built at boot so the djl-ssh env and PATH exist before any harness spawns.
+  const serverCommandLayer = ServerCommandServiceLive.pipe(
+    Layer.provideMerge(ServerCommandRepositoryLive),
+    Layer.provideMerge(ServerRepositoryLive),
+    Layer.provideMerge(SshRunnerLive),
+    Layer.provideMerge(ShimRuntimeLive),
+    Layer.provideMerge(authServicesLayer),
+  );
 
   return Layer.mergeAll(
     automationServiceLayer,
+    serverRegistryLayer,
+    serverCommandLayer,
     automationSchedulerLayer,
     automationRunReactorLayer,
     AutomationRepositoryLive,

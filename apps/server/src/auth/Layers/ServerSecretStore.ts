@@ -95,7 +95,9 @@ export const makeServerSecretStore = Effect.gen(function* () {
       ),
     );
 
-  return { get, set, getOrCreateRandom, remove } satisfies ServerSecretStoreShape;
+  const pathOf: ServerSecretStoreShape["pathOf"] = (name) => resolveSecretPath(name);
+
+  return { get, set, getOrCreateRandom, remove, pathOf } satisfies ServerSecretStoreShape;
 });
 
 export const ServerSecretStoreLive = Layer.effect(ServerSecretStore, makeServerSecretStore);

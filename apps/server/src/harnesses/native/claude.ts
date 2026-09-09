@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { withDjlThreadId } from "./driverEnv";
 import { query, type PermissionMode, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { bounded, object, string } from "./protocol";
 import type { NativeDriverFactory } from "./types";
@@ -120,7 +121,7 @@ export const createClaudeDriver: NativeDriverFactory = async (input, sink) => {
       abortController: abort,
       includePartialMessages: true,
       settingSources: ["user", "project", "local"],
-      env: { ...process.env },
+      env: withDjlThreadId(process.env, input.threadId),
       canUseTool: async (tool, args, context) => {
         // Required user interaction still reaches this callback in native bypass mode.
         if (tool === "AskUserQuestion") {

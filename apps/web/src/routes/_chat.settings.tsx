@@ -72,6 +72,7 @@ import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel"
 import { OpenCodeModelsSettingsPanel } from "../components/settings/OpenCodeModelsSettingsPanel";
 import { HarnessAccountsPanel } from "../components/settings/HarnessAccountsPanel";
 import { LocalModelsSettingsPanel } from "../components/settings/LocalModelsSettingsPanel";
+import { ServersSettingsPanel } from "../components/settings/ServersSettingsPanel";
 import {
   CHAT_CONTENT_CARD_CLASS_NAME,
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
@@ -2420,6 +2421,8 @@ function SettingsRouteView() {
         );
       case "local-models":
         return <LocalModelsSettingsPanel />;
+      case "servers":
+        return <ServersSettingsPanel />;
       case "providers":
         return (
           <OpenCodeModelsSettingsPanel

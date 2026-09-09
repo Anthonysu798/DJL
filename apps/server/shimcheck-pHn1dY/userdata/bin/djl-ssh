@@ -1,0 +1,16 @@
+#!/bin/sh
+# djl-ssh <server name> [--] <command...>   — runs a command on a DJL-registered server.
+set -u
+if [ "$#" -lt 2 ]; then echo "usage: djl-ssh <server> [--] <command>" >&2; exit 64; fi
+server="$1"; shift; [ "${1:-}" = "--" ] && shift
+cmd="$*"
+if [ -z "${DJL_SSH_SHIM_URL:-}" ] || [ -z "${DJL_SSH_SHIM_TOKEN:-}" ]; then echo "djl-ssh: not running inside DJL" >&2; exit 69; fi
+hdr=$(mktemp) || exit 70; out=$(mktemp) || exit 70
+trap 'rm -f "$hdr" "$out"' EXIT
+printf '%s' "$cmd" | curl -sS --max-time 1800 -X POST "$DJL_SSH_SHIM_URL" \
+  -H "Authorization: Bearer $DJL_SSH_SHIM_TOKEN" -H "X-DJL-Server: $server" \
+  -H "X-DJL-Thread: ${DJL_THREAD_ID:-}" -H "Content-Type: text/plain; charset=utf-8" \
+  --data-binary @- -D "$hdr" -o "$out" || { echo "djl-ssh: could not reach DJL" >&2; exit 70; }
+cat "$out"
+code=$(tr -d '\r' < "$hdr" | awk 'tolower($1)=="x-djl-exit-code:" {print $2}' | tail -1)
+exit "${code:-1}"

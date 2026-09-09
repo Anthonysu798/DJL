@@ -1,6 +1,6 @@
 // FILE: MentionChipIcon.tsx
-// Purpose: Shared icon renderer for mention chips. Keeps file, folder, and
-//          plugin glyphs identical between Lexical composer chips and React
+// Purpose: Shared icon renderer for mention chips. Keeps file, folder, plugin
+//          and server glyphs identical between Lexical composer chips and React
 //          sent-message chips.
 // Layer: UI shared component/helper
 // Exports: MentionChipIcon, createMentionChipIconElement
@@ -16,9 +16,14 @@ import type { ProviderMentionReference } from "@synara/contracts";
 
 export type { MentionChipKind };
 
+const SERVER_MENTION_CHIP_ICON_NAME = "server";
+
 function composerMentionChipCentralIconName(path: string, kind: MentionChipKind = "path"): string {
   if (kind === "plugin" || path.startsWith("plugin://")) {
     return "puzzle";
+  }
+  if (kind === "server") {
+    return SERVER_MENTION_CHIP_ICON_NAME;
   }
   if (inferEntryKindFromPath(path) === "directory") {
     return "folder-2";
@@ -44,6 +49,9 @@ export const MentionChipIcon = memo(function MentionChipIcon(props: {
   });
   if (resolvedKind === "plugin") {
     return <PluginIcon className={className} />;
+  }
+  if (resolvedKind === "server") {
+    return <CentralIcon name={SERVER_MENTION_CHIP_ICON_NAME} className={className} />;
   }
   const kind = inferEntryKindFromPath(props.path);
   if (kind === "directory") {
