@@ -23,8 +23,13 @@ import {
   ServerImportApplyInput,
   ServerImportApplyResult,
   ServerImportPreviewResult,
+  ServerCommandRecord,
+  ServerCommandStreamEvent,
+  ServerListCommandsInput,
+  ServerListCommandsResult,
   ServerListLocalKeysResult,
   ServerListResult,
+  ServerResolveCommandInput,
   ServerRecord,
   ServerRefreshStatsResult,
   ServerTrustHostKeyInput,
@@ -1214,6 +1219,25 @@ export const WsServersListLocalKeysRpc = Rpc.make(WS_METHODS.serversListLocalKey
   error: WsRpcError,
 });
 
+export const WsServersResolveCommandRpc = Rpc.make(WS_METHODS.serversResolveCommand, {
+  payload: ServerResolveCommandInput,
+  success: ServerCommandRecord,
+  error: WsRpcError,
+});
+
+export const WsServersListCommandsRpc = Rpc.make(WS_METHODS.serversListCommands, {
+  payload: ServerListCommandsInput,
+  success: ServerListCommandsResult,
+  error: WsRpcError,
+});
+
+export const WsSubscribeServerEventsRpc = Rpc.make(WS_METHODS.subscribeServerEvents, {
+  payload: EmptyServersInput,
+  success: ServerCommandStreamEvent,
+  error: WsRpcError,
+  stream: true,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1419,6 +1443,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsServersImportApplyRpc,
   WsServersCheckCapabilitiesRpc,
   WsServersListLocalKeysRpc,
+  WsServersResolveCommandRpc,
+  WsServersListCommandsRpc,
+  WsSubscribeServerEventsRpc,
   WsAutomationListRpc,
   WsAutomationCreateRpc,
   WsAutomationUpdateRpc,

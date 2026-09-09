@@ -24,6 +24,9 @@ import {
   ServerCreateInput,
   ServerDeleteInput,
   ServerImportApplyInput,
+  ServerListCommandsInput,
+  ServerResolveCommandInput,
+  ServerCommandStreamEvent,
   ServerTrustHostKeyInput,
   ServerUpdateInput,
 } from "./servers";
@@ -329,6 +332,9 @@ export const WS_METHODS = {
   serversImportApply: "servers.importSshConfig.apply",
   serversCheckCapabilities: "servers.checkCapabilities",
   serversListLocalKeys: "servers.listLocalKeys",
+  serversResolveCommand: "servers.commands.resolve",
+  serversListCommands: "servers.commands.list",
+  subscribeServerEvents: "servers.subscribe",
 
   // Automation methods
   automationList: "automation.list",
@@ -346,6 +352,7 @@ export const WS_METHODS = {
 
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
+  serverEvent: "servers.event",
   gitActionProgress: "git.actionProgress",
   terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
@@ -547,6 +554,9 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serversImportApply, ServerImportApplyInput),
   tagRequestBody(WS_METHODS.serversCheckCapabilities, EmptyServersInput),
   tagRequestBody(WS_METHODS.serversListLocalKeys, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversResolveCommand, ServerResolveCommandInput),
+  tagRequestBody(WS_METHODS.serversListCommands, ServerListCommandsInput),
+  tagRequestBody(WS_METHODS.subscribeServerEvents, EmptyServersInput),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),
@@ -598,6 +608,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
+  readonly [WS_CHANNELS.serverEvent]: typeof ServerCommandStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;

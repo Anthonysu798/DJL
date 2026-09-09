@@ -55,9 +55,14 @@ import type {
   ServerImportApplyInput,
   ServerImportApplyResult,
   ServerImportPreviewResult,
+  ServerCommandRecord,
+  ServerCommandStreamEvent,
+  ServerListCommandsInput,
+  ServerListCommandsResult,
   ServerListLocalKeysResult,
   ServerListResult,
   ServerRecord,
+  ServerResolveCommandInput,
   ServerRefreshStatsResult,
   ServerTrustHostKeyInput,
   ServerUpdateInput,
@@ -807,6 +812,9 @@ export interface NativeApi {
     importApply: (input: ServerImportApplyInput) => Promise<ServerImportApplyResult>;
     checkCapabilities: () => Promise<ServerCapabilities>;
     listLocalKeys: () => Promise<ServerListLocalKeysResult>;
+    resolveCommand: (input: ServerResolveCommandInput) => Promise<ServerCommandRecord>;
+    listCommands: (input: ServerListCommandsInput) => Promise<ServerListCommandsResult>;
+    onEvent: (callback: (event: ServerCommandStreamEvent) => void) => () => void;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;

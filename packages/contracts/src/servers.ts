@@ -214,3 +214,84 @@ export function serverReference(record: Pick<ServerRecord, "id" | "name">): {
 } {
   return { name: record.name, path: `ssh://${record.id}` };
 }
+
+// ---------------------------------------------------------------------------
+// Agent commands (the `djl-ssh` shim) and the `@server` mention reference.
+// ---------------------------------------------------------------------------
+
+export const SERVER_MENTION_PREFIX = "ssh://";
+
+export function isServerMentionPath(path: string): boolean {
+  return path.startsWith(SERVER_MENTION_PREFIX);
+}
+
+export function serverIdFromMentionPath(path: string): ServerId | null {
+  if (!isServerMentionPath(path)) return null;
+  const id = path.slice(SERVER_MENTION_PREFIX.length).trim();
+  return id.length > 0 ? ServerId.makeUnsafe(id) : null;
+}
+
+export const ServerCommandId = TrimmedNonEmptyString.pipe(Schema.brand("ServerCommandId"));
+export type ServerCommandId = typeof ServerCommandId.Type;
+
+export const SERVER_COMMAND_STATUSES = [
+  "pending",
+  "running",
+  "succeeded",
+  "failed",
+  "denied",
+  "refused",
+  "timed-out",
+] as const;
+export const ServerCommandStatus = Schema.Literals(SERVER_COMMAND_STATUSES);
+export type ServerCommandStatus = typeof ServerCommandStatus.Type;
+
+export const ServerCommandRecord = Schema.Struct({
+  id: ServerCommandId,
+  serverId: ServerId,
+  serverName: Schema.String,
+  threadId: Schema.optional(Schema.String),
+  command: Schema.String,
+  tier: ServerPermissionTier,
+  status: ServerCommandStatus,
+  exitCode: Schema.optional(Schema.Number),
+  /** Combined output, truncated for the audit trail. */
+  output: Schema.optional(Schema.String),
+  /** Why a command was refused or denied, in user-facing words. */
+  reason: Schema.optional(Schema.String),
+  requestedAt: Schema.Number,
+  finishedAt: Schema.optional(Schema.Number),
+});
+export type ServerCommandRecord = typeof ServerCommandRecord.Type;
+
+export const ServerCommandDecision = Schema.Literals(["approve", "deny"]);
+export type ServerCommandDecision = typeof ServerCommandDecision.Type;
+
+export const ServerResolveCommandInput = Schema.Struct({
+  id: ServerCommandId,
+  decision: ServerCommandDecision,
+});
+export type ServerResolveCommandInput = typeof ServerResolveCommandInput.Type;
+
+export const ServerListCommandsInput = Schema.Struct({
+  id: ServerId,
+  limit: Schema.optional(PositiveInt),
+});
+export type ServerListCommandsInput = typeof ServerListCommandsInput.Type;
+
+export const ServerListCommandsResult = Schema.Struct({
+  commands: Schema.Array(ServerCommandRecord),
+});
+export type ServerListCommandsResult = typeof ServerListCommandsResult.Type;
+
+export const ServerCommandStreamEvent = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("snapshot"),
+    pending: Schema.Array(ServerCommandRecord),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("command-updated"),
+    command: ServerCommandRecord,
+  }),
+]);
+export type ServerCommandStreamEvent = typeof ServerCommandStreamEvent.Type;
