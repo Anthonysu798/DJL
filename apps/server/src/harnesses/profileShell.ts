@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, delimiter, dirname, join } from "node:path";
 import type { TerminalCommand } from "../terminal/Services/Manager";
-import type { TerminalAgentProfile } from "@synara/contracts";
+import type { HarnessId } from "@synara/contracts";
 
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const psQuote = (value: string) => `'${value.replaceAll("'", "''")}'`;
@@ -10,12 +10,14 @@ const COMMANDS = {
   claudeAgent: "claude",
   cursor: "cursor-agent",
   opencode: "opencode",
+  kimi: "kimi",
+  grok: "grok",
 } as const;
 
 export async function prepareProfileShell(input: {
   directory: string;
   cwd: string;
-  provider: TerminalAgentProfile["provider"];
+  provider: HarnessId;
   executable: string;
   prefixArgs: string[];
   initialArgs: string[];
@@ -112,7 +114,9 @@ if [ -z "\${DJL_AGENT_SKIP_START:-}" ]; then
     unfunction _djl_start_agent
     ${runInitial}
   }
-  if [[ -o zle ]] && (: </dev/tty) 2>/dev/null; then
+  # Instant-prompt themes can temporarily disable ZLE during .zshrc.
+  # A controlling TTY, not the current ZLE option, determines interactive launch.
+  if (: </dev/tty) 2>/dev/null; then
     autoload -Uz add-zle-hook-widget
     _djl_start_agent_from_prompt() {
       add-zle-hook-widget -d line-init _djl_start_agent_from_prompt

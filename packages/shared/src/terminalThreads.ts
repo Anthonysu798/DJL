@@ -4,8 +4,15 @@
 // Exports: command parsing plus resolved terminal presentation metadata for web/server consumers.
 
 export const GENERIC_TERMINAL_THREAD_TITLE = "New terminal";
-export type TerminalCliKind = "codex" | "claude";
-export type TerminalIconKey = "terminal" | "openai" | "claude";
+export type TerminalCliKind = "codex" | "claude" | "cursor" | "opencode" | "kimi" | "grok";
+export type TerminalIconKey =
+  | "terminal"
+  | "openai"
+  | "claude"
+  | "cursor"
+  | "opencode"
+  | "kimi"
+  | "grok";
 export type TerminalActivityState = "running" | "attention" | "review";
 export type TerminalVisualState = "idle" | TerminalActivityState;
 export type TerminalAgentHookEventType = "Start" | "Stop" | "PermissionRequest";
@@ -14,6 +21,19 @@ export const SYNARA_TERMINAL_HOOK_OSC_PREFIX = "633;SYNARA_AGENT_EVENT=";
 export const MANAGED_TERMINAL_COMMAND_NAME_BY_CLI_KIND: Record<TerminalCliKind, string> = {
   codex: "codex",
   claude: "claude",
+  cursor: "cursor-agent",
+  opencode: "opencode",
+  kimi: "kimi",
+  grok: "grok",
+};
+
+const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
+  codex: "Codex CLI",
+  claude: "Claude Code",
+  cursor: "Cursor",
+  opencode: "OpenCode",
+  kimi: "Kimi",
+  grok: "Grok",
 };
 
 export interface TerminalCommandIdentity {
@@ -105,7 +125,7 @@ function normalizeCommandToken(token: string): string {
 }
 
 function stripScriptExtension(token: string): string {
-  return token.replace(/\.(?:cjs|cts|js|jsx|mjs|mts|py|ts|tsx)$/i, "");
+  return token.replace(/\.(?:cjs|cts|js|jsx|mjs|mts|py|ts|tsx|exe|cmd|bat)$/i, "");
 }
 
 function deriveCliKindFromNormalizedToken(token: string): TerminalCliKind | null {
@@ -122,6 +142,10 @@ function deriveCliKindFromNormalizedToken(token: string): TerminalCliKind | null
   ) {
     return "claude";
   }
+  if (normalizedToken === "cursor-agent") return "cursor";
+  if (normalizedToken === "kimi-code") return "kimi";
+  if (["opencode", "kimi", "grok"].includes(normalizedToken))
+    return normalizedToken as TerminalCliKind;
   return null;
 }
 
@@ -275,13 +299,13 @@ function createTerminalCommandIdentity(
 ): TerminalCommandIdentity {
   return {
     cliKind,
-    iconKey: cliKind === "codex" ? "openai" : cliKind === "claude" ? "claude" : "terminal",
+    iconKey: cliKind === "codex" ? "openai" : (cliKind ?? "terminal"),
     title,
   };
 }
 
 export function defaultTerminalTitleForCliKind(cliKind: TerminalCliKind): string {
-  return cliKind === "codex" ? "Codex CLI" : "Claude Code";
+  return TERMINAL_TITLES[cliKind];
 }
 
 export function managedTerminalCommandNameForCliKind(cliKind: TerminalCliKind): string {
@@ -290,7 +314,9 @@ export function managedTerminalCommandNameForCliKind(cliKind: TerminalCliKind): 
 
 export function terminalCliKindFromValue(value: string | null | undefined): TerminalCliKind | null {
   const normalizedValue = value?.trim().toLowerCase();
-  return normalizedValue === "codex" || normalizedValue === "claude" ? normalizedValue : null;
+  return normalizedValue && Object.hasOwn(TERMINAL_TITLES, normalizedValue)
+    ? (normalizedValue as TerminalCliKind)
+    : null;
 }
 
 // Prefer the actual spawned process name over shell aliases when attributing terminal providers.
@@ -304,12 +330,11 @@ export function deriveTerminalProcessIdentity(
   const tokenCliKind =
     deriveCliKindFromTokenList(tokenizeShellCommand(strippedCommand)) ??
     deriveCliKindFromProcessText(strippedCommand);
-  if (tokenCliKind === "codex") {
-    return createTerminalCommandIdentity(defaultTerminalTitleForCliKind("codex"), "codex");
-  }
-  if (tokenCliKind === "claude") {
-    return createTerminalCommandIdentity(defaultTerminalTitleForCliKind("claude"), "claude");
-  }
+  if (tokenCliKind)
+    return createTerminalCommandIdentity(
+      defaultTerminalTitleForCliKind(tokenCliKind),
+      tokenCliKind,
+    );
   return null;
 }
 
@@ -317,6 +342,9 @@ function inferCliKindFromTitle(title: string | null | undefined): TerminalCliKin
   const normalizedTitle = title?.trim().toLowerCase();
   if (!normalizedTitle) {
     return null;
+  }
+  for (const kind of ["cursor", "opencode", "kimi", "grok"] as const) {
+    if (new RegExp(`^${kind}(?: cli| code)?(?: \\d+)?$`).test(normalizedTitle)) return kind;
   }
   if (/^codex(?: cli)?(?: \d+)?$/.test(normalizedTitle)) {
     return "codex";
@@ -368,6 +396,11 @@ export function deriveTerminalCommandIdentity(command: string): TerminalCommandI
   if (detectedCliKind === "claude" || (first === "claude" && second === "code")) {
     return createTerminalCommandIdentity("Claude Code", "claude");
   }
+  if (detectedCliKind)
+    return createTerminalCommandIdentity(
+      defaultTerminalTitleForCliKind(detectedCliKind),
+      detectedCliKind,
+    );
   if (first === "git") {
     return createTerminalCommandIdentity(
       truncateTerminalTitle(second ? `git ${second}` : "git"),
@@ -501,7 +534,7 @@ export function resolveTerminalVisualIdentity(input: {
   const state = input.state ?? (input.isRunning ? "running" : "idle");
   return {
     cliKind,
-    iconKey: cliKind === "codex" ? "openai" : cliKind === "claude" ? "claude" : "terminal",
+    iconKey: cliKind === "codex" ? "openai" : (cliKind ?? "terminal"),
     state,
     title,
   };

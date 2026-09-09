@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "Ajouter à la discussion",
       "chat": "Discussion",
+      "chooseFolder": "Choisir un dossier",
       "close": "Fermer le terminal",
       "closeActiveTab": "Fermer l’onglet de terminal actif",
       "closeNamed": "Fermer {{name}}",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "Replier le terminal dans le tiroir de discussion",
       "error": "Erreur d’exécution",
       "expandToWorkspace": "Déployer le terminal dans l’espace de travail",
+      "folderPickerFailed": "Impossible d’ouvrir le sélecteur. Saisissez le chemin du dossier ci-dessus.",
+      "launchHarness": "Lancer un agent",
       "moveToOwnTab": "Déplacer vers son propre onglet de terminal",
       "name": "Terminal intégré",
       "new": "Nouveau terminal",
@@ -4829,6 +4832,9 @@
       "newTab": "Nouvel onglet de terminal",
       "numbered": "Terminal n° {{number}}",
       "openSidePanel": "Ouvrir le panneau latéral",
+      "recoveryHelp": "Terminal indisponible. Réessayez ou choisissez un dossier de travail existant.",
+      "restart": "Redémarrer le terminal",
+      "retry": "Réessayer",
       "scrollToBottom": "Faire défiler jusqu’en bas",
       "search": {
         "close": "Fermer la recherche (Échap)",
@@ -4838,11 +4844,14 @@
         "placeholder": "Rechercher",
         "previous": "Résultat précédent (Shift+Entrée)"
       },
+      "sessionEnded": "Cette session de terminal est terminée.",
       "splitDown": "Scinder vers le bas",
       "splitDownShortcut": "Scinder vers le bas ({{shortcut}})",
       "splitLimit": "Scinder le terminal ({{count}} maximum par groupe)",
       "splitRight": "Scinder à droite",
-      "splitRightShortcut": "Scinder à droite ({{shortcut}})"
+      "splitRightShortcut": "Scinder à droite ({{shortcut}})",
+      "useFolder": "Utiliser ce dossier",
+      "workingDirectory": "Dossier de travail"
     },
     "terminalClose": {
       "confirm": "Fermer ce terminal ?",

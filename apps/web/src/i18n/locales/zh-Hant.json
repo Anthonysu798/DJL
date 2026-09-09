@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "加入聊天",
       "chat": "聊天",
+      "chooseFolder": "選擇資料夾",
       "close": "關閉終端機",
       "closeActiveTab": "關閉目前的終端機分頁",
       "closeNamed": "關閉{{name}}",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "將終端機收合至聊天抽屜",
       "error": "錯誤",
       "expandToWorkspace": "將終端機展開至工作區",
+      "folderPickerFailed": "無法開啟資料夾選擇器。請在上方輸入資料夾路徑。",
+      "launchHarness": "啟動代理程式",
       "moveToOwnTab": "移至獨立終端機分頁",
       "name": "終端機",
       "new": "新增終端機",
@@ -4829,6 +4832,9 @@
       "newTab": "新增終端機分頁",
       "numbered": "終端機 {{number}}",
       "openSidePanel": "開啟側面板",
+      "recoveryHelp": "終端機無法啟動。請重試，或選擇現有的工作資料夾。",
+      "restart": "重新啟動終端機",
+      "retry": "重試",
       "scrollToBottom": "捲動到底部",
       "search": {
         "close": "關閉搜尋 (Esc)",
@@ -4838,11 +4844,14 @@
         "placeholder": "尋找",
         "previous": "上一個相符項目 (Shift+Enter)"
       },
+      "sessionEnded": "終端機工作階段已結束。",
       "splitDown": "向下分割",
       "splitDownShortcut": "向下分割 ({{shortcut}})",
       "splitLimit": "分割終端機（每組最多 {{count}} 個）",
       "splitRight": "向右分割",
-      "splitRightShortcut": "向右分割 ({{shortcut}})"
+      "splitRightShortcut": "向右分割 ({{shortcut}})",
+      "useFolder": "使用此資料夾",
+      "workingDirectory": "工作目錄"
     },
     "terminalClose": {
       "confirm": "關閉此終端機？",

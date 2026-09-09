@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "Agregar al chat",
       "chat": "Conversación",
+      "chooseFolder": "Elegir carpeta",
       "close": "Cerrar terminal",
       "closeActiveTab": "Cerrar la pestaña de terminal activa",
       "closeNamed": "Cerrar {{name}}",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "Contraer la terminal en el panel del chat",
       "error": "Error de ejecución",
       "expandToWorkspace": "Expandir la terminal en el espacio de trabajo",
+      "folderPickerFailed": "No se pudo abrir el selector. Ingresa la ruta de la carpeta arriba.",
+      "launchHarness": "Iniciar agente",
       "moveToOwnTab": "Mover a su propia pestaña de terminal",
       "name": "Consola",
       "new": "Nueva terminal",
@@ -4829,6 +4832,9 @@
       "newTab": "Nueva pestaña de terminal",
       "numbered": "Consola {{number}}",
       "openSidePanel": "Abrir panel lateral",
+      "recoveryHelp": "Terminal no disponible. Reintenta o elige una carpeta de trabajo existente.",
+      "restart": "Reiniciar terminal",
+      "retry": "Reintentar",
       "scrollToBottom": "Desplazarse al final",
       "search": {
         "close": "Cerrar búsqueda (Esc)",
@@ -4838,11 +4844,14 @@
         "placeholder": "Buscar",
         "previous": "Coincidencia anterior (Shift+Enter)"
       },
+      "sessionEnded": "La sesión de terminal terminó.",
       "splitDown": "Dividir hacia abajo",
       "splitDownShortcut": "Dividir hacia abajo ({{shortcut}})",
       "splitLimit": "Dividir terminal (máximo {{count}} por grupo)",
       "splitRight": "Dividir a la derecha",
-      "splitRightShortcut": "Dividir a la derecha ({{shortcut}})"
+      "splitRightShortcut": "Dividir a la derecha ({{shortcut}})",
+      "useFolder": "Usar carpeta",
+      "workingDirectory": "Directorio de trabajo"
     },
     "terminalClose": {
       "confirm": "¿Cerrar esta terminal?",
