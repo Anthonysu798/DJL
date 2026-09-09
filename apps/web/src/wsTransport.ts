@@ -11,6 +11,7 @@ import {
   WsRpcGroup,
   type AiDetectorEvent,
   type AutomationStreamEvent,
+  type ServerCommandStreamEvent,
   type DocumentRenderEvent,
   type GitActionProgressEvent,
   type GitRunStackedActionResult,
@@ -508,6 +509,13 @@ export class WsTransport {
             (event: AutomationStreamEvent) => this.emit(WS_CHANNELS.automationEvent, event),
             restartChannel,
           );
+        } else if (channel === WS_CHANNELS.serverEvent) {
+          this.startStream(
+            "servers.events",
+            client[WS_METHODS.subscribeServerEvents]({}),
+            (event: ServerCommandStreamEvent) => this.emit(WS_CHANNELS.serverEvent, event),
+            restartChannel,
+          );
         } else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent) {
           this.startStream(
             "orchestration.domain",
@@ -539,6 +547,7 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.localModelEvent) this.stopStream("localModels.events");
     else if (channel === WS_CHANNELS.aiDetectorEvent) this.stopStream("aiDetector.events");
     else if (channel === WS_CHANNELS.automationEvent) this.stopStream("automation.events");
+    else if (channel === WS_CHANNELS.serverEvent) this.stopStream("servers.events");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)
       this.stopStream("orchestration.domain");
   }

@@ -103,6 +103,7 @@
         "local": "本地",
         "plugins": "外掛",
         "provider": "提供者",
+        "servers": "伺服器",
         "skills": "技能",
         "subagents": "子代理"
       },
@@ -2302,6 +2303,29 @@
         "test": "測試連線",
         "testBeforeSaving": "儲存前先測試",
         "trust": "信任此金鑰"
+      },
+      "approval": {
+        "approve": "核准",
+        "deny": "拒絕",
+        "more": "還有 {{count}} 個等待中",
+        "region": "伺服器命令核准",
+        "thread": "來自 {{thread}}",
+        "title": "代理程式想在 {{server}} 上執行命令",
+        "waits": "最多等待 15 分鐘"
+      },
+      "commands": {
+        "empty": "尚無代理程式命令",
+        "exitCode": "結束代碼 {{code}}",
+        "status": {
+          "denied": "已拒絕",
+          "failed": "失敗",
+          "pending": "等待核准",
+          "refused": "已攔截",
+          "running": "執行中",
+          "succeeded": "成功",
+          "timed-out": "逾時"
+        },
+        "title": "最近的代理程式命令"
       },
       "empty": {
         "body": "手動新增 VPS，或匯入 SSH 設定中既有的主機。",

@@ -48,6 +48,7 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstab
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
 import { AutomationService } from "./automation/Services/AutomationService";
+import { ServerCommandService } from "./servers/Services/ServerCommandService";
 import { ServerService } from "./servers/Services/ServerService";
 import { authErrorResponse, makeEffectAuthRequest } from "./auth/http";
 import { ServerAuth } from "./auth/Services/ServerAuth";
@@ -344,6 +345,7 @@ export const makeWsRpcLayer = () =>
       const checkpointDiffQuery = yield* CheckpointDiffQuery;
       const automationService = yield* AutomationService;
       const serverService = yield* ServerService;
+      const serverCommandService = yield* ServerCommandService;
       // Desktop-started git actions fan out here so remote observers (the
       // phone bridge) can follow progress that used to reach only the caller.
       const gitActionProgressPubSub = yield* PubSub.unbounded<GitActionProgressEvent>();
@@ -1756,6 +1758,19 @@ export const makeWsRpcLayer = () =>
           rpcEffect(serverService.checkCapabilities(), "Failed to check ssh"),
         [WS_METHODS.serversListLocalKeys]: () =>
           rpcEffect(serverService.listLocalKeys(), "Failed to list keys"),
+        [WS_METHODS.serversResolveCommand]: (input) =>
+          rpcEffect(serverCommandService.resolve(input), "Failed to resolve server command"),
+        [WS_METHODS.serversListCommands]: (input) =>
+          rpcEffect(serverCommandService.listByServer(input), "Failed to list server commands"),
+        [WS_METHODS.subscribeServerEvents]: () =>
+          Stream.merge(
+            Stream.fromEffect(
+              serverCommandService
+                .listPending()
+                .pipe(Effect.map((pending) => ({ type: "snapshot" as const, pending }))),
+            ),
+            serverCommandService.streamEvents,
+          ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server event stream failed"))),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationCreate]: (input) =>

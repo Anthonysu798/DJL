@@ -107,6 +107,7 @@ import {
   formatComposerMentionToken,
   filterPromptProviderMentionReferences,
   filterPromptSkillReferences,
+  isServerProviderMentionReference,
   providerMentionReferencesEqual,
   providerSkillReferencesEqual,
   skillMentionPrefix,
@@ -5908,7 +5909,8 @@ export default function ChatView({
       return;
     }
     updateSelectedComposerSkills([]);
-    updateSelectedComposerMentions([]);
+    // Server mentions are provider-agnostic; only file and plugin references reset.
+    updateSelectedComposerMentions((existing) => existing.filter(isServerProviderMentionReference));
   }, [selectedProvider, threadId, updateSelectedComposerMentions, updateSelectedComposerSkills]);
 
   useLayoutEffect(() => {
@@ -10231,7 +10233,7 @@ export default function ChatView({
         });
         return;
       }
-      if (item.type === "plugin") {
+      if (item.type === "plugin" || item.type === "server") {
         applyComposerTriggerReplacement({
           snapshot,
           trigger,

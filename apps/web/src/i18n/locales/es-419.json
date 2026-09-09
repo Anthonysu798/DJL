@@ -103,6 +103,7 @@
         "local": "locales",
         "plugins": "Complementos",
         "provider": "Proveedor",
+        "servers": "Servidores",
         "skills": "Habilidades",
         "subagents": "Subagentes"
       },
@@ -2302,6 +2303,29 @@
         "test": "Probar conexión",
         "testBeforeSaving": "Probar antes de guardar",
         "trust": "Confiar en esta clave"
+      },
+      "approval": {
+        "approve": "Aprobar",
+        "deny": "Denegar",
+        "more": "{{count}} más en espera",
+        "region": "Aprobaciones de comandos de servidor",
+        "thread": "Desde {{thread}}",
+        "title": "El agente quiere ejecutar un comando en {{server}}",
+        "waits": "Espera hasta 15 minutos"
+      },
+      "commands": {
+        "empty": "Todavía no hay comandos de agentes",
+        "exitCode": "salida {{code}}",
+        "status": {
+          "denied": "Denegado",
+          "failed": "Falló",
+          "pending": "Esperando aprobación",
+          "refused": "Rechazado",
+          "running": "En ejecución",
+          "succeeded": "Completado",
+          "timed-out": "Tiempo agotado"
+        },
+        "title": "Comandos recientes de agentes"
       },
       "empty": {
         "body": "Agrega un VPS manualmente o importa los hosts que ya tienes en tu configuración de SSH.",

@@ -27,6 +27,8 @@ const runCalls: SshRunInput[] = [];
 let scripted: SshRunResult = {
   outcome: "ok",
   stdout: "djl-ok\n",
+  stderr: "",
+  exitCode: 0,
   message: undefined,
   latencyMs: 12,
 };
@@ -61,7 +63,14 @@ afterAll(() => {
 
 afterEach(() => {
   runCalls.length = 0;
-  scripted = { outcome: "ok", stdout: "djl-ok\n", message: undefined, latencyMs: 12 };
+  scripted = {
+    outcome: "ok",
+    stdout: "djl-ok\n",
+    stderr: "",
+    exitCode: 0,
+    message: undefined,
+    latencyMs: 12,
+  };
   fs.writeFileSync(djlKnownHosts, "");
 });
 
@@ -174,6 +183,8 @@ describe.skipIf(isWindows)("ServerService", () => {
         scripted = {
           outcome: "ok",
           stdout: "@@hostname\nweb-1\n@@uptime\n5000.1 1\n@@df\n/dev/x 100 40 60 40% /\n",
+          stderr: "",
+          exitCode: 0,
           message: undefined,
           latencyMs: 30,
         };
@@ -186,6 +197,8 @@ describe.skipIf(isWindows)("ServerService", () => {
         scripted = {
           outcome: "auth-failed",
           stdout: "",
+          stderr: "Permission denied",
+          exitCode: 255,
           message: "Permission denied",
           latencyMs: 5,
         };

@@ -55,6 +55,26 @@ describe("composer mention reference filtering", () => {
     expect(resolveMentionChipKind("linear", { mentionReferences: [plugin] })).toBe("plugin");
   });
 
+  it("keeps server references while their name token remains in the prompt", () => {
+    const server = { name: "hk-edge", path: "ssh://srv-hk" };
+    const spaced = { name: "tokyo db", path: "ssh://srv-tokyo" };
+
+    expect(
+      filterPromptProviderMentionReferences('Check @hk-edge and @"tokyo db" now', [server, spaced]),
+    ).toEqual([server, spaced]);
+    expect(filterPromptProviderMentionReferences("Check @src/hk-edge now", [server])).toEqual([]);
+  });
+
+  it("resolves server chip kind from ssh:// paths, explicit kind, or stored references", () => {
+    const server = { name: "hk-edge", path: "ssh://srv-hk" };
+
+    expect(resolveMentionChipKind("hk-edge")).toBe("path");
+    expect(resolveMentionChipKind("ssh://srv-hk")).toBe("server");
+    expect(resolveMentionChipKind("hk-edge", { kind: "server" })).toBe("server");
+    expect(resolveMentionChipKind("hk-edge", { mentionReferences: [server] })).toBe("server");
+    expect(resolveMentionChipKind("README.md", { mentionReferences: [server] })).toBe("path");
+  });
+
   it("keeps selected slash and dollar skills only when their prompt token remains", () => {
     const checkCode = { name: "check-code", path: "/skills/check-code/SKILL.md" };
     const refactorCode = { name: "refactor-code", path: "/skills/refactor-code/SKILL.md" };

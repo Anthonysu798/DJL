@@ -103,6 +103,7 @@
         "local": "Local",
         "plugins": "Plugins",
         "provider": "Provider",
+        "servers": "Servers",
         "skills": "Skills",
         "subagents": "Subagents"
       },
@@ -2302,6 +2303,29 @@
         "test": "Test connection",
         "testBeforeSaving": "Test before saving",
         "trust": "Trust this key"
+      },
+      "approval": {
+        "approve": "Approve",
+        "deny": "Deny",
+        "more": "{{count}} more waiting",
+        "region": "Server command approvals",
+        "thread": "From {{thread}}",
+        "title": "Agent wants to run a command on {{server}}",
+        "waits": "Waits up to 15 minutes"
+      },
+      "commands": {
+        "empty": "No agent commands yet",
+        "exitCode": "exit {{code}}",
+        "status": {
+          "denied": "Denied",
+          "failed": "Failed",
+          "pending": "Waiting for approval",
+          "refused": "Refused",
+          "running": "Running",
+          "succeeded": "Succeeded",
+          "timed-out": "Timed out"
+        },
+        "title": "Recent agent commands"
       },
       "empty": {
         "body": "Add a VPS by hand or import the hosts already in your SSH config.",

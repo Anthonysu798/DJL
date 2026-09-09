@@ -103,6 +103,7 @@
         "local": "ローカル",
         "plugins": "プラグイン",
         "provider": "プロバイダー",
+        "servers": "サーバー",
         "skills": "スキル",
         "subagents": "サブエージェント"
       },
@@ -2302,6 +2303,29 @@
         "test": "接続をテスト",
         "testBeforeSaving": "保存前にテスト",
         "trust": "この鍵を信頼する"
+      },
+      "approval": {
+        "approve": "承認",
+        "deny": "拒否",
+        "more": "他に {{count}} 件が待機中",
+        "region": "サーバーコマンドの承認",
+        "thread": "{{thread}} から",
+        "title": "エージェントが {{server}} でコマンドを実行しようとしています",
+        "waits": "最長 15 分間待機します"
+      },
+      "commands": {
+        "empty": "エージェントのコマンドはまだありません",
+        "exitCode": "終了コード {{code}}",
+        "status": {
+          "denied": "拒否済み",
+          "failed": "失敗",
+          "pending": "承認待ち",
+          "refused": "却下",
+          "running": "実行中",
+          "succeeded": "成功",
+          "timed-out": "タイムアウト"
+        },
+        "title": "最近のエージェントコマンド"
       },
       "empty": {
         "body": "VPS を手動で追加するか、SSH 設定にあるホストをインポートしてください。",

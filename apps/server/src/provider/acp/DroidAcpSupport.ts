@@ -38,6 +38,8 @@ export interface DroidAcpRuntimeInput extends Omit<
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly droidSettings: DroidAcpRuntimeSettings | null | undefined;
+  /** DJL thread that owns the spawned process; exported as `DJL_THREAD_ID`. */
+  readonly threadId?: string;
 }
 
 export interface DroidAcpModelSelectionErrorContext {
@@ -103,6 +105,7 @@ export function resolveDroidCliBinaryPath(binaryPath?: string | null): string {
 export function buildDroidAcpSpawnInput(
   droidSettings: DroidAcpRuntimeSettings | null | undefined,
   cwd: string,
+  threadId?: string,
 ): AcpSpawnInput {
   const args = ["exec", "--output-format", "acp"];
   if (droidSettings?.skipPermissionsUnsafe === true) {
@@ -121,6 +124,7 @@ export function buildDroidAcpSpawnInput(
     command: resolveDroidCliBinaryPath(droidSettings?.binaryPath),
     args,
     cwd,
+    ...(threadId ? { env: { DJL_THREAD_ID: threadId } } : {}),
   };
 }
 
@@ -158,7 +162,7 @@ export const makeDroidAcpRuntime = (
     const acpContext = yield* Layer.build(
       AcpSessionRuntime.layer({
         ...input,
-        spawn: buildDroidAcpSpawnInput(input.droidSettings, input.cwd),
+        spawn: buildDroidAcpSpawnInput(input.droidSettings, input.cwd, input.threadId),
         resolveAuthMethodId: resolveDroidAcpAuthMethodId,
         authenticateMeta: { headless: true },
       }).pipe(

@@ -12,7 +12,7 @@ import { ServerConfig } from "../config";
 import { runProcess } from "../processRunner";
 import { serverSecretName } from "./secrets";
 import { buildSshArgs, buildSshEnv } from "./sshArgs";
-import { classifySshResult, sanitizeSshStderr } from "./sshOutcome";
+import { classifySshResult, redactSshStderr, sanitizeSshStderr } from "./sshOutcome";
 
 export class SshRunnerError extends Data.TaggedError("SshRunnerError")<{
   readonly message: string;
@@ -22,6 +22,10 @@ export class SshRunnerError extends Data.TaggedError("SshRunnerError")<{
 export interface SshRunResult {
   readonly outcome: ServerTestOutcome;
   readonly stdout: string;
+  /** Raw stderr with secrets redacted, so callers can show ssh's own error text. */
+  readonly stderr: string;
+  /** ssh's exit status (the remote command's on success, 255 for ssh's own failures); null when killed. */
+  readonly exitCode: number | null;
   readonly message: string | undefined;
   readonly latencyMs: number;
 }
@@ -139,6 +143,8 @@ export const makeSshRunner = (options: { sshCommand?: string } = {}) =>
           return {
             outcome: "auth-failed" as const,
             stdout: "",
+            stderr: "",
+            exitCode: null,
             message: "This server needs a stored password or passphrase, but none is saved.",
             latencyMs: 0,
           };
@@ -169,7 +175,14 @@ export const makeSshRunner = (options: { sshCommand?: string } = {}) =>
             ? undefined
             : sanitizeSshStderr(raw.stderr || (raw.timedOut ? "Timed out." : ""), redactions) ||
               undefined;
-        return { outcome, stdout: raw.stdout, message, latencyMs };
+        return {
+          outcome,
+          stdout: raw.stdout,
+          stderr: redactSshStderr(raw.stderr, redactions),
+          exitCode: raw.code,
+          message,
+          latencyMs,
+        };
       });
 
     const capabilities: SshRunnerShape["capabilities"] = () =>

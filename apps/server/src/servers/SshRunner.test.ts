@@ -119,6 +119,7 @@ describe("SshRunner", () => {
     );
     expect(result.outcome).toBe("auth-failed");
     expect(result.message).toContain("Permission denied");
+    expect(result.stderr).toContain("Permission denied");
   });
 
   it("kills a hanging ssh and reports timeout", async () => {

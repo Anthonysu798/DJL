@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   importPreview: vi.fn(),
   importApply: vi.fn(),
   listLocalKeys: vi.fn(),
+  listCommands: vi.fn(),
 }));
 
 vi.mock("~/env", () => ({ isElectron: true }));
@@ -40,6 +41,9 @@ vi.mock("~/nativeApi", () => ({
       importApply: mocks.importApply,
       checkCapabilities: vi.fn(),
       listLocalKeys: mocks.listLocalKeys,
+      listCommands: mocks.listCommands,
+      resolveCommand: vi.fn(),
+      onEvent: () => () => {},
     },
   }),
 }));
@@ -92,6 +96,7 @@ const queryClient = () => new QueryClient({ defaultOptions: { queries: { retry: 
 async function mount(list: ServerListResult = { servers: [hk, fresh] }) {
   mocks.list.mockResolvedValue(list);
   mocks.listLocalKeys.mockResolvedValue({ keys: [] });
+  mocks.listCommands.mockResolvedValue({ commands: [] });
   mocks.testConnection.mockResolvedValue({ at: now, outcome: "ok", latencyMs: 50 });
   mocks.refreshStats.mockResolvedValue({ ok: true, stats: { collectedAt: now } });
   const i18n = createInstance();
@@ -145,6 +150,48 @@ describe("ServersSettingsPanel", () => {
     await expect.element(page.getByText("Linux 6.8.0-45-generic")).toBeVisible();
     await expect.element(page.getByText("3 GB / 8 GB")).toBeVisible();
     await expect.element(page.getByText(/Last tested/)).toBeVisible();
+  });
+
+  it("lists recent agent commands in the expanded row", async () => {
+    await mount({ servers: [hk] });
+    // The row is collapsed until clicked, so the list is fetched only after this mock is set.
+    mocks.listCommands.mockResolvedValue({
+      commands: [
+        {
+          id: "cmd-1",
+          serverId: "srv-hk",
+          serverName: "hk-edge",
+          command: "df -h /",
+          tier: "read-only",
+          status: "succeeded",
+          exitCode: 0,
+          requestedAt: now - 120_000,
+          finishedAt: now - 119_000,
+        },
+        {
+          id: "cmd-2",
+          serverId: "srv-hk",
+          serverName: "hk-edge",
+          command: "rm -rf /tmp/build",
+          tier: "read-only",
+          status: "refused",
+          reason: "read-only",
+          requestedAt: now - 60_000,
+        },
+      ],
+    });
+    await page.getByRole("button", { name: /hk-edge/ }).click();
+    await expect.element(page.getByText("Recent agent commands")).toBeVisible();
+    await expect.element(page.getByText("df -h /")).toBeVisible();
+    await expect.element(page.getByText("exit 0")).toBeVisible();
+    await expect.element(page.getByRole("img", { name: "Refused" })).toBeInTheDocument();
+    expect(mocks.listCommands).toHaveBeenCalledWith({ id: "srv-hk", limit: 5 });
+  });
+
+  it("shows the empty line when no agent command ran yet", async () => {
+    await mount({ servers: [fresh] });
+    await page.getByRole("button", { name: /tokyo-db/ }).click();
+    await expect.element(page.getByText("No agent commands yet")).toBeVisible();
   });
 
   it("runs a connection test and shows the host key prompt, then trusts it", async () => {

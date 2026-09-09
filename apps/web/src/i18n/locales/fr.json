@@ -103,6 +103,7 @@
         "local": "Sur cet appareil",
         "plugins": "Greffons",
         "provider": "Fournisseur",
+        "servers": "Serveurs",
         "skills": "Compétences",
         "subagents": "Sous-agents"
       },
@@ -2302,6 +2303,29 @@
         "test": "Tester la connexion",
         "testBeforeSaving": "Tester avant d’enregistrer",
         "trust": "Faire confiance à cette clé"
+      },
+      "approval": {
+        "approve": "Approuver",
+        "deny": "Refuser",
+        "more": "{{count}} autres en attente",
+        "region": "Approbations de commandes serveur",
+        "thread": "Depuis {{thread}}",
+        "title": "L'agent veut exécuter une commande sur {{server}}",
+        "waits": "Attend jusqu'à 15 minutes"
+      },
+      "commands": {
+        "empty": "Aucune commande d'agent pour l'instant",
+        "exitCode": "code {{code}}",
+        "status": {
+          "denied": "Refusé",
+          "failed": "Échec",
+          "pending": "En attente d'approbation",
+          "refused": "Rejeté",
+          "running": "En cours",
+          "succeeded": "Réussi",
+          "timed-out": "Expiré"
+        },
+        "title": "Commandes d'agent récentes"
       },
       "empty": {
         "body": "Ajoutez un VPS manuellement ou importez les hôtes déjà présents dans votre configuration SSH.",

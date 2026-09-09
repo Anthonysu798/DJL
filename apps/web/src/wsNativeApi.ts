@@ -35,6 +35,7 @@ import {
   WS_METHODS,
   type WsWelcomePayload,
   type AutomationStreamEvent,
+  type ServerCommandStreamEvent,
   type DocumentRenderEvent,
   type LocalModelEvent,
   type AiDetectorEvent,
@@ -77,6 +78,7 @@ const workDocumentRenderEventListeners = new Set<(payload: DocumentRenderEvent) 
 const localModelEventListeners = new Set<(payload: LocalModelEvent) => void>();
 const aiDetectorEventListeners = new Set<(payload: AiDetectorEvent) => void>();
 const automationEventListeners = new Set<(payload: AutomationStreamEvent) => void>();
+const serverEventListeners = new Set<(payload: ServerCommandStreamEvent) => void>();
 const orchestrationDomainEventListeners = new Set<(payload: OrchestrationEvent) => void>();
 const orchestrationShellEventListeners = new Set<(payload: OrchestrationShellStreamItem) => void>();
 const orchestrationThreadEventListeners = new Set<
@@ -432,6 +434,16 @@ export function createWsNativeApi(): NativeApi {
   transport.subscribe(WS_CHANNELS.automationEvent, (message) => {
     const payload = message.data;
     for (const listener of automationEventListeners) {
+      try {
+        listener(payload);
+      } catch {
+        // Swallow listener errors
+      }
+    }
+  });
+  transport.subscribe(WS_CHANNELS.serverEvent, (message) => {
+    const payload = message.data;
+    for (const listener of serverEventListeners) {
       try {
         listener(payload);
       } catch {
@@ -864,6 +876,14 @@ export function createWsNativeApi(): NativeApi {
       importApply: (input) => transport.request(WS_METHODS.serversImportApply, input),
       checkCapabilities: () => transport.request(WS_METHODS.serversCheckCapabilities, {}),
       listLocalKeys: () => transport.request(WS_METHODS.serversListLocalKeys, {}),
+      resolveCommand: (input) => transport.request(WS_METHODS.serversResolveCommand, input),
+      listCommands: (input) => transport.request(WS_METHODS.serversListCommands, input),
+      onEvent: (callback) => {
+        serverEventListeners.add(callback);
+        return () => {
+          serverEventListeners.delete(callback);
+        };
+      },
     },
     automation: {
       list: (input) => transport.request(WS_METHODS.automationList, input),
@@ -1101,6 +1121,7 @@ export function resetWsNativeApiForTest(): void {
   workDocumentRenderEventListeners.clear();
   localModelEventListeners.clear();
   automationEventListeners.clear();
+  serverEventListeners.clear();
   orchestrationDomainEventListeners.clear();
   orchestrationShellEventListeners.clear();
   orchestrationThreadEventListeners.clear();

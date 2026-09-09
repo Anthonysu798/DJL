@@ -2,7 +2,8 @@
 // Purpose: One registered server: status, address, tags, stats strip, actions, expandable details.
 // Layer: Settings UI components (servers)
 
-import type { ServerRecord } from "@synara/contracts";
+import type { ServerCommandRecord, ServerId, ServerRecord } from "@synara/contracts";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,10 +24,12 @@ import {
   ZapIcon,
 } from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
+import { serverCommandsQueryKey, serverCommandsQueryOptions } from "~/lib/serversReactQuery";
 import { cn } from "~/lib/utils";
+import { ensureNativeApi } from "~/nativeApi";
 
 import { formatBytes, percent, statusKey, statusTone, uptimeParts } from "./serverPanelModel";
-import { ServerStatusDot } from "./ServerStatusDot";
+import { ServerStatusDot, type ServerStatusTone } from "./ServerStatusDot";
 
 export type ServerPendingAction = "test" | "refresh" | null;
 
@@ -97,6 +100,73 @@ function Bar({ label, used, total }: { label: string; used: number; total: numbe
           style={{ width: `${width}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function commandTone(status: ServerCommandRecord["status"]): ServerStatusTone {
+  switch (status) {
+    case "pending":
+      return "warning";
+    case "succeeded":
+      return "success";
+    case "running":
+      return "neutral";
+    default:
+      return "danger";
+  }
+}
+
+/** The last few `djl-ssh` commands agents ran here; only fetched while the row is open. */
+function ServerRecentCommands({ serverId, open }: { serverId: ServerId; open: boolean }) {
+  const { t, i18n } = useTranslation("settings");
+  const queryClient = useQueryClient();
+  const commands = useQuery({ ...serverCommandsQueryOptions(serverId), enabled: open });
+
+  useEffect(() => {
+    if (!open) return;
+    return ensureNativeApi().servers.onEvent((event) => {
+      if (event.type === "command-updated" && event.command.serverId === serverId) {
+        void queryClient.invalidateQueries({ queryKey: serverCommandsQueryKey(serverId) });
+      }
+    });
+  }, [open, queryClient, serverId]);
+
+  const list = commands.data?.commands ?? [];
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-medium text-[var(--color-text-foreground)]">
+        {t("servers.commands.title")}
+      </p>
+      {list.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground">{t("servers.commands.empty")}</p>
+      ) : (
+        <ul className="space-y-1.5" data-slot="server-recent-commands">
+          {list.map((command) => (
+            <li key={command.id} className="flex items-center gap-2.5 text-[11px]">
+              <ServerStatusDot
+                tone={commandTone(command.status)}
+                busy={command.status === "pending" || command.status === "running"}
+                label={t(`servers.commands.status.${command.status}`)}
+              />
+              <code
+                className="min-w-0 flex-1 truncate font-mono text-[var(--color-text-foreground)]"
+                title={command.command}
+              >
+                {command.command}
+              </code>
+              {command.exitCode !== undefined ? (
+                <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+                  {t("servers.commands.exitCode", { code: command.exitCode })}
+                </span>
+              ) : null}
+              <span className="shrink-0 text-muted-foreground">
+                {formatRelativeTime(new Date(command.requestedAt).toISOString(), i18n.language)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -428,6 +498,8 @@ export function ServerRow({
               </div>
             ))}
           </dl>
+
+          <ServerRecentCommands serverId={server.id} open={open} />
 
           <div className="flex flex-col gap-3 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-0.5">

@@ -36,11 +36,19 @@ export function classifySshResult(raw: RawSshResult): ServerTestOutcome {
 
 const MAX_MESSAGE_LENGTH = 500;
 
-/** Strips each redaction, collapses whitespace, trims and caps the result at 500 characters. */
-export function sanitizeSshStderr(stderr: string, redactions: ReadonlyArray<string>): string {
+/** Replaces every occurrence of each non-empty redaction with "[redacted]". */
+export function redactSshStderr(stderr: string, redactions: ReadonlyArray<string>): string {
   let text = stderr;
   for (const redaction of redactions) {
     if (redaction.length > 0) text = text.split(redaction).join("[redacted]");
   }
-  return text.replace(/\s+/g, " ").trim().slice(0, MAX_MESSAGE_LENGTH);
+  return text;
+}
+
+/** Strips each redaction, collapses whitespace, trims and caps the result at 500 characters. */
+export function sanitizeSshStderr(stderr: string, redactions: ReadonlyArray<string>): string {
+  return redactSshStderr(stderr, redactions)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_MESSAGE_LENGTH);
 }

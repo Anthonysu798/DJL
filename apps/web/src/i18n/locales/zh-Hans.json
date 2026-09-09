@@ -103,6 +103,7 @@
         "local": "本地",
         "plugins": "插件",
         "provider": "提供者",
+        "servers": "服务器",
         "skills": "技能",
         "subagents": "子代理"
       },
@@ -2302,6 +2303,29 @@
         "test": "测试连接",
         "testBeforeSaving": "保存前测试",
         "trust": "信任此密钥"
+      },
+      "approval": {
+        "approve": "批准",
+        "deny": "拒绝",
+        "more": "还有 {{count}} 个等待中",
+        "region": "服务器命令审批",
+        "thread": "来自 {{thread}}",
+        "title": "代理想在 {{server}} 上运行命令",
+        "waits": "最多等待 15 分钟"
+      },
+      "commands": {
+        "empty": "还没有代理命令",
+        "exitCode": "退出码 {{code}}",
+        "status": {
+          "denied": "已拒绝",
+          "failed": "失败",
+          "pending": "等待批准",
+          "refused": "已拦截",
+          "running": "运行中",
+          "succeeded": "成功",
+          "timed-out": "超时"
+        },
+        "title": "最近的代理命令"
       },
       "empty": {
         "body": "手动添加 VPS，或导入 SSH 配置中已有的主机。",

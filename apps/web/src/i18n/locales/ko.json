@@ -103,6 +103,7 @@
         "local": "지역",
         "plugins": "플러그인",
         "provider": "공급자",
+        "servers": "서버",
         "skills": "기술",
         "subagents": "하위 에이전트"
       },
@@ -2302,6 +2303,29 @@
         "test": "연결 테스트",
         "testBeforeSaving": "저장 전에 테스트",
         "trust": "이 키 신뢰"
+      },
+      "approval": {
+        "approve": "승인",
+        "deny": "거부",
+        "more": "{{count}}개 더 대기 중",
+        "region": "서버 명령 승인",
+        "thread": "{{thread}}에서",
+        "title": "에이전트가 {{server}}에서 명령을 실행하려고 합니다",
+        "waits": "최대 15분 동안 대기합니다"
+      },
+      "commands": {
+        "empty": "아직 에이전트 명령이 없습니다",
+        "exitCode": "종료 코드 {{code}}",
+        "status": {
+          "denied": "거부됨",
+          "failed": "실패",
+          "pending": "승인 대기 중",
+          "refused": "차단됨",
+          "running": "실행 중",
+          "succeeded": "성공",
+          "timed-out": "시간 초과"
+        },
+        "title": "최근 에이전트 명령"
       },
       "empty": {
         "body": "VPS를 직접 추가하거나 SSH 설정에 이미 있는 호스트를 가져오세요.",
