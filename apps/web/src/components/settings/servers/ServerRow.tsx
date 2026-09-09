@@ -1,0 +1,538 @@
+// FILE: ServerRow.tsx
+// Purpose: One registered server: status, address, tags, stats strip, actions, expandable details.
+// Layer: Settings UI components (servers)
+
+import type { ServerCommandRecord, ServerId, ServerRecord } from "@synara/contracts";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { DisclosureRegion } from "~/components/ui/DisclosureRegion";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "~/components/ui/menu";
+import { CentralIcon } from "~/lib/central-icons";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  EllipsisIcon,
+  LoaderCircleIcon,
+  PencilIcon,
+  RefreshCwIcon,
+  ZapIcon,
+} from "~/lib/icons";
+import { formatRelativeTime } from "~/lib/relativeTime";
+import { serverCommandsQueryKey, serverCommandsQueryOptions } from "~/lib/serversReactQuery";
+import { cn } from "~/lib/utils";
+import { ensureNativeApi } from "~/nativeApi";
+
+import { formatBytes, percent, statusKey, statusTone, uptimeParts } from "./serverPanelModel";
+import { ServerStatusDot, type ServerStatusTone } from "./ServerStatusDot";
+
+export type ServerPendingAction = "test" | "refresh" | null;
+
+export interface ServerRowProps {
+  server: ServerRecord;
+  pending: ServerPendingAction;
+  /** Set right after creation so the row plays its enter + highlight animation. */
+  justAdded?: boolean;
+  onTest: () => void;
+  onRefresh: () => void;
+  onTrust: (fingerprint: string) => void;
+  onEdit: () => void;
+  onRemove: () => void;
+}
+
+function formatUptime(seconds: number, t: TFunction<"settings">) {
+  const { days, hours, minutes } = uptimeParts(seconds);
+  if (days > 0) return t("servers.stats.uptimeDays", { count: days, hours });
+  if (hours > 0) return t("servers.stats.uptimeHours", { count: hours, minutes });
+  return t("servers.stats.uptimeMinutes", { count: minutes });
+}
+
+function CopyButton({ value }: { value: string }) {
+  const { t } = useTranslation("settings");
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  return (
+    <Button
+      size="chip"
+      variant="outline"
+      className="servers-press"
+      onClick={() => {
+        void navigator.clipboard?.writeText(value);
+        setCopied(true);
+      }}
+    >
+      {copied ? <CheckIcon className="servers-check-pop" /> : <CopyIcon />}
+      {copied ? t("servers.actions.copied") : t("servers.actions.copy")}
+    </Button>
+  );
+}
+
+function Bar({ label, used, total }: { label: string; used: number; total: number }) {
+  const [width, setWidth] = useState(0);
+  const target = percent(used, total);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setWidth(target));
+    return () => window.cancelAnimationFrame(frame);
+  }, [target]);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between text-[11px]">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-mono tabular-nums text-[var(--color-text-foreground)]">
+          {formatBytes(used)} / {formatBytes(total)}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-background-elevated-secondary)]">
+        <div
+          className={cn(
+            "servers-bar-fill h-full rounded-full",
+            target >= 90 ? "bg-destructive" : target >= 75 ? "bg-warning" : "bg-primary",
+          )}
+          style={{ width: `${width}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function commandTone(status: ServerCommandRecord["status"]): ServerStatusTone {
+  switch (status) {
+    case "pending":
+      return "warning";
+    case "succeeded":
+      return "success";
+    case "running":
+      return "neutral";
+    default:
+      return "danger";
+  }
+}
+
+/** The last few `djl-ssh` commands agents ran here; only fetched while the row is open. */
+function ServerRecentCommands({ serverId, open }: { serverId: ServerId; open: boolean }) {
+  const { t, i18n } = useTranslation("settings");
+  const queryClient = useQueryClient();
+  const commands = useQuery({ ...serverCommandsQueryOptions(serverId), enabled: open });
+
+  useEffect(() => {
+    if (!open) return;
+    return ensureNativeApi().servers.onEvent((event) => {
+      if (event.type === "command-updated" && event.command.serverId === serverId) {
+        void queryClient.invalidateQueries({ queryKey: serverCommandsQueryKey(serverId) });
+      }
+    });
+  }, [open, queryClient, serverId]);
+
+  const list = commands.data?.commands ?? [];
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-medium text-[var(--color-text-foreground)]">
+        {t("servers.commands.title")}
+      </p>
+      {list.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground">{t("servers.commands.empty")}</p>
+      ) : (
+        <ul className="space-y-1.5" data-slot="server-recent-commands">
+          {list.map((command) => (
+            <li key={command.id} className="flex items-center gap-2.5 text-[11px]">
+              <ServerStatusDot
+                tone={commandTone(command.status)}
+                busy={command.status === "pending" || command.status === "running"}
+                label={t(`servers.commands.status.${command.status}`)}
+              />
+              <code
+                className="min-w-0 flex-1 truncate font-mono text-[var(--color-text-foreground)]"
+                title={command.command}
+              >
+                {command.command}
+              </code>
+              {command.exitCode !== undefined ? (
+                <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+                  {t("servers.commands.exitCode", { code: command.exitCode })}
+                </span>
+              ) : null}
+              <span className="shrink-0 text-muted-foreground">
+                {formatRelativeTime(new Date(command.requestedAt).toISOString(), i18n.language)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ActionButton({
+  label,
+  busy,
+  done,
+  onClick,
+  variant = "outline",
+}: {
+  label: string;
+  busy: boolean;
+  done: boolean;
+  onClick: () => void;
+  variant?: "outline" | "default";
+}) {
+  return (
+    <Button
+      size="sm"
+      variant={variant}
+      className="servers-press min-w-28"
+      disabled={busy}
+      onClick={onClick}
+    >
+      {busy ? (
+        <LoaderCircleIcon className="animate-spin" />
+      ) : done ? (
+        <CheckIcon className="servers-check-pop" />
+      ) : null}
+      <span>{label}</span>
+    </Button>
+  );
+}
+
+export function ServerRow({
+  server,
+  pending,
+  justAdded = false,
+  onTest,
+  onRefresh,
+  onTrust,
+  onEdit,
+  onRemove,
+}: ServerRowProps) {
+  const { t, i18n } = useTranslation("settings");
+  const [open, setOpen] = useState(false);
+  const [recentSuccess, setRecentSuccess] = useState<ServerPendingAction>(null);
+  const [wasPending, setWasPending] = useState<ServerPendingAction>(null);
+
+  const outcome = server.lastTest?.outcome;
+  const needsHostKeyDecision = outcome === "host-key-unknown" || outcome === "host-key-changed";
+
+  // Remember which action was running so its button can flash a check mark when it succeeds.
+  useEffect(() => {
+    if (pending) {
+      setWasPending(pending);
+      return;
+    }
+    if (wasPending) {
+      setWasPending(null);
+      if (outcome === "ok") setRecentSuccess(wasPending);
+    }
+  }, [pending, wasPending, outcome]);
+
+  useEffect(() => {
+    if (!recentSuccess) return;
+    const timer = window.setTimeout(() => setRecentSuccess(null), 900);
+    return () => window.clearTimeout(timer);
+  }, [recentSuccess]);
+
+  // A host-key decision is never hidden inside a collapsed row.
+  useEffect(() => {
+    if (needsHostKeyDecision) setOpen(true);
+  }, [needsHostKeyDecision, server.lastTest?.at]);
+
+  const tone = statusTone(server);
+  const statusLabel = t(`servers.status.${statusKey(server, pending)}`);
+  const stats = server.lastStats;
+  const address = `${server.username}@${server.host}${server.port === 22 ? "" : `:${server.port}`}`;
+  const locale = i18n.language;
+  const testedWhen = server.lastTest
+    ? formatRelativeTime(new Date(server.lastTest.at).toISOString(), locale)
+    : null;
+
+  const stripItems: Array<{ key: string; label: string; value: string }> = [];
+  if (stats?.load)
+    stripItems.push({
+      key: "load",
+      label: t("servers.stats.load"),
+      value: stats.load.one.toFixed(2),
+    });
+  if (stats?.memory)
+    stripItems.push({
+      key: "memory",
+      label: t("servers.stats.memory"),
+      value: `${percent(stats.memory.usedBytes, stats.memory.totalBytes)}%`,
+    });
+  if (stats?.disk)
+    stripItems.push({
+      key: "disk",
+      label: t("servers.stats.disk"),
+      value: `${percent(stats.disk.usedBytes, stats.disk.totalBytes)}%`,
+    });
+  if (stats?.uptimeSeconds !== undefined)
+    stripItems.push({
+      key: "uptime",
+      label: t("servers.stats.uptime"),
+      value: formatUptime(stats.uptimeSeconds, t),
+    });
+
+  const details: Array<[string, string | undefined]> = [
+    [t("servers.stats.hostname"), stats?.hostname],
+    [t("servers.stats.os"), stats?.os],
+    [t("servers.stats.kernel"), stats?.kernel],
+    [
+      t("servers.stats.load"),
+      stats?.load
+        ? `${stats.load.one.toFixed(2)}  ${stats.load.five.toFixed(2)}  ${stats.load.fifteen.toFixed(2)}`
+        : undefined,
+    ],
+    [
+      t("servers.stats.uptime"),
+      stats?.uptimeSeconds !== undefined ? formatUptime(stats.uptimeSeconds, t) : undefined,
+    ],
+  ];
+
+  return (
+    <div
+      className={cn("px-4 py-4 sm:px-5", justAdded && "servers-row-enter servers-highlight-sweep")}
+      data-slot="settings-row"
+      data-server-id={server.id}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          className="group flex min-w-0 flex-1 items-start gap-3 text-left"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="mt-[7px] inline-flex">
+            <ServerStatusDot tone={tone} busy={pending !== null} label={statusLabel} />
+          </span>
+          <span className="min-w-0 flex-1 space-y-1">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold text-[var(--color-text-foreground)]">
+                {server.name}
+              </span>
+              {server.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="hidden px-1.5 py-0 text-[10px] font-normal sm:inline-flex"
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </span>
+            <span className="block truncate font-mono text-[11px] text-muted-foreground">
+              {address}
+            </span>
+            <span className="block text-[11px] text-muted-foreground">
+              <span
+                className={cn(
+                  tone === "danger" && "text-destructive",
+                  tone === "warning" && "text-warning",
+                  tone === "success" && "text-success",
+                )}
+              >
+                {statusLabel}
+              </span>
+              {server.lastTest?.latencyMs !== undefined && outcome === "ok"
+                ? ` · ${t("servers.status.latency", { ms: server.lastTest.latencyMs })}`
+                : ""}
+              {testedWhen ? ` · ${t("servers.status.lastTested", { when: testedWhen })}` : ""}
+            </span>
+          </span>
+        </button>
+
+        <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto sm:justify-end">
+          {stripItems.length > 0 ? (
+            <dl className="hidden items-center gap-4 font-mono text-[11px] tabular-nums lg:flex">
+              {stripItems.map((item, index) => (
+                <div
+                  key={item.key}
+                  className="servers-stat-enter flex flex-col items-end leading-tight"
+                  style={{ ["--servers-stat-index" as string]: index }}
+                >
+                  <dd className="text-[var(--color-text-foreground)]">{item.value}</dd>
+                  <dt className="text-[10px] text-muted-foreground">{item.label}</dt>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+            {t(`servers.tier.${server.permissionTier}`)}
+          </Badge>
+          <Menu>
+            <MenuTrigger
+              render={<Button size="icon" variant="ghost" aria-label={t("servers.actions.more")} />}
+            >
+              <EllipsisIcon />
+            </MenuTrigger>
+            <MenuPopup align="end" className="min-w-52 p-1">
+              <MenuItem onClick={onTest} className="gap-2.5 px-2.5 py-2 text-[13px]">
+                <ZapIcon className="size-4 text-muted-foreground" />
+                {t("servers.actions.test")}
+              </MenuItem>
+              <MenuItem onClick={onRefresh} className="gap-2.5 px-2.5 py-2 text-[13px]">
+                <RefreshCwIcon className="size-4 text-muted-foreground" />
+                {t("servers.actions.refresh")}
+              </MenuItem>
+              <MenuItem onClick={onEdit} className="gap-2.5 px-2.5 py-2 text-[13px]">
+                <PencilIcon className="size-4 text-muted-foreground" />
+                {t("servers.actions.edit")}
+              </MenuItem>
+              <MenuSeparator className="my-1" />
+              <MenuItem
+                onClick={onRemove}
+                className="gap-2.5 px-2.5 py-2 text-[13px] text-destructive"
+              >
+                <CentralIcon name="trash-can-simple" className="size-4" />
+                {t("servers.actions.remove")}
+              </MenuItem>
+            </MenuPopup>
+          </Menu>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={statusLabel}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <ChevronDownIcon
+              className={cn("transition-transform duration-200", open && "rotate-180")}
+            />
+          </Button>
+        </div>
+      </div>
+
+      <DisclosureRegion open={open}>
+        <div className="space-y-5 pt-5 sm:pl-5">
+          {needsHostKeyDecision && server.lastTest ? (
+            <div
+              className={cn(
+                "rounded-lg border p-3.5 text-xs",
+                outcome === "host-key-unknown"
+                  ? "border-warning/40 bg-warning/8"
+                  : "border-destructive/40 bg-destructive/8",
+              )}
+              role="alert"
+            >
+              <p className="font-medium text-[var(--color-text-foreground)]">
+                {outcome === "host-key-unknown"
+                  ? t("servers.hostKey.title")
+                  : t("servers.hostKey.changedTitle")}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {outcome === "host-key-unknown"
+                  ? t("servers.hostKey.body")
+                  : t("servers.hostKey.changedBody")}
+              </p>
+              {server.lastTest.hostKey ? (
+                <div className="mt-3 space-y-1.5">
+                  <div className="text-[11px] text-muted-foreground">
+                    {t("servers.hostKey.keyType")}:{" "}
+                    <span className="font-mono">{server.lastTest.hostKey.type}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="rounded bg-[var(--color-background-elevated-secondary)] px-1.5 py-1 font-mono text-[11px] break-all">
+                      {server.lastTest.hostKey.fingerprint}
+                    </code>
+                    <CopyButton value={server.lastTest.hostKey.fingerprint} />
+                  </div>
+                </div>
+              ) : null}
+              {outcome === "host-key-unknown" && server.lastTest.hostKey ? (
+                <div className="mt-3 flex gap-2">
+                  <ActionButton
+                    label={t("servers.actions.trust")}
+                    busy={pending === "test"}
+                    done={false}
+                    variant="default"
+                    onClick={() => onTrust(server.lastTest!.hostKey!.fingerprint)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="servers-press"
+                    onClick={() => setOpen(false)}
+                  >
+                    {t("servers.actions.notNow")}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {stats?.memory || stats?.disk ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {stats.memory ? (
+                <Bar
+                  label={t("servers.stats.memory")}
+                  used={stats.memory.usedBytes}
+                  total={stats.memory.totalBytes}
+                />
+              ) : null}
+              {stats.disk ? (
+                <Bar
+                  label={`${t("servers.stats.disk")} ${stats.disk.mountPoint}`}
+                  used={stats.disk.usedBytes}
+                  total={stats.disk.totalBytes}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          <dl className="grid gap-y-2 text-[11px] sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-6">
+            {details.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="truncate font-mono text-[var(--color-text-foreground)]">
+                  {value ?? (
+                    <span className="text-muted-foreground/70">
+                      {t("servers.stats.unavailable")}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <ServerRecentCommands serverId={server.id} open={open} />
+
+          <div className="flex flex-col gap-3 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-0.5">
+              {server.lastTest?.message && !needsHostKeyDecision ? (
+                <p className="font-mono text-[10px] break-words text-muted-foreground/80">
+                  {server.lastTest.message}
+                </p>
+              ) : null}
+              {stats ? (
+                <p>
+                  {t("servers.stats.collected", {
+                    when: formatRelativeTime(new Date(stats.collectedAt).toISOString(), locale),
+                  })}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <ActionButton
+                label={t("servers.actions.test")}
+                busy={pending === "test"}
+                done={recentSuccess === "test"}
+                onClick={onTest}
+              />
+              <ActionButton
+                label={t("servers.actions.refresh")}
+                busy={pending === "refresh"}
+                done={recentSuccess === "refresh"}
+                onClick={onRefresh}
+              />
+            </div>
+          </div>
+        </div>
+      </DisclosureRegion>
+    </div>
+  );
+}

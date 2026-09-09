@@ -3,6 +3,7 @@ import type {
   ProviderSessionStartInput,
   ProviderModelDescriptor,
 } from "@synara/contracts";
+import { withDjlThreadId } from "./driverEnv";
 import { bounded, NativeRpc, object, string } from "./protocol";
 import type { NativeDriverFactory } from "./types";
 import { codexContextUsage } from "./usage";
@@ -44,7 +45,10 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink) => {
     options?.binaryPath ?? "codex",
     ["app-server"],
     input.cwd!,
-    options?.homePath ? { ...process.env, CODEX_HOME: options.homePath } : undefined,
+    withDjlThreadId(
+      options?.homePath ? { ...process.env, CODEX_HOME: options.homePath } : process.env,
+      input.threadId,
+    ),
   );
   let id = "";
   let activeTurn = "";

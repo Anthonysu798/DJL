@@ -71,6 +71,11 @@ import {
   ProviderServiceError,
 } from "../../provider/Errors.ts";
 import { isOpenCodeSessionNotFoundDetail } from "../../provider/openCodeSessionRecovery.ts";
+import { ServerRepository } from "../../persistence/Services/ServerRepository.ts";
+import {
+  appendSelectedServersBlock,
+  resolveServerMentions,
+} from "../../servers/serverMentionPrompt.ts";
 import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
 import {
   TextGeneration,
@@ -367,6 +372,7 @@ const make = Effect.gen(function* () {
   const textGeneration = yield* TextGeneration;
   const serverSettings = yield* ServerSettingsService;
   const workPreparationQueue = yield* WorkPreparationQueue;
+  const serverRepository = yield* ServerRepository;
   const handledTurnStartKeys = yield* Cache.make<string, true>({
     capacity: HANDLED_TURN_START_KEY_MAX,
     timeToLive: HANDLED_TURN_START_KEY_TTL,
@@ -1299,6 +1305,23 @@ const make = Effect.gen(function* () {
       }),
     );
     const normalizedAttachments = input.attachments ?? [];
+    // `@server` mentions never reach a harness as native mentions: they are
+    // resolved here and described in a <selected_servers> block instead.
+    const { servers: selectedServers, remainingMentions } =
+      input.mentions !== undefined && input.mentions.length > 0
+        ? yield* resolveServerMentions(input.mentions, (serverId) =>
+            serverRepository.getById(serverId).pipe(
+              Effect.catch((error) =>
+                Effect.logWarning("failed to resolve server mention", {
+                  threadId: input.threadId,
+                  serverId,
+                  error,
+                }).pipe(Effect.as(Option.none())),
+              ),
+            ),
+          )
+        : { servers: [], remainingMentions: [] };
+    const providerMentions = input.mentions !== undefined ? remainingMentions : undefined;
     const activeSession = yield* providerService
       .listSessions()
       .pipe(
@@ -1318,17 +1341,19 @@ const make = Effect.gen(function* () {
             }
           : requestedModelSelection
         : requestedModelSelection;
-    const sendQueuedProviderTurn = (messageText: string | undefined) =>
-      providerService.sendTurn({
+    const sendQueuedProviderTurn = (messageText: string | undefined) => {
+      const inputWithServers = appendSelectedServersBlock(messageText, selectedServers);
+      return providerService.sendTurn({
         threadId: input.threadId,
-        ...(messageText ? { input: messageText } : {}),
+        ...(inputWithServers ? { input: inputWithServers } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
+        ...(providerMentions !== undefined ? { mentions: providerMentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
         ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
         ...(input.workTurnPolicy !== undefined ? { workTurnPolicy: input.workTurnPolicy } : {}),
       });
+    };
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
       if ((input.dispatchMode ?? "queue") === "steer") {
@@ -1390,12 +1415,13 @@ const make = Effect.gen(function* () {
         })
         .pipe(Effect.onError(() => cancelPendingStudioBaseline));
     } else if (input.dispatchMode === "steer") {
+      const steerInput = appendSelectedServersBlock(normalizedInput, selectedServers);
       yield* providerService.steerTurn({
         threadId: input.threadId,
-        ...(normalizedInput ? { input: normalizedInput } : {}),
+        ...(steerInput ? { input: steerInput } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
+        ...(providerMentions !== undefined ? { mentions: providerMentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
         ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
       });

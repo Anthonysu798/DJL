@@ -1108,6 +1108,7 @@ export function makeGrokAdapter(
             grokSettings: effectiveGrokSettings,
             childProcessSpawner,
             cwd,
+            threadId: input.threadId,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientInfo: { name: "DJL", version: "0.0.0" },
             ...acpRuntimeLoggers,

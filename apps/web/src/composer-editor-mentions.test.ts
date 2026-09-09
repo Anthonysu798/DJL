@@ -104,6 +104,20 @@ describe("splitPromptIntoComposerSegments", () => {
     ]);
   });
 
+  it("marks selected server references as server mentions", () => {
+    expect(
+      splitPromptIntoComposerSegments(
+        "Check @hk-edge please",
+        [],
+        [{ name: "hk-edge", path: "ssh://srv-hk" }],
+      ),
+    ).toEqual([
+      { type: "text", text: "Check " },
+      { type: "mention", path: "hk-edge", kind: "server" },
+      { type: "text", text: " please" },
+    ]);
+  });
+
   it("does not convert an incomplete trailing mention token", () => {
     expect(splitPromptIntoComposerSegments("Inspect @AGENTS.md")).toEqual([
       { type: "text", text: "Inspect @AGENTS.md" },

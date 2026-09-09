@@ -812,7 +812,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        env: buildCodexProcessEnv(codexHomePath ? { homePath: codexHomePath } : {}),
+        env: {
+          ...buildCodexProcessEnv(codexHomePath ? { homePath: codexHomePath } : {}),
+          DJL_THREAD_ID: threadId,
+        },
       });
       const output = readline.createInterface({ input: child.stdout });
 
@@ -1433,7 +1436,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
-        env: buildCodexProcessEnv(codexHomePath ? { homePath: codexHomePath } : {}),
+        env: {
+          ...buildCodexProcessEnv(codexHomePath ? { homePath: codexHomePath } : {}),
+          DJL_THREAD_ID: threadId,
+        },
       });
       const output = readline.createInterface({ input: child.stdout });
 

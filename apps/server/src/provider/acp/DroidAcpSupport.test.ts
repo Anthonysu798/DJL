@@ -48,6 +48,12 @@ describe("buildDroidAcpSpawnInput", () => {
     });
   });
 
+  it("exports DJL_THREAD_ID for the owning thread", () => {
+    expect(buildDroidAcpSpawnInput(undefined, "/tmp/project", "thread-1").env).toEqual({
+      DJL_THREAD_ID: "thread-1",
+    });
+  });
+
   it("passes model, reasoning effort, and full-access flag", () => {
     expect(
       buildDroidAcpSpawnInput(

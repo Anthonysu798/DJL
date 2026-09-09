@@ -30,6 +30,8 @@ export interface GrokAcpRuntimeInput extends Omit<
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly grokSettings: GrokAcpRuntimeSettings | null | undefined;
+  /** DJL thread that owns the spawned process; exported as `DJL_THREAD_ID`. */
+  readonly threadId?: string;
 }
 
 export interface GrokAcpModelSelectionErrorContext {
@@ -58,6 +60,7 @@ export function hasGrokApiKeyEnv(env: NodeJS.ProcessEnv = process.env): boolean 
 export function buildGrokAcpSpawnInput(
   grokSettings: GrokAcpRuntimeSettings | null | undefined,
   cwd: string,
+  threadId?: string,
 ): AcpSpawnInput {
   const args = ["agent", "--no-leader"];
   if (grokSettings?.alwaysApprove === true) {
@@ -78,6 +81,7 @@ export function buildGrokAcpSpawnInput(
     command: grokSettings?.binaryPath || "grok",
     args,
     cwd,
+    ...(threadId ? { env: { DJL_THREAD_ID: threadId } } : {}),
   };
 }
 
@@ -115,7 +119,7 @@ export const makeGrokAcpRuntime = (
     const acpContext = yield* Layer.build(
       AcpSessionRuntime.layer({
         ...input,
-        spawn: buildGrokAcpSpawnInput(input.grokSettings, input.cwd),
+        spawn: buildGrokAcpSpawnInput(input.grokSettings, input.cwd, input.threadId),
         resolveAuthMethodId: resolveGrokAcpAuthMethodId,
         authenticateMeta: { headless: true },
       }).pipe(

@@ -67,6 +67,7 @@ import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
 import { useProjectRunStore } from "../projectRunStore";
 import { dockTerminalThreadId } from "../lib/dockTerminalScope";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
+import { ServerCommandApprovalSurface } from "../components/servers/ServerCommandApprovalSurface";
 import { useWorkspaceStore, workspaceThreadId } from "../workspaceStore";
 import {
   subscribeRetainedThreadDetailIdChanges,
@@ -203,6 +204,7 @@ function RootRouteView() {
           <GlobalShortcutsDialog />
           <GlobalWhatsNewSurface />
           <TaskCompletionNotifications />
+          <ServerCommandApprovalSurface />
           <ProviderUpdateNotifications />
           <LocalModelSetupCoordinator />
           <DesktopProjectBootstrap />

@@ -130,7 +130,8 @@ function renderMentionChipDom(
 
   const label = document.createElement("span");
   label.className = COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME;
-  label.textContent = basenameOfPath(pathValue);
+  // A server token is the server's name, not a path; show it verbatim.
+  label.textContent = kind === "server" ? pathValue : basenameOfPath(pathValue);
 
   container.append(icon, label);
 }

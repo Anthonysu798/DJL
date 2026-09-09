@@ -27,6 +27,7 @@ import {
 } from "@synara/shared/shell";
 
 import { resolveBaseCodexHomePath, resolveDjlCodexHomeOverlayPath } from "./codexHomePaths.ts";
+import { prependPathEntry } from "./servers/shimRuntime.ts";
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS = "NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS";
@@ -318,6 +319,11 @@ export function buildCodexProcessEnv(
 
         if (shellEnvironment.PATH) {
           effectiveEnv.PATH = shellEnvironment.PATH;
+          // The login shell knows nothing about the djl-ssh shim DJL put on PATH at boot.
+          const shimBin = effectiveEnv.DJL_SSH_SHIM_BIN?.trim();
+          if (shimBin) {
+            effectiveEnv.PATH = prependPathEntry(effectiveEnv.PATH, shimBin);
+          }
         }
         if (!effectiveEnv.SSH_AUTH_SOCK && shellEnvironment.SSH_AUTH_SOCK) {
           effectiveEnv.SSH_AUTH_SOCK = shellEnvironment.SSH_AUTH_SOCK;

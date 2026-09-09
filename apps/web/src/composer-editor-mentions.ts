@@ -7,6 +7,7 @@ import {
   createComposerMentionTokenRegex,
   extractComposerMentionPath,
   isPluginProviderMentionReference,
+  isServerProviderMentionReference,
   providerMentionMatchesToken,
 } from "./lib/composerMentions";
 import {
@@ -25,7 +26,7 @@ export type ComposerPromptSegment =
   | {
       type: "mention";
       path: string;
-      kind?: "path" | "plugin";
+      kind?: "path" | "plugin" | "server";
     }
   | {
       type: "skill";
@@ -314,16 +315,15 @@ function splitTextIntoPromptSegments(
         color: match.color,
       });
     } else if (match.kind === "mention") {
-      const isPluginMention =
-        options.mentionReferences?.some(
-          (mention) =>
-            isPluginProviderMentionReference(mention) &&
-            providerMentionMatchesToken(mention, match.value),
-        ) ?? false;
+      const reference = options.mentionReferences?.find((mention) =>
+        providerMentionMatchesToken(mention, match.value),
+      );
       segments.push(
-        isPluginMention
+        reference && isPluginProviderMentionReference(reference)
           ? { type: "mention", path: match.value, kind: "plugin" }
-          : { type: "mention", path: match.value },
+          : reference && isServerProviderMentionReference(reference)
+            ? { type: "mention", path: match.value, kind: "server" }
+            : { type: "mention", path: match.value },
       );
     } else if (match.kind === "slash-command") {
       segments.push({ type: "slash-command", command: match.command });

@@ -12,6 +12,7 @@
 import { memo, type MouseEvent, type ReactNode } from "react";
 import type { ProviderMentionReference } from "@synara/contracts";
 import { basenameOfPath, pathLooksLikeKnownFile } from "~/file-icons";
+import { resolveMentionChipKind } from "~/lib/composerMentions";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "~/lib/workspaceFileOpener";
 import {
   COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME,
@@ -36,7 +37,13 @@ interface InlineMentionChipProps {
 
 export const InlineMentionChip = memo(function InlineMentionChip(props: InlineMentionChipProps) {
   const opener = useWorkspaceFileOpener();
-  const label = props.label ?? basenameOfPath(props.path);
+  const resolvedKind = resolveMentionChipKind(props.path, {
+    ...(props.kind ? { kind: props.kind } : {}),
+    ...(props.mentionReferences ? { mentionReferences: props.mentionReferences } : {}),
+  });
+  // A server token is the server's name, not a path; show it verbatim.
+  const label =
+    props.label ?? (resolvedKind === "server" ? props.path : basenameOfPath(props.path));
   const inner = (
     <InlineChipContent
       icon={
@@ -58,7 +65,7 @@ export const InlineMentionChip = memo(function InlineMentionChip(props: InlineMe
     props.href === undefined &&
     props.onActivate === undefined &&
     opener !== null &&
-    (props.kind === undefined || props.kind === "path") &&
+    resolvedKind === "path" &&
     pathLooksLikeKnownFile(props.path);
 
   if (props.href !== undefined || props.onActivate || contextOpenable) {

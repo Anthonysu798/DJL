@@ -19,6 +19,18 @@ import {
   AutomationUpdateInput,
 } from "./automation";
 import {
+  EmptyServersInput,
+  ServerByIdInput,
+  ServerCreateInput,
+  ServerDeleteInput,
+  ServerImportApplyInput,
+  ServerListCommandsInput,
+  ServerResolveCommandInput,
+  ServerCommandStreamEvent,
+  ServerTrustHostKeyInput,
+  ServerUpdateInput,
+} from "./servers";
+import {
   ClientOrchestrationCommand,
   OrchestrationEvent,
   OrchestrationImportThreadInput,
@@ -308,6 +320,22 @@ export const WS_METHODS = {
   aiDetectorClearCache: "aiDetector.clearCache",
   subscribeAiDetectorEvents: "aiDetector.subscribe",
 
+  // Server registry methods
+  serversList: "servers.list",
+  serversCreate: "servers.create",
+  serversUpdate: "servers.update",
+  serversDelete: "servers.delete",
+  serversTestConnection: "servers.testConnection",
+  serversTrustHostKey: "servers.trustHostKey",
+  serversRefreshStats: "servers.refreshStats",
+  serversImportPreview: "servers.importSshConfig.preview",
+  serversImportApply: "servers.importSshConfig.apply",
+  serversCheckCapabilities: "servers.checkCapabilities",
+  serversListLocalKeys: "servers.listLocalKeys",
+  serversResolveCommand: "servers.commands.resolve",
+  serversListCommands: "servers.commands.list",
+  subscribeServerEvents: "servers.subscribe",
+
   // Automation methods
   automationList: "automation.list",
   automationCreate: "automation.create",
@@ -324,6 +352,7 @@ export const WS_METHODS = {
 
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
+  serverEvent: "servers.event",
   gitActionProgress: "git.actionProgress",
   terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
@@ -513,6 +542,22 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.aiDetectorClearCache, Schema.Struct({})),
   tagRequestBody(WS_METHODS.subscribeAiDetectorEvents, Schema.Struct({})),
 
+  // Server registry methods
+  tagRequestBody(WS_METHODS.serversList, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversCreate, ServerCreateInput),
+  tagRequestBody(WS_METHODS.serversUpdate, ServerUpdateInput),
+  tagRequestBody(WS_METHODS.serversDelete, ServerDeleteInput),
+  tagRequestBody(WS_METHODS.serversTestConnection, ServerByIdInput),
+  tagRequestBody(WS_METHODS.serversTrustHostKey, ServerTrustHostKeyInput),
+  tagRequestBody(WS_METHODS.serversRefreshStats, ServerByIdInput),
+  tagRequestBody(WS_METHODS.serversImportPreview, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversImportApply, ServerImportApplyInput),
+  tagRequestBody(WS_METHODS.serversCheckCapabilities, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversListLocalKeys, EmptyServersInput),
+  tagRequestBody(WS_METHODS.serversResolveCommand, ServerResolveCommandInput),
+  tagRequestBody(WS_METHODS.serversListCommands, ServerListCommandsInput),
+  tagRequestBody(WS_METHODS.subscribeServerEvents, EmptyServersInput),
+
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),
   tagRequestBody(WS_METHODS.automationCreate, AutomationCreateInput),
@@ -563,6 +608,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
+  readonly [WS_CHANNELS.serverEvent]: typeof ServerCommandStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
@@ -609,6 +655,10 @@ export const WsPushAutomationEvent = makeWsPushSchema(
   WS_CHANNELS.automationEvent,
   AutomationStreamEvent,
 );
+export const WsPushServerEvent = makeWsPushSchema(
+  WS_CHANNELS.serverEvent,
+  ServerCommandStreamEvent,
+);
 export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
@@ -645,6 +695,7 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverProviderStatusesUpdated,
   WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
+  WS_CHANNELS.serverEvent,
   WS_CHANNELS.terminalEvent,
   WS_CHANNELS.projectDevServerEvent,
   WS_CHANNELS.workDocumentRenderEvent,
@@ -663,6 +714,7 @@ export const WsPush = Schema.Union([
   WsPushServerProviderStatusesUpdated,
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
+  WsPushServerEvent,
   WsPushGitActionProgress,
   WsPushTerminalEvent,
   WsPushProjectDevServerEvent,

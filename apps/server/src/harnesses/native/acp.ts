@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { withDjlThreadId } from "./driverEnv";
 import { NativeRpc, object, string, type JsonObject } from "./protocol";
 import type { NativeDriverFactory } from "./types";
 import type { ProviderSendTurnInput, ProviderSessionStartInput } from "@synara/contracts";
@@ -47,7 +48,12 @@ export function createNativeAcpDriver(config: {
         `${config.label} ACP cannot enforce an OS sandbox; use Codex for sandboxed execution`,
       );
     const command = config.command(input);
-    const rpc = new NativeRpc(command.command, [...command.args], input.cwd!, command.env);
+    const rpc = new NativeRpc(
+      command.command,
+      [...command.args],
+      input.cwd!,
+      withDjlThreadId(command.env ?? process.env, input.threadId),
+    );
     let id = "";
     let replaying = true;
     let assistantMessageId = randomUUID();

@@ -736,7 +736,7 @@ const makeGeminiAdapter = Effect.fn("makeGeminiAdapter")(function* (
 
     if (Object.keys(aliases).length === 0) {
       return {
-        env: process.env,
+        env: { ...process.env, DJL_THREAD_ID: input.threadId },
         systemSettingsPath: undefined,
       };
     }
@@ -776,6 +776,7 @@ const makeGeminiAdapter = Effect.fn("makeGeminiAdapter")(function* (
       env: {
         ...process.env,
         GEMINI_CLI_SYSTEM_SETTINGS_PATH: systemSettingsPath,
+        DJL_THREAD_ID: input.threadId,
       },
     };
   });
