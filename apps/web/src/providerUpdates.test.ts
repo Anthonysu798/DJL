@@ -58,6 +58,8 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       gemini: { ...provider, binaryPath: "gemini" },
       grok: { ...provider, binaryPath: "grok" },
       kimi: { region: "existing", ...provider, binaryPath: "kimi" },
+      iflow: { ...provider, binaryPath: "iflow" },
+      qwen: { ...provider, binaryPath: "qwen" },
       droid: { ...provider, binaryPath: "droid" },
       kilo: { ...provider, binaryPath: "kilo", serverUrl: "", serverPassword: "" },
       opencode: {

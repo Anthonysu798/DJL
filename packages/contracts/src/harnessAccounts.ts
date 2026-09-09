@@ -8,6 +8,8 @@ export const HarnessId = Schema.Literals([
   "opencode",
   "grok",
   "kimi",
+  "iflow",
+  "qwen",
 ]);
 export type HarnessId = typeof HarnessId.Type;
 
@@ -43,6 +45,8 @@ export const HarnessToolId = Schema.Literals([
   "opencode",
   "grok",
   "kimi",
+  "iflow",
+  "qwen",
   "cursor",
 ]);
 export type HarnessToolId = typeof HarnessToolId.Type;

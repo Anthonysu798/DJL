@@ -54,6 +54,8 @@ const TECHNICAL_ALLOWLIST = new Set([
   "Grok",
   "Grok Build",
   "Kimi Code",
+  "iFlow CLI",
+  "Qwen Code",
   "Droid",
   "Kilo",
   "Pi",

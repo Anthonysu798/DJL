@@ -7,8 +7,10 @@ import {
   GeminiModelOptions,
   DroidModelOptions,
   GrokModelOptions,
+  IFlowModelOptions,
   KimiModelOptions,
   OpenCodeModelOptions,
+  QwenModelOptions,
   PiModelOptions,
 } from "./model";
 import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
@@ -66,6 +68,8 @@ export const ProviderKind = Schema.Literals([
   "gemini",
   "grok",
   "kimi",
+  "iflow",
+  "qwen",
   "droid",
   "kilo",
   "opencode",
@@ -129,6 +133,20 @@ export const KimiModelSelection = Schema.Struct({
 });
 export type KimiModelSelection = typeof KimiModelSelection.Type;
 
+export const IFlowModelSelection = Schema.Struct({
+  provider: Schema.Literal("iflow"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(IFlowModelOptions),
+});
+export type IFlowModelSelection = typeof IFlowModelSelection.Type;
+
+export const QwenModelSelection = Schema.Struct({
+  provider: Schema.Literal("qwen"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(QwenModelOptions),
+});
+export type QwenModelSelection = typeof QwenModelSelection.Type;
+
 export const DroidModelSelection = Schema.Struct({
   provider: Schema.Literal("droid"),
   model: TrimmedNonEmptyString,
@@ -164,6 +182,8 @@ export const ModelSelection = Schema.Union([
   GeminiModelSelection,
   GrokModelSelection,
   KimiModelSelection,
+  IFlowModelSelection,
+  QwenModelSelection,
   DroidModelSelection,
   KiloModelSelection,
   OpenCodeModelSelection,
@@ -211,6 +231,14 @@ export const KimiProviderStartOptions = Schema.Struct({
   region: Schema.optional(Schema.Literals(["existing", "global", "mainland-cn"])),
 });
 
+export const IFlowProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const QwenProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const DroidProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
@@ -240,6 +268,8 @@ export const ProviderStartOptions = Schema.Struct({
   gemini: Schema.optional(GeminiProviderStartOptions),
   grok: Schema.optional(GrokProviderStartOptions),
   kimi: Schema.optional(KimiProviderStartOptions),
+  iflow: Schema.optional(IFlowProviderStartOptions),
+  qwen: Schema.optional(QwenProviderStartOptions),
   droid: Schema.optional(DroidProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),

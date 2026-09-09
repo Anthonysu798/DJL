@@ -16,6 +16,10 @@ export function nativeProfileOptions(
       };
     case "grok":
       return { grok: { binaryPath: settings.providers.grok.binaryPath.trim() || "grok" } };
+    case "iflow":
+      return { iflow: { binaryPath: settings.providers.iflow.binaryPath.trim() || "iflow" } };
+    case "qwen":
+      return { qwen: { binaryPath: settings.providers.qwen.binaryPath.trim() || "qwen" } };
     case "codex":
       return {
         codex: {

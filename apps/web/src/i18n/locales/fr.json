@@ -1090,7 +1090,7 @@
   "settings": {
     "accounts": {
       "checking": "Vérification…",
-      "codingPlansDescription": "Dans la connexion OpenCode, choisissez Z.AI Coding Plan pour GLM, Kimi For Coding ou le fournisseur de votre forfait de programmation MiniMax. Qwen et les autres fournisseurs apparaissent si le moteur installé les prend en charge.",
+      "codingPlansDescription": "Dans la connexion OpenCode, choisissez Z.AI Coding Plan pour GLM, Kimi For Coding ou le fournisseur de votre forfait de programmation MiniMax. Kimi Code, iFlow CLI et Qwen Code se connectent ci-dessus avec leurs CLI officielles et réutilisent la session déjà ouverte dans ces CLI.",
       "codingPlansTitle": "Modèles chinois et forfaits de programmation",
       "default": "Par défaut pour les nouveaux chats",
       "description": "Connectez vos comptes existants via la connexion officielle de chaque fournisseur. Votre abonnement et vos limites restent gérés par celui-ci.",

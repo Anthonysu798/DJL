@@ -1233,6 +1233,8 @@ function makeModelSelection(
 ): ModelSelection {
   switch (provider) {
     case "kimi":
+    case "iflow":
+    case "qwen":
       return { provider, model };
     case "codex":
       return {

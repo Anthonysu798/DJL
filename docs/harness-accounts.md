@@ -1,6 +1,6 @@
 # Harness accounts in DJL
 
-DJL has new native integration code for Codex, Claude Code, Cursor, Grok Build, and Kimi Code alongside its active OpenCode runtime. These bridges do not reactivate the historical adapters. The Accounts screen is available in Electron; its authenticated RPC contracts are shared with the backend for a future iOS interface.
+DJL has new native integration code for Codex, Claude Code, Cursor, Grok Build, Kimi Code, iFlow CLI, and Qwen Code alongside its active OpenCode runtime. These bridges do not reactivate the historical adapters. The Accounts screen is available in Electron; its authenticated RPC contracts are shared with the backend for a future iOS interface.
 
 ## Connect an account
 
@@ -15,20 +15,24 @@ The native runtimes retain their own authentication and credential storage. DJL 
 
 Accounts includes direct connections for these officially supported plans:
 
-| Plan | Connection |
-| --- | --- |
-| GLM international | Z.AI Coding Plan through OpenCode |
-| GLM mainland China | Zhipu AI Coding Plan through OpenCode; separate credentials and coding endpoint |
-| Kimi membership | Kimi Code's official OAuth login, or a Kimi For Coding key through OpenCode |
-| MiniMax international / China | Separate Token Plan provider entries through OpenCode |
-| GitHub Copilot / GitLab Duo | The installed OpenCode CLI's advertised sign-in methods |
-| Grok | Official Grok Build login and ACP runtime; provider eligibility and limits apply |
+| Plan                          | Connection                                                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GLM international             | Z.AI Coding Plan through OpenCode                                                                                                                                                    |
+| GLM mainland China            | Zhipu AI Coding Plan through OpenCode; separate credentials and coding endpoint                                                                                                      |
+| Kimi membership               | Kimi Code's official OAuth login, or a Kimi For Coding key through OpenCode                                                                                                          |
+| iFlow (Alibaba)               | The official iFlow CLI's own account login and ACP runtime                                                                                                                           |
+| Qwen Code                     | The official Qwen Code CLI's stored provider setup and ACP runtime; the Qwen OAuth free tier was discontinued on 2026-04-15, so the CLI holds a Coding Plan or API-key setup instead |
+| MiniMax international / China | Separate Token Plan provider entries through OpenCode                                                                                                                                |
+| GitHub Copilot / GitLab Duo   | The installed OpenCode CLI's advertised sign-in methods                                                                                                                              |
+| Grok                          | Official Grok Build login and ACP runtime; provider eligibility and limits apply                                                                                                     |
 
 For Kimi OAuth, choose **Use existing CLI region**, **International**, or **Mainland China** before signing in. The default preserves the installed CLI's region. Explicit region selections use the official `kimi.ai` or `kimi.com` authentication and coding endpoints, respectively. DJL waits for the selection to save before enabling sign-in. The current Node-based `@moonshot-ai/kimi-code` runtime is supported; legacy Python kimi-cli credentials are not silently copied or migrated.
 
 Grok defaults to the currently advertised `grok-4.6` model. Grok and Kimi model pickers prioritize their runtime catalogs while keeping explicit custom model choices.
 
-The sign-in terminal identifies the selected provider and scrolls into view. Closing it cancels an unfinished login and refreshes provider status. OAuth-only providers remain discoverable before their first login; Accounts requests fresh authentication state instead of using an older model-catalog snapshot. Other providers, including Qwen offerings, remain available through the installed OpenCode runtime when supported by that provider and plan.
+The sign-in terminal identifies the selected provider and scrolls into view. Closing it cancels an unfinished login and refreshes provider status. OAuth-only providers remain discoverable before their first login; Accounts requests fresh authentication state instead of using an older model-catalog snapshot. Other providers remain available through the installed OpenCode runtime when supported by that provider and plan.
+
+iFlow CLI and Qwen Code have no separate login command. **Sign in** opens the interactive CLI in the embedded terminal; a CLI without stored credentials shows its own account dialog there, and a signed-in Qwen Code accepts `/auth` to change providers. DJL never passes an API key of its own into either runtime: `IFLOW_API_KEY`, `OPENAI_API_KEY` and their model overrides are removed from the environment so sessions use only what the CLI has stored. Account status comes from each runtime's ACP handshake: iFlow reports `isAuthenticated` at initialize, and Qwen Code rejects `session/new` until the CLI is set up.
 
 Some plans use API keys, while other providers offer OAuth. Existing **Models & API keys** connections remain available. OpenCode installation checks, login, model discovery, chat, and auxiliary generation use the same configured executable (or `opencode` on PATH). DJL shares the installed CLI's normal credentials and configuration. Signing in or removing a saved login affects that CLI too. Existing CLI logins are recognized automatically, including OAuth and custom provider connections.
 
@@ -36,7 +40,7 @@ For older DJL-only logins, Accounts offers **Copy saved DJL logins to OpenCode**
 
 ## Provider tool updates
 
-Provider tools shows installed/latest versions for Codex, Claude Code, OpenCode, Grok Build, Kimi Code, and Cursor. **Update all** updates installed, supported, outdated tools sequentially and shows individual results. Missing tools are installed only through an explicit Install action. Custom or unrecognized installations retain their setup guide instead of updating a different installation.
+Provider tools shows installed/latest versions for Codex, Claude Code, OpenCode, Grok Build, Kimi Code, iFlow CLI, Qwen Code, and Cursor. iFlow CLI and Qwen Code are npm packages (`@iflow-ai/iflow-cli`, `@qwen-code/qwen-code`). **Update all** updates installed, supported, outdated tools sequentially and shows individual results. Missing tools are installed only through an explicit Install action. Custom or unrecognized installations retain their setup guide instead of updating a different installation.
 
 **Automatically update provider tools** is off by default and saved on the server. When enabled, DJL checks every six hours and defers maintenance while chats are running or terminals are open. Closing Settings does not stop the scheduler. This controls DJL's scheduler; official CLIs can also have their own update policies.
 

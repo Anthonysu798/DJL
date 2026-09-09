@@ -143,6 +143,8 @@ const allProvidersDisabledSettings = {
     gemini: { enabled: false },
     grok: { enabled: false },
     kimi: { enabled: false },
+    iflow: { enabled: false },
+    qwen: { enabled: false },
     droid: { enabled: false },
     kilo: { enabled: false },
     opencode: { enabled: false },
@@ -159,6 +161,8 @@ const allProvidersDisabledServerSettings = {
     gemini: { ...DEFAULT_SERVER_SETTINGS.providers.gemini, enabled: false },
     grok: { ...DEFAULT_SERVER_SETTINGS.providers.grok, enabled: false },
     kimi: { ...DEFAULT_SERVER_SETTINGS.providers.kimi, enabled: false },
+    iflow: { ...DEFAULT_SERVER_SETTINGS.providers.iflow, enabled: false },
+    qwen: { ...DEFAULT_SERVER_SETTINGS.providers.qwen, enabled: false },
     droid: { ...DEFAULT_SERVER_SETTINGS.providers.droid, enabled: false },
     kilo: { ...DEFAULT_SERVER_SETTINGS.providers.kilo, enabled: false },
     opencode: { ...DEFAULT_SERVER_SETTINGS.providers.opencode, enabled: false },
@@ -260,7 +264,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
       assert.deepEqual(
         new Set(statuses.map((status) => status.provider)),
-        new Set(["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi"]),
+        new Set(["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi", "iflow", "qwen"]),
       );
       assert.strictEqual(opencode?.available, false);
       assert.strictEqual(opencode?.message, "Provider is disabled in DJL settings.");
@@ -400,7 +404,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
         assert.deepEqual(
           new Set(statuses.map((status) => status.provider)),
-          new Set(["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi"]),
+          new Set(["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi", "iflow", "qwen"]),
         );
         for (const status of statuses) {
           assert.strictEqual(status.available, false);

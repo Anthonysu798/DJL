@@ -21,6 +21,8 @@ describe("providerOrdering", () => {
       "cursor",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
     ]);
   });
 
@@ -33,6 +35,8 @@ describe("providerOrdering", () => {
       "cursor",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
     ]);
     expect(normalizeHiddenProviders(["bogus", "pi", "pi"])).toEqual([]);
   });

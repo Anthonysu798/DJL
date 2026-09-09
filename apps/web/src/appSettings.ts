@@ -103,6 +103,8 @@ type CustomModelSettingsKey =
   | "customGeminiModels"
   | "customGrokModels"
   | "customKimiModels"
+  | "customIflowModels"
+  | "customQwenModels"
   | "customDroidModels"
   | "customKiloModels"
   | "customOpenCodeModels"
@@ -122,6 +124,8 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   gemini: new Set(getModelOptions("gemini").map((option) => option.slug)),
   grok: new Set(getModelOptions("grok").map((option) => option.slug)),
   kimi: new Set(getModelOptions("kimi").map((option) => option.slug)),
+  iflow: new Set(getModelOptions("iflow").map((option) => option.slug)),
+  qwen: new Set(getModelOptions("qwen").map((option) => option.slug)),
   droid: new Set(getModelOptions("droid").map((option) => option.slug)),
   kilo: new Set(getModelOptions("kilo").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
@@ -167,6 +171,8 @@ export const AppSettingsSchema = Schema.Struct({
     withDefaults(() => "existing" as const),
   ),
   kimiBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  iflowBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  qwenBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   droidBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   kiloServerUrl: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -224,6 +230,8 @@ export const AppSettingsSchema = Schema.Struct({
   customGeminiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customGrokModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customKimiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customIflowModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customQwenModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customDroidModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customKiloModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customOpenCodeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
@@ -303,6 +311,20 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     defaultSettingsKey: "customKimiModels",
     title: "Kimi Code",
     example: "kimi-code/k3",
+  },
+  iflow: {
+    provider: "iflow",
+    settingsKey: "customIflowModels",
+    defaultSettingsKey: "customIflowModels",
+    title: "iFlow CLI",
+    example: "glm-5",
+  },
+  qwen: {
+    provider: "qwen",
+    settingsKey: "customQwenModels",
+    defaultSettingsKey: "customQwenModels",
+    title: "Qwen Code",
+    example: "qwen3-coder-next",
   },
   droid: {
     provider: "droid",
@@ -444,6 +466,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     geminiBinaryPath: normalizeProviderBinaryPathOverride("gemini", settings.geminiBinaryPath),
     grokBinaryPath: normalizeProviderBinaryPathOverride("grok", settings.grokBinaryPath),
     kimiBinaryPath: normalizeProviderBinaryPathOverride("kimi", settings.kimiBinaryPath),
+    iflowBinaryPath: normalizeProviderBinaryPathOverride("iflow", settings.iflowBinaryPath),
+    qwenBinaryPath: normalizeProviderBinaryPathOverride("qwen", settings.qwenBinaryPath),
     droidBinaryPath: normalizeProviderBinaryPathOverride("droid", settings.droidBinaryPath),
     kiloBinaryPath: normalizeProviderBinaryPathOverride("kilo", settings.kiloBinaryPath),
     openCodeBinaryPath: "",
@@ -460,6 +484,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customGeminiModels: normalizeCustomModelSlugs(settings.customGeminiModels, "gemini"),
     customGrokModels: normalizeCustomModelSlugs(settings.customGrokModels, "grok"),
     customKimiModels: normalizeCustomModelSlugs(settings.customKimiModels, "kimi"),
+    customIflowModels: normalizeCustomModelSlugs(settings.customIflowModels, "iflow"),
+    customQwenModels: normalizeCustomModelSlugs(settings.customQwenModels, "qwen"),
     customDroidModels: normalizeCustomModelSlugs(settings.customDroidModels, "droid"),
     customKiloModels: normalizeCustomModelSlugs(settings.customKiloModels, "kilo"),
     customOpenCodeModels: normalizeCustomModelSlugs(settings.customOpenCodeModels, "opencode"),
@@ -484,6 +510,8 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     grokBinaryPath: settings.providers.grok.binaryPath,
     kimiBinaryPath: settings.providers.kimi.binaryPath,
     kimiRegion: settings.providers.kimi.region,
+    iflowBinaryPath: settings.providers.iflow.binaryPath,
+    qwenBinaryPath: settings.providers.qwen.binaryPath,
     droidBinaryPath: settings.providers.droid.binaryPath,
     kiloBinaryPath: settings.providers.kilo.binaryPath,
     kiloServerPassword: settings.providers.kilo.serverPassword,
@@ -500,6 +528,8 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customGeminiModels: settings.providers.gemini.customModels,
     customGrokModels: settings.providers.grok.customModels,
     customKimiModels: settings.providers.kimi.customModels,
+    customIflowModels: settings.providers.iflow.customModels,
+    customQwenModels: settings.providers.qwen.customModels,
     customDroidModels: settings.providers.droid.customModels,
     customKiloModels: settings.providers.kilo.customModels,
     customOpenCodeModels: settings.providers.opencode.customModels,
@@ -622,6 +652,20 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       ...(hasOwn(patch, "customKimiModels") ? { customModels: patch.customKimiModels ?? [] } : {}),
     };
   }
+  if (hasOwn(patch, "iflowBinaryPath") || hasOwn(patch, "customIflowModels")) {
+    providers.iflow = {
+      ...(hasOwn(patch, "iflowBinaryPath") ? { binaryPath: patch.iflowBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customIflowModels")
+        ? { customModels: patch.customIflowModels ?? [] }
+        : {}),
+    };
+  }
+  if (hasOwn(patch, "qwenBinaryPath") || hasOwn(patch, "customQwenModels")) {
+    providers.qwen = {
+      ...(hasOwn(patch, "qwenBinaryPath") ? { binaryPath: patch.qwenBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customQwenModels") ? { customModels: patch.customQwenModels ?? [] } : {}),
+    };
+  }
   if (hasOwn(patch, "droidBinaryPath") || hasOwn(patch, "customDroidModels")) {
     providers.droid = {
       ...(hasOwn(patch, "droidBinaryPath") ? { binaryPath: patch.droidBinaryPath ?? "" } : {}),
@@ -708,6 +752,8 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "grokBinaryPath",
     "kimiBinaryPath",
     "kimiRegion",
+    "iflowBinaryPath",
+    "qwenBinaryPath",
     "droidBinaryPath",
     "kiloBinaryPath",
     "kiloServerPassword",
@@ -733,6 +779,8 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "customGeminiModels",
     "customGrokModels",
     "customKimiModels",
+    "customIflowModels",
+    "customQwenModels",
     "customDroidModels",
     "customKiloModels",
     "customOpenCodeModels",
@@ -783,6 +831,8 @@ export function getCustomModelsByProvider(
     gemini: getCustomModelsForProvider(settings, "gemini"),
     grok: getCustomModelsForProvider(settings, "grok"),
     kimi: getCustomModelsForProvider(settings, "kimi"),
+    iflow: getCustomModelsForProvider(settings, "iflow"),
+    qwen: getCustomModelsForProvider(settings, "qwen"),
     droid: getCustomModelsForProvider(settings, "droid"),
     kilo: getCustomModelsForProvider(settings, "kilo"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
@@ -929,6 +979,8 @@ export function getCustomModelOptionsByProvider(
     gemini: getAppModelOptions("gemini", customModelsByProvider.gemini),
     grok: getAppModelOptions("grok", customModelsByProvider.grok),
     kimi: getAppModelOptions("kimi", customModelsByProvider.kimi),
+    iflow: getAppModelOptions("iflow", customModelsByProvider.iflow),
+    qwen: getAppModelOptions("qwen", customModelsByProvider.qwen),
     droid: getAppModelOptions("droid", customModelsByProvider.droid),
     kilo: getAppModelOptions("kilo", customModelsByProvider.kilo),
     opencode: getAppModelOptions("opencode", customModelsByProvider.opencode),
@@ -947,6 +999,8 @@ export function getProviderStartOptions(
     | "geminiBinaryPath"
     | "grokBinaryPath"
     | "kimiBinaryPath"
+    | "iflowBinaryPath"
+    | "qwenBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
     | "kiloServerPassword"
@@ -967,11 +1021,15 @@ export function getProviderStartOptions(
   const cursorBinaryPath = normalizeProviderBinaryPathOverride("cursor", settings.cursorBinaryPath);
   const grokBinaryPath = normalizeProviderBinaryPathOverride("grok", settings.grokBinaryPath);
   const kimiBinaryPath = normalizeProviderBinaryPathOverride("kimi", settings.kimiBinaryPath);
+  const iflowBinaryPath = normalizeProviderBinaryPathOverride("iflow", settings.iflowBinaryPath);
+  const qwenBinaryPath = normalizeProviderBinaryPathOverride("qwen", settings.qwenBinaryPath);
   const homePath = settings.codexHomePath.trim();
   const apiEndpoint = settings.cursorApiEndpoint.trim();
   const options: ProviderStartOptions = {
     ...(grokBinaryPath ? { grok: { binaryPath: grokBinaryPath } } : {}),
     ...(kimiBinaryPath ? { kimi: { binaryPath: kimiBinaryPath } } : {}),
+    ...(iflowBinaryPath ? { iflow: { binaryPath: iflowBinaryPath } } : {}),
+    ...(qwenBinaryPath ? { qwen: { binaryPath: qwenBinaryPath } } : {}),
     ...(codexBinaryPath || homePath
       ? {
           codex: {
@@ -1015,6 +1073,8 @@ export function getCustomBinaryPathForProvider(
     | "geminiBinaryPath"
     | "grokBinaryPath"
     | "kimiBinaryPath"
+    | "iflowBinaryPath"
+    | "qwenBinaryPath"
     | "droidBinaryPath"
     | "kiloBinaryPath"
     | "openCodeBinaryPath"
@@ -1035,6 +1095,10 @@ export function getCustomBinaryPathForProvider(
       return normalizeProviderBinaryPathOverride(provider, settings.grokBinaryPath);
     case "kimi":
       return normalizeProviderBinaryPathOverride(provider, settings.kimiBinaryPath);
+    case "iflow":
+      return normalizeProviderBinaryPathOverride(provider, settings.iflowBinaryPath);
+    case "qwen":
+      return normalizeProviderBinaryPathOverride(provider, settings.qwenBinaryPath);
     case "droid":
       return normalizeProviderBinaryPathOverride(provider, settings.droidBinaryPath);
     case "kilo":

@@ -301,6 +301,8 @@ describe("wsNativeApi", () => {
           gemini: { enabled: true, binaryPath: "gemini", customModels: [] },
           grok: { enabled: true, binaryPath: "grok", customModels: [] },
           kimi: { region: "existing", enabled: true, binaryPath: "kimi", customModels: [] },
+          iflow: { enabled: true, binaryPath: "iflow", customModels: [] },
+          qwen: { enabled: true, binaryPath: "qwen", customModels: [] },
           droid: { enabled: true, binaryPath: "droid", customModels: [] },
           kilo: {
             enabled: true,

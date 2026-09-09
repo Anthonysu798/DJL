@@ -8,7 +8,7 @@ describe("fresh harness command contracts", () => {
   it("defaults Grok to a model advertised by the current official CLI", () => {
     expect(DEFAULT_MODEL_BY_PROVIDER.grok).toBe("grok-4.6");
   });
-  it.each(["codex", "claudeAgent", "cursor", "opencode", "grok", "kimi"])(
+  it.each(["codex", "claudeAgent", "cursor", "opencode", "grok", "kimi", "iflow", "qwen"])(
     "accepts %s for a new chat turn",
     (provider) => {
       expect(

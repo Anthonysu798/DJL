@@ -6,7 +6,14 @@ import type {
   ProviderSessionStartInput,
   ProviderUserInputAnswers,
 } from "@synara/contracts";
-export type NativeProvider = "codex" | "claudeAgent" | "cursor" | "grok" | "kimi";
+export type NativeProvider =
+  | "codex"
+  | "claudeAgent"
+  | "cursor"
+  | "grok"
+  | "kimi"
+  | "iflow"
+  | "qwen";
 export interface NativeSink {
   emit(event: Record<string, unknown>): void;
   request(

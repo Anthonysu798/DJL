@@ -8,6 +8,8 @@ import { createCodexDriver } from "./codex";
 import { createCursorDriver } from "./cursor";
 import { createGrokDriver } from "./grok";
 import { createKimiDriver } from "./kimi";
+import { createIFlowDriver } from "./iflow";
+import { createQwenDriver } from "./qwen";
 import type { NativeSink } from "./types";
 
 const dirs: string[] = [];
@@ -103,6 +105,93 @@ describe("new official protocol drivers", () => {
     } finally {
       driver.close();
     }
+  });
+  it("iFlow uses the CLI's stored login, reads its _meta model catalog, and never opens a browser", async () => {
+    vi.stubEnv("IFLOW_API_KEY", "must-not-replace-login");
+    const binary = fixture(`
+      if(process.env.IFLOW_API_KEY)throw Error('API key leaked into subscription runtime');
+      if(process.argv.slice(2).join(' ')!=='--experimental-acp')throw Error('bad command');
+      if(m.method==='initialize')reply(m,{protocolVersion:1,isAuthenticated:true,authMethods:[{id:'oauth-iflow'},{id:'iflow'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate')throw Error('authenticate would start a browser login');
+      if(m.method==='session/new')reply(m,{sessionId:'iflow-test',modes:{currentModeId:'yolo',availableModes:[{id:'smart'},{id:'yolo'},{id:'default'},{id:'plan'}]},_meta:{models:{currentModelId:'glm-4.7',availableModels:[{id:'glm-4.7',name:'GLM-4.7'},{id:'kimi-k2.5',name:'Kimi-K2.5'}]}}});
+      if(m.method==='session/set_model')reply(m,{});
+      if(m.method==='session/set_mode'){if(m.params.modeId!=='plan')throw Error('wrong mode');reply(m,{})}
+      if(m.method==='session/prompt'){note('session/update',{sessionId:'iflow-test',update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'hello iflow'}}});reply(m,{stopReason:'end_turn'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const driver = await createIFlowDriver(
+      { ...input, providerOptions: { iflow: { binaryPath: binary } } },
+      sink(events),
+    );
+    try {
+      expect((await driver.models()).models).toEqual([
+        { slug: "glm-4.7", name: "GLM-4.7" },
+        { slug: "kimi-k2.5", name: "Kimi-K2.5" },
+      ]);
+      await driver.send({ threadId: input.threadId, input: "Hello", interactionMode: "plan" });
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello iflow" },
+        }),
+      );
+    } finally {
+      driver.close();
+    }
+  });
+  it("iFlow requires the official CLI sign-in instead of authenticating itself", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{protocolVersion:1,isAuthenticated:false,authMethods:[{id:'oauth-iflow'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate'||m.method==='session/new')throw Error('must not continue without login');
+    `);
+    await expect(
+      createIFlowDriver({ ...input, providerOptions: { iflow: { binaryPath: binary } } }, sink([])),
+    ).rejects.toThrow("Sign in with the official iFlow CLI");
+  });
+  it("Qwen Code uses only the CLI's stored provider setup and its advertised catalog", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "must-not-replace-cli-setup");
+    const binary = fixture(`
+      if(process.env.OPENAI_API_KEY)throw Error('API key leaked into subscription runtime');
+      if(process.argv.slice(2).join(' ')!=='--acp')throw Error('bad command');
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'openai'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate')throw Error('unexpected authenticate');
+      if(m.method==='session/new')reply(m,{sessionId:'qwen-test',configOptions:[{id:'mode',category:'mode',options:[{value:'default'},{value:'plan'}]},{id:'model',category:'model',options:[{value:'qwen3-coder-plus',name:'Qwen3 Coder Plus'}]}],modes:{currentModeId:'default',availableModes:[{id:'plan'},{id:'default'},{id:'auto-edit'},{id:'yolo'}]}});
+      if(m.method==='session/set_model'){if(m.params.modelId!=='qwen3-coder-plus')throw Error('wrong model');reply(m,{})}
+      if(m.method==='session/set_mode'){if(m.params.modeId!=='default')throw Error('wrong mode');reply(m,{})}
+      if(m.method==='session/prompt'){note('session/update',{sessionId:'qwen-test',update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'hello qwen'}}});reply(m,{stopReason:'end_turn'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const driver = await createQwenDriver(
+      {
+        ...input,
+        providerOptions: { qwen: { binaryPath: binary } },
+        modelSelection: { provider: "qwen", model: "qwen3-coder-plus" },
+      },
+      sink(events),
+    );
+    try {
+      expect((await driver.models()).models).toEqual([
+        { slug: "qwen3-coder-plus", name: "Qwen3 Coder Plus" },
+      ]);
+      await driver.send({ threadId: input.threadId, input: "Hello" });
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello qwen" },
+        }),
+      );
+    } finally {
+      driver.close();
+    }
+  });
+  it("Qwen Code surfaces the runtime's own sign-in requirement", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'openai'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='session/new')send({id:m.id,error:{code:-32000,message:'Authentication required: Use Qwen Code CLI to authenticate first.'}});
+    `);
+    await expect(
+      createQwenDriver({ ...input, providerOptions: { qwen: { binaryPath: binary } } }, sink([])),
+    ).rejects.toThrow("Authentication required");
   });
   it("Grok uses cached subscription authentication and advertised modes without API-key fallback", async () => {
     vi.stubEnv("XAI_API_KEY", "must-not-use-metered-api");

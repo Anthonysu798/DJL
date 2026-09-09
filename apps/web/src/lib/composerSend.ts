@@ -218,6 +218,8 @@ export function resolvePromptEffortFromModelSelection(
     case "pi":
       return modelSelection.options?.thinkingLevel ?? null;
     case "kimi":
+    case "iflow":
+    case "qwen":
     case "kilo":
     case "opencode":
       return null;

@@ -1090,7 +1090,7 @@
   "settings": {
     "accounts": {
       "checking": "확인 중…",
-      "codingPlansDescription": "OpenCode 로그인에서 GLM은 Z.AI Coding Plan, Kimi는 Kimi For Coding, MiniMax는 가입한 코딩 요금제 제공업체를 선택하세요. Qwen 등은 설치된 런타임이 지원하는 경우 표시됩니다.",
+      "codingPlansDescription": "OpenCode 로그인에서 GLM은 Z.AI Coding Plan, Kimi는 Kimi For Coding, MiniMax는 가입한 코딩 요금제 제공업체를 선택하세요. Kimi Code, iFlow CLI, Qwen Code는 위 목록에서 공식 CLI로 연결하며 해당 CLI에 이미 로그인된 상태를 그대로 사용합니다.",
       "codingPlansTitle": "중국 모델 및 코딩 요금제",
       "default": "새 채팅 기본값",
       "description": "각 제공업체의 공식 로그인으로 기존 계정을 연결하세요. 요금제와 사용 한도는 해당 제공업체에서 관리합니다.",
