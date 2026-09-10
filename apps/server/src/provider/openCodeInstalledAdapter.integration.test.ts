@@ -185,7 +185,7 @@ it.skipIf(!process.env.DJL_TEST_OPENCODE_BINARY)(
       vi.unstubAllEnvs();
       mock.closeAllConnections();
       await new Promise<void>((resolve) => mock.close(() => resolve()));
-      await rm(root, { recursive: true, force: true });
+      await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     }
   },
   90_000,
@@ -337,7 +337,7 @@ it.skipIf(!process.env.DJL_TEST_OPENCODE_BINARY)(
       expect(legacy.messages).toEqual(original.messages);
     } finally {
       vi.unstubAllEnvs();
-      await rm(root, { recursive: true, force: true });
+      await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     }
   },
   90_000,

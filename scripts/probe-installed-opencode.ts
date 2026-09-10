@@ -304,12 +304,16 @@ try {
   if (failures.length > 0) process.exitCode = 1;
 } finally {
   if (child && child.exitCode === null && child.signalCode === null) {
-    child.kill("SIGTERM");
+    if (process.platform === "win32" && child.pid) {
+      // Windows SIGTERM only stops the parent. Its helpers can retain the
+      // fixture as their working directory after the parent has exited.
+      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    } else child.kill("SIGTERM");
     const forceKill = setTimeout(() => child?.kill("SIGKILL"), 5_000);
     await childClosed;
     clearTimeout(forceKill);
   }
   mock.closeAllConnections();
   await new Promise<void>((resolve) => mock.close(() => resolve()));
-  await rm(root, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
