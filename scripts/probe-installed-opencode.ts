@@ -303,17 +303,23 @@ try {
   );
   if (failures.length > 0) process.exitCode = 1;
 } finally {
-  if (child && child.exitCode === null && child.signalCode === null) {
-    if (process.platform === "win32" && child.pid) {
-      // Windows SIGTERM only stops the parent. Its helpers can retain the
-      // fixture as their working directory after the parent has exited.
-      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
-    } else child.kill("SIGTERM");
+  if (child) {
+    if (child.exitCode === null && child.signalCode === null) {
+      if (process.platform === "win32" && child.pid) {
+        // Windows SIGTERM only stops the parent. Its helpers can retain the
+        // fixture as their working directory after the parent has exited.
+        spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+      } else child.kill("SIGTERM");
+    }
     const forceKill = setTimeout(() => child?.kill("SIGKILL"), 5_000);
-    await childClosed;
-    clearTimeout(forceKill);
+    try {
+      await childClosed;
+    } finally {
+      clearTimeout(forceKill);
+    }
   }
   mock.closeAllConnections();
   await new Promise<void>((resolve) => mock.close(() => resolve()));
+  // Windows can retain filesystem handles briefly after the CLI closes.
   await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

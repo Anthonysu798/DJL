@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "Explorar carpetas",
+      "continueTask": "Continúa esta tarea desde donde la dejó el agente anterior.",
+      "continueWithContext": "Continuar con el contexto",
       "files": "Archivos",
       "fork": {
         "local": "Bifurcarse en local",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "Continuar en un nuevo árbol de trabajo"
       },
       "groups": {
+        "agentModels": "Continuar con un agente",
         "builtIn": "Incorporado",
         "local": "locales",
         "plugins": "Complementos",
@@ -107,10 +110,13 @@
         "skills": "Habilidades",
         "subagents": "Subagentes"
       },
+      "handoffReady": "Agente listo",
+      "handoffReadyDescription": "Se conservaron la conversación, las notas y el borrador. Envía tu siguiente instrucción para continuar.",
+      "handoffWait": "Termina el turno actual antes de transferir",
       "loadingCommands": "Cargando comandos...",
       "loadingSkills": "Cargando habilidades...",
       "noMatchingCommand": "No hay órdenes iguales.",
-      "noMatchingMention": "No empareja plugin o archivo.",
+      "noMatchingMention": "No hay agentes, servidores, plugins ni archivos que coincidan.",
       "noMatchingSkill": "No hay habilidad.",
       "review": {
         "base": "Revisión contra la sucursal base",
@@ -152,7 +158,7 @@
         "answer": "Escribe tu respuesta para continuar",
         "approval": "Resuelve esta solicitud de aprobación para continuar",
         "configureModel": "Configura un modelo en Ajustes para comenzar",
-        "default": "Pregunta algo, etiqueta archivos o carpetas con @, o usa / para ver los comandos",
+        "default": "Pregunta lo que quieras, @ para archivos o agentes, / para comandos",
         "followUp": "Pide cambios adicionales",
         "followUpAttachments": "Pide cambios adicionales o adjunta imágenes",
         "ownAnswer": "Escribe tu propia respuesta o deja el campo vacío para usar la opción seleccionada",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "Proyectos y carpetas recientes",
         "chooseFolder": "Elija otra carpeta",
-        "managed": "Carpeta de trabajo gestionada",
+        "managed": "Carpeta de tareas del agente",
         "managedDetail": "Carpeta privada para esta tarea",
         "search": "Buscar lugares de trabajo",
-        "trigger": "Carpeta de trabajo gestionada"
+        "trigger": "Carpeta de tareas del agente"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "Comprobación de actualizaciones de proveedores",
         "providerVisibility": "Visibilidad de proveedores",
         "themePack": "Paquete del tema {{theme}}",
-        "workSection": "Sección Trabajo",
+        "workSection": "Sección del modo agente",
         "workspaceSection": "Sección Espacio de trabajo"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "Mostrar la sección {{section}} en la barra lateral",
           "work": {
-            "description": "Muestra la pestaña Trabajo para tareas no técnicas orientadas a resultados."
+            "description": "Mostrar el modo agente para tareas y continuaciones con otro proveedor."
           },
           "workspace": {
             "description": "Muestra la pestaña Espacio de trabajo en el selector lateral. La pestaña Hilos siempre permanece visible."
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "tareas documentos barra lateral",
-            "title": "Trabajo"
+            "title": "Modo agente"
           },
           "thread-order": {
             "keywords": "barra lateral ordenar reciente creación",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "Iniciar tutorial",
         "basicTitle": "Tutorial básico",
-        "description": "Vuelve a ver la guía de Trabajo, Proyectos, recomendaciones de IA local y Configuración.",
+        "description": "Repetir el recorrido del modo agente, proyectos, recomendaciones de IA local y configuración.",
         "section": "Primeros pasos",
         "title": "Tutorial para nuevos usuarios"
       },
@@ -2734,8 +2740,8 @@
           "title": "Vuelve a ver los tutoriales cuando quieras"
         },
         "work-mode": {
-          "description": "Usa Trabajo para tareas concretas como redacción, investigación y procesamiento de archivos.",
-          "title": "Modo Trabajo"
+          "description": "Inicia una tarea y escribe @ para continuar con otro agente conservando el contexto.",
+          "title": "Modo agente"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "Trabajando"
       },
       "studio": {
-        "loading": "Trabajo de carga...",
+        "loading": "Cargando el modo agente…",
         "noTasks": "No hay tareas todavía"
       },
       "temporaryChat": "Chat temporal",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "Proyectos",
-        "work": "Trabajo",
+        "work": "Modo agente",
         "workspace": "Espacio de trabajo"
       },
       "workspace": "Espacio de trabajo",
@@ -4073,13 +4079,13 @@
       "title": "Tablero kanban"
     },
     "route": {
-      "loadTimeout": "El trabajo está tardando demasiado en cargar: el servidor aún no informó su carpeta de Work administrada."
+      "loadTimeout": "El modo agente tarda demasiado en cargar. El servidor todavía no ha indicado la carpeta de tareas administrada."
     },
     "studio": {
       "errors": {
-        "folderConflict": "Work no puede usar \"{{path}}\" porque otro proyecto ya usa esa carpeta. Mueve o elimina ese proyecto y vuelve a intentarlo.",
-        "prepareTask": "No se pudo preparar una tarea nueva de Work.",
-        "syncing": "Work se creó, pero aún no termina de sincronizarse. Inténtalo de nuevo en un momento."
+        "folderConflict": "El modo agente no puede usar \"{{path}}\" porque otro proyecto usa esa carpeta. Elimina o mueve ese proyecto e inténtalo de nuevo.",
+        "prepareTask": "No se pudo preparar una nueva tarea del agente.",
+        "syncing": "Se creó el modo agente, pero la sincronización no ha terminado. Inténtalo de nuevo en un momento."
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "Trabajando"
       }
     },
-    "title": "Trabajo"
+    "title": "Modo agente"
   },
   "workspace": {
     "actions": {

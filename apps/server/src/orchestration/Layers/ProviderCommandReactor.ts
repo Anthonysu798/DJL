@@ -63,6 +63,7 @@ import {
   resolveThreadWorkspaceCwd,
 } from "../../checkpointing/Utils.ts";
 import { ServerConfig } from "../../config";
+import { writeHandoffContextArchive } from "../handoffContextArchive";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import {
@@ -1166,16 +1167,36 @@ const make = Effect.gen(function* () {
       ? wrapSidechatInput(input.messageText)
       : input.messageText;
     const shouldBootstrapHandoff =
-      thread.handoff?.bootstrapStatus === "pending" &&
-      !hasNativeAssistantMessagesBefore(thread, input.messageId);
+      thread.handoff != null && !hasNativeAssistantMessagesBefore(thread, input.messageId);
     const handoffBootstrapAvailableChars = availableProviderContextChars({
       tag: "handoff_context",
       messageText: boundaryMessageText,
       wrapLatestUserMessage: true,
     });
+    let contextArchivePath: string | undefined;
+    if (shouldBootstrapHandoff) {
+      if (handoffBootstrapAvailableChars < 2_000) {
+        return yield* new ProviderAdapterValidationError({
+          provider: thread.modelSelection.provider,
+          operation: "sendTurn",
+          issue: "Shorten this message so the receiving agent has room for handoff context.",
+        });
+      }
+      const sourceThread = thread.handoff
+        ? yield* resolveThread(thread.handoff.sourceThreadId)
+        : undefined;
+      contextArchivePath = yield* Effect.tryPromise(() =>
+        writeHandoffContextArchive({
+          stateDir: serverConfig.stateDir,
+          attachmentsDir: serverConfig.attachmentsDir,
+          thread,
+          sourceThread: sourceThread ?? undefined,
+        }),
+      );
+    }
     const handoffBootstrapText =
       shouldBootstrapHandoff && handoffBootstrapAvailableChars > 0
-        ? buildHandoffBootstrapText(thread, handoffBootstrapAvailableChars)
+        ? buildHandoffBootstrapText(thread, handoffBootstrapAvailableChars, contextArchivePath)
         : null;
     const selectedProvider =
       input.modelSelection?.provider ??
@@ -2619,9 +2640,31 @@ const make = Effect.gen(function* () {
           }
           return;
         }
-        case "thread.created":
+        case "thread.created": {
           threadSessionModelSelections.set(event.payload.threadId, event.payload.modelSelection);
+          if (event.payload.handoff) {
+            const thread = yield* resolveThread(event.payload.threadId);
+            const sourceThread = yield* resolveThread(event.payload.handoff.sourceThreadId);
+            if (thread) {
+              yield* Effect.tryPromise(() =>
+                writeHandoffContextArchive({
+                  stateDir: serverConfig.stateDir,
+                  attachmentsDir: serverConfig.attachmentsDir,
+                  thread,
+                  sourceThread: sourceThread ?? undefined,
+                }),
+              ).pipe(
+                Effect.catch((error) =>
+                  Effect.logWarning("failed to capture handoff context archive", {
+                    threadId: event.payload.threadId,
+                    error,
+                  }),
+                ),
+              );
+            }
+          }
           return;
+        }
         case "thread.meta-updated": {
           const thread = yield* resolveThread(event.payload.threadId);
           if (event.payload.modelSelection === undefined) {

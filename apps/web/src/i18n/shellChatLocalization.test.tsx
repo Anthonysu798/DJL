@@ -56,7 +56,7 @@ describe("shell and chat localization", () => {
     const english = renderProbe();
     expect(english).toContain('aria-label="Search chats and projects"');
     expect(english).toContain(
-      'placeholder="Ask anything, @tag files/folders, or use / to show available commands"',
+      'placeholder="Ask anything, @tag files or agents, or use / for commands"',
     );
     expect(english).toContain("2 threads");
     expect(english).toContain("Let&#x27;s build");

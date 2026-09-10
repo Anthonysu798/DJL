@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "浏览文件夹",
+      "continueTask": "请从上一个智能体停下的地方继续完成此任务。",
+      "continueWithContext": "携带上下文继续",
       "files": "文件",
       "fork": {
         "local": "分叉到本地",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "在新的工作树中继续"
       },
       "groups": {
+        "agentModels": "切换智能体继续",
         "builtIn": "内置",
         "local": "本地",
         "plugins": "插件",
@@ -107,10 +110,13 @@
         "skills": "技能",
         "subagents": "子代理"
       },
+      "handoffReady": "智能体已就绪",
+      "handoffReadyDescription": "对话、笔记和草稿已保留。发送下一条指令即可继续。",
+      "handoffWait": "请先完成当前轮次，再进行交接",
       "loadingCommands": "正在装入命令...",
       "loadingSkills": "正在装入技能...",
       "noMatchingCommand": "无匹配命令 。",
-      "noMatchingMention": "没有匹配的插件或文件 。",
+      "noMatchingMention": "没有匹配的智能体、服务器、插件或文件。",
       "noMatchingSkill": "没有匹配的技能。",
       "review": {
         "base": "针对基地分支的审查",
@@ -152,7 +158,7 @@
         "answer": "请输入答案以继续",
         "approval": "请先处理此批准请求",
         "configureModel": "请先在设置中配置模型",
-        "default": "输入问题、用 @ 标记文件/文件夹，或输入 / 查看可用命令",
+        "default": "输入问题，用 @ 选择文件或智能体，用 / 查看命令",
         "followUp": "提出后续修改",
         "followUpAttachments": "提出后续修改或附加图片",
         "ownAnswer": "输入自己的答案，或留空以使用所选选项",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "项目和最近文件夹",
         "chooseFolder": "选择另一个文件夹",
-        "managed": "管理的工作文件夹",
+        "managed": "智能体任务文件夹",
         "managedDetail": "此任务的私人文件夹",
         "search": "搜索地点",
-        "trigger": "管理的工作文件夹"
+        "trigger": "智能体任务文件夹"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "提供商更新检查",
         "providerVisibility": "提供商可见性",
         "themePack": "{{theme}}主题包",
-        "workSection": "工作分区",
+        "workSection": "智能体模式区域",
         "workspaceSection": "工作区分区"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "在侧边栏中显示{{section}}分区",
           "work": {
-            "description": "显示用于非技术性、任务导向工作的“工作”标签页。"
+            "description": "显示智能体模式，用于执行任务和跨提供商接续任务。"
           },
           "workspace": {
             "description": "在侧边栏切换器中显示“工作区”标签页。“线程”标签页始终可见。"
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "任务 文档 侧边栏",
-            "title": "工作"
+            "title": "智能体模式"
           },
           "thread-order": {
             "keywords": "侧边栏 排序 最近 创建",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "开始教程",
         "basicTitle": "基础功能教程",
-        "description": "重新查看工作模式、项目模式、本地 AI 推荐和设置的箭头引导。",
+        "description": "重新播放智能体模式、项目、本地 AI 推荐和设置的引导。",
         "section": "开始使用",
         "title": "新手教程"
       },
@@ -2734,8 +2740,8 @@
           "title": "随时重新查看教程"
         },
         "work-mode": {
-          "description": "写作、研究和文件处理等目标明确的任务，请使用工作模式。",
-          "title": "工作模式"
+          "description": "开始任务后，输入 @ 即可切换到其他智能体，并保留任务上下文。",
+          "title": "智能体模式"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "工作中"
       },
       "studio": {
-        "loading": "正在装入工作...",
+        "loading": "正在加载智能体模式…",
         "noTasks": "还没有任务"
       },
       "temporaryChat": "临时聊天",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "项目",
-        "work": "工作",
+        "work": "智能体模式",
         "workspace": "工作空间"
       },
       "workspace": "工作区",
@@ -4073,13 +4079,13 @@
       "title": "看板"
     },
     "route": {
-      "loadTimeout": "工作加载时间过长——服务器尚未报告其管理的 Work 文件夹。"
+      "loadTimeout": "智能体模式加载时间过长，服务器尚未返回托管任务文件夹。"
     },
     "studio": {
       "errors": {
-        "folderConflict": "Work 无法使用“{{path}}”，因为另一个项目已使用该文件夹。请移除或移动该项目后重试。",
-        "prepareTask": "无法准备新的 Work 任务。",
-        "syncing": "Work 已创建，但尚未完成同步。请稍后重试。"
+        "folderConflict": "其他项目正在使用“{{path}}”，智能体模式无法使用此文件夹。请移除或移动该项目后重试。",
+        "prepareTask": "无法准备新的智能体任务。",
+        "syncing": "智能体模式已创建，但尚未完成同步。请稍后重试。"
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "正在处理"
       }
     },
-    "title": "工作"
+    "title": "智能体模式"
   },
   "workspace": {
     "actions": {

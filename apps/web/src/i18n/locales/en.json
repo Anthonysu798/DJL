@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "Browse folders",
+      "continueTask": "Continue this task from where the previous agent left off.",
+      "continueWithContext": "Continue with context",
       "files": "Files",
       "fork": {
         "local": "Fork Into Local",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "Continue in a new worktree"
       },
       "groups": {
+        "agentModels": "Continue with agent",
         "builtIn": "Built-in",
         "local": "Local",
         "plugins": "Plugins",
@@ -107,10 +110,13 @@
         "skills": "Skills",
         "subagents": "Subagents"
       },
+      "handoffReady": "Agent ready",
+      "handoffReadyDescription": "Your conversation, notes, and draft are carried over. Send your next instruction to continue.",
+      "handoffWait": "Finish the current turn before handing off",
       "loadingCommands": "Loading commands...",
       "loadingSkills": "Loading skills...",
       "noMatchingCommand": "No matching command.",
-      "noMatchingMention": "No matching plugin or file.",
+      "noMatchingMention": "No matching agent, server, plugin, or file.",
       "noMatchingSkill": "No matching skill.",
       "review": {
         "base": "Review Against Base Branch",
@@ -152,7 +158,7 @@
         "answer": "Type your answer to continue",
         "approval": "Resolve this approval request to continue",
         "configureModel": "Configure a model in Settings to start",
-        "default": "Ask anything, @tag files/folders, or use / to show available commands",
+        "default": "Ask anything, @tag files or agents, or use / for commands",
         "followUp": "Ask for follow-up changes",
         "followUpAttachments": "Ask for follow-up changes or attach images",
         "ownAnswer": "Type your own answer, or leave this blank to use the selected option",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "Projects and recent folders",
         "chooseFolder": "Choose another folder",
-        "managed": "Managed Work folder",
+        "managed": "Agent task folder",
         "managedDetail": "Private folder for this task",
         "search": "Search work locations",
-        "trigger": "Managed Work folder"
+        "trigger": "Agent task folder"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "Provider update checks",
         "providerVisibility": "Provider visibility",
         "themePack": "{{theme}} theme pack",
-        "workSection": "Work section",
+        "workSection": "Agent mode section",
         "workspaceSection": "Workspace section"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "Show the {{section}} section in the sidebar",
           "work": {
-            "description": "Show the Work tab for nontechnical, task-oriented work."
+            "description": "Show Agent mode for tasks and cross-provider continuations."
           },
           "workspace": {
             "description": "Show the Workspace tab in the sidebar switcher. The Threads tab always stays visible."
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "tasks documents sidebar section",
-            "title": "Work"
+            "title": "Agent mode"
           },
           "thread-order": {
             "keywords": "sidebar sort recent created",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "Start tutorial",
         "basicTitle": "Basic tutorial",
-        "description": "Replay the guided tour for Work, Projects, local AI recommendations, and Settings.",
+        "description": "Replay the guided tour for Agent mode, Projects, local AI recommendations, and Settings.",
         "section": "Getting started",
         "title": "New user tutorial"
       },
@@ -2734,8 +2740,8 @@
           "title": "Replay tutorials anytime"
         },
         "work-mode": {
-          "description": "Use Work for focused tasks such as writing, research, and file processing.",
-          "title": "Work mode"
+          "description": "Start a task, then type @ to continue with another agent and carry over its context.",
+          "title": "Agent mode"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "Working"
       },
       "studio": {
-        "loading": "Loading Work...",
+        "loading": "Loading Agent mode...",
         "noTasks": "No tasks yet"
       },
       "temporaryChat": "Temporary chat",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "Projects",
-        "work": "Work",
+        "work": "Agent mode",
         "workspace": "Workspace"
       },
       "workspace": "Workspace",
@@ -4073,13 +4079,13 @@
       "title": "Kanban"
     },
     "route": {
-      "loadTimeout": "Work is taking too long to load — the server has not reported its managed Work folder yet."
+      "loadTimeout": "Agent mode is taking too long to load. The server has not reported its managed task folder yet."
     },
     "studio": {
       "errors": {
-        "folderConflict": "Work can't use \"{{path}}\" because another project already uses that folder. Remove or move that project, then retry.",
-        "prepareTask": "Unable to prepare a new Work task.",
-        "syncing": "Work was created but hasn't finished syncing yet. Try again in a moment."
+        "folderConflict": "Agent mode cannot use \"{{path}}\" because another project uses that folder. Remove or move that project, then retry.",
+        "prepareTask": "Unable to prepare a new agent task.",
+        "syncing": "Agent mode was created but has not finished syncing yet. Try again in a moment."
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "Working"
       }
     },
-    "title": "Work"
+    "title": "Agent mode"
   },
   "workspace": {
     "actions": {
