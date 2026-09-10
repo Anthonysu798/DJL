@@ -648,20 +648,19 @@ export class WsTransport {
         // Any unrequested stream termination is a lost subscription, including
         // a clean end. One transport-level reconnect restores every registered
         // subscription; this stream must not restart itself a second time.
-        window.setTimeout(
-          () => {
-            if (
-              !this.disposed &&
-              streamSessionVersion === this.sessionVersion &&
-              !this.streamCleanups.has(key)
-            ) {
-              void this.reconnect().catch((error) =>
-                console.warn("WebSocket RPC stream reconnect failed", error),
-              );
-            }
-          },
-          Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause) ? 0 : 500,
-        );
+        // Reconnect owns the backoff. Adding another delay here doubles cold-start
+        // retry latency while the local backend is still starting.
+        window.setTimeout(() => {
+          if (
+            !this.disposed &&
+            streamSessionVersion === this.sessionVersion &&
+            !this.streamCleanups.has(key)
+          ) {
+            void this.reconnect().catch((error) =>
+              console.warn("WebSocket RPC stream reconnect failed", error),
+            );
+          }
+        }, 0);
         return;
       }
       if (Exit.isFailure(exit) && !this.disposed && !Cause.hasInterruptsOnly(exit.cause)) {

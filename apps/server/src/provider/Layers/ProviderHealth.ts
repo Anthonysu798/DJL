@@ -22,7 +22,7 @@ import { ServerProviderUpdateError } from "@synara/contracts";
 import { parseCodexConfigModelProvider } from "@synara/shared/codexConfig";
 import { decodeJsonResult } from "@synara/shared/schemaJson";
 import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
-import { query as claudeQuery, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   Array,
   Cache,
@@ -444,6 +444,8 @@ function waitForAbortSignal(signal: AbortSignal): Promise<void> {
 const probeClaudeSubscription = () => {
   const abort = new AbortController();
   return Effect.tryPromise(async () => {
+    const { query: claudeQuery } = await import("@anthropic-ai/claude-agent-sdk");
+    abort.signal.throwIfAborted();
     const q = claudeQuery({
       // oxlint-disable-next-line require-yield
       prompt: (async function* (): AsyncGenerator<SDKUserMessage> {

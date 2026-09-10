@@ -2,6 +2,8 @@
 // Purpose: Restores the latest DJL Work task or creates a managed task when the Work route opens.
 // Layer: Web UI
 
+import { ThreadId } from "@synara/contracts";
+import { getStartupSeed, startupNavigationIsCurrent } from "../../startup/session";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -72,6 +74,13 @@ export function WorkIndexRouteView() {
 
   const resolveRestoreRoute = useCallback<RestoreRouteResolver>(
     ({ availableSplitViewIds }) => {
+      const startupSeed = getStartupSeed("work");
+      if (startupSeed) {
+        return workTaskSummaries.some((thread) => thread.id === startupSeed) ||
+          draftThreadsByThreadId[ThreadId.makeUnsafe(startupSeed)]
+          ? { threadId: startupSeed }
+          : null;
+      }
       const availableThreadIds = new Set<string>(workTaskSummaries.map((thread) => thread.id));
       if (workDraftThreadId) {
         availableThreadIds.add(workDraftThreadId);
@@ -89,11 +98,22 @@ export function WorkIndexRouteView() {
       }
       return { threadId: latestWorkTaskId };
     },
-    [latestWorkTaskId, workDraftThreadId, workTaskSummaries],
+    [latestWorkTaskId, workDraftThreadId, workTaskSummaries, draftThreadsByThreadId],
   );
 
   // Reuse an existing managed draft instead of creating duplicates on every visit.
-  const createFreshTask = useCallback(() => handleNewStudioChat(), [handleNewStudioChat]);
+  const createFreshTask = useCallback(() => {
+    const seed = getStartupSeed("work");
+    return handleNewStudioChat(
+      seed
+        ? {
+            fresh: true,
+            startupDraftId: ThreadId.makeUnsafe(seed),
+            shouldNavigate: () => startupNavigationIsCurrent("work"),
+          }
+        : undefined,
+    );
+  }, [handleNewStudioChat]);
   const navigate = useNavigate();
   const workSectionVisible = appSettings.showStudioSection;
   useEffect(() => {

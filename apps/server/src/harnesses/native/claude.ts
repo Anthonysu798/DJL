@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { withDjlThreadId } from "./driverEnv";
-import { query, type PermissionMode, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { PermissionMode, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { bounded, object, string } from "./protocol";
 import type { NativeDriverFactory } from "./types";
 import { resolveClaudeExecutable } from "./claudeExecutable";
@@ -100,6 +100,7 @@ export const createClaudeDriver: NativeDriverFactory = async (input, sink) => {
     },
   };
   const abort = new AbortController();
+  const { query } = await import("@anthropic-ai/claude-agent-sdk");
   const runtime = query({
     prompt,
     options: {

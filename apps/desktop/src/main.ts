@@ -168,6 +168,7 @@ import {
 } from "./browserUsePipeServer";
 import {
   DESKTOP_WS_URL_CHANNEL,
+  DESKTOP_STARTUP_SCOPE_CHANNEL,
   normalizeDesktopWsUrl,
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
@@ -197,7 +198,10 @@ import {
 // baseline, so a replacement during startup cannot silently become "normal."
 const startupBundleIdentity = captureStartupBundleIdentity();
 
-syncShellEnvironment();
+const shellEnvironmentAbort = new AbortController();
+const shellEnvironmentReady = syncShellEnvironment(process.env, {
+  signal: shellEnvironmentAbort.signal,
+});
 
 const PICK_FOLDER_CHANNEL = "desktop:pick-folder";
 const SAVE_FILE_CHANNEL = "desktop:save-file";
@@ -3075,6 +3079,7 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   }
 
   isQuitting = true;
+  shellEnvironmentAbort.abort();
   desktopShutdownPromise = (async () => {
     writeDesktopLogHeader(`${reason} shutdown start`);
     try {
@@ -3150,6 +3155,11 @@ function registerIpcHandlers(): void {
   ipcMain.removeHandler(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge);
   ipcMain.handle(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge, async () => {
     await acknowledgeSynaraStorageSnapshot(storageSnapshotPath);
+  });
+
+  ipcMain.removeAllListeners(DESKTOP_STARTUP_SCOPE_CHANNEL);
+  ipcMain.on(DESKTOP_STARTUP_SCOPE_CHANNEL, (event: IpcMainEvent) => {
+    event.returnValue = Crypto.createHash("sha256").update(BASE_DIR).digest("hex").slice(0, 24);
   });
 
   ipcMain.removeAllListeners(DESKTOP_WS_URL_CHANNEL);
@@ -3805,11 +3815,15 @@ async function bootstrap(): Promise<void> {
   initializeRemoteGatewayConfiguration();
   registerIpcHandlers();
   writeDesktopLogHeader("bootstrap ipc handlers registered");
+  ensureInitialBackendWindowOpen(backendHttpUrl);
+
+  // The renderer can paint while login-shell startup runs. Provider processes
+  // still inherit the complete shell environment, including PATH and SSH agents.
+  await shellEnvironmentReady;
+  if (isQuitting) return;
   startRemoteGateway();
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");
-
-  ensureInitialBackendWindowOpen(backendHttpUrl);
 }
 
 app.on("before-quit", (event) => {
