@@ -5,6 +5,7 @@ import { BROWSER_IPC_CHANNELS } from "./browserIpcChannels";
 import { DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";
 import {
   DESKTOP_WS_URL_CHANNEL,
+  DESKTOP_STARTUP_SCOPE_CHANNEL,
   normalizeDesktopWsUrl,
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
@@ -55,6 +56,7 @@ function getDesktopWsUrl(): string | null {
 contextBridge.exposeInMainWorld("desktopBridge", {
   notifyReady: () => ipcRenderer.send(RENDERER_READY_CHANNEL),
   getWsUrl: getDesktopWsUrl,
+  getStartupScope: () => ipcRenderer.sendSync(DESKTOP_STARTUP_SCOPE_CHANNEL) as string,
   getBuildInfo: () => ipcRenderer.sendSync(DESKTOP_BUILD_INFO_CHANNEL) as DesktopBuildInfo,
   locale: {
     getPreferredSystemLanguages: () =>

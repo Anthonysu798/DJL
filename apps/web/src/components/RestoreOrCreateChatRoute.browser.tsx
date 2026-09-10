@@ -58,6 +58,77 @@ describe("RestoreOrCreateChatRoute", () => {
     window.localStorage.removeItem(SIDEBAR_UI_STATE_STORAGE_KEY);
   });
 
+  it("waits for required workspace paths before starting a fresh chat", async () => {
+    const createFreshChat = vi.fn(async () => ({ ok: true }) as const);
+    const screen = await render(
+      <RestoreOrCreateChatRoute
+        mode="fresh"
+        ready={false}
+        resolveRestoreRoute={() => null}
+        createFreshChat={createFreshChat}
+      />,
+    );
+    expect(createFreshChat).not.toHaveBeenCalled();
+    await screen.rerender(
+      <RestoreOrCreateChatRoute
+        mode="fresh"
+        ready
+        resolveRestoreRoute={() => null}
+        createFreshChat={createFreshChat}
+      />,
+    );
+    await expect.poll(() => createFreshChat.mock.calls.length).toBe(1);
+  });
+
+  it("shows startup progress while chat creation is pending", async () => {
+    const screen = await render(
+      <RestoreOrCreateChatRoute
+        mode="fresh"
+        resolveRestoreRoute={() => null}
+        createFreshChat={() => new Promise(() => {})}
+      />,
+    );
+    await expect.element(screen.getByRole("status")).toBeVisible();
+  });
+
+  it("shows a failed fresh startup and allows retry under Strict Mode", async () => {
+    const createFreshChat = vi.fn(
+      async () =>
+        ({
+          ok: false,
+          error: { summary: "Startup unavailable", detail: null },
+        }) as const,
+    );
+    const screen = await render(
+      <StrictMode>
+        <RestoreOrCreateChatRoute
+          mode="fresh"
+          resolveRestoreRoute={() => null}
+          createFreshChat={createFreshChat}
+        />
+      </StrictMode>,
+    );
+    await expect.element(screen.getByText("Startup unavailable")).toBeVisible();
+    await screen.getByRole("button", { name: "Retry" }).click();
+    await expect.poll(() => createFreshChat.mock.calls.length).toBe(2);
+  });
+
+  it("shows restore-mode creation failures after Strict Mode effect replay", async () => {
+    window.localStorage.removeItem(SIDEBAR_UI_STATE_STORAGE_KEY);
+    const screen = await render(
+      <StrictMode>
+        <RestoreOrCreateChatRoute
+          resolveRestoreRoute={() => null}
+          createFreshChat={async () => ({
+            ok: false,
+            error: { summary: "Restore unavailable", detail: null },
+          })}
+        />
+      </StrictMode>,
+    );
+    await expect.element(screen.getByText("Restore unavailable"), { timeout: 2000 }).toBeVisible();
+  });
+
   it("falls back to a fresh chat after stale-route recovery under Strict Mode", async () => {
     const createFreshChat = vi.fn(async () => ({ ok: true }) as const);
 

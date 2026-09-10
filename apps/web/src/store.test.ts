@@ -23,6 +23,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  evictThreadDetail,
   applyShellEvent,
   applyOrchestrationEvents,
   applyOrchestrationEventsHotPath,
@@ -3756,5 +3757,36 @@ describe("store read model sync", () => {
     const next = syncServerReadModel(hydratedState, readModel);
 
     expect(next.threads[0]).toBe(thread);
+  });
+});
+
+describe("idle thread detail eviction", () => {
+  it("releases cached messages while preserving the shell and restores them from a snapshot", () => {
+    const thread = makeReadModelThread({
+      messages: [
+        {
+          id: MessageId.makeUnsafe("cached-message"),
+          role: "assistant",
+          text: "cached history",
+          createdAt: "2026-02-27T00:00:00.000Z",
+          updatedAt: "2026-02-27T00:00:00.000Z",
+          streaming: false,
+          turnId: null,
+          attachments: [],
+          source: "native",
+        },
+      ],
+    });
+    const state = syncServerReadModel(makeState(makeThread()), makeReadModel(thread));
+    const next = evictThreadDetail(state, thread.id);
+    expect(next.threadIds).toEqual(state.threadIds);
+    expect(next.threadShellById).toBe(state.threadShellById);
+    expect(next.sidebarThreadSummaryById).toBe(state.sidebarThreadSummaryById);
+    expect(next.messageByThreadId?.[thread.id]).toBeUndefined();
+    expect(next.threads[0]?.messages).toEqual([]);
+    const restored = syncServerThreadDetailHotPath(next, thread);
+    expect(restored.messageByThreadId?.[thread.id]?.[thread.messages[0]!.id]?.text).toBe(
+      "cached history",
+    );
   });
 });

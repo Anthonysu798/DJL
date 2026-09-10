@@ -10,6 +10,7 @@ import { ThreadId } from "@synara/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { getStartupSession } from "../startup/session";
 import { SplashScreen } from "./SplashScreen";
 import {
   type EmptyRouteRestoreRecoveryState,
@@ -43,10 +44,12 @@ export type ChatRouteStartMode = "fresh" | "restore";
 
 export function RestoreOrCreateChatRoute({
   mode = "restore",
+  ready = true,
   resolveRestoreRoute,
   createFreshChat,
 }: {
   readonly mode?: ChatRouteStartMode;
+  readonly ready?: boolean;
   // Surface-specific policy for picking the thread route to restore (e.g. the last-visited route
   // for home chats, the latest Studio thread or draft for Studio). The remembered-route recovery
   // below still keys off the total thread count, which is shared across surfaces.
@@ -68,12 +71,12 @@ export function RestoreOrCreateChatRoute({
     useState<EmptyRouteRestoreRecoveryState>("idle");
   const mountedRef = useMountedRef();
   const emptyRestoreRecoveryRunRef = useRef(0);
-  // One fresh-chat creation at a time per mount: a dep change mid-create re-runs the effect,
-  // and without this guard the superseded run and the new run could both mint a draft.
-  const createFreshChatInFlightRef = useRef(false);
   // React StrictMode replays effects. Track the attempt that already created a draft so its
   // replay cannot mint another one while the first navigation is completing.
-  const freshChatCreationAttemptRef = useRef<number | null>(null);
+  const freshChatCreationRef = useRef<{
+    attempt: number;
+    result: Promise<StartContainerChatResult>;
+  } | null>(null);
 
   useEffect(() => {
     if (threadIds.length > 0 && emptyRestoreRecoveryState !== "idle") {
@@ -83,18 +86,19 @@ export function RestoreOrCreateChatRoute({
   }, [emptyRestoreRecoveryState, threadIds.length]);
 
   useEffect(() => {
+    if (!ready) return;
+
     if (mode === "fresh") {
       let cancelled = false;
       setChatFailure(null);
 
-      if (freshChatCreationAttemptRef.current === attempt) {
-        return () => {
-          cancelled = true;
-        };
+      if (freshChatCreationRef.current?.attempt !== attempt) {
+        freshChatCreationRef.current = { attempt, result: createFreshChat() };
       }
-      freshChatCreationAttemptRef.current = attempt;
 
-      void createFreshChat().then((result) => {
+      // Every effect run observes the same attempt, including StrictMode's replay
+      // and hydration-driven callback changes. Only the current observer updates UI.
+      void freshChatCreationRef.current.result.then((result) => {
         if (!cancelled && !result.ok) {
           setChatFailure(result.error);
         }
@@ -161,16 +165,11 @@ export function RestoreOrCreateChatRoute({
         return;
       }
 
-      if (cancelled || createFreshChatInFlightRef.current) {
-        return;
+      if (cancelled) return;
+      if (freshChatCreationRef.current?.attempt !== attempt) {
+        freshChatCreationRef.current = { attempt, result: createFreshChat() };
       }
-      createFreshChatInFlightRef.current = true;
-      let result: StartContainerChatResult;
-      try {
-        result = await createFreshChat();
-      } finally {
-        createFreshChatInFlightRef.current = false;
-      }
+      const result = await freshChatCreationRef.current.result;
       if (cancelled || result.ok) {
         return;
       }
@@ -188,11 +187,16 @@ export function RestoreOrCreateChatRoute({
     mountedRef,
     navigate,
     resolveRestoreRoute,
+    ready,
     splitViewIds,
     splitViewsHydrated,
     threadIds.length,
     threadsHydrated,
   ]);
+
+  useEffect(() => {
+    if (chatFailure) getStartupSession()?.setStatus("runtime-error");
+  }, [chatFailure]);
 
   return (
     <SplashScreen

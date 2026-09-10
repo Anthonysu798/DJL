@@ -196,7 +196,6 @@ import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
-import { terminalRuntimeRegistry } from "./terminal/terminalRuntimeRegistry";
 import {
   SidebarSearchPalette,
   type ImportProviderKind,
@@ -2654,6 +2653,7 @@ export default function Sidebar() {
       );
 
       if (api && typeof api.terminal.close === "function") {
+        const { terminalRuntimeRegistry } = await import("./terminal/terminalRuntimeRegistry");
         terminalRuntimeRegistry.disposeThread(workspaceThread);
         await Promise.allSettled(
           terminalState.terminalIds.map((terminalId) =>
@@ -3100,6 +3100,7 @@ export default function Sidebar() {
       }
 
       try {
+        const { terminalRuntimeRegistry } = await import("./terminal/terminalRuntimeRegistry");
         terminalRuntimeRegistry.disposeThread(threadId);
         await api.terminal.close({ threadId, deleteHistory: true });
       } catch {

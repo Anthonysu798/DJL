@@ -31,6 +31,7 @@ export interface NewThreadOptions {
   temporary?: boolean;
   provider?: ProviderKind;
   fresh?: boolean;
+  startupDraftId?: ThreadId;
 }
 
 export interface InheritedThreadContext {

@@ -1,9 +1,12 @@
+import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
+import { getStartupSession } from "../startup/session";
 import { effectiveRuntimeMode } from "@synara/contracts";
 import {
   type AutomationDefinition,
   type AutomationSchedule,
   type ApprovalRequestId,
   DEFAULT_MODEL_BY_PROVIDER,
+  CommandId,
   EventId,
   MessageId,
   type ModelSelection,
@@ -64,6 +67,8 @@ import {
   workspaceRootsEqual,
 } from "@synara/shared/threadWorkspace";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -279,7 +284,9 @@ import {
 } from "../keybindings";
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
-import ThreadTerminalDrawer from "./ThreadTerminalDrawer";
+import { PanelStateMessage } from "./chat/PanelStateMessage";
+
+const ThreadTerminalDrawer = lazy(() => import("./ThreadTerminalDrawer"));
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -8220,7 +8227,13 @@ export default function ChatView({
       ),
       browserFindingsForSend,
     );
-    const messageIdForSend = newMessageId();
+    const startupIdentity = getStartupSession()?.identityFor(threadIdForSend, promptForSend, {
+      provider: selectedModelSelectionForSend.provider,
+      model: selectedModelSelectionForSend.model,
+    });
+    const messageIdForSend = startupIdentity
+      ? MessageId.makeUnsafe(startupIdentity.messageId)
+      : newMessageId();
     const messageCreatedAt = new Date().toISOString();
     const outgoingTextSeed =
       messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
@@ -8487,7 +8500,9 @@ export default function ChatView({
       });
       await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
-        commandId: newCommandId(),
+        commandId: startupIdentity
+          ? CommandId.makeUnsafe(startupIdentity.commandId)
+          : newCommandId(),
         threadId: threadIdForSend,
         message: {
           messageId: messageIdForSend,
@@ -8527,7 +8542,9 @@ export default function ChatView({
       // Surface the failure on whichever setup step was active (no-op for
       // sends without a worktree setup in flight).
       failLocalDispatchWorktreeSetup();
-      if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
+      // A startup turn has a durable command identity and may have been accepted
+      // before its response was lost. Keep its owner for receipt reconciliation.
+      if (createdServerThreadForLocalDraft && !turnStartSucceeded && !startupIdentity) {
         // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
         await api.orchestration
           .dispatchCommand({
@@ -8596,6 +8613,8 @@ export default function ChatView({
         resetLocalDispatch();
       }
     }
+    if (startupIdentity)
+      getStartupSession()?.sendFinished(startupIdentity.messageId, turnStartSucceeded);
     return turnStartSucceeded;
   };
 
@@ -9055,6 +9074,28 @@ export default function ChatView({
   const onSubmitPlanFollowUpRef = useRef(onSubmitPlanFollowUp);
   onSendRef.current = onSend;
   onSubmitPlanFollowUpRef.current = onSubmitPlanFollowUp;
+  useStartupDraftBridge({
+    threadId,
+    surface: isStudioContainer ? "work" : "home",
+    prompt,
+    model: selectedModelSelection,
+    active: Boolean(activeThread) && isFocusedPane && !isEditorRail,
+    canSend:
+      Boolean(activeThread) &&
+      Boolean(activeProject) &&
+      !isLegacyReadOnlyThread &&
+      (isZeroConfigEntry ? hasUsableZeroConfigModel : hasConfiguredOpenCodeModel) &&
+      !isSendBusy &&
+      !isConnecting &&
+      !hasLiveTurn &&
+      !isVoiceTranscribing &&
+      activePendingApproval === null &&
+      activePendingProgress === null &&
+      pendingUserInputs.length === 0,
+    editor: composerEditorRef,
+    send: onSendRef,
+    locale,
+  });
 
   useEffect(() => {
     if (localAiContinuationForThread?.state === "waiting") {
@@ -11957,15 +11998,19 @@ export default function ChatView({
                   : "pointer-events-none translate-y-1 opacity-0",
               )}
             >
-              <ThreadTerminalDrawer
-                key={`${activeThread.id}-workspace`}
-                {...terminalDrawerProps}
-                presentationMode="workspace"
-                isVisible={terminalWorkspaceTerminalTabActive}
-                onTogglePresentationMode={
-                  terminalState.workspaceLayout === "both" ? collapseTerminalWorkspace : undefined
-                }
-              />
+              <Suspense
+                fallback={<PanelStateMessage>{t("panels.loadingTerminal")}</PanelStateMessage>}
+              >
+                <ThreadTerminalDrawer
+                  key={`${activeThread.id}-workspace`}
+                  {...terminalDrawerProps}
+                  presentationMode="workspace"
+                  isVisible={terminalWorkspaceTerminalTabActive}
+                  onTogglePresentationMode={
+                    terminalState.workspaceLayout === "both" ? collapseTerminalWorkspace : undefined
+                  }
+                />
+              </Suspense>
             </div>
           ) : null}
 
@@ -12006,12 +12051,14 @@ export default function ChatView({
           return null;
         }
         return (
-          <ThreadTerminalDrawer
-            key={activeThread.id}
-            {...terminalDrawerProps}
-            presentationMode="drawer"
-            onTogglePresentationMode={expandTerminalWorkspace}
-          />
+          <Suspense fallback={<PanelStateMessage>{t("panels.loadingTerminal")}</PanelStateMessage>}>
+            <ThreadTerminalDrawer
+              key={activeThread.id}
+              {...terminalDrawerProps}
+              presentationMode="drawer"
+              onTogglePresentationMode={expandTerminalWorkspace}
+            />
+          </Suspense>
         );
       })()}
 

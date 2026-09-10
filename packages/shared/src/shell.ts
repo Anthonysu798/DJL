@@ -3,7 +3,10 @@
 // Exports: shell candidate resolution plus PATH/environment capture utilities.
 
 import * as OS from "node:os";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const PATH_CAPTURE_START = "__SYNARA_PATH_START__";
 const PATH_CAPTURE_END = "__SYNARA_PATH_END__";
@@ -192,6 +195,10 @@ export const readEnvironmentFromLoginShell: ShellEnvironmentReader = (
     timeout: 5000,
   });
 
+  return parseCapturedEnvironment(output, names);
+};
+
+function parseCapturedEnvironment(output: string, names: ReadonlyArray<string>) {
   const environment: Partial<Record<string, string>> = {};
   for (const name of names) {
     const value = extractEnvironmentValue(output, name);
@@ -201,6 +208,33 @@ export const readEnvironmentFromLoginShell: ShellEnvironmentReader = (
   }
 
   return environment;
+}
+
+export type AsyncShellEnvironmentReader = (
+  shell: string,
+  names: ReadonlyArray<string>,
+  signal?: AbortSignal,
+) => Promise<Partial<Record<string, string>>>;
+
+export const readEnvironmentFromLoginShellAsync: AsyncShellEnvironmentReader = async (
+  shell,
+  names,
+  signal,
+) => {
+  if (names.length === 0) return {};
+  const execution = execFileAsync(shell, ["-ilc", buildEnvironmentCaptureCommand(names)], {
+    encoding: "utf8",
+    timeout: 5000,
+    ...(signal ? { signal } : {}),
+    // This child only captures variables; starting a prompt Git-status daemon
+    // adds seconds on some shells. Do not mutate the app or terminal environment.
+    env: { ...process.env, POWERLEVEL9K_DISABLE_GITSTATUS: "true" },
+  });
+  // execFileSync sends EOF with no input. Match it so interactive startup
+  // scripts cannot wait for input that this background probe will never send.
+  execution.child.stdin?.end();
+  const { stdout } = await execution;
+  return parseCapturedEnvironment(stdout, names);
 };
 
 // Windows has no login-shell to probe; the user's persisted environment lives in the

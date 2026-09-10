@@ -7,6 +7,7 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import {
   $createRangeSelection,
+  SKIP_DOM_SELECTION_TAG,
   $getSelection,
   $setSelection,
   $isElementNode,
@@ -387,7 +388,7 @@ function $getComposerRootLength(): number {
   return children.reduce((sum, child) => sum + getComposerNodeTextLength(child), 0);
 }
 
-function $setSelectionAtComposerOffset(nextOffset: number): void {
+function $setSelectionAtComposerOffset(nextOffset: number, endOffset = nextOffset): void {
   const root = $getRoot();
   const composerLength = $getComposerRootLength();
   const boundedOffset = Math.max(0, Math.min(nextOffset, composerLength));
@@ -399,7 +400,10 @@ function $setSelectionAtComposerOffset(nextOffset: number): void {
   };
   const selection = $createRangeSelection();
   selection.anchor.set(point.key, point.offset, point.type);
-  selection.focus.set(point.key, point.offset, point.type);
+  const end =
+    findSelectionPointAtOffset(root, { value: Math.max(0, Math.min(endOffset, composerLength)) }) ??
+    point;
+  selection.focus.set(end.key, end.offset, end.type);
   $setSelection(selection);
 }
 
@@ -495,6 +499,7 @@ export interface ComposerPromptEditorHandle {
   blur: () => void;
   focus: () => void;
   focusAt: (cursor: number) => void;
+  focusRange?: (expandedStart: number, expandedEnd: number) => void;
   focusAtEnd: () => void;
   isFocused: () => boolean;
   readSnapshot: () => {
@@ -977,16 +982,19 @@ function ComposerPromptEditorInner({
     }
 
     isApplyingControlledUpdateRef.current = true;
-    editor.update(() => {
-      const shouldRewriteEditorState =
-        previousSnapshot.value !== value || contextsChanged || mentionsChanged;
-      if (shouldRewriteEditorState) {
-        $setComposerEditorPrompt(value, terminalContexts, mentionReferences);
-      }
-      if (shouldRewriteEditorState || isFocused) {
-        $setSelectionAtComposerOffset(normalizedCursor);
-      }
-    });
+    editor.update(
+      () => {
+        const shouldRewriteEditorState =
+          previousSnapshot.value !== value || contextsChanged || mentionsChanged;
+        if (shouldRewriteEditorState) {
+          $setComposerEditorPrompt(value, terminalContexts, mentionReferences);
+        }
+        if (shouldRewriteEditorState || isFocused) {
+          $setSelectionAtComposerOffset(normalizedCursor);
+        }
+      },
+      rootElement?.closest("[inert]") ? { tag: SKIP_DOM_SELECTION_TAG } : undefined,
+    );
     queueMicrotask(() => {
       isApplyingControlledUpdateRef.current = false;
     });
@@ -1003,7 +1011,7 @@ function ComposerPromptEditorInner({
   const focusAt = useCallback(
     (nextCursor: number) => {
       const rootElement = editor.getRootElement();
-      if (!rootElement) return;
+      if (!rootElement || rootElement.closest("[inert]")) return;
       const boundedCursor = clampCollapsedComposerCursor(snapshotRef.current.value, nextCursor);
       rootElement.focus();
       editor.update(() => {
@@ -1023,6 +1031,22 @@ function ComposerPromptEditorInner({
         false,
         snapshotRef.current.terminalContextIds,
       );
+    },
+    [editor],
+  );
+
+  const focusRange = useCallback(
+    (start: number, end: number) => {
+      const rootElement = editor.getRootElement();
+      if (!rootElement || rootElement.closest("[inert]")) return;
+      const value = snapshotRef.current.value;
+      rootElement.focus({ preventScroll: true });
+      editor.update(() => {
+        $setSelectionAtComposerOffset(
+          collapseExpandedComposerCursor(value, start),
+          collapseExpandedComposerCursor(value, end),
+        );
+      });
     },
     [editor],
   );
@@ -1085,6 +1109,7 @@ function ComposerPromptEditorInner({
         focusAt(snapshotRef.current.cursor);
       },
       focusAt,
+      focusRange,
       focusAtEnd: () => {
         focusAt(
           collapseExpandedComposerCursor(
@@ -1096,7 +1121,7 @@ function ComposerPromptEditorInner({
       isFocused: isEditorFocused,
       readSnapshot,
     }),
-    [blurEditor, focusAt, isEditorFocused, readSnapshot],
+    [blurEditor, focusAt, focusRange, isEditorFocused, readSnapshot],
   );
 
   const handleEditorChange = useCallback((editorState: EditorState) => {

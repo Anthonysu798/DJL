@@ -458,6 +458,8 @@ export interface DesktopBuildInfo {
 export interface DesktopBridge {
   notifyReady?: () => void;
   getWsUrl: () => string | null;
+  /** Opaque backend-profile identity for small local startup drafts and snapshots. */
+  getStartupScope?: () => string;
   getBuildInfo: () => DesktopBuildInfo;
   locale: {
     getPreferredSystemLanguages: () => readonly string[];

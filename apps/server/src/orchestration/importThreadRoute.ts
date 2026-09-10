@@ -4,10 +4,6 @@
 // Exports: makeImportThreadHandler.
 
 import {
-  getSessionInfo as getClaudeSessionInfo,
-  getSessionMessages as getClaudeSessionMessages,
-} from "@anthropic-ai/claude-agent-sdk";
-import {
   CommandId,
   type OrchestrationImportThreadInput,
   type ProviderKind,
@@ -107,7 +103,11 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly externalId: string;
   }) {
     const claudeSessionInfo = yield* Effect.tryPromise({
-      try: () => getClaudeSessionInfo(input.externalId, input.cwd ? { dir: input.cwd } : undefined),
+      try: async () =>
+        (await import("@anthropic-ai/claude-agent-sdk")).getSessionInfo(
+          input.externalId,
+          input.cwd ? { dir: input.cwd } : undefined,
+        ),
       catch: (cause) =>
         importMessagesError(
           cause instanceof Error && cause.message.length > 0
@@ -119,7 +119,8 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     if (claudeSessionInfo) return;
 
     const sessionFoundElsewhere = yield* Effect.tryPromise({
-      try: () => getClaudeSessionInfo(input.externalId),
+      try: async () =>
+        (await import("@anthropic-ai/claude-agent-sdk")).getSessionInfo(input.externalId),
       catch: () => undefined,
     });
 
@@ -253,8 +254,11 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly threadId: ThreadId;
   }) {
     const sessionMessages = yield* Effect.tryPromise({
-      try: () =>
-        getClaudeSessionMessages(input.externalId, input.cwd ? { dir: input.cwd } : undefined),
+      try: async () =>
+        (await import("@anthropic-ai/claude-agent-sdk")).getSessionMessages(
+          input.externalId,
+          input.cwd ? { dir: input.cwd } : undefined,
+        ),
       catch: (cause) =>
         importMessagesError(
           cause instanceof Error && cause.message.length > 0

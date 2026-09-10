@@ -1,3 +1,4 @@
+import type { ThreadId } from "@synara/contracts";
 import { useCallback } from "react";
 
 import { ensureHomeChatProject } from "../lib/chatProjects";
@@ -12,7 +13,11 @@ export function useHandleNewChat() {
   const { handleNewThread } = useHandleNewThread();
 
   const handleNewChat = useCallback(
-    async (options?: { fresh?: boolean }): Promise<StartContainerChatResult> => {
+    async (options?: {
+      fresh?: boolean;
+      startupDraftId?: ThreadId;
+      shouldNavigate?: () => boolean;
+    }): Promise<StartContainerChatResult> => {
       if (!homeDir) {
         return {
           ok: false,
@@ -30,6 +35,8 @@ export function useHandleNewChat() {
         ensureProjectId: () => ensureHomeChatProject({ homeDir, chatWorkspaceRoot }),
         handleNewThread,
         fresh: options?.fresh,
+        startupDraftId: options?.startupDraftId,
+        shouldNavigate: options?.shouldNavigate,
         errorLabel: translateRendererCopy(
           "common:hardening.newChatFailed",
           "Unable to prepare a new chat.",

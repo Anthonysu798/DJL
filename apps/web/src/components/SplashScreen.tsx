@@ -1,5 +1,5 @@
 // FILE: SplashScreen.tsx
-// Purpose: Keep route recovery visually quiet while preserving actionable failure feedback.
+// Purpose: Show startup progress and actionable route recovery failures.
 // Layer: Shared app loading presentation
 
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,22 @@ export function SplashScreen({
   const { t } = useTranslation("shell");
 
   if (!errorMessage) {
-    return null;
+    return (
+      <div role="status" aria-live="polite" className="flex min-h-0 flex-1 flex-col p-6">
+        <div aria-hidden="true" className="h-4 w-40 rounded bg-muted" />
+        <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+          <span
+            aria-hidden="true"
+            className="size-2 rounded-full bg-current motion-safe:animate-pulse"
+          />
+          {t("common:loading")}
+        </div>
+        <div
+          aria-hidden="true"
+          className="mx-auto h-24 w-full max-w-3xl rounded-2xl border border-border/60 bg-muted/30"
+        />
+      </div>
+    );
   }
 
   return (
