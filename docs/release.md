@@ -167,7 +167,7 @@ Entra application `djl-github-windows-signing`. Keep two federated credentials:
 - protected `main` for the signed Windows package smoke;
 - the `windows-signing` GitHub environment for production release tags.
 
-The `windows-signing` environment allows only tags matching `v*.*.*`. Grant the application only
+Only the Windows build job enters the `windows-signing` environment; the Mac builds use repository secrets and create no deployment, so the environment shows one deployment per release. The environment allows only tags matching `v*.*.*`. Grant the application only
 **Artifact Signing Certificate Profile Signer** at the exact
 `djl-release-signing-prod/djl-windows-release-prod` certificate-profile scope. Do not create or
 store an Azure client secret.
