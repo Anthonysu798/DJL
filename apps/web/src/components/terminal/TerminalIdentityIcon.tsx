@@ -8,7 +8,18 @@ import type { TerminalIconKey } from "@synara/shared/terminalThreads";
 import { TerminalSquare } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
-import { ClaudeAI, OpenAI, CursorIcon, OpenCodeIcon, KimiIcon, GrokIcon } from "../Icons";
+import {
+  ClaudeAI,
+  OpenAI,
+  CursorIcon,
+  OpenCodeIcon,
+  KimiIcon,
+  GrokIcon,
+  IFlowIcon,
+  QwenIcon,
+  CodeBuddyIcon,
+  PiIcon,
+} from "../Icons";
 
 interface TerminalIdentityIconProps {
   iconKey: TerminalIconKey;
@@ -24,6 +35,10 @@ export default function TerminalIdentityIcon({ iconKey, className }: TerminalIde
     opencode: OpenCodeIcon,
     kimi: KimiIcon,
     grok: GrokIcon,
+    iflow: IFlowIcon,
+    qwen: QwenIcon,
+    codebuddy: CodeBuddyIcon,
+    pi: PiIcon,
     terminal: TerminalSquare,
   }[iconKey];
 

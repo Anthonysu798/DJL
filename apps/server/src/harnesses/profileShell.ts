@@ -12,6 +12,10 @@ const COMMANDS = {
   opencode: "opencode",
   kimi: "kimi",
   grok: "grok",
+  iflow: "iflow",
+  qwen: "qwen",
+  codebuddy: "codebuddy",
+  pi: "pi",
 } as const;
 
 export async function prepareProfileShell(input: {

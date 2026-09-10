@@ -4,7 +4,17 @@
 // Exports: command parsing plus resolved terminal presentation metadata for web/server consumers.
 
 export const GENERIC_TERMINAL_THREAD_TITLE = "New terminal";
-export type TerminalCliKind = "codex" | "claude" | "cursor" | "opencode" | "kimi" | "grok";
+export type TerminalCliKind =
+  | "codex"
+  | "claude"
+  | "cursor"
+  | "opencode"
+  | "kimi"
+  | "grok"
+  | "iflow"
+  | "qwen"
+  | "codebuddy"
+  | "pi";
 export type TerminalIconKey =
   | "terminal"
   | "openai"
@@ -12,7 +22,11 @@ export type TerminalIconKey =
   | "cursor"
   | "opencode"
   | "kimi"
-  | "grok";
+  | "grok"
+  | "iflow"
+  | "qwen"
+  | "codebuddy"
+  | "pi";
 export type TerminalActivityState = "running" | "attention" | "review";
 export type TerminalVisualState = "idle" | TerminalActivityState;
 export type TerminalAgentHookEventType = "Start" | "Stop" | "PermissionRequest";
@@ -25,6 +39,10 @@ export const MANAGED_TERMINAL_COMMAND_NAME_BY_CLI_KIND: Record<TerminalCliKind, 
   opencode: "opencode",
   kimi: "kimi",
   grok: "grok",
+  iflow: "iflow",
+  qwen: "qwen",
+  codebuddy: "codebuddy",
+  pi: "pi",
 };
 
 const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
@@ -34,6 +52,10 @@ const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
   opencode: "OpenCode",
   kimi: "Kimi",
   grok: "Grok",
+  iflow: "iFlow CLI",
+  qwen: "Qwen Code",
+  codebuddy: "CodeBuddy Code",
+  pi: "Pi",
 };
 
 export interface TerminalCommandIdentity {
