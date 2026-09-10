@@ -21,19 +21,27 @@ describe("providerOrdering", () => {
       "cursor",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
+      "codebuddy",
+      "pi",
     ]);
   });
 
   it("drops historical providers from picker order and visibility settings", () => {
-    expect(isProviderKind("pi")).toBe(false);
-    expect(normalizeProviderOrder(["pi", "codex"])).toEqual([
+    expect(isProviderKind("gemini")).toBe(false);
+    expect(normalizeProviderOrder(["gemini", "codex"])).toEqual([
       "codex",
       "opencode",
       "claudeAgent",
       "cursor",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
+      "codebuddy",
+      "pi",
     ]);
-    expect(normalizeHiddenProviders(["bogus", "pi", "pi"])).toEqual([]);
+    expect(normalizeHiddenProviders(["bogus", "gemini", "gemini"])).toEqual([]);
   });
 });

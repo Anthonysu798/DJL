@@ -21,6 +21,10 @@ import {
   NativeCursorAdapter,
   NativeGrokAdapter,
   NativeKimiAdapter,
+  NativeIFlowAdapter,
+  NativeQwenAdapter,
+  NativeCodeBuddyAdapter,
+  NativePiAdapter,
 } from "../../harnesses/native/layer";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 
@@ -40,6 +44,10 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
             yield* NativeCursorAdapter,
             yield* NativeGrokAdapter,
             yield* NativeKimiAdapter,
+            yield* NativeIFlowAdapter,
+            yield* NativeQwenAdapter,
+            yield* NativeCodeBuddyAdapter,
+            yield* NativePiAdapter,
           ];
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
 

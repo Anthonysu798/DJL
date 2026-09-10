@@ -1090,7 +1090,7 @@
   "settings": {
     "accounts": {
       "checking": "正在检查…",
-      "codingPlansDescription": "在 OpenCode 登录中，为 GLM 选择 Z.AI Coding Plan，为 Kimi 选择 Kimi For Coding，或选择你的 MiniMax 编程套餐服务商。已安装的运行时支持时，也会显示 Qwen 等服务商。",
+      "codingPlansDescription": "在 OpenCode 登录中，为 GLM 选择 Z.AI Coding Plan，为 Kimi 选择 Kimi For Coding，或选择你的 MiniMax 编程套餐服务商。Kimi Code、iFlow CLI、Qwen Code、CodeBuddy Code 和 Pi 在上方通过官方 CLI 连接，直接复用这些 CLI 已登录的账号。",
       "codingPlansTitle": "中国模型与编程套餐",
       "default": "新对话默认使用",
       "description": "通过各服务商的官方登录流程连接现有账户。套餐和用量限制仍由服务商管理。",

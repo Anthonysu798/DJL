@@ -12,6 +12,13 @@ export function readAcpModels(session: JsonObject): Array<{ slug: string; name: 
       const model = object(entry);
       return { slug: string(model.modelId), name: string(model.name ?? model.modelId) };
     });
+  // iFlow advertises its catalog under `_meta.models` with `id` fields.
+  const meta = object(object(session._meta ?? {}).models ?? {}).availableModels;
+  if (Array.isArray(meta))
+    return meta.map((entry) => {
+      const model = object(entry);
+      return { slug: string(model.id), name: string(model.name ?? model.id) };
+    });
   const controls = Array.isArray(session.configOptions) ? session.configOptions.map(object) : [];
   const model = controls.find((control) => control.category === "model" || control.id === "model");
   if (!Array.isArray(model?.options)) throw new Error("ACP runtime did not advertise models");

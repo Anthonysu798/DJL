@@ -31,7 +31,7 @@ const unsupported = () =>
   Effect.die(new Error("Unexpected provider operation in ingestion test")) as never;
 
 describe("native adapters through real orchestration ingestion", () => {
-  it.each(["claudeAgent", "cursor", "grok", "kimi"] as const)(
+  it.each(["claudeAgent", "cursor", "grok", "kimi", "iflow", "qwen", "codebuddy"] as const)(
     "persists separate %s turns and renders input and approval context",
     async (provider) => {
       const scope = await Effect.runPromise(Scope.make("sequential"));

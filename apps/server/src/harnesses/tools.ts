@@ -23,7 +23,18 @@ import {
   type PackageManagedProviderMaintenanceDefinition,
 } from "../provider/providerMaintenance";
 
-const TOOL_IDS = ["codex", "claudeAgent", "opencode", "grok", "kimi", "cursor"] as const;
+const TOOL_IDS = [
+  "codex",
+  "claudeAgent",
+  "opencode",
+  "grok",
+  "kimi",
+  "iflow",
+  "qwen",
+  "codebuddy",
+  "pi",
+  "cursor",
+] as const;
 const KIMI_TOOL: PackageManagedProviderMaintenanceDefinition = {
   provider: "kimi",
   binaryName: "kimi",
