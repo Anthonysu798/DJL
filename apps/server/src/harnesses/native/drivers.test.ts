@@ -200,7 +200,7 @@ describe("new official protocol drivers", () => {
       const argv=process.argv.slice(2);
       if(argv[0]!=='--mode'||argv[1]!=='rpc'||argv[2]!=='--session-id'||!argv[3])throw Error('bad command '+argv.join(' '));
       if(argv[4]!=='-e'||!argv[5].endsWith('djl-approvals.ts'))throw Error('approval extension missing');
-      if(process.env.DJL_PI_APPROVE!=='command,file'||process.env.PI_OFFLINE!=='1')throw Error('bad env');
+      if(process.env.DJL_PI_APPROVE!=='command,file'||process.env.PI_SKIP_VERSION_CHECK!=='1')throw Error('bad env');
       const ok=(data)=>send({id:m.id,type:'response',command:m.type,success:true,data});
       if(m.type==='get_state')ok({sessionId:argv[3],model:{id:'claude-sonnet-4-5',provider:'anthropic',name:'Claude Sonnet 4.5'},thinkingLevel:'medium'});
       if(m.type==='set_model'){if(m.provider!=='anthropic'||m.modelId!=='claude-haiku-4-5')throw Error('wrong model');ok({id:'claude-haiku-4-5',provider:'anthropic',name:'Claude Haiku 4.5'})}

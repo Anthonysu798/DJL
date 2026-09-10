@@ -30,9 +30,9 @@ export function piSubscriptionEnvironment(
   base: NodeJS.ProcessEnv = process.env,
   agentDir?: string,
 ): NodeJS.ProcessEnv {
-  // Offline mode only skips pi.dev version checks and telemetry; Pi still uses
-  // the credentials it has stored in its own auth file.
-  const env: NodeJS.ProcessEnv = { ...base, PI_OFFLINE: "1" };
+  // Skip only the pi.dev version notice; full offline mode would also stop Pi
+  // fetching its helper binaries. Pi keeps using the credentials in its own auth file.
+  const env: NodeJS.ProcessEnv = { ...base, PI_SKIP_VERSION_CHECK: "1" };
   if (agentDir?.trim()) env.PI_CODING_AGENT_DIR = agentDir.trim();
   return env;
 }

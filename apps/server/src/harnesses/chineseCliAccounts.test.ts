@@ -89,7 +89,7 @@ describe("iFlow and Qwen Code accounts", () => {
     });
     expect(login.binary).toBe("pi");
     expect(login.loginArgs).toEqual([]);
-    expect(login.env.PI_OFFLINE).toBe("1");
+    expect(login.env.PI_SKIP_VERSION_CHECK).toBe("1");
   });
   it("reports CodeBuddy Code account state from a session attempt", async () => {
     const ready = fixture(
