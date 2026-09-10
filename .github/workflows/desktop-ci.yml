@@ -177,12 +177,16 @@ jobs:
       # This isolated test dependency is never staged into the DJL application.
       - name: Install official CLI fixture
         shell: bash
-        run: npm install --prefix "$RUNNER_TEMP/djl-installed-opencode" --ignore-scripts --no-save "${{ matrix.package }}@1.18.29"
+        run: |
+          npm install --prefix "$RUNNER_TEMP/djl-installed-opencode" --ignore-scripts --no-save "${{ matrix.package }}@1.18.29"
+          npm install --prefix "$RUNNER_TEMP/djl-opencode-config-deps" --ignore-scripts --save-exact --no-audit --no-fund "@opencode-ai/plugin@1.18.29"
 
       - name: Verify installed CLI compatibility
         shell: bash
         env:
           OPENCODE_FIXTURE_PACKAGE: ${{ matrix.package }}
+          DJL_TEST_OPENCODE_DEPENDENCIES: ${{ runner.temp }}/djl-opencode-config-deps
+          OPENCODE_DISABLE_MODELS_FETCH: "true"
         run: |
           node --input-type=module <<'NODE'
           import { spawnSync } from "node:child_process";

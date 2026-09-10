@@ -7,6 +7,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ThreadId } from "@synara/contracts";
 import { Effect, Fiber, Layer, Stream } from "effect";
 import { expect, it, vi } from "vitest";
+import { prepareInstalledOpenCodeFixture } from "../../../../scripts/lib/installed-opencode-fixture.ts";
 
 import { ServerConfig } from "../config.ts";
 import { makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter.ts";
@@ -70,6 +71,7 @@ it.skipIf(!process.env.DJL_TEST_OPENCODE_BINARY)(
     });
     try {
       await mkdir(project);
+      await prepareInstalledOpenCodeFixture(join(root, "config"));
       await writeFile(join(project, "AGENTS.md"), marker);
       await writeFile(join(project, "fixture.txt"), resultMarker);
       const listening = once(mock, "listening");
@@ -89,6 +91,7 @@ it.skipIf(!process.env.DJL_TEST_OPENCODE_BINARY)(
         XDG_STATE_HOME: join(root, "state"),
         OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
         OPENCODE_DISABLE_AUTOUPDATE: "true",
+        OPENCODE_DISABLE_MODELS_FETCH: "true",
         OPENCODE_CONFIG_CONTENT: JSON.stringify({
           autoupdate: false,
           enabled_providers: ["ollama"],
@@ -203,6 +206,8 @@ it.skipIf(!process.env.DJL_TEST_OPENCODE_BINARY)(
     const id = "ses_abcdef0123456789abcdef012346";
     try {
       await mkdir(project);
+      await prepareInstalledOpenCodeFixture(join(root, "config"));
+      await prepareInstalledOpenCodeFixture(join(legacyRoot, "config"));
       const isolatedEnv = {
         HOME: root,
         USERPROFILE: root,
@@ -214,6 +219,7 @@ it.skipIf(!process.env.DJL_TEST_OPENCODE_BINARY)(
         XDG_STATE_HOME: join(root, "state"),
         OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
         OPENCODE_DISABLE_AUTOUPDATE: "true",
+        OPENCODE_DISABLE_MODELS_FETCH: "true",
         OPENCODE_CONFIG_CONTENT: JSON.stringify({
           autoupdate: false,
           enabled_providers: ["ollama"],

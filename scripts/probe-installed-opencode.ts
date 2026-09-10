@@ -10,6 +10,7 @@ import { createOpenCodeCompatibilityPluginSource } from "@synara/shared/openCode
 import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import { evaluateOpenCodeWorkCompatibility } from "./lib/opencode-compatibility.ts";
+import { prepareInstalledOpenCodeFixture } from "./lib/installed-opencode-fixture.ts";
 
 interface ModelRequest {
   tools?: Array<{ function: { name: string } }>;
@@ -108,6 +109,7 @@ try {
   const port = await listen(mock);
   let cliOutput = "";
   await mkdir(project);
+  await prepareInstalledOpenCodeFixture(join(root, "config"));
   await writeFile(join(project, "AGENTS.md"), instructionMarker);
   await writeFile(join(project, "fixture.txt"), toolResultMarker);
   const policyPath = join(root, "policies.json");
