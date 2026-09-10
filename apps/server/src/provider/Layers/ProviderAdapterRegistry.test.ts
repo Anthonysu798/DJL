@@ -4,6 +4,10 @@ import {
   NativeCursorAdapter,
   NativeGrokAdapter,
   NativeKimiAdapter,
+  NativeIFlowAdapter,
+  NativeQwenAdapter,
+  NativeCodeBuddyAdapter,
+  NativePiAdapter,
 } from "../../harnesses/native/layer";
 import type { ProviderKind } from "@synara/contracts";
 import { it, assert, vi } from "@effect/vitest";
@@ -194,6 +198,10 @@ const layer = it.layer(
         Layer.succeed(NativeCursorAdapter, fakeCursorAdapter),
         Layer.succeed(NativeGrokAdapter, fakeGrokAdapter),
         Layer.succeed(NativeKimiAdapter, { ...fakeGrokAdapter, provider: "kimi" }),
+        Layer.succeed(NativeIFlowAdapter, { ...fakeGrokAdapter, provider: "iflow" }),
+        Layer.succeed(NativeQwenAdapter, { ...fakeGrokAdapter, provider: "qwen" }),
+        Layer.succeed(NativeCodeBuddyAdapter, { ...fakeGrokAdapter, provider: "codebuddy" }),
+        Layer.succeed(NativePiAdapter, { ...fakeGrokAdapter, provider: "pi" }),
         Layer.succeed(GeminiAdapter, fakeGeminiAdapter),
         Layer.succeed(GrokAdapter, fakeGrokAdapter),
         Layer.succeed(DroidAdapter, fakeDroidAdapter),
@@ -214,7 +222,18 @@ layer("ProviderAdapterRegistryLive", (it) => {
       assert.equal(opencode, fakeOpenCodeAdapter);
 
       const providers = yield* registry.listProviders();
-      assert.deepEqual(providers, ["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi"]);
+      assert.deepEqual(providers, [
+        "opencode",
+        "codex",
+        "claudeAgent",
+        "cursor",
+        "grok",
+        "kimi",
+        "iflow",
+        "qwen",
+        "codebuddy",
+        "pi",
+      ]);
       assert.equal(yield* registry.getByProvider("codex"), fakeCodexAdapter);
       assert.equal(yield* registry.getByProvider("claudeAgent"), fakeClaudeAdapter);
       assert.equal(yield* registry.getByProvider("cursor"), fakeCursorAdapter);

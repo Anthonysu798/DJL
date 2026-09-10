@@ -145,6 +145,12 @@ export const GrokModelOptions = Schema.Struct({
 export type GrokModelOptions = typeof GrokModelOptions.Type;
 export const KimiModelOptions = Schema.Struct({});
 export type KimiModelOptions = typeof KimiModelOptions.Type;
+export const IFlowModelOptions = Schema.Struct({});
+export type IFlowModelOptions = typeof IFlowModelOptions.Type;
+export const QwenModelOptions = Schema.Struct({});
+export type QwenModelOptions = typeof QwenModelOptions.Type;
+export const CodeBuddyModelOptions = Schema.Struct({});
+export type CodeBuddyModelOptions = typeof CodeBuddyModelOptions.Type;
 
 export const DroidModelOptions = Schema.Struct({
   reasoningEffort: Schema.optional(Schema.Literals(DROID_REASONING_EFFORT_OPTIONS)),
@@ -158,6 +164,9 @@ export const ProviderModelOptions = Schema.Struct({
   gemini: Schema.optional(GeminiModelOptions),
   grok: Schema.optional(GrokModelOptions),
   kimi: Schema.optional(KimiModelOptions),
+  iflow: Schema.optional(IFlowModelOptions),
+  qwen: Schema.optional(QwenModelOptions),
+  codebuddy: Schema.optional(CodeBuddyModelOptions),
   droid: Schema.optional(DroidModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
@@ -444,6 +453,47 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     {
       slug: "kimi-code/kimi-for-coding",
       name: "Kimi For Coding",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  // The official CLIs advertise their live catalogs over ACP; these are the
+  // fallbacks shown before discovery completes.
+  iflow: [
+    {
+      slug: "glm-4.7",
+      name: "GLM-4.7",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  qwen: [
+    {
+      slug: "qwen3-coder-plus",
+      name: "Qwen3 Coder Plus",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  codebuddy: [
+    {
+      slug: "default-model",
+      name: "Auto",
       capabilities: {
         reasoningEffortLevels: [],
         supportsFastMode: false,
@@ -934,6 +984,9 @@ export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
   kimi: "kimi-code/kimi-for-coding",
+  iflow: "glm-4.7",
+  qwen: "qwen3-coder-plus",
+  codebuddy: "default-model",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
   cursor: "auto",
@@ -951,6 +1004,9 @@ export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "openai/gpt-5" as const;
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
   kimi: {},
+  iflow: {},
+  qwen: {},
+  codebuddy: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1095,6 +1151,9 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   kimi: "Kimi Code",
+  iflow: "iFlow",
+  qwen: "Qwen Code",
+  codebuddy: "CodeBuddy Code",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

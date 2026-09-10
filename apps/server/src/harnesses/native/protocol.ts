@@ -69,7 +69,8 @@ export class NativeRpc {
         while ((end = this.buffer.indexOf("\n")) !== -1) {
           const line = this.buffer.slice(0, end);
           this.buffer = this.buffer.slice(end + 1);
-          if (!line.trim()) continue;
+          // Official runtimes (iFlow) print startup banners on stdout before speaking JSON.
+          if (!line.trimStart().startsWith("{")) continue;
           const message = object(JSON.parse(line));
           if (typeof message.method === "string") {
             const id =

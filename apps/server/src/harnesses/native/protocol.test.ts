@@ -19,6 +19,16 @@ afterEach(() => {
 });
 
 describe("native NDJSON transport", () => {
+  it("ignores runtime banner lines printed on stdout before JSON frames", async () => {
+    const rpc = fixture(
+      "process.stdout.write('[iFlow ACP Agent] ACP adapter factory initialized\\n');require('readline').createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);process.stdout.write(JSON.stringify({id:m.id,result:{ok:true}})+'\\n')});",
+    );
+    try {
+      expect(await rpc.request("initialize", {})).toEqual({ ok: true });
+    } finally {
+      rpc.close();
+    }
+  });
   it("prepares Windows npm shims with the same safe launch flags as Accounts", () => {
     const launch = prepareNativeRpcLaunch(
       "codex",

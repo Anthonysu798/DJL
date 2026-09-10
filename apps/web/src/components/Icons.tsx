@@ -405,6 +405,47 @@ export const KimiIcon: Icon = (props) => (
   </svg>
 );
 
+// iFlow: a looping flow line, mirroring the CLI's own wordmark motif.
+export const IFlowIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M4 15c2.5 0 3.5-6 6-6s3.5 6 6 6 3-3 4-3"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="4" cy="15" r="1.6" fill="currentColor" />
+  </svg>
+);
+
+// Qwen Code: an angled Q monogram.
+export const QwenIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="11.5" cy="11" r="6.5" stroke="currentColor" strokeWidth="2.4" />
+    <path d="M14.5 14.5 20 20" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+  </svg>
+);
+
+// CodeBuddy Code: a chat bubble with a code chevron.
+export const CodeBuddyIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-8Z"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinejoin="round"
+    />
+    <path
+      d="m10 7-2.5 2.5L10 12m4-5 2.5 2.5L14 12"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const GrokIcon: Icon = (props) => (
   <svg {...props} viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

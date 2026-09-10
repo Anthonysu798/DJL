@@ -27,6 +27,18 @@ describe("ACP model discovery", () => {
       readAcpModels({ models: { availableModels: [{ modelId: "grok-test", name: "Grok" }] } }),
     ).toEqual([{ slug: "grok-test", name: "Grok" }]);
   });
+  it("reads the iFlow catalog published under session _meta", () => {
+    expect(
+      readAcpModels({
+        _meta: {
+          models: {
+            currentModelId: "glm-4.7",
+            availableModels: [{ id: "glm-4.7", name: "GLM-4.7" }],
+          },
+        },
+      }),
+    ).toEqual([{ slug: "glm-4.7", name: "GLM-4.7" }]);
+  });
   it("does not invent models when the runtime advertises no model controls", () => {
     expect(() => readAcpModels({})).toThrow("did not advertise models");
   });

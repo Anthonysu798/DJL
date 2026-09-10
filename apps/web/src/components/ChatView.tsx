@@ -828,6 +828,12 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.grok?.binaryPath);
     case "kimi":
       return normalizeCustomBinaryPath(providerOptions?.kimi?.binaryPath);
+    case "iflow":
+      return normalizeCustomBinaryPath(providerOptions?.iflow?.binaryPath);
+    case "qwen":
+      return normalizeCustomBinaryPath(providerOptions?.qwen?.binaryPath);
+    case "codebuddy":
+      return normalizeCustomBinaryPath(providerOptions?.codebuddy?.binaryPath);
     case "droid":
       return normalizeCustomBinaryPath(providerOptions?.droid?.binaryPath);
     case "kilo":
@@ -2145,6 +2151,9 @@ export default function ChatView({
       gemini: resolveHint("gemini"),
       grok: resolveHint("grok"),
       kimi: resolveHint("kimi"),
+      iflow: resolveHint("iflow"),
+      qwen: resolveHint("qwen"),
+      codebuddy: resolveHint("codebuddy"),
       droid: resolveHint("droid"),
       kilo: resolveHint("kilo"),
       opencode: resolveHint("opencode"),
@@ -2216,6 +2225,30 @@ export default function ChatView({
       binaryPath: settings.kimiBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
       enabled: selectedProvider === "kimi" || isModelPickerOpen,
+    }),
+  );
+  const iflowDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "iflow",
+      binaryPath: settings.iflowBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "iflow" || isModelPickerOpen,
+    }),
+  );
+  const qwenDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "qwen",
+      binaryPath: settings.qwenBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "qwen" || isModelPickerOpen,
+    }),
+  );
+  const codebuddyDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "codebuddy",
+      binaryPath: settings.codebuddyBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "codebuddy" || isModelPickerOpen,
     }),
   );
   const droidModelDiscoveryEnabled =
@@ -2354,6 +2387,21 @@ export default function ChatView({
         customModelsByProvider.kimi,
         composerModelHintByProvider.kimi,
       ),
+      iflow: getAppModelOptions(
+        "iflow",
+        customModelsByProvider.iflow,
+        composerModelHintByProvider.iflow,
+      ),
+      qwen: getAppModelOptions(
+        "qwen",
+        customModelsByProvider.qwen,
+        composerModelHintByProvider.qwen,
+      ),
+      codebuddy: getAppModelOptions(
+        "codebuddy",
+        customModelsByProvider.codebuddy,
+        composerModelHintByProvider.codebuddy,
+      ),
       droid: getAppModelOptions(
         "droid",
         customModelsByProvider.droid,
@@ -2382,6 +2430,9 @@ export default function ChatView({
       gemini: geminiModelsQuery.data,
       grok: grokDynamicModelsQuery.data,
       kimi: kimiDynamicModelsQuery.data,
+      iflow: iflowDynamicModelsQuery.data,
+      qwen: qwenDynamicModelsQuery.data,
+      codebuddy: codebuddyDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
@@ -2395,6 +2446,9 @@ export default function ChatView({
       "gemini",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
+      "codebuddy",
       "droid",
       "kilo",
       "opencode",
@@ -2425,6 +2479,9 @@ export default function ChatView({
     geminiModelsQuery.data,
     grokDynamicModelsQuery.data,
     kimiDynamicModelsQuery.data,
+    iflowDynamicModelsQuery.data,
+    qwenDynamicModelsQuery.data,
+    codebuddyDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
@@ -2445,6 +2502,9 @@ export default function ChatView({
       gemini: geminiModelsQuery.data?.models ?? [],
       grok: grokDynamicModelsQuery.data?.models ?? [],
       kimi: kimiDynamicModelsQuery.data?.models ?? [],
+      iflow: iflowDynamicModelsQuery.data?.models ?? [],
+      qwen: qwenDynamicModelsQuery.data?.models ?? [],
+      codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
@@ -2458,6 +2518,9 @@ export default function ChatView({
       geminiModelsQuery.data?.models,
       grokDynamicModelsQuery.data?.models,
       kimiDynamicModelsQuery.data?.models,
+      iflowDynamicModelsQuery.data?.models,
+      qwenDynamicModelsQuery.data?.models,
+      codebuddyDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
@@ -2470,6 +2533,9 @@ export default function ChatView({
     gemini: geminiModelsQuery,
     grok: grokDynamicModelsQuery,
     kimi: kimiDynamicModelsQuery,
+    iflow: iflowDynamicModelsQuery,
+    qwen: qwenDynamicModelsQuery,
+    codebuddy: codebuddyDynamicModelsQuery,
     droid: droidDynamicModelsQuery,
     kilo: kiloDynamicModelsQuery,
     opencode: openCodeDynamicModelsQuery,
