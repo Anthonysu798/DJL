@@ -1,4 +1,4 @@
-import type { TerminalAgentProfile } from "@synara/contracts";
+import type { HarnessId, TerminalAgentProfile } from "@synara/contracts";
 // FILE: terminalRuntimeTypes.ts
 // Purpose: Shared types and stable identity helpers for persistent terminal runtimes.
 // Layer: Terminal runtime infrastructure
@@ -36,6 +36,7 @@ export interface TerminalRuntimeConfig {
   cwd: string;
   runtimeEnv?: Record<string, string>;
   agentProfile?: TerminalAgentProfile;
+  harness?: HarnessId;
   imageSupport?: boolean;
   lightweight?: boolean;
   screenSnapshot?: boolean;
@@ -54,7 +55,7 @@ export interface TerminalPendingWrite {
   queuedAt: number;
 }
 
-export type TerminalRuntimeStatus = "connecting" | "replaying" | "ready" | "error";
+export type TerminalRuntimeStatus = "connecting" | "replaying" | "ready" | "error" | "exited";
 
 export interface TerminalRuntimeEntry {
   runtimeKey: string;
@@ -65,6 +66,7 @@ export interface TerminalRuntimeEntry {
   cwd: string;
   runtimeEnv?: Record<string, string>;
   agentProfile?: TerminalAgentProfile;
+  harness?: HarnessId;
   imageSupport?: boolean;
   lightweight?: boolean;
   screenSnapshot?: boolean;

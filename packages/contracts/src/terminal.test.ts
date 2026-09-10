@@ -267,3 +267,35 @@ describe("TerminalEvent", () => {
     ).toBe(true);
   });
 });
+
+describe("terminal harness contracts", () => {
+  it.each(["codex", "claudeAgent", "cursor", "opencode", "kimi", "grok"])(
+    "preserves the %s launch selection",
+    (harness) => {
+      expect(decodeSync(TerminalOpenInput, { threadId: "t", cwd: "/tmp", harness })).toMatchObject({
+        harness,
+      });
+    },
+  );
+  it.each(["codex", "claude", "cursor", "opencode", "kimi", "grok"])(
+    "accepts %s terminal activity",
+    (cliKind) => {
+      expect(
+        decodes(TerminalEvent, {
+          type: "activity",
+          threadId: "t",
+          terminalId: "default",
+          createdAt: "now",
+          cliKind,
+          agentState: null,
+          hasRunningSubprocess: true,
+        }),
+      ).toBe(true);
+    },
+  );
+  it("rejects an unknown harness", () => {
+    expect(decodes(TerminalOpenInput, { threadId: "t", cwd: "/tmp", harness: "unknown" })).toBe(
+      false,
+    );
+  });
+});
