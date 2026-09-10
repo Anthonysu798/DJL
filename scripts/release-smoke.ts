@@ -63,7 +63,7 @@ for (const expected of [
   "Upload updater manifests last",
   "Verify exact 13-asset draft inventory",
   "environment: production",
-  "environment: windows-signing",
+  "environment: ${{ matrix.platform == 'win' && 'windows-signing' || '' }}",
   "Azure login for Artifact Signing",
   "Get-AuthenticodeSignature",
   'Status -ne "Valid"',

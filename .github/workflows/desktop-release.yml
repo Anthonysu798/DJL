@@ -257,7 +257,9 @@ jobs:
     needs: [preflight, create-draft]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
-    environment: windows-signing
+    # Only the Windows build signs through Azure OIDC, so only it enters the environment.
+    # The Mac builds read repository secrets and need no deployment record.
+    environment: ${{ matrix.platform == 'win' && 'windows-signing' || '' }}
     permissions:
       contents: write
       # Sigstore signs the provenance against this job's OIDC identity, which is what makes the

@@ -497,7 +497,11 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /permissions:\n  contents: read/);
     assert.match(releaseWorkflow, /persist-credentials: false/);
     assert.match(releaseWorkflow, /environment: production/);
-    assert.match(releaseWorkflow, /environment: windows-signing/);
+    // Only the Windows build leg enters the signing environment; the Mac legs must not.
+    assert.match(
+      releaseWorkflow,
+      /environment: \$\{\{ matrix\.platform == 'win' && 'windows-signing' \|\| '' \}\}/,
+    );
     assert.match(releaseWorkflow, /retention-days: 1/);
     assert.match(releaseWorkflow, /gh release upload "\$RELEASE_TAG" "\$\{payloads\[@\]\}"/);
     assert.match(releaseWorkflow, /Get-AuthenticodeSignature/);
