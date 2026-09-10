@@ -1073,10 +1073,10 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   async open(raw: TerminalOpenInput, command?: TerminalCommand): Promise<TerminalSessionSnapshot> {
     const input = decodeTerminalOpenInput(raw);
     return this.runWithThreadLock(input.threadId, async () => {
-      await this.assertValidCwd(input.cwd);
-
       const sessionKey = toSessionKey(input.threadId, input.terminalId);
       const existing = this.sessions.get(sessionKey);
+      // Reattaching must not validate stale UI paths or interrupt a live PTY.
+      if (!existing?.process) await this.assertValidCwd(input.cwd);
       if (!existing) {
         await this.flushPersistQueue(input.threadId, input.terminalId);
         const history = await this.readHistory(input.threadId, input.terminalId);
@@ -1234,7 +1234,10 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     session.pendingInputBuffer = nextIdentityState.buffer;
     if (
       nextIdentityState.identity &&
-      nextIdentityState.identity.cliKind !== session.detectedCliKind
+      nextIdentityState.identity.cliKind !== session.detectedCliKind &&
+      (nextIdentityState.identity.cliKind !== null ||
+        session.detectedCliKind === null ||
+        (!session.providerDescendantObserved && cliKindFromRuntimeEnv(session.runtimeEnv) === null))
     ) {
       session.detectedCliKind = nextIdentityState.identity.cliKind;
       session.providerDescendantObserved = false;
@@ -2356,16 +2359,22 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           const terminalPid = session.pid;
           let hasRunningSubprocess = false;
           let shouldClearDetectedCliKind = false;
+          let observedLaunchCliKind: TerminalCliKind | null = null;
           try {
             const subprocessActivity =
               sharedChildrenMap !== null
                 ? inspectSubprocessActivity(terminalPid, sharedChildrenMap)
                 : normalizeSubprocessActivity(await this.subprocessChecker(terminalPid));
+            const launchCliKind = cliKindFromRuntimeEnv(session.runtimeEnv);
+            if (launchCliKind && subprocessActivity.cliKind === launchCliKind) {
+              observedLaunchCliKind = launchCliKind;
+            }
             const providerDescendantObserved =
               session.providerDescendantObserved ||
-              (session.detectedCliKind !== null && subprocessActivity.hasProviderDescendant);
-            // Process-tree provider matches affect busy-state only. Branding follows explicit
-            // env/input/hook signals so dev servers that spawn agents stay generic.
+              ((session.detectedCliKind !== null || observedLaunchCliKind !== null) &&
+                subprocessActivity.hasProviderDescendant);
+            // Only an explicitly selected harness can recover branding from its process.
+            // Unbranded shells and dev servers that spawn agents stay generic.
             shouldClearDetectedCliKind =
               session.detectedCliKind !== null &&
               !subprocessActivity.hasProviderDescendant &&
@@ -2398,9 +2407,10 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             return;
           }
           const nextDetectedCliKind =
-            shouldClearDetectedCliKind && liveSession.detectedCliKind === session.detectedCliKind
+            observedLaunchCliKind ??
+            (shouldClearDetectedCliKind && liveSession.detectedCliKind === session.detectedCliKind
               ? null
-              : liveSession.detectedCliKind;
+              : liveSession.detectedCliKind);
           const nextProviderDescendantObserved =
             nextDetectedCliKind === null ? false : session.providerDescendantObserved;
           if (

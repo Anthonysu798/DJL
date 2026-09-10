@@ -406,3 +406,33 @@ describe("terminalStateStore actions", () => {
     ]);
   });
 });
+
+describe("terminal launch settings", () => {
+  it("persists a recovered directory and harness, and removes closed tab launch settings", () => {
+    useTerminalStateStore.setState({ terminalStateByThreadId: {} });
+    const store = useTerminalStateStore.getState();
+    store.openTerminalThreadPage(THREAD_ID, { terminalOnly: true });
+    store.setTerminalCwd(THREAD_ID, "/tmp/recovered-project");
+    store.newHarnessTerminal(THREAD_ID, "kimi-tab", "kimi");
+    const saved = sanitizePersistedTerminalStateByThreadId(
+      useTerminalStateStore.getState().terminalStateByThreadId,
+    );
+    expect(saved[THREAD_ID]?.terminalCwd).toBe("/tmp/recovered-project");
+    expect(saved[THREAD_ID]?.terminalHarnessesById).toEqual({ "kimi-tab": "kimi" });
+    store.closeTerminal(THREAD_ID, "kimi-tab");
+    expect(
+      useTerminalStateStore.getState().terminalStateByThreadId[THREAD_ID]?.terminalHarnessesById,
+    ).toEqual({});
+  });
+});
+
+it("launches a harness in a new group when the active group is full", () => {
+  useTerminalStateStore.setState({ terminalStateByThreadId: {} });
+  const store = useTerminalStateStore.getState();
+  store.openTerminalThreadPage(THREAD_ID, { terminalOnly: true });
+  for (let i = 0; i < 6; i++) store.newHarnessTerminal(THREAD_ID, `harness-${i}`, "grok");
+  const state = useTerminalStateStore.getState().terminalStateByThreadId[THREAD_ID]!;
+  expect(state.terminalIds).toHaveLength(7);
+  expect(state.terminalHarnessesById?.["harness-5"]).toBe("grok");
+  expect(state.terminalGroups).toHaveLength(2);
+});

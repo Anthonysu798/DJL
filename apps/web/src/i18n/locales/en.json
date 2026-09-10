@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "Add to chat",
       "chat": "Chat",
+      "chooseFolder": "Choose folder",
       "close": "Close terminal",
       "closeActiveTab": "Close active terminal tab",
       "closeNamed": "Close {{name}}",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "Collapse terminal into chat drawer",
       "error": "Error",
       "expandToWorkspace": "Expand terminal into workspace",
+      "folderPickerFailed": "Could not open the folder picker. Enter the folder path above.",
+      "launchHarness": "Launch harness",
       "moveToOwnTab": "Move to its own terminal tab",
       "name": "Terminal",
       "new": "New terminal",
@@ -4829,6 +4832,9 @@
       "newTab": "New terminal tab",
       "numbered": "Terminal {{number}}",
       "openSidePanel": "Open side panel",
+      "recoveryHelp": "Terminal unavailable. Retry, or choose an existing working folder.",
+      "restart": "Restart terminal",
+      "retry": "Retry",
       "scrollToBottom": "Scroll to bottom",
       "search": {
         "close": "Close search (Esc)",
@@ -4838,11 +4844,14 @@
         "placeholder": "Find",
         "previous": "Previous match (Shift+Enter)"
       },
+      "sessionEnded": "This terminal session has ended.",
       "splitDown": "Split down",
       "splitDownShortcut": "Split down ({{shortcut}})",
       "splitLimit": "Split terminal (maximum {{count}} per group)",
       "splitRight": "Split right",
-      "splitRightShortcut": "Split right ({{shortcut}})"
+      "splitRightShortcut": "Split right ({{shortcut}})",
+      "useFolder": "Use folder",
+      "workingDirectory": "Working directory"
     },
     "terminalClose": {
       "confirm": "Close this terminal?",

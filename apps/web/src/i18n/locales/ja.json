@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "チャットに追加",
       "chat": "チャット",
+      "chooseFolder": "フォルダーを選択",
       "close": "ターミナルを閉じる",
       "closeActiveTab": "現在のターミナルタブを閉じる",
       "closeNamed": "{{name}}を閉じる",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "ターミナルをチャットドロワーに折りたたむ",
       "error": "エラー",
       "expandToWorkspace": "ターミナルをワークスペースに展開",
+      "folderPickerFailed": "フォルダー選択画面を開けませんでした。上の欄にパスを入力してください。",
+      "launchHarness": "エージェントを起動",
       "moveToOwnTab": "独立したターミナルタブへ移動",
       "name": "ターミナル",
       "new": "新しいターミナル",
@@ -4829,6 +4832,9 @@
       "newTab": "新しいターミナルタブ",
       "numbered": "ターミナル {{number}}",
       "openSidePanel": "サイドパネルを開く",
+      "recoveryHelp": "ターミナルを起動できません。再試行するか、既存の作業フォルダーを選択してください。",
+      "restart": "ターミナルを再起動",
+      "retry": "再試行",
       "scrollToBottom": "一番下までスクロール",
       "search": {
         "close": "検索を閉じる (Esc)",
@@ -4838,11 +4844,14 @@
         "placeholder": "検索",
         "previous": "前の一致 (Shift+Enter)"
       },
+      "sessionEnded": "ターミナルのセッションが終了しました。",
       "splitDown": "下に分割",
       "splitDownShortcut": "下に分割 ({{shortcut}})",
       "splitLimit": "ターミナルを分割（1グループ最大{{count}}個）",
       "splitRight": "右に分割",
-      "splitRightShortcut": "右に分割 ({{shortcut}})"
+      "splitRightShortcut": "右に分割 ({{shortcut}})",
+      "useFolder": "このフォルダーを使用",
+      "workingDirectory": "作業ディレクトリ"
     },
     "terminalClose": {
       "confirm": "このターミナルを閉じますか？",

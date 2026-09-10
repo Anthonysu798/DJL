@@ -103,7 +103,7 @@ export function openProfileTerminal(
   root: string,
   manager: Pick<TerminalManagerShape, "open" | "isRunning">,
 ) {
-  if (!input.agentProfile) return manager.open(input);
+  if (!input.agentProfile && !input.harness) return manager.open(input);
   return Effect.gen(function* () {
     // Reattaching a viewport must not rediscover CLIs or rewrite startup scripts.
     if (
@@ -113,6 +113,53 @@ export function openProfileTerminal(
       })
     )
       return yield* manager.open(input);
+    if (input.harness && !input.agentProfile) {
+      const harness = input.harness;
+      const launch = yield* Effect.tryPromise({
+        try: async () => {
+          // Keep installed CLI credentials; remove only parent-agent session markers.
+          const removeEnv = [
+            "CLAUDECODE",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CODEX_THREAD_ID",
+            "CODEX_INTERNAL_ORIGINATOR_OVERRIDE",
+          ];
+          const baseEnv = { ...process.env, ...input.env };
+          for (const name of removeEnv) delete baseEnv[name];
+          const invocation = buildHarnessInvocation(harness, settings, root, baseEnv);
+          for (const name of Object.keys(baseEnv)) {
+            if (invocation.env[name] === undefined) removeEnv.push(name);
+          }
+          const executable =
+            harness === "codex"
+              ? await resolveCodexTerminalBinary(invocation.binary, invocation.env)
+              : invocation.binary;
+          const env: Record<string, string> = {
+            SYNARA_TERMINAL_CLI_KIND: harness === "claudeAgent" ? "claude" : harness,
+          };
+          for (const [name, value] of Object.entries(invocation.env)) {
+            if (value !== undefined && value !== process.env[name]) env[name] = value;
+          }
+          return prepareProfileShell({
+            directory: join(
+              root,
+              "shared-terminal-launches",
+              createHash("sha256").update(`${input.threadId}::${input.terminalId}`).digest("hex"),
+            ),
+            cwd: input.cwd,
+            provider: harness,
+            executable,
+            prefixArgs: invocation.prefixArgs,
+            initialArgs: [],
+            env,
+            removeEnv,
+          });
+        },
+        catch: (cause) =>
+          new TerminalError({ message: "Could not launch terminal harness.", cause }),
+      });
+      return yield* manager.open({ ...input, env: launch.env }, launch.command);
+    }
     return yield* Effect.tryPromise({
       try: async () => {
         const launch = buildProfileTerminalLaunch(

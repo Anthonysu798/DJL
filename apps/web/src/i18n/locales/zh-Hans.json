@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "添加到聊天",
       "chat": "聊天",
+      "chooseFolder": "选择文件夹",
       "close": "关闭终端",
       "closeActiveTab": "关闭当前终端标签页",
       "closeNamed": "关闭{{name}}",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "将终端收起到聊天抽屉",
       "error": "错误",
       "expandToWorkspace": "将终端展开到工作区",
+      "folderPickerFailed": "无法打开文件夹选择器。请在上方输入文件夹路径。",
+      "launchHarness": "启动智能体",
       "moveToOwnTab": "移至独立终端标签页",
       "name": "终端",
       "new": "新建终端",
@@ -4829,6 +4832,9 @@
       "newTab": "新建终端标签页",
       "numbered": "终端 {{number}}",
       "openSidePanel": "打开侧面板",
+      "recoveryHelp": "终端无法启动。请重试，或选择一个现有的工作文件夹。",
+      "restart": "重启终端",
+      "retry": "重试",
       "scrollToBottom": "滚动到底部",
       "search": {
         "close": "关闭搜索 (Esc)",
@@ -4838,11 +4844,14 @@
         "placeholder": "查找",
         "previous": "上一个匹配项 (Shift+Enter)"
       },
+      "sessionEnded": "终端会话已结束。",
       "splitDown": "向下拆分",
       "splitDownShortcut": "向下拆分 ({{shortcut}})",
       "splitLimit": "拆分终端（每组最多 {{count}} 个）",
       "splitRight": "向右拆分",
-      "splitRightShortcut": "向右拆分 ({{shortcut}})"
+      "splitRightShortcut": "向右拆分 ({{shortcut}})",
+      "useFolder": "使用此文件夹",
+      "workingDirectory": "工作目录"
     },
     "terminalClose": {
       "confirm": "关闭此终端？",

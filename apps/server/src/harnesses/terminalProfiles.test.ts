@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
 import { Effect } from "effect";
@@ -114,4 +117,44 @@ describe("workspace subscription profiles", () => {
   it.each(["../escape", "/tmp/escape", "a/b", "", "a.b"])("rejects unsafe profile id %s", (id) => {
     expect(() => launch("codex", id)).toThrow();
   });
+});
+
+describe("shared-login terminal harness launches", () => {
+  it.each(["codex", "claudeAgent", "cursor", "opencode", "kimi", "grok"] as const)(
+    "prepares a persistent %s shell using the installed CLI configuration",
+    async (harness) => {
+      const root = await mkdtemp(join(tmpdir(), "djl-terminal-launch-"));
+      const settings = structuredClone(DEFAULT_SERVER_SETTINGS);
+      const configuredSettings = {
+        ...settings,
+        providers: {
+          ...settings.providers,
+          [harness]: { ...settings.providers[harness], binaryPath: "/bin/echo" },
+        },
+      };
+      const manager = {
+        isRunning: () => Effect.succeed(false),
+        open: vi.fn(() => Effect.succeed({} as never)),
+      };
+      try {
+        await Effect.runPromise(
+          openProfileTerminal(
+            { threadId: "t", terminalId: harness, cwd: root, harness },
+            configuredSettings,
+            root,
+            manager,
+          ),
+        );
+        const [input, command] = manager.open.mock.calls[0] as unknown as [
+          Record<string, unknown>,
+          { persistentShell?: boolean },
+        ];
+        expect(command?.persistentShell).toBe(true);
+        expect(input.cwd).toBe(root);
+        expect(JSON.stringify(input)).not.toContain("account-a");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

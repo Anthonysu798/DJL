@@ -5,19 +5,18 @@
 
 import "@xterm/xterm/css/xterm.css";
 import { SearchAddon } from "@xterm/addon-search";
-import {
-  Plus,
-  SquareSplitHorizontal,
-  SquareSplitVertical,
-  Trash2,
-  TriangleAlertIcon,
-} from "~/lib/icons";
-import { type ThreadId } from "@synara/contracts";
+import { Plus, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "~/lib/icons";
+import { type HarnessId, type ThreadId } from "@synara/contracts";
 import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared/terminalThreads";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type TerminalContextSelection } from "~/lib/terminalContext";
+import { selectThreadTerminalState, useTerminalStateStore } from "~/terminalStateStore";
+import { randomTerminalId } from "./terminal/terminalSession";
+import { Menu, MenuTrigger, MenuPopup, MenuItem } from "~/components/ui/menu";
+import { Button } from "~/components/ui/button";
+import { TerminalRecovery } from "./terminal/TerminalRecovery";
 import { readNativeApi } from "~/nativeApi";
 import {
   MAX_TERMINALS_PER_GROUP,
@@ -91,29 +90,13 @@ function getTerminalSelectionRect(mountElement: HTMLElement): DOMRect | null {
   return boundingRect.width > 0 || boundingRect.height > 0 ? boundingRect : null;
 }
 
-function TerminalRuntimeStatusOverlay({ status }: { status: TerminalRuntimeStatus }) {
-  const { t } = useTranslation("workspace");
-  if (status !== "error") return null;
-
-  return (
-    <div
-      className={cn(
-        "pointer-events-none absolute left-1 top-1 z-10 inline-flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded border px-2 text-[11px] leading-none shadow-sm backdrop-blur",
-        "border-destructive/30 bg-destructive/10 text-destructive",
-      )}
-    >
-      <TriangleAlertIcon className="size-3" />
-      <span className="truncate">{t("terminal.error")}</span>
-    </div>
-  );
-}
-
 interface TerminalViewportProps {
   threadId: ThreadId;
   terminalId: string;
   terminalLabel: string;
   terminalCliKind?: TerminalCliKind | null;
   cwd: string;
+  harness?: HarnessId;
   runtimeEnv?: Record<string, string>;
   onSessionExited: () => void;
   onTerminalMetadataChange: (
@@ -135,6 +118,7 @@ function TerminalViewport({
   terminalId,
   terminalLabel,
   terminalCliKind = null,
+  harness,
   cwd,
   runtimeEnv,
   onSessionExited,
@@ -178,6 +162,7 @@ function TerminalViewport({
       terminalId,
       terminalLabel,
       terminalCliKind,
+      ...(harness ? { harness } : {}),
       cwd,
       ...(runtimeEnvPayload ? { runtimeEnv: runtimeEnvPayload } : {}),
       callbacks: {
@@ -193,6 +178,7 @@ function TerminalViewport({
     }),
     [
       cwd,
+      harness,
       onSessionExited,
       onTerminalActivityChange,
       onTerminalMetadataChange,
@@ -440,7 +426,16 @@ function TerminalViewport({
             terminalRuntimeRegistry.focus(runtimeKey);
           }}
         />
-        <TerminalRuntimeStatusOverlay status={runtimeStatus} />
+        <TerminalRecovery
+          key={cwd}
+          status={runtimeStatus}
+          cwdReady={runtimeCwdReady}
+          cwd={cwd}
+          onRetry={() => terminalRuntimeRegistry.retry(runtimeKey)}
+          onDirectoryChange={(path) =>
+            useTerminalStateStore.getState().setTerminalCwd(threadId, path)
+          }
+        />
         <TerminalScrollToBottom terminal={terminalInstance} />
         <div ref={containerRef} className="h-full w-full" />
       </div>
@@ -534,6 +529,10 @@ export default function ThreadTerminalDrawer({
   isPanelOpen,
 }: ThreadTerminalDrawerProps) {
   const { t } = useTranslation("workspace");
+  const launchState = useTerminalStateStore((state) =>
+    selectThreadTerminalState(state.terminalStateByThreadId, threadId),
+  );
+  const effectiveCwd = launchState.terminalCwd ?? cwd;
   const isWorkspaceMode = presentationMode === "workspace";
   const previousRuntimeKeysRef = useRef<Set<string>>(new Set());
   const { drawerHeight, handleResizePointerDown, handleResizePointerMove, handleResizePointerEnd } =
@@ -668,6 +667,37 @@ export default function ThreadTerminalDrawer({
         />
       ) : null}
 
+      <div className="flex min-w-0 items-center justify-between gap-3 border-b border-border/50 px-3 py-1.5">
+        <span className="truncate text-xs text-muted-foreground" title={effectiveCwd}>
+          {effectiveCwd}
+        </span>
+        <Menu>
+          <MenuTrigger render={<Button variant="outline" size="sm" />}>
+            {t("terminal.launchHarness")}
+          </MenuTrigger>
+          <MenuPopup align="end">
+            {Object.entries({
+              codex: "Codex",
+              claudeAgent: "Claude Code",
+              cursor: "Cursor",
+              opencode: "OpenCode",
+              kimi: "Kimi",
+              grok: "Grok",
+            }).map(([id, label]) => (
+              <MenuItem
+                key={id}
+                onClick={() =>
+                  useTerminalStateStore
+                    .getState()
+                    .newHarnessTerminal(threadId, randomTerminalId(), id as HarnessId)
+                }
+              >
+                {label}
+              </MenuItem>
+            ))}
+          </MenuPopup>
+        </Menu>
+      </div>
       {showTerminalGroupTabs ? (
         <TerminalWorkspaceTabBar
           terminalGroups={resolvedTerminalGroups}
@@ -736,9 +766,17 @@ export default function ThreadTerminalDrawer({
                     terminalVisualIdentityById.get(terminalId)?.title ?? t("terminal.name")
                   }
                   terminalCliKind={terminalVisualIdentityById.get(terminalId)?.cliKind ?? null}
-                  cwd={cwd}
+                  cwd={effectiveCwd}
+                  {...(launchState.terminalHarnessesById?.[terminalId]
+                    ? { harness: launchState.terminalHarnessesById[terminalId] }
+                    : {})}
                   {...(runtimeEnv ? { runtimeEnv } : {})}
-                  onSessionExited={() => onCloseTerminal(terminalId)}
+                  onSessionExited={() =>
+                    onTerminalActivityChange(terminalId, {
+                      hasRunningSubprocess: false,
+                      agentState: null,
+                    })
+                  }
                   onTerminalMetadataChange={onTerminalMetadataChange}
                   onTerminalActivityChange={onTerminalActivityChange}
                   onAddTerminalContext={onAddTerminalContext}

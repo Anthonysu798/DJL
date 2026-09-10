@@ -4814,6 +4814,7 @@
     "terminal": {
       "addToChat": "채팅에 추가",
       "chat": "채팅",
+      "chooseFolder": "폴더 선택",
       "close": "터미널 닫기",
       "closeActiveTab": "활성 터미널 탭 닫기",
       "closeNamed": "{{name}} 닫기",
@@ -4822,6 +4823,8 @@
       "collapseToChat": "터미널을 채팅 서랍으로 축소",
       "error": "오류",
       "expandToWorkspace": "터미널을 작업 공간으로 확장",
+      "folderPickerFailed": "폴더 선택 창을 열 수 없습니다. 위에 폴더 경로를 입력하세요.",
+      "launchHarness": "에이전트 실행",
       "moveToOwnTab": "별도 터미널 탭으로 이동",
       "name": "터미널",
       "new": "새 터미널",
@@ -4829,6 +4832,9 @@
       "newTab": "새 터미널 탭",
       "numbered": "터미널 {{number}}",
       "openSidePanel": "측면 패널 열기",
+      "recoveryHelp": "터미널을 시작할 수 없습니다. 다시 시도하거나 기존 작업 폴더를 선택하세요.",
+      "restart": "터미널 다시 시작",
+      "retry": "다시 시도",
       "scrollToBottom": "맨 아래로 스크롤",
       "search": {
         "close": "검색 닫기 (Esc)",
@@ -4838,11 +4844,14 @@
         "placeholder": "찾기",
         "previous": "이전 일치 항목 (Shift+Enter)"
       },
+      "sessionEnded": "터미널 세션이 종료되었습니다.",
       "splitDown": "아래로 분할",
       "splitDownShortcut": "아래로 분할 ({{shortcut}})",
       "splitLimit": "터미널 분할(그룹당 최대 {{count}}개)",
       "splitRight": "오른쪽으로 분할",
-      "splitRightShortcut": "오른쪽으로 분할 ({{shortcut}})"
+      "splitRightShortcut": "오른쪽으로 분할 ({{shortcut}})",
+      "useFolder": "폴더 사용",
+      "workingDirectory": "작업 디렉터리"
     },
     "terminalClose": {
       "confirm": "이 터미널을 닫을까요?",

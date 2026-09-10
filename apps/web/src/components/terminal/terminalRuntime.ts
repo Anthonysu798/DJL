@@ -194,6 +194,7 @@ function buildOpenInput(entry: TerminalRuntimeEntry) {
     rows: entry.terminal.rows,
     ...(entry.runtimeEnv ? { env: entry.runtimeEnv } : {}),
     ...(entry.agentProfile ? { agentProfile: entry.agentProfile } : {}),
+    ...(entry.harness ? { harness: entry.harness } : {}),
     ...(entry.screenSnapshot ? { screenSnapshot: true } : {}),
     ...(entry.lightweight ? { headlessQueries: true } : {}),
   };
@@ -756,6 +757,7 @@ export function syncRuntimeConfig(
   entry: TerminalRuntimeEntry,
   config: TerminalRuntimeConfig,
 ): void {
+  const cwdChanged = entry.cwd !== config.cwd;
   entry.runtimeKey = config.runtimeKey;
   entry.threadId = config.threadId;
   entry.terminalId = config.terminalId;
@@ -770,9 +772,12 @@ export function syncRuntimeConfig(
   entry.screenSnapshot = config.screenSnapshot ?? false;
   entry.lightweight = config.lightweight ?? false;
   entry.serverHandlesQueries = config.serverHandlesQueries ?? false;
+  if (config.harness) entry.harness = config.harness;
+  else delete entry.harness;
   if (config.agentProfile) entry.agentProfile = config.agentProfile;
   else delete entry.agentProfile;
   entry.callbacks = config.callbacks;
+  if (cwdChanged && entry.runtimeStatus === "error") retryTerminalRuntime(entry);
 }
 
 export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRuntimeEntry {
@@ -868,6 +873,7 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
   entry.lightweight = config.lightweight ?? false;
   entry.serverHandlesQueries = config.serverHandlesQueries ?? false;
   if (config.agentProfile) entry.agentProfile = config.agentProfile;
+  if (config.harness) entry.harness = config.harness;
   if (config.runtimeEnv !== undefined) {
     entry.runtimeEnv = config.runtimeEnv;
   }
@@ -1016,7 +1022,7 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
       const nextIdentityState = consumeTerminalIdentityInput(entry.titleInputBuffer, data);
       entry.titleInputBuffer = nextIdentityState.buffer;
       const submittedIdentity = nextIdentityState.identity;
-      if (submittedIdentity && (submittedIdentity.cliKind || entry.terminalCliKind !== null)) {
+      if (submittedIdentity?.cliKind) {
         entry.terminalCliKind = submittedIdentity.cliKind;
         entry.callbacks.onTerminalMetadataChange(entry.terminalId, {
           cliKind: submittedIdentity.cliKind,
@@ -1117,6 +1123,7 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
           return;
         }
         entry.hasHandledExit = true;
+        setRuntimeStatus(entry, "exited");
         window.setTimeout(() => {
           if (!entry.hasHandledExit) {
             return;
@@ -1130,9 +1137,18 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
   return entry;
 }
 
+export function retryTerminalRuntime(entry: TerminalRuntimeEntry): void {
+  if (entry.disposed || !["error", "exited"].includes(entry.runtimeStatus)) return;
+  entry.opened = false;
+  entry.hasHandledExit = false;
+  setRuntimeStatus(entry, "connecting");
+  openTerminal(entry);
+}
+
 function openTerminal(entry: TerminalRuntimeEntry): void {
   const api = readNativeApi();
-  if (!api || entry.opened) return;
+  if (!api || entry.opened || entry.runtimeStatus === "error" || entry.runtimeStatus === "exited")
+    return;
 
   fitTerminal(entry);
   entry.lastSentResize = null;

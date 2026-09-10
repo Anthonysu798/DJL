@@ -5,8 +5,13 @@
  * API constrained to store actions/selectors.
  */
 
-import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared/terminalThreads";
-import type { ThreadId } from "@synara/contracts";
+import {
+  defaultTerminalTitleForCliKind,
+  terminalCliKindFromValue,
+  type TerminalActivityState,
+  type TerminalCliKind,
+} from "@synara/shared/terminalThreads";
+import { HarnessId, type ThreadId } from "@synara/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
@@ -36,6 +41,8 @@ import {
 } from "./workspaceTerminalLayoutPresets";
 
 export interface ThreadTerminalState {
+  terminalCwd?: string;
+  terminalHarnessesById?: Record<string, HarnessId>;
   entryPoint: ThreadPrimarySurface;
   terminalOpen: boolean;
   presentationMode: ThreadTerminalPresentationMode;
@@ -108,7 +115,7 @@ function normalizeTerminalCliKinds(
     .map(([terminalId, cliKind]) => [terminalId.trim(), cliKind] as const)
     .filter(
       ([terminalId, cliKind]) =>
-        terminalId.length > 0 && (cliKind === "codex" || cliKind === "claude"),
+        terminalId.length > 0 && terminalCliKindFromValue(cliKind) !== null,
     )
     .filter(([terminalId]) => validTerminalIdSet.has(terminalId))
     .toSorted(([leftId], [rightId]) => leftId.localeCompare(rightId));
@@ -146,6 +153,7 @@ function clearTerminalReviewState(
 function generatedTerminalTitleBase(cliKind: TerminalCliKind | null): string {
   if (cliKind === "codex") return "Codex";
   if (cliKind === "claude") return "Claude";
+  if (cliKind) return defaultTerminalTitleForCliKind(cliKind);
   return "Terminal";
 }
 
@@ -317,6 +325,9 @@ function terminalGroupsEqual(left: ThreadTerminalGroup[], right: ThreadTerminalG
 
 function threadTerminalStateEqual(left: ThreadTerminalState, right: ThreadTerminalState): boolean {
   return (
+    left.terminalCwd === right.terminalCwd &&
+    JSON.stringify(left.terminalHarnessesById ?? {}) ===
+      JSON.stringify(right.terminalHarnessesById ?? {}) &&
     left.entryPoint === right.entryPoint &&
     left.terminalOpen === right.terminalOpen &&
     left.presentationMode === right.presentationMode &&
@@ -427,6 +438,14 @@ function normalizeThreadTerminalState(state: ThreadTerminalState): ThreadTermina
   );
 
   const normalized: ThreadTerminalState = {
+    ...(typeof state.terminalCwd === "string" && state.terminalCwd.trim()
+      ? { terminalCwd: state.terminalCwd.trim() }
+      : {}),
+    terminalHarnessesById: Object.fromEntries(
+      Object.entries(state.terminalHarnessesById ?? {}).filter(
+        ([id, harness]) => nextTerminalIds.includes(id) && HarnessId.literals.includes(harness),
+      ),
+    ),
     entryPoint: state.entryPoint === "terminal" ? "terminal" : "chat",
     terminalOpen: state.terminalOpen,
     presentationMode: state.presentationMode === "workspace" ? "workspace" : "drawer",
@@ -998,6 +1017,7 @@ function closeThreadTerminal(state: ThreadTerminalState, terminalId: string): Th
     fallbackGroupId(nextActiveTerminalId);
 
   return normalizeThreadTerminalState({
+    ...normalized,
     entryPoint: normalized.entryPoint,
     terminalOpen: normalized.terminalOpen,
     presentationMode: normalized.presentationMode,
@@ -1238,6 +1258,8 @@ interface TerminalStateStoreState {
   setTerminalPresentationMode: (threadId: ThreadId, mode: ThreadTerminalPresentationMode) => void;
   setTerminalWorkspaceLayout: (threadId: ThreadId, layout: ThreadTerminalWorkspaceLayout) => void;
   setTerminalWorkspaceTab: (threadId: ThreadId, tab: ThreadTerminalWorkspaceTab) => void;
+  setTerminalCwd: (threadId: ThreadId, cwd: string) => void;
+  newHarnessTerminal: (threadId: ThreadId, terminalId: string, harness: HarnessId) => void;
   setTerminalHeight: (threadId: ThreadId, height: number) => void;
   setTerminalMetadata: (
     threadId: ThreadId,
@@ -1322,6 +1344,26 @@ export const useTerminalStateStore = create<TerminalStateStoreState>()(
           updateTerminal(threadId, (state) => setThreadTerminalWorkspaceLayout(state, layout)),
         setTerminalWorkspaceTab: (threadId, tab) =>
           updateTerminal(threadId, (state) => setThreadTerminalWorkspaceTab(state, tab)),
+        setTerminalCwd: (threadId, cwd) =>
+          updateTerminal(threadId, (state) =>
+            normalizeThreadTerminalState({ ...state, terminalCwd: cwd }),
+          ),
+        newHarnessTerminal: (threadId, terminalId, harness) =>
+          updateTerminal(threadId, (state) => {
+            const candidate = newThreadTerminalTab(state, state.activeTerminalId, terminalId);
+            const tab = candidate.terminalIds.includes(terminalId)
+              ? candidate
+              : newThreadTerminal(state, terminalId);
+            const next = setThreadTerminalCliKind(
+              tab,
+              terminalId,
+              harness === "claudeAgent" ? "claude" : harness,
+            );
+            return normalizeThreadTerminalState({
+              ...next,
+              terminalHarnessesById: { ...next.terminalHarnessesById, [terminalId]: harness },
+            });
+          }),
         setTerminalHeight: (threadId, height) =>
           updateTerminal(threadId, (state) => setThreadTerminalHeight(state, height)),
         setTerminalMetadata: (threadId, terminalId, metadata) =>

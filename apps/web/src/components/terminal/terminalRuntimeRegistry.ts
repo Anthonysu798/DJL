@@ -12,6 +12,7 @@ import {
   detachRuntimeFromContainer,
   disposeRuntimeEntry,
   syncRuntimeConfig,
+  retryTerminalRuntime,
   updateRuntimeViewState,
 } from "./terminalRuntime";
 import type {
@@ -71,6 +72,11 @@ class TerminalRuntimeRegistry {
     const entry = this.entries.get(runtimeKey);
     if (!entry) return;
     updateRuntimeViewState(entry, viewState);
+  }
+
+  retry(runtimeKey: string): void {
+    const entry = this.entries.get(runtimeKey);
+    if (entry) retryTerminalRuntime(entry);
   }
 
   detach(runtimeKey: string): void {

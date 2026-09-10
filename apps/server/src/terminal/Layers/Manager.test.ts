@@ -426,6 +426,16 @@ describe("TerminalManager", () => {
     manager.dispose();
   });
 
+  it("keeps harness identity when a user submits a prompt inside its CLI", async () => {
+    const { manager } = makeManager();
+    const events: TerminalEvent[] = [];
+    manager.on("event", (event) => events.push(event));
+    await manager.open(openInput({ env: { SYNARA_TERMINAL_CLI_KIND: "kimi" } }));
+    await manager.write({ threadId: "thread-1", data: "Reply with exactly OK\r" });
+    expect(events.findLast((event) => event.type === "activity")?.cliKind).toBe("kimi");
+    manager.dispose();
+  });
+
   it("keeps a running terminal alive when open reattaches with different cwd or env", async () => {
     const { manager, ptyAdapter, logsDir } = makeManager();
     await manager.open(openInput());
@@ -435,6 +445,31 @@ describe("TerminalManager", () => {
 
     const snapshot = await manager.open(
       openInput({ cwd: logsDir, env: { SYNARA_TERMINAL_TEST: "changed" } }),
+    );
+
+    expect(snapshot.cwd).toBe(globalThis.process.cwd());
+    expect(snapshot.status).toBe("running");
+    expect(process.killSignals).toEqual([]);
+    expect(ptyAdapter.spawnInputs).toHaveLength(1);
+
+    await manager.write({ threadId: "thread-1", data: "echo alive\n" });
+    expect(process.writes).toContain("echo alive\n");
+
+    manager.dispose();
+  });
+
+  it("reattaches a running terminal even when the saved project directory is missing", async () => {
+    const { manager, ptyAdapter, logsDir } = makeManager();
+    await manager.open(openInput());
+    const process = ptyAdapter.processes[0];
+    expect(process).toBeDefined();
+    if (!process) return;
+
+    const snapshot = await manager.open(
+      openInput({
+        cwd: path.join(logsDir, "deleted-project"),
+        env: { SYNARA_TERMINAL_TEST: "changed" },
+      }),
     );
 
     expect(snapshot.cwd).toBe(globalThis.process.cwd());
@@ -805,6 +840,36 @@ describe("TerminalManager", () => {
       cliKind: null,
     });
     manager.dispose();
+  });
+
+  it("restores explicitly launched harness identity after slow shell startup", async () => {
+    let started = false;
+    const { manager } = makeManager(5, {
+      subprocessChecker: async () => ({
+        cliKind: started ? "kimi" : null,
+        hasProviderDescendant: started,
+        hasNonProviderSubprocess: false,
+        hasRunningSubprocess: started,
+      }),
+      subprocessPollIntervalMs: 20,
+    });
+    const events: TerminalEvent[] = [];
+    manager.on("event", (event) => events.push(event));
+    try {
+      await manager.open(openInput({ env: { SYNARA_TERMINAL_CLI_KIND: "kimi" } }));
+      await waitFor(
+        () => events.some((event) => event.type === "activity" && event.cliKind === null),
+        1200,
+      );
+      events.length = 0;
+      started = true;
+      await waitFor(
+        () => events.some((event) => event.type === "activity" && event.cliKind === "kimi"),
+        1200,
+      );
+    } finally {
+      manager.dispose();
+    }
   });
 
   it("clears unmanaged provider identity as soon as an observed provider process disappears", async () => {

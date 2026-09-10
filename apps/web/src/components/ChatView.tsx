@@ -1,5 +1,6 @@
 import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
 import { getStartupSession } from "../startup/session";
+import type { TerminalCliKind } from "@synara/shared/terminalThreads";
 import { effectiveRuntimeMode } from "@synara/contracts";
 import {
   type AutomationDefinition,
@@ -4965,7 +4966,7 @@ export default function ChatView({
       },
       onTerminalMetadataChange: (
         terminalId: string,
-        metadata: { cliKind: "codex" | "claude" | null; label: string },
+        metadata: { cliKind: TerminalCliKind | null; label: string },
       ) => {
         if (!activeThreadId) return;
         storeSetTerminalMetadata(activeThreadId, terminalId, metadata);
