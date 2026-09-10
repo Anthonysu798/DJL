@@ -23,6 +23,12 @@ const TOOLS = [
   },
   { id: "iflow", label: "iFlow CLI", docs: "https://github.com/iflow-ai/iflow-cli" },
   { id: "qwen", label: "Qwen Code", docs: "https://github.com/QwenLM/qwen-code" },
+  {
+    id: "codebuddy",
+    label: "CodeBuddy Code",
+    docs: "https://www.codebuddy.ai/docs/cli/installation",
+  },
+  { id: "pi", label: "Pi", docs: "https://pi.dev/docs/latest/usage" },
   { id: "cursor", label: "Cursor", docs: "https://cursor.com/docs/cli/installation" },
 ] as const;
 

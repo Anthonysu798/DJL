@@ -1090,7 +1090,7 @@
   "settings": {
     "accounts": {
       "checking": "確認中…",
-      "codingPlansDescription": "OpenCode のログインで、GLM には Z.AI Coding Plan、Kimi には Kimi For Coding、MiniMax には契約中のコーディングプランを選択します。Kimi Code、iFlow CLI、Qwen Code は上の一覧から公式 CLI で接続し、その CLI のログイン状態をそのまま使います。",
+      "codingPlansDescription": "OpenCode のログインで、GLM には Z.AI Coding Plan、Kimi には Kimi For Coding、MiniMax には契約中のコーディングプランを選択します。Kimi Code、iFlow CLI、Qwen Code、CodeBuddy Code、Pi は上の一覧から公式 CLI で接続し、その CLI のログイン状態をそのまま使います。",
       "codingPlansTitle": "中国のモデルとコーディングプラン",
       "default": "新しいチャットの既定",
       "description": "各プロバイダーの公式ログインで既存のアカウントを接続します。プランと利用制限はプロバイダーが管理します。",

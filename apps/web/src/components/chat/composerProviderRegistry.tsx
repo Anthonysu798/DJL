@@ -308,6 +308,11 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("qwen", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("qwen", input),
   },
+  codebuddy: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("codebuddy", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("codebuddy", input),
+  },
   droid: {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("droid", input),

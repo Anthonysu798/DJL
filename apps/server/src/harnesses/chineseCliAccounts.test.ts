@@ -7,6 +7,8 @@ import { buildHarnessInvocation } from "./accounts";
 import { nativeProfileOptions } from "./native/profile";
 import { probeIFlowSubscriptionAccount } from "./native/iflow";
 import { probeQwenSubscriptionAccount } from "./native/qwen";
+import { probePiSubscriptionAccount } from "./native/pi";
+import { probeCodeBuddySubscriptionAccount } from "./native/codebuddy";
 
 const dirs: string[] = [];
 const fixture = (body: string) => {
@@ -72,5 +74,39 @@ describe("iFlow and Qwen Code accounts", () => {
     );
     expect(await probeQwenSubscriptionAccount(ready, "/tmp")).toBe("ready");
     expect(await probeQwenSubscriptionAccount(required, "/tmp")).toBe("required");
+  });
+  it("reports Pi account state from its available model catalog", async () => {
+    const ready = fixture(
+      `if(m.type==='get_available_models')send({id:m.id,type:'response',command:m.type,success:true,data:{models:[{id:'x',provider:'anthropic',name:'X'}]}});`,
+    );
+    const required = fixture(
+      `if(m.type==='get_available_models')send({id:m.id,type:'response',command:m.type,success:true,data:{models:[]}});`,
+    );
+    expect(await probePiSubscriptionAccount(ready, "/tmp")).toBe("ready");
+    expect(await probePiSubscriptionAccount(required, "/tmp")).toBe("required");
+    const login = buildHarnessInvocation("pi", DEFAULT_SERVER_SETTINGS, "/tmp", {
+      PATH: "/usr/bin",
+    });
+    expect(login.binary).toBe("pi");
+    expect(login.loginArgs).toEqual([]);
+    expect(login.env.PI_OFFLINE).toBe("1");
+  });
+  it("reports CodeBuddy Code account state from a session attempt", async () => {
+    const ready = fixture(
+      `if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[]});if(m.method==='session/new')reply(m,{sessionId:'s'});`,
+    );
+    const required = fixture(
+      `if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[]});if(m.method==='session/new')send({id:m.id,error:{code:-32000,message:'Authentication required',data:{category:'auth'}}});`,
+    );
+    expect(await probeCodeBuddySubscriptionAccount(ready, "/tmp")).toBe("ready");
+    expect(await probeCodeBuddySubscriptionAccount(required, "/tmp")).toBe("required");
+    const login = buildHarnessInvocation("codebuddy", DEFAULT_SERVER_SETTINGS, "/tmp", {
+      CODEBUDDY_AUTH_TOKEN: "secret",
+      PATH: "/usr/bin",
+    });
+    expect(login.binary).toBe("codebuddy");
+    expect(login.loginArgs).toEqual([]);
+    expect(login.env.CODEBUDDY_AUTH_TOKEN).toBeUndefined();
+    expect(login.env.DISABLE_AUTOUPDATER).toBe("1");
   });
 });

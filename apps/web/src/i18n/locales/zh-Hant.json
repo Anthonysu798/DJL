@@ -1090,7 +1090,7 @@
   "settings": {
     "accounts": {
       "checking": "正在檢查…",
-      "codingPlansDescription": "在 OpenCode 登入中，為 GLM 選擇 Z.AI Coding Plan，為 Kimi 選擇 Kimi For Coding，或選擇你的 MiniMax 程式開發方案服務商。Kimi Code、iFlow CLI 和 Qwen Code 在上方透過官方 CLI 連線，直接沿用這些 CLI 已登入的帳號。",
+      "codingPlansDescription": "在 OpenCode 登入中，為 GLM 選擇 Z.AI Coding Plan，為 Kimi 選擇 Kimi For Coding，或選擇你的 MiniMax 程式開發方案服務商。Kimi Code、iFlow CLI、Qwen Code、CodeBuddy Code 和 Pi 在上方透過官方 CLI 連線，直接沿用這些 CLI 已登入的帳號。",
       "codingPlansTitle": "中國模型與程式開發方案",
       "default": "新對話預設使用",
       "description": "透過各服務商的官方登入流程連接現有帳戶。方案及用量限制仍由服務商管理。",

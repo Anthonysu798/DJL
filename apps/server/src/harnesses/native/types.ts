@@ -13,7 +13,9 @@ export type NativeProvider =
   | "grok"
   | "kimi"
   | "iflow"
-  | "qwen";
+  | "qwen"
+  | "codebuddy"
+  | "pi";
 export interface NativeSink {
   emit(event: Record<string, unknown>): void;
   request(

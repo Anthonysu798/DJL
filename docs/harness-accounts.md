@@ -1,6 +1,6 @@
 # Harness accounts in DJL
 
-DJL has new native integration code for Codex, Claude Code, Cursor, Grok Build, Kimi Code, iFlow CLI, and Qwen Code alongside its active OpenCode runtime. These bridges do not reactivate the historical adapters. The Accounts screen is available in Electron; its authenticated RPC contracts are shared with the backend for a future iOS interface.
+DJL has new native integration code for Codex, Claude Code, Cursor, Grok Build, Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, and Pi alongside its active OpenCode runtime. These bridges do not reactivate the historical adapters. The Accounts screen is available in Electron; its authenticated RPC contracts are shared with the backend for a future iOS interface.
 
 ## Connect an account
 
@@ -22,6 +22,8 @@ Accounts includes direct connections for these officially supported plans:
 | Kimi membership               | Kimi Code's official OAuth login, or a Kimi For Coding key through OpenCode                                                                                                          |
 | iFlow CLI                     | The official iFlow CLI's stored provider setup and ACP runtime; iFlow retired its account login on 2026-04-16, so the CLI holds an OpenAI-compatible key setup instead               |
 | Qwen Code                     | The official Qwen Code CLI's stored provider setup and ACP runtime; the Qwen OAuth free tier was discontinued on 2026-04-15, so the CLI holds a Coding Plan or API-key setup instead |
+| CodeBuddy Code (Tencent)      | The official CodeBuddy Code CLI's own account login (Google/GitHub internationally, WeChat in China, enterprise domains) and ACP runtime                                             |
+| Pi                            | The official Pi CLI's own subscription logins (Claude Pro/Max, ChatGPT Plus/Pro, GitHub Copilot, xAI, OpenRouter) and RPC runtime                                                    |
 | MiniMax international / China | Separate Token Plan provider entries through OpenCode                                                                                                                                |
 | GitHub Copilot / GitLab Duo   | The installed OpenCode CLI's advertised sign-in methods                                                                                                                              |
 | Grok                          | Official Grok Build login and ACP runtime; provider eligibility and limits apply                                                                                                     |
@@ -34,13 +36,15 @@ The sign-in terminal identifies the selected provider and scrolls into view. Clo
 
 iFlow CLI and Qwen Code have no separate login command. **Sign in** opens the interactive CLI in the embedded terminal; a CLI without stored credentials shows its own provider-setup dialog there (both vendors retired their account logins in April 2026, so the dialog asks for the vendor's OpenAI-compatible endpoint and key), and a signed-in Qwen Code accepts `/auth` to change providers. DJL never passes an API key of its own into either runtime: `IFLOW_API_KEY`, `OPENAI_API_KEY` and their model overrides are removed from the environment so sessions use only what the CLI has stored. Account status comes from each runtime's ACP handshake: iFlow reports `isAuthenticated` at initialize, and Qwen Code rejects `session/new` until the CLI is set up.
 
+CodeBuddy Code and Pi also sign in from their own TUIs (`/login`). CodeBuddy's ACP `authenticate` method is never called because it logs a signed-in account out first; DJL reads its status from `session/new` like Qwen Code. Pi has no permission system of its own, so approval-required and accept-edits chats load a small DJL extension that routes `bash`, `write` and `edit` calls through Pi's extension UI to the normal DJL approval prompt; full-access chats load none. Pi's account status is whether its stored logins yield any model (`get_available_models`), and DJL runs it with `PI_OFFLINE=1` so no version check or telemetry leaves the machine. Neither runtime receives `CODEBUDDY_API_KEY`, `CODEBUDDY_AUTH_TOKEN` or endpoint overrides from DJL.
+
 Some plans use API keys, while other providers offer OAuth. Existing **Models & API keys** connections remain available. OpenCode installation checks, login, model discovery, chat, and auxiliary generation use the same configured executable (or `opencode` on PATH). DJL shares the installed CLI's normal credentials and configuration. Signing in or removing a saved login affects that CLI too. Existing CLI logins are recognized automatically, including OAuth and custom provider connections.
 
 For older DJL-only logins, Accounts offers **Copy saved DJL logins to OpenCode**. This is an explicit action: existing CLI provider entries win, and the original file and a private backup are retained. Existing conversations migrate on first resume using the official CLI's export/import commands and a consistent SQLite backup; DJL verifies the original session ID and transcript before continuing. A failed migration retains the source and reports an error instead of replacing the conversation.
 
 ## Provider tool updates
 
-Provider tools shows installed/latest versions for Codex, Claude Code, OpenCode, Grok Build, Kimi Code, iFlow CLI, Qwen Code, and Cursor. iFlow CLI and Qwen Code are npm packages (`@iflow-ai/iflow-cli`, `@qwen-code/qwen-code`). **Update all** updates installed, supported, outdated tools sequentially and shows individual results. Missing tools are installed only through an explicit Install action. Custom or unrecognized installations retain their setup guide instead of updating a different installation.
+Provider tools shows installed/latest versions for Codex, Claude Code, OpenCode, Grok Build, Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, Pi, and Cursor. iFlow CLI, Qwen Code, CodeBuddy Code and Pi are npm packages (`@iflow-ai/iflow-cli`, `@qwen-code/qwen-code`, `@tencent-ai/codebuddy-code`, `@earendil-works/pi-coding-agent`). **Update all** updates installed, supported, outdated tools sequentially and shows individual results. Missing tools are installed only through an explicit Install action. Custom or unrecognized installations retain their setup guide instead of updating a different installation.
 
 **Automatically update provider tools** is off by default and saved on the server. When enabled, DJL checks every six hours and defers maintenance while chats are running or terminals are open. Closing Settings does not stop the scheduler. This controls DJL's scheduler; official CLIs can also have their own update policies.
 

@@ -145,6 +145,7 @@ const allProvidersDisabledSettings = {
     kimi: { enabled: false },
     iflow: { enabled: false },
     qwen: { enabled: false },
+    codebuddy: { enabled: false },
     droid: { enabled: false },
     kilo: { enabled: false },
     opencode: { enabled: false },
@@ -163,6 +164,7 @@ const allProvidersDisabledServerSettings = {
     kimi: { ...DEFAULT_SERVER_SETTINGS.providers.kimi, enabled: false },
     iflow: { ...DEFAULT_SERVER_SETTINGS.providers.iflow, enabled: false },
     qwen: { ...DEFAULT_SERVER_SETTINGS.providers.qwen, enabled: false },
+    codebuddy: { ...DEFAULT_SERVER_SETTINGS.providers.codebuddy, enabled: false },
     droid: { ...DEFAULT_SERVER_SETTINGS.providers.droid, enabled: false },
     kilo: { ...DEFAULT_SERVER_SETTINGS.providers.kilo, enabled: false },
     opencode: { ...DEFAULT_SERVER_SETTINGS.providers.opencode, enabled: false },
@@ -264,7 +266,18 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
       assert.deepEqual(
         new Set(statuses.map((status) => status.provider)),
-        new Set(["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi", "iflow", "qwen"]),
+        new Set([
+          "opencode",
+          "codex",
+          "claudeAgent",
+          "cursor",
+          "grok",
+          "kimi",
+          "iflow",
+          "qwen",
+          "codebuddy",
+          "pi",
+        ]),
       );
       assert.strictEqual(opencode?.available, false);
       assert.strictEqual(opencode?.message, "Provider is disabled in DJL settings.");
@@ -404,7 +417,18 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
         assert.deepEqual(
           new Set(statuses.map((status) => status.provider)),
-          new Set(["opencode", "codex", "claudeAgent", "cursor", "grok", "kimi", "iflow", "qwen"]),
+          new Set([
+            "opencode",
+            "codex",
+            "claudeAgent",
+            "cursor",
+            "grok",
+            "kimi",
+            "iflow",
+            "qwen",
+            "codebuddy",
+            "pi",
+          ]),
         );
         for (const status of statuses) {
           assert.strictEqual(status.available, false);

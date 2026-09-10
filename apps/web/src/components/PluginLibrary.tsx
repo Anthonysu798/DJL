@@ -405,6 +405,9 @@ export function PluginLibrary() {
   const kimiCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("kimi"));
   const iflowCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("iflow"));
   const qwenCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("qwen"));
+  const codebuddyCapabilitiesQuery = useQuery(
+    providerComposerCapabilitiesQueryOptions("codebuddy"),
+  );
   const droidCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("droid"));
   const kiloCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("kilo"));
   const openCodeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("opencode"));
@@ -444,6 +447,10 @@ export function PluginLibrary() {
         plugins: supportsPluginDiscovery(qwenCapabilitiesQuery.data),
         skills: supportsSkillDiscovery(qwenCapabilitiesQuery.data),
       },
+      codebuddy: {
+        plugins: supportsPluginDiscovery(codebuddyCapabilitiesQuery.data),
+        skills: supportsSkillDiscovery(codebuddyCapabilitiesQuery.data),
+      },
       droid: {
         plugins: supportsPluginDiscovery(droidCapabilitiesQuery.data),
         skills: supportsSkillDiscovery(droidCapabilitiesQuery.data),
@@ -470,6 +477,7 @@ export function PluginLibrary() {
       kimiCapabilitiesQuery.data,
       iflowCapabilitiesQuery.data,
       qwenCapabilitiesQuery.data,
+      codebuddyCapabilitiesQuery.data,
       droidCapabilitiesQuery.data,
       kiloCapabilitiesQuery.data,
       openCodeCapabilitiesQuery.data,

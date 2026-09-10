@@ -1090,7 +1090,7 @@
   "settings": {
     "accounts": {
       "checking": "Checking…",
-      "codingPlansDescription": "In OpenCode sign-in, select Z.AI Coding Plan for GLM, Kimi For Coding, or your MiniMax coding-plan provider. Kimi Code, iFlow CLI, and Qwen Code connect above with their official CLIs and reuse whatever those CLIs have signed in to.",
+      "codingPlansDescription": "In OpenCode sign-in, select Z.AI Coding Plan for GLM, Kimi For Coding, or your MiniMax coding-plan provider. Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, and Pi connect above with their official CLIs and reuse whatever those CLIs have signed in to.",
       "codingPlansTitle": "Chinese models and coding plans",
       "default": "Default for new chats",
       "description": "Connect your existing accounts using each provider’s official sign-in. Your plan and usage limits stay with that provider.",

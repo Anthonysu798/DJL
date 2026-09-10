@@ -60,6 +60,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       kimi: { region: "existing", ...provider, binaryPath: "kimi" },
       iflow: { ...provider, binaryPath: "iflow" },
       qwen: { ...provider, binaryPath: "qwen" },
+      codebuddy: { ...provider, binaryPath: "codebuddy" },
       droid: { ...provider, binaryPath: "droid" },
       kilo: { ...provider, binaryPath: "kilo", serverUrl: "", serverPassword: "" },
       opencode: {

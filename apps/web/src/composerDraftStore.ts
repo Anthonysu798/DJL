@@ -1235,6 +1235,7 @@ function makeModelSelection(
     case "kimi":
     case "iflow":
     case "qwen":
+    case "codebuddy":
       return { provider, model };
     case "codex":
       return {

@@ -120,6 +120,8 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.iflow.binaryPath;
     case "qwen":
       return settings.providers.qwen.binaryPath;
+    case "codebuddy":
+      return settings.providers.codebuddy.binaryPath;
     case "droid":
       return settings.providers.droid.binaryPath;
     case "kilo":
@@ -173,6 +175,7 @@ const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
 const IFLOW_PROVIDER = "iflow" as const;
 const QWEN_PROVIDER = "qwen" as const;
+const CODEBUDDY_PROVIDER = "codebuddy" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
@@ -248,6 +251,13 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     provider: QWEN_PROVIDER,
     binaryName: "qwen",
     npmPackageName: "@qwen-code/qwen-code",
+    homebrew: null,
+    nativeUpdate: null,
+  },
+  codebuddy: {
+    provider: CODEBUDDY_PROVIDER,
+    binaryName: "codebuddy",
+    npmPackageName: "@tencent-ai/codebuddy-code",
     homebrew: null,
     nativeUpdate: null,
   },

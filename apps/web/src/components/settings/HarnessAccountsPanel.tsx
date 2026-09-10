@@ -31,6 +31,12 @@ const HARNESSES: { id: HarnessId; label: string; docs: string }[] = [
   },
   { id: "iflow", label: "iFlow CLI", docs: "https://github.com/iflow-ai/iflow-cli" },
   { id: "qwen", label: "Qwen Code", docs: "https://github.com/QwenLM/qwen-code" },
+  {
+    id: "codebuddy",
+    label: "CodeBuddy Code",
+    docs: "https://www.codebuddy.ai/docs/cli/quickstart",
+  },
+  { id: "pi", label: "Pi", docs: "https://pi.dev/docs/latest/providers" },
   { id: "opencode", label: "OpenCode", docs: "https://opencode.ai/docs/providers/" },
 ];
 

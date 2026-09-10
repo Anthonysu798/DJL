@@ -56,6 +56,7 @@ const TECHNICAL_ALLOWLIST = new Set([
   "Kimi Code",
   "iFlow CLI",
   "Qwen Code",
+  "CodeBuddy Code",
   "Droid",
   "Kilo",
   "Pi",

@@ -31,6 +31,8 @@ const TOOL_IDS = [
   "kimi",
   "iflow",
   "qwen",
+  "codebuddy",
+  "pi",
   "cursor",
 ] as const;
 const KIMI_TOOL: PackageManagedProviderMaintenanceDefinition = {

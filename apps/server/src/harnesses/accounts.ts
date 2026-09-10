@@ -5,6 +5,11 @@ import { resolveKimiBinaryPath } from "./kimiExecutable";
 import { kimiSubscriptionEnvironment, probeKimiSubscriptionAccount } from "./native/kimi";
 import { iflowSubscriptionEnvironment, probeIFlowSubscriptionAccount } from "./native/iflow";
 import { qwenSubscriptionEnvironment, probeQwenSubscriptionAccount } from "./native/qwen";
+import { piSubscriptionEnvironment, probePiSubscriptionAccount } from "./native/pi";
+import {
+  codeBuddySubscriptionEnvironment,
+  probeCodeBuddySubscriptionAccount,
+} from "./native/codebuddy";
 import { parseGenericCliVersion } from "../provider/providerMaintenance";
 // Fresh account probes and official-runtime login invocations. No credential values leave this module.
 import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
@@ -30,6 +35,8 @@ export const NATIVE_HARNESS_IDS = [
   "kimi",
   "iflow",
   "qwen",
+  "codebuddy",
+  "pi",
 ] as const;
 const HARNESS_IDS = [...NATIVE_HARNESS_IDS, "opencode"] as const;
 
@@ -65,6 +72,24 @@ export function buildHarnessInvocation(
       loginArgs: [] as string[],
       statusArgs: ["--version"],
       env: qwenSubscriptionEnvironment(env),
+    };
+  // CodeBuddy Code signs in with the TUI `/login` picker; there is no login subcommand.
+  if (harness === "codebuddy")
+    return {
+      binary: settings.providers.codebuddy.binaryPath.trim() || "codebuddy",
+      prefixArgs: [] as string[],
+      loginArgs: [] as string[],
+      statusArgs: ["--version"],
+      env: codeBuddySubscriptionEnvironment(env),
+    };
+  // Pi signs in with the TUI `/login` command; there is no login subcommand.
+  if (harness === "pi")
+    return {
+      binary: settings.providers.pi.binaryPath.trim() || "pi",
+      prefixArgs: [] as string[],
+      loginArgs: [] as string[],
+      statusArgs: ["--version"],
+      env: piSubscriptionEnvironment(env, settings.providers.pi.agentDir),
     };
   if (harness === "grok") {
     return {
@@ -214,6 +239,26 @@ export async function probeHarnessAccount(
       installed: true,
       enabled: true,
       status: await probeQwenSubscriptionAccount(invocation.binary, process.cwd()),
+      version: version.stdout.trim().slice(0, 100),
+    };
+  if (harness === "codebuddy")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probeCodeBuddySubscriptionAccount(invocation.binary, process.cwd()),
+      version: version.stdout.trim().slice(0, 100),
+    };
+  if (harness === "pi")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probePiSubscriptionAccount(
+        invocation.binary,
+        process.cwd(),
+        settings.providers.pi.agentDir,
+      ),
       version: version.stdout.trim().slice(0, 100),
     };
   if (harness === "grok")

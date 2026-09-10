@@ -18,6 +18,7 @@ const PROVIDER_STATUS_CACHE_IDS = [
   "kimi",
   "iflow",
   "qwen",
+  "codebuddy",
   "droid",
   "kilo",
   "opencode",

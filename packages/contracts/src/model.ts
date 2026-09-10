@@ -149,6 +149,8 @@ export const IFlowModelOptions = Schema.Struct({});
 export type IFlowModelOptions = typeof IFlowModelOptions.Type;
 export const QwenModelOptions = Schema.Struct({});
 export type QwenModelOptions = typeof QwenModelOptions.Type;
+export const CodeBuddyModelOptions = Schema.Struct({});
+export type CodeBuddyModelOptions = typeof CodeBuddyModelOptions.Type;
 
 export const DroidModelOptions = Schema.Struct({
   reasoningEffort: Schema.optional(Schema.Literals(DROID_REASONING_EFFORT_OPTIONS)),
@@ -164,6 +166,7 @@ export const ProviderModelOptions = Schema.Struct({
   kimi: Schema.optional(KimiModelOptions),
   iflow: Schema.optional(IFlowModelOptions),
   qwen: Schema.optional(QwenModelOptions),
+  codebuddy: Schema.optional(CodeBuddyModelOptions),
   droid: Schema.optional(DroidModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
@@ -478,6 +481,19 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     {
       slug: "qwen3-coder-plus",
       name: "Qwen3 Coder Plus",
+      capabilities: {
+        reasoningEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+    },
+  ],
+  codebuddy: [
+    {
+      slug: "default-model",
+      name: "Auto",
       capabilities: {
         reasoningEffortLevels: [],
         supportsFastMode: false,
@@ -970,6 +986,7 @@ export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSl
   kimi: "kimi-code/kimi-for-coding",
   iflow: "glm-4.7",
   qwen: "qwen3-coder-plus",
+  codebuddy: "default-model",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
   cursor: "auto",
@@ -989,6 +1006,7 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
   kimi: {},
   iflow: {},
   qwen: {},
+  codebuddy: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1135,6 +1153,7 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   kimi: "Kimi Code",
   iflow: "iFlow",
   qwen: "Qwen Code",
+  codebuddy: "CodeBuddy Code",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

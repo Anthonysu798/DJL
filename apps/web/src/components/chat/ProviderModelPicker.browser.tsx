@@ -34,6 +34,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
   ],
   iflow: [{ slug: "glm-5", name: "GLM-5" }],
   qwen: [{ slug: "qwen3-coder-plus", name: "Qwen3 Coder Plus" }],
+  codebuddy: [{ slug: "default-model", name: "Auto" }],
   droid: [
     {
       slug: "gpt-5.6-luna",

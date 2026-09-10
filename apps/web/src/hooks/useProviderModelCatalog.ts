@@ -129,6 +129,14 @@ export function useProviderModelCatalog(input: {
       enabled: selectedProvider === "qwen" || discoveryEnabled,
     }),
   );
+  const codebuddyDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "codebuddy",
+      binaryPath: settings.codebuddyBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "codebuddy" || discoveryEnabled,
+    }),
+  );
   const droidDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "droid",
@@ -261,6 +269,11 @@ export function useProviderModelCatalog(input: {
       kimi: getAppModelOptions("kimi", customModelsByProvider.kimi, modelHintByProvider?.kimi),
       iflow: getAppModelOptions("iflow", customModelsByProvider.iflow, modelHintByProvider?.iflow),
       qwen: getAppModelOptions("qwen", customModelsByProvider.qwen, modelHintByProvider?.qwen),
+      codebuddy: getAppModelOptions(
+        "codebuddy",
+        customModelsByProvider.codebuddy,
+        modelHintByProvider?.codebuddy,
+      ),
       droid: getAppModelOptions("droid", customModelsByProvider.droid, modelHintByProvider?.droid),
       kilo: getAppModelOptions("kilo", customModelsByProvider.kilo, modelHintByProvider?.kilo),
       opencode: [],
@@ -283,6 +296,7 @@ export function useProviderModelCatalog(input: {
       kimi: kimiDynamicModelsQuery.data,
       iflow: iflowDynamicModelsQuery.data,
       qwen: qwenDynamicModelsQuery.data,
+      codebuddy: codebuddyDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
@@ -298,6 +312,7 @@ export function useProviderModelCatalog(input: {
       "kimi",
       "iflow",
       "qwen",
+      "codebuddy",
       "droid",
       "kilo",
       "opencode",
@@ -329,6 +344,7 @@ export function useProviderModelCatalog(input: {
     kimiDynamicModelsQuery.data,
     iflowDynamicModelsQuery.data,
     qwenDynamicModelsQuery.data,
+    codebuddyDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     modelHintByProvider,
     openCodeDynamicModelsQuery.data,
@@ -364,6 +380,7 @@ export function useProviderModelCatalog(input: {
       kimi: kimiDynamicModelsQuery.data?.models ?? [],
       iflow: iflowDynamicModelsQuery.data?.models ?? [],
       qwen: qwenDynamicModelsQuery.data?.models ?? [],
+      codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
@@ -379,6 +396,7 @@ export function useProviderModelCatalog(input: {
       kimiDynamicModelsQuery.data?.models,
       iflowDynamicModelsQuery.data?.models,
       qwenDynamicModelsQuery.data?.models,
+      codebuddyDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,

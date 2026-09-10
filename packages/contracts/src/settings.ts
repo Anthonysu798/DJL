@@ -63,6 +63,12 @@ export const QwenServerProviderSettings = Schema.Struct({
 });
 export type QwenServerProviderSettings = typeof QwenServerProviderSettings.Type;
 
+export const CodeBuddyServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "codebuddy")),
+});
+export type CodeBuddyServerProviderSettings = typeof CodeBuddyServerProviderSettings.Type;
+
 export const DroidServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "droid")),
@@ -132,6 +138,7 @@ export const ServerSettings = Schema.Struct({
     kimi: KimiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     iflow: IFlowServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     qwen: QwenServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    codebuddy: CodeBuddyServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -192,6 +199,7 @@ export const ServerSettingsPatch = Schema.Struct({
       ),
       iflow: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       qwen: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      codebuddy: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       droid: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       kilo: Schema.optionalKey(
         Schema.Struct({

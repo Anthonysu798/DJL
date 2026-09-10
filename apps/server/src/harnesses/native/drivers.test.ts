@@ -10,6 +10,8 @@ import { createGrokDriver } from "./grok";
 import { createKimiDriver } from "./kimi";
 import { createIFlowDriver } from "./iflow";
 import { createQwenDriver } from "./qwen";
+import { createPiDriver } from "./pi";
+import { createCodeBuddyDriver } from "./codebuddy";
 import type { NativeSink } from "./types";
 
 const dirs: string[] = [];
@@ -192,6 +194,116 @@ describe("new official protocol drivers", () => {
     await expect(
       createQwenDriver({ ...input, providerOptions: { qwen: { binaryPath: binary } } }, sink([])),
     ).rejects.toThrow("Authentication required");
+  });
+  it("Pi drives RPC mode, routes approvals through its extension UI, and streams text", async () => {
+    const binary = fixture(`
+      const argv=process.argv.slice(2);
+      if(argv[0]!=='--mode'||argv[1]!=='rpc'||argv[2]!=='--session-id'||!argv[3])throw Error('bad command '+argv.join(' '));
+      if(argv[4]!=='-e'||!argv[5].endsWith('djl-approvals.ts'))throw Error('approval extension missing');
+      if(process.env.DJL_PI_APPROVE!=='command,file'||process.env.PI_OFFLINE!=='1')throw Error('bad env');
+      const ok=(data)=>send({id:m.id,type:'response',command:m.type,success:true,data});
+      if(m.type==='get_state')ok({sessionId:argv[3],model:{id:'claude-sonnet-4-5',provider:'anthropic',name:'Claude Sonnet 4.5'},thinkingLevel:'medium'});
+      if(m.type==='set_model'){if(m.provider!=='anthropic'||m.modelId!=='claude-haiku-4-5')throw Error('wrong model');ok({id:'claude-haiku-4-5',provider:'anthropic',name:'Claude Haiku 4.5'})}
+      if(m.type==='set_thinking_level'){if(m.level!=='high')throw Error('wrong level');ok({})}
+      if(m.type==='get_available_models')ok({models:[{id:'claude-haiku-4-5',provider:'anthropic',name:'Claude Haiku 4.5'}]});
+      if(m.type==='prompt'){ok({});send({type:'agent_start'});send({type:'message_start',message:{role:'assistant'}});send({type:'extension_ui_request',id:'ui-1',method:'confirm',title:'djl-approval:command:bash',message:'ls'})}
+      if(m.type==='extension_ui_response'){if(m.id!=='ui-1'||m.confirmed!==false)throw Error('wrong answer');send({type:'tool_execution_start',toolCallId:'t1',toolName:'bash',args:{command:'ls'}});send({type:'tool_execution_end',toolCallId:'t1',toolName:'bash',result:'blocked',isError:true});send({type:'message_update',message:{role:'assistant'},assistantMessageEvent:{type:'text_delta',delta:'hello pi'}});send({type:'message_end',message:{role:'assistant',stopReason:'stop'}});send({type:'agent_end'});send({type:'agent_settled'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const request = vi.fn(async () => "decline" as const);
+    const driver = await createPiDriver(
+      { ...input, providerOptions: { pi: { binaryPath: binary } } },
+      sink(events, request),
+    );
+    try {
+      expect((await driver.models()).models).toEqual([
+        { slug: "anthropic/claude-haiku-4-5", name: "Claude Haiku 4.5" },
+      ]);
+      await driver.send({
+        threadId: input.threadId,
+        input: "Hello",
+        modelSelection: {
+          provider: "pi",
+          model: "anthropic/claude-haiku-4-5",
+          options: { thinkingLevel: "high" },
+        },
+      });
+      expect(request).toHaveBeenCalledWith("command_execution_approval", {
+        toolName: "bash",
+        summary: "ls",
+      });
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello pi" },
+        }),
+      );
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "item.completed",
+          itemId: "t1",
+          payload: expect.objectContaining({ status: "failed", title: "bash" }),
+        }),
+      );
+    } finally {
+      driver.close();
+    }
+  });
+  it("Pi reports the runtime's sign-in error and skips approvals in full access", async () => {
+    const binary = fixture(`
+      const argv=process.argv.slice(2);
+      if(argv.includes('-e')||process.env.DJL_PI_APPROVE)throw Error('unexpected approval extension');
+      const ok=(data)=>send({id:m.id,type:'response',command:m.type,success:true,data});
+      if(m.type==='get_state')ok({sessionId:'pi-session',model:{id:'unknown',provider:'unknown'}});
+      if(m.type==='prompt')send({id:m.id,type:'response',command:'prompt',success:false,error:'No API key found for the selected model.\\n\\nUse /login to log into a provider via OAuth or API key.'});
+    `);
+    await expect(
+      createPiDriver(
+        { ...input, runtimeMode: "full-access", providerOptions: { pi: { binaryPath: binary } } },
+        sink([]),
+      ),
+    ).rejects.toThrow("Sign in to Pi");
+  });
+  it("CodeBuddy Code uses the CLI's stored account and never calls ACP authenticate", async () => {
+    vi.stubEnv("CODEBUDDY_API_KEY", "must-not-replace-login");
+    vi.stubEnv("CODEBUDDY_INTERNET_ENVIRONMENT", "internal");
+    const binary = fixture(`
+      if(process.env.CODEBUDDY_API_KEY||process.env.CODEBUDDY_INTERNET_ENVIRONMENT||process.env.DISABLE_AUTOUPDATER!=='1')throw Error('bad env');
+      if(process.argv.slice(2).join(' ')!=='--acp')throw Error('bad command');
+      if(m.method==='initialize')reply(m,{protocolVersion:1,authMethods:[{id:'external',name:'Login with Google/Github'},{id:'internal',name:'Login with WeChat'}],agentCapabilities:{loadSession:true}});
+      if(m.method==='authenticate')throw Error('authenticate would log the account out');
+      if(m.method==='session/new')reply(m,{sessionId:'cb-test',models:{currentModelId:'default-model',availableModels:[{modelId:'default-model',name:'Auto'},{modelId:'deep-model',name:'Deep'}]},modes:{currentModeId:'default',availableModes:[{id:'default'},{id:'acceptEdits'},{id:'plan'}]}});
+      if(m.method==='session/set_model'){if(m.params.modelId!=='deep-model')throw Error('wrong model');reply(m,{})}
+      if(m.method==='session/set_mode'){if(m.params.modeId!=='default')throw Error('wrong mode');reply(m,{})}
+      if(m.method==='session/prompt'){send({id:9,method:'session/request_permission',params:{sessionId:'cb-test',toolCall:{kind:'edit'},options:[{kind:'allow_always',optionId:'allow_always'},{kind:'allow_once',optionId:'allow'},{kind:'reject_once',optionId:'reject'}]}});global.prompt=m}
+      if(m.id===9&&!m.method){if(m.result.outcome.optionId!=='allow')throw Error('wrong permission');note('session/update',{sessionId:'cb-test',update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'hello codebuddy'}}});reply(global.prompt,{stopReason:'end_turn'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const request = vi.fn(async () => "accept" as const);
+    const driver = await createCodeBuddyDriver(
+      {
+        ...input,
+        providerOptions: { codebuddy: { binaryPath: binary } },
+        modelSelection: { provider: "codebuddy", model: "deep-model" },
+      },
+      sink(events, request),
+    );
+    try {
+      expect((await driver.models()).models).toEqual([
+        { slug: "default-model", name: "Auto" },
+        { slug: "deep-model", name: "Deep" },
+      ]);
+      await driver.send({ threadId: input.threadId, input: "Hello" });
+      expect(request).toHaveBeenCalledWith("file_change_approval", expect.anything());
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello codebuddy" },
+        }),
+      );
+    } finally {
+      driver.close();
+    }
   });
   it("Grok uses cached subscription authentication and advertised modes without API-key fallback", async () => {
     vi.stubEnv("XAI_API_KEY", "must-not-use-metered-api");
