@@ -1040,6 +1040,8 @@ export const ThreadHandoffImportedMessage = Schema.Struct({
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
+  skills: Schema.optional(Schema.Array(ProviderSkillReference)),
+  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -1050,6 +1052,7 @@ const ThreadHandoffCreateCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   sourceThreadId: ThreadId,
+  expectedSourceUpdatedAt: IsoDateTime,
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
   modelSelection: NewTaskModelSelection,
@@ -1066,7 +1069,6 @@ const ThreadHandoffCreateCommand = Schema.Struct({
   createBranchFlowCompleted: Schema.optional(Schema.Boolean).pipe(
     Schema.withDecodingDefault(() => false),
   ),
-  importedMessages: Schema.Array(ThreadHandoffImportedMessage),
   createdAt: IsoDateTime,
 });
 

@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "瀏覽資料夾",
+      "continueTask": "請從上一個智慧體停下的地方繼續完成此任務。",
+      "continueWithContext": "保留上下文繼續",
       "files": "文件",
       "fork": {
         "local": "分岔到本地",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "在新的工作樹中繼續"
       },
       "groups": {
+        "agentModels": "切換智慧體繼續",
         "builtIn": "內建",
         "local": "本地",
         "plugins": "外掛",
@@ -107,10 +110,13 @@
         "skills": "技能",
         "subagents": "子代理"
       },
+      "handoffReady": "智慧體已就緒",
+      "handoffReadyDescription": "對話、筆記和草稿已保留。傳送下一條指令即可繼續。",
+      "handoffWait": "請先完成目前回合，再進行交接",
       "loadingCommands": "正在裝入命令...",
       "loadingSkills": "正在裝入技能...",
       "noMatchingCommand": "無匹配命令 。",
-      "noMatchingMention": "沒有匹配的外掛或檔案 。",
+      "noMatchingMention": "沒有相符的智慧體、伺服器、外掛程式或檔案。",
       "noMatchingSkill": "沒有匹配的技能。",
       "review": {
         "base": "針對基地分支的審查",
@@ -152,7 +158,7 @@
         "answer": "請輸入答案以繼續",
         "approval": "請先處理此核准要求",
         "configureModel": "請先在設定中配置模型",
-        "default": "輸入問題、用 @ 標記檔案/資料夾，或輸入 / 查看可用指令",
+        "default": "輸入問題，用 @ 選擇檔案或智慧體，用 / 查看命令",
         "followUp": "提出後續修改",
         "followUpAttachments": "提出後續修改或附加圖片",
         "ownAnswer": "輸入自己的答案，或留空以使用所選選項",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "專案和最近資料夾",
         "chooseFolder": "選擇另一個資料夾",
-        "managed": "管理的工作資料夾",
+        "managed": "智慧體任務資料夾",
         "managedDetail": "此任務的私人資料夾",
         "search": "搜尋地點",
-        "trigger": "管理的工作資料夾"
+        "trigger": "智慧體任務資料夾"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "供應商更新檢查",
         "providerVisibility": "供應商可見性",
         "themePack": "{{theme}}主題包",
-        "workSection": "工作區段",
+        "workSection": "智慧體模式區域",
         "workspaceSection": "工作區區段"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "在側邊欄中顯示{{section}}區段",
           "work": {
-            "description": "顯示用於非技術性、任務導向工作的“工作”分頁。"
+            "description": "顯示智慧體模式，用於執行任務及跨供應商接續任務。"
           },
           "workspace": {
             "description": "在側邊欄切換器中顯示“工作區”分頁。“討論串”分頁始終可見。"
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "任務 文件 側邊欄",
-            "title": "工作"
+            "title": "智慧體模式"
           },
           "thread-order": {
             "keywords": "側邊欄 排序 最近 建立",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "開始教學",
         "basicTitle": "基礎功能教學",
-        "description": "重新查看工作模式、專案模式、本機 AI 推薦和設定的箭頭引導。",
+        "description": "重新播放智慧體模式、專案、本機 AI 建議和設定的導覽。",
         "section": "開始使用",
         "title": "新手教學"
       },
@@ -2734,8 +2740,8 @@
           "title": "隨時重新查看教學"
         },
         "work-mode": {
-          "description": "寫作、研究和檔案處理等目標明確的任務，請使用工作模式。",
-          "title": "工作模式"
+          "description": "開始任務後，輸入 @ 即可切換至其他智慧體，並保留任務上下文。",
+          "title": "智慧體模式"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "工作中"
       },
       "studio": {
-        "loading": "正在裝入工作...",
+        "loading": "正在載入智慧體模式…",
         "noTasks": "還沒有任務"
       },
       "temporaryChat": "暫時聊天",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "專案",
-        "work": "工作",
+        "work": "智慧體模式",
         "workspace": "工作空間"
       },
       "workspace": "工作區",
@@ -4073,13 +4079,13 @@
       "title": "看板"
     },
     "route": {
-      "loadTimeout": "工作載入時間過長——伺服器尚未回報其管理的 Work 資料夾。"
+      "loadTimeout": "智慧體模式載入時間過長，伺服器尚未回傳受管理的任務資料夾。"
     },
     "studio": {
       "errors": {
-        "folderConflict": "Work 無法使用「{{path}}」，因為另一個專案已使用該資料夾。請移除或移動該專案後重試。",
-        "prepareTask": "無法準備新的 Work 任務。",
-        "syncing": "Work 已建立，但尚未完成同步。請稍後再試。"
+        "folderConflict": "其他專案正在使用「{{path}}」，智慧體模式無法使用此資料夾。請移除或移動該專案後重試。",
+        "prepareTask": "無法準備新的智慧體任務。",
+        "syncing": "智慧體模式已建立，但尚未完成同步。請稍後重試。"
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "正在處理"
       }
     },
-    "title": "工作"
+    "title": "智慧體模式"
   },
   "workspace": {
     "actions": {

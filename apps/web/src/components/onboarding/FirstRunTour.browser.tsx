@@ -201,7 +201,7 @@ describe("FirstRunTour", () => {
     await render(<RouterProvider router={createTourRouter()} />);
 
     requestFirstRunTourReplay();
-    await expect.element(page.getByText("Work mode", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Agent mode", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Next" }).click();
     await expect.element(page.getByText("Project mode", { exact: true })).toBeVisible();
@@ -253,7 +253,7 @@ describe("FirstRunTour", () => {
     await render(<RouterProvider router={createTourRouter("/?localAi=hidden")} />);
 
     requestFirstRunTourReplay();
-    await expect.element(page.getByText("Work mode", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Agent mode", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
     await expect.element(page.getByText("Project mode", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
@@ -338,7 +338,7 @@ describe("FirstRunTour", () => {
     await page.getByRole("button", { name: "Skip" }).click();
 
     requestFirstRunTourReplay();
-    await expect.element(page.getByText("Work mode", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Agent mode", { exact: true })).toBeVisible();
     await expect.poll(() => router.state.location.pathname).toBe("/");
   });
 });

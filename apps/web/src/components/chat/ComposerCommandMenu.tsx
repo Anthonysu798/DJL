@@ -46,6 +46,7 @@ import {
   CommandSeparator,
 } from "../ui/command";
 import { FileEntryIcon } from "./FileEntryIcon";
+import { ProviderIcon } from "../ProviderIcon";
 import {
   COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
   COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
@@ -134,7 +135,7 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
     return item.description;
   }
 
-  if (item.type === "agent") {
+  if (item.type === "agent" || item.type === "handoff-model") {
     return item.description;
   }
 
@@ -197,7 +198,7 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
-      type: "model";
+      type: "model" | "handoff-model";
       provider: ProviderKind;
       model: ModelSlug;
       label: string;
@@ -254,12 +255,14 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const handoffItems = items.filter((item) => item.type === "handoff-model");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const serverItems = items.filter((item) => item.type === "server");
     const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
+        item.type !== "handoff-model" &&
         item.type !== "plugin" &&
         item.type !== "server" &&
         item.type !== "local-root" &&
@@ -268,6 +271,13 @@ export function groupCommandItems(
     );
 
     const groups: ComposerCommandGroupModel[] = [];
+    if (handoffItems.length > 0) {
+      groups.push({
+        id: "agent-models",
+        labelKey: "commandMenu.groups.agentModels",
+        items: handoffItems,
+      });
+    }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", labelKey: "commandMenu.groups.plugins", items: pluginItems });
     }
@@ -495,6 +505,8 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       // slash commands), so default to the skill block glyph used for skill
       // tokens in the composer/timeline — named commands still keep their icon.
       return commandMenuSlashGlyph(item.command, SkillCubeIcon);
+    case "handoff-model":
+      return <ProviderIcon provider={item.provider} className={cls} />;
     case "model":
       return <BrainIcon className={cls} />;
     case "agent":
@@ -536,7 +548,11 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
   onSelect: (item: ComposerCommandItem) => void;
 }) {
   const secondaryText = commandMenuSecondaryText(props.item);
-  const trailingMeta = commandMenuTrailingMeta(props.item);
+  const { t } = useTranslation("chat");
+  const trailingMeta =
+    props.item.type === "handoff-model"
+      ? t("commandMenu.continueWithContext")
+      : commandMenuTrailingMeta(props.item);
 
   return (
     <CommandItem

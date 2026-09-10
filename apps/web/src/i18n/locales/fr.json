@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "Parcourir les dossiers",
+      "continueTask": "Poursuivez cette tâche là où l’agent précédent s’est arrêté.",
+      "continueWithContext": "Reprendre le contexte",
       "files": "Fichiers",
       "fork": {
         "local": "Fourche en local",
@@ -99,6 +101,7 @@
         "newWorktreeDescription": "Continuer dans un nouvel atelier"
       },
       "groups": {
+        "agentModels": "Continuer avec un agent",
         "builtIn": "Intégré",
         "local": "Sur cet appareil",
         "plugins": "Greffons",
@@ -107,10 +110,13 @@
         "skills": "Compétences",
         "subagents": "Sous-agents"
       },
+      "handoffReady": "Agent prêt",
+      "handoffReadyDescription": "La conversation, les notes et le brouillon sont conservés. Envoyez votre prochaine instruction pour continuer.",
+      "handoffWait": "Terminez le tour en cours avant le transfert",
       "loadingCommands": "Chargement des commandes...",
       "loadingSkills": "Chargement des compétences...",
       "noMatchingCommand": "Aucune commande correspondante.",
-      "noMatchingMention": "Pas de plugin ou de fichier correspondant.",
+      "noMatchingMention": "Aucun agent, serveur, plugin ou fichier correspondant.",
       "noMatchingSkill": "Aucune compétence correspondante.",
       "review": {
         "base": "Examen par le Service de la base",
@@ -152,7 +158,7 @@
         "answer": "Saisissez votre réponse pour continuer",
         "approval": "Traitez cette demande d’approbation pour continuer",
         "configureModel": "Configurez un modèle dans les paramètres pour commencer",
-        "default": "Posez une question, identifiez des fichiers ou dossiers avec @, ou utilisez / pour afficher les commandes",
+        "default": "Posez une question, @ pour les fichiers ou agents, / pour les commandes",
         "followUp": "Demandez des modifications supplémentaires",
         "followUpAttachments": "Demandez des modifications supplémentaires ou joignez des images",
         "ownAnswer": "Saisissez votre propre réponse ou laissez le champ vide pour utiliser l’option sélectionnée",
@@ -686,10 +692,10 @@
       "work": {
         "activeGroup": "Projets et dossiers récents",
         "chooseFolder": "Choisir un autre dossier",
-        "managed": "Dossier de travail géré",
+        "managed": "Dossier des tâches agent",
         "managedDetail": "Dossier privé pour cette tâche",
         "search": "Lieux de recherche",
-        "trigger": "Dossier de travail géré"
+        "trigger": "Dossier des tâches agent"
       }
     },
     "projectScripts": {
@@ -1801,7 +1807,7 @@
         "providerUpdateChecks": "Recherche de mises à jour des fournisseurs",
         "providerVisibility": "Visibilité des fournisseurs",
         "themePack": "Palette du thème {{theme}}",
-        "workSection": "Section Travail",
+        "workSection": "Section du mode agent",
         "workspaceSection": "Section Espace de travail"
       },
       "confirmations": {
@@ -1920,7 +1926,7 @@
           },
           "showAriaLabel": "Afficher la section {{section}} dans la barre latérale",
           "work": {
-            "description": "Affiche l’onglet Travail pour les tâches non techniques orientées vers un résultat."
+            "description": "Afficher le mode agent pour les tâches et leur reprise par un autre fournisseur."
           },
           "workspace": {
             "description": "Affiche l’onglet Espace de travail dans le sélecteur de la barre latérale. L’onglet Fils reste toujours visible."
@@ -2202,7 +2208,7 @@
           },
           "studio-section": {
             "keywords": "tâches documents barre latérale",
-            "title": "Travail"
+            "title": "Mode agent"
           },
           "thread-order": {
             "keywords": "barre latérale tri récent création",
@@ -2703,7 +2709,7 @@
       "settings": {
         "action": "Démarrer le tutoriel",
         "basicTitle": "Tutoriel de base",
-        "description": "Revoir le guide de Travail, Projets, des recommandations d’IA locale et des Paramètres.",
+        "description": "Revoir la visite guidée du mode agent, des projets, des recommandations d’IA locale et des paramètres.",
         "section": "Bien démarrer",
         "title": "Tutoriel pour débutants"
       },
@@ -2734,8 +2740,8 @@
           "title": "Revoir les tutoriels à tout moment"
         },
         "work-mode": {
-          "description": "Utilisez Travail pour les tâches ciblées comme la rédaction, la recherche et le traitement de fichiers.",
-          "title": "Mode Travail"
+          "description": "Commencez une tâche, puis saisissez @ pour la poursuivre avec un autre agent en conservant son contexte.",
+          "title": "Mode agent"
         }
       }
     },
@@ -3289,7 +3295,7 @@
         "working": "En cours"
       },
       "studio": {
-        "loading": "Chargement des travaux...",
+        "loading": "Chargement du mode agent…",
         "noTasks": "Pas encore de tâches"
       },
       "temporaryChat": "Discussion temporaire",
@@ -3339,7 +3345,7 @@
       },
       "views": {
         "projects": "Projets",
-        "work": "Travail",
+        "work": "Mode agent",
         "workspace": "Espace de travail"
       },
       "workspace": "Espace de travail",
@@ -4073,13 +4079,13 @@
       "title": "Tableau kanban"
     },
     "route": {
-      "loadTimeout": "Le chargement du travail prend trop de temps : le serveur n’a pas encore signalé son dossier Work géré."
+      "loadTimeout": "Le mode agent met trop de temps à se charger. Le serveur n’a pas encore indiqué son dossier de tâches géré."
     },
     "studio": {
       "errors": {
-        "folderConflict": "Work ne peut pas utiliser « {{path}} », car un autre projet utilise déjà ce dossier. Déplacez ou supprimez ce projet, puis réessayez.",
-        "prepareTask": "Impossible de préparer une nouvelle tâche Work.",
-        "syncing": "Work a été créé, mais sa synchronisation n’est pas terminée. Réessayez dans un instant."
+        "folderConflict": "Le mode agent ne peut pas utiliser « {{path}} » car un autre projet utilise ce dossier. Supprimez ou déplacez ce projet, puis réessayez.",
+        "prepareTask": "Impossible de préparer une nouvelle tâche agent.",
+        "syncing": "Le mode agent a été créé, mais la synchronisation n’est pas terminée. Réessayez dans un instant."
       }
     },
     "task": {
@@ -4113,7 +4119,7 @@
         "working": "En cours"
       }
     },
-    "title": "Travail"
+    "title": "Mode agent"
   },
   "workspace": {
     "actions": {

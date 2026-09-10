@@ -703,6 +703,7 @@ describe("decider project scripts", () => {
             commandId: CommandId.makeUnsafe("cmd-thread-rehandoff"),
             threadId: ThreadId.makeUnsafe("thread-handoff-copy"),
             sourceThreadId: ThreadId.makeUnsafe("thread-handoff"),
+            expectedSourceUpdatedAt: now,
             projectId: asProjectId("project-handoff"),
             title: "Handoff Copy",
             modelSelection: {
@@ -713,15 +714,6 @@ describe("decider project scripts", () => {
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,
-            importedMessages: [
-              {
-                messageId: asMessageId("message-imported-2"),
-                role: "user",
-                text: "Imported history",
-                createdAt: now,
-                updatedAt: now,
-              },
-            ],
             createdAt: now,
           },
           readModel,
@@ -849,6 +841,7 @@ describe("decider project scripts", () => {
           commandId: CommandId.makeUnsafe("cmd-thread-native-rehandoff"),
           threadId: ThreadId.makeUnsafe("thread-native-handoff-copy"),
           sourceThreadId: ThreadId.makeUnsafe("thread-native-handoff"),
+          expectedSourceUpdatedAt: now,
           projectId: asProjectId("project-native-handoff"),
           title: "Handoff Copy",
           modelSelection: {
@@ -859,22 +852,6 @@ describe("decider project scripts", () => {
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
-          importedMessages: [
-            {
-              messageId: asMessageId("message-native-imported-2"),
-              role: "user",
-              text: "Imported history",
-              createdAt: now,
-              updatedAt: now,
-            },
-            {
-              messageId: asMessageId("message-native-imported-3"),
-              role: "user",
-              text: "A real new follow-up",
-              createdAt: now,
-              updatedAt: now,
-            },
-          ],
           createdAt: now,
         },
         readModel,

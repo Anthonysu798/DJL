@@ -6,6 +6,8 @@ import { ProfileStatsArchive } from "../../profileStatsArchive";
 import { ProviderService } from "../../provider/Services/ProviderService";
 import { TerminalManager } from "../../terminal/Services/Manager";
 import { THREAD_RETENTION_COMMAND_ID_PREFIX } from "../../threadRetention";
+import { ServerConfig } from "../../config";
+import { removeHandoffContextArchive } from "../handoffContextArchive";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine";
 import {
   ThreadDeletionReactor,
@@ -63,11 +65,31 @@ export const cleanupSucceededUnlessInterrupted = <R, E>({
     }),
   );
 
+export function prepareThreadForPurge<R1, E1, R2, E2>(input: {
+  cleanup: Effect.Effect<boolean, E1, R1>;
+  removeArchive: Effect.Effect<boolean, E2, R2>;
+}): Effect.Effect<boolean, E1 | E2, R1 | R2> {
+  return Effect.gen(function* () {
+    if (!(yield* input.cleanup)) return false;
+    return yield* input.removeArchive;
+  });
+}
+
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const profileStatsArchive = yield* ProfileStatsArchive;
   const providerService = yield* ProviderService;
   const terminalManager = yield* TerminalManager;
+  const serverConfig = yield* ServerConfig;
+
+  const removeThreadHandoffArchive = (threadId: ThreadDeletedEvent["payload"]["threadId"]) =>
+    cleanupSucceededUnlessInterrupted({
+      effect: Effect.tryPromise(() =>
+        removeHandoffContextArchive({ stateDir: serverConfig.stateDir, threadId }),
+      ),
+      message: "thread deletion cleanup skipped handoff context archive removal",
+      threadId,
+    });
 
   const refreshCommandReadModelAfterPurge = (threadId: string) =>
     orchestrationEngine.refreshCommandReadModel().pipe(
@@ -153,8 +175,11 @@ const make = Effect.gen(function* () {
 
   const processThreadDeleted = Effect.fn(function* (event: ThreadDeletedEvent) {
     const { threadId } = event.payload;
-    const cleanupSucceeded = yield* cleanupThreadBeforePurge(threadId);
-    if (!cleanupSucceeded) {
+    const readyToPurge = yield* prepareThreadForPurge({
+      cleanup: cleanupThreadBeforePurge(threadId),
+      removeArchive: removeThreadHandoffArchive(threadId),
+    });
+    if (!readyToPurge) {
       yield* Effect.logWarning("thread deletion cleanup deferred stats archive purge", {
         threadId,
       });
@@ -192,7 +217,13 @@ const make = Effect.gen(function* () {
       Effect.sleep(PURGE_STARTUP_SWEEP_DELAY_MS).pipe(
         Effect.flatMap(() =>
           profileStatsArchive.purgeSoftDeletedManualThreads({
-            beforePurge: (threadId) => cleanupThreadBeforePurge(ThreadId.makeUnsafe(threadId)),
+            beforePurge: (threadId) => {
+              const typedThreadId = ThreadId.makeUnsafe(threadId);
+              return prepareThreadForPurge({
+                cleanup: cleanupThreadBeforePurge(typedThreadId),
+                removeArchive: removeThreadHandoffArchive(typedThreadId),
+              });
+            },
           }),
         ),
         Effect.tap((purgedCount) =>

@@ -7,6 +7,7 @@ import type {
 } from "@synara/contracts";
 import {
   MAX_PINNED_PROJECTS,
+  MessageId,
   PINNED_MESSAGES_MAX_COUNT,
   THREAD_MARKERS_MAX_COUNT,
   TurnId,
@@ -15,7 +16,9 @@ import {
   deriveAssociatedWorktreeMetadata,
   deriveAssociatedWorktreeMetadataPatch,
 } from "@synara/shared/threadWorkspace";
+import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
 import { doThreadMarkerRangesOverlap } from "@synara/shared/threadMarkers";
+import { derivePendingThreadRequestIds } from "@synara/shared/threadSummary";
 import {
   collectTailTurnIds,
   resolveTailReplayTurnId,
@@ -46,6 +49,12 @@ const STUDIO_PROJECT_KIND_SET = new Set<ProjectKind>(["studio"]);
 // Kinds that claim exclusive ownership of a workspace root. Chat containers are excluded: they
 // use placeholder roots (e.g. the home dir) that legitimately coexist with real projects.
 const WORKSPACE_OWNING_PROJECT_KIND_SET = new Set<ProjectKind>(["project", "studio"]);
+const EMBEDDED_ASSISTANT_SELECTIONS_PATTERN =
+  /\n*<assistant_selection>\n[\s\S]*?\n<\/assistant_selection>(?=\n*(<terminal_context>\n[\s\S]*?\n<\/terminal_context>\s*)?(<file_comments>\n[\s\S]*?\n<\/file_comments>\s*)?(<pasted_text>\n[\s\S]*?\n<\/pasted_text>\s*)?$)/;
+
+function stripEmbeddedAssistantSelections(text: string): string {
+  return text.replace(EMBEDDED_ASSISTANT_SELECTIONS_PATTERN, "").trimEnd();
+}
 
 const defaultMetadata: Omit<OrchestrationEvent, "sequence" | "type" | "payload"> = {
   eventId: crypto.randomUUID() as OrchestrationEvent["eventId"],
@@ -501,6 +510,28 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: `Source thread '${command.sourceThreadId}' belongs to a different project.`,
         });
       }
+      if (sourceThread.updatedAt !== command.expectedSourceUpdatedAt) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "The source thread changed before the handoff. Refresh it and try again.",
+        });
+      }
+      const pendingRequests = derivePendingThreadRequestIds({
+        activities: sourceThread.activities,
+      });
+      if (
+        sourceThread.session?.status === "starting" ||
+        sourceThread.session?.status === "running" ||
+        sourceThread.latestTurn?.state === "running" ||
+        sourceThread.messages.some((message) => message.streaming) ||
+        pendingRequests.approvalRequestIds.length > 0 ||
+        pendingRequests.userInputRequestIds.length > 0
+      ) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "Finish the current turn and resolve pending requests before handing off.",
+        });
+      }
       if (sourceThread.handoff !== null && !hasNativeHandoffMessages(sourceThread)) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
@@ -558,29 +589,62 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       };
 
       const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> =
-        command.importedMessages.map((message) => ({
+        sourceThread.messages.flatMap((message) => {
+          if (
+            (message.role !== "user" && message.role !== "assistant") ||
+            message.streaming ||
+            (message.role === "assistant" && isProviderProtocolOnlyText(message.text))
+          ) {
+            return [];
+          }
+          return [
+            {
+              ...withEventBase({
+                aggregateKind: "thread",
+                aggregateId: command.threadId,
+                occurredAt: command.createdAt,
+                commandId: command.commandId,
+              }),
+              type: "thread.message-sent",
+              payload: {
+                threadId: command.threadId,
+                messageId: MessageId.makeUnsafe(crypto.randomUUID()),
+                role: message.role,
+                text:
+                  message.role === "user"
+                    ? stripEmbeddedAssistantSelections(message.text)
+                    : message.text,
+                ...(message.skills !== undefined ? { skills: message.skills } : {}),
+                ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
+                ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
+                turnId: null,
+                streaming: false,
+                source: "handoff-import",
+                createdAt: message.createdAt,
+                updatedAt: message.updatedAt,
+              },
+            },
+          ];
+        });
+
+      const contextEvents: Array<Omit<OrchestrationEvent, "sequence">> = [];
+      if (sourceThread.notes !== undefined) {
+        contextEvents.push({
           ...withEventBase({
             aggregateKind: "thread",
             aggregateId: command.threadId,
             occurredAt: command.createdAt,
             commandId: command.commandId,
           }),
-          type: "thread.message-sent",
+          type: "thread.meta-updated",
           payload: {
             threadId: command.threadId,
-            messageId: message.messageId,
-            role: message.role,
-            text: message.text,
-            ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
-            turnId: null,
-            streaming: false,
-            source: "handoff-import",
-            createdAt: message.createdAt,
-            updatedAt: message.updatedAt,
+            notes: sourceThread.notes,
+            updatedAt: command.createdAt,
           },
-        }));
-
-      return [createdEvent, ...importedMessageEvents];
+        });
+      }
+      return [createdEvent, ...importedMessageEvents, ...contextEvents];
     }
 
     case "thread.fork.create": {
@@ -1511,6 +1575,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           role: message.role,
           text: message.text,
           ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
+          ...(message.skills !== undefined ? { skills: message.skills } : {}),
+          ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
           turnId: null,
           streaming: false,
           source: "native" as const,

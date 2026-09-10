@@ -4,9 +4,7 @@
 // Exports: target-provider, title, transcript, and model-selection helpers.
 
 import {
-  EventId,
   MessageId,
-  type OrchestrationThreadActivity,
   PROVIDER_DISPLAY_NAMES,
   type ModelSelection,
   type ProviderKind,
@@ -24,17 +22,12 @@ const HANDOFF_PROVIDER_ORDER: ReadonlyArray<ProviderKind> = [
   "cursor",
   "gemini",
   "grok",
+  "kimi",
   "droid",
   "kilo",
   "opencode",
   "pi",
 ];
-const IMPORTABLE_THREAD_ACTIVITY_KINDS = new Set([
-  "account.rate-limits.updated",
-  "account.rate-limited",
-  "context-window.updated",
-  "context-window.configured",
-]);
 
 function isImportableThreadMessage(
   message: Thread["messages"][number],
@@ -46,12 +39,6 @@ function isImportableThreadMessage(
     message.streaming === false &&
     !(message.role === "assistant" && isProviderProtocolOnlyText(message.text))
   );
-}
-
-function isImportableThreadActivity(
-  activity: Thread["activities"][number],
-): activity is OrchestrationThreadActivity {
-  return IMPORTABLE_THREAD_ACTIVITY_KINDS.has(activity.kind);
 }
 
 export function resolveAvailableHandoffTargetProviders(
@@ -86,6 +73,9 @@ export function buildThreadHandoffImportedMessages(
       createdAt: message.createdAt,
       updatedAt: message.completedAt ?? message.createdAt,
     };
+    if (message.skills !== undefined) Object.assign(importedMessage, { skills: message.skills });
+    if (message.mentions !== undefined)
+      Object.assign(importedMessage, { mentions: message.mentions });
     const attachments =
       message.attachments && message.attachments.length > 0
         ? message.attachments.map((attachment) =>
@@ -106,19 +96,6 @@ export function buildThreadHandoffImportedMessages(
           )
         : null;
     return attachments ? Object.assign(importedMessage, { attachments }) : importedMessage;
-  });
-}
-
-export function buildThreadHandoffImportedActivities(
-  thread: Pick<Thread, "activities">,
-): ReadonlyArray<OrchestrationThreadActivity> {
-  // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
-  return thread.activities.filter(isImportableThreadActivity).map((activity) => {
-    const { sequence: _sequence, ...rest } = activity;
-    return {
-      ...rest,
-      id: EventId.makeUnsafe(randomUUID()),
-    };
   });
 }
 

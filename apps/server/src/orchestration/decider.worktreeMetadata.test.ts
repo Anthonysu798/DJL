@@ -3,6 +3,8 @@ import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   EventId,
+  MessageId,
+  type OrchestrationCommand,
   ProjectId,
   ThreadId,
 } from "@synara/contracts";
@@ -19,6 +21,28 @@ const WORKTREE_BRANCH = "feature/worktree";
 const WORKTREE_PATH = "/tmp/worktrees/feature-worktree";
 
 const asEventId = (value: string) => EventId.makeUnsafe(value);
+
+function handoffCommand(
+  now: string,
+): Extract<OrchestrationCommand, { type: "thread.handoff.create" }> {
+  return {
+    type: "thread.handoff.create",
+    commandId: CommandId.makeUnsafe("handoff-command"),
+    threadId: FORK_THREAD_ID,
+    sourceThreadId: THREAD_ID,
+    expectedSourceUpdatedAt: now,
+    projectId: PROJECT_ID,
+    title: "Continue task",
+    modelSelection: { provider: "claudeAgent", model: "sonnet" },
+    runtimeMode: "approval-required",
+    interactionMode: "default",
+    envMode: "worktree",
+    branch: WORKTREE_BRANCH,
+    worktreePath: WORKTREE_PATH,
+    createBranchFlowCompleted: false,
+    createdAt: now,
+  };
+}
 
 async function createProjectReadModel(now: string) {
   return Effect.runPromise(
@@ -92,6 +116,90 @@ async function createWorktreeThreadReadModel(now: string) {
 }
 
 describe("decider worktree metadata", () => {
+  it("rejects a handoff when the renderer source revision is stale", async () => {
+    const now = new Date().toISOString();
+    const readModel = await createWorktreeThreadReadModel(now);
+    const command = {
+      ...handoffCommand(now),
+      expectedSourceUpdatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await expect(
+      Effect.runPromise(decideOrchestrationCommand({ readModel, command })),
+    ).rejects.toThrow("source thread changed");
+  });
+
+  it("rejects handoffs while the source is streaming even if the client was previously idle", async () => {
+    const now = new Date().toISOString();
+    const original = await createWorktreeThreadReadModel(now);
+    const readModel = {
+      ...original,
+      threads: original.threads.map((thread) =>
+        Object.assign({}, thread, {
+          messages: [
+            {
+              id: MessageId.makeUnsafe("streaming"),
+              role: "assistant" as const,
+              text: "In progress",
+              streaming: true,
+              source: "native" as const,
+              turnId: null,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+        }),
+      ),
+    };
+    await expect(
+      Effect.runPromise(decideOrchestrationCommand({ readModel, command: handoffCommand(now) })),
+    ).rejects.toThrow("Finish the current turn");
+  });
+
+  it("persists notes and portable references in the handoff events", async () => {
+    const now = new Date().toISOString();
+    const original = await createWorktreeThreadReadModel(now);
+    const readModel = {
+      ...original,
+      threads: original.threads.map((thread) =>
+        Object.assign({}, thread, {
+          notes: "Keep the route",
+          messages: [
+            {
+              id: MessageId.makeUnsafe("source-message"),
+              role: "user" as const,
+              text: "Continue",
+              skills: [{ name: "review", path: "/project/SKILL.md" }],
+              mentions: [{ name: "README", path: "/project/README.md" }],
+              streaming: false,
+              source: "native" as const,
+              turnId: null,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+        }),
+      ),
+    };
+    const events = await Effect.runPromise(
+      decideOrchestrationCommand({ readModel, command: handoffCommand(now) }),
+    );
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "thread.meta-updated",
+          payload: expect.objectContaining({ notes: "Keep the route" }),
+        }),
+        expect.objectContaining({
+          type: "thread.message-sent",
+          payload: expect.objectContaining({
+            skills: [{ name: "review", path: "/project/SKILL.md" }],
+            mentions: [{ name: "README", path: "/project/README.md" }],
+          }),
+        }),
+      ]),
+    );
+  });
   it("derives associated worktree metadata during thread.create when only branch and worktreePath are provided", async () => {
     const now = new Date().toISOString();
     const readModel = await createProjectReadModel(now);
