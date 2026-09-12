@@ -516,11 +516,11 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /http:\/\/timestamp\.acs\.microsoft\.com/);
     assert.match(
       releaseWorkflow,
-      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,
     );
     assert.match(
       ciWorkflow,
-      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,
     );
     assert.match(ciWorkflow, /uses: \.\/\.github\/actions\/setup-ossutil/);
     assert.match(ciWorkflow, /ossutil cp README\.md/);
@@ -624,11 +624,11 @@ describe("public desktop release preparation", () => {
     assert.match(workflow, /SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798\/DJL/);
     assert.match(
       workflow,
-      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,
     );
     assert.match(
       workflow,
-      /curl -fsSLo target-release\/oss-djl-mac\.yml[\s\S]*djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable\/djl-mac\.yml/,
+      /curl -fsSLo target-release\/oss-djl-mac\.yml[\s\S]*djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable\/djl-mac\.yml/,
     );
     assert.match(workflow, /repos\/\$RELEASE_REPOSITORY\/releases\/latest/);
     assert.match(workflow, /compareReleaseVersions/);

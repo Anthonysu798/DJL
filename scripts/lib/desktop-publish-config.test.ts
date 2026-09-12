@@ -45,20 +45,20 @@ describe("desktop publish config", () => {
   it("uses an explicit validated HTTPS download origin before GitHub metadata", () => {
     expect(
       resolveDesktopPublishConfig({
-        configuredUpdateBaseUrl: "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable/",
+        configuredUpdateBaseUrl: "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable/",
         configuredRepository: "configured/djl",
       }),
     ).toEqual({
       provider: "generic",
-      url: "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
+      url: "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable",
     });
   });
 
   it.each([
-    "http://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
-    "https://user:password@djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
-    "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable?token=secret",
-    "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable#fragment",
+    "http://djl-china-releases.oss-accelerate.aliyuncs.com/stable",
+    "https://user:password@djl-china-releases.oss-accelerate.aliyuncs.com/stable",
+    "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable?token=secret",
+    "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable#fragment",
   ])("fails closed for an unsafe explicit update origin: %s", (configuredUpdateBaseUrl) => {
     expect(() =>
       resolveDesktopPublishConfig({

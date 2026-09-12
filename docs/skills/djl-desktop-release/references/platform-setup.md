@@ -62,7 +62,7 @@ Configure these repository secrets for the bucket-scoped `djl-release-publisher`
 
 The identity may list, read, write, and delete objects only in `djl-china-releases`. Public access
 is read-only. Production packages embed the credential-free HTTPS feed
-`https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable`; secrets are used only by the
+`https://djl-china-releases.oss-accelerate.aliyuncs.com/stable`; secrets are used only by the
 release workflow and are never embedded in the application.
 
 Expect Intel to be the long pole: roughly 20–23 minutes, since notarization is a round-trip to Apple

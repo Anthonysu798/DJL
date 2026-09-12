@@ -303,7 +303,7 @@ jobs:
         shell: bash
         env:
           SMOKE_VERSION: 0.0.0-ci.${{ github.run_number }}
-          DJL_DESKTOP_UPDATE_BASE_URL: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable
+          DJL_DESKTOP_UPDATE_BASE_URL: https://djl-china-releases.oss-accelerate.aliyuncs.com/stable
           SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
