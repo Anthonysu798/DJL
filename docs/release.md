@@ -223,7 +223,7 @@ Before GitHub publication, the release workflow verifies and mirrors the exact 1
 GitHub and advance only the four small manifests under `stable/`; those manifests point to the
 immutable versioned payloads. Prereleases never modify `stable/`.
 
-Packaged clients use `https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable` as their
+Packaged clients use `https://djl-china-releases.oss-accelerate.aliyuncs.com/stable` as their
 primary generic updater feed. Eligible network and download failures retry once through the
 canonical `Anthonysu798/DJL` GitHub release. Checksum, manifest-integrity, signature, and installer
 failures do not switch sources. Clients on 0.5.10 still discover the first migration release through
