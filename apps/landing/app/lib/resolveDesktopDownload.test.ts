@@ -5,7 +5,7 @@ import { resolveDesktopDownload } from "./resolveDesktopDownload";
 const GITHUB_URL =
   "https://github.com/Anthonysu798/DJL/releases/download/v0.5.10/DJL-0.5.10-arm64.dmg";
 const OSS_URL =
-  "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/0.5.10/DJL-0.5.10-arm64.dmg";
+  "https://djl-china-releases.oss-accelerate.aliyuncs.com/releases/0.5.10/DJL-0.5.10-arm64.dmg";
 const RELEASE_PAGE = "https://github.com/Anthonysu798/DJL/releases/latest";
 const target = { platform: "mac", arch: "arm64" } as const;
 const release = async () => ({

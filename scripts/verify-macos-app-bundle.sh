@@ -71,7 +71,7 @@ grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${expected_onnx//./\\.}\"" "$onn
 
 grep -qF "provider: generic" "$app/Contents/Resources/app-update.yml"
 grep -qF \
-  "url: https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable" \
+  "url: https://djl-china-releases.oss-accelerate.aliyuncs.com/stable" \
   "$app/Contents/Resources/app-update.yml"
 
 node "$repo_root/scripts/check-no-bundled-opencode.ts" "$app"

@@ -12,11 +12,11 @@ describe("update feed failover", () => {
     expect(
       resolveGenericUpdateFeed({
         provider: "generic",
-        url: "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
+        url: "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable",
       }),
     ).toEqual({
       provider: "generic",
-      url: "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable",
+      url: "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable",
     });
   });
 

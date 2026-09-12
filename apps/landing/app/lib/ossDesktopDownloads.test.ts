@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { readOssDownloadBaseUrl, resolveOssDesktopDownload } from "./ossDesktopDownloads";
 
-const HONG_KONG_OSS = "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com";
+const HONG_KONG_OSS = "https://djl-china-releases.oss-accelerate.aliyuncs.com";
 
 describe("readOssDownloadBaseUrl", () => {
   it("uses the Hong Kong bucket when no override is configured", () => {
