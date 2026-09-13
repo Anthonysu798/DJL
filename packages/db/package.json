@@ -12,9 +12,11 @@
     "test": "vitest run --passWithNoTests",
     "generate": "drizzle-kit generate",
     "migrate": "bun run src/migrate.ts",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "seed": "bun run src/seed.ts"
   },
   "dependencies": {
+    "@djl/domain": "workspace:*",
     "drizzle-orm": "catalog:",
     "postgres": "catalog:"
   },

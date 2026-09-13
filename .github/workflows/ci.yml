@@ -65,6 +65,7 @@ jobs:
           bun-version: 1.3.13
       - run: bun install --frozen-lockfile
       - run: bun run db:migrate
+      - run: bun run db:seed
       - run: bun run test
 
   secrets-scan:

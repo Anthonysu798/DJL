@@ -70,6 +70,7 @@
       "name": "@djl/db",
       "version": "0.1.0",
       "dependencies": {
+        "@djl/domain": "workspace:*",
         "drizzle-orm": "catalog:",
         "postgres": "catalog:",
       },
@@ -94,6 +95,8 @@
       "version": "0.1.0",
       "dependencies": {
         "effect": "catalog:",
+        "resend": "^6.28.0",
+        "twilio": "^6.1.1",
       },
       "devDependencies": {
         "@effect/language-service": "catalog:",

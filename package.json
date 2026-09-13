@@ -32,7 +32,8 @@
     "db:generate": "bun run --cwd packages/db generate",
     "db:migrate": "bun run --cwd packages/db migrate",
     "ci": "bun run fmt:check && bun run lint && bun run typecheck && bun run test",
-    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist .turbo apps/*/.turbo packages/*/.turbo"
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist .turbo apps/*/.turbo packages/*/.turbo",
+    "db:seed": "bun run --cwd packages/db seed"
   },
   "devDependencies": {
     "@types/node": "catalog:",

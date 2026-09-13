@@ -125,6 +125,19 @@ export function createAuth(input: {
       useSecureCookies: env.env !== "local" && env.env !== "test",
       cookiePrefix: "djl",
       database: { generateId: "uuid" },
+      ipAddress: { ipAddressHeaders: ["fly-client-ip", "cf-connecting-ip", "x-forwarded-for"] },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Every user owns a hidden personal organization that holds credits
+          // and billing (decision: Personal org). Created in the same flow as
+          // the user so no account ever exists without a billing owner.
+          after: async (user) => {
+            await createPersonalOrganization(db, user.id, user.name || user.email);
+          },
+        },
+      },
     },
     plugins: [
       organization({
@@ -192,3 +205,31 @@ export function createAuth(input: {
 }
 
 export type DjlAuth = ReturnType<typeof createAuth>;
+
+export const PERSONAL_ORG_METADATA = JSON.stringify({ kind: "personal" });
+
+export async function createPersonalOrganization(
+  db: DjlDatabase,
+  userId: string,
+  displayName: string,
+) {
+  const slug = `u-${userId.replace(/-/g, "").slice(0, 16)}`;
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    const [org] = await tx
+      .insert(schema.organization)
+      .values({
+        name: `${displayName}`.slice(0, 80),
+        slug,
+        createdAt: now,
+        metadata: PERSONAL_ORG_METADATA,
+      })
+      .onConflictDoNothing({ target: schema.organization.slug })
+      .returning();
+    if (!org) return; // already exists (idempotent on retried hooks)
+    await tx
+      .insert(schema.member)
+      .values({ organizationId: org.id, userId, role: "owner", createdAt: now });
+    await tx.insert(schema.creditBalances).values({ orgId: org.id }).onConflictDoNothing();
+  });
+}
