@@ -224,6 +224,7 @@ export const AGENT_MENTION_ALIASES_BY_PROVIDER: Record<
   kilo: OPENCODE_AGENT_MENTION_ALIASES,
   opencode: OPENCODE_AGENT_MENTION_ALIASES,
   pi: {},
+  djlCloud: {},
 } as const satisfies Record<ProviderKind, Record<string, AgentAliasDefinition>>;
 
 // Backward compatibility for legacy call sites that still expect a flat alias table.
@@ -233,6 +234,7 @@ export const AGENT_MENTION_ALIASES: Record<string, AgentAliasDefinition> = Objec
 );
 
 const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER: Record<ProviderKind, readonly string[]> = {
+  djlCloud: [],
   codex: ["5.5", "5.4", "mini", "5.3-codex", "spark", "5.2", "5.2-codex"],
   claudeAgent: ["explore", "review", "build", "plan"],
   cursor: [],

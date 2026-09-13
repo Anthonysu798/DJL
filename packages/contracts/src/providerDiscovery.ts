@@ -22,6 +22,7 @@ const ProviderDiscoveryKind = Schema.Literals([
   "kilo",
   "opencode",
   "pi",
+  "djlCloud",
 ]);
 
 export const OpenCodeModelProviderConnection = Schema.Struct({

@@ -437,6 +437,7 @@ function SettingsRouteView() {
       settings.openCodeServerPassword,
     ),
     pi: Boolean(settings.piBinaryPath || settings.piAgentDir),
+    djlCloud: false,
   });
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
@@ -456,6 +457,7 @@ function SettingsRouteView() {
     kilo: "",
     opencode: "",
     pi: "",
+    djlCloud: "",
   });
   const [, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, CustomModelValidationError | null>>
@@ -699,7 +701,8 @@ function SettingsRouteView() {
     settings.customDroidModels.length > 0 ||
     settings.customKiloModels.length > 0 ||
     settings.customOpenCodeModels.length > 0 ||
-    settings.customPiModels.length > 0
+    settings.customPiModels.length > 0 ||
+    settings.customDjlCloudModels.length > 0
       ? [t("route.models.customModels.title")]
       : []),
     ...(isInstallSettingsDirty ? [t("route.changedSettings.providerInstalls")] : []),
@@ -827,6 +830,7 @@ function SettingsRouteView() {
       kilo: false,
       opencode: false,
       pi: false,
+      djlCloud: false,
     });
     setSelectedCustomModelProvider("codex");
     setCustomModelInputByProvider({
@@ -843,6 +847,7 @@ function SettingsRouteView() {
       kilo: "",
       opencode: "",
       pi: "",
+      djlCloud: "",
     });
     setCustomModelErrorByProvider({});
     setShowAllCustomModels(false);

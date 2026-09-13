@@ -845,6 +845,8 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(providerOptions?.pi?.binaryPath);
+    case "djlCloud":
+      return null;
   }
 }
 
@@ -2159,6 +2161,7 @@ export default function ChatView({
       kilo: resolveHint("kilo"),
       opencode: resolveHint("opencode"),
       pi: resolveHint("pi"),
+      djlCloud: resolveHint("djlCloud"),
     };
   }, [
     activeProject?.defaultModelSelection,
@@ -2202,6 +2205,11 @@ export default function ChatView({
   const piModelDiscoveryEnabled =
     selectedProvider === "pi" ||
     lockedProvider === "pi" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
+  const djlCloudModelDiscoveryEnabled =
+    selectedProvider === "djlCloud" ||
+    lockedProvider === "djlCloud" ||
     isModelPickerOpen ||
     isAgentMentionPickerOpen;
   const cursorDynamicModelsQuery = useQuery(
@@ -2296,6 +2304,13 @@ export default function ChatView({
       agentDir: settings.piAgentDir || null,
       cwd: providerModelDiscoveryCwd,
       enabled: piModelDiscoveryEnabled,
+    }),
+  );
+  const djlCloudDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "djlCloud",
+      cwd: providerModelDiscoveryCwd,
+      enabled: djlCloudModelDiscoveryEnabled,
     }),
   );
   const claudeDynamicAgentsQuery = useQuery(
@@ -2426,6 +2441,11 @@ export default function ChatView({
       ),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, composerModelHintByProvider.pi),
+      djlCloud: getAppModelOptions(
+        "djlCloud",
+        customModelsByProvider.djlCloud,
+        composerModelHintByProvider.djlCloud,
+      ),
     };
     const result: Record<
       ProviderKind,
@@ -2449,6 +2469,7 @@ export default function ChatView({
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      djlCloud: djlCloudDynamicModelsQuery.data,
     };
 
     for (const provider of [
@@ -2465,6 +2486,7 @@ export default function ChatView({
       "kilo",
       "opencode",
       "pi",
+      "djlCloud",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
@@ -2497,6 +2519,7 @@ export default function ChatView({
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    djlCloudDynamicModelsQuery.data,
   ]);
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
@@ -2521,6 +2544,7 @@ export default function ChatView({
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -2536,6 +2560,7 @@ export default function ChatView({
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      djlCloudDynamicModelsQuery.data?.models,
     ],
   );
   const providerModelsQueryByProvider = {
@@ -2552,6 +2577,7 @@ export default function ChatView({
     kilo: kiloDynamicModelsQuery,
     opencode: openCodeDynamicModelsQuery,
     pi: piDynamicModelsQuery,
+    djlCloud: djlCloudDynamicModelsQuery,
   } as const;
   const selectedRuntimeModel = useMemo(
     () =>

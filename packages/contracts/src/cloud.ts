@@ -336,3 +336,45 @@ export const CloudUsageTrailer = Schema.Struct({
   cutOff: Schema.Boolean,
 });
 export type CloudUsageTrailer = typeof CloudUsageTrailer.Type;
+
+// ---------------------------------------------------------------------------
+// Local server ↔ renderer RPCs for the cloud account (served by apps/server)
+// ---------------------------------------------------------------------------
+
+export const CloudAccountStatus = Schema.Struct({
+  signedIn: Schema.Boolean,
+  apiBaseUrl: TrimmedNonEmptyString,
+  email: Schema.optional(TrimmedNonEmptyString),
+  userId: Schema.optional(CloudUserId),
+  orgId: Schema.optional(CloudOrgId),
+  /** Present when signed in and the control plane answered. */
+  credits: Schema.optional(CloudCreditsResponse),
+  /** Set when the stored session no longer works (expired, revoked, offline). */
+  problem: Schema.optional(Schema.Literals(["unreachable", "session_expired", "suspended"])),
+  checkedAt: Schema.String,
+});
+export type CloudAccountStatus = typeof CloudAccountStatus.Type;
+
+export const CloudSignInStartResult = Schema.Struct({
+  deviceCode: TrimmedNonEmptyString,
+  userCode: TrimmedNonEmptyString,
+  verificationUri: TrimmedNonEmptyString,
+  verificationUriComplete: Schema.optional(TrimmedNonEmptyString),
+  expiresInSeconds: Schema.Int,
+  intervalSeconds: Schema.Int,
+});
+export type CloudSignInStartResult = typeof CloudSignInStartResult.Type;
+
+export const CloudSignInPollInput = Schema.Struct({ deviceCode: TrimmedNonEmptyString });
+export type CloudSignInPollInput = typeof CloudSignInPollInput.Type;
+
+export const CloudSignInPollResult = Schema.Union([
+  Schema.Struct({ state: Schema.Literal("pending") }),
+  Schema.Struct({ state: Schema.Literal("slow_down"), intervalSeconds: Schema.Int }),
+  Schema.Struct({ state: Schema.Literal("complete"), status: CloudAccountStatus }),
+  Schema.Struct({ state: Schema.Literals(["denied", "expired"]) }),
+]);
+export type CloudSignInPollResult = typeof CloudSignInPollResult.Type;
+
+export const CloudEmptyInput = Schema.Struct({});
+export type CloudEmptyInput = typeof CloudEmptyInput.Type;

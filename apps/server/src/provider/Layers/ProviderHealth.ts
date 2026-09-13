@@ -10,6 +10,7 @@
  */
 import * as OS from "node:os";
 import { NATIVE_HARNESS_IDS, probeNativeHarnessStatuses } from "../../harnesses/accounts";
+import { readCloudSession } from "../../cloud/session";
 import type {
   ProviderKind,
   ServerSettings,
@@ -130,6 +131,8 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.opencode.binaryPath;
     case "pi":
       return settings.providers.pi.binaryPath;
+    case "djlCloud":
+      return "";
   }
 };
 
@@ -181,10 +184,44 @@ const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in DJL settings.";
 
+const DJL_CLOUD_PROVIDER = "djlCloud" as const;
 const PROVIDERS = [
   OPENCODE_PROVIDER,
   ...NATIVE_HARNESS_IDS,
+  DJL_CLOUD_PROVIDER,
 ] as const satisfies ReadonlyArray<ProviderKind>;
+
+// ── DJL Cloud health check ───────────────────────────────────────────
+// No binary: the provider is available whenever a cloud session is stored.
+
+export const checkDjlCloudProviderStatus = (
+  secretsDir: string,
+): Effect.Effect<ServerProviderStatus> =>
+  Effect.promise(async () => {
+    const checkedAt = new Date().toISOString();
+    const session = await readCloudSession(secretsDir);
+    if (!session) {
+      return {
+        provider: DJL_CLOUD_PROVIDER,
+        status: "warning" as const,
+        available: true,
+        authStatus: "unauthenticated" as const,
+        authType: "djl-cloud",
+        checkedAt,
+        message: "Sign in to DJL Cloud in Settings → Accounts to use cloud models.",
+      } satisfies ServerProviderStatus;
+    }
+    return {
+      provider: DJL_CLOUD_PROVIDER,
+      status: "ready" as const,
+      available: true,
+      authStatus: "authenticated" as const,
+      authType: "djl-cloud",
+      authLabel: session.email,
+      checkedAt,
+      message: `Signed in to DJL Cloud as ${session.email}.`,
+    } satisfies ServerProviderStatus;
+  });
 
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 const UPDATE_TIMEOUT_MS = 5 * 60_000;
@@ -2298,6 +2335,11 @@ export const ProviderHealthLive = Layer.effect(
                     ),
                 ),
               ).pipe(Effect.map((statuses) => statuses.map(Option.some))),
+              checkProviderWhenEnabled(
+                settings,
+                DJL_CLOUD_PROVIDER,
+                checkDjlCloudProviderStatus(serverConfig.secretsDir),
+              ).pipe(Effect.map((status) => [status])),
             ],
             {
               concurrency: "unbounded",

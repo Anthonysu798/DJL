@@ -6,6 +6,7 @@
 import type { ProviderKind } from "@synara/contracts";
 
 export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = [
+  "djlCloud",
   "opencode",
   "codex",
   "claudeAgent",

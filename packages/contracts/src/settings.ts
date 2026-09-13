@@ -99,6 +99,17 @@ export const KiloServerProviderSettings = Schema.Struct({
 });
 export type KiloServerProviderSettings = typeof KiloServerProviderSettings.Type;
 
+/**
+ * DJL Cloud: the hosted, credit-based provider. The session token never lives
+ * in settings (settings are streamed to the renderer); it is stored in the
+ * server's secrets directory. Only the preferred region hint is a setting.
+ */
+export const DjlCloudServerProviderSettings = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  region: Schema.Literals(["auto", "global", "asia"]).pipe(Schema.withDecodingDefault(() => "auto" as const)),
+});
+export type DjlCloudServerProviderSettings = typeof DjlCloudServerProviderSettings.Type;
+
 export const PiServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "pi")),
@@ -143,6 +154,7 @@ export const ServerSettings = Schema.Struct({
     kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    djlCloud: DjlCloudServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
 });

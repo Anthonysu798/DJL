@@ -11,6 +11,12 @@ import type {
   HarnessEndLoginInput,
 } from "./harnessAccounts";
 import type {
+  CloudAccountStatus,
+  CloudSignInPollInput,
+  CloudSignInPollResult,
+  CloudSignInStartResult,
+} from "./cloud";
+import type {
   AuthBearerBootstrapResult,
   AuthBootstrapInput,
   AuthBootstrapResult,
@@ -760,6 +766,12 @@ export interface NativeApi {
     transferLegacyOpenCodeCredentials: () => Promise<HarnessLegacyOpenCodeCredentialsResult>;
     startLogin: (input: HarnessLoginInput) => Promise<HarnessLoginResult>;
     endLogin: (input: HarnessEndLoginInput) => Promise<void>;
+  };
+  cloud: {
+    getStatus: () => Promise<CloudAccountStatus>;
+    startSignIn: () => Promise<CloudSignInStartResult>;
+    pollSignIn: (input: CloudSignInPollInput) => Promise<CloudSignInPollResult>;
+    signOut: () => Promise<CloudAccountStatus>;
   };
   provider: {
     getComposerCapabilities: (
