@@ -8,6 +8,7 @@ COPY package.json bun.lock bunfig.toml ./
 COPY apps/api/package.json apps/api/
 COPY apps/worker/package.json apps/worker/
 COPY apps/web/package.json apps/web/
+COPY apps/admin/package.json apps/admin/
 COPY packages/db/package.json packages/db/
 COPY packages/domain/package.json packages/domain/
 COPY packages/notify/package.json packages/notify/

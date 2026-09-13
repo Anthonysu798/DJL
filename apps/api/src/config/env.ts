@@ -58,7 +58,12 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     redisUrl: required("REDIS_URL", env, "redis://localhost:63799"),
     betterAuthSecret: secret,
     mockExternals,
-    trustedOrigins: [webPublicUrl, "djl://app", ...(isLocal ? ["http://localhost:5173"] : [])],
+    trustedOrigins: [
+      webPublicUrl,
+      "djl://app",
+      ...(env.ADMIN_PUBLIC_URL?.trim() ? [env.ADMIN_PUBLIC_URL.trim()] : []),
+      ...(isLocal ? ["http://localhost:5173", "http://localhost:3001"] : []),
+    ],
     cookieDomain: env.COOKIE_DOMAIN?.trim() || null,
     google,
     apple,
