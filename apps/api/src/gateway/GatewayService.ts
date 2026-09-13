@@ -673,16 +673,21 @@ export class GatewayService {
       const breaker = this.breaker(model.provider);
       let result;
       try {
-        result = await provider.generateImage(
-          {
-            model: model.upstreamModelId,
-            prompt: body.prompt,
-            n,
-            ...(body.size ? { size: body.size } : {}),
-            ...(body.quality ? { quality: body.quality } : {}),
-            user: facts.principal.orgId.slice(0, 16),
-          },
-          new AbortController().signal,
+        result = await withSpan(
+          "gateway.image",
+          { provider: model.provider, model: model.modelId },
+          () =>
+            provider.generateImage(
+              {
+                model: model.upstreamModelId,
+                prompt: body.prompt,
+                n,
+                ...(body.size ? { size: body.size } : {}),
+                ...(body.quality ? { quality: body.quality } : {}),
+                user: facts.principal.orgId.slice(0, 16),
+              },
+              new AbortController().signal,
+            ),
         );
         breaker.success();
       } catch (error) {
@@ -803,9 +808,18 @@ export class GatewayService {
       const provider = this.deps.providers[model.provider]!;
       let result;
       try {
-        result = await provider.embed(
-          { model: model.upstreamModelId, input: inputs, user: facts.principal.orgId.slice(0, 16) },
-          new AbortController().signal,
+        result = await withSpan(
+          "gateway.embed",
+          { provider: model.provider, model: model.modelId },
+          () =>
+            provider.embed(
+              {
+                model: model.upstreamModelId,
+                input: inputs,
+                user: facts.principal.orgId.slice(0, 16),
+              },
+              new AbortController().signal,
+            ),
         );
         this.breaker(model.provider).success();
       } catch (error) {
