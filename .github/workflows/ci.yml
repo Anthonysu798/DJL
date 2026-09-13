@@ -1,0 +1,81 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  FORCE_COLOR: "1"
+
+jobs:
+  quality:
+    name: Format, lint, typecheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile
+      - run: bun run fmt:check
+      - run: bun run lint
+      - run: bun run typecheck
+
+  tests:
+    name: Unit, ledger invariants, abuse suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: djl
+          POSTGRES_PASSWORD: djl
+          POSTGRES_DB: djl
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U djl" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["63799:6379"]
+    env:
+      DATABASE_URL: postgres://djl:djl@localhost:54329/djl
+      REDIS_URL: redis://localhost:63799
+      DJL_MOCK_EXTERNALS: "true"
+      BETTER_AUTH_SECRET: ci-only-secret-not-for-production-use-0000
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile
+      - run: bun run db:migrate
+      - run: bun run test
+
+  secrets-scan:
+    name: Secret and dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

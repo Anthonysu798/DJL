@@ -1,0 +1,39 @@
+{
+  "name": "@djl/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "auth:generate": "better-auth generate --config auth.cli.ts --output ../../packages/db/src/schema/auth.ts -y"
+  },
+  "dependencies": {
+    "@better-auth/cli": "^1.4.21",
+    "@better-auth/passkey": "^1.7.4",
+    "@djl/db": "workspace:*",
+    "@djl/domain": "workspace:*",
+    "@djl/notify": "workspace:*",
+    "@djl/providers": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "better-auth": "^1.7.4",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "ioredis": "^6.0.0",
+    "pg-boss": "^12.31.0",
+    "postgres": "catalog:",
+    "resend": "^6.28.0",
+    "stripe": "^22.6.2",
+    "twilio": "^6.1.1"
+  },
+  "devDependencies": {
+    "@effect/language-service": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

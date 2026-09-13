@@ -1,0 +1,17 @@
+node_modules
+.bun
+.turbo
+.DS_Store
+*.log
+*.tsbuildinfo
+apps/*/dist
+packages/*/dist
+apps/*/.next
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+coverage/

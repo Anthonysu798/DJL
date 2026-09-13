@@ -1,0 +1,12 @@
+app = "djl-worker"
+primary_region = "iad"
+
+[build]
+dockerfile = "../../apps/worker/Dockerfile"
+
+[env]
+DJL_ENV = "production"
+
+[[vm]]
+size = "shared-cpu-2x"
+memory = "2gb"
