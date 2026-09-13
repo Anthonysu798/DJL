@@ -401,6 +401,66 @@ CREATE TABLE "settings" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "attachments" (
+	"org_id" uuid NOT NULL,
+	"content_hash" text NOT NULL,
+	"bucket_key" text NOT NULL,
+	"mime_type" text NOT NULL,
+	"size_bytes" integer NOT NULL,
+	"uploaded_by" uuid,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "device_cursors" (
+	"device_id" uuid PRIMARY KEY NOT NULL,
+	"org_id" uuid NOT NULL,
+	"pulled_through" bigint DEFAULT 0 NOT NULL,
+	"last_pushed_event_id" text,
+	"last_sync_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE TABLE "sync_usage" (
+	"org_id" uuid PRIMARY KEY NOT NULL,
+	"event_bytes" bigint DEFAULT 0 NOT NULL,
+	"attachment_bytes" bigint DEFAULT 0 NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "thread_events" (
+	"sequence" bigserial PRIMARY KEY NOT NULL,
+	"org_id" uuid NOT NULL,
+	"origin_device_id" uuid,
+	"event_id" text NOT NULL,
+	"aggregate_kind" text NOT NULL,
+	"stream_id" text NOT NULL,
+	"stream_version" integer NOT NULL,
+	"event_type" text NOT NULL,
+	"occurred_at" timestamp with time zone NOT NULL,
+	"command_id" text,
+	"causation_event_id" text,
+	"correlation_id" text,
+	"actor_kind" text NOT NULL,
+	"payload" jsonb NOT NULL,
+	"metadata" jsonb,
+	"size_bytes" integer NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "thread_index" (
+	"org_id" uuid NOT NULL,
+	"thread_id" text NOT NULL,
+	"project_id" text,
+	"title" text,
+	"provider" text,
+	"model" text,
+	"last_event_sequence" bigint NOT NULL,
+	"last_event_at" timestamp with time zone NOT NULL,
+	"archived" boolean DEFAULT false NOT NULL,
+	"deleted" boolean DEFAULT false NOT NULL,
+	"event_count" integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_inviter_id_user_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -422,6 +482,14 @@ ALTER TABLE "devices" ADD CONSTRAINT "devices_user_id_user_id_fk" FOREIGN KEY ("
 ALTER TABLE "usage_requests" ADD CONSTRAINT "usage_requests_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usage_requests" ADD CONSTRAINT "usage_requests_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_admin_id_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."admins"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "attachments" ADD CONSTRAINT "attachments_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "attachments" ADD CONSTRAINT "attachments_uploaded_by_user_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "device_cursors" ADD CONSTRAINT "device_cursors_device_id_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "device_cursors" ADD CONSTRAINT "device_cursors_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sync_usage" ADD CONSTRAINT "sync_usage_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "thread_events" ADD CONSTRAINT "thread_events_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "thread_events" ADD CONSTRAINT "thread_events_origin_device_id_devices_id_fk" FOREIGN KEY ("origin_device_id") REFERENCES "public"."devices"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "thread_index" ADD CONSTRAINT "thread_index_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "account_userId_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "invitation_organizationId_idx" ON "invitation" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "invitation_email_idx" ON "invitation" USING btree ("email");--> statement-breakpoint
@@ -455,4 +523,11 @@ CREATE INDEX "usage_requests_user_idx" ON "usage_requests" USING btree ("user_id
 CREATE INDEX "admin_sessions_admin_idx" ON "admin_sessions" USING btree ("admin_id");--> statement-breakpoint
 CREATE INDEX "audit_events_target_idx" ON "audit_events" USING btree ("target_type","target_id");--> statement-breakpoint
 CREATE INDEX "audit_events_actor_idx" ON "audit_events" USING btree ("actor_type","actor_id");--> statement-breakpoint
-CREATE INDEX "audit_events_created_idx" ON "audit_events" USING btree ("created_at");
+CREATE INDEX "audit_events_created_idx" ON "audit_events" USING btree ("created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "attachments_org_hash_idx" ON "attachments" USING btree ("org_id","content_hash");--> statement-breakpoint
+CREATE INDEX "device_cursors_org_idx" ON "device_cursors" USING btree ("org_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "thread_events_org_event_idx" ON "thread_events" USING btree ("org_id","event_id");--> statement-breakpoint
+CREATE INDEX "thread_events_org_sequence_idx" ON "thread_events" USING btree ("org_id","sequence");--> statement-breakpoint
+CREATE INDEX "thread_events_org_stream_idx" ON "thread_events" USING btree ("org_id","stream_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "thread_index_org_thread_idx" ON "thread_index" USING btree ("org_id","thread_id");--> statement-breakpoint
+CREATE INDEX "thread_index_org_last_idx" ON "thread_index" USING btree ("org_id","last_event_at");

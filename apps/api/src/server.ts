@@ -35,6 +35,8 @@ import { TrialService } from "./trial/TrialService.ts";
 import { AdminAuth } from "./admin/AdminAuth.ts";
 import { AdminService } from "./admin/AdminService.ts";
 import { GatewayService } from "./gateway/GatewayService.ts";
+import { FakeBlobStore, createS3BlobStore, type BlobStore } from "./sync/BlobStore.ts";
+import { SyncService } from "./sync/SyncService.ts";
 import {
   createMemoryRateLimiter,
   createRedisRateLimiter,
@@ -56,6 +58,8 @@ export interface ApiRuntime {
   readonly gateway: GatewayService;
   readonly adminAuth: AdminAuth;
   readonly admin: AdminService;
+  readonly sync: SyncService;
+  readonly blobs: BlobStore;
   readonly outbox: MockOutbox | null;
   readonly address: { readonly host: string; readonly port: number };
   readonly close: () => Promise<void>;
@@ -182,6 +186,16 @@ export async function startApi(
     onAlert: (alert) => void senders.alerts?.post(alert),
   });
   const version = process.env.DJL_VERSION ?? "dev";
+  const blobs: BlobStore = env.mockExternals
+    ? new FakeBlobStore()
+    : createS3BlobStore({
+        endpoint: requireEnv("STORAGE_S3_ENDPOINT"),
+        region: process.env.STORAGE_S3_REGION ?? "us-east-1",
+        bucket: process.env.STORAGE_BUCKET ?? "djl-sync",
+        accessKeyId: requireEnv("STORAGE_ACCESS_KEY_ID"),
+        secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
+      });
+  const sync = new SyncService(db, blobs);
   const adminAuth = new AdminAuth(db, env.betterAuthSecret);
   const admin = new AdminService({ db, ledger, limiter, gateway, trial, version });
   const routes = makeRoutes({
@@ -200,6 +214,7 @@ export async function startApi(
     admin,
     secureCookies: env.env !== "local" && env.env !== "test",
     gatewayStatus: () => gateway.status(),
+    sync,
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;
@@ -233,6 +248,8 @@ export async function startApi(
     gateway,
     adminAuth,
     admin,
+    sync,
+    blobs,
     outbox,
     address: bound,
     close: async () => {
