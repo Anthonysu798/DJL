@@ -30,8 +30,6 @@ export default function Overview() {
   const stats = useLoad(() => admin<Stats>(`/stats?range=${range}`), [range]);
   const status = useLoad(() => admin<Status>("/status"), []);
   const s = stats.data;
-  const sum = (rows: { [k: string]: unknown }[], key: string) =>
-    rows.reduce((a, r) => a + Number(r[key] ?? 0), 0);
   return (
     <Shell>
       <div className="mb-4 flex flex-wrap items-center gap-2">
