@@ -8,6 +8,7 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstab
 
 import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
 import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
+import { makeAdminRoutes, type AdminRouteDeps } from "../admin/routes.ts";
 import { makeGatewayRoutes, type GatewayRouteDeps } from "../gateway/routes.ts";
 import { makeTrialRoutes, type TrialRouteDeps } from "../trial/routes.ts";
 import type { DjlAuth } from "../auth/auth.ts";
@@ -15,7 +16,8 @@ import type { ApiEnv } from "../config/env.ts";
 import { RequestContext } from "./context.ts";
 import { errorResponse } from "./errors.ts";
 
-export interface RouteDeps extends AccountDeps, BillingRouteDeps, TrialRouteDeps, GatewayRouteDeps {
+export interface RouteDeps
+  extends AccountDeps, BillingRouteDeps, TrialRouteDeps, GatewayRouteDeps, AdminRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
@@ -85,6 +87,7 @@ export function makeRoutes(deps: RouteDeps) {
     makeBillingRoutes(deps),
     makeTrialRoutes(deps),
     makeGatewayRoutes(deps),
+    makeAdminRoutes(deps),
     fallback,
   );
 }

@@ -32,6 +32,8 @@ import {
 } from "./billing/StripeGateway.ts";
 import { LedgerService } from "./credits/LedgerService.ts";
 import { TrialService } from "./trial/TrialService.ts";
+import { AdminAuth } from "./admin/AdminAuth.ts";
+import { AdminService } from "./admin/AdminService.ts";
 import { GatewayService } from "./gateway/GatewayService.ts";
 import {
   createMemoryRateLimiter,
@@ -51,6 +53,8 @@ export interface ApiRuntime {
   readonly stripe: StripeGateway;
   readonly trial: TrialService;
   readonly gateway: GatewayService;
+  readonly adminAuth: AdminAuth;
+  readonly admin: AdminService;
   readonly outbox: MockOutbox | null;
   readonly address: { readonly host: string; readonly port: number };
   readonly close: () => Promise<void>;
@@ -168,11 +172,14 @@ export async function startApi(
     },
     onAlert: (alert) => void senders.alerts?.post(alert),
   });
+  const version = process.env.DJL_VERSION ?? "dev";
+  const adminAuth = new AdminAuth(db, env.betterAuthSecret);
+  const admin = new AdminService({ db, ledger, limiter, gateway, trial, version });
   const routes = makeRoutes({
     env,
     auth,
     readiness,
-    version: process.env.DJL_VERSION ?? "dev",
+    version,
     db,
     ledger,
     principals,
@@ -180,6 +187,10 @@ export async function startApi(
     trial,
     gateway,
     ipSalt: env.betterAuthSecret,
+    adminAuth,
+    admin,
+    secureCookies: env.env !== "local" && env.env !== "test",
+    gatewayStatus: () => gateway.status(),
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;
@@ -211,6 +222,8 @@ export async function startApi(
     stripe,
     trial,
     gateway,
+    adminAuth,
+    admin,
     outbox,
     address: bound,
     close: async () => {

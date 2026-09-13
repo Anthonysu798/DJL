@@ -119,6 +119,13 @@ export class GatewayService {
     this.catalogCache = null;
   }
 
+  /** In-flight streams and breaker states for the admin status page. */
+  status(): { readonly inFlight: number; readonly breakers: Record<string, string> } {
+    const breakers: Record<string, string> = {};
+    for (const [provider, breaker] of this.breakers) breakers[provider] = breaker.state();
+    return { inFlight: this.inFlight, breakers };
+  }
+
   async listModels() {
     const models = await this.catalog();
     return models

@@ -13,6 +13,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
   admin,
   bearer,
+  deviceAuthorization,
   emailOTP,
   haveIBeenPwned,
   jwt,
@@ -28,6 +29,9 @@ import type { ApiEnv } from "../config/env.ts";
 import { hashPassword, verifyPassword } from "./password.ts";
 
 const DAY = 60 * 60 * 24;
+
+/** Client ids allowed to start the device flow. */
+export const DEVICE_CLIENT_IDS = new Set(["djl-desktop", "djl-ios", "djl-cli"]);
 
 export interface AuthNotifier {
   readonly sendEmailOtp: (input: {
@@ -200,6 +204,16 @@ export function createAuth(input: {
       bearer(),
       haveIBeenPwned(),
       admin(),
+      // OAuth device flow for desktop and iOS: the app shows a short code, the
+      // user approves it in the browser after signing in by any method, and the
+      // app polls for its session. No deep links, works on every platform.
+      deviceAuthorization({
+        expiresIn: "10m",
+        interval: "5s",
+        userCodeLength: 8,
+        verificationUri: `${env.webPublicUrl}/device`,
+        validateClient: async (clientId) => DEVICE_CLIENT_IDS.has(clientId),
+      }),
     ],
   });
 }
