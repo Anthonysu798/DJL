@@ -135,6 +135,37 @@ describe("api end to end", () => {
     expect(ledger.entries[0].type).toBe("topup");
   });
 
+  it("lists models and streams a chat completion through the gateway, deducting credits", async () => {
+    const models = await (await call("/v1/models")).json();
+    expect(models.models.length).toBeGreaterThan(0);
+    const before = Number((await (await call("/v1/credits")).json()).total);
+    const res = await call("/v1/chat/completions", {
+      method: "POST",
+      json: {
+        model: "gpt-5-mini",
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 50,
+        stream: true,
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    const text = await res.text();
+    const content = text
+      .split("\n\n")
+      .filter((b) => b.startsWith("data: {"))
+      .map((b) => JSON.parse(b.slice(6)).choices?.[0]?.delta?.content ?? "")
+      .join("");
+    expect(content).toBe("echo: ping");
+    expect(text).toContain("event: djl.usage");
+    expect(text.trimEnd().endsWith("data: [DONE]")).toBe(true);
+    const after = Number((await (await call("/v1/credits")).json()).total);
+    expect(after).toBeLessThan(before);
+    const usage = await (await call("/v1/usage")).json();
+    expect(usage.recent[0].status).toBe("settled");
+    expect(usage.recent[0].model).toBe("gpt-5-mini");
+  });
+
   it("registers and lists a device", async () => {
     const created = await call("/v1/devices", {
       method: "POST",

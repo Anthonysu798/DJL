@@ -16,8 +16,10 @@ import {
   passwordReset,
   type EmailSender,
   type SmsSender,
+  type TeamAlertSender,
 } from "@djl/notify";
 import { Effect, Layer, Scope } from "effect";
+import { Redis } from "ioredis";
 import { HttpRouter } from "effect/unstable/http";
 
 import { createAuth, type AuthNotifier } from "./auth/auth.ts";
@@ -30,6 +32,13 @@ import {
 } from "./billing/StripeGateway.ts";
 import { LedgerService } from "./credits/LedgerService.ts";
 import { TrialService } from "./trial/TrialService.ts";
+import { GatewayService } from "./gateway/GatewayService.ts";
+import {
+  createMemoryRateLimiter,
+  createRedisRateLimiter,
+  type RateLimiter,
+} from "./gateway/RateLimiter.ts";
+import { buildProviders } from "./gateway/providers.ts";
 import { loadApiEnv, type ApiEnv } from "./config/env.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
@@ -41,6 +50,7 @@ export interface ApiRuntime {
   readonly billing: BillingService;
   readonly stripe: StripeGateway;
   readonly trial: TrialService;
+  readonly gateway: GatewayService;
   readonly outbox: MockOutbox | null;
   readonly address: { readonly host: string; readonly port: number };
   readonly close: () => Promise<void>;
@@ -81,10 +91,10 @@ export async function startApi(
   const { db, close: closeDb } = createDatabase(env.databaseUrl);
 
   let outbox: MockOutbox | null = null;
-  let senders: { email: EmailSender; sms: SmsSender };
+  let senders: { email: EmailSender; sms: SmsSender; alerts?: TeamAlertSender };
   if (env.mockExternals) {
     outbox = new MockOutbox(env.env === "local");
-    senders = { email: outbox, sms: outbox };
+    senders = { email: outbox, sms: outbox, alerts: outbox };
   } else {
     senders = {
       email: createResendSender({
@@ -132,6 +142,32 @@ export async function startApi(
     dailyBudgetUsdCents: 10_000,
     hashSalt: env.betterAuthSecret,
   });
+  let limiter: RateLimiter;
+  let redis: Redis | null = null;
+  if (env.mockExternals) {
+    limiter = createMemoryRateLimiter();
+  } else {
+    redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
+    limiter = createRedisRateLimiter(redis);
+  }
+  const providers = buildProviders(env, process.env, (alert) => {
+    void senders.alerts?.post(alert);
+  });
+  const gateway = new GatewayService({
+    db,
+    ledger,
+    limiter,
+    providers,
+    trial,
+    config: {
+      region,
+      catalogTtlMs: 30_000,
+      refusalFlagThreshold: 10,
+      instanceSoftCap: 150,
+      instanceHardCap: 200,
+    },
+    onAlert: (alert) => void senders.alerts?.post(alert),
+  });
   const routes = makeRoutes({
     env,
     auth,
@@ -142,6 +178,8 @@ export async function startApi(
     principals,
     billing,
     trial,
+    gateway,
+    ipSalt: env.betterAuthSecret,
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;
@@ -172,10 +210,12 @@ export async function startApi(
     billing,
     stripe,
     trial,
+    gateway,
     outbox,
     address: bound,
     close: async () => {
       await Effect.runPromise(Scope.close(scope, { _tag: "Success", value: undefined } as never));
+      redis?.disconnect();
       await closeDb();
     },
   };

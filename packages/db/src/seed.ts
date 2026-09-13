@@ -59,5 +59,7 @@ if (import.meta.main) {
     process.exit(1);
   }
   await seed(url);
-  console.log("seed applied");
+  const { seedModels } = await import("./seedModels.ts");
+  const models = await seedModels(url);
+  console.log(`seed applied (${models} new models)`);
 }
