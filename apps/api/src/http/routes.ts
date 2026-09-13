@@ -6,12 +6,14 @@
 import { Effect, Layer } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
+import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
+import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
 import type { DjlAuth } from "../auth/auth.ts";
 import type { ApiEnv } from "../config/env.ts";
 import { RequestContext } from "./context.ts";
 import { errorResponse } from "./errors.ts";
 
-export interface RouteDeps {
+export interface RouteDeps extends AccountDeps, BillingRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
@@ -73,5 +75,12 @@ export function makeRoutes(deps: RouteDeps) {
     }),
   );
 
-  return Layer.mergeAll(health, ready, authRoutes, fallback);
+  return Layer.mergeAll(
+    health,
+    ready,
+    authRoutes,
+    makeAccountRoutes(deps),
+    makeBillingRoutes(deps),
+    fallback,
+  );
 }

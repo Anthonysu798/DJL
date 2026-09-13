@@ -21,6 +21,14 @@ import { Effect, Layer, Scope } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
 import { createAuth, type AuthNotifier } from "./auth/auth.ts";
+import { makePrincipalResolver } from "./auth/guard.ts";
+import { BillingService } from "./billing/BillingService.ts";
+import {
+  FakeStripeGateway,
+  createStripeGateway,
+  type StripeGateway,
+} from "./billing/StripeGateway.ts";
+import { LedgerService } from "./credits/LedgerService.ts";
 import { loadApiEnv, type ApiEnv } from "./config/env.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
@@ -28,6 +36,9 @@ import { makeRoutes } from "./http/routes.ts";
 export interface ApiRuntime {
   readonly env: ApiEnv;
   readonly db: ReturnType<typeof createDatabase>["db"];
+  readonly ledger: LedgerService;
+  readonly billing: BillingService;
+  readonly stripe: StripeGateway;
   readonly outbox: MockOutbox | null;
   readonly address: { readonly host: string; readonly port: number };
   readonly close: () => Promise<void>;
@@ -101,7 +112,28 @@ export async function startApi(
     },
   };
 
-  const routes = makeRoutes({ env, auth, readiness, version: process.env.DJL_VERSION ?? "dev" });
+  const ledger = new LedgerService(db);
+  const principals = makePrincipalResolver(auth, db);
+  const stripe: StripeGateway = env.mockExternals
+    ? new FakeStripeGateway()
+    : createStripeGateway({
+        secretKey: requireEnv("STRIPE_SECRET_KEY"),
+        webhookSecret: requireEnv("STRIPE_WEBHOOK_SECRET"),
+      });
+  const billing = new BillingService(db, ledger, stripe, {
+    webPublicUrl: env.webPublicUrl,
+    topupPriceId: process.env.STRIPE_TOPUP_PRICE_ID ?? "price_topup_fake",
+  });
+  const routes = makeRoutes({
+    env,
+    auth,
+    readiness,
+    version: process.env.DJL_VERSION ?? "dev",
+    db,
+    ledger,
+    principals,
+    billing,
+  });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;
 
@@ -127,6 +159,9 @@ export async function startApi(
   return {
     env,
     db,
+    ledger,
+    billing,
+    stripe,
     outbox,
     address: bound,
     close: async () => {
