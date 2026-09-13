@@ -29,6 +29,7 @@ import {
   type StripeGateway,
 } from "./billing/StripeGateway.ts";
 import { LedgerService } from "./credits/LedgerService.ts";
+import { TrialService } from "./trial/TrialService.ts";
 import { loadApiEnv, type ApiEnv } from "./config/env.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
@@ -39,6 +40,7 @@ export interface ApiRuntime {
   readonly ledger: LedgerService;
   readonly billing: BillingService;
   readonly stripe: StripeGateway;
+  readonly trial: TrialService;
   readonly outbox: MockOutbox | null;
   readonly address: { readonly host: string; readonly port: number };
   readonly close: () => Promise<void>;
@@ -124,6 +126,12 @@ export async function startApi(
     webPublicUrl: env.webPublicUrl,
     topupPriceId: process.env.STRIPE_TOPUP_PRICE_ID ?? "price_topup_fake",
   });
+  const trial = new TrialService(db, ledger, senders.sms, {
+    credits: 200,
+    expiryDays: 14,
+    dailyBudgetUsdCents: 10_000,
+    hashSalt: env.betterAuthSecret,
+  });
   const routes = makeRoutes({
     env,
     auth,
@@ -133,6 +141,7 @@ export async function startApi(
     ledger,
     principals,
     billing,
+    trial,
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;
@@ -162,6 +171,7 @@ export async function startApi(
     ledger,
     billing,
     stripe,
+    trial,
     outbox,
     address: bound,
     close: async () => {

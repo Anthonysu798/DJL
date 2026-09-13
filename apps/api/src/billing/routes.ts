@@ -37,6 +37,22 @@ function handle<R>(
 
 const BILLING_ROLES = ["owner", "billing"] as const;
 
+const attempt = (fn: () => Promise<{ url: string }>) =>
+  Effect.tryPromise({
+    try: fn,
+    catch: (e) => {
+      if (e instanceof ApiError) return e;
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "billing checkout failed",
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
+      return new ApiError(502, "billing_error", "Billing provider error.");
+    },
+  });
+
 export function makeBillingRoutes(deps: BillingRouteDeps) {
   const orgName = (orgId: string) =>
     Effect.promise(

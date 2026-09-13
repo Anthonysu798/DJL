@@ -369,7 +369,8 @@ CREATE TABLE "daily_stats" (
 	"settled_micro" text DEFAULT '0' NOT NULL,
 	"revenue_usd_cents" integer DEFAULT 0 NOT NULL,
 	"provider_cost_usd_micro" text DEFAULT '0' NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "daily_stats_day_country_pk" PRIMARY KEY("day","country")
 );
 --> statement-breakpoint
 CREATE TABLE "kill_switches" (
@@ -441,5 +442,4 @@ CREATE INDEX "usage_requests_user_idx" ON "usage_requests" USING btree ("user_id
 CREATE INDEX "admin_sessions_admin_idx" ON "admin_sessions" USING btree ("admin_id");--> statement-breakpoint
 CREATE INDEX "audit_events_target_idx" ON "audit_events" USING btree ("target_type","target_id");--> statement-breakpoint
 CREATE INDEX "audit_events_actor_idx" ON "audit_events" USING btree ("actor_type","actor_id");--> statement-breakpoint
-CREATE INDEX "audit_events_created_idx" ON "audit_events" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "daily_stats_day_country_idx" ON "daily_stats" USING btree ("day","country");
+CREATE INDEX "audit_events_created_idx" ON "audit_events" USING btree ("created_at");

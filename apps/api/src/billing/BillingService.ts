@@ -23,7 +23,7 @@ export interface BillingConfig {
   readonly topupPriceId: string;
 }
 
-const PAID_PLANS: readonly PlanId[] = ["starter", "business", "autopilot"];
+const PAID_PLANS = new Set<PlanId>(["starter", "business", "autopilot"]);
 
 type SubscriptionStatus = (typeof schema.subscriptionStatusEnum.enumValues)[number];
 const SUBSCRIPTION_STATUSES = new Set<string>(schema.subscriptionStatusEnum.enumValues);
@@ -70,8 +70,7 @@ export class BillingService {
   }): Promise<{ readonly url: string }> {
     if (await this.killSwitchEngaged())
       throw new ApiError(503, "billing_paused", "Billing is temporarily paused.");
-    if (!PAID_PLANS.includes(input.planId))
-      throw new ApiError(400, "bad_plan", "Choose a paid plan.");
+    if (!PAID_PLANS.has(input.planId)) throw new ApiError(400, "bad_plan", "Choose a paid plan.");
     const plan = await this.db.query.plans.findFirst({ where: eq(schema.plans.id, input.planId) });
     const priceId =
       input.interval === "year" ? plan?.stripeAnnualPriceId : plan?.stripeMonthlyPriceId;

@@ -1,0 +1,70 @@
+name: Deploy production
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify tag commit is green on main
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: meta
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git merge-base --is-ancestor HEAD origin/main || { echo "tag is not on main"; exit 1; }
+      - name: Require a successful Backend CI run for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusion=$(gh run list --workflow "Backend CI" --commit "$(git rev-parse HEAD)" --json conclusion --jq '.[0].conclusion // "none"')
+          test "$conclusion" = "success" || { echo "Backend CI for this commit is $conclusion"; exit 1; }
+
+  deploy:
+    name: Migrate and deploy production
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    # The `production` environment requires a manual approval in GitHub before this job runs.
+    environment: production
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile
+      - name: Apply migrations, policies, and seed
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          bun run db:migrate
+          sudo apt-get install -y -q postgresql-client >/dev/null
+          bash infra/scripts/apply-policies.sh
+          bun run db:seed
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy API (rolling)
+        run: flyctl deploy --config infra/fly/api.toml --app djl-api --build-arg DJL_VERSION=${{ github.ref_name }} --remote-only --strategy rolling
+      - name: Deploy worker
+        run: flyctl deploy --config infra/fly/worker.toml --app djl-worker --build-arg DJL_VERSION=${{ github.ref_name }} --remote-only
+      - name: Smoke
+        run: |
+          curl --fail --silent --show-error https://api.slcor.com/health | grep -q "\"version\":\"${{ github.ref_name }}\""
+          curl --fail --silent --show-error https://api.slcor.com/ready

@@ -5,7 +5,7 @@
  */
 import { LedgerService } from "@djl/api/credits";
 import { createDatabase } from "@djl/db";
-import PgBoss from "pg-boss";
+import { PgBoss } from "pg-boss";
 
 import { JOBS } from "./jobs.ts";
 

@@ -53,6 +53,7 @@
         "@djl/notify": "workspace:*",
         "@djl/providers": "workspace:*",
         "@effect/platform-node": "catalog:",
+        "drizzle-orm": "catalog:",
         "effect": "catalog:",
         "pg-boss": "^12.31.0",
         "resend": "^6.28.0",

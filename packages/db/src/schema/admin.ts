@@ -6,6 +6,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -107,7 +108,7 @@ export const dailyStats = pgTable(
     providerCostUsdMicro: text("provider_cost_usd_micro").notNull().default("0"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("daily_stats_day_country_idx").on(t.day, t.country)],
+  (t) => [primaryKey({ columns: [t.day, t.country] })],
 );
 
 /** Global configuration knobs editable from admin (trial cap, priority weights, limits). */

@@ -1,5 +1,5 @@
 {
-  "id": "094fd43d-ecb9-45c1-a690-033c1503b367",
+  "id": "ab67dc41-025f-4efb-9164-34dee7d07d5a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2996,31 +2996,17 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "daily_stats_day_country_idx": {
-          "name": "daily_stats_day_country_idx",
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "daily_stats_day_country_pk": {
+          "name": "daily_stats_day_country_pk",
           "columns": [
-            {
-              "expression": "day",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "country",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
+            "day",
+            "country"
+          ]
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
