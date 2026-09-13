@@ -121,8 +121,18 @@ export function createMemoryRateLimiter(now: () => number = Date.now): RateLimit
     },
     async reset(prefix) {
       let n = 0;
-      for (const k of [...hits.keys()]) if (k.includes(prefix)) (hits.delete(k), n++);
-      for (const k of [...holds.keys()]) if (k.includes(prefix)) (holds.delete(k), n++);
+      for (const k of Array.from(hits.keys())) {
+        if (k.includes(prefix)) {
+          hits.delete(k);
+          n += 1;
+        }
+      }
+      for (const k of Array.from(holds.keys())) {
+        if (k.includes(prefix)) {
+          holds.delete(k);
+          n += 1;
+        }
+      }
       return n;
     },
     async inFlight(key) {

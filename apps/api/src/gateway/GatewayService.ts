@@ -71,6 +71,17 @@ interface PlanLimits {
 
 const TRAILER_EVENT = "djl.usage";
 
+/** Microcredits per token → credits per 1,000 tokens with two decimals. */
+function fmtPer1k(microPerToken: bigint): string {
+  const hundredths = (microPerToken * 1000n) / 10_000n;
+  return `${hundredths / 100n}.${(hundredths % 100n).toString().padStart(2, "0")}`;
+}
+/** Microcredits per unit → credits with two decimals. */
+function fmtEach(micro: bigint): string {
+  const hundredths = micro / 10_000n;
+  return `${hundredths / 100n}.${(hundredths % 100n).toString().padStart(2, "0")}`;
+}
+
 function priceOf(m: CatalogModel): ModelPrice {
   return {
     modelId: m.modelId,
@@ -110,8 +121,6 @@ export class GatewayService {
 
   async listModels() {
     const models = await this.catalog();
-    const per1k = (micro: bigint) =>
-      ((micro * 1000n) / 10_000n / 100n).toString().replace(/(\d+)(\d{2})$/, "$1.$2");
     return models
       .filter((m) => m.status !== "disabled")
       .map((m) => ({
@@ -120,23 +129,14 @@ export class GatewayService {
         displayName: m.displayName,
         capabilities: m.capabilities,
         price: {
-          inputPer1k: fmt1k(m.inputMicroPerToken),
-          outputPer1k: fmt1k(m.outputMicroPerToken),
-          perImage: fmtImage(m.microPerImage),
+          inputPer1k: fmtPer1k(m.inputMicroPerToken),
+          outputPer1k: fmtPer1k(m.outputMicroPerToken),
+          perImage: fmtEach(m.microPerImage),
         },
         contextWindow: m.contextWindow,
         maxOutputTokens: m.maxOutputTokens,
         status: m.status,
       }));
-    function fmt1k(micro: bigint) {
-      const hundredths = (micro * 1000n) / 10_000n; // microcredits per 1k → credits×100
-      return `${hundredths / 100n}.${(hundredths % 100n).toString().padStart(2, "0")}`;
-    }
-    function fmtImage(micro: bigint) {
-      const hundredths = micro / 10_000n;
-      return `${hundredths / 100n}.${(hundredths % 100n).toString().padStart(2, "0")}`;
-    }
-    void per1k;
   }
 
   // ---- guards --------------------------------------------------------------
@@ -389,10 +389,9 @@ export class GatewayService {
         max_tokens: maxOutput,
         user: facts.principal.orgId.slice(0, 16),
       };
-      const self = this;
       const encoder = new TextEncoder();
 
-      const produce = async function* (): AsyncGenerator<string> {
+      const produce = async function* (this: GatewayService): AsyncGenerator<string> {
         let outputChars = 0;
         let usage: Usage | null = null;
         let finish: ChatChunk["finish_reason"] = null;
@@ -412,13 +411,13 @@ export class GatewayService {
           };
           try {
             if (failed && outputChars === 0 && !usage) {
-              await self.deps.ledger.release({
+              await this.deps.ledger.release({
                 orgId: facts.principal.orgId,
                 reservationId: requestId,
                 idempotencyKey: `req:${requestId}`,
                 actor: "system:gateway",
               });
-              await self.finishRequest({
+              await this.finishRequest({
                 id: requestId,
                 status: "failed",
                 errorCode: failed.code,
@@ -436,7 +435,7 @@ export class GatewayService {
                 images: 0,
                 requests: 1,
               });
-              const { balances } = await self.deps.ledger.settle({
+              const { balances } = await this.deps.ledger.settle({
                 orgId: facts.principal.orgId,
                 reservationId: requestId,
                 actual,
@@ -444,7 +443,7 @@ export class GatewayService {
                 actor: "system:gateway",
               });
               const refusal = finish === "content_filter";
-              await self.finishRequest({
+              await this.finishRequest({
                 id: requestId,
                 status: cutOff ? "cut_off" : failed ? "failed" : "settled",
                 usage: finalUsage,
@@ -474,7 +473,7 @@ export class GatewayService {
                   `event: error\ndata: ${JSON.stringify({ error: { code: failed.code, message: failed.message, traceId: facts.traceId } })}\n\n`,
                 );
               lines.push(`event: ${TRAILER_EVENT}\ndata: ${JSON.stringify(trailer)}\n\n`);
-              void self.afterSettle(facts, refusal);
+              void this.afterSettle(facts, refusal);
             }
           } catch (error) {
             console.error(
@@ -537,7 +536,7 @@ export class GatewayService {
           if (error instanceof ProviderError) {
             if (error.retryable) breaker.failure();
             if (error.code === "auth")
-              self.deps.onAlert?.({
+              this.deps.onAlert?.({
                 severity: "p0",
                 title: `${model.provider} rejected our key`,
                 body: error.message,
@@ -556,7 +555,7 @@ export class GatewayService {
           for (const line of await settle()) yield line;
         }
       };
-      const iterator = produce();
+      const iterator = produce.call(this);
       const stream = new ReadableStream<Uint8Array>({
         async pull(controller) {
           const { value, done } = await iterator.next();

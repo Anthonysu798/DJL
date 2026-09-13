@@ -24,6 +24,10 @@ const phone = () =>
     .toString()
     .padStart(7, "0")}`;
 
+// Fresh IP per run: trial_grants persists across local runs and the velocity rules count history.
+const ip = () =>
+  `10.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+
 describe("TrialService", () => {
   it("claims as pending, grants on first cloud request, and is idempotent", async () => {
     const { orgId, userId } = await seedOrg(conn.db, "trial");
@@ -33,7 +37,7 @@ describe("TrialService", () => {
       phoneNumber: phone(),
       phoneVerified: true,
       deviceFingerprint: `d-${orgId}`,
-      ip: "1.2.3.4",
+      ip: ip(),
       suspended: false,
     });
     expect(claimed.status).toBe("pending_first_request");

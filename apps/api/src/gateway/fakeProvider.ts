@@ -17,7 +17,7 @@ export function createFakeProvider(): ProviderAdapter {
   return {
     id: "openai",
     async *chatStream(req: ChatRequest, signal: AbortSignal): AsyncIterable<ChatChunk> {
-      const last = [...req.messages].reverse().find((m) => m.role === "user");
+      const last = req.messages.toReversed().find((m) => m.role === "user");
       const text = typeof last?.content === "string" ? last.content : "hello";
       const id = `fake-${crypto.randomUUID().slice(0, 8)}`;
       if (text === "fail")

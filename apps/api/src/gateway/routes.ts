@@ -10,7 +10,7 @@ import { requirePrincipal } from "../auth/guard.ts";
 import { RequestContext } from "../http/context.ts";
 import { ApiError } from "../http/errors.ts";
 import { attempt, handle } from "../http/handle.ts";
-import { json, readJson } from "../http/json.ts";
+import { json } from "../http/json.ts";
 import type { GatewayService, RequestFacts } from "./GatewayService.ts";
 
 export interface GatewayRouteDeps {

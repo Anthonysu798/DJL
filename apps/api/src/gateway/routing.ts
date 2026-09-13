@@ -64,7 +64,7 @@ function alias_covers(m: CatalogModel, needs: readonly string[]): boolean {
 
 function pick(models: readonly CatalogModel[], prefer: "quality" | "cost"): CatalogModel | null {
   if (models.length === 0) return null;
-  const sorted = [...models].sort((a, b) => {
+  const sorted = models.toSorted((a, b) => {
     if (prefer === "quality")
       return b.qualityScore - a.qualityScore || Number(a.inputMicroPerToken - b.inputMicroPerToken);
     const costA = a.inputMicroPerToken + a.outputMicroPerToken + a.microPerImage;
