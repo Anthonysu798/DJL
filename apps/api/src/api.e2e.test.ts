@@ -152,6 +152,17 @@ describe("api end to end", () => {
     expect(list.devices[0].syncEnabled).toBe(false);
   });
 
+  it("shows no trial yet and refuses a claim without a verified phone", async () => {
+    const status = await (await call("/v1/trial")).json();
+    expect(status.trial).toBeNull();
+    const claim = await call("/v1/trial/claim", {
+      method: "POST",
+      json: { deviceFingerprint: "fp-1" },
+    });
+    expect(claim.status).toBe(400);
+    expect((await claim.json()).error.code).toBe("phone_required");
+  });
+
   it("signs out and loses access", async () => {
     const out = await call("/v1/auth/sign-out", { method: "POST", json: {} });
     expect(out.status).toBe(200);

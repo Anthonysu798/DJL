@@ -8,6 +8,7 @@ import type { PrincipalResolver } from "../auth/guard.ts";
 import { requirePrincipal, requireRole } from "../auth/guard.ts";
 import { RequestContext } from "../http/context.ts";
 import { ApiError, errorResponse } from "../http/errors.ts";
+import { attempt, handle } from "../http/handle.ts";
 import { json, readJson } from "../http/json.ts";
 import type { BillingService } from "./BillingService.ts";
 
@@ -17,41 +18,8 @@ export interface BillingRouteDeps {
   readonly principals: PrincipalResolver;
 }
 
-function handle<R>(
-  effect: Effect.Effect<
-    import("effect/unstable/http").HttpServerResponse.HttpServerResponse,
-    ApiError,
-    R
-  >,
-) {
-  return Effect.gen(function* () {
-    const ctx = yield* RequestContext;
-    return yield* effect.pipe(
-      Effect.catchIf(
-        (e): e is ApiError => e instanceof ApiError,
-        (e) => Effect.succeed(errorResponse(e.status, e.code, e.message, ctx.traceId)),
-      ),
-    );
-  });
-}
-
 const BILLING_ROLES = ["owner", "billing"] as const;
-
-const attempt = (fn: () => Promise<{ url: string }>) =>
-  Effect.tryPromise({
-    try: fn,
-    catch: (e) => {
-      if (e instanceof ApiError) return e;
-      console.error(
-        JSON.stringify({
-          level: "error",
-          msg: "billing checkout failed",
-          error: e instanceof Error ? e.message : String(e),
-        }),
-      );
-      return new ApiError(502, "billing_error", "Billing provider error.");
-    },
-  });
+const BILLING_FAILURE = { status: 502, code: "billing_error", message: "Billing provider error." };
 
 export function makeBillingRoutes(deps: BillingRouteDeps) {
   const orgName = (orgId: string) =>
@@ -75,43 +43,32 @@ export function makeBillingRoutes(deps: BillingRouteDeps) {
           usd: number;
         }>;
         const name = yield* orgName(p.orgId);
-        const attempt = (fn: () => Promise<{ url: string }>) =>
-          Effect.tryPromise({
-            try: fn,
-            catch: (e) => {
-              if (e instanceof ApiError) return e;
-              console.error(
-                JSON.stringify({
-                  level: "error",
-                  msg: "billing checkout failed",
-                  error: e instanceof Error ? e.message : String(e),
-                }),
-              );
-              return new ApiError(502, "billing_error", "Billing provider error.");
-            },
-          });
         if (body.kind === "topup") {
-          const r = yield* attempt(() =>
-            deps.billing.topupCheckout({
-              orgId: p.orgId,
-              userId: p.userId,
-              email: p.email,
-              orgName: name,
-              usd: Number(body.usd),
-            }),
+          const r = yield* attempt(
+            () =>
+              deps.billing.topupCheckout({
+                orgId: p.orgId,
+                userId: p.userId,
+                email: p.email,
+                orgName: name,
+                usd: Number(body.usd),
+              }),
+            BILLING_FAILURE,
           );
           return json(r);
         }
         if (body.kind === "subscription" && body.planId) {
-          const r = yield* attempt(() =>
-            deps.billing.subscribeCheckout({
-              orgId: p.orgId,
-              userId: p.userId,
-              email: p.email,
-              orgName: name,
-              planId: body.planId!,
-              interval: body.interval === "year" ? "year" : "month",
-            }),
+          const r = yield* attempt(
+            () =>
+              deps.billing.subscribeCheckout({
+                orgId: p.orgId,
+                userId: p.userId,
+                email: p.email,
+                orgName: name,
+                planId: body.planId!,
+                interval: body.interval === "year" ? "year" : "month",
+              }),
+            BILLING_FAILURE,
           );
           return json(r);
         }
@@ -130,10 +87,10 @@ export function makeBillingRoutes(deps: BillingRouteDeps) {
         const p = yield* requirePrincipal(deps.principals);
         requireRole(p, BILLING_ROLES);
         const name = yield* orgName(p.orgId);
-        const r = yield* Effect.tryPromise({
-          try: () => deps.billing.portal(p.orgId, p.email, name),
-          catch: () => new ApiError(502, "billing_error", "Billing provider error."),
-        });
+        const r = yield* attempt(
+          () => deps.billing.portal(p.orgId, p.email, name),
+          BILLING_FAILURE,
+        );
         return json(r);
       }),
     ),

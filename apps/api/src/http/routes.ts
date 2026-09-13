@@ -82,6 +82,7 @@ export function makeRoutes(deps: RouteDeps) {
     authRoutes,
     makeAccountRoutes(deps),
     makeBillingRoutes(deps),
+    makeTrialRoutes(deps),
     fallback,
   );
 }

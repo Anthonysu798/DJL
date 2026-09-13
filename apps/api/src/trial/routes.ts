@@ -6,7 +6,7 @@ import { HttpRouter } from "effect/unstable/http";
 import type { PrincipalResolver } from "../auth/guard.ts";
 import { requirePrincipal } from "../auth/guard.ts";
 import { RequestContext } from "../http/context.ts";
-import { ApiError, errorResponse } from "../http/errors.ts";
+import { attempt, handle } from "../http/handle.ts";
 import { json, readJson } from "../http/json.ts";
 import type { TrialService } from "./TrialService.ts";
 
@@ -17,23 +17,6 @@ export interface TrialRouteDeps {
 }
 
 export function makeTrialRoutes(deps: TrialRouteDeps) {
-  const handle = <R>(
-    effect: Effect.Effect<
-      import("effect/unstable/http").HttpServerResponse.HttpServerResponse,
-      ApiError,
-      R
-    >,
-  ) =>
-    Effect.gen(function* () {
-      const ctx = yield* RequestContext;
-      return yield* effect.pipe(
-        Effect.catchIf(
-          (e): e is ApiError => e instanceof ApiError,
-          (e) => Effect.succeed(errorResponse(e.status, e.code, e.message, ctx.traceId)),
-        ),
-      );
-    });
-
   const status = HttpRouter.add(
     "GET",
     "/v1/trial",
@@ -66,8 +49,8 @@ export function makeTrialRoutes(deps: TrialRouteDeps) {
         const user = yield* Effect.promise(() =>
           deps.db.query.user.findFirst({ where: eq(schema.user.id, p.userId) }),
         );
-        const row = yield* Effect.tryPromise({
-          try: () =>
+        const row = yield* attempt(
+          () =>
             deps.trial.claim({
               orgId: p.personalOrgId,
               userId: p.userId,
@@ -77,11 +60,8 @@ export function makeTrialRoutes(deps: TrialRouteDeps) {
               ip: ctx.ip,
               suspended: p.banned,
             }),
-          catch: (e) =>
-            e instanceof ApiError
-              ? e
-              : new ApiError(500, "trial_failed", "Could not evaluate the trial."),
-        });
+          { status: 500, code: "trial_failed", message: "Could not evaluate the trial." },
+        );
         return json({ trial: { status: row.status, reasons: row.reasons } }, 201);
       }),
     ),

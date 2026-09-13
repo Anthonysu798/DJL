@@ -10,33 +10,14 @@ import { HttpRouter, HttpServerRequest } from "effect/unstable/http";
 import type { PrincipalResolver } from "../auth/guard.ts";
 import { requirePrincipal } from "../auth/guard.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
-import { RequestContext } from "../http/context.ts";
-import { ApiError, errorResponse } from "../http/errors.ts";
+import { ApiError } from "../http/errors.ts";
+import { handle } from "../http/handle.ts";
 import { json, readJson } from "../http/json.ts";
 
 export interface AccountDeps {
   readonly db: DjlDatabase;
   readonly ledger: LedgerService;
   readonly principals: PrincipalResolver;
-}
-
-/** Turn ApiError failures into the JSON envelope; everything else bubbles to the 500 handler. */
-function handle<R>(
-  effect: Effect.Effect<
-    import("effect/unstable/http").HttpServerResponse.HttpServerResponse,
-    ApiError,
-    R
-  >,
-) {
-  return Effect.gen(function* () {
-    const ctx = yield* RequestContext;
-    return yield* effect.pipe(
-      Effect.catchIf(
-        (e): e is ApiError => e instanceof ApiError,
-        (e) => Effect.succeed(errorResponse(e.status, e.code, e.message, ctx.traceId)),
-      ),
-    );
-  });
 }
 
 export function makeAccountRoutes(deps: AccountDeps) {

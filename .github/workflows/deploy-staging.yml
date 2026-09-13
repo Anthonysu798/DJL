@@ -16,9 +16,25 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
+  # Staging infrastructure is provisioned by hand once. Until its secrets exist,
+  # the deploy job is skipped instead of failing every push to main.
+  preflight:
+    name: Staging secrets present
+    runs-on: ubuntu-24.04
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          HAS_DB: ${{ secrets.STAGING_DATABASE_URL != '' }}
+          HAS_FLY: ${{ secrets.FLY_API_TOKEN_STAGING != '' }}
+        run: |
+          if [ "$HAS_DB" = "true" ] && [ "$HAS_FLY" = "true" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "ready=false" >> "$GITHUB_OUTPUT"; echo "::notice::staging secrets not configured; skipping deploy"; fi
+
   deploy:
     name: Migrate and deploy staging
-    needs: ci
+    needs: [ci, preflight]
+    if: needs.preflight.outputs.ready == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: staging

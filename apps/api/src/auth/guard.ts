@@ -91,8 +91,13 @@ export function requirePrincipal(resolver: PrincipalResolver) {
     const requestedOrgId = request.headers["x-org-id"] ?? null;
     return yield* Effect.tryPromise({
       try: () => resolver.resolve({ headers, requestedOrgId }),
-      catch: (e) =>
-        e instanceof ApiError ? e : new ApiError(500, "auth_failed", "Could not resolve session."),
+      catch: (e) => {
+        if (e instanceof ApiError) return e;
+        process.stderr.write(
+          `principal resolution failed: ${e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ""}` : String(e)}\n`,
+        );
+        return new ApiError(500, "auth_failed", "Could not resolve session.");
+      },
     });
   });
 }
