@@ -16,6 +16,7 @@
     "@djl/notify": "workspace:*",
     "@djl/providers": "workspace:*",
     "@effect/platform-node": "catalog:",
+    "@sentry/bun": "^10.74.0",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "pg-boss": "^12.31.0",

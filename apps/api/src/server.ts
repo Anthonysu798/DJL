@@ -42,6 +42,7 @@ import {
 } from "./gateway/RateLimiter.ts";
 import { buildProviders } from "./gateway/providers.ts";
 import { loadApiEnv, type ApiEnv } from "./config/env.ts";
+import { startObservability, stopObservability } from "./observability.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
 
@@ -92,6 +93,14 @@ export async function startApi(
   } = {},
 ): Promise<ApiRuntime> {
   const env = options.env ?? loadApiEnv();
+  startObservability({
+    serviceName: "djl-api",
+    version: process.env.DJL_VERSION ?? "dev",
+    environment: env.env,
+    otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim() || null,
+    otlpHeaders: process.env.OTEL_EXPORTER_OTLP_HEADERS?.trim() || null,
+    sentryDsn: process.env.SENTRY_DSN?.trim() || null,
+  });
   const { db, close: closeDb } = createDatabase(env.databaseUrl);
 
   let outbox: MockOutbox | null = null;
@@ -230,6 +239,7 @@ export async function startApi(
       await Effect.runPromise(Scope.close(scope, { _tag: "Success", value: undefined } as never));
       redis?.disconnect();
       await closeDb();
+      await stopObservability();
     },
   };
 }

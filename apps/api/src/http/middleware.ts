@@ -7,6 +7,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import type { ApiEnv } from "../config/env.ts";
+import { captureError, currentTraceId, httpRequests } from "../observability.ts";
 import { RequestContext, clientIp, newTraceId } from "./context.ts";
 import { errorResponse } from "./errors.ts";
 
@@ -30,7 +31,8 @@ export function makeMiddleware(env: ApiEnv, region: string) {
   > =>
     Effect.gen(function* () {
       const request = yield* HttpServerRequest.HttpServerRequest;
-      const traceId = request.headers["x-trace-id"]?.slice(0, 64) ?? newTraceId();
+      const traceId =
+        request.headers["x-trace-id"]?.slice(0, 64) ?? currentTraceId() ?? newTraceId();
       const origin = request.headers["origin"] ?? null;
       const corsHeaders: Record<string, string> = {};
       if (origin && trusted.has(origin)) {
@@ -66,9 +68,15 @@ export function makeMiddleware(env: ApiEnv, region: string) {
           console.error(
             JSON.stringify({ level: "error", traceId, msg: "unhandled", cause: String(cause) }),
           );
+          captureError(new Error(String(cause)), {
+            traceId,
+            path: new URL(request.url, "http://x").pathname,
+          });
           return Effect.succeed(errorResponse(500, "internal", "Something went wrong.", traceId));
         }),
       );
+      const routeKey = new URL(request.url, "http://x").pathname.replace(/[0-9a-f-]{20,}/g, ":id");
+      httpRequests.add(1, { route: routeKey, method: request.method, status: response.status });
       return HttpServerResponse.setHeaders(response, {
         ...SECURITY_HEADERS,
         ...corsHeaders,

@@ -27,6 +27,12 @@ import {
 } from "@djl/providers";
 
 import type { Principal } from "../auth/guard.ts";
+import {
+  gatewayInFlight,
+  gatewayRequests,
+  settledMicrocredits,
+  withSpan,
+} from "../observability.ts";
 import { InsufficientCreditsError, type LedgerService } from "../credits/LedgerService.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
@@ -218,11 +224,13 @@ export class GatewayService {
       throw new ApiError(503, "overloaded", "Servers are busy. Try again in a moment.");
     }
     this.inFlight += 1;
+    gatewayInFlight.add(1);
     let released = false;
     return async () => {
       if (released) return;
       released = true;
       this.inFlight -= 1;
+      gatewayInFlight.add(-1);
       await hold.release();
     };
   }
@@ -297,6 +305,9 @@ export class GatewayService {
         completedAt: new Date(),
       })
       .where(eq(schema.usageRequests.id, input.id));
+    gatewayRequests.add(1, { status: input.status });
+    if (input.settled && input.settled > 0n)
+      settledMicrocredits.add(Number(input.settled), { status: input.status });
   }
 
   private async afterSettle(facts: RequestFacts, refusal: boolean): Promise<void> {
