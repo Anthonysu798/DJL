@@ -130,6 +130,10 @@ export function createAuth(input: {
       cookiePrefix: "djl",
       database: { generateId: "uuid" },
       ipAddress: { ipAddressHeaders: ["fly-client-ip", "cf-connecting-ip", "x-forwarded-for"] },
+      // app.slcor.com and api.slcor.com share the session cookie (decision: Hostnames).
+      ...(env.cookieDomain
+        ? { crossSubDomainCookies: { enabled: true, domain: env.cookieDomain } }
+        : {}),
     },
     databaseHooks: {
       user: {

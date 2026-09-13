@@ -194,6 +194,69 @@ describe("api end to end", () => {
     expect((await claim.json()).error.code).toBe("phone_required");
   });
 
+  it("completes the OAuth device flow used by desktop and iOS", async () => {
+    // The device (no cookies) asks for a code.
+    const code = await fetch(`${base}/v1/auth/device/code`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ client_id: "djl-desktop", scope: "desktop" }),
+    });
+    expect(code.status).toBe(200);
+    const device = (await code.json()) as {
+      device_code: string;
+      user_code: string;
+      verification_uri: string;
+      interval: number;
+    };
+    expect(device.verification_uri).toContain("/device");
+    // Unknown client ids are refused.
+    const bad = await fetch(`${base}/v1/auth/device/code`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ client_id: "evil", scope: "desktop" }),
+    });
+    expect(bad.status).toBeGreaterThanOrEqual(400);
+    // Polling before approval is pending.
+    const pending = await fetch(`${base}/v1/auth/device/token`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        device_code: device.device_code,
+        client_id: "djl-desktop",
+      }),
+    });
+    expect(pending.status).toBe(400);
+    expect((await pending.json()).error).toBe("authorization_pending");
+    // The signed-in browser session first claims the code (GET /device), then approves it.
+    const claim = await call(`/v1/auth/device?user_code=${encodeURIComponent(device.user_code)}`);
+    expect(claim.status).toBe(200);
+    const approve = await call("/v1/auth/device/approve", {
+      method: "POST",
+      json: { userCode: device.user_code },
+    });
+    expect(approve.status).toBe(200);
+    // Now the device receives a session token and can call the API with it.
+    await new Promise((r) => setTimeout(r, (device.interval + 1) * 1000));
+    const token = await fetch(`${base}/v1/auth/device/token`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        device_code: device.device_code,
+        client_id: "djl-desktop",
+      }),
+    });
+    expect(token.status).toBe(200);
+    const granted = (await token.json()) as { access_token: string };
+    expect(granted.access_token).toBeTruthy();
+    const meViaDevice = await fetch(`${base}/v1/me`, {
+      headers: { authorization: `Bearer ${granted.access_token}` },
+    });
+    expect(meViaDevice.status).toBe(200);
+    expect(((await meViaDevice.json()) as { user: { email: string } }).user.email).toBe(email);
+  });
+
   it("signs out and loses access", async () => {
     const out = await call("/v1/auth/sign-out", { method: "POST", json: {} });
     expect(out.status).toBe(200);

@@ -15,6 +15,8 @@ export interface ApiEnv {
   readonly betterAuthSecret: string;
   readonly mockExternals: boolean;
   readonly trustedOrigins: readonly string[];
+  /** Parent domain for the shared session cookie in staging/production, e.g. ".slcor.com". */
+  readonly cookieDomain: string | null;
   readonly google: { readonly clientId: string; readonly clientSecret: string } | null;
   readonly apple: { readonly clientId: string; readonly clientSecret: string } | null;
 }
@@ -57,6 +59,7 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     betterAuthSecret: secret,
     mockExternals,
     trustedOrigins: [webPublicUrl, "djl://app", ...(isLocal ? ["http://localhost:5173"] : [])],
+    cookieDomain: env.COOKIE_DOMAIN?.trim() || null,
     google,
     apple,
   };
