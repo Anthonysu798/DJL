@@ -30,7 +30,10 @@ export class CloudApiError extends Error {
 
 let probedBase: string | null = null;
 
-export function resolveCloudBaseUrl(region: CloudRegionSetting, env: NodeJS.ProcessEnv = process.env): string {
+export function resolveCloudBaseUrl(
+  region: CloudRegionSetting,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   const override = env.DJL_CLOUD_API_URL?.trim();
   if (override) return override.replace(/\/+$/, "");
   if (region === "asia") return DJL_CLOUD_HOSTS.asia;
@@ -53,22 +56,45 @@ export async function probeCloudRegion(fetchImpl: FetchLike = fetch): Promise<st
       return Number.POSITIVE_INFINITY;
     }
   };
-  const [global, asia] = await Promise.all([time(DJL_CLOUD_HOSTS.global), time(DJL_CLOUD_HOSTS.asia)]);
+  const [global, asia] = await Promise.all([
+    time(DJL_CLOUD_HOSTS.global),
+    time(DJL_CLOUD_HOSTS.asia),
+  ]);
   probedBase = asia < global ? DJL_CLOUD_HOSTS.asia : DJL_CLOUD_HOSTS.global;
   return probedBase;
 }
 
 async function parseError(res: Response): Promise<CloudHttpError> {
   try {
-    const body = (await res.json()) as { error?: { code?: string; message?: string; traceId?: string } };
+    const body = (await res.json()) as {
+      error?: { code?: string; message?: string; traceId?: string } | string;
+      error_description?: string;
+      message?: string;
+    };
+    // Two shapes: the DJL envelope `{ error: { code, message, traceId } }` and the
+    // OAuth style `{ error: "authorization_pending", error_description }` used by
+    // the device-flow endpoints.
+    if (typeof body.error === "string") {
+      return {
+        status: res.status,
+        code: body.error,
+        message: body.error_description ?? body.message ?? `DJL Cloud returned ${res.status}`,
+        traceId: null,
+      };
+    }
     return {
       status: res.status,
       code: body.error?.code ?? "http_error",
-      message: body.error?.message ?? `DJL Cloud returned ${res.status}`,
+      message: body.error?.message ?? body.message ?? `DJL Cloud returned ${res.status}`,
       traceId: body.error?.traceId ?? null,
     };
   } catch {
-    return { status: res.status, code: "http_error", message: `DJL Cloud returned ${res.status}`, traceId: null };
+    return {
+      status: res.status,
+      code: "http_error",
+      message: `DJL Cloud returned ${res.status}`,
+      traceId: null,
+    };
   }
 }
 
@@ -77,7 +103,12 @@ export interface CloudClient {
   readonly get: <T>(path: string, token?: string | null) => Promise<T>;
   readonly post: <T>(path: string, body: unknown, token?: string | null) => Promise<T>;
   /** POST returning the raw response for SSE streams. */
-  readonly stream: (path: string, body: unknown, token: string, signal: AbortSignal) => Promise<Response>;
+  readonly stream: (
+    path: string,
+    body: unknown,
+    token: string,
+    signal: AbortSignal,
+  ) => Promise<Response>;
 }
 
 export function createCloudClient(baseUrl: string, fetchImpl: FetchLike = fetch): CloudClient {
@@ -93,9 +124,16 @@ export function createCloudClient(baseUrl: string, fetchImpl: FetchLike = fetch)
   };
   return {
     baseUrl,
-    get: async (path, token) => check(await fetchImpl(`${baseUrl}${path}`, { headers: headers(token) })),
+    get: async (path, token) =>
+      check(await fetchImpl(`${baseUrl}${path}`, { headers: headers(token) })),
     post: async (path, body, token) =>
-      check(await fetchImpl(`${baseUrl}${path}`, { method: "POST", headers: headers(token), body: JSON.stringify(body) })),
+      check(
+        await fetchImpl(`${baseUrl}${path}`, {
+          method: "POST",
+          headers: headers(token),
+          body: JSON.stringify(body),
+        }),
+      ),
     stream: async (path, body, token, signal) => {
       const res = await fetchImpl(`${baseUrl}${path}`, {
         method: "POST",
