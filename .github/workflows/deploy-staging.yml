@@ -1,7 +1,11 @@
 name: Deploy staging
 
 on:
-  push:
+  # Runs after a successful Backend CI run on main, so the CI record for the
+  # commit is the same one the production deploy later verifies.
+  workflow_run:
+    workflows: ["Backend CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -13,13 +17,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
   # Staging infrastructure is provisioned by hand once. Until its secrets exist,
   # the deploy job is skipped instead of failing every push to main.
   preflight:
     name: Staging secrets present
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     outputs:
       ready: ${{ steps.check.outputs.ready }}
@@ -33,7 +35,7 @@ jobs:
 
   deploy:
     name: Migrate and deploy staging
-    needs: [ci, preflight]
+    needs: [preflight]
     if: needs.preflight.outputs.ready == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -44,6 +46,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
