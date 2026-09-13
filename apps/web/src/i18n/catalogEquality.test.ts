@@ -21,6 +21,8 @@ const ENGLISH_EQUAL_INVARIANTS = new Map<string, string>([
   ["chat.panels.names.git", "Git"],
   ["chat.panels.names.side", "Side"],
   ["settings.navigation.groups.djl", "DJL"],
+  ["settings.cloud.name", "DJL Cloud"],
+  ["settings.cloud.title", "DJL Cloud"],
   ["settings.servers.form.importKeyPlaceholder", "-----BEGIN OPENSSH PRIVATE KEY-----"],
   ["settings.servers.form.keyPathPlaceholder", "~/.ssh/id_ed25519"],
 ]);

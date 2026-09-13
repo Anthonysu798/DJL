@@ -11,6 +11,13 @@ import {
   HarnessLoginResult,
   HarnessEndLoginInput,
 } from "./harnessAccounts";
+import {
+  CloudAccountStatus,
+  CloudEmptyInput,
+  CloudSignInPollInput,
+  CloudSignInPollResult,
+  CloudSignInStartResult,
+} from "./cloud";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
 import {
@@ -1109,6 +1116,26 @@ export const WsHarnessProfileAccountRpc = Rpc.make(WS_METHODS.harnessProfileAcco
   success: HarnessProfileAccount,
   error: WsRpcError,
 });
+export const WsCloudGetStatusRpc = Rpc.make(WS_METHODS.cloudGetStatus, {
+  payload: CloudEmptyInput,
+  success: CloudAccountStatus,
+  error: WsRpcError,
+});
+export const WsCloudStartSignInRpc = Rpc.make(WS_METHODS.cloudStartSignIn, {
+  payload: CloudEmptyInput,
+  success: CloudSignInStartResult,
+  error: WsRpcError,
+});
+export const WsCloudPollSignInRpc = Rpc.make(WS_METHODS.cloudPollSignIn, {
+  payload: CloudSignInPollInput,
+  success: CloudSignInPollResult,
+  error: WsRpcError,
+});
+export const WsCloudSignOutRpc = Rpc.make(WS_METHODS.cloudSignOut, {
+  payload: CloudEmptyInput,
+  success: CloudAccountStatus,
+  error: WsRpcError,
+});
 export const WsHarnessListAccountsRpc = Rpc.make(WS_METHODS.harnessListAccounts, {
   payload: Schema.Struct({}),
   success: HarnessAccountsResult,
@@ -1426,6 +1453,10 @@ export const WsRpcGroup = RpcGroup.make(
   WsHarnessMaintainToolRpc,
   WsHarnessProfileAccountRpc,
   WsHarnessListAccountsRpc,
+  WsCloudGetStatusRpc,
+  WsCloudStartSignInRpc,
+  WsCloudPollSignInRpc,
+  WsCloudSignOutRpc,
   WsHarnessListLegacyOpenCodeCredentialsRpc,
   WsHarnessTransferLegacyOpenCodeCredentialsRpc,
   WsHarnessStartLoginRpc,

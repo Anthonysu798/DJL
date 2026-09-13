@@ -71,6 +71,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
         experimentalWebSockets: false,
       },
       pi: { ...provider, binaryPath: "pi", agentDir: "" },
+      djlCloud: { enabled: true, region: "auto" },
       ...overrides,
     },
     skills: { disabled: [] },

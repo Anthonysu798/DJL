@@ -321,6 +321,7 @@ describe("wsNativeApi", () => {
             customModels: [],
           },
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
+          djlCloud: { enabled: true, region: "auto" },
         },
         skills: { disabled: [] },
       },

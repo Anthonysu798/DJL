@@ -15,6 +15,7 @@ import {
   buildTerminalRuntimeKey,
 } from "../terminal/terminalRuntimeRegistry";
 import { SettingsSection } from "./SettingsPanelPrimitives";
+import { DjlCloudAccountCard } from "./DjlCloudAccountCard";
 import { SettingsLoadError, settingsLoadErrorDetail } from "./SettingsLoadError";
 
 const LEGACY_OPENCODE_QUERY_KEY = ["legacy-opencode-credentials"] as const;
@@ -192,6 +193,7 @@ export function HarnessAccountsPanel() {
           onAction={() => void accounts.refetch()}
         />
       ) : null}
+      <DjlCloudAccountCard />
       <SettingsSection title={t("accounts.title")}>
         {HARNESSES.map((harness) => {
           const account = accounts.data?.accounts.find((item) => item.id === harness.id);

@@ -2588,6 +2588,26 @@
       },
       "title": "Utilisation des fournisseurs",
       "unavailableWithDetail": "Utilisation indisponible. {{detail}}"
+    },
+    "cloud": {
+      "title": "DJL Cloud",
+      "name": "DJL Cloud",
+      "description": "Modèles hébergés facturés en crédits. Connectez-vous une fois ; votre code, vos fichiers et vos terminaux restent sur cet ordinateur.",
+      "signedOut": "Non connecté",
+      "signedInAs": "Connecté en tant que {{email}}",
+      "credits": "{{credits}} crédits disponibles",
+      "sessionExpired": "Votre session a expiré. Reconnectez-vous.",
+      "unreachable": "Impossible de joindre DJL Cloud. Vérifiez votre connexion.",
+      "suspended": "Ce compte est suspendu. Contactez support@slcor.com.",
+      "buyCredits": "Acheter des crédits",
+      "signOut": "Se déconnecter",
+      "enterCode": "Saisissez ce code dans la fenêtre du navigateur qui vient de s’ouvrir, puis approuvez DJL sur cet ordinateur.",
+      "openBrowser": "Rouvrir le navigateur",
+      "cancel": "Annuler",
+      "denied": "La connexion a été refusée dans le navigateur.",
+      "expired": "Le code de connexion a expiré. Recommencez.",
+      "error": "Impossible de joindre DJL Cloud.",
+      "signIn": "Se connecter à DJL Cloud"
     }
   },
   "shell": {

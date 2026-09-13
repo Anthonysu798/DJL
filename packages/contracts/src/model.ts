@@ -151,6 +151,8 @@ export const QwenModelOptions = Schema.Struct({});
 export type QwenModelOptions = typeof QwenModelOptions.Type;
 export const CodeBuddyModelOptions = Schema.Struct({});
 export type CodeBuddyModelOptions = typeof CodeBuddyModelOptions.Type;
+export const DjlCloudModelOptions = Schema.Struct({});
+export type DjlCloudModelOptions = typeof DjlCloudModelOptions.Type;
 
 export const DroidModelOptions = Schema.Struct({
   reasoningEffort: Schema.optional(Schema.Literals(DROID_REASONING_EFFORT_OPTIONS)),
@@ -170,6 +172,7 @@ export const ProviderModelOptions = Schema.Struct({
   droid: Schema.optional(DroidModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
+  djlCloud: Schema.optional(DjlCloudModelOptions),
   pi: Schema.optional(PiModelOptions),
 });
 export type ProviderModelOptions = typeof ProviderModelOptions.Type;
@@ -215,6 +218,14 @@ export type ModelCapabilities = {
   readonly variantOptions?: readonly EffortOption[];
   readonly agentOptions?: readonly EffortOption[];
 };
+
+const DJL_CLOUD_CAPABILITIES = {
+  reasoningEffortLevels: [],
+  supportsFastMode: false,
+  supportsThinkingToggle: false,
+  promptInjectedEffortLevels: [],
+  contextWindowOptions: [],
+} as const;
 
 const GEMINI_2_5_CAPABILITIES: ModelCapabilities = {
   reasoningEffortLevels: [
@@ -974,6 +985,21 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       },
     },
   ],
+  // DJL Cloud: the built-in list mirrors the launch catalog so the picker works
+  // before the first discovery call; the gateway catalog (GET /v1/models)
+  // supersedes it at runtime, so admin catalog edits never need a client release.
+  djlCloud: [
+    { slug: "claude-sonnet-5", name: "Claude Sonnet 5", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "claude-opus-5", name: "Claude Opus 5", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "claude-haiku-4-5", name: "Claude Haiku 4.5", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "gpt-5", name: "GPT-5", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "gpt-5-mini", name: "GPT-5 mini", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "gemini-2.5-pro", name: "Gemini 2.5 Pro", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "grok-4", name: "Grok 4", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "deepseek-v3", name: "DeepSeek V3", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "kimi-k2", name: "Kimi K2", capabilities: DJL_CLOUD_CAPABILITIES },
+    { slug: "glm-4.5", name: "GLM 4.5", capabilities: DJL_CLOUD_CAPABILITIES },
+  ],
 } as const satisfies Record<ProviderKind, readonly ModelDefinition[]>;
 export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
 
@@ -983,6 +1009,7 @@ export type ModelSlug = BuiltInModelSlug | (string & {});
 export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
+  djlCloud: "claude-sonnet-5",
   kimi: "kimi-code/kimi-for-coding",
   iflow: "glm-4.7",
   qwen: "qwen3-coder-plus",
@@ -1003,6 +1030,7 @@ export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "openai/gpt-5" as const;
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
+  djlCloud: {},
   kimi: {},
   iflow: {},
   qwen: {},
@@ -1163,4 +1191,5 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   kilo: "Kilo",
   opencode: "DJL",
   pi: "Pi",
+  djlCloud: "DJL Cloud",
 };

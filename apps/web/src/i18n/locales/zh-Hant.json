@@ -2588,6 +2588,26 @@
       },
       "title": "供應商用量",
       "unavailableWithDetail": "用量無法使用。{{detail}}"
+    },
+    "cloud": {
+      "title": "DJL Cloud",
+      "name": "DJL Cloud",
+      "description": "託管模型以點數計費。只需登入一次，你的程式碼、檔案和終端機都留在本機。",
+      "signedOut": "未登入",
+      "signedInAs": "已登入：{{email}}",
+      "credits": "可用點數 {{credits}}",
+      "sessionExpired": "工作階段已過期，請重新登入。",
+      "unreachable": "無法連線 DJL Cloud，請檢查網路。",
+      "suspended": "此帳戶已被停用，請聯絡 support@slcor.com。",
+      "buyCredits": "購買點數",
+      "signOut": "登出",
+      "enterCode": "在剛開啟的瀏覽器視窗中輸入此代碼，然後核准這台電腦上的 DJL。",
+      "openBrowser": "再次開啟瀏覽器",
+      "cancel": "取消",
+      "denied": "在瀏覽器中拒絕了登入。",
+      "expired": "登入代碼已過期，請重新開始。",
+      "error": "無法連線 DJL Cloud。",
+      "signIn": "登入 DJL Cloud"
     }
   },
   "shell": {

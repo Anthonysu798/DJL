@@ -15,6 +15,7 @@ import {
 describe("providerOrdering", () => {
   it("exposes the active OpenCode runtime and newly built native harnesses", () => {
     expect(DEFAULT_PROVIDER_ORDER).toEqual([
+      "djlCloud",
       "opencode",
       "codex",
       "claudeAgent",
@@ -32,6 +33,7 @@ describe("providerOrdering", () => {
     expect(isProviderKind("gemini")).toBe(false);
     expect(normalizeProviderOrder(["gemini", "codex"])).toEqual([
       "codex",
+      "djlCloud",
       "opencode",
       "claudeAgent",
       "cursor",

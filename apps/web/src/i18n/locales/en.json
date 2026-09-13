@@ -2588,6 +2588,26 @@
       },
       "title": "Provider usage",
       "unavailableWithDetail": "Usage is unavailable. {{detail}}"
+    },
+    "cloud": {
+      "title": "DJL Cloud",
+      "name": "DJL Cloud",
+      "description": "Hosted models billed in credits. Sign in once; your code, files, and terminals stay on this computer.",
+      "signedOut": "Not signed in",
+      "signedInAs": "Signed in as {{email}}",
+      "credits": "{{credits}} credits available",
+      "sessionExpired": "Your session expired. Sign in again.",
+      "unreachable": "DJL Cloud could not be reached. Check your connection.",
+      "suspended": "This account is suspended. Contact support@slcor.com.",
+      "buyCredits": "Buy credits",
+      "signOut": "Sign out",
+      "enterCode": "Enter this code in the browser window that just opened, then approve DJL on this computer.",
+      "openBrowser": "Open browser again",
+      "cancel": "Cancel",
+      "denied": "Sign-in was denied in the browser.",
+      "expired": "The sign-in code expired. Start again.",
+      "error": "Could not reach DJL Cloud.",
+      "signIn": "Sign in to DJL Cloud"
     }
   },
   "shell": {

@@ -8,6 +8,7 @@ import {
   NativeQwenAdapter,
   NativeCodeBuddyAdapter,
   NativePiAdapter,
+  NativeDjlCloudAdapter,
 } from "../../harnesses/native/layer";
 import type { ProviderKind } from "@synara/contracts";
 import { it, assert, vi } from "@effect/vitest";
@@ -202,6 +203,7 @@ const layer = it.layer(
         Layer.succeed(NativeQwenAdapter, { ...fakeGrokAdapter, provider: "qwen" }),
         Layer.succeed(NativeCodeBuddyAdapter, { ...fakeGrokAdapter, provider: "codebuddy" }),
         Layer.succeed(NativePiAdapter, { ...fakeGrokAdapter, provider: "pi" }),
+        Layer.succeed(NativeDjlCloudAdapter, { ...fakeGrokAdapter, provider: "djlCloud" }),
         Layer.succeed(GeminiAdapter, fakeGeminiAdapter),
         Layer.succeed(GrokAdapter, fakeGrokAdapter),
         Layer.succeed(DroidAdapter, fakeDroidAdapter),
@@ -233,6 +235,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "qwen",
         "codebuddy",
         "pi",
+        "djlCloud",
       ]);
       assert.equal(yield* registry.getByProvider("codex"), fakeCodexAdapter);
       assert.equal(yield* registry.getByProvider("claudeAgent"), fakeClaudeAdapter);

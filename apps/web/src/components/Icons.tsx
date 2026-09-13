@@ -471,6 +471,16 @@ export const PiIcon: Icon = (props) => (
   </svg>
 );
 
+// Generic cloud glyph for the hosted DJL Cloud provider.
+export const DjlCloudIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fill="currentColor"
+      d="M17.5 19a4.5 4.5 0 0 0 .5-8.973A6.5 6.5 0 0 0 5.6 8.1 5 5 0 0 0 7 19h10.5Zm0-2H7a3 3 0 0 1-.4-5.973l1.3-.174.4-1.25A4.5 4.5 0 0 1 16.03 11l.25 1.61 1.62.19A2.5 2.5 0 0 1 17.5 17Z"
+    />
+  </svg>
+);
+
 export const OpenCodeIcon: Icon = (props) => (
   <svg {...props} viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g clipPath="url(#opencode__clip0_1311_94969)">

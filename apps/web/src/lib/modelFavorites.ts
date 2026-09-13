@@ -6,6 +6,7 @@ import type { ProviderKind } from "@synara/contracts";
 import { Schema } from "effect";
 
 export const FAVORITE_MODEL_STORAGE_KEYS = {
+  djlCloud: "synara:djlcloud-favourite-models:v1",
   cursor: "synara:cursor-favourite-models:v1",
   kilo: "synara:kilo-favourite-models:v1",
   opencode: "synara:opencode-favourite-models:v1",
@@ -18,7 +19,11 @@ const FavoriteModelSlugsSchema = Schema.Array(Schema.String);
 
 export function supportsModelFavorites(provider: ProviderKind): provider is FavoriteModelProvider {
   return (
-    provider === "cursor" || provider === "kilo" || provider === "opencode" || provider === "pi"
+    provider === "djlCloud" ||
+    provider === "cursor" ||
+    provider === "kilo" ||
+    provider === "opencode" ||
+    provider === "pi"
   );
 }
 
