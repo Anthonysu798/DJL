@@ -1,9 +1,8 @@
 "use client";
-import { Activity, KeyRound } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { Spotlight } from "@/components/Spotlight";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,12 +64,11 @@ function LoginForm() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <Spotlight className="-top-40 left-0 md:-top-20 md:left-60" />
-      <div className="glass-strong relative z-10 w-full max-w-sm p-8">
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="panel w-full max-w-sm p-8 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-primary shadow-[0_0_40px_-6px_var(--color-primary)]">
-            <Activity className="size-5 text-white" />
+          <span className="grid size-10 place-items-center rounded-xl bg-primary">
+            <span className="size-4 rounded-full border-[3px] border-primary-foreground" />
           </span>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">DJL Admin</h1>
@@ -90,7 +88,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 rounded-xl bg-white/[0.04]"
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-1.5">
@@ -102,7 +100,7 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 rounded-xl bg-white/[0.04]"
+                className="h-11 rounded-xl"
               />
             </div>
             {step === "totp" ? (
@@ -115,7 +113,7 @@ function LoginForm() {
                   required
                   value={totp}
                   onChange={(e) => setTotp(e.target.value)}
-                  className="h-11 rounded-xl bg-white/[0.04] font-mono tracking-[0.3em]"
+                  className="h-11 rounded-xl font-mono tracking-[0.3em]"
                 />
               </div>
             ) : null}
@@ -124,11 +122,7 @@ function LoginForm() {
                 {error}
               </p>
             ) : null}
-            <Button
-              className="h-11 w-full rounded-xl shadow-[0_10px_30px_-10px_var(--color-primary)]"
-              disabled={busy}
-              type="submit"
-            >
+            <Button className="h-11 w-full rounded-xl" disabled={busy} type="submit">
               {busy ? "Signing in…" : "Sign in"}
             </Button>
           </form>
@@ -140,7 +134,7 @@ function LoginForm() {
               enter the current code.
             </p>
             {enroll ? (
-              <div className="glass p-3">
+              <div className="rounded-xl border bg-secondary p-3">
                 <p className="font-mono text-xs break-all">{enroll.secret}</p>
                 <a className="mt-2 inline-block text-xs underline" href={enroll.uri}>
                   Open in authenticator app
@@ -169,7 +163,7 @@ function LoginForm() {
                 required
                 value={totp}
                 onChange={(e) => setTotp(e.target.value)}
-                className="h-11 rounded-xl bg-white/[0.04] font-mono tracking-[0.3em]"
+                className="h-11 rounded-xl font-mono tracking-[0.3em]"
               />
             </div>
             {error ? (

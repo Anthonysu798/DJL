@@ -63,7 +63,7 @@ export function ReasonDialog({
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="glass-strong border-white/10 sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}

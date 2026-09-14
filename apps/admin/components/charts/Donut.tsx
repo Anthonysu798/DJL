@@ -1,8 +1,8 @@
 /**
  * Composition donut with a hero number in the hole, a legend (identity never
  * by color alone), 2px surface gaps between segments, and a table view.
- * Categorical hues are assigned in fixed order and validated against the
- * dark surface (see dataviz validator run in the commit message).
+ * Categorical hues are assigned in fixed order and validated for both
+ * light and dark surfaces (dataviz validator).
  */
 const HUES = [
   "var(--color-chart-1)",
@@ -32,9 +32,12 @@ export function Donut({
   const c = 2 * Math.PI * r;
   let offset = 0;
   return (
-    <figure className="glass p-5">
+    <figure className="panel p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <figcaption className="text-lg font-medium">{title}</figcaption>
+        <figcaption className="flex items-center gap-3 text-lg font-medium">
+          <span className="size-2.5 rounded-full bg-primary ring-4 ring-primary/15" />
+          {title}
+        </figcaption>
         {action}
       </div>
       <div className="flex flex-wrap items-center gap-8">
@@ -44,7 +47,14 @@ export function Donut({
           role="img"
           aria-label={`${title}: ${slices.map((s) => `${s.label} ${s.value}`).join(", ")}`}
         >
-          <circle cx="60" cy="60" r={r} fill="none" stroke="oklch(1 0 0 / 0.06)" strokeWidth="12" />
+          <circle
+            cx="60"
+            cy="60"
+            r={r}
+            fill="none"
+            stroke="var(--color-secondary)"
+            strokeWidth="12"
+          />
           {slices.map((s, i) => {
             const len = (s.value / sum) * c;
             const el = (

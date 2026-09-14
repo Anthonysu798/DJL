@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** Glass hero-number tile with a change-versus-previous-period line and an overflow menu. */
+/** Hero-number tile with a change-versus-previous-period line and an overflow menu. */
 export function StatTile({
   label,
   value,
@@ -45,7 +45,7 @@ export function StatTile({
     );
   }
   return (
-    <div className="glass p-5">
+    <div className="panel p-6">
       <div className="flex items-start justify-between">
         <div className="text-sm text-muted-foreground">{label}</div>
         {menu?.length ? (
@@ -60,7 +60,7 @@ export function StatTile({
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="glass-strong">
+            <DropdownMenuContent align="end">
               {menu.map((m) => (
                 <DropdownMenuItem key={m.label} onSelect={m.onSelect}>
                   {m.label}

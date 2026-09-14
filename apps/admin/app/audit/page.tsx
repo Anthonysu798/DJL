@@ -54,19 +54,19 @@ export default function AuditPage() {
             }}
           >
             <Input
-              className="pill h-9 w-40"
+              className="h-9 w-40"
               placeholder="action prefix"
               value={filter.action}
               onChange={(e) => setFilter({ ...filter, action: e.target.value })}
             />
             <Input
-              className="pill h-9 w-56"
+              className="h-9 w-56"
               placeholder="target id"
               value={filter.targetId}
               onChange={(e) => setFilter({ ...filter, targetId: e.target.value })}
             />
             <Input
-              className="pill h-9 w-56"
+              className="h-9 w-56"
               placeholder="actor id"
               value={filter.actorId}
               onChange={(e) => setFilter({ ...filter, actorId: e.target.value })}

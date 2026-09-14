@@ -2,7 +2,7 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { PageCard, headRowClass, rowClass } from "@/components/PageCard";
+import { PageCard, StatusPill, headRowClass, rowClass } from "@/components/PageCard";
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
 import { Badge } from "@/components/ui/badge";
@@ -93,9 +93,11 @@ export default function UserDetailPage() {
           <PageCard>
             <div className="flex flex-wrap items-center gap-2">
               {d.user.banned ? (
-                <Badge variant="destructive">Suspended · {d.user.banReason ?? ""}</Badge>
+                <StatusPill tone="danger">
+                  Suspended{d.user.banReason ? ` · ${d.user.banReason}` : ""}
+                </StatusPill>
               ) : (
-                <Badge className="bg-primary/20 text-foreground">Active</Badge>
+                <StatusPill tone="success">Active</StatusPill>
               )}
               <Badge variant="secondary">{d.user.twoFactorEnabled ? "2FA on" : "2FA off"}</Badge>
               <Badge variant="secondary">

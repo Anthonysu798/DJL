@@ -2,11 +2,10 @@
 import { useState } from "react";
 
 /**
- * Single-series bars, one violet hue with a vertical gradient, a hover card
- * anchored to the hovered bar, recessive gridlines, and a table view. The
- * title names the series, so no legend.
+ * Single-series bars: one hue, rounded tops, 2px gaps, hover tooltip, table
+ * view. The title names the series, so no legend.
  */
-export function GlassBars({
+export function Bars({
   title,
   rows,
   format,
@@ -22,9 +21,12 @@ export function GlassBars({
   const [hover, setHover] = useState<number | null>(null);
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   return (
-    <figure className="glass p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <figcaption className="text-lg font-medium">{title}</figcaption>
+    <figure className="panel p-6">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <figcaption className="flex items-center gap-3 text-lg font-medium">
+          <span className="size-2.5 rounded-full bg-primary ring-4 ring-primary/15" />
+          {title}
+        </figcaption>
         {controls}
       </div>
       {rows.length === 0 ? (
@@ -35,7 +37,7 @@ export function GlassBars({
             {ticks.map((t) => (
               <div
                 key={t}
-                className="absolute right-0 left-10 border-t border-dashed border-white/[0.06]"
+                className="absolute right-0 left-10 border-t border-dashed border-border"
                 style={{ bottom: `${t * 100}%` }}
               >
                 <span className="absolute -top-2 -left-10 w-8 text-right text-[11px] text-muted-foreground">
@@ -44,7 +46,7 @@ export function GlassBars({
               </div>
             ))}
             <div
-              className={`relative flex h-full items-end ${rows.length > 40 ? "gap-px" : rows.length > 12 ? "gap-[3px]" : "gap-[6px]"}`}
+              className={`relative flex h-full items-end ${rows.length > 40 ? "gap-px" : rows.length > 12 ? "gap-[3px]" : "gap-2"}`}
               role="img"
               aria-label={`${title} by day`}
             >
@@ -56,18 +58,15 @@ export function GlassBars({
                   onMouseLeave={() => setHover(null)}
                 >
                   <div
-                    className={`w-full ${rows.length > 40 ? "rounded-t-[2px]" : "rounded-t-[6px]"} transition-opacity`}
+                    className={`w-full bg-primary transition-opacity ${rows.length > 40 ? "rounded-t-[2px]" : "rounded-t-md"}`}
                     style={{
                       height: `${Math.max(1.5, (r.value / max) * 100)}%`,
-                      background:
-                        "linear-gradient(180deg, oklch(0.72 0.2 292) 0%, oklch(0.45 0.16 292 / 0.35) 100%)",
-                      opacity: hover === null || hover === i ? 1 : 0.55,
-                      boxShadow: hover === i ? "0 0 24px -4px oklch(0.7 0.2 292)" : undefined,
+                      opacity: hover === null || hover === i ? 1 : 0.45,
                     }}
                   />
                   {hover === i ? (
                     <div
-                      className="glass-strong pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 px-3 py-2 text-xs whitespace-nowrap"
+                      className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 rounded-lg border bg-popover px-3 py-2 text-xs whitespace-nowrap shadow-md"
                       role="tooltip"
                     >
                       <div className="text-muted-foreground">{r.day}</div>

@@ -4,38 +4,72 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * DJL Admin theme: a single dark "liquid glass" look. Surfaces are translucent
- * layers over a deep navy ground with a violet glow; the accent is violet.
- * Values are OKLCH so the glass tints stay consistent at every opacity.
+ * DJL Admin theme. Light first: white surfaces with hairline borders on a
+ * soft gray canvas, indigo as the only accent. Dark mode is its own set of
+ * steps, not an inverted light palette. Chart hues are validated per mode
+ * with the dataviz palette validator (all checks pass on both surfaces).
  */
 :root {
-  color-scheme: dark;
-  --radius: 1rem;
-  --background: oklch(0.13 0.02 275);
-  --foreground: oklch(0.96 0.01 275);
-  --card: oklch(0.18 0.025 275 / 0.55);
-  --card-foreground: oklch(0.96 0.01 275);
-  --popover: oklch(0.17 0.025 275);
-  --popover-foreground: oklch(0.96 0.01 275);
-  --primary: oklch(0.62 0.22 290);
+  --radius: 0.875rem;
+  --background: oklch(0.975 0.002 260);
+  --foreground: oklch(0.17 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.01 260);
+  --primary: oklch(0.49 0.22 275);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.24 0.03 275);
-  --secondary-foreground: oklch(0.94 0.01 275);
-  --muted: oklch(0.22 0.025 275);
-  --muted-foreground: oklch(0.7 0.02 275);
-  --accent: oklch(0.26 0.04 285);
-  --accent-foreground: oklch(0.97 0.01 275);
-  --destructive: oklch(0.63 0.2 25);
-  --border: oklch(1 0 0 / 0.1);
+  --secondary: oklch(0.955 0.004 260);
+  --secondary-foreground: oklch(0.25 0.01 260);
+  --muted: oklch(0.955 0.004 260);
+  --muted-foreground: oklch(0.5 0.012 260);
+  --accent: oklch(0.955 0.004 260);
+  --accent-foreground: oklch(0.2 0.01 260);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.91 0.005 260);
+  --input: oklch(0.91 0.005 260);
+  --ring: oklch(0.49 0.22 275 / 0.35);
+  --chart-1: #4f46e5;
+  --chart-2: #b45309;
+  --chart-3: #15803d;
+  --chart-4: #0284c7;
+  --chart-5: #b91c1c;
+  --success-bg: oklch(0.96 0.04 160);
+  --success-fg: oklch(0.42 0.13 160);
+  --danger-bg: oklch(0.96 0.03 10);
+  --danger-fg: oklch(0.5 0.18 15);
+  --sidebar: oklch(1 0 0);
+}
+
+.dark {
+  --background: oklch(0.14 0.005 260);
+  --foreground: oklch(0.95 0.005 260);
+  --card: oklch(0.18 0.006 260);
+  --card-foreground: oklch(0.95 0.005 260);
+  --popover: oklch(0.2 0.006 260);
+  --popover-foreground: oklch(0.95 0.005 260);
+  --primary: oklch(0.7 0.17 280);
+  --primary-foreground: oklch(0.13 0.02 275);
+  --secondary: oklch(0.24 0.006 260);
+  --secondary-foreground: oklch(0.92 0.005 260);
+  --muted: oklch(0.24 0.006 260);
+  --muted-foreground: oklch(0.68 0.01 260);
+  --accent: oklch(0.25 0.008 260);
+  --accent-foreground: oklch(0.95 0.005 260);
+  --destructive: oklch(0.66 0.19 25);
+  --border: oklch(1 0 0 / 0.09);
   --input: oklch(1 0 0 / 0.12);
-  --ring: oklch(0.62 0.22 290 / 0.6);
-  /* Categorical hues validated on this surface (dataviz validator: all checks pass). */
+  --ring: oklch(0.7 0.17 280 / 0.4);
   --chart-1: #7c5cf6;
   --chart-2: #b8860b;
   --chart-3: #15803d;
   --chart-4: #2563eb;
-  --chart-5: oklch(0.63 0.2 25);
-  --sidebar: oklch(0.15 0.02 275 / 0.7);
+  --chart-5: #ef4444;
+  --success-bg: oklch(0.3 0.05 160);
+  --success-fg: oklch(0.85 0.12 160);
+  --danger-bg: oklch(0.3 0.06 15);
+  --danger-fg: oklch(0.85 0.1 15);
+  --sidebar: oklch(0.16 0.006 260);
 }
 
 @theme inline {
@@ -62,8 +96,13 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 8px);
-  --radius-md: calc(var(--radius) - 4px);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-sidebar: var(--sidebar);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
@@ -73,21 +112,22 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
   body {
     @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(60rem 30rem at 50% -10rem, oklch(0.45 0.2 295 / 0.35), transparent 70%),
-      radial-gradient(40rem 20rem at 90% 110%, oklch(0.4 0.18 300 / 0.2), transparent 70%);
-    background-attachment: fixed;
+    font-feature-settings: "cv11", "ss01";
   }
 }
 
-@utility glass {
-  @apply rounded-2xl border border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_20px_60px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl;
-}
-@utility glass-strong {
-  @apply rounded-2xl border border-white/12 bg-white/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_30px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur-2xl;
+/* Surfaces used across the app. Named for their role, not their look. */
+@utility panel {
+  @apply rounded-2xl border border-border bg-card;
 }
 @utility pill {
-  @apply rounded-full border border-white/10 bg-white/[0.05] backdrop-blur-xl;
+  @apply rounded-full border border-border bg-card;
 }

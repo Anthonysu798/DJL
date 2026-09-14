@@ -3,8 +3,9 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Donut } from "@/components/charts/Donut";
-import { GlassBars } from "@/components/charts/GlassBars";
+import { Bars } from "@/components/charts/Bars";
 import { StatTile } from "@/components/charts/StatTile";
+import { Initials, PageCard, StatusPill, headRowClass, rowClass } from "@/components/PageCard";
 import { Shell } from "@/components/Shell";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -138,10 +139,10 @@ export default function Overview() {
 
   const rangeSelect = (
     <Select value={range} onValueChange={(v) => setRange(v as Range)}>
-      <SelectTrigger className="pill h-10 w-44 px-4" aria-label="Range">
+      <SelectTrigger className="h-10 w-44 rounded-xl" aria-label="Range">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="glass-strong">
+      <SelectContent>
         {(Object.keys(RANGE_LABEL) as Range[]).map((r) => (
           <SelectItem key={r} value={r}>
             {RANGE_LABEL[r]}
@@ -192,16 +193,16 @@ export default function Overview() {
             />
           </div>
           <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
-            <GlassBars
+            <Bars
               title={series[metric].title}
               rows={series[metric].rows}
               format={series[metric].format}
               controls={
                 <Select value={metric} onValueChange={(v) => setMetric(v as Metric)}>
-                  <SelectTrigger className="pill h-9 w-44" aria-label="Metric">
+                  <SelectTrigger className="h-9 w-44 rounded-lg" aria-label="Metric">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="glass-strong">
+                  <SelectContent>
                     <SelectItem value="requests">Gateway requests</SelectItem>
                     <SelectItem value="signups">Signups</SelectItem>
                     <SelectItem value="active">Active users</SelectItem>
@@ -219,54 +220,51 @@ export default function Overview() {
                 value: s.byPlan.find((p) => p.planId === id)?.orgs ?? 0,
               }))}
               action={
-                <Link
-                  href="/plans"
-                  className="pill px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-                >
+                <Link href="/plans" className="text-sm text-primary hover:underline">
                   View plans
                 </Link>
               }
             />
           </div>
           <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
-            <div className="glass p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-medium">Recent users</h2>
-                <Link
-                  href="/users"
-                  className="pill px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-                >
+            <PageCard
+              title="Recent users"
+              action={
+                <Link href="/users" className="text-sm text-primary hover:underline">
                   All users
                 </Link>
-              </div>
+              }
+            >
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/[0.06] hover:bg-transparent">
+                  <TableRow className={headRowClass}>
                     <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Joined</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recent.data?.users.map((u) => (
-                    <TableRow key={u.id} className="border-white/[0.06]">
+                    <TableRow key={u.id} className={`${rowClass} h-16`}>
                       <TableCell>
                         <Link href={`/users/${u.id}`} className="flex items-center gap-3">
-                          <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-primary/80 to-fuchsia-500/80 text-xs font-semibold text-white">
-                            {u.name.slice(0, 1).toUpperCase()}
+                          <Initials name={u.name || u.email} />
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{u.name || "—"}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {u.email}
+                            </span>
                           </span>
-                          <span className="font-medium">{u.name}</span>
                         </Link>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{u.email}</TableCell>
                       <TableCell>
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={`size-2 rounded-full ${u.banned ? "bg-chart-5" : u.emailVerified ? "bg-primary" : "bg-chart-2"}`}
-                          />
-                          {u.banned ? "Suspended" : u.emailVerified ? "Active" : "Unverified"}
-                        </span>
+                        {u.banned ? (
+                          <StatusPill tone="danger">Suspended</StatusPill>
+                        ) : u.emailVerified ? (
+                          <StatusPill tone="success">Active</StatusPill>
+                        ) : (
+                          <StatusPill tone="neutral">Unverified</StatusPill>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(u.createdAt).toLocaleDateString()}
@@ -275,10 +273,9 @@ export default function Overview() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </PageCard>
             <div className="space-y-4">
-              <div className="glass p-5">
-                <h2 className="mb-3 text-lg font-medium">Top models</h2>
+              <PageCard title="Top models">
                 {s.byModel.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No settled requests in this range.
@@ -298,9 +295,8 @@ export default function Overview() {
                     ))}
                   </ul>
                 )}
-              </div>
-              <div className="glass p-5">
-                <h2 className="mb-3 text-lg font-medium">Servers</h2>
+              </PageCard>
+              <PageCard title="Servers">
                 {status.data ? (
                   <dl className="grid grid-cols-2 gap-3 text-sm">
                     <div>
@@ -331,7 +327,7 @@ export default function Overview() {
                 ) : (
                   <p className="text-sm text-muted-foreground">{status.error ?? "Loading…"}</p>
                 )}
-              </div>
+              </PageCard>
             </div>
           </div>
         </div>

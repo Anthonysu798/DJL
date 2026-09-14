@@ -1,5 +1,5 @@
 "use client";
-import { PageCard, headRowClass, rowClass } from "@/components/PageCard";
+import { PageCard, StatusPill, headRowClass, rowClass } from "@/components/PageCard";
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
 import { Badge } from "@/components/ui/badge";
@@ -65,9 +65,9 @@ export default function AdminsPage() {
                 </TableCell>
                 <TableCell>
                   {a.disabled ? (
-                    <Badge variant="destructive">disabled</Badge>
+                    <StatusPill tone="danger">Disabled</StatusPill>
                   ) : (
-                    <Badge className="bg-primary/20 text-foreground">active</Badge>
+                    <StatusPill tone="success">Active</StatusPill>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
