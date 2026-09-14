@@ -83,6 +83,12 @@ export class AdminAuth {
   constructor(
     private readonly db: DjlDatabase,
     private readonly appSecret: string,
+    /**
+     * Local development only: when false, sessions count as MFA-verified so
+     * the admin app can be used without an authenticator. The env loader
+     * refuses to turn this off outside local/test.
+     */
+    private readonly mfaRequired: boolean = true,
   ) {}
 
   async allowlist(): Promise<readonly string[]> {
@@ -204,7 +210,7 @@ export class AdminAuth {
         email: admin.email,
         role: admin.role,
         sessionId: session!.id,
-        mfaVerified,
+        mfaVerified: mfaVerified || !this.mfaRequired,
       },
     };
   }
@@ -230,7 +236,7 @@ export class AdminAuth {
       email: admin.email,
       role: admin.role,
       sessionId: session.id,
-      mfaVerified: Boolean(session.mfaVerifiedAt),
+      mfaVerified: Boolean(session.mfaVerifiedAt) || !this.mfaRequired,
     };
   }
 

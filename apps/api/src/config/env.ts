@@ -17,6 +17,8 @@ export interface ApiEnv {
   readonly trustedOrigins: readonly string[];
   /** Parent domain for the shared session cookie in staging/production, e.g. ".slcor.com". */
   readonly cookieDomain: string | null;
+  /** Admin second factor. Only local/test may set ADMIN_MFA_REQUIRED=false. */
+  readonly adminMfaRequired: boolean;
   readonly google: { readonly clientId: string; readonly clientSecret: string } | null;
   readonly apple: { readonly clientId: string; readonly clientSecret: string } | null;
 }
@@ -65,6 +67,7 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
       ...(isLocal ? ["http://localhost:5173", "http://localhost:3001"] : []),
     ],
     cookieDomain: env.COOKIE_DOMAIN?.trim() || null,
+    adminMfaRequired: isLocal ? env.ADMIN_MFA_REQUIRED !== "false" : true,
     google,
     apple,
   };

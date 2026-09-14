@@ -196,7 +196,7 @@ export async function startApi(
         secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
       });
   const sync = new SyncService(db, blobs);
-  const adminAuth = new AdminAuth(db, env.betterAuthSecret);
+  const adminAuth = new AdminAuth(db, env.betterAuthSecret, env.adminMfaRequired);
   const admin = new AdminService({ db, ledger, limiter, gateway, trial, version });
   const routes = makeRoutes({
     env,
