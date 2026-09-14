@@ -1,13 +1,25 @@
 "use client";
+import { PageCard, headRowClass, rowClass } from "@/components/PageCard";
+import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { admin } from "@/lib/api";
-import { askReason, useLoad } from "@/lib/useLoad";
+import { useLoad } from "@/lib/useLoad";
 
 interface Model {
   modelId: string;
   provider: string;
   displayName: string;
-  status: string;
+  status: "active" | "degraded" | "disabled";
   qualityScore: number;
   inputMicroPerToken: string;
   outputMicroPerToken: string;
@@ -16,108 +28,145 @@ interface Model {
   capabilities: string[];
 }
 
+const STATUS_STYLE: Record<Model["status"], string> = {
+  active: "bg-primary",
+  degraded: "bg-chart-2",
+  disabled: "bg-chart-5",
+};
+
 export default function ModelsPage() {
   const models = useLoad(() => admin<Model[]>("/models"), []);
-  const patch = async (m: Model, field: keyof Model, prompt: string) => {
-    const value = window.prompt(prompt, String(m[field]));
-    if (value === null) return;
-    const reason = askReason(`Update ${field} of ${m.modelId}`);
-    if (!reason) return;
-    await admin(`/models/${m.modelId}`, {
-      method: "PATCH",
-      json: {
-        [field]: field === "status" ? value : Number.isNaN(Number(value)) ? value : Number(value),
-        reason,
-      },
-    });
-    models.reload();
-  };
   return (
-    <Shell>
-      <h1 className="mb-1 text-lg font-semibold">Model catalog</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        Prices are microcredits per token or per image (1 credit = 1,000,000 microcredits). Edits
-        take effect within 30 seconds and are audited.
-      </p>
-      {models.error ? (
-        <p role="alert" className="text-sm text-red-600">
-          {models.error}
-        </p>
-      ) : null}
-      <div className="card overflow-x-auto">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Model</th>
-              <th>Provider</th>
-              <th>Status</th>
-              <th>Quality</th>
-              <th>Input µcr/tok</th>
-              <th>Output µcr/tok</th>
-              <th>µcr/image</th>
-              <th>Caps</th>
-            </tr>
-          </thead>
-          <tbody>
+    <Shell
+      title="Model catalog"
+      subtitle="Prices are microcredits per token or per image (1 credit = 1,000,000 microcredits). Edits take effect within 30 seconds and are audited."
+    >
+      <PageCard>
+        {models.error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {models.error}
+          </p>
+        ) : null}
+        <Table>
+          <TableHeader>
+            <TableRow className={headRowClass}>
+              <TableHead>Model</TableHead>
+              <TableHead>Provider</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Quality</TableHead>
+              <TableHead>Input µcr/tok</TableHead>
+              <TableHead>Output µcr/tok</TableHead>
+              <TableHead>µcr/image</TableHead>
+              <TableHead>Capabilities</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {models.data?.map((m) => (
-              <tr key={m.modelId}>
-                <td>
-                  {m.displayName}
-                  <br />
-                  <span className="text-xs text-neutral-500">{m.modelId}</span>
-                </td>
-                <td>{m.provider}</td>
-                <td>
-                  <button
-                    className="underline"
-                    type="button"
-                    onClick={() => patch(m, "status", "active | degraded | disabled")}
-                  >
-                    {m.status}
-                  </button>
-                </td>
-                <td>
-                  <button
-                    className="underline"
-                    type="button"
-                    onClick={() => patch(m, "qualityScore", "Quality 0-100")}
-                  >
-                    {m.qualityScore}
-                  </button>
-                </td>
-                <td>
-                  <button
-                    className="underline tabular-nums"
-                    type="button"
-                    onClick={() => patch(m, "inputMicroPerToken", "Input microcredits per token")}
-                  >
-                    {m.inputMicroPerToken}
-                  </button>
-                </td>
-                <td>
-                  <button
-                    className="underline tabular-nums"
-                    type="button"
-                    onClick={() => patch(m, "outputMicroPerToken", "Output microcredits per token")}
-                  >
-                    {m.outputMicroPerToken}
-                  </button>
-                </td>
-                <td>
-                  <button
-                    className="underline tabular-nums"
-                    type="button"
-                    onClick={() => patch(m, "microPerImage", "Microcredits per image")}
-                  >
-                    {m.microPerImage}
-                  </button>
-                </td>
-                <td className="text-xs">{m.capabilities.join(", ")}</td>
-              </tr>
+              <TableRow key={m.modelId} className={rowClass}>
+                <TableCell>
+                  <div className="font-medium">{m.displayName}</div>
+                  <div className="text-xs text-muted-foreground">{m.modelId}</div>
+                </TableCell>
+                <TableCell>{m.provider}</TableCell>
+                <TableCell>
+                  <ReasonDialog
+                    trigger={
+                      <button type="button" className="flex items-center gap-2 text-sm">
+                        <span className={`size-2 rounded-full ${STATUS_STYLE[m.status]}`} />
+                        {m.status}
+                      </button>
+                    }
+                    title={`Change status of ${m.displayName}`}
+                    fields={[
+                      {
+                        name: "status",
+                        label: "Status (active, degraded, disabled)",
+                        defaultValue: m.status,
+                      },
+                    ]}
+                    confirmLabel="Save"
+                    onConfirm={(v, reason) =>
+                      admin(`/models/${m.modelId}`, {
+                        method: "PATCH",
+                        json: { status: v.status, reason },
+                      }).then(models.reload)
+                    }
+                  />
+                </TableCell>
+                <TableCell className="tabular-nums">{m.qualityScore}</TableCell>
+                <TableCell className="tabular-nums">{m.inputMicroPerToken}</TableCell>
+                <TableCell className="tabular-nums">{m.outputMicroPerToken}</TableCell>
+                <TableCell className="tabular-nums">{m.microPerImage}</TableCell>
+                <TableCell>
+                  {m.capabilities.map((c) => (
+                    <Badge key={c} variant="secondary" className="mr-1 mb-1">
+                      {c}
+                    </Badge>
+                  ))}
+                </TableCell>
+                <TableCell className="text-right">
+                  <ReasonDialog
+                    trigger={
+                      <Button size="sm" variant="secondary">
+                        Edit
+                      </Button>
+                    }
+                    title={`Edit ${m.displayName}`}
+                    description="Leave a field unchanged to keep its value."
+                    fields={[
+                      {
+                        name: "qualityScore",
+                        label: "Quality score (0–100)",
+                        type: "number",
+                        defaultValue: String(m.qualityScore),
+                      },
+                      {
+                        name: "inputMicroPerToken",
+                        label: "Input microcredits per token",
+                        type: "number",
+                        defaultValue: m.inputMicroPerToken,
+                      },
+                      {
+                        name: "outputMicroPerToken",
+                        label: "Output microcredits per token",
+                        type: "number",
+                        defaultValue: m.outputMicroPerToken,
+                      },
+                      {
+                        name: "microPerImage",
+                        label: "Microcredits per image",
+                        type: "number",
+                        defaultValue: m.microPerImage,
+                      },
+                      {
+                        name: "sortOrder",
+                        label: "Sort order",
+                        type: "number",
+                        defaultValue: String(m.sortOrder),
+                      },
+                    ]}
+                    confirmLabel="Save"
+                    onConfirm={(v, reason) =>
+                      admin(`/models/${m.modelId}`, {
+                        method: "PATCH",
+                        json: {
+                          qualityScore: Number(v.qualityScore),
+                          inputMicroPerToken: v.inputMicroPerToken,
+                          outputMicroPerToken: v.outputMicroPerToken,
+                          microPerImage: v.microPerImage,
+                          sortOrder: Number(v.sortOrder),
+                          reason,
+                        },
+                      }).then(models.reload)
+                    }
+                  />
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </PageCard>
     </Shell>
   );
 }

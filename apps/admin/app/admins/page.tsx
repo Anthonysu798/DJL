@@ -1,7 +1,19 @@
 "use client";
+import { PageCard, headRowClass, rowClass } from "@/components/PageCard";
+import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { admin } from "@/lib/api";
-import { askReason, useLoad } from "@/lib/useLoad";
+import { useLoad } from "@/lib/useLoad";
 
 interface Admin {
   id: string;
@@ -16,63 +28,70 @@ interface Admin {
 
 export default function AdminsPage() {
   const admins = useLoad(() => admin<Admin[]>("/admins"), []);
-  const toggle = async (a: Admin) => {
-    const reason = askReason(`${a.disabled ? "Enable" : "Disable"} ${a.email}`);
-    if (!reason) return;
-    await admin(`/admins/${a.id}/disabled`, {
-      method: "POST",
-      json: { disabled: !a.disabled, reason },
-    });
-    admins.reload();
-  };
   return (
-    <Shell>
-      <h1 className="mb-1 text-lg font-semibold">Admins</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        New admins are created from a trusted shell with `bun run admin:create` so no password ever
-        crosses this UI.
-      </p>
-      {admins.error ? (
-        <p role="alert" className="text-sm text-red-600">
-          {admins.error}
-        </p>
-      ) : null}
-      <div className="card">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Name</th>
-              <th>Role</th>
-              <th>2FA</th>
-              <th>Last login</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
+    <Shell
+      title="Admins"
+      subtitle="New admins are created from a trusted shell with `bun run admin:create`, so no password ever crosses this UI."
+    >
+      <PageCard>
+        {admins.error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {admins.error}
+          </p>
+        ) : null}
+        <Table>
+          <TableHeader>
+            <TableRow className={headRowClass}>
+              <TableHead>Email</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>2FA</TableHead>
+              <TableHead>Last login</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {admins.data?.map((a) => (
-              <tr key={a.id}>
-                <td>{a.email}</td>
-                <td>{a.name}</td>
-                <td>{a.role}</td>
-                <td>{a.totpEnabled ? "on" : "not enrolled"}</td>
-                <td>{a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString() : "never"}</td>
-                <td>{a.disabled ? "disabled" : "active"}</td>
-                <td>
-                  <button
-                    className={a.disabled ? "btn-secondary" : "btn-danger"}
-                    type="button"
-                    onClick={() => toggle(a)}
-                  >
-                    {a.disabled ? "Enable" : "Disable"}
-                  </button>
-                </td>
-              </tr>
+              <TableRow key={a.id} className={rowClass}>
+                <TableCell>{a.email}</TableCell>
+                <TableCell>{a.name}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{a.role}</Badge>
+                </TableCell>
+                <TableCell>{a.totpEnabled ? "on" : "not enrolled"}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString() : "never"}
+                </TableCell>
+                <TableCell>
+                  {a.disabled ? (
+                    <Badge variant="destructive">disabled</Badge>
+                  ) : (
+                    <Badge className="bg-primary/20 text-foreground">active</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <ReasonDialog
+                    trigger={
+                      <Button size="sm" variant={a.disabled ? "secondary" : "destructive"}>
+                        {a.disabled ? "Enable" : "Disable"}
+                      </Button>
+                    }
+                    title={`${a.disabled ? "Enable" : "Disable"} ${a.email}`}
+                    destructive={!a.disabled}
+                    onConfirm={(_v, reason) =>
+                      admin(`/admins/${a.id}/disabled`, {
+                        method: "POST",
+                        json: { disabled: !a.disabled, reason },
+                      }).then(admins.reload)
+                    }
+                  />
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </PageCard>
     </Shell>
   );
 }

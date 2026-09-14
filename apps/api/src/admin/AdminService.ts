@@ -365,6 +365,21 @@ export class AdminService {
       WHERE created_at >= ${sinceIso}::timestamptz GROUP BY 1 ORDER BY 1`);
     const byCountry = await this.deps.db.execute<{ country: string; signups: number }>(sql`
       SELECT country, sum(signups)::int AS signups FROM daily_stats WHERE country <> '*' AND day >= ${sinceIso.slice(0, 10)} GROUP BY 1 ORDER BY 2 DESC LIMIT 25`);
+    // Previous period of equal length, for "from last period" deltas on the tiles.
+    const prevSinceIso = new Date(since.getTime() - days * 86_400_000).toISOString();
+    const [previous] = await this.deps.db.execute<{
+      signups: number;
+      requests: number;
+      active: number;
+      cents: number;
+    }>(sql`
+      SELECT (SELECT count(*)::int FROM "user" WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz) AS signups,
+             (SELECT count(*)::int FROM usage_requests WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz AND status IN ('settled','cut_off')) AS requests,
+             (SELECT count(DISTINCT user_id)::int FROM usage_requests WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz) AS active,
+             (SELECT coalesce(sum(amount_paid_usd_cents),0)::int FROM invoices WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz) AS cents`);
+    // Organizations by plan: active subscriptions per tier; everyone else is on trial.
+    const byPlan = await this.deps.db.execute<{ plan_id: string; orgs: number }>(sql`
+      SELECT plan_id::text AS plan_id, count(DISTINCT org_id)::int AS orgs FROM subscriptions WHERE status = 'active' GROUP BY 1`);
     const byModel = await this.deps.db.execute<{
       model_id: string;
       requests: number;
@@ -372,10 +387,16 @@ export class AdminService {
     }>(sql`
       SELECT model_id, count(*)::int AS requests, coalesce(sum(settled_micro),0)::text AS settled FROM usage_requests
       WHERE created_at >= ${sinceIso}::timestamptz AND status IN ('settled','cut_off') GROUP BY 1 ORDER BY 3 DESC LIMIT 25`);
+    const paidOrgs = byPlan.reduce((a, r) => a + r.orgs, 0);
     return {
       range,
       since: sinceIso,
       totals: totals ?? { users: 0, orgs: 0, paid: 0 },
+      previous: previous ?? { signups: 0, requests: 0, active: 0, cents: 0 },
+      byPlan: [
+        ...byPlan.map((r) => ({ planId: r.plan_id, orgs: r.orgs })),
+        { planId: "trial", orgs: Math.max(0, (totals?.orgs ?? 0) - paidOrgs) },
+      ],
       signups: [...signups],
       usage: [...usage],
       revenue: [...revenue],

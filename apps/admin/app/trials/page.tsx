@@ -1,5 +1,16 @@
 "use client";
+import { PageCard, headRowClass, rowClass } from "@/components/PageCard";
 import { Shell } from "@/components/Shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 
@@ -16,42 +27,47 @@ interface Trial {
 export default function TrialsPage() {
   const trials = useLoad(() => admin<Trial[]>("/trials"), []);
   return (
-    <Shell>
-      <h1 className="mb-4 text-lg font-semibold">Trial review queue</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        Claims that hit the daily trial budget wait here. Approving grants the credits immediately
-        and is audited.
-      </p>
-      {trials.error ? (
-        <p role="alert" className="text-sm text-red-600">
-          {trials.error}
-        </p>
-      ) : null}
-      <div className="card">
+    <Shell
+      title="Trial queue"
+      subtitle="Claims that hit the daily trial budget wait here. Approving grants the credits immediately and is audited."
+    >
+      <PageCard>
+        {trials.error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {trials.error}
+          </p>
+        ) : null}
         {trials.data?.length === 0 ? (
-          <p className="text-sm text-neutral-500">Queue is empty.</p>
+          <p className="text-sm text-muted-foreground">The queue is empty.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Claimed</th>
-                <th>User</th>
-                <th>Line</th>
-                <th>Reasons</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow className={headRowClass}>
+                <TableHead>Claimed</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Line</TableHead>
+                <TableHead>Reasons</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {trials.data?.map((t) => (
-                <tr key={t.id}>
-                  <td>{new Date(t.createdAt).toLocaleString()}</td>
-                  <td>{t.userId}</td>
-                  <td>{t.phoneLineType}</td>
-                  <td>{t.reasons.join(", ")}</td>
-                  <td>
-                    <button
-                      className="btn"
-                      type="button"
+                <TableRow key={t.id} className={rowClass}>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(t.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{t.userId}</TableCell>
+                  <TableCell>{t.phoneLineType}</TableCell>
+                  <TableCell>
+                    {t.reasons.map((r) => (
+                      <Badge key={r} variant="secondary" className="mr-1">
+                        {r}
+                      </Badge>
+                    ))}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
                       onClick={() =>
                         admin(`/trials/${t.id}/approve`, { method: "POST", json: {} }).then(
                           trials.reload,
@@ -59,14 +75,14 @@ export default function TrialsPage() {
                       }
                     >
                       Approve
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
-      </div>
+      </PageCard>
     </Shell>
   );
 }

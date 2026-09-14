@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "DJL Admin", robots: { index: false, 
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>{children}</body>
     </html>
   );
