@@ -47,6 +47,7 @@ export default function AuditPage() {
       <PageCard
         action={
           <form
+            noValidate
             className="flex flex-wrap gap-2"
             onSubmit={(e) => {
               e.preventDefault();

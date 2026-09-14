@@ -5,7 +5,7 @@ CREATE TYPE "public"."subscription_status" AS ENUM('trialing', 'active', 'past_d
 CREATE TYPE "public"."model_status" AS ENUM('active', 'degraded', 'disabled');--> statement-breakpoint
 CREATE TYPE "public"."model_provider" AS ENUM('openai', 'anthropic', 'openrouter');--> statement-breakpoint
 CREATE TYPE "public"."usage_status" AS ENUM('reserved', 'streaming', 'settled', 'released', 'cut_off', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."admin_role" AS ENUM('owner', 'support', 'finance', 'readonly');--> statement-breakpoint
+CREATE TYPE "public"."admin_role" AS ENUM('admin', 'employee');--> statement-breakpoint
 CREATE TYPE "public"."kill_switch" AS ENUM('gateway', 'billing', 'sync');--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid() NOT NULL,
@@ -328,6 +328,33 @@ CREATE TABLE "usage_requests" (
 	"completed_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "admin_invites" (
+	"id" uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid() NOT NULL,
+	"admin_id" uuid NOT NULL,
+	"token_hash" text NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"used_at" timestamp with time zone,
+	"created_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "admin_invites_token_hash_unique" UNIQUE("token_hash")
+);
+--> statement-breakpoint
+CREATE TABLE "admin_login_events" (
+	"id" uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid() NOT NULL,
+	"admin_id" uuid,
+	"email" text NOT NULL,
+	"outcome" text NOT NULL,
+	"ip" text,
+	"country" text,
+	"user_agent" text,
+	"timezone" text,
+	"locale" text,
+	"platform" text,
+	"screen" text,
+	"device_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "admin_sessions" (
 	"id" uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid() NOT NULL,
 	"admin_id" uuid NOT NULL,
@@ -346,16 +373,18 @@ CREATE TABLE "admins" (
 	"email" text NOT NULL,
 	"name" text NOT NULL,
 	"role" "admin_role" NOT NULL,
-	"password_hash" text NOT NULL,
+	"password_hash" text,
+	"email_verified_at" timestamp with time zone,
 	"totp_secret_encrypted" text,
 	"totp_enabled" boolean DEFAULT false NOT NULL,
 	"passkey_credentials" jsonb,
 	"credit_grant_cap_micro" text,
 	"disabled" boolean DEFAULT false NOT NULL,
+	"deleted_at" timestamp with time zone,
 	"last_login_at" timestamp with time zone,
+	"last_login_ip" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"invited_by" uuid,
-	CONSTRAINT "admins_email_unique" UNIQUE("email")
+	"invited_by" uuid
 );
 --> statement-breakpoint
 CREATE TABLE "audit_events" (
@@ -481,6 +510,8 @@ ALTER TABLE "abuse_flags" ADD CONSTRAINT "abuse_flags_user_id_user_id_fk" FOREIG
 ALTER TABLE "devices" ADD CONSTRAINT "devices_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usage_requests" ADD CONSTRAINT "usage_requests_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usage_requests" ADD CONSTRAINT "usage_requests_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admin_invites" ADD CONSTRAINT "admin_invites_admin_id_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."admins"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admin_login_events" ADD CONSTRAINT "admin_login_events_admin_id_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."admins"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_admin_id_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."admins"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "attachments" ADD CONSTRAINT "attachments_org_id_organization_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "attachments" ADD CONSTRAINT "attachments_uploaded_by_user_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -520,7 +551,12 @@ CREATE INDEX "devices_fingerprint_idx" ON "devices" USING btree ("fingerprint");
 CREATE INDEX "usage_requests_org_created_idx" ON "usage_requests" USING btree ("org_id","created_at");--> statement-breakpoint
 CREATE INDEX "usage_requests_status_idx" ON "usage_requests" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "usage_requests_user_idx" ON "usage_requests" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "admin_invites_admin_idx" ON "admin_invites" USING btree ("admin_id");--> statement-breakpoint
+CREATE INDEX "admin_login_events_admin_idx" ON "admin_login_events" USING btree ("admin_id","created_at");--> statement-breakpoint
+CREATE INDEX "admin_login_events_ip_idx" ON "admin_login_events" USING btree ("ip");--> statement-breakpoint
+CREATE INDEX "admin_login_events_created_idx" ON "admin_login_events" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "admin_sessions_admin_idx" ON "admin_sessions" USING btree ("admin_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "admins_email_live_uidx" ON "admins" USING btree ("email") WHERE "admins"."deleted_at" is null;--> statement-breakpoint
 CREATE INDEX "audit_events_target_idx" ON "audit_events" USING btree ("target_type","target_id");--> statement-breakpoint
 CREATE INDEX "audit_events_actor_idx" ON "audit_events" USING btree ("actor_type","actor_id");--> statement-breakpoint
 CREATE INDEX "audit_events_created_idx" ON "audit_events" USING btree ("created_at");--> statement-breakpoint

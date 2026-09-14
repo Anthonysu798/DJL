@@ -1,12 +1,17 @@
 "use client";
 import { KeyRound } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { Field, FormError, invalid } from "@/components/Field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { admin, setToken } from "@/lib/api";
+import { admin, setToken, AdminApiError } from "@/lib/api";
+import { loginClient } from "@/lib/client";
+import { email as emailRule, required, validate } from "@/lib/validation";
+
+const TOTP = /^\d{6}$/;
 
 function LoginForm() {
   const router = useRouter();
@@ -18,17 +23,39 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
   const [enroll, setEnroll] = useState<{ secret: string; uri: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ email?: string; password?: string; totp?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const joined = params.get("joined");
 
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
+    const found = validate(
+      { email, password, totp },
+      {
+        email: emailRule,
+        password: required("Password"),
+        ...(step === "totp"
+          ? { totp: (v: string) => (TOTP.test(v.trim()) ? null : "Enter the 6-digit code.") }
+          : {}),
+      },
+    );
+    setErrors(found);
+    if (Object.keys(found).length) return;
     setBusy(true);
-    setError(null);
+    setFormError(null);
     try {
       const result = await admin<{ token: string; admin: { mfaVerified: boolean } }>(
         "/auth/login",
-        { method: "POST", json: { email, password, ...(totp ? { totp } : {}) } },
+        {
+          method: "POST",
+          json: {
+            email: email.trim(),
+            password,
+            ...(totp ? { totp: totp.trim() } : {}),
+            client: loginClient(),
+          },
+        },
       );
       setToken(result.token);
       if (result.admin.mfaVerified) router.replace("/");
@@ -42,8 +69,16 @@ function LoginForm() {
         setStep("enroll");
       }
     } catch (e) {
-      if ((e as { code?: string }).code === "totp_required") setStep("totp");
-      else setError((e as Error).message);
+      const err = e as AdminApiError;
+      if (err.code === "totp_required") setStep("totp");
+      else if (err.code === "bad_totp") setErrors({ totp: "That code is wrong or expired." });
+      else if (err.code === "bad_credentials")
+        setFormError("Email or password is wrong. Sign-in attempts are logged.");
+      else if (err.code === "locked_out")
+        setFormError("Too many failed attempts. Wait 15 minutes and try again.");
+      else if (err.code === "ip_blocked" || err.code === "ip_not_allowed")
+        setFormError("This network cannot reach the admin console.");
+      else setFormError(err.message);
     } finally {
       setBusy(false);
     }
@@ -51,13 +86,17 @@ function LoginForm() {
 
   const confirm = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!TOTP.test(totp.trim())) {
+      setErrors({ totp: "Enter the 6-digit code from your authenticator." });
+      return;
+    }
     setBusy(true);
-    setError(null);
+    setFormError(null);
     try {
-      await admin("/auth/totp/confirm", { method: "POST", json: { code: totp } });
+      await admin("/auth/totp/confirm", { method: "POST", json: { code: totp.trim() } });
       router.replace("/");
-    } catch (e) {
-      setError((e as Error).message);
+    } catch {
+      setErrors({ totp: "That code is wrong. Check the time on your phone and try again." });
     } finally {
       setBusy(false);
     }
@@ -77,57 +116,68 @@ function LoginForm() {
             </p>
           </div>
         </div>
+        {joined ? (
+          <p className="mb-4 rounded-lg border border-success-fg/20 bg-success-bg px-3 py-2 text-[13px] text-success-fg">
+            Your email is verified and your password is set. Sign in to continue.
+          </p>
+        ) : null}
         {step !== "enroll" ? (
-          <form onSubmit={login} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+          <form onSubmit={login} className="space-y-4" noValidate>
+            <Field id="email" label="Email" error={errors.email}>
               <Input
                 id="email"
-                type="email"
+                type="text"
+                inputMode="email"
                 autoComplete="username"
-                required
+                autoCapitalize="none"
+                spellCheck={false}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors(({ email: _drop, ...rest }) => rest);
+                }}
                 className="h-11 rounded-xl"
+                {...invalid("email", errors.email)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+            </Field>
+            <Field id="password" label="Password" error={errors.password}>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors(({ password: _drop, ...rest }) => rest);
+                }}
                 className="h-11 rounded-xl"
+                {...invalid("password", errors.password)}
               />
-            </div>
+            </Field>
             {step === "totp" ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="totp">Authenticator code</Label>
+              <Field id="totp" label="Authenticator code" error={errors.totp}>
                 <Input
                   id="totp"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  required
+                  maxLength={6}
                   value={totp}
-                  onChange={(e) => setTotp(e.target.value)}
+                  onChange={(e) => {
+                    setTotp(e.target.value.replace(/\D/g, ""));
+                    if (errors.totp) setErrors(({ totp: _drop, ...rest }) => rest);
+                  }}
                   className="h-11 rounded-xl font-mono tracking-[0.3em]"
+                  {...invalid("totp", errors.totp)}
                 />
-              </div>
+              </Field>
             ) : null}
-            {error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
+            <FormError error={formError} />
             <Button className="h-11 w-full rounded-xl" disabled={busy} type="submit">
               {busy ? "Signing in…" : "Sign in"}
             </Button>
           </form>
         ) : (
-          <form onSubmit={confirm} className="space-y-4">
+          <form onSubmit={confirm} className="space-y-4" noValidate>
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <KeyRound className="mt-0.5 size-4 shrink-0" />
               Every admin needs an authenticator. Add this secret to your authenticator app, then
@@ -136,9 +186,12 @@ function LoginForm() {
             {enroll ? (
               <div className="rounded-xl border bg-secondary p-3">
                 <p className="font-mono text-xs break-all">{enroll.secret}</p>
-                <a className="mt-2 inline-block text-xs underline" href={enroll.uri}>
+                <Link
+                  className="mt-2 inline-block text-xs text-primary underline"
+                  href={enroll.uri}
+                >
                   Open in authenticator app
-                </a>
+                </Link>
               </div>
             ) : (
               <Button
@@ -154,23 +207,22 @@ function LoginForm() {
                 Generate secret
               </Button>
             )}
-            <div className="space-y-1.5">
-              <Label htmlFor="code">Current code</Label>
+            <Field id="code" label="Current code" error={errors.totp}>
               <Input
                 id="code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                required
+                maxLength={6}
                 value={totp}
-                onChange={(e) => setTotp(e.target.value)}
+                onChange={(e) => {
+                  setTotp(e.target.value.replace(/\D/g, ""));
+                  if (errors.totp) setErrors({});
+                }}
                 className="h-11 rounded-xl font-mono tracking-[0.3em]"
+                {...invalid("code", errors.totp)}
               />
-            </div>
-            {error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
+            </Field>
+            <FormError error={formError} />
             <Button className="h-11 w-full rounded-xl" disabled={busy || !enroll} type="submit">
               Confirm
             </Button>

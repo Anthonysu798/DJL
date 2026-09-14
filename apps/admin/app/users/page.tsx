@@ -62,6 +62,7 @@ function UsersView() {
         title="All users"
         action={
           <form
+            noValidate
             className="flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();

@@ -44,6 +44,7 @@ export async function seed(databaseUrl: string): Promise<void> {
         { key: "gateway.soft_cap_streams", value: 150 },
         { key: "gateway.hard_cap_streams", value: 200 },
         { key: "pricing.margin", value: 0.4 },
+        { key: "admin.ip_blocklist", value: [] },
       ])
       .onConflictDoNothing({ target: settings.key });
     await db.execute(sql`select 1`);

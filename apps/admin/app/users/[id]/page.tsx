@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { integer } from "@/lib/validation";
 
 interface Detail {
   user: {
@@ -212,8 +213,10 @@ export default function UserDetailPage() {
                         fields={[
                           {
                             name: "credits",
-                            label: "Credits (whole number)",
-                            type: "number",
+                            label: "Credits",
+                            inputMode: "numeric",
+                            validate: integer(1, 1_000_000, "Credits"),
+                            hint: "Whole credits. Employees are capped at 500 per grant.",
                             placeholder: "200",
                           },
                         ]}

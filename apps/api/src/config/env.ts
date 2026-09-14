@@ -10,6 +10,7 @@ export interface ApiEnv {
   readonly port: number;
   readonly apiPublicUrl: string;
   readonly webPublicUrl: string;
+  readonly adminPublicUrl: string;
   readonly databaseUrl: string;
   readonly redisUrl: string;
   readonly betterAuthSecret: string;
@@ -43,6 +44,7 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
   }
   const apiPublicUrl = required("API_PUBLIC_URL", env, "http://localhost:8787");
   const webPublicUrl = required("WEB_PUBLIC_URL", env, "http://localhost:3000");
+  const adminPublicUrl = required("ADMIN_PUBLIC_URL", env, "http://localhost:3001");
   const google =
     env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET
       ? { clientId: env.GOOGLE_OAUTH_CLIENT_ID, clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET }
@@ -56,6 +58,7 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     port: Number(env.API_PORT ?? 8787),
     apiPublicUrl,
     webPublicUrl,
+    adminPublicUrl,
     databaseUrl: required("DATABASE_URL", env, "postgres://djl:djl@localhost:54329/djl"),
     redisUrl: required("REDIS_URL", env, "redis://localhost:63799"),
     betterAuthSecret: secret,

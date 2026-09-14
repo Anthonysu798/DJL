@@ -9,7 +9,12 @@ import { RequestContext } from "../http/context.ts";
 import { ApiError } from "../http/errors.ts";
 import { attempt, handle } from "../http/handle.ts";
 import { json, readJson } from "../http/json.ts";
-import { ADMIN_SESSION_COOKIE, type AdminAuth, type AdminPrincipal } from "./AdminAuth.ts";
+import {
+  ADMIN_SESSION_COOKIE,
+  type AdminAuth,
+  type AdminPrincipal,
+  type LoginClient,
+} from "./AdminAuth.ts";
 import type { AdminService } from "./AdminService.ts";
 
 export interface AdminRouteDeps {
@@ -32,6 +37,18 @@ const param = (name: string) =>
     return value;
   });
 const str = (v: unknown) => (typeof v === "string" ? v : null);
+/** Only the fields we store, only as strings; anything else is dropped. */
+function loginClient(raw: unknown): LoginClient | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  return {
+    timezone: str(o.timezone) ?? undefined,
+    locale: str(o.locale) ?? undefined,
+    platform: str(o.platform) ?? undefined,
+    screen: str(o.screen) ?? undefined,
+    deviceId: str(o.deviceId) ?? undefined,
+  };
+}
 
 function cookieValue(header: string | undefined, name: string): string | null {
   if (!header) return null;
@@ -76,12 +93,14 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
     handle(
       Effect.gen(function* () {
         const ctx = yield* RequestContext;
+        const request = yield* HttpServerRequest.HttpServerRequest;
         const body = (yield* readJson) as Partial<{
           email: string;
           password: string;
           totp: string;
+          client: LoginClient;
         }>;
-        if (!body.email || !body.password)
+        if (typeof body.email !== "string" || typeof body.password !== "string")
           return yield* Effect.fail(
             new ApiError(400, "bad_request", "email and password are required."),
           );
@@ -92,7 +111,9 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
               password: body.password!,
               ...(body.totp ? { totp: body.totp } : {}),
               ip: ctx.ip,
+              country: request.headers["cf-ipcountry"] ?? null,
               userAgent: ctx.userAgent,
+              client: loginClient(body.client),
             }),
           { status: 401, code: "bad_credentials", message: "Sign-in failed." },
         );
@@ -111,6 +132,53 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
           "set-cookie",
           setCookie(result.token, result.expiresAt),
         );
+      }),
+    ),
+  );
+
+  // Public: the invite link lands here before the employee has any credentials.
+  const inviteInspect = HttpRouter.add(
+    "POST",
+    "/admin/v1/auth/invite/inspect",
+    handle(
+      Effect.gen(function* () {
+        const ctx = yield* RequestContext;
+        const body = (yield* readJson) as Partial<{ token: string }>;
+        const result = yield* attempt(
+          () => deps.adminAuth.inspectInvite(String(body.token ?? ""), ctx.ip),
+          { status: 400, code: "invalid_invite", message: "This invite link is not valid." },
+        );
+        return json(result);
+      }),
+    ),
+  );
+  const inviteAccept = HttpRouter.add(
+    "POST",
+    "/admin/v1/auth/invite/accept",
+    handle(
+      Effect.gen(function* () {
+        const ctx = yield* RequestContext;
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        const body = (yield* readJson) as Partial<{
+          token: string;
+          password: string;
+          client: LoginClient;
+        }>;
+        if (typeof body.password !== "string")
+          return yield* Effect.fail(new ApiError(400, "bad_request", "password is required."));
+        const result = yield* attempt(
+          () =>
+            deps.adminAuth.acceptInvite({
+              token: String(body.token ?? ""),
+              password: body.password!,
+              ip: ctx.ip,
+              country: request.headers["cf-ipcountry"] ?? null,
+              userAgent: ctx.userAgent,
+              client: loginClient(body.client),
+            }),
+          { status: 400, code: "invalid_invite", message: "This invite link is not valid." },
+        );
+        return json(result);
       }),
     ),
   );
@@ -369,9 +437,101 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
     ),
     HttpRouter.add(
       "POST",
+      "/admin/v1/admins",
+      handle(
+        Effect.gen(function* () {
+          const p = yield* principal();
+          const b = (yield* readJson) as Record<string, unknown>;
+          const result = yield* attempt(
+            () =>
+              deps.admin.inviteAdmin(p, {
+                email: b.email,
+                name: b.name,
+                role: b.role,
+                reason: b.reason,
+              }),
+            FAIL,
+          );
+          return json(result);
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "PATCH",
+      "/admin/v1/admins/:id",
+      opWithParam("id", (p, id, b) =>
+        deps.admin.updateAdmin(p, id, {
+          ...(b.name !== undefined ? { name: b.name } : {}),
+          ...(b.role !== undefined ? { role: b.role } : {}),
+          reason: b.reason,
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "DELETE",
+      "/admin/v1/admins/:id",
+      opWithParam("id", (p, id, b) => deps.admin.deleteAdmin(p, id, b.reason)),
+    ),
+    HttpRouter.add(
+      "POST",
       "/admin/v1/admins/:id/disabled",
       opWithParam("id", (p, id, b) =>
         deps.admin.setAdminDisabled(p, id, b.disabled === true, str(b.reason) ?? ""),
+      ),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/admins/:id/resend-invite",
+      opWithParam("id", (p, id, b) => deps.admin.resendInvite(p, id, b.reason)),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/admins/:id/revoke-sessions",
+      opWithParam("id", (p, id, b) => deps.admin.revokeAdminSessions(p, id, b.reason)),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/admins/:id/logins",
+      opWithParam("id", (p, id) => deps.admin.loginEvents(p, { adminId: id }), false),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/security/logins",
+      opWithQuery((p, q) =>
+        deps.admin.loginEvents(p, {
+          ...(q.get("ip") ? { ip: q.get("ip")! } : {}),
+          ...(q.get("adminId") ? { adminId: q.get("adminId")! } : {}),
+          ...(q.get("limit") ? { limit: Number(q.get("limit")) } : {}),
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/security/ip-bans",
+      op((p) => deps.admin.ipBans(p)),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/security/ip-bans",
+      handle(
+        Effect.gen(function* () {
+          const p = yield* principal();
+          const b = (yield* readJson) as Record<string, unknown>;
+          const result = yield* attempt(() => deps.admin.setIpBan(p, b.ip, true, b.reason), FAIL);
+          return json(result);
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/security/ip-bans/remove",
+      handle(
+        Effect.gen(function* () {
+          const p = yield* principal();
+          const b = (yield* readJson) as Record<string, unknown>;
+          const result = yield* attempt(() => deps.admin.setIpBan(p, b.ip, false, b.reason), FAIL);
+          return json(result);
+        }),
       ),
     ),
     HttpRouter.add(
@@ -381,5 +541,14 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
     ),
   ];
 
-  return Layer.mergeAll(login, logout, me, totpEnroll, totpConfirm, ...routes);
+  return Layer.mergeAll(
+    login,
+    inviteInspect,
+    inviteAccept,
+    logout,
+    me,
+    totpEnroll,
+    totpConfirm,
+    ...routes,
+  );
 }

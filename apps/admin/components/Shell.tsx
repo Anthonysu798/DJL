@@ -9,8 +9,8 @@ import {
   Search,
   Settings,
   ShieldAlert,
-  ShieldCheck,
   Sparkles,
+  UserRound,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -44,12 +44,13 @@ export const NAV_PLATFORM = [
   { href: "/plans", label: "Plans", icon: Boxes },
   { href: "/switches", label: "Kill switches", icon: ShieldAlert },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/admins", label: "Admins", icon: ShieldCheck },
+  { href: "/team", label: "Team", icon: UserRound },
 ] as const;
 
 interface Me {
-  admin: { id: string; email: string; role: string; mfaVerified: boolean };
+  admin: { id: string; email: string; role: "admin" | "employee"; mfaVerified: boolean };
 }
+const ROLE_LABEL = { admin: "Admin", employee: "Employee" } as const;
 interface AuditRow {
   id: string;
   action: string;
@@ -211,7 +212,9 @@ export function Shell({
         </Link>
         <div className="space-y-7">
           <NavGroup title="Navigation" items={NAV_MAIN} pathname={pathname} />
-          <NavGroup title="Platform" items={NAV_PLATFORM} pathname={pathname} />
+          {me?.role === "admin" ? (
+            <NavGroup title="Platform" items={NAV_PLATFORM} pathname={pathname} />
+          ) : null}
         </div>
         <button
           type="button"
@@ -252,14 +255,20 @@ export function Shell({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <div className="truncate text-sm font-medium">{me?.email}</div>
-                  <div className="text-xs text-muted-foreground">{me?.role}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {me ? ROLE_LABEL[me.role] : ""}
+                  </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => router.push("/admins")}>Admins</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => router.push("/settings")}>
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                {me?.role === "admin" ? (
+                  <>
+                    <DropdownMenuItem onSelect={() => router.push("/team")}>Team</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => router.push("/settings")}>
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
                 <DropdownMenuItem onSelect={signOut}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -275,7 +284,11 @@ export function Shell({
           {me ? children : <p className="text-sm text-muted-foreground">Loading…</p>}
         </main>
       </div>
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        isAdmin={me?.role === "admin"}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@
  * Email + argon2id password, mandatory TOTP once enrolled, opaque session
  * tokens stored hashed, and an IP allowlist read from settings.
  */
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import * as OTPAuth from "otpauth";
 
@@ -11,7 +11,47 @@ import { hashIp, writeAudit } from "../audit/AuditLog.ts";
 import { hashPassword, verifyPassword } from "../auth/password.ts";
 import { ApiError } from "../http/errors.ts";
 
-export type AdminRole = "owner" | "support" | "finance" | "readonly";
+export type AdminRole = "admin" | "employee";
+export const ADMIN_ROLES: readonly AdminRole[] = ["admin", "employee"];
+
+/** What the browser reports about itself at sign-in. Stored verbatim for forensics, never trusted for auth. */
+export interface LoginClient {
+  readonly timezone?: string | undefined;
+  readonly locale?: string | undefined;
+  readonly platform?: string | undefined;
+  readonly screen?: string | undefined;
+  readonly deviceId?: string | undefined;
+}
+
+export type LoginOutcome =
+  | "success"
+  | "bad_password"
+  | "bad_totp"
+  | "totp_required"
+  | "locked_out"
+  | "disabled"
+  | "ip_blocked"
+  | "ip_not_allowed"
+  | "not_active"
+  | "unknown_email";
+
+const INVITE_TTL_MS = 24 * 3_600_000;
+const PASSWORD_MIN = 14;
+const PASSWORD_MAX = 128;
+
+/** Password rules for admin accounts: long, not the email, no trivial repeats. */
+export function checkPasswordPolicy(password: string, email: string): string | null {
+  if (password.length < PASSWORD_MIN) return `Use at least ${PASSWORD_MIN} characters.`;
+  if (password.length > PASSWORD_MAX) return `Use at most ${PASSWORD_MAX} characters.`;
+  const local = email.split("@")[0]?.toLowerCase() ?? "";
+  if (local.length >= 4 && password.toLowerCase().includes(local))
+    return "The password must not contain your email address.";
+  if (/^(.)\1+$/.test(password)) return "The password cannot be one repeated character.";
+  return null;
+}
+
+const clientField = (v: unknown, max = 128) =>
+  typeof v === "string" && v.length > 0 ? v.slice(0, max) : null;
 
 export interface AdminPrincipal {
   readonly adminId: string;
@@ -63,10 +103,23 @@ export async function decryptSecret(encrypted: string, appSecret: string): Promi
 const ipv4ToInt = (addr: string) =>
   addr.split(".").reduce((acc, octet) => (acc << 8) + Number(octet), 0) >>> 0;
 
-export function ipAllowed(ip: string | null, allowlist: readonly string[]): boolean {
-  if (allowlist.length === 0) return true; // no list configured yet (local/staging)
+const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6 = /^[0-9a-f:]+$/i;
+/** Accepts a bare IPv4/IPv6 address or an IPv4 CIDR like 203.0.113.0/24. */
+export function isIpOrCidr(entry: string): boolean {
+  const [addr, bits] = entry.split("/");
+  if (!addr) return false;
+  if (bits !== undefined) {
+    if (!/^\d{1,2}$/.test(bits) || Number(bits) > 32) return false;
+    return IPV4.test(addr) && addr.split(".").every((o) => Number(o) <= 255);
+  }
+  if (IPV4.test(addr)) return addr.split(".").every((o) => Number(o) <= 255);
+  return IPV6.test(addr) && addr.includes(":") && addr.length <= 45;
+}
+
+export function ipMatches(ip: string | null, list: readonly string[]): boolean {
   if (!ip) return false;
-  return allowlist.some((entry) => {
+  return list.some((entry) => {
     if (!entry.includes("/")) return entry === ip;
     const [network, bitsRaw] = entry.split("/");
     const bits = Number(bitsRaw);
@@ -75,6 +128,11 @@ export function ipAllowed(ip: string | null, allowlist: readonly string[]): bool
     const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
     return (ipv4ToInt(ip) & mask) === (ipv4ToInt(network) & mask);
   });
+}
+
+export function ipAllowed(ip: string | null, allowlist: readonly string[]): boolean {
+  if (allowlist.length === 0) return true; // no list configured yet (local/staging)
+  return ipMatches(ip, allowlist);
 }
 
 export class AdminAuth {
@@ -91,20 +149,61 @@ export class AdminAuth {
     private readonly mfaRequired: boolean = true,
   ) {}
 
-  async allowlist(): Promise<readonly string[]> {
-    const row = await this.db.query.settings.findFirst({
-      where: eq(schema.settings.key, "admin.ip_allowlist"),
-    });
-    return Array.isArray(row?.value) ? (row!.value as string[]) : [];
+  private async ipList(
+    key: "admin.ip_allowlist" | "admin.ip_blocklist",
+  ): Promise<readonly string[]> {
+    const row = await this.db.query.settings.findFirst({ where: eq(schema.settings.key, key) });
+    return Array.isArray(row?.value)
+      ? (row!.value as unknown[]).filter((v): v is string => typeof v === "string")
+      : [];
+  }
+  allowlist() {
+    return this.ipList("admin.ip_allowlist");
+  }
+  blocklist() {
+    return this.ipList("admin.ip_blocklist");
   }
 
+  /** Blocklist wins over allowlist; both are read on every request so a ban takes effect at once. */
   async assertIpAllowed(ip: string | null): Promise<void> {
+    if (ipMatches(ip, await this.blocklist()))
+      throw new ApiError(403, "ip_blocked", "This network is blocked from the admin API.");
     if (!ipAllowed(ip, await this.allowlist()))
       throw new ApiError(
         403,
         "ip_not_allowed",
         "This network is not allowed to reach the admin API.",
       );
+  }
+
+  private liveAdminByEmail(email: string) {
+    return this.db.query.admins.findFirst({
+      where: and(eq(schema.admins.email, email), isNull(schema.admins.deletedAt)),
+    });
+  }
+
+  private async recordLogin(input: {
+    readonly adminId: string | null;
+    readonly email: string;
+    readonly outcome: LoginOutcome;
+    readonly ip: string | null;
+    readonly country: string | null;
+    readonly userAgent: string | null;
+    readonly client: LoginClient | undefined;
+  }): Promise<void> {
+    await this.db.insert(schema.adminLoginEvents).values({
+      adminId: input.adminId,
+      email: input.email,
+      outcome: input.outcome,
+      ip: input.ip,
+      country: input.country,
+      userAgent: input.userAgent?.slice(0, 512) ?? null,
+      timezone: clientField(input.client?.timezone, 64),
+      locale: clientField(input.client?.locale, 32),
+      platform: clientField(input.client?.platform, 64),
+      screen: clientField(input.client?.screen, 32),
+      deviceId: clientField(input.client?.deviceId, 64),
+    });
   }
 
   private noteFailure(key: string): void {
@@ -121,7 +220,7 @@ export class AdminAuth {
     );
   }
 
-  /** Create an admin. Only used by the bootstrap script and by owners inviting admins. */
+  /** Create a ready-to-use admin. Only the bootstrap script and tests use this; the UI invites. */
   async create(input: {
     readonly email: string;
     readonly name: string;
@@ -132,14 +231,112 @@ export class AdminAuth {
     const [row] = await this.db
       .insert(schema.admins)
       .values({
-        email: input.email.toLowerCase(),
+        email: input.email.trim().toLowerCase(),
         name: input.name,
         role: input.role,
         passwordHash: await hashPassword(input.password),
+        emailVerifiedAt: new Date(),
         invitedBy: input.invitedBy ?? null,
       })
       .returning({ id: schema.admins.id, email: schema.admins.email, role: schema.admins.role });
     return row!;
+  }
+
+  // ---- invites -------------------------------------------------------------
+
+  /** Issue a fresh single-use invite token, killing any earlier one for the same admin. */
+  async issueInvite(adminId: string, createdBy: string | null): Promise<string> {
+    const token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.adminInvites)
+        .set({ expiresAt: new Date() })
+        .where(and(eq(schema.adminInvites.adminId, adminId), isNull(schema.adminInvites.usedAt)));
+      await tx.insert(schema.adminInvites).values({
+        adminId,
+        tokenHash: await sha256(token),
+        expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+        createdBy,
+      });
+    });
+    return token;
+  }
+
+  /** Same error for missing, used, expired, or revoked: the caller learns nothing. */
+  private async liveInvite(token: string, ip: string | null) {
+    const key = `invite|${ip ?? ""}`;
+    if (this.lockedOut(key))
+      throw new ApiError(429, "locked_out", "Too many attempts. Try again later.");
+    const invalid = () => {
+      this.noteFailure(key);
+      return new ApiError(400, "invalid_invite", "This invite link is not valid any more.");
+    };
+    if (typeof token !== "string" || token.length < 16 || token.length > 128) throw invalid();
+    const invite = await this.db.query.adminInvites.findFirst({
+      where: and(
+        eq(schema.adminInvites.tokenHash, await sha256(token)),
+        isNull(schema.adminInvites.usedAt),
+        gt(schema.adminInvites.expiresAt, new Date()),
+      ),
+    });
+    if (!invite) throw invalid();
+    const admin = await this.db.query.admins.findFirst({
+      where: and(eq(schema.admins.id, invite.adminId), isNull(schema.admins.deletedAt)),
+    });
+    if (!admin || admin.disabled || admin.passwordHash) throw invalid();
+    return { invite, admin };
+  }
+
+  async inspectInvite(token: string, ip: string | null) {
+    const { admin } = await this.liveInvite(token, ip);
+    return { email: admin.email, name: admin.name, role: admin.role };
+  }
+
+  async acceptInvite(input: {
+    readonly token: string;
+    readonly password: string;
+    readonly ip: string | null;
+    readonly country: string | null;
+    readonly userAgent: string | null;
+    readonly client?: LoginClient | undefined;
+  }): Promise<{ readonly email: string }> {
+    const { invite, admin } = await this.liveInvite(input.token, input.ip);
+    const problem = checkPasswordPolicy(input.password, admin.email);
+    if (problem) throw new ApiError(400, "weak_password", problem);
+    const passwordHash = await hashPassword(input.password);
+    const now = new Date();
+    await this.db.transaction(async (tx) => {
+      // Claim the token first; a concurrent accept with the same token loses here.
+      const claimed = await tx
+        .update(schema.adminInvites)
+        .set({ usedAt: now })
+        .where(and(eq(schema.adminInvites.id, invite.id), isNull(schema.adminInvites.usedAt)))
+        .returning({ id: schema.adminInvites.id });
+      if (claimed.length === 0)
+        throw new ApiError(400, "invalid_invite", "This invite link is not valid any more.");
+      await tx
+        .update(schema.admins)
+        .set({ passwordHash, emailVerifiedAt: now })
+        .where(and(eq(schema.admins.id, admin.id), isNull(schema.admins.passwordHash)));
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: admin.id,
+        action: "admin.invite.accepted",
+        targetType: "admin",
+        targetId: admin.id,
+        ipHash: await hashIp(input.ip, this.appSecret),
+      });
+    });
+    await this.recordLogin({
+      adminId: admin.id,
+      email: admin.email,
+      outcome: "success",
+      ip: input.ip,
+      country: input.country,
+      userAgent: input.userAgent,
+      client: input.client,
+    });
+    return { email: admin.email };
   }
 
   async login(input: {
@@ -147,33 +344,65 @@ export class AdminAuth {
     readonly password: string;
     readonly totp?: string;
     readonly ip: string | null;
+    readonly country?: string | null;
     readonly userAgent: string | null;
+    readonly client?: LoginClient | undefined;
   }): Promise<{
     readonly token: string;
     readonly principal: AdminPrincipal;
     readonly expiresAt: Date;
   }> {
-    await this.assertIpAllowed(input.ip);
-    const key = `${input.email.toLowerCase()}|${input.ip ?? ""}`;
+    const email = input.email.trim().toLowerCase();
+    const admin = await this.liveAdminByEmail(email);
+    const record = (outcome: LoginOutcome) =>
+      this.recordLogin({
+        adminId: admin?.id ?? null,
+        email,
+        outcome,
+        ip: input.ip,
+        country: input.country ?? null,
+        userAgent: input.userAgent,
+        client: input.client,
+      });
+    const refuse = async (outcome: LoginOutcome, error: ApiError) => {
+      await record(outcome);
+      throw error;
+    };
+    try {
+      await this.assertIpAllowed(input.ip);
+    } catch (e) {
+      if (e instanceof ApiError)
+        await refuse(e.code === "ip_blocked" ? "ip_blocked" : "ip_not_allowed", e);
+      throw e;
+    }
+    const key = `${email}|${input.ip ?? ""}`;
+    const badCredentials = new ApiError(401, "bad_credentials", "Email or password is wrong.");
     if (this.lockedOut(key))
-      throw new ApiError(429, "locked_out", "Too many failed attempts. Try again later.");
-    const admin = await this.db.query.admins.findFirst({
-      where: eq(schema.admins.email, input.email.toLowerCase()),
-    });
-    const ok =
-      admin &&
-      !admin.disabled &&
-      (await verifyPassword({ hash: admin.passwordHash, password: input.password }));
-    if (!ok) {
+      await refuse(
+        "locked_out",
+        new ApiError(429, "locked_out", "Too many failed attempts. Try again later."),
+      );
+    if (!admin) {
       this.noteFailure(key);
-      throw new ApiError(401, "bad_credentials", "Email or password is wrong.");
+      await refuse("unknown_email", badCredentials);
+    }
+    const live = admin!;
+    if (live.disabled) await refuse("disabled", badCredentials);
+    if (!live.passwordHash) await refuse("not_active", badCredentials);
+    if (!(await verifyPassword({ hash: live.passwordHash!, password: input.password }))) {
+      this.noteFailure(key);
+      await refuse("bad_password", badCredentials);
     }
     let mfaVerified = false;
-    if (admin.totpEnabled) {
-      if (!input.totp) throw new ApiError(401, "totp_required", "Enter your authenticator code.");
-      if (!(await this.checkTotp(admin.id, input.totp))) {
+    if (live.totpEnabled) {
+      if (!input.totp)
+        await refuse(
+          "totp_required",
+          new ApiError(401, "totp_required", "Enter your authenticator code."),
+        );
+      if (!(await this.checkTotp(live.id, input.totp!))) {
         this.noteFailure(key);
-        throw new ApiError(401, "bad_totp", "Authenticator code is wrong.");
+        await refuse("bad_totp", new ApiError(401, "bad_totp", "Authenticator code is wrong."));
       }
       mfaVerified = true;
     }
@@ -182,7 +411,7 @@ export class AdminAuth {
     const [session] = await this.db
       .insert(schema.adminSessions)
       .values({
-        adminId: admin.id,
+        adminId: live.id,
         tokenHash: await sha256(token),
         ipHash: (await hashIp(input.ip, this.appSecret)) ?? "",
         userAgent: input.userAgent,
@@ -192,27 +421,52 @@ export class AdminAuth {
       .returning({ id: schema.adminSessions.id });
     await this.db
       .update(schema.admins)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(schema.admins.id, admin.id));
+      .set({ lastLoginAt: new Date(), lastLoginIp: input.ip })
+      .where(eq(schema.admins.id, live.id));
+    await record("success");
     await writeAudit(this.db, {
       actorType: "admin",
-      actorId: admin.id,
+      actorId: live.id,
       action: "admin.login",
       targetType: "admin",
-      targetId: admin.id,
+      targetId: live.id,
       ipHash: await hashIp(input.ip, this.appSecret),
     });
     return {
       token,
       expiresAt,
       principal: {
-        adminId: admin.id,
-        email: admin.email,
-        role: admin.role,
+        adminId: live.id,
+        email: live.email,
+        role: live.role,
         sessionId: session!.id,
         mfaVerified: mfaVerified || !this.mfaRequired,
       },
     };
+  }
+
+  /** Revoke every live session of an admin, optionally sparing one (the caller's own). */
+  async revokeSessions(adminId: string, except?: string): Promise<void> {
+    await this.db
+      .update(schema.adminSessions)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(schema.adminSessions.adminId, adminId),
+          isNull(schema.adminSessions.revokedAt),
+          ...(except ? [ne(schema.adminSessions.id, except)] : []),
+        ),
+      );
+  }
+
+  /** Revoke every live session that was opened from the given IP (used when banning it). */
+  async revokeSessionsFromIp(ip: string): Promise<void> {
+    const ipHash = await hashIp(ip, this.appSecret);
+    if (!ipHash) return;
+    await this.db
+      .update(schema.adminSessions)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(schema.adminSessions.ipHash, ipHash), isNull(schema.adminSessions.revokedAt)));
   }
 
   async resolve(token: string | null, ip: string | null): Promise<AdminPrincipal> {
@@ -229,7 +483,7 @@ export class AdminAuth {
     const admin = await this.db.query.admins.findFirst({
       where: eq(schema.admins.id, session.adminId),
     });
-    if (!admin || admin.disabled)
+    if (!admin || admin.disabled || admin.deletedAt)
       throw new ApiError(401, "unauthorized", "Admin account disabled.");
     return {
       adminId: admin.id,
@@ -316,9 +570,14 @@ export class AdminAuth {
   }
 }
 
+/**
+ * Admin runs everything. Employee is the support desk: users, credits within
+ * a cap, limit resets, trial reviews, and read access to usage, stats, and
+ * the audit log. Team, settings, prices, plans, and kill switches are admin only.
+ */
 export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
-  owner: new Set(["*"]),
-  support: new Set([
+  admin: new Set(["*"]),
+  employee: new Set([
     "users.read",
     "users.write",
     "users.suspend",
@@ -329,15 +588,6 @@ export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
     "stats.read",
     "audit.read",
   ]),
-  finance: new Set([
-    "users.read",
-    "ledger.read",
-    "refunds.write",
-    "stats.read",
-    "audit.read",
-    "usage.read",
-  ]),
-  readonly: new Set(["users.read", "stats.read", "usage.read", "audit.read"]),
 };
 
 export function can(principal: AdminPrincipal, permission: string): boolean {

@@ -59,3 +59,19 @@ bun run --cwd apps/web dev      # dashboard on 3000
 bun run --cwd apps/admin dev    # admin on 3001
 bun run test                    # every workspace
 ```
+
+## 2026-09-13: admin team management and form validation
+
+- Admin roles are now `admin` and `employee` (migration 0000 regenerated; nothing was shipped).
+  Admin runs the platform and the team; employee is the support desk with the credit cap.
+- Team page (`/team`): invite by email (single-use, hashed, 24h token; recipient verifies the
+  email by opening it and sets a password meeting the 14-char policy), edit name/role, resend
+  invite, sign out everywhere, disable/enable, soft delete. Last active admin and self-changes
+  are refused. Role changes and disables revoke sessions.
+- Every admin sign-in attempt is recorded in `admin_login_events` with outcome, IP, country
+  header, user agent, timezone, locale, platform, screen and a browser device id. Viewable per
+  member and across the team; any IP can be banned from there.
+- `admin.ip_blocklist` is checked before the allowlist on every request; banning an IP also
+  revokes sessions opened from it.
+- Admin UI forms use custom inline validation (no native browser validation); Settings has a
+  typed editor per key. Tests: `apps/api/src/admin/admin.e2e.test.ts` covers the whole flow.

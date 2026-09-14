@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { admin, credits } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { integer } from "@/lib/validation";
 
 interface Plan {
   id: string;
@@ -94,47 +95,62 @@ export default function PlansPage() {
                 {
                   name: "monthlyPriceUsdCents",
                   label: "Monthly price (cents)",
-                  type: "number",
+                  inputMode: "numeric",
+                  validate: integer(0, 10000000, "Monthly price (cents)"),
                   defaultValue: String(p.monthlyPriceUsdCents),
                 },
                 {
                   name: "annualPriceUsdCents",
                   label: "Annual price (cents)",
-                  type: "number",
+                  inputMode: "numeric",
+                  validate: integer(0, 100000000, "Annual price (cents)"),
                   defaultValue: String(p.annualPriceUsdCents),
                 },
                 {
                   name: "includedMicrocredits",
                   label: "Included microcredits",
-                  type: "number",
+                  inputMode: "numeric",
+                  validate: integer(0, 1_000_000_000_000_000, "Included microcredits"),
                   defaultValue: p.includedMicrocredits,
                 },
                 {
                   name: "concurrentStreams",
                   label: "Concurrent streams",
-                  type: "number",
+                  inputMode: "numeric",
+                  validate: integer(1, 10000, "Concurrent streams"),
                   defaultValue: String(p.concurrentStreams),
                 },
                 {
                   name: "requestsPerMinute",
                   label: "Requests per minute",
-                  type: "number",
+                  inputMode: "numeric",
+                  validate: integer(1, 100000, "Requests per minute"),
                   defaultValue: String(p.requestsPerMinute),
                 },
                 {
                   name: "priorityWeight",
                   label: "Priority weight",
-                  type: "number",
+                  inputMode: "numeric",
+                  validate: integer(1, 1000, "Priority weight"),
                   defaultValue: String(p.priorityWeight),
                 },
                 {
                   name: "stripeMonthlyPriceId",
                   label: "Stripe monthly price id",
+                  hint: "Leave empty until the Stripe price exists.",
+                  validate: (v) =>
+                    v.trim() === "" || /^price_[A-Za-z0-9]+$/.test(v.trim())
+                      ? null
+                      : "Stripe price ids start with price_.",
                   defaultValue: p.stripeMonthlyPriceId ?? "",
                 },
                 {
                   name: "stripeAnnualPriceId",
                   label: "Stripe annual price id",
+                  validate: (v) =>
+                    v.trim() === "" || /^price_[A-Za-z0-9]+$/.test(v.trim())
+                      ? null
+                      : "Stripe price ids start with price_.",
                   defaultValue: p.stripeAnnualPriceId ?? "",
                 },
               ]}

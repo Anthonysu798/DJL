@@ -23,9 +23,11 @@ interface UserRow {
 export function CommandPalette({
   open,
   onOpenChange,
+  isAdmin = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -71,7 +73,7 @@ export function CommandPalette({
           </CommandGroup>
         ) : null}
         <CommandGroup heading="Pages">
-          {[...NAV_MAIN, ...NAV_PLATFORM].map(({ href, label, icon: Icon }) => (
+          {[...NAV_MAIN, ...(isAdmin ? NAV_PLATFORM : [])].map(({ href, label, icon: Icon }) => (
             <CommandItem key={href} value={label} onSelect={() => go(href)}>
               <Icon className="size-4" />
               {label}

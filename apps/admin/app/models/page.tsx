@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { integer, oneOf } from "@/lib/validation";
 
 interface Model {
   modelId: string;
@@ -81,8 +82,15 @@ export default function ModelsPage() {
                     fields={[
                       {
                         name: "status",
-                        label: "Status (active, degraded, disabled)",
+                        label: "Status",
+                        kind: "select",
+                        options: [
+                          { value: "active", label: "Active" },
+                          { value: "degraded", label: "Degraded · routed around when possible" },
+                          { value: "disabled", label: "Disabled · hidden from clients" },
+                        ],
                         defaultValue: m.status,
+                        validate: oneOf(["active", "degraded", "disabled"], "Status"),
                       },
                     ]}
                     confirmLabel="Save"
@@ -117,32 +125,37 @@ export default function ModelsPage() {
                     fields={[
                       {
                         name: "qualityScore",
-                        label: "Quality score (0–100)",
-                        type: "number",
+                        label: "Quality score",
+                        inputMode: "numeric",
+                        validate: integer(0, 100, "Quality score"),
                         defaultValue: String(m.qualityScore),
                       },
                       {
                         name: "inputMicroPerToken",
                         label: "Input microcredits per token",
-                        type: "number",
+                        inputMode: "numeric",
+                        validate: integer(0, 1_000_000_000_000, "Input microcredits per token"),
                         defaultValue: m.inputMicroPerToken,
                       },
                       {
                         name: "outputMicroPerToken",
                         label: "Output microcredits per token",
-                        type: "number",
+                        inputMode: "numeric",
+                        validate: integer(0, 1_000_000_000_000, "Output microcredits per token"),
                         defaultValue: m.outputMicroPerToken,
                       },
                       {
                         name: "microPerImage",
                         label: "Microcredits per image",
-                        type: "number",
+                        inputMode: "numeric",
+                        validate: integer(0, 1_000_000_000_000, "Microcredits per image"),
                         defaultValue: m.microPerImage,
                       },
                       {
                         name: "sortOrder",
                         label: "Sort order",
-                        type: "number",
+                        inputMode: "numeric",
+                        validate: integer(0, 100000, "Sort order"),
                         defaultValue: String(m.sortOrder),
                       },
                     ]}

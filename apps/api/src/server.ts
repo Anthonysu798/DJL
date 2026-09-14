@@ -197,7 +197,17 @@ export async function startApi(
       });
   const sync = new SyncService(db, blobs);
   const adminAuth = new AdminAuth(db, env.betterAuthSecret, env.adminMfaRequired);
-  const admin = new AdminService({ db, ledger, limiter, gateway, trial, version });
+  const admin = new AdminService({
+    db,
+    ledger,
+    limiter,
+    gateway,
+    trial,
+    auth: adminAuth,
+    email: senders.email,
+    adminPublicUrl: env.adminPublicUrl,
+    version,
+  });
   const routes = makeRoutes({
     env,
     auth,

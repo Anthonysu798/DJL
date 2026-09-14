@@ -3,9 +3,10 @@
  * the same transaction where the change is a single statement, and never
  * touches credits except through the ledger with an explicit reason.
  */
-import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import { creditsToMicro, formatCredits, totalAvailable, type Microcredits } from "@djl/domain";
+import { adminInvite, type EmailSender } from "@djl/notify";
 
 import { writeAudit } from "../audit/AuditLog.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
@@ -13,7 +14,14 @@ import type { GatewayService } from "../gateway/GatewayService.ts";
 import type { RateLimiter } from "../gateway/RateLimiter.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
-import { requirePermission, type AdminPrincipal } from "./AdminAuth.ts";
+import {
+  ADMIN_ROLES,
+  isIpOrCidr,
+  requirePermission,
+  type AdminAuth,
+  type AdminPrincipal,
+  type AdminRole,
+} from "./AdminAuth.ts";
 
 export interface AdminDeps {
   readonly db: DjlDatabase;
@@ -21,10 +29,21 @@ export interface AdminDeps {
   readonly limiter: RateLimiter;
   readonly gateway: Pick<GatewayService, "invalidateCatalog">;
   readonly trial: Pick<TrialService, "approve">;
+  readonly auth: Pick<AdminAuth, "issueInvite" | "revokeSessions" | "revokeSessionsFromIp">;
+  readonly email: EmailSender;
+  /** Where invite links point, e.g. https://admin.slcor.com. */
+  readonly adminPublicUrl: string;
   readonly version: string;
 }
 
-const SUPPORT_GRANT_CAP = creditsToMicro(500);
+const EMPLOYEE_GRANT_CAP = creditsToMicro(500);
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isRole = (v: unknown): v is AdminRole => ADMIN_ROLES.includes(v as AdminRole);
+const needReason = (reason: unknown): string => {
+  if (typeof reason !== "string" || !reason.trim())
+    throw new ApiError(400, "bad_request", "A reason is required.");
+  return reason.trim();
+};
 
 export class AdminService {
   constructor(private readonly deps: AdminDeps) {}
@@ -275,18 +294,18 @@ export class AdminService {
       throw new ApiError(400, "bad_request", "credits must be a positive whole number.");
     if (!input.reason?.trim()) throw new ApiError(400, "bad_request", "A reason is required.");
     const amount: Microcredits = creditsToMicro(input.credits);
-    if (p.role === "support") {
+    if (p.role === "employee") {
       const admin = await this.deps.db.query.admins.findFirst({
         where: eq(schema.admins.id, p.adminId),
       });
       const cap = admin?.creditGrantCapMicro
         ? BigInt(admin.creditGrantCapMicro)
-        : SUPPORT_GRANT_CAP;
+        : EMPLOYEE_GRANT_CAP;
       if (amount > cap)
         throw new ApiError(
           403,
           "grant_cap",
-          `Support grants are capped at ${formatCredits(cap)} credits.`,
+          `Employee grants are capped at ${formatCredits(cap)} credits.`,
         );
     }
     const balances = await this.deps.ledger.grant({
@@ -628,32 +647,191 @@ export class AdminService {
     if (!ok) throw new ApiError(409, "not_queued", "That trial is not waiting for review.");
   }
 
-  async listAdmins(p: AdminPrincipal) {
-    requirePermission(p, "admins.write");
-    const rows = await this.deps.db.query.admins.findMany();
-    return rows.map((a) => ({
+  // ---- team (admin only) ---------------------------------------------------
+
+  private teamRow(a: typeof schema.admins.$inferSelect) {
+    return {
       id: a.id,
       email: a.email,
       name: a.name,
       role: a.role,
+      status: a.disabled
+        ? ("disabled" as const)
+        : a.passwordHash
+          ? ("active" as const)
+          : ("invited" as const),
+      emailVerifiedAt: a.emailVerifiedAt,
       totpEnabled: a.totpEnabled,
-      disabled: a.disabled,
       lastLoginAt: a.lastLoginAt,
+      lastLoginIp: a.lastLoginIp,
       createdAt: a.createdAt,
-    }));
+      invitedBy: a.invitedBy,
+    };
+  }
+
+  private async liveAdmin(adminId: string) {
+    const row = await this.deps.db.query.admins.findFirst({
+      where: and(eq(schema.admins.id, adminId), isNull(schema.admins.deletedAt)),
+    });
+    if (!row) throw new ApiError(404, "not_found", "No such team member.");
+    return row;
+  }
+
+  /** Refuse any change that would leave the platform without an active admin. */
+  private async assertNotLastAdmin(adminId: string) {
+    const [row] = await this.deps.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.admins)
+      .where(
+        and(
+          eq(schema.admins.role, "admin"),
+          eq(schema.admins.disabled, false),
+          isNull(schema.admins.deletedAt),
+          sql`${schema.admins.passwordHash} is not null`,
+          sql`${schema.admins.id} <> ${adminId}`,
+        ),
+      );
+    if ((row?.n ?? 0) === 0)
+      throw new ApiError(409, "last_admin", "There must always be at least one active admin.");
+  }
+
+  async listAdmins(p: AdminPrincipal) {
+    requirePermission(p, "admins.write");
+    const rows = await this.deps.db.query.admins.findMany({
+      where: isNull(schema.admins.deletedAt),
+      orderBy: [schema.admins.createdAt],
+    });
+    return rows.map((a) => this.teamRow(a));
+  }
+
+  async inviteAdmin(
+    p: AdminPrincipal,
+    input: {
+      readonly email: unknown;
+      readonly name: unknown;
+      readonly role: unknown;
+      readonly reason: unknown;
+    },
+  ) {
+    requirePermission(p, "admins.write");
+    const reason = needReason(input.reason);
+    const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+    if (!EMAIL.test(email) || email.length > 254)
+      throw new ApiError(400, "bad_request", "Enter a valid email address.");
+    const name = typeof input.name === "string" ? input.name.trim() : "";
+    if (name.length < 1 || name.length > 80)
+      throw new ApiError(400, "bad_request", "Name must be 1 to 80 characters.");
+    if (!isRole(input.role))
+      throw new ApiError(400, "bad_request", "Role must be admin or employee.");
+    const existing = await this.deps.db.query.admins.findFirst({
+      where: and(eq(schema.admins.email, email), isNull(schema.admins.deletedAt)),
+    });
+    if (existing)
+      throw new ApiError(409, "email_in_use", "A team member with that email already exists.");
+    const [row] = await this.deps.db
+      .insert(schema.admins)
+      .values({ email, name, role: input.role, invitedBy: p.adminId })
+      .returning();
+    const token = await this.deps.auth.issueInvite(row!.id, p.adminId);
+    await this.deps.email.send(
+      adminInvite(
+        email,
+        p.email,
+        `${this.deps.adminPublicUrl.replace(/\/+$/, "")}/invite?token=${token}`,
+        "en",
+      ),
+    );
+    await writeAudit(this.deps.db, {
+      actorType: "admin",
+      actorId: p.adminId,
+      action: "admin.admin.invite",
+      targetType: "admin",
+      targetId: row!.id,
+      after: { email, name, role: input.role },
+      reason,
+    });
+    return this.teamRow(row!);
+  }
+
+  async resendInvite(p: AdminPrincipal, adminId: string, reason: unknown) {
+    requirePermission(p, "admins.write");
+    const why = needReason(reason);
+    const row = await this.liveAdmin(adminId);
+    if (row.passwordHash || row.disabled)
+      throw new ApiError(409, "not_pending", "That team member has already joined.");
+    const token = await this.deps.auth.issueInvite(row.id, p.adminId);
+    await this.deps.email.send(
+      adminInvite(
+        row.email,
+        p.email,
+        `${this.deps.adminPublicUrl.replace(/\/+$/, "")}/invite?token=${token}`,
+        "en",
+      ),
+    );
+    await writeAudit(this.deps.db, {
+      actorType: "admin",
+      actorId: p.adminId,
+      action: "admin.admin.invite",
+      targetType: "admin",
+      targetId: row.id,
+      after: { resend: true },
+      reason: why,
+    });
+  }
+
+  async updateAdmin(
+    p: AdminPrincipal,
+    adminId: string,
+    patch: { readonly name?: unknown; readonly role?: unknown; readonly reason: unknown },
+  ) {
+    requirePermission(p, "admins.write");
+    const reason = needReason(patch.reason);
+    const row = await this.liveAdmin(adminId);
+    const set: { name?: string; role?: AdminRole } = {};
+    if (patch.name !== undefined) {
+      const name = typeof patch.name === "string" ? patch.name.trim() : "";
+      if (name.length < 1 || name.length > 80)
+        throw new ApiError(400, "bad_request", "Name must be 1 to 80 characters.");
+      set.name = name;
+    }
+    if (patch.role !== undefined) {
+      if (!isRole(patch.role))
+        throw new ApiError(400, "bad_request", "Role must be admin or employee.");
+      if (patch.role !== row.role) {
+        if (adminId === p.adminId)
+          throw new ApiError(400, "bad_request", "You cannot change your own role.");
+        if (row.role === "admin") await this.assertNotLastAdmin(adminId);
+        set.role = patch.role;
+      }
+    }
+    if (Object.keys(set).length === 0) return this.teamRow(row);
+    await this.deps.db.transaction(async (tx) => {
+      await tx.update(schema.admins).set(set).where(eq(schema.admins.id, adminId));
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: p.adminId,
+        action: "admin.admin.update",
+        targetType: "admin",
+        targetId: adminId,
+        before: pick(row, Object.keys(set)),
+        after: set,
+        reason,
+      });
+    });
+    // A role change must not leave a session running with the old permissions.
+    if (set.role) await this.deps.auth.revokeSessions(adminId);
+    return this.teamRow({ ...row, ...set });
   }
 
   async setAdminDisabled(p: AdminPrincipal, adminId: string, disabled: boolean, reason: string) {
     requirePermission(p, "admins.write");
+    needReason(reason);
     if (adminId === p.adminId)
       throw new ApiError(400, "bad_request", "You cannot disable yourself.");
+    const row = await this.liveAdmin(adminId);
+    if (disabled && row.role === "admin") await this.assertNotLastAdmin(adminId);
     await this.deps.db.transaction(async (tx) => {
       await tx.update(schema.admins).set({ disabled }).where(eq(schema.admins.id, adminId));
-      if (disabled)
-        await tx
-          .update(schema.adminSessions)
-          .set({ revokedAt: new Date() })
-          .where(eq(schema.adminSessions.adminId, adminId));
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -663,6 +841,118 @@ export class AdminService {
         reason,
       });
     });
+    if (disabled) await this.deps.auth.revokeSessions(adminId);
+  }
+
+  async revokeAdminSessions(p: AdminPrincipal, adminId: string, reason: unknown) {
+    requirePermission(p, "admins.write");
+    const why = needReason(reason);
+    await this.liveAdmin(adminId);
+    await this.deps.auth.revokeSessions(adminId, adminId === p.adminId ? p.sessionId : undefined);
+    await writeAudit(this.deps.db, {
+      actorType: "admin",
+      actorId: p.adminId,
+      action: "admin.admin.revoke_sessions",
+      targetType: "admin",
+      targetId: adminId,
+      reason: why,
+    });
+  }
+
+  /** Soft delete: the row stays for the audit trail, every credential and session dies. */
+  async deleteAdmin(p: AdminPrincipal, adminId: string, reason: unknown) {
+    requirePermission(p, "admins.write");
+    const why = needReason(reason);
+    if (adminId === p.adminId)
+      throw new ApiError(400, "bad_request", "You cannot delete yourself.");
+    const row = await this.liveAdmin(adminId);
+    if (row.role === "admin" && !row.disabled && row.passwordHash)
+      await this.assertNotLastAdmin(adminId);
+    await this.deps.db.transaction(async (tx) => {
+      await tx
+        .update(schema.admins)
+        .set({
+          deletedAt: new Date(),
+          disabled: true,
+          passwordHash: null,
+          totpSecretEncrypted: null,
+          totpEnabled: false,
+          passkeyCredentials: null,
+        })
+        .where(eq(schema.admins.id, adminId));
+      await tx
+        .update(schema.adminInvites)
+        .set({ expiresAt: new Date() })
+        .where(eq(schema.adminInvites.adminId, adminId));
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: p.adminId,
+        action: "admin.admin.delete",
+        targetType: "admin",
+        targetId: adminId,
+        before: { email: row.email, name: row.name, role: row.role },
+        reason: why,
+      });
+    });
+    await this.deps.auth.revokeSessions(adminId);
+  }
+
+  async loginEvents(
+    p: AdminPrincipal,
+    input: { readonly adminId?: string; readonly ip?: string; readonly limit?: number },
+  ) {
+    requirePermission(p, "admins.write");
+    const conditions = [];
+    if (input.adminId) conditions.push(eq(schema.adminLoginEvents.adminId, input.adminId));
+    if (input.ip) conditions.push(eq(schema.adminLoginEvents.ip, input.ip));
+    return this.deps.db.query.adminLoginEvents.findMany({
+      where: conditions.length ? and(...conditions) : undefined,
+      orderBy: [desc(schema.adminLoginEvents.createdAt)],
+      limit: Math.min(Math.max(input.limit ?? 50, 1), 200),
+    });
+  }
+
+  async ipBans(p: AdminPrincipal): Promise<readonly string[]> {
+    requirePermission(p, "admins.write");
+    const row = await this.deps.db.query.settings.findFirst({
+      where: eq(schema.settings.key, "admin.ip_blocklist"),
+    });
+    return Array.isArray(row?.value) ? (row!.value as string[]) : [];
+  }
+
+  async setIpBan(p: AdminPrincipal, ip: unknown, banned: boolean, reason: unknown) {
+    requirePermission(p, "admins.write");
+    const why = needReason(reason);
+    const entry = typeof ip === "string" ? ip.trim() : "";
+    if (!isIpOrCidr(entry))
+      throw new ApiError(400, "bad_request", "Enter an IP address or IPv4 CIDR.");
+    const current = await this.ipBans(p);
+    const next = banned
+      ? current.includes(entry)
+        ? current
+        : [...current, entry]
+      : current.filter((e) => e !== entry);
+    await this.deps.db.transaction(async (tx) => {
+      await tx
+        .insert(schema.settings)
+        .values({ key: "admin.ip_blocklist", value: next, updatedBy: p.adminId })
+        .onConflictDoUpdate({
+          target: schema.settings.key,
+          set: { value: next, updatedBy: p.adminId, updatedAt: new Date() },
+        });
+      await writeAudit(tx, {
+        actorType: "admin",
+        actorId: p.adminId,
+        action: banned ? "admin.ip.ban" : "admin.ip.unban",
+        targetType: "ip",
+        targetId: entry,
+        before: current,
+        after: next,
+        reason: why,
+      });
+    });
+    if (banned && !entry.includes("/")) await this.deps.auth.revokeSessionsFromIp(entry);
+    return next;
   }
 
   async serverStatus(

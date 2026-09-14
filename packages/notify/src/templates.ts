@@ -22,6 +22,9 @@ const strings = {
     securitySubject: (event: string) => `DJL Cloud security notice: ${event}`,
     securityBody: (event: string, when: string, url: string) =>
       `${event} on ${when}. If this was not you, secure your account now:\n${url}`,
+    adminInviteSubject: "You have been added to the DJL admin team",
+    adminInviteBody: (inviter: string, url: string) =>
+      `${inviter} added you to the DJL admin team. Open the link to verify your email and choose a password. It works once and expires in 24 hours:\n${url}\n\nIf you were not expecting this, ignore it.`,
   },
   "zh-Hans": {
     otpSubject: (code: string) => `${code} 是你的 DJL Cloud 验证码`,
@@ -39,6 +42,9 @@ const strings = {
     securitySubject: (event: string) => `DJL Cloud 安全提醒：${event}`,
     securityBody: (event: string, when: string, url: string) =>
       `${when} 发生了 ${event}。如果不是你本人操作，请立即保护账户：\n${url}`,
+    adminInviteSubject: "你已被加入 DJL 管理团队",
+    adminInviteBody: (inviter: string, url: string) =>
+      `${inviter} 将你加入了 DJL 管理团队。打开链接验证邮箱并设置密码，链接仅可使用一次，24 小时内有效：\n${url}\n\n如果这不是你预期的邮件，请忽略。`,
   },
 } as const;
 
@@ -98,4 +104,15 @@ export function securityNotice(
   const s = strings[locale];
   const text = s.securityBody(event, when, url);
   return { to, subject: s.securitySubject(event), text, html: wrap(text), tag: "security" };
+}
+
+export function adminInvite(
+  to: string,
+  inviter: string,
+  url: string,
+  locale: Locale,
+): EmailMessage {
+  const s = strings[locale];
+  const text = s.adminInviteBody(inviter, url);
+  return { to, subject: s.adminInviteSubject, text, html: wrap(text), tag: "admin-invite" };
 }
