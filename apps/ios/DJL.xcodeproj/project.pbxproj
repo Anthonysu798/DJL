@@ -102,6 +102,8 @@
 		E1A2B3C4D5E6F708192A3B4C /* QRScannerPairingValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E6F708192A3B4D /* QRScannerPairingValidatorTests.swift */; };
 		E6F1A2B3C4D5E6F708192A51 /* UserBubbleInlineMarkdownRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F1A2B3C4D5E6F708192A50 /* UserBubbleInlineMarkdownRendererTests.swift */; };
 		F1B2C3D4E5F60718293A4B10 /* CodexGPTAccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B2C3D4E5F60718293A4B11 /* CodexGPTAccountTests.swift */; };
+		D7D0647F64B696D4C64AFAD7 /* RemoteProviderSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */; };
+		8D8CCAA8FE63B1217293E983 /* ShortCodePairingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071DBB71014F2A3AA3333D71 /* ShortCodePairingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -217,6 +219,8 @@
 		F83CF468ACB7D025235894CC /* DJLWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = DJLWidget.entitlements; sourceTree = "<group>"; };
 		FBC8EB1341C49A392A43BFB3 /* DJLTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DJLTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FDBD5C45B205BFD7C281AD0D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
+		42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RemoteProviderSelectionTests.swift; sourceTree = "<group>"; };
+		071DBB71014F2A3AA3333D71 /* ShortCodePairingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShortCodePairingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -312,6 +316,8 @@
 				D4F56781234567890ABCDE02 /* CodexServiceIncomingRunIndicatorTests.swift */,
 				A2B3C4D5E6F708192A3B4C7 /* CodexServiceThreadListTests.swift */,
 				E1A2B3C4D5E6F708192A3B4D /* QRScannerPairingValidatorTests.swift */,
+				071DBB71014F2A3AA3333D71 /* ShortCodePairingTests.swift */,
+				42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */,
 				2A6D4B8C1E3F507192A4B6C9 /* CodexStatusTests.swift */,
 				D3A1B2C4E5F60718293A4B02 /* CodexServiceBatchIncomingTests.swift */,
 				D3A1B2C4E5F60718293A4B04 /* CodexServiceRelayRateLimitTests.swift */,
@@ -675,6 +681,8 @@
 				D4F56781234567890ABCDE01 /* CodexServiceIncomingRunIndicatorTests.swift in Sources */,
 				A2B3C4D5E6F708192A3B4C6 /* CodexServiceThreadListTests.swift in Sources */,
 				E1A2B3C4D5E6F708192A3B4C /* QRScannerPairingValidatorTests.swift in Sources */,
+				8D8CCAA8FE63B1217293E983 /* ShortCodePairingTests.swift in Sources */,
+				D7D0647F64B696D4C64AFAD7 /* RemoteProviderSelectionTests.swift in Sources */,
 				2A6D4B8C1E3F507192A4B6C8 /* CodexStatusTests.swift in Sources */,
 				D3A1B2C4E5F60718293A4B01 /* CodexServiceBatchIncomingTests.swift in Sources */,
 				D3A1B2C4E5F60718293A4B03 /* CodexServiceRelayRateLimitTests.swift in Sources */,
