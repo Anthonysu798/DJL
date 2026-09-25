@@ -399,11 +399,23 @@ describe("public desktop release preparation", () => {
     );
     const workflows = readdirSync(resolve(REPOSITORY_ROOT, ".github/workflows")).toSorted();
     assert.deepStrictEqual(workflows, [
+      "cloud-ci.yml",
+      "cloud-deploy-prod.yml",
+      "cloud-deploy-staging.yml",
       "desktop-ci.yml",
       "desktop-release.yml",
       "desktop-signed-update-e2e.yml",
       "landing-deploy.yml",
     ]);
+
+    // The DJL Cloud backend deploys from its own `cloud-v*` tags. A desktop `v*` release tag must
+    // never trigger a backend production deploy.
+    const cloudProductionWorkflow = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/workflows/cloud-deploy-prod.yml"),
+      "utf8",
+    );
+    assert.match(cloudProductionWorkflow, /tags: \["cloud-v\*"\]/);
+    assert.notMatch(cloudProductionWorkflow, /tags:[^\n]*"v\*/);
 
     // The landing mirror deploys the marketing site only. It must never grow into a second desktop
     // pipeline, never run for fork pull requests, and never hold write access to this repository.

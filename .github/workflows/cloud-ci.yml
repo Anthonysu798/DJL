@@ -1,0 +1,125 @@
+name: Cloud CI
+
+# DJL Cloud backend (cloud/). Runs only when the backend or the shared root
+# files it depends on change, so desktop-only pushes stay on Desktop CI.
+on:
+  pull_request:
+    paths:
+      - "cloud/**"
+      - "package.json"
+      - "bun.lock"
+      - "bunfig.toml"
+      - "turbo.json"
+      - ".oxlintrc.json"
+      - ".oxfmtrc.json"
+      - ".dockerignore"
+      - ".github/workflows/cloud-*.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cloud/**"
+      - "package.json"
+      - "bun.lock"
+      - "bunfig.toml"
+      - "turbo.json"
+      - ".oxlintrc.json"
+      - ".oxfmtrc.json"
+      - ".dockerignore"
+      - ".github/workflows/cloud-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  FORCE_COLOR: "1"
+
+jobs:
+  quality:
+    name: Format, lint, typecheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bun run cloud:fmt:check
+      - run: bun run cloud:lint
+      - run: bun run cloud:typecheck
+
+  tests:
+    name: Unit, ledger invariants, abuse suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: djl
+          POSTGRES_PASSWORD: djl
+          POSTGRES_DB: djl
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U djl" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["63799:6379"]
+    env:
+      DATABASE_URL: postgres://djl:djl@localhost:54329/djl
+      REDIS_URL: redis://localhost:63799
+      DJL_MOCK_EXTERNALS: "true"
+      BETTER_AUTH_SECRET: ci-only-secret-not-for-production-use-0000
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bun run cloud:db:migrate
+      - run: bun run cloud:db:seed
+      - run: bun run cloud:test
+
+  secrets-scan:
+    name: Secret and dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # The gitleaks action scans from the parent of the first PR commit, which
+      # breaks on histories imported with their own root commit. Run the pinned,
+      # checksum-verified CLI over exactly the commits this event introduces.
+      - name: Install gitleaks 8.30.1
+        run: |
+          curl -sSfL -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tgz" | sha256sum -c -
+          tar xzf gitleaks.tgz gitleaks && rm gitleaks.tgz
+      - name: Scan new commits for secrets
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            range="$PR_BASE..$PR_HEAD"
+          elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            range="$PUSH_BEFORE..$SHA"
+          else
+            range="$SHA~1..$SHA"
+          fi
+          ./gitleaks git --redact --verbose --exit-code 1 --log-opts="$range" .
