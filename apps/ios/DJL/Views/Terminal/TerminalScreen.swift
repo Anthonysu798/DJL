@@ -34,10 +34,16 @@ struct TerminalScreen: View {
 
     let preferredWorkingDirectory: String?
     let threadID: String?
+    let preferredWorkspaceTerminalId: String?
+    @State private var didApplyWorkspacePreference = false
+
+    private var activeWorkspaceTerminal: DesktopWorkspaceTerminal? {
+        codex.desktopWorkspaceTerminals.first { $0.id == activeTerminalId }
+    }
 
     // Desktop mirroring needs a thread: the route's thread first, else the active chat.
     private var resolvedThreadID: String? {
-        let candidate = threadID ?? codex.activeThreadId
+        let candidate = activeWorkspaceTerminal?.threadId ?? codex.desktopTerminalBinding(for: activeTerminalId)?.threadId ?? threadID ?? codex.activeThreadId
         let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
     }
@@ -212,7 +218,11 @@ struct TerminalScreen: View {
             }
         }
 
+        for entry in codex.desktopWorkspaceTerminals where !snapshots.contains(where: { $0.terminalId == entry.id }) {
+            snapshots.append(DJLTerminalSnapshot.idleSnapshot(terminalId: entry.id))
+        }
         return snapshots.filter { snapshot in
+            codex.desktopWorkspaceTerminals.contains(where: { $0.id == snapshot.terminalId }) ||
             (usesDesktopSource && desktopTerminalIds.contains(snapshot.terminalId)) ||
             snapshot.terminalId == activeTerminalId || snapshot.status.isRunning
         }.map { snapshot in
@@ -376,6 +386,18 @@ struct TerminalScreen: View {
     }
 
     private func bootstrapTerminalRoute() async {
+        try? await codex.refreshDesktopWorkspaceTerminals()
+        if !didApplyWorkspacePreference, let preferredWorkspaceTerminalId {
+            didApplyWorkspacePreference = true
+            terminalSource = .desktop
+            activeTerminalId = preferredWorkspaceTerminalId
+            return
+        }
+        if resolvedThreadID == nil, let first = codex.desktopWorkspaceTerminals.first {
+            terminalSource = .desktop
+            activeTerminalId = first.id
+            return
+        }
         resolveDefaultTerminalSourceIfNeeded()
         if restoreRunningTerminalIfNeeded() {
             return
@@ -383,7 +405,7 @@ struct TerminalScreen: View {
         applyPreferredWorkingDirectoryIfNeeded()
         connectionDraft = draftProfile.connectionString
         try? await codex.refreshTerminalSnapshot()
-        if usesDesktopSource, let resolvedThreadID {
+        if usesDesktopSource, activeWorkspaceTerminal == nil, let resolvedThreadID {
             desktopTerminalIds = (try? await codex.listDesktopTerminalIds(threadId: resolvedThreadID)) ?? []
         }
 
@@ -418,6 +440,10 @@ struct TerminalScreen: View {
     }
 
     private func selectTerminalSession(_ terminalId: String) {
+        if codex.desktopWorkspaceTerminals.contains(where: { $0.id == terminalId }) {
+            terminalSource = .desktop
+            desktopTerminalIds = []
+        }
         activeTerminalId = terminalId
     }
 
@@ -459,9 +485,10 @@ struct TerminalScreen: View {
             try await codex.openDesktopTerminal(
                 terminalId: activeTerminalId,
                 threadId: resolvedThreadID,
-                cwd: nil,
+                cwd: activeWorkspaceTerminal?.cwd,
                 cols: activeSnapshot.cols,
-                rows: activeSnapshot.rows
+                rows: activeSnapshot.rows,
+                desktopTerminalId: activeWorkspaceTerminal?.terminalId
             )
         } catch {
             actionErrorMessage = terminalErrorText(error)
@@ -749,6 +776,7 @@ struct TerminalScreen: View {
     }
 
     private func terminalDisplayLabel(_ terminalId: String) -> String {
+        if let entry = codex.desktopWorkspaceTerminals.first(where: { $0.id == terminalId }) { return "Workspace · \(entry.label)" }
         let index = terminalIndex(terminalId)
         guard index > 1 else { return "Terminal" }
         return "Terminal \(index)"

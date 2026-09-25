@@ -17,6 +17,9 @@ enum SidebarContentScope: String, CaseIterable, Hashable, Identifiable {
     case projects
     case chats
     case attention
+    case workspaces
+
+    static let allCases: [SidebarContentScope] = [.chats, .projects, .workspaces]
 
     var id: String { rawValue }
 
@@ -25,9 +28,11 @@ enum SidebarContentScope: String, CaseIterable, Hashable, Identifiable {
         case .projects:
             return "Projects"
         case .chats:
-            return "Chats"
+            return "Studio"
         case .attention:
             return "Attention"
+        case .workspaces:
+            return "Workspaces"
         }
     }
 }
@@ -138,7 +143,9 @@ enum SidebarThreadGrouping {
         _ thread: CodexThread,
         projectlessRootPaths: [String] = []
     ) -> Bool {
-        thread.normalizedProjectPath == nil
+        if thread.djlScope == "studio" { return true }
+        if thread.djlScope == "project" { return false }
+        return thread.normalizedProjectPath == nil
             || isUnderProjectlessRoot(thread.normalizedProjectPath, roots: projectlessRootPaths)
             || isGeneratedCodexProjectlessPath(thread.normalizedProjectPath)
     }
@@ -221,7 +228,7 @@ enum SidebarThreadGrouping {
 
         return SidebarThreadGroup(
             id: "chats:rootless",
-            label: "Chats",
+            label: "Studio",
             kind: .chat,
             sortDate: firstThread.updatedAt ?? firstThread.createdAt ?? .distantPast,
             projectPath: nil,

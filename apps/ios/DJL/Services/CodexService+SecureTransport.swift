@@ -398,18 +398,13 @@ extension CodexService {
 
     // Resolves a short manual pairing code through the best-known relay for this app instance.
     func resolvePairingCode(_ code: String) async throws -> CodexPairingQRPayload {
-        let normalizedCode = code
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .uppercased()
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: " ", with: "")
-        guard !normalizedCode.isEmpty else {
-            throw CodexSecureTransportError.invalidQR("Enter a valid pairing code.")
+        guard let normalizedCode = normalizedOneTimePairingCode(code) else {
+            throw CodexSecureTransportError.invalidQR("Enter the one-time code shown in DJL desktop Remote settings.")
         }
 
         guard let relayURL = preferredPairingCodeRelayURL else {
             throw CodexSecureTransportError.invalidQR(
-                "This iPhone does not know which relay to ask for that pairing code yet. Scan the QR code instead."
+                "This iPhone build has no pairing service configured. Use a DJL build configured for the same relay as your computer."
             )
         }
 

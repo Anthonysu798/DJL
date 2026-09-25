@@ -444,6 +444,12 @@ extension CodexService {
         case Self.desktopGitActionProgressMethod:
             handleDesktopGitActionProgress(paramsObject)
 
+        case "djl/models/changed":
+            Task { @MainActor in try? await self.listModels() }
+
+        case "djl/workspaces/changed":
+            Task { @MainActor in try? await self.refreshDesktopWorkspaceTerminals() }
+
         case Self.desktopTerminalEventMethod:
             handleDesktopTerminalEvent(paramsObject)
 

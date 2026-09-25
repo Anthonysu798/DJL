@@ -25,8 +25,24 @@ enum AppEnvironment {
     static let defaultRelayURLString = ""
 
     static var relayBaseURL: String {
-        if let infoURL = resolvedString(forInfoPlistKey: defaultRelayURLInfoPlistKey) {
-            return infoURL
+        #if DEBUG
+        let override = ProcessInfo.processInfo.environment["DJL_REMOTE_RELAY_URL"]
+        #else
+        let override: String? = nil
+        #endif
+        return configuredPairingRelay(bundleValue: resolvedString(forInfoPlistKey: defaultRelayURLInfoPlistKey), developmentOverride: override)
+    }
+
+    // The short code is a lookup key, not a server address. Both shipped apps
+    // use the same relay build setting; Simulator runs can override it in Debug.
+    static func configuredPairingRelay(bundleValue: String?, developmentOverride: String?) -> String {
+        for value in [developmentOverride, bundleValue].compactMap({ $0 }) {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let url = URLComponents(string: trimmed),
+                  ["ws", "wss"].contains(url.scheme?.lowercased() ?? ""),
+                  let host = url.host, !host.isEmpty,
+                  url.user == nil, url.password == nil, url.query == nil, url.fragment == nil else { continue }
+            return trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
         }
         return defaultRelayURLString
     }

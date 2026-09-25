@@ -55,6 +55,31 @@ final class CodexServiceDesktopTerminalTests: XCTestCase {
         XCTAssertEqual(service.desktopTerminalBinding(for: "term-1")?.terminalId, "default")
     }
 
+    func testWorkspaceReconnectPreservesDesktopPaneIdentity() async throws {
+        let service = makeService()
+        let phoneId = "workspace:agent-workspace-qa:pane-qa"
+        var ids: [String] = []
+        let reattached = expectation(description: "reattached to original pane")
+        service.requestTransportOverride = { method, params in
+            if method == "djl/terminal/open" {
+                ids.append(params?.objectValue?["terminalId"]?.stringValue ?? "")
+                if ids.count == 2 { reattached.fulfill() }
+            }
+            return RPCMessage(id: .string("r"), result: .object(["snapshot": .object([
+                "cwd": .string("/work/qa"), "status": .string("running"), "history": .string("original shell"),
+            ])]))
+        }
+        try await service.openDesktopTerminal(terminalId: phoneId, threadId: "agent-workspace-qa", cwd: "/work/qa", cols: 80, rows: 24, desktopTerminalId: "pane-qa")
+        service.markDesktopTerminalsOffline()
+        service.isConnected = true
+        service.reattachDesktopTerminalsIfNeeded()
+        await fulfillment(of: [reattached], timeout: 2)
+        XCTAssertEqual(ids, ["pane-qa", "pane-qa"])
+        XCTAssertEqual(service.desktopTerminalBinding(for: phoneId)?.terminalId, "pane-qa")
+        service.handleDesktopTerminalEvent(["threadId": .string("agent-workspace-qa"), "terminalId": .string("pane-qa"), "type": .string("output"), "data": .string(" still here")])
+        XCTAssertEqual(service.terminalSnapshot(for: phoneId).buffer, "original shell still here")
+    }
+
     func testOutputAppendsAndQueuesAck() async throws {
         let service = try await attachedService()
 

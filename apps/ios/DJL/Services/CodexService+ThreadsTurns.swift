@@ -176,12 +176,17 @@ extension CodexService {
         )
 
         while true {
-            let params = CodexThreadStartProjectBinding.makeThreadStartParams(
+            var params = CodexThreadStartProjectBinding.makeThreadStartParams(
                 modelIdentifier: explicitModelIdentifier,
                 preferredProjectPath: normalizedPreferredProjectPath,
                 serviceTier: includesServiceTier ? explicitServiceTier : nil
             )
 
+            params["djlScope"] = .string(normalizedPreferredProjectPath == nil ? "studio" : "project")
+            if let provider = (runtimeOverrideModel ?? selectedModelOption())?.djlProvider {
+                params["djlProvider"] = .string(provider)
+                params["serviceTier"] = .string(explicitServiceTier ?? "default")
+            }
             do {
                 let response = try await sendRequestWithSandboxFallback(
                     method: "thread/start",
@@ -2552,6 +2557,10 @@ extension CodexService {
         // the user's selected model on runtimes that do not read collaboration settings.
         if let modelIdentifier = runtimeModelIdentifierForTurn(threadId: threadId) {
             params["model"] = .string(modelIdentifier)
+        }
+        if let provider = selectedModelOption(threadId: threadId)?.djlProvider {
+            params["djlProvider"] = .string(provider)
+            params["serviceTier"] = .string(runtimeServiceTierForTurn(threadId: threadId) ?? "default")
         }
         if let effort = selectedReasoningEffortForSelectedModel(threadId: threadId) {
             params["effort"] = .string(effort)

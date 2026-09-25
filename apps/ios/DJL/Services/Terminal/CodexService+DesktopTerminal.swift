@@ -23,11 +23,12 @@ extension CodexService {
         threadId: String,
         cwd: String?,
         cols: Int,
-        rows: Int
+        rows: Int,
+        desktopTerminalId: String? = nil
     ) async throws {
         let binding = DesktopTerminalBinding(
             threadId: threadId,
-            terminalId: DesktopTerminalBinding.desktopTerminalId(forPhoneTerminalId: terminalId)
+            terminalId: desktopTerminalId ?? DesktopTerminalBinding.desktopTerminalId(forPhoneTerminalId: terminalId)
         )
         desktopTerminalBindings[terminalId] = binding
         desktopTerminalsAwaitingReattach.remove(terminalId)
@@ -116,6 +117,22 @@ extension CodexService {
                 "terminalId": .string(binding.terminalId),
             ])
         )
+    }
+
+    func refreshDesktopWorkspaceTerminals() async throws {
+        let response = try await sendRequest(method: "djl/workspaces/terminals", params: .object([:]))
+        let entries = response.result?.objectValue?["terminals"]?.arrayValue ?? []
+        var seen = Set<String>()
+        let next = entries.compactMap { value -> DesktopWorkspaceTerminal? in
+            guard let object = value.objectValue,
+                  let threadId = object["threadId"]?.stringValue,
+                  let terminalId = object["terminalId"]?.stringValue,
+                  let cwd = object["cwd"]?.stringValue,
+                  let status = object["status"]?.stringValue else { return nil }
+            let entry = DesktopWorkspaceTerminal(threadId: threadId, terminalId: terminalId, cwd: cwd, status: status, workspaceName: object["workspaceName"]?.stringValue)
+            return seen.insert(entry.id).inserted ? entry : nil
+        }
+        if next != desktopWorkspaceTerminals { desktopWorkspaceTerminals = next }
     }
 
     func listDesktopTerminalIds(threadId: String) async throws -> [String] {
@@ -208,7 +225,8 @@ extension CodexService {
                     threadId: binding.threadId,
                     cwd: snapshot.cwd.isEmpty ? nil : snapshot.cwd,
                     cols: snapshot.cols,
-                    rows: snapshot.rows
+                    rows: snapshot.rows,
+                    desktopTerminalId: binding.terminalId
                 )
             }
         }
