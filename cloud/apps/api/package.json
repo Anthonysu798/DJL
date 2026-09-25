@@ -1,0 +1,54 @@
+{
+  "name": "@djl/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./credits": "./src/credits/LedgerService.ts",
+    "./server": "./src/server.ts"
+  },
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "auth:generate": "better-auth generate --config auth.cli.ts --output ../../packages/db/src/schema/auth.ts -y",
+    "admin:create": "bun src/admin/createAdmin.ts"
+  },
+  "dependencies": {
+    "@better-auth/cli": "^1.4.21",
+    "@better-auth/passkey": "^1.7.4",
+    "@djl/db": "workspace:*",
+    "@djl/domain": "workspace:*",
+    "@djl/notify": "workspace:*",
+    "@djl/providers": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "@node-rs/argon2": "^2.2.1",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.222.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-metrics": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@sentry/bun": "^10.74.0",
+    "better-auth": "^1.7.4",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "ioredis": "^6.0.0",
+    "otpauth": "^9.5.2",
+    "pg-boss": "^12.31.0",
+    "postgres": "catalog:",
+    "resend": "^6.28.0",
+    "stripe": "^22.6.2",
+    "twilio": "^6.1.1"
+  },
+  "devDependencies": {
+    "@effect/language-service": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

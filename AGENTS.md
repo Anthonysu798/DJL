@@ -54,6 +54,24 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 ---
 
+## DJL Cloud backend (`cloud/`)
+
+The hosted control plane lives in `cloud/`: accounts, organizations, credits, billing, the model
+gateway, sync, and the admin console. It shares this repo's Bun workspace, lockfile, Effect pin,
+and lint/format configs, but it ships separately from the desktop app.
+
+- Read `cloud/CLAUDE.md` and `cloud/docs/specs/2026-09-12-phase-0-cloud-control-plane.md` before
+  changing anything under `cloud/`.
+- Packages are named `@djl/*` (`cloud/apps/{api,worker,web,admin}`,
+  `cloud/packages/{db,domain,notify,providers}`). Client code talks to it only through the public
+  contract in `packages/contracts/src/cloud.ts`.
+- Run it with the root `cloud:*` scripts: `bun run cloud:dev`, `cloud:ci`, `cloud:test`,
+  `cloud:db:migrate`. `cloud:test` needs Postgres and Redis (`cloud/docker-compose.yml`).
+- Cloud CI (`.github/workflows/cloud-ci.yml`) runs only when `cloud/` or shared root files change.
+  Backend production deploys from `cloud-v*` tags. Never use a plain `v*` tag for the backend:
+  those tags release the desktop app.
+- Never commit real keys, `.env` files, or customer data. Everything here is public.
+
 ## Shipping a production release
 
 When the user says "ship it" (optionally "ship it minor|major|rc"):

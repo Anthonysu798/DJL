@@ -1,0 +1,70 @@
+name: Cloud deploy staging
+
+on:
+  # Runs after a successful Cloud CI run on main, so the CI record for the
+  # commit is the same one the production deploy later verifies.
+  workflow_run:
+    workflows: ["Cloud CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  # Staging infrastructure is provisioned by hand once. Until its secrets exist,
+  # the deploy job is skipped instead of failing every push to main.
+  preflight:
+    name: Staging secrets present
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          HAS_DB: ${{ secrets.STAGING_DATABASE_URL != '' }}
+          HAS_FLY: ${{ secrets.FLY_API_TOKEN_STAGING != '' }}
+        run: |
+          if [ "$HAS_DB" = "true" ] && [ "$HAS_FLY" = "true" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "ready=false" >> "$GITHUB_OUTPUT"; echo "::notice::staging secrets not configured; skipping deploy"; fi
+
+  deploy:
+    name: Migrate and deploy staging
+    needs: [preflight]
+    if: needs.preflight.outputs.ready == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: staging
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_STAGING }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Apply migrations, policies, and seed
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          bun run cloud:db:migrate
+          sudo apt-get install -y -q postgresql-client >/dev/null
+          bash cloud/infra/scripts/apply-policies.sh
+          bun run cloud:db:seed
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy API
+        run: flyctl deploy --config cloud/infra/fly/api.toml --app djl-api-staging --build-arg DJL_VERSION=${{ github.sha }} --remote-only
+      - name: Deploy worker
+        run: flyctl deploy --config cloud/infra/fly/worker.toml --app djl-worker-staging --build-arg DJL_VERSION=${{ github.sha }} --remote-only
+      - name: Smoke
+        run: |
+          curl --fail --silent --show-error https://djl-api-staging.fly.dev/health
+          curl --fail --silent --show-error https://djl-api-staging.fly.dev/ready

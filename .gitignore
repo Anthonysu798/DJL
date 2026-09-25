@@ -66,3 +66,7 @@ apps/server/.tmp-document-renderer-tests/
 /browser-sidebar-comment-preload.js.map
 /preload.js.map
 /bootstrap.js.map
+
+# DJL Cloud (cloud/)
+.next/
+coverage/

@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: djl
+      POSTGRES_PASSWORD: djl
+      POSTGRES_DB: djl
+    ports:
+      - "54329:5432"
+    volumes:
+      - djl-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U djl"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "63799:6379"
+volumes:
+  djl-postgres:

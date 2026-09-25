@@ -1,0 +1,22 @@
+# Docker build context for the DJL Cloud images (cloud/apps/*/Dockerfile).
+# The context is the repo root because the root bun.lock covers every
+# workspace, so Bun needs each workspace manifest to verify the lockfile.
+# Everything else in the monorepo stays out of the image.
+**
+!package.json
+!bun.lock
+!bunfig.toml
+!patches/**
+!apps/*/package.json
+!packages/*/package.json
+!scripts/package.json
+!cloud/**
+**/node_modules
+**/.turbo
+**/.next
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+cloud/docs
+cloud/infra/cloudflare

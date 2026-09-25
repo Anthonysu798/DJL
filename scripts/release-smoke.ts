@@ -41,6 +41,9 @@ const workflows = readdirSync(workflowDirectory).toSorted();
 if (
   JSON.stringify(workflows) !==
   JSON.stringify([
+    "cloud-ci.yml",
+    "cloud-deploy-prod.yml",
+    "cloud-deploy-staging.yml",
     "desktop-ci.yml",
     "desktop-release.yml",
     "desktop-signed-update-e2e.yml",

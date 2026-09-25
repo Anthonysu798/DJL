@@ -8,7 +8,9 @@
     "bun.lock",
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
-    "apps/web/public/mockServiceWorker.js"
+    "apps/web/public/mockServiceWorker.js",
+    ".next",
+    "cloud/packages/db/drizzle"
   ],
   "sortPackageJson": {}
 }
