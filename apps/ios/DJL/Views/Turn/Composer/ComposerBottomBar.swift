@@ -409,6 +409,9 @@ private struct ComposerRuntimeMenuControl: View, Equatable {
         if selectedModelID == nil {
             return isRuntimeSelectionLoading ? "Loading…" : "Select model"
         }
+        if let provider = orderedModelOptions.first(where: { $0.id == selectedModelID })?.providerDisplayName {
+            return "\(provider) · \(compactModelTitle)"
+        }
         return compactModelTitle
     }
 
@@ -501,6 +504,18 @@ private struct AllModelsSheet: View {
     let onSelect: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(CodexService.self) private var codex
+    @State private var searchText = ""
+    @State private var selectedProvider: String? = nil
+
+    private var providerNames: [String] { Array(Set(models.map { $0.providerDisplayName ?? "Models" })).sorted() }
+    private var visibleModels: [CodexModelOption] {
+        models.filter { model in
+            (selectedProvider == nil || model.providerDisplayName == selectedProvider) &&
+            (searchText.isEmpty || "\(model.displayName) \(model.providerDisplayName ?? "") \(model.model)".localizedCaseInsensitiveContains(searchText))
+        }
+    }
+
     private let fastModeIconSide: CGFloat = 16
 
     var body: some View {
@@ -513,32 +528,59 @@ private struct AllModelsSheet: View {
                     ContentUnavailableView {
                         DJLIcon.label("No models available", systemName: "square.stack.3d.up.slash")
                     } description: {
-                        Text("Reconnect to your local Codex bridge to refresh the model list.")
+                        Text("Connect a provider in DJL on your computer, then refresh the model list.")
                     }
                 } else {
-                    List {
-                        Section {
-                            ForEach(models, id: \.id) { model in
-                                Button {
-                                    onSelect(model.id)
-                                } label: {
-                                    modelRow(for: model)
-                                }
-                                .buttonStyle(.plain)
+                    VStack(spacing: 0) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            AdaptiveGlassContainer(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    providerChip("All providers", value: nil)
+                                    ForEach(providerNames, id: \.self) { name in providerChip(name, value: name) }
+                                }.padding(.horizontal, 20).padding(.vertical, 10)
                             }
                         }
+                        List {
+                            ForEach(providerNames, id: \.self) { provider in
+                                let entries = visibleModels.filter { ($0.providerDisplayName ?? "Models") == provider }
+                                if !entries.isEmpty {
+                                    Section(provider) {
+                                        ForEach(entries) { model in
+                                            Button { onSelect(model.id); dismiss() } label: { modelRow(for: model) }
+                                                .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .listStyle(.insetGrouped)
+                        .refreshable { try? await codex.listModels() }
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Choose model")
+            .navigationTitle("Provider & model")
+            .searchable(text: $searchText, prompt: "Search providers or models")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Refresh", systemImage: "arrow.clockwise") { Task { try? await codex.listModels() } }
+                        .disabled(isLoadingModels)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
         }
+    }
+
+    private func providerChip(_ label: String, value: String?) -> some View {
+        Button { selectedProvider = value } label: {
+            Text(label).font(AppFont.callout(weight: .medium))
+                .foregroundStyle(selectedProvider == value ? Color.white : Color.primary)
+                .padding(.horizontal, 14).padding(.vertical, 9)
+                .adaptiveGlass(.regular, isInteractive: true, tint: selectedProvider == value ? Color.accentColor : nil, fallbackMaterial: .ultraThinMaterial, in: Capsule())
+        }.buttonStyle(.plain)
+        .accessibilityAddTraits(selectedProvider == value ? .isSelected : [])
     }
 
     @ViewBuilder
@@ -563,6 +605,7 @@ private struct AllModelsSheet: View {
                 }
                 if !model.description.isEmpty {
                     Text(model.description)
+                        .lineLimit(2)
                         .font(AppFont.subheadline())
                         .foregroundStyle(Color(.secondaryLabel))
                 }

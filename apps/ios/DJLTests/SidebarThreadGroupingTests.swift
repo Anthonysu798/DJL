@@ -8,6 +8,31 @@ import XCTest
 @testable import DJL
 
 final class SidebarThreadGroupingTests: XCTestCase {
+    func testPhoneDrawerLeavesThirtyPercentOfConversationVisible() {
+        XCTAssertEqual(PhoneNavigationDrawerPolicy.width(for: 320), 224, accuracy: 0.01)
+        XCTAssertEqual(PhoneNavigationDrawerPolicy.width(for: 402), 281.4, accuracy: 0.01)
+        XCTAssertEqual(PhoneNavigationDrawerPolicy.width(for: 700), 490, accuracy: 0.01)
+    }
+
+    func testPhoneDrawerCommitsSwipeAndCancelsShortDrag() {
+        XCTAssertTrue(PhoneNavigationDrawerPolicy.shouldOpen(isOpen: false, translation: 90, predicted: 220, width: 330))
+        XCTAssertFalse(PhoneNavigationDrawerPolicy.shouldOpen(isOpen: false, translation: 20, predicted: 35, width: 330))
+        XCTAssertFalse(PhoneNavigationDrawerPolicy.shouldOpen(isOpen: true, translation: -110, predicted: -240, width: 330))
+        XCTAssertTrue(PhoneNavigationDrawerPolicy.shouldOpen(isOpen: true, translation: -15, predicted: -25, width: 330))
+        XCTAssertFalse(PhoneNavigationDrawerPolicy.shouldOpen(isOpen: false, translation: 5, predicted: 300, width: 330))
+    }
+
+    @MainActor
+    func testDesktopStudioMetadataOverridesItsRealWorkingDirectory() {
+        var studio = makeThread(id: "studio", updatedAt: Date(), cwd: "/work/managed-studio")
+        studio.djlScope = "studio"
+        var project = makeThread(id: "project", updatedAt: Date(), cwd: "/Users/me/Documents/Codex/2026-09-08/project")
+        project.djlScope = "project"
+        XCTAssertEqual(SidebarThreadGrouping.threadsForScope(.chats, from: [studio, project]).map(\.id), ["studio"])
+        XCTAssertEqual(SidebarThreadGrouping.threadsForScope(.projects, from: [studio, project]).map(\.id), ["project"])
+        XCTAssertEqual(SidebarContentScope.allCases.map(\.title), ["Studio", "Projects", "Workspaces"])
+    }
+
     func testMakeGroupsPartitionsLiveThreadsByProjectPath() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let threads = [
@@ -37,7 +62,7 @@ final class SidebarThreadGroupingTests: XCTestCase {
         XCTAssertEqual(groups.count, 1)
         XCTAssertEqual(groups[0].id, "chats:rootless")
         XCTAssertEqual(groups[0].kind, .chat)
-        XCTAssertEqual(groups[0].label, "Chats")
+        XCTAssertEqual(groups[0].label, "Studio")
         XCTAssertNil(groups[0].projectPath)
         XCTAssertEqual(groups[0].threads.map(\.id), ["thread-a", "thread-b"])
     }
@@ -54,7 +79,7 @@ final class SidebarThreadGroupingTests: XCTestCase {
         XCTAssertEqual(groups.count, 1)
         XCTAssertEqual(groups[0].id, "chats:rootless")
         XCTAssertEqual(groups[0].kind, .chat)
-        XCTAssertEqual(groups[0].label, "Chats")
+        XCTAssertEqual(groups[0].label, "Studio")
         XCTAssertNil(groups[0].projectPath)
         XCTAssertEqual(groups[0].threads.map(\.id), ["thread-a", "thread-b"])
     }
@@ -85,7 +110,7 @@ final class SidebarThreadGroupingTests: XCTestCase {
         XCTAssertEqual(groups.count, 1)
         XCTAssertEqual(groups[0].id, "chats:rootless")
         XCTAssertEqual(groups[0].kind, .chat)
-        XCTAssertEqual(groups[0].label, "Chats")
+        XCTAssertEqual(groups[0].label, "Studio")
         XCTAssertNil(groups[0].projectPath)
         XCTAssertEqual(groups[0].threads.map(\.id), ["rootless-new", "rootless-old"])
     }
