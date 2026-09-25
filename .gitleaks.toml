@@ -62,3 +62,12 @@ regexes = [
   '''VITE_STRIPE_PUBLISHABLE_KEY=pk_test_''',
   '''const DO_OAUTH_CLIENT_ID\s*=''',
 ]
+
+# DJL Cloud admin e2e tests use fixed throwaway passwords for test-only accounts.
+[[allowlists]]
+description = "DJL Cloud admin e2e test fixture passwords"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = ['''^(cloud/)?apps/api/src/admin/admin\.e2e\.test\.ts$''']
+regexes = ['''goodPassword\s*=\s*"employee-strong-passphrase-42"''']

@@ -1,14 +1,16 @@
-name: Deploy production
+name: Cloud deploy production
 
+# Backend releases use their own `cloud-v*` tags. Plain `v*` tags belong to
+# the desktop release (desktop-release.yml) and must never deploy the backend.
 on:
   push:
-    tags: ["v*"]
+    tags: ["cloud-v*"]
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-prod
+  group: cloud-deploy-prod
   cancel-in-progress: false
 
 jobs:
@@ -27,12 +29,12 @@ jobs:
         run: |
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           git merge-base --is-ancestor HEAD origin/main || { echo "tag is not on main"; exit 1; }
-      - name: Require a successful Backend CI run for this exact commit
+      - name: Require a successful Cloud CI run for this exact commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          conclusion=$(gh run list --workflow "Backend CI" --commit "$(git rev-parse HEAD)" --json conclusion --jq '.[0].conclusion // "none"')
-          test "$conclusion" = "success" || { echo "Backend CI for this commit is $conclusion"; exit 1; }
+          conclusion=$(gh run list --workflow "Cloud CI" --commit "$(git rev-parse HEAD)" --json conclusion --jq '.[0].conclusion // "none"')
+          test "$conclusion" = "success" || { echo "Cloud CI for this commit is $conclusion"; exit 1; }
 
   deploy:
     name: Migrate and deploy production
@@ -50,20 +52,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
-      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile --ignore-scripts
       - name: Apply migrations, policies, and seed
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
         run: |
-          bun run db:migrate
+          bun run cloud:db:migrate
           sudo apt-get install -y -q postgresql-client >/dev/null
-          bash infra/scripts/apply-policies.sh
-          bun run db:seed
+          bash cloud/infra/scripts/apply-policies.sh
+          bun run cloud:db:seed
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy API (rolling)
-        run: flyctl deploy --config infra/fly/api.toml --app djl-api --build-arg DJL_VERSION=${{ github.ref_name }} --remote-only --strategy rolling
+        run: flyctl deploy --config cloud/infra/fly/api.toml --app djl-api --build-arg DJL_VERSION=${{ github.ref_name }} --remote-only --strategy rolling
       - name: Deploy worker
-        run: flyctl deploy --config infra/fly/worker.toml --app djl-worker --build-arg DJL_VERSION=${{ github.ref_name }} --remote-only
+        run: flyctl deploy --config cloud/infra/fly/worker.toml --app djl-worker --build-arg DJL_VERSION=${{ github.ref_name }} --remote-only
       - name: Smoke
         run: |
           curl --fail --silent --show-error https://api.slcor.com/health | grep -q "\"version\":\"${{ github.ref_name }}\""

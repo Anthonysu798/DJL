@@ -1,5 +1,9 @@
 # DJL Cloud Phase 0: private backend, accounts, credits, gateway, sync, cloud runner, admin
 
+> **Superseded on 2026-09-25:** the backend no longer lives in a separate private
+> `DJL-Backend` repository. It moved into `cloud/` of the public DJL monorepo, and production
+> deploys from `cloud-v*` tags. Every other decision below still stands.
+
 ## Context
 
 DJL today is local-first: every model call runs on the user's machine with their own provider
@@ -74,24 +78,24 @@ Claude. Budget is not a constraint.
 
 ### Infrastructure
 
-| Area       | Decision                                                                                                                                                                                                        |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Language   | TypeScript, Bun, Effect, Vitest, Turbo, same conventions as the open-source monorepo                                                                                                                            |
-| Repo       | `Anthonysu798/DJL-Backend`, private, created with `gh` (already authenticated with repo+workflow scopes)                                                                                                        |
-| Compute    | Fly.io. US East primary, Singapore secondary. Cloud runner = one Fly Machine per org, started on demand, stopped when idle                                                                                      |
+| Area       | Decision                                                                                                                                                                                                              |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language   | TypeScript, Bun, Effect, Vitest, Turbo, same conventions as the open-source monorepo                                                                                                                                  |
+| Repo       | `Anthonysu798/DJL-Backend`, private, created with `gh` (already authenticated with repo+workflow scopes)                                                                                                              |
+| Compute    | Fly.io. US East primary, Singapore secondary. Cloud runner = one Fly Machine per org, started on demand, stopped when idle                                                                                            |
 | Database   | Supabase Postgres in the user's paid **DJL** organization, separate prod and staging projects. Note: this session's Supabase connector only sees another organization; the user must reconnect with the DJL org login |
-| Storage    | Supabase Storage for attachments, generated images, documents                                                                                                                                                   |
-| Cache      | Upstash Redis for rate limits and stream reservations only                                                                                                                                                      |
-| Queue      | pg-boss in Postgres for settlement, webhooks, email/SMS, purge, stats                                                                                                                                           |
-| Payments   | New DJL Stripe account (to be created and connected; test mode until then). Stripe Checkout, Customer Portal, Stripe Tax. Alipay and WeChat Pay toggled later                                                   |
-| Hostnames  | `api.slcor.com` (Cloudflare proxied), `api-asia.slcor.com` (Cloudflare DNS-only to Fly Singapore, for mainland reachability), `admin.slcor.com`, `app.slcor.com`. DNS on Cloudflare                             |
-| Autoscale  | In-flight streams per API instance: out above ~200, in below ~50                                                                                                                                                |
-| Monitoring | OpenTelemetry to Grafana Cloud, Sentry for errors, incident.io status page, `trace_id` on every request                                                                                                         |
-| Secrets    | Fly and Vercel secret stores. Provider keys: primary + fallback per provider, quarterly rotation script                                                                                                         |
-| Dev env    | docker compose with Postgres and Redis; providers, Stripe, Twilio, Resend mocked by default                                                                                                                     |
-| Deploy     | Every push to main deploys staging. A `v*` tag deploys production after the user approves the GitHub `production` environment. Fail-closed ship script like the desktop one                                     |
-| Security   | Automated abuse suite in CI plus one external pentest before public launch                                                                                                                                      |
-| Contract   | Public API types live in the open-source `packages/contracts`; backend depends on it by git tag                                                                                                                 |
+| Storage    | Supabase Storage for attachments, generated images, documents                                                                                                                                                         |
+| Cache      | Upstash Redis for rate limits and stream reservations only                                                                                                                                                            |
+| Queue      | pg-boss in Postgres for settlement, webhooks, email/SMS, purge, stats                                                                                                                                                 |
+| Payments   | New DJL Stripe account (to be created and connected; test mode until then). Stripe Checkout, Customer Portal, Stripe Tax. Alipay and WeChat Pay toggled later                                                         |
+| Hostnames  | `api.slcor.com` (Cloudflare proxied), `api-asia.slcor.com` (Cloudflare DNS-only to Fly Singapore, for mainland reachability), `admin.slcor.com`, `app.slcor.com`. DNS on Cloudflare                                   |
+| Autoscale  | In-flight streams per API instance: out above ~200, in below ~50                                                                                                                                                      |
+| Monitoring | OpenTelemetry to Grafana Cloud, Sentry for errors, incident.io status page, `trace_id` on every request                                                                                                               |
+| Secrets    | Fly and Vercel secret stores. Provider keys: primary + fallback per provider, quarterly rotation script                                                                                                               |
+| Dev env    | docker compose with Postgres and Redis; providers, Stripe, Twilio, Resend mocked by default                                                                                                                           |
+| Deploy     | Every push to main deploys staging. A `v*` tag deploys production after the user approves the GitHub `production` environment. Fail-closed ship script like the desktop one                                           |
+| Security   | Automated abuse suite in CI plus one external pentest before public launch                                                                                                                                            |
+| Contract   | Public API types live in the open-source `packages/contracts`; backend depends on it by git tag                                                                                                                       |
 
 ## Architecture
 

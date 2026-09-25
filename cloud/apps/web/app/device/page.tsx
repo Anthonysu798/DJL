@@ -1,6 +1,6 @@
 "use client";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AuthGate } from "@/components/AuthGate";
 import { AUTH_URL } from "@/lib/config";
@@ -20,22 +20,25 @@ function DeviceApproval() {
   const [phase, setPhase] = useState<Phase>(initial ? "claiming" : "ready");
   const [error, setError] = useState<string | null>(null);
 
-  const claim = async (code: string) => {
-    setError(null);
-    const res = await fetch(`${AUTH_URL}/device?user_code=${encodeURIComponent(code)}`, {
-      credentials: "include",
-    });
-    if (!res.ok) {
-      setPhase("error");
-      setError(d.error);
-      return;
-    }
-    setPhase("ready");
-  };
+  const claim = useCallback(
+    async (code: string) => {
+      setError(null);
+      const res = await fetch(`${AUTH_URL}/device?user_code=${encodeURIComponent(code)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        setPhase("error");
+        setError(d.error);
+        return;
+      }
+      setPhase("ready");
+    },
+    [d.error],
+  );
 
   useEffect(() => {
     if (initial) void claim(initial);
-  }, [initial]);
+  }, [initial, claim]);
 
   const decide = async (action: "approve" | "deny") => {
     setError(null);

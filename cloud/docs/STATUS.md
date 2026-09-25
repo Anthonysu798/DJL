@@ -46,18 +46,20 @@ another organization); DJL Stripe account with three monthly and three annual pr
 Resend domain verification for `slcor.com`; OpenAI, Anthropic, OpenRouter keys (primary and
 fallback); Google OAuth client and Apple Sign-In service id; Cloudflare DNS records per
 `infra/cloudflare/dns.md`; Grafana Cloud OTLP endpoint; Sentry DSN; incident.io status page;
-Terms, Privacy, and refund policy text; the first admin created with `bun run --cwd apps/api admin:create`.
+Terms, Privacy, and refund policy text; the first admin created with `bun run --cwd cloud/apps/api admin:create`.
 
 ## Local development
 
+From the repository root:
+
 ```sh
-bun install && cp .env.example .env
-docker compose up -d            # or a local Postgres on 54329 and Redis on 63799
-bun run db:migrate && bash infra/scripts/apply-policies.sh && bun run db:seed
-bun run --cwd apps/api dev      # API on 8787, external services mocked
-bun run --cwd apps/web dev      # dashboard on 3000
-bun run --cwd apps/admin dev    # admin on 3001
-bun run test                    # every workspace
+bun install && cp cloud/.env.example cloud/.env
+docker compose -f cloud/docker-compose.yml up -d   # or a local Postgres on 54329 and Redis on 63799
+bun run cloud:db:migrate && bash cloud/infra/scripts/apply-policies.sh && bun run cloud:db:seed
+bun run --cwd cloud/apps/api dev     # API on 8787, external services mocked
+bun run --cwd cloud/apps/web dev     # dashboard on 3000
+bun run --cwd cloud/apps/admin dev   # admin on 3001
+bun run cloud:test                   # every cloud workspace
 ```
 
 ## 2026-09-13: admin team management and form validation
@@ -75,3 +77,13 @@ bun run test                    # every workspace
   revokes sessions opened from it.
 - Admin UI forms use custom inline validation (no native browser validation); Settings has a
   typed editor per key. Tests: `apps/api/src/admin/admin.e2e.test.ts` covers the whole flow.
+
+## 2026-09-25: moved into the public DJL monorepo
+
+- The former private `DJL-Backend` repository now lives in `cloud/` of the DJL monorepo, with its
+  full commit history. It shares the root workspace, `bun.lock`, and lint/format configs.
+- Commands moved to root scripts: `bun run cloud:ci`, `cloud:test`, `cloud:db:migrate`, and so on.
+- Workflows are `.github/workflows/cloud-{ci,deploy-staging,deploy-prod}.yml`. Production now
+  deploys from `cloud-v*` tags so desktop `v*` release tags can never deploy the backend.
+- Images build from the repo root (`docker build -f cloud/apps/api/Dockerfile .`); the root
+  `.dockerignore` limits the context to workspace manifests and `cloud/`.

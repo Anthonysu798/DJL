@@ -1,4 +1,4 @@
--- Applied after Drizzle migrations by infra/scripts/apply-policies.sh.
+-- Applied after Drizzle migrations by cloud/infra/scripts/apply-policies.sh.
 -- The API and worker connect as `djl_app`, never as the Postgres superuser.
 -- Append-only tables lose UPDATE and DELETE entirely so a bug cannot rewrite history.
 

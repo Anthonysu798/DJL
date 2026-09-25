@@ -1,10 +1,10 @@
-name: Deploy staging
+name: Cloud deploy staging
 
 on:
-  # Runs after a successful Backend CI run on main, so the CI record for the
+  # Runs after a successful Cloud CI run on main, so the CI record for the
   # commit is the same one the production deploy later verifies.
   workflow_run:
-    workflows: ["Backend CI"]
+    workflows: ["Cloud CI"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-staging
+  group: cloud-deploy-staging
   cancel-in-progress: false
 
 jobs:
@@ -50,20 +50,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
-      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile --ignore-scripts
       - name: Apply migrations, policies, and seed
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          bun run db:migrate
+          bun run cloud:db:migrate
           sudo apt-get install -y -q postgresql-client >/dev/null
-          bash infra/scripts/apply-policies.sh
-          bun run db:seed
+          bash cloud/infra/scripts/apply-policies.sh
+          bun run cloud:db:seed
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy API
-        run: flyctl deploy --config infra/fly/api.toml --app djl-api-staging --build-arg DJL_VERSION=${{ github.sha }} --remote-only
+        run: flyctl deploy --config cloud/infra/fly/api.toml --app djl-api-staging --build-arg DJL_VERSION=${{ github.sha }} --remote-only
       - name: Deploy worker
-        run: flyctl deploy --config infra/fly/worker.toml --app djl-worker-staging --build-arg DJL_VERSION=${{ github.sha }} --remote-only
+        run: flyctl deploy --config cloud/infra/fly/worker.toml --app djl-worker-staging --build-arg DJL_VERSION=${{ github.sha }} --remote-only
       - name: Smoke
         run: |
           curl --fail --silent --show-error https://djl-api-staging.fly.dev/health

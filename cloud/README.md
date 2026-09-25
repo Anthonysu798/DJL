@@ -1,8 +1,8 @@
-# DJL-Backend
+# DJL Cloud
 
-Private control plane for DJL Cloud: accounts, organizations, credits, billing, the model
-gateway, cross-device sync, per-org cloud runners, and the admin tool. The open-source DJL
-monorepo holds the clients; this repository holds everything paid and privileged.
+The control plane for DJL Cloud: accounts, organizations, credits, billing, the model gateway,
+cross-device sync, per-org cloud runners, and the admin tool. It lives in `cloud/` of the DJL
+monorepo next to the desktop, web, and iOS clients, and shares the root Bun workspace.
 
 Start with `docs/specs/2026-09-12-phase-0-cloud-control-plane.md`. Every product, auth,
 admin, and infrastructure decision for Phase 0 is recorded there and is not re-opened in code.
@@ -19,13 +19,20 @@ admin, and infrastructure decision for Phase 0 is recorded there and is not re-o
 
 ## Local development
 
+From the repository root:
+
 ```sh
 bun install
-cp .env.example .env
-docker compose up -d
-bun run db:migrate
-bun run dev
+cp cloud/.env.example cloud/.env
+docker compose -f cloud/docker-compose.yml up -d
+bun run cloud:db:migrate
+bun run cloud:db:seed
+bun run cloud:dev
 ```
+
+`bun run cloud:ci` runs format, lint, typecheck, and tests for everything under `cloud/`.
+Container images build from the repo root, for example
+`docker build -f cloud/apps/api/Dockerfile .`.
 
 External services are mocked unless `DJL_MOCK_EXTERNALS=false`.
 
@@ -34,4 +41,5 @@ External services are mocked unless `DJL_MOCK_EXTERNALS=false`.
 - Never edit or delete a ledger entry. Corrections are new entries.
 - Every table is scoped by `org_id`; missing scope fails closed.
 - Provider keys live only in Fly secrets. Response bodies are never logged.
-- Production deploys only from a `v*` tag after the `production` environment approval.
+- Production deploys only from a `cloud-v*` tag after the `production` environment approval.
+  Plain `v*` tags release the desktop app.

@@ -1,22 +1,28 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Minimal load/refresh hook for admin pages: data, error, reload. */
 export function useLoad<T>(loader: () => Promise<T>, deps: readonly unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Callers pass fresh closures every render; keep the latest one in a ref and
+  // re-run only when the (primitive) deps change, keyed by their JSON form.
+  const loaderRef = useRef(loader);
+  loaderRef.current = loader;
+  const key = JSON.stringify(deps);
   const reload = useCallback(() => {
     setLoading(true);
     setError(null);
-    loader()
+    loaderRef
+      .current()
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, deps);
+  }, []);
   useEffect(() => {
     reload();
-  }, [reload]);
+  }, [reload, key]);
   return { data, error, loading, reload, setData };
 }
 
