@@ -2607,7 +2607,10 @@
       "denied": "在瀏覽器中拒絕了登入。",
       "expired": "登入代碼已過期，請重新開始。",
       "error": "無法連線 DJL Cloud。",
-      "signIn": "登入 DJL Cloud"
+      "signInWithBrowser": "使用瀏覽器登入",
+      "useCodeInstead": "改用代碼登入",
+      "finishInBrowser": "請在瀏覽器中完成登入，DJL 會在這裡自動繼續。",
+      "browserFailed": "瀏覽器登入未完成。請重試或改用代碼登入。"
     }
   },
   "shell": {
