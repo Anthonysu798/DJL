@@ -6,6 +6,7 @@
  *   "fail"         → retryable provider error before any output
  *   "tool"         → a tool call
  *   "hang"         → (images) never finishes until the request is aborted
+ * Image edits return a tiny valid PNG so callers can store the result.
  */
 import {
   ProviderError,
@@ -13,6 +14,10 @@ import {
   type ChatRequest,
   type ProviderAdapter,
 } from "@djl/providers";
+
+/** A 1x1 transparent PNG. */
+export const FAKE_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 export function createFakeProvider(): ProviderAdapter {
   return {
@@ -97,6 +102,18 @@ export function createFakeProvider(): ProviderAdapter {
         images: Array.from({ length: req.n }, (_v, i) => ({
           b64_json: Buffer.from(`fake-image-${i}`).toString("base64"),
         })),
+        count: req.n,
+      };
+    },
+    async editImage(req, signal) {
+      if (req.prompt === "fail")
+        throw new ProviderError("openai", 503, "unavailable", "fake outage", true);
+      if (req.prompt === "hang")
+        await new Promise((_resolve, reject) =>
+          signal.addEventListener("abort", () => reject(new Error("aborted"))),
+        );
+      return {
+        images: Array.from({ length: req.n }, () => ({ b64_json: FAKE_PNG_BASE64 })),
         count: req.n,
       };
     },

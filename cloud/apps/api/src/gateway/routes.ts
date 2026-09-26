@@ -11,7 +11,7 @@ import { RequestContext } from "../http/context.ts";
 import { ApiError } from "../http/errors.ts";
 import { attempt, handle } from "../http/handle.ts";
 import { json } from "../http/json.ts";
-import type { GatewayService, RequestFacts } from "./GatewayService.ts";
+import { MAX_EDIT_IMAGE_BYTES, type GatewayService, type RequestFacts } from "./GatewayService.ts";
 
 export interface GatewayRouteDeps {
   readonly gateway: GatewayService;
@@ -132,6 +132,55 @@ export function makeGatewayRoutes(deps: GatewayRouteDeps) {
     ),
   );
 
+  // OpenAI-compatible multipart: model, prompt, image (file), optional n and size.
+  const imageEdits = HttpRouter.add(
+    "POST",
+    "/v1/images/edits",
+    handle(
+      Effect.gen(function* () {
+        const f = yield* facts;
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        const length = Number(request.headers["content-length"] ?? "0");
+        if (length > MAX_EDIT_IMAGE_BYTES + 64 * 1024)
+          return yield* Effect.fail(new ApiError(413, "payload_too_large", "Body too large."));
+        const web = yield* HttpServerRequest.toWeb(request).pipe(
+          Effect.mapError(() => new ApiError(400, "bad_body", "Could not read body.")),
+        );
+        const form = yield* Effect.tryPromise({
+          try: () => web.formData(),
+          catch: () => new ApiError(400, "bad_body", "Send the edit as multipart/form-data."),
+        });
+        const model = form.get("model");
+        const prompt = form.get("prompt");
+        const image = form.get("image");
+        if (typeof model !== "string" || typeof prompt !== "string" || !(image instanceof Blob)) {
+          return yield* Effect.fail(
+            new ApiError(400, "bad_request", "model, prompt, and image are required."),
+          );
+        }
+        const bytes = new Uint8Array(yield* Effect.promise(() => image.arrayBuffer()));
+        const n = Number(form.get("n") ?? "1");
+        const size = form.get("size");
+        const result = yield* attempt(
+          (signal) =>
+            deps.gateway.editImage(
+              f,
+              {
+                model,
+                prompt,
+                image: { bytes, mimeType: image.type },
+                n: Number.isInteger(n) ? n : 1,
+                ...(typeof size === "string" ? { size } : {}),
+              },
+              { signal },
+            ),
+          GATEWAY_FAILURE,
+        );
+        return json(result);
+      }),
+    ),
+  );
+
   const embeddings = HttpRouter.add(
     "POST",
     "/v1/embeddings",
@@ -178,5 +227,5 @@ export function makeGatewayRoutes(deps: GatewayRouteDeps) {
     ),
   );
 
-  return Layer.mergeAll(models, chat, images, embeddings, usage);
+  return Layer.mergeAll(models, chat, images, imageEdits, embeddings, usage);
 }

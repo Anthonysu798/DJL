@@ -243,6 +243,30 @@ describe("api end to end", () => {
     expect((await (await call("/v1/credits")).json()).total).toBe(before);
   });
 
+  it("edits an uploaded image through multipart /v1/images/edits and charges per image", async () => {
+    const before = Number((await (await call("/v1/credits")).json()).total);
+    const form = new FormData();
+    form.set("model", "image.edit");
+    form.set("prompt", "make it blue");
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    form.set("image", new Blob([png], { type: "image/png" }), "in.png");
+    const res = await call("/v1/images/edits", { method: "POST", body: form });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.usage.images).toBe(1);
+    expect(Number((await (await call("/v1/credits")).json()).total)).toBeLessThan(before);
+
+    const missing = new FormData();
+    missing.set("model", "image.edit");
+    missing.set("prompt", "x");
+    const bad = await call("/v1/images/edits", { method: "POST", body: missing });
+    expect(bad.status).toBe(400);
+  });
+
   it("registers and lists a device", async () => {
     const created = await call("/v1/devices", {
       method: "POST",
