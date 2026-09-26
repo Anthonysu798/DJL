@@ -5,6 +5,7 @@
  */
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
+import { DEFAULT_PLANS } from "@djl/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { loadApiEnv } from "../config/env.ts";
@@ -14,6 +15,8 @@ import { startApi, type ApiRuntime } from "../server.ts";
 import { TestClient } from "../testing/client.ts";
 import { seedOrg, testDatabase } from "../testing/db.ts";
 import { abusePolicy } from "./abusePolicy.ts";
+
+const STARTER = DEFAULT_PLANS.find((plan) => plan.id === "starter")!;
 
 describe("abuse admission policy", () => {
   const { db, close } = testDatabase();
@@ -37,7 +40,13 @@ describe("abuse admission policy", () => {
         ipHash: null,
         deviceId: null,
       },
-      limits: { planId: "starter", concurrentStreams: 2, requestsPerMinute, priorityWeight: 1 },
+      limits: {
+        planId: "starter",
+        concurrentStreams: 2,
+        requestsPerMinute,
+        priorityWeight: 1,
+        windowCaps: { fiveHour: STARTER.window5h, week: STARTER.windowWeek },
+      },
     };
   }
 
