@@ -4,7 +4,12 @@ This directory is part of the public DJL monorepo. Read
 `docs/specs/2026-09-12-phase-0-cloud-control-plane.md` (relative to `cloud/`) before changing anything. Decisions
 listed there are final for Phase 0.
 
-- Effect services live in `Services/`, implementations in `Layers/`, same as the open-source DJL repo.
+- Code is organized by feature, not by `Services/` and `Layers/` folders (that is the desktop
+  app's convention). Each area of the API is one folder under `apps/api/src/<feature>/`
+  (`admin`, `billing`, `credits`, `gateway`, `sync`, `trial`, ...) holding a plain
+  `<Name>Service.ts` class with the logic, a `routes.ts` that exposes it through Effect HTTP
+  handlers (`http/handle.ts`, `http/errors.ts`), and its `*.test.ts` files beside the code.
+  Shared HTTP plumbing lives in `apps/api/src/http/`; wiring happens once in `apps/api/src/server.ts`.
 - Pure rules go in `packages/domain` with unit tests; IO goes in apps.
 - Ledger is append-only. Balances are folded from entries. Never write a balance directly.
 - Every request carries a `trace_id`; never log tokens, secrets, emails, phones, or response bodies.
