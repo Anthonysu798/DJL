@@ -1,0 +1,9 @@
+#!/bin/bash
+# Usage: fetch-input <signed https url> <input.pdf|input.docx|input.xlsx>
+# Runs outside the jail and only downloads the short-lived signed storage URL
+# the API passes for a file the user attached. User code never runs here.
+set -euo pipefail
+case "$2" in input.pdf | input.docx | input.xlsx) ;; *) echo "unsupported input name" >&2; exit 2 ;; esac
+case "$1" in https://*) ;; *) echo "https only" >&2; exit 2 ;; esac
+curl -fsS --proto =https --max-redirs 0 --max-filesize 26214400 --max-time 30 -o "/work/in/$2" "$1"
+chmod 644 "/work/in/$2"
