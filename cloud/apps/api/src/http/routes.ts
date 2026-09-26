@@ -3,8 +3,8 @@
  * server. Better Auth is mounted by converting the Effect request to a web
  * Request and the auth Response back.
  */
-import { Effect, Layer } from "effect";
-import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { Effect, Layer, Stream } from "effect";
+import { HttpBody, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
 import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
@@ -24,6 +24,20 @@ import type { DjlAuth } from "../auth/auth.ts";
 import type { ApiEnv } from "../config/env.ts";
 import { RequestContext } from "./context.ts";
 import { errorResponse } from "./errors.ts";
+
+/**
+ * `HttpServerResponse.fromWeb` keeps status, headers, and every Set-Cookie,
+ * but labels the body application/octet-stream, which web clients (Better
+ * Auth's included) then refuse to parse as JSON. Re-attach the body with the
+ * upstream Content-Type.
+ */
+function fromWebKeepingType(response: Response): HttpServerResponse.HttpServerResponse {
+  const converted = HttpServerResponse.fromWeb(response);
+  const contentType = response.headers.get("content-type");
+  if (!response.body || !contentType) return converted;
+  const body = Stream.fromReadableStream({ evaluate: () => response.body!, onError: (e) => e });
+  return HttpServerResponse.setBody(converted, HttpBody.stream(body, contentType));
+}
 
 export interface RouteDeps
   extends
@@ -87,9 +101,7 @@ export function makeRoutes(deps: RouteDeps) {
         return errorResponse(500, "auth_unavailable", "Authentication service error.", ctx.traceId);
       const headers = new Headers(response.headers);
       headers.set("x-trace-id", ctx.traceId);
-      return HttpServerResponse.fromWeb(
-        new Response(response.body, { status: response.status, headers }),
-      );
+      return fromWebKeepingType(new Response(response.body, { status: response.status, headers }));
     }),
   );
 

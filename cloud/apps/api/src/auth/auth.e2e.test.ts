@@ -106,3 +106,30 @@ describe("account deletion", () => {
     expect((await client.call("/v1/me")).status).toBe(200);
   });
 });
+
+describe("browser clients", () => {
+  it("serves Better Auth JSON as application/json so the web client can parse the session", async () => {
+    const browser = TestClient.for(api);
+    const { email } = await browser.signUp(api, "json-session");
+    const res = await browser.call("/v1/auth/get-session");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/^application\/json/);
+    const body = (await res.json()) as { user?: { email?: string }; session?: unknown };
+    expect(body.user?.email).toBe(email);
+    expect(body.session).toBeTruthy();
+  });
+
+  it("still sets every sign-in cookie while forwarding the JSON body", async () => {
+    const browser = TestClient.for(api);
+    const { email, password } = await browser.signUp(api, "json-cookies");
+    const fresh = new TestClient(browser.base);
+    const res = await fresh.call("/v1/auth/sign-in/email", {
+      method: "POST",
+      json: { email, password },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/^application\/json/);
+    expect(res.headers.getSetCookie().some((c) => c.includes("session_token"))).toBe(true);
+    expect(((await res.json()) as { user?: { email?: string } }).user?.email).toBe(email);
+  });
+});
