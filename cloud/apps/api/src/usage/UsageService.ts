@@ -7,6 +7,7 @@ import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import type { PlanId, WindowCaps, WindowsUsage } from "@djl/domain";
 
+import type { ResumeWindowBlockedRuns } from "../agent/resume.ts";
 import { ApiError } from "../http/errors.ts";
 import { planForOrg } from "./plans.ts";
 import { measure, resetWindows, windowState } from "./windowStore.ts";
@@ -37,6 +38,7 @@ export class UsageService {
   constructor(
     private readonly db: DjlDatabase,
     private readonly now: () => Date = () => new Date(),
+    private readonly resumeRuns: ResumeWindowBlockedRuns = async () => undefined,
   ) {}
 
   /** Both windows measured against the caps of the org's plan. */
@@ -112,6 +114,7 @@ export class UsageService {
       });
       return bank.id;
     });
+    await this.resumeRuns(userId);
     return { redeemedBankId, usage: await this.windows(userId, orgId) };
   }
 }
