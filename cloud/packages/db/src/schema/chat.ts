@@ -54,11 +54,19 @@ export const conversations = pgTable(
     search: tsvector("search").generatedAlwaysAs(
       sql`to_tsvector('simple'::regconfig, coalesce(title, '') || ' ' || search_text)`,
     ),
+    /** Last message of the branch the user is looking at; null before the first message. */
+    currentLeafId: uuid("current_leaf_id").references((): AnyPgColumn => messages.id, {
+      onDelete: "set null",
+    }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).defaultNow().notNull(),
+    /** Soft delete; the worker purges the conversation and its files 30 days later. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index("conversations_user_updated_idx").on(t.userId, t.updatedAt),
+    index("conversations_user_list_idx").on(t.userId, t.pinned, t.lastMessageAt),
     index("conversations_org_idx").on(t.orgId),
     index("conversations_search_idx").using("gin", t.search),
   ],
@@ -112,6 +120,9 @@ export const files = pgTable(
     storageKey: text("storage_key").notNull(),
     status: fileStatusEnum("status").notNull().default("pending"),
     source: text("source").notNull().default("upload"), // upload | generated
+    purpose: text("purpose").notNull().default("attachment"), // attachment | image
+    /** Text extracted from a document, when available; sent to the model with the file. */
+    textContent: text("text_content"),
     sha256: text("sha256"),
     width: integer("width"),
     height: integer("height"),
@@ -140,6 +151,10 @@ export const shares = pgTable(
       .notNull()
       .references(() => conversations.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull(),
+    /** Last message of the shared branch; later messages are never shared. */
+    leafMessageId: uuid("leaf_message_id")
+      .notNull()
+      .references((): AnyPgColumn => messages.id, { onDelete: "cascade" }),
     title: text("title"),
     /** CloudSharedMessage[] frozen at creation. */
     snapshot: jsonb("snapshot").$type<readonly unknown[]>().notNull(),
@@ -193,6 +208,8 @@ export const runs = pgTable(
       .default(sql`0`),
     leaseOwner: text("lease_owner"),
     leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    /** Set by POST /v1/runs/{id}/cancel; the executor checks it between chunks. */
+    cancelRequestedAt: timestamp("cancel_requested_at", { withTimezone: true }),
     createdAt: createdAt(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
