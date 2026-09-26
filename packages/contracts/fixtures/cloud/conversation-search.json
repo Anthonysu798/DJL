@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "conversation": {
+        "id": "conv_1",
+        "title": "Trip plan",
+        "pinned": false,
+        "archived": false,
+        "createdAt": "2026-09-26T12:00:00.000Z",
+        "updatedAt": "2026-09-26T12:00:00.000Z"
+      },
+      "messageId": "msg_1",
+      "snippet": "three days in Kyoto"
+    }
+  ],
+  "nextCursor": null
+}

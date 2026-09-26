@@ -1,0 +1,10 @@
+{
+  "share": {
+    "id": "share_1",
+    "conversationId": "conv_1",
+    "title": "Trip plan",
+    "createdAt": "2026-09-26T12:00:00.000Z",
+    "revokedAt": null
+  },
+  "url": "https://app.slcor.com/share/token_example"
+}

@@ -64,7 +64,7 @@ and lint/format configs, but it ships separately from the desktop app.
   changing anything under `cloud/`.
 - Packages are named `@djl/*` (`cloud/apps/{api,worker,web,admin}`,
   `cloud/packages/{db,domain,notify,providers}`). Client code talks to it only through the public
-  contract in `packages/contracts/src/cloud.ts`.
+  contract in `packages/contracts/src/cloud/` (`@synara/contracts/cloud`).
 - Run it with the root `cloud:*` scripts: `bun run cloud:dev`, `cloud:ci`, `cloud:test`,
   `cloud:db:migrate`. `cloud:test` needs Postgres and Redis (`cloud/docker-compose.yml`).
 - Cloud CI (`.github/workflows/cloud-ci.yml`) runs only when `cloud/` or shared root files change.

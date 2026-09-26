@@ -32,6 +32,7 @@
     "@opentelemetry/sdk-node": "^0.222.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "@sentry/bun": "^10.74.0",
+    "@synara/contracts": "workspace:*",
     "better-auth": "^1.7.4",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
