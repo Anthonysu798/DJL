@@ -13,7 +13,7 @@ export function handle<R>(
     return yield* effect.pipe(
       Effect.catchIf(
         (e): e is ApiError => e instanceof ApiError,
-        (e) => Effect.succeed(errorResponse(e.status, e.code, e.message, ctx.traceId)),
+        (e) => Effect.succeed(errorResponse(e.status, e.code, e.message, ctx.traceId, e.details)),
       ),
     );
   });

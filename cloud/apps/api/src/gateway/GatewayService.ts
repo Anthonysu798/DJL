@@ -13,9 +13,9 @@ import { schema, type DjlDatabase } from "@djl/db";
 import {
   costOfUsage,
   estimateReservation,
+  spendable,
   type Microcredits,
   type ModelPrice,
-  type PlanId,
 } from "@djl/domain";
 import {
   CircuitBreaker,
@@ -33,6 +33,9 @@ import { gatewayRequests, settledMicrocredits, withSpan } from "../observability
 import { InsufficientCreditsError, type LedgerService } from "../credits/LedgerService.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
+import { planForOrg } from "../usage/plans.ts";
+import { windowExhausted } from "../usage/windowPolicy.ts";
+import { UsageWindowExhaustedError } from "../usage/windowStore.ts";
 import {
   allowAll,
   killSwitchPolicy,
@@ -123,6 +126,32 @@ export interface Step {
 }
 
 const TRAILER_EVENT = "djl.usage";
+
+/** The tightest spending limit on a stream and the error it ends with when reached. */
+function streamBudget(
+  credits: Microcredits,
+  windowHold: Microcredits | null,
+  stepCap: Microcredits | undefined,
+): { readonly amount: Microcredits; readonly error: { code: string; message: string } } {
+  let budget = {
+    amount: credits,
+    error: { code: "insufficient_credits", message: "Credits ran out during this response." },
+  };
+  if (windowHold !== null && windowHold < budget.amount)
+    budget = {
+      amount: windowHold,
+      error: {
+        code: "usage_window_cut",
+        message: "Your usage limit was reached during this response.",
+      },
+    };
+  if (stepCap !== undefined && stepCap < budget.amount)
+    budget = {
+      amount: stepCap,
+      error: { code: "budget_exhausted", message: "This step reached its spending cap." },
+    };
+  return budget;
+}
 
 /** Microcredits per token → credits per 1,000 tokens with two decimals. */
 function fmtPer1k(microPerToken: bigint): string {
@@ -222,24 +251,11 @@ export class GatewayService {
     return Boolean(this.deps.providers[provider]) && this.breaker(provider).state() !== "open";
   }
 
-  private async planLimits(orgId: string): Promise<PlanLimits> {
-    const sub = await this.deps.db.query.subscriptions.findFirst({
-      where: and(eq(schema.subscriptions.orgId, orgId), eq(schema.subscriptions.status, "active")),
-      orderBy: [desc(schema.subscriptions.createdAt)],
-    });
-    const planId: PlanId = sub?.planId ?? "trial";
-    const plan = await this.deps.db.query.plans.findFirst({ where: eq(schema.plans.id, planId) });
-    return {
-      planId,
-      concurrentStreams: plan?.concurrentStreams ?? 2,
-      requestsPerMinute: plan?.requestsPerMinute ?? 20,
-      priorityWeight: plan?.priorityWeight ?? 1,
-    };
-  }
-
-  private async admit(facts: RequestFacts): Promise<AdmissionRelease> {
-    const limits = await this.planLimits(facts.principal.orgId);
-    return runAdmission(this.policies, { facts, limits });
+  private async admit(
+    facts: RequestFacts,
+  ): Promise<{ readonly release: AdmissionRelease; readonly limits: PlanLimits }> {
+    const limits = await planForOrg(this.deps.db, facts.principal.orgId, new Date());
+    return { release: await runAdmission(this.policies, { facts, limits }), limits };
   }
 
   private route(requested: string, catalog: readonly CatalogModel[]) {
@@ -394,7 +410,7 @@ export class GatewayService {
     body: ChatRequest,
     options: StepOptions = {},
   ): Promise<Step> {
-    const release = await this.admit(facts);
+    const { release, limits } = await this.admit(facts);
     let reserved: Microcredits | null = null;
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
@@ -413,16 +429,19 @@ export class GatewayService {
         maxOutputTokens: maxOutput,
         images: 0,
       });
-      let balancesAfter;
+      let reservation;
       try {
-        balancesAfter = await this.deps.ledger.reserve({
+        reservation = await this.deps.ledger.reserve({
           orgId: facts.principal.orgId,
           reservationId: requestId,
           estimate,
           idempotencyKey: `req:${requestId}`,
           actor: `user:${facts.principal.userId}`,
+          freeEligible: model.freeEligible,
+          window: { userId: facts.principal.userId, caps: limits.windowCaps, partial: true },
         });
       } catch (e) {
+        if (e instanceof UsageWindowExhaustedError) throw windowExhausted(e.window);
         if (e instanceof InsufficientCreditsError)
           throw new ApiError(
             402,
@@ -432,9 +451,13 @@ export class GatewayService {
         throw e;
       }
       reserved = estimate;
-      const credits = balancesAfter.trial + balancesAfter.plan + balancesAfter.topup + estimate; // what the org could spend
-      const capped = options.budgetCap !== undefined && options.budgetCap < credits;
-      const budget = capped ? options.budgetCap! : credits;
+      const budget = streamBudget(
+        spendable(reservation.balances, model.freeEligible) + estimate, // what the org could spend
+        reservation.windowHold !== null && reservation.windowHold < estimate
+          ? reservation.windowHold
+          : null,
+        options.budgetCap,
+      );
       await this.recordRequest({
         id: requestId,
         facts,
@@ -504,6 +527,7 @@ export class GatewayService {
               actual,
               idempotencyKey: `req:${requestId}`,
               actor: "system:gateway",
+              freeEligible: model.freeEligible,
             });
             const refusal = finish === "content_filter";
             await this.finishRequest({
@@ -525,13 +549,11 @@ export class GatewayService {
               inputTokens: finalUsage.input_tokens,
               outputTokens: finalUsage.output_tokens,
               settled: actual.toString(),
-              remaining: (balances.trial + balances.plan + balances.topup).toString(),
+              remaining: spendable(balances, model.freeEligible).toString(),
               cutOff,
             };
             const error = cutOff
-              ? capped
-                ? { code: "budget_exhausted", message: "This step reached its spending cap." }
-                : { code: "insufficient_credits", message: "Credits ran out during this response." }
+              ? budget.error
               : failed
                 ? { code: failed.code, message: failed.message }
                 : null;
@@ -567,7 +589,7 @@ export class GatewayService {
               images: 0,
               requests: 1,
             });
-            if (running > budget) {
+            if (running > budget.amount) {
               cutOff = true;
               abort.abort();
               break;
@@ -651,7 +673,7 @@ export class GatewayService {
     /** Aborted when the client disconnects; the provider call stops and nothing is charged. */
     options: { readonly signal?: AbortSignal } = {},
   ) {
-    const release = await this.admit(facts);
+    const { release, limits } = await this.admit(facts);
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
     let reserved = false;
@@ -675,8 +697,11 @@ export class GatewayService {
           estimate,
           idempotencyKey: `req:${requestId}`,
           actor: `user:${facts.principal.userId}`,
+          freeEligible: model.freeEligible,
+          window: { userId: facts.principal.userId, caps: limits.windowCaps, partial: false },
         });
       } catch (e) {
+        if (e instanceof UsageWindowExhaustedError) throw windowExhausted(e.window);
         if (e instanceof InsufficientCreditsError)
           throw new ApiError(
             402,
@@ -750,6 +775,7 @@ export class GatewayService {
         actual,
         idempotencyKey: `req:${requestId}`,
         actor: "system:gateway",
+        freeEligible: model.freeEligible,
       });
       await this.finishRequest({
         id: requestId,
@@ -769,7 +795,7 @@ export class GatewayService {
           routeReason: reason,
           images: result.count,
           settled: actual.toString(),
-          remaining: (balances.trial + balances.plan + balances.topup).toString(),
+          remaining: spendable(balances, model.freeEligible).toString(),
         },
       };
     } catch (error) {
@@ -795,7 +821,7 @@ export class GatewayService {
     facts: RequestFacts,
     body: { readonly model: string; readonly input: string | readonly string[] },
   ) {
-    const release = await this.admit(facts);
+    const { release, limits } = await this.admit(facts);
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
     try {
@@ -815,8 +841,11 @@ export class GatewayService {
           estimate,
           idempotencyKey: `req:${requestId}`,
           actor: `user:${facts.principal.userId}`,
+          freeEligible: model.freeEligible,
+          window: { userId: facts.principal.userId, caps: limits.windowCaps, partial: false },
         });
       } catch (e) {
+        if (e instanceof UsageWindowExhaustedError) throw windowExhausted(e.window);
         if (e instanceof InsufficientCreditsError)
           throw new ApiError(402, "insufficient_credits", "Not enough credits for this request.");
         throw e;
@@ -882,6 +911,7 @@ export class GatewayService {
         actual,
         idempotencyKey: `req:${requestId}`,
         actor: "system:gateway",
+        freeEligible: model.freeEligible,
       });
       await this.finishRequest({
         id: requestId,

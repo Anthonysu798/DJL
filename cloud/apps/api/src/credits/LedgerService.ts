@@ -7,6 +7,10 @@
  * never both pass the balance check. Balances are updated in the same
  * transaction as the ledger insert; the ledger remains the source of truth and
  * `refold` repairs drift.
+ *
+ * Reservations for a signed-in user also hold room in their usage windows
+ * inside the same transaction (lock order: credit_balances, then
+ * usage_windows); settling moves the actual cost into the window buckets.
  */
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 import {
@@ -16,12 +20,16 @@ import {
   reserve as domainReserve,
   settle as domainSettle,
   totalAvailable,
+  ZERO_BALANCES,
   type Balances,
   type Bucket,
   type LedgerEntry,
   type Microcredits,
+  type WindowCaps,
 } from "@djl/domain";
 import { schema, type DjlDatabase } from "@djl/db";
+
+import { holdWindows, settleHold, type Tx } from "../usage/windowStore.ts";
 
 const { creditBalances, creditLedger } = schema;
 
@@ -45,7 +53,18 @@ type NewEntry = Omit<LedgerEntry, "id" | "createdAt"> & {
   readonly metadata?: Record<string, unknown> | null;
 };
 
-type Tx = Parameters<Parameters<DjlDatabase["transaction"]>[0]>[0];
+export interface ReserveResult {
+  readonly balances: Balances;
+  /** What the usage windows hold for this request; null when no window applies. */
+  readonly windowHold: Microcredits | null;
+}
+
+const balancesOf = (row: typeof creditBalances.$inferSelect): Balances => ({
+  free: row.free,
+  trial: row.trial,
+  plan: row.plan,
+  topup: row.topup,
+});
 
 function rowToEntry(row: typeof creditLedger.$inferSelect): LedgerEntry {
   return {
@@ -68,20 +87,18 @@ export class LedgerService {
     const row = await this.db.query.creditBalances.findFirst({
       where: eq(creditBalances.orgId, orgId),
     });
-    return row
-      ? { trial: row.trial, plan: row.plan, topup: row.topup }
-      : { trial: 0n, plan: 0n, topup: 0n };
+    return row ? balancesOf(row) : ZERO_BALANCES;
   }
 
   async available(orgId: string): Promise<Microcredits> {
     return totalAvailable(await this.balances(orgId));
   }
 
-  /** Grant credits into a bucket (trial, plan, topup, admin). Positive amounts only. */
+  /** Grant credits into a bucket (free, trial, plan, topup, admin). Positive amounts only. */
   async grant(input: {
     readonly orgId: string;
     readonly bucket: Bucket;
-    readonly type: "trial_grant" | "plan_grant" | "topup" | "admin_grant" | "refund";
+    readonly type: "free_grant" | "trial_grant" | "plan_grant" | "topup" | "admin_grant" | "refund";
     readonly amount: Microcredits;
     readonly idempotencyKey: string;
     readonly actor: string;
@@ -108,25 +125,44 @@ export class LedgerService {
     });
   }
 
-  /** Reserve an estimated cost. Throws InsufficientCreditsError; never partially reserves. */
+  /**
+   * Reserve an estimated cost. Throws InsufficientCreditsError; never partially
+   * reserves credits. With `window`, also holds room in the user's usage
+   * windows or throws UsageWindowExhaustedError (see windowStore.holdWindows).
+   */
   async reserve(input: {
     readonly orgId: string;
     readonly reservationId: string;
     readonly estimate: Microcredits;
     readonly idempotencyKey: string;
     readonly actor: string;
-  }): Promise<Balances> {
+    /** The model may be paid from the weekly free allowance. */
+    readonly freeEligible?: boolean;
+    readonly window?: {
+      readonly userId: string;
+      readonly caps: WindowCaps;
+      readonly partial: boolean;
+    };
+  }): Promise<ReserveResult> {
     return this.db.transaction(async (tx) => {
       const balances = await this.lockBalances(tx, input.orgId);
       const decision = domainReserve(input, balances);
       if (!decision.ok) throw new InsufficientCreditsError(decision.shortfall);
+      const windowHold = input.window
+        ? await holdWindows(tx, {
+            ...input.window,
+            reservationId: input.reservationId,
+            amount: input.estimate,
+            now: new Date(),
+          })
+        : null;
       await this.insert(
         tx,
         decision.entries.map((e) => ({ ...e, actor: input.actor })),
       );
-      const delta: Record<Bucket, Microcredits> = { trial: 0n, plan: 0n, topup: 0n };
+      const delta = { ...ZERO_BALANCES };
       for (const e of decision.entries) delta[e.bucket] += e.amount;
-      return this.applyDelta(tx, input.orgId, balances, delta);
+      return { balances: await this.applyDelta(tx, input.orgId, balances, delta), windowHold };
     });
   }
 
@@ -140,6 +176,7 @@ export class LedgerService {
     readonly actual: Microcredits;
     readonly idempotencyKey: string;
     readonly actor: string;
+    readonly freeEligible?: boolean;
   }): Promise<{ readonly balances: Balances; readonly uncovered: Microcredits }> {
     return this.db.transaction(async (tx) => {
       const balances = await this.lockBalances(tx, input.orgId);
@@ -162,7 +199,8 @@ export class LedgerService {
         tx,
         entries.map((e) => ({ ...e, actor: input.actor })),
       );
-      const delta: Record<Bucket, Microcredits> = { trial: 0n, plan: 0n, topup: 0n };
+      await settleHold(tx, input.reservationId, input.actual, new Date());
+      const delta = { ...ZERO_BALANCES };
       for (const e of entries) delta[e.bucket] += e.amount;
       return { balances: await this.applyDelta(tx, input.orgId, balances, delta), uncovered };
     });
@@ -231,12 +269,7 @@ export class LedgerService {
       const after = foldBalances(rows.map(rowToEntry));
       await tx
         .update(creditBalances)
-        .set({
-          trial: after.trial,
-          plan: after.plan,
-          topup: after.topup,
-          foldedThrough: new Date(),
-        })
+        .set({ ...after, foldedThrough: new Date() })
         .where(eq(creditBalances.orgId, orgId));
       return { before, after };
     });
@@ -270,7 +303,7 @@ export class LedgerService {
       .where(eq(creditBalances.orgId, orgId))
       .for("update");
     if (!row) throw new Error("credit_balances row missing after upsert");
-    return { trial: row.trial, plan: row.plan, topup: row.topup };
+    return balancesOf(row);
   }
 
   private async insert(tx: Tx, entries: readonly NewEntry[]) {
@@ -304,14 +337,12 @@ export class LedgerService {
     delta: Partial<Balances>,
   ): Promise<Balances> {
     const after: Balances = {
+      free: before.free + (delta.free ?? 0n),
       trial: before.trial + (delta.trial ?? 0n),
       plan: before.plan + (delta.plan ?? 0n),
       topup: before.topup + (delta.topup ?? 0n),
     };
-    await tx
-      .update(creditBalances)
-      .set({ trial: after.trial, plan: after.plan, topup: after.topup })
-      .where(eq(creditBalances.orgId, orgId));
+    await tx.update(creditBalances).set(after).where(eq(creditBalances.orgId, orgId));
     return after;
   }
 }

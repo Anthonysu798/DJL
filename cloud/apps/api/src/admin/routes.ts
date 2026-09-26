@@ -16,10 +16,12 @@ import {
   type LoginClient,
 } from "./AdminAuth.ts";
 import type { AdminService } from "./AdminService.ts";
+import type { UsageAdminService } from "../usage/UsageAdminService.ts";
 
 export interface AdminRouteDeps {
   readonly adminAuth: AdminAuth;
   readonly admin: AdminService;
+  readonly usageAdmin: UsageAdminService;
   readonly secureCookies: boolean;
   readonly gatewayStatus: () => {
     readonly inFlight: number;
@@ -342,6 +344,82 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
       "POST",
       "/admin/v1/users/:id/reset-limits",
       opWithParam("id", (p, id, b) => deps.admin.resetLimits(p, id, str(b.reason))),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/users/:id/usage",
+      opWithParam("id", (p, id) => deps.usageAdmin.userUsage(p, id), false),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/users/:id/usage/banks",
+      opWithParam("id", (p, id, b) =>
+        deps.usageAdmin.grantBanks(p, id, { count: b.count, reason: b.reason }),
+      ),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/usage/banks/:id/revoke",
+      opWithParam("id", (p, id, b) => deps.usageAdmin.revokeBank(p, id, b.reason)),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/usage/reset-all",
+      handle(
+        Effect.gen(function* () {
+          const p = yield* principal();
+          const b = (yield* readJson) as Record<string, unknown>;
+          return json(
+            yield* attempt(
+              () => deps.usageAdmin.resetAll(p, { confirm: b.confirm, reason: b.reason }),
+              FAIL,
+            ),
+          );
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/usage/schedules",
+      op((p) => deps.usageAdmin.schedules(p)),
+    ),
+    HttpRouter.add(
+      "PUT",
+      "/admin/v1/usage/schedules/:planId",
+      opWithParam("planId", (p, planId, b) =>
+        deps.usageAdmin.putSchedule(
+          p,
+          planId,
+          { everyDays: b.everyDays, banksPerGrant: b.banksPerGrant, active: b.active },
+          b.reason,
+        ),
+      ),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/usage/batches",
+      op((p) => deps.usageAdmin.batches(p)),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/usage/batches",
+      handle(
+        Effect.gen(function* () {
+          const p = yield* principal();
+          const b = (yield* readJson) as Record<string, unknown>;
+          return json(
+            yield* attempt(
+              () =>
+                deps.usageAdmin.createBulkGrant(p, {
+                  planId: b.planId,
+                  reason: b.reason,
+                  idempotencyKey: b.idempotencyKey,
+                }),
+              FAIL,
+            ),
+          );
+        }),
+      ),
     ),
     HttpRouter.add(
       "POST",

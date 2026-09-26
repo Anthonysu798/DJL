@@ -6,15 +6,33 @@ import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import type { LedgerService } from "@djl/api/credits";
 
+import {
+  bulkGrant,
+  expireBanks,
+  grantFreeAllowance,
+  grantPlanResets,
+  pruneBuckets,
+} from "./usageJobs.ts";
+
 export interface JobDeps {
   readonly db: DjlDatabase;
   readonly ledger: LedgerService;
   readonly now?: () => Date;
 }
 
-/** Reservations without settlement after 10 minutes are released. */
-export async function releaseStaleReservations(deps: JobDeps): Promise<number> {
-  return deps.ledger.releaseStaleReservations(10 * 60 * 1000, "system:worker");
+/**
+ * Reservations without settlement after 10 minutes are released (which also
+ * drops their usage window holds); holds left without a reservation expire.
+ */
+export async function releaseStaleReservations(
+  deps: JobDeps,
+): Promise<{ released: number; holdsSwept: number }> {
+  const released = await deps.ledger.releaseStaleReservations(10 * 60 * 1000, "system:worker");
+  const swept = await deps.db
+    .delete(schema.usageHolds)
+    .where(lt(schema.usageHolds.expiresAt, deps.now?.() ?? new Date()))
+    .returning({ id: schema.usageHolds.id });
+  return { released, holdsSwept: swept.length };
 }
 
 /** Trial grants past their expiry lose whatever is left in the trial bucket. */
@@ -148,6 +166,11 @@ export const JOBS = {
   "ledger.refold": refoldActiveOrgs,
   "users.purge-deleted": purgeDeletedUsers,
   "stats.daily": rollupDailyStats,
+  "usage.grantPlanResets": grantPlanResets,
+  "usage.bulkGrant": bulkGrant,
+  "usage.expireBanks": expireBanks,
+  "usage.pruneBuckets": pruneBuckets,
+  "usage.grantFreeAllowance": grantFreeAllowance,
 } as const;
 
 // Keep isNull referenced for future soft-delete predicates.

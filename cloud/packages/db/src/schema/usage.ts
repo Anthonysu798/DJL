@@ -273,9 +273,12 @@ export const resetBanks = pgTable(
     redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     idempotencyKey: text("idempotency_key").notNull(),
+    /** The client's redeem key; a retried redeem returns the same bank. */
+    redeemIdempotencyKey: text("redeem_idempotency_key"),
   },
   (t) => [
     uniqueIndex("reset_banks_idempotency_idx").on(t.idempotencyKey),
+    uniqueIndex("reset_banks_redeem_idx").on(t.userId, t.redeemIdempotencyKey),
     // Redeem locks the oldest live bank with FOR UPDATE SKIP LOCKED through this index.
     index("reset_banks_live_idx")
       .on(t.userId, t.grantedAt)
