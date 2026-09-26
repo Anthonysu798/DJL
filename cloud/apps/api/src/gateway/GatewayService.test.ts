@@ -735,6 +735,22 @@ describe("GatewayService image edits", () => {
     expect(await ledger.available(p.orgId)).toBe(creditsToMicro(20));
     expect(gateway.status().inFlight).toBe(0);
   });
+
+  it("releases the reservation when the signal was aborted before the provider was called", async () => {
+    const p = await principalFor("gw-edit-preabort");
+    await fund(p, creditsToMicro(20));
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      gateway.editImage(
+        facts(p),
+        { model: "fake-image", prompt: "hang", image: { bytes: png, mimeType: "image/png" } },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ code: "provider_error" });
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(20));
+    expect(gateway.status().inFlight).toBe(0);
+  });
 });
 
 describe("GatewayService image aborts", () => {
