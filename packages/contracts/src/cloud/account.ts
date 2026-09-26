@@ -184,5 +184,19 @@ export const CloudSignInPollResult = Schema.Union([
 ]);
 export type CloudSignInPollResult = typeof CloudSignInPollResult.Type;
 
+/** Browser sign-in: the renderer opens `authorizeUrl`; the app gets `djl://auth/callback` back. */
+export const CloudBrowserSignInStartResult = Schema.Struct({
+  authorizeUrl: TrimmedNonEmptyString,
+  expiresInSeconds: Schema.Int,
+});
+export type CloudBrowserSignInStartResult = typeof CloudBrowserSignInStartResult.Type;
+
+/** The `code` and `state` from the `djl://auth/callback` deep link. */
+export const CloudBrowserSignInCompleteInput = Schema.Struct({
+  code: TrimmedNonEmptyString,
+  state: TrimmedNonEmptyString,
+});
+export type CloudBrowserSignInCompleteInput = typeof CloudBrowserSignInCompleteInput.Type;
+
 export const CloudEmptyInput = Schema.Struct({});
 export type CloudEmptyInput = typeof CloudEmptyInput.Type;

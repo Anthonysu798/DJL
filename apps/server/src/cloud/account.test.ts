@@ -1,4 +1,5 @@
 import type { FetchLike } from "./api";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -117,5 +118,104 @@ describe("CloudAccount device flow", () => {
     const status = await account.status();
     expect(status.signedIn).toBe(true);
     expect(status.problem).toBe("session_expired");
+  });
+});
+
+describe("CloudAccount browser sign-in", () => {
+  const exchangeFetch =
+    (seen: { body?: Record<string, unknown> }): FetchLike =>
+    async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/v1/native-auth/token")) {
+        seen.body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return jsonResponse(200, {
+          sessionToken: "sess-browser",
+          expiresAt: "2026-10-26T00:00:00.000Z",
+          userId: "u1",
+          orgId: "o1",
+        });
+      }
+      if (url.endsWith("/v1/me"))
+        return jsonResponse(200, {
+          user: { id: "u1", email: "me@test.invalid" },
+          activeOrgId: "o1",
+        });
+      return jsonResponse(404, { error: { code: "not_found", message: "nope" } });
+    };
+
+  afterEach(() => {
+    delete process.env.DJL_CLOUD_WEB_URL;
+  });
+
+  it("opens the authorize page with PKCE S256 and redeems the returned code once", async () => {
+    process.env.DJL_CLOUD_WEB_URL = "https://app.test";
+    const seen: { body?: Record<string, unknown> } = {};
+    const account = new CloudAccount({
+      secretsDir,
+      region: async () => "auto",
+      fetchImpl: exchangeFetch(seen),
+    });
+    const start = await account.startBrowserSignIn();
+    const url = new URL(start.authorizeUrl);
+    expect(`${url.origin}${url.pathname}`).toBe("https://app.test/authorize");
+    expect(url.searchParams.get("client_id")).toBe("djl-desktop");
+    expect(url.searchParams.get("redirect_uri")).toBe("djl://auth/callback");
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+    const state = url.searchParams.get("state")!;
+    expect(state.length).toBeGreaterThanOrEqual(22);
+
+    const status = await account.completeBrowserSignIn({ code: "code-1", state });
+    expect(status.signedIn).toBe(true);
+    expect((await readCloudSession(secretsDir))?.token).toBe("sess-browser");
+    const verifier = String(seen.body?.codeVerifier);
+    expect(url.searchParams.get("code_challenge")).toBe(
+      createHash("sha256").update(verifier).digest("base64url"),
+    );
+    expect(seen.body).toMatchObject({
+      clientId: "djl-desktop",
+      code: "code-1",
+      redirectUri: "djl://auth/callback",
+    });
+
+    // The state is single use: a replayed callback is refused without calling the API.
+    delete seen.body;
+    await expect(account.completeBrowserSignIn({ code: "code-1", state })).rejects.toThrow(
+      /did not start/,
+    );
+    expect(seen.body).toBeUndefined();
+  });
+
+  it("refuses a callback whose state this app never issued", async () => {
+    const seen: { body?: Record<string, unknown> } = {};
+    const account = new CloudAccount({
+      secretsDir,
+      region: async () => "auto",
+      fetchImpl: exchangeFetch(seen),
+    });
+    await account.startBrowserSignIn();
+    await expect(
+      account.completeBrowserSignIn({ code: "stolen", state: "attacker-chosen-state-value" }),
+    ).rejects.toThrow(/did not start/);
+    expect(seen.body).toBeUndefined();
+    expect(await readCloudSession(secretsDir)).toBeNull();
+  });
+
+  it("refuses a state once it has expired", async () => {
+    let now = Date.parse("2026-09-26T00:00:00Z");
+    const seen: { body?: Record<string, unknown> } = {};
+    const account = new CloudAccount({
+      secretsDir,
+      region: async () => "auto",
+      fetchImpl: exchangeFetch(seen),
+      now: () => now,
+    });
+    const state = new URL((await account.startBrowserSignIn()).authorizeUrl).searchParams.get(
+      "state",
+    )!;
+    now += 11 * 60_000;
+    await expect(account.completeBrowserSignIn({ code: "late", state })).rejects.toThrow(
+      /did not start/,
+    );
+    expect(seen.body).toBeUndefined();
   });
 });

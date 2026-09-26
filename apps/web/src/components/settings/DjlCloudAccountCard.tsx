@@ -1,4 +1,8 @@
-import type { CloudAccountStatus, CloudSignInStartResult } from "@synara/contracts";
+import type {
+  CloudAccountStatus,
+  CloudBrowserSignInCompleteInput,
+  CloudSignInStartResult,
+} from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,13 +25,16 @@ const BILLING_URL = "https://app.slcor.com/billing";
 
 type SignInPhase =
   | { kind: "idle" }
+  | { kind: "browser"; authorizeUrl: string }
   | { kind: "waiting"; start: CloudSignInStartResult }
   | { kind: "failed"; reason: "denied" | "expired" };
 
 /**
- * DJL Cloud account: sign in with the OAuth device flow (a short code approved
- * in the browser), show credits, and choose it for new chats. Rendered above the
- * CLI harness accounts because it is the first-party provider.
+ * DJL Cloud account: sign in through the browser (the page hands the app a
+ * one-time code over the djl:// deep link), or with the OAuth device flow (a
+ * short code approved in the browser) as the fallback; show credits; choose it
+ * for new chats. Rendered above the CLI harness accounts because it is the
+ * first-party provider.
  */
 export function DjlCloudAccountCard() {
   const { t } = useTranslation("settings");
@@ -82,6 +89,31 @@ export function DjlCloudAccountCard() {
 
   useEffect(() => stopPolling, []);
 
+  const completeBrowserSignIn = useMutation({
+    mutationFn: (callback: CloudBrowserSignInCompleteInput) =>
+      ensureNativeApi().cloud.completeBrowserSignIn(callback),
+    onSuccess: async (next) => {
+      setPhase({ kind: "idle" });
+      await afterAccountChange(next);
+    },
+    onError: () => setPhase({ kind: "idle" }),
+  });
+  const { mutate: completeWithCallback } = completeBrowserSignIn;
+  useEffect(
+    () => window.desktopBridge?.onCloudAuthCallback?.((callback) => completeWithCallback(callback)),
+    [completeWithCallback],
+  );
+
+  const browserSignIn = useMutation({
+    mutationFn: () => ensureNativeApi().cloud.startBrowserSignIn(),
+    onSuccess: ({ authorizeUrl }) => {
+      stopPolling();
+      completeBrowserSignIn.reset();
+      setPhase({ kind: "browser", authorizeUrl });
+      openExternalLink(authorizeUrl);
+    },
+  });
+
   const signIn = useMutation({
     mutationFn: () => ensureNativeApi().cloud.startSignIn(),
     onSuccess: (start) => {
@@ -97,6 +129,7 @@ export function DjlCloudAccountCard() {
     },
   });
   const cancel = () => {
+    completeBrowserSignIn.reset();
     stopPolling();
     setPhase({ kind: "idle" });
   };
@@ -153,16 +186,44 @@ export function DjlCloudAccountCard() {
               </Button>
             </>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={signIn.isPending || phase.kind === "waiting" || status.isLoading}
-              onClick={() => signIn.mutate()}
-            >
-              {signIn.isPending ? t("accounts.checking") : t("cloud.signIn")}
-            </Button>
+            <>
+              <Button
+                size="sm"
+                disabled={browserSignIn.isPending || completeBrowserSignIn.isPending}
+                onClick={() => browserSignIn.mutate()}
+              >
+                {browserSignIn.isPending || completeBrowserSignIn.isPending
+                  ? t("accounts.checking")
+                  : t("cloud.signInWithBrowser")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={signIn.isPending || phase.kind === "waiting" || status.isLoading}
+                onClick={() => signIn.mutate()}
+              >
+                {t("cloud.useCodeInstead")}
+              </Button>
+            </>
           )}
         </div>
+        {phase.kind === "browser" ? (
+          <div className="space-y-2 rounded-lg border px-4 py-3" role="status">
+            <p className="text-sm text-muted-foreground">{t("cloud.finishInBrowser")}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openExternalLink(phase.authorizeUrl)}
+              >
+                {t("cloud.openBrowser")}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={cancel}>
+                {t("cloud.cancel")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {phase.kind === "waiting" ? (
           <div className="space-y-2 rounded-lg border px-4 py-3" role="status">
             <p className="text-sm text-muted-foreground">{t("cloud.enterCode")}</p>
@@ -190,10 +251,15 @@ export function DjlCloudAccountCard() {
             {phase.reason === "denied" ? t("cloud.denied") : t("cloud.expired")}
           </p>
         ) : null}
-        {status.isError || signIn.isError || signOut.isError ? (
+        {completeBrowserSignIn.isError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {t("cloud.browserFailed")}
+          </p>
+        ) : null}
+        {status.isError || signIn.isError || browserSignIn.isError || signOut.isError ? (
           <p role="alert" className="text-sm text-destructive">
             {settingsLoadErrorDetail(
-              status.error ?? signIn.error ?? signOut.error,
+              status.error ?? signIn.error ?? browserSignIn.error ?? signOut.error,
               t("cloud.error"),
             )}
           </p>

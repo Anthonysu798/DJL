@@ -10,6 +10,11 @@ import {
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
 import { SERVER_TRANSCRIBE_VOICE_CHANNEL } from "./voiceTranscription";
+import {
+  CLOUD_AUTH_CALLBACK_CHANNEL,
+  CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+  type CloudAuthCallback,
+} from "./cloudAuthDeepLink";
 import { STORAGE_MIGRATION_IPC_CHANNELS } from "./desktopStorageMigration";
 import { REMOTE_GATEWAY_IPC_CHANNELS } from "./remoteGatewayIpc";
 import {
@@ -112,6 +117,21 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     ipcRenderer.on(MENU_ACTION_CHANNEL, wrappedListener);
     return () => {
       ipcRenderer.removeListener(MENU_ACTION_CHANNEL, wrappedListener);
+    };
+  },
+  onCloudAuthCallback: (listener) => {
+    // Main keeps the newest callback until it is taken, so each one is handled once.
+    const take = async () => {
+      const callback = (await ipcRenderer.invoke(
+        CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+      )) as CloudAuthCallback | null;
+      if (callback) listener({ code: callback.code, state: callback.state });
+    };
+    const wrappedListener = () => void take();
+    ipcRenderer.on(CLOUD_AUTH_CALLBACK_CHANNEL, wrappedListener);
+    void take();
+    return () => {
+      ipcRenderer.removeListener(CLOUD_AUTH_CALLBACK_CHANNEL, wrappedListener);
     };
   },
   getZoomFactor: () => {

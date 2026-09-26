@@ -2607,7 +2607,10 @@
       "denied": "La connexion a été refusée dans le navigateur.",
       "expired": "Le code de connexion a expiré. Recommencez.",
       "error": "Impossible de joindre DJL Cloud.",
-      "signIn": "Se connecter à DJL Cloud"
+      "signInWithBrowser": "Se connecter avec le navigateur",
+      "useCodeInstead": "Utiliser un code à la place",
+      "finishInBrowser": "Terminez la connexion dans votre navigateur. DJL continuera ici automatiquement.",
+      "browserFailed": "La connexion par le navigateur n’a pas abouti. Réessayez ou utilisez un code."
     }
   },
   "shell": {
