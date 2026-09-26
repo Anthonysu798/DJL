@@ -8,7 +8,9 @@ import { schema, type DjlDatabase } from "@djl/db";
 import { creditsToMicro, formatCredits, totalAvailable, type Microcredits } from "@djl/domain";
 import { adminInvite, type EmailSender } from "@djl/notify";
 
+import type { ResumeWindowBlockedRuns } from "../agent/resume.ts";
 import { writeAudit } from "../audit/AuditLog.ts";
+import type { SessionRevocations } from "../auth/revocations.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
 import type { GatewayService } from "../gateway/GatewayService.ts";
 import type { RateLimiter } from "../gateway/RateLimiter.ts";
@@ -31,6 +33,10 @@ export interface AdminDeps {
   readonly gateway: Pick<GatewayService, "invalidateCatalog">;
   readonly trial: Pick<TrialService, "approve">;
   readonly auth: Pick<AdminAuth, "issueInvite" | "revokeSessions" | "revokeSessionsFromIp">;
+  /** Denylists user sessions so their access tokens stop working before they expire. */
+  readonly revocations: Pick<SessionRevocations, "revoke">;
+  /** Re-enqueues a user's window-blocked task runs after their windows are reset. */
+  readonly resumeRuns?: ResumeWindowBlockedRuns;
   readonly email: EmailSender;
   /** Where invite links point, e.g. https://admin.slcor.com. */
   readonly adminPublicUrl: string;
@@ -271,8 +277,11 @@ export class AdminService {
 
   async revokeSessions(p: AdminPrincipal, userId: string) {
     requirePermission(p, "users.write");
-    await this.deps.db.transaction(async (tx) => {
-      await tx.delete(schema.session).where(eq(schema.session.userId, userId));
+    const ended = await this.deps.db.transaction(async (tx) => {
+      const rows = await tx
+        .delete(schema.session)
+        .where(eq(schema.session.userId, userId))
+        .returning({ id: schema.session.id });
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -280,7 +289,9 @@ export class AdminService {
         targetType: "user",
         targetId: userId,
       });
+      return rows.map((r) => r.id);
     });
+    await this.deps.revocations.revoke(ended);
   }
 
   // ---- credits and limits --------------------------------------------------
@@ -365,6 +376,7 @@ export class AdminService {
         reason,
       });
     });
+    await this.deps.resumeRuns?.(userId);
     return { cleared };
   }
 

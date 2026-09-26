@@ -46,6 +46,7 @@ import { windowPolicy } from "./usage/windowPolicy.ts";
 import { ChatService } from "./chat/ChatService.ts";
 import { FileService } from "./files/FileService.ts";
 import { ChatRunner } from "./runs/ChatRunner.ts";
+import { resumeWindowBlockedRuns } from "./agent/resume.ts";
 import { createPgBossTaskQueue } from "./runs/RunExecutor.ts";
 import { RunLog } from "./runs/RunLog.ts";
 import { RunService } from "./runs/RunService.ts";
@@ -204,7 +205,10 @@ export async function startApi(
   const providers = buildProviders(env, process.env, (alert) => {
     void senders.alerts?.post(alert);
   });
-  const usage = new UsageService(db);
+  const tasks = createPgBossTaskQueue(env.databaseUrl);
+  const resumeRuns = (userId: string | null) =>
+    resumeWindowBlockedRuns({ db, enqueue: tasks.enqueue }, userId);
+  const usage = new UsageService(db, undefined, resumeRuns);
   const settings = new Settings(db);
   const gateway = new GatewayService({
     db,
@@ -234,7 +238,6 @@ export async function startApi(
   const sync = new SyncService(db, blobs);
   const runLog = new RunLog(db, redis);
   const runner = new ChatRunner({ db, gateway, log: runLog, blobs });
-  const tasks = createPgBossTaskQueue(env.databaseUrl);
   const files = new FileService(db, blobs, settings);
   const chat = new ChatService({ db, files, runner, tasks });
   const shares = new ShareService(db, chat, blobs, env.webPublicUrl);
@@ -252,11 +255,13 @@ export async function startApi(
     gateway,
     trial,
     auth: adminAuth,
+    revocations,
+    resumeRuns,
     email: senders.email,
     adminPublicUrl: env.adminPublicUrl,
     version,
   });
-  const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts });
+  const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
   const routes = makeRoutes({
     env,
     auth,
