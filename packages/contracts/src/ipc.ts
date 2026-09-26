@@ -12,6 +12,8 @@ import type {
 } from "./harnessAccounts";
 import type {
   CloudAccountStatus,
+  CloudBrowserSignInCompleteInput,
+  CloudBrowserSignInStartResult,
   CloudSignInPollInput,
   CloudSignInPollResult,
   CloudSignInStartResult,
@@ -502,6 +504,13 @@ export interface DesktopBridge {
     onState: (listener: (state: DesktopWindowState) => void) => () => void;
   };
   onMenuAction: (listener: (action: string) => void) => () => void;
+  /**
+   * `djl://auth/callback` deep links (browser sign-in). Delivers a callback that
+   * arrived before the listener was attached, and each callback only once.
+   */
+  onCloudAuthCallback?: (
+    listener: (callback: CloudBrowserSignInCompleteInput) => void,
+  ) => () => void;
   /** Current `webContents` page zoom (1 = 100%). Used to keep macOS traffic-light gutter aligned. */
   getZoomFactor: () => number;
   onZoomFactorChange: (listener: (zoomFactor: number) => void) => () => void;
@@ -772,6 +781,8 @@ export interface NativeApi {
     startSignIn: () => Promise<CloudSignInStartResult>;
     pollSignIn: (input: CloudSignInPollInput) => Promise<CloudSignInPollResult>;
     signOut: () => Promise<CloudAccountStatus>;
+    startBrowserSignIn: () => Promise<CloudBrowserSignInStartResult>;
+    completeBrowserSignIn: (input: CloudBrowserSignInCompleteInput) => Promise<CloudAccountStatus>;
   };
   provider: {
     getComposerCapabilities: (
