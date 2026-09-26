@@ -4,8 +4,11 @@
  * tokens. Every decision here traces to docs/specs/2026-09-12-phase-0-cloud-control-plane.md.
  *
  * Session model: the Better Auth session token is the 30-day rotating refresh
- * credential; the JWT plugin mints 15-minute access tokens verified via JWKS
- * by the gateway and cloud runners.
+ * credential; GET /v1/auth/token exchanges it for a 15-minute access token
+ * (audience "djl-cloud", `sid` claim) that guard.ts verifies locally against
+ * the JWKS. Deleting a session puts its id on the Redis denylist so its access
+ * tokens stop working at once. Throttles live in Redis so every instance
+ * shares them.
  */
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
@@ -24,9 +27,13 @@ import {
 
 import type { DjlDatabase } from "@djl/db";
 import { schema } from "@djl/db";
+import type { Redis } from "ioredis";
 
 import type { ApiEnv } from "../config/env.ts";
+import { createRedisThrottle } from "../security/throttle.ts";
+import { ACCESS_TOKEN_AUDIENCE } from "./accessTokens.ts";
 import { hashPassword, verifyPassword } from "./password.ts";
+import type { SessionRevocations } from "./revocations.ts";
 
 const DAY = 60 * 60 * 24;
 
@@ -63,9 +70,10 @@ export function createAuth(input: {
   readonly env: ApiEnv;
   readonly db: DjlDatabase;
   readonly notifier: AuthNotifier;
+  readonly redis: Redis;
+  readonly revocations: SessionRevocations;
 }) {
-  const { env, db, notifier } = input;
-  const apiUrl = new URL(env.apiPublicUrl);
+  const { env, db, notifier, redis, revocations } = input;
   return betterAuth({
     appName: "DJL Cloud",
     baseURL: env.apiPublicUrl,
@@ -88,12 +96,27 @@ export function createAuth(input: {
       sendOnSignUp: false, // email OTP plugin handles verification codes
       autoSignInAfterVerification: true,
     },
+    // Native apps post the provider's ID token to /sign-in/social ({ provider, idToken }).
+    // Google accepts tokens minted for any listed client id (web first, then iOS); Apple
+    // accepts the web service id and the iOS bundle id, with the nonce checked by Better Auth.
     socialProviders: {
       ...(env.google
-        ? { google: { clientId: env.google.clientId, clientSecret: env.google.clientSecret } }
+        ? {
+            google: {
+              clientId: [env.google.clientId, ...env.google.extraClientIds],
+              clientSecret: env.google.clientSecret,
+            },
+          }
         : {}),
       ...(env.apple
-        ? { apple: { clientId: env.apple.clientId, clientSecret: env.apple.clientSecret } }
+        ? {
+            apple: {
+              clientId: env.apple.clientId,
+              clientSecret: env.apple.clientSecret,
+              appBundleIdentifier: env.apple.appBundleIdentifier,
+              audience: [env.apple.clientId, env.apple.appBundleIdentifier],
+            },
+          }
         : {}),
     },
     account: {
@@ -113,6 +136,7 @@ export function createAuth(input: {
       enabled: true,
       window: 60,
       max: 60,
+      customStorage: createRedisThrottle(redis, "auth:rl"),
       customRules: {
         "/sign-in/email": { window: 60, max: 10 },
         "/sign-up/email": { window: 60, max: 5 },
@@ -122,6 +146,10 @@ export function createAuth(input: {
       },
     },
     user: {
+      additionalFields: {
+        // Email and SMS language; set at sign-up or through update-user.
+        locale: { type: "string", required: false, input: true },
+      },
       changeEmail: { enabled: true },
       deleteUser: { enabled: false }, // deletion goes through the DJL soft-delete flow
     },
@@ -143,6 +171,14 @@ export function createAuth(input: {
           // the user so no account ever exists without a billing owner.
           after: async (user) => {
             await createPersonalOrganization(db, user.id, user.name || user.email);
+          },
+        },
+      },
+      session: {
+        delete: {
+          // Runs for sign-out, revoke, password reset, and user-session sweeps alike.
+          after: async (session) => {
+            await revocations.revoke([session.id]);
           },
         },
       },
@@ -193,16 +229,20 @@ export function createAuth(input: {
           },
         },
       }),
+      // The ceremony runs on the web app while the API serves it, so the relying
+      // party is the registrable parent domain both hosts share.
       passkey({
-        rpID: apiUrl.hostname,
+        rpID: env.passkeyRpId,
         rpName: "DJL Cloud",
-        origin: env.webPublicUrl,
+        origin: [env.webPublicUrl],
       }),
       jwt({
         jwt: {
           issuer: env.apiPublicUrl,
-          audience: "djl-cloud",
+          audience: ACCESS_TOKEN_AUDIENCE,
           expirationTime: "15m",
+          // Only ids: the guard reloads the user so bans and deletions apply immediately.
+          definePayload: ({ session }) => ({ sid: session.id }),
         },
       }),
       bearer(),
