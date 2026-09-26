@@ -18,11 +18,10 @@ export const CloudShare = Schema.Struct({
 });
 export type CloudShare = typeof CloudShare.Type;
 
-// POST /v1/shares
+// POST /v1/conversations/{id}/shares
 export const CloudCreateShareInput = Schema.Struct({
-  conversationId: CloudConversationId,
-  /** Last message of the branch to snapshot. */
-  messageId: CloudMessageId,
+  /** Last message of the branch to snapshot; defaults to the branch the user is looking at. */
+  messageId: Schema.optionalKey(CloudMessageId),
 });
 export type CloudCreateShareInput = typeof CloudCreateShareInput.Type;
 
@@ -49,5 +48,7 @@ export const CloudPublicShareResponse = Schema.Struct({
   title: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
   messages: Schema.Array(CloudSharedMessage),
+  /** Short-lived signed URLs for the shared images, keyed by file id. */
+  imageUrls: Schema.Record(Schema.String, Schema.String),
 });
 export type CloudPublicShareResponse = typeof CloudPublicShareResponse.Type;
