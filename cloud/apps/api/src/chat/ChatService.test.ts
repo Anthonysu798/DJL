@@ -148,12 +148,17 @@ describe("conversations and messages", () => {
     const owner = await h.user("chat-search");
     const other = await h.user("chat-search-other");
     const marker = `quokka${crypto.randomUUID().slice(0, 6)}`;
-    const c = await h.chat.create(owner.p, { title: "Animals" } as never);
-    await h.chat.send(owner.facts, c.id, input(`tell me about the ${marker} please`));
+    const tag = `wombat${crypto.randomUUID().slice(0, 6)}`;
+    const c = await h.chat.create(owner.p, { title: `Animals ${tag}` } as never);
+    const sent = await h.chat.send(owner.facts, c.id, input(`tell me about the ${marker} please`));
     await h.runner.idle();
     const hits = await h.chat.search(owner.p, { q: marker } as never);
     expect(hits.results.map((r) => r.conversation.id)).toEqual([c.id]);
     expect(hits.results[0]!.snippet).toContain(marker);
+    expect(hits.results[0]!.messageId).toBe(sent.message.id);
+    // A title-only match has no message to jump to.
+    const titled = await h.chat.search(owner.p, { q: tag } as never);
+    expect(titled.results.map((r) => [r.conversation.id, r.messageId])).toEqual([[c.id, null]]);
     expect((await h.chat.search(other.p, { q: marker } as never)).results).toEqual([]);
     await h.chat.remove(owner.p, c.id);
     expect((await h.chat.search(owner.p, { q: marker } as never)).results).toEqual([]);

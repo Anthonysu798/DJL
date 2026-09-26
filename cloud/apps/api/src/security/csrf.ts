@@ -10,8 +10,10 @@
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
 
-export const CSRF_COOKIE = "djl_csrf";
-export const CSRF_HEADER = "x-csrf-token";
+import { CLOUD_CSRF_COOKIE, CLOUD_CSRF_HEADER } from "@synara/contracts/cloud";
+
+export const CSRF_COOKIE = CLOUD_CSRF_COOKIE;
+export const CSRF_HEADER = CLOUD_CSRF_HEADER;
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_COOKIE = /(?:^|;\s*)(?:__Secure-)?djl\.session_token=/;
