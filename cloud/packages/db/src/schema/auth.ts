@@ -30,6 +30,8 @@ export const user = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
+  /** Language for emails and texts ("en" | "zh-Hans"); null means English. */
+  locale: text("locale"),
 });
 
 export const session = pgTable(
