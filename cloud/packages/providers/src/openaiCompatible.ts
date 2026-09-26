@@ -11,6 +11,7 @@ import {
   type ChatRequest,
   type EmbeddingRequest,
   type EmbeddingResult,
+  type ImageEditRequest,
   type ImageRequest,
   type ImageResult,
   type ProviderAdapter,
@@ -35,25 +36,35 @@ function classify(status: number): { code: ProviderError["code"]; retryable: boo
   return { code: "unknown", retryable: false };
 }
 
+async function imageResult(response: Response): Promise<ImageResult> {
+  const json = (await response.json()) as {
+    data?: { b64_json?: string; url?: string; revised_prompt?: string }[];
+  };
+  const images = json.data ?? [];
+  return { images, count: images.length };
+}
+
 export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions): ProviderAdapter {
   const fetchImpl = options.fetchImpl ?? fetch;
 
+  /** JSON bodies are serialized; a FormData body goes out as multipart with its own boundary. */
   async function request(
     path: string,
     body: unknown,
     signal: AbortSignal,
     stream: boolean,
   ): Promise<Response> {
+    const multipart = body instanceof FormData;
     const attempt = async (): Promise<Response> =>
       fetchImpl(`${options.baseUrl}${path}`, {
         method: "POST",
         headers: {
           authorization: `Bearer ${options.keys.current()}`,
-          "content-type": "application/json",
+          ...(multipart ? {} : { "content-type": "application/json" }),
           ...(stream ? { accept: "text/event-stream" } : {}),
           ...options.extraHeaders,
         },
-        body: JSON.stringify(body),
+        body: multipart ? body : JSON.stringify(body),
         signal,
       });
     let response = await attempt();
@@ -142,11 +153,22 @@ export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions):
         signal,
         false,
       );
-      const json = (await response.json()) as {
-        data?: { b64_json?: string; url?: string; revised_prompt?: string }[];
-      };
-      const images = json.data ?? [];
-      return { images, count: images.length };
+      return imageResult(response);
+    },
+    async editImage(req: ImageEditRequest, signal: AbortSignal): Promise<ImageResult> {
+      const form = new FormData();
+      form.set("model", req.model);
+      form.set("prompt", req.prompt);
+      form.set("n", String(req.n));
+      if (req.size) form.set("size", req.size);
+      if (req.user) form.set("user", req.user);
+      const extension = req.image.mimeType.split("/")[1] ?? "png";
+      form.set(
+        "image",
+        new Blob([req.image.bytes as BlobPart], { type: req.image.mimeType }),
+        `image.${extension}`,
+      );
+      return imageResult(await request("/images/edits", form, signal, false));
     },
     async embed(req: EmbeddingRequest, signal: AbortSignal): Promise<EmbeddingResult> {
       const response = await request(

@@ -32,6 +32,8 @@ export interface ToolDefinition {
     readonly name: string;
     readonly description?: string;
     readonly parameters?: Record<string, unknown>;
+    /** OpenAI structured outputs: the arguments must match `parameters` exactly. */
+    readonly strict?: boolean;
   };
 }
 
@@ -87,6 +89,16 @@ export interface ImageRequest {
   readonly user?: string;
 }
 
+export interface ImageEditRequest {
+  readonly model: string;
+  readonly prompt: string;
+  /** The source image, sent as a multipart file. */
+  readonly image: { readonly bytes: Uint8Array; readonly mimeType: string };
+  readonly n: number;
+  readonly size?: string;
+  readonly user?: string;
+}
+
 export interface ImageResult {
   readonly images: readonly {
     readonly b64_json?: string;
@@ -124,5 +136,6 @@ export interface ProviderAdapter {
   readonly id: ProviderId;
   readonly chatStream: (request: ChatRequest, signal: AbortSignal) => AsyncIterable<ChatChunk>;
   readonly generateImage: (request: ImageRequest, signal: AbortSignal) => Promise<ImageResult>;
+  readonly editImage: (request: ImageEditRequest, signal: AbortSignal) => Promise<ImageResult>;
   readonly embed: (request: EmbeddingRequest, signal: AbortSignal) => Promise<EmbeddingResult>;
 }

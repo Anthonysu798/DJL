@@ -89,6 +89,41 @@ describe("OpenAI-compatible adapter", () => {
       rateLimited.embed({ model: "e", input: ["a"] }, new AbortController().signal),
     ).rejects.toMatchObject({ code: "rate_limited", retryable: true });
   });
+
+  it("sends image edits as multipart with the source image as a file", async () => {
+    let seen: { url: string; headers: Headers; form: FormData } | null = null;
+    const adapter = createOpenAiCompatibleAdapter({
+      id: "openai",
+      baseUrl: "https://api.test/v1",
+      keys: new KeyRing("k1", null),
+      fetchImpl: async (url, init) => {
+        seen = {
+          url: String(url),
+          headers: new Headers(init?.headers),
+          form: init?.body as FormData,
+        };
+        return new Response(JSON.stringify({ data: [{ b64_json: "QUJD" }] }), { status: 200 });
+      },
+    });
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const result = await adapter.editImage(
+      {
+        model: "gpt-image-1",
+        prompt: "make it blue",
+        image: { bytes, mimeType: "image/png" },
+        n: 1,
+      },
+      new AbortController().signal,
+    );
+    expect(result).toEqual({ images: [{ b64_json: "QUJD" }], count: 1 });
+    expect(seen!.url).toBe("https://api.test/v1/images/edits");
+    expect(seen!.headers.get("content-type")).toBeNull(); // fetch sets the multipart boundary
+    expect(seen!.form.get("prompt")).toBe("make it blue");
+    const image = seen!.form.get("image") as File;
+    expect(image.type).toBe("image/png");
+    expect(image.name).toBe("image.png");
+    expect(new Uint8Array(await image.arrayBuffer())).toEqual(bytes);
+  });
 });
 
 describe("Anthropic adapter", () => {

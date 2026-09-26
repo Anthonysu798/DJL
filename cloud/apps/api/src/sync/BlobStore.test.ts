@@ -50,4 +50,15 @@ describe("S3 blob store", () => {
     expect(calls.at(-1)!.url.pathname).toBe("/storage/v1/s3/djl/org/o/files/f");
     expect(calls.at(-1)!.url.searchParams.get("X-Amz-Signature")).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  it("writes server-side with a PUT signed for the type and size", async () => {
+    const { blobs, calls } = store();
+    await blobs.write("org/o/files/g", new Uint8Array([9, 9]), "image/png");
+    expect(calls.at(-1)!.method).toBe("PUT");
+    expect(calls.at(-1)!.url.searchParams.get("X-Amz-SignedHeaders")).toBe(
+      "content-length;content-type;host",
+    );
+    const failing = store(() => new Response("no", { status: 403 }));
+    await expect(failing.blobs.write("k", new Uint8Array([1]), "image/png")).rejects.toThrow();
+  });
 });
