@@ -45,6 +45,7 @@
 		8FA12BC34DE56F708192A3B4 /* CodexTrustedMacSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA12BC34DE56F708192A3B5 /* CodexTrustedMacSelectionTests.swift */; };
 		8FA12BC34DE56F708192A3B6 /* ContentViewModelReconnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA12BC34DE56F708192A3B7 /* ContentViewModelReconnectTests.swift */; };
 		8FA12BC34DE56F708192A3B8 /* CodexSecurePairingStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA12BC34DE56F708192A3B9 /* CodexSecurePairingStateTests.swift */; };
+		E2E0C10D1A2B3C4D5E6F7A82 /* CloudLocalE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E0C10D1A2B3C4D5E6F7A81 /* CloudLocalE2ETests.swift */; };
 		90120FC72C9B8D0F5F03F14D /* DJLUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D523A0A98D6540D0E2EE6131 /* DJLUITests.swift */; };
 		9B4A1F81BFE9FA5190652A22 /* DJLLaunchIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA83C07BD6661A63FFD1400F /* DJLLaunchIntent.swift */; };
 		9D7C9A8B7E6D5C4B3A291817 /* TurnViewModelQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7C9A8B7E6D5C4B3A291818 /* TurnViewModelQueueTests.swift */; };
@@ -216,6 +217,7 @@
 		C31FD4BBF43CBB431839BBF8 /* DJLWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DJLWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C0FFEE0000000000000002 /* RemodexTextKitMarkdownRenderingRegressionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RemodexTextKitMarkdownRenderingRegressionTests.swift; sourceTree = "<group>"; };
 		D4F56781234567890ABCDE02 /* CodexServiceIncomingRunIndicatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CodexServiceIncomingRunIndicatorTests.swift; sourceTree = "<group>"; };
+		E2E0C10D1A2B3C4D5E6F7A81 /* CloudLocalE2ETests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudLocalE2ETests.swift; sourceTree = "<group>"; };
 		D523A0A98D6540D0E2EE6131 /* DJLUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DJLUITests.swift; sourceTree = "<group>"; };
 		E1A2B3C4D5E6F708192A3B4D /* QRScannerPairingValidatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QRScannerPairingValidatorTests.swift; sourceTree = "<group>"; };
 		E6F1A2B3C4D5E6F708192A50 /* UserBubbleInlineMarkdownRendererTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UserBubbleInlineMarkdownRendererTests.swift; sourceTree = "<group>"; };
@@ -467,6 +469,7 @@
 		E7FB7A37E42F80D70FF68438 /* DJLUITests */ = {
 			isa = PBXGroup;
 			children = (
+				E2E0C10D1A2B3C4D5E6F7A81 /* CloudLocalE2ETests.swift */,
 				D523A0A98D6540D0E2EE6131 /* DJLUITests.swift */,
 			);
 			path = DJLUITests;
@@ -658,6 +661,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E2E0C10D1A2B3C4D5E6F7A82 /* CloudLocalE2ETests.swift in Sources */,
 				90120FC72C9B8D0F5F03F14D /* DJLUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
