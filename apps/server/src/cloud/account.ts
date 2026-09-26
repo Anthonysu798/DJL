@@ -11,10 +11,21 @@ import type {
   CloudUserId,
 } from "@synara/contracts";
 
-import { CloudApiError, createCloudClient, probeCloudRegion, resolveCloudBaseUrl, type CloudClient, type CloudRegionSetting,
+import {
+  CloudApiError,
+  createCloudClient,
+  probeCloudRegion,
+  resolveCloudBaseUrl,
+  type CloudClient,
+  type CloudRegionSetting,
   type FetchLike,
 } from "./api";
-import { clearCloudSession, readCloudSession, writeCloudSession, type CloudSession } from "./session";
+import {
+  clearCloudSession,
+  readCloudSession,
+  writeCloudSession,
+  type CloudSession,
+} from "./session";
 
 export const DJL_CLOUD_DEVICE_CLIENT_ID = "djl-desktop";
 
@@ -35,7 +46,8 @@ export class CloudAccount {
   private async client(baseUrl?: string): Promise<CloudClient> {
     if (baseUrl) return createCloudClient(baseUrl, this.deps.fetchImpl);
     const region = await this.deps.region();
-    if (region === "auto" && !process.env.DJL_CLOUD_API_URL) await probeCloudRegion(this.deps.fetchImpl);
+    if (region === "auto" && !process.env.DJL_CLOUD_API_URL)
+      await probeCloudRegion(this.deps.fetchImpl);
     return createCloudClient(resolveCloudBaseUrl(region), this.deps.fetchImpl);
   }
 
@@ -86,7 +98,9 @@ export class CloudAccount {
       deviceCode: result.device_code,
       userCode: result.user_code,
       verificationUri: result.verification_uri,
-      ...(result.verification_uri_complete ? { verificationUriComplete: result.verification_uri_complete } : {}),
+      ...(result.verification_uri_complete
+        ? { verificationUriComplete: result.verification_uri_complete }
+        : {}),
       expiresInSeconds: result.expires_in,
       intervalSeconds: result.interval,
     };
@@ -95,11 +109,14 @@ export class CloudAccount {
   async pollSignIn(deviceCode: string, apiBaseUrl?: string): Promise<CloudSignInPollResult> {
     const client = await this.client(apiBaseUrl);
     try {
-      const token = await client.post<{ access_token?: string; token_type?: string }>("/v1/auth/device/token", {
-        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        device_code: deviceCode,
-        client_id: DJL_CLOUD_DEVICE_CLIENT_ID,
-      });
+      const token = await client.post<{ access_token?: string; token_type?: string }>(
+        "/v1/auth/device/token",
+        {
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          device_code: deviceCode,
+          client_id: DJL_CLOUD_DEVICE_CLIENT_ID,
+        },
+      );
       if (!token.access_token) return { state: "pending" };
       const me = await client.get<MeResponse>("/v1/me", token.access_token);
       await writeCloudSession(this.deps.secretsDir, {

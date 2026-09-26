@@ -24,7 +24,14 @@ const sse = (events: string[]) =>
 let secretsDir = "";
 beforeEach(async () => {
   secretsDir = await mkdtemp(join(tmpdir(), "djl-cloud-driver-"));
-  await writeCloudSession(secretsDir, { apiBaseUrl: "https://cloud.test", token: "sess", userId: "u", email: "e@x.y", orgId: "o", createdAt: "x" });
+  await writeCloudSession(secretsDir, {
+    apiBaseUrl: "https://cloud.test",
+    token: "sess",
+    userId: "u",
+    email: "e@x.y",
+    orgId: "o",
+    createdAt: "x",
+  });
 });
 
 const start: ProviderSessionStartInput = {
@@ -36,7 +43,11 @@ const start: ProviderSessionStartInput = {
 
 function sink() {
   const events: Record<string, unknown>[] = [];
-  const s: NativeSink = { emit: (e) => void events.push(e), request: async () => "cancel", fail: () => {} };
+  const s: NativeSink = {
+    emit: (e) => void events.push(e),
+    request: async () => "cancel",
+    fail: () => {},
+  };
   return { s, events };
 }
 
@@ -57,7 +68,31 @@ describe("DJL Cloud driver", () => {
         ]);
       }
       if (url.endsWith("/v1/models")) {
-        return new Response(JSON.stringify({ models: [{ id: "gpt-5-mini", provider: "openai", displayName: "GPT-5 mini", capabilities: ["text.chat", "tools"], contextWindow: 400000, maxOutputTokens: 1000, status: "active" }, { id: "img", provider: "openai", displayName: "Img", capabilities: ["image.generate"], contextWindow: null, maxOutputTokens: null, status: "active" }] }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            models: [
+              {
+                id: "gpt-5-mini",
+                provider: "openai",
+                displayName: "GPT-5 mini",
+                capabilities: ["text.chat", "tools"],
+                contextWindow: 400000,
+                maxOutputTokens: 1000,
+                status: "active",
+              },
+              {
+                id: "img",
+                provider: "openai",
+                displayName: "Img",
+                capabilities: ["image.generate"],
+                contextWindow: null,
+                maxOutputTokens: null,
+                status: "active",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }
       return new Response("{}", { status: 404 });
     };
@@ -65,7 +100,10 @@ describe("DJL Cloud driver", () => {
     const { s, events } = sink();
     const driver2 = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(start, s);
     await driver2.send({ threadId: start.threadId, input: "hi there" });
-    const text = events.filter((e) => e.type === "content.delta").map((e) => (e.payload as { delta: string }).delta).join("");
+    const text = events
+      .filter((e) => e.type === "content.delta")
+      .map((e) => (e.payload as { delta: string }).delta)
+      .join("");
     expect(text).toBe("Hello");
     expect(events.some((e) => e.type === "item.completed")).toBe(true);
     await driver2.send({ threadId: start.threadId, input: "again" });
@@ -82,14 +120,21 @@ describe("DJL Cloud driver", () => {
     const out = async (status: number, code: string) =>
       createDjlCloudDriverFactory({
         secretsDir,
-        fetchImpl: async () => new Response(JSON.stringify({ error: { code, message: "m", traceId: "t" } }), { status }),
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ error: { code, message: "m", traceId: "t" } }), { status }),
       })(start, sink().s);
-    await expect((await out(402, "insufficient_credits")).send({ threadId: start.threadId, input: "x" })).rejects.toThrow(/out of DJL Cloud credits/);
-    await expect((await out(401, "unauthorized")).send({ threadId: start.threadId, input: "x" })).rejects.toThrow(/session expired/);
+    await expect(
+      (await out(402, "insufficient_credits")).send({ threadId: start.threadId, input: "x" }),
+    ).rejects.toThrow(/out of DJL Cloud credits/);
+    await expect(
+      (await out(401, "unauthorized")).send({ threadId: start.threadId, input: "x" }),
+    ).rejects.toThrow(/session expired/);
   });
 
   it("requires a stored session", async () => {
     const empty = await mkdtemp(join(tmpdir(), "djl-cloud-empty-"));
-    await expect(createDjlCloudDriverFactory({ secretsDir: empty })(start, sink().s)).rejects.toThrow(/Sign in to DJL Cloud/);
+    await expect(
+      createDjlCloudDriverFactory({ secretsDir: empty })(start, sink().s),
+    ).rejects.toThrow(/Sign in to DJL Cloud/);
   });
 });

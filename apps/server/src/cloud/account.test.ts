@@ -59,13 +59,25 @@ describe("CloudAccount device flow", () => {
       }
       if (url.endsWith("/v1/auth/device/token")) {
         polls += 1;
-        if (polls === 1) return jsonResponse(400, { error: { code: "authorization_pending", message: "pending" } });
+        if (polls === 1)
+          return jsonResponse(400, {
+            error: { code: "authorization_pending", message: "pending" },
+          });
         return jsonResponse(200, { access_token: "sess-1", token_type: "Bearer" });
       }
-      if (url.endsWith("/v1/me")) return jsonResponse(200, { user: { id: "u1", email: "me@test.invalid" }, activeOrgId: "o1" });
+      if (url.endsWith("/v1/me"))
+        return jsonResponse(200, {
+          user: { id: "u1", email: "me@test.invalid" },
+          activeOrgId: "o1",
+        });
       if (url.endsWith("/v1/credits")) {
         expect(new Headers(init?.headers).get("authorization")).toBe("Bearer sess-1");
-        return jsonResponse(200, { orgId: "o1", balances: { trial: "0", plan: "0", topup: "2500000000" }, total: "2500000000", display: { total: "2500.00", trial: "0.00", plan: "0.00", topup: "2500.00" } });
+        return jsonResponse(200, {
+          orgId: "o1",
+          balances: { trial: "0", plan: "0", topup: "2500000000" },
+          total: "2500000000",
+          display: { total: "2500.00", trial: "0.00", plan: "0.00", topup: "2500.00" },
+        });
       }
       if (url.endsWith("/v1/auth/sign-out")) return jsonResponse(200, { success: true });
       return jsonResponse(404, { error: { code: "not_found", message: "nope" } });
@@ -89,8 +101,19 @@ describe("CloudAccount device flow", () => {
   });
 
   it("reports an expired session when the control plane answers 401", async () => {
-    await writeCloudSession(secretsDir, { apiBaseUrl: "https://cloud.test", token: "old", userId: "u1", email: "a@b.c", orgId: "o1", createdAt: "x" });
-    const account = new CloudAccount({ secretsDir, region: async () => "global", fetchImpl: async () => jsonResponse(401, { error: { code: "unauthorized", message: "no" } }) });
+    await writeCloudSession(secretsDir, {
+      apiBaseUrl: "https://cloud.test",
+      token: "old",
+      userId: "u1",
+      email: "a@b.c",
+      orgId: "o1",
+      createdAt: "x",
+    });
+    const account = new CloudAccount({
+      secretsDir,
+      region: async () => "global",
+      fetchImpl: async () => jsonResponse(401, { error: { code: "unauthorized", message: "no" } }),
+    });
     const status = await account.status();
     expect(status.signedIn).toBe(true);
     expect(status.problem).toBe("session_expired");

@@ -106,7 +106,9 @@ export type KiloServerProviderSettings = typeof KiloServerProviderSettings.Type;
  */
 export const DjlCloudServerProviderSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  region: Schema.Literals(["auto", "global", "asia"]).pipe(Schema.withDecodingDefault(() => "auto" as const)),
+  region: Schema.Literals(["auto", "global", "asia"]).pipe(
+    Schema.withDecodingDefault(() => "auto" as const),
+  ),
 });
 export type DjlCloudServerProviderSettings = typeof DjlCloudServerProviderSettings.Type;
 

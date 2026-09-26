@@ -41,7 +41,8 @@ export async function readCloudSession(secretsDir: string): Promise<CloudSession
       userId: parsed.userId,
       email: parsed.email,
       orgId: parsed.orgId,
-      createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : new Date(0).toISOString(),
+      createdAt:
+        typeof parsed.createdAt === "string" ? parsed.createdAt : new Date(0).toISOString(),
     };
   } catch {
     return null;

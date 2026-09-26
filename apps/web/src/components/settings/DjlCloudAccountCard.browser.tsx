@@ -67,12 +67,16 @@ describe("DjlCloudAccountCard", () => {
       expiresInSeconds: 600,
       intervalSeconds: 3,
     });
-    api.cloud.pollSignIn.mockResolvedValueOnce({ state: "pending" }).mockResolvedValueOnce({ state: "complete", status: signedIn });
+    api.cloud.pollSignIn
+      .mockResolvedValueOnce({ state: "pending" })
+      .mockResolvedValueOnce({ state: "complete", status: signedIn });
     renderCard();
     await expect.element(page.getByText("Not signed in")).toBeVisible();
     await page.getByRole("button", { name: "Sign in to DJL Cloud" }).click();
     await expect.element(page.getByText("ABCD-EFGH")).toBeVisible();
-    expect(api.shell.openExternal).toHaveBeenCalledWith("https://app.test/device?user_code=ABCD-EFGH");
+    expect(api.shell.openExternal).toHaveBeenCalledWith(
+      "https://app.test/device?user_code=ABCD-EFGH",
+    );
     await expect
       .element(page.getByText("Signed in as me@test.invalid"), { timeout: 10_000 })
       .toBeVisible();

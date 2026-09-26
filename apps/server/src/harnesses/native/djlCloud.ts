@@ -100,11 +100,20 @@ export const createDjlCloudDriverFactory =
                 continue;
               }
               if (event === "djl.usage") {
-                const usage = JSON.parse(data) as { settled: string; remaining: string; cutOff: boolean };
+                const usage = JSON.parse(data) as {
+                  settled: string;
+                  remaining: string;
+                  cutOff: boolean;
+                };
                 sink.emit({
                   type: "item.completed",
                   itemId: `usage-${itemId}`,
-                  payload: { itemType: "dynamic_tool_call", status: "completed", title: "DJL Cloud usage", data: usage },
+                  payload: {
+                    itemType: "dynamic_tool_call",
+                    status: "completed",
+                    title: "DJL Cloud usage",
+                    data: usage,
+                  },
                 });
                 continue;
               }
@@ -112,7 +121,11 @@ export const createDjlCloudDriverFactory =
               const delta = chunk.choices?.[0]?.delta?.content;
               if (delta) {
                 reply += delta;
-                sink.emit({ type: "content.delta", itemId, payload: { streamKind: "assistant_text", delta } });
+                sink.emit({
+                  type: "content.delta",
+                  itemId,
+                  payload: { streamKind: "assistant_text", delta },
+                });
               }
             }
           }
@@ -124,9 +137,16 @@ export const createDjlCloudDriverFactory =
           }
           if (error instanceof CloudApiError) {
             const code = error.detail.code;
-            if (code === "insufficient_credits") throw new Error("You are out of DJL Cloud credits. Add credits in Settings → Accounts.");
-            if (error.detail.status === 401) throw new Error("Your DJL Cloud session expired. Sign in again in Settings → Accounts.");
-            if (code === "gateway_paused") throw new Error("DJL Cloud is temporarily paused. Try again shortly.");
+            if (code === "insufficient_credits")
+              throw new Error(
+                "You are out of DJL Cloud credits. Add credits in Settings → Accounts.",
+              );
+            if (error.detail.status === 401)
+              throw new Error(
+                "Your DJL Cloud session expired. Sign in again in Settings → Accounts.",
+              );
+            if (code === "gateway_paused")
+              throw new Error("DJL Cloud is temporarily paused. Try again shortly.");
             throw new Error(error.detail.message);
           }
           throw error;
@@ -134,7 +154,8 @@ export const createDjlCloudDriverFactory =
           controller = null;
         }
         if (reply) history.push({ role: "assistant", content: reply });
-        if (cutOff) throw new Error("DJL Cloud credits ran out during this reply. Add credits to continue.");
+        if (cutOff)
+          throw new Error("DJL Cloud credits ran out during this reply. Add credits to continue.");
         if (errorMessage) throw new Error(errorMessage);
       },
       async interrupt() {
@@ -146,7 +167,9 @@ export const createDjlCloudDriverFactory =
       async models(): Promise<ProviderListModelsResult> {
         const result = await client.get<{ models: CloudModel[] }>("/v1/models", session.token);
         return {
-          models: result.models.filter((m) => m.status !== "disabled" && m.capabilities.includes("text.chat")).map(toModelDescriptor),
+          models: result.models
+            .filter((m) => m.status !== "disabled" && m.capabilities.includes("text.chat"))
+            .map(toModelDescriptor),
           source: "djl-cloud",
         };
       },
@@ -154,9 +177,14 @@ export const createDjlCloudDriverFactory =
   };
 
 /** Model listing without an active session, used by discovery when signed in. */
-export async function listDjlCloudModels(deps: DjlCloudDriverDeps): Promise<ProviderListModelsResult> {
+export async function listDjlCloudModels(
+  deps: DjlCloudDriverDeps,
+): Promise<ProviderListModelsResult> {
   const session = await requireSession(deps.secretsDir);
   const client = createCloudClient(session.apiBaseUrl, deps.fetchImpl);
   const result = await client.get<{ models: CloudModel[] }>("/v1/models", session.token);
-  return { models: result.models.filter((m) => m.status !== "disabled").map(toModelDescriptor), source: "djl-cloud" };
+  return {
+    models: result.models.filter((m) => m.status !== "disabled").map(toModelDescriptor),
+    source: "djl-cloud",
+  };
 }
