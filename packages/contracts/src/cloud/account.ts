@@ -68,6 +68,16 @@ export type CloudRegisterDeviceResponse = typeof CloudRegisterDeviceResponse.Typ
 export const CloudDevicesResponse = Schema.Struct({ devices: Schema.Array(CloudDevice) });
 export type CloudDevicesResponse = typeof CloudDevicesResponse.Type;
 
+// POST /v1/devices/push-token → 204. Registers (or moves) an APNs token for
+// task-finished notifications; the same token re-registered is refreshed.
+export const CloudPushTokenInput = Schema.Struct({
+  /** APNs device token, hex. */
+  token: Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]{32,200}$/)),
+  environment: Schema.Literals(["production", "sandbox"]),
+  deviceId: Schema.optionalKey(CloudDeviceId),
+});
+export type CloudPushTokenInput = typeof CloudPushTokenInput.Type;
+
 // ---------------------------------------------------------------------------
 // Billing: POST /v1/billing/checkout, POST /v1/billing/portal, GET /v1/billing/subscription
 // ---------------------------------------------------------------------------

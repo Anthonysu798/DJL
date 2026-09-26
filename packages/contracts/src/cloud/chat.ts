@@ -55,12 +55,21 @@ export const CloudToolResultPart = Schema.Struct({
 });
 export type CloudToolResultPart = typeof CloudToolResultPart.Type;
 
+/** A web source a task read or cited; shown under the reply. */
+export const CloudCitationPart = Schema.Struct({
+  type: Schema.Literal("citation"),
+  url: TrimmedNonEmptyString,
+  title: Schema.NullOr(Schema.String),
+});
+export type CloudCitationPart = typeof CloudCitationPart.Type;
+
 export const CloudMessagePart = Schema.Union([
   CloudTextPart,
   CloudFileRefPart,
   CloudImageRefPart,
   CloudToolCallPart,
   CloudToolResultPart,
+  CloudCitationPart,
 ]);
 export type CloudMessagePart = typeof CloudMessagePart.Type;
 
