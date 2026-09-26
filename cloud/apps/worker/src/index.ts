@@ -1,6 +1,6 @@
 /**
  * Worker entry: pg-boss on the same Postgres, cron schedules for the ledger,
- * trials, purge, and stats jobs. Stripe webhooks are processed inline by the
+ * trials, purge, stats, and usage window jobs. Stripe webhooks are processed inline by the
  * API; the worker only owns time-based work.
  */
 import { LedgerService } from "@djl/api/credits";
@@ -28,6 +28,11 @@ const SCHEDULES: Record<keyof typeof JOBS, string> = {
   "ledger.refold": "43 * * * *",
   "users.purge-deleted": "15 3 * * *",
   "stats.daily": "5 0 * * *",
+  "usage.grantPlanResets": "7 * * * *",
+  "usage.bulkGrant": "* * * * *",
+  "usage.expireBanks": "30 2 * * *",
+  "usage.pruneBuckets": "45 3 * * *",
+  "usage.grantFreeAllowance": "11 * * * *",
 };
 
 for (const [name, handler] of Object.entries(JOBS) as [

@@ -11,6 +11,9 @@ import { seedOrg, testDatabase } from "../testing/db.ts";
 import { createFakeProvider } from "./fakeProvider.ts";
 import { GatewayService, type GatewayDeps } from "./GatewayService.ts";
 import { createMemoryRateLimiter } from "./RateLimiter.ts";
+import { planForOrg } from "../usage/plans.ts";
+import { UsageService } from "../usage/UsageService.ts";
+import { windowPolicy } from "../usage/windowPolicy.ts";
 
 const conn = testDatabase();
 const ledger = new LedgerService(conn.db);
@@ -65,8 +68,18 @@ async function fund(p: Principal, amount = creditsToMicro(100)) {
   });
 }
 
+/** A phone-verified trial account, so limits come from the trial plan. */
 async function principalFor(label: string): Promise<Principal> {
   const { orgId, userId } = await seedOrg(conn.db, label);
+  await conn.db.insert(schema.trialGrants).values({
+    orgId,
+    userId,
+    phoneHash: `phone-${orgId}`,
+    phoneLineType: "mobile",
+    status: "granted",
+    grantedAt: new Date(),
+    expiresAt: new Date(Date.now() + 14 * 86_400_000),
+  });
   return {
     userId,
     email: `${label}@test.invalid`,
@@ -123,6 +136,8 @@ beforeAll(async () => {
       requestsPerMinute: 20,
       priorityWeight: 1,
       syncQuotaBytes: 1n,
+      window5hMicro: creditsToMicro(50),
+      windowWeekMicro: creditsToMicro(200),
     })
     .onConflictDoNothing();
   await conn.db
@@ -665,13 +680,16 @@ describe("GatewayService image aborts", () => {
       providers: {
         openai: {
           ...fake,
+          // Like fetch: rejects on abort, including a signal aborted before the call.
           generateImage: (_req, signal) =>
-            new Promise((_resolve, reject) =>
-              signal.addEventListener("abort", () => {
+            new Promise((_resolve, reject) => {
+              const abort = () => {
                 aborted = true;
                 reject(new Error("aborted"));
-              }),
-            ),
+              };
+              if (signal.aborted) abort();
+              else signal.addEventListener("abort", abort);
+            }),
         },
       },
     });
@@ -686,5 +704,63 @@ describe("GatewayService image aborts", () => {
     expect(aborted).toBe(true);
     expect(await ledger.available(p.orgId)).toBe(creditsToMicro(20));
     expect(gw.status().inFlight).toBe(0);
+  });
+});
+
+/** Spend all but `room` of the 5-hour window, as if earlier requests had settled. */
+async function fillWindow(p: Principal, room: bigint) {
+  const { windowCaps } = await planForOrg(conn.db, p.orgId, new Date());
+  await conn.db
+    .insert(schema.usageWindows)
+    .values({ userId: p.userId, weekAnchorAt: new Date(Date.now() - 3_600_000) });
+  await conn.db.insert(schema.usageBuckets).values({
+    userId: p.userId,
+    bucketStart: new Date(Date.now() - 20 * 60_000),
+    spentMicro: windowCaps.fiveHour - room,
+  });
+}
+
+describe("GatewayService usage windows", () => {
+  const chat = { model: "fake-chat", messages: [{ role: "user" as const, content: "hi" }] };
+
+  it("refuses a full window with 429, which window, and when it frees up", async () => {
+    const withPolicy = makeGateway({
+      admission: { window: windowPolicy(new UsageService(conn.db)) },
+    });
+    for (const gw of [gateway, withPolicy]) {
+      const p = await principalFor("gw-window-full");
+      await fund(p);
+      await fillWindow(p, 0n);
+      const refusal = await gw.completeStep(facts(p), chat).catch((e: unknown) => e);
+      expect(refusal).toBeInstanceOf(ApiError);
+      expect(refusal).toMatchObject({
+        status: 429,
+        code: "usage_window_exhausted",
+        details: { window: "five_hour", resetsAt: expect.any(String) },
+      });
+      expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100));
+    }
+  });
+
+  it("cuts a stream when the window fills mid-response, with its own code", async () => {
+    const p = await principalFor("gw-window-cut");
+    await fund(p);
+    await fillWindow(p, 100_000n);
+    const step = await gateway.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: [{ role: "user", content: "long:50" }],
+      max_tokens: 1000,
+    });
+    await collect(step.chunks);
+    const result = await step.result;
+    expect(result.usage?.cutOff).toBe(true);
+    expect(result.error?.code).toBe("usage_window_cut");
+    // The window is now exactly full; credits paid the full actual cost.
+    await expect(gateway.completeStep(facts(p), chat)).rejects.toMatchObject({
+      code: "usage_window_exhausted",
+    });
+    expect(await ledger.available(p.orgId)).toBe(
+      creditsToMicro(100) - BigInt(result.usage!.settled),
+    );
   });
 });

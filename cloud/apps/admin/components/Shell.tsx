@@ -3,6 +3,7 @@ import {
   Bell,
   BadgePercent,
   Boxes,
+  Gauge,
   LayoutDashboard,
   LogOut,
   ScrollText,
@@ -42,6 +43,7 @@ export const NAV_MAIN = [
 export const NAV_PLATFORM = [
   { href: "/models", label: "Models", icon: Sparkles },
   { href: "/plans", label: "Plans", icon: Boxes },
+  { href: "/usage", label: "Usage windows", icon: Gauge },
   { href: "/switches", label: "Kill switches", icon: ShieldAlert },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/team", label: "Team", icon: UserRound },

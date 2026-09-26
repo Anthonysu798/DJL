@@ -14,6 +14,7 @@ import type { GatewayService } from "../gateway/GatewayService.ts";
 import type { RateLimiter } from "../gateway/RateLimiter.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
+import { resetWindows } from "../usage/windowStore.ts";
 import {
   ADMIN_ROLES,
   isIpOrCidr,
@@ -329,7 +330,10 @@ export class AdminService {
     return balances;
   }
 
-  /** Clears rate limits, concurrency holds, and abuse flags. Never moves credits (decision: Reset). */
+  /**
+   * Clears rate limits, concurrency holds, abuse flags, and both usage windows.
+   * Never moves credits or banked resets (decision: Reset).
+   */
   async resetLimits(p: AdminPrincipal, userId: string, reason: string | null) {
     requirePermission(p, "limits.reset");
     const orgIds = (
@@ -344,6 +348,13 @@ export class AdminService {
         .where(
           and(eq(schema.abuseFlags.userId, userId), sql`${schema.abuseFlags.resolvedAt} IS NULL`),
         );
+      await resetWindows(tx, userId, new Date(), { newWeek: false });
+      await tx.insert(schema.usageWindowEvents).values({
+        userId,
+        kind: "admin_reset",
+        actor: `admin:${p.adminId}`,
+        reason,
+      });
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -457,6 +468,7 @@ export class AdminService {
       "maxOutputTokens",
       "capabilities",
       "upstreamModelId",
+      "freeEligible",
     ] as const;
     const set: Record<string, unknown> = {};
     for (const key of allowed)
@@ -511,14 +523,18 @@ export class AdminService {
       "stripeMonthlyPriceId",
       "stripeAnnualPriceId",
       "active",
+      "window5hMicro",
+      "windowWeekMicro",
     ] as const;
+    const bigints = new Set<string>([
+      "includedMicrocredits",
+      "syncQuotaBytes",
+      "window5hMicro",
+      "windowWeekMicro",
+    ]);
     const set: Record<string, unknown> = {};
     for (const key of allowed)
-      if (key in patch)
-        set[key] =
-          key === "includedMicrocredits" || key === "syncQuotaBytes"
-            ? BigInt(String(patch[key]))
-            : patch[key];
+      if (key in patch) set[key] = bigints.has(key) ? BigInt(String(patch[key])) : patch[key];
     if (Object.keys(set).length === 0) throw new ApiError(400, "bad_request", "Nothing to update.");
     await this.deps.db.transaction(async (tx) => {
       await tx
