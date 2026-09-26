@@ -22,6 +22,7 @@ import {
   ProviderError,
   type ChatChunk,
   type ChatRequest,
+  type ImageResult,
   type ProviderAdapter,
   type ProviderId,
   type Usage,
@@ -31,6 +32,7 @@ import type { Principal } from "../auth/guard.ts";
 import type { Settings } from "../config/settings.ts";
 import { gatewayRequests, settledMicrocredits, withSpan } from "../observability.ts";
 import { InsufficientCreditsError, type LedgerService } from "../credits/LedgerService.ts";
+import { bytesMatchType } from "../files/fileTypes.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
 import { planForOrg } from "../usage/plans.ts";
@@ -126,6 +128,8 @@ export interface Step {
 }
 
 const TRAILER_EVENT = "djl.usage";
+const EDITABLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+export const MAX_EDIT_IMAGE_BYTES = 16 * 1024 * 1024;
 
 /** The tightest spending limit on a stream and the error it ends with when reached. */
 function streamBudget(
@@ -673,17 +677,118 @@ export class GatewayService {
     /** Aborted when the client disconnects; the provider call stops and nothing is charged. */
     options: { readonly signal?: AbortSignal } = {},
   ) {
+    return this.imageRequest(
+      facts,
+      {
+        endpoint: "images.generations",
+        capability: "image.generate",
+        model: body.model,
+        prompt: body.prompt,
+        n: body.n,
+      },
+      (provider, model, n, signal) =>
+        provider.generateImage(
+          {
+            model,
+            prompt: body.prompt,
+            n,
+            ...(body.size ? { size: body.size } : {}),
+            ...(body.quality ? { quality: body.quality } : {}),
+            user: facts.principal.orgId.slice(0, 16),
+          },
+          signal,
+        ),
+      options,
+    );
+  }
+
+  /** Edits an image (PNG, JPEG, or WebP) the caller supplies; charged and refunded like a generation. */
+  async editImage(
+    facts: RequestFacts,
+    body: {
+      readonly model: string;
+      readonly prompt: string;
+      readonly image: { readonly bytes: Uint8Array; readonly mimeType: string };
+      readonly n?: number;
+      readonly size?: string;
+    },
+    options: { readonly signal?: AbortSignal } = {},
+  ) {
+    const { bytes, mimeType } = body.image;
+    if (
+      !EDITABLE_IMAGE_TYPES.has(mimeType) ||
+      !bytesMatchType(mimeType, bytes) ||
+      bytes.byteLength > MAX_EDIT_IMAGE_BYTES
+    )
+      throw new ApiError(
+        400,
+        "bad_request",
+        "The image must be a PNG, JPEG, or WebP file of up to 16 MB.",
+      );
+    return this.imageRequest(
+      facts,
+      {
+        endpoint: "images.edits",
+        capability: "image.edit",
+        model: body.model,
+        prompt: body.prompt,
+        n: body.n,
+      },
+      (provider, model, n, signal) =>
+        provider.editImage(
+          {
+            model,
+            prompt: body.prompt,
+            image: body.image,
+            n,
+            ...(body.size ? { size: body.size } : {}),
+            user: facts.principal.orgId.slice(0, 16),
+          },
+          signal,
+        ),
+      options,
+    );
+  }
+
+  /**
+   * One image call: admit, route to a model with `capability`, reserve per
+   * image, call the provider, then settle what it returned. A provider failure
+   * or an abort releases the reservation, so nothing is charged.
+   */
+  private async imageRequest(
+    facts: RequestFacts,
+    input: {
+      readonly endpoint: "images.generations" | "images.edits";
+      readonly capability: "image.generate" | "image.edit";
+      readonly model: string;
+      readonly prompt: string;
+      readonly n: number | undefined;
+    },
+    call: (
+      provider: ProviderAdapter,
+      upstreamModelId: string,
+      n: number,
+      signal: AbortSignal,
+    ) => Promise<ImageResult>,
+    options: { readonly signal?: AbortSignal },
+  ) {
     const { release, limits } = await this.admit(facts);
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
     let reserved = false;
     try {
-      const n = Math.min(Math.max(body.n ?? 1, 1), 4);
-      if (!body.prompt || body.prompt.length > 8000)
+      const n = Math.min(Math.max(input.n ?? 1, 1), 4);
+      if (!input.prompt || input.prompt.length > 8000)
         throw new ApiError(400, "bad_request", "A prompt of up to 8,000 characters is required.");
-      const { model, reason } = this.route(body.model, await this.catalog());
-      if (!model.capabilities.includes("image.generate"))
-        throw new ApiError(400, "bad_request", "That model does not generate images.");
+      const { model, reason } = this.route(input.model, await this.catalog());
+      if (!model.capabilities.includes(input.capability))
+        throw new ApiError(
+          400,
+          "bad_request",
+          input.capability === "image.edit"
+            ? "That model does not edit images."
+            : "That model does not generate images.",
+        );
       const price = priceOf(model);
       const estimate = estimateReservation(price, {
         inputTokens: 0,
@@ -715,7 +820,7 @@ export class GatewayService {
         id: requestId,
         facts,
         model,
-        endpoint: "images.generations",
+        endpoint: input.endpoint,
         routeReason: reason,
         reserved: estimate,
       });
@@ -727,15 +832,10 @@ export class GatewayService {
           "gateway.image",
           { provider: model.provider, model: model.modelId },
           () =>
-            provider.generateImage(
-              {
-                model: model.upstreamModelId,
-                prompt: body.prompt,
-                n,
-                ...(body.size ? { size: body.size } : {}),
-                ...(body.quality ? { quality: body.quality } : {}),
-                user: facts.principal.orgId.slice(0, 16),
-              },
+            call(
+              provider,
+              model.upstreamModelId,
+              n,
               options.signal ?? new AbortController().signal,
             ),
         );

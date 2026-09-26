@@ -172,7 +172,7 @@ beforeAll(async () => {
         provider: "openai",
         upstreamModelId: "fake-image",
         displayName: "Fake Image",
-        capabilities: ["image.generate"],
+        capabilities: ["image.generate", "image.edit"],
         microPerImage: creditsToMicro(5),
         qualityScore: 80,
         sortOrder: 3,
@@ -667,6 +667,72 @@ describe("GatewayService completeStep", () => {
     expect(await ledger.available(p.orgId)).toBe(
       creditsToMicro(100) - BigInt(result.usage!.settled),
     );
+    expect(gateway.status().inFlight).toBe(0);
+  });
+});
+
+describe("GatewayService image edits", () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+
+  it("reserves, charges per image on success, and refunds a provider failure", async () => {
+    const p = await principalFor("gw-edit");
+    await fund(p, creditsToMicro(20));
+    const edited = await gateway.editImage(facts(p), {
+      model: "fake-image",
+      prompt: "make it blue",
+      image: { bytes: png, mimeType: "image/png" },
+    });
+    expect(edited.data).toHaveLength(1);
+    expect(edited.usage.settled).toBe(creditsToMicro(5).toString());
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(15));
+    const [row] = await conn.db
+      .select()
+      .from(schema.usageRequests)
+      .where(eq(schema.usageRequests.id, edited.usage.requestId));
+    expect(row).toMatchObject({ endpoint: "images.edits", status: "settled", images: 1 });
+
+    await expect(
+      gateway.editImage(facts(p), {
+        model: "fake-image",
+        prompt: "fail",
+        image: { bytes: png, mimeType: "image/png" },
+      }),
+    ).rejects.toMatchObject({ code: "provider_error" });
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(15));
+  });
+
+  it("refuses bytes that are not the declared image type, and models that cannot edit", async () => {
+    const p = await principalFor("gw-edit-bad");
+    await fund(p, creditsToMicro(20));
+    await expect(
+      gateway.editImage(facts(p), {
+        model: "fake-image",
+        prompt: "x",
+        image: { bytes: new TextEncoder().encode("<svg/>"), mimeType: "image/png" },
+      }),
+    ).rejects.toMatchObject({ status: 400, code: "bad_request" });
+    await expect(
+      gateway.editImage(facts(p), {
+        model: "fake-chat",
+        prompt: "x",
+        image: { bytes: png, mimeType: "image/png" },
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(20));
+  });
+
+  it("aborts the provider call and releases the reservation when the signal fires", async () => {
+    const p = await principalFor("gw-edit-abort");
+    await fund(p, creditsToMicro(20));
+    const controller = new AbortController();
+    const pending = gateway.editImage(
+      facts(p),
+      { model: "fake-image", prompt: "hang", image: { bytes: png, mimeType: "image/png" } },
+      { signal: controller.signal },
+    );
+    setTimeout(() => controller.abort(), 20);
+    await expect(pending).rejects.toMatchObject({ code: "provider_error" });
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(20));
     expect(gateway.status().inFlight).toBe(0);
   });
 });

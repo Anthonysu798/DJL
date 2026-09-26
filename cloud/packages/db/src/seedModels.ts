@@ -168,7 +168,7 @@ export const SEED_MODELS: readonly SeedModel[] = [
     provider: "openai",
     upstreamModelId: "gpt-image-1",
     displayName: "GPT Image 1",
-    capabilities: ["image.generate"],
+    capabilities: ["image.generate", "image.edit"],
     usdPerImage: 0.04,
     qualityScore: 88,
     sortOrder: 100,
