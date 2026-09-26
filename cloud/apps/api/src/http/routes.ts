@@ -13,6 +13,7 @@ import { makeFileRoutes, type FileRouteDeps } from "../files/routes.ts";
 import { makeAdminRoutes, type AdminRouteDeps } from "../admin/routes.ts";
 import { makeAuthRoutes, type AuthRouteDeps } from "../auth/routes.ts";
 import { makeGatewayRoutes, type GatewayRouteDeps } from "../gateway/routes.ts";
+import { makePushRoutes, type PushRouteDeps } from "../push/routes.ts";
 import { makeRunRoutes, type RunRouteDeps } from "../runs/routes.ts";
 import { makeShareRoutes, type ShareRouteDeps } from "../shares/routes.ts";
 import { makeNativeAuthRoutes, type NativeAuthRouteDeps } from "../nativeAuth/routes.ts";
@@ -38,7 +39,8 @@ export interface RouteDeps
     ShareRouteDeps,
     RunRouteDeps,
     AuthRouteDeps,
-    NativeAuthRouteDeps {
+    NativeAuthRouteDeps,
+    PushRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
@@ -117,6 +119,7 @@ export function makeRoutes(deps: RouteDeps) {
     makeRunRoutes(deps),
     makeAuthRoutes(deps),
     makeNativeAuthRoutes(deps),
+    makePushRoutes(deps),
     fallback,
   );
 }

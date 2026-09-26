@@ -271,6 +271,15 @@ export function createAnthropicAdapter(options: AnthropicOptions): ProviderAdapt
         false,
       );
     },
+    async editImage() {
+      throw new ProviderError(
+        "anthropic",
+        400,
+        "bad_request",
+        "Anthropic does not edit images",
+        false,
+      );
+    },
     async embed() {
       throw new ProviderError(
         "anthropic",

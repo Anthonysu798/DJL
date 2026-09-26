@@ -50,6 +50,7 @@ import { createPgBossTaskQueue } from "./runs/RunExecutor.ts";
 import { RunLog } from "./runs/RunLog.ts";
 import { RunService } from "./runs/RunService.ts";
 import { ShareService } from "./shares/ShareService.ts";
+import { PushTokenService } from "./push/PushTokenService.ts";
 import {
   createMemoryRateLimiter,
   createRedisRateLimiter,
@@ -281,6 +282,7 @@ export async function startApi(
     shares,
     runs,
     limiter,
+    pushTokens: new PushTokenService(db),
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;

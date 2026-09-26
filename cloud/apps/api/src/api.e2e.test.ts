@@ -243,6 +243,30 @@ describe("api end to end", () => {
     expect((await (await call("/v1/credits")).json()).total).toBe(before);
   });
 
+  it("edits an uploaded image through multipart /v1/images/edits and charges per image", async () => {
+    const before = Number((await (await call("/v1/credits")).json()).total);
+    const form = new FormData();
+    form.set("model", "image.edit");
+    form.set("prompt", "make it blue");
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    form.set("image", new Blob([png], { type: "image/png" }), "in.png");
+    const res = await call("/v1/images/edits", { method: "POST", body: form });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.usage.images).toBe(1);
+    expect(Number((await (await call("/v1/credits")).json()).total)).toBeLessThan(before);
+
+    const missing = new FormData();
+    missing.set("model", "image.edit");
+    missing.set("prompt", "x");
+    const bad = await call("/v1/images/edits", { method: "POST", body: missing });
+    expect(bad.status).toBe(400);
+  });
+
   it("registers and lists a device", async () => {
     const created = await call("/v1/devices", {
       method: "POST",
@@ -258,6 +282,19 @@ describe("api end to end", () => {
     const list = await (await call("/v1/devices")).json();
     expect(list.devices).toHaveLength(1);
     expect(list.devices[0].syncEnabled).toBe(false);
+  });
+
+  it("registers an APNs push token and rejects a malformed one", async () => {
+    const ok = await call("/v1/devices/push-token", {
+      method: "POST",
+      json: { token: "ab".repeat(32), environment: "sandbox" },
+    });
+    expect(ok.status).toBe(204);
+    const bad = await call("/v1/devices/push-token", {
+      method: "POST",
+      json: { token: "not hex", environment: "production" },
+    });
+    expect(bad.status).toBe(400);
   });
 
   it("shows no trial yet and refuses a claim without a verified phone", async () => {

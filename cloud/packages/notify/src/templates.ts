@@ -25,6 +25,12 @@ const strings = {
     adminInviteSubject: "You have been added to the DJL admin team",
     adminInviteBody: (inviter: string, url: string) =>
       `${inviter} added you to the DJL admin team. Open the link to verify your email and choose a password. It works once and expires in 24 hours:\n${url}\n\nIf you were not expecting this, ignore it.`,
+    taskSubject: (ok: boolean) => (ok ? "Your DJL task is done" : "Your DJL task stopped"),
+    taskBody: (ok: boolean, title: string, url: string) =>
+      ok
+        ? `Your task "${title}" finished. Open it to see the result:\n${url}`
+        : `Your task "${title}" could not finish. Open it to see what happened:\n${url}`,
+    untitledTask: "Untitled task",
   },
   "zh-Hans": {
     otpSubject: (code: string) => `${code} 是你的 DJL Cloud 验证码`,
@@ -45,6 +51,12 @@ const strings = {
     adminInviteSubject: "你已被加入 DJL 管理团队",
     adminInviteBody: (inviter: string, url: string) =>
       `${inviter} 将你加入了 DJL 管理团队。打开链接验证邮箱并设置密码，链接仅可使用一次，24 小时内有效：\n${url}\n\n如果这不是你预期的邮件，请忽略。`,
+    taskSubject: (ok: boolean) => (ok ? "你的 DJL 任务已完成" : "你的 DJL 任务未能完成"),
+    taskBody: (ok: boolean, title: string, url: string) =>
+      ok
+        ? `你的任务「${title}」已完成。打开查看结果：\n${url}`
+        : `你的任务「${title}」未能完成。打开查看原因：\n${url}`,
+    untitledTask: "未命名任务",
   },
 } as const;
 
@@ -115,4 +127,17 @@ export function adminInvite(
   const s = strings[locale];
   const text = s.adminInviteBody(inviter, url);
   return { to, subject: s.adminInviteSubject, text, html: wrap(text), tag: "admin-invite" };
+}
+
+/** A background task ended; `ok` is false when it failed. */
+export function taskFinished(
+  to: string,
+  ok: boolean,
+  title: string | null,
+  url: string,
+  locale: Locale,
+): EmailMessage {
+  const s = strings[locale];
+  const text = s.taskBody(ok, title ?? s.untitledTask, url);
+  return { to, subject: s.taskSubject(ok), text, html: wrap(text), tag: "task-finished" };
 }

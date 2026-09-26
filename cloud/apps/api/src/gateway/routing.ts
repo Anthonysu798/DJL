@@ -15,6 +15,7 @@ export const CAPABILITY_ALIASES: Record<
   "text.high": { needs: ["text.chat", "tools"], prefer: "quality" },
   "vision.high": { needs: ["text.chat", "vision"], prefer: "quality" },
   "image.generate": { needs: ["image.generate"], prefer: "quality" },
+  "image.edit": { needs: ["image.edit"], prefer: "quality" },
   embed: { needs: ["embeddings"], prefer: "cost" },
 };
 

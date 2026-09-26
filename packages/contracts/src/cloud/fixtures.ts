@@ -171,6 +171,7 @@ export const cloudFixtures = {
           },
           { type: "text", text: "Here is a plan." },
           { type: "image_ref", fileId: "file_2", mimeType: "image/png", width: 1024, height: 1024 },
+          { type: "citation", url: "https://example.com/kyoto", title: "Kyoto temples guide" },
         ],
         model: "gpt-5",
         runId: "run_1",

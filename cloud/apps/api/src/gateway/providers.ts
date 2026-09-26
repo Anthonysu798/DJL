@@ -15,7 +15,7 @@ import type { ApiEnv } from "../config/env.ts";
 import { createFakeProvider } from "./fakeProvider.ts";
 
 export function buildProviders(
-  env: ApiEnv,
+  env: Pick<ApiEnv, "mockExternals">,
   processEnv: NodeJS.ProcessEnv,
   onAlert: (alert: {
     readonly severity: "warn" | "p0";
