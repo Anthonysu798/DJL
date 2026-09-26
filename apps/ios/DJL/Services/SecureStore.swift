@@ -25,6 +25,7 @@ enum CodexSecureKeys {
     nonisolated static let terminalSSHPrivateKey = "codex.terminal.sshPrivateKey"
     nonisolated static let terminalSSHPrivateKeyPassphrase = "codex.terminal.sshPrivateKeyPassphrase"
     nonisolated static let terminalSSHKnownHostPrefix = "codex.terminal.sshKnownHost"
+    nonisolated static let cloudSessionToken = "djl.cloud.sessionToken"
 }
 
 enum SecureStore {
