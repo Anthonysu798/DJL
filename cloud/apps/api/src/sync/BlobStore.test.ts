@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createS3BlobStore } from "./BlobStore.ts";
+import { FakeBlobStore, blobStoreFromEnv, createS3BlobStore } from "./BlobStore.ts";
 
 function store(respond: (req: { method: string; url: URL }) => Response = () => new Response()) {
   const calls: { method: string; url: URL }[] = [];
@@ -60,5 +60,28 @@ describe("S3 blob store", () => {
     );
     const failing = store(() => new Response("no", { status: 403 }));
     await expect(failing.blobs.write("k", new Uint8Array([1]), "image/png")).rejects.toThrow();
+  });
+});
+
+describe("blob store selection", () => {
+  const s3 = {
+    STORAGE_S3_ENDPOINT: "http://127.0.0.1:9000",
+    STORAGE_ACCESS_KEY_ID: "djl",
+    STORAGE_SECRET_ACCESS_KEY: "djl-local-secret",
+  };
+
+  it("uses real S3 storage whenever it is configured, even with other externals mocked", async () => {
+    const blobs = blobStoreFromEnv({ ...s3, STORAGE_BUCKET: "djl-local" }, { mockExternals: true });
+    expect(blobs).not.toBeInstanceOf(FakeBlobStore);
+    const upload = await blobs.presignUpload("org/o/files/f", "image/png", 4);
+    expect(upload.url.startsWith("http://127.0.0.1:9000/djl-local/org/o/files/f?")).toBe(true);
+  });
+
+  it("falls back to the in-memory store only in mock mode without S3 settings", () => {
+    expect(blobStoreFromEnv({}, { mockExternals: true })).toBeInstanceOf(FakeBlobStore);
+  });
+
+  it("refuses to start without S3 settings outside mock mode", () => {
+    expect(() => blobStoreFromEnv({}, { mockExternals: false })).toThrow(/STORAGE_S3_ENDPOINT/);
   });
 });

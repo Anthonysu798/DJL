@@ -38,7 +38,7 @@ import { TrialService } from "./trial/TrialService.ts";
 import { ADMIN_LOCKOUT, AdminAuth } from "./admin/AdminAuth.ts";
 import { AdminService } from "./admin/AdminService.ts";
 import { GatewayService } from "./gateway/GatewayService.ts";
-import { FakeBlobStore, createS3BlobStore, type BlobStore } from "./sync/BlobStore.ts";
+import { blobStoreFromEnv, type BlobStore } from "./sync/BlobStore.ts";
 import { SyncService } from "./sync/SyncService.ts";
 import { UsageAdminService } from "./usage/UsageAdminService.ts";
 import { UsageService } from "./usage/UsageService.ts";
@@ -226,15 +226,7 @@ export async function startApi(
     onAlert: (alert) => void senders.alerts?.post(alert),
   });
   const version = process.env.DJL_VERSION ?? "dev";
-  const blobs: BlobStore = env.mockExternals
-    ? new FakeBlobStore()
-    : createS3BlobStore({
-        endpoint: requireEnv("STORAGE_S3_ENDPOINT"),
-        region: process.env.STORAGE_S3_REGION ?? "us-east-1",
-        bucket: process.env.STORAGE_BUCKET ?? "djl-sync",
-        accessKeyId: requireEnv("STORAGE_ACCESS_KEY_ID"),
-        secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
-      });
+  const blobs: BlobStore = blobStoreFromEnv(process.env, { mockExternals: env.mockExternals });
   const sync = new SyncService(db, blobs);
   const runLog = new RunLog(db, redis);
   const runner = new ChatRunner({ db, gateway, log: runLog, blobs });
