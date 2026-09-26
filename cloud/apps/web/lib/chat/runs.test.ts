@@ -142,6 +142,7 @@ describe("failureReason", () => {
   it("names credit and window limits and keeps other failures generic", () => {
     expect(failureReason({ code: "insufficient_credits" })).toBe("outOfCredits");
     expect(failureReason({ code: "usage_window_exhausted" })).toBe("usageLimit");
+    expect(failureReason({ code: "usage_window_cut" })).toBe("usageLimit");
     expect(failureReason({ code: "internal" })).toBe("replyFailed");
     expect(failureReason(null)).toBe("replyFailed");
   });

@@ -15,7 +15,8 @@ export function failureReason(
   error: { readonly code: string } | null | undefined,
 ): "outOfCredits" | "usageLimit" | "replyFailed" {
   if (error?.code === "insufficient_credits") return "outOfCredits";
-  if (error?.code === "usage_window_exhausted") return "usageLimit";
+  if (error?.code === "usage_window_exhausted" || error?.code === "usage_window_cut")
+    return "usageLimit";
   return "replyFailed";
 }
 

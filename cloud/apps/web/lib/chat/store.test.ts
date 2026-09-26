@@ -95,6 +95,26 @@ describe("ChatStore", () => {
     expect(reply?.parts).toEqual(messages.find((m) => m.id === reply?.id)?.parts);
   });
 
+  it("keeps a finished run's outcome when a chat is reopened, so a failure reason can show", async () => {
+    const { client, store } = setup();
+    await store.init();
+    const id = await store.send({
+      conversationId: null,
+      parentId: null,
+      parts: text("Hi"),
+      model: "gpt-5",
+      mode: "chat",
+      clientMessageId: newClientId(),
+    });
+    const runId = Object.keys(store.getState().runs)[0]!;
+    await vi.waitFor(() => expect(allDone(store)).toBe(true), { timeout: 10_000 });
+    store.dispose();
+
+    const reloaded = new ChatStore(client);
+    await reloaded.openConversation(id);
+    expect(reloaded.getState().runs[runId]?.status).toBe("succeeded");
+  });
+
   it("blocks on an exhausted window and clears the block after redeeming a bank once", async () => {
     const { mock, store } = setup("exhausted");
     await store.init();

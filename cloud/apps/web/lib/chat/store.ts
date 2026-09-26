@@ -223,7 +223,7 @@ export class ChatStore {
     await this.resumeRuns(id);
   }
 
-  /** Reattaches to unfinished runs on the visible branch, resuming from the last seq seen in this tab. */
+  /** Loads the visible branch's runs and reattaches to unfinished ones, resuming from the last seq seen in this tab. */
   private async resumeRuns(conversationId: string) {
     const view = this.state.views[conversationId];
     if (!view) return;
@@ -239,6 +239,18 @@ export class ChatStore {
       if (!run) continue;
       if (isTerminal(run.status)) {
         writeRunSnapshot(run.id, null);
+        // Kept (not followed) so a failed or cut-off reply still says why.
+        this.trackRun({
+          id: run.id,
+          conversationId,
+          messageId: run.messageId,
+          mode: run.mode,
+          status: run.status,
+          error: run.error,
+          step: null,
+          maxSteps: null,
+          lastSeq: run.lastSeq,
+        });
         continue;
       }
       const snapshot = readRunSnapshot(run.id);
