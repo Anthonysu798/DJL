@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./agent": "./src/agent/runtime.ts",
     "./blobs": "./src/sync/BlobStore.ts",
     "./credits": "./src/credits/LedgerService.ts",
     "./server": "./src/server.ts"

@@ -19,6 +19,7 @@
     "@sentry/bun": "^10.74.0",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
+    "ioredis": "^6.0.0",
     "pg-boss": "^12.31.0",
     "resend": "^6.28.0",
     "stripe": "^22.6.2",

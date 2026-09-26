@@ -6,7 +6,7 @@
  *   "fail"         → retryable provider error before any output
  *   "tool"         → a tool call
  *   "hang"         → (images) never finishes until the request is aborted
- * Image edits return a tiny valid PNG so callers can store the result.
+ * Generated and edited images are a tiny valid PNG so callers can store them.
  */
 import {
   ProviderError,
@@ -99,9 +99,7 @@ export function createFakeProvider(): ProviderAdapter {
           signal.addEventListener("abort", () => reject(new Error("aborted"))),
         );
       return {
-        images: Array.from({ length: req.n }, (_v, i) => ({
-          b64_json: Buffer.from(`fake-image-${i}`).toString("base64"),
-        })),
+        images: Array.from({ length: req.n }, () => ({ b64_json: FAKE_PNG_BASE64 })),
         count: req.n,
       };
     },
