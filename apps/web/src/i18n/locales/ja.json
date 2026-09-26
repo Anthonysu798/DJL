@@ -2607,7 +2607,10 @@
       "denied": "ブラウザーでサインインが拒否されました。",
       "expired": "サインインコードの期限が切れました。もう一度開始してください。",
       "error": "DJL Cloud に接続できませんでした。",
-      "signIn": "DJL Cloud にサインイン"
+      "signInWithBrowser": "ブラウザーでサインイン",
+      "useCodeInstead": "代わりにコードを使用",
+      "finishInBrowser": "ブラウザーでサインインを完了してください。DJL はここで自動的に続行します。",
+      "browserFailed": "ブラウザーでのサインインが完了しませんでした。もう一度試すか、コードを使用してください。"
     }
   },
   "shell": {

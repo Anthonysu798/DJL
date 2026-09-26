@@ -805,6 +805,10 @@ export function createWsNativeApi(): NativeApi {
       pollSignIn: (input) =>
         transport.request(WS_METHODS.cloudPollSignIn, input, { timeoutMs: 20_000 }),
       signOut: () => transport.request(WS_METHODS.cloudSignOut, {}, { timeoutMs: 20_000 }),
+      startBrowserSignIn: () =>
+        transport.request(WS_METHODS.cloudStartBrowserSignIn, {}, { timeoutMs: 20_000 }),
+      completeBrowserSignIn: (input) =>
+        transport.request(WS_METHODS.cloudCompleteBrowserSignIn, input, { timeoutMs: 20_000 }),
     },
     provider: {
       getComposerCapabilities: (input) =>
