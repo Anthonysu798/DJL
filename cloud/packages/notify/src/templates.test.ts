@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MockOutbox } from "./mock.ts";
-import { emailOtp, lowCredit, securityNotice } from "./templates.ts";
+import { emailOtp, lowCredit, securityNotice, taskFinished } from "./templates.ts";
 
 describe("templates", () => {
   it("renders English and Simplified Chinese OTP emails and escapes html", () => {
@@ -11,6 +11,15 @@ describe("templates", () => {
     expect(zh.subject).toContain("验证码");
     const notice = securityNotice("a@b.c", "<script>", "now", "https://x", "en");
     expect(notice.html).toContain("&lt;script&gt;");
+  });
+  it("renders task-finished emails in both languages", () => {
+    const en = taskFinished("a@b.c", true, "Trip plan", "https://app/chat/1", "en");
+    expect(en.subject).toBe("Your DJL task is done");
+    expect(en.text).toContain('"Trip plan"');
+    expect(en.text).toContain("https://app/chat/1");
+    const zh = taskFinished("a@b.c", false, null, "https://app/chat/1", "zh-Hans");
+    expect(zh.subject).toBe("你的 DJL 任务未能完成");
+    expect(zh.text).toContain("未命名任务");
   });
   it("captures sends in the mock outbox", async () => {
     const outbox = new MockOutbox();
