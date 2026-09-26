@@ -37,7 +37,7 @@ export {
   type AgentRunJobData,
 } from "../runs/RunExecutor.ts";
 export { RunInterruptedError } from "./AgentRunner.ts";
-export { resumeBlockedRuns } from "./resume.ts";
+export { resumeBlockedRuns, windowsHaveRoom } from "./resume.ts";
 
 export interface AgentRuntimeInput {
   readonly db: DjlDatabase;

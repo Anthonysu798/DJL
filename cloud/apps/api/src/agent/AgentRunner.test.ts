@@ -7,7 +7,7 @@ import { agentHarness } from "../testing/agent.ts";
 import { AGENT_LIMITS, RunInterruptedError } from "./AgentRunner.ts";
 import { FINAL_STEP_NOTE, SYSTEM_PROMPT } from "./context.ts";
 import { createFakeWebSearch } from "./exa.ts";
-import { resumeBlockedRuns, resumeWindowBlockedRuns } from "./resume.ts";
+import { resumeBlockedRuns, resumeWindowBlockedRuns, windowsHaveRoom } from "./resume.ts";
 
 const h = agentHarness();
 afterAll(() => h.close());
@@ -248,6 +248,37 @@ describe("usage blocking", () => {
     await resumeWindowBlockedRuns({ db: h.db, enqueue }, null);
     expect(enqueued).toEqual(expect.arrayContaining([mine.runId, theirs.runId]));
     expect(enqueued).not.toContain(broke.runId);
+  });
+
+  it("wakes window-blocked runs on its own once the user's windows have room again", async () => {
+    const block = async (label: string) => {
+      const t = await h.task(label, "x", { credits: 5 });
+      await h.db
+        .update(schema.runs)
+        .set({
+          status: "blocked_on_usage",
+          error: { code: "usage_window_exhausted", message: "limit" },
+        })
+        .where(eq(schema.runs.id, t.runId));
+      return t;
+    };
+    const reopened = await block("agent-window-reopened");
+    const stillFull = await block("agent-window-full");
+    const enqueued: string[] = [];
+    await resumeBlockedRuns({
+      db: h.db,
+      ledger: h.ledger,
+      enqueue: async (id) => void enqueued.push(id),
+      olderThanMs: -60_000,
+      windowsHaveRoom: async (userId) => userId === reopened.p.userId,
+    });
+    expect(enqueued).toContain(reopened.runId);
+    expect(enqueued).not.toContain(stillFull.runId);
+  });
+
+  it("sees room in the windows of a user who has spent nothing", async () => {
+    const t = await h.task("agent-window-fresh", "x", { credits: 5 });
+    await expect(windowsHaveRoom(h.db)(t.p.userId, t.p.orgId)).resolves.toBe(true);
   });
 
   it("blocks when a priced tool cannot be reserved, then runs that tool call on resume", async () => {
