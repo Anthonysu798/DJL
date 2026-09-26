@@ -109,16 +109,16 @@ describe("ChatStore", () => {
       });
     await expect(send()).rejects.toMatchObject({ code: "usage_window_exhausted" });
     expect(store.getState().usageBlock?.resetsAt).toMatch(/^\d{4}-/);
-    const banksBefore = store.getState().usage!.banks.length;
+    const banksBefore = store.getState().usage!.banks.count;
 
     mock.faults.failNext.push({ method: "POST", path: /redeem$/, status: 503 });
     await expect(store.redeemBank()).rejects.toMatchObject({ status: 503 });
     await store.redeemBank();
 
-    const redeems = mock.requests.filter((r) => r.path.endsWith("/redeem"));
+    const redeems = mock.requests.filter((r) => r.path === "/v1/usage/resets/redeem");
     expect(new Set(redeems.map((r) => JSON.stringify(r.body))).size).toBe(1);
     expect(store.getState().usageBlock).toBeNull();
-    expect(store.getState().usage!.banks).toHaveLength(banksBefore - 1);
+    expect(store.getState().usage!.banks.count).toBe(banksBefore - 1);
     await expect(send()).resolves.toBeTruthy();
   });
 

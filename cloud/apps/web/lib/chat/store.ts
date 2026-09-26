@@ -15,7 +15,7 @@ import type {
   CloudRunStatus,
   CloudSendMessageInput,
   CloudSendMessageResponse,
-  CloudUsageStatusResponse,
+  CloudUsageWindowsResponse,
   CloudUserMessagePart,
 } from "@synara/contracts/cloud";
 
@@ -59,7 +59,7 @@ export interface ChatState {
   readonly views: Readonly<Record<string, ConversationView>>;
   readonly runs: Readonly<Record<string, RunView>>;
   readonly models: readonly CloudModel[];
-  readonly usage: CloudUsageStatusResponse | null;
+  readonly usage: CloudUsageWindowsResponse | null;
   readonly me: CloudMeResponse | null;
   /** Set when the API refused a send with usage_window_exhausted. */
   readonly usageBlock: UsageBlock | null;
@@ -482,9 +482,9 @@ export class ChatStore {
   /** Redeems the oldest banked reset. The idempotency key survives a failed attempt so a retry can't spend two banks. */
   async redeemBank() {
     this.redeemKey ??= newClientId();
-    const { status } = await this.client.redeemBank(this.redeemKey);
+    const { usage } = await this.client.redeemBank(this.redeemKey);
     this.redeemKey = null;
-    this.set({ usage: status, usageBlock: null });
+    this.set({ usage, usageBlock: null });
   }
 }
 
@@ -501,7 +501,7 @@ function mergeMessages(
   return [...byId.values()];
 }
 
-export function windowExhausted(usage: CloudUsageStatusResponse): UsageBlock | null {
+export function windowExhausted(usage: CloudUsageWindowsResponse): UsageBlock | null {
   const { fiveHour, week } = usage.windows;
   if (BigInt(week.remaining) <= 0n && BigInt(week.limit) > 0n) return { resetsAt: week.resetsAt };
   if (BigInt(fiveHour.remaining) <= 0n && BigInt(fiveHour.limit) > 0n)

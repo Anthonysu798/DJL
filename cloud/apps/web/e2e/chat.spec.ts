@@ -32,7 +32,7 @@ async function waitForReply(page: Page) {
 }
 
 test("new chat streams, then edit, regenerate, and branch switching", async ({ page }) => {
-  await boot(page);
+  await boot(page, { tickMs: 40 }); // slow enough to see the Stop button mid-stream
   await page.goto("/chat");
   await send(page, "How do tides work?");
   await expect(page).toHaveURL(/\/chat\/conv_/);

@@ -1,7 +1,7 @@
 "use client";
 /* oxlint-disable react/no-array-index-key -- a snapshot's messages and parts are fixed and carry no ids */
-import type { CloudPublicShareResponse } from "@synara/contracts/cloud";
-import { FileText, ImageIcon } from "lucide-react";
+import type { CloudImageRefPart, CloudPublicShareResponse } from "@synara/contracts/cloud";
+import { FileText, ImageOff } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -13,6 +13,31 @@ import { useLocale } from "@/lib/locale-context";
 
 import { Markdown } from "./Markdown";
 import { TaskSteps } from "./TaskSteps";
+
+/** A shared image through the share's own short-lived signed URL; a placeholder once it's gone. */
+function SharedImage({ part, url }: { part: CloudImageRefPart; url: string | undefined }) {
+  const { d } = useLocale();
+  const [failed, setFailed] = useState(false);
+  if (!url || failed)
+    return (
+      <span className="inline-flex w-fit items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
+        <ImageOff className="size-4" aria-hidden />
+        {d.chat.imageUnavailable}
+      </span>
+    );
+  return (
+    // Signed storage URLs can't go through next/image's optimizer.
+    <img
+      src={url}
+      alt={d.chat.image}
+      onError={() => setFailed(true)}
+      className="w-full max-w-sm rounded-xl border border-border bg-muted object-cover"
+      style={{
+        aspectRatio: part.width && part.height ? `${part.width} / ${part.height}` : undefined,
+      }}
+    />
+  );
+}
 
 /** Read-only view of a shared snapshot. No account needed; nothing here can change the chat. */
 export function SharedConversation({ token }: { token: string }) {
@@ -75,13 +100,7 @@ export function SharedConversation({ token }: { token: string }) {
                           {p.name}
                         </span>
                       ) : p.type === "image_ref" ? (
-                        <span
-                          key={j}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground"
-                        >
-                          <ImageIcon className="size-4" aria-hidden />
-                          {d.chat.image}
-                        </span>
+                        <SharedImage key={j} part={p} url={share.imageUrls[p.fileId]} />
                       ) : null,
                     )}
                   </div>
@@ -92,13 +111,7 @@ export function SharedConversation({ token }: { token: string }) {
                       p.type === "text" ? (
                         <Markdown key={j} text={p.text} />
                       ) : p.type === "image_ref" ? (
-                        <span
-                          key={j}
-                          className="inline-flex w-fit items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground"
-                        >
-                          <ImageIcon className="size-4" aria-hidden />
-                          {d.chat.image}
-                        </span>
+                        <SharedImage key={j} part={p} url={share.imageUrls[p.fileId]} />
                       ) : null,
                     )}
                   </div>

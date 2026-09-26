@@ -3,9 +3,12 @@
  * Playwright. Enabled in the browser only with NEXT_PUBLIC_DJL_MOCK_API=true.
  *
  * - Seeded from the contract fixtures in packages/contracts/fixtures/cloud.
+ * - Paths, status codes, and error codes follow cloud/apps/api's routes.
  * - Every request body is decoded with its contract input schema (400 on
  *   mismatch) and every response is checked against its response schema, so
- *   the client cannot drift from the contract while the real API is built.
+ *   the client cannot drift from the contract.
+ * - Mutations need the CSRF token from GET /v1/csrf, like cookie requests to the API.
+ * - Uploads are verified on complete (size and SHA-256) like the API does.
  * - Runs are scripted event logs released over time, served as SSE with
  *   `after=<seq>` resume, exactly like the real run endpoints.
  */
@@ -13,7 +16,7 @@ import * as C from "@synara/contracts/cloud";
 import conversationDetailFixture from "@synara/contracts/fixtures/cloud/conversation-detail.json";
 import meFixture from "@synara/contracts/fixtures/cloud/me.json";
 import modelsFixture from "@synara/contracts/fixtures/cloud/models.json";
-import usageStatusFixture from "@synara/contracts/fixtures/cloud/usage-status.json";
+import usageWindowsFixture from "@synara/contracts/fixtures/cloud/usage-windows.json";
 import { Schema } from "effect";
 
 import type { FetchLike } from "../client";
@@ -49,6 +52,10 @@ interface MockRun {
 
 interface MockFile {
   file: Enc<typeof C.CloudFile>;
+  /** Declared at POST /v1/files; checked on complete. */
+  sha256: string;
+  /** The uploaded bytes' hash and size, once PUT. */
+  uploaded: { sha256: string; size: number } | null;
   url: string | null;
 }
 
@@ -106,7 +113,9 @@ export interface MockApi {
   readonly fetch: FetchLike;
   readonly db: MockDb;
   readonly faults: MockFaults;
-  readonly requests: Array<{ method: string; path: string; body: unknown }>;
+  /** The double-submit token mutations must send; change it to simulate a rotated cookie. */
+  readonly csrf: { token: string };
+  readonly requests: Array<{ method: string; path: string; body: unknown; csrf: string | null }>;
 }
 
 const DAY = 86_400_000;
@@ -158,7 +167,7 @@ function iso(ms: number) {
 
 export function seedDb(now: number, scenario: MockScenario): MockDb {
   const detail = conversationDetailFixture as Enc<typeof C.CloudConversationDetailResponse>;
-  const usage = usageStatusFixture as Enc<typeof C.CloudUsageStatusResponse>;
+  const usage = usageWindowsFixture as Enc<typeof C.CloudUsageWindowsResponse>;
   const ago = (ms: number) => iso(now - ms);
   const conversations: Conversation[] =
     scenario === "empty"
@@ -167,6 +176,7 @@ export function seedDb(now: number, scenario: MockScenario): MockDb {
           {
             ...detail.conversation,
             pinned: true,
+            lastMessageAt: ago(3 * DAY),
             createdAt: ago(3 * DAY),
             updatedAt: ago(3 * DAY),
           },
@@ -211,6 +221,8 @@ export function seedDb(now: number, scenario: MockScenario): MockDb {
           status: "ready",
           createdAt: ago(3 * DAY),
         },
+        sha256: "",
+        uploaded: null,
         url: "data:text/plain;charset=utf-8,Mock%20itinerary",
       },
       file_2: {
@@ -222,6 +234,8 @@ export function seedDb(now: number, scenario: MockScenario): MockDb {
           status: "ready",
           createdAt: ago(3 * DAY),
         },
+        sha256: "",
+        uploaded: null,
         url: generatedImageDataUrl(3, "Kyoto"),
       },
     },
@@ -235,9 +249,12 @@ export function seedDb(now: number, scenario: MockScenario): MockDb {
       fiveHourResetsAt: iso(now + 2 * 3_600_000 + 14 * 60_000),
       weekResetsAt: iso(now + 4 * DAY),
       banks: [
-        ...usage.banks.map((b) =>
-          Object.assign({}, b, { grantedAt: ago(10 * DAY), expiresAt: iso(now + 80 * DAY) }),
-        ),
+        {
+          id: "bank_1",
+          source: "plan_schedule" as const,
+          grantedAt: ago(10 * DAY),
+          expiresAt: iso(now + 80 * DAY),
+        },
         {
           id: "bank_2",
           source: "admin" as const,
@@ -252,7 +269,15 @@ export function seedDb(now: number, scenario: MockScenario): MockDb {
 }
 
 function conv(id: string, title: string, at: string): Conversation {
-  return { id, title, pinned: false, archived: false, createdAt: at, updatedAt: at };
+  return {
+    id,
+    title,
+    pinned: false,
+    archived: false,
+    lastMessageAt: at,
+    createdAt: at,
+    updatedAt: at,
+  };
 }
 
 function msg(
@@ -309,6 +334,7 @@ export function createMockApi(options: MockApiOptions): MockApi {
   const appOrigin = options.appOrigin ?? "https://app.slcor.com";
   const db = options.persist?.load() ?? seedDb(now(), options.scenario ?? "default");
   const faults: MockFaults = { dropStreamAfter: null, failNext: [] };
+  const csrf = { token: "mock-csrf-token-mock-csrf-token-mock-csrf-t" };
   const requests: MockApi["requests"] = [];
   const save = () => options.persist?.save(db);
 
@@ -469,6 +495,8 @@ export function createMockApi(options: MockApiOptions): MockApi {
           status: "ready",
           createdAt: iso(now()),
         },
+        sha256: "",
+        uploaded: null,
         url: generatedImageDataUrl(db.nextId + variant, prompt.slice(0, 40)),
       };
       text("Here's the image. ");
@@ -534,15 +562,22 @@ export function createMockApi(options: MockApiOptions): MockApi {
 
   // --- usage --------------------------------------------------------------------
 
-  function usageStatus(): Enc<typeof C.CloudUsageStatusResponse> {
+  /** Live banks, oldest first; redeeming uses the oldest. */
+  const liveBanks = () =>
+    db.usage.banks
+      .filter((b) => Date.parse(b.expiresAt) > now())
+      .toSorted((a, b) => a.grantedAt.localeCompare(b.grantedAt));
+
+  function usageWindows(): Enc<typeof C.CloudUsageWindowsResponse> {
     const u = db.usage;
+    const banks = liveBanks();
     return {
       planId: u.planId,
       windows: {
         fiveHour: win("five_hour", u.fiveHourLimit, u.fiveHourUsed, u.fiveHourResetsAt),
         week: win("week", u.weekLimit, u.weekUsed, u.weekResetsAt),
       },
-      banks: u.banks.filter((b) => Date.parse(b.expiresAt) > now()),
+      banks: { count: banks.length, nextExpiresAt: banks[0]?.expiresAt ?? null },
     };
   }
 
@@ -654,23 +689,29 @@ export function createMockApi(options: MockApiOptions): MockApi {
       () => checked(C.CloudMeResponse, meFixture as Enc<typeof C.CloudMeResponse>),
     ],
     ["GET", /^\/v1\/models$/, () => checked(C.CloudModelsResponse, { models: [...MOCK_MODELS] })],
-    ["GET", /^\/v1\/usage\/status$/, () => checked(C.CloudUsageStatusResponse, usageStatus())],
+    ["GET", /^\/v1\/csrf$/, () => checked(C.CloudCsrfResponse, { token: csrf.token })],
+    ["GET", /^\/v1\/usage\/windows$/, () => checked(C.CloudUsageWindowsResponse, usageWindows())],
+    [
+      "GET",
+      /^\/v1\/usage\/banks$/,
+      () => checked(C.CloudResetBanksResponse, { banks: liveBanks() }),
+    ],
     [
       "POST",
-      /^\/v1\/usage\/banks\/redeem$/,
+      /^\/v1\/usage\/resets\/redeem$/,
       (_m, body) => {
         const { idempotencyKey } = decode(C.CloudRedeemBankInput, body);
         const prior = db.redeemed[idempotencyKey];
         if (prior) return prior;
-        const bank = usageStatus().banks[0];
-        if (!bank) throw new HttpError(409, "no_reset_bank", "No banked resets left.");
+        const bank = liveBanks()[0];
+        if (!bank) throw new HttpError(409, "no_reset_bank", "You have no banked resets to use.");
         db.usage.banks = db.usage.banks.filter((b) => b.id !== bank.id);
         db.usage.fiveHourUsed = 0;
         db.usage.weekUsed = 0;
         db.usage.weekResetsAt = iso(now() + 7 * DAY);
         const res = checked(C.CloudRedeemBankResponse, {
           redeemedBankId: bank.id,
-          status: usageStatus(),
+          usage: usageWindows(),
         });
         db.redeemed[idempotencyKey] = res;
         return res;
@@ -681,9 +722,13 @@ export function createMockApi(options: MockApiOptions): MockApi {
       /^\/v1\/conversations$/,
       (_m, _b, url) => {
         const archived = url.searchParams.get("archived") === "true";
+        // Pinned first, then most recent, like the API.
         const conversations = db.conversations
           .filter((c) => c.archived === archived)
-          .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+          .toSorted(
+            (a, b) =>
+              Number(b.pinned) - Number(a.pinned) || b.lastMessageAt.localeCompare(a.lastMessageAt),
+          );
         return checked(C.CloudConversationListResponse, { conversations, nextCursor: null });
       },
     ],
@@ -695,7 +740,7 @@ export function createMockApi(options: MockApiOptions): MockApi {
         const at = iso(now());
         const c = { ...conv(id("conv"), input.title ?? "", at), title: input.title ?? null };
         db.conversations.push(c);
-        return checked(C.CloudConversation, c);
+        return json(201, checked(C.CloudCreateConversationResponse, c));
       },
     ],
     [
@@ -708,7 +753,8 @@ export function createMockApi(options: MockApiOptions): MockApi {
         const needle = q.toLowerCase();
         const results: Enc<typeof C.CloudConversationSearchHit>[] = [];
         for (const c of db.conversations) {
-          const hit = db.messages.find(
+          // The newest matching message, like the API.
+          const hit = db.messages.findLast(
             (m) => m.conversationId === c.id && textOf(m).toLowerCase().includes(needle),
           );
           if (hit) {
@@ -744,7 +790,7 @@ export function createMockApi(options: MockApiOptions): MockApi {
         if (input.title !== undefined) c.title = input.title;
         if (input.pinned !== undefined) c.pinned = input.pinned;
         if (input.archived !== undefined) c.archived = input.archived;
-        return checked(C.CloudConversation, c);
+        return checked(C.CloudUpdateConversationResponse, c);
       },
     ],
     [
@@ -776,13 +822,14 @@ export function createMockApi(options: MockApiOptions): MockApi {
         db.messages.push(message);
         const { reply, run } = startRun(c.id, message, input.model, input.mode);
         c.updatedAt = at;
+        c.lastMessageAt = at;
         if (!c.title) {
           const firstText = input.parts.find((p) => p.type === "text");
           c.title = (firstText?.type === "text" ? firstText.text : "New chat").slice(0, 60);
         }
         const res = checked(C.CloudSendMessageResponse, { message, reply, run });
         db.sent[`${c.id}:${input.clientMessageId}`] = res;
-        return res;
+        return json(201, res);
       },
     ],
     [
@@ -791,13 +838,15 @@ export function createMockApi(options: MockApiOptions): MockApi {
       (m, body) => {
         const c = findConversation(decodeURIComponent(m[1]!));
         const input = decode(C.CloudRegenerateInput, body ?? {});
+        // Only an assistant reply can be regenerated; anything else is a 404, like the API.
         const target = db.messages.find(
-          (x) => x.id === decodeURIComponent(m[2]!) && x.conversationId === c.id,
+          (x) =>
+            x.id === decodeURIComponent(m[2]!) &&
+            x.conversationId === c.id &&
+            x.role === "assistant",
         );
-        if (!target) throw new HttpError(404, "not_found", "Message not found");
-        const parent =
-          target.role === "user" ? target : db.messages.find((x) => x.id === target.parentId);
-        if (!parent) throw new HttpError(400, "bad_request", "Nothing to regenerate");
+        const parent = target && db.messages.find((x) => x.id === target.parentId);
+        if (!target || !parent) throw new HttpError(404, "not_found", "Not found.");
         assertUsageAvailable();
         const { reply, run } = startRun(
           c.id,
@@ -806,7 +855,11 @@ export function createMockApi(options: MockApiOptions): MockApi {
           runMode(target),
         );
         c.updatedAt = iso(now());
-        return checked(C.CloudSendMessageResponse, { message: messageView(parent), reply, run });
+        c.lastMessageAt = c.updatedAt;
+        return json(
+          201,
+          checked(C.CloudRegenerateResponse, { message: messageView(parent), reply, run }),
+        );
       },
     ],
     [
@@ -839,9 +892,11 @@ export function createMockApi(options: MockApiOptions): MockApi {
     ],
     [
       "POST",
-      /^\/v1\/files\/presign$/,
+      /^\/v1\/files$/,
       (_m, body) => {
         const input = decode(C.CloudFilePresignInput, body);
+        if (input.purpose === "image" && !input.mimeType.startsWith("image/"))
+          throw new HttpError(400, "unsupported_type", "Images must be PNG, JPEG, GIF, or WebP.");
         const fileId = id("file");
         const file = {
           id: fileId,
@@ -851,16 +906,19 @@ export function createMockApi(options: MockApiOptions): MockApi {
           status: "pending" as const,
           createdAt: iso(now()),
         };
-        db.files[fileId] = { file, url: null };
-        return checked(C.CloudFilePresignResponse, {
-          file,
-          upload: {
-            url: `${options.baseUrl}/__mock_storage__/${fileId}`,
-            method: "PUT",
-            headers: { "content-type": input.mimeType, "content-length": String(input.size) },
-            expiresAt: iso(now() + 15 * 60_000),
-          },
-        });
+        db.files[fileId] = { file, sha256: input.sha256, uploaded: null, url: null };
+        return json(
+          201,
+          checked(C.CloudFilePresignResponse, {
+            file,
+            upload: {
+              url: `${options.baseUrl}/__mock_storage__/${fileId}`,
+              method: "PUT",
+              headers: { "content-type": input.mimeType, "content-length": String(input.size) },
+              expiresAt: iso(now() + 15 * 60_000),
+            },
+          }),
+        );
       },
     ],
     [
@@ -868,18 +926,32 @@ export function createMockApi(options: MockApiOptions): MockApi {
       /^\/v1\/files\/([^/]+)\/complete$/,
       (m) => {
         const f = db.files[decodeURIComponent(m[1]!)];
-        if (!f) throw new HttpError(404, "not_found", "File not found");
-        if (!f.url) throw new HttpError(400, "bad_request", "Upload not received");
+        if (!f) throw new HttpError(404, "not_found", "Not found.");
+        if (f.file.status === "ready") return checked(C.CloudFile, f.file);
+        if (f.file.status !== "pending")
+          throw new HttpError(400, "upload_rejected", "This upload was rejected.");
+        if (!f.uploaded || !f.url)
+          throw new HttpError(400, "upload_missing", "Upload the file before completing it.");
+        if (f.uploaded.size !== f.file.size || f.uploaded.sha256 !== f.sha256) {
+          f.file = { ...f.file, status: "rejected" };
+          f.url = null;
+          throw new HttpError(
+            400,
+            "upload_mismatch",
+            "The uploaded file does not match what was declared.",
+          );
+        }
         f.file = { ...f.file, status: "ready" };
         return checked(C.CloudFile, f.file);
       },
     ],
     [
       "GET",
-      /^\/v1\/files\/([^/]+)\/download$/,
+      /^\/v1\/files\/([^/]+)\/url$/,
       (m) => {
         const f = db.files[decodeURIComponent(m[1]!)];
-        if (!f?.url) throw new HttpError(404, "not_found", "File not found");
+        if (!f?.url || f.file.status !== "ready")
+          throw new HttpError(404, "not_found", "Not found.");
         return checked(C.CloudFileDownloadResponse, {
           url: f.url,
           expiresAt: iso(now() + 5 * 60_000),
@@ -888,10 +960,14 @@ export function createMockApi(options: MockApiOptions): MockApi {
     ],
     [
       "POST",
-      /^\/v1\/shares$/,
-      (_m, body) => {
-        const input = decode(C.CloudCreateShareInput, body);
-        const c = findConversation(input.conversationId);
+      /^\/v1\/conversations\/([^/]+)\/shares$/,
+      (m, body) => {
+        const c = findConversation(decodeURIComponent(m[1]!));
+        const input = decode(C.CloudCreateShareInput, body ?? {});
+        // Without a messageId the API snapshots the branch on screen; the mock uses the newest message.
+        const leafId =
+          input.messageId ?? db.messages.findLast((x) => x.conversationId === c.id)?.id;
+        if (!leafId) throw new HttpError(404, "not_found", "Not found.");
         const token = `tok_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
         const share = {
           id: id("share"),
@@ -900,13 +976,14 @@ export function createMockApi(options: MockApiOptions): MockApi {
           createdAt: iso(now()),
           revokedAt: null,
         };
-        const messages = branchTo(input.messageId).map((x) => ({
-          role: x.role,
-          parts: x.parts,
-          createdAt: x.createdAt,
-        }));
+        const messages = branchTo(leafId)
+          .filter((x) => x.parts.length > 0)
+          .map((x) => ({ role: x.role, parts: x.parts, createdAt: x.createdAt }));
         db.shares.push({ share, token, messages });
-        return checked(C.CloudCreateShareResponse, { share, url: `${appOrigin}/share/${token}` });
+        return json(
+          201,
+          checked(C.CloudCreateShareResponse, { share, url: `${appOrigin}/share/${token}` }),
+        );
       },
     ],
     [
@@ -919,9 +996,9 @@ export function createMockApi(options: MockApiOptions): MockApi {
       /^\/v1\/shares\/([^/]+)$/,
       (m) => {
         const s = db.shares.find((x) => x.share.id === decodeURIComponent(m[1]!));
-        if (!s) throw new HttpError(404, "not_found", "Share not found");
-        s.share = { ...s.share, revokedAt: iso(now()) };
-        return null;
+        if (!s) throw new HttpError(404, "not_found", "Not found.");
+        s.share = { ...s.share, revokedAt: s.share.revokedAt ?? iso(now()) };
+        return checked(C.CloudRevokeShareResponse, { share: s.share });
       },
     ],
     [
@@ -931,11 +1008,19 @@ export function createMockApi(options: MockApiOptions): MockApi {
         const s = db.shares.find(
           (x) => x.token === decodeURIComponent(m[1]!) && x.share.revokedAt === null,
         );
-        if (!s) throw new HttpError(404, "not_found", "This link was removed or never existed.");
+        if (!s) throw new HttpError(404, "not_found", "Not found.");
+        // Signed URLs for the snapshot's images only, like the API.
+        const imageUrls: Record<string, string> = {};
+        for (const message of s.messages)
+          for (const p of message.parts) {
+            const url = p.type === "image_ref" ? db.files[p.fileId]?.url : null;
+            if (url && p.type === "image_ref") imageUrls[p.fileId] = url;
+          }
         return checked(C.CloudPublicShareResponse, {
           title: s.share.title,
           createdAt: s.share.createdAt,
           messages: s.messages,
+          imageUrls,
         });
       },
     ],
@@ -951,6 +1036,7 @@ export function createMockApi(options: MockApiOptions): MockApi {
     const blob = init?.body instanceof Blob ? init.body : new Blob([String(init?.body ?? "")]);
     const declared = new Headers(init?.headers).get("content-type");
     if (declared !== f.file.mimeType) return new Response(null, { status: 403 });
+    f.uploaded = { sha256: await sha256Hex(blob), size: blob.size };
     f.url = blob.size < 1_500_000 ? await toDataUrl(blob, f.file.mimeType) : objectUrl(blob);
     save();
     return new Response(null, { status: 200 });
@@ -961,7 +1047,8 @@ export function createMockApi(options: MockApiOptions): MockApi {
     const method = (init?.method ?? "GET").toUpperCase();
     const path = url.pathname.replace(new URL(options.baseUrl).pathname.replace(/\/$/, ""), "");
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
-    requests.push({ method, path: `${path}${url.search}`, body });
+    const presentedCsrf = new Headers(init?.headers).get(C.CLOUD_CSRF_HEADER);
+    requests.push({ method, path: `${path}${url.search}`, body, csrf: presentedCsrf });
     if (latency > 0) await new Promise((r) => setTimeout(r, latency));
     const faultIndex = faults.failNext.findIndex((f) => f.method === method && f.path.test(path));
     if (faultIndex !== -1) {
@@ -973,14 +1060,18 @@ export function createMockApi(options: MockApiOptions): MockApi {
     }
     const storage = path.match(/^\/__mock_storage__\/([^/]+)$/);
     if (storage && method === "PUT") return storagePut(storage[1]!, init);
+    if (method !== "GET" && presentedCsrf !== csrf.token)
+      return json(403, {
+        error: { code: "csrf_token", message: "Refresh the page and try again.", traceId: "mock" },
+      });
     for (const [m, re, handler] of routes) {
       if (m !== method) continue;
       const match = path.match(re);
       if (!match) continue;
       try {
-        const result = handler(match, body, url, init);
-        if (result instanceof Response) return result;
+        const result = await handler(match, body, url, init);
         save();
+        if (result instanceof Response) return result;
         return result === null ? new Response(null, { status: 204 }) : json(200, result);
       } catch (e) {
         if (e instanceof HttpError)
@@ -1000,7 +1091,7 @@ export function createMockApi(options: MockApiOptions): MockApi {
     });
   };
 
-  return { fetch, db, faults, requests };
+  return { fetch, db, faults, csrf, requests };
 }
 
 /** Splits text into three-word chunks so replies stream like a model's output. */
@@ -1029,6 +1120,11 @@ function json(status: number, value: unknown) {
     status,
     headers: { "content-type": "application/json" },
   });
+}
+
+async function sha256Hex(blob: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function toDataUrl(blob: Blob, mimeType: string): Promise<string> {
