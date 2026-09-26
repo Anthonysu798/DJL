@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { createChatClient } from "./client";
 import { createMockApi } from "./mock/server";
-import { applyEventToParts, followRun } from "./runs";
+import { applyEventToParts, failureReason, followRun } from "./runs";
 
 const BASE = "https://api.test";
 
@@ -135,5 +135,14 @@ describe("followRun", () => {
       signal: new AbortController().signal,
     });
     expect(again).toEqual({ lastSeq: first.lastSeq, status: "succeeded" });
+  });
+});
+
+describe("failureReason", () => {
+  it("names credit and window limits and keeps other failures generic", () => {
+    expect(failureReason({ code: "insufficient_credits" })).toBe("outOfCredits");
+    expect(failureReason({ code: "usage_window_exhausted" })).toBe("usageLimit");
+    expect(failureReason({ code: "internal" })).toBe("replyFailed");
+    expect(failureReason(null)).toBe("replyFailed");
   });
 });

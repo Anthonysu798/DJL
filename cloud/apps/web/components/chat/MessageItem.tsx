@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatBytes } from "@/lib/chat/attachments";
 import { useChatClient } from "@/lib/chat/context";
-import { isTerminal } from "@/lib/chat/runs";
+import { failureReason, isTerminal } from "@/lib/chat/runs";
 import type { RunView } from "@/lib/chat/store";
 import type { Siblings } from "@/lib/chat/tree";
 import { fill } from "@/lib/i18n";
@@ -279,7 +279,7 @@ function AssistantMessage(props: MessageItemProps) {
       {run?.status === "failed" ? (
         <p className="flex items-center gap-2 text-sm text-danger-fg" role="alert">
           <CircleAlert className="size-4" aria-hidden />
-          {d.chat.replyFailed}
+          {d.chat[failureReason(run.error)]}
         </p>
       ) : null}
       {run?.status === "cancelled" && run.mode !== "task" ? (

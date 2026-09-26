@@ -6,7 +6,8 @@
 import http from "node:http";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
-import { createDatabase } from "@djl/db";
+import { createDatabase, schema } from "@djl/db";
+import { and, eq } from "drizzle-orm";
 import {
   MockOutbox,
   createResendSender,
@@ -23,7 +24,7 @@ import { Redis } from "ioredis";
 import { HttpRouter } from "effect/unstable/http";
 
 import { makeAccessTokenVerifier } from "./auth/accessTokens.ts";
-import { createAuth, type AuthNotifier } from "./auth/auth.ts";
+import { createAuth, PERSONAL_ORG_METADATA, type AuthNotifier } from "./auth/auth.ts";
 import { makePrincipalResolver } from "./auth/guard.ts";
 import { makeLocaleLookup } from "./auth/locale.ts";
 import { createSessionRevocations } from "./auth/revocations.ts";
@@ -33,6 +34,7 @@ import {
   createStripeGateway,
   type StripeGateway,
 } from "./billing/StripeGateway.ts";
+import { grantWeeklyFreeAllowance } from "./credits/freeAllowance.ts";
 import { LedgerService } from "./credits/LedgerService.ts";
 import { TrialService } from "./trial/TrialService.ts";
 import { ADMIN_LOCKOUT, AdminAuth } from "./admin/AdminAuth.ts";
@@ -158,12 +160,31 @@ export async function startApi(
   // Auth throttles, the session denylist, and admin lockouts are shared by every instance.
   const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
   const revocations = createSessionRevocations(redis);
+  const ledger = new LedgerService(db);
   const auth = createAuth({
     env,
     db,
     notifier: makeNotifier(env, senders, makeLocaleLookup(db)),
     redis,
     revocations,
+    onEmailVerified: async (userId) => {
+      const [personal] = await db
+        .select({ orgId: schema.member.organizationId })
+        .from(schema.member)
+        .innerJoin(schema.organization, eq(schema.organization.id, schema.member.organizationId))
+        .where(
+          and(
+            eq(schema.member.userId, userId),
+            eq(schema.organization.metadata, PERSONAL_ORG_METADATA),
+          ),
+        );
+      if (personal)
+        await grantWeeklyFreeAllowance(db, ledger, {
+          userId,
+          orgId: personal.orgId,
+          actor: "system:signup",
+        });
+    },
   });
   const region = process.env.FLY_REGION ?? "local";
   const readiness = {
@@ -177,7 +198,6 @@ export async function startApi(
     },
   };
 
-  const ledger = new LedgerService(db);
   const verifyAccessToken = makeAccessTokenVerifier({
     issuer: env.apiPublicUrl,
     loadJwks: () => auth.api.getJwks(),

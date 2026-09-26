@@ -28,7 +28,7 @@ describe("safeNext", () => {
       "@evil.example",
       "data:text/html,hi",
     ])
-      expect(safeNext(value), String(value)).toBe("/account");
+      expect(safeNext(value), String(value)).toBe("/chat");
   });
 
   it("uses the given fallback", () => {

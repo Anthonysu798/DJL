@@ -151,6 +151,9 @@ const dict = {
       thinking: "Thinking…",
       stopped: "Stopped",
       replyFailed: "Something went wrong while writing this reply.",
+      outOfCredits: "You're out of credits. Add credits or upgrade to keep chatting.",
+      usageLimit:
+        "You've reached a usage limit. Use a banked reset or wait for the window to reset.",
       blockedOnUsage: "Paused: you've reached a usage limit. It continues after a reset.",
       copyCode: "Copy code",
       openFile: "Open {name}",
@@ -369,6 +372,8 @@ const dict = {
       thinking: "正在思考…",
       stopped: "已停止",
       replyFailed: "生成此回复时出了点问题。",
+      outOfCredits: "你的额度已用完。请充值或升级后继续聊天。",
+      usageLimit: "你已达到用量上限。可使用储备重置，或等待窗口重置。",
       blockedOnUsage: "已暂停：你已达到用量上限，重置后会继续。",
       copyCode: "复制代码",
       openFile: "打开 {name}",

@@ -61,6 +61,7 @@ const RANGE_LABEL: Record<Range, string> = {
   year: "Last 12 months",
 };
 const PLAN_LABEL: Record<string, string> = {
+  free: "Free",
   trial: "Trial",
   starter: "Starter",
   business: "Business",
@@ -215,7 +216,7 @@ export default function Overview() {
               title="Organizations by plan"
               total={s.totals.orgs}
               totalLabel="organizations"
-              slices={["trial", "starter", "business", "autopilot"].map((id) => ({
+              slices={["free", "trial", "starter", "business", "autopilot"].map((id) => ({
                 label: PLAN_LABEL[id] ?? id,
                 value: s.byPlan.find((p) => p.planId === id)?.orgs ?? 0,
               }))}

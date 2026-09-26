@@ -9,7 +9,7 @@ const BASE = "https://app.invalid";
 // oxlint-disable-next-line no-control-regex -- control characters are exactly what is refused
 const UNSAFE = /[\\\u0000-\u001f\u007f]/;
 
-export function safeNext(value: string | null, fallback = "/account"): string {
+export function safeNext(value: string | null, fallback = "/chat"): string {
   if (!value?.startsWith("/") || value.startsWith("//") || UNSAFE.test(value)) return fallback;
   const url = new URL(value, BASE);
   return url.origin === BASE ? `${url.pathname}${url.search}${url.hash}` : fallback;

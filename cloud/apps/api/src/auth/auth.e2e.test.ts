@@ -55,6 +55,18 @@ describe("bearer clients", () => {
   });
 });
 
+describe("free allowance", () => {
+  it("grants this week's free allowance as soon as the email is verified", async () => {
+    const client = TestClient.for(api);
+    await client.signUp(api, "free");
+    const plan = await api.db.query.plans.findFirst({ where: eq(schema.plans.id, "free") });
+    const credits = (await (await client.call("/v1/credits")).json()) as {
+      balances: { free: string };
+    };
+    expect(BigInt(credits.balances.free)).toBe(plan!.includedMicrocredits);
+  });
+});
+
 describe("email language", () => {
   it("sends the verification code in the language chosen at sign-up", async () => {
     const client = TestClient.for(api);

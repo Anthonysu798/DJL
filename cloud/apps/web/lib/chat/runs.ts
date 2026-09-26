@@ -10,6 +10,15 @@ import { ChatApiError, type ChatClient } from "./client";
 export const TERMINAL_STATUSES: readonly CloudRunStatus[] = ["succeeded", "failed", "cancelled"];
 export const isTerminal = (status: CloudRunStatus) => TERMINAL_STATUSES.includes(status);
 
+/** Which message explains a failed run: limits get their own, everything else is generic. */
+export function failureReason(
+  error: { readonly code: string } | null | undefined,
+): "outOfCredits" | "usageLimit" | "replyFailed" {
+  if (error?.code === "insufficient_credits") return "outOfCredits";
+  if (error?.code === "usage_window_exhausted") return "usageLimit";
+  return "replyFailed";
+}
+
 export interface FollowRunOptions {
   readonly client: Pick<ChatClient, "streamRunEvents" | "getRun">;
   readonly runId: string;
