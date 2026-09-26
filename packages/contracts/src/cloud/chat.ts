@@ -16,7 +16,7 @@ export type CloudMessageRole = typeof CloudMessageRole.Type;
 export const CloudTextPart = Schema.Struct({ type: Schema.Literal("text"), text: Schema.String });
 export type CloudTextPart = typeof CloudTextPart.Type;
 
-/** An uploaded document; the bytes are fetched through GET /v1/files/{id}/download. */
+/** An uploaded document; the bytes are fetched through GET /v1/files/{id}/url. */
 export const CloudFileRefPart = Schema.Struct({
   type: Schema.Literal("file_ref"),
   fileId: CloudFileId,
@@ -91,6 +91,7 @@ export const CloudConversation = Schema.Struct({
   title: Schema.NullOr(Schema.String),
   pinned: Schema.Boolean,
   archived: Schema.Boolean,
+  lastMessageAt: Schema.String,
   createdAt: Schema.String,
   updatedAt: Schema.String,
 });
@@ -99,6 +100,13 @@ export type CloudConversation = typeof CloudConversation.Type;
 // ---------------------------------------------------------------------------
 // GET/POST /v1/conversations, GET/PATCH/DELETE /v1/conversations/{id}
 // ---------------------------------------------------------------------------
+
+/** Pinned first, then most recent. Archived conversations are listed only with `archived=true`. */
+export const CloudConversationListQuery = Schema.Struct({
+  cursor: Schema.optionalKey(TrimmedNonEmptyString),
+  archived: Schema.optionalKey(Schema.Literals(["true", "false"])),
+});
+export type CloudConversationListQuery = typeof CloudConversationListQuery.Type;
 
 export const CloudConversationListResponse = Schema.Struct({
   conversations: Schema.Array(CloudConversation),
@@ -115,6 +123,8 @@ export const CloudUpdateConversationInput = Schema.Struct({
   title: Schema.optionalKey(TrimmedNonEmptyString.check(Schema.isMaxLength(200))),
   pinned: Schema.optionalKey(Schema.Boolean),
   archived: Schema.optionalKey(Schema.Boolean),
+  /** Switch branches: show the branch through this message, following its newest replies. */
+  branchMessageId: Schema.optionalKey(CloudMessageId),
 });
 export type CloudUpdateConversationInput = typeof CloudUpdateConversationInput.Type;
 
@@ -124,6 +134,24 @@ export const CloudConversationDetailResponse = Schema.Struct({
   messages: Schema.Array(CloudMessage),
 });
 export type CloudConversationDetailResponse = typeof CloudConversationDetailResponse.Type;
+
+// ---------------------------------------------------------------------------
+// GET /v1/conversations/{id}/messages: the branch the user is looking at
+// ---------------------------------------------------------------------------
+
+export const CloudBranchMessage = Schema.Struct({
+  ...CloudMessage.fields,
+  /** This message and its siblings (same parent), oldest first, for the branch switcher. */
+  siblingIds: Schema.Array(CloudMessageId),
+});
+export type CloudBranchMessage = typeof CloudBranchMessage.Type;
+
+export const CloudConversationMessagesResponse = Schema.Struct({
+  conversation: CloudConversation,
+  /** Root to leaf. */
+  messages: Schema.Array(CloudBranchMessage),
+});
+export type CloudConversationMessagesResponse = typeof CloudConversationMessagesResponse.Type;
 
 // ---------------------------------------------------------------------------
 // GET /v1/conversations/search?q=

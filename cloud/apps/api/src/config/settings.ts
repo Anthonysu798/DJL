@@ -26,6 +26,16 @@ export const SETTINGS = {
   "gateway.hard_cap_streams": int(200, 1),
   /** Gateway requests allowed per client IP hash per minute. */
   "gateway.ip_requests_per_minute": int(300, 1),
+  /** Largest upload per plan id, in bytes; plans not listed use `default`. */
+  "files.max_upload_bytes": {
+    default: { default: 25 * 1024 * 1024 } as Readonly<Record<string, number>>,
+    parse: (raw: unknown) =>
+      typeof raw === "object" &&
+      raw !== null &&
+      Object.values(raw).every((v) => Number.isInteger(v) && (v as number) > 0)
+        ? (raw as Readonly<Record<string, number>>)
+        : undefined,
+  },
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS;

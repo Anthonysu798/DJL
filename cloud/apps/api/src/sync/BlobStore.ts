@@ -3,7 +3,7 @@
  * S3-compatible endpoint with pre-signed URLs; tests use an in-memory fake.
  */
 export interface BlobStore {
-  /** Pre-signed PUT for a client upload; expires in minutes. */
+  /** Pre-signed PUT for a client upload, pinned to the type and size; expires in minutes. */
   readonly presignUpload: (
     key: string,
     mimeType: string,
@@ -13,35 +13,46 @@ export interface BlobStore {
     readonly headers: Record<string, string>;
     readonly expiresAt: string;
   }>;
-  /** Pre-signed GET. */
+  /** Pre-signed GET, valid for `expiresSeconds` (default ten minutes). */
   readonly presignDownload: (
     key: string,
+    expiresSeconds?: number,
   ) => Promise<{ readonly url: string; readonly expiresAt: string }>;
   /** Confirm an object exists and matches the expected size. */
   readonly head: (key: string) => Promise<{ readonly sizeBytes: number } | null>;
+  /** The object's bytes, or null when it does not exist. */
+  readonly read: (key: string) => Promise<Uint8Array | null>;
   readonly remove: (key: string) => Promise<void>;
 }
 
 export class FakeBlobStore implements BlobStore {
-  readonly objects = new Map<string, { sizeBytes: number; mimeType: string }>();
+  readonly objects = new Map<string, { sizeBytes: number; mimeType: string; bytes?: Uint8Array }>();
   async presignUpload(key: string, mimeType: string, sizeBytes: number) {
     // Tests "upload" by calling complete(); mark the object as present immediately.
     this.objects.set(key, { sizeBytes, mimeType });
     return {
       url: `https://blob.test/upload/${encodeURIComponent(key)}`,
-      headers: { "content-type": mimeType },
+      headers: { "content-type": mimeType, "content-length": String(sizeBytes) },
       expiresAt: new Date(Date.now() + 600_000).toISOString(),
     };
   }
-  async presignDownload(key: string) {
+  async presignDownload(key: string, expiresSeconds = 600) {
+    const expiresAt = new Date(Date.now() + expiresSeconds * 1000).toISOString();
     return {
-      url: `https://blob.test/${encodeURIComponent(key)}`,
-      expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      url: `https://blob.test/${encodeURIComponent(key)}?expires=${encodeURIComponent(expiresAt)}`,
+      expiresAt,
     };
+  }
+  /** What a client's PUT to the presigned URL would store. */
+  put(key: string, bytes: Uint8Array, mimeType = "application/octet-stream") {
+    this.objects.set(key, { sizeBytes: bytes.byteLength, mimeType, bytes });
   }
   async head(key: string) {
     const o = this.objects.get(key);
     return o ? { sizeBytes: o.sizeBytes } : null;
+  }
+  async read(key: string) {
+    return this.objects.get(key)?.bytes ?? null;
   }
   async remove(key: string) {
     this.objects.delete(key);
@@ -82,7 +93,7 @@ export function createS3BlobStore(config: {
     hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 
   async function presign(
-    method: "GET" | "PUT" | "HEAD",
+    method: "GET" | "PUT" | "HEAD" | "DELETE",
     key: string,
     expiresSeconds: number,
     extraHeaders: Record<string, string> = {},
@@ -134,11 +145,11 @@ export function createS3BlobStore(config: {
   return {
     async presignUpload(key, mimeType, sizeBytes) {
       const headers = { "content-type": mimeType, "content-length": String(sizeBytes) };
-      const { url, expiresAt } = await presign("PUT", key, 600, { "content-type": mimeType });
+      const { url, expiresAt } = await presign("PUT", key, 600, headers);
       return { url, headers, expiresAt };
     },
-    async presignDownload(key) {
-      return presign("GET", key, 600);
+    async presignDownload(key, expiresSeconds = 600) {
+      return presign("GET", key, expiresSeconds);
     },
     async head(key) {
       const { url } = await presign("HEAD", key, 60);
@@ -146,11 +157,17 @@ export function createS3BlobStore(config: {
       if (!res.ok) return null;
       return { sizeBytes: Number(res.headers.get("content-length") ?? "0") };
     },
+    async read(key) {
+      const { url } = await presign("GET", key, 60);
+      const res = await fetchImpl(url);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`storage read failed: ${res.status}`);
+      return new Uint8Array(await res.arrayBuffer());
+    },
     async remove(key) {
-      const now = new Date();
-      void now;
-      const { url } = await presign("PUT", key, 60); // placeholder path; deletes run from the worker with service credentials
-      void url;
+      const { url } = await presign("DELETE", key, 60);
+      const res = await fetchImpl(url, { method: "DELETE" });
+      if (!res.ok && res.status !== 404) throw new Error(`storage delete failed: ${res.status}`);
     },
   };
 }

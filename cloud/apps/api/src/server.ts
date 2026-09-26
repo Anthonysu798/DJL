@@ -40,6 +40,13 @@ import { SyncService } from "./sync/SyncService.ts";
 import { UsageAdminService } from "./usage/UsageAdminService.ts";
 import { UsageService } from "./usage/UsageService.ts";
 import { windowPolicy } from "./usage/windowPolicy.ts";
+import { ChatService } from "./chat/ChatService.ts";
+import { FileService } from "./files/FileService.ts";
+import { ChatRunner } from "./runs/ChatRunner.ts";
+import { createPgBossTaskQueue } from "./runs/RunExecutor.ts";
+import { RunLog } from "./runs/RunLog.ts";
+import { RunService } from "./runs/RunService.ts";
+import { ShareService } from "./shares/ShareService.ts";
 import {
   createMemoryRateLimiter,
   createRedisRateLimiter,
@@ -64,6 +71,7 @@ export interface ApiRuntime {
   readonly admin: AdminService;
   readonly sync: SyncService;
   readonly blobs: BlobStore;
+  readonly runner: ChatRunner;
   readonly outbox: MockOutbox | null;
   readonly address: { readonly host: string; readonly port: number };
   readonly close: () => Promise<void>;
@@ -163,23 +171,21 @@ export async function startApi(
     dailyBudgetUsdCents: 10_000,
     hashSalt: env.betterAuthSecret,
   });
-  let limiter: RateLimiter;
-  let redis: Redis | null = null;
-  if (env.mockExternals) {
-    limiter = createMemoryRateLimiter();
-  } else {
-    redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
-    limiter = createRedisRateLimiter(redis);
-  }
+  // Run event streams always live in Redis; the rate limiter uses it outside mock mode.
+  const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
+  const limiter: RateLimiter = env.mockExternals
+    ? createMemoryRateLimiter()
+    : createRedisRateLimiter(redis);
   const providers = buildProviders(env, process.env, (alert) => {
     void senders.alerts?.post(alert);
   });
   const usage = new UsageService(db);
+  const settings = new Settings(db);
   const gateway = new GatewayService({
     db,
     ledger,
     limiter,
-    settings: new Settings(db),
+    settings,
     admission: { window: windowPolicy(usage) },
     providers,
     trial,
@@ -201,6 +207,13 @@ export async function startApi(
         secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
       });
   const sync = new SyncService(db, blobs);
+  const runLog = new RunLog(db, redis);
+  const runner = new ChatRunner({ db, gateway, log: runLog, blobs });
+  const tasks = createPgBossTaskQueue(env.databaseUrl);
+  const files = new FileService(db, blobs, settings);
+  const chat = new ChatService({ db, files, runner, tasks });
+  const shares = new ShareService(db, chat, blobs, env.webPublicUrl);
+  const runs = new RunService(db, runLog);
   const adminAuth = new AdminAuth(db, env.betterAuthSecret, env.adminMfaRequired);
   const admin = new AdminService({
     db,
@@ -233,6 +246,11 @@ export async function startApi(
     sync,
     usage,
     usageAdmin,
+    chat,
+    files,
+    shares,
+    runs,
+    limiter,
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;
@@ -268,11 +286,14 @@ export async function startApi(
     admin,
     sync,
     blobs,
+    runner,
     outbox,
     address: bound,
     close: async () => {
       await Effect.runPromise(Scope.close(scope, { _tag: "Success", value: undefined } as never));
-      redis?.disconnect();
+      await runner.stop();
+      await tasks.close();
+      redis.disconnect();
       await closeDb();
       await stopObservability();
     },

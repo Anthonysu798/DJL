@@ -125,7 +125,12 @@ describe("cloud contract", () => {
   });
 
   it("bounds upload sizes", () => {
-    const input = { name: "a.pdf", mimeType: "application/pdf" };
+    const input = {
+      name: "a.pdf",
+      mimeType: "application/pdf",
+      sha256: "0".repeat(64),
+      purpose: "attachment",
+    };
     expect(Schema.decodeUnknownSync(CloudFilePresignInput)({ ...input, size: 1 }).size).toBe(1);
     expect(() =>
       Schema.decodeUnknownSync(CloudFilePresignInput)({ ...input, size: CLOUD_FILE_MAX_BYTES + 1 }),

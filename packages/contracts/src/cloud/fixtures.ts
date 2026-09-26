@@ -35,6 +35,7 @@ const conversation = {
   title: "Trip plan",
   pinned: false,
   archived: false,
+  lastMessageAt: at,
   createdAt: at,
   updatedAt: at,
 };
@@ -295,6 +296,7 @@ export const cloudFixtures = {
       { role: "user", parts: [{ type: "text", text: "Hello" }], createdAt: at },
       { role: "assistant", parts: [{ type: "text", text: "Hi!" }], createdAt: at },
     ],
+    imageUrls: {},
   }),
   "native-token": fixture(CloudNativeTokenResponse, {
     sessionToken: "session_token_example",

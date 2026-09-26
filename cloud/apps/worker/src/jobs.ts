@@ -2,8 +2,9 @@
  * Background jobs. Each job is a plain async function over injected services
  * so it can be unit tested without pg-boss. Schedules live in index.ts.
  */
-import { and, eq, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
+import type { BlobStore } from "@djl/api/blobs";
 import type { LedgerService } from "@djl/api/credits";
 
 import {
@@ -117,6 +118,47 @@ export async function purgeDeletedUsers(deps: JobDeps): Promise<number> {
   return count;
 }
 
+/**
+ * Hard-delete conversations soft-deleted more than 30 days ago, with their
+ * messages, runs, and shares (cascade) and the files their messages
+ * reference, unless another conversation in the org still uses a file.
+ */
+export async function purgeDeletedConversations(
+  deps: Pick<JobDeps, "db" | "now"> & { readonly blobs: BlobStore },
+): Promise<number> {
+  const cutoff = new Date((deps.now?.() ?? new Date()).getTime() - 30 * 86_400_000);
+  const due = await deps.db
+    .select({ id: schema.conversations.id, orgId: schema.conversations.orgId })
+    .from(schema.conversations)
+    .where(lt(schema.conversations.deletedAt, cutoff))
+    .limit(500);
+  for (const c of due) {
+    const files = await deps.db.execute<{ id: string; storage_key: string }>(sql`
+      SELECT f.id, f.storage_key FROM files f
+      WHERE f.org_id = ${c.orgId}
+        AND f.id::text IN (
+          SELECT p->>'fileId' FROM messages m, jsonb_array_elements(m.parts) p
+          WHERE m.conversation_id = ${c.id})
+        AND NOT EXISTS (
+          SELECT 1 FROM messages m
+          JOIN conversations other ON other.id = m.conversation_id
+          CROSS JOIN LATERAL jsonb_array_elements(m.parts) p
+          WHERE other.org_id = f.org_id AND other.id <> ${c.id} AND p->>'fileId' = f.id::text)`);
+    for (const f of files) await deps.blobs.remove(f.storage_key);
+    await deps.db.transaction(async (tx) => {
+      if (files.length)
+        await tx.delete(schema.files).where(
+          inArray(
+            schema.files.id,
+            files.map((f) => f.id),
+          ),
+        );
+      await tx.delete(schema.conversations).where(eq(schema.conversations.id, c.id));
+    });
+  }
+  return due.length;
+}
+
 /** Roll up yesterday's signups, active users, gateway usage, and revenue per country. */
 export async function rollupDailyStats(deps: JobDeps, day?: string): Promise<void> {
   const target =
@@ -165,6 +207,7 @@ export const JOBS = {
   "ledger.expire-trials": expireTrials,
   "ledger.refold": refoldActiveOrgs,
   "users.purge-deleted": purgeDeletedUsers,
+  "chat.purge-deleted": purgeDeletedConversations,
   "stats.daily": rollupDailyStats,
   "usage.grantPlanResets": grantPlanResets,
   "usage.bulkGrant": bulkGrant,

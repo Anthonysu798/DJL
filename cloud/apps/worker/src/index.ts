@@ -3,6 +3,7 @@
  * trials, purge, stats, and usage window jobs. Stripe webhooks are processed inline by the
  * API; the worker only owns time-based work.
  */
+import { FakeBlobStore, createS3BlobStore } from "@djl/api/blobs";
 import { LedgerService } from "@djl/api/credits";
 import { createDatabase } from "@djl/db";
 import { PgBoss } from "pg-boss";
@@ -14,7 +15,22 @@ if (!databaseUrl) throw new Error("DATABASE_URL is required");
 
 const { db, close } = createDatabase(databaseUrl, { max: 4 });
 const ledger = new LedgerService(db);
-const deps = { db, ledger };
+const requireEnv = (name: string) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+};
+const blobs =
+  process.env.DJL_MOCK_EXTERNALS === "true"
+    ? new FakeBlobStore()
+    : createS3BlobStore({
+        endpoint: requireEnv("STORAGE_S3_ENDPOINT"),
+        region: process.env.STORAGE_S3_REGION ?? "us-east-1",
+        bucket: process.env.STORAGE_BUCKET ?? "djl-sync",
+        accessKeyId: requireEnv("STORAGE_ACCESS_KEY_ID"),
+        secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
+      });
+const deps = { db, ledger, blobs };
 
 const boss = new PgBoss({ connectionString: databaseUrl, schema: "pgboss", max: 4 });
 boss.on("error", (error) =>
@@ -27,6 +43,7 @@ const SCHEDULES: Record<keyof typeof JOBS, string> = {
   "ledger.expire-trials": "17 * * * *",
   "ledger.refold": "43 * * * *",
   "users.purge-deleted": "15 3 * * *",
+  "chat.purge-deleted": "35 3 * * *",
   "stats.daily": "5 0 * * *",
   "usage.grantPlanResets": "7 * * * *",
   "usage.bulkGrant": "* * * * *",
