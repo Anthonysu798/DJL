@@ -1,0 +1,69 @@
+{
+  "conversation": {
+    "id": "conv_1",
+    "title": "Trip plan",
+    "pinned": false,
+    "archived": false,
+    "createdAt": "2026-09-26T12:00:00.000Z",
+    "updatedAt": "2026-09-26T12:00:00.000Z"
+  },
+  "messages": [
+    {
+      "id": "msg_1",
+      "conversationId": "conv_1",
+      "parentId": null,
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Plan three days in Kyoto from this itinerary."
+        },
+        {
+          "type": "file_ref",
+          "fileId": "file_1",
+          "name": "itinerary.pdf",
+          "mimeType": "application/pdf",
+          "size": 48213
+        }
+      ],
+      "model": null,
+      "runId": null,
+      "createdAt": "2026-09-26T12:00:00.000Z"
+    },
+    {
+      "id": "msg_2",
+      "conversationId": "conv_1",
+      "parentId": "msg_1",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "tool_call",
+          "toolCallId": "call_1",
+          "name": "web_search",
+          "arguments": "{\"query\":\"Kyoto temples\"}"
+        },
+        {
+          "type": "tool_result",
+          "toolCallId": "call_1",
+          "name": "web_search",
+          "content": "5 results",
+          "isError": false
+        },
+        {
+          "type": "text",
+          "text": "Here is a plan."
+        },
+        {
+          "type": "image_ref",
+          "fileId": "file_2",
+          "mimeType": "image/png",
+          "width": 1024,
+          "height": 1024
+        }
+      ],
+      "model": "gpt-5",
+      "runId": "run_1",
+      "createdAt": "2026-09-26T12:00:00.000Z"
+    }
+  ]
+}

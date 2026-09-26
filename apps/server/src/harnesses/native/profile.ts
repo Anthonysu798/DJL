@@ -46,6 +46,8 @@ export function nativeProfileOptions(
       return {
         claudeAgent: { binaryPath: settings.providers.claudeAgent.binaryPath.trim() || "claude" },
       };
+    case "djlCloud":
+      return { djlCloud: { region: settings.providers.djlCloud.region } };
     case "cursor":
       return {
         cursor: {

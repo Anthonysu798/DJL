@@ -26,6 +26,8 @@ export async function seed(databaseUrl: string): Promise<void> {
           priorityWeight: plan.priorityWeight,
           syncQuotaBytes: BigInt(plan.syncQuotaBytes),
           requiresOwner2fa: plan.requiresOwner2fa,
+          window5hMicro: plan.window5h,
+          windowWeekMicro: plan.windowWeek,
         })
         .onConflictDoNothing({ target: plans.id });
     }
@@ -43,6 +45,7 @@ export async function seed(databaseUrl: string): Promise<void> {
         { key: "trial.expiry_days", value: 14 },
         { key: "gateway.soft_cap_streams", value: 150 },
         { key: "gateway.hard_cap_streams", value: 200 },
+        { key: "gateway.ip_requests_per_minute", value: 300 },
         { key: "pricing.margin", value: 0.4 },
         { key: "admin.ip_blocklist", value: [] },
       ])

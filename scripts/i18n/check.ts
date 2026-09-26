@@ -45,6 +45,7 @@ const VISIBLE_ATTRIBUTE = new Set([
 const UI_CALL = /(?:alert|confirm|notify|set[A-Za-z]*Error|showToast|toast)$/;
 const TECHNICAL_EXACT = new Set([
   "DJL",
+  "DJL Cloud",
   "Codex",
   "Claude",
   "Cursor",

@@ -170,6 +170,13 @@ export function useProviderModelCatalog(input: {
       enabled: false,
     }),
   );
+  const djlCloudDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "djlCloud",
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "djlCloud" || discoveryEnabled,
+    }),
+  );
 
   // Agent/mode discovery (kilo/opencode "Mode"/"Agent" picker, claude/codex subagents).
   const claudeDynamicAgentsQuery = useQuery(
@@ -278,6 +285,11 @@ export function useProviderModelCatalog(input: {
       kilo: getAppModelOptions("kilo", customModelsByProvider.kilo, modelHintByProvider?.kilo),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, modelHintByProvider?.pi),
+      djlCloud: getAppModelOptions(
+        "djlCloud",
+        customModelsByProvider.djlCloud,
+        modelHintByProvider?.djlCloud,
+      ),
     };
     const result: Record<
       ProviderKind,
@@ -301,6 +313,7 @@ export function useProviderModelCatalog(input: {
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      djlCloud: djlCloudDynamicModelsQuery.data,
     };
 
     for (const provider of [
@@ -317,6 +330,7 @@ export function useProviderModelCatalog(input: {
       "kilo",
       "opencode",
       "pi",
+      "djlCloud",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
@@ -349,6 +363,7 @@ export function useProviderModelCatalog(input: {
     modelHintByProvider,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    djlCloudDynamicModelsQuery.data,
   ]);
 
   const loadingModelProviders = useMemo<Partial<Record<ProviderKind, boolean>>>(
@@ -385,6 +400,7 @@ export function useProviderModelCatalog(input: {
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -400,6 +416,7 @@ export function useProviderModelCatalog(input: {
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      djlCloudDynamicModelsQuery.data?.models,
     ],
   );
 

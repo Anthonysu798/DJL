@@ -194,6 +194,7 @@ describe("resolveAppModelSelection", () => {
           kilo: [],
           opencode: [],
           pi: [],
+          djlCloud: [],
         },
         "galapagos-alpha",
       ),
@@ -218,6 +219,7 @@ describe("resolveAppModelSelection", () => {
           kilo: [],
           opencode: [],
           pi: [],
+          djlCloud: [],
         },
         "",
       ),
@@ -242,6 +244,7 @@ describe("resolveAppModelSelection", () => {
           kilo: [],
           opencode: [],
           pi: [],
+          djlCloud: [],
         },
         "GPT-5.3 Codex",
       ),
@@ -266,6 +269,7 @@ describe("resolveAppModelSelection", () => {
           kilo: [],
           opencode: [],
           pi: [],
+          djlCloud: [],
         },
         "sonnet",
       ),
@@ -290,6 +294,7 @@ describe("resolveAppModelSelection", () => {
           kilo: [],
           opencode: [],
           pi: [],
+          djlCloud: [],
         },
         "custom/selected-model",
       ),
@@ -377,6 +382,7 @@ describe("normalizeStoredAppSettings", () => {
       providerOrder: [
         "cursor",
         "codex",
+        "djlCloud",
         "opencode",
         "claudeAgent",
         "grok",
@@ -605,6 +611,7 @@ describe("provider-indexed custom model settings", () => {
     customKiloModels: ["kilo/kilo-auto/free"],
     customOpenCodeModels: ["openrouter/gpt-oss-120b"],
     customPiModels: ["anthropic/custom-pi"],
+    customDjlCloudModels: [],
   } as const;
 
   it("exports one provider config per provider", () => {
@@ -622,6 +629,7 @@ describe("provider-indexed custom model settings", () => {
       "kilo",
       "opencode",
       "pi",
+      "djlCloud",
     ]);
   });
 
@@ -652,6 +660,7 @@ describe("provider-indexed custom model settings", () => {
       customKiloModels: ["kilo/default-auto"],
       customOpenCodeModels: ["openai/gpt-5"],
       customPiModels: ["anthropic/default-pi"],
+      customDjlCloudModels: [],
     } as const;
 
     expect(getDefaultCustomModelsForProvider(defaults, "codex")).toEqual(["default/codex-model"]);
@@ -741,6 +750,7 @@ describe("provider-indexed custom model settings", () => {
       kilo: ["kilo/kilo-auto/free"],
       opencode: ["openrouter/gpt-oss-120b"],
       pi: ["anthropic/custom-pi"],
+      djlCloud: [],
     });
   });
 
@@ -796,6 +806,7 @@ describe("provider-indexed custom model settings", () => {
         "anthropic/custom-pi",
         "anthropic/custom-pi",
       ],
+      customDjlCloudModels: [],
     });
 
     expect(
@@ -889,6 +900,7 @@ describe("AppSettingsSchema", () => {
       customKiloModels: [],
       customOpenCodeModels: [],
       customPiModels: [],
+      customDjlCloudModels: [],
     });
   });
 });

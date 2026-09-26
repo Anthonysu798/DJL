@@ -10,6 +10,8 @@
 !apps/*/package.json
 !packages/*/package.json
 !scripts/package.json
+# The public API contract the cloud apps import as @synara/contracts/cloud.
+!packages/contracts/src/**
 !cloud/**
 **/node_modules
 **/.turbo

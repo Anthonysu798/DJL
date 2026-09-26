@@ -1,13 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { creditsToMicro } from "@djl/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Principal } from "../auth/guard.ts";
+import { Settings } from "../config/settings.ts";
 import { LedgerService } from "../credits/LedgerService.ts";
+import { ApiError } from "../http/errors.ts";
 import { seedOrg, testDatabase } from "../testing/db.ts";
 import { createFakeProvider } from "./fakeProvider.ts";
-import { GatewayService } from "./GatewayService.ts";
+import { GatewayService, type GatewayDeps } from "./GatewayService.ts";
 import { createMemoryRateLimiter } from "./RateLimiter.ts";
 
 const conn = testDatabase();
@@ -15,25 +17,53 @@ const ledger = new LedgerService(conn.db);
 const firstRequests: string[] = [];
 const alerts: string[] = [];
 const fake = createFakeProvider();
-const gateway = new GatewayService({
-  db: conn.db,
-  ledger,
-  limiter: createMemoryRateLimiter(),
-  providers: {
-    openai: fake,
-    anthropic: { ...fake, id: "anthropic" },
-    openrouter: { ...fake, id: "openrouter" },
-  },
-  trial: { onFirstCloudRequest: async (orgId) => (firstRequests.push(orgId), true) },
-  config: {
-    region: "test",
-    catalogTtlMs: 0,
-    refusalFlagThreshold: 2,
-    instanceSoftCap: 150,
-    instanceHardCap: 200,
-  },
-  onAlert: (a) => void alerts.push(a.title),
-});
+const makeGateway = (overrides: Partial<GatewayDeps> = {}) =>
+  new GatewayService({
+    db: conn.db,
+    ledger,
+    limiter: createMemoryRateLimiter(),
+    settings: new Settings(conn.db, { ttlMs: 0 }),
+    providers: {
+      openai: fake,
+      anthropic: { ...fake, id: "anthropic" },
+      openrouter: { ...fake, id: "openrouter" },
+    },
+    trial: { onFirstCloudRequest: async (orgId) => (firstRequests.push(orgId), true) },
+    config: { region: "test", catalogTtlMs: 0, refusalFlagThreshold: 2 },
+    onAlert: (a) => void alerts.push(a.title),
+    ...overrides,
+  });
+const gateway = makeGateway();
+
+/** Temporarily override settings rows for one test. */
+async function withSettings(values: Record<string, unknown>, run: () => Promise<void>) {
+  const keys = Object.keys(values);
+  const saved = await conn.db.query.settings.findMany({
+    where: inArray(schema.settings.key, keys),
+  });
+  for (const [key, value] of Object.entries(values))
+    await conn.db
+      .insert(schema.settings)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: schema.settings.key, set: { value } });
+  try {
+    await run();
+  } finally {
+    await conn.db.delete(schema.settings).where(inArray(schema.settings.key, keys));
+    if (saved.length) await conn.db.insert(schema.settings).values(saved);
+  }
+}
+
+async function fund(p: Principal, amount = creditsToMicro(100)) {
+  await ledger.grant({
+    orgId: p.orgId,
+    bucket: "topup",
+    type: "topup",
+    amount,
+    idempotencyKey: `g:${p.orgId}`,
+    actor: "test",
+  });
+}
 
 async function principalFor(label: string): Promise<Principal> {
   const { orgId, userId } = await seedOrg(conn.db, label);
@@ -437,5 +467,224 @@ describe("GatewayService images and embeddings", () => {
     expect(chat?.price.inputPer1k).toBe("1.00");
     expect(chat?.price.outputPer1k).toBe("10.00");
     expect(models.find((m) => m.id === "fake-image")?.price.perImage).toBe("5.00");
+  });
+});
+
+describe("GatewayService admission", () => {
+  it("runs abuse before the rate slot and window after it, releasing the slot on refusal", async () => {
+    const p = await principalFor("gw-adm-order");
+    await fund(p);
+    const order: string[] = [];
+    const limiter = createMemoryRateLimiter();
+    const gw = makeGateway({
+      limiter,
+      admission: {
+        abuse: { name: "abuse", admit: async () => void order.push("abuse") },
+        window: {
+          name: "window",
+          admit: async ({ facts }) => {
+            order.push(`window:${await limiter.inFlight(`org:${facts.principal.orgId}`)}`);
+            throw new ApiError(429, "usage_window_exhausted", "Window used up.");
+          },
+        },
+      },
+    });
+    await expect(
+      gw.chatStream(facts(p), { model: "fake-chat", messages: [{ role: "user", content: "hi" }] }),
+    ).rejects.toMatchObject({ status: 429, code: "usage_window_exhausted" });
+    expect(order).toEqual(["abuse", "window:1"]);
+    expect(await limiter.inFlight(`org:${p.orgId}`)).toBe(0);
+    expect(gw.status().inFlight).toBe(0);
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100));
+  });
+
+  it("refuses in the abuse slot before taking any rate slot", async () => {
+    const p = await principalFor("gw-adm-abuse");
+    const limiter = createMemoryRateLimiter();
+    const gw = makeGateway({
+      limiter,
+      admission: {
+        abuse: {
+          name: "abuse",
+          admit: async () => {
+            throw new ApiError(403, "suspended", "This account is suspended.");
+          },
+        },
+      },
+    });
+    await expect(
+      gw.chatStream(facts(p), { model: "fake-chat", messages: [{ role: "user", content: "hi" }] }),
+    ).rejects.toMatchObject({ status: 403, code: "suspended" });
+    expect(await limiter.hit(`user:${p.userId}`, 1, 60)).toMatchObject({ allowed: true });
+  });
+
+  it("reads the per-IP limit from Settings", async () => {
+    await withSettings({ "gateway.ip_requests_per_minute": 2 }, async () => {
+      const gw = makeGateway();
+      const ipHash = `ip-${crypto.randomUUID()}`;
+      for (const label of ["gw-ip-a", "gw-ip-b"]) {
+        const p = await principalFor(label);
+        await fund(p);
+        const { stream } = await gw.chatStream(
+          { ...facts(p), ipHash },
+          { model: "fake-chat", messages: [{ role: "user", content: "hi" }], max_tokens: 10 },
+        );
+        await readSse(stream);
+      }
+      const p = await principalFor("gw-ip-c");
+      await fund(p);
+      await expect(
+        gw.chatStream(
+          { ...facts(p), ipHash },
+          { model: "fake-chat", messages: [{ role: "user", content: "hi" }] },
+        ),
+      ).rejects.toMatchObject({ status: 429, message: "Too many requests from this network." });
+    });
+  });
+
+  it("sheds low-priority plans at the instance caps from Settings", async () => {
+    await withSettings(
+      { "gateway.soft_cap_streams": 1, "gateway.hard_cap_streams": 1 },
+      async () => {
+        const gw = makeGateway();
+        const a = await principalFor("gw-cap-a");
+        const b = await principalFor("gw-cap-b");
+        await fund(a);
+        await fund(b);
+        const open = await gw.chatStream(facts(a), {
+          model: "fake-chat",
+          messages: [{ role: "user", content: "long:5" }],
+          max_tokens: 100,
+        });
+        const reader = open.stream.getReader();
+        await reader.read();
+        await expect(
+          gw.chatStream(facts(b), {
+            model: "fake-chat",
+            messages: [{ role: "user", content: "hi" }],
+          }),
+        ).rejects.toMatchObject({ status: 503, code: "overloaded" });
+        await reader.cancel();
+      },
+    );
+  });
+});
+
+async function collect(
+  chunks: AsyncIterable<{ readonly choices: readonly { readonly delta: { content?: string } }[] }>,
+) {
+  let text = "";
+  for await (const c of chunks) text += c.choices[0]?.delta.content ?? "";
+  return text;
+}
+
+describe("GatewayService completeStep", () => {
+  it("streams chunks in process and settles with the usage trailer", async () => {
+    const p = await principalFor("gw-step");
+    await fund(p);
+    const step = await gateway.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: [{ role: "user", content: "hello world" }],
+      max_tokens: 100,
+    });
+    expect(await collect(step.chunks)).toBe("echo: hello world");
+    const result = await step.result;
+    expect(result.error).toBeNull();
+    expect(result.usage).toMatchObject({
+      requestId: step.requestId,
+      settled: "57000",
+      cutOff: false,
+    });
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100) - 57_000n);
+  });
+
+  it("cuts the stream at the step's budget cap", async () => {
+    const p = await principalFor("gw-step-cap");
+    await fund(p);
+    const step = await gateway.completeStep(
+      facts(p),
+      { model: "fake-chat", messages: [{ role: "user", content: "long:50" }], max_tokens: 1000 },
+      { budgetCap: 100_000n },
+    );
+    await collect(step.chunks);
+    const result = await step.result;
+    expect(result.usage?.cutOff).toBe(true);
+    expect(result.error?.code).toBe("budget_exhausted");
+    expect(await ledger.available(p.orgId)).toBe(
+      creditsToMicro(100) - BigInt(result.usage!.settled),
+    );
+  });
+
+  it("stops the provider and settles what was used when the caller aborts", async () => {
+    const p = await principalFor("gw-step-abort");
+    await fund(p);
+    const controller = new AbortController();
+    const step = await gateway.completeStep(
+      facts(p),
+      { model: "fake-chat", messages: [{ role: "user", content: "long:50" }], max_tokens: 1000 },
+      { signal: controller.signal },
+    );
+    let chunks = 0;
+    for await (const _chunk of step.chunks) {
+      chunks += 1;
+      if (chunks === 3) controller.abort();
+    }
+    expect(chunks).toBeLessThan(10);
+    const result = await step.result;
+    expect(result.error).toBeNull();
+    expect(result.usage?.cutOff).toBe(false);
+    expect(gateway.status().inFlight).toBe(0);
+    const { before, after } = await ledger.refold(p.orgId);
+    expect(before).toEqual(after);
+  });
+
+  it("settles when the caller stops reading early", async () => {
+    const p = await principalFor("gw-step-break");
+    await fund(p);
+    const step = await gateway.completeStep(facts(p), {
+      model: "fake-chat",
+      messages: [{ role: "user", content: "long:50" }],
+      max_tokens: 1000,
+    });
+    for await (const _chunk of step.chunks) break;
+    const result = await step.result;
+    expect(BigInt(result.usage!.settled)).toBeGreaterThan(0n);
+    expect(await ledger.available(p.orgId)).toBe(
+      creditsToMicro(100) - BigInt(result.usage!.settled),
+    );
+    expect(gateway.status().inFlight).toBe(0);
+  });
+});
+
+describe("GatewayService image aborts", () => {
+  it("aborts the provider call and releases the reservation when the signal fires", async () => {
+    const p = await principalFor("gw-img-abort");
+    await fund(p, creditsToMicro(20));
+    let aborted = false;
+    const gw = makeGateway({
+      providers: {
+        openai: {
+          ...fake,
+          generateImage: (_req, signal) =>
+            new Promise((_resolve, reject) =>
+              signal.addEventListener("abort", () => {
+                aborted = true;
+                reject(new Error("aborted"));
+              }),
+            ),
+        },
+      },
+    });
+    const controller = new AbortController();
+    const pending = gw.generateImage(
+      facts(p),
+      { model: "fake-image", prompt: "a cat" },
+      { signal: controller.signal },
+    );
+    setTimeout(() => controller.abort(), 20);
+    await expect(pending).rejects.toMatchObject({ code: "provider_error" });
+    expect(aborted).toBe(true);
+    expect(await ledger.available(p.orgId)).toBe(creditsToMicro(20));
+    expect(gw.status().inFlight).toBe(0);
   });
 });

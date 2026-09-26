@@ -19,9 +19,12 @@ export function handle<R>(
   });
 }
 
-/** Run a promise-returning service call, passing ApiErrors through and hiding everything else. */
+/**
+ * Run a promise-returning service call, passing ApiErrors through and hiding everything else.
+ * `signal` aborts when the request is interrupted (the client disconnected).
+ */
 export function attempt<A>(
-  fn: () => Promise<A>,
+  fn: (signal: AbortSignal) => Promise<A>,
   fallback: { readonly status: number; readonly code: string; readonly message: string },
 ) {
   return Effect.tryPromise({

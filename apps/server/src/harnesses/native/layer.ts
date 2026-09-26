@@ -14,6 +14,8 @@ import { createIFlowDriver } from "./iflow";
 import { createQwenDriver } from "./qwen";
 import { createPiDriver } from "./pi";
 import { createCodeBuddyDriver } from "./codebuddy";
+import { createDjlCloudDriverFactory } from "./djlCloud";
+import { ServerConfig } from "../../config";
 
 export class NativeCodexAdapter extends ServiceMap.Service<
   NativeCodexAdapter,
@@ -48,6 +50,10 @@ export class NativeCodeBuddyAdapter extends ServiceMap.Service<
   NativeCodeBuddyAdapter,
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/CodeBuddyAdapter") {}
+export class NativeDjlCloudAdapter extends ServiceMap.Service<
+  NativeDjlCloudAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/DjlCloudAdapter") {}
 export class NativePiAdapter extends ServiceMap.Service<
   NativePiAdapter,
   ProviderAdapterShape<ProviderAdapterError>
@@ -77,4 +83,14 @@ export const NativeHarnessesLive = Layer.mergeAll(
     makeConfiguredNativeAdapter("codebuddy", createCodeBuddyDriver),
   ),
   Layer.effect(NativePiAdapter, makeConfiguredNativeAdapter("pi", createPiDriver)),
+  Layer.effect(
+    NativeDjlCloudAdapter,
+    Effect.gen(function* () {
+      const config = yield* ServerConfig;
+      return yield* makeConfiguredNativeAdapter(
+        "djlCloud",
+        createDjlCloudDriverFactory({ secretsDir: config.secretsDir }),
+      );
+    }),
+  ),
 );

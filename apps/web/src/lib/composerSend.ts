@@ -223,6 +223,7 @@ export function resolvePromptEffortFromModelSelection(
     case "codebuddy":
     case "kilo":
     case "opencode":
+    case "djlCloud":
       return null;
   }
 }

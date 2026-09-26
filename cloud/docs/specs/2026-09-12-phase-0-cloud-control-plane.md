@@ -95,7 +95,7 @@ Claude. Budget is not a constraint.
 | Dev env    | docker compose with Postgres and Redis; providers, Stripe, Twilio, Resend mocked by default                                                                                                                           |
 | Deploy     | Every push to main deploys staging. A `v*` tag deploys production after the user approves the GitHub `production` environment. Fail-closed ship script like the desktop one                                           |
 | Security   | Automated abuse suite in CI plus one external pentest before public launch                                                                                                                                            |
-| Contract   | Public API types live in the open-source `packages/contracts`; backend depends on it by git tag                                                                                                                       |
+| Contract   | Public API types live in the open-source `packages/contracts`; cloud apps import it as `@synara/contracts/cloud` (`workspace:*`)                                                                                      |
 
 ## Architecture
 

@@ -3,3 +3,5 @@ export * from "./billing.ts";
 export * from "./usage.ts";
 export * from "./admin.ts";
 export * from "./sync.ts";
+export * from "./chat.ts";
+export * from "./nativeAuth.ts";

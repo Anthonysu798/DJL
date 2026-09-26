@@ -5,6 +5,7 @@ import {
   HarnessEndLoginInput,
   HarnessMaintainToolInput,
 } from "./harnessAccounts";
+import { CloudEmptyInput, CloudSignInPollInput } from "./cloud";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 import {
@@ -279,6 +280,10 @@ export const WS_METHODS = {
   harnessTransferLegacyOpenCodeCredentials: "harnesses.transferLegacyOpenCodeCredentials",
   harnessStartLogin: "harnesses.startLogin",
   harnessEndLogin: "harnesses.endLogin",
+  cloudGetStatus: "cloud.getStatus",
+  cloudStartSignIn: "cloud.startSignIn",
+  cloudPollSignIn: "cloud.pollSignIn",
+  cloudSignOut: "cloud.signOut",
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
   providerCompactThread: "provider.compactThread",
   providerListCommands: "provider.listCommands",
@@ -512,6 +517,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.harnessMaintainTool, HarnessMaintainToolInput),
   tagRequestBody(WS_METHODS.harnessStartLogin, HarnessLoginInput),
   tagRequestBody(WS_METHODS.harnessEndLogin, HarnessEndLoginInput),
+  tagRequestBody(WS_METHODS.cloudGetStatus, CloudEmptyInput),
+  tagRequestBody(WS_METHODS.cloudStartSignIn, CloudEmptyInput),
+  tagRequestBody(WS_METHODS.cloudPollSignIn, CloudSignInPollInput),
+  tagRequestBody(WS_METHODS.cloudSignOut, CloudEmptyInput),
   tagRequestBody(WS_METHODS.openCodeRemoveCredential, OpenCodeRemoveCredentialInput),
 
   // Desktop local-model runtimes

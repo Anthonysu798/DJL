@@ -124,7 +124,7 @@ export function makeGatewayRoutes(deps: GatewayRouteDeps) {
           );
         }
         const result = yield* attempt(
-          () => deps.gateway.generateImage(f, body as never),
+          (signal) => deps.gateway.generateImage(f, body as never, { signal }),
           GATEWAY_FAILURE,
         );
         return json(result);

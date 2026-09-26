@@ -166,6 +166,29 @@ describe("api end to end", () => {
     expect(usage.recent[0].model).toBe("gpt-5-mini");
   });
 
+  it("aborts the image provider call and refunds the reservation when the client disconnects", async () => {
+    const before = (await (await call("/v1/credits")).json()).total;
+    const controller = new AbortController();
+    const pending = call("/v1/images/generations", {
+      method: "POST",
+      json: { model: "gpt-image-1", prompt: "hang" },
+      signal: controller.signal,
+    }).catch(() => null);
+    await new Promise((r) => setTimeout(r, 300));
+    controller.abort();
+    await pending;
+    let status: string | undefined;
+    for (let i = 0; i < 40 && status !== "failed"; i += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      const usage = await (await call("/v1/usage")).json();
+      status = usage.recent.find(
+        (r: { endpoint: string }) => r.endpoint === "images.generations",
+      )?.status;
+    }
+    expect(status).toBe("failed");
+    expect((await (await call("/v1/credits")).json()).total).toBe(before);
+  });
+
   it("registers and lists a device", async () => {
     const created = await call("/v1/devices", {
       method: "POST",

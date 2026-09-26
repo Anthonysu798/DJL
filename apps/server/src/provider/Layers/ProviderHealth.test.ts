@@ -150,6 +150,7 @@ const allProvidersDisabledSettings = {
     kilo: { enabled: false },
     opencode: { enabled: false },
     pi: { enabled: false },
+    djlCloud: { enabled: false, region: "auto" },
   },
 } as const;
 
@@ -169,6 +170,7 @@ const allProvidersDisabledServerSettings = {
     kilo: { ...DEFAULT_SERVER_SETTINGS.providers.kilo, enabled: false },
     opencode: { ...DEFAULT_SERVER_SETTINGS.providers.opencode, enabled: false },
     pi: { ...DEFAULT_SERVER_SETTINGS.providers.pi, enabled: false },
+    djlCloud: { ...DEFAULT_SERVER_SETTINGS.providers.djlCloud, enabled: false },
   },
 } satisfies typeof DEFAULT_SERVER_SETTINGS;
 
@@ -277,6 +279,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           "qwen",
           "codebuddy",
           "pi",
+          "djlCloud",
         ]),
       );
       assert.strictEqual(opencode?.available, false);
@@ -428,6 +431,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             "qwen",
             "codebuddy",
             "pi",
+            "djlCloud",
           ]),
         );
         for (const status of statuses) {

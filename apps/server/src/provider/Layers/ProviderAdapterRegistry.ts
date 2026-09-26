@@ -25,6 +25,7 @@ import {
   NativeQwenAdapter,
   NativeCodeBuddyAdapter,
   NativePiAdapter,
+  NativeDjlCloudAdapter,
 } from "../../harnesses/native/layer";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 
@@ -48,6 +49,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
             yield* NativeQwenAdapter,
             yield* NativeCodeBuddyAdapter,
             yield* NativePiAdapter,
+            yield* NativeDjlCloudAdapter,
           ];
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
 

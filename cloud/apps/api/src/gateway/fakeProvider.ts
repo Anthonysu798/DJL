@@ -5,6 +5,7 @@
  *   "long:<n>"     → n chunks of 40 characters (for cut-off tests)
  *   "fail"         → retryable provider error before any output
  *   "tool"         → a tool call
+ *   "hang"         → (images) never finishes until the request is aborted
  */
 import {
   ProviderError,
@@ -85,9 +86,13 @@ export function createFakeProvider(): ProviderAdapter {
         },
       };
     },
-    async generateImage(req) {
+    async generateImage(req, signal) {
       if (req.prompt === "fail")
         throw new ProviderError("openai", 503, "unavailable", "fake outage", true);
+      if (req.prompt === "hang")
+        await new Promise((_resolve, reject) =>
+          signal.addEventListener("abort", () => reject(new Error("aborted"))),
+        );
       return {
         images: Array.from({ length: req.n }, (_v, i) => ({
           b64_json: Buffer.from(`fake-image-${i}`).toString("base64"),

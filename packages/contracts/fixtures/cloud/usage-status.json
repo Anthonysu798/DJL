@@ -1,0 +1,27 @@
+{
+  "planId": "starter",
+  "windows": {
+    "fiveHour": {
+      "kind": "five_hour",
+      "limit": "150000000",
+      "used": "42000000",
+      "remaining": "108000000",
+      "resetsAt": "2026-09-26T17:00:00.000Z"
+    },
+    "week": {
+      "kind": "week",
+      "limit": "1000000000",
+      "used": "42000000",
+      "remaining": "958000000",
+      "resetsAt": "2026-10-03T12:00:00.000Z"
+    }
+  },
+  "banks": [
+    {
+      "id": "bank_1",
+      "source": "plan_schedule",
+      "grantedAt": "2026-09-26T12:00:00.000Z",
+      "expiresAt": "2026-12-25T12:00:00.000Z"
+    }
+  ]
+}

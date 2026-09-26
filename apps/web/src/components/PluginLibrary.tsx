@@ -467,6 +467,7 @@ export function PluginLibrary() {
         plugins: supportsPluginDiscovery(piCapabilitiesQuery.data),
         skills: supportsSkillDiscovery(piCapabilitiesQuery.data),
       },
+      djlCloud: { plugins: false, skills: false },
     }),
     [
       claudeCapabilitiesQuery.data,

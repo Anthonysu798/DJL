@@ -443,6 +443,7 @@ export function buildModelSelection(
     case "iflow":
     case "qwen":
     case "codebuddy":
+    case "djlCloud":
       return { provider, model };
     case "codex":
       return options

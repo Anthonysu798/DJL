@@ -13,6 +13,7 @@ import {
   QwenModelOptions,
   CodeBuddyModelOptions,
   PiModelOptions,
+  DjlCloudModelOptions,
 } from "./model";
 import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
 import { ProjectKind } from "./project";
@@ -76,6 +77,7 @@ export const ProviderKind = Schema.Literals([
   "kilo",
   "opencode",
   "pi",
+  "djlCloud",
 ]);
 export type ProviderKind = typeof ProviderKind.Type;
 export const ProviderApprovalPolicy = Schema.Literals([
@@ -184,6 +186,13 @@ export const PiModelSelection = Schema.Struct({
 });
 export type PiModelSelection = typeof PiModelSelection.Type;
 
+export const DjlCloudModelSelection = Schema.Struct({
+  provider: Schema.Literal("djlCloud"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(DjlCloudModelOptions),
+});
+export type DjlCloudModelSelection = typeof DjlCloudModelSelection.Type;
+
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   ClaudeModelSelection,
@@ -198,12 +207,14 @@ export const ModelSelection = Schema.Union([
   KiloModelSelection,
   OpenCodeModelSelection,
   PiModelSelection,
+  DjlCloudModelSelection,
 ]);
 export type ModelSelection = typeof ModelSelection.Type;
 
 export const NewTaskModelSelection = ModelSelection.check(
   Schema.makeFilter(
     (selection) =>
+      selection.provider === "djlCloud" ||
       Schema.is(HarnessId)(selection.provider) ||
       new SchemaIssue.InvalidValue(Option.some(selection.provider), {
         message: "This harness does not have an active DJL runtime implementation",
@@ -270,6 +281,12 @@ export const KiloProviderStartOptions = Schema.Struct({
   serverPassword: Schema.optional(TrimmedNonEmptyString),
 });
 
+/** DJL Cloud runs remotely; the only start option is the region hint. */
+export const DjlCloudProviderStartOptions = Schema.Struct({
+  region: Schema.optional(Schema.Literals(["auto", "global", "asia"])),
+});
+export type DjlCloudProviderStartOptions = typeof DjlCloudProviderStartOptions.Type;
+
 export const PiProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
@@ -289,12 +306,15 @@ export const ProviderStartOptions = Schema.Struct({
   kilo: Schema.optional(KiloProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),
   pi: Schema.optional(PiProviderStartOptions),
+  djlCloud: Schema.optional(DjlCloudProviderStartOptions),
 });
 export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   Schema.makeFilter(
     (options) =>
-      Object.keys(options).every((provider) => Schema.is(HarnessId)(provider)) ||
+      Object.keys(options).every(
+        (provider) => provider === "djlCloud" || Schema.is(HarnessId)(provider),
+      ) ||
       new SchemaIssue.InvalidValue(Option.some(options), {
         message: "New turns accept DJL runtime options only",
       }),

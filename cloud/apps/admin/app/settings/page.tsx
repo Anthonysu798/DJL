@@ -96,6 +96,14 @@ const DEFS: Record<string, Def> = {
     show: (v) => `${Number(v ?? 0).toLocaleString()} streams`,
     parse: Number,
   },
+  "gateway.ip_requests_per_minute": {
+    group: "Gateway",
+    label: "Requests per network",
+    description: "Gateway requests allowed per client IP address per minute, across all accounts.",
+    field: int("value", "Requests per minute", 1, 1_000_000),
+    show: (v) => `${Number(v ?? 0).toLocaleString()} per minute`,
+    parse: Number,
+  },
   "pricing.margin": {
     group: "Pricing",
     label: "Margin over provider cost",

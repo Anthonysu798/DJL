@@ -1241,6 +1241,7 @@ function makeModelSelection(
     case "iflow":
     case "qwen":
     case "codebuddy":
+    case "djlCloud":
       return { provider, model };
     case "codex":
       return {

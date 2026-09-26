@@ -1,0 +1,18 @@
+{
+  "models": [
+    {
+      "id": "gpt-5",
+      "provider": "openai",
+      "displayName": "GPT-5",
+      "capabilities": ["text.chat", "tools", "vision", "json"],
+      "price": {
+        "inputPer1k": "0.18",
+        "outputPer1k": "1.40",
+        "perImage": "0.00"
+      },
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
+      "status": "active"
+    }
+  ]
+}
