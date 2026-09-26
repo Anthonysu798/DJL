@@ -18,5 +18,24 @@ services:
     image: redis:7-alpine
     ports:
       - "63799:6379"
+  # S3-compatible file storage for development, so the API, the worker, and
+  # the browser share one store and presigned URLs work (Supabase Storage in
+  # staging and production). Local-only credentials in infra/local/s3.json.
+  s3:
+    image: chrislusf/seaweedfs:4.47
+    command: server -s3 -s3.config=/etc/seaweedfs/s3.json -dir=/data
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./infra/local/s3.json:/etc/seaweedfs/s3.json:ro
+      - djl-s3:/data
+  s3-init:
+    image: chrislusf/seaweedfs:4.47
+    depends_on: [s3]
+    entrypoint: ["sh", "-c"]
+    command:
+      - until echo "s3.bucket.create -name djl-local" | weed shell -master=s3:9333; do sleep 2; done
+    restart: "no"
 volumes:
   djl-postgres:
+  djl-s3:
