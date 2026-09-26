@@ -5,12 +5,13 @@ import { Suspense, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/lib/locale-context";
+import { safeNext } from "@/lib/safeNext";
 
 function SignUpForm() {
   const { d } = useLocale();
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/account";
+  const next = safeNext(params.get("next"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
