@@ -182,3 +182,28 @@ export function createS3BlobStore(config: {
     },
   };
 }
+
+/**
+ * The blob store for this process. Real S3-compatible storage whenever it is
+ * configured, even when other externals are mocked, so the API and worker
+ * share one store and browsers can reach presigned URLs (local MinIO in
+ * development). The in-memory fake is only for mock mode without S3 settings.
+ */
+export function blobStoreFromEnv(
+  env: Readonly<Record<string, string | undefined>>,
+  options: { readonly mockExternals: boolean },
+): BlobStore {
+  if (!env.STORAGE_S3_ENDPOINT && options.mockExternals) return new FakeBlobStore();
+  const required = (name: string) => {
+    const value = env[name];
+    if (!value) throw new Error(`${name} is required`);
+    return value;
+  };
+  return createS3BlobStore({
+    endpoint: required("STORAGE_S3_ENDPOINT"),
+    region: env.STORAGE_S3_REGION ?? "us-east-1",
+    bucket: env.STORAGE_BUCKET ?? "djl-sync",
+    accessKeyId: required("STORAGE_ACCESS_KEY_ID"),
+    secretAccessKey: required("STORAGE_SECRET_ACCESS_KEY"),
+  });
+}

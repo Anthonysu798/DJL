@@ -33,6 +33,7 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            SettingsCloudCard()
             SettingsAppearanceCard(appFontStyle: appFontStyleBinding)
             SettingsNotificationsCard()
             SettingsSecurityCard()
@@ -519,5 +520,6 @@ private struct SettingsArchivedChatsCard: View {
     NavigationStack {
         SettingsView()
             .environment(CodexService())
+            .environment(CloudService())
     }
 }

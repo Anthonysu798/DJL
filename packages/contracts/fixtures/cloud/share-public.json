@@ -18,10 +18,19 @@
         {
           "type": "text",
           "text": "Hi!"
+        },
+        {
+          "type": "image_ref",
+          "fileId": "file_2",
+          "mimeType": "image/png",
+          "width": 512,
+          "height": 512
         }
       ],
       "createdAt": "2026-09-26T12:00:00.000Z"
     }
   ],
-  "imageUrls": {}
+  "imageUrls": {
+    "file_2": "https://storage.example.com/file_2?signature=abc"
+  }
 }

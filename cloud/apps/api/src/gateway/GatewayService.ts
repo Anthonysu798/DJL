@@ -237,6 +237,7 @@ export class GatewayService {
         contextWindow: m.contextWindow,
         maxOutputTokens: m.maxOutputTokens,
         status: m.status,
+        freeEligible: m.freeEligible,
       }));
   }
 

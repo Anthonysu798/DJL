@@ -5,7 +5,11 @@
  */
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudRunEventsResponse, CloudRunResponse } from "@synara/contracts/cloud";
+import {
+  CLOUD_RUN_STREAM_HEARTBEAT_SECONDS,
+  type CloudRunEventsResponse,
+  type CloudRunResponse,
+} from "@synara/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import { ApiError } from "../http/errors.ts";
@@ -16,7 +20,7 @@ export class RunService {
   constructor(
     private readonly db: DjlDatabase,
     private readonly log: RunLog,
-    private readonly heartbeatMs = 15_000,
+    private readonly heartbeatMs = CLOUD_RUN_STREAM_HEARTBEAT_SECONDS * 1000,
   ) {}
 
   async get(p: Principal, id: string): Promise<typeof CloudRunResponse.Encoded> {

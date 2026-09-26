@@ -32,11 +32,15 @@ export const CloudCreateShareResponse = Schema.Struct({
 });
 export type CloudCreateShareResponse = typeof CloudCreateShareResponse.Type;
 
-// GET /v1/shares → list; DELETE /v1/shares/{id} → revoke
+// GET /v1/shares (newest first)
 export const CloudShareListResponse = Schema.Struct({ shares: Schema.Array(CloudShare) });
 export type CloudShareListResponse = typeof CloudShareListResponse.Type;
 
-// GET /v1/public/shares/{token} (no auth)
+// DELETE /v1/shares/{id}: idempotent; returns the revoked share
+export const CloudRevokeShareResponse = Schema.Struct({ share: CloudShare });
+export type CloudRevokeShareResponse = typeof CloudRevokeShareResponse.Type;
+
+// GET /v1/public/shares/{token} (no auth, rate limited per IP, `x-robots-tag: noindex`)
 export const CloudSharedMessage = Schema.Struct({
   role: CloudMessageRole,
   parts: Schema.Array(CloudMessagePart),
@@ -48,7 +52,11 @@ export const CloudPublicShareResponse = Schema.Struct({
   title: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
   messages: Schema.Array(CloudSharedMessage),
-  /** Short-lived signed URLs for the shared images, keyed by file id. */
+  /**
+   * Five-minute signed URLs for the snapshot's image_ref parts, keyed by file
+   * id. An image missing here was deleted; render a placeholder. Reload the
+   * share for fresh URLs.
+   */
   imageUrls: Schema.Record(Schema.String, Schema.String),
 });
 export type CloudPublicShareResponse = typeof CloudPublicShareResponse.Type;

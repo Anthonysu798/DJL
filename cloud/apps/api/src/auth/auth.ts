@@ -72,8 +72,10 @@ export function createAuth(input: {
   readonly notifier: AuthNotifier;
   readonly redis: Redis;
   readonly revocations: SessionRevocations;
+  /** Runs once a user has a verified email: at sign-up (social) or on verification. */
+  readonly onEmailVerified?: (userId: string) => Promise<void>;
 }) {
-  const { env, db, notifier, redis, revocations } = input;
+  const { env, db, notifier, redis, revocations, onEmailVerified } = input;
   return betterAuth({
     appName: "DJL Cloud",
     baseURL: env.apiPublicUrl,
@@ -171,6 +173,12 @@ export function createAuth(input: {
           // the user so no account ever exists without a billing owner.
           after: async (user) => {
             await createPersonalOrganization(db, user.id, user.name || user.email);
+            if (user.emailVerified) await onEmailVerified?.(user.id);
+          },
+        },
+        update: {
+          after: async (user) => {
+            if (user.emailVerified) await onEmailVerified?.(user.id);
           },
         },
       },

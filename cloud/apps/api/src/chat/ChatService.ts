@@ -224,9 +224,16 @@ export class ChatService {
     const c = schema.conversations;
     const offset = query.cursor ? decodeCursor(query.cursor, isOffset) : 0;
     const q = sql`websearch_to_tsquery('simple', ${query.q})`;
+    // Written out so the outer "conversations"."id" can't be read as the subquery's own id.
+    const newestMatch = sql<string | null>`(
+      select m.id from messages m
+      where m.conversation_id = "conversations"."id"
+        and to_tsvector('simple', jsonb_path_query_array(m.parts, '$[*] ? (@.type == "text").text')::text) @@ ${q}
+      order by m.created_at desc limit 1)`;
     const rows = await this.db
       .select({
         row: c,
+        messageId: newestMatch,
         snippet: sql<string>`ts_headline('simple', coalesce(${c.title}, '') || ' ' || ${c.searchText}, ${q}, 'StartSel="", StopSel="", MaxWords=20, MinWords=10')`,
       })
       .from(c)
@@ -244,7 +251,7 @@ export class ChatService {
     return {
       results: rows.slice(0, PAGE_SIZE).map((r) => ({
         conversation: toConversation(r.row),
-        messageId: null,
+        messageId: r.messageId,
         snippet: r.snippet,
       })),
       nextCursor: rows.length > PAGE_SIZE ? encodeCursor(offset + PAGE_SIZE) : null,

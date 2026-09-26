@@ -7,6 +7,7 @@
     "./agent": "./src/agent/runtime.ts",
     "./blobs": "./src/sync/BlobStore.ts",
     "./credits": "./src/credits/LedgerService.ts",
+    "./free-allowance": "./src/credits/freeAllowance.ts",
     "./server": "./src/server.ts"
   },
   "scripts": {

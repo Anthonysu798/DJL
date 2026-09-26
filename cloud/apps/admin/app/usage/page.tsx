@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+
 import { PageCard, StatusPill, headRowClass, rowClass } from "@/components/PageCard";
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
@@ -58,6 +60,7 @@ export default function UsagePage() {
   const batches = useLoad(() => admin<Batch[]>("/usage/batches"), []);
   const models = useLoad(() => admin<Model[]>("/models"), []);
   const error = plans.error ?? schedules.error ?? batches.error ?? models.error;
+  const [resetDone, setResetDone] = useState<string | null>(null);
   const free = plans.data?.find((p) => p.id === "free");
   const planOptions = [
     { value: "everyone", label: "Everyone" },
@@ -382,10 +385,19 @@ export default function UsagePage() {
                 admin("/usage/reset-all", {
                   method: "POST",
                   json: { confirm: v.confirm!.trim(), reason },
-                }).then(() => undefined)
+                }).then(() =>
+                  setResetDone(
+                    `Every user's windows were reset at ${new Date().toLocaleString()}.`,
+                  ),
+                )
               }
             />
           </div>
+          {resetDone ? (
+            <p role="status" className="mt-3 text-sm text-muted-foreground">
+              {resetDone}
+            </p>
+          ) : null}
         </PageCard>
       </div>
     </Shell>

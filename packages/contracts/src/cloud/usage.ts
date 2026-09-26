@@ -97,6 +97,8 @@ export const CloudModel = Schema.Struct({
   contextWindow: Schema.NullOr(Schema.Int),
   maxOutputTokens: Schema.NullOr(Schema.Int),
   status: Schema.Literals(["active", "degraded", "disabled"]),
+  /** The weekly free allowance can be spent on this model. */
+  freeEligible: Schema.optionalKey(Schema.Boolean),
 });
 export type CloudModel = typeof CloudModel.Type;
 

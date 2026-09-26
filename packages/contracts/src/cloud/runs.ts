@@ -2,7 +2,14 @@
  * Runs: every assistant turn, chat or background task, is a run. Its progress
  * is an ordered event log; `seq` starts at 1 and increases by one per event,
  * so any device can resume with GET /v1/runs/{id}/events?after=<last seq>.
- * The same events are streamed as SSE (`event: <type>`, `data: <CloudRunEvent>`).
+ *
+ * With `Accept: text/event-stream` the same endpoint streams SSE:
+ * - first `retry: 3000`;
+ * - one message per event: `id: <seq>`, `event: <type>`, `data: <CloudRunEvent JSON>`;
+ * - a `: heartbeat` comment every CLOUD_RUN_STREAM_HEARTBEAT_SECONDS while the run is quiet;
+ * - the stream closes after the terminal `status` event (at once for a finished run).
+ * Resume with `after=<seq>`; without it, a `Last-Event-ID` header is honored.
+ * Closing the stream never stops the run.
  */
 import { Schema } from "effect";
 
@@ -24,6 +31,8 @@ export type CloudRunStatus = typeof CloudRunStatus.Type;
 
 export const CloudRunError = Schema.Struct({ code: TrimmedNonEmptyString, message: Schema.String });
 export type CloudRunError = typeof CloudRunError.Type;
+
+export const CLOUD_RUN_STREAM_HEARTBEAT_SECONDS = 15;
 
 export const CloudRun = Schema.Struct({
   id: CloudRunId,
@@ -91,6 +100,11 @@ export const CloudSendMessageResponse = Schema.Struct({
   run: CloudRun,
 });
 export type CloudSendMessageResponse = typeof CloudSendMessageResponse.Type;
+
+// POST /v1/conversations/{id}/messages/{messageId}/regenerate: `message` is the
+// user message being answered again, `reply` the new sibling reply.
+export const CloudRegenerateResponse = CloudSendMessageResponse;
+export type CloudRegenerateResponse = typeof CloudRegenerateResponse.Type;
 
 // GET /v1/runs/{id}
 export const CloudRunResponse = Schema.Struct({ run: CloudRun });

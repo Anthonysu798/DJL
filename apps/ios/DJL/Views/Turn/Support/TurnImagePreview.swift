@@ -82,7 +82,7 @@ struct ZoomableImagePreviewScreen: View {
 
     private var topBar: some View {
         HStack(spacing: 14) {
-            themedCircleButton(systemName: "xmark") {
+            themedCircleButton(systemName: "xmark", label: "Close") {
                 onDismiss()
             }
 
@@ -99,11 +99,11 @@ struct ZoomableImagePreviewScreen: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                themedCircleButton(systemName: "square.and.arrow.up") {
+                themedCircleButton(systemName: "square.and.arrow.up", label: "Share") {
                     isShowingShareSheet = true
                 }
 
-                themedCircleButton(systemName: "square.and.arrow.down") {
+                themedCircleButton(systemName: "square.and.arrow.down", label: "Save to Photos") {
                     saveCoordinator.save(payload.image) { result in
                         switch result {
                         case .success:
@@ -117,7 +117,7 @@ struct ZoomableImagePreviewScreen: View {
         }
     }
 
-    private func themedCircleButton(systemName: String, action: @escaping () -> Void) -> some View {
+    private func themedCircleButton(systemName: String, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button {
             HapticFeedback.shared.triggerImpactFeedback(style: .light)
             action()
@@ -130,6 +130,8 @@ struct ZoomableImagePreviewScreen: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        // The icon is a custom asset whose name VoiceOver would otherwise read aloud.
+        .accessibilityLabel(label)
     }
 
     private var alertIsPresented: Binding<Bool> {

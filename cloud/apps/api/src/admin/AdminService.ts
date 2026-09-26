@@ -8,12 +8,15 @@ import { schema, type DjlDatabase } from "@djl/db";
 import { creditsToMicro, formatCredits, totalAvailable, type Microcredits } from "@djl/domain";
 import { adminInvite, type EmailSender } from "@djl/notify";
 
+import type { ResumeWindowBlockedRuns } from "../agent/resume.ts";
 import { writeAudit } from "../audit/AuditLog.ts";
+import type { SessionRevocations } from "../auth/revocations.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
 import type { GatewayService } from "../gateway/GatewayService.ts";
 import type { RateLimiter } from "../gateway/RateLimiter.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
+import { planForOrg } from "../usage/plans.ts";
 import { resetWindows } from "../usage/windowStore.ts";
 import {
   ADMIN_ROLES,
@@ -31,6 +34,10 @@ export interface AdminDeps {
   readonly gateway: Pick<GatewayService, "invalidateCatalog">;
   readonly trial: Pick<TrialService, "approve">;
   readonly auth: Pick<AdminAuth, "issueInvite" | "revokeSessions" | "revokeSessionsFromIp">;
+  /** Denylists user sessions so their access tokens stop working before they expire. */
+  readonly revocations: Pick<SessionRevocations, "revoke">;
+  /** Re-enqueues a user's window-blocked task runs after their windows are reset. */
+  readonly resumeRuns?: ResumeWindowBlockedRuns;
   readonly email: EmailSender;
   /** Where invite links point, e.g. https://admin.slcor.com. */
   readonly adminPublicUrl: string;
@@ -108,6 +115,7 @@ export class AdminService {
           where: eq(schema.subscriptions.orgId, m.orgId),
           orderBy: [desc(schema.subscriptions.createdAt)],
         });
+        const { planId } = await planForOrg(this.deps.db, m.orgId, new Date());
         return {
           id: m.orgId,
           name: m.name,
@@ -115,7 +123,7 @@ export class AdminService {
           personal: m.metadata?.includes('"personal"') ?? false,
           balances,
           total: formatCredits(totalAvailable(balances)),
-          plan: sub?.planId ?? "trial",
+          plan: planId,
           subscriptionStatus: sub?.status ?? null,
         };
       }),
@@ -271,8 +279,11 @@ export class AdminService {
 
   async revokeSessions(p: AdminPrincipal, userId: string) {
     requirePermission(p, "users.write");
-    await this.deps.db.transaction(async (tx) => {
-      await tx.delete(schema.session).where(eq(schema.session.userId, userId));
+    const ended = await this.deps.db.transaction(async (tx) => {
+      const rows = await tx
+        .delete(schema.session)
+        .where(eq(schema.session.userId, userId))
+        .returning({ id: schema.session.id });
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -280,7 +291,9 @@ export class AdminService {
         targetType: "user",
         targetId: userId,
       });
+      return rows.map((r) => r.id);
     });
+    await this.deps.revocations.revoke(ended);
   }
 
   // ---- credits and limits --------------------------------------------------
@@ -365,6 +378,7 @@ export class AdminService {
         reason,
       });
     });
+    await this.deps.resumeRuns?.(userId);
     return { cleared };
   }
 
@@ -407,9 +421,14 @@ export class AdminService {
              (SELECT count(*)::int FROM usage_requests WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz AND status IN ('settled','cut_off')) AS requests,
              (SELECT count(DISTINCT user_id)::int FROM usage_requests WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz) AS active,
              (SELECT coalesce(sum(amount_paid_usd_cents),0)::int FROM invoices WHERE created_at >= ${prevSinceIso}::timestamptz AND created_at < ${sinceIso}::timestamptz) AS cents`);
-    // Organizations by plan: active subscriptions per tier; everyone else is on trial.
+    // Organizations by plan, as planForOrg decides: an active subscription's tier,
+    // else a live trial, else free.
     const byPlan = await this.deps.db.execute<{ plan_id: string; orgs: number }>(sql`
-      SELECT plan_id::text AS plan_id, count(DISTINCT org_id)::int AS orgs FROM subscriptions WHERE status = 'active' GROUP BY 1`);
+      SELECT plan_id::text AS plan_id, count(DISTINCT org_id)::int AS orgs FROM subscriptions WHERE status = 'active' GROUP BY 1
+      UNION ALL
+      SELECT 'trial', count(DISTINCT t.org_id)::int FROM trial_grants t
+      WHERE t.status = 'granted' AND t.expires_at > now()
+        AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.org_id = t.org_id AND s.status = 'active')`);
     const byModel = await this.deps.db.execute<{
       model_id: string;
       requests: number;
@@ -417,7 +436,7 @@ export class AdminService {
     }>(sql`
       SELECT model_id, count(*)::int AS requests, coalesce(sum(settled_micro),0)::text AS settled FROM usage_requests
       WHERE created_at >= ${sinceIso}::timestamptz AND status IN ('settled','cut_off') GROUP BY 1 ORDER BY 3 DESC LIMIT 25`);
-    const paidOrgs = byPlan.reduce((a, r) => a + r.orgs, 0);
+    const paidOrgs = byPlan.reduce((a, r) => a + r.orgs, 0); // subscribed or on a trial
     return {
       range,
       since: sinceIso,
@@ -425,7 +444,7 @@ export class AdminService {
       previous: previous ?? { signups: 0, requests: 0, active: 0, cents: 0 },
       byPlan: [
         ...byPlan.map((r) => ({ planId: r.plan_id, orgs: r.orgs })),
-        { planId: "trial", orgs: Math.max(0, (totals?.orgs ?? 0) - paidOrgs) },
+        { planId: "free", orgs: Math.max(0, (totals?.orgs ?? 0) - paidOrgs) },
       ],
       signups: [...signups],
       usage: [...usage],
@@ -496,7 +515,8 @@ export class AdminService {
 
   async listPlans(p: AdminPrincipal) {
     requirePermission(p, "stats.read");
-    return this.deps.db.query.plans.findMany();
+    // Enum order: free, trial, then tiers, so an edited row keeps its place.
+    return this.deps.db.query.plans.findMany({ orderBy: [schema.plans.id] });
   }
 
   async updatePlan(

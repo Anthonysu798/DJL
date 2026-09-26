@@ -44,6 +44,7 @@ private struct MacContextTransitionSnapshot {
 
 struct ContentView: View {
     @Environment(CodexService.self) private var codex
+    @Environment(CloudService.self) private var cloud
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -116,10 +117,18 @@ struct ContentView: View {
     private static var isSidebarDebugLoggingEnabled: Bool { false }
 
     var body: some View {
-        rootContentWithBannerOverlay
-            .onAppear {
-                normalizeInitialPairingScreenIfNeeded()
-            }
+        // Signed-in users land in DJL Cloud chat; desktop pairing lives in its own "My Macs" section.
+        switch cloud.route(hasPairedMac: codex.hasReconnectCandidate) {
+        case .cloudHome:
+            CloudHomeView()
+        case .welcome:
+            CloudWelcomeView()
+        case .myMacs:
+            rootContentWithBannerOverlay
+                .onAppear {
+                    normalizeInitialPairingScreenIfNeeded()
+                }
+        }
     }
 
     // Scene restoration can preserve a previously-open scanner after a fresh
@@ -2319,4 +2328,5 @@ private struct HorizontalRevealViewportShape: Shape {
 #Preview {
     ContentView()
         .environment(CodexService())
+        .environment(CloudService())
 }

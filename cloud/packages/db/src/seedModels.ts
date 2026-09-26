@@ -23,6 +23,8 @@ interface SeedModel {
   readonly maxOutputTokens?: number;
   readonly qualityScore: number;
   readonly sortOrder: number;
+  /** Cheap models the weekly free allowance may be spent on. */
+  readonly freeEligible?: boolean;
 }
 
 const TEXT = ["text.chat", "tools", "vision", "json"] as const;
@@ -55,6 +57,7 @@ export const SEED_MODELS: readonly SeedModel[] = [
     maxOutputTokens: 128_000,
     qualityScore: 75,
     sortOrder: 20,
+    freeEligible: true,
   },
   {
     modelId: "claude-opus-5",
@@ -97,6 +100,7 @@ export const SEED_MODELS: readonly SeedModel[] = [
     maxOutputTokens: 64_000,
     qualityScore: 72,
     sortOrder: 22,
+    freeEligible: true,
   },
   {
     modelId: "gemini-2.5-pro",
@@ -136,6 +140,7 @@ export const SEED_MODELS: readonly SeedModel[] = [
     maxOutputTokens: 16_000,
     qualityScore: 74,
     sortOrder: 40,
+    freeEligible: true,
   },
   {
     modelId: "kimi-k2",
@@ -229,6 +234,7 @@ export async function seedModels(databaseUrl: string, margin = 0.4): Promise<num
           maxOutputTokens: m.maxOutputTokens ?? null,
           qualityScore: m.qualityScore,
           sortOrder: m.sortOrder,
+          freeEligible: m.freeEligible ?? false,
         })
         .onConflictDoNothing({ target: modelCatalog.modelId })
         .returning({ id: modelCatalog.modelId });

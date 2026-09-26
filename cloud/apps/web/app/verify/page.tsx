@@ -5,13 +5,14 @@ import { Suspense, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { fill } from "@/lib/i18n";
 import { useLocale } from "@/lib/locale-context";
+import { safeNext } from "@/lib/safeNext";
 
 function VerifyForm() {
   const { d } = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") ?? "";
-  const next = params.get("next") ?? "/account";
+  const next = safeNext(params.get("next"));
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

@@ -68,6 +68,13 @@ final class CodexNotificationCenterDelegateProxy: NSObject, UNUserNotificationCe
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        let userInfo = response.notification.request.content.userInfo
+        if let conversationID = CloudRunPush(userInfo: userInfo)?.conversationID {
+            await MainActor.run {
+                NotificationCenter.default.post(name: .djlCloudOpenConversation, object: nil, userInfo: ["conversationId": conversationID])
+            }
+            return
+        }
         guard let service,
               let payload = CodexThreadNotificationPayload(from: response.notification.request.content.userInfo) else {
             return

@@ -11,7 +11,14 @@ import { UsageService } from "./UsageService.ts";
 
 const conn = testDatabase();
 const ledger = new LedgerService(conn.db);
-const usage = new UsageService(conn.db);
+const resumed: (string | null)[] = [];
+const usage = new UsageService(
+  conn.db,
+  () => new Date(),
+  async (userId) => {
+    resumed.push(userId);
+  },
+);
 afterAll(() => conn.close());
 
 async function account(label: string) {
@@ -87,6 +94,8 @@ describe("UsageService", () => {
     });
     const result = await usage.redeem(ids.userId, ids.orgId, "key-1");
     expect(result.redeemedBankId).toBe(granted.id);
+    // Tasks this user had blocked on a window get another go.
+    expect(resumed).toContain(ids.userId);
     expect(result.usage.windows.fiveHour).toMatchObject({ used: 0n, resetsAt: null });
     expect(result.usage.windows.week).toMatchObject({ used: 0n, resetsAt: null });
     expect(result.usage.banks.count).toBe(0);

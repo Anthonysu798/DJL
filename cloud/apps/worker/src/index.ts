@@ -4,7 +4,7 @@
  * (task runs). Stripe webhooks are processed inline by the API.
  */
 import { createAgentRuntime } from "@djl/api/agent";
-import { FakeBlobStore, createS3BlobStore } from "@djl/api/blobs";
+import { blobStoreFromEnv } from "@djl/api/blobs";
 import { LedgerService } from "@djl/api/credits";
 import { createDatabase } from "@djl/db";
 import { MockOutbox, createResendSender } from "@djl/notify";
@@ -25,15 +25,7 @@ const requireEnv = (name: string) => {
   return value;
 };
 const mockExternals = process.env.DJL_MOCK_EXTERNALS === "true";
-const blobs = mockExternals
-  ? new FakeBlobStore()
-  : createS3BlobStore({
-      endpoint: requireEnv("STORAGE_S3_ENDPOINT"),
-      region: process.env.STORAGE_S3_REGION ?? "us-east-1",
-      bucket: process.env.STORAGE_BUCKET ?? "djl-sync",
-      accessKeyId: requireEnv("STORAGE_ACCESS_KEY_ID"),
-      secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
-    });
+const blobs = blobStoreFromEnv(process.env, { mockExternals });
 const deps = { db, ledger, blobs };
 
 const boss = new PgBoss({ connectionString: databaseUrl, schema: "pgboss", max: 4 });

@@ -6,7 +6,8 @@
 import http from "node:http";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
-import { createDatabase } from "@djl/db";
+import { createDatabase, schema } from "@djl/db";
+import { and, eq } from "drizzle-orm";
 import {
   MockOutbox,
   createResendSender,
@@ -23,7 +24,7 @@ import { Redis } from "ioredis";
 import { HttpRouter } from "effect/unstable/http";
 
 import { makeAccessTokenVerifier } from "./auth/accessTokens.ts";
-import { createAuth, type AuthNotifier } from "./auth/auth.ts";
+import { createAuth, PERSONAL_ORG_METADATA, type AuthNotifier } from "./auth/auth.ts";
 import { makePrincipalResolver } from "./auth/guard.ts";
 import { makeLocaleLookup } from "./auth/locale.ts";
 import { createSessionRevocations } from "./auth/revocations.ts";
@@ -33,12 +34,13 @@ import {
   createStripeGateway,
   type StripeGateway,
 } from "./billing/StripeGateway.ts";
+import { grantWeeklyFreeAllowance } from "./credits/freeAllowance.ts";
 import { LedgerService } from "./credits/LedgerService.ts";
 import { TrialService } from "./trial/TrialService.ts";
 import { ADMIN_LOCKOUT, AdminAuth } from "./admin/AdminAuth.ts";
 import { AdminService } from "./admin/AdminService.ts";
 import { GatewayService } from "./gateway/GatewayService.ts";
-import { FakeBlobStore, createS3BlobStore, type BlobStore } from "./sync/BlobStore.ts";
+import { blobStoreFromEnv, type BlobStore } from "./sync/BlobStore.ts";
 import { SyncService } from "./sync/SyncService.ts";
 import { UsageAdminService } from "./usage/UsageAdminService.ts";
 import { UsageService } from "./usage/UsageService.ts";
@@ -46,6 +48,7 @@ import { windowPolicy } from "./usage/windowPolicy.ts";
 import { ChatService } from "./chat/ChatService.ts";
 import { FileService } from "./files/FileService.ts";
 import { ChatRunner } from "./runs/ChatRunner.ts";
+import { resumeWindowBlockedRuns } from "./agent/resume.ts";
 import { createPgBossTaskQueue } from "./runs/RunExecutor.ts";
 import { RunLog } from "./runs/RunLog.ts";
 import { RunService } from "./runs/RunService.ts";
@@ -157,12 +160,31 @@ export async function startApi(
   // Auth throttles, the session denylist, and admin lockouts are shared by every instance.
   const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
   const revocations = createSessionRevocations(redis);
+  const ledger = new LedgerService(db);
   const auth = createAuth({
     env,
     db,
     notifier: makeNotifier(env, senders, makeLocaleLookup(db)),
     redis,
     revocations,
+    onEmailVerified: async (userId) => {
+      const [personal] = await db
+        .select({ orgId: schema.member.organizationId })
+        .from(schema.member)
+        .innerJoin(schema.organization, eq(schema.organization.id, schema.member.organizationId))
+        .where(
+          and(
+            eq(schema.member.userId, userId),
+            eq(schema.organization.metadata, PERSONAL_ORG_METADATA),
+          ),
+        );
+      if (personal)
+        await grantWeeklyFreeAllowance(db, ledger, {
+          userId,
+          orgId: personal.orgId,
+          actor: "system:signup",
+        });
+    },
   });
   const region = process.env.FLY_REGION ?? "local";
   const readiness = {
@@ -176,7 +198,6 @@ export async function startApi(
     },
   };
 
-  const ledger = new LedgerService(db);
   const verifyAccessToken = makeAccessTokenVerifier({
     issuer: env.apiPublicUrl,
     loadJwks: () => auth.api.getJwks(),
@@ -204,7 +225,10 @@ export async function startApi(
   const providers = buildProviders(env, process.env, (alert) => {
     void senders.alerts?.post(alert);
   });
-  const usage = new UsageService(db);
+  const tasks = createPgBossTaskQueue(env.databaseUrl);
+  const resumeRuns = (userId: string | null) =>
+    resumeWindowBlockedRuns({ db, enqueue: tasks.enqueue }, userId);
+  const usage = new UsageService(db, undefined, resumeRuns);
   const settings = new Settings(db);
   const gateway = new GatewayService({
     db,
@@ -222,19 +246,10 @@ export async function startApi(
     onAlert: (alert) => void senders.alerts?.post(alert),
   });
   const version = process.env.DJL_VERSION ?? "dev";
-  const blobs: BlobStore = env.mockExternals
-    ? new FakeBlobStore()
-    : createS3BlobStore({
-        endpoint: requireEnv("STORAGE_S3_ENDPOINT"),
-        region: process.env.STORAGE_S3_REGION ?? "us-east-1",
-        bucket: process.env.STORAGE_BUCKET ?? "djl-sync",
-        accessKeyId: requireEnv("STORAGE_ACCESS_KEY_ID"),
-        secretAccessKey: requireEnv("STORAGE_SECRET_ACCESS_KEY"),
-      });
+  const blobs: BlobStore = blobStoreFromEnv(process.env, { mockExternals: env.mockExternals });
   const sync = new SyncService(db, blobs);
   const runLog = new RunLog(db, redis);
   const runner = new ChatRunner({ db, gateway, log: runLog, blobs });
-  const tasks = createPgBossTaskQueue(env.databaseUrl);
   const files = new FileService(db, blobs, settings);
   const chat = new ChatService({ db, files, runner, tasks });
   const shares = new ShareService(db, chat, blobs, env.webPublicUrl);
@@ -252,11 +267,13 @@ export async function startApi(
     gateway,
     trial,
     auth: adminAuth,
+    revocations,
+    resumeRuns,
     email: senders.email,
     adminPublicUrl: env.adminPublicUrl,
     version,
   });
-  const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts });
+  const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
   const routes = makeRoutes({
     env,
     auth,

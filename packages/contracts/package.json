@@ -22,7 +22,8 @@
     "./locale-values": {
       "types": "./src/localeValues.ts",
       "import": "./src/localeValues.ts"
-    }
+    },
+    "./fixtures/cloud/*": "./fixtures/cloud/*"
   },
   "scripts": {
     "dev": "tsdown src/index.ts --format cjs --watch --clean",

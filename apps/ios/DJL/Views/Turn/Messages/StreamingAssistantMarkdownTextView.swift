@@ -121,7 +121,11 @@ struct StreamingAssistantMarkdownTextView: View {
         }
         .onChange(of: animatesReveal) { _, isAnimating in
             if !isAnimating {
-                snapToActive()
+                // The last delta and the end of the stream often land together; adopt the
+                // final text now instead of relying on a coalesced adoption still pending.
+                textAdoptionTask?.cancel()
+                textAdoptionTask = nil
+                adoptText(text, animated: false)
             }
         }
         // Accessibility: if Reduce Motion turns on mid-stream, stop the reveal immediately

@@ -8,6 +8,7 @@ import {
   CloudResetBanksResponse,
   CloudUsageWindowsResponse,
 } from "@synara/contracts/cloud";
+import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { bankExpiresAt } from "@djl/domain";
 import { Schema } from "effect";
@@ -73,7 +74,7 @@ describe("api end to end", () => {
     expect((await me.json()).error.code).toBe("unauthorized");
   });
 
-  it("signs up, verifies email with the OTP from the outbox, and sees a personal org with zero credits", async () => {
+  it("signs up, verifies email with the OTP from the outbox, and sees a personal org holding only the free allowance", async () => {
     const signup = await call("/v1/auth/sign-up/email", {
       method: "POST",
       json: { email, password, name: "E2E" },
@@ -98,7 +99,10 @@ describe("api end to end", () => {
 
     const credits = await call("/v1/credits");
     expect(credits.status).toBe(200);
-    expect((await credits.json()).display.total).toBe("0.00");
+    const balance = await credits.json();
+    const free = await api.db.query.plans.findFirst({ where: eq(schema.plans.id, "free") });
+    expect(BigInt(balance.balances.free)).toBe(free!.includedMicrocredits);
+    expect(balance.total).toBe(balance.balances.free); // nothing paid, no trial
   });
 
   it("refuses org switching to an org the user is not a member of", async () => {
@@ -144,7 +148,7 @@ describe("api end to end", () => {
     });
     expect(hook.status).toBe(200);
     const credits = await (await call("/v1/credits")).json();
-    expect(credits.display.total).toBe("2500.00");
+    expect(credits.display.topup).toBe("2500.00");
     const ledger = await (await call("/v1/credits/ledger?limit=5")).json();
     expect(ledger.entries[0].type).toBe("topup");
   });

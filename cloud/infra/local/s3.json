@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "djl-local",
+      "credentials": [{ "accessKey": "djl-local", "secretKey": "djl-local-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
