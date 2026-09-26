@@ -56,6 +56,8 @@ export const CloudApiError = Schema.Struct({
     traceId: TrimmedNonEmptyString,
     /** Set with `usage_window_exhausted`: when the exhausted window frees up again. */
     resetsAt: Schema.optionalKey(Schema.String),
+    /** Set with `usage_window_exhausted`: which window is full. */
+    window: Schema.optionalKey(Schema.Literals(["five_hour", "week"])),
   }),
 });
 export type CloudApiError = typeof CloudApiError.Type;
@@ -81,6 +83,8 @@ export const CloudApiErrorCode = Schema.Literals([
   "rate_limited",
   "overloaded",
   "usage_window_exhausted",
+  /** A stream was cut mid-response because a usage window filled. */
+  "usage_window_cut",
   "no_reset_bank",
   "gateway_paused",
   "sync_paused",
