@@ -26,12 +26,24 @@ export async function writeAudit(db: Writer, event: AuditEventInput): Promise<vo
     action: event.action,
     targetType: event.targetType,
     targetId: event.targetId,
-    before: event.before ?? null,
-    after: event.after ?? null,
+    before: jsonSafe(event.before ?? null),
+    after: jsonSafe(event.after ?? null),
     reason: event.reason ?? null,
     ipHash: event.ipHash ?? null,
     traceId: event.traceId ?? null,
   });
+}
+
+/**
+ * Audit values are stored as JSON, which has no bigint. Money is bigint
+ * microcredits throughout, so bigints become decimal strings, at any depth.
+ */
+function jsonSafe(value: unknown): unknown {
+  if (typeof value === "bigint") return value.toString();
+  if (Array.isArray(value)) return value.map(jsonSafe);
+  if (value !== null && typeof value === "object" && !(value instanceof Date))
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, jsonSafe(v)]));
+  return value;
 }
 
 /** SHA-256 of an IP with a static salt so audit rows never hold raw addresses. */

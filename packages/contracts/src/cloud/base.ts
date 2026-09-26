@@ -42,6 +42,31 @@ export type CloudFileId = typeof CloudFileId.Type;
 export const CloudShareId = TrimmedNonEmptyString.pipe(Schema.brand("CloudShareId"));
 export type CloudShareId = typeof CloudShareId.Type;
 
+/**
+ * Cookie-authenticated (web) mutations on /v1/* must echo the double-submit
+ * token from GET /v1/csrf in this header, from a trusted Origin. Requests with
+ * an `Authorization` header (desktop, iOS) are exempt.
+ */
+export const CLOUD_CSRF_HEADER = "x-csrf-token";
+export const CLOUD_CSRF_COOKIE = "djl_csrf";
+
+// GET /v1/csrf (also sets the HttpOnly `djl_csrf` cookie the header must match)
+export const CloudCsrfResponse = Schema.Struct({ token: TrimmedNonEmptyString });
+export type CloudCsrfResponse = typeof CloudCsrfResponse.Type;
+
+/**
+ * Native sessions. Signing in through Better Auth (/v1/auth/sign-in/*) returns
+ * the long-lived session token in this response header. Clients send it as
+ * `Authorization: Bearer <session token>` to GET /v1/auth/token and use the
+ * returned 15-minute JWT as the bearer for every other call, fetching a new
+ * one shortly before it expires (the JWT's `exp`).
+ */
+export const CLOUD_SESSION_TOKEN_HEADER = "set-auth-token";
+
+// GET /v1/auth/token (bearer: the session token)
+export const CloudAccessTokenResponse = Schema.Struct({ token: TrimmedNonEmptyString });
+export type CloudAccessTokenResponse = typeof CloudAccessTokenResponse.Type;
+
 export const CloudOrgRole = Schema.Literals(["owner", "admin", "member", "billing"]);
 export type CloudOrgRole = typeof CloudOrgRole.Type;
 
@@ -64,12 +89,34 @@ export type CloudApiError = typeof CloudApiError.Type;
 
 export const CloudApiErrorCode = Schema.Literals([
   "unauthorized",
+  /** The bearer JWT is malformed, expired, or signed by an unknown key: fetch a new one. */
+  "invalid_token",
+  /** The session behind the JWT was signed out: sign in again. */
+  "session_revoked",
+  /** Cookie mutation without a trusted Origin. */
+  "csrf_origin",
+  /** Cookie mutation without a matching x-csrf-token: fetch GET /v1/csrf and retry once. */
+  "csrf_token",
+  "browser_session_required",
   "forbidden",
   "suspended",
   "not_a_member",
   "not_found",
   "bad_request",
   "bad_json",
+  "bad_cursor",
+  /** A message must reply to an assistant message. */
+  "bad_parent",
+  "unsupported_type",
+  "file_too_large",
+  /** POST /v1/files/{id}/complete before the bytes were PUT. */
+  "upload_missing",
+  /** The uploaded bytes differ from the declared size, SHA-256, or type. */
+  "upload_mismatch",
+  /** The scan gate refused the file. */
+  "upload_rejected",
+  /** A message references a file that is not the sender's or not ready. */
+  "file_unavailable",
   "payload_too_large",
   "insufficient_credits",
   "billing_paused",

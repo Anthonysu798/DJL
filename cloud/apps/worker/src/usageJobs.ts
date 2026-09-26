@@ -4,7 +4,7 @@
  * twice; bank expiry is a read-time filter, and the nightly job only records it.
  */
 import { and, eq, inArray, lt, sql, type SQL } from "drizzle-orm";
-import { DuplicateIdempotencyKeyError } from "@djl/api/credits";
+import { grantWeeklyFreeAllowance } from "@djl/api/free-allowance";
 import { schema, type DjlDatabase } from "@djl/db";
 import { BANK_LIFETIME_MS, freeWeekStart, type PlanId } from "@djl/domain";
 
@@ -182,15 +182,13 @@ export async function pruneBuckets(deps: JobDeps): Promise<number> {
 }
 
 /**
- * Each verified-email user's personal org gets the weekly free allowance (the
- * free plan's included credits) once per Monday-to-Monday UTC week; whatever
- * is left of an earlier week's allowance expires first.
+ * Each verified-email user's personal org gets the weekly free allowance once
+ * per week (see grantWeeklyFreeAllowance). Sign-up grants it immediately; this
+ * sweep covers the start of every new week.
  */
 export async function grantFreeAllowance(deps: JobDeps): Promise<number> {
-  const week = freeWeekStart(deps.now?.() ?? new Date()).toISOString();
-  const plan = await deps.db.query.plans.findFirst({ where: eq(schema.plans.id, "free") });
-  const amount = plan?.includedMicrocredits ?? 0n;
-  if (amount <= 0n) return 0;
+  const now = deps.now?.() ?? new Date();
+  const week = freeWeekStart(now).toISOString();
   let granted = 0;
   for (;;) {
     const due = await deps.db.execute<{ user_id: string; org_id: string }>(sql`
@@ -201,28 +199,13 @@ export async function grantFreeAllowance(deps: JobDeps): Promise<number> {
         SELECT 1 FROM credit_ledger l WHERE l.idempotency_key = 'free:' || u.id || ':' || ${week})
       LIMIT 500`);
     if (due.length === 0) return granted;
-    for (const { user_id: userId, org_id: orgId } of due) {
-      await deps.ledger
-        .expire({
-          orgId,
-          bucket: "free",
-          idempotencyKey: `free:expire:${userId}:${week}`,
-          actor: WORKER,
-          reason: "weekly free allowance rollover",
-        })
-        .catch((error: unknown) => {
-          if (!(error instanceof DuplicateIdempotencyKeyError)) throw error;
-        });
-      await deps.ledger.grant({
-        orgId,
-        bucket: "free",
-        type: "free_grant",
-        amount,
-        idempotencyKey: `free:${userId}:${week}`,
-        actor: WORKER,
-        reason: "weekly free allowance",
-      });
-      granted += 1;
-    }
+    let wrote = 0;
+    for (const { user_id: userId, org_id: orgId } of due)
+      if (
+        await grantWeeklyFreeAllowance(deps.db, deps.ledger, { userId, orgId, actor: WORKER, now })
+      )
+        wrote += 1;
+    if (wrote === 0) return granted; // no free allowance configured
+    granted += wrote;
   }
 }

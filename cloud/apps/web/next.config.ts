@@ -4,7 +4,10 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  turbopack: { root: fileURLToPath(new URL("../..", import.meta.url)) },
+  devIndicators: false,
+  // The Bun workspace root (repo root): dependencies are linked from its
+  // node_modules and @synara/contracts lives in its packages/.
+  turbopack: { root: fileURLToPath(new URL("../../..", import.meta.url)) },
   headers: async () => [
     {
       source: "/(.*)",
@@ -15,6 +18,8 @@ const config: NextConfig = {
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
       ],
     },
+    // Share links carry a secret token: keep them out of search engines.
+    { source: "/share/:token*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
   ],
 };
 

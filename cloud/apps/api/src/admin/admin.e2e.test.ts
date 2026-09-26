@@ -148,6 +148,7 @@ describe("admin api", () => {
     const detail = await admin(`/admin/v1/users/${subjectUserId}`, { token: ownerToken });
     expect(detail.status).toBe(200);
     expect(detail.body.organizations[0].total).toBe("0.00");
+    expect(detail.body.organizations[0].plan).toBe("free"); // no subscription or live trial
   });
 
   it("grants credits with a reason and an audit row; support is capped", async () => {

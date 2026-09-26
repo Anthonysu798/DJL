@@ -10,6 +10,7 @@ import { bankExpiresAt, DEFAULT_PLANS, type PlanId } from "@djl/domain";
 import type { TeamAlertSender } from "@djl/notify";
 
 import { requirePermission, type AdminPrincipal } from "../admin/AdminAuth.ts";
+import type { ResumeWindowBlockedRuns } from "../agent/resume.ts";
 import { writeAudit } from "../audit/AuditLog.ts";
 import { PERSONAL_ORG_METADATA } from "../auth/auth.ts";
 import { ApiError } from "../http/errors.ts";
@@ -22,6 +23,7 @@ export interface UsageAdminDeps {
   readonly db: DjlDatabase;
   readonly usage: UsageService;
   readonly alerts?: TeamAlertSender | undefined;
+  readonly resumeRuns?: ResumeWindowBlockedRuns;
 }
 
 const MAX_BANKS_PER_GRANT = 10;
@@ -204,6 +206,7 @@ export class UsageAdminService {
         reason,
       });
     });
+    await this.deps.resumeRuns?.(null);
     await this.deps.alerts?.post({
       severity: "warn",
       title: "Usage windows reset for everyone",
