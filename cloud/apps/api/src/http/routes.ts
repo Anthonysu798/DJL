@@ -11,9 +11,11 @@ import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
 import { makeChatRoutes, type ChatRouteDeps } from "../chat/routes.ts";
 import { makeFileRoutes, type FileRouteDeps } from "../files/routes.ts";
 import { makeAdminRoutes, type AdminRouteDeps } from "../admin/routes.ts";
+import { makeAuthRoutes, type AuthRouteDeps } from "../auth/routes.ts";
 import { makeGatewayRoutes, type GatewayRouteDeps } from "../gateway/routes.ts";
 import { makeRunRoutes, type RunRouteDeps } from "../runs/routes.ts";
 import { makeShareRoutes, type ShareRouteDeps } from "../shares/routes.ts";
+import { makeNativeAuthRoutes, type NativeAuthRouteDeps } from "../nativeAuth/routes.ts";
 import { makeSyncRoutes, type SyncRouteDeps } from "../sync/routes.ts";
 import { makeTrialRoutes, type TrialRouteDeps } from "../trial/routes.ts";
 import { makeUsageRoutes, type UsageRouteDeps } from "../usage/routes.ts";
@@ -34,7 +36,9 @@ export interface RouteDeps
     ChatRouteDeps,
     FileRouteDeps,
     ShareRouteDeps,
-    RunRouteDeps {
+    RunRouteDeps,
+    AuthRouteDeps,
+    NativeAuthRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
@@ -111,6 +115,8 @@ export function makeRoutes(deps: RouteDeps) {
     makeFileRoutes(deps),
     makeShareRoutes(deps),
     makeRunRoutes(deps),
+    makeAuthRoutes(deps),
+    makeNativeAuthRoutes(deps),
     fallback,
   );
 }

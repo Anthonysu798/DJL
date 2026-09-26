@@ -2607,7 +2607,10 @@
       "denied": "在浏览器中拒绝了登录。",
       "expired": "登录代码已过期，请重新开始。",
       "error": "无法连接 DJL Cloud。",
-      "signIn": "登录 DJL Cloud"
+      "signInWithBrowser": "使用浏览器登录",
+      "useCodeInstead": "改用代码登录",
+      "finishInBrowser": "请在浏览器中完成登录，DJL 会在这里自动继续。",
+      "browserFailed": "浏览器登录未完成。请重试或改用代码登录。"
     }
   },
   "shell": {

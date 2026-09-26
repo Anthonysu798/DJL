@@ -1696,6 +1696,16 @@ export const makeWsRpcLayer = () =>
             Effect.tryPromise(() => cloudAccount.signOut()),
             "Could not sign out of DJL Cloud",
           ),
+        [WS_METHODS.cloudStartBrowserSignIn]: () =>
+          rpcEffect(
+            Effect.tryPromise(() => cloudAccount.startBrowserSignIn()),
+            "Could not start DJL Cloud sign-in",
+          ),
+        [WS_METHODS.cloudCompleteBrowserSignIn]: (input) =>
+          rpcEffect(
+            Effect.tryPromise(() => cloudAccount.completeBrowserSignIn(input)),
+            "Could not complete DJL Cloud sign-in",
+          ),
         [WS_METHODS.harnessListAccounts]: () =>
           rpcEffect(
             serverSettings.getSettings.pipe(

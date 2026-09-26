@@ -2607,7 +2607,10 @@
       "denied": "브라우저에서 로그인이 거부되었습니다.",
       "expired": "로그인 코드가 만료되었습니다. 다시 시작하세요.",
       "error": "DJL Cloud에 연결할 수 없습니다.",
-      "signIn": "DJL Cloud 로그인"
+      "signInWithBrowser": "브라우저로 로그인",
+      "useCodeInstead": "대신 코드 사용",
+      "finishInBrowser": "브라우저에서 로그인을 완료하세요. DJL이 여기에서 자동으로 계속합니다.",
+      "browserFailed": "브라우저 로그인이 완료되지 않았습니다. 다시 시도하거나 코드를 사용하세요."
     }
   },
   "shell": {

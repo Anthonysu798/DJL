@@ -11,6 +11,13 @@ export const DJL_CLOUD_HOSTS = {
 
 export type CloudRegionSetting = "auto" | "global" | "asia";
 
+/** The web app that hosts browser sign-in; every API region shares it. */
+export const DJL_CLOUD_WEB_URL = "https://app.slcor.com";
+
+export function resolveCloudWebUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return (env.DJL_CLOUD_WEB_URL?.trim() || DJL_CLOUD_WEB_URL).replace(/\/+$/, "");
+}
+
 /** Narrow fetch signature so tests can pass a plain function without Bun's `preconnect`. */
 export type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 

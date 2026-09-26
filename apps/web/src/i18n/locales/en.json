@@ -2607,7 +2607,10 @@
       "denied": "Sign-in was denied in the browser.",
       "expired": "The sign-in code expired. Start again.",
       "error": "Could not reach DJL Cloud.",
-      "signIn": "Sign in to DJL Cloud"
+      "signInWithBrowser": "Sign in with browser",
+      "useCodeInstead": "Use a code instead",
+      "finishInBrowser": "Finish signing in in your browser. DJL continues here automatically.",
+      "browserFailed": "Browser sign-in did not complete. Try again or use a code instead."
     }
   },
   "shell": {

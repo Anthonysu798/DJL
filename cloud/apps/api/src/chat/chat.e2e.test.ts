@@ -8,31 +8,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { loadApiEnv } from "../config/env.ts";
 import { startApi, type ApiRuntime } from "../server.ts";
+import { TestClient, type CallInit } from "../testing/client.ts";
 
 let api: ApiRuntime;
-let base: string;
 
-type Call = (path: string, init?: RequestInit & { json?: unknown }) => Promise<Response>;
+type Call = (path: string, init?: CallInit) => Promise<Response>;
 
+/** A signed-in browser: cookie jar, the web app's CSRF header, and its own client IP. */
 function client(): Call {
-  const jar = new Map<string, string>();
-  return async (path, init = {}) => {
-    const { json: body, ...rest } = init;
-    const headers = new Headers(rest.headers);
-    headers.set("origin", "http://localhost:3000");
-    if (jar.size > 0) headers.set("cookie", Array.from(jar, ([k, v]) => `${k}=${v}`).join("; "));
-    if (body !== undefined) headers.set("content-type", "application/json");
-    const res = await fetch(`${base}${path}`, {
-      ...rest,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : (rest.body ?? null),
-    });
-    for (const raw of res.headers.getSetCookie()) {
-      const [name, ...value] = raw.split(";")[0]!.split("=");
-      if (name) jar.set(name.trim(), value.join("="));
-    }
-    return res;
-  };
+  const browser = TestClient.for(api);
+  return (path, init) => browser.call(path, init);
 }
 
 async function signUp(label: string): Promise<{ call: Call; orgId: string }> {
@@ -76,7 +61,6 @@ let bob: { call: Call; orgId: string };
 beforeAll(async () => {
   const env = loadApiEnv({ ...process.env, DJL_ENV: "test", DJL_MOCK_EXTERNALS: "true" });
   api = await startApi({ env, port: 0, host: "127.0.0.1" });
-  base = `http://127.0.0.1:${api.address.port}`;
   alice = await signUp("alice");
   bob = await signUp("bob");
 });

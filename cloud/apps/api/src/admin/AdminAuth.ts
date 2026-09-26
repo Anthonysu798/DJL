@@ -10,6 +10,7 @@ import * as OTPAuth from "otpauth";
 import { hashIp, writeAudit } from "../audit/AuditLog.ts";
 import { hashPassword, verifyPassword } from "../auth/password.ts";
 import { ApiError } from "../http/errors.ts";
+import type { Lockouts } from "../security/throttle.ts";
 
 export type AdminRole = "admin" | "employee";
 export const ADMIN_ROLES: readonly AdminRole[] = ["admin", "employee"];
@@ -63,8 +64,8 @@ export interface AdminPrincipal {
 
 export const ADMIN_SESSION_COOKIE = "djl_admin";
 const SESSION_TTL_MS = 8 * 3_600_000;
-const LOGIN_WINDOW_MS = 15 * 60_000;
-const LOGIN_MAX_FAILURES = 5;
+/** Five failures per email+IP (or per IP for invites) inside 15 minutes lock that key. */
+export const ADMIN_LOCKOUT = { maxFailures: 5, windowSeconds: 15 * 60 } as const;
 
 async function sha256(input: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
@@ -135,19 +136,36 @@ export function ipAllowed(ip: string | null, allowlist: readonly string[]): bool
   return ipMatches(ip, allowlist);
 }
 
+export interface AdminAuthOptions {
+  /** Encrypts TOTP secrets. */
+  readonly appSecret: string;
+  /** Salts IP hashes in sessions and audit rows. */
+  readonly ipSalt: string;
+  /** Failed sign-in counters; Redis in the server so they hold across instances and restarts. */
+  readonly lockouts: Lockouts;
+  /**
+   * Local development only: when false, sessions count as MFA-verified so
+   * the admin app can be used without an authenticator. The env loader
+   * refuses to turn this off outside local/test.
+   */
+  readonly mfaRequired?: boolean;
+}
+
 export class AdminAuth {
-  private readonly failures = new Map<string, number[]>();
+  private readonly appSecret: string;
+  private readonly ipSalt: string;
+  private readonly lockouts: Lockouts;
+  private readonly mfaRequired: boolean;
 
   constructor(
     private readonly db: DjlDatabase,
-    private readonly appSecret: string,
-    /**
-     * Local development only: when false, sessions count as MFA-verified so
-     * the admin app can be used without an authenticator. The env loader
-     * refuses to turn this off outside local/test.
-     */
-    private readonly mfaRequired: boolean = true,
-  ) {}
+    options: AdminAuthOptions,
+  ) {
+    this.appSecret = options.appSecret;
+    this.ipSalt = options.ipSalt;
+    this.lockouts = options.lockouts;
+    this.mfaRequired = options.mfaRequired ?? true;
+  }
 
   private async ipList(
     key: "admin.ip_allowlist" | "admin.ip_blocklist",
@@ -206,20 +224,6 @@ export class AdminAuth {
     });
   }
 
-  private noteFailure(key: string): void {
-    const now = Date.now();
-    const arr = (this.failures.get(key) ?? []).filter((t) => now - t < LOGIN_WINDOW_MS);
-    arr.push(now);
-    this.failures.set(key, arr);
-  }
-  private lockedOut(key: string): boolean {
-    const now = Date.now();
-    return (
-      (this.failures.get(key) ?? []).filter((t) => now - t < LOGIN_WINDOW_MS).length >=
-      LOGIN_MAX_FAILURES
-    );
-  }
-
   /** Create a ready-to-use admin. Only the bootstrap script and tests use this; the UI invites. */
   async create(input: {
     readonly email: string;
@@ -265,13 +269,13 @@ export class AdminAuth {
   /** Same error for missing, used, expired, or revoked: the caller learns nothing. */
   private async liveInvite(token: string, ip: string | null) {
     const key = `invite|${ip ?? ""}`;
-    if (this.lockedOut(key))
+    if (await this.lockouts.isLocked(key))
       throw new ApiError(429, "locked_out", "Too many attempts. Try again later.");
-    const invalid = () => {
-      this.noteFailure(key);
+    const invalid = async () => {
+      await this.lockouts.noteFailure(key);
       return new ApiError(400, "invalid_invite", "This invite link is not valid any more.");
     };
-    if (typeof token !== "string" || token.length < 16 || token.length > 128) throw invalid();
+    if (typeof token !== "string" || token.length < 16 || token.length > 128) throw await invalid();
     const invite = await this.db.query.adminInvites.findFirst({
       where: and(
         eq(schema.adminInvites.tokenHash, await sha256(token)),
@@ -279,11 +283,11 @@ export class AdminAuth {
         gt(schema.adminInvites.expiresAt, new Date()),
       ),
     });
-    if (!invite) throw invalid();
+    if (!invite) throw await invalid();
     const admin = await this.db.query.admins.findFirst({
       where: and(eq(schema.admins.id, invite.adminId), isNull(schema.admins.deletedAt)),
     });
-    if (!admin || admin.disabled || admin.passwordHash) throw invalid();
+    if (!admin || admin.disabled || admin.passwordHash) throw await invalid();
     return { invite, admin };
   }
 
@@ -324,7 +328,7 @@ export class AdminAuth {
         action: "admin.invite.accepted",
         targetType: "admin",
         targetId: admin.id,
-        ipHash: await hashIp(input.ip, this.appSecret),
+        ipHash: await hashIp(input.ip, this.ipSalt),
       });
     });
     await this.recordLogin({
@@ -377,20 +381,20 @@ export class AdminAuth {
     }
     const key = `${email}|${input.ip ?? ""}`;
     const badCredentials = new ApiError(401, "bad_credentials", "Email or password is wrong.");
-    if (this.lockedOut(key))
+    if (await this.lockouts.isLocked(key))
       await refuse(
         "locked_out",
         new ApiError(429, "locked_out", "Too many failed attempts. Try again later."),
       );
     if (!admin) {
-      this.noteFailure(key);
+      await this.lockouts.noteFailure(key);
       await refuse("unknown_email", badCredentials);
     }
     const live = admin!;
     if (live.disabled) await refuse("disabled", badCredentials);
     if (!live.passwordHash) await refuse("not_active", badCredentials);
     if (!(await verifyPassword({ hash: live.passwordHash!, password: input.password }))) {
-      this.noteFailure(key);
+      await this.lockouts.noteFailure(key);
       await refuse("bad_password", badCredentials);
     }
     let mfaVerified = false;
@@ -401,7 +405,7 @@ export class AdminAuth {
           new ApiError(401, "totp_required", "Enter your authenticator code."),
         );
       if (!(await this.checkTotp(live.id, input.totp!))) {
-        this.noteFailure(key);
+        await this.lockouts.noteFailure(key);
         await refuse("bad_totp", new ApiError(401, "bad_totp", "Authenticator code is wrong."));
       }
       mfaVerified = true;
@@ -413,7 +417,7 @@ export class AdminAuth {
       .values({
         adminId: live.id,
         tokenHash: await sha256(token),
-        ipHash: (await hashIp(input.ip, this.appSecret)) ?? "",
+        ipHash: (await hashIp(input.ip, this.ipSalt)) ?? "",
         userAgent: input.userAgent,
         mfaVerifiedAt: mfaVerified ? new Date() : null,
         expiresAt,
@@ -430,7 +434,7 @@ export class AdminAuth {
       action: "admin.login",
       targetType: "admin",
       targetId: live.id,
-      ipHash: await hashIp(input.ip, this.appSecret),
+      ipHash: await hashIp(input.ip, this.ipSalt),
     });
     return {
       token,
@@ -461,7 +465,7 @@ export class AdminAuth {
 
   /** Revoke every live session that was opened from the given IP (used when banning it). */
   async revokeSessionsFromIp(ip: string): Promise<void> {
-    const ipHash = await hashIp(ip, this.appSecret);
+    const ipHash = await hashIp(ip, this.ipSalt);
     if (!ipHash) return;
     await this.db
       .update(schema.adminSessions)

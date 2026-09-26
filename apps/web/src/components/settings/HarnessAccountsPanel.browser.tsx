@@ -48,6 +48,8 @@ const api = vi.hoisted(() => ({
     startSignIn: vi.fn(),
     pollSignIn: vi.fn(),
     signOut: vi.fn(),
+    startBrowserSignIn: vi.fn(),
+    completeBrowserSignIn: vi.fn(),
   },
 }));
 vi.mock("~/nativeApi", () => ({ ensureNativeApi: () => api }));

@@ -180,6 +180,14 @@ import {
 } from "./desktopUserDataProfile";
 import { isBrokenPipeError } from "./desktopProcessErrors";
 import {
+  CLOUD_AUTH_CALLBACK_CHANNEL,
+  CLOUD_AUTH_PROTOCOL,
+  CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+  findCloudAuthCallbackInArgv,
+  parseCloudAuthCallbackUrl,
+  type CloudAuthCallback,
+} from "./cloudAuthDeepLink";
+import {
   acknowledgeSynaraStorageSnapshot,
   readSynaraStorageSnapshot,
   resolveDjlStorageSnapshotReadPath,
@@ -1399,6 +1407,31 @@ function clearUnreadNotificationBadge(): void {
 // Reuse the existing desktop window when the app is launched again so users
 // don't end up with multiple packaged instances racing the same local state.
 const revealedWindows = new WeakSet<BrowserWindow>();
+
+/**
+ * DJL Cloud browser sign-in returns through `djl://auth/callback`. The newest
+ * callback waits here until the renderer takes it (so one that arrives during
+ * a cold start is not lost); the renderer passes it to the local server, which
+ * checks the state it issued and redeems the code.
+ */
+let pendingCloudAuthCallback: CloudAuthCallback | null = null;
+
+function deliverCloudAuthCallback(callback: CloudAuthCallback): void {
+  pendingCloudAuthCallback = callback;
+  focusMainWindow();
+  mainWindow?.webContents.send(CLOUD_AUTH_CALLBACK_CHANNEL);
+}
+
+function registerCloudAuthProtocol(): void {
+  // An unpackaged run (`electron .`) must name its entry script for the OS to relaunch it.
+  const registered =
+    process.defaultApp && process.argv[1]
+      ? app.setAsDefaultProtocolClient(CLOUD_AUTH_PROTOCOL, process.execPath, [
+          Path.resolve(process.argv[1]),
+        ])
+      : app.setAsDefaultProtocolClient(CLOUD_AUTH_PROTOCOL);
+  if (!registered) writeDesktopLogHeader(`could not register ${CLOUD_AUTH_PROTOCOL}:// handler`);
+}
 
 function focusMainWindow(): void {
   if (!mainWindow || !revealedWindows.has(mainWindow)) {
@@ -3130,6 +3163,13 @@ function registerIpcHandlers(): void {
   const storageSnapshotPath = resolveDjlStorageSnapshotReadPath(app.getPath("userData"));
   const localePreferencePath = resolveDesktopLocalePreferencePath(app.getPath("userData"));
 
+  ipcMain.removeHandler(CLOUD_AUTH_TAKE_CALLBACK_CHANNEL);
+  ipcMain.handle(CLOUD_AUTH_TAKE_CALLBACK_CHANNEL, () => {
+    const callback = pendingCloudAuthCallback;
+    pendingCloudAuthCallback = null;
+    return callback;
+  });
+
   ipcMain.removeAllListeners(DESKTOP_LOCALE_IPC_CHANNELS.preferredSystemLanguages);
   ipcMain.on(DESKTOP_LOCALE_IPC_CHANNELS.preferredSystemLanguages, (event: IpcMainEvent) => {
     event.returnValue = getPreferredSystemLanguageCandidates();
@@ -3801,8 +3841,20 @@ configureAppIdentity();
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  registerCloudAuthProtocol();
+  // Windows and Linux: a cold start by the OS carries the deep link in argv; a
+  // running app receives it through the second instance's argv.
+  pendingCloudAuthCallback = findCloudAuthCallbackInArgv(process.argv);
+  app.on("second-instance", (_event, argv) => {
+    const callback = findCloudAuthCallbackInArgv(argv);
+    if (callback) deliverCloudAuthCallback(callback);
     focusMainWindow();
+  });
+  // macOS delivers deep links as open-url, before ready on a cold start.
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    const callback = parseCloudAuthCallbackUrl(url);
+    if (callback) deliverCloudAuthCallback(callback);
   });
 }
 

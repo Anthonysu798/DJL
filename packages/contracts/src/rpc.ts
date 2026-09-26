@@ -13,6 +13,8 @@ import {
 } from "./harnessAccounts";
 import {
   CloudAccountStatus,
+  CloudBrowserSignInCompleteInput,
+  CloudBrowserSignInStartResult,
   CloudEmptyInput,
   CloudSignInPollInput,
   CloudSignInPollResult,
@@ -1136,6 +1138,16 @@ export const WsCloudSignOutRpc = Rpc.make(WS_METHODS.cloudSignOut, {
   success: CloudAccountStatus,
   error: WsRpcError,
 });
+export const WsCloudStartBrowserSignInRpc = Rpc.make(WS_METHODS.cloudStartBrowserSignIn, {
+  payload: CloudEmptyInput,
+  success: CloudBrowserSignInStartResult,
+  error: WsRpcError,
+});
+export const WsCloudCompleteBrowserSignInRpc = Rpc.make(WS_METHODS.cloudCompleteBrowserSignIn, {
+  payload: CloudBrowserSignInCompleteInput,
+  success: CloudAccountStatus,
+  error: WsRpcError,
+});
 export const WsHarnessListAccountsRpc = Rpc.make(WS_METHODS.harnessListAccounts, {
   payload: Schema.Struct({}),
   success: HarnessAccountsResult,
@@ -1457,6 +1469,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsCloudStartSignInRpc,
   WsCloudPollSignInRpc,
   WsCloudSignOutRpc,
+  WsCloudStartBrowserSignInRpc,
+  WsCloudCompleteBrowserSignInRpc,
   WsHarnessListLegacyOpenCodeCredentialsRpc,
   WsHarnessTransferLegacyOpenCodeCredentialsRpc,
   WsHarnessStartLoginRpc,

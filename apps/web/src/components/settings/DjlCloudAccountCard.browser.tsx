@@ -1,3 +1,4 @@
+import type { DesktopBridge } from "@synara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -35,6 +36,8 @@ const api = vi.hoisted(() => ({
     startSignIn: vi.fn(),
     pollSignIn: vi.fn(),
     signOut: vi.fn(),
+    startBrowserSignIn: vi.fn(),
+    completeBrowserSignIn: vi.fn(),
   },
   server: { refreshProviders: vi.fn(async () => undefined) },
   shell: { openExternal: vi.fn(async () => undefined) },
@@ -51,9 +54,24 @@ function renderCard() {
   );
 }
 
+/** Stands in for the preload bridge: lets a test deliver a djl://auth/callback. */
+function installDeepLinkBridge() {
+  let deliver: ((callback: { code: string; state: string }) => void) | null = null;
+  window.desktopBridge = {
+    onCloudAuthCallback: (listener: (callback: { code: string; state: string }) => void) => {
+      deliver = listener;
+      return () => {
+        deliver = null;
+      };
+    },
+  } as unknown as DesktopBridge;
+  return (callback: { code: string; state: string }) => deliver?.(callback);
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  delete window.desktopBridge;
 });
 
 describe("DjlCloudAccountCard", () => {
@@ -72,7 +90,7 @@ describe("DjlCloudAccountCard", () => {
       .mockResolvedValueOnce({ state: "complete", status: signedIn });
     renderCard();
     await expect.element(page.getByText("Not signed in")).toBeVisible();
-    await page.getByRole("button", { name: "Sign in to DJL Cloud" }).click();
+    await page.getByRole("button", { name: "Use a code instead" }).click();
     await expect.element(page.getByText("ABCD-EFGH")).toBeVisible();
     expect(api.shell.openExternal).toHaveBeenCalledWith(
       "https://app.test/device?user_code=ABCD-EFGH",
@@ -100,6 +118,39 @@ describe("DjlCloudAccountCard", () => {
     api.cloud.getStatus.mockResolvedValueOnce({ ...signedIn, problem: "session_expired" });
     renderCard();
     await expect.element(page.getByText("Your session expired. Sign in again.")).toBeVisible();
-    await expect.element(page.getByRole("button", { name: "Sign in to DJL Cloud" })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Sign in with browser" })).toBeVisible();
+  });
+
+  it("signs in through the browser and finishes when the deep link comes back", async () => {
+    const deliver = installDeepLinkBridge();
+    api.cloud.getStatus.mockResolvedValueOnce(signedOut);
+    api.cloud.startBrowserSignIn.mockResolvedValueOnce({
+      authorizeUrl: "https://app.test/authorize?state=s1",
+      expiresInSeconds: 600,
+    });
+    api.cloud.completeBrowserSignIn.mockResolvedValueOnce(signedIn);
+    renderCard();
+    await page.getByRole("button", { name: "Sign in with browser" }).click();
+    expect(api.shell.openExternal).toHaveBeenCalledWith("https://app.test/authorize?state=s1");
+    await expect
+      .element(
+        page.getByText("Finish signing in in your browser. DJL continues here automatically."),
+      )
+      .toBeVisible();
+    deliver({ code: "code-1", state: "s1" });
+    await expect.element(page.getByText("Signed in as me@test.invalid")).toBeVisible();
+    expect(api.cloud.completeBrowserSignIn).toHaveBeenCalledWith({ code: "code-1", state: "s1" });
+  });
+
+  it("explains a browser sign-in that the app refused", async () => {
+    const deliver = installDeepLinkBridge();
+    api.cloud.getStatus.mockResolvedValue(signedOut);
+    api.cloud.completeBrowserSignIn.mockRejectedValueOnce(new Error("state mismatch"));
+    renderCard();
+    await expect.element(page.getByText("Not signed in")).toBeVisible();
+    deliver({ code: "code-1", state: "forged" });
+    await expect
+      .element(page.getByText("Browser sign-in did not complete. Try again or use a code instead."))
+      .toBeVisible();
   });
 });

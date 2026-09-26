@@ -14,14 +14,28 @@ export interface ApiEnv {
   readonly databaseUrl: string;
   readonly redisUrl: string;
   readonly betterAuthSecret: string;
+  /** Salt for hashing client IPs in audit rows, sessions, and rate-limit keys. */
+  readonly ipHashSalt: string;
+  /** WebAuthn relying party: the registrable parent domain shared by app and api hosts. */
+  readonly passkeyRpId: string;
   readonly mockExternals: boolean;
   readonly trustedOrigins: readonly string[];
   /** Parent domain for the shared session cookie in staging/production, e.g. ".slcor.com". */
   readonly cookieDomain: string | null;
   /** Admin second factor. Only local/test may set ADMIN_MFA_REQUIRED=false. */
   readonly adminMfaRequired: boolean;
-  readonly google: { readonly clientId: string; readonly clientSecret: string } | null;
-  readonly apple: { readonly clientId: string; readonly clientSecret: string } | null;
+  /** Web OAuth client plus extra client ids (iOS) whose Google ID tokens are accepted. */
+  readonly google: {
+    readonly clientId: string;
+    readonly clientSecret: string;
+    readonly extraClientIds: readonly string[];
+  } | null;
+  /** Web service id plus the iOS bundle id that native Sign in with Apple tokens carry. */
+  readonly apple: {
+    readonly clientId: string;
+    readonly clientSecret: string;
+    readonly appBundleIdentifier: string;
+  } | null;
 }
 
 function required(name: string, env: NodeJS.ProcessEnv, fallbackForLocal?: string): string {
@@ -47,11 +61,22 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
   const adminPublicUrl = required("ADMIN_PUBLIC_URL", env, "http://localhost:3001");
   const google =
     env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET
-      ? { clientId: env.GOOGLE_OAUTH_CLIENT_ID, clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET }
+      ? {
+          clientId: env.GOOGLE_OAUTH_CLIENT_ID,
+          clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+          extraClientIds: (env.GOOGLE_ALLOWED_CLIENT_IDS ?? "")
+            .split(",")
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0),
+        }
       : null;
   const apple =
     env.APPLE_OAUTH_CLIENT_ID && env.APPLE_OAUTH_CLIENT_SECRET
-      ? { clientId: env.APPLE_OAUTH_CLIENT_ID, clientSecret: env.APPLE_OAUTH_CLIENT_SECRET }
+      ? {
+          clientId: env.APPLE_OAUTH_CLIENT_ID,
+          clientSecret: env.APPLE_OAUTH_CLIENT_SECRET,
+          appBundleIdentifier: env.APPLE_APP_BUNDLE_ID?.trim() || "app.djl.ios",
+        }
       : null;
   return {
     env: djlEnv,
@@ -62,6 +87,8 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     databaseUrl: required("DATABASE_URL", env, "postgres://djl:djl@localhost:54329/djl"),
     redisUrl: required("REDIS_URL", env, "redis://localhost:63799"),
     betterAuthSecret: secret,
+    ipHashSalt: required("IP_HASH_SALT", env, "local-ip-hash-salt"),
+    passkeyRpId: env.PASSKEY_RP_ID?.trim() || (isLocal ? "localhost" : "slcor.com"),
     mockExternals,
     trustedOrigins: [
       webPublicUrl,

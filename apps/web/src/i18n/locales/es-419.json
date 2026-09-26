@@ -2607,7 +2607,10 @@
       "denied": "El inicio de sesión fue rechazado en el navegador.",
       "expired": "El código de inicio de sesión expiró. Comienza de nuevo.",
       "error": "No se pudo conectar con DJL Cloud.",
-      "signIn": "Iniciar sesión en DJL Cloud"
+      "signInWithBrowser": "Iniciar sesión con el navegador",
+      "useCodeInstead": "Usar un código",
+      "finishInBrowser": "Termina de iniciar sesión en el navegador. DJL continuará aquí automáticamente.",
+      "browserFailed": "No se completó el inicio de sesión en el navegador. Inténtalo de nuevo o usa un código."
     }
   },
   "shell": {
