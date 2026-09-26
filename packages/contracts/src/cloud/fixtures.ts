@@ -6,12 +6,23 @@
  */
 import { Schema } from "effect";
 
-import { CloudMeResponse } from "./account";
-import { CloudConversationDetailResponse, CloudConversationSearchResponse } from "./chat";
-import { CloudFilePresignResponse } from "./files";
+import { CloudDeleteAccountResponse, CloudMeResponse, CloudRunPushData } from "./account";
+import { CloudAccessTokenResponse, CloudCsrfResponse } from "./base";
+import {
+  CloudConversation,
+  CloudConversationDetailResponse,
+  CloudConversationListResponse,
+  CloudConversationMessagesResponse,
+  CloudConversationSearchResponse,
+} from "./chat";
+import { CloudFile, CloudFileDownloadResponse, CloudFilePresignResponse } from "./files";
 import { CloudNativeTokenResponse } from "./nativeAuth";
-import { CloudRunEventsResponse, CloudSendMessageResponse } from "./runs";
-import { CloudCreateShareResponse, CloudPublicShareResponse } from "./shares";
+import { CloudRunEventsResponse, CloudRunResponse, CloudSendMessageResponse } from "./runs";
+import {
+  CloudCreateShareResponse,
+  CloudPublicShareResponse,
+  CloudRevokeShareResponse,
+} from "./shares";
 import {
   CloudCreditsResponse,
   CloudModelsResponse,
@@ -74,7 +85,60 @@ const usageWindows = {
   banks: { count: 1, nextExpiresAt: "2026-12-25T12:00:00.000Z" },
 } as const;
 
+const share = {
+  id: "share_1",
+  conversationId: "conv_1",
+  title: "Trip plan",
+  createdAt: at,
+  revokedAt: null,
+};
+
 export const cloudFixtures = {
+  csrf: fixture(CloudCsrfResponse, { token: "Q2hhbmdlTWVDaGFuZ2VNZUNoYW5nZU1lQ2hhbmdlTWU" }),
+  "access-token": fixture(CloudAccessTokenResponse, {
+    token: "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ1c2VyXzEiLCJzaWQiOiJzZXNzXzEifQ.c2ln",
+  }),
+  "account-delete": fixture(CloudDeleteAccountResponse, { deleted: true }),
+  "run-push": fixture(CloudRunPushData, {
+    source: "djl.cloudRun",
+    runId: "run_1",
+    conversationId: "conv_1",
+    status: "succeeded",
+    url: "djl://cloud/c/conv_1",
+  }),
+  conversation: fixture(CloudConversation, conversation),
+  "conversation-list": fixture(CloudConversationListResponse, {
+    conversations: [conversation],
+    nextCursor: "WyJjdXJzb3IiXQ",
+  }),
+  "conversation-messages": fixture(CloudConversationMessagesResponse, {
+    conversation,
+    messages: [
+      {
+        id: "msg_1",
+        conversationId: "conv_1",
+        parentId: null,
+        role: "user",
+        parts: [{ type: "text", text: "Hello" }],
+        model: null,
+        runId: null,
+        createdAt: at,
+        siblingIds: ["msg_1"],
+      },
+      {
+        id: "msg_2",
+        conversationId: "conv_1",
+        parentId: "msg_1",
+        role: "assistant",
+        parts: [{ type: "text", text: "Hi!" }],
+        model: "gpt-5",
+        runId: "run_1",
+        createdAt: at,
+        siblingIds: ["msg_2", "msg_3"],
+      },
+    ],
+  }),
+  run: fixture(CloudRunResponse, { run }),
   me: fixture(CloudMeResponse, {
     user: { id: "user_1", email: "ada@example.com", emailVerified: true },
     activeOrgId: "org_1",
@@ -280,24 +344,38 @@ export const cloudFixtures = {
       expiresAt: at,
     },
   }),
+  file: fixture(CloudFile, {
+    id: "file_1",
+    name: "itinerary.pdf",
+    mimeType: "application/pdf",
+    size: 48213,
+    status: "ready",
+    createdAt: at,
+  }),
+  "file-url": fixture(CloudFileDownloadResponse, {
+    url: "https://storage.example.com/file_1?signature=abc",
+    expiresAt: at,
+  }),
   "share-create": fixture(CloudCreateShareResponse, {
-    share: {
-      id: "share_1",
-      conversationId: "conv_1",
-      title: "Trip plan",
-      createdAt: at,
-      revokedAt: null,
-    },
+    share,
     url: "https://app.slcor.com/share/token_example",
   }),
+  "share-revoke": fixture(CloudRevokeShareResponse, { share: { ...share, revokedAt: later } }),
   "share-public": fixture(CloudPublicShareResponse, {
     title: "Trip plan",
     createdAt: at,
     messages: [
       { role: "user", parts: [{ type: "text", text: "Hello" }], createdAt: at },
-      { role: "assistant", parts: [{ type: "text", text: "Hi!" }], createdAt: at },
+      {
+        role: "assistant",
+        parts: [
+          { type: "text", text: "Hi!" },
+          { type: "image_ref", fileId: "file_2", mimeType: "image/png", width: 512, height: 512 },
+        ],
+        createdAt: at,
+      },
     ],
-    imageUrls: {},
+    imageUrls: { file_2: "https://storage.example.com/file_2?signature=abc" },
   }),
   "native-token": fixture(CloudNativeTokenResponse, {
     sessionToken: "session_token_example",

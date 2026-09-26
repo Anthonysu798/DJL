@@ -54,9 +54,14 @@ export const CloudFilePresignResponse = Schema.Struct({
 });
 export type CloudFilePresignResponse = typeof CloudFilePresignResponse.Type;
 
-// POST /v1/files/{id}/complete → CloudFile (verifies size, type, and hash)
+/**
+ * POST /v1/files/{id}/complete → CloudFile. Verifies size, SHA-256, and magic
+ * bytes, then runs the scan gate, all before responding: the file comes back
+ * `ready`, or the call fails (upload_missing, upload_mismatch, upload_rejected)
+ * and the file stays unusable. Completing a ready file again returns it.
+ */
 
-// GET /v1/files/{id}/url
+// GET /v1/files/{id}/url (ready files only; 404 otherwise)
 export const CloudFileDownloadResponse = Schema.Struct({
   /** Signed GET, valid for five minutes. */
   url: TrimmedNonEmptyString,
