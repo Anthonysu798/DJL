@@ -1,6 +1,7 @@
 /**
  * Background agent jobs: `agent.run` executes task runs; `agent.resume-blocked`
- * re-enqueues runs blocked for credits once the org is funded; `sandbox.reap`
+ * re-enqueues runs blocked on usage once the org is funded or the user's
+ * windows have room again; `sandbox.reap`
  * destroys sandbox machines that outlived their run.
  */
 import {
@@ -8,6 +9,7 @@ import {
   AGENT_RUN_QUEUE_OPTIONS,
   RunInterruptedError,
   resumeBlockedRuns,
+  windowsHaveRoom,
   type AgentRunJobData,
   type AgentRuntime,
 } from "@djl/api/agent";
@@ -53,7 +55,12 @@ export async function registerAgentJobs(
   await boss.createQueue("agent.resume-blocked");
   await boss.schedule("agent.resume-blocked", "*/5 * * * *", undefined, { tz: "UTC" });
   await boss.work("agent.resume-blocked", { batchSize: 1 }, async () => {
-    const resumed = await resumeBlockedRuns({ db: deps.db, ledger: deps.ledger, enqueue });
+    const resumed = await resumeBlockedRuns({
+      db: deps.db,
+      ledger: deps.ledger,
+      enqueue,
+      windowsHaveRoom: windowsHaveRoom(deps.db),
+    });
     log({ job: "agent.resume-blocked", resumed });
   });
 
