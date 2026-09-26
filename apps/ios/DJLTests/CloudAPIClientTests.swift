@@ -10,6 +10,15 @@ final class CloudAPIClientTests: XCTestCase {
         return (CloudAPIClient(configuration: configuration, tokenProvider: provider, urlSession: CloudStubURLProtocol.session()), provider)
     }
 
+    // MARK: Transport
+
+    func testCloudSessionNeverStoresOrSendsCookies() {
+        let configuration = URLSession.djlCloud.configuration
+        XCTAssertNil(configuration.httpCookieStorage)
+        XCTAssertFalse(configuration.httpShouldSetCookies)
+        XCTAssertEqual(configuration.httpCookieAcceptPolicy, .never)
+    }
+
     // MARK: Auth header and refresh
 
     func testSendsBearerAccessToken() async throws {

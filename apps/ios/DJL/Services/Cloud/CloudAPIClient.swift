@@ -99,6 +99,21 @@ nonisolated enum CloudAPIError: Error, Equatable, LocalizedError {
     private struct FlatError: Decodable { let code: String?; let message: String? }
 }
 
+// MARK: - Transport
+
+nonisolated extension URLSession {
+    /// Cloud traffic authenticates only with the bearer token. A cookie saved at sign-in would
+    /// ride along on later auth calls without an Origin header, which the API refuses: signing in
+    /// again fails and sign-out never reaches the server.
+    static let djlCloud: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpCookieStorage = nil
+        configuration.httpShouldSetCookies = false
+        configuration.httpCookieAcceptPolicy = .never
+        return URLSession(configuration: configuration)
+    }()
+}
+
 // MARK: - Access tokens
 
 /// Supplies the bearer credential for API calls (a JWT from CloudJWTAccessTokenProvider in the app).
@@ -132,7 +147,7 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
     init(
         configuration: CloudAPIConfiguration,
         sessionStore: CloudSessionStoring,
-        urlSession: URLSession = .shared,
+        urlSession: URLSession = .djlCloud,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.configuration = configuration
@@ -197,7 +212,7 @@ nonisolated final class CloudAPIClient: Sendable {
     let tokenProvider: CloudAccessTokenProviding
     private let urlSession: URLSession
 
-    init(configuration: CloudAPIConfiguration, tokenProvider: CloudAccessTokenProviding, urlSession: URLSession = .shared) {
+    init(configuration: CloudAPIConfiguration, tokenProvider: CloudAccessTokenProviding, urlSession: URLSession = .djlCloud) {
         self.configuration = configuration
         self.tokenProvider = tokenProvider
         self.urlSession = urlSession

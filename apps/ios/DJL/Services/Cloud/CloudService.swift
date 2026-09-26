@@ -44,7 +44,7 @@ final class CloudService {
     init(
         configuration: CloudAPIConfiguration = .resolved(),
         sessionStore: CloudSessionStoring = CloudKeychainSessionStore(),
-        urlSession: URLSession = .shared,
+        urlSession: URLSession = .djlCloud,
         tokenProvider: CloudAccessTokenProviding? = nil
     ) {
         self.sessionStore = sessionStore

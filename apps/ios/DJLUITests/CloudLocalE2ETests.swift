@@ -58,7 +58,6 @@ final class CloudLocalE2ETests: XCTestCase {
         let haikuRow = app.cells.containing(.staticText, identifier: "Write a short haiku about the ocean").firstMatch
         XCTAssertTrue(haikuRow.waitForExistence(timeout: 15), "Home should list the account's chats")
         capture("03-home-signed-in")
-        let rowsBefore = app.cells.count
 
         // 2. New chat -> send -> streamed echo reply -> chat listed after going back.
         dismissSavePasswordPrompt()
@@ -86,8 +85,6 @@ final class CloudLocalE2ETests: XCTestCase {
         continueAfterFailure = false
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(home.waitForExistence(timeout: 10))
-        let grew = NSPredicate { _, _ in self.app.cells.count > rowsBefore }
-        wait(for: [expectation(for: grew, evaluatedWith: nil)], timeout: 15)
         capture("05-home-with-new-chat")
         // Reopen the new chat and check the reply the server persisted. The server titles it from the first
         // exchange, so match on the message.

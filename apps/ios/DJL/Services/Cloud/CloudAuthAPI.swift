@@ -18,7 +18,7 @@ nonisolated enum CloudSignUpResult: Equatable, Sendable {
 
 nonisolated struct CloudAuthAPI: Sendable {
     let configuration: CloudAPIConfiguration
-    var urlSession: URLSession = .shared
+    var urlSession: URLSession = .djlCloud
 
     func signIn(email: String, password: String) async throws -> String {
         try await sessionToken(from: post("sign-in/email", ["email": email, "password": password]))

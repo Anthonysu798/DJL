@@ -104,12 +104,14 @@ final class CloudChatSession {
         }
     }
 
-    /// Reattaches to the newest assistant message's run if it is still going (e.g. started on another device).
+    /// Reattaches to the newest assistant message's run if it is still going (e.g. started on another
+    /// device); a failed one shows its reason, as it would have live.
     private func resumeUnfinishedRun() async {
         guard let reply = visibleMessages.last(where: { !$0.isUser }), let runId = reply.runId else { return }
         do {
             let current = try await cloud.client.run(runId)
             run = current
+            if current.status == "failed", let error = current.error { errorMessage = error.message }
             guard !current.isTerminal else { return }
             // Replay the full log into an empty message so persisted partial text is never duplicated.
             if let index = messages.firstIndex(where: { $0.id == reply.id }) { messages[index].parts = [] }
