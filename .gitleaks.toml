@@ -71,3 +71,21 @@ targetRules = ["generic-api-key"]
 regexTarget = "line"
 paths = ['''^(cloud/)?apps/api/src/admin/admin\.e2e\.test\.ts$''']
 regexes = ['''goodPassword\s*=\s*"employee-strong-passphrase-42"''']
+
+# DJL Cloud contract fixtures and iOS client tests use synthetic tokens: a "ChangeMe" CSRF value,
+# an unsigned JWT for user_1 ("sig"), and a hex APNs device token.
+[[allowlists]]
+description = "DJL Cloud synthetic contract and client test tokens"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^packages/contracts/fixtures/cloud/(csrf|access-token)\.json$''',
+  '''^packages/contracts/src/cloud/fixtures\.ts$''',
+  '''^apps/ios/DJLTests/CloudAPIClientTests\.swift$''',
+]
+regexes = [
+  '''"Q2hhbmdlTWVDaGFuZ2VNZUNoYW5nZU1lQ2hhbmdlTWU"''',
+  '''"eyJhbGciOiJFZERTQSJ9\.eyJzdWIiOiJ1c2VyXzEiLCJzaWQiOiJzZXNzXzEifQ\.c2ln"''',
+  '''"abcdef0123456789abcdef0123456789"''',
+]
