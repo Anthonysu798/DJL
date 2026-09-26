@@ -34,6 +34,11 @@ enum CloudRootRoute: Equatable {
     }
 }
 
+extension Notification.Name {
+    /// Posted with `userInfo["conversationId"]` when a task-finished push is tapped.
+    static let djlCloudOpenConversation = Notification.Name("djl.cloud.openConversation")
+}
+
 /// `djl://cloud/c/<conversation id>` opens a cloud conversation (task-completion pushes, shared links).
 enum CloudDeepLink {
     static func conversationID(from url: URL) -> String? {
