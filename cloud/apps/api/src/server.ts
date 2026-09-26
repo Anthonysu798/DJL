@@ -44,6 +44,7 @@ import {
 } from "./gateway/RateLimiter.ts";
 import { buildProviders } from "./gateway/providers.ts";
 import { loadApiEnv, type ApiEnv } from "./config/env.ts";
+import { Settings } from "./config/settings.ts";
 import { startObservability, stopObservability } from "./observability.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
@@ -174,14 +175,13 @@ export async function startApi(
     db,
     ledger,
     limiter,
+    settings: new Settings(db),
     providers,
     trial,
     config: {
       region,
       catalogTtlMs: 30_000,
       refusalFlagThreshold: 10,
-      instanceSoftCap: 150,
-      instanceHardCap: 200,
     },
     onAlert: (alert) => void senders.alerts?.post(alert),
   });
