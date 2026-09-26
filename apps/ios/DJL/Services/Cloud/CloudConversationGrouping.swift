@@ -24,10 +24,10 @@ nonisolated struct CloudConversationGroup: Identifiable, Equatable {
 
 nonisolated enum CloudConversationGrouping {
     static func groups(_ conversations: [CloudConversation], now: Date = Date(), calendar: Calendar = .current) -> [CloudConversationGroup] {
-        let sorted = conversations.sorted { ($0.updatedAt) > ($1.updatedAt) }
+        let sorted = conversations.sorted { ($0.lastMessageAt) > ($1.lastMessageAt) }
         let startOfToday = calendar.startOfDay(for: now)
         func daysAgo(_ conversation: CloudConversation) -> Int {
-            guard let date = CloudDate.parse(conversation.updatedAt) else { return .max }
+            guard let date = CloudDate.parse(conversation.lastMessageAt) else { return .max }
             return calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: startOfToday).day ?? .max
         }
 

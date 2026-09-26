@@ -112,18 +112,18 @@ struct CloudAccountView: View {
         .padding(.vertical, 4)
     }
 
-    private func bankRow(_ usage: CloudUsageStatus) -> some View {
+    private func bankRow(_ usage: CloudUsageWindows) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Banked resets")
-                if let oldest = usage.banks.first, let expires = CloudDate.parse(oldest.expiresAt) {
+                if let expires = CloudDate.parse(usage.banks.nextExpiresAt) {
                     Text("Next expires \(expires.formatted(date: .abbreviated, time: .omitted))")
                         .font(AppFont.caption())
                         .foregroundStyle(.secondary)
                 }
             }
             Spacer()
-            if usage.banks.isEmpty {
+            if usage.banks.count == 0 {
                 Text("None").foregroundStyle(.secondary)
             } else {
                 Button {

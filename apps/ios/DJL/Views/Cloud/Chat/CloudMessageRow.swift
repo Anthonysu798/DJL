@@ -81,6 +81,14 @@ struct CloudMessageRow: View {
                             .font(AppFont.footnote())
                             .foregroundStyle(.secondary)
                     }
+                case .citation(let url, let title):
+                    if let link = URL(string: url), ["https", "http"].contains(link.scheme?.lowercased()) {
+                        Link(destination: link) {
+                            Label(title ?? link.host() ?? url, systemImage: "link")
+                                .font(AppFont.footnote())
+                                .lineLimit(1)
+                        }
+                    }
                 }
             }
             if isStreaming, message.parts.isEmpty {

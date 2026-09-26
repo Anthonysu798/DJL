@@ -3,8 +3,9 @@
 // Layer: Service
 // Exports: CloudAPIConfiguration, CloudAPIError, CloudAccessTokenProviding, CloudJWTAccessTokenProvider,
 //          CloudSessionBearerTokenProvider, CloudAPIClient
-// Depends on: Foundation, CloudModels, CloudSSEParser, CloudSessionStore
+// Depends on: Foundation, CryptoKit, CloudModels, CloudSSEParser, CloudSessionStore
 
+import CryptoKit
 import Foundation
 
 // MARK: - Configuration
@@ -55,6 +56,8 @@ nonisolated enum CloudAPIError: Error, Equatable, LocalizedError {
     /// The session is gone (revoked, expired, deleted); the user must sign in again.
     case unauthorized
     case server(status: Int, code: String, message: String, traceId: String?, resetsAt: String?)
+    /// A 401 the access token can't fix: the session itself was signed out (`session_revoked`).
+    static let sessionRevokedCode = "session_revoked"
     case transport(String)
     case decoding(String)
 
@@ -98,7 +101,7 @@ nonisolated enum CloudAPIError: Error, Equatable, LocalizedError {
 
 // MARK: - Access tokens
 
-/// Supplies the bearer credential for API calls. Pluggable because the session → JWT exchange is owned by stream S4.
+/// Supplies the bearer credential for API calls (a JWT from CloudJWTAccessTokenProvider in the app).
 nonisolated protocol CloudAccessTokenProviding: Sendable {
     func accessToken() async throws -> String
     /// Drops any cached token so the next `accessToken()` mints a fresh one.
@@ -166,15 +169,13 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
         }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else { throw CloudAPIError.from(status: status, data: data) }
-        guard let body = try? JSONDecoder().decode(TokenBody.self, from: data) else {
+        guard let body = try? JSONDecoder().decode(CloudAccessToken.self, from: data) else {
             throw CloudAPIError.decoding("auth/token")
         }
         let expiresAt = Self.expiry(ofJWT: body.token) ?? now().addingTimeInterval(15 * 60)
         cached = (body.token, expiresAt)
         return body.token
     }
-
-    private struct TokenBody: Decodable { let token: String }
 
     /// Reads `exp` from the unverified JWT payload; only used to schedule refreshes.
     static func expiry(ofJWT token: String) -> Date? {
@@ -221,14 +222,15 @@ nonisolated final class CloudAPIClient: Sendable {
         return request
     }
 
-    /// Sends an authenticated request; on 401 mints a fresh access token and retries exactly once.
+    /// Sends an authenticated request; on 401 mints a fresh access token and retries exactly once,
+    /// unless the session itself was revoked, which no new token can fix.
     func perform(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         var attempt = 0
         while true {
             var authorized = request
             authorized.setValue("Bearer \(try await tokenProvider.accessToken())", forHTTPHeaderField: "Authorization")
             let (data, response) = try await transport(authorized)
-            if response.statusCode == 401, attempt == 0 {
+            if response.statusCode == 401, attempt == 0, !Self.isSessionRevoked(data) {
                 attempt += 1
                 await tokenProvider.invalidate()
                 continue
@@ -238,6 +240,10 @@ nonisolated final class CloudAPIClient: Sendable {
             }
             return (data, response)
         }
+    }
+
+    private static func isSessionRevoked(_ data: Data) -> Bool {
+        (try? JSONDecoder().decode(CloudAPIErrorEnvelope.self, from: data))?.error.code == CloudAPIError.sessionRevokedCode
     }
 
     private func transport(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -274,18 +280,22 @@ nonisolated final class CloudAPIClient: Sendable {
     func me() async throws -> CloudMe { try await send("GET", "v1/me") }
     func credits() async throws -> CloudCredits { try await send("GET", "v1/credits") }
     func models() async throws -> [CloudModel] { try await send("GET", "v1/models", as: CloudModelsResponse.self).models }
-    func usageStatus() async throws -> CloudUsageStatus { try await send("GET", "v1/usage/status") }
+    func usageWindows() async throws -> CloudUsageWindows { try await send("GET", "v1/usage/windows") }
 
     func redeemBank(idempotencyKey: String) async throws -> CloudRedeemBankResponse {
-        try await send("POST", "v1/usage/banks/redeem", body: ["idempotencyKey": idempotencyKey])
+        try await send("POST", "v1/usage/resets/redeem", body: ["idempotencyKey": idempotencyKey])
     }
 
-    /// Not in the contract yet (see PR notes): in-app account deletion required by App Store 5.1.1(v).
-    func deleteAccount() async throws { try await sendIgnoringBody("DELETE", "v1/me") }
+    /// In-app account deletion, required by App Store 5.1.1(v).
+    func deleteAccount() async throws {
+        _ = try await send("DELETE", "v1/me", as: CloudDeleteAccountResponse.self)
+    }
 
-    /// Not in the contract yet (see PR notes): APNs token for task-completion pushes.
-    func registerPushToken(_ token: String, environment: String) async throws {
-        try await sendIgnoringBody("POST", "v1/devices/push-token", body: ["token": token, "platform": "ios", "environment": environment])
+    enum PushEnvironment: String { case production, sandbox }
+
+    /// APNs token for task-completion pushes (204).
+    func registerPushToken(_ token: String, environment: PushEnvironment) async throws {
+        try await sendIgnoringBody("POST", "v1/devices/push-token", body: ["token": token, "environment": environment.rawValue])
     }
 
     // MARK: Conversations
@@ -356,8 +366,9 @@ nonisolated final class CloudAPIClient: Sendable {
         return try await send("POST", "v1/conversations/\(conversationId)/messages/\(messageId)/regenerate", body: body)
     }
 
+    /// Snapshots the branch ending at `messageId` behind a read-only link.
     func createShare(conversationId: String, messageId: String) async throws -> CloudCreateShareResponse {
-        try await send("POST", "v1/shares", body: ["conversationId": conversationId, "messageId": messageId])
+        try await send("POST", "v1/conversations/\(conversationId)/shares", body: ["messageId": messageId])
     }
 
     // MARK: Runs
@@ -481,11 +492,19 @@ nonisolated final class CloudAPIClient: Sendable {
 
     // MARK: Files
 
-    /// Presigns, PUTs the bytes straight to storage with the pinned headers, then completes the file.
+    /// Declares the file (with its SHA-256), PUTs the bytes straight to storage with the pinned headers, then
+    /// completes it; completion verifies and scans before answering, so the result is `ready` or an error.
     func uploadFile(name: String, mimeType: String, data: Data) async throws -> CloudFile {
+        let sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let presign: CloudFilePresignResponse = try await send(
-            "POST", "v1/files/presign",
-            body: PresignBody(name: name, mimeType: mimeType, size: data.count)
+            "POST", "v1/files",
+            body: PresignBody(
+                name: name,
+                mimeType: mimeType,
+                size: data.count,
+                sha256: sha256,
+                purpose: mimeType.hasPrefix("image/") ? "image" : "attachment"
+            )
         )
         guard let uploadURL = URL(string: presign.upload.url) else { throw CloudAPIError.decoding("upload url") }
         var put = URLRequest(url: uploadURL)
@@ -496,7 +515,13 @@ nonisolated final class CloudAPIClient: Sendable {
         return try await send("POST", "v1/files/\(presign.file.id)/complete")
     }
 
-    private struct PresignBody: Encodable { let name: String; let mimeType: String; let size: Int }
+    private struct PresignBody: Encodable {
+        let name: String
+        let mimeType: String
+        let size: Int
+        let sha256: String
+        let purpose: String
+    }
 
     private func transportUpload(_ request: URLRequest, data: Data) async throws -> (Data, HTTPURLResponse) {
         do {
@@ -511,7 +536,7 @@ nonisolated final class CloudAPIClient: Sendable {
     }
 
     func downloadURL(fileId: String) async throws -> URL {
-        let response: CloudFileDownload = try await send("GET", "v1/files/\(fileId)/download")
+        let response: CloudFileDownload = try await send("GET", "v1/files/\(fileId)/url")
         guard let url = URL(string: response.url) else { throw CloudAPIError.decoding("download url") }
         return url
     }

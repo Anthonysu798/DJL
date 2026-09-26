@@ -66,6 +66,44 @@ nonisolated struct CloudCredits: Codable, Sendable, Equatable {
     let display: Display
 }
 
+/// GET /v1/auth/token: a 15-minute access token minted from the session token.
+nonisolated struct CloudAccessToken: Codable, Sendable {
+    let token: String
+}
+
+/// DELETE /v1/me.
+nonisolated struct CloudDeleteAccountResponse: Codable, Sendable {
+    let deleted: Bool
+}
+
+/// Custom keys of a task-finished APNs push (CloudRunPushData). Ids only, never content.
+nonisolated struct CloudRunPush: Codable, Sendable, Equatable {
+    static let source = "djl.cloudRun"
+
+    let source: String
+    let runId: String
+    let conversationId: String
+    let status: String
+    /// `djl://cloud/c/<conversation id>`.
+    let url: String
+
+    /// The conversation to open, read from the deep link so a tap and `onOpenURL` agree.
+    var conversationID: String? { URL(string: url).flatMap(CloudDeepLink.conversationID(from:)) }
+
+    init?(userInfo: [AnyHashable: Any]) {
+        guard let source = userInfo["source"] as? String, source == Self.source,
+              let runId = userInfo["runId"] as? String,
+              let conversationId = userInfo["conversationId"] as? String,
+              let status = userInfo["status"] as? String,
+              let url = userInfo["url"] as? String else { return nil }
+        self.source = source
+        self.runId = runId
+        self.conversationId = conversationId
+        self.status = status
+        self.url = url
+    }
+}
+
 nonisolated struct CloudNativeToken: Codable, Sendable {
     let sessionToken: String
     let expiresAt: String
@@ -134,15 +172,22 @@ nonisolated struct CloudResetBank: Codable, Sendable, Equatable, Identifiable {
     let expiresAt: String
 }
 
-nonisolated struct CloudUsageStatus: Codable, Sendable, Equatable {
+/// GET /v1/usage/windows.
+nonisolated struct CloudUsageWindows: Codable, Sendable, Equatable {
     nonisolated struct Windows: Codable, Sendable, Equatable {
         let fiveHour: CloudUsageWindow
         let week: CloudUsageWindow
     }
 
+    /// Live (unredeemed, unexpired) banked resets.
+    nonisolated struct Banks: Codable, Sendable, Equatable {
+        let count: Int
+        let nextExpiresAt: String?
+    }
+
     let planId: String
     let windows: Windows
-    let banks: [CloudResetBank]
+    let banks: Banks
 
     var exhaustedWindow: CloudUsageWindow? {
         [windows.fiveHour, windows.week].first(where: \.isExhausted)
@@ -151,7 +196,7 @@ nonisolated struct CloudUsageStatus: Codable, Sendable, Equatable {
 
 nonisolated struct CloudRedeemBankResponse: Codable, Sendable {
     let redeemedBankId: String
-    let status: CloudUsageStatus
+    let usage: CloudUsageWindows
 }
 
 // MARK: - Chat
@@ -162,10 +207,12 @@ nonisolated enum CloudMessagePart: Codable, Sendable, Equatable, Hashable {
     case imageRef(fileId: String, mimeType: String, width: Int?, height: Int?)
     case toolCall(toolCallId: String, name: String, arguments: String)
     case toolResult(toolCallId: String, name: String, content: String, isError: Bool)
+    /// A web source a task read or cited; shown under the reply.
+    case citation(url: String, title: String?)
 
     private enum CodingKeys: String, CodingKey {
         case type, text, fileId, name, mimeType, size, width, height
-        case toolCallId, arguments, content, isError
+        case toolCallId, arguments, content, isError, url, title
     }
 
     init(from decoder: Decoder) throws {
@@ -201,6 +248,11 @@ nonisolated enum CloudMessagePart: Codable, Sendable, Equatable, Hashable {
                 content: try c.decode(String.self, forKey: .content),
                 isError: try c.decode(Bool.self, forKey: .isError)
             )
+        case "citation":
+            self = .citation(
+                url: try c.decode(String.self, forKey: .url),
+                title: try c.decodeIfPresent(String.self, forKey: .title)
+            )
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "Unknown part type \(type)")
         }
@@ -235,6 +287,10 @@ nonisolated enum CloudMessagePart: Codable, Sendable, Equatable, Hashable {
             try c.encode(name, forKey: .name)
             try c.encode(content, forKey: .content)
             try c.encode(isError, forKey: .isError)
+        case .citation(let url, let title):
+            try c.encode("citation", forKey: .type)
+            try c.encode(url, forKey: .url)
+            try c.encode(title, forKey: .title)
         }
     }
 }
@@ -264,6 +320,7 @@ nonisolated struct CloudConversation: Codable, Sendable, Equatable, Identifiable
     var title: String?
     var pinned: Bool
     var archived: Bool
+    var lastMessageAt: String
     let createdAt: String
     var updatedAt: String
 
@@ -467,4 +524,6 @@ nonisolated struct CloudPublicShare: Codable, Sendable {
     let title: String?
     let createdAt: String
     let messages: [Message]
+    /// Five-minute signed URLs for the shared images, keyed by file id.
+    let imageUrls: [String: String]
 }

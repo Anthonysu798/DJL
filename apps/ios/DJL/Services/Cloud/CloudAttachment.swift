@@ -20,7 +20,8 @@ nonisolated enum CloudAttachmentPolicy {
     /// Mirrors CLOUD_FILE_MAX_BYTES in packages/contracts/src/cloud/files.ts.
     static let maxBytes = 25 * 1024 * 1024
     static let maxAttachmentsPerMessage = 10
-    static let imageTypes: Set<String> = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/heic"]
+    /// What the API's magic-byte check accepts (cloud/apps/api/src/files/fileTypes.ts).
+    static let imageTypes: Set<String> = ["image/png", "image/jpeg", "image/gif", "image/webp"]
     static let documentTypes: Set<String> = [
         "application/pdf", "text/plain", "text/markdown", "text/csv", "application/json",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
