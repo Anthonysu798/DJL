@@ -22,6 +22,7 @@ import {
   formatBytes,
   isImageType,
   resolveMimeType,
+  sha256Hex,
   validateFile,
   type AttachmentProblem,
 } from "@/lib/chat/attachments";
@@ -127,10 +128,16 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const upload = useCallback(
     async (file: File, key: string, mimeType: string, previewUrl: string | null) => {
       try {
-        const presign = await client.presignFile({ name: file.name, mimeType, size: file.size });
+        const presign = await client.presignFile({
+          name: file.name,
+          mimeType,
+          size: file.size,
+          sha256: await sha256Hex(file),
+          purpose: isImageType(mimeType) ? "image" : "attachment",
+        });
         await client.putToStorage(presign, file);
+        // Completing verifies and scans the bytes; a refused file fails the call.
         const done = await client.completeFile(presign.file.id);
-        if (done.status === "rejected") throw new Error("rejected");
         const part: CloudUserMessagePart = isImageType(mimeType)
           ? {
               type: "image_ref",

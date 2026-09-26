@@ -1,6 +1,7 @@
 import type { CloudSendMessageInput } from "@synara/contracts/cloud";
 import { describe, expect, it } from "vitest";
 
+import { sha256Hex } from "./attachments";
 import { ChatApiError, createChatClient, sendMessageIdempotent } from "./client";
 import { createMockApi } from "./mock/server";
 
@@ -78,13 +79,74 @@ describe("chat client", () => {
     ).rejects.toMatchObject({ code: "bad_request" });
   });
 
-  it("uploads through presign, PUT, and complete", async () => {
-    const { client } = setup();
+  it("uploads through POST /v1/files, PUT, complete, and reads it back through /url", async () => {
+    const { mock, client } = setup();
     const blob = new Blob(["hello"], { type: "text/plain" });
-    const presign = await client.presignFile({ name: "a.txt", mimeType: "text/plain", size: 5 });
+    const presign = await client.presignFile({
+      name: "a.txt",
+      mimeType: "text/plain",
+      size: 5,
+      sha256: await sha256Hex(blob),
+      purpose: "attachment",
+    });
     await client.putToStorage(presign, blob);
     const file = await client.completeFile(presign.file.id);
     expect(file.status).toBe("ready");
     expect((await client.fileUrl(file.id)).url).toBeTruthy();
+    expect(mock.requests.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        "POST /v1/files",
+        `POST /v1/files/${file.id}/complete`,
+        `GET /v1/files/${file.id}/url`,
+      ]),
+    );
+  });
+
+  it("rejects an upload whose bytes don't match the declared hash", async () => {
+    const { client } = setup();
+    const blob = new Blob(["hello"], { type: "text/plain" });
+    const presign = await client.presignFile({
+      name: "a.txt",
+      mimeType: "text/plain",
+      size: 5,
+      sha256: "0".repeat(64),
+      purpose: "attachment",
+    });
+    await client.putToStorage(presign, blob);
+    await expect(client.completeFile(presign.file.id)).rejects.toMatchObject({
+      code: "upload_mismatch",
+    });
+  });
+
+  it("sends the CSRF token on every mutation and fetches a fresh one once when it rotates", async () => {
+    const { mock, client } = setup();
+    await client.createConversation({});
+    expect(mock.requests.filter((r) => r.path === "/v1/csrf")).toHaveLength(1);
+    const post = mock.requests.find((r) => r.method === "POST");
+    expect(post?.csrf).toBe(mock.csrf.token);
+
+    mock.csrf.token = "rotated-token-value-rotated-token-value-rot";
+    await client.createConversation({});
+    expect(mock.requests.filter((r) => r.path === "/v1/csrf")).toHaveLength(2);
+    expect(mock.requests.at(-1)?.csrf).toBe(mock.csrf.token);
+    await client.listConversations();
+    expect(mock.requests.at(-1)?.csrf).toBeNull();
+  });
+
+  it("shares a conversation at POST /v1/conversations/{id}/shares and shows its images publicly", async () => {
+    const { mock, client } = setup();
+    const detail = await client.getConversation("conv_1");
+    const created = await client.createShare("conv_1", {});
+    expect(mock.requests.some((r) => r.path === "/v1/conversations/conv_1/shares")).toBe(true);
+    const token = created.url.split("/share/")[1]!;
+    const view = await client.getPublicShare(token);
+    const images = detail.messages.flatMap((m) =>
+      m.parts.flatMap((p) => (p.type === "image_ref" ? [p.fileId] : [])),
+    );
+    expect(images.length).toBeGreaterThan(0);
+    for (const id of images) expect(view.imageUrls[id]).toBeTruthy();
+    const { share } = await client.revokeShare(created.share.id);
+    expect(share.revokedAt).not.toBeNull();
+    await expect(client.getPublicShare(token)).rejects.toMatchObject({ status: 404 });
   });
 });

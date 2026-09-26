@@ -1,5 +1,5 @@
 "use client";
-import type { CloudUsageStatusResponse, CloudUsageWindow } from "@synara/contracts/cloud";
+import type { CloudUsageWindow, CloudUsageWindowsResponse } from "@synara/contracts/cloud";
 import { Gauge, Loader2, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -57,7 +57,7 @@ function WindowBar({ label, window }: { label: string; window: CloudUsageWindow 
   );
 }
 
-export function UsageMeter({ usage }: { usage: CloudUsageStatusResponse }) {
+export function UsageMeter({ usage }: { usage: CloudUsageWindowsResponse }) {
   const { d } = useLocale();
   return (
     <div className="space-y-3">
@@ -79,8 +79,8 @@ export function UsageExhaustedPanel() {
   if (!block) return null;
 
   const weekly = usage ? BigInt(usage.windows.week.remaining) <= 0n : false;
-  const banks = usage?.banks ?? [];
-  const next = banks[0];
+  const banks = usage?.banks.count ?? 0;
+  const nextExpiresAt = usage?.banks.nextExpiresAt ?? null;
   const resetsAt = block.resetsAt;
 
   const redeem = async () => {
@@ -119,7 +119,7 @@ export function UsageExhaustedPanel() {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 sm:pl-12">
-        {next ? (
+        {banks > 0 ? (
           <Button size="sm" onClick={() => setConfirming(true)}>
             <RotateCcw />
             {d.chat.useBank}
@@ -129,10 +129,10 @@ export function UsageExhaustedPanel() {
           <Link href="/billing">{d.chat.upgrade}</Link>
         </Button>
         <span className="text-xs text-muted-foreground">
-          {next
+          {banks > 0 && nextExpiresAt
             ? fill(d.chat.banksLeft, {
-                count: String(banks.length),
-                date: formatDate(next.expiresAt, locale),
+                count: String(banks),
+                date: formatDate(nextExpiresAt, locale),
               })
             : d.chat.noBanks}
         </span>
@@ -142,7 +142,7 @@ export function UsageExhaustedPanel() {
           <DialogHeader>
             <DialogTitle>{d.chat.confirmBankTitle}</DialogTitle>
             <DialogDescription>
-              {fill(d.chat.confirmBankBody, { count: String(Math.max(0, banks.length - 1)) })}
+              {fill(d.chat.confirmBankBody, { count: String(Math.max(0, banks - 1)) })}
             </DialogDescription>
           </DialogHeader>
           {error ? (
