@@ -104,6 +104,11 @@
 		F1B2C3D4E5F60718293A4B10 /* CodexGPTAccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B2C3D4E5F60718293A4B11 /* CodexGPTAccountTests.swift */; };
 		D7D0647F64B696D4C64AFAD7 /* RemoteProviderSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */; };
 		8D8CCAA8FE63B1217293E983 /* ShortCodePairingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071DBB71014F2A3AA3333D71 /* ShortCodePairingTests.swift */; };
+		88B5E39C9CDC53AF1D8BC4F6 /* CloudTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F68717090AD7FEF6D1732D82 /* CloudTestSupport.swift */; };
+		7EC278BFE36E58A455104F63 /* CloudContractFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 585B0E82E78D9619A24D7521 /* CloudContractFixtureTests.swift */; };
+		E25879D6AB99138E4AA66824 /* CloudSSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E55E54346D95D2B18AD75D7 /* CloudSSEParserTests.swift */; };
+		36470468F4ED9B490A03FF0B /* CloudAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */; };
+		B8FDCC4775A339C2E90E65A1 /* CloudChatLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -221,6 +226,11 @@
 		FDBD5C45B205BFD7C281AD0D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
 		42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RemoteProviderSelectionTests.swift; sourceTree = "<group>"; };
 		071DBB71014F2A3AA3333D71 /* ShortCodePairingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShortCodePairingTests.swift; sourceTree = "<group>"; };
+		F68717090AD7FEF6D1732D82 /* CloudTestSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudTestSupport.swift; sourceTree = "<group>"; };
+		585B0E82E78D9619A24D7521 /* CloudContractFixtureTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudContractFixtureTests.swift; sourceTree = "<group>"; };
+		9E55E54346D95D2B18AD75D7 /* CloudSSEParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudSSEParserTests.swift; sourceTree = "<group>"; };
+		74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudAPIClientTests.swift; sourceTree = "<group>"; };
+		477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudChatLogicTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -317,6 +327,11 @@
 				A2B3C4D5E6F708192A3B4C7 /* CodexServiceThreadListTests.swift */,
 				E1A2B3C4D5E6F708192A3B4D /* QRScannerPairingValidatorTests.swift */,
 				071DBB71014F2A3AA3333D71 /* ShortCodePairingTests.swift */,
+				F68717090AD7FEF6D1732D82 /* CloudTestSupport.swift */,
+				585B0E82E78D9619A24D7521 /* CloudContractFixtureTests.swift */,
+				9E55E54346D95D2B18AD75D7 /* CloudSSEParserTests.swift */,
+				74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */,
+				477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */,
 				42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */,
 				2A6D4B8C1E3F507192A4B6C9 /* CodexStatusTests.swift */,
 				D3A1B2C4E5F60718293A4B02 /* CodexServiceBatchIncomingTests.swift */,
@@ -682,6 +697,11 @@
 				A2B3C4D5E6F708192A3B4C6 /* CodexServiceThreadListTests.swift in Sources */,
 				E1A2B3C4D5E6F708192A3B4C /* QRScannerPairingValidatorTests.swift in Sources */,
 				8D8CCAA8FE63B1217293E983 /* ShortCodePairingTests.swift in Sources */,
+				88B5E39C9CDC53AF1D8BC4F6 /* CloudTestSupport.swift in Sources */,
+				7EC278BFE36E58A455104F63 /* CloudContractFixtureTests.swift in Sources */,
+				E25879D6AB99138E4AA66824 /* CloudSSEParserTests.swift in Sources */,
+				36470468F4ED9B490A03FF0B /* CloudAPIClientTests.swift in Sources */,
+				B8FDCC4775A339C2E90E65A1 /* CloudChatLogicTests.swift in Sources */,
 				D7D0647F64B696D4C64AFAD7 /* RemoteProviderSelectionTests.swift in Sources */,
 				2A6D4B8C1E3F507192A4B6C8 /* CodexStatusTests.swift in Sources */,
 				D3A1B2C4E5F60718293A4B01 /* CodexServiceBatchIncomingTests.swift in Sources */,
