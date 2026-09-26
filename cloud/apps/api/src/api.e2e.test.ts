@@ -3,6 +3,14 @@
  * the signup → verify → account → billing → device path over HTTP, the way
  * the desktop and web clients will.
  */
+import {
+  CloudRedeemBankResponse,
+  CloudResetBanksResponse,
+  CloudUsageWindowsResponse,
+} from "@synara/contracts/cloud";
+import { schema } from "@djl/db";
+import { bankExpiresAt } from "@djl/domain";
+import { Schema } from "effect";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { loadApiEnv } from "./config/env.ts";
@@ -164,6 +172,46 @@ describe("api end to end", () => {
     const usage = await (await call("/v1/usage")).json();
     expect(usage.recent[0].status).toBe("settled");
     expect(usage.recent[0].model).toBe("gpt-5-mini");
+  });
+
+  it("shows both usage windows and redeems a banked reset", async () => {
+    const windows = Schema.decodeUnknownSync(CloudUsageWindowsResponse)(
+      await (await call("/v1/usage/windows")).json(),
+    );
+    expect(windows.planId).toBe("free");
+    expect(BigInt(windows.windows.fiveHour.used)).toBeGreaterThan(0n);
+    expect(windows.banks).toEqual({ count: 0, nextExpiresAt: null });
+
+    const me = await (await call("/v1/me")).json();
+    await api.db.insert(schema.resetBanks).values({
+      userId: me.user.id,
+      source: "admin",
+      grantedBy: "admin:e2e",
+      expiresAt: bankExpiresAt(new Date()),
+      idempotencyKey: `e2e:${crypto.randomUUID()}`,
+    });
+    const banks = Schema.decodeUnknownSync(CloudResetBanksResponse)(
+      await (await call("/v1/usage/banks")).json(),
+    );
+    expect(banks.banks).toHaveLength(1);
+
+    const bad = await call("/v1/usage/resets/redeem", { method: "POST", json: {} });
+    expect(bad.status).toBe(400);
+    const redeem = () =>
+      call("/v1/usage/resets/redeem", { method: "POST", json: { idempotencyKey: "e2e-1" } });
+    const redeemed = Schema.decodeUnknownSync(CloudRedeemBankResponse)(
+      await (await redeem()).json(),
+    );
+    expect(redeemed.redeemedBankId).toBe(banks.banks[0]!.id);
+    expect(redeemed.usage.windows.fiveHour.used).toBe("0");
+    expect(redeemed.usage.windows.week.used).toBe("0");
+    expect((await (await redeem()).json()).redeemedBankId).toBe(redeemed.redeemedBankId);
+    const none = await call("/v1/usage/resets/redeem", {
+      method: "POST",
+      json: { idempotencyKey: "e2e-2" },
+    });
+    expect(none.status).toBe(409);
+    expect((await none.json()).error.code).toBe("no_reset_bank");
   });
 
   it("aborts the image provider call and refunds the reservation when the client disconnects", async () => {

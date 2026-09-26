@@ -32,6 +32,7 @@ export const CloudCreditsResponse = Schema.Struct({
 export type CloudCreditsResponse = typeof CloudCreditsResponse.Type;
 
 export const CloudLedgerEntryType = Schema.Literals([
+  "free_grant",
   "trial_grant",
   "plan_grant",
   "topup",
@@ -124,13 +125,14 @@ export const CloudUsageTrailer = Schema.Struct({
   outputTokens: Schema.Int,
   settled: Microcredits,
   remaining: Microcredits,
-  /** True when the stream was cut because the balance reached zero. */
+  /** True when the stream was cut: the balance reached zero or a usage window filled. */
   cutOff: Schema.Boolean,
 });
 export type CloudUsageTrailer = typeof CloudUsageTrailer.Type;
 
 // ---------------------------------------------------------------------------
-// Usage windows and banked resets: GET /v1/usage/status, POST /v1/usage/banks/redeem
+// Usage windows and banked resets:
+// GET /v1/usage/windows, GET /v1/usage/banks, POST /v1/usage/resets/redeem
 // ---------------------------------------------------------------------------
 
 /** A rolling 5-hour window and a 7-day week, both capped in microcredits per plan. */
@@ -142,7 +144,10 @@ export const CloudUsageWindow = Schema.Struct({
   limit: Microcredits,
   used: Microcredits,
   remaining: Microcredits,
-  /** When spend next rolls off (5-hour) or the week restarts; null when nothing is spent. */
+  /**
+   * 5-hour: when spend next rolls off, or when there is room again if the
+   * window is exhausted. Week: when the week ends. Null when nothing is used.
+   */
   resetsAt: Schema.NullOr(Schema.String),
 });
 export type CloudUsageWindow = typeof CloudUsageWindow.Type;
@@ -159,13 +164,23 @@ export const CloudResetBank = Schema.Struct({
 });
 export type CloudResetBank = typeof CloudResetBank.Type;
 
-export const CloudUsageStatusResponse = Schema.Struct({
+export const CloudUsageWindowsResponse = Schema.Struct({
   planId: CloudPlanId,
   windows: Schema.Struct({ fiveHour: CloudUsageWindow, week: CloudUsageWindow }),
+  /** Unredeemed, unexpired banked resets. */
+  banks: Schema.Struct({
+    count: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    /** When the oldest live bank expires; null without banks. */
+    nextExpiresAt: Schema.NullOr(Schema.String),
+  }),
+});
+export type CloudUsageWindowsResponse = typeof CloudUsageWindowsResponse.Type;
+
+export const CloudResetBanksResponse = Schema.Struct({
   /** Unredeemed, unexpired banks, oldest first. Redeeming always uses the oldest. */
   banks: Schema.Array(CloudResetBank),
 });
-export type CloudUsageStatusResponse = typeof CloudUsageStatusResponse.Type;
+export type CloudResetBanksResponse = typeof CloudResetBanksResponse.Type;
 
 export const CloudRedeemBankInput = Schema.Struct({
   /** Client-generated; a retried redeem with the same key redeems at most one bank. */
@@ -173,8 +188,9 @@ export const CloudRedeemBankInput = Schema.Struct({
 });
 export type CloudRedeemBankInput = typeof CloudRedeemBankInput.Type;
 
+/** Redeeming zeroes both windows and starts a new 7-day week. */
 export const CloudRedeemBankResponse = Schema.Struct({
   redeemedBankId: TrimmedNonEmptyString,
-  status: CloudUsageStatusResponse,
+  usage: CloudUsageWindowsResponse,
 });
 export type CloudRedeemBankResponse = typeof CloudRedeemBankResponse.Type;

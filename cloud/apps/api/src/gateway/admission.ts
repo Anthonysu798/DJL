@@ -9,20 +9,16 @@
  */
 import { eq } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import { decideAdmission, type PlanId } from "@djl/domain";
+import { decideAdmission } from "@djl/domain";
 
 import type { Settings } from "../config/settings.ts";
 import { ApiError } from "../http/errors.ts";
 import { gatewayInFlight } from "../observability.ts";
+import type { OrgPlan } from "../usage/plans.ts";
 import type { RequestFacts } from "./GatewayService.ts";
 import type { RateLimiter } from "./RateLimiter.ts";
 
-export interface PlanLimits {
-  readonly planId: PlanId;
-  readonly concurrentStreams: number;
-  readonly requestsPerMinute: number;
-  readonly priorityWeight: number;
-}
+export type PlanLimits = OrgPlan;
 
 export interface AdmissionContext {
   readonly facts: RequestFacts;

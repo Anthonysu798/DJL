@@ -37,6 +37,9 @@ import { AdminService } from "./admin/AdminService.ts";
 import { GatewayService } from "./gateway/GatewayService.ts";
 import { FakeBlobStore, createS3BlobStore, type BlobStore } from "./sync/BlobStore.ts";
 import { SyncService } from "./sync/SyncService.ts";
+import { UsageAdminService } from "./usage/UsageAdminService.ts";
+import { UsageService } from "./usage/UsageService.ts";
+import { windowPolicy } from "./usage/windowPolicy.ts";
 import {
   createMemoryRateLimiter,
   createRedisRateLimiter,
@@ -171,11 +174,13 @@ export async function startApi(
   const providers = buildProviders(env, process.env, (alert) => {
     void senders.alerts?.post(alert);
   });
+  const usage = new UsageService(db);
   const gateway = new GatewayService({
     db,
     ledger,
     limiter,
     settings: new Settings(db),
+    admission: { window: windowPolicy(usage) },
     providers,
     trial,
     config: {
@@ -208,6 +213,7 @@ export async function startApi(
     adminPublicUrl: env.adminPublicUrl,
     version,
   });
+  const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts });
   const routes = makeRoutes({
     env,
     auth,
@@ -225,6 +231,8 @@ export async function startApi(
     secureCookies: env.env !== "local" && env.env !== "test",
     gatewayStatus: () => gateway.status(),
     sync,
+    usage,
+    usageAdmin,
   });
   const scope = Scope.makeUnsafe();
   let nodeServer: http.Server | null = null;

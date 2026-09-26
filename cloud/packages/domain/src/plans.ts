@@ -7,6 +7,7 @@ export interface PlanConfig {
   readonly name: string;
   readonly monthlyPriceUsdCents: number;
   readonly annualPriceUsdCents: number;
+  /** Credits granted per billing period; for `free`, the weekly free allowance. */
   readonly includedCredits: Microcredits;
   readonly concurrentStreams: number;
   readonly requestsPerMinute: number;
@@ -28,7 +29,7 @@ export const DEFAULT_PLANS: readonly PlanConfig[] = [
     name: "Free",
     monthlyPriceUsdCents: 0,
     annualPriceUsdCents: 0,
-    includedCredits: 0n,
+    includedCredits: creditsToMicro(20),
     concurrentStreams: 1,
     requestsPerMinute: 10,
     priorityWeight: 1,

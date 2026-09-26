@@ -2,8 +2,15 @@ import { HttpServerResponse } from "effect/unstable/http";
 
 /** Uniform JSON error envelope. Codes are stable strings clients switch on. */
 export interface ApiErrorBody {
-  readonly error: { readonly code: string; readonly message: string; readonly traceId: string };
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+    readonly traceId: string;
+  } & ApiErrorDetails;
 }
+
+/** Extra fields some codes carry, e.g. `resetsAt` with usage_window_exhausted. */
+export type ApiErrorDetails = Readonly<Record<string, string>>;
 
 export class ApiError extends Error {
   readonly _tag = "ApiError";
@@ -11,13 +18,20 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly details: ApiErrorDetails = {},
   ) {
     super(message);
   }
 }
 
-export function errorResponse(status: number, code: string, message: string, traceId: string) {
-  const body: ApiErrorBody = { error: { code, message, traceId } };
+export function errorResponse(
+  status: number,
+  code: string,
+  message: string,
+  traceId: string,
+  details: ApiErrorDetails = {},
+) {
+  const body: ApiErrorBody = { error: { ...details, code, message, traceId } };
   return HttpServerResponse.jsonUnsafe(body, {
     status,
     headers: { "x-trace-id": traceId, "cache-control": "no-store" },

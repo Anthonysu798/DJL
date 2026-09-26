@@ -5,12 +5,19 @@ import type { Microcredits } from "./units.ts";
  *
  * Every balance is derived from entries. Nothing ever edits or deletes an
  * entry; corrections are new entries. Buckets are consumed in the order
- * trial → plan → topup so the credits that expire soonest are spent first.
+ * free → trial → plan → topup so the credits that expire soonest are spent
+ * first. The weekly free allowance pays only for free-eligible models.
  */
-export type Bucket = "trial" | "plan" | "topup";
-export const BUCKET_SPEND_ORDER: readonly Bucket[] = ["trial", "plan", "topup"];
+export type Bucket = "free" | "trial" | "plan" | "topup";
+export const BUCKET_SPEND_ORDER: readonly Bucket[] = ["free", "trial", "plan", "topup"];
+const PAID_SPEND_ORDER: readonly Bucket[] = ["trial", "plan", "topup"];
+
+export function spendOrder(freeEligible: boolean): readonly Bucket[] {
+  return freeEligible ? BUCKET_SPEND_ORDER : PAID_SPEND_ORDER;
+}
 
 export type LedgerEntryType =
+  | "free_grant"
   | "trial_grant"
   | "plan_grant"
   | "topup"
@@ -37,28 +44,28 @@ export interface LedgerEntry {
 }
 
 export interface Balances {
+  readonly free: Microcredits;
   readonly trial: Microcredits;
   readonly plan: Microcredits;
   readonly topup: Microcredits;
 }
 
-export const ZERO_BALANCES: Balances = { trial: 0n, plan: 0n, topup: 0n };
+export const ZERO_BALANCES: Balances = { free: 0n, trial: 0n, plan: 0n, topup: 0n };
 
 export function totalAvailable(b: Balances): Microcredits {
-  return b.trial + b.plan + b.topup;
+  return b.free + b.trial + b.plan + b.topup;
+}
+
+/** What a request may spend: the free allowance counts only for free-eligible models. */
+export function spendable(b: Balances, freeEligible: boolean): Microcredits {
+  return freeEligible ? totalAvailable(b) : b.trial + b.plan + b.topup;
 }
 
 /** Fold entries into per-bucket balances. Reservations count as spent until released. */
 export function foldBalances(entries: Iterable<LedgerEntry>): Balances {
-  let trial = 0n;
-  let plan = 0n;
-  let topup = 0n;
-  for (const e of entries) {
-    if (e.bucket === "trial") trial += e.amount;
-    else if (e.bucket === "plan") plan += e.amount;
-    else topup += e.amount;
-  }
-  return { trial, plan, topup };
+  const b = { ...ZERO_BALANCES };
+  for (const e of entries) b[e.bucket] += e.amount;
+  return b;
 }
 
 /**
@@ -68,11 +75,12 @@ export function foldBalances(entries: Iterable<LedgerEntry>): Balances {
 export function allocateDebit(
   balances: Balances,
   amount: Microcredits,
+  freeEligible = false,
 ): { readonly debits: Balances; readonly uncovered: Microcredits } {
   if (amount < 0n) throw new RangeError("debit must be non-negative");
   let remaining = amount;
-  const debits = { trial: 0n, plan: 0n, topup: 0n };
-  for (const bucket of BUCKET_SPEND_ORDER) {
+  const debits = { ...ZERO_BALANCES };
+  for (const bucket of spendOrder(freeEligible)) {
     if (remaining === 0n) break;
     const available = balances[bucket] > 0n ? balances[bucket] : 0n;
     const take = available < remaining ? available : remaining;
@@ -100,10 +108,11 @@ export function reserve(
     readonly reservationId: string;
     readonly estimate: Microcredits;
     readonly idempotencyKey: string;
+    readonly freeEligible?: boolean;
   },
   balances: Balances,
 ): ReserveDecision {
-  const { debits, uncovered } = allocateDebit(balances, input.estimate);
+  const { debits, uncovered } = allocateDebit(balances, input.estimate, input.freeEligible);
   if (uncovered > 0n) return { ok: false, reason: "insufficient_credits", shortfall: uncovered };
   const entries: Omit<LedgerEntry, "id" | "createdAt">[] = [];
   for (const bucket of BUCKET_SPEND_ORDER) {
@@ -135,6 +144,7 @@ export function settle(
     readonly reservationId: string;
     readonly actual: Microcredits;
     readonly idempotencyKey: string;
+    readonly freeEligible?: boolean;
   },
   reservationEntries: readonly LedgerEntry[],
   balancesWithReservation: Balances,
@@ -165,7 +175,7 @@ export function settle(
     restored[bucket] += amount;
   }
   // 2. debit actual against restored balances
-  const { debits, uncovered } = allocateDebit(restored, input.actual);
+  const { debits, uncovered } = allocateDebit(restored, input.actual, input.freeEligible);
   for (const bucket of BUCKET_SPEND_ORDER) {
     if (debits[bucket] === 0n) continue;
     entries.push({

@@ -16,7 +16,8 @@ import {
   CloudCreditsResponse,
   CloudModelsResponse,
   CloudRedeemBankResponse,
-  CloudUsageStatusResponse,
+  CloudResetBanksResponse,
+  CloudUsageWindowsResponse,
 } from "./usage";
 
 type AnyCodec = Schema.Codec<unknown, unknown, never, never>;
@@ -51,7 +52,7 @@ const run = {
   finishedAt: null,
 } as const;
 
-const usageStatus = {
+const usageWindows = {
   planId: "starter",
   windows: {
     fiveHour: {
@@ -63,20 +64,13 @@ const usageStatus = {
     },
     week: {
       kind: "week",
-      limit: "1000000000",
+      limit: "750000000",
       used: "42000000",
-      remaining: "958000000",
+      remaining: "708000000",
       resetsAt: "2026-10-03T12:00:00.000Z",
     },
   },
-  banks: [
-    {
-      id: "bank_1",
-      source: "plan_schedule",
-      grantedAt: at,
-      expiresAt: "2026-12-25T12:00:00.000Z",
-    },
-  ],
+  banks: { count: 1, nextExpiresAt: "2026-12-25T12:00:00.000Z" },
 } as const;
 
 export const cloudFixtures = {
@@ -106,21 +100,31 @@ export const cloudFixtures = {
       },
     ],
   }),
-  "usage-status": fixture(CloudUsageStatusResponse, usageStatus),
+  "usage-windows": fixture(CloudUsageWindowsResponse, usageWindows),
+  "usage-banks": fixture(CloudResetBanksResponse, {
+    banks: [
+      {
+        id: "bank_1",
+        source: "plan_schedule",
+        grantedAt: at,
+        expiresAt: "2026-12-25T12:00:00.000Z",
+      },
+    ],
+  }),
   "usage-redeem": fixture(CloudRedeemBankResponse, {
     redeemedBankId: "bank_1",
-    status: {
-      ...usageStatus,
+    usage: {
+      ...usageWindows,
       windows: {
         fiveHour: {
-          ...usageStatus.windows.fiveHour,
+          ...usageWindows.windows.fiveHour,
           used: "0",
           remaining: "150000000",
           resetsAt: null,
         },
-        week: { ...usageStatus.windows.week, used: "0", remaining: "1000000000", resetsAt: null },
+        week: { ...usageWindows.windows.week, used: "0", remaining: "750000000", resetsAt: null },
       },
-      banks: [],
+      banks: { count: 0, nextExpiresAt: null },
     },
   }),
   "conversation-detail": fixture(CloudConversationDetailResponse, {

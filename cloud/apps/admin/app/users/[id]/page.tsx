@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PageCard, StatusPill, headRowClass, rowClass } from "@/components/PageCard";
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
+import { UsagePanel } from "@/components/users/UsagePanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -137,16 +138,6 @@ export default function UserDetailPage() {
                   }
                 />
               )}
-              <ReasonDialog
-                trigger={<Button variant="secondary">Reset limits</Button>}
-                title="Reset limits"
-                description="Clears rate limits, concurrency holds, and open abuse flags. Credits are never changed."
-                onConfirm={(_v, reason) =>
-                  admin(`/users/${id}/reset-limits`, { method: "POST", json: { reason } }).then(
-                    () => done("Reset limits"),
-                  )
-                }
-              />
               <Button
                 variant="secondary"
                 onClick={() =>
@@ -234,6 +225,7 @@ export default function UserDetailPage() {
               </TableBody>
             </Table>
           </PageCard>
+          <UsagePanel userId={id} />
           <div className="grid gap-4 xl:grid-cols-2">
             <PageCard title="Devices">
               {d.devices.length === 0 ? (

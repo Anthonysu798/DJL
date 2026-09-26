@@ -113,6 +113,7 @@ export const subscriptions = pgTable(
 );
 
 export const ledgerEntryTypeEnum = pgEnum("ledger_entry_type", [
+  "free_grant",
   "trial_grant",
   "plan_grant",
   "topup",
@@ -124,7 +125,7 @@ export const ledgerEntryTypeEnum = pgEnum("ledger_entry_type", [
   "expiry",
   "anonymize",
 ]);
-/** `free` holds the weekly free allowance; nothing writes it until the free tier lands. */
+/** `free` holds the weekly free allowance, spent only on free-eligible models. */
 export const ledgerBucketEnum = pgEnum("ledger_bucket", ["free", "trial", "plan", "topup"]);
 
 /**
@@ -166,6 +167,9 @@ export const creditBalances = pgTable("credit_balances", {
   orgId: uuid("org_id")
     .primaryKey()
     .references(() => organization.id, { onDelete: "cascade" }),
+  free: bigint("free", { mode: "bigint" })
+    .notNull()
+    .default(sql`0`),
   trial: bigint("trial", { mode: "bigint" })
     .notNull()
     .default(sql`0`),

@@ -24,7 +24,13 @@ const ctx = {
     ipHash: null,
     deviceId: null,
   },
-  limits: { planId: "trial", concurrentStreams: 1, requestsPerMinute: 1, priorityWeight: 1 },
+  limits: {
+    planId: "trial",
+    concurrentStreams: 1,
+    requestsPerMinute: 1,
+    priorityWeight: 1,
+    windowCaps: { fiveHour: 1n, week: 1n },
+  },
 } satisfies AdmissionContext;
 
 function recording(log: string[], name: string, fail = false): AdmissionPolicy {
