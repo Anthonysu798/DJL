@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./cloud";
 export * from "./automation";
 export * from "./servers";
 export * from "./browserAnnotations";

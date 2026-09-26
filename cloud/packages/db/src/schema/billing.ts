@@ -13,6 +13,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import type { Bucket } from "@djl/domain";
+
 import { organization, user } from "./auth.ts";
 
 const id = () =>
@@ -26,7 +28,7 @@ const updatedAt = () =>
     .$onUpdate(() => new Date())
     .notNull();
 
-export const planIdEnum = pgEnum("plan_id", ["trial", "starter", "business", "autopilot"]);
+export const planIdEnum = pgEnum("plan_id", ["free", "trial", "starter", "business", "autopilot"]);
 
 /** Plan configuration. Seeded from @djl/domain DEFAULT_PLANS; admins edit rows, not code. */
 export const plans = pgTable("plans", {
@@ -39,6 +41,13 @@ export const plans = pgTable("plans", {
   requestsPerMinute: integer("requests_per_minute").notNull(),
   priorityWeight: integer("priority_weight").notNull(),
   syncQuotaBytes: bigint("sync_quota_bytes", { mode: "bigint" }).notNull(),
+  /** Usage window caps in microcredits: rolling 5 hours and the 7-day week. */
+  window5hMicro: bigint("window_5h_micro", { mode: "bigint" })
+    .notNull()
+    .default(sql`0`),
+  windowWeekMicro: bigint("window_week_micro", { mode: "bigint" })
+    .notNull()
+    .default(sql`0`),
   requiresOwner2fa: boolean("requires_owner_2fa").notNull().default(false),
   stripeMonthlyPriceId: text("stripe_monthly_price_id"),
   stripeAnnualPriceId: text("stripe_annual_price_id"),
@@ -115,7 +124,8 @@ export const ledgerEntryTypeEnum = pgEnum("ledger_entry_type", [
   "expiry",
   "anonymize",
 ]);
-export const ledgerBucketEnum = pgEnum("ledger_bucket", ["trial", "plan", "topup"]);
+/** `free` holds the weekly free allowance; nothing writes it until the free tier lands. */
+export const ledgerBucketEnum = pgEnum("ledger_bucket", ["free", "trial", "plan", "topup"]);
 
 /**
  * Append-only. No UPDATE or DELETE grant exists for the application role;
@@ -129,7 +139,7 @@ export const creditLedger = pgTable(
       .notNull()
       .references(() => organization.id),
     type: ledgerEntryTypeEnum("type").notNull(),
-    bucket: ledgerBucketEnum("bucket").notNull(),
+    bucket: ledgerBucketEnum("bucket").$type<Bucket>().notNull(),
     amount: bigint("amount", { mode: "bigint" }).notNull(),
     reservationId: uuid("reservation_id"),
     idempotencyKey: text("idempotency_key").notNull(),

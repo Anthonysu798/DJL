@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@synara/contracts": "workspace:*",
     "better-auth": "^1.7.4",
     "next": "16.2.9",
     "react": "19.2.7",

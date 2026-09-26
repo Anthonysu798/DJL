@@ -1,6 +1,6 @@
 import { creditsToMicro, type Microcredits } from "./units.ts";
 
-export type PlanId = "trial" | "starter" | "business" | "autopilot";
+export type PlanId = "free" | "trial" | "starter" | "business" | "autopilot";
 
 export interface PlanConfig {
   readonly id: PlanId;
@@ -14,12 +14,29 @@ export interface PlanConfig {
   readonly priorityWeight: number;
   readonly syncQuotaBytes: number;
   readonly requiresOwner2fa: boolean;
+  /** Spend caps for the rolling 5-hour window and the 7-day week. */
+  readonly window5h: Microcredits;
+  readonly windowWeek: Microcredits;
 }
 
 const GB = 1024 ** 3;
 
 /** Defaults seeded into the plans table; admins edit the table, not this file. */
 export const DEFAULT_PLANS: readonly PlanConfig[] = [
+  {
+    id: "free",
+    name: "Free",
+    monthlyPriceUsdCents: 0,
+    annualPriceUsdCents: 0,
+    includedCredits: 0n,
+    concurrentStreams: 1,
+    requestsPerMinute: 10,
+    priorityWeight: 1,
+    syncQuotaBytes: 0,
+    requiresOwner2fa: false,
+    window5h: creditsToMicro(10),
+    windowWeek: creditsToMicro(50),
+  },
   {
     id: "trial",
     name: "Trial",
@@ -31,6 +48,8 @@ export const DEFAULT_PLANS: readonly PlanConfig[] = [
     priorityWeight: 1,
     syncQuotaBytes: 100 * 1024 ** 2,
     requiresOwner2fa: false,
+    window5h: creditsToMicro(50),
+    windowWeek: creditsToMicro(200),
   },
   {
     id: "starter",
@@ -43,6 +62,8 @@ export const DEFAULT_PLANS: readonly PlanConfig[] = [
     priorityWeight: 4,
     syncQuotaBytes: 2 * GB,
     requiresOwner2fa: true,
+    window5h: creditsToMicro(150),
+    windowWeek: creditsToMicro(750),
   },
   {
     id: "business",
@@ -55,6 +76,8 @@ export const DEFAULT_PLANS: readonly PlanConfig[] = [
     priorityWeight: 8,
     syncQuotaBytes: 10 * GB,
     requiresOwner2fa: true,
+    window5h: creditsToMicro(500),
+    windowWeek: creditsToMicro(2500),
   },
   {
     id: "autopilot",
@@ -67,6 +90,8 @@ export const DEFAULT_PLANS: readonly PlanConfig[] = [
     priorityWeight: 16,
     syncQuotaBytes: 50 * GB,
     requiresOwner2fa: true,
+    window5h: creditsToMicro(1600),
+    windowWeek: creditsToMicro(8000),
   },
 ];
 

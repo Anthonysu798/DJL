@@ -799,6 +799,13 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.harnessStartLogin, input, { timeoutMs: 30_000 }),
       endLogin: (input) => transport.request(WS_METHODS.harnessEndLogin, input),
     },
+    cloud: {
+      getStatus: () => transport.request(WS_METHODS.cloudGetStatus, {}, { timeoutMs: 20_000 }),
+      startSignIn: () => transport.request(WS_METHODS.cloudStartSignIn, {}, { timeoutMs: 20_000 }),
+      pollSignIn: (input) =>
+        transport.request(WS_METHODS.cloudPollSignIn, input, { timeoutMs: 20_000 }),
+      signOut: () => transport.request(WS_METHODS.cloudSignOut, {}, { timeoutMs: 20_000 }),
+    },
     provider: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),

@@ -1,3 +1,5 @@
+import type { CloudCreditsResponse, CloudMeResponse } from "@synara/contracts/cloud";
+
 import { API_URL } from "./config";
 
 export interface ApiErrorBody {
@@ -46,16 +48,5 @@ export async function api<T>(
   return (await res.json()) as T;
 }
 
-export interface Me {
-  user: { id: string; email: string; emailVerified: boolean };
-  activeOrgId: string;
-  role: string;
-  organizations: { id: string; name: string; slug: string; role: string; personal: boolean }[];
-}
-
-export interface Credits {
-  orgId: string;
-  balances: { trial: string; plan: string; topup: string };
-  total: string;
-  display: { total: string; trial: string; plan: string; topup: string };
-}
+export type Me = CloudMeResponse;
+export type Credits = CloudCreditsResponse;

@@ -2588,6 +2588,26 @@
       },
       "title": "プロバイダー使用量",
       "unavailableWithDetail": "使用量を取得できません。{{detail}}"
+    },
+    "cloud": {
+      "title": "DJL Cloud",
+      "name": "DJL Cloud",
+      "description": "ホスト型モデルをクレジットで利用します。一度サインインすれば、コード・ファイル・ターミナルはこのコンピューターに残ります。",
+      "signedOut": "サインインしていません",
+      "signedInAs": "{{email}} でサインイン中",
+      "credits": "利用可能クレジット {{credits}}",
+      "sessionExpired": "セッションの期限が切れました。再度サインインしてください。",
+      "unreachable": "DJL Cloud に接続できません。接続を確認してください。",
+      "suspended": "このアカウントは停止されています。support@slcor.com にお問い合わせください。",
+      "buyCredits": "クレジットを購入",
+      "signOut": "サインアウト",
+      "enterCode": "開いたブラウザーウィンドウにこのコードを入力し、このコンピューターの DJL を承認してください。",
+      "openBrowser": "ブラウザーを再度開く",
+      "cancel": "キャンセル",
+      "denied": "ブラウザーでサインインが拒否されました。",
+      "expired": "サインインコードの期限が切れました。もう一度開始してください。",
+      "error": "DJL Cloud に接続できませんでした。",
+      "signIn": "DJL Cloud にサインイン"
     }
   },
   "shell": {

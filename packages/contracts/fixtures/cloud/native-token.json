@@ -1,0 +1,6 @@
+{
+  "sessionToken": "session_token_example",
+  "expiresAt": "2026-10-26T12:00:00.000Z",
+  "userId": "user_1",
+  "orgId": "org_1"
+}

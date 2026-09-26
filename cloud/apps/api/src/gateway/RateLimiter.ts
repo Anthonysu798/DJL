@@ -40,6 +40,21 @@ redis.call('PEXPIRE', key, window * 1000)
 return {1, limit - count - 1, 0}
 `;
 
+/** Prune expired holds, then take a slot only if one is free, in one atomic step. */
+const ACQUIRE_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+redis.call('ZREMRANGEBYSCORE', key, 0, now - ttl * 1000)
+if redis.call('ZCARD', key) >= limit then
+  return 0
+end
+redis.call('ZADD', key, now, ARGV[4])
+redis.call('EXPIRE', key, ttl)
+return 1
+`;
+
 export function createRedisRateLimiter(redis: Redis): RateLimiter {
   return {
     async hit(key, limit, windowSeconds) {
@@ -56,12 +71,8 @@ export function createRedisRateLimiter(redis: Redis): RateLimiter {
     async acquire(key, limit, ttlSeconds) {
       const slot = `cc:${key}`;
       const id = crypto.randomUUID();
-      const now = Date.now();
-      await redis.zremrangebyscore(slot, 0, now - ttlSeconds * 1000);
-      const count = await redis.zcard(slot);
-      if (count >= limit) return { acquired: false, release: async () => {} };
-      await redis.zadd(slot, now, id);
-      await redis.expire(slot, ttlSeconds);
+      const acquired = await redis.eval(ACQUIRE_SCRIPT, 1, slot, Date.now(), ttlSeconds, limit, id);
+      if (acquired !== 1) return { acquired: false, release: async () => {} };
       return {
         acquired: true,
         release: async () => {
@@ -107,7 +118,7 @@ export function createMemoryRateLimiter(now: () => number = Date.now): RateLimit
     async acquire(key, limit, ttlSeconds) {
       const t = now();
       const map = holds.get(key) ?? new Map<string, number>();
-      for (const [id, at] of map) if (t - at > ttlSeconds * 1000) map.delete(id);
+      for (const [id, at] of map) if (t - at >= ttlSeconds * 1000) map.delete(id);
       holds.set(key, map);
       if (map.size >= limit) return { acquired: false, release: async () => {} };
       const id = crypto.randomUUID();

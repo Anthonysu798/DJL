@@ -15,6 +15,10 @@
       "import": "./src/index.ts",
       "require": "./dist/index.cjs"
     },
+    "./cloud": {
+      "types": "./src/cloud.ts",
+      "import": "./src/cloud.ts"
+    },
     "./locale-values": {
       "types": "./src/localeValues.ts",
       "import": "./src/localeValues.ts"
@@ -25,7 +29,8 @@
     "build": "tsdown src/index.ts --format esm,cjs --dts --clean",
     "prepare": "effect-language-service patch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "fixtures:cloud": "bun scripts/write-cloud-fixtures.ts && oxfmt fixtures/cloud"
   },
   "dependencies": {
     "effect": "catalog:"

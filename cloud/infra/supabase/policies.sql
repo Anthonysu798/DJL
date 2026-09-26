@@ -12,9 +12,12 @@ GRANT USAGE ON SCHEMA public TO djl_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO djl_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO djl_app;
 
--- Append-only: ledger and audit trail.
+-- Append-only: ledger, audit trail, usage window history, and run event logs.
+-- (ON DELETE CASCADE from a parent row still removes them: referential actions run as the owner.)
 REVOKE UPDATE, DELETE ON credit_ledger FROM djl_app;
 REVOKE UPDATE, DELETE ON audit_events FROM djl_app;
+REVOKE UPDATE, DELETE ON usage_window_events FROM djl_app;
+REVOKE UPDATE, DELETE ON run_events FROM djl_app;
 REVOKE DELETE ON stripe_events FROM djl_app;
 REVOKE DELETE ON usage_requests FROM djl_app;
 
@@ -26,9 +29,14 @@ ALTER TABLE usage_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shares ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
 
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['credit_ledger','credit_balances','usage_requests','subscriptions','customers','invoices'] LOOP
+  FOREACH t IN ARRAY ARRAY['credit_ledger','credit_balances','usage_requests','subscriptions','customers','invoices',
+                        'conversations','files','shares','runs'] LOOP
     EXECUTE format('DROP POLICY IF EXISTS org_scope ON %I', t);
     EXECUTE format(
       'CREATE POLICY org_scope ON %I TO djl_app USING (

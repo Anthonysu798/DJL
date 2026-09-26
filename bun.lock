@@ -284,6 +284,7 @@
         "@opentelemetry/sdk-node": "^0.222.0",
         "@opentelemetry/semantic-conventions": "^1.43.0",
         "@sentry/bun": "^10.74.0",
+        "@synara/contracts": "workspace:*",
         "better-auth": "^1.7.4",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
@@ -308,6 +309,7 @@
       "name": "@djl/web",
       "version": "0.1.0",
       "dependencies": {
+        "@synara/contracts": "workspace:*",
         "better-auth": "^1.7.4",
         "next": "16.2.9",
         "react": "19.2.7",

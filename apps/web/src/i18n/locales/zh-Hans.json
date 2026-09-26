@@ -2588,6 +2588,26 @@
       },
       "title": "提供商用量",
       "unavailableWithDetail": "用量不可用。{{detail}}"
+    },
+    "cloud": {
+      "title": "DJL Cloud",
+      "name": "DJL Cloud",
+      "description": "托管模型按积分计费。只需登录一次，你的代码、文件和终端都留在本机。",
+      "signedOut": "未登录",
+      "signedInAs": "已登录：{{email}}",
+      "credits": "可用积分 {{credits}}",
+      "sessionExpired": "会话已过期，请重新登录。",
+      "unreachable": "无法连接 DJL Cloud，请检查网络。",
+      "suspended": "此账户已被暂停，请联系 support@slcor.com。",
+      "buyCredits": "购买积分",
+      "signOut": "退出登录",
+      "enterCode": "在刚打开的浏览器窗口中输入此代码，然后批准这台电脑上的 DJL。",
+      "openBrowser": "重新打开浏览器",
+      "cancel": "取消",
+      "denied": "在浏览器中拒绝了登录。",
+      "expired": "登录代码已过期，请重新开始。",
+      "error": "无法连接 DJL Cloud。",
+      "signIn": "登录 DJL Cloud"
     }
   },
   "shell": {

@@ -2,12 +2,13 @@
  * The model gateway: OpenAI-compatible chat, images, and embeddings on top of
  * the credit ledger.
  *
- * Per request: kill switch → plan limits and rate limits → route → reserve →
- * stream from the provider while tracking running cost → cut at zero →
- * settle actual usage → usage row, trial hook, abuse counting. Prompt and
- * response content are never persisted or logged.
+ * Per request: admission chain (kill switch → abuse → rate → window, see
+ * admission.ts) → route → reserve → stream from the provider while tracking
+ * running cost → cut at zero → settle actual usage → usage row, trial hook,
+ * abuse counting. Prompt and response content are never persisted or logged.
  */
 import { and, desc, eq, gt, sql } from "drizzle-orm";
+import type { CloudUsageTrailer } from "@synara/contracts/cloud";
 import { schema, type DjlDatabase } from "@djl/db";
 import {
   costOfUsage,
@@ -27,15 +28,20 @@ import {
 } from "@djl/providers";
 
 import type { Principal } from "../auth/guard.ts";
-import {
-  gatewayInFlight,
-  gatewayRequests,
-  settledMicrocredits,
-  withSpan,
-} from "../observability.ts";
+import type { Settings } from "../config/settings.ts";
+import { gatewayRequests, settledMicrocredits, withSpan } from "../observability.ts";
 import { InsufficientCreditsError, type LedgerService } from "../credits/LedgerService.ts";
 import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
+import {
+  allowAll,
+  killSwitchPolicy,
+  rateLimitPolicy,
+  runAdmission,
+  type AdmissionPolicy,
+  type AdmissionRelease,
+  type PlanLimits,
+} from "./admission.ts";
 import type { RateLimiter } from "./RateLimiter.ts";
 import { estimateInputTokens, resolveModel, type CatalogModel } from "./routing.ts";
 
@@ -43,14 +49,21 @@ export interface GatewayConfig {
   readonly region: string;
   readonly catalogTtlMs: number;
   readonly refusalFlagThreshold: number;
-  readonly instanceSoftCap: number;
-  readonly instanceHardCap: number;
 }
 
 export interface GatewayDeps {
   readonly db: DjlDatabase;
   readonly ledger: LedgerService;
   readonly limiter: RateLimiter;
+  readonly settings: Settings;
+  /**
+   * Admission slots other features fill; each allows everything when absent.
+   * The chain runs kill switch → abuse → rate → window.
+   */
+  readonly admission?: {
+    readonly abuse?: AdmissionPolicy;
+    readonly window?: AdmissionPolicy;
+  };
   readonly providers: Partial<Record<ProviderId, ProviderAdapter>>;
   readonly trial: Pick<TrialService, "onFirstCloudRequest">;
   readonly config: GatewayConfig;
@@ -68,11 +81,45 @@ export interface RequestFacts {
   readonly deviceId: string | null;
 }
 
-interface PlanLimits {
-  readonly planId: PlanId;
-  readonly concurrentStreams: number;
-  readonly requestsPerMinute: number;
-  readonly priorityWeight: number;
+/** One OpenAI-compatible `chat.completion.chunk`. */
+export interface ChatCompletionChunk {
+  readonly id: string;
+  readonly object: "chat.completion.chunk";
+  readonly created: number;
+  readonly model: string;
+  readonly choices: readonly [
+    {
+      readonly index: 0;
+      readonly delta: ChatChunk["delta"];
+      readonly finish_reason: ChatChunk["finish_reason"];
+    },
+  ];
+}
+
+export interface StepOptions {
+  /** Aborting stops the provider call; what was used so far is settled. */
+  readonly signal?: AbortSignal;
+  /** Most this step may spend, in microcredits; the stream is cut when it is reached. */
+  readonly budgetCap?: Microcredits;
+}
+
+export interface StepResult {
+  /** The settled cost, as sent in the `djl.usage` trailer; null when nothing was settled. */
+  readonly usage: CloudUsageTrailer | null;
+  /** Why the step ended early (provider failure, cut off), if it did. */
+  readonly error: { readonly code: string; readonly message: string } | null;
+}
+
+export interface Step {
+  readonly requestId: string;
+  /**
+   * The provider's output. Iterate it to the end or stop early (break, or
+   * the signal); either way the request is settled and `result` resolves.
+   * A step that is never iterated holds its reservation until the stale
+   * reservation job releases it.
+   */
+  readonly chunks: AsyncIterable<ChatCompletionChunk>;
+  readonly result: Promise<StepResult>;
 }
 
 const TRAILER_EVENT = "djl.usage";
@@ -104,9 +151,17 @@ export class GatewayService {
   private catalogCache: { readonly at: number; readonly models: readonly CatalogModel[] } | null =
     null;
   private readonly breakers = new Map<ProviderId, CircuitBreaker>();
-  private inFlight = 0;
+  private readonly load = { inFlight: 0 };
+  private readonly policies: readonly AdmissionPolicy[];
 
-  constructor(private readonly deps: GatewayDeps) {}
+  constructor(private readonly deps: GatewayDeps) {
+    this.policies = [
+      killSwitchPolicy(deps.db),
+      deps.admission?.abuse ?? allowAll("abuse"),
+      rateLimitPolicy({ limiter: deps.limiter, settings: deps.settings, load: this.load }),
+      deps.admission?.window ?? allowAll("window"),
+    ];
+  }
 
   // ---- catalog -------------------------------------------------------------
 
@@ -129,7 +184,7 @@ export class GatewayService {
   status(): { readonly inFlight: number; readonly breakers: Record<string, string> } {
     const breakers: Record<string, string> = {};
     for (const [provider, breaker] of this.breakers) breakers[provider] = breaker.state();
-    return { inFlight: this.inFlight, breakers };
+    return { inFlight: this.load.inFlight, breakers };
   }
 
   async listModels() {
@@ -167,14 +222,6 @@ export class GatewayService {
     return Boolean(this.deps.providers[provider]) && this.breaker(provider).state() !== "open";
   }
 
-  private async assertNotPaused(): Promise<void> {
-    const row = await this.deps.db.query.killSwitches.findFirst({
-      where: eq(schema.killSwitches.name, "gateway"),
-    });
-    if (row?.engaged)
-      throw new ApiError(503, "gateway_paused", "The model gateway is temporarily paused.");
-  }
-
   private async planLimits(orgId: string): Promise<PlanLimits> {
     const sub = await this.deps.db.query.subscriptions.findFirst({
       where: and(eq(schema.subscriptions.orgId, orgId), eq(schema.subscriptions.status, "active")),
@@ -190,49 +237,9 @@ export class GatewayService {
     };
   }
 
-  private async admit(facts: RequestFacts, limits: PlanLimits): Promise<() => Promise<void>> {
-    const { limiter } = this.deps;
-    const perUser = await limiter.hit(
-      `user:${facts.principal.userId}`,
-      limits.requestsPerMinute,
-      60,
-    );
-    if (!perUser.allowed)
-      throw new ApiError(
-        429,
-        "rate_limited",
-        `Too many requests. Retry in ${perUser.retryAfterSeconds}s.`,
-      );
-    if (facts.ipHash) {
-      const perIp = await limiter.hit(`ip:${facts.ipHash}`, 300, 60);
-      if (!perIp.allowed)
-        throw new ApiError(429, "rate_limited", "Too many requests from this network.");
-    }
-    const hold = await limiter.acquire(
-      `org:${facts.principal.orgId}`,
-      limits.concurrentStreams,
-      600,
-    );
-    if (!hold.acquired)
-      throw new ApiError(
-        429,
-        "rate_limited",
-        `Your plan allows ${limits.concurrentStreams} concurrent streams.`,
-      );
-    if (this.inFlight >= this.deps.config.instanceHardCap && limits.priorityWeight < 16) {
-      await hold.release();
-      throw new ApiError(503, "overloaded", "Servers are busy. Try again in a moment.");
-    }
-    this.inFlight += 1;
-    gatewayInFlight.add(1);
-    let released = false;
-    return async () => {
-      if (released) return;
-      released = true;
-      this.inFlight -= 1;
-      gatewayInFlight.add(-1);
-      await hold.release();
-    };
+  private async admit(facts: RequestFacts): Promise<AdmissionRelease> {
+    const limits = await this.planLimits(facts.principal.orgId);
+    return runAdmission(this.policies, { facts, limits });
   }
 
   private route(requested: string, catalog: readonly CatalogModel[]) {
@@ -348,9 +355,46 @@ export class GatewayService {
     facts: RequestFacts,
     body: ChatRequest & { readonly stream?: boolean },
   ): Promise<{ readonly stream: ReadableStream<Uint8Array>; readonly requestId: string }> {
-    await this.assertNotPaused();
-    const limits = await this.planLimits(facts.principal.orgId);
-    const release = await this.admit(facts, limits);
+    const step = await this.completeStep(facts, body);
+    const sse = async function* (): AsyncGenerator<string> {
+      for await (const chunk of step.chunks) yield `data: ${JSON.stringify(chunk)}\n\n`;
+      const { usage, error } = await step.result;
+      if (error)
+        yield `event: error\ndata: ${JSON.stringify({ error: { ...error, traceId: facts.traceId } })}\n\n`;
+      if (usage) yield `event: ${TRAILER_EVENT}\ndata: ${JSON.stringify(usage)}\n\n`;
+      yield "data: [DONE]\n\n";
+    };
+    const iterator = sse();
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        const { value, done } = await iterator.next();
+        if (done) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(encoder.encode(value));
+      },
+      async cancel() {
+        // Client disconnected: stop the provider and settle what was used.
+        await iterator.return(undefined);
+      },
+    });
+    return { stream, requestId: step.requestId };
+  }
+
+  /**
+   * One model call, in process: admit, route, reserve, stream from the
+   * provider while tracking running cost, cut at zero (or at `budgetCap`),
+   * then settle actual usage. Throws an ApiError before streaming when the
+   * request is refused; after that, failures end the step with `result.error`.
+   */
+  async completeStep(
+    facts: RequestFacts,
+    body: ChatRequest,
+    options: StepOptions = {},
+  ): Promise<Step> {
+    const release = await this.admit(facts);
     let reserved: Microcredits | null = null;
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
@@ -388,7 +432,9 @@ export class GatewayService {
         throw e;
       }
       reserved = estimate;
-      const budget = balancesAfter.trial + balancesAfter.plan + balancesAfter.topup + estimate; // what the org could spend
+      const credits = balancesAfter.trial + balancesAfter.plan + balancesAfter.topup + estimate; // what the org could spend
+      const capped = options.budgetCap !== undefined && options.budgetCap < credits;
+      const budget = capped ? options.budgetCap! : credits;
       await this.recordRequest({
         id: requestId,
         facts,
@@ -401,15 +447,20 @@ export class GatewayService {
       const provider = this.deps.providers[model.provider]!;
       const breaker = this.breaker(model.provider);
       const abort = new AbortController();
+      const onAbort = () => abort.abort();
+      options.signal?.addEventListener("abort", onAbort, { once: true });
       const upstream: ChatRequest = {
         ...body,
         model: model.upstreamModelId,
         max_tokens: maxOutput,
         user: facts.principal.orgId.slice(0, 16),
       };
-      const encoder = new TextEncoder();
+      let resolveResult!: (result: StepResult) => void;
+      const result = new Promise<StepResult>((resolve) => {
+        resolveResult = resolve;
+      });
 
-      const produce = async function* (this: GatewayService): AsyncGenerator<string> {
+      const produce = async function* (this: GatewayService): AsyncGenerator<ChatCompletionChunk> {
         let outputChars = 0;
         let usage: Usage | null = null;
         let finish: ChatChunk["finish_reason"] = null;
@@ -417,11 +468,7 @@ export class GatewayService {
         let firstTokenAt: number | null = null;
         let cutOff = false;
         let failed: ApiError | null = null;
-        let settled = false;
-        const settle = async (): Promise<string[]> => {
-          if (settled) return [];
-          settled = true;
-          const lines: string[] = [];
+        const settle = async (): Promise<StepResult> => {
           const finalUsage: Usage = usage ?? {
             input_tokens: inputTokens,
             output_tokens: Math.ceil(outputChars / 4),
@@ -442,57 +489,53 @@ export class GatewayService {
                 startedAt,
                 firstTokenAt,
               });
-              lines.push(
-                `event: error\ndata: ${JSON.stringify({ error: { code: failed.code, message: failed.message, traceId: facts.traceId } })}\n\n`,
-              );
-            } else {
-              const actual = costOfUsage(price, {
-                inputTokens: finalUsage.input_tokens,
-                cachedInputTokens: finalUsage.cached_input_tokens,
-                outputTokens: finalUsage.output_tokens,
-                images: 0,
-                requests: 1,
-              });
-              const { balances } = await this.deps.ledger.settle({
-                orgId: facts.principal.orgId,
-                reservationId: requestId,
-                actual,
-                idempotencyKey: `req:${requestId}`,
-                actor: "system:gateway",
-              });
-              const refusal = finish === "content_filter";
-              await this.finishRequest({
-                id: requestId,
-                status: cutOff ? "cut_off" : failed ? "failed" : "settled",
-                usage: finalUsage,
-                settled: actual,
-                upstreamRequestId: upstreamId,
-                refusal,
-                errorCode: failed?.code ?? null,
-                startedAt,
-                firstTokenAt,
-              });
-              const trailer = {
-                requestId,
-                model: model.modelId,
-                routeReason: reason,
-                inputTokens: finalUsage.input_tokens,
-                outputTokens: finalUsage.output_tokens,
-                settled: actual.toString(),
-                remaining: (balances.trial + balances.plan + balances.topup).toString(),
-                cutOff,
-              };
-              if (cutOff)
-                lines.push(
-                  `event: error\ndata: ${JSON.stringify({ error: { code: "insufficient_credits", message: "Credits ran out during this response.", traceId: facts.traceId } })}\n\n`,
-                );
-              if (failed && !cutOff)
-                lines.push(
-                  `event: error\ndata: ${JSON.stringify({ error: { code: failed.code, message: failed.message, traceId: facts.traceId } })}\n\n`,
-                );
-              lines.push(`event: ${TRAILER_EVENT}\ndata: ${JSON.stringify(trailer)}\n\n`);
-              void this.afterSettle(facts, refusal);
+              return { usage: null, error: { code: failed.code, message: failed.message } };
             }
+            const actual = costOfUsage(price, {
+              inputTokens: finalUsage.input_tokens,
+              cachedInputTokens: finalUsage.cached_input_tokens,
+              outputTokens: finalUsage.output_tokens,
+              images: 0,
+              requests: 1,
+            });
+            const { balances } = await this.deps.ledger.settle({
+              orgId: facts.principal.orgId,
+              reservationId: requestId,
+              actual,
+              idempotencyKey: `req:${requestId}`,
+              actor: "system:gateway",
+            });
+            const refusal = finish === "content_filter";
+            await this.finishRequest({
+              id: requestId,
+              status: cutOff ? "cut_off" : failed ? "failed" : "settled",
+              usage: finalUsage,
+              settled: actual,
+              upstreamRequestId: upstreamId,
+              refusal,
+              errorCode: failed?.code ?? null,
+              startedAt,
+              firstTokenAt,
+            });
+            void this.afterSettle(facts, refusal);
+            const trailer: CloudUsageTrailer = {
+              requestId,
+              model: model.modelId,
+              routeReason: reason,
+              inputTokens: finalUsage.input_tokens,
+              outputTokens: finalUsage.output_tokens,
+              settled: actual.toString(),
+              remaining: (balances.trial + balances.plan + balances.topup).toString(),
+              cutOff,
+            };
+            const error = cutOff
+              ? capped
+                ? { code: "budget_exhausted", message: "This step reached its spending cap." }
+                : { code: "insufficient_credits", message: "Credits ran out during this response." }
+              : failed
+                ? { code: failed.code, message: failed.message }
+                : null;
+            return { usage: trailer, error };
           } catch (error) {
             console.error(
               JSON.stringify({
@@ -502,14 +545,10 @@ export class GatewayService {
                 error: error instanceof Error ? error.message : String(error),
               }),
             );
-            lines.push(
-              `event: error\ndata: ${JSON.stringify({ error: { code: "internal", message: "Could not record usage.", traceId: facts.traceId } })}\n\n`,
-            );
+            return { usage: null, error: { code: "internal", message: "Could not record usage." } };
           } finally {
             await release();
           }
-          lines.push("data: [DONE]\n\n");
-          return lines;
         };
         try {
           for await (const chunk of provider.chatStream(upstream, abort.signal)) {
@@ -539,14 +578,13 @@ export class GatewayService {
               chunk.delta.role ||
               chunk.finish_reason
             ) {
-              const out = {
+              yield {
                 id: requestId,
                 object: "chat.completion.chunk",
                 created: Math.floor(startedAt / 1000),
                 model: model.modelId,
                 choices: [{ index: 0, delta: chunk.delta, finish_reason: chunk.finish_reason }],
               };
-              yield `data: ${JSON.stringify(out)}\n\n`;
             }
           }
           breaker.success();
@@ -564,31 +602,18 @@ export class GatewayService {
               `provider_${error.code}`,
               "The model provider returned an error.",
             );
-          } else if (!cutOff) {
+          } else if (!cutOff && !options.signal?.aborted) {
             failed = new ApiError(502, "provider_unknown", "The model provider failed.");
           }
         } finally {
-          // Runs on normal completion, provider failure, and client disconnect (iterator.return()).
+          // Runs on normal completion, provider failure, the caller's abort, and
+          // the caller stopping early (iterator.return()).
           abort.abort();
-          for (const line of await settle()) yield line;
+          options.signal?.removeEventListener("abort", onAbort);
+          resolveResult(await settle());
         }
       };
-      const iterator = produce.call(this);
-      const stream = new ReadableStream<Uint8Array>({
-        async pull(controller) {
-          const { value, done } = await iterator.next();
-          if (done) {
-            controller.close();
-            return;
-          }
-          controller.enqueue(encoder.encode(value));
-        },
-        async cancel() {
-          abort.abort();
-          await iterator.return(undefined);
-        },
-      });
-      return { stream, requestId };
+      return { requestId, chunks: produce.call(this), result };
     } catch (error) {
       if (reserved !== null) {
         await this.deps.ledger
@@ -623,10 +648,10 @@ export class GatewayService {
       readonly size?: string;
       readonly quality?: string;
     },
+    /** Aborted when the client disconnects; the provider call stops and nothing is charged. */
+    options: { readonly signal?: AbortSignal } = {},
   ) {
-    await this.assertNotPaused();
-    const limits = await this.planLimits(facts.principal.orgId);
-    const release = await this.admit(facts, limits);
+    const release = await this.admit(facts);
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
     let reserved = false;
@@ -686,12 +711,13 @@ export class GatewayService {
                 ...(body.quality ? { quality: body.quality } : {}),
                 user: facts.principal.orgId.slice(0, 16),
               },
-              new AbortController().signal,
+              options.signal ?? new AbortController().signal,
             ),
         );
         breaker.success();
       } catch (error) {
-        if (error instanceof ProviderError && error.retryable) breaker.failure();
+        if (error instanceof ProviderError && error.retryable && !options.signal?.aborted)
+          breaker.failure();
         await this.deps.ledger.release({
           orgId: facts.principal.orgId,
           reservationId: requestId,
@@ -769,9 +795,7 @@ export class GatewayService {
     facts: RequestFacts,
     body: { readonly model: string; readonly input: string | readonly string[] },
   ) {
-    await this.assertNotPaused();
-    const limits = await this.planLimits(facts.principal.orgId);
-    const release = await this.admit(facts, limits);
+    const release = await this.admit(facts);
     const requestId = crypto.randomUUID();
     const startedAt = Date.now();
     try {
