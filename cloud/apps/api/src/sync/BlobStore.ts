@@ -22,6 +22,8 @@ export interface BlobStore {
   readonly head: (key: string) => Promise<{ readonly sizeBytes: number } | null>;
   /** The object's bytes, or null when it does not exist. */
   readonly read: (key: string) => Promise<Uint8Array | null>;
+  /** Server-side upload (generated files). */
+  readonly write: (key: string, bytes: Uint8Array, mimeType: string) => Promise<void>;
   readonly remove: (key: string) => Promise<void>;
 }
 
@@ -53,6 +55,9 @@ export class FakeBlobStore implements BlobStore {
   }
   async read(key: string) {
     return this.objects.get(key)?.bytes ?? null;
+  }
+  async write(key: string, bytes: Uint8Array, mimeType: string) {
+    this.put(key, bytes, mimeType);
   }
   async remove(key: string) {
     this.objects.delete(key);
@@ -163,6 +168,12 @@ export function createS3BlobStore(config: {
       if (res.status === 404) return null;
       if (!res.ok) throw new Error(`storage read failed: ${res.status}`);
       return new Uint8Array(await res.arrayBuffer());
+    },
+    async write(key, bytes, mimeType) {
+      const headers = { "content-type": mimeType, "content-length": String(bytes.byteLength) };
+      const { url } = await presign("PUT", key, 60, headers);
+      const res = await fetchImpl(url, { method: "PUT", headers, body: bytes as BodyInit });
+      if (!res.ok) throw new Error(`storage write failed: ${res.status}`);
     },
     async remove(key) {
       const { url } = await presign("DELETE", key, 60);

@@ -8,6 +8,18 @@ import { PgBoss } from "pg-boss";
 /** pg-boss queue for task runs. */
 export const AGENT_RUN_JOB = "agent.run";
 
+/**
+ * A task may run 30 minutes. pg-boss heartbeats the job while the worker is
+ * alive; a crashed worker's job misses its heartbeat and is retried, and the
+ * retry resumes the run from its lease (see agent/AgentRunner.ts).
+ */
+export const AGENT_RUN_QUEUE_OPTIONS = {
+  expireInSeconds: 35 * 60,
+  heartbeatSeconds: 30,
+  retryLimit: 5,
+  retryDelay: 5,
+} as const;
+
 export interface AgentRunJobData {
   readonly runId: string;
 }
@@ -41,7 +53,7 @@ export function createPgBossTaskQueue(
         console.error(JSON.stringify({ level: "error", msg: "pg-boss", error: String(error) })),
       );
       await b.start();
-      await b.createQueue(AGENT_RUN_JOB);
+      await b.createQueue(AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS);
       return b;
     })());
   return {

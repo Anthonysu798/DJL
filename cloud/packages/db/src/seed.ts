@@ -7,7 +7,7 @@ import { DEFAULT_PLANS, TRIAL_DAILY_BUDGET_USD_CENTS } from "@djl/domain";
 import { sql } from "drizzle-orm";
 
 import { createDatabase } from "./client.ts";
-import { killSwitches, plans, settings } from "./schema/index.ts";
+import { killSwitches, plans, settings, toolPrices } from "./schema/index.ts";
 
 export async function seed(databaseUrl: string): Promise<void> {
   const { db, close } = createDatabase(databaseUrl, { max: 1 });
@@ -48,8 +48,20 @@ export async function seed(databaseUrl: string): Promise<void> {
         { key: "gateway.ip_requests_per_minute", value: 300 },
         { key: "pricing.margin", value: 0.4 },
         { key: "admin.ip_blocklist", value: [] },
+        { key: "agent.run_credit_cap", value: 200 },
       ])
       .onConflictDoNothing({ target: settings.key });
+    // Agent tool prices in microcredits (1 credit = 1,000,000; 1 USD = 100 credits), with margin.
+    await db
+      .insert(toolPrices)
+      .values([
+        { tool: "exa_search", unit: "call", microPerUnit: 850_000n },
+        { tool: "exa_contents", unit: "call", microPerUnit: 170_000n },
+        { tool: "sandbox_second", unit: "second", microPerUnit: 10_000n },
+        // Surcharge per edit_image call on top of the image model's per-image price.
+        { tool: "image_edit", unit: "call", microPerUnit: 0n },
+      ])
+      .onConflictDoNothing({ target: toolPrices.tool });
     await db.execute(sql`select 1`);
   } finally {
     await close();
