@@ -5,6 +5,7 @@
  */
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
+import { Redis } from "ioredis";
 import * as OTPAuth from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -42,6 +43,12 @@ async function admin(
 
 beforeAll(async () => {
   const env = loadApiEnv({ ...process.env, DJL_ENV: "test", DJL_MOCK_EXTERNALS: "true" });
+  // Lockouts live in Redis and outlast a run; start from none so reruns within
+  // the 15-minute window see the same counts as a fresh CI job.
+  const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2 });
+  const stale = await redis.keys("admin:lockout:*");
+  if (stale.length > 0) await redis.del(...stale);
+  redis.disconnect();
   api = await startApi({ env, port: 0, host: "127.0.0.1" });
   base = `http://127.0.0.1:${api.address.port}`;
   await api.adminAuth.create({ email: ownerEmail, name: "Owner", role: "admin", password });

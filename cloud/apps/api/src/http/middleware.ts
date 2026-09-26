@@ -1,13 +1,14 @@
 /**
  * Request middleware: trace id, request context, CORS for trusted origins,
- * security headers, and a last-resort error envelope so no stack trace ever
- * reaches a client.
+ * CSRF checks for cookie-authenticated mutations, security headers, and a
+ * last-resort error envelope so no stack trace ever reaches a client.
  */
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import type { ApiEnv } from "../config/env.ts";
 import { captureError, currentTraceId, httpRequests } from "../observability.ts";
+import { csrfRefusal } from "../security/csrf.ts";
 import { RequestContext, clientIp, newTraceId } from "./context.ts";
 import { errorResponse } from "./errors.ts";
 
@@ -18,7 +19,16 @@ const SECURITY_HEADERS: Record<string, string> = {
   "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
   "cross-origin-opener-policy": "same-origin",
   "cross-origin-resource-policy": "same-site",
+  // The API serves JSON only; nothing it returns may run script or be framed.
+  "content-security-policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "x-permitted-cross-domain-policies": "none",
 };
+
+const CSRF_MESSAGES = {
+  csrf_origin: "This request did not come from a DJL page.",
+  csrf_token: "Your page is out of date. Reload and try again.",
+} as const;
 
 export function makeMiddleware(env: ApiEnv, region: string) {
   const trusted = new Set(env.trustedOrigins);
@@ -39,7 +49,8 @@ export function makeMiddleware(env: ApiEnv, region: string) {
         corsHeaders["access-control-allow-origin"] = origin;
         corsHeaders["access-control-allow-credentials"] = "true";
         corsHeaders["access-control-allow-headers"] =
-          "authorization, content-type, x-trace-id, x-device-id";
+          "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token";
+        corsHeaders["access-control-expose-headers"] = "x-trace-id, set-auth-token, set-auth-jwt";
         corsHeaders["access-control-allow-methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
         corsHeaders["access-control-max-age"] = "600";
         corsHeaders["vary"] = "Origin";
@@ -49,6 +60,14 @@ export function makeMiddleware(env: ApiEnv, region: string) {
           status: 204,
           headers: { ...SECURITY_HEADERS, ...corsHeaders },
         });
+      }
+      const path = new URL(request.url, "http://x").pathname;
+      const csrf = csrfRefusal({ method: request.method, path, headers: request.headers }, trusted);
+      if (csrf) {
+        return HttpServerResponse.setHeaders(
+          errorResponse(403, csrf, CSRF_MESSAGES[csrf], traceId),
+          { ...SECURITY_HEADERS, ...corsHeaders },
+        );
       }
       const context = {
         traceId,
@@ -70,12 +89,12 @@ export function makeMiddleware(env: ApiEnv, region: string) {
           );
           captureError(new Error(String(cause)), {
             traceId,
-            path: new URL(request.url, "http://x").pathname,
+            path,
           });
           return Effect.succeed(errorResponse(500, "internal", "Something went wrong.", traceId));
         }),
       );
-      const routeKey = new URL(request.url, "http://x").pathname.replace(/[0-9a-f-]{20,}/g, ":id");
+      const routeKey = path.replace(/[0-9a-f-]{20,}/g, ":id");
       httpRequests.add(1, { route: routeKey, method: request.method, status: response.status });
       return HttpServerResponse.setHeaders(response, {
         ...SECURITY_HEADERS,

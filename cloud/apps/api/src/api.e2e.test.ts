@@ -30,10 +30,16 @@ function storeCookies(res: Response) {
     if (name) jar.set(name.trim(), rest.join("="));
   }
 }
+let csrfToken: string | null = null;
 async function call(path: string, init: RequestInit & { json?: unknown } = {}) {
   const { json: jsonBody, ...rest } = init;
   const headers = new Headers(rest.headers);
   headers.set("origin", "http://localhost:3000");
+  // Cookie-authenticated mutations on DJL routes need the double-submit token, as in the web app.
+  if (rest.method && rest.method !== "GET" && !path.startsWith("/v1/auth/")) {
+    csrfToken ??= ((await (await call("/v1/csrf")).json()) as { token: string }).token;
+    headers.set("x-csrf-token", csrfToken);
+  }
   if (jar.size > 0) headers.set("cookie", cookieHeader());
   let body: BodyInit | null = rest.body ?? null;
   if (jsonBody !== undefined) {

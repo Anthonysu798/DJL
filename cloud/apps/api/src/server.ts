@@ -22,8 +22,11 @@ import { Effect, Layer, Scope } from "effect";
 import { Redis } from "ioredis";
 import { HttpRouter } from "effect/unstable/http";
 
+import { makeAccessTokenVerifier } from "./auth/accessTokens.ts";
 import { createAuth, type AuthNotifier } from "./auth/auth.ts";
 import { makePrincipalResolver } from "./auth/guard.ts";
+import { makeLocaleLookup } from "./auth/locale.ts";
+import { createSessionRevocations } from "./auth/revocations.ts";
 import { BillingService } from "./billing/BillingService.ts";
 import {
   FakeStripeGateway,
@@ -32,7 +35,7 @@ import {
 } from "./billing/StripeGateway.ts";
 import { LedgerService } from "./credits/LedgerService.ts";
 import { TrialService } from "./trial/TrialService.ts";
-import { AdminAuth } from "./admin/AdminAuth.ts";
+import { ADMIN_LOCKOUT, AdminAuth } from "./admin/AdminAuth.ts";
 import { AdminService } from "./admin/AdminService.ts";
 import { GatewayService } from "./gateway/GatewayService.ts";
 import { FakeBlobStore, createS3BlobStore, type BlobStore } from "./sync/BlobStore.ts";
@@ -58,6 +61,9 @@ import { Settings } from "./config/settings.ts";
 import { startObservability, stopObservability } from "./observability.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
+import { NativeAuthService } from "./nativeAuth/NativeAuthService.ts";
+import { abusePolicy } from "./security/abusePolicy.ts";
+import { createRedisLockouts } from "./security/throttle.ts";
 
 export interface ApiRuntime {
   readonly env: ApiEnv;
@@ -77,26 +83,33 @@ export interface ApiRuntime {
   readonly close: () => Promise<void>;
 }
 
-function makeNotifier(env: ApiEnv, senders: { email: EmailSender; sms: SmsSender }): AuthNotifier {
-  const locale = "en" as const; // per-user locale lands with the dashboard; templates are ready
+function makeNotifier(
+  env: ApiEnv,
+  senders: { email: EmailSender; sms: SmsSender },
+  locale: ReturnType<typeof makeLocaleLookup>,
+): AuthNotifier {
   return {
     sendEmailOtp: async ({ email, otp }) => {
-      await senders.email.send(emailOtp(email, otp, locale));
+      await senders.email.send(emailOtp(email, otp, await locale.byEmail(email)));
     },
     sendPhoneOtp: async ({ phoneNumber, code }) => {
-      await senders.sms.sendVerification({ phoneNumber, code, locale });
+      await senders.sms.sendVerification({
+        phoneNumber,
+        code,
+        locale: await locale.byPhone(phoneNumber),
+      });
     },
     sendPasswordReset: async ({ email, url }) => {
-      await senders.email.send(passwordReset(email, url, locale));
+      await senders.email.send(passwordReset(email, url, await locale.byEmail(email)));
     },
     sendOrganizationInvitation: async ({ email, organizationName, inviterEmail, invitationId }) => {
       const url = `${env.webPublicUrl}/invite/${invitationId}`;
       await senders.email.send(
-        organizationInvite(email, organizationName, inviterEmail, url, locale),
+        organizationInvite(email, organizationName, inviterEmail, url, await locale.byEmail(email)),
       );
     },
     sendTwoFactorOtp: async ({ email, otp }) => {
-      await senders.email.send(emailOtp(email, otp, locale));
+      await senders.email.send(emailOtp(email, otp, await locale.byEmail(email)));
     },
   };
 }
@@ -140,7 +153,16 @@ export async function startApi(
     };
   }
 
-  const auth = createAuth({ env, db, notifier: makeNotifier(env, senders) });
+  // Auth throttles, the session denylist, and admin lockouts are shared by every instance.
+  const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
+  const revocations = createSessionRevocations(redis);
+  const auth = createAuth({
+    env,
+    db,
+    notifier: makeNotifier(env, senders, makeLocaleLookup(db)),
+    redis,
+    revocations,
+  });
   const region = process.env.FLY_REGION ?? "local";
   const readiness = {
     ready: async () => {
@@ -154,7 +176,11 @@ export async function startApi(
   };
 
   const ledger = new LedgerService(db);
-  const principals = makePrincipalResolver(auth, db);
+  const verifyAccessToken = makeAccessTokenVerifier({
+    issuer: env.apiPublicUrl,
+    loadJwks: () => auth.api.getJwks(),
+  });
+  const principals = makePrincipalResolver(auth, db, { verifyAccessToken, revocations });
   const stripe: StripeGateway = env.mockExternals
     ? new FakeStripeGateway()
     : createStripeGateway({
@@ -169,10 +195,8 @@ export async function startApi(
     credits: 200,
     expiryDays: 14,
     dailyBudgetUsdCents: 10_000,
-    hashSalt: env.betterAuthSecret,
+    hashSalt: env.ipHashSalt,
   });
-  // Run event streams always live in Redis; the rate limiter uses it outside mock mode.
-  const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
   const limiter: RateLimiter = env.mockExternals
     ? createMemoryRateLimiter()
     : createRedisRateLimiter(redis);
@@ -186,7 +210,7 @@ export async function startApi(
     ledger,
     limiter,
     settings,
-    admission: { window: windowPolicy(usage) },
+    admission: { window: windowPolicy(usage), abuse: abusePolicy({ db, limiter }) },
     providers,
     trial,
     config: {
@@ -214,7 +238,12 @@ export async function startApi(
   const chat = new ChatService({ db, files, runner, tasks });
   const shares = new ShareService(db, chat, blobs, env.webPublicUrl);
   const runs = new RunService(db, runLog);
-  const adminAuth = new AdminAuth(db, env.betterAuthSecret, env.adminMfaRequired);
+  const adminAuth = new AdminAuth(db, {
+    appSecret: env.betterAuthSecret,
+    ipSalt: env.ipHashSalt,
+    lockouts: createRedisLockouts(redis, { prefix: "admin:lockout", ...ADMIN_LOCKOUT }),
+    mfaRequired: env.adminMfaRequired,
+  });
   const admin = new AdminService({
     db,
     ledger,
@@ -238,7 +267,8 @@ export async function startApi(
     billing,
     trial,
     gateway,
-    ipSalt: env.betterAuthSecret,
+    ipSalt: env.ipHashSalt,
+    nativeAuth: new NativeAuthService(db, auth),
     adminAuth,
     admin,
     secureCookies: env.env !== "local" && env.env !== "test",

@@ -289,6 +289,7 @@
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
         "ioredis": "^6.0.0",
+        "jose": "^6.2.3",
         "otpauth": "^9.5.2",
         "pg-boss": "^12.31.0",
         "postgres": "catalog:",
