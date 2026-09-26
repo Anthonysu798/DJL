@@ -128,6 +128,10 @@ export const CloudCreateConversationInput = Schema.Struct({
 });
 export type CloudCreateConversationInput = typeof CloudCreateConversationInput.Type;
 
+/** POST /v1/conversations → 201 with the bare conversation. */
+export const CloudCreateConversationResponse = CloudConversation;
+export type CloudCreateConversationResponse = typeof CloudCreateConversationResponse.Type;
+
 export const CloudUpdateConversationInput = Schema.Struct({
   title: Schema.optionalKey(TrimmedNonEmptyString.check(Schema.isMaxLength(200))),
   pinned: Schema.optionalKey(Schema.Boolean),
@@ -137,7 +141,11 @@ export const CloudUpdateConversationInput = Schema.Struct({
 });
 export type CloudUpdateConversationInput = typeof CloudUpdateConversationInput.Type;
 
-/** The whole tree; clients choose the branch to show. */
+/** PATCH /v1/conversations/{id} → the updated conversation. DELETE → 204, no body. */
+export const CloudUpdateConversationResponse = CloudConversation;
+export type CloudUpdateConversationResponse = typeof CloudUpdateConversationResponse.Type;
+
+/** GET /v1/conversations/{id}: the whole tree; clients choose the branch to show. */
 export const CloudConversationDetailResponse = Schema.Struct({
   conversation: CloudConversation,
   messages: Schema.Array(CloudMessage),
@@ -163,7 +171,7 @@ export const CloudConversationMessagesResponse = Schema.Struct({
 export type CloudConversationMessagesResponse = typeof CloudConversationMessagesResponse.Type;
 
 // ---------------------------------------------------------------------------
-// GET /v1/conversations/search?q=
+// GET /v1/conversations/search?q= (archived conversations included)
 // ---------------------------------------------------------------------------
 
 export const CloudConversationSearchQuery = Schema.Struct({
@@ -174,7 +182,7 @@ export type CloudConversationSearchQuery = typeof CloudConversationSearchQuery.T
 
 export const CloudConversationSearchHit = Schema.Struct({
   conversation: CloudConversation,
-  /** The best-matching message, or null when only the title matched. */
+  /** The newest message whose text matches, to scroll to; null when only the title matched. */
   messageId: Schema.NullOr(CloudMessageId),
   /** Plain text around the match; clients highlight it themselves. */
   snippet: Schema.String,
@@ -188,8 +196,9 @@ export const CloudConversationSearchResponse = Schema.Struct({
 export type CloudConversationSearchResponse = typeof CloudConversationSearchResponse.Type;
 
 // ---------------------------------------------------------------------------
-// POST /v1/conversations/{id}/messages (the reply is a run, see runs.ts)
-// POST /v1/conversations/{id}/messages/{messageId}/regenerate
+// POST /v1/conversations/{id}/messages → 201 CloudSendMessageResponse (runs.ts)
+// POST /v1/conversations/{id}/messages/{messageId}/regenerate → 201 CloudRegenerateResponse
+//   `messageId` is the assistant reply to redo; a new sibling reply is added.
 // ---------------------------------------------------------------------------
 
 export const CloudRunMode = Schema.Literals(["chat", "task"]);
@@ -206,6 +215,7 @@ export const CloudSendMessageInput = Schema.Struct({
 });
 export type CloudSendMessageInput = typeof CloudSendMessageInput.Type;
 
+/** Defaults to the model (and mode) of the reply being regenerated. */
 export const CloudRegenerateInput = Schema.Struct({
   model: Schema.optionalKey(TrimmedNonEmptyString),
 });

@@ -30,6 +30,10 @@ export const CloudMeResponse = Schema.Struct({
 });
 export type CloudMeResponse = typeof CloudMeResponse.Type;
 
+// DELETE /v1/me: deletes the signed-in account; its sessions stop working at once
+export const CloudDeleteAccountResponse = Schema.Struct({ deleted: Schema.Literal(true) });
+export type CloudDeleteAccountResponse = typeof CloudDeleteAccountResponse.Type;
+
 // ---------------------------------------------------------------------------
 // Devices: POST /v1/devices, GET /v1/devices
 // ---------------------------------------------------------------------------
@@ -70,6 +74,7 @@ export type CloudDevicesResponse = typeof CloudDevicesResponse.Type;
 
 // POST /v1/devices/push-token → 204. Registers (or moves) an APNs token for
 // task-finished notifications; the same token re-registered is refreshed.
+// The push's custom keys are CloudRunPushData.
 export const CloudPushTokenInput = Schema.Struct({
   /** APNs device token, hex. */
   token: Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]{32,200}$/)),
@@ -77,6 +82,21 @@ export const CloudPushTokenInput = Schema.Struct({
   deviceId: Schema.optionalKey(CloudDeviceId),
 });
 export type CloudPushTokenInput = typeof CloudPushTokenInput.Type;
+
+/** The deep link that opens a cloud conversation in the iOS app. */
+export const cloudConversationDeepLink = (conversationId: string) =>
+  `djl://cloud/c/${encodeURIComponent(conversationId)}`;
+
+/** Custom keys of a task-finished APNs push (beside `aps`). Ids only, never content. */
+export const CloudRunPushData = Schema.Struct({
+  source: Schema.Literal("djl.cloudRun"),
+  runId: TrimmedNonEmptyString,
+  conversationId: TrimmedNonEmptyString,
+  status: Schema.Literals(["succeeded", "failed"]),
+  /** cloudConversationDeepLink(conversationId). */
+  url: TrimmedNonEmptyString,
+});
+export type CloudRunPushData = typeof CloudRunPushData.Type;
 
 // ---------------------------------------------------------------------------
 // Billing: POST /v1/billing/checkout, POST /v1/billing/portal, GET /v1/billing/subscription
