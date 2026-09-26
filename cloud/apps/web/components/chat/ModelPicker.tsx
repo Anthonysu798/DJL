@@ -22,9 +22,30 @@ export const pickable = (models: readonly CloudModel[]) =>
     (m) => m.capabilities.includes("text.chat") || m.capabilities.includes("image.generate"),
   );
 
-/** The chosen model id, remembered per browser; falls back to the first usable chat model. */
+/**
+ * The model to use: the one remembered in this browser, else the first active
+ * chat model (the first free-eligible one on the free plan), else any usable one.
+ */
+export function chooseModel(
+  models: readonly CloudModel[],
+  stored: string | null,
+  preferFree: boolean,
+): string | null {
+  const usable = pickable(models).filter((m) => m.status !== "disabled");
+  const chat = usable.filter((m) => m.capabilities.includes("text.chat") && m.status === "active");
+  return (
+    usable.find((m) => m.id === stored)?.id ??
+    (preferFree ? chat.find((m) => m.freeEligible)?.id : undefined) ??
+    chat[0]?.id ??
+    usable[0]?.id ??
+    null
+  );
+}
+
+/** The chosen model id, remembered per browser (see chooseModel). */
 export function useModelChoice(
   models: readonly CloudModel[],
+  preferFree = false,
 ): [string | null, (id: string) => void] {
   const [stored, setStored] = useState<string | null>(null);
   useEffect(() => {
@@ -34,12 +55,7 @@ export function useModelChoice(
       /* ignore */
     }
   }, []);
-  const usable = pickable(models).filter((m) => m.status !== "disabled");
-  const choice =
-    usable.find((m) => m.id === stored)?.id ??
-    usable.find((m) => m.capabilities.includes("text.chat") && m.status === "active")?.id ??
-    usable[0]?.id ??
-    null;
+  const choice = chooseModel(models, stored, preferFree);
   const set = (id: string) => {
     setStored(id);
     try {

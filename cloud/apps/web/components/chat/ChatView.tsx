@@ -43,7 +43,8 @@ export function ChatView({ conversationId }: { conversationId: string | null }) 
   const view = useChat((s) => (conversationId ? s.views[conversationId] : undefined));
   const runs = useChat((s) => s.runs);
   const blocked = useChat((s) => s.usageBlock !== null);
-  const [model, setModel] = useModelChoice(models);
+  const onFreePlan = useChat((s) => s.usage?.planId === "free");
+  const [model, setModel] = useModelChoice(models, onFreePlan);
   const [shareOpen, setShareOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
