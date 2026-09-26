@@ -2,6 +2,7 @@ import XCTest
 @testable import DJL
 
 final class CloudAPIClientTests: XCTestCase {
+    private typealias Reply = CloudStubURLProtocol.Reply
     private let configuration = CloudAPIConfiguration(baseURL: URL(string: "https://api.test")!)
 
     private func makeClient(tokens: [String] = ["jwt-1"]) -> (CloudAPIClient, CloudCountingTokenProvider) {
@@ -53,6 +54,140 @@ final class CloudAPIClientTests: XCTestCase {
         XCTAssertEqual(invalidations, 1)
     }
 
+    func testRevokedSessionEndsWithoutARetry() async throws {
+        CloudStubURLProtocol.install { _, _ in
+            .json(401, #"{"error":{"code":"session_revoked","message":"Signed out.","traceId":"t"}}"#)
+        }
+        let (client, provider) = makeClient(tokens: ["a", "b"])
+
+        do {
+            _ = try await client.me()
+            XCTFail("Expected unauthorized")
+        } catch {
+            XCTAssertEqual(error as? CloudAPIError, .unauthorized)
+        }
+        XCTAssertEqual(CloudStubURLProtocol.requests.count, 1)
+        let invalidations = await provider.invalidations
+        XCTAssertEqual(invalidations, 0)
+    }
+
+    // MARK: Endpoints
+
+    private func recordedPaths() -> [String] {
+        CloudStubURLProtocol.requests.map { "\($0.request.httpMethod ?? "?") \($0.request.url?.path ?? "")" }
+    }
+
+    private func jsonBody(_ index: Int) throws -> [String: Any] {
+        try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(CloudStubURLProtocol.requests[index].body)) as? [String: Any])
+    }
+
+    func testUsageEndpoints() async throws {
+        let windows = try CloudFixtures.string("usage-windows")
+        let redeem = try CloudFixtures.string("usage-redeem")
+        CloudStubURLProtocol.install { request, _ in .json(200, request.httpMethod == "POST" ? redeem : windows) }
+        let (client, _) = makeClient()
+
+        let usage = try await client.usageWindows()
+        let redeemed = try await client.redeemBank(idempotencyKey: "k1")
+
+        XCTAssertEqual(usage.banks.count, 1)
+        XCTAssertEqual(redeemed.usage.banks.count, 0)
+        XCTAssertEqual(recordedPaths(), ["GET /v1/usage/windows", "POST /v1/usage/resets/redeem"])
+        XCTAssertEqual(try jsonBody(1)["idempotencyKey"] as? String, "k1")
+    }
+
+    func testRegistersThePushTokenWithTheContractBody() async throws {
+        CloudStubURLProtocol.install { _, _ in Reply(status: 204) }
+        let (client, _) = makeClient()
+
+        try await client.registerPushToken("abcdef0123456789abcdef0123456789", environment: .sandbox)
+
+        XCTAssertEqual(recordedPaths(), ["POST /v1/devices/push-token"])
+        let body = try jsonBody(0)
+        XCTAssertEqual(body as? [String: String], ["token": "abcdef0123456789abcdef0123456789", "environment": "sandbox"])
+    }
+
+    func testDeletesTheAccount() async throws {
+        let deleted = try CloudFixtures.string("account-delete")
+        CloudStubURLProtocol.install { _, _ in .json(200, deleted) }
+        let (client, _) = makeClient()
+
+        try await client.deleteAccount()
+
+        XCTAssertEqual(recordedPaths(), ["DELETE /v1/me"])
+    }
+
+    func testSharesAConversationBranch() async throws {
+        let created = try CloudFixtures.string("share-create")
+        CloudStubURLProtocol.install { _, _ in .json(201, created) }
+        let (client, _) = makeClient()
+
+        let share = try await client.createShare(conversationId: "conv_1", messageId: "msg_2")
+
+        XCTAssertEqual(share.url, "https://app.slcor.com/share/token_example")
+        XCTAssertEqual(recordedPaths(), ["POST /v1/conversations/conv_1/shares"])
+        XCTAssertEqual(try jsonBody(0) as? [String: String], ["messageId": "msg_2"])
+    }
+
+    func testUploadDeclaresHashAndPurposeThenCompletes() async throws {
+        let presign = try CloudFixtures.string("file-presign")
+        let file = try CloudFixtures.string("file")
+        CloudStubURLProtocol.install { request, _ in
+            switch (request.httpMethod, request.url?.path) {
+            case ("POST", "/v1/files"): return .json(201, presign)
+            case ("PUT", _): return Reply(status: 200)
+            default: return .json(200, file)
+            }
+        }
+        let (client, _) = makeClient()
+        let data = Data("hello".utf8)
+
+        let uploaded = try await client.uploadFile(name: "notes.pdf", mimeType: "application/pdf", data: data)
+
+        XCTAssertEqual(uploaded.status, "ready")
+        XCTAssertEqual(recordedPaths(), ["POST /v1/files", "PUT /upload/file_1", "POST /v1/files/file_1/complete"])
+        let body = try jsonBody(0)
+        XCTAssertEqual(body["sha256"] as? String, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+        XCTAssertEqual(body["purpose"] as? String, "attachment")
+        XCTAssertEqual(body["size"] as? Int, 5)
+        XCTAssertNil(CloudStubURLProtocol.requests[1].request.value(forHTTPHeaderField: "Authorization"), "Storage PUTs never carry the API token")
+    }
+
+    func testImageUploadsUseTheImagePurpose() async throws {
+        let presign = try CloudFixtures.string("file-presign")
+        let file = try CloudFixtures.string("file")
+        CloudStubURLProtocol.install { request, _ in
+            request.url?.path == "/v1/files" ? .json(201, presign) : (request.httpMethod == "PUT" ? Reply(status: 200) : .json(200, file))
+        }
+        let (client, _) = makeClient()
+
+        _ = try await client.uploadFile(name: "a.png", mimeType: "image/png", data: Data([1]))
+
+        XCTAssertEqual(try jsonBody(0)["purpose"] as? String, "image")
+    }
+
+    func testDownloadURLUsesTheSignedURLRoute() async throws {
+        let signed = try CloudFixtures.string("file-url")
+        CloudStubURLProtocol.install { _, _ in .json(200, signed) }
+        let (client, _) = makeClient()
+
+        let url = try await client.downloadURL(fileId: "file_1")
+
+        XCTAssertEqual(url.absoluteString, "https://storage.example.com/file_1?signature=abc")
+        XCTAssertEqual(recordedPaths(), ["GET /v1/files/file_1/url"])
+    }
+
+    func testRegenerateTargetsTheAssistantReply() async throws {
+        let sent = try CloudFixtures.string("send-message")
+        CloudStubURLProtocol.install { _, _ in .json(201, sent) }
+        let (client, _) = makeClient()
+
+        _ = try await client.regenerate(conversationId: "conv_1", messageId: "msg_2", model: nil)
+
+        XCTAssertEqual(recordedPaths(), ["POST /v1/conversations/conv_1/messages/msg_2/regenerate"])
+        XCTAssertEqual(try jsonBody(0).count, 0)
+    }
+
     // MARK: Errors
 
     func testMapsTheErrorEnvelope() async throws {
@@ -62,7 +197,7 @@ final class CloudAPIClientTests: XCTestCase {
         let (client, _) = makeClient()
 
         do {
-            _ = try await client.usageStatus()
+            _ = try await client.usageWindows()
             XCTFail("Expected an error")
         } catch let error as CloudAPIError {
             XCTAssertEqual(error, .server(status: 429, code: "usage_window_exhausted", message: "Limit reached.", traceId: "t1", resetsAt: "2026-09-26T17:00:00.000Z"))
@@ -113,7 +248,7 @@ final class CloudAPIClientTests: XCTestCase {
     // MARK: Run streaming
 
     private func event(_ seq: Int, _ type: String, _ payload: String) -> String {
-        "event: \(type)\ndata: {\"runId\":\"run_1\",\"seq\":\(seq),\"type\":\"\(type)\",\"payload\":\(payload),\"createdAt\":\"2026-09-26T12:00:00.000Z\"}\n\n"
+        "id: \(seq)\nevent: \(type)\ndata: {\"runId\":\"run_1\",\"seq\":\(seq),\"type\":\"\(type)\",\"payload\":\(payload),\"createdAt\":\"2026-09-26T12:00:00.000Z\"}\n\n"
     }
 
     func testStreamResumesAfterTheLastSeqAndStopsOnTerminalStatus() async throws {
@@ -125,7 +260,7 @@ final class CloudAPIClientTests: XCTestCase {
             if after == "0" {
                 // Split frame + heartbeat, then the connection drops without a terminal status.
                 let split = second.index(second.startIndex, offsetBy: 20)
-                return .sse([": ping\n\n", first, String(second[..<split]), String(second[split...])])
+                return .sse(["retry: 3000\n\n", ": heartbeat\n\n", first, String(second[..<split]), String(second[split...])])
             }
             // A resumed stream may replay an already-seen event; it must be ignored.
             return .sse([second, done])
@@ -197,9 +332,12 @@ final class CloudAPIClientTests: XCTestCase {
         XCTAssertEqual(body["idToken"] as? [String: String], ["token": "id-token", "nonce": "n1"])
     }
 
-    func testSessionTokenFallsBackToTheBearerHeader() {
+    func testSessionTokenComesFromTheBearerHeaderFirst() {
         let response = HTTPURLResponse(url: URL(string: "https://api.test")!, statusCode: 200, httpVersion: nil, headerFields: ["set-auth-token": "from-header"])!
         XCTAssertEqual(CloudAuthAPI.extractToken(data: Data("{}".utf8), response: response), "from-header")
+        XCTAssertEqual(CloudAuthAPI.extractToken(data: Data(#"{"token":"from-body"}"#.utf8), response: response), "from-header")
+        let bare = HTTPURLResponse(url: URL(string: "https://api.test")!, statusCode: 200, httpVersion: nil, headerFields: [:])!
+        XCTAssertEqual(CloudAuthAPI.extractToken(data: Data(#"{"token":"from-body"}"#.utf8), response: bare), "from-body")
     }
 
     func testBaseURLResolution() {

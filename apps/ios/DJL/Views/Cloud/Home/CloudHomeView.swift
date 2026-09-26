@@ -178,7 +178,7 @@ struct CloudHomeView: View {
     private func openPendingConversation(_ id: String?) {
         guard let id else { return }
         let target = cloud.conversations.first { $0.id == id }
-            ?? CloudConversation(id: id, title: nil, pinned: false, archived: false, createdAt: "", updatedAt: "")
+            ?? CloudConversation(id: id, title: nil, pinned: false, archived: false, lastMessageAt: "", createdAt: "", updatedAt: "")
         cloud.pendingConversationID = nil
         path = [.chat(target)]
     }

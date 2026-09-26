@@ -23,7 +23,7 @@ final class CloudService {
 
     private(set) var me: CloudMe?
     private(set) var credits: CloudCredits?
-    private(set) var usage: CloudUsageStatus?
+    private(set) var usage: CloudUsageWindows?
     private(set) var models: [CloudModel] = []
     private(set) var conversations: [CloudConversation] = []
     private(set) var isLoadingConversations = false
@@ -38,6 +38,7 @@ final class CloudService {
     @ObservationIgnored private var images: [String: UIImage] = [:]
     @ObservationIgnored private var pushToken: String?
     @ObservationIgnored private var pushObserver: NSObjectProtocol?
+    @ObservationIgnored private var openObserver: NSObjectProtocol?
     private static let selectedModelKey = "djl.cloud.selectedModelID"
 
     init(
@@ -62,6 +63,7 @@ final class CloudService {
         pendingConversationID = CloudDebugLaunch.argument(for: "conversation") ?? CloudDebugLaunch.argument(for: "image")
         #endif
         observePushToken()
+        observeConversationOpens()
     }
 
     func route(hasPairedMac: Bool) -> CloudRootRoute {
@@ -138,7 +140,7 @@ final class CloudService {
         guard isSignedIn else { return }
         do {
             async let creditsResult = client.credits()
-            async let usageResult = client.usageStatus()
+            async let usageResult = client.usageWindows()
             credits = try await creditsResult
             usage = try await usageResult
         } catch {
@@ -222,7 +224,7 @@ final class CloudService {
     /// Spends the oldest banked reset. The idempotency key makes a retried tap redeem at most one bank.
     func redeemBankedReset(idempotencyKey: String = UUID().uuidString) async -> Bool {
         do {
-            usage = try await client.redeemBank(idempotencyKey: idempotencyKey).status
+            usage = try await client.redeemBank(idempotencyKey: idempotencyKey).usage
             return true
         } catch {
             handle(error)
@@ -276,12 +278,28 @@ final class CloudService {
         }
     }
 
+    /// A tapped task-finished push (see CodexNotificationCenterDelegateProxy) opens its conversation.
+    private func observeConversationOpens() {
+        openObserver = NotificationCenter.default.addObserver(
+            forName: .djlCloudOpenConversation,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let id = note.userInfo?["conversationId"] as? String else { return }
+            MainActor.assumeIsolated {
+                self?.sectionPreference = .cloud
+                self?.pendingConversationID = id
+            }
+        }
+    }
+
     private func registerPushTokenIfPossible() {
         guard isSignedIn, let pushToken else { return }
+        // Debug builds are signed with the development aps-environment, whose tokens are APNs sandbox tokens.
         #if DEBUG
-        let environment = "development"
+        let environment = CloudAPIClient.PushEnvironment.sandbox
         #else
-        let environment = "production"
+        let environment = CloudAPIClient.PushEnvironment.production
         #endif
         Task {
             try? await client.registerPushToken(pushToken, environment: environment)

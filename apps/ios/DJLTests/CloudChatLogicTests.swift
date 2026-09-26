@@ -102,8 +102,9 @@ final class CloudChatLogicTests: XCTestCase {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
         let now = CloudDate.parse("2026-09-26T15:00:00.000Z")!
-        func conversation(_ id: String, _ updatedAt: String, pinned: Bool = false) -> CloudConversation {
-            CloudConversation(id: id, title: id, pinned: pinned, archived: false, createdAt: updatedAt, updatedAt: updatedAt)
+        // Grouped by the last message, not by renames or pins (updatedAt), like the server's list order.
+        func conversation(_ id: String, _ lastMessageAt: String, pinned: Bool = false) -> CloudConversation {
+            CloudConversation(id: id, title: id, pinned: pinned, archived: false, lastMessageAt: lastMessageAt, createdAt: lastMessageAt, updatedAt: "2026-09-26T14:59:00.000Z")
         }
         let groups = CloudConversationGrouping.groups([
             conversation("today", "2026-09-26T09:00:00.000Z"),

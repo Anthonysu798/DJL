@@ -4,9 +4,9 @@
 // Exports: CloudAuthAPI, CloudSignUpResult
 // Depends on: Foundation, CloudAPIClient
 //
-// These routes are served by Better Auth and deliberately not described by the public contract. With the
-// `bearer()` plugin every successful sign-in returns the session token in the body (`token`) and in the
-// `set-auth-token` header.
+// These routes are served by Better Auth. With the `bearer()` plugin every successful sign-in returns the
+// session token in the `set-auth-token` header (CLOUD_SESSION_TOKEN_HEADER in the contract), and usually
+// in the body's `token` as well. The app keeps the session token and trades it for short-lived JWTs.
 
 import Foundation
 
@@ -100,12 +100,14 @@ nonisolated struct CloudAuthAPI: Sendable {
         return token
     }
 
+    static let sessionTokenHeader = "set-auth-token"
+
     static func extractToken(data: Data, response: HTTPURLResponse) -> String? {
+        if let header = response.value(forHTTPHeaderField: sessionTokenHeader), !header.isEmpty {
+            return header
+        }
         if let body = try? JSONDecoder().decode(TokenBody.self, from: data), let token = body.token, !token.isEmpty {
             return token
-        }
-        if let header = response.value(forHTTPHeaderField: "set-auth-token"), !header.isEmpty {
-            return header
         }
         return nil
     }
