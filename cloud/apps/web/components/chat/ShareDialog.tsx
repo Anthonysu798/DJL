@@ -1,5 +1,5 @@
 "use client";
-import type { CloudConversationId, CloudMessageId, CloudShare } from "@synara/contracts/cloud";
+import type { CloudMessageId, CloudShare } from "@synara/contracts/cloud";
 import { Check, Copy, Link2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -60,8 +60,7 @@ export function ShareDialog({
     setBusy(true);
     setError(null);
     try {
-      const res = await client.createShare({
-        conversationId: conversationId as CloudConversationId,
+      const res = await client.createShare(conversationId, {
         messageId: lastMessageId as CloudMessageId,
       });
       setUrl(res.url);

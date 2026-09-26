@@ -72,6 +72,12 @@ export function validateFile(file: FileLike, alreadyAttached: number): Attachmen
   return null;
 }
 
+/** Lowercase hex SHA-256 of a file, declared when asking for an upload URL. */
+export async function sha256Hex(file: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;

@@ -28,7 +28,7 @@ describe("UsageExhaustedPanel", () => {
   it("stays hidden while usage is available", async () => {
     const { mock } = renderWithChat(<UsageExhaustedPanel />);
     await waitFor(() =>
-      expect(mock.requests.some((r) => r.path === "/v1/usage/status")).toBe(true),
+      expect(mock.requests.some((r) => r.path === "/v1/usage/windows")).toBe(true),
     );
     expect(screen.queryByRole("region")).toBeNull();
   });

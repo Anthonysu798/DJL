@@ -3,32 +3,40 @@
  * from `@synara/contracts/cloud`; paths follow the route comments in those
  * contract modules. `fetch` is injected so the same client runs against the
  * real API, the in-browser mock (NEXT_PUBLIC_DJL_MOCK_API=true), and tests.
+ *
+ * The web app is signed in with a session cookie, so every mutation carries
+ * the double-submit token from GET /v1/csrf in CLOUD_CSRF_HEADER.
  */
-import type {
-  CloudConversation,
-  CloudConversationDetailResponse,
-  CloudConversationListResponse,
-  CloudConversationSearchResponse,
-  CloudCreateConversationInput,
-  CloudCreateShareInput,
-  CloudCreateShareResponse,
-  CloudFile,
-  CloudFileDownloadResponse,
-  CloudFilePresignInput,
-  CloudFilePresignResponse,
-  CloudMeResponse,
-  CloudModelsResponse,
-  CloudPublicShareResponse,
-  CloudRedeemBankResponse,
-  CloudRegenerateInput,
-  CloudRunEvent,
-  CloudRunEventsResponse,
-  CloudRunResponse,
-  CloudSendMessageInput,
-  CloudSendMessageResponse,
-  CloudShareListResponse,
-  CloudUpdateConversationInput,
-  CloudUsageStatusResponse,
+import {
+  CLOUD_CSRF_HEADER,
+  type CloudConversationDetailResponse,
+  type CloudConversationListResponse,
+  type CloudConversationSearchResponse,
+  type CloudCreateConversationInput,
+  type CloudCreateConversationResponse,
+  type CloudCreateShareInput,
+  type CloudCreateShareResponse,
+  type CloudCsrfResponse,
+  type CloudFile,
+  type CloudFileDownloadResponse,
+  type CloudFilePresignInput,
+  type CloudFilePresignResponse,
+  type CloudMeResponse,
+  type CloudModelsResponse,
+  type CloudPublicShareResponse,
+  type CloudRedeemBankResponse,
+  type CloudRegenerateInput,
+  type CloudRegenerateResponse,
+  type CloudRevokeShareResponse,
+  type CloudRunEvent,
+  type CloudRunEventsResponse,
+  type CloudRunResponse,
+  type CloudSendMessageInput,
+  type CloudSendMessageResponse,
+  type CloudShareListResponse,
+  type CloudUpdateConversationInput,
+  type CloudUpdateConversationResponse,
+  type CloudUsageWindowsResponse,
 } from "@synara/contracts/cloud";
 
 import { parseSse } from "./sse";
@@ -66,14 +74,28 @@ export type ChatClient = ReturnType<typeof createChatClient>;
 const enc = encodeURIComponent;
 
 export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
+  let csrfToken: Promise<string> | null = null;
+  const csrf = () =>
+    (csrfToken ??= fetch(`${baseUrl}/v1/csrf`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw await toError(res);
+        return ((await res.json()) as CloudCsrfResponse).token;
+      })
+      .catch((error: unknown) => {
+        csrfToken = null;
+        throw error;
+      }));
+
   async function send(
     method: string,
     path: string,
     body?: unknown,
     init: { signal?: AbortSignal; accept?: string; auth?: boolean } = {},
+    retried = false,
   ): Promise<Response> {
     const headers = new Headers({ accept: init.accept ?? "application/json" });
     if (body !== undefined) headers.set("content-type", "application/json");
+    if (method !== "GET") headers.set(CLOUD_CSRF_HEADER, await csrf());
     const res = await fetch(`${baseUrl}${path}`, {
       method,
       headers,
@@ -81,8 +103,14 @@ export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
       body: body === undefined ? null : JSON.stringify(body),
       ...(init.signal ? { signal: init.signal } : {}),
     });
-    if (!res.ok) throw await toError(res);
-    return res;
+    if (res.ok) return res;
+    const error = await toError(res);
+    // The token cookie can rotate (a new browser session): fetch a fresh one once.
+    if (error.code === "csrf_token" && !retried) {
+      csrfToken = null;
+      return send(method, path, body, init, true);
+    }
+    throw error;
   }
 
   async function json<T>(
@@ -100,9 +128,9 @@ export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
     // Account, models, usage -------------------------------------------------
     getMe: () => json<CloudMeResponse>("GET", "/v1/me"),
     listModels: () => json<CloudModelsResponse>("GET", "/v1/models"),
-    getUsage: () => json<CloudUsageStatusResponse>("GET", "/v1/usage/status"),
+    getUsage: () => json<CloudUsageWindowsResponse>("GET", "/v1/usage/windows"),
     redeemBank: (idempotencyKey: string) =>
-      json<CloudRedeemBankResponse>("POST", "/v1/usage/banks/redeem", { idempotencyKey }),
+      json<CloudRedeemBankResponse>("POST", "/v1/usage/resets/redeem", { idempotencyKey }),
 
     // Conversations -----------------------------------------------------------
     listConversations: (opts: { archived?: boolean; cursor?: string } = {}) => {
@@ -113,9 +141,9 @@ export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
       return json<CloudConversationListResponse>("GET", `/v1/conversations${qs ? `?${qs}` : ""}`);
     },
     createConversation: (input: CloudCreateConversationInput) =>
-      json<CloudConversation>("POST", "/v1/conversations", input),
+      json<CloudCreateConversationResponse>("POST", "/v1/conversations", input),
     updateConversation: (id: string, input: CloudUpdateConversationInput) =>
-      json<CloudConversation>("PATCH", `/v1/conversations/${enc(id)}`, input),
+      json<CloudUpdateConversationResponse>("PATCH", `/v1/conversations/${enc(id)}`, input),
     deleteConversation: (id: string) => json<void>("DELETE", `/v1/conversations/${enc(id)}`),
     getConversation: (id: string, signal?: AbortSignal) =>
       json<CloudConversationDetailResponse>(
@@ -139,8 +167,9 @@ export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
         `/v1/conversations/${enc(conversationId)}/messages`,
         input,
       ),
+    /** `messageId` is the assistant reply to redo; the new reply is its sibling. */
     regenerate: (conversationId: string, messageId: string, input: CloudRegenerateInput) =>
-      json<CloudSendMessageResponse>(
+      json<CloudRegenerateResponse>(
         "POST",
         `/v1/conversations/${enc(conversationId)}/messages/${enc(messageId)}/regenerate`,
         input,
@@ -160,15 +189,14 @@ export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
         accept: "text/event-stream",
       });
       if (!res.body) return;
-      for await (const message of parseSse(res.body)) {
-        if (message.event === "ping") continue;
+      // Heartbeats are SSE comments, which the parser drops.
+      for await (const message of parseSse(res.body))
         yield JSON.parse(message.data) as CloudRunEvent;
-      }
     },
 
     // Files -----------------------------------------------------------------------
     presignFile: (input: CloudFilePresignInput) =>
-      json<CloudFilePresignResponse>("POST", "/v1/files/presign", input),
+      json<CloudFilePresignResponse>("POST", "/v1/files", input),
     /** PUTs the bytes straight to storage with exactly the headers the presign pinned. */
     async putToStorage(presign: CloudFilePresignResponse, body: Blob, signal?: AbortSignal) {
       const headers = new Headers(presign.upload.headers);
@@ -184,13 +212,18 @@ export function createChatClient({ baseUrl, fetch }: ChatClientOptions) {
     },
     completeFile: (fileId: string) => json<CloudFile>("POST", `/v1/files/${enc(fileId)}/complete`),
     fileUrl: (fileId: string) =>
-      json<CloudFileDownloadResponse>("GET", `/v1/files/${enc(fileId)}/download`),
+      json<CloudFileDownloadResponse>("GET", `/v1/files/${enc(fileId)}/url`),
 
     // Shares ----------------------------------------------------------------------
-    createShare: (input: CloudCreateShareInput) =>
-      json<CloudCreateShareResponse>("POST", "/v1/shares", input),
+    createShare: (conversationId: string, input: CloudCreateShareInput) =>
+      json<CloudCreateShareResponse>(
+        "POST",
+        `/v1/conversations/${enc(conversationId)}/shares`,
+        input,
+      ),
     listShares: () => json<CloudShareListResponse>("GET", "/v1/shares"),
-    revokeShare: (shareId: string) => json<void>("DELETE", `/v1/shares/${enc(shareId)}`),
+    revokeShare: (shareId: string) =>
+      json<CloudRevokeShareResponse>("DELETE", `/v1/shares/${enc(shareId)}`),
     getPublicShare: (token: string) =>
       json<CloudPublicShareResponse>("GET", `/v1/public/shares/${enc(token)}`, undefined, {
         auth: false,
