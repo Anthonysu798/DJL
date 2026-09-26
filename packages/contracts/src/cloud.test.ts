@@ -101,6 +101,7 @@ describe("cloud contract", () => {
 
   it("requires PKCE S256 with a well-formed verifier and challenge", () => {
     const request = {
+      clientId: "djl-desktop",
       redirectUri: "djl://auth/callback",
       state: "a".repeat(22),
       codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
@@ -116,7 +117,11 @@ describe("cloud contract", () => {
       }),
     ).toThrow();
     expect(() =>
+      Schema.decodeUnknownSync(CloudNativeAuthorizeRequest)({ ...request, clientId: undefined }),
+    ).toThrow();
+    expect(() =>
       Schema.decodeUnknownSync(CloudNativeTokenInput)({
+        clientId: "djl-desktop",
         code: "c",
         codeVerifier: "too-short",
         redirectUri: "djl://auth/callback",

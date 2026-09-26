@@ -14,6 +14,7 @@ export const nativeAuthCodes = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
     redirectUri: text("redirect_uri").notNull(),
     codeChallenge: text("code_challenge").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
