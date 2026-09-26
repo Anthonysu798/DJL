@@ -17,10 +17,15 @@ const conn = testDatabase();
 const ledger = new LedgerService(conn.db);
 const usage = new UsageService(conn.db);
 const alerts: string[] = [];
+/** User ids whose window-blocked runs were re-enqueued; null means everyone. */
+const resumed: (string | null)[] = [];
+const resumeRuns = async (userId: string | null) => void resumed.push(userId);
+const revoked: string[] = [];
 const usageAdmin = new UsageAdminService({
   db: conn.db,
   usage,
   alerts: { post: async (a) => void alerts.push(a.title) },
+  resumeRuns,
 });
 const admin = new AdminService({
   db: conn.db,
@@ -29,6 +34,8 @@ const admin = new AdminService({
   gateway: { invalidateCatalog: () => {} },
   trial: { approve: async () => false },
   auth: {} as never,
+  revocations: { revoke: async (ids) => void revoked.push(...ids) },
+  resumeRuns,
   email: {} as never,
   adminPublicUrl: "http://admin.test",
   version: "test",
@@ -91,11 +98,33 @@ describe("UsageAdminService", () => {
     expect(after.windows.fiveHour.used).toBe(0n);
     expect(after.windows.week.used).toBe(0n);
     expect(after.banks.count).toBe(1);
+    expect(resumed).toContain(ids.userId);
     expect(await ledger.available(ids.orgId)).toBe(creditsToMicro(98));
     const events = await conn.db.query.usageWindowEvents.findMany({
       where: eq(schema.usageWindowEvents.userId, ids.userId),
     });
     expect(events.map((e) => e.kind).toSorted()).toEqual(["admin_reset", "bank_granted"]);
+  });
+
+  it("revoking a user's sessions also denylists them so their access tokens die now", async () => {
+    const ids = await seedOrg(conn.db, "uadm-revoke");
+    const now = new Date();
+    const sessions = [crypto.randomUUID(), crypto.randomUUID()];
+    await conn.db.insert(schema.session).values(
+      sessions.map((id) => ({
+        id,
+        userId: ids.userId,
+        token: `tok-${id}`,
+        expiresAt: new Date(now.getTime() + 86_400_000),
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+    await admin.revokeSessions(support, ids.userId);
+    expect(revoked).toEqual(expect.arrayContaining(sessions));
+    expect(
+      await conn.db.query.session.findMany({ where: eq(schema.session.userId, ids.userId) }),
+    ).toEqual([]);
   });
 
   it("grants banks with an audited reason and revokes only unredeemed ones", async () => {
@@ -169,6 +198,7 @@ describe("UsageAdminService", () => {
         { reason: "provider outage refund" },
       ]);
       expect(alerts).toContain("Usage windows reset for everyone");
+      expect(resumed).toContain(null);
     } finally {
       await conn.db.delete(schema.settings).where(eq(schema.settings.key, GLOBAL_FLOOR_KEY));
       if (saved) await conn.db.insert(schema.settings).values(saved);

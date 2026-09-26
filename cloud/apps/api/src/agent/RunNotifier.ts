@@ -1,12 +1,15 @@
 /**
  * Tells the user a background task ended: an APNs push to each of their iOS
- * devices, or, when they have none, an email in their language. Pushes are
- * content-free (ids only). Tokens APNs reports as dead are revoked.
+ * devices, or, when they have none, an email in their stored language. Pushes
+ * are content-free (ids and the conversation deep link, CloudRunPushData).
+ * Tokens APNs reports as dead are revoked.
  */
 import { and, eq, isNull } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import { taskFinished, type EmailSender, type Locale, type PushSender } from "@djl/notify";
+import { taskFinished, type EmailSender, type PushSender } from "@djl/notify";
+import { cloudConversationDeepLink, type CloudRunPushData } from "@synara/contracts/cloud";
 
+import { toNotifyLocale } from "../auth/locale.ts";
 import type { RunRow } from "../runs/wire.ts";
 
 export interface RunNotifierDeps {
@@ -14,8 +17,6 @@ export interface RunNotifierDeps {
   readonly push: PushSender;
   readonly email: EmailSender;
   readonly webPublicUrl: string;
-  /** The user's email language; English until per-user locale is stored. */
-  readonly localeOf?: (userId: string) => Promise<Locale>;
 }
 
 export class RunNotifier {
@@ -26,6 +27,13 @@ export class RunNotifier {
     if (run.status !== "succeeded" && run.status !== "failed") return "none"; // cancelled: the user did it
     const { db } = this.deps;
     const ok = run.status === "succeeded";
+    const data: typeof CloudRunPushData.Encoded = {
+      source: "djl.cloudRun",
+      runId: run.id,
+      conversationId: run.conversationId,
+      status: run.status,
+      url: cloudConversationDeepLink(run.conversationId),
+    };
     const tokens = await db
       .select()
       .from(schema.pushTokens)
@@ -39,12 +47,7 @@ export class RunNotifier {
         message: {
           title: ok ? "DJL task finished" : "DJL task stopped",
           body: "Open DJL to see the result.",
-          data: {
-            source: "djl.cloudRun",
-            runId: run.id,
-            conversationId: run.conversationId,
-            status: run.status,
-          },
+          data,
         },
       });
       if (result.ok) delivered = true;
@@ -59,7 +62,7 @@ export class RunNotifier {
     if (delivered) return "push";
     if (live > 0) return "none"; // a device exists; a transient APNs failure is not worth an email
     const user = await db.query.user.findFirst({
-      columns: { email: true },
+      columns: { email: true, locale: true },
       where: eq(schema.user.id, run.userId),
     });
     const conversation = await db.query.conversations.findFirst({
@@ -67,14 +70,13 @@ export class RunNotifier {
       where: eq(schema.conversations.id, run.conversationId),
     });
     if (!user) return "none";
-    const locale = (await this.deps.localeOf?.(run.userId)) ?? "en";
     await this.deps.email.send(
       taskFinished(
         user.email,
         ok,
         conversation?.title ?? null,
         `${this.deps.webPublicUrl}/chat/${run.conversationId}`,
-        locale,
+        toNotifyLocale(user.locale),
       ),
     );
     return "email";
