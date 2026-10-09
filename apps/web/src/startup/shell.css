@@ -30,6 +30,11 @@
   background: transparent;
   --startup-sidebar: color-mix(in srgb, var(--startup-card) 64%, transparent);
 }
+/* The full app mounts underneath while the shell is up. It must not paint
+   through the translucent macOS surfaces; layout stays measurable. */
+body:has(> .djl-startup) > #root {
+  visibility: hidden;
+}
 .djl-startup .startup-surfaces {
   display: flex;
   gap: 2px;
