@@ -629,6 +629,14 @@ function normalizeProjectScripts(
   return arraysShallowEqual(previous, nextScripts) ? previous : nextScripts;
 }
 
+function resolveProjectExpanded(previous: Project | undefined, workspaceRootKey: string): boolean {
+  if (previous) {
+    return previous.expanded;
+  }
+  const wasPreviouslySeen = persistedProjectOrderCwds.includes(workspaceRootKey);
+  return wasPreviouslySeen ? persistedExpandedProjectCwds.has(workspaceRootKey) : true;
+}
+
 function normalizeProjectFromReadModel(
   incoming: ReadModelProject,
   previous: Project | undefined,
@@ -641,11 +649,7 @@ function normalizeProjectFromReadModel(
       ? null
       : normalizeModelSelection(incoming.defaultModelSelection, previous?.defaultModelSelection);
   const scripts = normalizeProjectScripts(incoming.scripts, previous?.scripts);
-  const expanded =
-    previous?.expanded ??
-    (persistedExpandedProjectCwds.size > 0
-      ? persistedExpandedProjectCwds.has(workspaceRootKey)
-      : true);
+  const expanded = resolveProjectExpanded(previous, workspaceRootKey);
 
   if (
     previous &&
@@ -695,11 +699,7 @@ function normalizeProjectFromShell(
       ? null
       : normalizeModelSelection(incoming.defaultModelSelection, previous?.defaultModelSelection);
   const scripts = normalizeProjectScripts(incoming.scripts, previous?.scripts);
-  const expanded =
-    previous?.expanded ??
-    (persistedExpandedProjectCwds.size > 0
-      ? persistedExpandedProjectCwds.has(workspaceRootKey)
-      : true);
+  const expanded = resolveProjectExpanded(previous, workspaceRootKey);
 
   if (
     previous &&

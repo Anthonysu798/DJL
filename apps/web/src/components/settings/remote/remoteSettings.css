@@ -1,0 +1,514 @@
+/* Remote's hardware stage is deliberately dark; the controls follow the app theme. */
+.remote-settings {
+  --remote-silver: #edf0f5;
+  --remote-graphite: #14161a;
+  --remote-line: #3c424d;
+  --remote-muted: #929aa7;
+  color: var(--foreground);
+}
+.remote-hero {
+  text-align: center;
+}
+.remote-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 0 22px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.remote-eyebrow-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.remote-eyebrow-divider {
+  width: 1px;
+  height: 11px;
+  background: var(--border);
+  margin: 0 2px;
+}
+.remote-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  aspect-ratio: 840/350;
+  background: radial-gradient(ellipse at 52% 92%, #303540 0%, #1b1e24 32%, #111317 72%);
+  border: 1px solid #353a43;
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 #ffffff0a,
+    0 14px 32px -24px #0008;
+  contain: layout paint;
+}
+.remote-stage > svg {
+  position: relative;
+}
+.remote-stage-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+  background-image: radial-gradient(#9aa5b8 0.7px, transparent 0.7px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(transparent 30%, #000);
+  pointer-events: none;
+}
+.remote-stage-caption {
+  position: absolute;
+  bottom: 16px;
+  inset-inline: 17% 28%;
+  display: flex;
+  justify-content: space-between;
+  color: #a5acb7;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}
+.remote-motion-control {
+  position: absolute;
+  bottom: 13px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid #ffffff1f;
+  border-radius: 50%;
+  background: #ffffff08;
+  color: #bfc6d2;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    color 0.18s,
+    scale 0.18s;
+}
+.remote-motion-control:hover {
+  background: #ffffff18;
+  color: white;
+}
+.remote-motion-control:active {
+  scale: 0.94;
+}
+.remote-motion-control svg {
+  width: 14px;
+  height: 14px;
+}
+.remote-hero h1 {
+  margin: 27px 0 9px;
+  font-size: clamp(25px, 3.5vw, 38px);
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.remote-hero-description {
+  max-width: 470px;
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  text-wrap: balance;
+}
+.remote-access-bar {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 20px;
+  margin: 28px 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+  transition: border-color 0.2s;
+}
+.remote-access-bar:hover {
+  border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
+}
+.remote-access-symbol {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+  color: var(--muted-foreground);
+}
+.remote-access-copy {
+  flex: 1;
+}
+.remote-access-copy h2 {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.remote-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.remote-pairing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  padding: 25px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.remote-section-label {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.remote-guide > h2 {
+  margin: 10px 0;
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.remote-guide-description {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 310px;
+}
+.remote-steps {
+  list-style: none;
+  padding: 0;
+  margin: 25px 0 0;
+}
+.remote-steps li {
+  display: flex;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 22px;
+}
+.remote-steps li:last-child {
+  padding-bottom: 0;
+}
+.remote-steps li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 29px;
+  bottom: 6px;
+  left: 12px;
+  width: 1px;
+  background: var(--border);
+}
+.remote-step-marker {
+  display: grid;
+  place-items: center;
+  flex: none;
+  height: 25px;
+  width: 25px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-family: var(--font-mono-family);
+  font-size: 10px;
+  color: var(--muted-foreground);
+  transition:
+    background 0.25s,
+    color 0.25s,
+    border-color 0.25s;
+}
+.remote-steps [data-active] .remote-step-marker {
+  border-color: color-mix(in srgb, var(--foreground) 40%, transparent);
+  color: var(--foreground);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muted) 50%, transparent);
+}
+.remote-steps [data-complete] .remote-step-marker {
+  background: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+}
+.remote-step-marker svg {
+  width: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.remote-steps h3 {
+  margin: 3px 0 5px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.remote-steps p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.65;
+  max-width: 285px;
+}
+.remote-pairing-surface {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+.remote-computer-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  margin-bottom: 17px;
+}
+.remote-computer-label span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remote-qr-stage {
+  width: 100%;
+  min-height: 205px;
+  display: grid;
+  place-items: center;
+  animation: remote-reveal 0.3s ease-out both;
+}
+.remote-qr-frame {
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e6e8eb;
+  border-radius: 13px;
+  max-width: 224px;
+  width: 100%;
+  box-shadow: 0 2px 8px #00000005;
+  transition:
+    box-shadow 0.2s,
+    translate 0.2s;
+}
+.remote-qr-frame:hover {
+  translate: 0 -2px;
+  box-shadow: 0 5px 15px #0000000c;
+}
+.remote-qr-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+.remote-pairing-code {
+  margin-top: 16px;
+  text-align: center;
+}
+.remote-pairing-code span {
+  display: block;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.remote-pairing-code code {
+  user-select: all;
+  cursor: text;
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono-family);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+}
+.remote-copy-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-top: 13px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.18s;
+}
+.remote-copy-trigger:hover {
+  color: var(--foreground);
+}
+.remote-copy-trigger svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  transition: rotate 0.2s;
+}
+.remote-pairing-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 17px;
+}
+.remote-pairing-actions button {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 9px;
+  font-size: 11px;
+  transition:
+    background 0.18s,
+    box-shadow 0.18s,
+    scale 0.18s;
+}
+.remote-pairing-actions button:active:not(:disabled) {
+  scale: 0.98;
+}
+.remote-empty-state {
+  padding: 25px 12px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+.remote-connected {
+  text-align: center;
+  padding: 15px 0;
+}
+.remote-connected-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.remote-connected-icon svg {
+  width: 30px;
+  fill: none;
+  stroke: var(--foreground);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.remote-connected-icon path {
+  stroke-dasharray: 35;
+  animation: remote-check 0.5s ease-out both;
+}
+.remote-connected h3 {
+  font-weight: 500;
+  font-size: 13px;
+}
+.remote-fingerprint {
+  margin-top: 9px;
+  font-size: 10px;
+  font-family: var(--font-mono-family);
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+}
+.remote-action-error {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--destructive);
+  overflow-wrap: anywhere;
+}
+.remote-security {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  margin: 18px auto 0;
+  max-width: 510px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.remote-security svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin-top: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.remote-settings button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+.remote-refreshing {
+  animation: remote-spin 1s linear infinite;
+}
+@keyframes remote-reveal {
+  from {
+    opacity: 0;
+    translate: 0 5px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes remote-check {
+  from {
+    stroke-dashoffset: 35;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes remote-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+@media (max-width: 640px) {
+  .remote-stage {
+    border-radius: 17px;
+  }
+  .remote-stage-caption {
+    bottom: 8px;
+    font-size: 7px;
+  }
+  .remote-motion-control {
+    bottom: 7px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+  }
+  .remote-hero h1 {
+    margin-top: 23px;
+  }
+  .remote-access-bar {
+    padding: 13px;
+  }
+  .remote-pairing {
+    grid-template-columns: 1fr;
+    padding: 20px;
+    gap: 23px;
+  }
+  .remote-guide-description,
+  .remote-steps p {
+    max-width: none;
+  }
+  .remote-pairing-surface {
+    padding: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .remote-settings *,
+  .remote-settings *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

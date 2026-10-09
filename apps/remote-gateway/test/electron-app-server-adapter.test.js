@@ -4,11 +4,42 @@ const assert = require("node:assert/strict");
 const {
   appServerThreadWithHistory,
   appServerTurns,
-  createElectronAppServerTransport,
+  createElectronAppServerTransport: createTransport,
   extractInputText,
-  listModels,
   listThreads,
 } = require("../src/electron-app-server-adapter");
+
+// Shared discovery fixture for transport tests; catalog behavior has dedicated tests.
+function createElectronAppServerTransport(options) {
+  const backend = options.backend;
+  return createTransport({
+    ...options,
+    backend: {
+      ...backend,
+      request(tag, payload) {
+        if (tag === "server.getConfig")
+          return Promise.resolve({
+            providers: ["opencode", "codex"].map((provider) => ({
+              provider,
+              available: true,
+              authStatus: "authenticated",
+            })),
+          });
+        if (tag === "provider.listModels")
+          return Promise.resolve({
+            models: [
+              {
+                slug: payload.provider === "codex" ? "gpt-6-astra" : "deepseek/deepseek-chat",
+                name: "Test model",
+                supportedReasoningEfforts: ["low", "medium", "high"].map((value) => ({ value })),
+              },
+            ],
+          });
+        return backend.request(tag, payload);
+      },
+    },
+  });
+}
 
 const PROJECT_WORKSPACE_ROOT = "/Users/tester/Documents/DJL";
 
@@ -110,9 +141,7 @@ test("Electron adapter materializes orchestration messages as iOS-compatible tur
   assert.deepEqual(appServerTurns(thread), result.turns);
 });
 
-test("Electron adapter preserves the selected OpenCode model and extracts only visible input text", () => {
-  const models = listModels(snapshot);
-  assert.equal(models.items[0].model, "deepseek/deepseek-chat");
+test("Electron adapter extracts only visible input text", () => {
   assert.equal(extractInputText([{ type: "text", text: "Run pwd" }]), "Run pwd");
   assert.equal(extractInputText([{ type: "image" }]), "");
 });
@@ -153,6 +182,40 @@ test("Electron adapter sends mutation commands as the direct Electron RPC payloa
   assert.equal(dispatched.payload.type, "thread.turn.start");
   assert.equal(dispatched.payload.message.text, "Reply from iOS");
   assert.equal(dispatched.payload.command, undefined);
+});
+
+test("Electron adapter reports a committed phone mutation for desktop shell reconciliation", async () => {
+  const committed = [];
+  const backend = {
+    onStarted() {},
+    onError() {},
+    onClose() {},
+    request: async (tag) => (tag === "orchestration.dispatchCommand" ? { sequence: 42 } : snapshot),
+    subscribe: () => () => {},
+    shutdown() {},
+  };
+  const transport = createElectronAppServerTransport({
+    endpoint: "ws://electron.test/ws",
+    backend,
+    onMutationCommitted: (mutation) => committed.push(mutation),
+  });
+
+  transport.send(
+    JSON.stringify({
+      id: "ios-archive-for-desktop-refresh",
+      method: "thread/archive",
+      params: { threadId: "electron-thread" },
+    }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.deepEqual(committed, [
+    {
+      method: "thread/archive",
+      sequence: 42,
+    },
+  ]);
+  transport.shutdown();
 });
 
 test("Electron adapter reuses command and message identities for duplicate mobile RPC delivery", async () => {
@@ -1445,4 +1508,196 @@ test("Electron adapter maps provider usage into rate limit buckets", async () =>
     primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: "2026-09-05T00:00:00.000Z" },
   });
   transport.shutdown();
+});
+
+test("phone turn live deltas cancel snapshot polling and are not replayed on recovery", async () => {
+  const active = structuredClone(snapshot);
+  active.snapshotSequence = 5;
+  active.threads[0].session = { activeTurnId: "turn-2" };
+  active.threads[0].messages = [];
+  const fake = createStreamingBackend(active);
+  const transport = createElectronAppServerTransport({ backend: fake.backend });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  try {
+    fake.start();
+    await flushMicrotasks();
+    transport.send(
+      JSON.stringify({
+        id: "start-race",
+        method: "turn/start",
+        params: {
+          threadId: "electron-thread",
+          input: [{ type: "text", text: "Hello" }],
+        },
+      }),
+    );
+    await flushMicrotasks();
+    const reads = fake.requests.filter((r) => r.tag === "orchestration.getSnapshot").length;
+    fake.pushThread("electron-thread", [assistantEvent(6, "Hello", true)]);
+    await new Promise((resolve) => setTimeout(resolve, 320));
+    assert.equal(fake.requests.filter((r) => r.tag === "orchestration.getSnapshot").length, reads);
+    fake.pushThread("electron-thread", [
+      detailSnapshotChunk(
+        {
+          ...active.threads[0],
+          messages: [
+            {
+              id: "assistant-2",
+              role: "assistant",
+              text: "Hello world",
+              streaming: true,
+              turnId: "turn-2",
+            },
+          ],
+        },
+        7,
+      ),
+    ]);
+    assert.deepEqual(
+      outbound.filter((m) => m.method === "item/agentMessage/delta").map((m) => m.params.delta),
+      ["Hello", " world"],
+    );
+  } finally {
+    transport.shutdown();
+  }
+});
+
+test("a live event arriving during turn dispatch does not arm fallback polling", async () => {
+  const active = structuredClone(snapshot);
+  active.snapshotSequence = 5;
+  active.threads[0].session = { activeTurnId: "turn-2" };
+  active.threads[0].messages = [];
+  const fake = createStreamingBackend(active);
+  const request = fake.backend.request;
+  fake.backend.request = async (tag, payload) => {
+    if (tag === "orchestration.dispatchCommand") {
+      fake.pushThread("electron-thread", [assistantEvent(6, "Early token", true)]);
+    }
+    return request(tag, payload);
+  };
+  const transport = createElectronAppServerTransport({ backend: fake.backend });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  try {
+    fake.start();
+    await flushMicrotasks();
+    transport.send(
+      JSON.stringify({
+        id: "early-token",
+        method: "turn/start",
+        params: {
+          threadId: "electron-thread",
+          input: [{ type: "text", text: "Hello" }],
+        },
+      }),
+    );
+    await flushMicrotasks();
+    const reads = fake.requests.filter((r) => r.tag === "orchestration.getSnapshot").length;
+    await new Promise((resolve) => setTimeout(resolve, 550));
+    assert.equal(fake.requests.filter((r) => r.tag === "orchestration.getSnapshot").length, reads);
+    assert.equal(outbound.filter((m) => m.method === "item/agentMessage/delta").length, 1);
+  } finally {
+    transport.shutdown();
+  }
+});
+
+test("a delayed previous-turn checkpoint does not cancel current-turn recovery", async () => {
+  const active = structuredClone(snapshot);
+  active.snapshotSequence = 5;
+  active.threads[0].session = { activeTurnId: "turn-2" };
+  active.threads[0].messages = [];
+  const fake = createStreamingBackend(active);
+  const transport = createElectronAppServerTransport({ backend: fake.backend });
+  const outbound = [];
+  transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
+  try {
+    fake.start();
+    await flushMicrotasks();
+    transport.send(
+      JSON.stringify({
+        id: "late-checkpoint",
+        method: "turn/start",
+        params: {
+          threadId: "electron-thread",
+          input: [{ type: "text", text: "Hello" }],
+        },
+      }),
+    );
+    await flushMicrotasks();
+    fake.pushThread("electron-thread", [
+      {
+        kind: "event",
+        event: {
+          sequence: 6,
+          aggregateId: "electron-thread",
+          type: "thread.turn-diff-completed",
+          payload: {
+            threadId: "electron-thread",
+            turnId: "turn-1",
+            checkpointTurnCount: 1,
+            files: [{ path: "old.txt", kind: "modified", additions: 1, deletions: 0 }],
+          },
+        },
+      },
+    ]);
+    assert.ok(outbound.some((m) => m.method === "item/completed" && m.params.turnId === "turn-1"));
+    active.snapshotSequence = 7;
+    active.threads[0].session = null;
+    active.threads[0].latestTurn = { turnId: "turn-2", state: "completed" };
+    await new Promise((resolve) => setTimeout(resolve, 320));
+    assert.ok(outbound.some((m) => m.method === "turn/completed" && m.params.turnId === "turn-2"));
+  } finally {
+    transport.shutdown();
+  }
+});
+
+test("phone follow-ups preserve the desktop thread provider", async () => {
+  const current = structuredClone(snapshot);
+  current.threads[0].modelSelection = { provider: "codex", model: "gpt-6-astra" };
+  const fake = createStreamingBackend(current);
+  const transport = createElectronAppServerTransport({ backend: fake.backend });
+  try {
+    transport.send(
+      JSON.stringify({
+        id: "codex-followup",
+        method: "turn/start",
+        params: {
+          threadId: "electron-thread",
+          model: "gpt-6-astra",
+          input: [{ type: "text", text: "Hello" }],
+        },
+      }),
+    );
+    await flushMicrotasks();
+    assert.deepEqual(
+      fake.requests.find((r) => r.tag === "orchestration.dispatchCommand").payload.modelSelection,
+      { provider: "codex", model: "gpt-6-astra" },
+    );
+  } finally {
+    transport.shutdown();
+  }
+});
+
+test("chat terminals use the project directory when no worktree is set", async () => {
+  const fake = createStreamingBackend(snapshot);
+  const transport = createElectronAppServerTransport({ backend: fake.backend });
+  try {
+    fake.start();
+    await flushMicrotasks();
+    transport.send(
+      JSON.stringify({
+        id: "project-terminal",
+        method: "djl/terminal/open",
+        params: { threadId: "electron-thread", terminalId: "default" },
+      }),
+    );
+    await flushMicrotasks();
+    assert.equal(
+      fake.requests.find((r) => r.tag === "terminal.open")?.payload.cwd,
+      PROJECT_WORKSPACE_ROOT,
+    );
+  } finally {
+    transport.shutdown();
+  }
 });

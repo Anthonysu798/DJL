@@ -74,3 +74,19 @@ describe("remote gateway runtime", () => {
     expect(JSON.stringify(connected)).not.toContain("must-not-cross-ipc");
   });
 });
+
+it("preserves state identity for unchanged gateway status to avoid redundant renderer IPC", () => {
+  const initial = createInitialRemoteGatewayState({
+    enabled: true,
+    relayUrl: "wss://relay.example/relay",
+  });
+  const message = { type: "status", status: { state: "running", connectionStatus: "connected" } };
+  const ready = reduceRemoteGatewayChildMessage(initial, message);
+  expect(reduceRemoteGatewayChildMessage(ready, message)).toBe(ready);
+  const offline = reduceRemoteGatewayChildMessage(ready, {
+    type: "status",
+    status: { connectionStatus: "offline" },
+  });
+  expect(offline).not.toBe(ready);
+  expect(offline.status).toBe("offline");
+});

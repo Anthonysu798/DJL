@@ -1315,6 +1315,8 @@ export const makeWsRpcLayer = () =>
             "Failed to hand off thread",
           ),
 
+        [WS_METHODS.terminalList]: () =>
+          rpcEffect(terminalManager.listSessions, "Failed to list terminals"),
         [WS_METHODS.terminalOpen]: (input) =>
           rpcEffect(
             resetTerminalTitleBuffer(input.threadId, input.terminalId ?? DEFAULT_TERMINAL_ID).pipe(

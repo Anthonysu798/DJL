@@ -13,6 +13,7 @@ const { createElectronAppServerTransport } = require("./electron-app-server-adap
 function createCodexTransport({
   endpoint = "",
   electronBackendEndpoint = "",
+  onMutationCommitted = null,
   env = process.env,
   appPath = "",
   platform = process.platform,
@@ -20,7 +21,10 @@ function createCodexTransport({
   WebSocketImpl = WebSocket,
 } = {}) {
   if (electronBackendEndpoint) {
-    return createElectronAppServerTransport({ endpoint: electronBackendEndpoint });
+    return createElectronAppServerTransport({
+      endpoint: electronBackendEndpoint,
+      onMutationCommitted,
+    });
   }
 
   if (endpoint) {

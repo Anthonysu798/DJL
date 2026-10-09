@@ -777,6 +777,7 @@ function startBridge({
   printPairingQr = true,
   onPairingSession = null,
   onBridgeStatus = null,
+  onRemoteMutationCommitted = null,
   onDesktopUpdateRequested = null,
 } = {}) {
   const config = explicitConfig || readBridgeConfig();
@@ -979,6 +980,7 @@ function startBridge({
   const codex = createCodexTransport({
     endpoint: config.codexEndpoint,
     electronBackendEndpoint: config.electronBackendEndpoint,
+    onMutationCommitted: onRemoteMutationCommitted,
     env: process.env,
     appPath: config.codexAppPath,
     logPrefix: "[djl]",

@@ -23,7 +23,6 @@ import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import {
   SETTINGS_NAV_GROUPS,
   SETTINGS_NAV_ITEMS,
-  isSettingsSectionVisible,
   type SettingsSectionId,
 } from "../settingsNavigation";
 import {
@@ -118,8 +117,7 @@ export function SettingsSidebarNav(props: {
         translateSettings,
       ).filter(
         (entry) =>
-          isSettingsSectionVisible(entry.section) &&
-          (isElectron || entry.section !== "local-models"),
+          isElectron || !SETTINGS_NAV_ITEMS.find((item) => item.id === entry.section)?.desktopOnly,
       ),
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Locale changes must refresh labels read through stable translation helpers.
     [i18n.resolvedLanguage, translateSettings, trimmedQuery],
@@ -205,10 +203,7 @@ export function SettingsSidebarNav(props: {
         <nav aria-label={t("navigation.sectionsAriaLabel")} className="flex flex-col">
           {SETTINGS_NAV_GROUPS.map((group) => {
             const items = SETTINGS_NAV_ITEMS.filter(
-              (item) =>
-                item.group === group.id &&
-                isSettingsSectionVisible(item.id) &&
-                (!item.desktopOnly || isElectron),
+              (item) => item.group === group.id && (!item.desktopOnly || isElectron),
             );
             if (items.length === 0) {
               return null;

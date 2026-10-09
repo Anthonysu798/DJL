@@ -25,7 +25,6 @@ import {
   getVisibleSidebarThreadIds,
   getVisibleThreadsForProject,
   getProjectSortTimestamp,
-  hasUnseenCompletion,
   partitionSidebarThreadsByProjectIds,
   isLatestPinnedThreadMutation,
   isLoopbackHostname,
@@ -70,7 +69,7 @@ describe("sidebar provider branding", () => {
 function makeLatestTurn(overrides?: {
   completedAt?: string | null;
   startedAt?: string | null;
-}): Parameters<typeof hasUnseenCompletion>[0]["latestTurn"] {
+}): NonNullable<Thread["latestTurn"]> {
   return {
     turnId: "turn-1" as never,
     state: "completed",
@@ -88,20 +87,6 @@ describe("resolvePendingSidebarViewSelection", () => {
 
   it("clears the optimistic segment when the user returns to the active view", () => {
     expect(resolvePendingSidebarViewSelection("threads", "threads")).toBeNull();
-  });
-});
-
-describe("hasUnseenCompletion", () => {
-  it("returns true when a thread completed after its last visit", () => {
-    expect(
-      hasUnseenCompletion({
-        interactionMode: "default",
-        latestTurn: makeLatestTurn(),
-        lastVisitedAt: "2026-03-09T10:04:00.000Z",
-        proposedPlans: [],
-        session: null,
-      }),
-    ).toBe(true);
   });
 });
 
@@ -846,10 +831,10 @@ describe("resolveThreadStatusPill", () => {
         hasPendingApprovals: false,
         hasPendingUserInput: false,
       }),
-    ).toMatchObject({ label: "Completed", pulse: false });
+    ).toBeNull();
   });
 
-  it("shows completed when there is an unseen completion and no active blocker", () => {
+  it("does not show a completed status after work settles", () => {
     expect(
       resolveThreadStatusPill({
         thread: {
@@ -866,7 +851,7 @@ describe("resolveThreadStatusPill", () => {
         hasPendingApprovals: false,
         hasPendingUserInput: false,
       }),
-    ).toMatchObject({ label: "Completed", pulse: false });
+    ).toBeNull();
   });
 
   it("hides a dismissible status when its dismissal key matches", () => {
@@ -946,10 +931,10 @@ describe("resolveProjectStatusIndicator", () => {
     expect(
       resolveProjectStatusIndicator([
         {
-          kind: "Completed",
-          label: "Completed",
-          colorClass: "text-emerald-600",
-          dotClass: "bg-emerald-500",
+          kind: "Plan Ready",
+          label: "Plan Ready",
+          colorClass: "text-violet-600",
+          dotClass: "bg-violet-500",
           pulse: false,
         },
         {
@@ -970,15 +955,15 @@ describe("resolveProjectStatusIndicator", () => {
     ).toMatchObject({ label: "Pending Approval", dotClass: "bg-amber-500" });
   });
 
-  it("prefers plan-ready over completed when no stronger action is needed", () => {
+  it("prefers connecting over plan-ready when both are present", () => {
     expect(
       resolveProjectStatusIndicator([
         {
-          kind: "Completed",
-          label: "Completed",
-          colorClass: "text-emerald-600",
-          dotClass: "bg-emerald-500",
-          pulse: false,
+          kind: "Connecting",
+          label: "Connecting",
+          colorClass: "text-sky-600",
+          dotClass: "bg-sky-500",
+          pulse: true,
         },
         {
           kind: "Plan Ready",
@@ -988,7 +973,7 @@ describe("resolveProjectStatusIndicator", () => {
           pulse: false,
         },
       ]),
-    ).toMatchObject({ label: "Plan Ready", dotClass: "bg-violet-500" });
+    ).toMatchObject({ label: "Connecting", dotClass: "bg-sky-500" });
   });
 });
 

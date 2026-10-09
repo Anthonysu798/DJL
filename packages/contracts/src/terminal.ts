@@ -53,6 +53,7 @@ export const TerminalOpenInput = Schema.Struct({
   rows: Schema.optional(TerminalRowsSchema),
   env: Schema.optional(TerminalEnvSchema),
   agentProfile: Schema.optional(TerminalAgentProfile),
+  workspaceName: Schema.optional(Schema.String),
   // Launch an installed harness with its normal CLI login and configuration.
   harness: Schema.optional(HarnessId),
   includeHistory: Schema.optional(Schema.Boolean),
@@ -203,3 +204,13 @@ export const TerminalEvent = Schema.Union([
   TerminalActivityEvent,
 ]);
 export type TerminalEvent = typeof TerminalEvent.Type;
+
+/** Metadata only: inventory must never serialize terminal scrollback. */
+export const TerminalSessionSummary = Schema.Struct({
+  threadId: Schema.String,
+  terminalId: Schema.String,
+  cwd: Schema.String,
+  status: TerminalSessionStatus,
+  workspaceName: Schema.optional(Schema.String),
+});
+export type TerminalSessionSummary = typeof TerminalSessionSummary.Type;

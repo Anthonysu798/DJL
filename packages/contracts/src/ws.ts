@@ -234,6 +234,7 @@ export const WS_METHODS = {
   gitPreparePullRequestThread: "git.preparePullRequestThread",
 
   // Terminal methods
+  terminalList: "terminal.list",
   terminalOpen: "terminal.open",
   terminalWrite: "terminal.write",
   terminalAckOutput: "terminal.ackOutput",
@@ -471,6 +472,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitPreparePullRequestThread, GitPreparePullRequestThreadInput),
 
   // Terminal methods
+  tagRequestBody(WS_METHODS.terminalList, Schema.Struct({})),
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),
   tagRequestBody(WS_METHODS.terminalWrite, TerminalWriteInput),
   tagRequestBody(WS_METHODS.terminalAckOutput, TerminalAckOutputInput),
