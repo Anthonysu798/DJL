@@ -1697,7 +1697,9 @@
       },
       "design": {
         "description": "Empieza en tu Mac. Continúa en tu iPhone. Los mismos chats, dondequiera que estés.",
+        "desktopDevice": "Mac",
         "pause": "Pausar animación",
+        "phoneDevice": "iPhone",
         "play": "Reproducir animación",
         "replay": "Repetir animación",
         "setupLabel": "Conecta tus dispositivos",

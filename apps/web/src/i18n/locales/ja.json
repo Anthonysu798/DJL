@@ -1697,7 +1697,9 @@
       },
       "design": {
         "description": "Mac で始めて、iPhone で続きを。同じスレッドで、どこからでも。",
+        "desktopDevice": "Mac",
         "pause": "アニメーションを一時停止",
+        "phoneDevice": "iPhone",
         "play": "アニメーションを再生",
         "replay": "アニメーションをもう一度再生",
         "setupLabel": "デバイスをつなぐ",

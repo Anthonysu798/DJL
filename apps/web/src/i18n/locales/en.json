@@ -1697,7 +1697,9 @@
       },
       "design": {
         "description": "Start on your Mac. Pick up on your iPhone. The same threads, wherever you go.",
+        "desktopDevice": "Mac",
         "pause": "Pause animation",
+        "phoneDevice": "iPhone",
         "play": "Play animation",
         "replay": "Replay animation",
         "setupLabel": "Connect your devices",

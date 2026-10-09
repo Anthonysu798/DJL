@@ -49,8 +49,8 @@ export function RemoteHero() {
           <Poster />
         )}
         <div className="remote-stage-caption">
-          <span>iPhone</span>
-          <span>Mac</span>
+          <span>{t("remote.design.phoneDevice")}</span>
+          <span>{t("remote.design.desktopDevice")}</span>
         </div>
       </div>
       <h1>{t("remote.design.title")}</h1>

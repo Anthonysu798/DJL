@@ -1697,7 +1697,9 @@
       },
       "design": {
         "description": "Commencez sur Mac. Continuez sur iPhone. Retrouvez vos conversations, où que vous soyez.",
+        "desktopDevice": "Mac",
         "pause": "Mettre l’animation en pause",
+        "phoneDevice": "iPhone",
         "play": "Lire l’animation",
         "replay": "Rejouer l’animation",
         "setupLabel": "Connectez vos appareils",

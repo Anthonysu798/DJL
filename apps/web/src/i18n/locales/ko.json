@@ -1697,7 +1697,9 @@
       },
       "design": {
         "description": "Mac에서 시작하고 iPhone에서 이어가세요. 어디서든 같은 대화로 작업하세요.",
+        "desktopDevice": "Mac",
         "pause": "애니메이션 일시 정지",
+        "phoneDevice": "iPhone",
         "play": "애니메이션 재생",
         "replay": "애니메이션 다시 재생",
         "setupLabel": "기기 연결",

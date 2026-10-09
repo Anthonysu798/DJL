@@ -1697,7 +1697,9 @@
       },
       "design": {
         "description": "在 Mac 上開始，在 iPhone 上繼續。同一段對話，隨時隨地接著做。",
+        "desktopDevice": "Mac",
         "pause": "暫停動畫",
+        "phoneDevice": "iPhone",
         "play": "播放動畫",
         "replay": "重播動畫",
         "setupLabel": "連接你的裝置",
