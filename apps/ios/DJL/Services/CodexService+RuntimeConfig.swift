@@ -437,9 +437,16 @@ extension CodexService {
 
     func selectedModelOption(threadId: String? = nil) -> CodexModelOption? {
         let selectedIdentifier = selectedModelIdentifier(threadId: threadId)
-        return availableModels.first {
-            $0.id == selectedIdentifier || $0.model == selectedIdentifier
+        if let exact = availableModels.first(where: { $0.id == selectedIdentifier }) { return exact }
+        let candidates = availableModels.filter { $0.model == selectedIdentifier }
+        if let threadId, let thread = threads.first(where: { $0.id == threadId }), let provider = thread.modelProvider {
+            // Migrate old unqualified phone choices without accidentally switching
+            // a Codex thread to an OpenCode model with a different account contract.
+            return candidates.first(where: { $0.djlProvider == provider })
+                ?? availableModels.first(where: { $0.djlProvider == provider && $0.model == thread.model })
+                ?? availableModels.first(where: { $0.djlProvider == provider })
         }
+        return candidates.first
     }
 
     // Composer chrome should not present the canonical fallback as a loaded user choice.

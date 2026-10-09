@@ -24,8 +24,8 @@ struct SidebarContentScopePicker: View {
     private static let selectionAnimation: Animation = .spring(response: 0.34, dampingFraction: 0.78)
 
     var body: some View {
-        AdaptiveGlassContainer(spacing: 12) {
-            HStack(spacing: 12) {
+        AdaptiveGlassContainer(spacing: 8) {
+            HStack(spacing: 8) {
                 ForEach(SidebarContentScope.allCases) { scope in
                     scopeButton(scope)
                 }
@@ -57,10 +57,10 @@ struct SidebarContentScopePicker: View {
                         .background((isSelected ? selectedForeground : Color.orange).opacity(0.16), in: Capsule())
                 }
             }
-                .font(AppFont.callout(weight: .medium))
+                .font(AppFont.subheadline(weight: .medium))
                 .foregroundStyle(isSelected ? selectedForeground : Color.primary)
                 .lineLimit(1)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .adaptiveGlass(
                     .regular,

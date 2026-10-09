@@ -16,14 +16,15 @@ enum QRScannerPairingValidationResult {
 private let qrScannerPairingCodePrefix = "RMX1:"
 private let qrScannerShortCodePattern = "^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8,12}$"
 
+func normalizedOneTimePairingCode(_ input: String) -> String? {
+    let normalized = input.uppercased().filter { !$0.isWhitespace && $0 != "-" }
+    return normalized.range(of: qrScannerShortCodePattern, options: .regularExpression) == nil ? nil : normalized
+}
+
 // Distinguishes a usable pairing QR from stale bridge payloads and generic camera mis-scans.
 func validatePairingQRCode(_ code: String, now: Date = Date()) -> QRScannerPairingValidationResult {
     let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-    let normalizedShortCode = trimmedCode
-        .uppercased()
-        .replacingOccurrences(of: "-", with: "")
-        .replacingOccurrences(of: " ", with: "")
-    if normalizedShortCode.range(of: qrScannerShortCodePattern, options: .regularExpression) != nil {
+    if let normalizedShortCode = normalizedOneTimePairingCode(trimmedCode) {
         return .shortCode(normalizedShortCode)
     }
     let normalizedCode: String

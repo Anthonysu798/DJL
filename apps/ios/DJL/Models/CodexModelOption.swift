@@ -15,6 +15,8 @@ struct CodexModelOption: Identifiable, Codable, Hashable, Sendable {
     let supportsFastMode: Bool
     let supportedReasoningEfforts: [CodexReasoningEffortOption]
     let defaultReasoningEffort: String?
+    let djlProvider: String?
+    let providerDisplayName: String?
 
     init(
         id: String,
@@ -24,8 +26,12 @@ struct CodexModelOption: Identifiable, Codable, Hashable, Sendable {
         isDefault: Bool,
         supportsFastMode: Bool = false,
         supportedReasoningEfforts: [CodexReasoningEffortOption],
-        defaultReasoningEffort: String?
+        defaultReasoningEffort: String?,
+        djlProvider: String? = nil,
+        providerDisplayName: String? = nil
     ) {
+        self.djlProvider = djlProvider
+        self.providerDisplayName = providerDisplayName
         self.id = id
         self.model = model
         self.displayName = displayName
@@ -37,6 +43,8 @@ struct CodexModelOption: Identifiable, Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
+        case djlProvider
+        case providerDisplayName
         case id
         case model
         case slug
@@ -103,6 +111,8 @@ struct CodexModelOption: Identifiable, Codable, Hashable, Sendable {
         let explicitFastMode = Self.decodeExplicitFastMode(from: container)
         let additionalSpeedTiers = Self.decodeAdditionalSpeedTiers(from: container)
 
+        djlProvider = try container.decodeIfPresent(String.self, forKey: .djlProvider)
+        providerDisplayName = try container.decodeIfPresent(String.self, forKey: .providerDisplayName)
         id = normalizedID.isEmpty ? normalizedModel : normalizedID
         model = normalizedModel
         displayName = normalizedDisplayName.isEmpty ? normalizedModel : normalizedDisplayName
@@ -159,6 +169,8 @@ struct CodexModelOption: Identifiable, Codable, Hashable, Sendable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(djlProvider, forKey: .djlProvider)
+        try container.encodeIfPresent(providerDisplayName, forKey: .providerDisplayName)
         try container.encode(id, forKey: .id)
         try container.encode(model, forKey: .model)
         try container.encode(displayName, forKey: .displayName)

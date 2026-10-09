@@ -38,6 +38,8 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
     let onOpenSettings: () -> Void
     let onOpenDevicesSettings: () -> Void
     let onOpenTerminal: () -> Void
+    var onOpenWorkspaceTerminal: (DesktopWorkspaceTerminal) -> Void = { _ in }
+    var onOpenNavigation: (() -> Void)? = nil
     let onOpenNewChatDraft: (NewChatDraftSource, String?) -> Void
     let onNewChatCreationStateChange: (Bool) -> Void
     let onOpenThread: (CodexThread) -> Void
@@ -51,7 +53,7 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
     @ViewBuilder let connectionEmptyStateFooter: () -> ConnectionEmptyStateFooter
 
     @State private var searchText = ""
-    @State private var selectedContentScope: SidebarContentScope = .projects
+    @State private var selectedContentScope: SidebarContentScope = .chats
     @State private var isCreatingThread = false
     @State private var pendingTopAction: SidebarTopAction? = nil
     @State private var groupedThreads: [SidebarThreadGroup] = []
@@ -83,7 +85,8 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
                 SidebarHeaderView(
                     showsCloseButton: showsInlineCloseButton,
                     onClose: onClose,
-                    overflowActions: overflowMenuActions
+                    overflowActions: overflowMenuActions,
+                    onOpenNavigation: onOpenNavigation
                 )
                 .modifier(SidebarHeaderBackdropModifier())
             }
@@ -93,6 +96,7 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
                 rebuildCachedSidebarState()
                 rebuildAttentionItems()
                 await refreshProjectlessChatRoots()
+                try? await codex.refreshDesktopWorkspaceTerminals()
                 if codex.isConnected, codex.threads.isEmpty {
                     await refreshThreads()
                 }
@@ -113,6 +117,7 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
             .onChange(of: selectedContentScope) { _, scope in
                 debugSidebarLog("content scope changed scope=\(scope.rawValue)")
                 rebuildGroupedThreads()
+                if scope == .workspaces { Task { try? await codex.refreshDesktopWorkspaceTerminals() } }
                 if scope == .attention {
                     rebuildAttentionItems()
                 }
@@ -280,6 +285,8 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
             handleRootlessChatDraftTap()
         case .attention:
             handleNewChatButtonTap()
+        case .workspaces:
+            openTerminal()
         }
     }
 
@@ -554,7 +561,7 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
             return .projects
         case .chats:
             return .chats
-        case .attention:
+        case .attention, .workspaces:
             return .all
         }
     }
@@ -593,9 +600,11 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
         case .projects:
             return "No project chats"
         case .chats:
-            return "No chats"
+            return "No Studio threads"
         case .attention:
             return "You're all caught up"
+        case .workspaces:
+            return "No running workspaces"
         }
     }
 
@@ -607,6 +616,8 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
             return "No matching chats"
         case .attention:
             return "No matching attention items"
+        case .workspaces:
+            return "No matching workspaces"
         }
     }
 
@@ -692,7 +703,13 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
 
     @ViewBuilder
     private var threadList: some View {
-        if selectedContentScope == .attention {
+        if selectedContentScope == .workspaces {
+            SidebarWorkspaceList(terminals: codex.desktopWorkspaceTerminals, searchText: searchText, isConnected: codex.isConnected) { terminal in
+                prepareSidebarForChatNavigation()
+                onOpenWorkspaceTerminal(terminal)
+            }
+            .refreshable { try? await codex.refreshDesktopWorkspaceTerminals() }
+        } else if selectedContentScope == .attention {
             SidebarAttentionListView(
                 items: SidebarAttentionProjection.filtered(attentionItems, query: searchText),
                 isFiltering: !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -795,7 +812,15 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
         }
     }
 
+    @ViewBuilder
     private var bottomActionBar: some View {
+        if selectedContentScope == .workspaces {
+            Button { Task { try? await codex.refreshDesktopWorkspaceTerminals() } } label: {
+                Label("Refresh workspaces", systemImage: "arrow.clockwise")
+                    .font(AppFont.callout(weight: .medium)).padding(.horizontal, 18).padding(.vertical, 12)
+                    .adaptiveGlass(.regular, isInteractive: true, fallbackMaterial: .ultraThinMaterial, in: Capsule())
+            }.buttonStyle(.plain).disabled(!codex.isConnected)
+        } else {
         SidebarBottomActionBar(
             isChatEnabled: canCreateThread,
             isCreatingThread: isCreatingThread,
@@ -803,6 +828,7 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
             onTapChat: handleBottomChatTap,
             onTapTerminal: openTerminal
         )
+        }
     }
 
     private var overflowMenuActions: SidebarOverflowMenuActions {
@@ -814,7 +840,8 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
             onNewProject: handleNewProjectTap,
             onOpenTerminal: openTerminal,
             onOpenConnections: onOpenDevicesSettings,
-            onOpenSettings: openSettings
+            onOpenSettings: openSettings,
+            onOpenAttention: { selectedContentScope = .attention }
         )
     }
 

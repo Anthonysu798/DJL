@@ -194,6 +194,7 @@ import {
   TerminalResizeInput,
   TerminalRestartInput,
   TerminalSessionSnapshot,
+  TerminalSessionSummary,
   TerminalWriteInput,
 } from "./terminal";
 import {
@@ -805,6 +806,12 @@ export const WsGitHandoffThreadRpc = Rpc.make(WS_METHODS.gitHandoffThread, {
   error: WsRpcError,
 });
 
+export const WsTerminalListRpc = Rpc.make(WS_METHODS.terminalList, {
+  payload: Schema.Struct({}),
+  success: Schema.Array(TerminalSessionSummary),
+  error: WsRpcError,
+});
+
 export const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {
   payload: TerminalOpenInput,
   success: TerminalSessionSnapshot,
@@ -1274,6 +1281,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitStageFilesRpc,
   WsGitUnstageFilesRpc,
   WsGitHandoffThreadRpc,
+  WsTerminalListRpc,
   WsTerminalOpenRpc,
   WsTerminalWriteRpc,
   WsTerminalAckOutputRpc,

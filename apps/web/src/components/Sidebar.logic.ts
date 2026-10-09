@@ -188,13 +188,7 @@ const THREAD_JUMP_COMMANDS = [
 ] as const satisfies readonly KeybindingCommand[];
 
 export interface ThreadStatusPill {
-  kind:
-    | "Working"
-    | "Connecting"
-    | "Completed"
-    | "Pending Approval"
-    | "Awaiting Input"
-    | "Plan Ready";
+  kind: "Working" | "Connecting" | "Pending Approval" | "Awaiting Input" | "Plan Ready";
   label: string;
   colorClass: string;
   dotClass: string;
@@ -209,7 +203,6 @@ const THREAD_STATUS_PRIORITY: Record<ThreadStatusPill["kind"], number> = {
   Working: 3,
   Connecting: 3,
   "Plan Ready": 2,
-  Completed: 1,
 };
 
 type ThreadStatusInput = Pick<
@@ -233,25 +226,6 @@ function createThreadStatusDismissalKey(
     thread.latestTurn?.completedAt ?? "",
     thread.session?.updatedAt ?? "",
   ].join(":");
-}
-
-function createCompletedDismissalKey(thread: ThreadStatusInput): string | null {
-  if (!thread.latestTurn?.completedAt) {
-    return null;
-  }
-
-  return ["Completed", thread.latestTurn.turnId, thread.latestTurn.completedAt].join(":");
-}
-
-export function hasUnseenCompletion(thread: ThreadStatusInput): boolean {
-  if (!thread.latestTurn?.completedAt) return false;
-  const completedAt = Date.parse(thread.latestTurn.completedAt);
-  if (Number.isNaN(completedAt)) return false;
-  if (!thread.lastVisitedAt) return true;
-
-  const lastVisitedAt = Date.parse(thread.lastVisitedAt);
-  if (Number.isNaN(lastVisitedAt)) return true;
-  return completedAt > lastVisitedAt;
 }
 
 export function shouldClearThreadSelectionOnMouseDown(target: HTMLElement | null): boolean {
@@ -503,22 +477,6 @@ export function resolveThreadStatusPill(input: {
       pulse: false,
       dismissible: true,
       dismissalKey,
-    };
-  }
-
-  if (!thread.hasLiveTailWork && hasUnseenCompletion(thread)) {
-    const dismissalKey = createCompletedDismissalKey(thread);
-    if (dismissalKey && thread.dismissedStatusKey === dismissalKey) {
-      return null;
-    }
-    return {
-      kind: "Completed",
-      label: translateRendererCopy("shell:sidebar.status.completed", "Completed"),
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
-      dotClass: "bg-emerald-500 dark:bg-emerald-300/90",
-      pulse: false,
-      dismissible: true,
-      ...(dismissalKey ? { dismissalKey } : {}),
     };
   }
 

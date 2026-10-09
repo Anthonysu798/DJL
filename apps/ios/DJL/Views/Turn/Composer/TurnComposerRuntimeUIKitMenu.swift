@@ -51,7 +51,13 @@ enum TurnComposerRuntimeUIKitMenuBuilder {
             children.append(speedMenu)
         }
 
-        children.append(modelMenu(input))
+        if input.orderedModelOptions.contains(where: { $0.djlProvider != nil }) {
+            children.append(UIAction(title: "Provider & model", image: DJLIcon.menuUIImage(systemName: "cube")) { _ in
+                input.onRequestAllModelsSheet()
+            })
+        } else {
+            children.append(modelMenu(input))
+        }
 
         if let intelligenceMenu = intelligenceMenu(input) {
             children.append(intelligenceMenu)

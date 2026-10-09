@@ -189,15 +189,6 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
 ] as const;
 
-// Keep unfinished settings out of the product until their backing service is
-// ready. The section id and panel remain for an intentional future re-enable,
-// but neither settings navigation, search, nor an old deep link exposes it.
-const HIDDEN_SETTINGS_SECTION_IDS = new Set<SettingsSectionId>(["remote"]);
-
-export function isSettingsSectionVisible(section: SettingsSectionId): boolean {
-  return !HIDDEN_SETTINGS_SECTION_IDS.has(section);
-}
-
 /**
  * Stable DOM id for a settings row. Callers pass a semantic id that never depends on
  * translated display copy. Existing English-slug ids are intentionally retained so saved
@@ -217,5 +208,5 @@ export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   }
   if (value === "providers") return "models";
   const section = SETTINGS_SECTION_IDS.find((candidate) => candidate === value);
-  return section && isSettingsSectionVisible(section) ? section : "general";
+  return section ?? "general";
 }

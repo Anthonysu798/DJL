@@ -173,3 +173,28 @@ test("close only detaches the watch", async () => {
   assert.equal(emitted.length, 0);
   assert.equal(mirror.isWatching("thread-1", "default"), false);
 });
+
+test("workspace inventory discovers existing panes without reading history or opening a shell", async () => {
+  const calls = [];
+  const mirror = createDesktopTerminalMirror({
+    request: async (tag) => {
+      calls.push(tag);
+      return [
+        {
+          threadId: "agent-workspace-one",
+          terminalId: "pane-a",
+          cwd: "/work/qa",
+          status: "running",
+        },
+        { threadId: "chat-one", terminalId: "default", cwd: "/work/chat", status: "running" },
+      ];
+    },
+    emit() {},
+  });
+  assert.deepEqual(await mirror.listWorkspaces(), {
+    terminals: [
+      { threadId: "agent-workspace-one", terminalId: "pane-a", cwd: "/work/qa", status: "running" },
+    ],
+  });
+  assert.deepEqual(calls, ["terminal.list"]);
+});

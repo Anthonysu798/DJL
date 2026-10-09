@@ -20,17 +20,28 @@ struct SidebarOverflowMenuActions {
     var onOpenTerminal: () -> Void
     var onOpenConnections: () -> Void
     var onOpenSettings: () -> Void
+    var onOpenAttention: () -> Void = {}
 }
 
 struct SidebarHeaderView: View {
     var showsCloseButton: Bool = true
     var onClose: () -> Void
     var overflowActions: SidebarOverflowMenuActions
+    var onOpenNavigation: (() -> Void)? = nil
 
     var body: some View {
         AdaptiveGlassContainer(spacing: 10) {
             HStack(spacing: 10) {
-                appLogo
+                if let onOpenNavigation {
+                    SidebarToolbarIconButton(
+                        icon: .custom { TwoLineHamburgerIcon() },
+                        accessibilityLabel: "Open navigation",
+                        action: onOpenNavigation
+                    )
+                    .accessibilityIdentifier("navigation.open")
+                } else {
+                    appLogo
+                }
                 Text("DJL")
                     .font(AppFont.title3(weight: .medium))
                     .foregroundStyle(.primary)
@@ -131,6 +142,9 @@ struct SidebarHeaderView: View {
                     title: "",
                     options: [.displayInline],
                     children: [
+                        overflowAction(title: "Attention", systemName: "bell.badge") {
+                            overflowActions.onOpenAttention()
+                        },
                         overflowAction(title: "Connections", systemName: "globe") {
                             overflowActions.onOpenConnections()
                         },

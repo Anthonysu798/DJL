@@ -1718,10 +1718,22 @@
         "toggleAriaLabel": "Enable iPhone remote access"
       },
       "actions": {
+        "copiedCode": "Code copied",
+        "copyCode": "Copy pairing code",
+        "copyFailed": "Could not copy the code. Select and copy it above.",
         "disconnecting": "Disconnecting…",
         "pairAnother": "Pair another iPhone",
         "refresh": "Generate new pairing code",
         "refreshing": "Generating…"
+      },
+      "design": {
+        "description": "Start on your Mac. Pick up on your iPhone. The same threads, wherever you go.",
+        "pause": "Pause animation",
+        "play": "Play animation",
+        "replay": "Replay animation",
+        "setupLabel": "Connect your devices",
+        "stepEnable": "Enable remote access",
+        "title": "Your work. Anywhere."
       },
       "pairing": {
         "codeLabel": "One-time pairing code",
@@ -1730,10 +1742,6 @@
         "description": "Scan the QR code with DJL on iPhone, or use the one-time pairing code.",
         "expired": "This pairing code expired. Generate a new one to continue.",
         "fingerprint": "Device fingerprint: {{fingerprint}}",
-        "manualPayloadAriaLabel": "Manual pairing payload",
-        "manualPayloadDescription": "For a Simulator without a camera, paste this one-time QR payload into DJL iOS → Pair with Code. Keep it private; it expires with this pairing session.",
-        "manualPayloadHide": "Hide manual pairing payload",
-        "manualPayloadShow": "Show manual pairing payload",
         "phoneConnected": "Your iPhone is connected",
         "preparing": "Preparing a secure pairing session…",
         "qrAlt": "DJL iPhone pairing QR code",
@@ -1743,6 +1751,16 @@
       },
       "reset": {
         "confirm": "Disconnect this iPhone and generate a new pairing session?"
+      },
+      "setup": {
+        "desktopOnly": "Open Settings in the DJL desktop app to pair your iPhone.",
+        "disabled": "Turn on remote access above to generate a pairing code.",
+        "enable": "Turn on remote access above. Keep this computer awake and DJL open.",
+        "loadError": "Could not load remote access. Reopen this page to try again.",
+        "qrError": "Could not draw the QR code. Generate a new pairing code to try again.",
+        "scan": "Open DJL on your iPhone and scan this QR code to pair securely.",
+        "work": "Open your desktop threads, send messages, and follow replies live from your iPhone.",
+        "workTitle": "Continue your work"
       },
       "status": {
         "connected": "Connected",

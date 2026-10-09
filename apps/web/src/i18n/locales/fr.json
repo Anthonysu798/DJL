@@ -1718,10 +1718,22 @@
         "toggleAriaLabel": "Activer l’accès à distance sur iPhone"
       },
       "actions": {
+        "copiedCode": "Code copié",
+        "copyCode": "Copier le code d’association",
+        "copyFailed": "Impossible de copier le code. Sélectionnez et copiez le code ci-dessus.",
         "disconnecting": "Déconnexion…",
         "pairAnother": "Jumeler un autre iPhone",
         "refresh": "Générer un nouveau code",
         "refreshing": "Génération…"
+      },
+      "design": {
+        "description": "Commencez sur Mac. Continuez sur iPhone. Retrouvez vos conversations, où que vous soyez.",
+        "pause": "Mettre l’animation en pause",
+        "play": "Lire l’animation",
+        "replay": "Rejouer l’animation",
+        "setupLabel": "Connectez vos appareils",
+        "stepEnable": "Activer l’accès à distance",
+        "title": "Votre travail, partout."
       },
       "pairing": {
         "codeLabel": "Code de jumelage à usage unique",
@@ -1730,10 +1742,6 @@
         "description": "Scannez le code QR avec DJL sur iPhone ou utilisez le code de jumelage à usage unique.",
         "expired": "Ce code a expiré. Générez-en un nouveau pour continuer.",
         "fingerprint": "Empreinte de l’appareil : {{fingerprint}}",
-        "manualPayloadAriaLabel": "Données de jumelage manuel",
-        "manualPayloadDescription": "Dans un Simulateur sans caméra, collez ces données QR à usage unique dans DJL iOS → Jumeler avec un code. Gardez-les confidentielles ; elles expirent avec cette session.",
-        "manualPayloadHide": "Masquer les données de jumelage manuel",
-        "manualPayloadShow": "Afficher les données de jumelage manuel",
         "phoneConnected": "Votre iPhone est connecté",
         "preparing": "Préparation d’une session sécurisée…",
         "qrAlt": "Code QR de jumelage DJL pour iPhone",
@@ -1743,6 +1751,16 @@
       },
       "reset": {
         "confirm": "Déconnecter cet iPhone et générer une nouvelle session de jumelage ?"
+      },
+      "setup": {
+        "desktopOnly": "Ouvrez les réglages de l’application de bureau DJL pour associer votre iPhone.",
+        "disabled": "Activez l’accès à distance ci-dessus pour générer un code d’association.",
+        "enable": "Activez l’accès à distance ci-dessus. Gardez cet ordinateur éveillé et DJL ouvert.",
+        "loadError": "Impossible de charger l’accès à distance. Rouvrez cette page pour réessayer.",
+        "qrError": "Impossible de créer le code QR. Générez un nouveau code d’association.",
+        "scan": "Ouvrez DJL sur votre iPhone et scannez ce code QR pour l’associer en toute sécurité.",
+        "work": "Ouvrez les conversations de votre ordinateur, envoyez des messages et suivez les réponses en direct sur votre iPhone.",
+        "workTitle": "Poursuivez votre travail"
       },
       "status": {
         "connected": "Connecté",

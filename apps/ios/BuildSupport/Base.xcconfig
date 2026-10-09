@@ -2,6 +2,7 @@
 // Real private endpoints belong in the ignored PrivateOverrides.xcconfig file.
 
 DJL_CHATGPT_CALLBACK_SCHEME = djl
-DJL_DEFAULT_RELAY_URL =
+// Match the desktop release endpoint; supply DJL_REMOTE_RELAY_URL in build settings.
+DJL_DEFAULT_RELAY_URL = $(DJL_REMOTE_RELAY_URL)
 
 #include? "PrivateOverrides.xcconfig"

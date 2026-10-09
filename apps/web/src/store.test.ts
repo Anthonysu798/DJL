@@ -2047,6 +2047,54 @@ describe("store pure functions", () => {
 });
 
 describe("store read model sync", () => {
+  it("opens a newly discovered project even when older project expansion state is persisted", () => {
+    const existingProject = makeProject({
+      id: ProjectId.makeUnsafe("project-existing-expanded"),
+      cwd: "/tmp/existing-expanded",
+      expanded: true,
+    });
+    const newProjectId = ProjectId.makeUnsafe("project-new-from-phone");
+    const next = syncServerShellSnapshot(
+      {
+        projects: [existingProject],
+        threads: [],
+        sidebarThreadSummaryById: {},
+        threadsHydrated: true,
+      },
+      {
+        snapshotSequence: 2,
+        projects: [
+          {
+            id: existingProject.id,
+            kind: "project",
+            title: "Existing",
+            workspaceRoot: existingProject.cwd,
+            defaultModelSelection: existingProject.defaultModelSelection,
+            scripts: [],
+            isPinned: false,
+            createdAt: "2026-03-09T10:00:00.000Z",
+            updatedAt: "2026-03-09T10:00:00.000Z",
+          },
+          {
+            id: newProjectId,
+            kind: "project",
+            title: "Phone task",
+            workspaceRoot: "/tmp/phone-task",
+            defaultModelSelection: existingProject.defaultModelSelection,
+            scripts: [],
+            isPinned: false,
+            createdAt: "2026-03-09T10:01:00.000Z",
+            updatedAt: "2026-03-09T10:01:00.000Z",
+          },
+        ],
+        threads: [],
+        updatedAt: "2026-03-09T10:01:00.000Z",
+      },
+    );
+
+    expect(next.projects.find((project) => project.id === newProjectId)?.expanded).toBe(true);
+  });
+
   it("adds the desktop bridge token to server attachment preview URLs", () => {
     const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     const testWindow = {

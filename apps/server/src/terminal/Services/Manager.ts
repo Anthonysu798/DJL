@@ -15,6 +15,7 @@ import {
   TerminalResizeInput,
   TerminalRestartInput,
   TerminalSessionSnapshot,
+  TerminalSessionSummary,
   TerminalSessionStatus,
   TerminalWriteInput,
 } from "@synara/contracts";
@@ -30,6 +31,7 @@ export class TerminalError extends Schema.TaggedErrorClass<TerminalError>()("Ter
 }) {}
 
 export interface TerminalSessionState {
+  workspaceName?: string;
   threadId: string;
   terminalId: string;
   cwd: string;
@@ -122,6 +124,7 @@ export interface TerminalStartInput extends TerminalOpenInput {
  * TerminalManagerShape - Service API for terminal session lifecycle operations.
  */
 export interface TerminalManagerShape {
+  readonly listSessions: Effect.Effect<ReadonlyArray<TerminalSessionSummary>>;
   /**
    * Open or attach to a terminal session.
    *

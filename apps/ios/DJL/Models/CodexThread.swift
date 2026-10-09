@@ -83,6 +83,7 @@ struct CodexThread: Identifiable, Codable, Hashable, Sendable {
     var agentRole: String?
     var model: String?
     var modelProvider: String?
+    var djlScope: String? = nil
     var reasoningEffort: String?
     var serviceTier: String?
     var runtimeSettingsRevision: Int?
@@ -169,6 +170,7 @@ struct CodexThread: Identifiable, Codable, Hashable, Sendable {
         case agentRole
         case agentRoleSnake = "agent_role"
         case model
+        case djlScope
         case modelProvider
         case modelProviderSnake = "model_provider"
         case reasoningEffort
@@ -236,6 +238,7 @@ struct CodexThread: Identifiable, Codable, Hashable, Sendable {
             keys: [.model],
             metadataKeys: ["model", "modelName", "model_name"]
         )
+        djlScope = try container.decodeIfPresent(String.self, forKey: .djlScope)
         modelProvider = Self.decodeThreadIdentity(
             from: container,
             metadata: metadata,
@@ -282,6 +285,7 @@ struct CodexThread: Identifiable, Codable, Hashable, Sendable {
         try container.encodeIfPresent(Self.normalizeIdentifier(agentNickname), forKey: .agentNickname)
         try container.encodeIfPresent(Self.normalizeIdentifier(agentRole), forKey: .agentRole)
         try container.encodeIfPresent(Self.normalizeIdentifier(model), forKey: .model)
+        try container.encodeIfPresent(djlScope, forKey: .djlScope)
         try container.encodeIfPresent(Self.normalizeIdentifier(modelProvider), forKey: .modelProvider)
         try container.encodeIfPresent(Self.normalizeIdentifier(reasoningEffort), forKey: .reasoningEffort)
         try container.encodeIfPresent(Self.normalizeIdentifier(serviceTier), forKey: .serviceTier)

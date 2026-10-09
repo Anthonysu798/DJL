@@ -10,6 +10,7 @@ interface GatewayModule {
     printPairingQr: boolean;
     onPairingSession(session: unknown): void;
     onBridgeStatus(status: unknown): void;
+    onRemoteMutationCommitted(mutation: unknown): void;
     onDesktopUpdateRequested(): Promise<unknown>;
   }): GatewayHandle;
   resetBridgePairing(): unknown;
@@ -120,6 +121,9 @@ const bridge = gateway.startBridge({
   onBridgeStatus(status: unknown) {
     const sanitized = sanitizeStatus(status);
     if (sanitized) send({ type: "status", status: sanitized });
+  },
+  onRemoteMutationCommitted() {
+    send({ type: "remote-mutation" });
   },
   onDesktopUpdateRequested: requestDesktopUpdate,
 });

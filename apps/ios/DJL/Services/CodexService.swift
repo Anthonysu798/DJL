@@ -624,6 +624,7 @@ final class CodexService {
     @ObservationIgnored let nativeSSHTerminal = DJLNativeSSHTerminal()
     @ObservationIgnored var nativeSSHTerminalsById: [String: DJLNativeSSHTerminal] = [:]
     // Desktop terminals mirrored over the relay, keyed by the phone-side terminal id.
+    var desktopWorkspaceTerminals: [DesktopWorkspaceTerminal] = []
     var desktopTerminalBindings: [String: DesktopTerminalBinding] = [:]
     @ObservationIgnored var desktopTerminalsAwaitingReattach = Set<String>()
     @ObservationIgnored var desktopTerminalPendingAckBytes: [String: Int] = [:]

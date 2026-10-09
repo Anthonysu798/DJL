@@ -1718,10 +1718,22 @@
         "toggleAriaLabel": "啟用 iPhone 遠端存取"
       },
       "actions": {
+        "copiedCode": "已複製配對碼",
+        "copyCode": "複製配對碼",
+        "copyFailed": "無法複製配對碼。請選取上方配對碼進行複製。",
         "disconnecting": "正在中斷連線…",
         "pairAnother": "配對另一台 iPhone",
         "refresh": "產生新配對碼",
         "refreshing": "正在產生…"
+      },
+      "design": {
+        "description": "在 Mac 上開始，在 iPhone 上繼續。同一段對話，隨時隨地接著做。",
+        "pause": "暫停動畫",
+        "play": "播放動畫",
+        "replay": "重播動畫",
+        "setupLabel": "連接你的裝置",
+        "stepEnable": "開啟遠端存取",
+        "title": "工作隨行，自在繼續。"
       },
       "pairing": {
         "codeLabel": "一次性配對碼",
@@ -1730,10 +1742,6 @@
         "description": "使用 iPhone 上的 DJL 掃描 QR Code，或輸入一次性配對碼。",
         "expired": "此配對碼已過期。請產生新配對碼以繼續。",
         "fingerprint": "裝置指紋：{{fingerprint}}",
-        "manualPayloadAriaLabel": "手動配對資料",
-        "manualPayloadDescription": "在沒有相機的模擬器中，將此一次性 QR 資料貼到 DJL iOS → 使用配對碼。請妥善保管；它會隨本次配對工作階段過期。",
-        "manualPayloadHide": "隱藏手動配對資料",
-        "manualPayloadShow": "顯示手動配對資料",
         "phoneConnected": "你的 iPhone 已連線",
         "preparing": "正在準備安全配對工作階段…",
         "qrAlt": "DJL iPhone 配對 QR Code",
@@ -1743,6 +1751,16 @@
       },
       "reset": {
         "confirm": "中斷此 iPhone 並產生新的配對工作階段？"
+      },
+      "setup": {
+        "desktopOnly": "請在 DJL 桌面應用程式的設定中配對 iPhone。",
+        "disabled": "開啟上方的遠端存取以產生配對碼。",
+        "enable": "開啟上方的遠端存取，讓電腦保持喚醒並持續執行 DJL。",
+        "loadError": "無法載入遠端存取。請重新開啟此頁面再試。",
+        "qrError": "無法產生 QR 碼。請產生新的配對碼後重試。",
+        "scan": "在 iPhone 上開啟 DJL，掃描此 QR 碼即可安全配對。",
+        "work": "在 iPhone 上開啟電腦中的對話、傳送訊息，並即時查看回覆。",
+        "workTitle": "隨時繼續工作"
       },
       "status": {
         "connected": "已連線",

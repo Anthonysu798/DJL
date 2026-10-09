@@ -382,3 +382,14 @@ struct DJLTerminalSnapshot: Equatable, Sendable {
         return trimmedBufferData(result)
     }
 }
+
+
+struct DesktopWorkspaceTerminal: Identifiable, Equatable, Sendable {
+    let threadId: String
+    let terminalId: String
+    let cwd: String
+    let status: String
+    var workspaceName: String? = nil
+    var id: String { "workspace:\(threadId):\(terminalId)" }
+    var label: String { "\(workspaceName ?? (cwd as NSString).lastPathComponent) · \(terminalId.suffix(6))" }
+}

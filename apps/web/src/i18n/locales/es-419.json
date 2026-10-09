@@ -1718,10 +1718,22 @@
         "toggleAriaLabel": "Activar el acceso remoto desde iPhone"
       },
       "actions": {
+        "copiedCode": "Código copiado",
+        "copyCode": "Copiar código de vinculación",
+        "copyFailed": "No se pudo copiar el código. Selecciona y copia el código de arriba.",
         "disconnecting": "Desconectando…",
         "pairAnother": "Vincular otro iPhone",
         "refresh": "Generar un código nuevo",
         "refreshing": "Generando…"
+      },
+      "design": {
+        "description": "Empieza en tu Mac. Continúa en tu iPhone. Los mismos chats, dondequiera que estés.",
+        "pause": "Pausar animación",
+        "play": "Reproducir animación",
+        "replay": "Repetir animación",
+        "setupLabel": "Conecta tus dispositivos",
+        "stepEnable": "Activar acceso remoto",
+        "title": "Tu trabajo. Donde estés."
       },
       "pairing": {
         "codeLabel": "Código de vinculación de un solo uso",
@@ -1730,10 +1742,6 @@
         "description": "Escanea el código QR con DJL en el iPhone o usa el código de vinculación de un solo uso.",
         "expired": "Este código venció. Genera uno nuevo para continuar.",
         "fingerprint": "Huella del dispositivo: {{fingerprint}}",
-        "manualPayloadAriaLabel": "Datos de vinculación manual",
-        "manualPayloadDescription": "En un Simulador sin cámara, pega estos datos QR de un solo uso en DJL para iOS → Vincular con código. Mantenlos privados; vencen con esta sesión.",
-        "manualPayloadHide": "Ocultar datos de vinculación manual",
-        "manualPayloadShow": "Mostrar datos de vinculación manual",
         "phoneConnected": "Tu iPhone está conectado",
         "preparing": "Preparando una sesión segura…",
         "qrAlt": "Código QR para vincular DJL con iPhone",
@@ -1743,6 +1751,16 @@
       },
       "reset": {
         "confirm": "¿Desconectar este iPhone y generar una sesión de vinculación nueva?"
+      },
+      "setup": {
+        "desktopOnly": "Abre Configuración en la app de escritorio de DJL para vincular tu iPhone.",
+        "disabled": "Activa el acceso remoto arriba para generar un código de vinculación.",
+        "enable": "Activa el acceso remoto arriba. Mantén la computadora activa y DJL abierto.",
+        "loadError": "No se pudo cargar el acceso remoto. Vuelve a abrir esta página.",
+        "qrError": "No se pudo crear el código QR. Genera un nuevo código de vinculación.",
+        "scan": "Abre DJL en tu iPhone y escanea este código QR para vincularlo de forma segura.",
+        "work": "Abre los chats de tu computadora, envía mensajes y sigue las respuestas en vivo desde tu iPhone.",
+        "workTitle": "Continúa tu trabajo"
       },
       "status": {
         "connected": "Conectado",

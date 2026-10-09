@@ -2,6 +2,7 @@
 // Purpose: Renders the project/thread sidebar, including row status, sorting, and thread actions.
 // Exports: Sidebar
 
+import { CentralIcon } from "~/lib/central-icons";
 import {
   ArchiveIcon,
   CheckCircle2Icon,
@@ -575,20 +576,10 @@ function WorktreeBadgeGlyph({ className }: { className?: string }) {
   return <WorktreeIcon aria-hidden="true" className={sidebarGlyphClass("meta", className)} />;
 }
 
-// Trailing row status: spinner while working, check when completed, otherwise a
-// colored status dot. Thread rows and project headers use the same glyph so a
-// collapsed project still advertises active child chats.
+// Trailing row status: spinner while working, otherwise a colored status dot.
+// Thread rows and project headers use the same glyph so a collapsed project
+// still advertises active child chats.
 function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPill }) {
-  if (status.kind === "Completed") {
-    // Match the worktree/other trailing chips' optical size (15px) so the green
-    // check reads as part of the same right-side icon cluster.
-    return (
-      <CheckCircle2Icon
-        aria-hidden="true"
-        className={cn(SIDEBAR_TRAILING_ICON_CLASS, status.colorClass)}
-      />
-    );
-  }
   if (status.pulse) {
     return <ThreadRunningSpinner />;
   }
@@ -1448,7 +1439,6 @@ export default function Sidebar() {
   const sidebarThreadSummaryById = useStore((store) => store.sidebarThreadSummaryById);
   const sidebarThreadSummaryByIdRef = useRef(sidebarThreadSummaryById);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
-  const markThreadVisited = useStore((store) => store.markThreadVisited);
   const markThreadUnread = useStore((store) => store.markThreadUnread);
   const toggleProject = useStore((store) => store.toggleProject);
   const setProjectExpanded = useStore((store) => store.setProjectExpanded);
@@ -1796,18 +1786,9 @@ export default function Sidebar() {
       if (!threadStatus?.dismissible) {
         return;
       }
-      if (threadStatus.label === "Completed") {
-        markThreadVisited(threadId, thread.latestTurn?.completedAt ?? undefined);
-        return;
-      }
       dismissThreadStatus(threadId, threadStatus.dismissalKey);
     },
-    [
-      dismissThreadStatus,
-      markThreadVisited,
-      resolveThreadStatusForSidebar,
-      sidebarThreadSummaryById,
-    ],
+    [dismissThreadStatus, resolveThreadStatusForSidebar, sidebarThreadSummaryById],
   );
   const routeTerminalState = routeThreadId
     ? selectThreadTerminalState(terminalStateByThreadId, routeThreadId)
@@ -7384,7 +7365,24 @@ export default function Sidebar() {
                   <DebugFeatureFlagsMenu />
                 </Suspense>
               ) : null}
-              <TutorialReplayMenu />
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <TutorialReplayMenu />
+                </div>
+                {isElectron ? (
+                  <button
+                    type="button"
+                    aria-label={t("navigation.items.remote.label", { ns: "settings" })}
+                    title={t("navigation.items.remote.label", { ns: "settings" })}
+                    className="sidebar-icon-button flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                    onClick={() =>
+                      void navigate({ to: "/settings", search: { section: "remote" } })
+                    }
+                  >
+                    <CentralIcon name="phone-haptic" className="size-4" />
+                  </button>
+                ) : null}
+              </div>
               <div className="flex items-center gap-2">
                 {!isOnSettings && (
                   <SidebarMenuButton

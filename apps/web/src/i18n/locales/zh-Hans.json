@@ -1718,10 +1718,22 @@
         "toggleAriaLabel": "启用 iPhone 远程访问"
       },
       "actions": {
+        "copiedCode": "已复制配对码",
+        "copyCode": "复制配对码",
+        "copyFailed": "无法复制配对码。请选中上方配对码进行复制。",
         "disconnecting": "正在断开…",
         "pairAnother": "配对另一台 iPhone",
         "refresh": "生成新配对码",
         "refreshing": "正在生成…"
+      },
+      "design": {
+        "description": "在 Mac 上开始，在 iPhone 上继续。同一段会话，随时随地接着做。",
+        "pause": "暂停动画",
+        "play": "播放动画",
+        "replay": "重播动画",
+        "setupLabel": "连接你的设备",
+        "stepEnable": "开启远程访问",
+        "title": "工作随行，自在继续。"
       },
       "pairing": {
         "codeLabel": "一次性配对码",
@@ -1730,10 +1742,6 @@
         "description": "使用 iPhone 上的 DJL 扫描二维码，或输入一次性配对码。",
         "expired": "此配对码已过期。请生成新配对码以继续。",
         "fingerprint": "设备指纹：{{fingerprint}}",
-        "manualPayloadAriaLabel": "手动配对数据",
-        "manualPayloadDescription": "在没有摄像头的模拟器中，将此一次性二维码数据粘贴到 DJL iOS → 使用配对码。请妥善保管；它会随本次配对会话过期。",
-        "manualPayloadHide": "隐藏手动配对数据",
-        "manualPayloadShow": "显示手动配对数据",
         "phoneConnected": "你的 iPhone 已连接",
         "preparing": "正在准备安全配对会话…",
         "qrAlt": "DJL iPhone 配对二维码",
@@ -1743,6 +1751,16 @@
       },
       "reset": {
         "confirm": "断开此 iPhone 并生成新的配对会话？"
+      },
+      "setup": {
+        "desktopOnly": "请在 DJL 桌面应用的设置中配对 iPhone。",
+        "disabled": "开启上方的远程访问以生成配对码。",
+        "enable": "开启上方的远程访问，保持电脑唤醒并让 DJL 继续运行。",
+        "loadError": "无法加载远程访问。请重新打开此页面再试。",
+        "qrError": "无法生成二维码。请生成新的配对码后重试。",
+        "scan": "在 iPhone 上打开 DJL，扫描此二维码即可安全配对。",
+        "work": "在 iPhone 上打开电脑中的会话、发送消息，并实时查看回复。",
+        "workTitle": "随时继续工作"
       },
       "status": {
         "connected": "已连接",

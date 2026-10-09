@@ -26,7 +26,7 @@ enum ContentNavigationRoute: Hashable {
     case newChatOpening
     case thread(id: String)
     case settings
-    case terminal(preferredWorkingDirectory: String?, threadID: String?)
+    case terminal(preferredWorkingDirectory: String?, threadID: String?, workspaceTerminalId: String? = nil)
 
     var isTerminalRoute: Bool {
         if case .terminal = self {
@@ -47,9 +47,11 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceNavigationMotion
 
     @State private var viewModel = ContentViewModel()
     @State private var isSidebarOpen = false
+    @State private var isNavigationDrawerOpen = false
     @State private var sidebarDragOffset: CGFloat = 0
     @State private var isSidebarPrewarmed = false
     @State private var selectedThread: CodexThread?
@@ -323,23 +325,23 @@ struct ContentView: View {
             } message: {
                 Text(manualPairingErrorAlertMessage)
             }
-            .alert("Enter Pairing Payload", isPresented: $isShowingManualPairingEntry) {
-                TextField("RMX1:… or {…}", text: $manualPairingCode)
-                    // A QR payload contains case-sensitive JSON and a relay URL. Short
-                    // codes are normalized by the validator, but changing a pasted
-                    // payload's case would make first-pairing fail on a Simulator.
-                    .textInputAutocapitalization(.never)
+            .alert("Enter one-time code", isPresented: $isShowingManualPairingEntry) {
+                TextField("ABCD-EF2345", text: $manualPairingCode)
+                    .keyboardType(.asciiCapable)
+                    .textContentType(.oneTimeCode)
+                    .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
 
-                Button(isResolvingManualPairingCode ? "Connecting..." : "Enter") {
+                Button(isResolvingManualPairingCode ? "Pairing…" : "Pair") {
                     submitManualPairingCode()
                 }
+                .disabled(normalizedOneTimePairingCode(manualPairingCode) == nil || isResolvingManualPairingCode)
 
                 Button("Cancel", role: .cancel) {
                     manualPairingCode = ""
                 }
             } message: {
-                Text("Paste the one-time pairing payload from DJL on your Mac. A short code works after this iPhone already knows the relay.")
+                Text("Enter the one-time pairing code shown in DJL on your computer → Settings → Remote.")
             }
             // Settings rides on a full-screen cover instead of `navigationPath`
             // so the gear tap inside the iOS 26 `safeAreaBar` header always
@@ -526,7 +528,28 @@ struct ContentView: View {
     }
 
     private var nativeNavigationAppBody: some View {
-        ZStack(alignment: .leading) {
+        PhoneNavigationDrawer(isOpen: $isNavigationDrawerOpen) {
+            PhoneNavigationMenu(
+                selectedThreadID: navigationPath.isEmpty ? nil : selectedThread?.id,
+                isRemoteSelected: navigationPath.isEmpty,
+                onRemote: {
+                    navigationPath.removeAll()
+                    setNavigationDrawer(open: false)
+                },
+                onThread: { thread in
+                    setNavigationDrawer(open: false)
+                    openThreadFromSidebar(thread)
+                },
+                onNewChat: {
+                    setNavigationDrawer(open: false)
+                    openNewChatDraftFromSidebar(source: .generalChat, preferredProjectPath: nil)
+                },
+                onSettings: {
+                    // Present over the menu itself rather than sliding back to Remote first.
+                    openSettingsFromSidebar()
+                }
+            )
+        } content: {
             nativeSidebarNavigationLayer
         }
     }
@@ -574,15 +597,10 @@ struct ContentView: View {
 
     // MARK: - Layers
 
-    // Native SwiftUI NavigationStack with the sidebar as the persistent root.
-    // Threads, settings, and terminal are pushed as destinations and use the
-    // system swipe-back gesture for a fluid, reliable pop animation.
-    //
-    // The system navigation bar is hidden on the sidebar root because
-    // `SidebarHeaderView` already supplies the logo, settings, and overflow
-    // actions; pushed destinations keep their own bars (with back button)
-    // by re-enabling visibility via `.toolbar(.visible, for: .navigationBar)`
-    // inside `navigationDestination(for:)`.
+    // Remote remains the persistent root. The surrounding phone drawer opens
+    // over this stack without replacing the active conversation or its composer.
+    // Root chrome comes from SidebarHeaderView; destinations use a native glass
+    // toolbar with the same navigation action.
     private var nativeSidebarNavigationLayer: some View {
         NavigationStack(path: $navigationPath) {
             sidebarContent(
@@ -594,6 +612,18 @@ struct ContentView: View {
             .navigationDestination(for: ContentNavigationRoute.self) { route in
                 navigationDestination(for: route)
                     .toolbar(.visible, for: .navigationBar)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                setNavigationDrawer(open: true)
+                            } label: {
+                                TwoLineHamburgerIcon()
+                            }
+                            .accessibilityLabel("Open navigation")
+                            .accessibilityIdentifier("navigation.open")
+                        }
+                    }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -622,8 +652,8 @@ struct ContentView: View {
         case .settings:
             SettingsView()
                 .adaptiveNavigationBar()
-        case .terminal(let preferredWorkingDirectory, let threadID):
-            TerminalScreen(preferredWorkingDirectory: preferredWorkingDirectory, threadID: threadID)
+        case .terminal(let preferredWorkingDirectory, let threadID, let workspaceTerminalId):
+            TerminalScreen(preferredWorkingDirectory: preferredWorkingDirectory, threadID: threadID, preferredWorkspaceTerminalId: workspaceTerminalId)
                 .adaptiveNavigationBar()
         }
     }
@@ -649,6 +679,11 @@ struct ContentView: View {
             onOpenTerminal: {
                 openTerminalFromSidebar(preferredWorkingDirectory: nil)
             },
+            onOpenWorkspaceTerminal: { terminal in
+                closeSidebarPresentation()
+                appendTerminalNavigationRoute(preferredWorkingDirectory: terminal.cwd, threadID: terminal.threadId, workspaceTerminalId: terminal.id)
+            },
+            onOpenNavigation: shouldPresentSidebarAsNavigation ? { setNavigationDrawer(open: true) } : nil,
             onOpenNewChatDraft: { source, preferredProjectPath in
                 openNewChatDraftFromSidebar(source: source, preferredProjectPath: preferredProjectPath)
             },
@@ -1135,11 +1170,16 @@ struct ContentView: View {
 
     private func openSidebarPresentation() {
         if shouldPresentSidebarAsNavigation {
-            requestSidebarFreshSyncIfNeeded()
-            guard !navigationPath.isEmpty else { return }
-            navigationPath.removeAll()
+            setNavigationDrawer(open: true)
         } else {
             toggleSidebar()
+        }
+    }
+
+    private func setNavigationDrawer(open: Bool) {
+        dismissActiveKeyboard()
+        withAnimation(reduceNavigationMotion ? nil : PhoneNavigationDrawerPolicy.transition) {
+            isNavigationDrawerOpen = open
         }
     }
 
@@ -1158,10 +1198,11 @@ struct ContentView: View {
 
     // Terminal can be opened from several surfaces with different cwd payloads;
     // replace the active terminal route instead of stacking near-identical pages.
-    private func appendTerminalNavigationRoute(preferredWorkingDirectory: String?, threadID: String? = nil) {
+    private func appendTerminalNavigationRoute(preferredWorkingDirectory: String?, threadID: String? = nil, workspaceTerminalId: String? = nil) {
         let route = ContentNavigationRoute.terminal(
             preferredWorkingDirectory: preferredWorkingDirectory,
-            threadID: threadID
+            threadID: threadID,
+            workspaceTerminalId: workspaceTerminalId
         )
         if navigationPath.last?.isTerminalRoute == true {
             navigationPath[navigationPath.count - 1] = route
@@ -1996,18 +2037,10 @@ struct ContentView: View {
             await viewModel.stopAutoReconnectForManualScan(codex: codex)
 
             do {
-                let pairingPayload: CodexPairingQRPayload
-                switch validatePairingQRCode(pendingCode) {
-                case .success(let payload):
-                    pairingPayload = payload
-                case .shortCode(let code):
-                    pairingPayload = try await codex.resolvePairingCode(code)
-                case .scanError(let message):
-                    throw CodexSecureTransportError.invalidQR(message)
-                case .bridgeUpdateRequired(let prompt):
-                    codex.bridgeUpdatePrompt = prompt
-                    return
+                guard let shortCode = normalizedOneTimePairingCode(pendingCode) else {
+                    throw CodexSecureTransportError.invalidQR("Enter the one-time code shown in DJL desktop Remote settings.")
                 }
+                let pairingPayload = try await codex.resolvePairingCode(shortCode)
 
                 isShowingManualPairingEntry = false
                 manualPairingCode = ""

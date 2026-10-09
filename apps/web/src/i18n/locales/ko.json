@@ -1718,10 +1718,22 @@
         "toggleAriaLabel": "iPhone 원격 접근 활성화"
       },
       "actions": {
+        "copiedCode": "코드 복사됨",
+        "copyCode": "페어링 코드 복사",
+        "copyFailed": "코드를 복사하지 못했습니다. 위 코드를 선택하여 복사하세요.",
         "disconnecting": "연결 해제 중…",
         "pairAnother": "다른 iPhone 페어링",
         "refresh": "새 페어링 코드 생성",
         "refreshing": "생성 중…"
+      },
+      "design": {
+        "description": "Mac에서 시작하고 iPhone에서 이어가세요. 어디서든 같은 대화로 작업하세요.",
+        "pause": "애니메이션 일시 정지",
+        "play": "애니메이션 재생",
+        "replay": "애니메이션 다시 재생",
+        "setupLabel": "기기 연결",
+        "stepEnable": "원격 액세스 켜기",
+        "title": "어디서든, 이어서."
       },
       "pairing": {
         "codeLabel": "일회용 페어링 코드",
@@ -1730,10 +1742,6 @@
         "description": "iPhone의 DJL로 QR 코드를 스캔하거나 일회용 페어링 코드를 사용하세요.",
         "expired": "이 코드가 만료되었습니다. 새 코드를 생성해 계속하세요.",
         "fingerprint": "기기 지문: {{fingerprint}}",
-        "manualPayloadAriaLabel": "수동 페어링 데이터",
-        "manualPayloadDescription": "카메라가 없는 시뮬레이터에서는 이 일회용 QR 데이터를 DJL iOS → 코드로 페어링에 붙여 넣으세요. 이 세션과 함께 만료되므로 비공개로 유지하세요.",
-        "manualPayloadHide": "수동 페어링 데이터 숨기기",
-        "manualPayloadShow": "수동 페어링 데이터 표시",
         "phoneConnected": "iPhone이 연결되었습니다",
         "preparing": "안전한 페어링 세션 준비 중…",
         "qrAlt": "DJL iPhone 페어링 QR 코드",
@@ -1743,6 +1751,16 @@
       },
       "reset": {
         "confirm": "이 iPhone의 연결을 해제하고 새 페어링 세션을 생성할까요?"
+      },
+      "setup": {
+        "desktopOnly": "DJL 데스크톱 앱의 설정에서 iPhone을 페어링하세요.",
+        "disabled": "위에서 원격 액세스를 켜면 페어링 코드가 생성됩니다.",
+        "enable": "위에서 원격 액세스를 켜세요. 컴퓨터가 잠자기 모드로 전환되지 않도록 하고 DJL을 열어 두세요.",
+        "loadError": "원격 액세스를 불러오지 못했습니다. 이 페이지를 다시 열어 보세요.",
+        "qrError": "QR 코드를 생성하지 못했습니다. 새 페어링 코드를 생성해 보세요.",
+        "scan": "iPhone에서 DJL을 열고 이 QR 코드를 스캔하여 안전하게 페어링하세요.",
+        "work": "iPhone에서 컴퓨터의 대화를 열고 메시지를 보내며 실시간으로 답변을 확인하세요.",
+        "workTitle": "작업 이어 하기"
       },
       "status": {
         "connected": "연결됨",
