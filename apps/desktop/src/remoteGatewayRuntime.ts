@@ -101,11 +101,22 @@ export function reduceRemoteGatewayChildMessage(
           : connectionStatus === "starting"
             ? "starting"
             : "offline";
+  const phoneDeviceKind = activeDevice ? nonEmptyString(activeDevice.deviceKind) : null;
+  const detail = nonEmptyString(snapshot.lastError);
+  // Most status messages only repeat liveness. Preserve identity so main does
+  // not broadcast unchanged state to every renderer window.
+  if (
+    state.status === status &&
+    state.phoneFingerprint === phoneFingerprint &&
+    state.phoneDeviceKind === phoneDeviceKind &&
+    state.message === detail
+  )
+    return state;
   return {
     ...state,
     status,
     phoneFingerprint,
-    phoneDeviceKind: activeDevice ? nonEmptyString(activeDevice.deviceKind) : null,
-    message: nonEmptyString(snapshot.lastError),
+    phoneDeviceKind,
+    message: detail,
   };
 }

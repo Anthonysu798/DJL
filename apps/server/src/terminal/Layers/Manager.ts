@@ -1066,6 +1066,19 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     return Boolean(this.sessions.get(toSessionKey(input.threadId, input.terminalId))?.process);
   }
 
+  listSessions() {
+    return Array.from(
+      this.sessions.values(),
+      ({ threadId, terminalId, cwd, status, workspaceName }) => ({
+        threadId,
+        terminalId,
+        cwd,
+        status,
+        ...(workspaceName ? { workspaceName } : {}),
+      }),
+    );
+  }
+
   hasRunningProcesses(): boolean {
     return [...this.sessions.values()].some((session) => Boolean(session.process));
   }
@@ -1083,6 +1096,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
         const cols = input.cols ?? DEFAULT_OPEN_COLS;
         const rows = input.rows ?? DEFAULT_OPEN_ROWS;
         const session: TerminalSessionState = {
+          ...(input.workspaceName ? { workspaceName: input.workspaceName } : {}),
           threadId: input.threadId,
           terminalId: input.terminalId,
           cwd: input.cwd,
@@ -2596,6 +2610,7 @@ export const TerminalManagerLive = Layer.effect(
 
     return {
       isRunning: (input) => Effect.sync(() => runtime.isRunning(input)),
+      listSessions: Effect.sync(() => runtime.listSessions()),
       hasRunningProcesses: Effect.sync(() => runtime.hasRunningProcesses()),
       open: (input, command) =>
         Effect.tryPromise({

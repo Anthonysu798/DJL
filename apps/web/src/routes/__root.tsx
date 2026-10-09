@@ -1438,6 +1438,17 @@ function EventRouter() {
     const shellBootstrapFallbackTimer = window.setTimeout(() => {
       void loadShellSnapshotOnce().catch(() => undefined);
     }, SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS);
+    let remoteShellRefreshInFlight: Promise<void> | null = null;
+    const unsubscribeRemoteGatewayState = window.desktopBridge?.remote?.onState(() => {
+      if (remoteShellRefreshInFlight) {
+        return;
+      }
+      remoteShellRefreshInFlight = loadShellSnapshotOnce(true)
+        .catch(() => undefined)
+        .finally(() => {
+          remoteShellRefreshInFlight = null;
+        });
+    });
     const threadDetailCatchupInterval = window.setInterval(() => {
       for (const threadId of subscribedThreadIds) {
         if (shouldPollThreadDetailCatchup(threadId)) {
@@ -1477,6 +1488,7 @@ function EventRouter() {
       unsubServerConfigUpdated();
       unsubProviderStatusesUpdated();
       unsubServerSettingsUpdated();
+      unsubscribeRemoteGatewayState?.();
     };
   }, [
     applyOrchestrationEventsHotPath,

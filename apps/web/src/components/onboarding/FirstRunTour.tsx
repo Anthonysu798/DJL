@@ -33,7 +33,6 @@ import {
 } from "~/onboarding/firstRunTour";
 import { openCodeModelProvidersQueryOptions } from "~/lib/providerDiscoveryReactQuery";
 import {
-  isSettingsSectionVisible,
   normalizeSettingsSection,
   SETTINGS_NAV_ITEMS,
   SETTINGS_TARGETS,
@@ -52,9 +51,7 @@ const SPOTLIGHT_TRANSITION_CLASS_NAME =
 
 type ActiveTour = "first-run" | "model-guide" | "settings";
 
-const SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter(
-  (item) => isSettingsSectionVisible(item.id) && (!item.desktopOnly || isElectron),
-);
+const SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter((item) => !item.desktopOnly || isElectron);
 const SETTINGS_TOUR_TARGETS = SETTINGS_TOUR_ITEMS.map((item) => settingsTourTarget(item.id));
 
 interface SpotlightRect {

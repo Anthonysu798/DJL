@@ -4,7 +4,6 @@
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
 import englishCatalog from "./i18n/locales/en.json";
 import {
-  isSettingsSectionVisible,
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
   type SettingsSectionId,
@@ -127,9 +126,7 @@ export function rankSettingsSearchEntries(
 ): readonly ResolvedSettingsSearchEntry[] {
   const trimmed = query.trim();
   if (trimmed.length === 0) return [];
-  const entries = SETTINGS_SEARCH_ENTRIES.filter((entry) =>
-    isSettingsSectionVisible(entry.section),
-  ).map((entry) => resolveSettingsSearchEntry(entry, t));
+  const entries = SETTINGS_SEARCH_ENTRIES.map((entry) => resolveSettingsSearchEntry(entry, t));
   return rankProviderDiscoveryItems(entries, trimmed, (entry) => [
     { value: entry.title },
     { value: entry.keywords, weight: 200 },

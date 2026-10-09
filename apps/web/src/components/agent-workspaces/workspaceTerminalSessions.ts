@@ -117,6 +117,7 @@ export class WorkspaceTerminalSessions {
           threadId: workspace.id,
           terminalId: pane.id,
           cwd: workspace.cwd,
+          workspaceName: workspace.name,
           ...(profile
             ? {
                 agentProfile: {

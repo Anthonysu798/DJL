@@ -1687,10 +1687,24 @@
         "toggleAriaLabel": "iPhone リモートアクセスを有効にする"
       },
       "actions": {
+        "copiedCode": "コードをコピーしました",
+        "copyCode": "ペアリングコードをコピー",
+        "copyFailed": "コピーできませんでした。上のコードを選択してコピーしてください。",
         "disconnecting": "切断中…",
         "pairAnother": "別の iPhone をペアリング",
         "refresh": "新しいペアリングコードを生成",
         "refreshing": "生成中…"
+      },
+      "design": {
+        "description": "Mac で始めて、iPhone で続きを。同じスレッドで、どこからでも。",
+        "desktopDevice": "Mac",
+        "pause": "アニメーションを一時停止",
+        "phoneDevice": "iPhone",
+        "play": "アニメーションを再生",
+        "replay": "アニメーションをもう一度再生",
+        "setupLabel": "デバイスをつなぐ",
+        "stepEnable": "リモートアクセスをオンにする",
+        "title": "どこにいても、続きから。"
       },
       "pairing": {
         "codeLabel": "1 回限りのペアリングコード",
@@ -1699,10 +1713,6 @@
         "description": "iPhone の DJL で QR コードを読み取るか、1 回限りのペアリングコードを使用します。",
         "expired": "このコードは期限切れです。新しいコードを生成してください。",
         "fingerprint": "デバイスフィンガープリント：{{fingerprint}}",
-        "manualPayloadAriaLabel": "手動ペアリングデータ",
-        "manualPayloadDescription": "カメラのないシミュレータでは、この 1 回限りの QR データを DJL iOS → コードでペアリングに貼り付けます。このセッションで期限切れになるため、公開しないでください。",
-        "manualPayloadHide": "手動ペアリングデータを隠す",
-        "manualPayloadShow": "手動ペアリングデータを表示",
         "phoneConnected": "iPhone が接続されました",
         "preparing": "安全なペアリングセッションを準備中…",
         "qrAlt": "DJL iPhone ペアリング QR コード",
@@ -1712,6 +1722,16 @@
       },
       "reset": {
         "confirm": "この iPhone を切断して新しいペアリングセッションを生成しますか？"
+      },
+      "setup": {
+        "desktopOnly": "DJL デスクトップアプリの設定を開いて iPhone をペアリングしてください。",
+        "disabled": "上のリモートアクセスをオンにすると、ペアリングコードが生成されます。",
+        "enable": "上のリモートアクセスをオンにし、パソコンをスリープさせずに DJL を開いておきます。",
+        "loadError": "リモートアクセスを読み込めませんでした。このページを開き直してください。",
+        "qrError": "QR コードを生成できませんでした。新しいペアリングコードを生成してください。",
+        "scan": "iPhone で DJL を開き、この QR コードをスキャンして安全にペアリングします。",
+        "work": "iPhone からパソコンのスレッドを開き、メッセージを送信して返信をリアルタイムで確認できます。",
+        "workTitle": "作業を続ける"
       },
       "status": {
         "connected": "接続済み",

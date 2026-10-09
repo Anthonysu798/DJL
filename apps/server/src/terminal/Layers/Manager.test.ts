@@ -255,6 +255,31 @@ describe("TerminalManager", () => {
     return { logsDir, ptyAdapter, manager };
   }
 
+  it("lists workspace terminal metadata without reading history or starting another process", async () => {
+    const { manager, ptyAdapter } = makeManager();
+    try {
+      expect(manager.listSessions()).toEqual([]);
+      await manager.open(openInput({ threadId: "agent-workspace-qa", terminalId: "pane-qa" }));
+      expect(manager.listSessions()).toEqual([
+        {
+          threadId: "agent-workspace-qa",
+          terminalId: "pane-qa",
+          cwd: process.cwd(),
+          status: "running",
+        },
+      ]);
+      expect(ptyAdapter.spawnInputs).toHaveLength(1);
+      await manager.close({
+        threadId: "agent-workspace-qa",
+        terminalId: "pane-qa",
+        deleteHistory: true,
+      });
+      expect(manager.listSessions()).toEqual([]);
+    } finally {
+      await manager.dispose();
+    }
+  });
+
   it("reports running background terminals until they are closed", async () => {
     const { manager } = makeManager();
     try {

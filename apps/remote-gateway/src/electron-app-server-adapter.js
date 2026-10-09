@@ -4,6 +4,7 @@
 // Exports: createElectronAppServerTransport plus pure projection helpers.
 // Depends on: crypto, ./electron-backend-rpc
 
+const { createRemoteProviderCatalog, effortKeyFor } = require("./remote-provider-catalog");
 const { createHash, randomUUID } = require("crypto");
 const { createElectronBackendRpcClient } = require("./electron-backend-rpc");
 const {
@@ -68,13 +69,17 @@ function createElectronAppServerTransport({
   now = () => new Date().toISOString(),
   makeId = () => randomUUID(),
   diagnostics = process.env.DJL_ELECTRON_BRIDGE_DIAGNOSTICS === "1",
+  onMutationCommitted = null,
 } = {}) {
   const rpc = backend || createElectronBackendRpcClient({ endpoint });
   const listeners = createListenerBag();
+  const providerCatalog = createRemoteProviderCatalog((tag, payload) => rpc.request(tag, payload));
+  let configUnsubscribe = null;
   const activeThreadSubscriptions = new Map();
   const threadStates = new Map();
   const projection = createThreadEventProjection();
   const turnReconcileTimers = new Map();
+  const lastLiveTurnByThread = new Map();
   const pendingApprovalResponses = new Map();
   let stopped = false;
   let shellUnsubscribe = null;
@@ -94,6 +99,27 @@ function createElectronAppServerTransport({
       launchDescription: "DJL Electron embedded backend",
     });
     void hydrateFromSnapshot();
+    providerCatalog.invalidate();
+    if (!configUnsubscribe)
+      configUnsubscribe = rpc.subscribe(
+        "server.subscribeConfig",
+        {},
+        {
+          onChunk(values) {
+            for (const value of values)
+              if (value?.type === "providerStatuses") {
+                providerCatalog.invalidate();
+                emitNotification("djl/models/changed", {});
+              }
+          },
+          onEnd() {
+            configUnsubscribe = null;
+          },
+          onError() {
+            configUnsubscribe = null;
+          },
+        },
+      );
     if (!gitProgressUnsubscribe) {
       // Desktop-started git actions: forward every progress event so the phone
       // can show the same toast it shows for its own actions.
@@ -159,6 +185,16 @@ function createElectronAppServerTransport({
   rpc.onError(() => {});
   rpc.onClose(() => {});
 
+  function rememberSnapshotDirectories(snapshot) {
+    const roots = new Map(
+      (snapshot.projects || []).map((project) => [project.id, project.workspaceRoot]),
+    );
+    for (const thread of readableThreads(snapshot)) {
+      const cwd = stringValue(thread.worktreePath) || stringValue(roots.get(thread.projectId));
+      if (cwd) threadCwdById.set(thread.id, cwd);
+    }
+  }
+
   // One full snapshot per backend (re)start: it seeds the thread list and the
   // per-thread subscriptions. Everything after that arrives as events.
   async function hydrateFromSnapshot() {
@@ -170,6 +206,7 @@ function createElectronAppServerTransport({
       logDiagnostic(diagnostics, "snapshot-failed", error);
       return;
     }
+    rememberSnapshotDirectories(snapshot);
     const threads = readableThreads(snapshot);
     logDiagnostic(diagnostics, `snapshot threads=${threads.length}`);
     for (const thread of threads) {
@@ -244,19 +281,35 @@ function createElectronAppServerTransport({
     activeThreadSubscriptions.delete(threadId);
     projection.forget(threadId);
     threadStates.delete(threadId);
+    threadCwdById.delete(threadId);
+    lastLiveTurnByThread.delete(threadId);
     stopTurnReconciliation(threadId);
   }
 
   function handleThreadEvent(threadId, event) {
     const outputs = projection.applyThreadEvent(event);
     for (const output of outputs) {
-      if (output.kind === "notification" && output.method === "turn/started") {
+      const turnId = output.params?.turnId;
+      if (
+        turnId &&
+        (turnId === projection.activeTurnId(threadId) || output.method === "turn/completed")
+      ) {
+        lastLiveTurnByThread.set(threadId, turnId);
         stopTurnReconciliation(threadId);
       }
       emitOutput(output);
     }
+    // Recovery snapshots must diff against the text already delivered live.
+    // Share the projection's maps instead of maintaining a second token buffer.
     const state = threadStates.get(threadId);
-    if (state) state.activeTurnId = projection.activeTurnId(threadId);
+    const live = projection.state(threadId);
+    if (state && live) {
+      state.snapshotSequence = live.lastAppliedSequence;
+      state.activeTurnId = live.activeTurnId;
+      state.messages = live.messages;
+      state.activityIds = live.activityIds;
+      state.runtimeMode = live.runtimeMode;
+    }
   }
 
   function emitOutput(output) {
@@ -293,12 +346,13 @@ function createElectronAppServerTransport({
   // turn in its local "sending" state. Reconcile only while the started turn
   // remains active; normal live notifications cancel this fallback promptly.
   function reconcileStartedTurn(threadId, turnId, attempt = 0) {
-    if (stopped || !threadId || !turnId) return;
+    if (stopped || !threadId || !turnId || lastLiveTurnByThread.get(threadId) === turnId) return;
     const priorTimer = turnReconcileTimers.get(threadId);
     if (priorTimer) clearTimeout(priorTimer);
 
     const timer = setTimeout(async () => {
       const thread = await refreshThread(threadId);
+      if (turnReconcileTimers.get(threadId) !== timer) return;
       const activeTurnId =
         threadStates.get(threadId)?.activeTurnId || thread?.session?.activeTurnId || null;
       if (activeTurnId !== turnId || attempt >= 60) {
@@ -470,6 +524,21 @@ function createElectronAppServerTransport({
     const mutation = createMutationContext(message, makeId);
     try {
       const result = await dispatchAppServerRequest(message.method, message.params || {}, mutation);
+      if (mutation && typeof onMutationCommitted === "function") {
+        const receipt = mutation.confirmedReceipt();
+        try {
+          onMutationCommitted({
+            method: message.method,
+            ...(receipt.sequence == null ? {} : { sequence: receipt.sequence }),
+          });
+        } catch (error) {
+          logDiagnostic(
+            diagnostics,
+            `mutation-commit-callback-failed method=${message.method}`,
+            error,
+          );
+        }
+      }
       if (requestId != null) {
         logDiagnostic(diagnostics, `response method=${message.method}`);
         emitRaw({
@@ -554,7 +623,7 @@ function createElectronAppServerTransport({
       case "thread/turns/list":
         return listTurns(await readSnapshot(), readThreadId(params), params);
       case "model/list":
-        return listModels(await readSnapshot());
+        return providerCatalog.list();
       case "thread/start":
         return startThread(params, mutation);
       case "turn/start":
@@ -580,6 +649,8 @@ function createElectronAppServerTransport({
         return renameThread(params, mutation);
       case "thread/unsubscribe":
         return {};
+      case "djl/workspaces/terminals":
+        return terminalMirror.listWorkspaces();
       case "djl/terminal/list":
         return terminalMirror.list(params);
       case "djl/terminal/open":
@@ -599,6 +670,7 @@ function createElectronAppServerTransport({
 
   async function readSnapshot() {
     const snapshot = await rpc.request(ORCHESTRATION.getSnapshot, {});
+    rememberSnapshotDirectories(snapshot);
     for (const thread of readableThreads(snapshot)) subscribeToThread(thread.id);
     return snapshot;
   }
@@ -614,9 +686,17 @@ function createElectronAppServerTransport({
 
   async function startThread(params, mutation) {
     const snapshot = await readSnapshot();
-    const cwd = stringValue(params.cwd) || defaultWorkspaceRoot(snapshot);
+    let cwd = stringValue(params.cwd);
+    if (!cwd && params.djlScope === "studio") {
+      const config = await rpc.request("server.getConfig", {});
+      cwd =
+        stringValue(config.studioWorkspaceRoot) ||
+        stringValue(config.chatWorkspaceRoot) ||
+        stringValue(config.cwd);
+    }
+    cwd ||= defaultWorkspaceRoot(snapshot);
     if (!cwd) throw new Error("Choose a workspace before starting a DJL Electron chat.");
-    const modelSelection = modelSelectionFor(params, snapshot);
+    const modelSelection = await providerCatalog.resolve(params, null);
     const runtimeMode = runtimeModeForAppServerParams(params, "approval-required");
     let project = (snapshot.projects || []).find(
       (entry) => entry.workspaceRoot === cwd && !entry.deletedAt,
@@ -628,8 +708,8 @@ function createElectronAppServerTransport({
           type: "project.create",
           commandId: mutation.commandId("project-create"),
           projectId,
-          kind: "project",
-          title: workspaceTitle(cwd),
+          kind: params.djlScope === "studio" ? "studio" : "project",
+          title: params.djlScope === "studio" ? "Studio" : workspaceTitle(cwd),
           workspaceRoot: cwd,
           defaultModelSelection: modelSelection,
           createdAt: now(),
@@ -691,7 +771,7 @@ function createElectronAppServerTransport({
     if (dispatchMode === "steer" && !thread.session?.activeTurnId) {
       throw new Error("No active turn available to steer.");
     }
-    const modelSelection = modelSelectionFor(params, snapshot, thread);
+    const modelSelection = await providerCatalog.resolve(params, thread.modelSelection);
     const runtimeMode = runtimeModeForAppServerParams(params, thread.runtimeMode);
     await dispatchCommand(
       {
@@ -960,6 +1040,8 @@ function createElectronAppServerTransport({
       shellUnsubscribe?.();
       gitProgressUnsubscribe?.();
       gitProgressUnsubscribe = null;
+      configUnsubscribe?.();
+      configUnsubscribe = null;
       terminalEventsUnsubscribe?.();
       terminalEventsUnsubscribe = null;
       terminalMirror.reset();
@@ -1030,31 +1112,6 @@ function listTurns(snapshot, threadId, params = {}) {
   return { data: ordered.slice(0, limit), nextCursor: null, hasMore: false };
 }
 
-function listModels(snapshot) {
-  const models = new Map();
-  for (const thread of readableThreads(snapshot)) {
-    const selection = thread.modelSelection;
-    const model = stringValue(selection?.model);
-    if (!model) continue;
-    models.set(model, selection);
-  }
-  if (models.size === 0)
-    models.set("openai/gpt-5", { provider: "opencode", model: "openai/gpt-5" });
-  return {
-    items: Array.from(models.entries()).map(([model, selection], index) => ({
-      id: model,
-      model,
-      displayName: model,
-      description: `DJL Electron ${stringValue(selection?.provider) || "model"}`,
-      isDefault: index === 0,
-      supportsFastMode: false,
-      supportedReasoningEfforts: ["low", "medium", "high"],
-      defaultReasoningEffort: "medium",
-    })),
-    nextCursor: null,
-  };
-}
-
 function appServerThread(thread, snapshot) {
   const project = (snapshot?.projects || []).find((entry) => entry.id === thread.projectId);
   const latestMessage = (thread.messages || []).at(-1);
@@ -1068,7 +1125,14 @@ function appServerThread(thread, snapshot) {
     cwd: thread.worktreePath || project?.workspaceRoot || undefined,
     model: stringValue(thread.modelSelection?.model) || undefined,
     modelProvider: stringValue(thread.modelSelection?.provider) || undefined,
-    reasoningEffort: stringValue(thread.modelSelection?.options?.variant) || undefined,
+    djlScope:
+      thread.workTask || project?.kind === "studio" || project?.kind === "chat"
+        ? "studio"
+        : "project",
+    reasoningEffort:
+      stringValue(
+        thread.modelSelection?.options?.[effortKeyFor(thread.modelSelection?.provider)],
+      ) || undefined,
     runtimeMode: normalizeRuntimeMode(thread.runtimeMode) || undefined,
   };
 }
@@ -1118,24 +1182,6 @@ function appServerMessageItem(message) {
     role,
     content: [{ type: role === "user" ? "inputText" : "outputText", text: message.text || "" }],
     createdAt: message.createdAt,
-  };
-}
-
-function modelSelectionFor(params, snapshot, thread = null) {
-  const requestedModel =
-    stringValue(params.model) ||
-    stringValue(params.collaborationMode?.settings?.model) ||
-    stringValue(thread?.modelSelection?.model) ||
-    stringValue(readableThreads(snapshot)[0]?.modelSelection?.model) ||
-    "openai/gpt-5";
-  const effort =
-    stringValue(params.effort) ||
-    stringValue(params.collaborationMode?.settings?.reasoning_effort) ||
-    stringValue(thread?.modelSelection?.options?.variant);
-  return {
-    provider: "opencode",
-    model: requestedModel,
-    ...(effort ? { options: { variant: effort } } : {}),
   };
 }
 
@@ -1356,6 +1402,5 @@ module.exports = {
   appServerTurns,
   createElectronAppServerTransport,
   extractInputText,
-  listModels,
   listThreads,
 };

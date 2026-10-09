@@ -2493,7 +2493,11 @@ function SettingsRouteView() {
         </div>
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto">
-            {activeSection === "profile" ? (
+            {activeSection === "remote" ? (
+              <div className="mx-auto w-full max-w-4xl px-5 pt-5 pb-10 sm:px-8">
+                {renderActivePanel()}
+              </div>
+            ) : activeSection === "profile" ? (
               // Profile is a self-contained dashboard: it owns its own header (avatar,
               // name, share) so it skips the section title bar, and gets a slightly wider
               // pane than the form sections to fit the heatmap + two-column layout.
@@ -2509,18 +2513,16 @@ function SettingsRouteView() {
                       {t(activeSectionItem.descriptionKey)}
                     </p>
                   </div>
-                  {activeSection !== "remote" ? (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      className="shrink-0"
-                      disabled={changedSettingLabels.length === 0}
-                      onClick={() => void restoreDefaults()}
-                    >
-                      <RotateCcwIcon className="size-3.5" />
-                      {t("actions.restoreDefaults")}
-                    </Button>
-                  ) : null}
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={changedSettingLabels.length === 0}
+                    onClick={() => void restoreDefaults()}
+                  >
+                    <RotateCcwIcon className="size-3.5" />
+                    {t("actions.restoreDefaults")}
+                  </Button>
                 </div>
 
                 {renderActivePanel()}

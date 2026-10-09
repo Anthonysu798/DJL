@@ -2,14 +2,16 @@
 // Purpose: Zero-friction desktop QR pairing and remote access controls.
 
 import type { DesktopRemoteGatewayState } from "@synara/contracts";
-import QRCode from "qrcode";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
+import { CentralIcon } from "~/lib/central-icons";
 import { cn } from "~/lib/utils";
-import { SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
+import { settingRowAnchorId } from "~/settingsNavigation";
+import { RemoteHero } from "./remote/RemoteHero";
+import "./remote/remoteSettings.css";
 
 const STATUS_TONE: Record<DesktopRemoteGatewayState["status"], string> = {
   disabled: "bg-muted-foreground/50",
@@ -21,22 +23,13 @@ const STATUS_TONE: Record<DesktopRemoteGatewayState["status"], string> = {
   error: "bg-destructive",
 };
 
-// Mirrors the QR payload in DJL iOS's paste-friendly format. It keeps the relay
-// and one-time session together, so a first-time Simulator pairing never needs
-// to guess a relay from a short code.
-export function encodeManualPairingPayload(payloadJson: string): string {
-  const bytes = new TextEncoder().encode(payloadJson);
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return `RMX1:${btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "")}`;
-}
-
 export function RemoteSettingsPanel() {
   const { t } = useTranslation("settings");
   const bridge = window.desktopBridge?.remote;
   const [state, setState] = useState<DesktopRemoteGatewayState | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [isManualPayloadVisible, setIsManualPayloadVisible] = useState(false);
+  const [qrImage, setQrImage] = useState<{ payload: string; url: string } | null>(null);
+  const [qrError, setQrError] = useState(false);
+  const [copiedPairingCode, setCopiedPairingCode] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"toggle" | "refresh" | "reset" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [clock, setClock] = useState(() => Date.now());
@@ -44,63 +37,67 @@ export function RemoteSettingsPanel() {
   useEffect(() => {
     if (!bridge) return;
     let active = true;
-    void bridge.getState().then((nextState) => {
-      if (active) setState(nextState);
-    });
+    let receivedLiveState = false;
     const unsubscribe = bridge.onState((nextState) => {
+      receivedLiveState = true;
       if (active) setState(nextState);
     });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [bridge]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setClock(Date.now()), 15_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const payload = state?.pairingPayloadJson;
-    if (!payload) {
-      setQrDataUrl(null);
-      return;
-    }
-    void QRCode.toDataURL(payload, {
-      errorCorrectionLevel: "M",
-      margin: 2,
-      width: 320,
-      color: { dark: "#0a0a0a", light: "#ffffff" },
-    }).then(
-      (url) => {
-        if (active) setQrDataUrl(url);
+    void bridge.getState().then(
+      (nextState) => {
+        if (active && !receivedLiveState) setState(nextState);
       },
       () => {
-        if (active) setQrDataUrl(null);
+        if (active && !receivedLiveState) setActionError(t("remote.setup.loadError"));
       },
     );
     return () => {
       active = false;
+      unsubscribe();
     };
-  }, [state?.pairingPayloadJson]);
+  }, [bridge, t]);
 
-  // A refreshed session invalidates the prior payload, so never leave it expanded
-  // while the user is looking at a newly generated QR.
   useEffect(() => {
-    setIsManualPayloadVisible(false);
-  }, [state?.pairingPayloadJson]);
+    setClock(Date.now());
+    if (!state?.enabled || state.status === "connected" || !state.pairingExpiresAt) return;
+    const delay = state.pairingExpiresAt - Date.now();
+    if (delay <= 0) return;
+    const timer = window.setTimeout(() => setClock(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [state?.enabled, state?.status, state?.pairingExpiresAt]);
 
+  useEffect(() => {
+    let active = true;
+    const payload = state?.pairingPayloadJson;
+    setQrError(false);
+    if (!payload || !state?.enabled || state.status === "connected") {
+      setQrImage(null);
+      return;
+    }
+    void import("qrcode")
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(payload, {
+          errorCorrectionLevel: "M",
+          margin: 2,
+          width: 320,
+          color: { dark: "#0a0a0a", light: "#ffffff" },
+        }),
+      )
+      .then(
+        (url) => {
+          if (active) setQrImage({ payload, url });
+        },
+        () => {
+          if (active) setQrError(true);
+        },
+      );
+    return () => {
+      active = false;
+    };
+  }, [state?.pairingPayloadJson, state?.enabled, state?.status]);
+
+  const qrDataUrl = qrImage?.payload === state?.pairingPayloadJson ? qrImage?.url : null;
   const expired = Boolean(state?.pairingExpiresAt && state.pairingExpiresAt <= clock);
-  const manualPairingPayload = useMemo(
-    () => (state?.pairingPayloadJson ? encodeManualPairingPayload(state.pairingPayloadJson) : ""),
-    [state?.pairingPayloadJson],
-  );
-  const statusLabel = useMemo(
-    () => (state ? t(`remote.status.${state.status}`) : t("remote.status.starting")),
-    [state, t],
-  );
+  const statusLabel = t(`remote.status.${state?.status ?? "starting"}`);
   const remoteIsConfigured = state?.configured === true;
 
   const runAction = async (
@@ -118,6 +115,18 @@ export function RemoteSettingsPanel() {
     }
   };
 
+  const copyPairingCode = async () => {
+    const code = state?.pairingCode;
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedPairingCode(code);
+      setActionError(null);
+    } catch {
+      setActionError(t("remote.actions.copyFailed"));
+    }
+  };
+
   const resetPairing = async () => {
     if (!bridge) return;
     const confirmed = await window.desktopBridge?.confirm(t("remote.reset.confirm"));
@@ -125,155 +134,221 @@ export function RemoteSettingsPanel() {
     await runAction("reset", () => bridge.resetPairing());
   };
 
-  if (!bridge) return null;
+  if (!bridge)
+    return <p className="text-sm text-muted-foreground">{t("remote.setup.desktopOnly")}</p>;
+
+  const connected = state?.status === "connected" && state.enabled;
+  const enabled = remoteIsConfigured && state?.enabled === true;
 
   return (
-    <div>
-      <SettingsSection title={t("remote.access.sectionTitle")}>
-        <SettingsRow
-          settingId="remote-access"
-          title={t("remote.access.title")}
-          description={t("remote.access.description")}
-          status={
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                className={cn("size-2 rounded-full", STATUS_TONE[state?.status ?? "starting"])}
-              />
-              {statusLabel}
-            </span>
-          }
-          control={
-            <Switch
-              aria-label={t("remote.access.toggleAriaLabel")}
-              checked={remoteIsConfigured && (state?.enabled ?? false)}
-              // A desktop without a relay cannot honor this switch. Keep the
-              // unavailable state truthful instead of showing an enabled blue
-              // toggle that appears actionable.
-              disabled={!remoteIsConfigured || busyAction !== null}
-              onCheckedChange={(enabled) =>
-                void runAction("toggle", () => bridge.setEnabled(enabled))
-              }
+    <div className="remote-settings">
+      <RemoteHero />
+      <section
+        className="remote-access-bar"
+        id={settingRowAnchorId("remote-access")}
+        aria-labelledby="remote-access-heading"
+      >
+        <div className="remote-access-symbol">
+          <CentralIcon name="phone-haptic" className="size-5" />
+        </div>
+        <div className="remote-access-copy">
+          <h2 id="remote-access-heading">{t("remote.access.sectionTitle")}</h2>
+          <span role="status" className="remote-status">
+            <span
+              className={cn("size-1.5 rounded-full", STATUS_TONE[state?.status ?? "starting"])}
             />
-          }
+            {statusLabel}
+          </span>
+        </div>
+        <Switch
+          aria-label={t("remote.access.toggleAriaLabel")}
+          checked={enabled}
+          disabled={!remoteIsConfigured || busyAction !== null}
+          onCheckedChange={(next) => void runAction("toggle", () => bridge.setEnabled(next))}
         />
-      </SettingsSection>
+      </section>
 
-      <SettingsSection title={t("remote.pairing.sectionTitle")}>
-        <SettingsRow
-          title={
-            state?.status === "connected"
-              ? t("remote.pairing.connectedTitle")
-              : t("remote.pairing.title")
-          }
-          description={
-            state?.status === "connected"
-              ? t("remote.pairing.connectedDescription")
-              : t("remote.pairing.description")
-          }
-        >
-          <div className="mt-5 flex flex-col items-center gap-4 pb-1">
-            {!state?.configured ? (
-              <div className="w-full rounded-lg border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-sm text-muted-foreground">
-                {t("remote.unavailable")}
-              </div>
-            ) : state.status === "connected" ? (
-              <div className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/8 px-4 py-4 text-center">
-                <div className="text-sm font-medium text-foreground">
-                  {t("remote.pairing.phoneConnected")}
-                </div>
-                {state.phoneFingerprint ? (
-                  <div className="mt-1 font-mono text-xs text-muted-foreground">
-                    {t("remote.pairing.fingerprint", { fingerprint: state.phoneFingerprint })}
-                  </div>
-                ) : null}
-              </div>
-            ) : qrDataUrl && !expired && state.enabled ? (
-              <>
-                <div className="rounded-[1.25rem] border border-border bg-white p-3">
-                  <img
-                    src={qrDataUrl}
-                    alt={t("remote.pairing.qrAlt")}
-                    className="size-64 max-w-full rounded-lg"
-                  />
-                </div>
-                {state.pairingCode ? (
-                  <div className="text-center">
-                    <div className="text-xs text-muted-foreground">
-                      {t("remote.pairing.codeLabel")}
-                    </div>
-                    <code className="mt-1 block text-base font-semibold tracking-[0.18em] text-foreground">
-                      {state.pairingCode}
-                    </code>
-                  </div>
-                ) : null}
-                <div className="w-full max-w-md rounded-lg border border-border bg-muted/20 p-3 text-left">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    aria-expanded={isManualPayloadVisible}
-                    onClick={() => setIsManualPayloadVisible((visible) => !visible)}
-                  >
-                    {isManualPayloadVisible
-                      ? t("remote.pairing.manualPayloadHide")
-                      : t("remote.pairing.manualPayloadShow")}
-                  </Button>
-                  {isManualPayloadVisible ? (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-xs leading-relaxed text-muted-foreground">
-                        {t("remote.pairing.manualPayloadDescription")}
-                      </p>
-                      <textarea
-                        aria-label={t("remote.pairing.manualPayloadAriaLabel")}
-                        readOnly
-                        spellCheck={false}
-                        value={manualPairingPayload}
-                        className="h-28 w-full resize-y rounded-md border border-border bg-background p-2 font-mono text-xs leading-relaxed text-foreground"
-                      />
-                    </div>
-                  ) : null}
-                </div>
-                <p className="max-w-md text-center text-xs leading-relaxed text-muted-foreground">
-                  {t("remote.pairing.securityNote")}
-                </p>
-              </>
-            ) : (
-              <div className="w-full rounded-lg border border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-                {expired ? t("remote.pairing.expired") : t("remote.pairing.preparing")}
-              </div>
-            )}
-
-            {state?.message || actionError ? (
-              <p className="w-full text-xs text-destructive">{actionError ?? state?.message}</p>
-            ) : null}
-
-            <div className="flex w-full flex-wrap justify-end gap-2">
-              {state?.status === "connected" ? (
-                <Button
-                  size="sm"
-                  variant="destructive-outline"
-                  disabled={busyAction !== null}
-                  onClick={() => void resetPairing()}
+      <section className="remote-pairing" aria-labelledby="remote-pairing-heading">
+        <div className="remote-guide">
+          <span className="remote-section-label">{t("remote.design.setupLabel")}</span>
+          <h2 id="remote-pairing-heading">
+            {connected ? t("remote.pairing.connectedTitle") : t("remote.pairing.title")}
+          </h2>
+          <p className="remote-guide-description">
+            {connected ? t("remote.pairing.connectedDescription") : t("remote.pairing.description")}
+          </p>
+          <ol className="remote-steps">
+            {(
+              [
+                ["remote.design.stepEnable", "remote.setup.enable"],
+                ["remote.pairing.title", "remote.setup.scan"],
+                ["remote.setup.workTitle", "remote.setup.work"],
+              ] as const
+            ).map(([title, description], index) => {
+              const complete = index === 0 ? enabled : connected;
+              const active = !connected && (enabled ? index === 1 : index === 0);
+              return (
+                <li
+                  key={title}
+                  data-complete={complete || undefined}
+                  data-active={active || undefined}
                 >
-                  {busyAction === "reset"
-                    ? t("remote.actions.disconnecting")
-                    : t("remote.actions.pairAnother")}
-                </Button>
+                  <span className="remote-step-marker" aria-hidden="true">
+                    {complete ? (
+                      <svg viewBox="0 0 16 16">
+                        <path d="m4 8 3 3 5-6" />
+                      </svg>
+                    ) : (
+                      index + 1
+                    )}
+                  </span>
+                  <div>
+                    <h3>{t(title)}</h3>
+                    <p>{t(description)}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+
+        <div className="remote-pairing-surface" aria-busy={busyAction !== null}>
+          <div className="remote-computer-label">
+            <svg
+              viewBox="0 0 20 20"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              aria-hidden="true"
+            >
+              <rect x="4" y="3" width="12" height="10" rx="1.5" />
+              <path d="M2 15h16l-1 2H3Z" />
+            </svg>
+            <span>{state?.computerName ?? t("remote.pairing.sectionTitle")}</span>
+          </div>
+          <div
+            className="remote-qr-stage"
+            key={connected ? "connected" : state?.enabled ? "enabled" : "disabled"}
+          >
+            {!state ? (
+              <p className="remote-empty-state">{t("remote.status.starting")}</p>
+            ) : !state.configured ? (
+              <p className="remote-empty-state">{t("remote.unavailable")}</p>
+            ) : !state.enabled ? (
+              <div className="remote-empty-state">
+                <CentralIcon name="phone-haptic" className="mx-auto mb-4 size-8 opacity-40" />
+                <p>{t("remote.setup.disabled")}</p>
+              </div>
+            ) : connected ? (
+              <div className="remote-connected">
+                <div className="remote-connected-icon">
+                  <svg viewBox="0 0 32 32" aria-hidden="true">
+                    <path d="m9 16 5 5 10-12" />
+                  </svg>
+                </div>
+                <h3>{t("remote.pairing.phoneConnected")}</h3>
+                {state.phoneFingerprint ? (
+                  <p className="remote-fingerprint">
+                    {t("remote.pairing.fingerprint", { fingerprint: state.phoneFingerprint })}
+                  </p>
+                ) : null}
+              </div>
+            ) : qrDataUrl && !expired ? (
+              <div className="remote-qr-frame">
+                <img src={qrDataUrl} alt={t("remote.pairing.qrAlt")} width={224} height={224} />
+              </div>
+            ) : (
+              <p className="remote-empty-state">
+                {expired
+                  ? t("remote.pairing.expired")
+                  : qrError
+                    ? t("remote.setup.qrError")
+                    : state.status === "offline" || state.status === "error"
+                      ? statusLabel
+                      : t("remote.pairing.preparing")}
+              </p>
+            )}
+          </div>
+
+          {!connected && enabled && qrDataUrl && !expired ? (
+            <>
+              {state?.pairingCode ? (
+                <div className="remote-pairing-code">
+                  <span>{t("remote.pairing.codeLabel")}</span>
+                  <code>{state.pairingCode}</code>
+                </div>
               ) : null}
+              <button
+                type="button"
+                className="remote-copy-trigger"
+                disabled={!state?.pairingCode}
+                onClick={() => void copyPairingCode()}
+              >
+                {copiedPairingCode === state?.pairingCode
+                  ? t("remote.actions.copiedCode")
+                  : t("remote.actions.copyCode")}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <rect x="5" y="5" width="8" height="8" rx="2" />
+                  <path d="M10 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+                </svg>
+              </button>
+            </>
+          ) : null}
+
+          {state?.message || actionError ? (
+            <p role="alert" className="remote-action-error">
+              {actionError ?? state?.message}
+            </p>
+          ) : null}
+          <div className="remote-pairing-actions">
+            {connected ? (
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!state?.enabled || !state?.configured || busyAction !== null}
+                disabled={busyAction !== null}
+                onClick={() => void resetPairing()}
+              >
+                {busyAction === "reset"
+                  ? t("remote.actions.disconnecting")
+                  : t("remote.actions.pairAnother")}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!enabled || busyAction !== null}
                 onClick={() => void runAction("refresh", () => bridge.refreshPairing())}
               >
+                <svg
+                  viewBox="0 0 16 16"
+                  className={cn("size-3.5", busyAction === "refresh" && "remote-refreshing")}
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 6a5 5 0 1 1 0 5M3 2v4h4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
                 {busyAction === "refresh"
                   ? t("remote.actions.refreshing")
                   : t("remote.actions.refresh")}
               </Button>
-            </div>
+            )}
           </div>
-        </SettingsRow>
-      </SettingsSection>
+        </div>
+      </section>
+      <p className="remote-security">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8 1.5 13 3v4.5c0 3-5 6.5-5 6.5S3 10.5 3 7.5V3Z" />
+          <path d="m5.5 7.5 1.5 1.5 3-3" />
+        </svg>
+        {t("remote.pairing.securityNote")}
+      </p>
     </div>
   );
 }

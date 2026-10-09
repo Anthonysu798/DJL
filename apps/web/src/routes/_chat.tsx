@@ -2,6 +2,8 @@ import type { ResolvedKeybindingsConfig } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAgentWorkspaceStore } from "~/agentWorkspaceStore";
+import { workspaceTerminalSessions } from "~/components/agent-workspaces/workspaceTerminalSessions";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -544,6 +546,18 @@ const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
   useDesktopReady();
+  useEffect(() => {
+    if (!isElectron) return;
+    // Restore saved workspace sessions at startup; a paired phone must not
+    // depend on the laptop first opening the Workspaces screen.
+    const sync = () => {
+      const state = useAgentWorkspaceStore.getState();
+      workspaceTerminalSessions.sync(state.workspaces, state.profiles);
+    };
+    const unsubscribe = useAgentWorkspaceStore.subscribe(sync);
+    sync();
+    return unsubscribe;
+  }, []);
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });

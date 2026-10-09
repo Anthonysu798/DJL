@@ -109,6 +109,7 @@ function createThreadEventProjection() {
     hydrate,
     applyThreadEvent,
     applyShellThread,
+    state: (threadId) => states.get(threadId),
     has: (threadId) => states.has(threadId),
     forget: (threadId) => {
       states.delete(threadId);

@@ -154,6 +154,14 @@ function createDesktopTerminalMirror({
   }
 
   return {
+    async listWorkspaces() {
+      const sessions = await request("terminal.list", {});
+      return {
+        terminals: (Array.isArray(sessions) ? sessions : []).filter((session) =>
+          readString(session?.threadId).startsWith("agent-workspace-"),
+        ),
+      };
+    },
     list(params) {
       const threadId = readString(params?.threadId);
       if (!threadId) throw new Error("threadId is required.");
@@ -230,6 +238,12 @@ function createDesktopTerminalMirror({
       const terminalId = readString(event.terminalId);
       if (!threadId || !terminalId) return;
       remember(threadId, terminalId);
+      if (
+        threadId.startsWith("agent-workspace-") &&
+        ["started", "restarted", "exited", "closed"].includes(event.type)
+      ) {
+        emit("djl/workspaces/changed", {});
+      }
       const entry = watched.get(watchKey(threadId, terminalId));
       if (!entry) return;
       if (event.type === "output") {

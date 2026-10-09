@@ -97,6 +97,11 @@ Keep the existing platform-signing secrets configured for public releases. A bui
 
 ## 6. Configure and ship the iOS app
 
+
+Use the same public `DJL_REMOTE_RELAY_URL` build setting for desktop and iOS. `BuildSupport/Base.xcconfig` maps it to the iPhone's `DJL_DEFAULT_RELAY_URL` Info.plist value. A first-time one-time-code lookup requires that baked-in address; the user enters only the desktop's short code. Do not ship an iPhone build with an empty pairing endpoint.
+
+For Simulator-only development, set `DJL_REMOTE_RELAY_URL=ws://127.0.0.1:8799/relay` in the Debug launch environment when the local relay runs on port 8799. A physical phone/production build must use the shared reachable `wss://` endpoint instead. Debug environment overrides are ignored in Release.
+
 1. Enable Push Notifications for `app.djl.ios` in the Apple Developer portal.
 2. Create matching development and distribution provisioning profiles.
 3. Confirm the DJL target's Push Notifications entitlement and Face ID usage description.
@@ -125,7 +130,7 @@ The CI simulator lane does not replace an archive/signing check because hosted C
 Use a fresh desktop user-data directory and a test iPhone:
 
 1. Install a release artifact and confirm Remote reaches **Ready** without entering configuration.
-2. Scan the QR, approve device-owner authentication, and verify the computer fingerprint on the phone.
+2. On a fresh iPhone install, choose Pair with Code and enter only the short one-time code shown on desktop. Approve device-owner authentication and verify the computer fingerprint. Also verify QR scanning as the alternate route.
 3. Start a harmless task, background the phone, and confirm a generic completion notification arrives without response text.
 4. Switch the phone between Wi-Fi and cellular and verify trusted reconnect without rescanning.
 5. Restart DJL and verify trusted session resolution.

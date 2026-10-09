@@ -3,6 +3,7 @@
 // Layer: Desktop main process
 // Depends on: Electron, backend startup helpers, browser manager, and update runtime.
 
+import { createRemotePairingRenewal } from "./remotePairingRenewal";
 import * as ChildProcess from "node:child_process";
 import * as Crypto from "node:crypto";
 import * as FS from "node:fs";
@@ -2851,8 +2852,14 @@ function emitRemoteGatewayState(): void {
   target.send(REMOTE_GATEWAY_IPC_CHANNELS.state, remoteGatewayState);
 }
 
+const remotePairingRenewal = createRemotePairingRenewal(
+  () => restartRemoteGateway(),
+  (error) => console.warn("[desktop-remote] Pairing renewal failed", error),
+);
+
 function setRemoteGatewayState(state: DesktopRemoteGatewayState): void {
   remoteGatewayState = state;
+  remotePairingRenewal.update(state);
   emitRemoteGatewayState();
 }
 
@@ -2960,6 +2967,12 @@ function startRemoteGateway(): void {
         sendRemoteUpdateResult(child, record.requestId);
         return;
       }
+      if (record.type === "remote-mutation") {
+        // A phone mutation is already committed to the embedded backend. Wake
+        // the renderer's shell reconciliation path without reloading the app.
+        emitRemoteGatewayState();
+        return;
+      }
     }
     const nextState = reduceRemoteGatewayChildMessage(remoteGatewayState, message);
     if (nextState !== remoteGatewayState) {
@@ -3021,6 +3034,7 @@ async function waitForRemoteGatewayExit(
 }
 
 async function stopRemoteGateway(): Promise<void> {
+  remotePairingRenewal.stop();
   clearRemoteGatewayRestartTimer();
   const child = remoteGatewayProcess;
   if (!child) return;
@@ -3232,7 +3246,8 @@ function registerIpcHandlers(): void {
 
   ipcMain.removeHandler(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing);
   ipcMain.handle(REMOTE_GATEWAY_IPC_CHANNELS.refreshPairing, async () => {
-    if (!remoteGatewayEnabled) return remoteGatewayState;
+    if (!remoteGatewayEnabled || remoteGatewayState.status === "connected")
+      return remoteGatewayState;
     return restartRemoteGateway();
   });
 

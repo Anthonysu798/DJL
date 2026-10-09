@@ -45,9 +45,13 @@ describe("rankSettingsSearchEntries", () => {
     expect(results.some((entry) => entry.id === "notifications:activity-toasts")).toBe(true);
   });
 
-  it("does not expose the unfinished remote-control section", () => {
-    expect(rankSettingsSearchEntries("remote", SETTINGS_SEARCH_ENTRIES.length)).toEqual([]);
-    expect(normalizeSettingsSection("remote")).toBe("general");
+  it("exposes remote control through search and saved deep links", () => {
+    expect(
+      rankSettingsSearchEntries("remote", SETTINGS_SEARCH_ENTRIES.length).some(
+        (entry) => entry.section === "remote",
+      ),
+    ).toBe(true);
+    expect(normalizeSettingsSection("remote")).toBe("remote");
   });
 
   it("surfaces every row in a section when searching the section label", () => {

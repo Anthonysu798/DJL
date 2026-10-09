@@ -30,11 +30,7 @@ import {
   requestSettingsTourReplay,
   settingsTourTarget,
 } from "~/onboarding/firstRunTour";
-import {
-  isSettingsSectionVisible,
-  normalizeSettingsSection,
-  SETTINGS_NAV_ITEMS,
-} from "~/settingsNavigation";
+import { normalizeSettingsSection, SETTINGS_NAV_ITEMS } from "~/settingsNavigation";
 import { useStore } from "~/store";
 import { FirstRunTour } from "./FirstRunTour";
 
@@ -42,9 +38,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
 
-const BROWSER_SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter(
-  (item) => isSettingsSectionVisible(item.id) && !item.desktopOnly,
-);
+const BROWSER_SETTINGS_TOUR_ITEMS = SETTINGS_NAV_ITEMS.filter((item) => !item.desktopOnly);
 
 function settingsCatalogValue(path: string): string {
   let value: unknown = englishCatalog.settings;
