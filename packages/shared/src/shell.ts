@@ -15,7 +15,7 @@ const SHELL_ENV_NAME_PATTERN = /^[A-Z0-9_]+$/;
 type ExecFileSyncLike = (
   file: string,
   args: ReadonlyArray<string>,
-  options: { encoding: "utf8"; timeout: number },
+  options: { encoding: "utf8"; timeout: number; env?: NodeJS.ProcessEnv },
 ) => string;
 
 function trimNonEmpty(value: string | null | undefined): string | undefined {
@@ -193,6 +193,8 @@ export const readEnvironmentFromLoginShell: ShellEnvironmentReader = (
   const output = execFile(shell, ["-ilc", buildEnvironmentCaptureCommand(names)], {
     encoding: "utf8",
     timeout: 5000,
+    // Match the async reader: a prompt Git-status daemon adds seconds on some shells.
+    env: { ...process.env, POWERLEVEL9K_DISABLE_GITSTATUS: "true" },
   });
 
   return parseCapturedEnvironment(output, names);

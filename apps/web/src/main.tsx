@@ -11,6 +11,7 @@ import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
 import { isElectron } from "./env";
 import { initializeRendererI18n } from "./i18n";
+import { prewarmThreadRoute } from "./startup/prewarmThreadRoute";
 
 const router = getRouter(appHistory);
 
@@ -28,6 +29,9 @@ async function renderApp(): Promise<void> {
       <RouterProvider router={router} />
     </React.StrictMode>,
   );
+  // The first navigation always lands on a thread. Fetch that chunk now, in
+  // parallel with the backend boot, instead of after the thread is created.
+  prewarmThreadRoute(router);
 }
 
 void renderApp();
