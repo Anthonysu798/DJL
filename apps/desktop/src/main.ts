@@ -2609,6 +2609,8 @@ function backendEnv(): NodeJS.ProcessEnv {
     DJL_MIGRATION_SOURCES: migrationSources.join(Path.delimiter),
     DJL_HOME: BASE_DIR,
     SYNARA_HOME: BASE_DIR,
+    // bootstrap() awaits syncShellEnvironment before spawning the backend.
+    DJL_SHELL_ENV_SYNCED: "1",
     ...(localAiRuntimeInfo.hostArch === "arm64" || localAiRuntimeInfo.hostArch === "x64"
       ? { DJL_HOST_ARCH: localAiRuntimeInfo.hostArch }
       : {}),

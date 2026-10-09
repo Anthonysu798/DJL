@@ -44,6 +44,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("hides the real app root while the shell is mounted and restores it on destroy", () => {
+  const root = document.createElement("div");
+  root.id = "root";
+  document.body.append(root);
+  try {
+    mount();
+    expect(getComputedStyle(root).visibility).toBe("hidden");
+    shell!.destroy();
+    shell = undefined;
+    expect(getComputedStyle(root).visibility).toBe("visible");
+  } finally {
+    root.remove();
+  }
+});
+
 it("accepts multibyte input before any native API and keeps selection on status changes", async () => {
   vi.stubGlobal("desktopBridge", undefined);
   const options = mount();
