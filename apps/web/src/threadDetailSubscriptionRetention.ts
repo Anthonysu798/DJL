@@ -4,8 +4,9 @@
 // Exports: retain/release helpers plus React and imperative subscription listeners.
 
 import type { ThreadId } from "@synara/contracts";
-import { useSyncExternalStore } from "react";
-import { useStore } from "./store";
+import { useEffect, useSyncExternalStore } from "react";
+import { evictThreadDetail, useStore } from "./store";
+import { getThreadFromState } from "./threadDerivation";
 
 const THREAD_DETAIL_RETENTION_EVICTION_MS = 15 * 60 * 1000;
 const MAX_CACHED_THREAD_DETAIL_SUBSCRIPTIONS = 32;
@@ -59,7 +60,7 @@ function isNonIdleThread(threadId: ThreadId): boolean {
     }
   }
 
-  const thread = state.threads.find((candidate) => candidate.id === threadId);
+  const thread = getThreadFromState(state, threadId);
   if (!thread) {
     return false;
   }
@@ -87,16 +88,20 @@ function clearEvictionTimeout(entry: RetainedThreadEntry): void {
 }
 
 function scheduleEviction(threadId: ThreadId, entry: RetainedThreadEntry): void {
-  clearEvictionTimeout(entry);
   if (!shouldEvictEntry(threadId, entry)) {
+    clearEvictionTimeout(entry);
     return;
   }
+  // Unrelated streaming updates must not postpone this idle thread's deadline.
+  if (entry.evictionTimeout !== null) return;
   entry.evictionTimeout = setTimeout(() => {
+    entry.evictionTimeout = null;
     const currentEntry = retainedThreadEntries.get(threadId);
     if (!currentEntry || !shouldEvictEntry(threadId, currentEntry)) {
       return;
     }
     retainedThreadEntries.delete(threadId);
+    useStore.setState((state) => evictThreadDetail(state, threadId));
     emitChange();
   }, THREAD_DETAIL_RETENTION_EVICTION_MS);
 }
@@ -122,16 +127,14 @@ function evictIdleEntriesToCapacity(): void {
     }
     clearEvictionTimeout(entry);
     retainedThreadEntries.delete(threadId);
+    useStore.setState((state) => evictThreadDetail(state, threadId));
     emitChange();
   }
 }
 
 function reconcileRetentionEntries(): void {
   for (const [threadId, entry] of retainedThreadEntries) {
-    clearEvictionTimeout(entry);
-    if (shouldEvictEntry(threadId, entry)) {
-      scheduleEviction(threadId, entry);
-    }
+    scheduleEviction(threadId, entry);
   }
   evictIdleEntriesToCapacity();
 }
@@ -210,4 +213,19 @@ export function resetRetainedThreadDetailSubscriptionsForTests(): void {
   }
   retainedThreadEntries.clear();
   emitChange();
+}
+
+// Visible routes and split panes own their data independently of sidebar prewarming.
+export function useRetainVisibleThreadDetails(threadIds: readonly ThreadId[]): void {
+  useEffect(() => {
+    const releases = threadIds.map(retainThreadDetailSubscription);
+    return () => {
+      // Replacement effects acquire their handles before the old ones release.
+      // Otherwise a still-visible pane can be evicted during an over-capacity
+      // split update or StrictMode replay.
+      queueMicrotask(() => {
+        for (const release of releases) release();
+      });
+    };
+  }, [threadIds]);
 }

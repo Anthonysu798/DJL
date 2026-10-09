@@ -130,6 +130,14 @@ describe("buildCursorAcpSpawnInput", () => {
     });
   });
 
+  it("exports DJL_THREAD_ID alongside the browserless env", () => {
+    expect(buildCursorAcpSpawnInput(undefined, "/tmp/project", undefined, "thread-1").env).toEqual({
+      NO_BROWSER: "true",
+      BROWSER: "www-browser",
+      DJL_THREAD_ID: "thread-1",
+    });
+  });
+
   it("maps the old ambiguous agent default to cursor-agent", () => {
     expect(buildCursorAcpSpawnInput({ binaryPath: "agent" }, "/tmp/project")).toEqual({
       command: "cursor-agent",

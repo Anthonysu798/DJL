@@ -113,6 +113,30 @@ export function useProviderModelCatalog(input: {
       enabled: selectedProvider === "kimi" || discoveryEnabled,
     }),
   );
+  const iflowDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "iflow",
+      binaryPath: settings.iflowBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "iflow" || discoveryEnabled,
+    }),
+  );
+  const qwenDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "qwen",
+      binaryPath: settings.qwenBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "qwen" || discoveryEnabled,
+    }),
+  );
+  const codebuddyDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "codebuddy",
+      binaryPath: settings.codebuddyBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "codebuddy" || discoveryEnabled,
+    }),
+  );
   const droidDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "droid",
@@ -144,6 +168,13 @@ export function useProviderModelCatalog(input: {
       agentDir: settings.piAgentDir || null,
       cwd: discoveryCwd,
       enabled: false,
+    }),
+  );
+  const djlCloudDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "djlCloud",
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "djlCloud" || discoveryEnabled,
     }),
   );
 
@@ -243,10 +274,22 @@ export function useProviderModelCatalog(input: {
       ),
       grok: getAppModelOptions("grok", customModelsByProvider.grok, modelHintByProvider?.grok),
       kimi: getAppModelOptions("kimi", customModelsByProvider.kimi, modelHintByProvider?.kimi),
+      iflow: getAppModelOptions("iflow", customModelsByProvider.iflow, modelHintByProvider?.iflow),
+      qwen: getAppModelOptions("qwen", customModelsByProvider.qwen, modelHintByProvider?.qwen),
+      codebuddy: getAppModelOptions(
+        "codebuddy",
+        customModelsByProvider.codebuddy,
+        modelHintByProvider?.codebuddy,
+      ),
       droid: getAppModelOptions("droid", customModelsByProvider.droid, modelHintByProvider?.droid),
       kilo: getAppModelOptions("kilo", customModelsByProvider.kilo, modelHintByProvider?.kilo),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, modelHintByProvider?.pi),
+      djlCloud: getAppModelOptions(
+        "djlCloud",
+        customModelsByProvider.djlCloud,
+        modelHintByProvider?.djlCloud,
+      ),
     };
     const result: Record<
       ProviderKind,
@@ -263,10 +306,14 @@ export function useProviderModelCatalog(input: {
       gemini: geminiModelsQuery.data,
       grok: grokDynamicModelsQuery.data,
       kimi: kimiDynamicModelsQuery.data,
+      iflow: iflowDynamicModelsQuery.data,
+      qwen: qwenDynamicModelsQuery.data,
+      codebuddy: codebuddyDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      djlCloud: djlCloudDynamicModelsQuery.data,
     };
 
     for (const provider of [
@@ -276,10 +323,14 @@ export function useProviderModelCatalog(input: {
       "gemini",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
+      "codebuddy",
       "droid",
       "kilo",
       "opencode",
       "pi",
+      "djlCloud",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
@@ -305,10 +356,14 @@ export function useProviderModelCatalog(input: {
     geminiModelsQuery.data,
     grokDynamicModelsQuery.data,
     kimiDynamicModelsQuery.data,
+    iflowDynamicModelsQuery.data,
+    qwenDynamicModelsQuery.data,
+    codebuddyDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     modelHintByProvider,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    djlCloudDynamicModelsQuery.data,
   ]);
 
   const loadingModelProviders = useMemo<Partial<Record<ProviderKind, boolean>>>(
@@ -338,10 +393,14 @@ export function useProviderModelCatalog(input: {
       gemini: geminiModelsQuery.data?.models ?? [],
       grok: grokDynamicModelsQuery.data?.models ?? [],
       kimi: kimiDynamicModelsQuery.data?.models ?? [],
+      iflow: iflowDynamicModelsQuery.data?.models ?? [],
+      qwen: qwenDynamicModelsQuery.data?.models ?? [],
+      codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -351,9 +410,13 @@ export function useProviderModelCatalog(input: {
       geminiModelsQuery.data?.models,
       grokDynamicModelsQuery.data?.models,
       kimiDynamicModelsQuery.data?.models,
+      iflowDynamicModelsQuery.data?.models,
+      qwenDynamicModelsQuery.data?.models,
+      codebuddyDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      djlCloudDynamicModelsQuery.data?.models,
     ],
   );
 

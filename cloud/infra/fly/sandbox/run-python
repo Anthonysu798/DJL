@@ -1,0 +1,10 @@
+#!/bin/bash
+# Usage: run-python <base64 source>
+# Runs the code inside nsjail (no network, read-only root, rlimits, 60 s).
+# Each output stream is capped at 64 KB.
+set -uo pipefail
+printf '%s' "$1" | base64 -d > /work/main.py
+chmod 644 /work/main.py
+/usr/local/bin/nsjail --config /opt/djl/nsjail.cfg -- /usr/local/bin/python3 /work/main.py \
+  2> >(head -c 65536 >&2) | head -c 65536
+exit "${PIPESTATUS[0]}"

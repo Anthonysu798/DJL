@@ -11,8 +11,39 @@ import {
   HarnessLoginResult,
   HarnessEndLoginInput,
 } from "./harnessAccounts";
+import {
+  CloudAccountStatus,
+  CloudBrowserSignInCompleteInput,
+  CloudBrowserSignInStartResult,
+  CloudEmptyInput,
+  CloudSignInPollInput,
+  CloudSignInPollResult,
+  CloudSignInStartResult,
+} from "./cloud";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
+import {
+  EmptyServersInput,
+  ServerByIdInput,
+  ServerCapabilities,
+  ServerConnectionTest,
+  ServerCreateInput,
+  ServerDeleteInput,
+  ServerImportApplyInput,
+  ServerImportApplyResult,
+  ServerImportPreviewResult,
+  ServerCommandRecord,
+  ServerCommandStreamEvent,
+  ServerListCommandsInput,
+  ServerListCommandsResult,
+  ServerListLocalKeysResult,
+  ServerListResult,
+  ServerResolveCommandInput,
+  ServerRecord,
+  ServerRefreshStatsResult,
+  ServerTrustHostKeyInput,
+  ServerUpdateInput,
+} from "./servers";
 import { CommandId } from "./baseSchemas";
 
 import {
@@ -1094,6 +1125,36 @@ export const WsHarnessProfileAccountRpc = Rpc.make(WS_METHODS.harnessProfileAcco
   success: HarnessProfileAccount,
   error: WsRpcError,
 });
+export const WsCloudGetStatusRpc = Rpc.make(WS_METHODS.cloudGetStatus, {
+  payload: CloudEmptyInput,
+  success: CloudAccountStatus,
+  error: WsRpcError,
+});
+export const WsCloudStartSignInRpc = Rpc.make(WS_METHODS.cloudStartSignIn, {
+  payload: CloudEmptyInput,
+  success: CloudSignInStartResult,
+  error: WsRpcError,
+});
+export const WsCloudPollSignInRpc = Rpc.make(WS_METHODS.cloudPollSignIn, {
+  payload: CloudSignInPollInput,
+  success: CloudSignInPollResult,
+  error: WsRpcError,
+});
+export const WsCloudSignOutRpc = Rpc.make(WS_METHODS.cloudSignOut, {
+  payload: CloudEmptyInput,
+  success: CloudAccountStatus,
+  error: WsRpcError,
+});
+export const WsCloudStartBrowserSignInRpc = Rpc.make(WS_METHODS.cloudStartBrowserSignIn, {
+  payload: CloudEmptyInput,
+  success: CloudBrowserSignInStartResult,
+  error: WsRpcError,
+});
+export const WsCloudCompleteBrowserSignInRpc = Rpc.make(WS_METHODS.cloudCompleteBrowserSignIn, {
+  payload: CloudBrowserSignInCompleteInput,
+  success: CloudAccountStatus,
+  error: WsRpcError,
+});
 export const WsHarnessListAccountsRpc = Rpc.make(WS_METHODS.harnessListAccounts, {
   payload: Schema.Struct({}),
   success: HarnessAccountsResult,
@@ -1136,6 +1197,91 @@ export const WsOpenCodeRemoveCredentialRpc = Rpc.make(WS_METHODS.openCodeRemoveC
   payload: OpenCodeRemoveCredentialInput,
   success: OpenCodeCredentialMutationResult,
   error: WsRpcError,
+});
+
+export const WsServersListRpc = Rpc.make(WS_METHODS.serversList, {
+  payload: EmptyServersInput,
+  success: ServerListResult,
+  error: WsRpcError,
+});
+
+export const WsServersCreateRpc = Rpc.make(WS_METHODS.serversCreate, {
+  payload: ServerCreateInput,
+  success: ServerRecord,
+  error: WsRpcError,
+});
+
+export const WsServersUpdateRpc = Rpc.make(WS_METHODS.serversUpdate, {
+  payload: ServerUpdateInput,
+  success: ServerRecord,
+  error: WsRpcError,
+});
+
+export const WsServersDeleteRpc = Rpc.make(WS_METHODS.serversDelete, {
+  payload: ServerDeleteInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+
+export const WsServersTestConnectionRpc = Rpc.make(WS_METHODS.serversTestConnection, {
+  payload: ServerByIdInput,
+  success: ServerConnectionTest,
+  error: WsRpcError,
+});
+
+export const WsServersTrustHostKeyRpc = Rpc.make(WS_METHODS.serversTrustHostKey, {
+  payload: ServerTrustHostKeyInput,
+  success: ServerConnectionTest,
+  error: WsRpcError,
+});
+
+export const WsServersRefreshStatsRpc = Rpc.make(WS_METHODS.serversRefreshStats, {
+  payload: ServerByIdInput,
+  success: ServerRefreshStatsResult,
+  error: WsRpcError,
+});
+
+export const WsServersImportPreviewRpc = Rpc.make(WS_METHODS.serversImportPreview, {
+  payload: EmptyServersInput,
+  success: ServerImportPreviewResult,
+  error: WsRpcError,
+});
+
+export const WsServersImportApplyRpc = Rpc.make(WS_METHODS.serversImportApply, {
+  payload: ServerImportApplyInput,
+  success: ServerImportApplyResult,
+  error: WsRpcError,
+});
+
+export const WsServersCheckCapabilitiesRpc = Rpc.make(WS_METHODS.serversCheckCapabilities, {
+  payload: EmptyServersInput,
+  success: ServerCapabilities,
+  error: WsRpcError,
+});
+
+export const WsServersListLocalKeysRpc = Rpc.make(WS_METHODS.serversListLocalKeys, {
+  payload: EmptyServersInput,
+  success: ServerListLocalKeysResult,
+  error: WsRpcError,
+});
+
+export const WsServersResolveCommandRpc = Rpc.make(WS_METHODS.serversResolveCommand, {
+  payload: ServerResolveCommandInput,
+  success: ServerCommandRecord,
+  error: WsRpcError,
+});
+
+export const WsServersListCommandsRpc = Rpc.make(WS_METHODS.serversListCommands, {
+  payload: ServerListCommandsInput,
+  success: ServerListCommandsResult,
+  error: WsRpcError,
+});
+
+export const WsSubscribeServerEventsRpc = Rpc.make(WS_METHODS.subscribeServerEvents, {
+  payload: EmptyServersInput,
+  success: ServerCommandStreamEvent,
+  error: WsRpcError,
+  stream: true,
 });
 
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
@@ -1327,12 +1473,32 @@ export const WsRpcGroup = RpcGroup.make(
   WsHarnessMaintainToolRpc,
   WsHarnessProfileAccountRpc,
   WsHarnessListAccountsRpc,
+  WsCloudGetStatusRpc,
+  WsCloudStartSignInRpc,
+  WsCloudPollSignInRpc,
+  WsCloudSignOutRpc,
+  WsCloudStartBrowserSignInRpc,
+  WsCloudCompleteBrowserSignInRpc,
   WsHarnessListLegacyOpenCodeCredentialsRpc,
   WsHarnessTransferLegacyOpenCodeCredentialsRpc,
   WsHarnessStartLoginRpc,
   WsHarnessEndLoginRpc,
   WsOpenCodeRemoveCredentialRpc,
   WsProviderListAgentsRpc,
+  WsServersListRpc,
+  WsServersCreateRpc,
+  WsServersUpdateRpc,
+  WsServersDeleteRpc,
+  WsServersTestConnectionRpc,
+  WsServersTrustHostKeyRpc,
+  WsServersRefreshStatsRpc,
+  WsServersImportPreviewRpc,
+  WsServersImportApplyRpc,
+  WsServersCheckCapabilitiesRpc,
+  WsServersListLocalKeysRpc,
+  WsServersResolveCommandRpc,
+  WsServersListCommandsRpc,
+  WsSubscribeServerEventsRpc,
   WsAutomationListRpc,
   WsAutomationCreateRpc,
   WsAutomationUpdateRpc,

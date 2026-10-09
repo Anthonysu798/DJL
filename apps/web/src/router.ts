@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 
 import { routeTree } from "./routeTree.gen";
+import { SplashScreen } from "./components/SplashScreen";
 import { StoreProvider } from "./store";
 
 type RouterHistory = NonNullable<Parameters<typeof createRouter>[0]["history"]>;
@@ -17,6 +18,9 @@ export function getRouter(history: RouterHistory) {
     // fetches the route chunk on link hover/touch — first navigation skips the
     // chunk download/parse wait.
     defaultPreload: "intent",
+    defaultPendingComponent: SplashScreen,
+    defaultPendingMs: 0,
+    defaultPendingMinMs: 0,
     context: {
       queryClient,
     },

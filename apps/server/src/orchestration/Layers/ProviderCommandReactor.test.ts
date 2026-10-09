@@ -4,6 +4,7 @@
 // Depends on: ProviderCommandReactorLive with in-memory provider and persistence services.
 
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 
@@ -12,6 +13,7 @@ import type {
   ProviderForkThreadResult,
   ProviderRuntimeEvent,
   ProviderSession,
+  ServerRecord,
 } from "@synara/contracts";
 import {
   ApprovalRequestId,
@@ -21,10 +23,11 @@ import {
   MessageId,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   ProjectId,
+  ServerId,
   ThreadId,
   TurnId,
 } from "@synara/contracts";
-import { Effect, Exit, Layer, ManagedRuntime, PubSub, Scope, Stream } from "effect";
+import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { deriveServerPaths, ServerConfig } from "../../config.ts";
@@ -33,6 +36,11 @@ import { ProviderAdapterRequestError } from "../../provider/Errors.ts";
 import { OrchestrationEventStoreLive } from "../../persistence/Layers/OrchestrationEventStore.ts";
 import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
+import {
+  ServerRepository,
+  type ServerRepositoryShape,
+} from "../../persistence/Services/ServerRepository.ts";
+import { buildSelectedServersPromptBlock } from "../../servers/serverMentionPrompt.ts";
 import {
   ProviderService,
   type ProviderServiceShape,
@@ -131,6 +139,7 @@ describe("ProviderCommandReactor", () => {
     readonly forkThreadResult?: ProviderForkThreadResult | null;
     readonly projectKind?: "project" | "studio" | "chat";
     readonly projectWorkspaceRoot?: string;
+    readonly servers?: ReadonlyArray<ServerRecord>;
   }) {
     const now = new Date().toISOString();
     const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "synara-reactor-"));
@@ -429,6 +438,15 @@ describe("ProviderCommandReactor", () => {
         } as unknown as TextGenerationShape),
       ),
       Layer.provideMerge(ServerSettingsService.layerTest()),
+      Layer.provideMerge(
+        Layer.succeed(ServerRepository, {
+          list: () => Effect.succeed(input?.servers ?? []),
+          getById: (id: ServerId) =>
+            Effect.succeed(
+              Option.fromUndefinedOr((input?.servers ?? []).find((server) => server.id === id)),
+            ),
+        } as unknown as ServerRepositoryShape),
+      ),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
       Layer.provideMerge(NodeServices.layer),
       Layer.provideMerge(SqlitePersistenceMemory),
@@ -790,6 +808,96 @@ describe("ProviderCommandReactor", () => {
       }),
     );
   }
+
+  it.each(["claudeAgent", "cursor", "grok"] as const)(
+    "hands Codex context to %s with a lossless archive",
+    async (provider) => {
+      const harness = await createHarness();
+      const now = new Date().toISOString();
+      const threadId = ThreadId.makeUnsafe(`handoff-${provider}`);
+      const original = "Detailed constraint. ".repeat(200) + "FINAL REQUIREMENT";
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.messages.import",
+          commandId: CommandId.makeUnsafe(`source-context-${provider}`),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          messages: [
+            {
+              messageId: asMessageId(`source-context-${provider}`),
+              role: "user",
+              text: original,
+              skills: [{ name: "review", path: "/project/SKILL.md" }],
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+          createdAt: now,
+        }),
+      );
+      const sourceThread = (await Effect.runPromise(harness.engine.getReadModel())).threads.find(
+        (thread) => thread.id === ThreadId.makeUnsafe("thread-1"),
+      )!;
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.handoff.create",
+          commandId: CommandId.makeUnsafe(`create-${provider}`),
+          threadId,
+          sourceThreadId: ThreadId.makeUnsafe("thread-1"),
+          expectedSourceUpdatedAt: sourceThread.updatedAt,
+          projectId: asProjectId("project-1"),
+          title: "Agent continuation",
+          modelSelection: { provider, model: `${provider}-selected-model` },
+          runtimeMode: "approval-required",
+          interactionMode: "default",
+          envMode: "local",
+          branch: null,
+          worktreePath: null,
+          createBranchFlowCompleted: false,
+          createdAt: now,
+        }),
+      );
+      const archiveDirectory = path.join(harness.stateDir, "handoff-context");
+      const archivePath = path.join(
+        archiveDirectory,
+        `${createHash("sha256").update(threadId).digest("hex")}.json`,
+      );
+      await waitFor(() => fs.existsSync(archivePath));
+      const eagerArchive = JSON.parse(fs.readFileSync(archivePath, "utf8"));
+      expect(eagerArchive.messages[0].text).toBe(original);
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe(`send-${provider}`),
+          threadId,
+          message: {
+            messageId: asMessageId(`next-${provider}`),
+            role: "user",
+            text: "Continue the task",
+            attachments: [],
+          },
+          runtimeMode: "approval-required",
+          interactionMode: "default",
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      const sent = harness.sendTurn.mock.calls[0]?.[0] as {
+        input: string;
+        modelSelection: ModelSelection;
+      };
+      expect(sent.input).toContain(original);
+      expect(sent.input).toContain("Continue the task");
+      expect(sent.input).toContain("<handoff_context>");
+      const archiveMatch = sent.input.match(/Full saved context \(JSON\): ("[^\n]+")/);
+      expect(archiveMatch).not.toBeNull();
+      const archive = JSON.parse(fs.readFileSync(JSON.parse(archiveMatch![1]!), "utf8"));
+      expect(archive.messages[0].text).toBe(original);
+      expect(archive.messages[0].skills).toEqual([{ name: "review", path: "/project/SKILL.md" }]);
+      expect(harness.startSession.mock.calls.at(-1)?.[1]).toMatchObject({
+        modelSelection: { provider, model: `${provider}-selected-model` },
+      });
+    },
+  );
 
   it("bootstraps sidechat context when the provider cannot fork natively", async () => {
     const harness = await createHarness();
@@ -3500,6 +3608,130 @@ describe("ProviderCommandReactor", () => {
       threadId: ThreadId.makeUnsafe("thread-1"),
       input: "pivot now",
       interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+    });
+  });
+
+  const registeredServer: ServerRecord = {
+    id: ServerId.makeUnsafe("srv-web-1"),
+    name: "web-1",
+    host: "203.0.113.10",
+    port: 22,
+    username: "deploy",
+    auth: { type: "agent" },
+    tags: ["prod"],
+    permissionTier: "approve-each",
+    notes: "",
+    source: "manual",
+    createdAt: 1,
+    updatedAt: 1,
+  };
+
+  it("replaces server mentions with a selected_servers block on queued turns", async () => {
+    const harness = await createHarness({ servers: [registeredServer] });
+    const now = new Date().toISOString();
+    const fileMention = { name: "README.md", path: "/tmp/project/README.md" };
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-server-mention"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-server-mention"),
+          role: "user",
+          text: "check disk",
+          attachments: [],
+          mentions: [fileMention, { name: "web-1", path: "ssh://srv-web-1" }],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      threadId: ThreadId.makeUnsafe("thread-1"),
+      input: `check disk\n\n${buildSelectedServersPromptBlock([registeredServer])}`,
+      mentions: [fileMention],
+    });
+  });
+
+  it("drops unresolved server mentions without touching the prompt", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-server-mention-missing"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-server-mention-missing"),
+          role: "user",
+          text: "check disk",
+          attachments: [],
+          mentions: [{ name: "gone", path: "ssh://srv-missing" }],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: "check disk",
+      mentions: [],
+    });
+  });
+
+  it("injects the selected_servers block when steering a running codex turn", async () => {
+    const harness = await createHarness({ servers: [registeredServer] });
+    const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-session-running-steer-server"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        session: {
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          status: "running",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: asTurnId("turn-running-server"),
+          lastError: null,
+          updatedAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+    harness.sendTurn.mockClear();
+    harness.steerTurn.mockClear();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-steer-server"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-steer-server"),
+          role: "user",
+          text: "restart nginx",
+          attachments: [],
+          mentions: [{ name: "web-1", path: "ssh://srv-web-1" }],
+        },
+        dispatchMode: "steer",
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.steerTurn.mock.calls.length === 1);
+    expect(harness.steerTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: `restart nginx\n\n${buildSelectedServersPromptBlock([registeredServer])}`,
+      mentions: [],
     });
   });
 

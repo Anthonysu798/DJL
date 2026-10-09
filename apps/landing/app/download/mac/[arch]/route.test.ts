@@ -55,11 +55,11 @@ describe("GET /download/mac/[arch]", () => {
   it.each([
     [
       "arm64",
-      "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/0.5.6/DJL-0.5.6-arm64.dmg",
+      "https://djl-china-releases.oss-accelerate.aliyuncs.com/releases/0.5.6/DJL-0.5.6-arm64.dmg",
     ],
     [
       "x64",
-      "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/0.5.6/DJL-0.5.6-x64.dmg",
+      "https://djl-china-releases.oss-accelerate.aliyuncs.com/releases/0.5.6/DJL-0.5.6-x64.dmg",
     ],
   ])(
     "redirects the China button for %s to its immutable OSS disk image",

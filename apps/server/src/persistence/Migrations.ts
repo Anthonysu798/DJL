@@ -74,6 +74,8 @@ import Migration0055 from "./Migrations/055_WorkPreparationNeedsInput.ts";
 import Migration0056 from "./Migrations/056_ProjectMemoryVault.ts";
 import Migration0057 from "./Migrations/057_ClearTerminalPendingTurns.ts";
 import Migration0058 from "./Migrations/058_CanonicalizeDeprecatedDeepSeekModels.ts";
+import Migration0059 from "./Migrations/059_Servers.ts";
+import Migration0060 from "./Migrations/060_ServerCommands.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -144,6 +146,8 @@ export const migrationEntries = [
   [56, "ProjectMemoryVault", Migration0056],
   [57, "ClearTerminalPendingTurns", Migration0057],
   [58, "CanonicalizeDeprecatedDeepSeekModels", Migration0058],
+  [59, "Servers", Migration0059],
+  [60, "ServerCommands", Migration0060],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

@@ -1,9 +1,13 @@
+import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
+import { getStartupSession } from "../startup/session";
+import type { TerminalCliKind } from "@synara/shared/terminalThreads";
 import { effectiveRuntimeMode } from "@synara/contracts";
 import {
   type AutomationDefinition,
   type AutomationSchedule,
   type ApprovalRequestId,
   DEFAULT_MODEL_BY_PROVIDER,
+  CommandId,
   EventId,
   MessageId,
   type ModelSelection,
@@ -64,6 +68,8 @@ import {
   workspaceRootsEqual,
 } from "@synara/shared/threadWorkspace";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -107,6 +113,7 @@ import {
   formatComposerMentionToken,
   filterPromptProviderMentionReferences,
   filterPromptSkillReferences,
+  isServerProviderMentionReference,
   providerMentionReferencesEqual,
   providerSkillReferencesEqual,
   skillMentionPrefix,
@@ -278,7 +285,9 @@ import {
 } from "../keybindings";
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
-import ThreadTerminalDrawer from "./ThreadTerminalDrawer";
+import { PanelStateMessage } from "./chat/PanelStateMessage";
+
+const ThreadTerminalDrawer = lazy(() => import("./ThreadTerminalDrawer"));
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -820,6 +829,12 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.grok?.binaryPath);
     case "kimi":
       return normalizeCustomBinaryPath(providerOptions?.kimi?.binaryPath);
+    case "iflow":
+      return normalizeCustomBinaryPath(providerOptions?.iflow?.binaryPath);
+    case "qwen":
+      return normalizeCustomBinaryPath(providerOptions?.qwen?.binaryPath);
+    case "codebuddy":
+      return normalizeCustomBinaryPath(providerOptions?.codebuddy?.binaryPath);
     case "droid":
       return normalizeCustomBinaryPath(providerOptions?.droid?.binaryPath);
     case "kilo":
@@ -830,6 +845,8 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(providerOptions?.pi?.binaryPath);
+    case "djlCloud":
+      return null;
   }
 }
 
@@ -1117,7 +1134,7 @@ export default function ChatView({
   const navigate = useNavigate();
   const { handleNewThread } = useHandleNewThread();
   const { handleNewChat } = useHandleNewChat();
-  const { createThreadHandoff } = useThreadHandoff();
+  const { createThreadHandoff, isCreatingHandoff } = useThreadHandoff();
   const rawSearch = useDiffRouteSearch();
   const activeSplitView = useSplitViewStore(selectSplitView(rawSearch.splitViewId ?? null));
   const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
@@ -2137,10 +2154,14 @@ export default function ChatView({
       gemini: resolveHint("gemini"),
       grok: resolveHint("grok"),
       kimi: resolveHint("kimi"),
+      iflow: resolveHint("iflow"),
+      qwen: resolveHint("qwen"),
+      codebuddy: resolveHint("codebuddy"),
       droid: resolveHint("droid"),
       kilo: resolveHint("kilo"),
       opencode: resolveHint("opencode"),
       pi: resolveHint("pi"),
+      djlCloud: resolveHint("djlCloud"),
     };
   }, [
     activeProject?.defaultModelSelection,
@@ -2152,12 +2173,13 @@ export default function ChatView({
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
+  const isAgentMentionPickerOpen = composerTrigger?.kind === "mention";
   const claudeDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "claudeAgent",
       binaryPath: settings.claudeBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "claudeAgent" || isModelPickerOpen,
+      enabled: selectedProvider === "claudeAgent" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const codexDynamicModelsQuery = useQuery(
@@ -2166,32 +2188,44 @@ export default function ChatView({
       binaryPath: settings.codexBinaryPath || null,
       homePath: settings.codexHomePath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "codex" || isModelPickerOpen,
+      enabled: selectedProvider === "codex" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const openCodeModelDiscoveryEnabled =
     !hasThreadStarted ||
     selectedProvider === "opencode" ||
     lockedProvider === "opencode" ||
-    isModelPickerOpen;
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const kiloModelDiscoveryEnabled =
-    selectedProvider === "kilo" || lockedProvider === "kilo" || isModelPickerOpen;
+    selectedProvider === "kilo" ||
+    lockedProvider === "kilo" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const piModelDiscoveryEnabled =
-    selectedProvider === "pi" || lockedProvider === "pi" || isModelPickerOpen;
+    selectedProvider === "pi" ||
+    lockedProvider === "pi" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
+  const djlCloudModelDiscoveryEnabled =
+    selectedProvider === "djlCloud" ||
+    lockedProvider === "djlCloud" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const cursorDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "cursor",
       cwd: providerModelDiscoveryCwd,
       binaryPath: settings.cursorBinaryPath || null,
       apiEndpoint: settings.cursorApiEndpoint || null,
-      enabled: selectedProvider === "cursor" || isModelPickerOpen,
+      enabled: selectedProvider === "cursor" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const geminiModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "gemini",
       binaryPath: settings.geminiBinaryPath || null,
-      enabled: false,
+      enabled: isAgentMentionPickerOpen,
     }),
   );
   const grokDynamicModelsQuery = useQuery(
@@ -2199,7 +2233,7 @@ export default function ChatView({
       provider: "grok",
       binaryPath: settings.grokBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "grok" || isModelPickerOpen,
+      enabled: selectedProvider === "grok" || isModelPickerOpen || isAgentMentionPickerOpen,
     }),
   );
   const kimiDynamicModelsQuery = useQuery(
@@ -2207,17 +2241,44 @@ export default function ChatView({
       provider: "kimi",
       binaryPath: settings.kimiBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: selectedProvider === "kimi" || isModelPickerOpen,
+      enabled: selectedProvider === "kimi" || isModelPickerOpen || isAgentMentionPickerOpen,
+    }),
+  );
+  const iflowDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "iflow",
+      binaryPath: settings.iflowBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "iflow" || isModelPickerOpen,
+    }),
+  );
+  const qwenDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "qwen",
+      binaryPath: settings.qwenBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "qwen" || isModelPickerOpen,
+    }),
+  );
+  const codebuddyDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "codebuddy",
+      binaryPath: settings.codebuddyBinaryPath || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: selectedProvider === "codebuddy" || isModelPickerOpen,
     }),
   );
   const droidModelDiscoveryEnabled =
-    selectedProvider === "droid" || lockedProvider === "droid" || isModelPickerOpen;
+    selectedProvider === "droid" ||
+    lockedProvider === "droid" ||
+    isModelPickerOpen ||
+    isAgentMentionPickerOpen;
   const droidDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "droid",
       binaryPath: settings.droidBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: false,
+      enabled: droidModelDiscoveryEnabled,
     }),
   );
   const openCodeDynamicModelsQuery = useQuery(
@@ -2233,7 +2294,7 @@ export default function ChatView({
       provider: "kilo",
       binaryPath: settings.kiloBinaryPath || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: false,
+      enabled: kiloModelDiscoveryEnabled,
     }),
   );
   const piDynamicModelsQuery = useQuery(
@@ -2242,7 +2303,14 @@ export default function ChatView({
       binaryPath: settings.piBinaryPath || null,
       agentDir: settings.piAgentDir || null,
       cwd: providerModelDiscoveryCwd,
-      enabled: false,
+      enabled: piModelDiscoveryEnabled,
+    }),
+  );
+  const djlCloudDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "djlCloud",
+      cwd: providerModelDiscoveryCwd,
+      enabled: djlCloudModelDiscoveryEnabled,
     }),
   );
   const claudeDynamicAgentsQuery = useQuery(
@@ -2346,6 +2414,21 @@ export default function ChatView({
         customModelsByProvider.kimi,
         composerModelHintByProvider.kimi,
       ),
+      iflow: getAppModelOptions(
+        "iflow",
+        customModelsByProvider.iflow,
+        composerModelHintByProvider.iflow,
+      ),
+      qwen: getAppModelOptions(
+        "qwen",
+        customModelsByProvider.qwen,
+        composerModelHintByProvider.qwen,
+      ),
+      codebuddy: getAppModelOptions(
+        "codebuddy",
+        customModelsByProvider.codebuddy,
+        composerModelHintByProvider.codebuddy,
+      ),
       droid: getAppModelOptions(
         "droid",
         customModelsByProvider.droid,
@@ -2358,6 +2441,11 @@ export default function ChatView({
       ),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, composerModelHintByProvider.pi),
+      djlCloud: getAppModelOptions(
+        "djlCloud",
+        customModelsByProvider.djlCloud,
+        composerModelHintByProvider.djlCloud,
+      ),
     };
     const result: Record<
       ProviderKind,
@@ -2374,10 +2462,14 @@ export default function ChatView({
       gemini: geminiModelsQuery.data,
       grok: grokDynamicModelsQuery.data,
       kimi: kimiDynamicModelsQuery.data,
+      iflow: iflowDynamicModelsQuery.data,
+      qwen: qwenDynamicModelsQuery.data,
+      codebuddy: codebuddyDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      djlCloud: djlCloudDynamicModelsQuery.data,
     };
 
     for (const provider of [
@@ -2387,10 +2479,14 @@ export default function ChatView({
       "gemini",
       "grok",
       "kimi",
+      "iflow",
+      "qwen",
+      "codebuddy",
       "droid",
       "kilo",
       "opencode",
       "pi",
+      "djlCloud",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
@@ -2417,9 +2513,13 @@ export default function ChatView({
     geminiModelsQuery.data,
     grokDynamicModelsQuery.data,
     kimiDynamicModelsQuery.data,
+    iflowDynamicModelsQuery.data,
+    qwenDynamicModelsQuery.data,
+    codebuddyDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    djlCloudDynamicModelsQuery.data,
   ]);
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
@@ -2437,10 +2537,14 @@ export default function ChatView({
       gemini: geminiModelsQuery.data?.models ?? [],
       grok: grokDynamicModelsQuery.data?.models ?? [],
       kimi: kimiDynamicModelsQuery.data?.models ?? [],
+      iflow: iflowDynamicModelsQuery.data?.models ?? [],
+      qwen: qwenDynamicModelsQuery.data?.models ?? [],
+      codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -2450,9 +2554,13 @@ export default function ChatView({
       geminiModelsQuery.data?.models,
       grokDynamicModelsQuery.data?.models,
       kimiDynamicModelsQuery.data?.models,
+      iflowDynamicModelsQuery.data?.models,
+      qwenDynamicModelsQuery.data?.models,
+      codebuddyDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      djlCloudDynamicModelsQuery.data?.models,
     ],
   );
   const providerModelsQueryByProvider = {
@@ -2462,10 +2570,14 @@ export default function ChatView({
     gemini: geminiModelsQuery,
     grok: grokDynamicModelsQuery,
     kimi: kimiDynamicModelsQuery,
+    iflow: iflowDynamicModelsQuery,
+    qwen: qwenDynamicModelsQuery,
+    codebuddy: codebuddyDynamicModelsQuery,
     droid: droidDynamicModelsQuery,
     kilo: kiloDynamicModelsQuery,
     opencode: openCodeDynamicModelsQuery,
     pi: piDynamicModelsQuery,
+    djlCloud: djlCloudDynamicModelsQuery,
   } as const;
   const selectedRuntimeModel = useMemo(
     () =>
@@ -2568,6 +2680,28 @@ export default function ChatView({
   const hiddenProviderSet = useMemo(
     () => new Set<ProviderKind>(settings.hiddenProviders),
     [settings.hiddenProviders],
+  );
+  const agentModelOptions = useMemo(
+    () =>
+      AVAILABLE_PROVIDER_OPTIONS.filter(
+        (option) => !hiddenProviderSet.has(option.value) || option.value === selectedProvider,
+      )
+        .toSorted((left, right) =>
+          compareProvidersByOrder(settings.providerOrder, left.value, right.value),
+        )
+        .flatMap((option) =>
+          modelOptionsByProvider[option.value].map(({ slug, name }) => ({
+            provider: option.value,
+            providerLabel: option.label,
+            slug,
+            name,
+            searchSlug: slug.toLowerCase(),
+            searchName: name.toLowerCase(),
+            searchProvider: option.label.toLowerCase(),
+            searchUpstreamProvider: "",
+          })),
+        ),
+    [hiddenProviderSet, modelOptionsByProvider, selectedProvider, settings.providerOrder],
   );
   const searchableModelOptions = useMemo(
     () =>
@@ -2882,7 +3016,8 @@ export default function ChatView({
       phase,
     ],
   );
-  const isSendBusy = localDispatch !== null && !serverAcknowledgedLocalDispatch;
+  const isSendBusy =
+    isCreatingHandoff || (localDispatch !== null && !serverAcknowledgedLocalDispatch);
   const hasConfiguredOpenCodeModel =
     selectedProvider !== "opencode" || modelOptionsByProvider.opencode.length > 0;
   const isLegacyReadOnlyThread = lockedProvider !== null && !isProviderKind(lockedProvider);
@@ -3565,7 +3700,9 @@ export default function ChatView({
         ? (kiloDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
         : selectedProvider === "opencode"
           ? (openCodeDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
-          : (codexDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS);
+          : selectedProvider === "codex"
+            ? (codexDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
+            : EMPTY_PROVIDER_AGENTS;
   const dynamicAgents = useMemo(
     () =>
       selectedDynamicAgents.map((agent) =>
@@ -3583,6 +3720,7 @@ export default function ChatView({
     providerSkills,
     workspaceEntries,
     searchableModelOptions,
+    agentModelOptions,
     supportsFastSlashCommand,
     canOfferCompactCommand:
       supportsThreadCompaction(providerComposerCapabilitiesQuery.data) &&
@@ -4891,7 +5029,7 @@ export default function ChatView({
       },
       onTerminalMetadataChange: (
         terminalId: string,
-        metadata: { cliKind: "codex" | "claude" | null; label: string },
+        metadata: { cliKind: TerminalCliKind | null; label: string },
       ) => {
         if (!activeThreadId) return;
         storeSetTerminalMetadata(activeThreadId, terminalId, metadata);
@@ -5908,7 +6046,8 @@ export default function ChatView({
       return;
     }
     updateSelectedComposerSkills([]);
-    updateSelectedComposerMentions([]);
+    // Server mentions are provider-agnostic; only file and plugin references reset.
+    updateSelectedComposerMentions((existing) => existing.filter(isServerProviderMentionReference));
   }, [selectedProvider, threadId, updateSelectedComposerMentions, updateSelectedComposerSkills]);
 
   useLayoutEffect(() => {
@@ -8218,7 +8357,13 @@ export default function ChatView({
       ),
       browserFindingsForSend,
     );
-    const messageIdForSend = newMessageId();
+    const startupIdentity = getStartupSession()?.identityFor(threadIdForSend, promptForSend, {
+      provider: selectedModelSelectionForSend.provider,
+      model: selectedModelSelectionForSend.model,
+    });
+    const messageIdForSend = startupIdentity
+      ? MessageId.makeUnsafe(startupIdentity.messageId)
+      : newMessageId();
     const messageCreatedAt = new Date().toISOString();
     const outgoingTextSeed =
       messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
@@ -8485,7 +8630,9 @@ export default function ChatView({
       });
       await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
-        commandId: newCommandId(),
+        commandId: startupIdentity
+          ? CommandId.makeUnsafe(startupIdentity.commandId)
+          : newCommandId(),
         threadId: threadIdForSend,
         message: {
           messageId: messageIdForSend,
@@ -8525,7 +8672,9 @@ export default function ChatView({
       // Surface the failure on whichever setup step was active (no-op for
       // sends without a worktree setup in flight).
       failLocalDispatchWorktreeSetup();
-      if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
+      // A startup turn has a durable command identity and may have been accepted
+      // before its response was lost. Keep its owner for receipt reconciliation.
+      if (createdServerThreadForLocalDraft && !turnStartSucceeded && !startupIdentity) {
         // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
         await api.orchestration
           .dispatchCommand({
@@ -8594,6 +8743,8 @@ export default function ChatView({
         resetLocalDispatch();
       }
     }
+    if (startupIdentity)
+      getStartupSession()?.sendFinished(startupIdentity.messageId, turnStartSucceeded);
     return turnStartSucceeded;
   };
 
@@ -9053,6 +9204,28 @@ export default function ChatView({
   const onSubmitPlanFollowUpRef = useRef(onSubmitPlanFollowUp);
   onSendRef.current = onSend;
   onSubmitPlanFollowUpRef.current = onSubmitPlanFollowUp;
+  useStartupDraftBridge({
+    threadId,
+    surface: isStudioContainer ? "work" : "home",
+    prompt,
+    model: selectedModelSelection,
+    active: Boolean(activeThread) && isFocusedPane && !isEditorRail,
+    canSend:
+      Boolean(activeThread) &&
+      Boolean(activeProject) &&
+      !isLegacyReadOnlyThread &&
+      (isZeroConfigEntry ? hasUsableZeroConfigModel : hasConfiguredOpenCodeModel) &&
+      !isSendBusy &&
+      !isConnecting &&
+      !hasLiveTurn &&
+      !isVoiceTranscribing &&
+      activePendingApproval === null &&
+      activePendingProgress === null &&
+      pendingUserInputs.length === 0,
+    editor: composerEditorRef,
+    send: onSendRef,
+    locale,
+  });
 
   useEffect(() => {
     if (localAiContinuationForThread?.state === "waiting") {
@@ -9668,7 +9841,7 @@ export default function ChatView({
             studioWorkspaceRoot,
           });
           if (!studioProjectId) {
-            throw new Error("Unable to prepare Work.");
+            throw new Error("Unable to prepare Agent mode.");
           }
           const api = readNativeApi();
           if (!api) {
@@ -10231,7 +10404,7 @@ export default function ChatView({
         });
         return;
       }
-      if (item.type === "plugin") {
+      if (item.type === "plugin" || item.type === "server") {
         applyComposerTriggerReplacement({
           snapshot,
           trigger,
@@ -10246,6 +10419,40 @@ export default function ChatView({
             });
           },
         });
+        return;
+      }
+      if (item.type === "handoff-model") {
+        if (!activeThread) return;
+        if (!lockedProvider || item.provider === lockedProvider) {
+          onProviderModelSelect(item.provider, item.model);
+          applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
+          return;
+        }
+        if (handoffDisabled) {
+          toastManager.add({ type: "info", title: t("commandMenu.handoffWait") });
+          return;
+        }
+        const nextPrompt =
+          snapshot.value.slice(0, trigger.rangeStart) + snapshot.value.slice(trigger.rangeEnd);
+        void createThreadHandoff(activeThread, item.provider, {
+          modelSelection: { provider: item.provider, model: item.model },
+          prompt: nextPrompt.trim().length > 0 ? nextPrompt : t("commandMenu.continueTask"),
+        })
+          .then(() => {
+            toastManager.add({
+              type: "success",
+              title: t("commandMenu.handoffReady"),
+              description: t("commandMenu.handoffReadyDescription"),
+            });
+          })
+          .catch((error: unknown) => {
+            toastManager.add({
+              type: "error",
+              title: t("errors.createHandoff"),
+              description:
+                error instanceof Error ? error.message : t("errors.createHandoffFallback"),
+            });
+          });
         return;
       }
       if (item.type === "model") {
@@ -10264,6 +10471,11 @@ export default function ChatView({
       }
     },
     [
+      activeThread,
+      lockedProvider,
+      handoffDisabled,
+      createThreadHandoff,
+      t,
       applyComposerTriggerReplacement,
       scheduleComposerFocus,
       handleForkTargetSelection,
@@ -11955,15 +12167,19 @@ export default function ChatView({
                   : "pointer-events-none translate-y-1 opacity-0",
               )}
             >
-              <ThreadTerminalDrawer
-                key={`${activeThread.id}-workspace`}
-                {...terminalDrawerProps}
-                presentationMode="workspace"
-                isVisible={terminalWorkspaceTerminalTabActive}
-                onTogglePresentationMode={
-                  terminalState.workspaceLayout === "both" ? collapseTerminalWorkspace : undefined
-                }
-              />
+              <Suspense
+                fallback={<PanelStateMessage>{t("panels.loadingTerminal")}</PanelStateMessage>}
+              >
+                <ThreadTerminalDrawer
+                  key={`${activeThread.id}-workspace`}
+                  {...terminalDrawerProps}
+                  presentationMode="workspace"
+                  isVisible={terminalWorkspaceTerminalTabActive}
+                  onTogglePresentationMode={
+                    terminalState.workspaceLayout === "both" ? collapseTerminalWorkspace : undefined
+                  }
+                />
+              </Suspense>
             </div>
           ) : null}
 
@@ -12004,12 +12220,14 @@ export default function ChatView({
           return null;
         }
         return (
-          <ThreadTerminalDrawer
-            key={activeThread.id}
-            {...terminalDrawerProps}
-            presentationMode="drawer"
-            onTogglePresentationMode={expandTerminalWorkspace}
-          />
+          <Suspense fallback={<PanelStateMessage>{t("panels.loadingTerminal")}</PanelStateMessage>}>
+            <ThreadTerminalDrawer
+              key={activeThread.id}
+              {...terminalDrawerProps}
+              presentationMode="drawer"
+              onTogglePresentationMode={expandTerminalWorkspace}
+            />
+          </Suspense>
         );
       })()}
 

@@ -169,6 +169,7 @@ import {
 } from "./browserUsePipeServer";
 import {
   DESKTOP_WS_URL_CHANNEL,
+  DESKTOP_STARTUP_SCOPE_CHANNEL,
   normalizeDesktopWsUrl,
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
@@ -179,6 +180,14 @@ import {
   resolveDesktopUserDataPath,
 } from "./desktopUserDataProfile";
 import { isBrokenPipeError } from "./desktopProcessErrors";
+import {
+  CLOUD_AUTH_CALLBACK_CHANNEL,
+  CLOUD_AUTH_PROTOCOL,
+  CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+  findCloudAuthCallbackInArgv,
+  parseCloudAuthCallbackUrl,
+  type CloudAuthCallback,
+} from "./cloudAuthDeepLink";
 import {
   acknowledgeSynaraStorageSnapshot,
   readSynaraStorageSnapshot,
@@ -198,7 +207,10 @@ import {
 // baseline, so a replacement during startup cannot silently become "normal."
 const startupBundleIdentity = captureStartupBundleIdentity();
 
-syncShellEnvironment();
+const shellEnvironmentAbort = new AbortController();
+const shellEnvironmentReady = syncShellEnvironment(process.env, {
+  signal: shellEnvironmentAbort.signal,
+});
 
 const PICK_FOLDER_CHANNEL = "desktop:pick-folder";
 const SAVE_FILE_CHANNEL = "desktop:save-file";
@@ -1396,6 +1408,31 @@ function clearUnreadNotificationBadge(): void {
 // Reuse the existing desktop window when the app is launched again so users
 // don't end up with multiple packaged instances racing the same local state.
 const revealedWindows = new WeakSet<BrowserWindow>();
+
+/**
+ * DJL Cloud browser sign-in returns through `djl://auth/callback`. The newest
+ * callback waits here until the renderer takes it (so one that arrives during
+ * a cold start is not lost); the renderer passes it to the local server, which
+ * checks the state it issued and redeems the code.
+ */
+let pendingCloudAuthCallback: CloudAuthCallback | null = null;
+
+function deliverCloudAuthCallback(callback: CloudAuthCallback): void {
+  pendingCloudAuthCallback = callback;
+  focusMainWindow();
+  mainWindow?.webContents.send(CLOUD_AUTH_CALLBACK_CHANNEL);
+}
+
+function registerCloudAuthProtocol(): void {
+  // An unpackaged run (`electron .`) must name its entry script for the OS to relaunch it.
+  const registered =
+    process.defaultApp && process.argv[1]
+      ? app.setAsDefaultProtocolClient(CLOUD_AUTH_PROTOCOL, process.execPath, [
+          Path.resolve(process.argv[1]),
+        ])
+      : app.setAsDefaultProtocolClient(CLOUD_AUTH_PROTOCOL);
+  if (!registered) writeDesktopLogHeader(`could not register ${CLOUD_AUTH_PROTOCOL}:// handler`);
+}
 
 function focusMainWindow(): void {
   if (!mainWindow || !revealedWindows.has(mainWindow)) {
@@ -3089,6 +3126,7 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   }
 
   isQuitting = true;
+  shellEnvironmentAbort.abort();
   desktopShutdownPromise = (async () => {
     writeDesktopLogHeader(`${reason} shutdown start`);
     try {
@@ -3139,6 +3177,13 @@ function registerIpcHandlers(): void {
   const storageSnapshotPath = resolveDjlStorageSnapshotReadPath(app.getPath("userData"));
   const localePreferencePath = resolveDesktopLocalePreferencePath(app.getPath("userData"));
 
+  ipcMain.removeHandler(CLOUD_AUTH_TAKE_CALLBACK_CHANNEL);
+  ipcMain.handle(CLOUD_AUTH_TAKE_CALLBACK_CHANNEL, () => {
+    const callback = pendingCloudAuthCallback;
+    pendingCloudAuthCallback = null;
+    return callback;
+  });
+
   ipcMain.removeAllListeners(DESKTOP_LOCALE_IPC_CHANNELS.preferredSystemLanguages);
   ipcMain.on(DESKTOP_LOCALE_IPC_CHANNELS.preferredSystemLanguages, (event: IpcMainEvent) => {
     event.returnValue = getPreferredSystemLanguageCandidates();
@@ -3164,6 +3209,11 @@ function registerIpcHandlers(): void {
   ipcMain.removeHandler(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge);
   ipcMain.handle(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge, async () => {
     await acknowledgeSynaraStorageSnapshot(storageSnapshotPath);
+  });
+
+  ipcMain.removeAllListeners(DESKTOP_STARTUP_SCOPE_CHANNEL);
+  ipcMain.on(DESKTOP_STARTUP_SCOPE_CHANNEL, (event: IpcMainEvent) => {
+    event.returnValue = Crypto.createHash("sha256").update(BASE_DIR).digest("hex").slice(0, 24);
   });
 
   ipcMain.removeAllListeners(DESKTOP_WS_URL_CHANNEL);
@@ -3806,8 +3856,20 @@ configureAppIdentity();
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  registerCloudAuthProtocol();
+  // Windows and Linux: a cold start by the OS carries the deep link in argv; a
+  // running app receives it through the second instance's argv.
+  pendingCloudAuthCallback = findCloudAuthCallbackInArgv(process.argv);
+  app.on("second-instance", (_event, argv) => {
+    const callback = findCloudAuthCallbackInArgv(argv);
+    if (callback) deliverCloudAuthCallback(callback);
     focusMainWindow();
+  });
+  // macOS delivers deep links as open-url, before ready on a cold start.
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    const callback = parseCloudAuthCallbackUrl(url);
+    if (callback) deliverCloudAuthCallback(callback);
   });
 }
 
@@ -3820,11 +3882,15 @@ async function bootstrap(): Promise<void> {
   initializeRemoteGatewayConfiguration();
   registerIpcHandlers();
   writeDesktopLogHeader("bootstrap ipc handlers registered");
+  ensureInitialBackendWindowOpen(backendHttpUrl);
+
+  // The renderer can paint while login-shell startup runs. Provider processes
+  // still inherit the complete shell environment, including PATH and SSH agents.
+  await shellEnvironmentReady;
+  if (isQuitting) return;
   startRemoteGateway();
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");
-
-  ensureInitialBackendWindowOpen(backendHttpUrl);
 }
 
 app.on("before-quit", (event) => {

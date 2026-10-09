@@ -3677,7 +3677,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ...(newSessionId ? { sessionId: newSessionId } : {}),
           includePartialMessages: true,
           canUseTool,
-          env: claudeSdkEnv,
+          env: { ...claudeSdkEnv, DJL_THREAD_ID: threadId },
           ...(input.cwd ? { additionalDirectories: [input.cwd] } : {}),
         };
 

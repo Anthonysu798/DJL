@@ -15,10 +15,14 @@ const ProviderDiscoveryKind = Schema.Literals([
   "gemini",
   "grok",
   "kimi",
+  "iflow",
+  "qwen",
+  "codebuddy",
   "droid",
   "kilo",
   "opencode",
   "pi",
+  "djlCloud",
 ]);
 
 export const OpenCodeModelProviderConnection = Schema.Struct({

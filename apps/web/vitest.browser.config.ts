@@ -6,6 +6,7 @@ import viteConfig from "./vite.config";
 
 const srcPath = fileURLToPath(new URL("./src", import.meta.url));
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const browserTestPort = process.env.DJL_BROWSER_TEST_PORT;
 
 export default defineConfig((env) =>
   mergeConfig(
@@ -25,6 +26,12 @@ export default defineConfig((env) =>
         ],
         browser: {
           enabled: true,
+          // The browser server rereads this file separately from Vitest's CLI options.
+          // Avoid inheriting the application's strict port when tests run concurrently.
+          api: {
+            ...(browserTestPort ? { port: Number(browserTestPort) } : {}),
+            strictPort: false,
+          },
           provider: playwright(
             chromiumExecutablePath
               ? { launchOptions: { executablePath: chromiumExecutablePath } }

@@ -4,6 +4,7 @@
 // Exports: mention token formatters plus regex helpers used by composer parsing and prompt sync.
 
 import type { ProviderMentionReference, ProviderSkillReference } from "@synara/contracts";
+import { isServerMentionPath } from "@synara/contracts";
 
 export function skillMentionPrefix(provider: string): string {
   return provider === "pi" ? "/skill:" : "/";
@@ -107,10 +108,14 @@ export function providerMentionMatchesToken(
   );
 }
 
-export type MentionChipKind = "path" | "plugin";
+export type MentionChipKind = "path" | "plugin" | "server";
 
 export function isPluginProviderMentionReference(mention: ProviderMentionReference): boolean {
   return mention.path.startsWith("plugin://");
+}
+
+export function isServerProviderMentionReference(mention: ProviderMentionReference): boolean {
+  return isServerMentionPath(mention.path);
 }
 
 export function resolveMentionChipKind(
@@ -123,13 +128,17 @@ export function resolveMentionChipKind(
   if (options?.kind === "plugin" || path.startsWith("plugin://")) {
     return "plugin";
   }
-  if (
-    options?.mentionReferences?.some(
-      (mention) =>
-        isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
-    )
-  ) {
+  if (options?.kind === "server" || isServerMentionPath(path)) {
+    return "server";
+  }
+  const matched = options?.mentionReferences?.find((mention) =>
+    providerMentionMatchesToken(mention, path),
+  );
+  if (matched && isPluginProviderMentionReference(matched)) {
     return "plugin";
+  }
+  if (matched && isServerProviderMentionReference(matched)) {
+    return "server";
   }
   return "path";
 }

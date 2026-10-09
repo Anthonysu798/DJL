@@ -58,6 +58,9 @@ import { resolveFavicon, tryParseHost } from "./siteFaviconCache";
 import { isTrustedAppOrigin, normalizeCorsOrigin } from "./trustedOrigins";
 import { resolveDocumentPreviewGrant } from "./work/documentPreviewFiles";
 import { AiDetectorService } from "./aiDetector/Services/AiDetectorService";
+import { ServerCommandService } from "./servers/Services/ServerCommandService";
+import { handleShimExec } from "./servers/shimExecRoute";
+import { SHIM_EXEC_ROUTE_PATH, ShimRuntime } from "./servers/shimRuntime";
 
 const PROJECT_FAVICON_CACHE_CONTROL = "public, max-age=3600";
 const SITE_FAVICON_CACHE_CONTROL_SUCCESS = "public, max-age=86400"; // 24 h
@@ -199,6 +202,7 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
     documentPreviewEffectRouteLayer,
     streamingAttachmentUploadEffectRouteLayer,
     aiDetectorAnalysisEffectRouteLayer,
+    serverShimExecEffectRouteLayer,
     attachmentsEffectRouteLayer,
     staticAndDevEffectRouteLayer,
   );
@@ -493,6 +497,38 @@ export const aiDetectorAnalysisEffectRouteLayer = HttpRouter.add(
       ),
     ),
   ) as Effect.Effect<HttpServerResponse.HttpServerResponse, never, unknown>,
+);
+
+/** Max command length accepted from the shim; commands are one line of shell, not a script. */
+const SHIM_EXEC_MAX_REQUEST_BYTES = 64 * 1024;
+
+// Called by the `djl-ssh` helper from agent subprocesses, so it authenticates with the
+// per-process shim token rather than a browser session and does no Origin check (curl sends none).
+export const serverShimExecEffectRouteLayer = HttpRouter.add(
+  "POST",
+  SHIM_EXEC_ROUTE_PATH,
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const shim = yield* ShimRuntime;
+    const commandService = yield* ServerCommandService;
+    const body = yield* collectBoundedStream(request.stream, SHIM_EXEC_MAX_REQUEST_BYTES).pipe(
+      Effect.map((bytes) => new TextDecoder().decode(bytes)),
+      Effect.orElseSucceed(() => ""),
+    );
+    const response = yield* handleShimExec(
+      {
+        authorization: request.headers.authorization,
+        serverName: request.headers["x-djl-server"],
+        threadId: request.headers["x-djl-thread"],
+        body,
+      },
+      { token: shim.token, requestCommand: commandService.requestCommand },
+    );
+    return HttpServerResponse.text(response.body, {
+      status: response.status,
+      headers: response.headers,
+    });
+  }) as Effect.Effect<HttpServerResponse.HttpServerResponse, never, unknown>,
 );
 
 export function isLegacyTokenAuthorized(input: {

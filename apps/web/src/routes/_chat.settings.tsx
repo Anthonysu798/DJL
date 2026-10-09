@@ -72,6 +72,7 @@ import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel"
 import { OpenCodeModelsSettingsPanel } from "../components/settings/OpenCodeModelsSettingsPanel";
 import { HarnessAccountsPanel } from "../components/settings/HarnessAccountsPanel";
 import { LocalModelsSettingsPanel } from "../components/settings/LocalModelsSettingsPanel";
+import { ServersSettingsPanel } from "../components/settings/ServersSettingsPanel";
 import {
   CHAT_CONTENT_CARD_CLASS_NAME,
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
@@ -424,6 +425,9 @@ function SettingsRouteView() {
     gemini: Boolean(settings.geminiBinaryPath),
     grok: Boolean(settings.grokBinaryPath),
     kimi: Boolean(settings.kimiBinaryPath),
+    iflow: Boolean(settings.iflowBinaryPath),
+    qwen: Boolean(settings.qwenBinaryPath),
+    codebuddy: Boolean(settings.codebuddyBinaryPath),
     droid: Boolean(settings.droidBinaryPath),
     kilo: Boolean(settings.kiloBinaryPath || settings.kiloServerUrl || settings.kiloServerPassword),
     opencode: Boolean(
@@ -433,6 +437,7 @@ function SettingsRouteView() {
       settings.openCodeServerPassword,
     ),
     pi: Boolean(settings.piBinaryPath || settings.piAgentDir),
+    djlCloud: false,
   });
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
@@ -445,10 +450,14 @@ function SettingsRouteView() {
     gemini: "",
     grok: "",
     kimi: "",
+    iflow: "",
+    qwen: "",
+    codebuddy: "",
     droid: "",
     kilo: "",
     opencode: "",
     pi: "",
+    djlCloud: "",
   });
   const [, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, CustomModelValidationError | null>>
@@ -692,7 +701,8 @@ function SettingsRouteView() {
     settings.customDroidModels.length > 0 ||
     settings.customKiloModels.length > 0 ||
     settings.customOpenCodeModels.length > 0 ||
-    settings.customPiModels.length > 0
+    settings.customPiModels.length > 0 ||
+    settings.customDjlCloudModels.length > 0
       ? [t("route.models.customModels.title")]
       : []),
     ...(isInstallSettingsDirty ? [t("route.changedSettings.providerInstalls")] : []),
@@ -813,10 +823,14 @@ function SettingsRouteView() {
       gemini: false,
       grok: false,
       kimi: false,
+      iflow: false,
+      qwen: false,
+      codebuddy: false,
       droid: false,
       kilo: false,
       opencode: false,
       pi: false,
+      djlCloud: false,
     });
     setSelectedCustomModelProvider("codex");
     setCustomModelInputByProvider({
@@ -826,10 +840,14 @@ function SettingsRouteView() {
       gemini: "",
       grok: "",
       kimi: "",
+      iflow: "",
+      qwen: "",
+      codebuddy: "",
       droid: "",
       kilo: "",
       opencode: "",
       pi: "",
+      djlCloud: "",
     });
     setCustomModelErrorByProvider({});
     setShowAllCustomModels(false);
@@ -2420,6 +2438,8 @@ function SettingsRouteView() {
         );
       case "local-models":
         return <LocalModelsSettingsPanel />;
+      case "servers":
+        return <ServersSettingsPanel />;
       case "providers":
         return (
           <OpenCodeModelsSettingsPanel

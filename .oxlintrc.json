@@ -8,7 +8,9 @@
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
     ".synara-*",
-    "vendor/opencode"
+    "vendor/opencode",
+    ".next",
+    "cloud/packages/db/drizzle"
   ],
   "plugins": ["eslint", "oxc", "react", "unicorn", "typescript"],
   "categories": {

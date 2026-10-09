@@ -41,6 +41,9 @@ const workflows = readdirSync(workflowDirectory).toSorted();
 if (
   JSON.stringify(workflows) !==
   JSON.stringify([
+    "cloud-ci.yml",
+    "cloud-deploy-prod.yml",
+    "cloud-deploy-staging.yml",
     "desktop-ci.yml",
     "desktop-release.yml",
     "desktop-signed-update-e2e.yml",
@@ -63,7 +66,7 @@ for (const expected of [
   "Upload updater manifests last",
   "Verify exact 13-asset draft inventory",
   "environment: production",
-  "environment: windows-signing",
+  "environment: ${{ matrix.platform == 'win' && 'windows-signing' || '' }}",
   "Azure login for Artifact Signing",
   "Get-AuthenticodeSignature",
   'Status -ne "Valid"',

@@ -1,0 +1,18 @@
+{
+  "user": {
+    "id": "user_1",
+    "email": "ada@example.com",
+    "emailVerified": true
+  },
+  "activeOrgId": "org_1",
+  "role": "owner",
+  "organizations": [
+    {
+      "id": "org_1",
+      "name": "Ada",
+      "slug": "ada",
+      "role": "owner",
+      "personal": true
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { HarnessId } from "./harnessAccounts";
 import { Schema } from "effect";
 import { ProcessEnvRecord, TrimmedNonEmptyString } from "./baseSchemas";
 
@@ -53,6 +54,8 @@ export const TerminalOpenInput = Schema.Struct({
   env: Schema.optional(TerminalEnvSchema),
   agentProfile: Schema.optional(TerminalAgentProfile),
   workspaceName: Schema.optional(Schema.String),
+  // Launch an installed harness with its normal CLI login and configuration.
+  harness: Schema.optional(HarnessId),
   includeHistory: Schema.optional(Schema.Boolean),
   screenSnapshot: Schema.optional(Schema.Boolean),
   headlessQueries: Schema.optional(Schema.Boolean),
@@ -168,7 +171,20 @@ const TerminalActivityEvent = Schema.Struct({
   ...TerminalEventBaseSchema.fields,
   type: Schema.Literal("activity"),
   hasRunningSubprocess: Schema.Boolean,
-  cliKind: Schema.NullOr(Schema.Union([Schema.Literal("codex"), Schema.Literal("claude")])),
+  cliKind: Schema.NullOr(
+    Schema.Literals([
+      "codex",
+      "claude",
+      "cursor",
+      "opencode",
+      "kimi",
+      "grok",
+      "iflow",
+      "qwen",
+      "codebuddy",
+      "pi",
+    ]),
+  ),
   agentState: Schema.NullOr(
     Schema.Union([
       Schema.Literal("running"),

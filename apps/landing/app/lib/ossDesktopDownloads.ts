@@ -3,7 +3,7 @@
 // Layer: Landing download routing
 
 export const DEFAULT_OSS_DOWNLOAD_BASE_URL =
-  "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com";
+  "https://djl-china-releases.oss-accelerate.aliyuncs.com";
 
 function normalizeBaseUrl(raw: string | undefined): string | null {
   const value = raw?.trim();

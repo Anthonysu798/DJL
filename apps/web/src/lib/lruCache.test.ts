@@ -116,3 +116,20 @@ describe("LRUCache", () => {
     expect(cache.get("c")).toBe("C");
   });
 });
+
+describe("oversized cache entries", () => {
+  it("does not retain oversized values or evict useful smaller entries for them", () => {
+    const cache = new LRUCache<string>(5, 100);
+    cache.set("small", "useful", 10);
+    cache.set("oversized", "large", 101);
+    expect(cache.get("oversized")).toBeNull();
+    expect(cache.get("small")).toBe("useful");
+  });
+
+  it("removes stale contents when an updated value exceeds the budget", () => {
+    const cache = new LRUCache<string>(5, 100);
+    cache.set("item", "old", 10);
+    cache.set("item", "new", 101);
+    expect(cache.get("item")).toBeNull();
+  });
+});

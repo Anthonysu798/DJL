@@ -11,6 +11,12 @@ export const MAC_INHERITED_ENTITLEMENTS_PATH =
 export const WINDOWS_INSTALLER_GUID = "368107a8-afe6-5db5-ab3b-d4f331684868";
 const MAC_DMG_ICON_PATH = "icon.icns";
 export const NODE_PTY_ASAR_UNPACK_GLOBS = ["node_modules/node-pty/**"] as const;
+/**
+ * `djl://` deep links (DJL Cloud browser sign-in returns to djl://auth/callback).
+ * Electron Builder turns this into CFBundleURLTypes on macOS, the NSIS protocol
+ * registration on Windows, and `x-scheme-handler/djl` in the Linux .desktop file.
+ */
+export const DESKTOP_URL_PROTOCOLS = [{ name: "DJL", schemes: ["djl"] }] as const;
 export const AI_DETECTOR_ASAR_UNPACK_GLOBS = [
   "node_modules/onnxruntime-node/**",
   "node_modules/sharp/**",
@@ -24,6 +30,7 @@ export interface DesktopPlatformBuildConfig {
   readonly linux?: Record<string, unknown>;
   readonly mac?: Record<string, unknown>;
   readonly nsis?: Record<string, unknown>;
+  readonly protocols: ReadonlyArray<{ readonly name: string; readonly schemes: readonly string[] }>;
   readonly win?: Record<string, unknown>;
 }
 
@@ -62,6 +69,7 @@ export function createDesktopPlatformBuildConfig(
 ): DesktopPlatformBuildConfig {
   const nativePackaging = {
     asarUnpack: [...NODE_PTY_ASAR_UNPACK_GLOBS, ...AI_DETECTOR_ASAR_UNPACK_GLOBS],
+    protocols: DESKTOP_URL_PROTOCOLS,
   };
 
   if (input.platform === "mac") {

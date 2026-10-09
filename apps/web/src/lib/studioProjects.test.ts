@@ -245,7 +245,7 @@ describe("studioProjects", () => {
       type: "project.create",
       projectId,
       kind: "studio",
-      title: "Work",
+      title: "Agent mode",
       workspaceRoot: "/Users/tester/Documents/Synara/Studio",
       createWorkspaceRootIfMissing: true,
     });

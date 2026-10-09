@@ -43,6 +43,8 @@ export interface CursorAcpRuntimeInput extends Omit<
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly cursorSettings: CursorAcpRuntimeCursorSettings | null | undefined;
+  /** DJL thread that owns the spawned process; exported as `DJL_THREAD_ID`. */
+  readonly threadId?: string;
 }
 
 export interface CursorAcpModelSelectionErrorContext {
@@ -69,6 +71,7 @@ export function buildCursorAcpSpawnInput(
   cursorSettings: CursorAcpRuntimeCursorSettings | null | undefined,
   cwd: string,
   commandOptions?: CursorAgentCommandOptions,
+  threadId?: string,
 ): AcpSpawnInput {
   const command = buildCursorAgentCommand(
     cursorSettings?.binaryPath,
@@ -80,7 +83,7 @@ export function buildCursorAcpSpawnInput(
     args: command.args,
     cwd,
     // Keep ACP startup browserless without forcing CI/noninteractive flags onto user turns.
-    env: CURSOR_AGENT_BROWSERLESS_ENV,
+    env: { ...CURSOR_AGENT_BROWSERLESS_ENV, ...(threadId ? { DJL_THREAD_ID: threadId } : {}) },
   };
 }
 
@@ -105,7 +108,7 @@ export const makeCursorAcpRuntime = (
     const acpContext = yield* Layer.build(
       AcpSessionRuntime.layer({
         ...input,
-        spawn: buildCursorAcpSpawnInput(input.cursorSettings, input.cwd),
+        spawn: buildCursorAcpSpawnInput(input.cursorSettings, input.cwd, undefined, input.threadId),
         authMethodId: "cursor_login",
         authenticateMeta: { headless: true },
         clientCapabilities: CURSOR_PARAMETERIZED_MODEL_PICKER_CAPABILITIES,

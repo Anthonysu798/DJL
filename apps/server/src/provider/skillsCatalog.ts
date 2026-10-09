@@ -439,10 +439,14 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   gemini: ["agents", "gemini"],
   grok: ["grok", "claude", "agents"],
   kimi: ["agents"],
+  iflow: ["agents"],
+  qwen: ["agents"],
+  codebuddy: ["agents"],
   droid: ["factory", "agents", "claude", "codex"],
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
+  djlCloud: [],
 } as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
 
 function homeRootsForOrigin(

@@ -87,7 +87,7 @@ export class WorkspaceTerminalSessions {
         this.update(session, { busy: activity.hasRunningSubprocess }),
       onTerminalRuntimeStatusChange: (_, status) =>
         this.update(session, {
-          status: status === "replaying" ? "connecting" : status,
+          status: status === "exited" ? "ready" : status === "replaying" ? "connecting" : status,
         }),
     };
   }

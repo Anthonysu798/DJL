@@ -25,6 +25,12 @@ describe("buildGrokAcpSpawnInput", () => {
     });
   });
 
+  it("exports DJL_THREAD_ID for the owning thread", () => {
+    expect(buildGrokAcpSpawnInput(undefined, "/tmp/project", "thread-1").env).toEqual({
+      DJL_THREAD_ID: "thread-1",
+    });
+  });
+
   it("uses the configured Grok binary path", () => {
     expect(buildGrokAcpSpawnInput({ binaryPath: "/usr/local/bin/grok" }, "/tmp/project")).toEqual({
       command: "/usr/local/bin/grok",

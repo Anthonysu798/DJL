@@ -399,11 +399,23 @@ describe("public desktop release preparation", () => {
     );
     const workflows = readdirSync(resolve(REPOSITORY_ROOT, ".github/workflows")).toSorted();
     assert.deepStrictEqual(workflows, [
+      "cloud-ci.yml",
+      "cloud-deploy-prod.yml",
+      "cloud-deploy-staging.yml",
       "desktop-ci.yml",
       "desktop-release.yml",
       "desktop-signed-update-e2e.yml",
       "landing-deploy.yml",
     ]);
+
+    // The DJL Cloud backend deploys from its own `cloud-v*` tags. A desktop `v*` release tag must
+    // never trigger a backend production deploy.
+    const cloudProductionWorkflow = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/workflows/cloud-deploy-prod.yml"),
+      "utf8",
+    );
+    assert.match(cloudProductionWorkflow, /tags: \["cloud-v\*"\]/);
+    assert.notMatch(cloudProductionWorkflow, /tags:[^\n]*"v\*/);
 
     // The landing mirror deploys the marketing site only. It must never grow into a second desktop
     // pipeline, never run for fork pull requests, and never hold write access to this repository.
@@ -497,7 +509,11 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /permissions:\n  contents: read/);
     assert.match(releaseWorkflow, /persist-credentials: false/);
     assert.match(releaseWorkflow, /environment: production/);
-    assert.match(releaseWorkflow, /environment: windows-signing/);
+    // Only the Windows build leg enters the signing environment; the Mac legs must not.
+    assert.match(
+      releaseWorkflow,
+      /environment: \$\{\{ matrix\.platform == 'win' && 'windows-signing' \|\| '' \}\}/,
+    );
     assert.match(releaseWorkflow, /retention-days: 1/);
     assert.match(releaseWorkflow, /gh release upload "\$RELEASE_TAG" "\$\{payloads\[@\]\}"/);
     assert.match(releaseWorkflow, /Get-AuthenticodeSignature/);
@@ -512,11 +528,11 @@ describe("public desktop release preparation", () => {
     assert.match(releaseWorkflow, /http:\/\/timestamp\.acs\.microsoft\.com/);
     assert.match(
       releaseWorkflow,
-      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,
     );
     assert.match(
       ciWorkflow,
-      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,
     );
     assert.match(ciWorkflow, /uses: \.\/\.github\/actions\/setup-ossutil/);
     assert.match(ciWorkflow, /ossutil cp README\.md/);
@@ -620,11 +636,11 @@ describe("public desktop release preparation", () => {
     assert.match(workflow, /SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798\/DJL/);
     assert.match(
       workflow,
-      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable/,
+      /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,
     );
     assert.match(
       workflow,
-      /curl -fsSLo target-release\/oss-djl-mac\.yml[\s\S]*djl-china-releases\.oss-cn-hongkong\.aliyuncs\.com\/stable\/djl-mac\.yml/,
+      /curl -fsSLo target-release\/oss-djl-mac\.yml[\s\S]*djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable\/djl-mac\.yml/,
     );
     assert.match(workflow, /repos\/\$RELEASE_REPOSITORY\/releases\/latest/);
     assert.match(workflow, /compareReleaseVersions/);

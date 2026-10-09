@@ -262,3 +262,27 @@ describe("readWindowsPersistentEnvironment", () => {
     expect(readWindowsPersistentEnvironment(execFile)).toEqual({});
   });
 });
+
+it("closes stdin during asynchronous environment capture like the synchronous probe", async () => {
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { readEnvironmentFromLoginShellAsync } = await import("./shell");
+  if (process.platform === "win32") return;
+  const originalPromptSetting = process.env.POWERLEVEL9K_DISABLE_GITSTATUS;
+  const directory = await mkdtemp(join(tmpdir(), "djl-shell-capture-"));
+  const shell = join(directory, "shell");
+  await writeFile(shell, '#!/bin/sh\ncat >/dev/null\nexec /bin/sh -c "$2"\n', { mode: 0o700 });
+  try {
+    const environment = await readEnvironmentFromLoginShellAsync(
+      shell,
+      ["PATH", "POWERLEVEL9K_DISABLE_GITSTATUS"],
+      AbortSignal.timeout(1500),
+    );
+    expect(environment.PATH).toBe(process.env.PATH);
+    expect(environment.POWERLEVEL9K_DISABLE_GITSTATUS).toBe("true");
+    expect(process.env.POWERLEVEL9K_DISABLE_GITSTATUS).toBe(originalPromptSetting);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

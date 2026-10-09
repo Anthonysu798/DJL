@@ -122,7 +122,7 @@ it for that release.
 gh release view vX.Y.Z --repo Anthonysu798/DJL --json assets --jq '.assets|length'   # 13
 gh attestation verify DJL-X.Y.Z-x64.exe --repo Anthonysu798/DJL
 curl -fsSI -H 'Range: bytes=0-1023' \
-  https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/X.Y.Z/DJL-X.Y.Z-x64.exe
+  https://djl-china-releases.oss-accelerate.aliyuncs.com/releases/X.Y.Z/DJL-X.Y.Z-x64.exe
 curl -sI https://slcor.com/download/windows                                          # 307 to the new version
 ```
 

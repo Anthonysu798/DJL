@@ -13,6 +13,8 @@ export interface ServerSecretStoreShape {
     bytes: number,
   ) => Effect.Effect<Uint8Array, SecretStoreError>;
   readonly remove: (name: string) => Effect.Effect<void, SecretStoreError>;
+  /** Absolute on-disk path the store uses for `name`. Pure; the file may not exist. */
+  readonly pathOf: (name: string) => string;
 }
 
 export class ServerSecretStore extends ServiceMap.Service<

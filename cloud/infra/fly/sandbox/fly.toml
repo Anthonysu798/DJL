@@ -1,0 +1,17 @@
+# Image source for the agent sandbox. Machines are never started by `fly deploy`;
+# the worker creates them through the Machines API (FLY_SANDBOX_APP,
+# FLY_SANDBOX_IMAGE) in a separate Fly organization with no public IPs.
+#
+# One-time setup (sandbox org):
+#   fly orgs create djl-sandbox
+#   fly apps create djl-sandbox --org djl-sandbox
+#   fly tokens create deploy --app djl-sandbox     # -> FLY_API_TOKEN_SANDBOX on the worker
+# Build and push a new image (from this directory):
+#   fly deploy --build-only --push --image-label v1
+#   # -> FLY_SANDBOX_IMAGE=registry.fly.io/djl-sandbox:v1 on the worker
+# Never allocate IPs or add services to this app.
+app = "djl-sandbox"
+primary_region = "iad"
+
+[build]
+dockerfile = "Dockerfile"

@@ -210,7 +210,8 @@ describe("WsTransport", () => {
     await transport.dispose();
   });
 
-  it("reconnects once when a subscribed RPC stream ends cleanly", async () => {
+  it("reconnects once without adding a second backoff when a subscribed stream ends", async () => {
+    const schedule = vi.spyOn(window, "setTimeout");
     const transport = new WsTransport();
     const internal = transport as unknown as {
       reconnect: () => Promise<unknown>;
@@ -228,6 +229,7 @@ describe("WsTransport", () => {
 
     await vi.waitFor(() => expect(reconnect).toHaveBeenCalledOnce(), { timeout: 2_000 });
     expect(restart).not.toHaveBeenCalled();
+    expect(schedule).toHaveBeenCalledWith(expect.any(Function), 0);
     await transport.dispose();
   });
 

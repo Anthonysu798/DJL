@@ -487,7 +487,7 @@ it.effect("rejects legacy providers for new turns while historical payloads rema
         text: "continue",
         attachments: [],
       },
-      modelSelection: { provider: "pi", model: "pi-test" },
+      modelSelection: { provider: "gemini", model: "gemini-test" },
       runtimeMode: "full-access",
       createdAt: "2026-01-01T00:00:00.000Z",
     }).pipe(Effect.flip);

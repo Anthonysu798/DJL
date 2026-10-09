@@ -713,6 +713,7 @@ export function makeCursorAdapter(
             cursorSettings: effectiveCursorSettings,
             childProcessSpawner,
             cwd,
+            threadId: input.threadId,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientInfo: { name: "DJL", version: "0.0.0" },
             ...acpNativeLoggers,

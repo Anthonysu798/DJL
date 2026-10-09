@@ -103,6 +103,11 @@ const composerDebouncedStorage = createDebouncedStorage(
   COMPOSER_PERSIST_DEBOUNCE_MS,
 );
 
+/** Called when ownership moves from the small startup editor to the full composer. */
+export function flushComposerDraftPersistence(): void {
+  composerDebouncedStorage.flush();
+}
+
 // Flush pending composer draft writes before page unload to prevent data loss.
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
@@ -1233,6 +1238,10 @@ function makeModelSelection(
 ): ModelSelection {
   switch (provider) {
     case "kimi":
+    case "iflow":
+    case "qwen":
+    case "codebuddy":
+    case "djlCloud":
       return { provider, model };
     case "codex":
       return {

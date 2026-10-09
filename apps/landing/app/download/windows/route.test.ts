@@ -62,7 +62,7 @@ describe("GET /download/windows", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/releases/0.5.6/DJL-0.5.6-x64.exe",
+      "https://djl-china-releases.oss-accelerate.aliyuncs.com/releases/0.5.6/DJL-0.5.6-x64.exe",
     );
   });
 

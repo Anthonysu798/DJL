@@ -12,10 +12,14 @@ import { cn } from "~/lib/utils";
 import {
   ClaudeAI,
   CursorIcon,
+  DjlCloudIcon,
   Gemini,
   DroidIcon,
   GrokIcon,
+  IFlowIcon,
   KimiIcon,
+  QwenIcon,
+  CodeBuddyIcon,
   type Icon,
   KiloIcon,
   OpenAI,
@@ -71,10 +75,14 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
   gemini: Gemini,
   grok: GrokIcon,
   kimi: KimiIcon,
+  iflow: IFlowIcon,
+  qwen: QwenIcon,
+  codebuddy: CodeBuddyIcon,
   droid: DroidIcon,
   kilo: KiloIcon,
   opencode: OpenCodeProviderIcon,
   pi: PiIcon,
+  djlCloud: DjlCloudIcon,
 };
 
 export function providerIconToneClassName(

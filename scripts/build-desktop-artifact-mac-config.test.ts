@@ -146,6 +146,16 @@ describe("createDesktopPlatformBuildConfig", () => {
     ]);
   });
 
+  it("registers the djl:// deep-link scheme on every platform", () => {
+    for (const platform of ["mac", "linux", "win"] as const) {
+      const config = createDesktopPlatformBuildConfig({
+        platform,
+        target: platform === "mac" ? "dmg" : platform === "linux" ? "AppImage" : "nsis",
+      });
+      assert.deepStrictEqual(config.protocols, [{ name: "DJL", schemes: ["djl"] }]);
+    }
+  });
+
   it("blocks unsupported or non-matching Linux native build hosts", () => {
     assert.equal(
       validateDesktopNativeBuildHost({

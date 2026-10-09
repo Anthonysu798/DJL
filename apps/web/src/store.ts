@@ -2412,6 +2412,43 @@ function writeThreadState(state: AppState, nextThread: Thread, previousThread?: 
   return nextState;
 }
 
+// Release reloadable detail data when an idle subscription leaves the warm cache.
+// Shell rows, unread indicators and session metadata remain available to the sidebar.
+export function evictThreadDetail(state: AppState, threadId: ThreadId): AppState {
+  const omitThread = <T>(record: Record<ThreadId, T> | undefined) => {
+    if (!record) return {};
+    if (!(threadId in record)) return record;
+    const { [threadId]: _removed, ...remaining } = record;
+    return remaining;
+  };
+  const next: AppState = {
+    ...state,
+    messageIdsByThreadId: omitThread(state.messageIdsByThreadId),
+    messageByThreadId: omitThread(state.messageByThreadId),
+    activityIdsByThreadId: omitThread(state.activityIdsByThreadId),
+    activityByThreadId: omitThread(state.activityByThreadId),
+    proposedPlanIdsByThreadId: omitThread(state.proposedPlanIdsByThreadId),
+    proposedPlanByThreadId: omitThread(state.proposedPlanByThreadId),
+    turnDiffIdsByThreadId: omitThread(state.turnDiffIdsByThreadId),
+    turnDiffSummaryByThreadId: omitThread(state.turnDiffSummaryByThreadId),
+  };
+  // Refresh the derived object too: otherwise its cached arrays keep the old
+  // message/attachment payloads alive after the normalized maps have been cleared.
+  const thread = getThreadFromState(next, threadId);
+  next.threads = state.threads.map((previous) =>
+    previous.id === threadId
+      ? (thread ?? {
+          ...previous,
+          messages: [],
+          activities: [],
+          proposedPlans: [],
+          turnDiffSummaries: [],
+        })
+      : previous,
+  );
+  return next;
+}
+
 function removeThreadState(state: AppState, threadId: ThreadId): AppState {
   const { [threadId]: _removedShell, ...threadShellById } =
     state.threadShellById ?? EMPTY_THREAD_SHELL_BY_ID;

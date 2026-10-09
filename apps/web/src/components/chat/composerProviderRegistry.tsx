@@ -298,6 +298,21 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("kimi", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("kimi", input),
   },
+  iflow: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("iflow", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("iflow", input),
+  },
+  qwen: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("qwen", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("qwen", input),
+  },
+  codebuddy: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("codebuddy", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("codebuddy", input),
+  },
   droid: {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("droid", input),
@@ -317,6 +332,11 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("pi", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("pi", input),
+  },
+  djlCloud: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("djlCloud", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("djlCloud", input),
   },
 };
 

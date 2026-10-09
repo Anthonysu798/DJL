@@ -90,6 +90,8 @@
     },
     "commandMenu": {
       "browseFolders": "瀏覽資料夾",
+      "continueTask": "請從上一個智慧體停下的地方繼續完成此任務。",
+      "continueWithContext": "保留上下文繼續",
       "files": "文件",
       "fork": {
         "local": "分岔到本地",
@@ -99,17 +101,22 @@
         "newWorktreeDescription": "在新的工作樹中繼續"
       },
       "groups": {
+        "agentModels": "切換智慧體繼續",
         "builtIn": "內建",
         "local": "本地",
         "plugins": "外掛",
         "provider": "提供者",
+        "servers": "伺服器",
         "skills": "技能",
         "subagents": "子代理"
       },
+      "handoffReady": "智慧體已就緒",
+      "handoffReadyDescription": "對話、筆記和草稿已保留。傳送下一條指令即可繼續。",
+      "handoffWait": "請先完成目前回合，再進行交接",
       "loadingCommands": "正在裝入命令...",
       "loadingSkills": "正在裝入技能...",
       "noMatchingCommand": "無匹配命令 。",
-      "noMatchingMention": "沒有匹配的外掛或檔案 。",
+      "noMatchingMention": "沒有相符的智慧體、伺服器、外掛程式或檔案。",
       "noMatchingSkill": "沒有匹配的技能。",
       "review": {
         "base": "針對基地分支的審查",
@@ -151,7 +158,7 @@
         "answer": "請輸入答案以繼續",
         "approval": "請先處理此核准要求",
         "configureModel": "請先在設定中配置模型",
-        "default": "輸入問題、用 @ 標記檔案/資料夾，或輸入 / 查看可用指令",
+        "default": "輸入問題，用 @ 選擇檔案或智慧體，用 / 查看命令",
         "followUp": "提出後續修改",
         "followUpAttachments": "提出後續修改或附加圖片",
         "ownAnswer": "輸入自己的答案，或留空以使用所選選項",
@@ -215,6 +222,7 @@
     "context": {
       "ariaLabel": "上下文視窗，已使用 {{usage}}",
       "autoCompact": "需要時會自動壓縮上下文。",
+      "awaitingUsage": "尚未回報使用量",
       "currentSession": "目前工作階段：{{window}}",
       "modelWindow": "模型視窗：{{tokens}} 個詞元",
       "nextTurn": "下一回合：{{window}}",
@@ -225,8 +233,7 @@
       "unknown": "未知",
       "used": "上下文已使用",
       "usedWithMaximum": "已使用 {{maximum}} 上下文",
-      "windowTransition": "目前會話：{{current}}。下一回合：{{next}}。",
-      "awaitingUsage": "尚未回報使用量"
+      "windowTransition": "目前會話：{{current}}。下一回合：{{next}}。"
     },
     "copy": {
       "copied": "複製了！",
@@ -440,8 +447,8 @@
           "title": "已達提供者限制"
         },
         "workspaceMissing": {
-          "title": "工作資料夾無法使用",
-          "action": "請選擇現有的專案資料夾，然後重新傳送訊息。"
+          "action": "請選擇現有的專案資料夾，然後重新傳送訊息。",
+          "title": "工作資料夾無法使用"
         }
       },
       "renameThreadFailed": "重命名線程失敗",
@@ -685,10 +692,10 @@
       "work": {
         "activeGroup": "專案和最近資料夾",
         "chooseFolder": "選擇另一個資料夾",
-        "managed": "管理的工作資料夾",
+        "managed": "智慧體任務資料夾",
         "managedDetail": "此任務的私人資料夾",
         "search": "搜尋地點",
-        "trigger": "管理的工作資料夾"
+        "trigger": "智慧體任務資料夾"
       }
     },
     "projectScripts": {
@@ -1087,66 +1094,23 @@
     "untitledThread": "未命名對話"
   },
   "settings": {
-    "tools": {
-      "nativeSetupRequired": "請使用適用於你系統的官方安裝程式。",
-      "automatic": "自動更新服務商工具",
-      "automaticDescription": "每六小時檢查一次，在沒有執行中的對話且所有終端機已關閉時更新已安裝的工具。",
-      "automaticError": "無法儲存自動更新設定。",
-      "automaticChecksRequired": "請在設定中啟用服務商更新檢查，以使用自動更新。",
-      "title": "供應商工具",
-      "description": "安裝官方命令列工具，並保持最新版本。",
-      "check": "檢查更新",
-      "checking": "正在檢查…",
-      "updateAll": "全部更新",
-      "installed": "已安裝",
-      "latest": "最新版本",
-      "unknown": "暫時無法取得",
-      "missing": "尚未安裝",
-      "install": "安裝",
-      "update": "更新",
-      "current": "已是最新版",
-      "working": "正在處理…",
-      "done": "已確認為最新版本。建立新聊天即可使用。",
-      "failed": "安裝或更新未成功。",
-      "loadError": "無法檢查供應商工具。",
-      "setupRequired": "請安裝 Node.js/npm，或依照設定指南管理此安裝。",
-      "bundledNote": "DJL 使用此已安裝的 OpenCode CLI，並共用其供應商登入狀態。",
-      "compatible": "與 DJL 相容",
-      "incompatible": "與 DJL 不相容。請更新 OpenCode 或查看設定指南。",
-      "accessNote": "模型存取權取決於供應商帳號。請在設定中啟用供應商更新檢查，以偵測最新版本。"
-    },
-    "subscriptions": {
-      "kimiRegion": "Kimi 帳號地區",
-      "existingRegion": "使用 CLI 目前地區",
-      "title": "訂閱與程式開發方案",
-      "international": "國際版",
-      "china": "中國大陸版",
-      "planKey": "程式開發方案 API 金鑰",
-      "providerLogin": "服務商登入",
-      "connect": "連線",
-      "runtimeRequired": "請啟用並安裝相容的 OpenCode 後再連線。",
-      "unavailable": "請更新 OpenCode，檢查是否支援此方案。",
-      "models_one": "{{count}} 個可用模型",
-      "models_other": "{{count}} 個可用模型",
-      "modelPicker": "連線後，在模型選擇器中選擇 OpenCode，即可使用方案。其他服務商仍可在「模型與 API 金鑰」中設定。"
-    },
     "accounts": {
-      "loginFor": "登入 {{provider}}",
-      "openCodeSharedLogin": "OpenCode 與已安裝的 OpenCode CLI 共用登入資訊。在此登入也會更新 CLI 的登入資訊。",
-      "openCodeLegacyAvailable": "DJL 中有可複製的已儲存登入資訊：{{providers}}。現有 CLI 登入資訊將保留，原始 DJL 憑證也會備份保留。",
-      "openCodeTransfer": "將 DJL 已儲存的登入資訊複製到 OpenCode",
-      "openCodeTransferring": "正在複製登入資訊…",
-      "openCodeExistingKept": "已保留現有 CLI 登入資訊：{{providers}}。",
-      "openCodeTransferComplete": "已複製儲存的登入資訊。OpenCode 和 DJL 現在共用這些憑證。",
-      "openCodeTransferError": "無法檢查或複製已儲存的登入資訊。請重新整理後再試。",
       "checking": "正在檢查…",
-      "codingPlansDescription": "在 OpenCode 登入中，為 GLM 選擇 Z.AI Coding Plan，為 Kimi 選擇 Kimi For Coding，或選擇你的 MiniMax 程式開發方案服務商。已安裝的執行環境支援時，也會顯示 Qwen 等服務商。",
+      "codingPlansDescription": "在 OpenCode 登入中，為 GLM 選擇 Z.AI Coding Plan，為 Kimi 選擇 Kimi For Coding，或選擇你的 MiniMax 程式開發方案服務商。Kimi Code、iFlow CLI、Qwen Code、CodeBuddy Code 和 Pi 在上方透過官方 CLI 連線，直接沿用這些 CLI 已登入的帳號。",
       "codingPlansTitle": "中國模型與程式開發方案",
       "default": "新對話預設使用",
       "description": "透過各服務商的官方登入流程連接現有帳戶。方案及用量限制仍由服務商管理。",
       "finish": "關閉並重新整理",
       "loadError": "無法檢查帳戶。",
+      "loginFor": "登入 {{provider}}",
       "loginInstructions": "請在終端機或服務商開啟的瀏覽器中完成登入。關閉此終端機可完成或取消登入。",
+      "openCodeExistingKept": "已保留現有 CLI 登入資訊：{{providers}}。",
+      "openCodeLegacyAvailable": "DJL 中有可複製的已儲存登入資訊：{{providers}}。現有 CLI 登入資訊將保留，原始 DJL 憑證也會備份保留。",
+      "openCodeSharedLogin": "OpenCode 與已安裝的 OpenCode CLI 共用登入資訊。在此登入也會更新 CLI 的登入資訊。",
+      "openCodeTransfer": "將 DJL 已儲存的登入資訊複製到 OpenCode",
+      "openCodeTransferComplete": "已複製儲存的登入資訊。OpenCode 和 DJL 現在共用這些憑證。",
+      "openCodeTransferError": "無法檢查或複製已儲存的登入資訊。請重新整理後再試。",
+      "openCodeTransferring": "正在複製登入資訊…",
       "providerGuide": "服務商連接指南",
       "refresh": "重新整理",
       "setup": "設定指南",
@@ -1459,6 +1423,7 @@
       "configuredTitle": "已設定模型",
       "configureFirst": "請先設定模型",
       "disconnect": "中斷連線",
+      "externalCredential": "此連線由 CLI 設定管理。請在已安裝的 CLI 中變更登入資訊或設定。",
       "generationDefaultsTitle": "生成預設值",
       "gitWritingAriaLabel": "Git 寫作模型",
       "gitWritingDescription": "用於提交訊息、提取要求標題與分支名稱。",
@@ -1466,7 +1431,6 @@
       "keyAriaLabel": "{{provider}} API 金鑰",
       "keyPlaceholder": "輸入 API 金鑰",
       "keyPrivacy": "憑證與已安裝的 CLI 共用。在此中斷連線也會移除 CLI 儲存的登入資訊。",
-      "externalCredential": "此連線由 CLI 設定管理。請在已安裝的 CLI 中變更登入資訊或設定。",
       "modelCount_one": "{{count}} 個模型可用",
       "modelCount_other": "{{count}} 個模型可用",
       "notConnected": "未連線",
@@ -1546,6 +1510,11 @@
           "description": "從任何地方使用 iPhone 安全控制 DJL。",
           "eyebrow": "安全夥伴",
           "label": "遠端"
+        },
+        "servers": {
+          "description": "你的 VPS 與 SSH 主機，隨時供代理使用。",
+          "eyebrow": "遠端主機",
+          "label": "伺服器"
         },
         "shortcuts": {
           "description": "依使用情境分類的所有 DJL 快速鍵。",
@@ -1856,7 +1825,7 @@
         "providerUpdateChecks": "供應商更新檢查",
         "providerVisibility": "供應商可見性",
         "themePack": "{{theme}}主題包",
-        "workSection": "工作區段",
+        "workSection": "智慧體模式區域",
         "workspaceSection": "工作區區段"
       },
       "confirmations": {
@@ -1975,7 +1944,7 @@
           },
           "showAriaLabel": "在側邊欄中顯示{{section}}區段",
           "work": {
-            "description": "顯示用於非技術性、任務導向工作的“工作”分頁。"
+            "description": "顯示智慧體模式，用於執行任務及跨供應商接續任務。"
           },
           "workspace": {
             "description": "在側邊欄切換器中顯示“工作區”分頁。“討論串”分頁始終可見。"
@@ -2257,7 +2226,7 @@
           },
           "studio-section": {
             "keywords": "任務 文件 側邊欄",
-            "title": "工作"
+            "title": "智慧體模式"
           },
           "thread-order": {
             "keywords": "側邊欄 排序 最近 建立",
@@ -2304,6 +2273,12 @@
             "title": "iPhone 遠端存取"
           }
         },
+        "servers": {
+          "registry": {
+            "keywords": "SSH VPS 主機 金鑰 指紋",
+            "title": "伺服器登錄"
+          }
+        },
         "shortcuts": {
           "keyboard-shortcuts": {
             "keywords": "按鍵 指令 參考",
@@ -2331,6 +2306,182 @@
       },
       "placeholder": "搜尋設定…",
       "resultsAriaLabel": "設定搜尋結果"
+    },
+    "servers": {
+      "actions": {
+        "add": "新增伺服器",
+        "cancel": "取消",
+        "copied": "已複製",
+        "copy": "複製",
+        "edit": "編輯",
+        "hide": "隱藏",
+        "import": "從 SSH 設定匯入",
+        "importSelected": "匯入所選的 {{count}} 項",
+        "more": "更多選項",
+        "notNow": "暫不",
+        "refresh": "重新整理",
+        "remove": "移除",
+        "reveal": "顯示",
+        "save": "儲存",
+        "saveChanges": "儲存變更",
+        "test": "測試連線",
+        "testBeforeSaving": "儲存前先測試",
+        "trust": "信任此金鑰"
+      },
+      "approval": {
+        "approve": "核准",
+        "deny": "拒絕",
+        "more": "還有 {{count}} 個等待中",
+        "region": "伺服器命令核准",
+        "thread": "來自 {{thread}}",
+        "title": "代理程式想在 {{server}} 上執行命令",
+        "waits": "最多等待 15 分鐘"
+      },
+      "commands": {
+        "empty": "尚無代理程式命令",
+        "exitCode": "結束代碼 {{code}}",
+        "status": {
+          "denied": "已拒絕",
+          "failed": "失敗",
+          "pending": "等待核准",
+          "refused": "已攔截",
+          "running": "執行中",
+          "succeeded": "成功",
+          "timed-out": "逾時"
+        },
+        "title": "最近的代理程式命令"
+      },
+      "empty": {
+        "body": "手動新增 VPS，或匯入 SSH 設定中既有的主機。",
+        "title": "尚無伺服器"
+      },
+      "errors": {
+        "hostInvalid": "這看起來不像主機名稱或 IP 位址。",
+        "hostRequired": "請輸入主機名稱或 IP 位址。",
+        "keyInvalid": "這不是私密金鑰。",
+        "keyPathRequired": "請選擇或輸入金鑰路徑。",
+        "keyRequired": "請貼上或拖入私密金鑰。",
+        "loadFailed": "無法載入伺服器。",
+        "nameRequired": "請為此伺服器命名。",
+        "passwordRequired": "請輸入密碼。",
+        "portInvalid": "連接埠必須介於 1 到 65535 之間。",
+        "tagInvalid": "標籤只能包含字母、數字、_ 與 -。",
+        "usernameRequired": "請輸入登入的使用者名稱。"
+      },
+      "form": {
+        "addTitle": "新增伺服器",
+        "auth": {
+          "agent": "SSH 代理程式",
+          "agentHint": "使用你的 ssh-agent 與 ~/.ssh/config。",
+          "importedKey": "匯入金鑰",
+          "importedKeyHint": "貼上或拖入金鑰。DJL 會保存在本機的密鑰庫中。",
+          "keyPath": "金鑰檔案",
+          "keyPathHint": "使用這台電腦上既有的私密金鑰檔案。",
+          "password": "密碼",
+          "passwordHint": "儲存在這台電腦上，並透過 askpass 交給 ssh。"
+        },
+        "authHint": "DJL 登入此主機的方式。",
+        "authLabel": "驗證方式",
+        "editTitle": "編輯伺服器",
+        "host": "主機",
+        "hostHint": "主機名稱或 IP 位址",
+        "importKey": "私密金鑰",
+        "importKeyChoose": "選擇檔案",
+        "importKeyDetected": "偵測到 {{type}} 金鑰",
+        "importKeyDrop": "將金鑰檔案拖放到這裡，或貼上其內容",
+        "importKeyKeep": "保留已儲存的金鑰",
+        "importKeyPlaceholder": "-----BEGIN OPENSSH PRIVATE KEY-----",
+        "keyPath": "私密金鑰路徑",
+        "keyPathPlaceholder": "~/.ssh/id_ed25519",
+        "name": "名稱",
+        "nameHint": "顯示在清單中並提供給代理程式。",
+        "notes": "備註",
+        "notesHint": "關於此主機值得記住的內容。",
+        "passphrase": "通關密語",
+        "passphraseHint": "僅加密的金鑰需要。儲存在這台電腦上。",
+        "passphraseKeep": "保留已儲存的通關密語",
+        "password": "密碼",
+        "passwordHint": "儲存在這台電腦上，且僅透過 askpass 傳給 ssh。",
+        "passwordKeep": "保留已儲存的密碼",
+        "port": "連接埠",
+        "preview": "DJL 將執行的指令",
+        "previewHint": "機密資訊絕不會出現在命令列中。",
+        "tags": "標籤",
+        "tagsHint": "為代理程式與篩選條件將伺服器分組。",
+        "tagsPlaceholder": "輸入標籤並按 Enter",
+        "tier": "代理權限",
+        "tierHint": "連線後代理程式可以在這裡做什麼。",
+        "username": "使用者名稱",
+        "usernameHint": "ssh 登入時使用的帳號。"
+      },
+      "hostKey": {
+        "body": "信任前，請將指紋與服務供應商顯示的指紋比對。",
+        "changedBody": "可能有人正在攔截連線，或伺服器已重建。再次連線前，請先從 known_hosts 移除舊項目。",
+        "changedTitle": "此伺服器的主機金鑰已變更",
+        "keyType": "金鑰類型",
+        "title": "確認此伺服器的身分"
+      },
+      "import": {
+        "alreadyAdded": "已新增",
+        "body": "在 {{path}} 中找到 {{count}} 個主機。在你要求之前不會進行任何測試。",
+        "none": "{{path}} 中沒有可匯入的主機。",
+        "title": "從 SSH 設定匯入"
+      },
+      "list": {
+        "count": "已登錄 {{count}} 台"
+      },
+      "remove": {
+        "body": "DJL 會忘記此伺服器、其儲存的機密資訊與已信任的主機金鑰。伺服器本身不會有任何變更。",
+        "title": "要移除 {{name}} 嗎？"
+      },
+      "stats": {
+        "collected": "統計資料來自 {{when}}",
+        "disk": "磁碟",
+        "hostname": "主機名稱",
+        "kernel": "核心",
+        "load": "負載",
+        "memory": "記憶體",
+        "os": "系統",
+        "unavailable": "未回報",
+        "uptime": "運作",
+        "uptimeDays": "{{count}} 天 {{hours}} 小時",
+        "uptimeHours": "{{count}} 小時 {{minutes}} 分鐘",
+        "uptimeMinutes": "{{count}} 分鐘"
+      },
+      "status": {
+        "askpassUnsupported": "密碼登入需要 OpenSSH 8.4 或更新版本",
+        "authFailed": "登入失敗",
+        "error": "錯誤",
+        "hostKeyChanged": "主機金鑰已變更",
+        "hostKeyUnknown": "主機金鑰需要你的核准",
+        "lastTested": "上次測試 {{when}}",
+        "latency": "{{ms}} 毫秒",
+        "neverTested": "從未測試",
+        "ok": "可連線",
+        "refreshing": "正在重新整理…",
+        "testing": "正在測試…",
+        "timeout": "已逾時",
+        "unreachable": "無法連線"
+      },
+      "subtitle": "你的 VPS 與 SSH 主機，隨時供代理使用。",
+      "tier": {
+        "approve-each": "逐一核准",
+        "full": "完整",
+        "hint": {
+          "approve-each": "每個指令都會等待你的核准。",
+          "full": "代理無需詢問即可執行指令。",
+          "read-only": "代理只能檢視此伺服器。"
+        },
+        "read-only": "唯讀"
+      },
+      "title": "伺服器",
+      "toasts": {
+        "added": "已新增 {{name}}",
+        "imported": "已匯入 {{count}} 個伺服器",
+        "removed": "已移除 {{name}}",
+        "saved": "已儲存 {{name}}",
+        "trusted": "已信任主機金鑰"
+      }
     },
     "shortcuts": {
       "commandColumn": "指令",
@@ -2369,7 +2520,50 @@
       },
       "title": "技能"
     },
+    "subscriptions": {
+      "china": "中國大陸版",
+      "connect": "連線",
+      "existingRegion": "使用 CLI 目前地區",
+      "international": "國際版",
+      "kimiRegion": "Kimi 帳號地區",
+      "modelPicker": "連線後，在模型選擇器中選擇 OpenCode，即可使用方案。其他服務商仍可在「模型與 API 金鑰」中設定。",
+      "models_one": "{{count}} 個可用模型",
+      "models_other": "{{count}} 個可用模型",
+      "planKey": "程式開發方案 API 金鑰",
+      "providerLogin": "服務商登入",
+      "runtimeRequired": "請啟用並安裝相容的 OpenCode 後再連線。",
+      "title": "訂閱與程式開發方案",
+      "unavailable": "請更新 OpenCode，檢查是否支援此方案。"
+    },
     "title": "設定",
+    "tools": {
+      "accessNote": "模型存取權取決於供應商帳號。請在設定中啟用供應商更新檢查，以偵測最新版本。",
+      "automatic": "自動更新服務商工具",
+      "automaticChecksRequired": "請在設定中啟用服務商更新檢查，以使用自動更新。",
+      "automaticDescription": "每六小時檢查一次，在沒有執行中的對話且所有終端機已關閉時更新已安裝的工具。",
+      "automaticError": "無法儲存自動更新設定。",
+      "bundledNote": "DJL 使用此已安裝的 OpenCode CLI，並共用其供應商登入狀態。",
+      "check": "檢查更新",
+      "checking": "正在檢查…",
+      "compatible": "與 DJL 相容",
+      "current": "已是最新版",
+      "description": "安裝官方命令列工具，並保持最新版本。",
+      "done": "已確認為最新版本。建立新聊天即可使用。",
+      "failed": "安裝或更新未成功。",
+      "incompatible": "與 DJL 不相容。請更新 OpenCode 或查看設定指南。",
+      "install": "安裝",
+      "installed": "已安裝",
+      "latest": "最新版本",
+      "loadError": "無法檢查供應商工具。",
+      "missing": "尚未安裝",
+      "nativeSetupRequired": "請使用適用於你系統的官方安裝程式。",
+      "setupRequired": "請安裝 Node.js/npm，或依照設定指南管理此安裝。",
+      "title": "供應商工具",
+      "unknown": "暫時無法取得",
+      "update": "更新",
+      "updateAll": "全部更新",
+      "working": "正在處理…"
+    },
     "usage": {
       "learnMore": "深入瞭解",
       "left": "剩餘 {{remaining}}",
@@ -2412,6 +2606,29 @@
       },
       "title": "供應商用量",
       "unavailableWithDetail": "用量無法使用。{{detail}}"
+    },
+    "cloud": {
+      "title": "DJL Cloud",
+      "name": "DJL Cloud",
+      "description": "託管模型以點數計費。只需登入一次，你的程式碼、檔案和終端機都留在本機。",
+      "signedOut": "未登入",
+      "signedInAs": "已登入：{{email}}",
+      "credits": "可用點數 {{credits}}",
+      "sessionExpired": "工作階段已過期，請重新登入。",
+      "unreachable": "無法連線 DJL Cloud，請檢查網路。",
+      "suspended": "此帳戶已被停用，請聯絡 support@slcor.com。",
+      "buyCredits": "購買點數",
+      "signOut": "登出",
+      "enterCode": "在剛開啟的瀏覽器視窗中輸入此代碼，然後核准這台電腦上的 DJL。",
+      "openBrowser": "再次開啟瀏覽器",
+      "cancel": "取消",
+      "denied": "在瀏覽器中拒絕了登入。",
+      "expired": "登入代碼已過期，請重新開始。",
+      "error": "無法連線 DJL Cloud。",
+      "signInWithBrowser": "使用瀏覽器登入",
+      "useCodeInstead": "改用代碼登入",
+      "finishInBrowser": "請在瀏覽器中完成登入，DJL 會在這裡自動繼續。",
+      "browserFailed": "瀏覽器登入未完成。請重試或改用代碼登入。"
     }
   },
   "shell": {
@@ -2533,7 +2750,7 @@
       "settings": {
         "action": "開始教學",
         "basicTitle": "基礎功能教學",
-        "description": "重新查看工作模式、專案模式、本機 AI 推薦和設定的箭頭引導。",
+        "description": "重新播放智慧體模式、專案、本機 AI 建議和設定的導覽。",
         "section": "開始使用",
         "title": "新手教學"
       },
@@ -2564,8 +2781,8 @@
           "title": "隨時重新查看教學"
         },
         "work-mode": {
-          "description": "寫作、研究和檔案處理等目標明確的任務，請使用工作模式。",
-          "title": "工作模式"
+          "description": "開始任務後，輸入 @ 即可切換至其他智慧體，並保留任務上下文。",
+          "title": "智慧體模式"
         }
       }
     },
@@ -3119,7 +3336,7 @@
         "working": "工作中"
       },
       "studio": {
-        "loading": "正在裝入工作...",
+        "loading": "正在載入智慧體模式…",
         "noTasks": "還沒有任務"
       },
       "temporaryChat": "暫時聊天",
@@ -3169,7 +3386,7 @@
       },
       "views": {
         "projects": "專案",
-        "work": "工作",
+        "work": "智慧體模式",
         "workspace": "工作空間"
       },
       "workspace": "工作區",
@@ -3903,13 +4120,13 @@
       "title": "看板"
     },
     "route": {
-      "loadTimeout": "工作載入時間過長——伺服器尚未回報其管理的 Work 資料夾。"
+      "loadTimeout": "智慧體模式載入時間過長，伺服器尚未回傳受管理的任務資料夾。"
     },
     "studio": {
       "errors": {
-        "folderConflict": "Work 無法使用「{{path}}」，因為另一個專案已使用該資料夾。請移除或移動該專案後重試。",
-        "prepareTask": "無法準備新的 Work 任務。",
-        "syncing": "Work 已建立，但尚未完成同步。請稍後再試。"
+        "folderConflict": "其他專案正在使用「{{path}}」，智慧體模式無法使用此資料夾。請移除或移動該專案後重試。",
+        "prepareTask": "無法準備新的智慧體任務。",
+        "syncing": "智慧體模式已建立，但尚未完成同步。請稍後重試。"
       }
     },
     "task": {
@@ -3943,11 +4160,101 @@
         "working": "正在處理"
       }
     },
-    "title": "工作"
+    "title": "智慧體模式"
   },
   "workspace": {
     "actions": {
       "doubleClickRename": "按兩下即可重新命名"
+    },
+    "agents": {
+      "account": "帳號設定檔",
+      "accountConnected": "帳號已連線",
+      "accountConnectHint": "選擇供應商，再登入要使用的帳號。",
+      "accountEmailUnavailable": "無法取得電子郵件",
+      "accountHint": "為每個訂閱建立獨立設定檔，再透過供應商的 CLI 登入。各設定檔分開儲存登入資訊，訂閱限制仍適用。",
+      "accountLabelOptional": "帳號標籤（選填）",
+      "accountPlaceholder": "個人訂閱",
+      "accountReadyHint": "現在可以使用此帳號開啟新終端機。",
+      "accounts": "帳號與訂閱",
+      "addAccount": "新增帳號",
+      "browseFolder": "選擇工作資料夾",
+      "cancel": "取消",
+      "checkSignIn": "檢查登入狀態",
+      "close": "關閉",
+      "closeHint": "這會停止所選終端機的程序。帳號設定檔與登入資訊會保留。",
+      "closeTerminal": "關閉終端機",
+      "closeWorkspace": "關閉 {{name}}",
+      "closing": "正在關閉…",
+      "connecting": "連線中…",
+      "create": "建立",
+      "customFolder": "手動選擇資料夾",
+      "dismiss": "關閉錯誤提示",
+      "duplicate": "使用此帳號新增終端機",
+      "editAccount": "編輯帳號",
+      "editNamedAccount": "編輯 {{name}}",
+      "emptyDescription": "開啟 Shell，或啟動 Codex、Claude Code、Cursor 與 OpenCode。每個終端機都使用選定的帳號。",
+      "emptyTitle": "讓代理程式一起工作",
+      "error": "錯誤",
+      "exited": "已結束",
+      "folder": "工作資料夾",
+      "folderPickError": "無法開啟資料夾選擇器，也可以手動輸入路徑。",
+      "grid": "網格",
+      "launchError": "無法啟動終端機。請檢查 CLI 安裝與工作資料夾。",
+      "live": "已連線",
+      "loginHint": "完成供應商登入後，啟動代理程式。",
+      "maximize": "最大化終端機",
+      "name": "名稱",
+      "newTerminal": "新增終端機",
+      "newWorkspace": "新增工作空間",
+      "openingSignIn": "正在開啟登入…",
+      "openSignInPage": "開啟登入頁面",
+      "openTerminals_one": "開啟 {{count}} 個終端機",
+      "openTerminals_other": "開啟 {{count}} 個終端機",
+      "organization": "工作空間管理",
+      "profileStatus": {
+        "checking": "正在檢查帳號…",
+        "signedIn": "已登入",
+        "signedOut": "尚未登入",
+        "unavailable": "命令列工具無法使用",
+        "unknown": "無法驗證帳號"
+      },
+      "project": "專案",
+      "provider": "供應商",
+      "quantity": "終端機數量",
+      "refreshAccounts": "重新整理帳號狀態",
+      "removeProfile": "從清單移除",
+      "removeProfileHint": "從清單移除此帳號前，請先關閉其終端機。",
+      "removeWorkspace": "關閉工作空間",
+      "renameWorkspace": "重新命名工作空間",
+      "restart": "重新啟動",
+      "restore": "還原配置",
+      "retrySignIn": "再試一次",
+      "running": "執行中",
+      "save": "儲存",
+      "selectedAccount": "已選取的帳號",
+      "sessionEnded": "此終端機工作階段已結束。",
+      "setupDescription": "設定你的終端機工作階段。",
+      "shell": "終端機",
+      "shellOption": "Shell · 使用任何已安裝的 CLI",
+      "signIn": "登入",
+      "signInBrowserError": "無法開啟瀏覽器，請使用下方的登入連結。",
+      "signInBrowserHint": "請在瀏覽器中完成登入，或依照下方步驟操作。",
+      "signInCloseError": "無法關閉登入工作階段，請再試一次。",
+      "signInStartError": "無法開始登入。請確認已安裝供應商的命令列工具，再試一次。",
+      "signInTerminal": "帳號登入終端機",
+      "signInWith": "使用 {{provider}} 登入",
+      "split": "分割",
+      "startAgent": "啟動代理程式",
+      "statusHint": "下方顯示供應商回報的帳號登入狀態。",
+      "terminalCount_one": "{{count}} 個終端機",
+      "terminalCount_other": "{{count}} 個終端機",
+      "terminalHint": "選擇這些終端機共用的帳號。第二個訂閱請使用另一個設定檔。",
+      "title": "工作空間",
+      "useThisAccount": "使用此帳號",
+      "welcomeDescription": "並排執行程式開發代理，依專案整理終端機，並為每個訂閱使用獨立的帳號設定檔。",
+      "welcomeTitle": "專屬於代理程式的工作空間",
+      "workspaceHint": "將終端機整理到命名的工作空間，並選擇執行的專案資料夾。",
+      "workspacePlaceholder": "我的專案"
     },
     "branch": {
       "actions": {
@@ -4018,19 +4325,19 @@
         "askTitle": "執行高風險操作前詢問",
         "autoApprove": "自動核准",
         "autoApproveTitle": "自動核准所有操作",
-        "fullAccess": "完整存取權",
-        "fullAccessTitle": "不受限制地存取網際網路和電腦上的任何檔案",
-        "heading": "應如何核准操作？",
         "autoMode": "自動模式",
+        "autoModelUnavailable": "此模型不支援 Claude 自動模式。",
         "autoModeTitle": "Claude 自動審核操作，並在需要時請求你的批准。",
         "bypassPermissions": "略過權限檢查",
         "bypassPermissionsTitle": "在此對話中略過 Claude 權限檢查。組織限制仍然適用。",
-        "codexAutoTitle": "Codex 審核批准請求，同時保留工作區沙盒。",
-        "autoModelUnavailable": "此模型不支援 Claude 自動模式。",
         "checkingSupport": "尚未驗證原生權限模式支援。",
-        "codexAskTitle": "Codex 對需要批准的操作發出請求，並保留工作區沙盒。",
         "claudeAskTitle": "Claude 按照原生權限規則請求批准。",
-        "finishTurn": "請先完成或停止目前回合，再更改權限。"
+        "codexAskTitle": "Codex 對需要批准的操作發出請求，並保留工作區沙盒。",
+        "codexAutoTitle": "Codex 審核批准請求，同時保留工作區沙盒。",
+        "finishTurn": "請先完成或停止目前回合，再更改權限。",
+        "fullAccess": "完整存取權",
+        "fullAccessTitle": "不受限制地存取網際網路和電腦上的任何檔案",
+        "heading": "應如何核准操作？"
       },
       "rateLimits": "使用限制",
       "rateLimitsRemaining": "剩餘{{percent}}",
@@ -4554,6 +4861,7 @@
     "terminal": {
       "addToChat": "加入聊天",
       "chat": "聊天",
+      "chooseFolder": "選擇資料夾",
       "close": "關閉終端機",
       "closeActiveTab": "關閉目前的終端機分頁",
       "closeNamed": "關閉{{name}}",
@@ -4562,6 +4870,8 @@
       "collapseToChat": "將終端機收合至聊天抽屜",
       "error": "錯誤",
       "expandToWorkspace": "將終端機展開至工作區",
+      "folderPickerFailed": "無法開啟資料夾選擇器。請在上方輸入資料夾路徑。",
+      "launchHarness": "啟動代理程式",
       "moveToOwnTab": "移至獨立終端機分頁",
       "name": "終端機",
       "new": "新增終端機",
@@ -4569,6 +4879,9 @@
       "newTab": "新增終端機分頁",
       "numbered": "終端機 {{number}}",
       "openSidePanel": "開啟側面板",
+      "recoveryHelp": "終端機無法啟動。請重試，或選擇現有的工作資料夾。",
+      "restart": "重新啟動終端機",
+      "retry": "重試",
       "scrollToBottom": "捲動到底部",
       "search": {
         "close": "關閉搜尋 (Esc)",
@@ -4578,11 +4891,14 @@
         "placeholder": "尋找",
         "previous": "上一個相符項目 (Shift+Enter)"
       },
+      "sessionEnded": "終端機工作階段已結束。",
       "splitDown": "向下分割",
       "splitDownShortcut": "向下分割 ({{shortcut}})",
       "splitLimit": "分割終端機（每組最多 {{count}} 個）",
       "splitRight": "向右分割",
-      "splitRightShortcut": "向右分割 ({{shortcut}})"
+      "splitRightShortcut": "向右分割 ({{shortcut}})",
+      "useFolder": "使用此資料夾",
+      "workingDirectory": "工作目錄"
     },
     "terminalClose": {
       "confirm": "關閉此終端機？",
@@ -4590,96 +4906,6 @@
       "history": "這將永久清除此分頁的終端機記錄。",
       "historyAndThread": "這將永久清除此分頁的終端機記錄，並刪除空的終端機討論串。"
     },
-    "title": "工作區",
-    "agents": {
-      "openSignInPage": "開啟登入頁面",
-      "signInBrowserError": "無法開啟瀏覽器，請使用下方的登入連結。",
-      "browseFolder": "選擇工作資料夾",
-      "folderPickError": "無法開啟資料夾選擇器，也可以手動輸入路徑。",
-      "accountConnectHint": "選擇供應商，再登入要使用的帳號。",
-      "accountLabelOptional": "帳號標籤（選填）",
-      "signInWith": "使用 {{provider}} 登入",
-      "accountConnected": "帳號已連線",
-      "accountReadyHint": "現在可以使用此帳號開啟新終端機。",
-      "signInBrowserHint": "請在瀏覽器中完成登入，或依照下方步驟操作。",
-      "openingSignIn": "正在開啟登入…",
-      "signInTerminal": "帳號登入終端機",
-      "signInStartError": "無法開始登入。請確認已安裝供應商的命令列工具，再試一次。",
-      "signInCloseError": "無法關閉登入工作階段，請再試一次。",
-      "retrySignIn": "再試一次",
-      "useThisAccount": "使用此帳號",
-      "selectedAccount": "已選取的帳號",
-      "editNamedAccount": "編輯 {{name}}",
-      "removeProfile": "從清單移除",
-      "removeProfileHint": "從清單移除此帳號前，請先關閉其終端機。",
-      "refreshAccounts": "重新整理帳號狀態",
-      "accountEmailUnavailable": "無法取得電子郵件",
-      "profileStatus": {
-        "checking": "正在檢查帳號…",
-        "signedIn": "已登入",
-        "signedOut": "尚未登入",
-        "unavailable": "命令列工具無法使用",
-        "unknown": "無法驗證帳號"
-      },
-      "title": "工作空間",
-      "organization": "工作空間管理",
-      "newWorkspace": "新增工作空間",
-      "newTerminal": "新增終端機",
-      "terminalCount_one": "{{count}} 個終端機",
-      "terminalCount_other": "{{count}} 個終端機",
-      "accounts": "帳號與訂閱",
-      "addAccount": "新增帳號",
-      "account": "帳號設定檔",
-      "provider": "供應商",
-      "name": "名稱",
-      "quantity": "終端機數量",
-      "shell": "終端機",
-      "shellOption": "Shell · 使用任何已安裝的 CLI",
-      "welcomeTitle": "專屬於代理程式的工作空間",
-      "welcomeDescription": "並排執行程式開發代理，依專案整理終端機，並為每個訂閱使用獨立的帳號設定檔。",
-      "emptyTitle": "讓代理程式一起工作",
-      "emptyDescription": "開啟 Shell，或啟動 Codex、Claude Code、Cursor 與 OpenCode。每個終端機都使用選定的帳號。",
-      "workspaceHint": "將終端機整理到命名的工作空間，並選擇執行的專案資料夾。",
-      "accountHint": "為每個訂閱建立獨立設定檔，再透過供應商的 CLI 登入。各設定檔分開儲存登入資訊，訂閱限制仍適用。",
-      "terminalHint": "選擇這些終端機共用的帳號。第二個訂閱請使用另一個設定檔。",
-      "accountPlaceholder": "個人訂閱",
-      "workspacePlaceholder": "我的專案",
-      "project": "專案",
-      "customFolder": "手動選擇資料夾",
-      "folder": "工作資料夾",
-      "split": "分割",
-      "grid": "網格",
-      "duplicate": "使用此帳號新增終端機",
-      "maximize": "最大化終端機",
-      "restore": "還原配置",
-      "closeTerminal": "關閉終端機",
-      "closeWorkspace": "關閉 {{name}}",
-      "removeWorkspace": "關閉工作空間",
-      "closeHint": "這會停止所選終端機的程序。帳號設定檔與登入資訊會保留。",
-      "close": "關閉",
-      "closing": "正在關閉…",
-      "cancel": "取消",
-      "save": "儲存",
-      "create": "建立",
-      "editAccount": "編輯帳號",
-      "renameWorkspace": "重新命名工作空間",
-      "signIn": "登入",
-      "checkSignIn": "檢查登入狀態",
-      "startAgent": "啟動代理程式",
-      "loginHint": "完成供應商登入後，啟動代理程式。",
-      "statusHint": "下方顯示供應商回報的帳號登入狀態。",
-      "restart": "重新啟動",
-      "sessionEnded": "此終端機工作階段已結束。",
-      "launchError": "無法啟動終端機。請檢查 CLI 安裝與工作資料夾。",
-      "live": "已連線",
-      "running": "執行中",
-      "connecting": "連線中…",
-      "exited": "已結束",
-      "error": "錯誤",
-      "dismiss": "關閉錯誤提示",
-      "openTerminals_one": "開啟 {{count}} 個終端機",
-      "openTerminals_other": "開啟 {{count}} 個終端機",
-      "setupDescription": "設定你的終端機工作階段。"
-    }
+    "title": "工作區"
   }
 }

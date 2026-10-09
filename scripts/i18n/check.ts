@@ -45,6 +45,7 @@ const VISIBLE_ATTRIBUTE = new Set([
 const UI_CALL = /(?:alert|confirm|notify|set[A-Za-z]*Error|showToast|toast)$/;
 const TECHNICAL_EXACT = new Set([
   "DJL",
+  "DJL Cloud",
   "Codex",
   "Claude",
   "Cursor",
@@ -102,7 +103,6 @@ const THEME_NAME_EXACT = new Set([
 ]);
 const DEV_ONLY_SOURCE_FILE_SUFFIXES = [
   "apps/web/src/components/DebugFeatureFlagsMenu.tsx",
-  "apps/web/src/components/GitProgressToastPreviewToggle.tsx",
   "apps/web/src/components/useGitProgressToastPreview.ts",
 ] as const;
 

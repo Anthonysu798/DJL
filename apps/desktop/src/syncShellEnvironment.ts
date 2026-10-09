@@ -8,6 +8,8 @@ import {
   mergePathEntries,
   readPathFromLaunchctl,
   readEnvironmentFromLoginShell,
+  readEnvironmentFromLoginShellAsync,
+  type AsyncShellEnvironmentReader,
   readWindowsPersistentEnvironment,
   type ShellEnvironmentReader,
   type WindowsEnvironmentReader,
@@ -54,17 +56,18 @@ function syncWindowsEnvironment(
   }
 }
 
-export function syncShellEnvironment(
+export async function syncShellEnvironment(
   env: NodeJS.ProcessEnv = process.env,
   options: {
     platform?: NodeJS.Platform;
-    readEnvironment?: ShellEnvironmentReader;
+    signal?: AbortSignal;
+    readEnvironment?: ShellEnvironmentReader | AsyncShellEnvironmentReader;
     readLaunchctlPath?: typeof readPathFromLaunchctl;
     readWindowsEnvironment?: WindowsEnvironmentReader;
     userShell?: string;
     logWarning?: (message: string, error?: unknown) => void;
   } = {},
-): void {
+): Promise<void> {
   const platform = options.platform ?? process.platform;
   const logWarning = options.logWarning ?? logShellEnvironmentWarning;
 
@@ -79,17 +82,29 @@ export function syncShellEnvironment(
 
   if (platform !== "darwin" && platform !== "linux") return;
 
-  const readEnvironment = options.readEnvironment ?? readEnvironmentFromLoginShell;
+  // Linux's profile path and single-instance lock depend on shell XDG values.
+  // Keep that capture synchronous; macOS can paint while its provider PATH loads.
+  const readEnvironment =
+    options.readEnvironment ??
+    (platform === "darwin"
+      ? (shell: string, names: ReadonlyArray<string>) =>
+          readEnvironmentFromLoginShellAsync(shell, names, options.signal)
+      : readEnvironmentFromLoginShell);
   const shellEnvironment: Partial<Record<string, string>> = {};
 
   try {
     for (const shell of listLoginShellCandidates(platform, env.SHELL, options.userShell)) {
+      if (options.signal?.aborted) return;
       try {
-        Object.assign(shellEnvironment, readEnvironment(shell, LOGIN_SHELL_ENV_NAMES));
+        const result = readEnvironment(shell, LOGIN_SHELL_ENV_NAMES);
+        const captured = result instanceof Promise ? await result : result;
+        if (options.signal?.aborted) return;
+        Object.assign(shellEnvironment, captured);
         if (shellEnvironment.PATH) {
           break;
         }
       } catch (error) {
+        if (options.signal?.aborted) return;
         logWarning(`Failed to read login shell environment from ${shell}.`, error);
       }
     }

@@ -698,6 +698,7 @@ export function makeDroidAdapter(
             droidSettings: effectiveDroidSettings,
             childProcessSpawner,
             cwd,
+            threadId: input.threadId,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientCapabilities: { elicitation: { form: {} } },
             clientInfo: { name: "DJL", version: "0.0.0" },

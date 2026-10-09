@@ -222,6 +222,11 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     [],
     FavoriteModelSlugs,
   );
+  const [djlCloudFavoriteModelSlugs, setDjlCloudFavoriteModelSlugs] = useLocalStorage(
+    FAVORITE_MODEL_STORAGE_KEYS.djlCloud,
+    [],
+    FavoriteModelSlugs,
+  );
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
   const activeProvider = props.lockedProvider ?? props.provider;
 
@@ -282,18 +287,24 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     () => new Set(piFavoriteModelSlugs),
     [piFavoriteModelSlugs],
   );
+  const djlCloudFavoriteModelSlugSet = useMemo(
+    () => new Set(djlCloudFavoriteModelSlugs),
+    [djlCloudFavoriteModelSlugs],
+  );
   const favoriteModelSlugSets = useMemo(
     () => ({
       cursor: cursorFavoriteModelSlugSet,
       kilo: kiloFavoriteModelSlugSet,
       opencode: openCodeFavoriteModelSlugSet,
       pi: piFavoriteModelSlugSet,
+      djlCloud: djlCloudFavoriteModelSlugSet,
     }),
     [
       cursorFavoriteModelSlugSet,
       kiloFavoriteModelSlugSet,
       openCodeFavoriteModelSlugSet,
       piFavoriteModelSlugSet,
+      djlCloudFavoriteModelSlugSet,
     ],
   );
   const commitModelChange = (provider: ProviderKind, value: string) => {
@@ -336,7 +347,9 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
             ? setKiloFavoriteModelSlugs
             : provider === "pi"
               ? setPiFavoriteModelSlugs
-              : setOpenCodeFavoriteModelSlugs;
+              : provider === "djlCloud"
+                ? setDjlCloudFavoriteModelSlugs
+                : setOpenCodeFavoriteModelSlugs;
       setFavoriteModelSlugs((current) => toggleFavoriteModelSlug(current, slug));
     },
     [
@@ -344,6 +357,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       setKiloFavoriteModelSlugs,
       setOpenCodeFavoriteModelSlugs,
       setPiFavoriteModelSlugs,
+      setDjlCloudFavoriteModelSlugs,
     ],
   );
 

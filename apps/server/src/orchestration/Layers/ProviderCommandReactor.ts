@@ -63,6 +63,7 @@ import {
   resolveThreadWorkspaceCwd,
 } from "../../checkpointing/Utils.ts";
 import { ServerConfig } from "../../config";
+import { writeHandoffContextArchive } from "../handoffContextArchive";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import {
@@ -71,6 +72,11 @@ import {
   ProviderServiceError,
 } from "../../provider/Errors.ts";
 import { isOpenCodeSessionNotFoundDetail } from "../../provider/openCodeSessionRecovery.ts";
+import { ServerRepository } from "../../persistence/Services/ServerRepository.ts";
+import {
+  appendSelectedServersBlock,
+  resolveServerMentions,
+} from "../../servers/serverMentionPrompt.ts";
 import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
 import {
   TextGeneration,
@@ -367,6 +373,7 @@ const make = Effect.gen(function* () {
   const textGeneration = yield* TextGeneration;
   const serverSettings = yield* ServerSettingsService;
   const workPreparationQueue = yield* WorkPreparationQueue;
+  const serverRepository = yield* ServerRepository;
   const handledTurnStartKeys = yield* Cache.make<string, true>({
     capacity: HANDLED_TURN_START_KEY_MAX,
     timeToLive: HANDLED_TURN_START_KEY_TTL,
@@ -1160,16 +1167,36 @@ const make = Effect.gen(function* () {
       ? wrapSidechatInput(input.messageText)
       : input.messageText;
     const shouldBootstrapHandoff =
-      thread.handoff?.bootstrapStatus === "pending" &&
-      !hasNativeAssistantMessagesBefore(thread, input.messageId);
+      thread.handoff != null && !hasNativeAssistantMessagesBefore(thread, input.messageId);
     const handoffBootstrapAvailableChars = availableProviderContextChars({
       tag: "handoff_context",
       messageText: boundaryMessageText,
       wrapLatestUserMessage: true,
     });
+    let contextArchivePath: string | undefined;
+    if (shouldBootstrapHandoff) {
+      if (handoffBootstrapAvailableChars < 2_000) {
+        return yield* new ProviderAdapterValidationError({
+          provider: thread.modelSelection.provider,
+          operation: "sendTurn",
+          issue: "Shorten this message so the receiving agent has room for handoff context.",
+        });
+      }
+      const sourceThread = thread.handoff
+        ? yield* resolveThread(thread.handoff.sourceThreadId)
+        : undefined;
+      contextArchivePath = yield* Effect.tryPromise(() =>
+        writeHandoffContextArchive({
+          stateDir: serverConfig.stateDir,
+          attachmentsDir: serverConfig.attachmentsDir,
+          thread,
+          sourceThread: sourceThread ?? undefined,
+        }),
+      );
+    }
     const handoffBootstrapText =
       shouldBootstrapHandoff && handoffBootstrapAvailableChars > 0
-        ? buildHandoffBootstrapText(thread, handoffBootstrapAvailableChars)
+        ? buildHandoffBootstrapText(thread, handoffBootstrapAvailableChars, contextArchivePath)
         : null;
     const selectedProvider =
       input.modelSelection?.provider ??
@@ -1299,6 +1326,23 @@ const make = Effect.gen(function* () {
       }),
     );
     const normalizedAttachments = input.attachments ?? [];
+    // `@server` mentions never reach a harness as native mentions: they are
+    // resolved here and described in a <selected_servers> block instead.
+    const { servers: selectedServers, remainingMentions } =
+      input.mentions !== undefined && input.mentions.length > 0
+        ? yield* resolveServerMentions(input.mentions, (serverId) =>
+            serverRepository.getById(serverId).pipe(
+              Effect.catch((error) =>
+                Effect.logWarning("failed to resolve server mention", {
+                  threadId: input.threadId,
+                  serverId,
+                  error,
+                }).pipe(Effect.as(Option.none())),
+              ),
+            ),
+          )
+        : { servers: [], remainingMentions: [] };
+    const providerMentions = input.mentions !== undefined ? remainingMentions : undefined;
     const activeSession = yield* providerService
       .listSessions()
       .pipe(
@@ -1318,17 +1362,19 @@ const make = Effect.gen(function* () {
             }
           : requestedModelSelection
         : requestedModelSelection;
-    const sendQueuedProviderTurn = (messageText: string | undefined) =>
-      providerService.sendTurn({
+    const sendQueuedProviderTurn = (messageText: string | undefined) => {
+      const inputWithServers = appendSelectedServersBlock(messageText, selectedServers);
+      return providerService.sendTurn({
         threadId: input.threadId,
-        ...(messageText ? { input: messageText } : {}),
+        ...(inputWithServers ? { input: inputWithServers } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
+        ...(providerMentions !== undefined ? { mentions: providerMentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
         ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
         ...(input.workTurnPolicy !== undefined ? { workTurnPolicy: input.workTurnPolicy } : {}),
       });
+    };
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
       if ((input.dispatchMode ?? "queue") === "steer") {
@@ -1390,12 +1436,13 @@ const make = Effect.gen(function* () {
         })
         .pipe(Effect.onError(() => cancelPendingStudioBaseline));
     } else if (input.dispatchMode === "steer") {
+      const steerInput = appendSelectedServersBlock(normalizedInput, selectedServers);
       yield* providerService.steerTurn({
         threadId: input.threadId,
-        ...(normalizedInput ? { input: normalizedInput } : {}),
+        ...(steerInput ? { input: steerInput } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
+        ...(providerMentions !== undefined ? { mentions: providerMentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
         ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
       });
@@ -2593,9 +2640,31 @@ const make = Effect.gen(function* () {
           }
           return;
         }
-        case "thread.created":
+        case "thread.created": {
           threadSessionModelSelections.set(event.payload.threadId, event.payload.modelSelection);
+          if (event.payload.handoff) {
+            const thread = yield* resolveThread(event.payload.threadId);
+            const sourceThread = yield* resolveThread(event.payload.handoff.sourceThreadId);
+            if (thread) {
+              yield* Effect.tryPromise(() =>
+                writeHandoffContextArchive({
+                  stateDir: serverConfig.stateDir,
+                  attachmentsDir: serverConfig.attachmentsDir,
+                  thread,
+                  sourceThread: sourceThread ?? undefined,
+                }),
+              ).pipe(
+                Effect.catch((error) =>
+                  Effect.logWarning("failed to capture handoff context archive", {
+                    threadId: event.payload.threadId,
+                    error,
+                  }),
+                ),
+              );
+            }
+          }
           return;
+        }
         case "thread.meta-updated": {
           const thread = yield* resolveThread(event.payload.threadId);
           if (event.payload.modelSelection === undefined) {

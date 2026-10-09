@@ -10,6 +10,7 @@
  */
 import * as OS from "node:os";
 import { NATIVE_HARNESS_IDS, probeNativeHarnessStatuses } from "../../harnesses/accounts";
+import { readCloudSession } from "../../cloud/session";
 import type {
   ProviderKind,
   ServerSettings,
@@ -22,7 +23,7 @@ import { ServerProviderUpdateError } from "@synara/contracts";
 import { parseCodexConfigModelProvider } from "@synara/shared/codexConfig";
 import { decodeJsonResult } from "@synara/shared/schemaJson";
 import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
-import { query as claudeQuery, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   Array,
   Cache,
@@ -116,6 +117,12 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.grok.binaryPath;
     case "kimi":
       return settings.providers.kimi.binaryPath;
+    case "iflow":
+      return settings.providers.iflow.binaryPath;
+    case "qwen":
+      return settings.providers.qwen.binaryPath;
+    case "codebuddy":
+      return settings.providers.codebuddy.binaryPath;
     case "droid":
       return settings.providers.droid.binaryPath;
     case "kilo":
@@ -124,6 +131,8 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
       return settings.providers.opencode.binaryPath;
     case "pi":
       return settings.providers.pi.binaryPath;
+    case "djlCloud":
+      return "";
   }
 };
 
@@ -167,15 +176,52 @@ const GEMINI_PROVIDER = "gemini" as const;
 const GROK_PROVIDER = "grok" as const;
 const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
+const IFLOW_PROVIDER = "iflow" as const;
+const QWEN_PROVIDER = "qwen" as const;
+const CODEBUDDY_PROVIDER = "codebuddy" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in DJL settings.";
 
+const DJL_CLOUD_PROVIDER = "djlCloud" as const;
 const PROVIDERS = [
   OPENCODE_PROVIDER,
   ...NATIVE_HARNESS_IDS,
+  DJL_CLOUD_PROVIDER,
 ] as const satisfies ReadonlyArray<ProviderKind>;
+
+// ── DJL Cloud health check ───────────────────────────────────────────
+// No binary: the provider is available whenever a cloud session is stored.
+
+export const checkDjlCloudProviderStatus = (
+  secretsDir: string,
+): Effect.Effect<ServerProviderStatus> =>
+  Effect.promise(async () => {
+    const checkedAt = new Date().toISOString();
+    const session = await readCloudSession(secretsDir);
+    if (!session) {
+      return {
+        provider: DJL_CLOUD_PROVIDER,
+        status: "warning" as const,
+        available: true,
+        authStatus: "unauthenticated" as const,
+        authType: "djl-cloud",
+        checkedAt,
+        message: "Sign in to DJL Cloud in Settings → Accounts to use cloud models.",
+      } satisfies ServerProviderStatus;
+    }
+    return {
+      provider: DJL_CLOUD_PROVIDER,
+      status: "ready" as const,
+      available: true,
+      authStatus: "authenticated" as const,
+      authType: "djl-cloud",
+      authLabel: session.email,
+      checkedAt,
+      message: `Signed in to DJL Cloud as ${session.email}.`,
+    } satisfies ServerProviderStatus;
+  });
 
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 const UPDATE_TIMEOUT_MS = 5 * 60_000;
@@ -230,6 +276,27 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
       lockKey: "droid-native",
       strategy: "always",
     },
+  },
+  iflow: {
+    provider: IFLOW_PROVIDER,
+    binaryName: "iflow",
+    npmPackageName: "@iflow-ai/iflow-cli",
+    homebrew: null,
+    nativeUpdate: null,
+  },
+  qwen: {
+    provider: QWEN_PROVIDER,
+    binaryName: "qwen",
+    npmPackageName: "@qwen-code/qwen-code",
+    homebrew: null,
+    nativeUpdate: null,
+  },
+  codebuddy: {
+    provider: CODEBUDDY_PROVIDER,
+    binaryName: "codebuddy",
+    npmPackageName: "@tencent-ai/codebuddy-code",
+    homebrew: null,
+    nativeUpdate: null,
   },
   kilo: {
     provider: KILO_PROVIDER,
@@ -444,6 +511,8 @@ function waitForAbortSignal(signal: AbortSignal): Promise<void> {
 const probeClaudeSubscription = () => {
   const abort = new AbortController();
   return Effect.tryPromise(async () => {
+    const { query: claudeQuery } = await import("@anthropic-ai/claude-agent-sdk");
+    abort.signal.throwIfAborted();
     const q = claudeQuery({
       // oxlint-disable-next-line require-yield
       prompt: (async function* (): AsyncGenerator<SDKUserMessage> {
@@ -2266,6 +2335,11 @@ export const ProviderHealthLive = Layer.effect(
                     ),
                 ),
               ).pipe(Effect.map((statuses) => statuses.map(Option.some))),
+              checkProviderWhenEnabled(
+                settings,
+                DJL_CLOUD_PROVIDER,
+                checkDjlCloudProviderStatus(serverConfig.secretsDir),
+              ).pipe(Effect.map((status) => [status])),
             ],
             {
               concurrency: "unbounded",

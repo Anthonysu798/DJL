@@ -28,7 +28,6 @@ const UI_FIELD_PATTERN =
 const NONTRANSLATABLE = new Set([
   "lib/automationForm.ts:UTC",
   "components/work/WorkTaskPanel.tsx:pending",
-  "components/kanban/KanbanView.tsx:Ctrl+Alt+T",
   "lib/automationForm.ts:daily",
   "lib/automationForm.ts:weekdays",
   "lib/automationForm.ts:weekly",
@@ -46,7 +45,6 @@ const NONTRANSLATABLE = new Set([
   "lib/automationStatus.ts:done",
   "lib/automationStatus.ts:active",
   "lib/automationStatus.ts:paused",
-  "lib/kanbanDispatch.ts:empty",
   "routes/-automations.shared.tsx:auto",
   "routes/-automations.shared.tsx:worktree",
   "routes/-automations.shared.tsx:local",
@@ -239,7 +237,6 @@ describe("Work, Kanban, Studio, and automation localization source audit classif
   it("enumerates the bounded production scope recursively", () => {
     const files = productionFiles().map((file) => relative(ROOT, join(ROOT, file)));
     expect(files).toContain("components/work/WorkTaskPanel.tsx");
-    expect(files).toContain("components/kanban/KanbanNewTaskDialog.tsx");
     expect(files).toContain("routes/-automations.shared.tsx");
     expect(files).toContain("routes/_chat.studio.index.tsx");
     expect(files).toContain("lib/automationDraft.ts");

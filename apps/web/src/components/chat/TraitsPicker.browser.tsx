@@ -48,10 +48,14 @@ function ClaudeTraitsPickerHarness(props: {
       gemini: [],
       grok: [],
       kimi: [],
+      iflow: [],
+      qwen: [],
+      codebuddy: [],
       droid: [],
       kilo: [],
       opencode: [],
       pi: [],
+      djlCloud: [],
     },
   });
   const handlePromptChange = useCallback(
@@ -631,10 +635,14 @@ function OpenCodeTraitsPickerHarness(props: {
       gemini: [],
       grok: [],
       kimi: [],
+      iflow: [],
+      qwen: [],
+      codebuddy: [],
       droid: [],
       kilo: [],
       opencode: [],
       pi: [],
+      djlCloud: [],
     },
   });
   const handlePromptChange = useCallback(

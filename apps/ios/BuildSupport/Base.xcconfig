@@ -4,5 +4,9 @@
 DJL_CHATGPT_CALLBACK_SCHEME = djl
 // Match the desktop release endpoint; supply DJL_REMOTE_RELAY_URL in build settings.
 DJL_DEFAULT_RELAY_URL = $(DJL_REMOTE_RELAY_URL)
+// DJL Cloud public API. Override (e.g. http://localhost:8787) in PrivateOverrides.xcconfig for local testing.
+DJL_CLOUD_API_URL = https:/$()/api.slcor.com
+// iOS OAuth client id for Google sign-in; the Google button stays hidden while this is empty.
+DJL_GOOGLE_IOS_CLIENT_ID =
 
 #include? "PrivateOverrides.xcconfig"

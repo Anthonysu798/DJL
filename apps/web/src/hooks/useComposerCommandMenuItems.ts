@@ -5,10 +5,13 @@ import type {
   ProviderMentionReference,
   ProviderPluginDescriptor,
   ProviderSkillDescriptor,
+  ServerRecord,
 } from "@synara/contracts";
-import { getAgentMentionAutocompleteAliases } from "@synara/contracts";
+import { getAgentMentionAutocompleteAliases, serverReference } from "@synara/contracts";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { serversQueryOptions } from "~/lib/serversReactQuery";
 import {
   buildCommandSearchFields,
   buildPluginSearchFields,
@@ -36,6 +39,12 @@ type ComposerPluginSuggestion = {
   mention: ProviderMentionReference;
 };
 
+const EMPTY_SERVERS: readonly ServerRecord[] = [];
+
+function serverAddress(server: ServerRecord): string {
+  return `${server.username}@${server.host}${server.port === 22 ? "" : `:${server.port}`}`;
+}
+
 type SearchableModelOption = {
   provider: ProviderKind;
   providerLabel: string;
@@ -55,6 +64,7 @@ export function useComposerCommandMenuItems(input: {
   providerSkills: readonly ProviderSkillDescriptor[];
   workspaceEntries: readonly ProjectEntry[];
   searchableModelOptions: readonly SearchableModelOption[];
+  agentModelOptions?: readonly SearchableModelOption[];
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
   canOfferReviewCommand: boolean;
@@ -65,6 +75,10 @@ export function useComposerCommandMenuItems(input: {
   dynamicAgents: readonly { name: string; displayName: string; description?: string }[];
 }): ComposerCommandItem[] {
   const { t } = useTranslation("chat");
+  const isMentionTrigger = input.composerTrigger?.kind === "mention";
+  // Registered servers join the `@` picker; the query only runs while it is open.
+  const serversQuery = useQuery({ ...serversQueryOptions(), enabled: isMentionTrigger });
+  const servers = serversQuery.data?.servers ?? EMPTY_SERVERS;
   const {
     composerTrigger,
     provider,
@@ -73,6 +87,7 @@ export function useComposerCommandMenuItems(input: {
     providerSkills,
     workspaceEntries,
     searchableModelOptions,
+    agentModelOptions,
     supportsFastSlashCommand,
     canOfferCompactCommand,
     canOfferReviewCommand,
@@ -89,6 +104,32 @@ export function useComposerCommandMenuItems(input: {
     // Keep trigger-specific discovery outside ChatView so the view mostly orchestrates state.
     if (composerTrigger.kind === "mention") {
       const query = normalizeProviderDiscoveryText(composerTrigger.query);
+      const seenProviders = new Set<ProviderKind>();
+
+      const handoffItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
+        agentModelOptions ?? [],
+        query,
+        (option) => [
+          { value: option.name },
+          { value: option.slug },
+          { value: option.providerLabel },
+          { value: option.searchProvider },
+        ],
+      )
+        .filter((option) => {
+          if (query.length > 0) return true;
+          if (seenProviders.has(option.provider)) return false;
+          seenProviders.add(option.provider);
+          return true;
+        })
+        .map(({ provider: targetProvider, providerLabel, slug, name }) => ({
+          id: `handoff-model:${targetProvider}:${slug}`,
+          type: "handoff-model" as const,
+          provider: targetProvider,
+          model: slug,
+          label: `@${providerLabel}`,
+          description: name,
+        }));
 
       const agentItems: ComposerCommandItem[] = (() => {
         // Use dynamic agents when available, fallback to static
@@ -134,6 +175,23 @@ export function useComposerCommandMenuItems(input: {
         label: plugin.interface?.displayName ?? plugin.name,
         description: plugin.interface?.shortDescription ?? plugin.source.path,
       }));
+      const serverItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
+        servers,
+        query,
+        (server) => [
+          { value: server.name },
+          { value: server.host, weight: 200 },
+          ...server.tags.map((tag) => ({ value: tag, weight: 300 })),
+        ],
+      ).map((server) => ({
+        id: `server:${server.id}`,
+        type: "server" as const,
+        server,
+        mention: serverReference(server),
+        label: server.name,
+        description: serverAddress(server),
+        tierLabel: t(`servers.tier.${server.permissionTier}`, { ns: "settings" }),
+      }));
       const localRootItems =
         matchesLocalFolderMentionShortcut(composerTrigger.query) && composerTrigger.query !== "/"
           ? [
@@ -153,9 +211,16 @@ export function useComposerCommandMenuItems(input: {
         label: basenameOfPath(entry.path),
         description: entry.parentPath ?? "",
       }));
-      // Keep mention suggestions ordered by primary intent: plugins first,
-      // then local context, then subagent delegation targets.
-      return [...pluginItems, ...localRootItems, ...pathItems, ...agentItems];
+      // Keep mention suggestions ordered by primary intent: agent handoffs first,
+      // then plugins, servers, local context, and subagent delegation targets.
+      return [
+        ...handoffItems,
+        ...pluginItems,
+        ...serverItems,
+        ...localRootItems,
+        ...pathItems,
+        ...agentItems,
+      ];
     }
 
     if (composerTrigger.kind === "slash-command") {
@@ -258,6 +323,7 @@ export function useComposerCommandMenuItems(input: {
       description: `${providerLabel} · ${slug}`,
     }));
   }, [
+    agentModelOptions,
     canOfferForkCommand,
     canOfferCompactCommand,
     canOfferReviewCommand,
@@ -270,6 +336,7 @@ export function useComposerCommandMenuItems(input: {
     providerNativeCommands,
     providerSkills,
     searchableModelOptions,
+    servers,
     surfaceAppSlashCommands,
     supportsFastSlashCommand,
     t,

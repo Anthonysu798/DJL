@@ -301,6 +301,9 @@ describe("wsNativeApi", () => {
           gemini: { enabled: true, binaryPath: "gemini", customModels: [] },
           grok: { enabled: true, binaryPath: "grok", customModels: [] },
           kimi: { region: "existing", enabled: true, binaryPath: "kimi", customModels: [] },
+          iflow: { enabled: true, binaryPath: "iflow", customModels: [] },
+          qwen: { enabled: true, binaryPath: "qwen", customModels: [] },
+          codebuddy: { enabled: true, binaryPath: "codebuddy", customModels: [] },
           droid: { enabled: true, binaryPath: "droid", customModels: [] },
           kilo: {
             enabled: true,
@@ -318,6 +321,7 @@ describe("wsNativeApi", () => {
             customModels: [],
           },
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
+          djlCloud: { enabled: true, region: "auto" },
         },
         skills: { disabled: [] },
       },

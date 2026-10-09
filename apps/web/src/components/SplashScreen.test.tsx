@@ -1,5 +1,5 @@
 // FILE: SplashScreen.test.tsx
-// Purpose: Prevents route recovery from covering the app with a branded wake/loading screen.
+// Purpose: Verifies compact startup progress and actionable recovery errors.
 // Layer: web UI tests
 
 import { renderToStaticMarkup } from "react-dom/server";
@@ -23,8 +23,10 @@ function renderSplash(element: ReactElement) {
 }
 
 describe("SplashScreen", () => {
-  it("renders nothing while route recovery is still in progress", () => {
-    expect(renderSplash(<SplashScreen />)).toBe("");
+  it("shows accessible progress while route recovery is still in progress", () => {
+    const markup = renderSplash(<SplashScreen />);
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("Loading");
   });
 
   it("keeps a compact retry surface when recovery fails", () => {

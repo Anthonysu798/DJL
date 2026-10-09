@@ -11,6 +11,7 @@ struct DJLApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @UIApplicationDelegateAdaptor(DJLAppDelegate.self) private var appDelegate
     @State private var codexService: CodexService
+    @State private var cloudService = CloudService()
     @State private var appLockController: DJLAppLockController
     @AppStorage(DJLAppLockPreference.storageKey) private var biometricLockEnabled = DJLAppLockPreference.defaultEnabled
 
@@ -71,6 +72,7 @@ struct DJLApp: App {
         ZStack {
             ContentView()
                 .environment(codexService)
+                .environment(cloudService)
                 .allowsHitTesting(!appLockController.isPrivacyShieldVisible)
                 .accessibilityHidden(appLockController.isPrivacyShieldVisible)
 
@@ -118,6 +120,11 @@ struct DJLApp: App {
 
     @discardableResult
     private func routeDJLDeepLink(_ url: URL) -> Bool {
+        if let conversationID = CloudDeepLink.conversationID(from: url) {
+            cloudService.sectionPreference = .cloud
+            cloudService.pendingConversationID = conversationID
+            return true
+        }
         guard let destination = DJLDeepLinkParser.destination(from: url) else {
             return false
         }

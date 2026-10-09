@@ -167,7 +167,7 @@ Entra application `djl-github-windows-signing`. Keep two federated credentials:
 - protected `main` for the signed Windows package smoke;
 - the `windows-signing` GitHub environment for production release tags.
 
-The `windows-signing` environment allows only tags matching `v*.*.*`. Grant the application only
+Only the Windows build job enters the `windows-signing` environment; the Mac builds use repository secrets and create no deployment, so the environment shows one deployment per release. The environment allows only tags matching `v*.*.*`. Grant the application only
 **Artifact Signing Certificate Profile Signer** at the exact
 `djl-release-signing-prod/djl-windows-release-prod` certificate-profile scope. Do not create or
 store an Azure client secret.
@@ -223,7 +223,7 @@ Before GitHub publication, the release workflow verifies and mirrors the exact 1
 GitHub and advance only the four small manifests under `stable/`; those manifests point to the
 immutable versioned payloads. Prereleases never modify `stable/`.
 
-Packaged clients use `https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable` as their
+Packaged clients use `https://djl-china-releases.oss-accelerate.aliyuncs.com/stable` as their
 primary generic updater feed. Eligible network and download failures retry once through the
 canonical `Anthonysu798/DJL` GitHub release. Checksum, manifest-integrity, signature, and installer
 failures do not switch sources. Clients on 0.5.10 still discover the first migration release through

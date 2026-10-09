@@ -1,8 +1,9 @@
+import type { ServerRecord } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 
 describe("groupCommandItems", () => {
-  it("groups mention suggestions as plugins, local, then subagents", () => {
+  it("groups mention suggestions as plugins, servers, local, then subagents", () => {
     const items: ComposerCommandItem[] = [
       {
         id: "agent:codex:mini",
@@ -53,6 +54,28 @@ describe("groupCommandItems", () => {
         label: "@local",
         description: "Browse folders on this computer",
       },
+      {
+        id: "server:srv-hk",
+        type: "server",
+        server: {
+          id: "srv-hk" as ServerRecord["id"],
+          name: "hk-edge",
+          host: "edge.example.test",
+          port: 22,
+          username: "deploy",
+          auth: { type: "agent" },
+          tags: [],
+          permissionTier: "approve-each",
+          notes: "",
+          source: "manual",
+          createdAt: 0,
+          updatedAt: 0,
+        },
+        mention: { name: "hk-edge", path: "ssh://srv-hk" },
+        label: "hk-edge",
+        description: "deploy@edge.example.test",
+        tierLabel: "Approve each",
+      },
     ];
 
     expect(groupCommandItems(items, "mention", true)).toEqual([
@@ -60,6 +83,11 @@ describe("groupCommandItems", () => {
         id: "plugins",
         labelKey: "commandMenu.groups.plugins",
         items: [items[2]],
+      },
+      {
+        id: "servers",
+        labelKey: "commandMenu.groups.servers",
+        items: [items[4]],
       },
       {
         id: "local",

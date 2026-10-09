@@ -1,0 +1,133 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * DJL Admin theme. Light first: white surfaces with hairline borders on a
+ * soft gray canvas, one blue accent. Dark mode is its own set of
+ * steps, not an inverted light palette. Chart hues are validated per mode
+ * with the dataviz palette validator (all checks pass on both surfaces).
+ */
+:root {
+  --radius: 0.875rem;
+  --background: oklch(0.975 0.002 260);
+  --foreground: oklch(0.17 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.01 260);
+  --primary: oklch(0.546 0.215 263);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0.004 260);
+  --secondary-foreground: oklch(0.25 0.01 260);
+  --muted: oklch(0.955 0.004 260);
+  --muted-foreground: oklch(0.5 0.012 260);
+  --accent: oklch(0.955 0.004 260);
+  --accent-foreground: oklch(0.2 0.01 260);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.91 0.005 260);
+  --input: oklch(0.91 0.005 260);
+  --ring: oklch(0.546 0.215 263 / 0.35);
+  --chart-1: #2563eb;
+  --chart-2: #b45309;
+  --chart-3: #15803d;
+  --chart-4: #0284c7;
+  --chart-5: #b91c1c;
+  --success-bg: oklch(0.96 0.04 160);
+  --success-fg: oklch(0.42 0.13 160);
+  --danger-bg: oklch(0.96 0.03 10);
+  --danger-fg: oklch(0.5 0.18 15);
+  --sidebar: oklch(1 0 0);
+}
+
+.dark {
+  --background: oklch(0.14 0.005 260);
+  --foreground: oklch(0.95 0.005 260);
+  --card: oklch(0.18 0.006 260);
+  --card-foreground: oklch(0.95 0.005 260);
+  --popover: oklch(0.2 0.006 260);
+  --popover-foreground: oklch(0.95 0.005 260);
+  --primary: oklch(0.623 0.188 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.24 0.006 260);
+  --secondary-foreground: oklch(0.92 0.005 260);
+  --muted: oklch(0.24 0.006 260);
+  --muted-foreground: oklch(0.68 0.01 260);
+  --accent: oklch(0.25 0.008 260);
+  --accent-foreground: oklch(0.95 0.005 260);
+  --destructive: oklch(0.66 0.19 25);
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.12);
+  --ring: oklch(0.623 0.188 260 / 0.4);
+  --chart-1: #3b82f6;
+  --chart-2: #b8860b;
+  --chart-3: #15803d;
+  --chart-4: #0891b2;
+  --chart-5: #ef4444;
+  --success-bg: oklch(0.3 0.05 160);
+  --success-fg: oklch(0.85 0.12 160);
+  --danger-bg: oklch(0.3 0.06 15);
+  --danger-fg: oklch(0.85 0.1 15);
+  --sidebar: oklch(0.16 0.006 260);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-sidebar: var(--sidebar);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+/* Surfaces used across the app. Named for their role, not their look. */
+@utility panel {
+  @apply rounded-2xl border border-border bg-card;
+}
+@utility pill {
+  @apply rounded-full border border-border bg-card;
+}

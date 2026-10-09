@@ -1,0 +1,26 @@
+{
+  "redeemedBankId": "bank_1",
+  "usage": {
+    "planId": "starter",
+    "windows": {
+      "fiveHour": {
+        "kind": "five_hour",
+        "limit": "150000000",
+        "used": "0",
+        "remaining": "150000000",
+        "resetsAt": null
+      },
+      "week": {
+        "kind": "week",
+        "limit": "750000000",
+        "used": "0",
+        "remaining": "750000000",
+        "resetsAt": null
+      }
+    },
+    "banks": {
+      "count": 0,
+      "nextExpiresAt": null
+    }
+  }
+}

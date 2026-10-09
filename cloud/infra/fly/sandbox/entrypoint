@@ -1,0 +1,7 @@
+#!/bin/sh
+# Machine init: a tmpfs work area, then idle until the exec API runs commands.
+# The machine stops itself after 15 minutes; auto_destroy then removes it.
+set -eu
+mount -t tmpfs -o size=256m,mode=0777 tmpfs /work
+mkdir -p /work/in
+exec sleep 900

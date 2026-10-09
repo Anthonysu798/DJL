@@ -1,0 +1,34 @@
+# Fly.io app definition for apps/api. Deployed per environment as djl-api-staging / djl-api.
+app = "djl-api"
+primary_region = "iad"
+
+[build]
+dockerfile = "../../apps/api/Dockerfile"
+
+[env]
+DJL_ENV = "production"
+API_PORT = "8787"
+
+[http_service]
+internal_port = 8787
+force_https = true
+auto_stop_machines = "off"
+auto_start_machines = true
+min_machines_running = 2
+
+[http_service.concurrency]
+# Scale on in-flight streams, not CPU (decision: Autoscale).
+type = "requests"
+soft_limit = 150
+hard_limit = 200
+
+[[http_service.checks]]
+interval = "10s"
+timeout = "3s"
+grace_period = "15s"
+method = "GET"
+path = "/ready"
+
+[[vm]]
+size = "performance-2x"
+memory = "4gb"

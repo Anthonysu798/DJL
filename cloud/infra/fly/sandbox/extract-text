@@ -1,0 +1,8 @@
+#!/bin/bash
+# Usage: extract-text <input.pdf|input.docx|input.xlsx>
+# Parses the document inside nsjail; the text (capped at 1 MB) goes to stdout.
+set -uo pipefail
+case "$1" in input.pdf | input.docx | input.xlsx) ;; *) echo "unsupported input name" >&2; exit 2 ;; esac
+/usr/local/bin/nsjail --config /opt/djl/nsjail.cfg -- /usr/local/bin/python3 /opt/djl/extract.py "/work/in/$1" \
+  2> >(head -c 65536 >&2) | head -c 1048576
+exit "${PIPESTATUS[0]}"

@@ -4,7 +4,7 @@
 // Layer: Web orchestration helper
 // Exports: Container-chat startup plus segment-aware fresh-chat dispatch.
 
-import type { ProjectId } from "@synara/contracts";
+import type { ProjectId, ThreadId } from "@synara/contracts";
 import type { Project } from "../types";
 import { isStudioContainerProject } from "./studioProjects";
 import type { ServerWorkspacePaths } from "./serverWorkspacePaths";
@@ -42,6 +42,8 @@ export async function startContainerChat(input: {
   readonly ensureProjectId: () => Promise<ProjectId | null>;
   readonly handleNewThread: (projectId: ProjectId, options?: NewThreadOptions) => Promise<unknown>;
   readonly fresh?: boolean | undefined;
+  readonly startupDraftId?: ThreadId | undefined;
+  readonly shouldNavigate?: (() => boolean) | undefined;
   readonly errorLabel: string;
 }): Promise<StartContainerChatResult> {
   try {
@@ -49,8 +51,16 @@ export async function startContainerChat(input: {
     if (!projectId) {
       return { ok: false, error: { summary: input.errorLabel, detail: null } };
     }
+    if (input.shouldNavigate && !input.shouldNavigate()) return { ok: true };
     const threadOptions: NewThreadOptions | undefined =
-      input.fresh === true ? { fresh: true, envMode: "local", worktreePath: null } : undefined;
+      input.fresh === true
+        ? {
+            fresh: true,
+            envMode: "local",
+            worktreePath: null,
+            ...(input.startupDraftId ? { startupDraftId: input.startupDraftId } : {}),
+          }
+        : undefined;
     await input.handleNewThread(projectId, threadOptions);
     return { ok: true };
   } catch (error) {

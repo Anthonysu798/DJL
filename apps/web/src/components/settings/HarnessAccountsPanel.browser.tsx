@@ -38,6 +38,19 @@ const api = vi.hoisted(() => ({
     })),
   },
   terminal: { close: vi.fn(async () => undefined) },
+  shell: { openExternal: vi.fn(async () => undefined) },
+  cloud: {
+    getStatus: vi.fn(async () => ({
+      signedIn: false,
+      apiBaseUrl: "https://api.test",
+      checkedAt: "2026-09-12T00:00:00.000Z",
+    })),
+    startSignIn: vi.fn(),
+    pollSignIn: vi.fn(),
+    signOut: vi.fn(),
+    startBrowserSignIn: vi.fn(),
+    completeBrowserSignIn: vi.fn(),
+  },
 }));
 vi.mock("~/nativeApi", () => ({ ensureNativeApi: () => api }));
 vi.mock("~/appSettings", () => ({

@@ -61,7 +61,7 @@ vi.mock("../RestoreOrCreateChatRoute", () => ({
 
 vi.mock("../SplashScreen", () => ({
   SplashScreen: ({ errorMessage }: { errorMessage?: string | null }) => (
-    <div>{errorMessage ?? "Loading Work"}</div>
+    <div>{errorMessage ?? "Loading Agent mode"}</div>
   ),
 }));
 

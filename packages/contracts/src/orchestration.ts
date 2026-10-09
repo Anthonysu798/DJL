@@ -7,9 +7,13 @@ import {
   GeminiModelOptions,
   DroidModelOptions,
   GrokModelOptions,
+  IFlowModelOptions,
   KimiModelOptions,
   OpenCodeModelOptions,
+  QwenModelOptions,
+  CodeBuddyModelOptions,
   PiModelOptions,
+  DjlCloudModelOptions,
 } from "./model";
 import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
 import { ProjectKind } from "./project";
@@ -66,10 +70,14 @@ export const ProviderKind = Schema.Literals([
   "gemini",
   "grok",
   "kimi",
+  "iflow",
+  "qwen",
+  "codebuddy",
   "droid",
   "kilo",
   "opencode",
   "pi",
+  "djlCloud",
 ]);
 export type ProviderKind = typeof ProviderKind.Type;
 export const ProviderApprovalPolicy = Schema.Literals([
@@ -129,6 +137,27 @@ export const KimiModelSelection = Schema.Struct({
 });
 export type KimiModelSelection = typeof KimiModelSelection.Type;
 
+export const IFlowModelSelection = Schema.Struct({
+  provider: Schema.Literal("iflow"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(IFlowModelOptions),
+});
+export type IFlowModelSelection = typeof IFlowModelSelection.Type;
+
+export const QwenModelSelection = Schema.Struct({
+  provider: Schema.Literal("qwen"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(QwenModelOptions),
+});
+export type QwenModelSelection = typeof QwenModelSelection.Type;
+
+export const CodeBuddyModelSelection = Schema.Struct({
+  provider: Schema.Literal("codebuddy"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(CodeBuddyModelOptions),
+});
+export type CodeBuddyModelSelection = typeof CodeBuddyModelSelection.Type;
+
 export const DroidModelSelection = Schema.Struct({
   provider: Schema.Literal("droid"),
   model: TrimmedNonEmptyString,
@@ -157,6 +186,13 @@ export const PiModelSelection = Schema.Struct({
 });
 export type PiModelSelection = typeof PiModelSelection.Type;
 
+export const DjlCloudModelSelection = Schema.Struct({
+  provider: Schema.Literal("djlCloud"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(DjlCloudModelOptions),
+});
+export type DjlCloudModelSelection = typeof DjlCloudModelSelection.Type;
+
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   ClaudeModelSelection,
@@ -164,16 +200,21 @@ export const ModelSelection = Schema.Union([
   GeminiModelSelection,
   GrokModelSelection,
   KimiModelSelection,
+  IFlowModelSelection,
+  QwenModelSelection,
+  CodeBuddyModelSelection,
   DroidModelSelection,
   KiloModelSelection,
   OpenCodeModelSelection,
   PiModelSelection,
+  DjlCloudModelSelection,
 ]);
 export type ModelSelection = typeof ModelSelection.Type;
 
 export const NewTaskModelSelection = ModelSelection.check(
   Schema.makeFilter(
     (selection) =>
+      selection.provider === "djlCloud" ||
       Schema.is(HarnessId)(selection.provider) ||
       new SchemaIssue.InvalidValue(Option.some(selection.provider), {
         message: "This harness does not have an active DJL runtime implementation",
@@ -211,6 +252,18 @@ export const KimiProviderStartOptions = Schema.Struct({
   region: Schema.optional(Schema.Literals(["existing", "global", "mainland-cn"])),
 });
 
+export const IFlowProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const QwenProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const CodeBuddyProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const DroidProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
@@ -228,6 +281,12 @@ export const KiloProviderStartOptions = Schema.Struct({
   serverPassword: Schema.optional(TrimmedNonEmptyString),
 });
 
+/** DJL Cloud runs remotely; the only start option is the region hint. */
+export const DjlCloudProviderStartOptions = Schema.Struct({
+  region: Schema.optional(Schema.Literals(["auto", "global", "asia"])),
+});
+export type DjlCloudProviderStartOptions = typeof DjlCloudProviderStartOptions.Type;
+
 export const PiProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
@@ -240,16 +299,22 @@ export const ProviderStartOptions = Schema.Struct({
   gemini: Schema.optional(GeminiProviderStartOptions),
   grok: Schema.optional(GrokProviderStartOptions),
   kimi: Schema.optional(KimiProviderStartOptions),
+  iflow: Schema.optional(IFlowProviderStartOptions),
+  qwen: Schema.optional(QwenProviderStartOptions),
+  codebuddy: Schema.optional(CodeBuddyProviderStartOptions),
   droid: Schema.optional(DroidProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),
   pi: Schema.optional(PiProviderStartOptions),
+  djlCloud: Schema.optional(DjlCloudProviderStartOptions),
 });
 export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 export const NewTaskProviderStartOptions = ProviderStartOptions.check(
   Schema.makeFilter(
     (options) =>
-      Object.keys(options).every((provider) => Schema.is(HarnessId)(provider)) ||
+      Object.keys(options).every(
+        (provider) => provider === "djlCloud" || Schema.is(HarnessId)(provider),
+      ) ||
       new SchemaIssue.InvalidValue(Option.some(options), {
         message: "New turns accept DJL runtime options only",
       }),
@@ -995,6 +1060,8 @@ export const ThreadHandoffImportedMessage = Schema.Struct({
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
+  skills: Schema.optional(Schema.Array(ProviderSkillReference)),
+  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -1005,6 +1072,7 @@ const ThreadHandoffCreateCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   sourceThreadId: ThreadId,
+  expectedSourceUpdatedAt: IsoDateTime,
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
   modelSelection: NewTaskModelSelection,
@@ -1021,7 +1089,6 @@ const ThreadHandoffCreateCommand = Schema.Struct({
   createBranchFlowCompleted: Schema.optional(Schema.Boolean).pipe(
     Schema.withDecodingDefault(() => false),
   ),
-  importedMessages: Schema.Array(ThreadHandoffImportedMessage),
   createdAt: IsoDateTime,
 });
 

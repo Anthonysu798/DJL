@@ -51,6 +51,24 @@ export const KimiServerProviderSettings = Schema.Struct({
 });
 export type KimiServerProviderSettings = typeof KimiServerProviderSettings.Type;
 
+export const IFlowServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "iflow")),
+});
+export type IFlowServerProviderSettings = typeof IFlowServerProviderSettings.Type;
+
+export const QwenServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "qwen")),
+});
+export type QwenServerProviderSettings = typeof QwenServerProviderSettings.Type;
+
+export const CodeBuddyServerProviderSettings = Schema.Struct({
+  ...ProviderSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "codebuddy")),
+});
+export type CodeBuddyServerProviderSettings = typeof CodeBuddyServerProviderSettings.Type;
+
 export const DroidServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "droid")),
@@ -80,6 +98,19 @@ export const KiloServerProviderSettings = Schema.Struct({
   serverPassword: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
 });
 export type KiloServerProviderSettings = typeof KiloServerProviderSettings.Type;
+
+/**
+ * DJL Cloud: the hosted, credit-based provider. The session token never lives
+ * in settings (settings are streamed to the renderer); it is stored in the
+ * server's secrets directory. Only the preferred region hint is a setting.
+ */
+export const DjlCloudServerProviderSettings = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  region: Schema.Literals(["auto", "global", "asia"]).pipe(
+    Schema.withDecodingDefault(() => "auto" as const),
+  ),
+});
+export type DjlCloudServerProviderSettings = typeof DjlCloudServerProviderSettings.Type;
 
 export const PiServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
@@ -118,10 +149,14 @@ export const ServerSettings = Schema.Struct({
     gemini: GeminiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     kimi: KimiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    iflow: IFlowServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    qwen: QwenServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    codebuddy: CodeBuddyServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    djlCloud: DjlCloudServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
 });
@@ -176,6 +211,9 @@ export const ServerSettingsPatch = Schema.Struct({
           region: Schema.optionalKey(Schema.Literals(["existing", "global", "mainland-cn"])),
         }),
       ),
+      iflow: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      qwen: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      codebuddy: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       droid: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
       kilo: Schema.optionalKey(
         Schema.Struct({

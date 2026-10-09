@@ -16,6 +16,23 @@ export function nativeProfileOptions(
       };
     case "grok":
       return { grok: { binaryPath: settings.providers.grok.binaryPath.trim() || "grok" } };
+    case "iflow":
+      return { iflow: { binaryPath: settings.providers.iflow.binaryPath.trim() || "iflow" } };
+    case "qwen":
+      return { qwen: { binaryPath: settings.providers.qwen.binaryPath.trim() || "qwen" } };
+    case "codebuddy":
+      return {
+        codebuddy: { binaryPath: settings.providers.codebuddy.binaryPath.trim() || "codebuddy" },
+      };
+    case "pi":
+      return {
+        pi: {
+          binaryPath: settings.providers.pi.binaryPath.trim() || "pi",
+          ...(settings.providers.pi.agentDir.trim()
+            ? { agentDir: settings.providers.pi.agentDir.trim() }
+            : {}),
+        },
+      };
     case "codex":
       return {
         codex: {
@@ -29,6 +46,8 @@ export function nativeProfileOptions(
       return {
         claudeAgent: { binaryPath: settings.providers.claudeAgent.binaryPath.trim() || "claude" },
       };
+    case "djlCloud":
+      return { djlCloud: { region: settings.providers.djlCloud.region } };
     case "cursor":
       return {
         cursor: {

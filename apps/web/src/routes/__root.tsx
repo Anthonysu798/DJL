@@ -1,3 +1,6 @@
+import { useStartupSnapshot } from "../startup/useStartupSnapshot";
+import { useStartupRouteReady } from "../startup/useStartupRouteReady";
+import { getStartupSession } from "../startup/session";
 import {
   PROVIDER_DISPLAY_NAMES,
   ThreadId,
@@ -67,10 +70,12 @@ import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
 import { useProjectRunStore } from "../projectRunStore";
 import { dockTerminalThreadId } from "../lib/dockTerminalScope";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
+import { ServerCommandApprovalSurface } from "../components/servers/ServerCommandApprovalSurface";
 import { useWorkspaceStore, workspaceThreadId } from "../workspaceStore";
 import {
   subscribeRetainedThreadDetailIdChanges,
   useRetainedThreadDetailIds,
+  useRetainVisibleThreadDetails,
 } from "../threadDetailSubscriptionRetention";
 import { getThreadFromState } from "../threadDerivation";
 import { useAppDensity } from "../hooks/useAppDensity";
@@ -157,6 +162,8 @@ function RootRouteView() {
   useAppTypography();
   useAppDensity();
   usePreloadSettingsRoute();
+  useStartupSnapshot();
+  useStartupRouteReady();
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
   useTheme();
@@ -203,6 +210,7 @@ function RootRouteView() {
           <GlobalShortcutsDialog />
           <GlobalWhatsNewSurface />
           <TaskCompletionNotifications />
+          <ServerCommandApprovalSurface />
           <ProviderUpdateNotifications />
           <LocalModelSetupCoordinator />
           <DesktopProjectBootstrap />
@@ -620,11 +628,19 @@ function GlobalWhatsNewSurface() {
 
 function RootRouteNotFoundView() {
   useDesktopReady();
+  useEffect(() => {
+    getStartupSession()?.finishPreview();
+  }, []);
   return <DefaultGlobalNotFound />;
 }
 
 function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
   useDesktopReady();
+  useEffect(() => {
+    const startup = getStartupSession();
+    if (startup?.previewActive && !startup.navigationTarget) startup.setStatus("runtime-error");
+    else startup?.finishPreview();
+  }, []);
   const { t } = useTranslation("shell");
   const details = errorDetails(error, t("error.noDetails"));
 
@@ -806,6 +822,7 @@ function EventRouter() {
     }
     return routeThreadId ? [routeThreadId] : [];
   }, [activeSplitView, routeThreadId]);
+  useRetainVisibleThreadDetails(visibleThreadIds);
   const retainedThreadIds = useRetainedThreadDetailIds();
   const serverThreadIds = useMemo(
     () => new Set(serverThreads.map((thread) => thread.id)),

@@ -22,3 +22,14 @@ it("bundles the existing font family names and every referenced font file", () =
   }
   expect(css.match(/^\s*font-display: swap;/gm)).toHaveLength(urls.length);
 });
+
+it("keeps terminal rendering out of the sidebar and ordinary chat startup imports", () => {
+  for (const [file, moduleName] of [
+    ["components/Sidebar.tsx", "./terminal/terminalRuntimeRegistry"],
+    ["components/ChatView.tsx", "./ThreadTerminalDrawer"],
+  ]) {
+    const source = readFileSync(path.resolve(import.meta.dirname, file!), "utf8");
+    expect(source.includes(`from "${moduleName}"`), file).toBe(false);
+    expect(source).toContain(`import("${moduleName}")`);
+  }
+});

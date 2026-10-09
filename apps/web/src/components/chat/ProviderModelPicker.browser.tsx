@@ -32,6 +32,9 @@ const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "kimi-build-0.1", name: "Kimi Build 0.1" },
     { slug: "kimi-build", name: "Kimi 4.3" },
   ],
+  iflow: [{ slug: "glm-5", name: "GLM-5" }],
+  qwen: [{ slug: "qwen3-coder-plus", name: "Qwen3 Coder Plus" }],
+  codebuddy: [{ slug: "default-model", name: "Auto" }],
   droid: [
     {
       slug: "gpt-5.6-luna",
@@ -69,6 +72,10 @@ const MODEL_OPTIONS_BY_PROVIDER = {
       upstreamProviderId: "anthropic",
       upstreamProviderName: "Anthropic",
     },
+  ],
+  djlCloud: [
+    { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
+    { slug: "gpt-5", name: "GPT-5" },
   ],
 } as const satisfies Record<ProviderKind, ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>>;
 

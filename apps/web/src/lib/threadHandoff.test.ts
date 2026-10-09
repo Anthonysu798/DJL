@@ -8,6 +8,24 @@ import {
 } from "./threadHandoff";
 
 describe("threadHandoff", () => {
+  it("preserves skill and mention references for the destination provider", () => {
+    const skills = [{ name: "review", path: "/project/skills/review/SKILL.md" }];
+    const mentions = [{ name: "README.md", path: "/project/README.md" }];
+    const [imported] = buildThreadHandoffImportedMessages({
+      messages: [
+        {
+          id: "source-message" as never,
+          role: "user",
+          text: "/review @README.md",
+          skills,
+          mentions,
+          createdAt: "2026-09-08T00:00:00.000Z",
+          streaming: false,
+        },
+      ],
+    });
+    expect(imported).toMatchObject({ skills, mentions });
+  });
   it("does not import protocol-only assistant messages into a handoff", () => {
     const imported = buildThreadHandoffImportedMessages({
       messages: [
@@ -30,6 +48,7 @@ describe("threadHandoff", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -40,6 +59,7 @@ describe("threadHandoff", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -50,6 +70,7 @@ describe("threadHandoff", () => {
       "claudeAgent",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -60,6 +81,7 @@ describe("threadHandoff", () => {
       "claudeAgent",
       "cursor",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -70,6 +92,7 @@ describe("threadHandoff", () => {
       "claudeAgent",
       "cursor",
       "gemini",
+      "kimi",
       "droid",
       "kilo",
       "opencode",
@@ -81,6 +104,7 @@ describe("threadHandoff", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "kilo",
       "opencode",
       "pi",
@@ -91,6 +115,7 @@ describe("threadHandoff", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "opencode",
       "pi",
@@ -101,6 +126,7 @@ describe("threadHandoff", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "pi",
@@ -111,6 +137,7 @@ describe("threadHandoff", () => {
       "cursor",
       "gemini",
       "grok",
+      "kimi",
       "droid",
       "kilo",
       "opencode",

@@ -5,10 +5,16 @@ import { BROWSER_IPC_CHANNELS } from "./browserIpcChannels";
 import { DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";
 import {
   DESKTOP_WS_URL_CHANNEL,
+  DESKTOP_STARTUP_SCOPE_CHANNEL,
   normalizeDesktopWsUrl,
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
 import { SERVER_TRANSCRIBE_VOICE_CHANNEL } from "./voiceTranscription";
+import {
+  CLOUD_AUTH_CALLBACK_CHANNEL,
+  CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+  type CloudAuthCallback,
+} from "./cloudAuthDeepLink";
 import { STORAGE_MIGRATION_IPC_CHANNELS } from "./desktopStorageMigration";
 import { REMOTE_GATEWAY_IPC_CHANNELS } from "./remoteGatewayIpc";
 import {
@@ -55,6 +61,7 @@ function getDesktopWsUrl(): string | null {
 contextBridge.exposeInMainWorld("desktopBridge", {
   notifyReady: () => ipcRenderer.send(RENDERER_READY_CHANNEL),
   getWsUrl: getDesktopWsUrl,
+  getStartupScope: () => ipcRenderer.sendSync(DESKTOP_STARTUP_SCOPE_CHANNEL) as string,
   getBuildInfo: () => ipcRenderer.sendSync(DESKTOP_BUILD_INFO_CHANNEL) as DesktopBuildInfo,
   locale: {
     getPreferredSystemLanguages: () =>
@@ -110,6 +117,21 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     ipcRenderer.on(MENU_ACTION_CHANNEL, wrappedListener);
     return () => {
       ipcRenderer.removeListener(MENU_ACTION_CHANNEL, wrappedListener);
+    };
+  },
+  onCloudAuthCallback: (listener) => {
+    // Main keeps the newest callback until it is taken, so each one is handled once.
+    const take = async () => {
+      const callback = (await ipcRenderer.invoke(
+        CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+      )) as CloudAuthCallback | null;
+      if (callback) listener({ code: callback.code, state: callback.state });
+    };
+    const wrappedListener = () => void take();
+    ipcRenderer.on(CLOUD_AUTH_CALLBACK_CHANNEL, wrappedListener);
+    void take();
+    return () => {
+      ipcRenderer.removeListener(CLOUD_AUTH_CALLBACK_CHANNEL, wrappedListener);
     };
   },
   getZoomFactor: () => {

@@ -122,6 +122,7 @@ describe("rankSettingsSearchEntries", () => {
       "models:configured-models": null,
       "local-models:runtimes": null,
       "local-models:recommended": null,
+      "servers:registry": null,
       "skills:skills": null,
       "usage:usage": null,
       "advanced:keybindings": "setting-keybindings",

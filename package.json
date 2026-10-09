@@ -5,7 +5,9 @@
     "packages": [
       "apps/*",
       "packages/*",
-      "scripts"
+      "scripts",
+      "cloud/apps/*",
+      "cloud/packages/*"
     ],
     "catalog": {
       "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@8881a9b",
@@ -18,7 +20,10 @@
       "@types/node": "^24.10.13",
       "tsdown": "^0.20.3",
       "typescript": "^5.7.3",
-      "vitest": "^4.0.0"
+      "vitest": "^4.0.0",
+      "drizzle-orm": "^0.44.0",
+      "drizzle-kit": "^0.31.0",
+      "postgres": "^3.4.5"
     }
   },
   "type": "module",
@@ -57,6 +62,16 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "build:contracts": "turbo run build --filter=@synara/contracts",
+    "cloud:dev": "docker compose -f cloud/docker-compose.yml up -d && turbo run dev --filter=./cloud/**",
+    "cloud:build": "turbo run build --filter=./cloud/**",
+    "cloud:typecheck": "turbo run typecheck --filter=./cloud/**",
+    "cloud:test": "turbo run test --concurrency=2 --filter=./cloud/**",
+    "cloud:lint": "oxlint --disable-nested-config --report-unused-disable-directives cloud",
+    "cloud:fmt:check": "oxfmt --check cloud",
+    "cloud:ci": "bun run cloud:fmt:check && bun run cloud:lint && bun run cloud:typecheck && bun run cloud:test",
+    "cloud:db:generate": "bun run --cwd cloud/packages/db generate",
+    "cloud:db:migrate": "bun run --cwd cloud/packages/db migrate",
+    "cloud:db:seed": "bun run --cwd cloud/packages/db seed",
     "dist:desktop:artifact": "node scripts/build-desktop-artifact.ts",
     "dist:desktop:dmg": "node scripts/build-desktop-artifact.ts --platform mac --target dmg",
     "dist:desktop:dmg:arm64": "node scripts/build-desktop-artifact.ts --platform mac --target dmg --arch arm64",

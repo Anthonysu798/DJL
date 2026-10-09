@@ -11,6 +11,14 @@ import type {
   HarnessEndLoginInput,
 } from "./harnessAccounts";
 import type {
+  CloudAccountStatus,
+  CloudBrowserSignInCompleteInput,
+  CloudBrowserSignInStartResult,
+  CloudSignInPollInput,
+  CloudSignInPollResult,
+  CloudSignInStartResult,
+} from "./cloud";
+import type {
   AuthBearerBootstrapResult,
   AuthBootstrapInput,
   AuthBootstrapResult,
@@ -46,6 +54,27 @@ import type {
   AutomationUpdateInput,
 } from "./automation";
 import type { AppLocale, AppLocalePreference } from "./locale";
+import type {
+  ServerByIdInput,
+  ServerCapabilities,
+  ServerConnectionTest,
+  ServerCreateInput,
+  ServerDeleteInput,
+  ServerImportApplyInput,
+  ServerImportApplyResult,
+  ServerImportPreviewResult,
+  ServerCommandRecord,
+  ServerCommandStreamEvent,
+  ServerListCommandsInput,
+  ServerListCommandsResult,
+  ServerListLocalKeysResult,
+  ServerListResult,
+  ServerRecord,
+  ServerResolveCommandInput,
+  ServerRefreshStatsResult,
+  ServerTrustHostKeyInput,
+  ServerUpdateInput,
+} from "./servers";
 import type {
   GitCheckoutInput,
   GitActionProgressEvent,
@@ -437,6 +466,8 @@ export interface DesktopBuildInfo {
 export interface DesktopBridge {
   notifyReady?: () => void;
   getWsUrl: () => string | null;
+  /** Opaque backend-profile identity for small local startup drafts and snapshots. */
+  getStartupScope?: () => string;
   getBuildInfo: () => DesktopBuildInfo;
   locale: {
     getPreferredSystemLanguages: () => readonly string[];
@@ -473,6 +504,13 @@ export interface DesktopBridge {
     onState: (listener: (state: DesktopWindowState) => void) => () => void;
   };
   onMenuAction: (listener: (action: string) => void) => () => void;
+  /**
+   * `djl://auth/callback` deep links (browser sign-in). Delivers a callback that
+   * arrived before the listener was attached, and each callback only once.
+   */
+  onCloudAuthCallback?: (
+    listener: (callback: CloudBrowserSignInCompleteInput) => void,
+  ) => () => void;
   /** Current `webContents` page zoom (1 = 100%). Used to keep macOS traffic-light gutter aligned. */
   getZoomFactor: () => number;
   onZoomFactorChange: (listener: (zoomFactor: number) => void) => () => void;
@@ -738,6 +776,14 @@ export interface NativeApi {
     startLogin: (input: HarnessLoginInput) => Promise<HarnessLoginResult>;
     endLogin: (input: HarnessEndLoginInput) => Promise<void>;
   };
+  cloud: {
+    getStatus: () => Promise<CloudAccountStatus>;
+    startSignIn: () => Promise<CloudSignInStartResult>;
+    pollSignIn: (input: CloudSignInPollInput) => Promise<CloudSignInPollResult>;
+    signOut: () => Promise<CloudAccountStatus>;
+    startBrowserSignIn: () => Promise<CloudBrowserSignInStartResult>;
+    completeBrowserSignIn: (input: CloudBrowserSignInCompleteInput) => Promise<CloudAccountStatus>;
+  };
   provider: {
     getComposerCapabilities: (
       input: ProviderGetComposerCapabilitiesInput,
@@ -778,6 +824,22 @@ export interface NativeApi {
     onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
     onShellEvent: (callback: (event: OrchestrationShellStreamItem) => void) => () => void;
     onThreadEvent: (callback: (event: OrchestrationThreadStreamItem) => void) => () => void;
+  };
+  servers: {
+    list: () => Promise<ServerListResult>;
+    create: (input: ServerCreateInput) => Promise<ServerRecord>;
+    update: (input: ServerUpdateInput) => Promise<ServerRecord>;
+    delete: (input: ServerDeleteInput) => Promise<void>;
+    testConnection: (input: ServerByIdInput) => Promise<ServerConnectionTest>;
+    trustHostKey: (input: ServerTrustHostKeyInput) => Promise<ServerConnectionTest>;
+    refreshStats: (input: ServerByIdInput) => Promise<ServerRefreshStatsResult>;
+    importPreview: () => Promise<ServerImportPreviewResult>;
+    importApply: (input: ServerImportApplyInput) => Promise<ServerImportApplyResult>;
+    checkCapabilities: () => Promise<ServerCapabilities>;
+    listLocalKeys: () => Promise<ServerListLocalKeysResult>;
+    resolveCommand: (input: ServerResolveCommandInput) => Promise<ServerCommandRecord>;
+    listCommands: (input: ServerListCommandsInput) => Promise<ServerListCommandsResult>;
+    onEvent: (callback: (event: ServerCommandStreamEvent) => void) => () => void;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;

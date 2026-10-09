@@ -1,0 +1,19 @@
+{
+  "file": {
+    "id": "file_1",
+    "name": "itinerary.pdf",
+    "mimeType": "application/pdf",
+    "size": 48213,
+    "status": "pending",
+    "createdAt": "2026-09-26T12:00:00.000Z"
+  },
+  "upload": {
+    "url": "https://storage.example.com/upload/file_1?signature=abc",
+    "method": "PUT",
+    "headers": {
+      "content-type": "application/pdf",
+      "content-length": "48213"
+    },
+    "expiresAt": "2026-09-26T12:00:00.000Z"
+  }
+}

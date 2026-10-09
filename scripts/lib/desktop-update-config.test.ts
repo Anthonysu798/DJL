@@ -9,7 +9,7 @@ import {
   findPackagedDesktopUpdateConfigs,
 } from "./desktop-update-config";
 
-const expectedUrl = "https://djl-china-releases.oss-cn-hongkong.aliyuncs.com/stable";
+const expectedUrl = "https://djl-china-releases.oss-accelerate.aliyuncs.com/stable";
 
 describe("packaged desktop updater configuration", () => {
   it("accepts only the expected generic OSS feed", () => {
