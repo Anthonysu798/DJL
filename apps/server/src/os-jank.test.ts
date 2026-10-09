@@ -56,6 +56,20 @@ describe("fixPath", () => {
     expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin");
   });
 
+  it("skips the login shell probe when the desktop already synced the environment", () => {
+    const env: NodeJS.ProcessEnv = {
+      SHELL: "/bin/zsh",
+      PATH: "/opt/homebrew/bin:/usr/bin",
+      DJL_SHELL_ENV_SYNCED: "1",
+    };
+    const readPath = vi.fn(() => "/other/bin");
+
+    fixPath({ env, platform: "darwin", readPath });
+
+    expect(readPath).not.toHaveBeenCalled();
+    expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin");
+  });
+
   it("does nothing on unsupported platforms", () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "C:/Program Files/Git/bin/bash.exe",

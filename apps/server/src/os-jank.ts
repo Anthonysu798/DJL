@@ -30,6 +30,9 @@ export function fixPath(
   if (platform !== "darwin" && platform !== "linux") return;
 
   const env = options.env ?? process.env;
+  // The desktop app already merged the login-shell environment before spawning
+  // this process; probing the shell again only delays the HTTP listener.
+  if (env.DJL_SHELL_ENV_SYNCED === "1") return;
   const logWarning = options.logWarning ?? logPathHydrationWarning;
   const readPath = options.readPath ?? readPathFromLoginShell;
 

@@ -16,6 +16,9 @@ export class ServerListeningDetector {
       resolvePromise = resolve;
       rejectPromise = reject;
     });
+    // Backend restarts fail detectors that no caller awaits anymore. Consumers
+    // still observe the rejection through `promise`; this only marks it handled.
+    this.promise.catch(() => undefined);
 
     this.resolvePromise = () => {
       if (this.settled) {

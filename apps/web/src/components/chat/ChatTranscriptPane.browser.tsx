@@ -69,9 +69,14 @@ function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
   const handleComposerChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setComposerValue(event.target.value);
   }, []);
-  const handleTranscriptRender = useCallback<ProfilerOnRenderCallback>(() => {
-    props.onTranscriptRender();
-  }, [props]);
+  const handleTranscriptRender = useCallback<ProfilerOnRenderCallback>(
+    (_id, _phase, actualDuration) => {
+      // The outer Profiler still commits when the memoized pane bails out.
+      // Count rendered work, not those zero-duration parent-only commits.
+      if (actualDuration > 0) props.onTranscriptRender();
+    },
+    [props],
+  );
 
   return (
     <div>
