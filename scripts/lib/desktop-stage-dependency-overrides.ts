@@ -7,6 +7,11 @@ export const DESKTOP_STAGE_DEPENDENCY_OVERRIDES = {
   // still treats it as a supported desktop target. Keep the last release
   // containing both Darwin architectures until Intel support returns upstream.
   "onnxruntime-node": "1.23.2",
+  // Fresh AWS installs selected credential-provider-http 3.972.75 and
+  // middleware-eventstream 3.972.31, whose tarballs returned 404. Keep stages
+  // on the versions already validated by the workspace lockfile.
+  "@aws-sdk/credential-provider-http": "3.972.36",
+  "@aws-sdk/middleware-eventstream": "3.972.10",
   // 1.2.9 declares a dependency on @pierre/theming@0.0.1 which is not published
   // to npm (404), breaking fresh staged installs. Pin the last installable
   // version until upstream ships a fixed release.

@@ -4,7 +4,7 @@ import { MessageId, type BrowserFindingDraft } from "@synara/contracts";
 import { appendBrowserFindingsBlock } from "@synara/shared/browserFindings";
 import { type LegendListRef } from "@legendapp/list/react";
 import { page } from "vitest/browser";
-import { Profiler, useCallback, useRef, useState, type ProfilerOnRenderCallback } from "react";
+import { useCallback, useRef, useState, type ComponentProps, type FunctionComponent } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -31,7 +31,7 @@ const TIMELINE_ENTRIES = [
   },
 ];
 
-function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
+function TranscriptPerfHarness() {
   const [composerValue, setComposerValue] = useState("");
   const composerImagesRef = useRef<readonly []>([]);
   const composerFilesRef = useRef<readonly []>([]);
@@ -69,14 +69,6 @@ function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
   const handleComposerChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setComposerValue(event.target.value);
   }, []);
-  const handleTranscriptRender = useCallback<ProfilerOnRenderCallback>(
-    (_id, _phase, actualDuration) => {
-      // The outer Profiler still commits when the memoized pane bails out.
-      // Count rendered work, not those zero-duration parent-only commits.
-      if (actualDuration > 0) props.onTranscriptRender();
-    },
-    [props],
-  );
 
   return (
     <div>
@@ -87,82 +79,79 @@ function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
         value={composerValue}
         onChange={handleComposerChange}
       />
-      <Profiler id="chat-transcript-pane" onRender={handleTranscriptRender}>
-        <ChatTranscriptPane
-          activeThreadId="thread-transcript-perf"
-          activeTurnInProgress={false}
-          activeTurnStartedAt={null}
-          chatFontSizePx={15}
-          emptyStateProjectName={undefined}
-          expandedWorkGroups={EMPTY_WORK_GROUPS}
-          hasMessages
-          isRevertingCheckpoint={false}
-          isWorking={false}
-          worktreeSetup={null}
-          followLiveOutput={false}
-          listRef={listRef}
-          markdownCwd={undefined}
-          onExpandTimelineImage={NOOP}
-          onMessagesClickCapture={onMessagesClickCapture}
-          onMessagesMouseUp={onMessagesMouseUp}
-          onMessagesPointerCancel={onMessagesPointerCancel}
-          onMessagesPointerDown={onMessagesPointerDown}
-          onMessagesPointerUp={onMessagesPointerUp}
-          onMessagesScroll={onMessagesScroll}
-          onMessagesTouchEnd={onMessagesTouchEnd}
-          onMessagesTouchMove={onMessagesTouchMove}
-          onMessagesTouchStart={onMessagesTouchStart}
-          onMessagesWheel={onMessagesWheel}
-          onIsAtEndChange={NOOP}
-          onOpenTurnDiff={NOOP}
-          onOpenThread={NOOP}
-          onRevertUserMessage={NOOP}
-          onScrollToBottom={NOOP}
-          onToggleWorkGroup={NOOP}
-          resolvedTheme="dark"
-          revertTurnCountByUserMessageId={EMPTY_REVERT_COUNTS}
-          scrollButtonVisible={false}
-          terminalWorkspaceTerminalTabActive={false}
-          timelineEntries={TIMELINE_ENTRIES}
-          timestampFormat="locale"
-          turnDiffSummaryByAssistantMessageId={EMPTY_TURN_DIFFS}
-          workspaceRoot={undefined}
-        />
-      </Profiler>
+      <ChatTranscriptPane
+        activeThreadId="thread-transcript-perf"
+        activeTurnInProgress={false}
+        activeTurnStartedAt={null}
+        chatFontSizePx={15}
+        emptyStateProjectName={undefined}
+        expandedWorkGroups={EMPTY_WORK_GROUPS}
+        hasMessages
+        isRevertingCheckpoint={false}
+        isWorking={false}
+        worktreeSetup={null}
+        followLiveOutput={false}
+        listRef={listRef}
+        markdownCwd={undefined}
+        onExpandTimelineImage={NOOP}
+        onMessagesClickCapture={onMessagesClickCapture}
+        onMessagesMouseUp={onMessagesMouseUp}
+        onMessagesPointerCancel={onMessagesPointerCancel}
+        onMessagesPointerDown={onMessagesPointerDown}
+        onMessagesPointerUp={onMessagesPointerUp}
+        onMessagesScroll={onMessagesScroll}
+        onMessagesTouchEnd={onMessagesTouchEnd}
+        onMessagesTouchMove={onMessagesTouchMove}
+        onMessagesTouchStart={onMessagesTouchStart}
+        onMessagesWheel={onMessagesWheel}
+        onIsAtEndChange={NOOP}
+        onOpenTurnDiff={NOOP}
+        onOpenThread={NOOP}
+        onRevertUserMessage={NOOP}
+        onScrollToBottom={NOOP}
+        onToggleWorkGroup={NOOP}
+        resolvedTheme="dark"
+        revertTurnCountByUserMessageId={EMPTY_REVERT_COUNTS}
+        scrollButtonVisible={false}
+        terminalWorkspaceTerminalTabActive={false}
+        timelineEntries={TIMELINE_ENTRIES}
+        timestampFormat="locale"
+        turnDiffSummaryByAssistantMessageId={EMPTY_TURN_DIFFS}
+        workspaceRoot={undefined}
+      />
     </div>
   );
 }
 
 describe("ChatTranscriptPane", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.innerHTML = "";
   });
 
-  it("does not re-render the transcript subtree when only composer text changes", async () => {
-    let transcriptCommitCount = 0;
-
-    const screen = await render(
-      <TranscriptPerfHarness
-        onTranscriptRender={() => {
-          transcriptCommitCount += 1;
-        }}
-      />,
+  it("does not re-render the transcript pane when only composer text changes", async () => {
+    // Count the memoized pane's render body. Profiler commits also include
+    // independent list measurement updates and parent-only reconciliation.
+    const paneRender = vi.spyOn(
+      ChatTranscriptPane as unknown as {
+        type: FunctionComponent<ComponentProps<typeof ChatTranscriptPane>>;
+      },
+      "type",
     );
+    const screen = await render(<TranscriptPerfHarness />);
     try {
-      await vi.waitFor(() => {
-        expect(transcriptCommitCount).toBeGreaterThan(0);
-      });
-
-      const baselineCommitCount = transcriptCommitCount;
+      expect(paneRender).toHaveBeenCalled();
+      const baselineRenderCount = paneRender.mock.calls.length;
       await page.getByPlaceholder("Type composer text").fill("reply follow up");
 
       await vi.waitFor(() => {
         expect(screen.container.querySelector("#composer-input")).toHaveValue("reply follow up");
       });
 
-      expect(transcriptCommitCount).toBe(baselineCommitCount);
+      expect(paneRender).toHaveBeenCalledTimes(baselineRenderCount);
     } finally {
       await screen.unmount();
+      paneRender.mockRestore();
     }
   });
 
