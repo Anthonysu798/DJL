@@ -24,6 +24,14 @@ struct CloudNavigationMenu: View {
                 }
                 action("Chat", icon: "bubble.left.and.bubble.right") { cloud.navigation.destination = .chat; cloud.navigation.isMenuOpen = false }
                 action("Remote", icon: "laptopcomputer") { cloud.navigation.isMenuOpen = false; cloud.sectionPreference = .myMacs }
+                Button { cloud.navigation.destination = .notifications; cloud.navigation.isMenuOpen = false } label: {
+                    HStack {
+                        Label("Notifications", systemImage: "bell")
+                        Spacer()
+                        if cloud.notifications.unreadCount > 0 { Text("\(cloud.notifications.unreadCount)").font(AppFont.footnote()).foregroundStyle(.secondary) }
+                    }
+                    .font(AppFont.body(weight: .medium)).padding(.horizontal, 14).frame(minHeight: 50)
+                }
                 section("Pinned", rows: history.filter(\.pinned))
                 section("Recent chats", rows: history.filter { !$0.pinned })
                 if cloud.nextConversationCursor != nil, query.isEmpty {

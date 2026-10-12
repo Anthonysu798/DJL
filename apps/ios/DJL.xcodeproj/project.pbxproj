@@ -114,6 +114,8 @@
 		348B04D49B53D95EBD1F10FC /* CloudDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC868526324AF4AEA74DF7D7 /* CloudDraftStoreTests.swift */; };
 		97D10EDBE5F79A54CCD0402A /* CloudNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAB9ADFDF06D162CD482CF5 /* CloudNavigationTests.swift */; };
 		EC1DE31B4629EA73D22615AD /* CloudChatSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFC6A9382407DF08A0BB314D /* CloudChatSessionTests.swift */; };
+		048E7D1207BEAAD776C2C977 /* CloudNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588BC860872F0A975644F3CE /* CloudNotificationTests.swift */; };
+		471647FFF722C13D972CDF45 /* MobileRemoteActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A29B0BDBBB027A6D6C1CEAD /* MobileRemoteActivityTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -241,6 +243,8 @@
 		FC868526324AF4AEA74DF7D7 /* CloudDraftStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudDraftStoreTests.swift; sourceTree = "<group>"; };
 		FEAB9ADFDF06D162CD482CF5 /* CloudNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudNavigationTests.swift; sourceTree = "<group>"; };
 		AFC6A9382407DF08A0BB314D /* CloudChatSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudChatSessionTests.swift; sourceTree = "<group>"; };
+		588BC860872F0A975644F3CE /* CloudNotificationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudNotificationTests.swift; sourceTree = "<group>"; };
+		0A29B0BDBBB027A6D6C1CEAD /* MobileRemoteActivityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MobileRemoteActivityTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -344,6 +348,8 @@
 				FC868526324AF4AEA74DF7D7 /* CloudDraftStoreTests.swift */,
 				FEAB9ADFDF06D162CD482CF5 /* CloudNavigationTests.swift */,
 				AFC6A9382407DF08A0BB314D /* CloudChatSessionTests.swift */,
+				588BC860872F0A975644F3CE /* CloudNotificationTests.swift */,
+				0A29B0BDBBB027A6D6C1CEAD /* MobileRemoteActivityTests.swift */,
 				74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */,
 				477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */,
 				42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */,
@@ -720,6 +726,8 @@
 				348B04D49B53D95EBD1F10FC /* CloudDraftStoreTests.swift in Sources */,
 				97D10EDBE5F79A54CCD0402A /* CloudNavigationTests.swift in Sources */,
 				EC1DE31B4629EA73D22615AD /* CloudChatSessionTests.swift in Sources */,
+				048E7D1207BEAAD776C2C977 /* CloudNotificationTests.swift in Sources */,
+				471647FFF722C13D972CDF45 /* MobileRemoteActivityTests.swift in Sources */,
 				36470468F4ED9B490A03FF0B /* CloudAPIClientTests.swift in Sources */,
 				B8FDCC4775A339C2E90E65A1 /* CloudChatLogicTests.swift in Sources */,
 				D7D0647F64B696D4C64AFAD7 /* RemoteProviderSelectionTests.swift in Sources */,

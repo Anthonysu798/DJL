@@ -395,6 +395,14 @@ nonisolated final class CloudAPIClient: Sendable {
 
     // MARK: Runs
 
+    func notifications(cursor: String? = nil) async throws -> CloudNotificationsPage {
+        try await send("GET", "v1/notifications", query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? [])
+    }
+
+    func markNotificationsRead(ids: [String]) async throws -> CloudNotificationReadResult {
+        try await send("POST", "v1/notifications/read", body: ["ids": ids])
+    }
+
     func run(_ id: String) async throws -> CloudRun { try await send("GET", "v1/runs/\(id)", as: CloudRunResponse.self).run }
 
     @discardableResult

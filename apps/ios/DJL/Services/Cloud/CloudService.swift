@@ -18,6 +18,8 @@ final class CloudService {
     let authAPI: CloudAuthAPI
     let navigation = CloudNavigationState()
     let drafts: CloudDraftStore
+    let remoteActivity = MobileRemoteActivityStore()
+    @ObservationIgnored private var notificationStorage: CloudNotificationStore?
     @ObservationIgnored private let sessionStore: CloudSessionStoring
 
     private(set) var isSignedIn: Bool
@@ -86,6 +88,13 @@ final class CloudService {
         return "\(me.user.id):\(me.activeOrgId)"
     }
 
+    var notifications: CloudNotificationStore {
+        if let notificationStorage { return notificationStorage }
+        let store = CloudNotificationStore(cloud: self)
+        notificationStorage = store
+        return store
+    }
+
     func refreshClientConfig() async {
         do { clientConfig = try await client.clientConfig() }
         catch { /* Email sign-in remains available while configuration is unreachable. */ }
@@ -128,6 +137,7 @@ final class CloudService {
     }
 
     private func clearAccountData() {
+        notificationStorage?.reset()
         drafts.clearAll()
         navigation.newChat()
         me = nil
@@ -338,6 +348,7 @@ final class CloudService {
 
     /// Asks once for notification permission when the user starts their first task.
     func enableTaskNotifications() {
+        guard clientConfig?.pushConfigured == true else { return }
         Task {
             let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
             if granted { UIApplication.shared.registerForRemoteNotifications() }

@@ -23,6 +23,8 @@ struct CloudShellView: View {
                             .id(navigation.presentationID)
                     case .settings:
                         CloudSettingsView()
+                    case .notifications:
+                        CloudNotificationsView()
                     }
                 }
                 .toolbar {

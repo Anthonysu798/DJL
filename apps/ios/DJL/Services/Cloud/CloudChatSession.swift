@@ -335,6 +335,7 @@ final class CloudChatSession {
         CloudRunEventReducer.apply(event, to: &messages, steps: &steps)
         if case .status(let status, let error) = event.payload {
             run.status = status
+            if run.isTerminal, run.mode == "task" { Task { await cloud.notifications.refresh() } }
             run.error = error
             if status == "blocked_on_usage" { usageBlockedUntil = cloud.usage?.exhaustedWindow?.resetsAt ?? "" }
             if let error, status == "failed" { errorMessage = error.message }

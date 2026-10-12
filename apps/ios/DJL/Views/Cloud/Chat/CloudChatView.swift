@@ -112,8 +112,8 @@ private struct CloudChatContent: View {
             if phase == .background { session.suspendStreaming() }
             if phase == .active { session.startStreaming() }
         }
-        .onDisappear { displayed = false; session.suspendStreaming() }
-        .onAppear { displayed = true; loadDraft() }
+        .onDisappear { displayed = false; cloud.notifications.clearActiveConversation(session.conversation?.id); session.suspendStreaming() }
+        .onAppear { displayed = true; loadDraft(); cloud.notifications.setActiveConversation(session.conversation?.id) }
         .onChange(of: cloud.accountScopeKey, initial: true) { _, _ in loadDraft() }
         .onChange(of: draft) { _, value in
             guard displayed, session.isCurrentSession, let scope = loadedScope, scope == cloud.accountScopeKey else { return }
@@ -127,6 +127,7 @@ private struct CloudChatContent: View {
                 loadedDraftKey = id
             }
             cloud.navigation.acknowledgeCreatedConversation(id)
+            cloud.notifications.setActiveConversation(id)
         }
         .fullScreenCover(item: $preview) { payload in
             imagePreview(payload)

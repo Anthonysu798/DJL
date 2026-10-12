@@ -1,10 +1,14 @@
 import SwiftUI
+import UserNotifications
 
 struct CloudSettingsView: View {
     @Environment(CloudService.self) private var cloud
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("djl.appearance.mode") private var appearance = "system"
     @AppStorage(GlassPreference.storageKey) private var glass = true
+    @AppStorage("djl.notifications.inApp") private var inAppAlerts = true
     @State private var showingAccount = false
+    @State private var permission: UNAuthorizationStatus = .notDetermined
 
     var body: some View {
         List {
@@ -24,6 +28,19 @@ struct CloudSettingsView: View {
                 NavigationLink { CloudArchivedChatsView() } label: { Label("Archived chats", systemImage: "archivebox") }
                 Button { cloud.sectionPreference = .myMacs } label: { Label("Remote access", systemImage: "laptopcomputer") }
             }
+            Section("Notifications") {
+                Toggle("In-app alerts", isOn: $inAppAlerts)
+                LabeledContent("Background alerts", value: cloud.clientConfig?.pushConfigured == true ? (permission == .denied ? "Off" : permission == .notDetermined ? "Not enabled" : "Enabled") : "Unavailable")
+                if cloud.clientConfig?.pushConfigured == true {
+                    if permission == .notDetermined {
+                        Button("Enable background alerts") { cloud.enableTaskNotifications() }
+                    } else if permission == .denied {
+                        Button("Open notification settings") {
+                            if let url = URL(string: UIApplication.openNotificationSettingsURLString) { UIApplication.shared.open(url) }
+                        }
+                    }
+                }
+            }
             Section("About") {
                 LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
                 if let raw = cloud.clientConfig?.policyUrls.terms, let url = URL(string: raw) { Link("Terms", destination: url) }
@@ -33,5 +50,9 @@ struct CloudSettingsView: View {
         .navigationTitle("Settings")
         .sheet(isPresented: $showingAccount) { CloudAccountView() }
         .task { await cloud.refreshUsage() }
+        .task { permission = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { permission = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus } }
+        }
     }
 }
