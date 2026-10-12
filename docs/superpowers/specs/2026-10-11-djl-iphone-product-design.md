@@ -1,6 +1,6 @@
 # DJL iPhone product completion
 
-Status: direction approved; written design awaiting review.
+Status: written design approved on 2026-10-11.
 
 ## Purpose and success criteria
 
