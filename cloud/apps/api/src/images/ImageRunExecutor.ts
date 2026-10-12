@@ -55,28 +55,20 @@ export class ImageRunExecutor implements RunExecutor {
     if (signal.aborted) controller.abort();
     let cancelled = Boolean(run.cancelRequestedAt),
       lost = false;
+    let ownershipUnknown = false;
     const heartbeat = setInterval(() => {
-      void this.deps.db
-        .update(schema.runs)
-        .set({ leaseExpiresAt: sql`now() + interval '60 seconds'` })
-        .where(
-          and(
-            eq(schema.runs.id, run.id),
-            eq(schema.runs.leaseOwner, this.owner),
-            eq(schema.runs.status, "running"),
-          ),
-        )
-        .returning({ cancel: schema.runs.cancelRequestedAt })
-        .then((rows) => {
-          if (!rows.length) {
+      void this.renewLease(run.id)
+        .then((state) => {
+          if (!state.held) {
             lost = true;
             controller.abort();
-          } else if (rows[0]?.cancel) {
+          } else if (state.cancelled) {
             cancelled = true;
             controller.abort();
           }
         })
         .catch(() => {
+          ownershipUnknown = true;
           lost = true;
           controller.abort();
         });
@@ -220,5 +212,22 @@ export class ImageRunExecutor implements RunExecutor {
         if (finished) await this.deps.notifier?.runFinished(finished).catch(() => undefined);
       }
     }
+
+    if (ownershipUnknown)
+      throw new Error("Image lease could not be verified; retry for safe recovery.");
+  }
+  protected async renewLease(runId: string): Promise<{ held: boolean; cancelled: boolean }> {
+    const rows = await this.deps.db
+      .update(schema.runs)
+      .set({ leaseExpiresAt: sql`now() + interval '60 seconds'` })
+      .where(
+        and(
+          eq(schema.runs.id, runId),
+          eq(schema.runs.leaseOwner, this.owner),
+          eq(schema.runs.status, "running"),
+        ),
+      )
+      .returning({ cancel: schema.runs.cancelRequestedAt });
+    return { held: rows.length > 0, cancelled: Boolean(rows[0]?.cancel) };
   }
 }

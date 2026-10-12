@@ -165,3 +165,32 @@ it("pages private metadata without skipping equal timestamps or embedding bytes"
   expect(Object.keys(first.images[0]!)).not.toContain("url");
   await expect(service.list(p, "invalid")).rejects.toMatchObject({ status: 400 });
 });
+
+it("a heartbeat database error fails the job so safe recovery runs instead of acknowledging unfinished work", async () => {
+  const { facts, p } = await h.user("image-heartbeat");
+  const c = await h.chat.create(p, {});
+  const task = await service.create(facts, c.id, {
+    clientMessageId: crypto.randomUUID(),
+    prompt: "Desk",
+    aspectRatio: "1:1",
+  });
+  class FailingLeaseExecutor extends ImageRunExecutor {
+    protected override async renewLease(): Promise<never> {
+      throw new Error("Transient database failure");
+    }
+  }
+  const executor = new FailingLeaseExecutor({
+    db: h.db,
+    blobs: h.blobs,
+    log: h.log,
+    gateway: {
+      generateImage: async (_facts, _input, options) => {
+        await new Promise<void>((resolve) =>
+          options!.signal!.addEventListener("abort", () => resolve(), { once: true }),
+        );
+        throw new Error("Interrupted");
+      },
+    },
+  });
+  await expect(executor.execute(task.run.id, new AbortController().signal)).rejects.toThrow();
+});
