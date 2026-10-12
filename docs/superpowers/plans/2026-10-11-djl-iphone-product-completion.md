@@ -72,7 +72,7 @@ XCTAssertTrue(CloudAuthFormState.canResend(sentAt: sentAt, now: sentAt.addingTim
 ```
 
 - [ ] Add `testDelayedRefreshCannotRepopulateSignedOutAccount`; use `CloudURLProtocol` and `CloudMemorySessionStore`, not real Keychain credentials.
-- [ ] Run the focused iOS tests with XcodeBuildMCP `test_sim`, `onlyTesting` set to the new auth class and `DJLTests/CloudAPIClientTests`; verify failure before implementation.
+- [ ] Run the focused iOS tests with XcodeBuildMCP `test_sim({extraArgs:["-only-testing:DJLTests/CloudAuthRecoveryTests","-only-testing:DJLTests/CloudAPIClientTests"]})`; verify failure before implementation.
 - [ ] Implement recovery/resend screens, cancellable submissions, capability-gated social buttons, and configured policy links. Map OTP errors separately from password errors.
 - [ ] Run the focused tests and existing cloud contract fixtures. Confirm cancelled login callbacks cannot complete a later sign-in.
 - [ ] Commit explicit task files.
