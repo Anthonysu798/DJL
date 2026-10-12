@@ -12,6 +12,7 @@ import type {
  * OTP codes from the log.
  */
 export class MockOutbox implements EmailSender, SmsSender, TeamAlertSender {
+  readonly approvedVerifications: string[] = [];
   readonly emails: EmailMessage[] = [];
   readonly sms: { readonly phoneNumber: string; readonly code?: string; readonly body?: string }[] =
     [];
@@ -43,6 +44,10 @@ export class MockOutbox implements EmailSender, SmsSender, TeamAlertSender {
     return this.lineTypes.get(phoneNumber) ?? "mobile";
   }
 
+  async approveVerification(verificationId: string) {
+    this.approvedVerifications.push(verificationId);
+  }
+
   async sendText(input: { readonly phoneNumber: string; readonly body: string }) {
     this.sms.push(input);
   }
@@ -57,6 +62,7 @@ export class MockOutbox implements EmailSender, SmsSender, TeamAlertSender {
   }
 
   clear() {
+    this.approvedVerifications.length = 0;
     this.emails.length = 0;
     this.sms.length = 0;
     this.alerts.length = 0;

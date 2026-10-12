@@ -15,7 +15,7 @@ admin, and infrastructure decision for Phase 0 is recorded there and is not re-o
 - `packages/db` Drizzle schema and migrations
 - `packages/providers` OpenAI, Anthropic, OpenRouter adapters
 - `packages/notify` Resend, Twilio, Slack templates
-- `infra/` Fly, Supabase, Cloudflare, scripts
+- `infra/` VPS Compose stack, native Postgres policies, optional isolated sandboxes, scripts
 
 ## Local development
 
@@ -36,10 +36,16 @@ Container images build from the repo root, for example
 
 External services are mocked unless `DJL_MOCK_EXTERNALS=false`.
 
+## VPS deployment
+
+Use [infra/vps/README.md](infra/vps/README.md) for authenticated Postgres, private Redis
+and storage, HTTPS, client login configuration, backup, and safe up/down commands. SMS
+is disabled. Supabase is not required.
+
 ## Rules
 
 - Never edit or delete a ledger entry. Corrections are new entries.
 - Every table is scoped by `org_id`; missing scope fails closed.
-- Provider keys live only in Fly secrets. Response bodies are never logged.
+- Provider keys live only in the private VPS environment. Response bodies are never logged.
 - Production deploys only from a `cloud-v*` tag after the `production` environment approval.
   Plain `v*` tags release the desktop app.

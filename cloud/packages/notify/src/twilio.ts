@@ -34,6 +34,12 @@ export function createTwilioSender(input: {
         });
       return { id: verification.sid };
     },
+    async approveVerification(verificationId) {
+      await client.verify.v2
+        .services(input.verifyServiceSid)
+        .verifications(verificationId)
+        .update({ status: "approved" });
+    },
     async lookupLineType(phoneNumber: string): Promise<PhoneLineType> {
       const result = await client.lookups.v2
         .phoneNumbers(phoneNumber)

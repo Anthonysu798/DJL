@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { APPLE_SIGN_IN_ENABLED, GOOGLE_SIGN_IN_ENABLED } from "@/lib/config";
 import { useLocale } from "@/lib/locale-context";
 import { safeNext } from "@/lib/safeNext";
 
@@ -79,14 +80,20 @@ function SignInForm() {
           {d.continue}
         </button>
       </form>
-      <div className="text-center text-xs text-neutral-500">{d.orContinueWith}</div>
-      <div className="grid grid-cols-2 gap-2">
-        <button className="btn-secondary" type="button" onClick={() => void social("google")}>
-          {d.google}
-        </button>
-        <button className="btn-secondary" type="button" onClick={() => void social("apple")}>
-          {d.apple}
-        </button>
+      {GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED ? (
+        <div className="text-center text-xs text-neutral-500">{d.orContinueWith}</div>
+      ) : null}
+      <div className="flex gap-2 [&>button]:flex-1">
+        {GOOGLE_SIGN_IN_ENABLED ? (
+          <button className="btn-secondary" type="button" onClick={() => void social("google")}>
+            {d.google}
+          </button>
+        ) : null}
+        {APPLE_SIGN_IN_ENABLED ? (
+          <button className="btn-secondary" type="button" onClick={() => void social("apple")}>
+            {d.apple}
+          </button>
+        ) : null}
       </div>
       <p className="text-sm text-neutral-600">
         {d.noAccount}{" "}

@@ -31,6 +31,21 @@ const TEXT = ["text.chat", "tools", "vision", "json"] as const;
 
 export const SEED_MODELS: readonly SeedModel[] = [
   {
+    modelId: "nemotron-3.5-lightning-free",
+    provider: "openrouter",
+    upstreamModelId: "nvidia/nemotron-3.5-lightning:free",
+    displayName: "Nemotron 3.5 Lightning (free)",
+    capabilities: ["text.chat", "tools"],
+    // Verified against OpenRouter's model catalog on 2026-10-11.
+    inputUsdPerMillion: 0,
+    outputUsdPerMillion: 0,
+    contextWindow: 1_000_000,
+    maxOutputTokens: 65_536,
+    qualityScore: 65,
+    sortOrder: 45,
+    freeEligible: true,
+  },
+  {
     modelId: "gpt-5",
     provider: "openai",
     upstreamModelId: "gpt-5",

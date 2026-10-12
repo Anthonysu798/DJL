@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { creditsToMicro } from "@djl/domain";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { LedgerService } from "../credits/LedgerService.ts";
+import * as AuditLog from "../audit/AuditLog.ts";
 import { ApiError } from "../http/errors.ts";
 import { seedOrg, testDatabase } from "../testing/db.ts";
 import { BillingService } from "./BillingService.ts";
@@ -12,7 +13,7 @@ import { FakeStripeGateway } from "./StripeGateway.ts";
 const conn = testDatabase();
 const ledger = new LedgerService(conn.db);
 const stripe = new FakeStripeGateway();
-const billing = new BillingService(conn.db, ledger, stripe, {
+const billing = new BillingService(conn.db, stripe, {
   webPublicUrl: "https://app.test",
   topupPriceId: "price_topup",
 });
@@ -47,6 +48,51 @@ const evt = (id: string, type: string, object: unknown) =>
   JSON.stringify({ id, type, data: { object } });
 
 describe("BillingService", () => {
+  it("retries a failed webhook without granting credits twice", async () => {
+    const before = await ledger.available(orgId);
+    const payload = evt(`evt_${orgId}_retry`, "checkout.session.completed", {
+      id: `cs_${orgId}_retry`,
+      payment_status: "paid",
+      amount_total: 1000,
+      metadata: { kind: "topup", orgId, userId, usd: "10" },
+    });
+    const failure = vi
+      .spyOn(AuditLog, "writeAudit")
+      .mockRejectedValueOnce(new Error("temporary database failure"));
+    await expect(billing.handleWebhook(payload, "sig")).rejects.toThrow();
+    failure.mockRestore();
+    expect(await ledger.available(orgId)).toBe(before);
+    expect(await billing.handleWebhook(payload, "sig")).toBe("processed");
+    expect(await ledger.available(orgId)).toBe(before + creditsToMicro(1000));
+    expect(await billing.handleWebhook(payload, "sig")).toBe("duplicate");
+  });
+
+  it("grants delayed top-ups once, excluding tax from credits", async () => {
+    const before = await ledger.available(orgId);
+    const session = {
+      id: `cs_${orgId}_async`,
+      payment_status: "paid",
+      currency: "usd",
+      amount_total: 2260,
+      amount_subtotal: 2000,
+      total_details: { amount_tax: 260, amount_discount: 0 },
+      metadata: { kind: "topup", orgId, userId, usd: "20" },
+    };
+    expect(
+      await billing.handleWebhook(
+        evt(`evt_${orgId}_async`, "checkout.session.async_payment_succeeded", session),
+        "sig",
+      ),
+    ).toBe("processed");
+    expect(await ledger.available(orgId)).toBe(before + creditsToMicro(2000));
+    expect(
+      await billing.handleWebhook(
+        evt(`evt_${orgId}_async_replay`, "checkout.session.completed", session),
+        "sig",
+      ),
+    ).toBe("processed");
+    expect(await ledger.available(orgId)).toBe(before + creditsToMicro(2000));
+  });
   it("creates one Stripe customer per org and a top-up checkout", async () => {
     const a = await billing.topupCheckout({
       orgId,
@@ -94,7 +140,7 @@ describe("BillingService", () => {
       "checkout.session.completed",
       JSON.parse(payload).data.object,
     );
-    await expect(billing.handleWebhook(replayed, "sig")).rejects.toThrow();
+    expect(await billing.handleWebhook(replayed, "sig")).toBe("processed");
     expect(await ledger.available(orgId)).toBe(before + creditsToMicro(2000));
   });
 
@@ -158,7 +204,10 @@ describe("BillingService", () => {
     ).toBe("processed");
     expect((await ledger.balances(orgId)).plan).toBe(creditsToMicro(6500));
     const history = await ledger.history(orgId, { limit: 5 });
-    expect(history.map((e) => e.type).slice(0, 2)).toEqual(["plan_grant", "expiry"]);
+    // Both entries share the webhook transaction timestamp.
+    expect(history.map((e) => e.type).slice(0, 2)).toEqual(
+      expect.arrayContaining(["plan_grant", "expiry"]),
+    );
     // subscribing again while active is refused
     await expect(
       billing.subscribeCheckout({

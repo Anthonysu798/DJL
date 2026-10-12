@@ -44,16 +44,22 @@ export interface TaskQueue {
 /** pg-boss started on first use, so an API that never sees a task never touches its schema. */
 export function createPgBossTaskQueue(
   connectionString: string,
+  options: { readonly producerOnly?: boolean } = {},
 ): TaskQueue & { readonly close: () => Promise<void> } {
   let started: Promise<PgBoss> | null = null;
   const boss = () =>
     (started ??= (async () => {
-      const b = new PgBoss({ connectionString, schema: "pgboss", max: 2 });
+      const b = new PgBoss({
+        connectionString,
+        schema: "pgboss",
+        max: 2,
+        ...(options.producerOnly ? { migrate: false, createSchema: false, supervise: false } : {}),
+      });
       b.on("error", (error) =>
         console.error(JSON.stringify({ level: "error", msg: "pg-boss", error: String(error) })),
       );
       await b.start();
-      await b.createQueue(AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS);
+      if (!options.producerOnly) await b.createQueue(AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS);
       return b;
     })());
   return {

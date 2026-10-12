@@ -1,0 +1,26 @@
+{
+    email {$TLS_EMAIL}
+}
+
+{$API_HOST} {
+    reverse_proxy {$API_UPSTREAM} {
+        flush_interval -1
+        header_up -Fly-Client-IP
+        header_up -CF-Connecting-IP
+        header_up X-Forwarded-For {remote_host}
+    }
+}
+
+{$WEB_HOST} {
+    encode zstd gzip
+    reverse_proxy {$WEB_UPSTREAM}
+}
+
+{$ADMIN_HOST} {
+    encode zstd gzip
+    reverse_proxy {$ADMIN_UPSTREAM}
+}
+
+{$STORAGE_HOST} {
+    reverse_proxy {$STORAGE_UPSTREAM}
+}

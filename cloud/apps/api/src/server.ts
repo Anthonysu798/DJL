@@ -4,6 +4,7 @@
  * can spin up a real server on an ephemeral port.
  */
 import http from "node:http";
+import { createHash } from "node:crypto";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import { createDatabase, schema } from "@djl/db";
@@ -68,6 +69,7 @@ import { makeRoutes } from "./http/routes.ts";
 import { NativeAuthService } from "./nativeAuth/NativeAuthService.ts";
 import { abusePolicy } from "./security/abusePolicy.ts";
 import { createRedisLockouts } from "./security/throttle.ts";
+import { ApiError } from "./http/errors.ts";
 
 export interface ApiRuntime {
   readonly env: ApiEnv;
@@ -91,17 +93,34 @@ function makeNotifier(
   env: ApiEnv,
   senders: { email: EmailSender; sms: SmsSender },
   locale: ReturnType<typeof makeLocaleLookup>,
+  redis: Redis,
 ): AuthNotifier {
+  const verificationKey = (phone: string) =>
+    `auth:sms:verification:${createHash("sha256").update(phone).digest("hex")}`;
   return {
     sendEmailOtp: async ({ email, otp }) => {
       await senders.email.send(emailOtp(email, otp, await locale.byEmail(email)));
     },
     sendPhoneOtp: async ({ phoneNumber, code }) => {
-      await senders.sms.sendVerification({
+      const verification = await senders.sms.sendVerification({
         phoneNumber,
         code,
         locale: await locale.byPhone(phoneNumber),
       });
+      await redis.set(verificationKey(phoneNumber), verification.id, "EX", 300);
+    },
+    confirmPhoneOtp: async (phoneNumber) => {
+      const key = verificationKey(phoneNumber);
+      const id = await redis.get(key);
+      if (!id) return;
+      await senders.sms.approveVerification(id);
+      // A concurrent resend may already have stored a different verification.
+      await redis.eval(
+        "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0",
+        1,
+        key,
+        id,
+      );
     },
     sendPasswordReset: async ({ email, url }) => {
       await senders.email.send(passwordReset(email, url, await locale.byEmail(email)));
@@ -142,18 +161,28 @@ export async function startApi(
     outbox = new MockOutbox(env.env === "local");
     senders = { email: outbox, sms: outbox, alerts: outbox };
   } else {
+    const smsDisabled = async (): Promise<never> => {
+      throw new ApiError(503, "sms_disabled", "SMS is not available.");
+    };
     senders = {
       email: createResendSender({
         apiKey: requireEnv("RESEND_API_KEY"),
-        from: "DJL Cloud <no-reply@slcor.com>",
-        replyTo: "support@slcor.com",
+        from: process.env.EMAIL_FROM ?? "DJL Cloud <no-reply@slcor.com>",
+        replyTo: process.env.EMAIL_REPLY_TO ?? "support@slcor.com",
       }),
-      sms: createTwilioSender({
-        accountSid: requireEnv("TWILIO_ACCOUNT_SID"),
-        authToken: requireEnv("TWILIO_AUTH_TOKEN"),
-        verifyServiceSid: requireEnv("TWILIO_VERIFY_SERVICE_SID"),
-        fromNumber: process.env.TWILIO_FROM_NUMBER ?? "",
-      }),
+      sms: env.smsEnabled
+        ? createTwilioSender({
+            accountSid: requireEnv("TWILIO_ACCOUNT_SID"),
+            authToken: requireEnv("TWILIO_AUTH_TOKEN"),
+            verifyServiceSid: requireEnv("TWILIO_VERIFY_SERVICE_SID"),
+            fromNumber: process.env.TWILIO_FROM_NUMBER ?? "",
+          })
+        : {
+            sendVerification: smsDisabled,
+            approveVerification: smsDisabled,
+            lookupLineType: smsDisabled,
+            sendText: smsDisabled,
+          },
     };
   }
 
@@ -164,7 +193,7 @@ export async function startApi(
   const auth = createAuth({
     env,
     db,
-    notifier: makeNotifier(env, senders, makeLocaleLookup(db)),
+    notifier: makeNotifier(env, senders, makeLocaleLookup(db), redis),
     redis,
     revocations,
     onEmailVerified: async (userId) => {
@@ -209,9 +238,11 @@ export async function startApi(
         secretKey: requireEnv("STRIPE_SECRET_KEY"),
         webhookSecret: requireEnv("STRIPE_WEBHOOK_SECRET"),
       });
-  const billing = new BillingService(db, ledger, stripe, {
+  const billing = new BillingService(db, stripe, {
     webPublicUrl: env.webPublicUrl,
-    topupPriceId: process.env.STRIPE_TOPUP_PRICE_ID ?? "price_topup_fake",
+    topupPriceId: env.mockExternals
+      ? (process.env.STRIPE_TOPUP_PRICE_ID ?? "price_topup_fake")
+      : requireEnv("STRIPE_TOPUP_PRICE_ID"),
   });
   const trial = new TrialService(db, ledger, senders.sms, {
     credits: 200,
@@ -225,7 +256,9 @@ export async function startApi(
   const providers = buildProviders(env, process.env, (alert) => {
     void senders.alerts?.post(alert);
   });
-  const tasks = createPgBossTaskQueue(env.databaseUrl);
+  const tasks = createPgBossTaskQueue(env.databaseUrl, {
+    producerOnly: process.env.PG_BOSS_PRODUCER_ONLY === "true",
+  });
   const resumeRuns = (userId: string | null) =>
     resumeWindowBlockedRuns({ db, enqueue: tasks.enqueue }, userId);
   const usage = new UsageService(db, undefined, resumeRuns);

@@ -197,6 +197,46 @@ beforeAll(async () => {
 afterAll(() => conn.close());
 
 describe("GatewayService chat", () => {
+  it("lists only models whose provider is configured", async () => {
+    const configured = makeGateway({ providers: { openrouter: { ...fake, id: "openrouter" } } });
+    const models = await configured.listModels();
+    expect(models.map((model) => model.id)).toContain("fake-cheap");
+    expect(models.every((model) => model.provider === "openrouter")).toBe(true);
+  });
+
+  it("streams and settles a zero-cost model without charging credits", async () => {
+    const modelId = `free-${crypto.randomUUID()}`;
+    await conn.db.insert(schema.modelCatalog).values({
+      modelId,
+      provider: "openrouter",
+      upstreamModelId: "free-upstream",
+      displayName: "Free model",
+      capabilities: ["text.chat"],
+      maxOutputTokens: 1000,
+      freeEligible: true,
+    });
+    try {
+      const p = await principalFor("gw-zero-cost");
+      const { stream, requestId } = await gateway.chatStream(facts(p), {
+        model: modelId,
+        messages: [{ role: "user", content: "hello" }],
+        max_tokens: 100,
+      });
+      const out = await readSse(stream);
+      expect(out.content).toBe("echo: hello");
+      expect(out.done).toBe(true);
+      expect(out.error).toBeNull();
+      expect(out.trailer.settled).toBe("0");
+      expect(await ledger.available(p.orgId)).toBe(0n);
+      const row = await conn.db.query.usageRequests.findFirst({
+        where: eq(schema.usageRequests.id, requestId),
+      });
+      expect(row?.status).toBe("settled");
+    } finally {
+      await conn.db.delete(schema.modelCatalog).where(eq(schema.modelCatalog.modelId, modelId));
+    }
+  });
+
   it("streams, settles the actual cost, records usage, and fires the trial hook", async () => {
     const p = await principalFor("gw-chat");
     await ledger.grant({

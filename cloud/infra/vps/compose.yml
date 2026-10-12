@@ -1,0 +1,303 @@
+name: ${COMPOSE_PROJECT_NAME:-djl-cloud}
+
+x-server-environment: &server-environment
+  DJL_ENV: ${DJL_ENV:-staging}
+  DJL_MOCK_EXTERNALS: ${DJL_MOCK_EXTERNALS:-false}
+  API_PUBLIC_URL: https://${API_HOST:?Set API_HOST}
+  WEB_PUBLIC_URL: https://${WEB_HOST:?Set WEB_HOST}
+  ADMIN_PUBLIC_URL: https://${ADMIN_HOST:?Set ADMIN_HOST}
+  COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+  PASSKEY_RP_ID: ${PASSKEY_RP_ID:?Set PASSKEY_RP_ID}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run djl.sh init}
+  IP_HASH_SALT: ${IP_HASH_SALT:?Run djl.sh init}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Run djl.sh init}@redis:6379
+  STORAGE_S3_ENDPOINT: http://s3:8333
+  STORAGE_S3_PUBLIC_ENDPOINT: https://${STORAGE_HOST:?Set STORAGE_HOST}
+  STORAGE_S3_REGION: us-east-1
+  STORAGE_BUCKET: djl-files
+  STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:?Run djl.sh init}
+  STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:?Run djl.sh init}
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  EMAIL_FROM: ${EMAIL_FROM:-DJL Cloud <no-reply@slcor.com>}
+  EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-support@slcor.com}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: djl_admin
+      POSTGRES_DB: djl
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run djl.sh init}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_MIGRATOR_PASSWORD: ${POSTGRES_MIGRATOR_PASSWORD:?Run djl.sh init}
+      POSTGRES_API_PASSWORD: ${POSTGRES_API_PASSWORD:?Run djl.sh init}
+      POSTGRES_WORKER_PASSWORD: ${POSTGRES_WORKER_PASSWORD:?Run djl.sh init}
+    command: [postgres, -c, password_encryption=scram-sha-256]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/01-djl.sh:ro
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U djl_admin -d djl"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    user: redis
+    command:
+      [
+        sh,
+        -ec,
+        "umask 077; printf 'appendonly yes\nrequirepass %s\n' \"$$REDISCLI_AUTH\" > /tmp/redis.conf; exec redis-server /tmp/redis.conf",
+      ]
+    volumes:
+      - redis-data:/data
+    networks: [data]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Run djl.sh init}
+    healthcheck:
+      test: [CMD-SHELL, "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  s3:
+    image: chrislusf/seaweedfs:4.47
+    restart: unless-stopped
+    command:
+      [
+        server,
+        -s3,
+        -s3.config=/etc/seaweedfs/s3.json,
+        "-s3.allowedOrigins=https://${WEB_HOST},https://${ADMIN_HOST}",
+        -dir=/data,
+        -ip=s3,
+        -ip.bind=0.0.0.0,
+        -master.telemetry=false,
+      ]
+    ports: ["${STORAGE_BIND:-127.0.0.1:8333}:8333"]
+    volumes:
+      - s3-data:/data
+      - ./.secrets/s3.json:/etc/seaweedfs/s3.json:ro
+    networks: [data, outbound]
+    healthcheck:
+      test:
+        [CMD-SHELL, "wget -S -O /dev/null http://127.0.0.1:8333/ 2>&1 | grep -q '403 Forbidden'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  s3-init:
+    image: chrislusf/seaweedfs:4.47
+    depends_on:
+      s3: { condition: service_healthy }
+    entrypoint: [sh, -ec]
+    command: ["echo 's3.bucket.create -name djl-files' | weed shell -master=s3:9333 -filer=s3:8888"]
+    networks: [data]
+    restart: "no"
+
+  migrate:
+    image: djl-cloud-api:local
+    build:
+      context: ../../..
+      dockerfile: cloud/apps/api/Dockerfile
+      args:
+        DJL_VERSION: ${DJL_VERSION:-dev}
+    environment:
+      DATABASE_URL: postgres://djl_migrator:${POSTGRES_MIGRATOR_PASSWORD:?Run djl.sh init}@postgres:5432/djl
+      STRIPE_STARTER_PRICE_ID: ${STRIPE_STARTER_PRICE_ID:-}
+      STRIPE_STARTER_ANNUAL_PRICE_ID: ${STRIPE_STARTER_ANNUAL_PRICE_ID:-}
+      STRIPE_BUSINESS_PRICE_ID: ${STRIPE_BUSINESS_PRICE_ID:-}
+      STRIPE_BUSINESS_ANNUAL_PRICE_ID: ${STRIPE_BUSINESS_ANNUAL_PRICE_ID:-}
+      STRIPE_AUTOPILOT_PRICE_ID: ${STRIPE_AUTOPILOT_PRICE_ID:-}
+      STRIPE_AUTOPILOT_ANNUAL_PRICE_ID: ${STRIPE_AUTOPILOT_ANNUAL_PRICE_ID:-}
+    command:
+      [
+        sh,
+        -ec,
+        "bun cloud/packages/db/src/migrate.ts && bun cloud/packages/db/src/seed.ts && bun cloud/packages/db/src/configureBilling.ts",
+      ]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    restart: "no"
+
+  policies:
+    image: postgres:17-alpine
+    environment:
+      PGHOST: postgres
+      PGUSER: djl_admin
+      PGDATABASE: djl
+      PGPASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run djl.sh init}
+    volumes:
+      - ../postgres/policies.sql:/setup/policies.sql:ro
+      - ./runtime-grants.sql:/setup/runtime-grants.sql:ro
+    command:
+      [
+        sh,
+        -ec,
+        "psql -v ON_ERROR_STOP=1 -f /setup/policies.sql && psql -v ON_ERROR_STOP=1 -f /setup/runtime-grants.sql",
+      ]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [data]
+    restart: "no"
+
+  api:
+    image: djl-cloud-api:local
+    build:
+      context: ../../..
+      dockerfile: cloud/apps/api/Dockerfile
+      args:
+        DJL_VERSION: ${DJL_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      <<: *server-environment
+      DATABASE_URL: postgres://djl_api:${POSTGRES_API_PASSWORD:?Run djl.sh init}@postgres:5432/djl
+      API_PORT: "8787"
+      PG_BOSS_PRODUCER_ONLY: "true"
+      SMS_ENABLED: "false"
+      ADMIN_MFA_REQUIRED: "true"
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_TOPUP_PRICE_ID: ${STRIPE_TOPUP_PRICE_ID:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      GOOGLE_ALLOWED_CLIENT_IDS: ${GOOGLE_ALLOWED_CLIENT_IDS:-}
+      APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
+      APPLE_OAUTH_CLIENT_SECRET: ${APPLE_OAUTH_CLIENT_SECRET:-}
+      APPLE_APP_BUNDLE_ID: ${APPLE_APP_BUNDLE_ID:-app.djl.ios}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+    ports: ["${API_BIND:-127.0.0.1:8787}:8787"]
+    depends_on:
+      policies: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      s3-init: { condition: service_completed_successfully }
+    networks: [data, outbound]
+    healthcheck:
+      test:
+        [CMD, bun, -e, "const r=await fetch('http://127.0.0.1:8787/ready');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  worker:
+    build:
+      context: ../../..
+      dockerfile: cloud/apps/worker/Dockerfile
+      args:
+        DJL_VERSION: ${DJL_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      <<: *server-environment
+      DATABASE_URL: postgres://djl_worker:${POSTGRES_WORKER_PASSWORD:?Run djl.sh init}@postgres:5432/djl
+      SANDBOX_BACKEND: disabled
+      PG_BOSS_CREATE_SCHEMA: "false"
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
+      APNS_TOPIC: ${APNS_TOPIC:-app.djl.ios}
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [data, outbound]
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          CMD,
+          bun,
+          -e,
+          "const t=Number(await Bun.file('/tmp/djl-worker-ready').text());process.exit(Date.now()-t<90000?0:1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  web:
+    build:
+      context: ../../..
+      dockerfile: cloud/infra/vps/frontend.Dockerfile
+      args:
+        APP: web
+        NEXT_PUBLIC_API_URL: https://${API_HOST}
+        NEXT_PUBLIC_GOOGLE_SIGN_IN: ${GOOGLE_OAUTH_CLIENT_ID:+true}
+        NEXT_PUBLIC_APPLE_SIGN_IN: ${APPLE_OAUTH_CLIENT_ID:+true}
+    restart: unless-stopped
+    ports: ["${WEB_BIND:-127.0.0.1:3002}:3000"]
+    networks: [outbound]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        [
+          CMD,
+          bun,
+          -e,
+          "const r=await fetch('http://127.0.0.1:3000/sign-in');process.exit(r.ok?0:1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+
+  admin:
+    build:
+      context: ../../..
+      dockerfile: cloud/infra/vps/frontend.Dockerfile
+      args:
+        APP: admin
+        NEXT_PUBLIC_API_URL: https://${API_HOST}
+    restart: unless-stopped
+    ports: ["${ADMIN_BIND:-127.0.0.1:3001}:3000"]
+    networks: [outbound]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  proxy:
+    image: caddy:2.11-alpine
+    profiles: [edge]
+    restart: unless-stopped
+    environment:
+      API_HOST: ${API_HOST}
+      WEB_HOST: ${WEB_HOST}
+      ADMIN_HOST: ${ADMIN_HOST}
+      STORAGE_HOST: ${STORAGE_HOST}
+      TLS_EMAIL: ${TLS_EMAIL:?Set TLS_EMAIL}
+      API_UPSTREAM: api:8787
+      WEB_UPSTREAM: web:3000
+      ADMIN_UPSTREAM: admin:3000
+      STORAGE_UPSTREAM: s3:8333
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api, web, admin]
+    networks: [data, outbound]
+
+networks:
+  data: { internal: true }
+  outbound: {}
+
+volumes:
+  postgres-data:
+  redis-data:
+  s3-data:
+  caddy-data:
+  caddy-config:

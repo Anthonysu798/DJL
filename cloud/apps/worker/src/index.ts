@@ -10,6 +10,8 @@ import { createDatabase } from "@djl/db";
 import { MockOutbox, createResendSender } from "@djl/notify";
 import { Redis } from "ioredis";
 import { PgBoss } from "pg-boss";
+import { writeFileSync } from "node:fs";
+import { sql } from "drizzle-orm";
 
 import { registerAgentJobs } from "./agent.ts";
 import { JOBS } from "./jobs.ts";
@@ -28,7 +30,12 @@ const mockExternals = process.env.DJL_MOCK_EXTERNALS === "true";
 const blobs = blobStoreFromEnv(process.env, { mockExternals });
 const deps = { db, ledger, blobs };
 
-const boss = new PgBoss({ connectionString: databaseUrl, schema: "pgboss", max: 4 });
+const boss = new PgBoss({
+  connectionString: databaseUrl,
+  schema: "pgboss",
+  max: 4,
+  createSchema: process.env.PG_BOSS_CREATE_SCHEMA !== "false",
+});
 boss.on("error", (error) =>
   console.error(JSON.stringify({ level: "error", msg: "pg-boss", error: String(error) })),
 );
@@ -72,8 +79,8 @@ const agent = createAgentRuntime({
     ? new MockOutbox(true)
     : createResendSender({
         apiKey: requireEnv("RESEND_API_KEY"),
-        from: "DJL Cloud <no-reply@slcor.com>",
-        replyTo: "support@slcor.com",
+        from: process.env.EMAIL_FROM ?? "DJL Cloud <no-reply@slcor.com>",
+        replyTo: process.env.EMAIL_REPLY_TO ?? "support@slcor.com",
       }),
   mockExternals,
   webPublicUrl: process.env.WEB_PUBLIC_URL ?? "http://localhost:3000",
@@ -88,8 +95,23 @@ await registerAgentJobs(boss, {
 
 console.log(JSON.stringify({ level: "info", msg: "worker started", jobs: Object.keys(JOBS) }));
 
+const heartbeat = async () => {
+  try {
+    await db.execute(sql`select 1`);
+    await redis.ping();
+    writeFileSync("/tmp/djl-worker-ready", String(Date.now()));
+  } catch {
+    console.error(JSON.stringify({ level: "error", msg: "worker readiness check failed" }));
+  }
+};
+await heartbeat();
+const heartbeatTimer = setInterval(() => {
+  void heartbeat();
+}, 30_000);
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
+    clearInterval(heartbeatTimer);
     void boss
       .stop({ graceful: true, timeout: 10_000 })
       .then(() => redis.disconnect())

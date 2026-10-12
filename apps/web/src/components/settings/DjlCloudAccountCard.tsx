@@ -21,7 +21,7 @@ function openExternalLink(url: string): void {
     .shell.openExternal(url)
     .catch(() => window.open(url, "_blank", "noopener,noreferrer"));
 }
-const BILLING_URL = "https://app.slcor.com/billing";
+const BILLING_URL = `${(import.meta.env.VITE_DJL_CLOUD_WEB_URL ?? "https://app.slcor.com").replace(/\/+$/, "")}/billing`;
 
 type SignInPhase =
   | { kind: "idle" }

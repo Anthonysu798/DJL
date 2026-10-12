@@ -4,6 +4,12 @@
 > `DJL-Backend` repository. It moved into `cloud/` of the public DJL monorepo, and production
 > deploys from `cloud-v*` tags. Every other decision below still stands.
 
+> **Hosting update, 2026-10-11:** the user selected self-hosted VPS Postgres,
+> Redis, and S3-compatible storage instead of Supabase/Fly hosting, and disabled
+> SMS. The deployment is documented in `cloud/infra/vps/README.md`. Better Auth
+> remains the account system. Optional sandbox tools stay disabled until an
+> isolated execution service is configured.
+
 ## Context
 
 DJL today is local-first: every model call runs on the user's machine with their own provider

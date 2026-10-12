@@ -1,6 +1,5 @@
 /**
- * Object storage for attachments. Production uses Supabase Storage through its
- * S3-compatible endpoint with pre-signed URLs; tests use an in-memory fake.
+ * S3-compatible attachment storage with signed client URLs.
  */
 export interface BlobStore {
   /** Pre-signed PUT for a client upload, pinned to the type and size; expires in minutes. */
@@ -64,11 +63,7 @@ export class FakeBlobStore implements BlobStore {
   }
 }
 
-/**
- * Supabase Storage via the S3 protocol with SigV4 pre-signing. Configured with
- * the project's S3 endpoint (https://<ref>.storage.supabase.co/storage/v1/s3),
- * region, access key id and secret from the Storage settings page.
- */
+/** SigV4 signing works with both public and private S3 endpoints. */
 const hmac = async (key: ArrayBuffer | Uint8Array, data: string) => {
   const k = await crypto.subtle.importKey(
     "raw",
@@ -84,6 +79,7 @@ const hex = (buf: ArrayBuffer) =>
 
 export function createS3BlobStore(config: {
   readonly endpoint: string;
+  readonly publicEndpoint?: string;
   readonly region: string;
   readonly bucket: string;
   readonly accessKeyId: string;
@@ -91,8 +87,6 @@ export function createS3BlobStore(config: {
   readonly fetchImpl?: typeof fetch;
 }): BlobStore {
   const fetchImpl = config.fetchImpl ?? fetch;
-  const host = new URL(config.endpoint).host;
-  const base = `${config.endpoint.replace(/\/+$/, "")}/${config.bucket}`;
 
   const sha256 = async (s: string) =>
     hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
@@ -102,7 +96,10 @@ export function createS3BlobStore(config: {
     key: string,
     expiresSeconds: number,
     extraHeaders: Record<string, string> = {},
+    endpoint = config.endpoint,
   ) {
+    const host = new URL(endpoint).host;
+    const base = `${endpoint.replace(/\/+$/, "")}/${config.bucket}`;
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
     const date = amzDate.slice(0, 8);
@@ -125,9 +122,10 @@ export function createS3BlobStore(config: {
       "X-Amz-SignedHeaders": signedHeaders,
     });
     const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+    const objectUrl = new URL(`${base}/${encodedKey}`);
     const canonicalRequest = [
       method,
-      `/${config.bucket}/${encodedKey}`,
+      objectUrl.pathname,
       query.toString(),
       canonicalHeaders,
       signedHeaders,
@@ -142,7 +140,7 @@ export function createS3BlobStore(config: {
     const signature = hex(await hmac(signingKey, stringToSign));
     query.set("X-Amz-Signature", signature);
     return {
-      url: `${base}/${encodedKey}?${query.toString()}`,
+      url: `${objectUrl}?${query.toString()}`,
       expiresAt: new Date(now.getTime() + expiresSeconds * 1000).toISOString(),
     };
   }
@@ -150,11 +148,17 @@ export function createS3BlobStore(config: {
   return {
     async presignUpload(key, mimeType, sizeBytes) {
       const headers = { "content-type": mimeType, "content-length": String(sizeBytes) };
-      const { url, expiresAt } = await presign("PUT", key, 600, headers);
+      const { url, expiresAt } = await presign(
+        "PUT",
+        key,
+        600,
+        headers,
+        config.publicEndpoint ?? config.endpoint,
+      );
       return { url, headers, expiresAt };
     },
     async presignDownload(key, expiresSeconds = 600) {
-      return presign("GET", key, expiresSeconds);
+      return presign("GET", key, expiresSeconds, {}, config.publicEndpoint ?? config.endpoint);
     },
     async head(key) {
       const { url } = await presign("HEAD", key, 60);
@@ -186,7 +190,7 @@ export function createS3BlobStore(config: {
 /**
  * The blob store for this process. Real S3-compatible storage whenever it is
  * configured, even when other externals are mocked, so the API and worker
- * share one store and browsers can reach presigned URLs (local MinIO in
+ * share one store and browsers can reach presigned URLs (local SeaweedFS in
  * development). The in-memory fake is only for mock mode without S3 settings.
  */
 export function blobStoreFromEnv(
@@ -201,6 +205,7 @@ export function blobStoreFromEnv(
   };
   return createS3BlobStore({
     endpoint: required("STORAGE_S3_ENDPOINT"),
+    ...(env.STORAGE_S3_PUBLIC_ENDPOINT ? { publicEndpoint: env.STORAGE_S3_PUBLIC_ENDPOINT } : {}),
     region: env.STORAGE_S3_REGION ?? "us-east-1",
     bucket: env.STORAGE_BUCKET ?? "djl-sync",
     accessKeyId: required("STORAGE_ACCESS_KEY_ID"),
