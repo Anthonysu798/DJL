@@ -40,7 +40,7 @@ it("exposes only configured mobile capabilities without authentication or secret
   const body = await response.json();
   expect(body.auth).toEqual({ google: false, apple: false });
   expect(body.pushConfigured).toBe(false);
-  expect(Object.keys(body).sort()).toEqual(["auth", "policyUrls", "pushConfigured", "tools"]);
+  expect(Object.keys(body).toSorted()).toEqual(["auth", "policyUrls", "pushConfigured", "tools"]);
   expect(body.policyUrls).toEqual({ terms: null, privacy: null });
   expect(response.headers.get("cache-control")).toBe("no-store");
 });

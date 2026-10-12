@@ -11,3 +11,4 @@ export * from "./cloud/shares";
 export * from "./cloud/runs";
 export * from "./cloud/nativeAuth";
 export * from "./cloud/clientConfig";
+export * from "./cloud/notifications";

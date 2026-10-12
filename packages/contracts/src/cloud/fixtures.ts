@@ -6,6 +6,7 @@
  */
 import { Schema } from "effect";
 import { CloudClientConfig } from "./clientConfig";
+import { CloudNotificationsResponse } from "./notifications";
 
 import { CloudDeleteAccountResponse, CloudMeResponse, CloudRunPushData } from "./account";
 import { CloudAccessTokenResponse, CloudCsrfResponse } from "./base";
@@ -95,6 +96,11 @@ const share = {
 };
 
 export const cloudFixtures = {
+  notifications: fixture(CloudNotificationsResponse, {
+    notifications: [{ id: "run_1", conversationId: "conv_1", conversationTitle: "Trip plan", status: "succeeded", finishedAt: at, readAt: null }],
+    unreadCount: 1,
+    nextCursor: null,
+  }),
   "client-config": fixture(CloudClientConfig, {
     auth: { google: true, apple: false },
     tools: { imageGeneration: true, imageEditing: false, fileParsing: false },

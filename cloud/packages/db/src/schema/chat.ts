@@ -218,6 +218,9 @@ export const runs = pgTable(
   (t) => [
     index("runs_conversation_created_idx").on(t.conversationId, t.createdAt),
     index("runs_user_created_idx").on(t.userId, t.createdAt),
+    index("runs_task_finished_idx")
+      .on(t.userId, t.orgId, t.finishedAt, t.id)
+      .where(sql`${t.mode} = 'task' AND ${t.status} IN ('succeeded', 'failed')`),
     // Resumable work: unfinished runs by lease expiry.
     index("runs_active_lease_idx")
       .on(t.status, t.leaseExpiresAt)
