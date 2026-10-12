@@ -60,6 +60,7 @@ struct CloudMessageRow: View {
 
     private var assistantBody: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if isStreaming, message.parts.isEmpty { ProgressView().controlSize(.small).accessibilityLabel("DJL is working") }
             ForEach(Array(message.parts.enumerated()), id: \.offset) { index, part in
                 switch part {
                 case .text(let text):

@@ -16,6 +16,8 @@ import UserNotifications
 final class CloudService {
     let client: CloudAPIClient
     let authAPI: CloudAuthAPI
+    let navigation = CloudNavigationState()
+    let drafts: CloudDraftStore
     @ObservationIgnored private let sessionStore: CloudSessionStoring
 
     private(set) var isSignedIn: Bool
@@ -29,6 +31,7 @@ final class CloudService {
     private(set) var models: [CloudModel] = []
     private(set) var conversations: [CloudConversation] = []
     private(set) var isLoadingConversations = false
+    private(set) var nextConversationCursor: String?
     var lastError: String?
     /// Set by a `djl://cloud/c/<id>` link or a task-completion push; the home view opens it.
     var pendingConversationID: String?
@@ -47,9 +50,11 @@ final class CloudService {
         configuration: CloudAPIConfiguration = .resolved(),
         sessionStore: CloudSessionStoring = CloudKeychainSessionStore(),
         urlSession: URLSession = .djlCloud,
-        tokenProvider: CloudAccessTokenProviding? = nil
+        tokenProvider: CloudAccessTokenProviding? = nil,
+        draftStore: CloudDraftStore = CloudDraftStore()
     ) {
         self.sessionStore = sessionStore
+        drafts = draftStore
         let provider = tokenProvider ?? CloudJWTAccessTokenProvider(
             configuration: configuration,
             sessionStore: sessionStore,
@@ -123,10 +128,13 @@ final class CloudService {
     }
 
     private func clearAccountData() {
+        drafts.clearAll()
+        navigation.newChat()
         me = nil
         credits = nil
         usage = nil
         conversations = []
+        nextConversationCursor = nil
         models = []
         selectedModelID = nil
         pendingConversationID = nil
@@ -161,6 +169,7 @@ final class CloudService {
             me = account
             models = catalog
             conversations = history.conversations
+            nextConversationCursor = history.nextCursor
             if !catalog.contains(where: { $0.id == selectedModelID && $0.isSelectable }) {
                 selectedModelID = catalog.first(where: \.isSelectable)?.id
             }
@@ -198,6 +207,7 @@ final class CloudService {
             let list = try await client.conversations()
             guard revision == sessionRevision, isSignedIn else { return }
             conversations = list.conversations
+            nextConversationCursor = list.nextCursor
         } catch {
             guard revision == sessionRevision else { return }
             handle(error)
@@ -205,10 +215,12 @@ final class CloudService {
     }
 
     func search(_ text: String) async -> [CloudConversationSearchHit] {
+        let revision = sessionRevision
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
         do {
-            return try await client.searchConversations(String(query.prefix(200)))
+            let results = try await client.searchConversations(String(query.prefix(200)))
+            return revision == sessionRevision ? results : []
         } catch {
             handle(error)
             return []
@@ -216,6 +228,22 @@ final class CloudService {
     }
 
     // MARK: Conversation actions
+
+    func loadMoreConversations() async {
+        guard isSignedIn, !isLoadingConversations, let cursor = nextConversationCursor else { return }
+        let revision = sessionRevision
+        isLoadingConversations = true
+        defer { if revision == sessionRevision { isLoadingConversations = false } }
+        do {
+            let page = try await client.conversations(cursor: cursor)
+            guard revision == sessionRevision, isSignedIn else { return }
+            for conversation in page.conversations { upsert(conversation) }
+            nextConversationCursor = page.nextCursor == cursor ? nil : page.nextCursor
+        } catch {
+            guard revision == sessionRevision else { return }
+            handle(error)
+        }
+    }
 
     func upsert(_ conversation: CloudConversation) {
         if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
@@ -236,29 +264,37 @@ final class CloudService {
     }
 
     func archive(_ conversation: CloudConversation) async {
+        let revision = sessionRevision
         conversations.removeAll { $0.id == conversation.id }
         do {
             _ = try await client.updateConversation(conversation.id, archived: true)
         } catch {
+            guard revision == sessionRevision else { return }
             upsert(conversation)
             handle(error)
         }
     }
 
     func delete(_ conversation: CloudConversation) async {
+        let revision = sessionRevision
         conversations.removeAll { $0.id == conversation.id }
         do {
             try await client.deleteConversation(conversation.id)
         } catch {
+            guard revision == sessionRevision else { return }
             upsert(conversation)
             handle(error)
         }
     }
 
     private func update(_ original: CloudConversation, _ call: () async throws -> CloudConversation) async {
+        let revision = sessionRevision
         do {
-            upsert(try await call())
+            let updated = try await call()
+            guard revision == sessionRevision, isSignedIn else { return }
+            upsert(updated)
         } catch {
+            guard revision == sessionRevision else { return }
             upsert(original)
             handle(error)
         }

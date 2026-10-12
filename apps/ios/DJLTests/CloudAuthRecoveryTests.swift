@@ -56,7 +56,7 @@ final class CloudAuthRecoveryTests: XCTestCase {
             return .json(200, #"{"success":true}"#)
         }
         let store = CloudMemorySessionStore(token: "session")
-        let cloud = CloudService(configuration: CloudAPIConfiguration(baseURL: URL(string: "https://test.invalid")!), sessionStore: store, urlSession: CloudStubURLProtocol.session(), tokenProvider: CloudCountingTokenProvider(tokens: ["jwt"]))
+        let cloud = CloudService(configuration: CloudAPIConfiguration(baseURL: URL(string: "https://test.invalid")!), sessionStore: store, urlSession: CloudStubURLProtocol.session(), tokenProvider: CloudCountingTokenProvider(tokens: ["jwt"]), draftStore: CloudDraftStore(defaults: UserDefaults(suiteName: "djl-tests-\(UUID())")!))
         let signOut = Task { await cloud.signOut() }
         await fulfillment(of: [started], timeout: 3)
         XCTAssertFalse(cloud.isSignedIn)
@@ -80,7 +80,7 @@ final class CloudAuthRecoveryTests: XCTestCase {
             default: return .json(200, "{}")
             }
         }
-        let cloud = CloudService(configuration: CloudAPIConfiguration(baseURL: URL(string: "https://test.invalid")!), sessionStore: CloudMemorySessionStore(token: "session"), urlSession: CloudStubURLProtocol.session(), tokenProvider: CloudCountingTokenProvider(tokens: ["jwt"]))
+        let cloud = CloudService(configuration: CloudAPIConfiguration(baseURL: URL(string: "https://test.invalid")!), sessionStore: CloudMemorySessionStore(token: "session"), urlSession: CloudStubURLProtocol.session(), tokenProvider: CloudCountingTokenProvider(tokens: ["jwt"]), draftStore: CloudDraftStore(defaults: UserDefaults(suiteName: "djl-tests-\(UUID())")!))
         let refresh = Task { await cloud.refreshAll() }
         await fulfillment(of: [started], timeout: 3)
         cloud.handle(CloudAPIError.unauthorized)

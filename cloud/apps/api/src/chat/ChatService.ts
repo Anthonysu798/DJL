@@ -161,9 +161,16 @@ export class ChatService {
   ): Promise<typeof CloudConversation.Encoded> {
     const [row] = await this.db
       .insert(schema.conversations)
-      .values({ orgId: p.orgId, userId: p.userId, title: input.title ?? null })
+      .values({
+        ...(input.clientConversationId ? { id: input.clientConversationId } : {}),
+        orgId: p.orgId,
+        userId: p.userId,
+        title: input.title ?? null,
+      })
+      .onConflictDoNothing({ target: schema.conversations.id })
       .returning();
-    return toConversation(row!);
+    if (row) return toConversation(row);
+    return toConversation(await this.own(p, input.clientConversationId!));
   }
 
   /** The whole tree; clients pick the branch. */

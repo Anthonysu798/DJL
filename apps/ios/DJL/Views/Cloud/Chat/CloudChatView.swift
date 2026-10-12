@@ -37,14 +37,15 @@ private struct CloudChatContent: View {
     @State private var editing: CloudMessage?
     @State private var shareURL: URL?
     @State private var isCreatingShare = false
+    @State private var loadedScope: String?
+    @State private var loadedDraftKey = "new"
+    @State private var displayed = true
+    @State private var atBottom = true
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
-                    if session.visibleMessages.isEmpty, !session.isLoading {
-                        emptyState
-                    }
                     ForEach(session.visibleMessages) { message in
                         CloudMessageRow(
                             message: message,
@@ -67,8 +68,18 @@ private struct CloudChatContent: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .defaultScrollAnchor(.bottom)
-            .onChange(of: session.visibleMessages.last?.parts.count) { _, _ in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(bottomID, anchor: .bottom) }
+            .overlay {
+                if session.visibleMessages.isEmpty, !session.isLoading { emptyState }
+                else if session.isLoading { ProgressView() }
+            }
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.visibleRect.maxY >= geometry.contentSize.height - 60
+            } action: { _, nearBottom in atBottom = nearBottom }
+            .onChange(of: session.visibleMessages.last?.text.count) { _, _ in
+                if atBottom { proxy.scrollTo(bottomID, anchor: .bottom) }
+            }
+            .onChange(of: session.visibleMessages.count) { _, _ in
+                if atBottom { proxy.scrollTo(bottomID, anchor: .bottom) }
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -88,12 +99,11 @@ private struct CloudChatContent: View {
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 6)
-            .background(.bar)
         }
         .navigationTitle(session.conversation?.displayTitle ?? "New chat")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) { CloudModelPicker() }
+            ToolbarItem(placement: .principal) { CloudModelPicker().disabled(session.isSending) }
             ToolbarItem(placement: .topBarTrailing) { shareButton }
         }
         .task { await session.load() }
@@ -102,7 +112,22 @@ private struct CloudChatContent: View {
             if phase == .background { session.suspendStreaming() }
             if phase == .active { session.startStreaming() }
         }
-        .onDisappear { session.suspendStreaming() }
+        .onDisappear { displayed = false; session.suspendStreaming() }
+        .onAppear { displayed = true; loadDraft() }
+        .onChange(of: cloud.accountScopeKey, initial: true) { _, _ in loadDraft() }
+        .onChange(of: draft) { _, value in
+            guard displayed, session.isCurrentSession, let scope = loadedScope, scope == cloud.accountScopeKey else { return }
+            cloud.drafts.save(value, accountID: scope, conversationID: loadedDraftKey)
+        }
+        .onChange(of: session.conversation?.id) { old, id in
+            guard displayed, session.isCurrentSession, let id else { return }
+            if old == nil, let scope = loadedScope {
+                cloud.drafts.save(draft, accountID: scope, conversationID: id)
+                cloud.drafts.save("", accountID: scope, conversationID: "new")
+                loadedDraftKey = id
+            }
+            cloud.navigation.acknowledgeCreatedConversation(id)
+        }
         .fullScreenCover(item: $preview) { payload in
             imagePreview(payload)
         }
@@ -129,14 +154,13 @@ private struct CloudChatContent: View {
             Text(session.mode == .task ? "What should DJL work on?" : "How can I help?")
                 .font(AppFont.title3(weight: .semibold))
             if session.mode == .task {
-                Text("Tasks keep running after you leave. DJL can search the web, read files, run Python, and make images. You'll get a notification when it's done.")
+                Text("Start a task and return to the result when it's ready.")
                     .font(AppFont.subheadline())
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 140)
         .padding(.horizontal, 24)
     }
 
@@ -145,6 +169,13 @@ private struct CloudChatContent: View {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             Text(message).font(AppFont.footnote()).lineLimit(3)
             Spacer(minLength: 0)
+            if session.canRetry {
+                Button("Retry") {
+                    Task {
+                        if await session.retryLastSend(), session.isCurrentSession { draft = ""; attachments = [] }
+                    }
+                }.disabled(session.isSending)
+            }
             Button { session.errorMessage = nil } label: { Image(systemName: "xmark").font(.footnote.weight(.semibold)) }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -182,6 +213,7 @@ private struct CloudChatContent: View {
     private func imagePreview(_ payload: PreviewImagePayload) -> some View {
         ZStack(alignment: .bottom) {
             ZoomableImagePreviewScreen(payload: payload) { preview = nil }
+            if cloud.clientConfig?.tools.imageEditing == true {
             Button {
                 session.imageToEdit = previewPart
                 preview = nil
@@ -194,6 +226,7 @@ private struct CloudChatContent: View {
             }
             .buttonStyle(.plain)
             .padding(.bottom, 24)
+            }
         }
     }
 
@@ -205,9 +238,17 @@ private struct CloudChatContent: View {
     private func send() {
         let text = draft
         let files = attachments
-        draft = ""
-        attachments = []
-        Task { await session.send(text: text, attachments: files) }
+        Task {
+            if await session.send(text: text, attachments: files), session.isCurrentSession { draft = ""; attachments = [] }
+        }
+    }
+
+    private func loadDraft() {
+        guard session.isCurrentSession, let scope = cloud.accountScopeKey else { return }
+        guard loadedScope != scope else { return }
+        loadedScope = scope
+        loadedDraftKey = session.conversation?.id ?? "new"
+        draft = cloud.drafts.draft(accountID: scope, conversationID: loadedDraftKey)
     }
 
     private func openDebugPreviewIfRequested() {

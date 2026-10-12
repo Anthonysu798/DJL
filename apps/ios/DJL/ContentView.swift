@@ -49,6 +49,7 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceNavigationMotion
+    @AppStorage("djl.appearance.mode") private var appearanceMode = "system"
 
     @State private var viewModel = ContentViewModel()
     @State private var isSidebarOpen = false
@@ -117,10 +118,10 @@ struct ContentView: View {
     private static var isSidebarDebugLoggingEnabled: Bool { false }
 
     var body: some View {
-        // Signed-in users land in DJL Cloud chat; desktop pairing lives in its own "My Macs" section.
+        Group {
         switch cloud.route(hasPairedMac: codex.hasReconnectCandidate) {
         case .cloudHome:
-            CloudHomeView()
+            CloudShellView()
         case .welcome:
             CloudWelcomeView()
         case .myMacs:
@@ -129,6 +130,9 @@ struct ContentView: View {
                     normalizeInitialPairingScreenIfNeeded()
                 }
         }
+        }
+        .preferredColorScheme(appearanceMode == "dark" ? .dark : appearanceMode == "light" ? .light : nil)
+        .onChange(of: cloud.sectionPreference) { _, _ in isNavigationDrawerOpen = false; isSidebarOpen = false }
     }
 
     // Scene restoration can preserve a previously-open scanner after a fresh

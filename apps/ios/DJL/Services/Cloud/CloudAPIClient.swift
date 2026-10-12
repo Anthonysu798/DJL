@@ -331,8 +331,9 @@ nonisolated final class CloudAPIClient: Sendable {
         try await send("GET", "v1/conversations/search", query: [URLQueryItem(name: "q", value: text)], as: CloudConversationSearchResponse.self).results
     }
 
-    func createConversation() async throws -> CloudConversation {
-        try await send("POST", "v1/conversations", body: [String: String]())
+    func createConversation(clientConversationId: String? = nil) async throws -> CloudConversation {
+        let body = clientConversationId.map { ["clientConversationId": $0] } ?? [:]
+        return try await send("POST", "v1/conversations", body: body)
     }
 
     func conversation(_ id: String) async throws -> CloudConversationDetail {

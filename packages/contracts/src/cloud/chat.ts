@@ -124,6 +124,11 @@ export const CloudConversationListResponse = Schema.Struct({
 export type CloudConversationListResponse = typeof CloudConversationListResponse.Type;
 
 export const CloudCreateConversationInput = Schema.Struct({
+  clientConversationId: Schema.optionalKey(
+    Schema.String.check(
+      Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
+    ),
+  ),
   title: Schema.optionalKey(TrimmedNonEmptyString.check(Schema.isMaxLength(200))),
 });
 export type CloudCreateConversationInput = typeof CloudCreateConversationInput.Type;
