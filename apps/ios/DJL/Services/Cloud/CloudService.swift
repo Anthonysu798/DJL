@@ -19,6 +19,8 @@ final class CloudService {
     @ObservationIgnored private let sessionStore: CloudSessionStoring
 
     private(set) var isSignedIn: Bool
+    private(set) var sessionRevision: UInt64 = 0
+    private(set) var clientConfig: CloudClientConfig?
     var sectionPreference: CloudSectionPreference = .automatic
 
     private(set) var me: CloudMe?
@@ -74,11 +76,25 @@ final class CloudService {
         models.first { $0.id == selectedModelID } ?? models.first(where: \.isSelectable)
     }
 
+    var accountScopeKey: String? {
+        guard let me else { return nil }
+        return "\(me.user.id):\(me.activeOrgId)"
+    }
+
+    func refreshClientConfig() async {
+        do { clientConfig = try await client.clientConfig() }
+        catch { /* Email sign-in remains available while configuration is unreachable. */ }
+    }
+
     // MARK: Session
 
     func completeSignIn(sessionToken: String) async {
-        sessionStore.writeSessionToken(sessionToken)
         await client.tokenProvider.invalidate()
+        guard !Task.isCancelled else { return }
+        sessionRevision &+= 1
+        clearAccountData()
+        lastError = nil
+        sessionStore.writeSessionToken(sessionToken)
         isSignedIn = true
         sectionPreference = .cloud
         await refreshAll()
@@ -86,10 +102,11 @@ final class CloudService {
     }
 
     func signOut() async {
-        if let token = sessionStore.readSessionToken() {
+        let token = sessionStore.readSessionToken()
+        clearLocalSession()
+        if let token {
             await authAPI.signOut(sessionToken: token)
         }
-        clearLocalSession()
     }
 
     func deleteAccount() async throws {
@@ -98,14 +115,23 @@ final class CloudService {
     }
 
     private func clearLocalSession() {
+        sessionRevision &+= 1
         sessionStore.writeSessionToken(nil)
         isSignedIn = false
+        clearAccountData()
+        Task { await client.tokenProvider.invalidate() }
+    }
+
+    private func clearAccountData() {
         me = nil
         credits = nil
         usage = nil
         conversations = []
+        models = []
+        selectedModelID = nil
+        pendingConversationID = nil
+        isLoadingConversations = false
         images = [:]
-        Task { await client.tokenProvider.invalidate() }
     }
 
     /// Every call site funnels errors here so an ended session always returns to the welcome screen.
@@ -123,38 +149,57 @@ final class CloudService {
 
     func refreshAll() async {
         guard isSignedIn else { return }
+        let revision = sessionRevision
         async let meResult = client.me()
         async let modelsResult = client.models()
         async let listResult = client.conversations()
         do {
-            me = try await meResult
-            models = try await modelsResult
-            conversations = try await listResult.conversations
+            let account = try await meResult
+            let catalog = try await modelsResult
+            let history = try await listResult
+            guard revision == sessionRevision, isSignedIn else { return }
+            me = account
+            models = catalog
+            conversations = history.conversations
+            if !catalog.contains(where: { $0.id == selectedModelID && $0.isSelectable }) {
+                selectedModelID = catalog.first(where: \.isSelectable)?.id
+            }
         } catch {
+            guard revision == sessionRevision else { return }
             handle(error)
         }
         await refreshUsage()
+        await refreshClientConfig()
     }
 
     func refreshUsage() async {
         guard isSignedIn else { return }
+        let revision = sessionRevision
         do {
             async let creditsResult = client.credits()
             async let usageResult = client.usageWindows()
-            credits = try await creditsResult
-            usage = try await usageResult
+            let balances = try await creditsResult
+            let windows = try await usageResult
+            guard revision == sessionRevision, isSignedIn else { return }
+            credits = balances
+            usage = windows
         } catch {
+            guard revision == sessionRevision else { return }
             handle(error)
         }
     }
 
     func refreshConversations() async {
         guard isSignedIn else { return }
+        let revision = sessionRevision
         isLoadingConversations = true
-        defer { isLoadingConversations = false }
+        defer { if revision == sessionRevision { isLoadingConversations = false } }
         do {
-            conversations = try await client.conversations().conversations
+            let list = try await client.conversations()
+            guard revision == sessionRevision, isSignedIn else { return }
+            conversations = list.conversations
         } catch {
+            guard revision == sessionRevision else { return }
             handle(error)
         }
     }

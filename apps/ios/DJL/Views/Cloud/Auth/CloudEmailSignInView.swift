@@ -15,13 +15,16 @@ struct CloudEmailSignInView: View {
     }
 
     @Environment(CloudService.self) private var cloud
-    @State private var method: Method = .password
+    @State private var method: Method = .code
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
     @State private var code = ""
     /// Set once a code was emailed: for code sign-in or to verify a new account.
     @State private var codeSentTo: String?
+    @State private var codeSentAt: Date?
+    @State private var submission: Task<Void, Never>?
+    @State private var showsRecovery = false
     @State private var isBusy = false
     @State private var errorMessage: String?
     @FocusState private var focusedField: Field?
@@ -35,6 +38,7 @@ struct CloudEmailSignInView: View {
                     ForEach(Method.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                .disabled(isBusy)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
             }
@@ -62,6 +66,7 @@ struct CloudEmailSignInView: View {
                         .textContentType(.oneTimeCode)
                         .keyboardType(.numberPad)
                         .focused($focusedField, equals: .code)
+                        .onChange(of: code) { _, value in code = String(value.filter { $0.isASCII && $0.isNumber }.prefix(6)) }
                 }
             } footer: {
                 footer
@@ -76,16 +81,38 @@ struct CloudEmailSignInView: View {
                     }
                 }
                 .disabled(!canSubmit || isBusy)
+                if codeSentTo != nil {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let seconds = codeSentAt.map { CloudAuthFormState.resendSeconds(sentAt: $0, now: context.date) } ?? 0
+                        Button(seconds == 0 ? "Resend code" : "Resend in \(seconds)s") { resend() }
+                            .disabled(isBusy || seconds > 0)
+                    }
+                    Button("Use another email") {
+                        codeSentTo = nil; codeSentAt = nil; code = ""; errorMessage = nil
+                        focusedField = .email
+                    }
+                    .disabled(isBusy)
+                } else if method == .password {
+                    Button("Forgot password?") { showsRecovery = true }
+                        .disabled(isBusy)
+                }
             }
         }
         .navigationTitle("Continue with email")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: method) { _, _ in
             codeSentTo = nil
+            codeSentAt = nil
             code = ""
             errorMessage = nil
         }
         .onAppear { focusedField = .email }
+        .onDisappear { submission?.cancel() }
+        .navigationDestination(isPresented: $showsRecovery) {
+            CloudPasswordRecoveryView(email: normalizedEmail) { recoveredEmail in
+                email = recoveredEmail; method = .password; errorMessage = nil
+            }
+        }
     }
 
     @ViewBuilder
@@ -114,22 +141,23 @@ struct CloudEmailSignInView: View {
 
     private var canSubmit: Bool {
         let hasEmail = normalizedEmail.contains("@")
-        if codeSentTo != nil { return code.trimmingCharacters(in: .whitespaces).count == 6 }
+        if codeSentTo != nil { return CloudAuthFormState.isValidCode(code) }
         switch method {
         case .password: return hasEmail && !password.isEmpty
         case .code: return hasEmail
-        case .create: return hasEmail && password.count >= 10 && !name.trimmingCharacters(in: .whitespaces).isEmpty
+        case .create: return hasEmail && CloudAuthFormState.isValidPassword(password) && !name.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 
     private func submit() {
         errorMessage = nil
         isBusy = true
-        Task {
+        submission = Task {
             defer { isBusy = false }
             do {
                 try await perform()
             } catch {
+                guard !Task.isCancelled else { return }
                 errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
@@ -143,7 +171,9 @@ struct CloudEmailSignInView: View {
             await cloud.completeSignIn(sessionToken: try await auth.signIn(email: normalizedEmail, password: password))
         case (.code, nil):
             try await auth.sendEmailCode(email: normalizedEmail)
+            try Task.checkCancellation()
             codeSentTo = normalizedEmail
+            codeSentAt = .now
             focusedField = .code
         case (.code, .some):
             await cloud.completeSignIn(sessionToken: try await auth.signIn(email: normalizedEmail, code: otp))
@@ -152,11 +182,29 @@ struct CloudEmailSignInView: View {
             case .signedIn(let token):
                 await cloud.completeSignIn(sessionToken: token)
             case .verificationRequired:
+                try Task.checkCancellation()
                 codeSentTo = normalizedEmail
+                codeSentAt = .now
                 focusedField = .code
             }
         case (.create, .some):
             await cloud.completeSignIn(sessionToken: try await auth.verifyEmail(email: normalizedEmail, code: otp))
+        }
+    }
+
+    private func resend() {
+        guard let email = codeSentTo, !isBusy else { return }
+        isBusy = true; errorMessage = nil
+        submission = Task {
+            defer { isBusy = false }
+            do {
+                try await cloud.authAPI.sendEmailCode(email: email, purpose: method == .create ? "email-verification" : "sign-in")
+                try Task.checkCancellation()
+                codeSentAt = .now; code = ""; focusedField = .code
+            } catch {
+                guard !Task.isCancelled else { return }
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

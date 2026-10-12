@@ -13,6 +13,7 @@ struct CloudWelcomeView: View {
     @State private var errorMessage: String?
     @State private var isSigningInWithGoogle = false
     @State private var google = CloudGoogleSignIn()
+    @State private var signInTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -34,6 +35,8 @@ struct CloudWelcomeView: View {
             }
         }
         .onAppear(perform: openDebugScreenIfRequested)
+        .task { await cloud.refreshClientConfig() }
+        .onDisappear { signInTask?.cancel() }
     }
 
     private var hero: some View {
@@ -48,7 +51,7 @@ struct CloudWelcomeView: View {
             VStack(spacing: 8) {
                 Text("Welcome to DJL")
                     .font(AppFont.system(size: 30, weight: .bold))
-                Text("Chat, create images, and hand off long tasks that keep working after you close the app.")
+                Text("Your ideas, conversations, and Mac.\nTogether in DJL.")
                     .font(AppFont.body())
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -58,9 +61,11 @@ struct CloudWelcomeView: View {
 
     private var actions: some View {
         VStack(spacing: 12) {
-            CloudAppleSignInButton { errorMessage = $0 }
+            if cloud.clientConfig?.auth.apple == true {
+                CloudAppleSignInButton { errorMessage = $0 }
+            }
 
-            if let clientID = CloudGoogleSignIn.clientID {
+            if cloud.clientConfig?.auth.google == true, let clientID = CloudGoogleSignIn.clientID {
                 welcomeButton(title: "Continue with Google", systemImage: "g.circle.fill", isBusy: isSigningInWithGoogle) {
                     signInWithGoogle(clientID: clientID)
                 }
@@ -82,11 +87,14 @@ struct CloudWelcomeView: View {
             .foregroundStyle(.secondary)
             .padding(.top, 4)
 
-            Text("By continuing you agree to the DJL Terms and Privacy Policy.")
-                .font(AppFont.caption())
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+            HStack(spacing: 16) {
+                if let raw = cloud.clientConfig?.policyUrls.terms, let url = URL(string: raw) { Link("Terms", destination: url) }
+                if let raw = cloud.clientConfig?.policyUrls.privacy, let url = URL(string: raw) { Link("Privacy", destination: url) }
+            }
+            .font(AppFont.caption())
+            .foregroundStyle(.secondary)
         }
+        .disabled(isSigningInWithGoogle)
     }
 
     private func welcomeButton(title: String, systemImage: String, isBusy: Bool = false, action: @escaping () -> Void) -> some View {
@@ -111,10 +119,11 @@ struct CloudWelcomeView: View {
 
     private func signInWithGoogle(clientID: String) {
         isSigningInWithGoogle = true
-        Task {
+        signInTask = Task {
             defer { isSigningInWithGoogle = false }
             do {
                 let idToken = try await google.idToken(clientID: clientID)
+                try Task.checkCancellation()
                 let session = try await cloud.authAPI.signIn(provider: "google", idToken: idToken, nonce: nil)
                 await cloud.completeSignIn(sessionToken: session)
             } catch {

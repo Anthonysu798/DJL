@@ -220,6 +220,12 @@ nonisolated final class CloudAPIClient: Sendable {
 
     // MARK: Transport
 
+    func clientConfig() async throws -> CloudClientConfig {
+        let (data, response) = try await transport(makeRequest("GET", "v1/client-config"))
+        guard response.statusCode == 200 else { throw CloudAPIError.from(status: response.statusCode, data: data) }
+        return try JSONDecoder().decode(CloudClientConfig.self, from: data)
+    }
+
     func url(_ path: String, query: [URLQueryItem] = []) -> URL {
         var components = URLComponents(url: configuration.baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { components.queryItems = query }
