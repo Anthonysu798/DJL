@@ -107,7 +107,7 @@ struct CloudEmailSignInView: View {
             errorMessage = nil
         }
         .onAppear { focusedField = .email }
-        .onDisappear { submission?.cancel() }
+        .onDisappear { if !cloud.isSignedIn { submission?.cancel() } }
         .navigationDestination(isPresented: $showsRecovery) {
             CloudPasswordRecoveryView(email: normalizedEmail) { recoveredEmail in
                 email = recoveredEmail; method = .password; errorMessage = nil

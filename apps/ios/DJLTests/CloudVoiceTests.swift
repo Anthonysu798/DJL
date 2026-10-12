@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import DJL
 
 @MainActor
@@ -91,4 +92,18 @@ final class CloudVoiceTests: XCTestCase {
     var stopCount = 0
     func speak(_ text: String, completion: @escaping @MainActor () -> Void) { spoken.append(text) }
     func stop() { stopCount += 1 }
+}
+
+extension CloudVoiceTests {
+    func testLosingAudioRouteStopsCaptureAndPlayback() async {
+        let capture=VoiceDriverStub(),speech=PlaybackDriverStub()
+        let voice=CloudVoiceInput(driver:capture),playback=CloudSpeechPlayback(driver:speech)
+        let center=NotificationCenter()
+        let lifecycle=CloudVoiceLifecycle(voice:voice,playback:playback,center:center)
+        await voice.start(locale:.current);playback.speak("Reply",messageID:"reply")
+        center.post(name:AVAudioSession.routeChangeNotification,object:nil,userInfo:[AVAudioSessionRouteChangeReasonKey:AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue])
+        await Task.yield()
+        XCTAssertEqual(capture.cancelCount,1);XCTAssertNil(playback.messageID)
+        withExtendedLifetime(lifecycle) {}
+    }
 }

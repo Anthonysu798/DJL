@@ -36,6 +36,9 @@ struct PhoneNavigationDrawer<Menu: View, Content: View>: View {
             // viewport. Controls retain these insets; the panel, scrim and
             // shadow extend all the way to the physical screen edges.
             GeometryReader { viewport in
+                // The keyboard changes SwiftUI insets; retain only the window's physical home-indicator inset here.
+                let bottomInset = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                    .flatMap(\.windows).first(where: \.isKeyWindow)?.safeAreaInsets.bottom ?? 0
                 let width = PhoneNavigationDrawerPolicy.width(for: geometry.size.width)
                 let reveal = min(width, max(0, (isOpen ? width : 0) + dragTranslation))
                 let progress = width > 0 ? reveal / width : 0
@@ -44,25 +47,22 @@ struct PhoneNavigationDrawer<Menu: View, Content: View>: View {
                 ZStack(alignment: .leading) {
                     Color(.systemBackground).ignoresSafeArea()
 
-                    // Retain the menu between openings so its list and glass
-                    // surfaces are ready before the tap-driven slide begins.
-                    // The menu reaches the bottom screen edge so its list can
-                    // scroll under the home indicator; the bottom inset is kept
-                    // as safe area for the floating controls.
-                    menu
-                        .safeAreaPadding(.bottom, geometry.safeAreaInsets.bottom)
-                        .frame(width: width, height: geometry.size.height + geometry.safeAreaInsets.bottom)
-                        .padding(.top, geometry.safeAreaInsets.top)
-                        .offset(x: reduceMotion ? 0 : -18 * (1 - progress))
-                        .allowsHitTesting(isOpen)
-                        .accessibilityElement(children: .contain)
-                        .accessibilityHidden(!isOpen)
-                        .simultaneousGesture(revealGesture(width: width))
+                    // Build the menu when revealed so hidden glass controls do not
+                    // remain in the accessibility tree. Its list reaches the screen edge.
+                    if isOpen || dragTranslation > 0 {
+                        menu
+                            .safeAreaPadding(.bottom, bottomInset)
+                            .frame(width: width, height: geometry.size.height + bottomInset)
+                            .padding(.top, geometry.safeAreaInsets.top)
+                            .offset(x: reduceMotion ? 0 : -18 * (1 - progress))
+                            .allowsHitTesting(isOpen)
+                            .simultaneousGesture(revealGesture(width: width))
+                    }
 
                     content
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .padding(.top, geometry.safeAreaInsets.top)
-                        .padding(.bottom, geometry.safeAreaInsets.bottom)
+                        .padding(.bottom, bottomInset)
                         .background(Color(.systemBackground))
                         .overlay {
                             if reveal > 0 {
@@ -83,8 +83,6 @@ struct PhoneNavigationDrawer<Menu: View, Content: View>: View {
                         }
                         .shadow(color: .black.opacity(0.16 * progress), radius: 28, x: -10)
                         .offset(x: reveal)
-                        .accessibilityElement(children: .contain)
-                        .accessibilityHidden(isOpen)
 
                     if !isOpen {
                         Color.clear

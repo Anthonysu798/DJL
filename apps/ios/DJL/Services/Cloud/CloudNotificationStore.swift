@@ -15,6 +15,7 @@ final class CloudNotificationStore {
     @ObservationIgnored private var scope: String?
     @ObservationIgnored private var seen: Set<String> = []
     @ObservationIgnored private var initialLoad = true
+    @ObservationIgnored private var loadedOlder = false
     @ObservationIgnored private var activeConversation: String?
     @ObservationIgnored private var poll: Task<Void, Never>?
     @ObservationIgnored private var dismiss: Task<Void, Never>?
@@ -31,7 +32,7 @@ final class CloudNotificationStore {
         setForeground(false)
         notifications = []; unreadCount = 0; nextCursor = nil; scope = nil
         loading = false
-        seen = []; initialLoad = true; errorMessage = nil; activeConversation = nil
+        seen = []; initialLoad = true; loadedOlder = false; errorMessage = nil; activeConversation = nil
     }
 
     func setForeground(_ active: Bool) {
@@ -50,7 +51,7 @@ final class CloudNotificationStore {
     func refresh() async {
         guard let cloud, cloud.isSignedIn, let account = cloud.accountScopeKey else { reset(); return }
         if scope != account {
-            scope = account; seen = []; initialLoad = true; notifications = []; unreadCount = 0
+            scope = account; seen = []; initialLoad = true; loadedOlder = false; notifications = []; unreadCount = 0
             dismissBanner()
         }
         guard !loading else { return }
@@ -61,8 +62,12 @@ final class CloudNotificationStore {
             let page = try await cloud.client.notifications()
             guard !Task.isCancelled, cloud.isSignedIn, revision == cloud.sessionRevision, scope == account else { return }
             let fresh = page.notifications.filter { !seen.contains($0.id) && $0.readAt == nil }
-            if page.notifications != notifications { notifications = page.notifications }
-            unreadCount = page.unreadCount; nextCursor = page.nextCursor; errorMessage = nil
+            let refreshed = Set(page.notifications.map(\.id))
+            let merged = page.notifications + (loadedOlder ? notifications.filter { !refreshed.contains($0.id) } : [])
+            if merged != notifications { notifications = merged }
+            unreadCount = page.unreadCount
+            if !loadedOlder { nextCursor = page.nextCursor }
+            errorMessage = nil
             if !initialLoad, defaults.object(forKey: "djl.notifications.inApp") as? Bool != false,
                let item = fresh.first(where: { $0.conversationId != activeConversation }) {
                 banner = item
@@ -91,6 +96,7 @@ final class CloudNotificationStore {
             let page = try await cloud.client.notifications(cursor: cursor)
             guard !Task.isCancelled, cloud.isSignedIn, revision == cloud.sessionRevision else { return }
             for item in page.notifications where !notifications.contains(where: { $0.id == item.id }) { notifications.append(item) }
+            loadedOlder = true
             seen.formUnion(page.notifications.map(\.id))
             unreadCount = page.unreadCount; nextCursor = page.nextCursor
         } catch { if revision == cloud.sessionRevision { errorMessage = error.localizedDescription } }

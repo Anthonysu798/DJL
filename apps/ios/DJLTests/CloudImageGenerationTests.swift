@@ -21,8 +21,9 @@ final class CloudImageGenerationTests: XCTestCase {
         await cloud.refreshAll();await cloud.refreshClientConfig()
         let session=CloudChatSession(cloud:cloud,conversation:nil)
         let failed=await session.generateImage(prompt:"A desk",aspectRatio:"1:1");XCTAssertFalse(failed)
-        let accepted=await session.generateImage(prompt:"A desk",aspectRatio:"1:1");XCTAssertTrue(accepted)
-        session.suspendStreaming()
+        let reopened = CloudChatSession(cloud: cloud, conversation: session.conversation)
+        let accepted=await reopened.generateImage(prompt:"A desk",aspectRatio:"1:1");XCTAssertTrue(accepted)
+        reopened.suspendStreaming()
         let bodies=try CloudStubURLProtocol.requests.filter{$0.request.url?.path=="/v1/conversations/conv_1/images"}.map{try JSONDecoder().decode(CloudCreateImageInput.self,from:XCTUnwrap($0.body))}
         XCTAssertEqual(bodies.count,2);XCTAssertEqual(bodies[0].clientMessageId,bodies[1].clientMessageId)
         let gallery=cloud.gallery

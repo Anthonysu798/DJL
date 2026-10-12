@@ -83,6 +83,7 @@ struct CloudNavigationMenu: View {
                     }
                     .adaptiveGlass(.regular, isInteractive: true, in: Circle())
                     .accessibilityLabel("Settings")
+                    .accessibilityIdentifier("cloud.navigation.settings")
                 }.padding(.horizontal, 18).padding(.bottom, 16)
             }
         }

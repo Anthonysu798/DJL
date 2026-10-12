@@ -190,6 +190,7 @@ struct CloudImagePartView: View {
         .aspectRatio(aspectRatio, contentMode: .fit)
         .frame(maxHeight: maxHeight)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onDisappear { image = nil; failed = false }
         .task(id: fileId) {
             guard let fileId else { return }
             image = cloud.cachedImage(fileId: fileId)

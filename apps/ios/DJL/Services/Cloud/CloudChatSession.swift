@@ -63,7 +63,8 @@ final class CloudChatSession {
     @ObservationIgnored private var streamTask: Task<Void, Never>?
     @ObservationIgnored private var lastAttempt: (() async -> Bool)?
     @ObservationIgnored private let sessionRevision: UInt64
-    @ObservationIgnored private let creationID = UUID().uuidString
+    @ObservationIgnored private var creationID: String
+    @ObservationIgnored private let startedWithoutConversation: Bool
     @ObservationIgnored private var pendingInput: (text: String, files: [UUID], image: CloudMessagePart?, model: String, mode: Mode)?
     @ObservationIgnored private var pendingImage: (prompt: String, ratio: String, id: String)?
     @ObservationIgnored private var uploadedParts: [UUID: CloudMessagePart] = [:]
@@ -72,6 +73,8 @@ final class CloudChatSession {
         self.cloud = cloud
         sessionRevision = cloud.sessionRevision
         self.conversation = conversation
+        startedWithoutConversation = conversation == nil
+        creationID = conversation == nil ? cloud.accountScopeKey.map { cloud.drafts.creationID(accountID: $0) } ?? UUID().uuidString : UUID().uuidString
     }
 
     private var isCurrent: Bool { cloud.isSignedIn && cloud.sessionRevision == sessionRevision }
@@ -140,6 +143,15 @@ final class CloudChatSession {
     func send(text: String, attachments: [CloudPendingAttachment]) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard isCurrent, !isSending, !trimmed.isEmpty || !attachments.isEmpty else { return false }
+        if attachments.isEmpty, imageToEdit == nil, let scope = cloud.accountScopeKey,
+           let stored = cloud.drafts.pendingSend(accountID: scope, conversationID: conversation?.id ?? "new"),
+           stored.parts.compactMap({ if case .text(let value) = $0 { return value }; return nil }).joined(separator: "\n") == trimmed {
+            let attempt: () async -> Bool = { [weak self] in
+                await self?.post(parts: stored.parts, parentId: stored.parentId, clientMessageId: stored.clientMessageId, model: stored.model, requestedMode: Mode(rawValue: stored.mode) ?? .chat) ?? false
+            }
+            lastAttempt = attempt
+            return await attempt()
+        }
         guard let model = cloud.selectedModel?.id else {
             errorMessage = "No model is available right now."
             return false
@@ -175,7 +187,8 @@ final class CloudChatSession {
         guard cloud.clientConfig?.tools.imageGeneration == true else { errorMessage = "Image generation isn't available yet."; return false }
         guard ["1:1", "4:3", "3:4"].contains(aspectRatio) else { return false }
         let id: String
-        if let pendingImage, pendingImage.prompt == text, pendingImage.ratio == aspectRatio { id = pendingImage.id }
+        if let scope = cloud.accountScopeKey, let stored = cloud.drafts.pendingImage(accountID: scope, conversationID: conversation?.id ?? "new"), stored.prompt == text, stored.aspectRatio == aspectRatio { id = stored.clientMessageId }
+        else if let pendingImage, pendingImage.prompt == text, pendingImage.ratio == aspectRatio { id = pendingImage.id }
         else { id = UUID().uuidString; pendingImage = (text, aspectRatio, id) }
         let attempt: () async -> Bool = { [weak self] in await self?.postImage(prompt: text, aspectRatio: aspectRatio, id: id) ?? false }
         lastAttempt = attempt
@@ -188,11 +201,17 @@ final class CloudChatSession {
         defer { isSending = false }
         do {
             if conversation == nil {
+                if let scope = cloud.accountScopeKey { creationID = cloud.drafts.creationID(accountID: scope) }
                 let created = try await cloud.client.createConversation(clientConversationId: creationID)
                 guard isCurrent else { return false }
                 conversation = created; cloud.upsert(created)
             }
-            let response = try await cloud.client.createImage(conversationID: conversation!.id, input: CloudCreateImageInput(clientMessageId: id, prompt: prompt, aspectRatio: aspectRatio))
+            let input = CloudCreateImageInput(clientMessageId: id, prompt: prompt, aspectRatio: aspectRatio)
+            if let scope = cloud.accountScopeKey {
+                cloud.drafts.savePendingImage(input, accountID: scope, conversationID: conversation!.id)
+                if startedWithoutConversation { cloud.drafts.savePendingImage(input, accountID: scope, conversationID: "new") }
+            }
+            let response = try await cloud.client.createImage(conversationID: conversation!.id, input: input)
             guard isCurrent else { return false }
             accept(response)
             return true
@@ -304,6 +323,7 @@ final class CloudChatSession {
         if let existing = conversation?.id {
             conversationId = existing
         } else {
+            if let scope = cloud.accountScopeKey { creationID = cloud.drafts.creationID(accountID: scope) }
             let created = try await cloud.client.createConversation(clientConversationId: creationID)
             guard isCurrent else { throw CancellationError() }
             conversation = created
@@ -312,6 +332,10 @@ final class CloudChatSession {
         }
         if requestedMode == .task { cloud.enableTaskNotifications() }
         let input = CloudSendMessageInput(clientMessageId: clientMessageId, parentId: parentId, parts: parts, model: model, mode: requestedMode.rawValue)
+        if let scope = cloud.accountScopeKey {
+            cloud.drafts.savePendingSend(input, accountID: scope, conversationID: conversationId)
+            if startedWithoutConversation { cloud.drafts.savePendingSend(input, accountID: scope, conversationID: "new") }
+        }
         let response = try await cloud.client.sendMessage(conversationId: conversationId, input: input)
         guard isCurrent else { throw CancellationError() }
         accept(response)
@@ -319,6 +343,20 @@ final class CloudChatSession {
 
     private func accept(_ response: CloudSendMessageResponse) {
         guard isCurrent else { return }
+        if let scope = cloud.accountScopeKey {
+            let currentImage = cloud.drafts.pendingImage(accountID: scope, conversationID: response.run.conversationId)
+            if let currentImage, cloud.drafts.pendingImage(accountID: scope, conversationID: "new")?.clientMessageId == currentImage.clientMessageId {
+                cloud.drafts.clearPendingImage(accountID: scope, conversationID: "new")
+                cloud.drafts.clearCreationID(accountID: scope)
+            }
+            cloud.drafts.clearPendingImage(accountID: scope, conversationID: response.run.conversationId)
+            let current = cloud.drafts.pendingSend(accountID: scope, conversationID: response.run.conversationId)
+            if let current, cloud.drafts.pendingSend(accountID: scope, conversationID: "new")?.clientMessageId == current.clientMessageId {
+                cloud.drafts.clearPendingSend(accountID: scope, conversationID: "new")
+                cloud.drafts.clearCreationID(accountID: scope)
+            }
+            cloud.drafts.clearPendingSend(accountID: scope, conversationID: response.run.conversationId)
+        }
         lastAttempt = nil
         pendingImage = nil
         pendingInput = nil

@@ -16,7 +16,7 @@ struct CloudSettingsView: View {
             Section("Account") {
                 Button { showingAccount = true } label: {
                     Label(cloud.me?.user.email ?? "DJL account", systemImage: "person.crop.circle")
-                }
+                }.accessibilityIdentifier("cloud.settings.account")
                 if let credits = cloud.credits { LabeledContent("Available credits", value: credits.display.total) }
             }
             Section("Appearance") {

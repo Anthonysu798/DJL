@@ -143,6 +143,8 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
     private let now: @Sendable () -> Date
     private var cached: (token: String, expiresAt: Date)?
     private var inFlight: Task<String, Error>?
+    private var generation = 0
+    private var sessionIdentity: String?
 
     init(
         configuration: CloudAPIConfiguration,
@@ -157,22 +159,32 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
     }
 
     func accessToken() async throws -> String {
+        guard let session = sessionStore.readSessionToken() else { throw CloudAPIError.unauthorized }
+        if sessionIdentity != session { invalidate(); sessionIdentity = session }
+        let version = generation
         if let cached, cached.expiresAt.timeIntervalSince(now()) > 60 {
             return cached.token
         }
-        if let inFlight { return try await inFlight.value }
-        let task = Task { try await self.exchange() }
+        if let inFlight {
+            let token = try await inFlight.value
+            guard generation == version, sessionStore.readSessionToken() == session else { throw CancellationError() }
+            return token
+        }
+        let task = Task { try await self.exchange(session: session, generation: version) }
         inFlight = task
-        defer { inFlight = nil }
-        return try await task.value
+        defer { if generation == version { inFlight = nil } }
+        let token = try await task.value
+        guard generation == version, sessionStore.readSessionToken() == session else { throw CancellationError() }
+        return token
     }
 
     func invalidate() {
+        generation += 1
+        inFlight?.cancel(); inFlight = nil
         cached = nil
     }
 
-    private func exchange() async throws -> String {
-        guard let session = sessionStore.readSessionToken() else { throw CloudAPIError.unauthorized }
+    private func exchange(session: String, generation version: Int) async throws -> String {
         var request = URLRequest(url: configuration.baseURL.appending(path: "v1/auth/token"))
         request.setValue("Bearer \(session)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -182,6 +194,8 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
         } catch {
             throw CloudAPIError.transport(error.localizedDescription)
         }
+        try Task.checkCancellation()
+        guard generation == version, sessionStore.readSessionToken() == session else { throw CancellationError() }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else { throw CloudAPIError.from(status: status, data: data) }
         guard let body = try? JSONDecoder().decode(CloudAccessToken.self, from: data) else {

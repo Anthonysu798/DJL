@@ -52,3 +52,26 @@ final class CloudNotificationTests: XCTestCase {
         XCTAssertEqual(store.unreadCount, 0)
     }
 }
+
+extension CloudNotificationTests {
+    @MainActor func testPollingKeepsLoadedOlderPages() async throws {
+        let me=try CloudFixtures.string("me"),models=try CloudFixtures.string("models")
+        CloudStubURLProtocol.install {request,_ in
+            switch request.url?.path {
+            case "/v1/me":return .json(200,me)
+            case "/v1/models":return .json(200,models)
+            case "/v1/conversations":return .json(200,#"{"conversations":[],"nextCursor":null}"#)
+            case "/v1/notifications":
+                let older=request.url?.query?.contains("cursor") == true
+                return .json(200,"{\"notifications\":[{\"id\":\"\(older ? "old" : "new")\",\"conversationId\":\"conv\",\"conversationTitle\":null,\"status\":\"succeeded\",\"finishedAt\":\"2026-10-12T00:00:00Z\",\"readAt\":null}],\"unreadCount\":2,\"nextCursor\":\(older ? "null" : "\"page-two\"")}")
+            default:return .json(200,"{}")
+            }
+        }
+        let cloud=CloudService(configuration:CloudAPIConfiguration(baseURL:URL(string:"https://test.invalid")!),sessionStore:CloudMemorySessionStore(token:"session"),urlSession:CloudStubURLProtocol.session(),tokenProvider:CloudCountingTokenProvider(tokens:["jwt"]),draftStore:CloudDraftStore(defaults:UserDefaults(suiteName:"inbox-pages-\(UUID())")!))
+        await cloud.refreshAll()
+        let store=cloud.notifications
+        await store.refresh();await store.loadMore();await store.refresh()
+        XCTAssertEqual(store.notifications.map(\.id),["new","old"])
+        XCTAssertNil(store.nextCursor)
+    }
+}

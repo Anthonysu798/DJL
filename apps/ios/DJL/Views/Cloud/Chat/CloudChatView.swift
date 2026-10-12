@@ -43,6 +43,7 @@ private struct CloudChatContent: View {
     @State private var loadedDraftKey = "new"
     @State private var displayed = true
     @State private var atBottom = true
+    @State private var voiceLifecycle: CloudVoiceLifecycle?
     @State private var voice = CloudVoiceInput()
     @State private var playback = CloudSpeechPlayback()
     @AppStorage("djl.voice.spokenReplies") private var spokenReplies = false
@@ -127,8 +128,8 @@ private struct CloudChatContent: View {
             if phase == .background { session.suspendStreaming() }
             if phase == .active { session.startStreaming() }
         }
-        .onDisappear { voice.cancel(); playback.stop(); displayed = false; cloud.notifications.clearActiveConversation(session.conversation?.id); session.suspendStreaming() }
-        .onAppear { displayed = true; loadDraft(); cloud.notifications.setActiveConversation(session.conversation?.id) }
+        .onDisappear { voiceLifecycle = nil; voice.cancel(); playback.stop(); displayed = false; cloud.notifications.clearActiveConversation(session.conversation?.id); session.suspendStreaming() }
+        .onAppear { voiceLifecycle = CloudVoiceLifecycle(voice: voice, playback: playback); displayed = true; loadDraft(); cloud.notifications.setActiveConversation(session.conversation?.id) }
         .onChange(of: cloud.accountScopeKey, initial: true) { _, _ in voice.cancel(); playback.stop(); loadDraft() }
         .onChange(of: cloud.navigation.isMenuOpen) { _, open in if open { voice.cancel(); playback.stop() } }
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { _ in voice.cancel(); playback.stop() }

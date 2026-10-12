@@ -3,7 +3,6 @@ import SwiftUI
 struct CloudImagesView: View {
     @Environment(CloudService.self) private var cloud
     @State private var preview: PreviewImagePayload?
-    @State private var selected: CloudGeneratedImage?
     @State private var creation: CloudChatSession?
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
@@ -13,7 +12,7 @@ struct CloudImagesView: View {
                 ForEach(cloud.gallery.images) { item in
                     VStack(alignment: .leading, spacing: 8) {
                         CloudImagePartView(part: item.part, maxHeight: 220) { _, image in
-                            selected = item; preview = PreviewImagePayload(id: item.id, image: image, title: "Your image")
+                            preview = PreviewImagePayload(id: item.id, image: image, title: "Your image")
                         }
                         Text(item.prompt.isEmpty ? "Generated image" : item.prompt).font(AppFont.footnote()).lineLimit(2)
                         Button("Open chat") { cloud.navigation.openConversation(item.conversationId) }.font(AppFont.caption())
@@ -50,7 +49,7 @@ struct CloudImagesView: View {
             if let creation { CloudImageCreationSheet(session: creation) { if let id = creation.conversation?.id { cloud.navigation.openConversation(id) } } }
         }
         .fullScreenCover(item: $preview) { payload in
-            ZoomableImagePreviewScreen(payload: payload) { preview = nil; selected = nil }
+            ZoomableImagePreviewScreen(payload: payload) { preview = nil }
         }
     }
 }

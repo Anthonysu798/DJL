@@ -139,7 +139,11 @@ final class CloudService {
         sessionStore.writeSessionToken(nil)
         isSignedIn = false
         clearAccountData()
-        Task { await client.tokenProvider.invalidate() }
+        let revision = sessionRevision
+        Task {
+            guard revision == self.sessionRevision, !self.isSignedIn else { return }
+            await client.tokenProvider.invalidate()
+        }
     }
 
     private func clearAccountData() {
@@ -161,12 +165,12 @@ final class CloudService {
 
     /// Every call site funnels errors here so an ended session always returns to the welcome screen.
     func handle(_ error: Error) {
+        if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled { return }
         if let apiError = error as? CloudAPIError, apiError == .unauthorized {
             clearLocalSession()
             lastError = apiError.errorDescription
             return
         }
-        if error is CancellationError { return }
         lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
