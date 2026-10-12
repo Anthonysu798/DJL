@@ -7,6 +7,7 @@ struct CloudSettingsView: View {
     @AppStorage("djl.appearance.mode") private var appearance = "system"
     @AppStorage(GlassPreference.storageKey) private var glass = true
     @AppStorage("djl.notifications.inApp") private var inAppAlerts = true
+    @AppStorage("djl.voice.spokenReplies") private var spokenReplies = false
     @State private var showingAccount = false
     @State private var permission: UNAuthorizationStatus = .notDetermined
 
@@ -40,6 +41,10 @@ struct CloudSettingsView: View {
                         }
                     }
                 }
+            }
+            Section("Voice") {
+                Toggle("Speak new replies", isOn: $spokenReplies)
+                Text("Dictation stays on your iPhone. Review the text before sending. Replies use the iPhone voice.").font(AppFont.footnote()).foregroundStyle(.secondary)
             }
             Section("About") {
                 LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")

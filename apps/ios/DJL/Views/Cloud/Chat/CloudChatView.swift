@@ -6,6 +6,7 @@
 // Depends on: CloudChatSession, CloudMessageRow, CloudComposerView, ZoomableImagePreviewScreen
 
 import SwiftUI
+import AVFoundation
 
 struct CloudChatView: View {
     @Environment(CloudService.self) private var cloud
@@ -41,6 +42,9 @@ private struct CloudChatContent: View {
     @State private var loadedDraftKey = "new"
     @State private var displayed = true
     @State private var atBottom = true
+    @State private var voice = CloudVoiceInput()
+    @State private var playback = CloudSpeechPlayback()
+    @AppStorage("djl.voice.spokenReplies") private var spokenReplies = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -54,7 +58,13 @@ private struct CloudChatContent: View {
                             onOpenImage: openPreview,
                             onEdit: { editing = message },
                             onRegenerate: { Task { await session.regenerate(message) } },
-                            onSwitchBranch: { session.selectSibling(of: message, offset: $0) }
+                            onSwitchBranch: { session.selectSibling(of: message, offset: $0) },
+                            playback: playback,
+                            onReadAloud: {
+                                voice.cancel()
+                                if playback.messageID == message.id { playback.stop() }
+                                else { playback.speak(message.text, messageID: message.id) }
+                            }
                         )
                         .id(message.id)
                     }
@@ -94,7 +104,9 @@ private struct CloudChatContent: View {
                     text: $draft,
                     attachments: $attachments,
                     session: session,
-                    onSend: send
+                    onSend: send,
+                    voice: voice,
+                    playback: playback
                 )
             }
             .padding(.horizontal, 12)
@@ -109,12 +121,21 @@ private struct CloudChatContent: View {
         .task { await session.load() }
         .onChange(of: scenePhase) { _, phase in
             // iOS suspends sockets in the background; reattach from the last seq when we come back.
+            if phase == .background { voice.cancel(); playback.stop() }
             if phase == .background { session.suspendStreaming() }
             if phase == .active { session.startStreaming() }
         }
-        .onDisappear { displayed = false; cloud.notifications.clearActiveConversation(session.conversation?.id); session.suspendStreaming() }
+        .onDisappear { voice.cancel(); playback.stop(); displayed = false; cloud.notifications.clearActiveConversation(session.conversation?.id); session.suspendStreaming() }
         .onAppear { displayed = true; loadDraft(); cloud.notifications.setActiveConversation(session.conversation?.id) }
-        .onChange(of: cloud.accountScopeKey, initial: true) { _, _ in loadDraft() }
+        .onChange(of: cloud.accountScopeKey, initial: true) { _, _ in voice.cancel(); playback.stop(); loadDraft() }
+        .onChange(of: cloud.navigation.isMenuOpen) { _, open in if open { voice.cancel(); playback.stop() } }
+        .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { _ in voice.cancel(); playback.stop() }
+        .onChange(of: session.run?.status) { _, status in
+            guard displayed, spokenReplies, status == "succeeded",
+                  let message = session.visibleMessages.last, !message.isUser,
+                  playback.shouldAutomaticallySpeak(messageID: message.id, runID: session.run?.id, succeeded: true) else { return }
+            playback.speak(message.text, messageID: message.id)
+        }
         .onChange(of: draft) { _, value in
             guard displayed, session.isCurrentSession, let scope = loadedScope, scope == cloud.accountScopeKey else { return }
             cloud.drafts.save(value, accountID: scope, conversationID: loadedDraftKey)
@@ -240,7 +261,11 @@ private struct CloudChatContent: View {
         let text = draft
         let files = attachments
         Task {
-            if await session.send(text: text, attachments: files), session.isCurrentSession { draft = ""; attachments = [] }
+            playback.stop(); voice.cancel()
+            if await session.send(text: text, attachments: files), session.isCurrentSession {
+                draft = ""; attachments = []
+                if spokenReplies, let runID = session.run?.id { playback.expectReply(runID: runID) }
+            }
         }
     }
 

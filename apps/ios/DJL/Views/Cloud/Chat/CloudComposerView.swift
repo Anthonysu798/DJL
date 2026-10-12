@@ -15,6 +15,8 @@ struct CloudComposerView: View {
     @Binding var attachments: [CloudPendingAttachment]
     @Bindable var session: CloudChatSession
     let onSend: () -> Void
+    let voice: CloudVoiceInput
+    let playback: CloudSpeechPlayback
 
     @State private var photoSelection: [PhotosPickerItem] = []
     @State private var isShowingPhotos = false
@@ -31,6 +33,16 @@ struct CloudComposerView: View {
             if !attachments.isEmpty || session.imageToEdit != nil {
                 attachmentStrip
             }
+            if case .failed(let error) = voice.state {
+                Text(error).font(AppFont.caption()).foregroundStyle(.secondary)
+            }
+            if voice.isBusy {
+                HStack {
+                    Image(systemName: "waveform").foregroundStyle(.tint)
+                    Text(voice.state == .preparing ? "Preparing on-device dictation…" : voice.state == .stopping ? "Finishing…" : "Listening. Tap stop to review your text.")
+                        .font(AppFont.caption()).foregroundStyle(.secondary)
+                }
+            }
             if let attachmentError {
                 Text(attachmentError).font(AppFont.caption()).foregroundStyle(.red)
             }
@@ -43,6 +55,8 @@ struct CloudComposerView: View {
                 attachMenu
                 modeToggle
                 Spacer()
+                CloudVoiceControls(voice: voice, playback: playback, draft: $text)
+                    .disabled(session.isSending || session.isRunning)
                 sendButton
             }
         }
@@ -168,7 +182,7 @@ struct CloudComposerView: View {
                 .frame(width: 34, height: 34)
                 .background(canSend ? Color.primary : Color.secondary.opacity(0.4), in: Circle())
             }
-            .disabled(!canSend)
+            .disabled(!canSend || voice.isBusy)
             .accessibilityLabel("Send")
         }
     }
