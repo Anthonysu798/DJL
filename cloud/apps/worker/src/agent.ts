@@ -7,6 +7,8 @@
 import {
   AGENT_RUN_JOB,
   AGENT_RUN_QUEUE_OPTIONS,
+  IMAGE_RUN_JOB,
+  IMAGE_RUN_QUEUE_OPTIONS,
   RunInterruptedError,
   resumeBlockedRuns,
   windowsHaveRoom,
@@ -29,6 +31,14 @@ export async function registerAgentJobs(
     readonly concurrency: number;
   },
 ): Promise<void> {
+  await boss.createQueue(IMAGE_RUN_JOB, IMAGE_RUN_QUEUE_OPTIONS);
+  await boss.work<AgentRunJobData>(
+    IMAGE_RUN_JOB,
+    { batchSize: 1, localConcurrency: deps.concurrency },
+    async ([job]) => {
+      if (job) await deps.agent.imageRunner.execute(job.data.runId, job.signal);
+    },
+  );
   await boss.createQueue(AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS);
   await boss.work<AgentRunJobData>(
     AGENT_RUN_JOB,

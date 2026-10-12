@@ -15,6 +15,7 @@ import { LedgerService } from "../credits/LedgerService.ts";
 import { GatewayService } from "../gateway/GatewayService.ts";
 import { buildProviders } from "../gateway/providers.ts";
 import { createMemoryRateLimiter, createRedisRateLimiter } from "../gateway/RateLimiter.ts";
+import { ImageRunExecutor } from "../images/ImageRunExecutor.ts";
 import { RunLog } from "../runs/RunLog.ts";
 import type { BlobStore } from "../sync/BlobStore.ts";
 import { TrialService } from "../trial/TrialService.ts";
@@ -31,6 +32,8 @@ import { createWebTools } from "./webTools.ts";
 export {
   AGENT_RUN_JOB,
   AGENT_RUN_QUEUE_OPTIONS,
+  IMAGE_RUN_JOB,
+  IMAGE_RUN_QUEUE_OPTIONS,
   type AgentRunJobData,
 } from "../runs/RunExecutor.ts";
 export { RunInterruptedError } from "./AgentRunner.ts";
@@ -53,6 +56,7 @@ export interface AgentRuntimeInput {
 
 export interface AgentRuntime {
   readonly runner: AgentRunner;
+  readonly imageRunner: ImageRunExecutor;
   /** Destroys stray sandbox machines; null in mock mode. */
   readonly reap: (() => Promise<number>) | null;
 }
@@ -146,5 +150,15 @@ export function createAgentRuntime(input: AgentRuntimeInput): AgentRuntime {
       ...createSandboxTools({ db, blobs, sandboxEnabled }),
     ],
   });
-  return { runner, reap };
+  return {
+    runner,
+    reap,
+    imageRunner: new ImageRunExecutor({
+      db,
+      blobs,
+      gateway,
+      log: new RunLog(db, redis),
+      notifier: new RunNotifier({ db, push, email: input.email, webPublicUrl: input.webPublicUrl }),
+    }),
+  };
 }

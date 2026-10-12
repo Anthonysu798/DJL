@@ -287,6 +287,7 @@ export class ChatService {
     facts: RequestFacts,
     conversationId: string,
     input: CloudSendMessageInput,
+    imageAspectRatio?: string,
   ): Promise<typeof CloudSendMessageResponse.Encoded> {
     const p = facts.principal;
     await this.own(p, conversationId);
@@ -317,7 +318,14 @@ export class ChatService {
             clientMessageId: input.clientMessageId,
           })
           .returning();
-        const reply = await this.createReply(tx, p, message!, input.model, input.mode);
+        const reply = await this.createReply(
+          tx,
+          p,
+          message!,
+          input.model,
+          input.mode,
+          imageAspectRatio,
+        );
         return { message: message!, ...reply };
       });
     } catch (error) {
@@ -359,10 +367,19 @@ export class ChatService {
     const previous = original.runId
       ? await this.db.query.runs.findFirst({ where: eq(schema.runs.id, original.runId) })
       : null;
-    const model = input.model ?? original.model ?? previous?.model;
+    const model = previous?.imageAspectRatio
+      ? previous.model
+      : (input.model ?? original.model ?? previous?.model);
     if (!model) throw new ApiError(400, "bad_request", "Choose a model.");
     const { reply, run } = await this.db.transaction((tx) =>
-      this.createReply(tx, p, parent, model, previous?.mode ?? "chat"),
+      this.createReply(
+        tx,
+        p,
+        parent,
+        model,
+        previous?.mode ?? "chat",
+        previous?.imageAspectRatio ?? undefined,
+      ),
     );
     await this.startRun(facts, run);
     return { message: toMessage(parent), reply: toMessage(reply), run: toRun(run) };
@@ -375,6 +392,7 @@ export class ChatService {
     parent: MessageRow,
     model: string,
     mode: CloudRunMode,
+    imageAspectRatio?: string,
   ): Promise<{ reply: MessageRow; run: RunRow }> {
     const [reply] = await tx
       .insert(schema.messages)
@@ -395,6 +413,7 @@ export class ChatService {
         messageId: reply!.id,
         mode,
         model,
+        imageAspectRatio: imageAspectRatio ?? null,
       })
       .returning();
     const [linked] = await tx
@@ -442,6 +461,6 @@ export class ChatService {
 
   private async startRun(facts: RequestFacts, run: RunRow): Promise<void> {
     if (run.mode === "chat") this.deps.runner.start(run.id, facts);
-    else await this.deps.tasks.enqueue(run.id);
+    else await this.deps.tasks.enqueue(run.id, run.imageAspectRatio ? "image" : "agent");
   }
 }

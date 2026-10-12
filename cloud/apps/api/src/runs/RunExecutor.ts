@@ -7,6 +7,13 @@ import { PgBoss } from "pg-boss";
 
 /** pg-boss queue for task runs. */
 export const AGENT_RUN_JOB = "agent.run";
+export const IMAGE_RUN_JOB = "image.run";
+export const IMAGE_RUN_QUEUE_OPTIONS = {
+  expireInSeconds: 6 * 60,
+  heartbeatSeconds: 30,
+  retryLimit: 1,
+  retryDelay: 65,
+} as const;
 
 /**
  * A task may run 30 minutes. pg-boss heartbeats the job while the worker is
@@ -38,7 +45,7 @@ export interface RunExecutor {
 
 /** Where the API puts task runs; pg-boss in production. */
 export interface TaskQueue {
-  readonly enqueue: (runId: string) => Promise<void>;
+  readonly enqueue: (runId: string, kind?: "agent" | "image") => Promise<void>;
 }
 
 /** pg-boss started on first use, so an API that never sees a task never touches its schema. */
@@ -59,13 +66,22 @@ export function createPgBossTaskQueue(
         console.error(JSON.stringify({ level: "error", msg: "pg-boss", error: String(error) })),
       );
       await b.start();
-      if (!options.producerOnly) await b.createQueue(AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS);
+      if (!options.producerOnly) {
+        await b.createQueue(AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS);
+        await b.createQueue(IMAGE_RUN_JOB, IMAGE_RUN_QUEUE_OPTIONS);
+      }
       return b;
     })());
   return {
-    async enqueue(runId) {
+    async enqueue(runId, kind = "agent") {
       const data: AgentRunJobData = { runId };
-      await (await boss()).send(AGENT_RUN_JOB, { ...data }, { singletonKey: runId });
+      await (
+        await boss()
+      ).send(
+        kind === "image" ? IMAGE_RUN_JOB : AGENT_RUN_JOB,
+        { ...data },
+        { singletonKey: runId },
+      );
     },
     async close() {
       if (started) await (await started).stop({ graceful: false });

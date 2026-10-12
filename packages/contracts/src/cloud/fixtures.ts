@@ -6,6 +6,7 @@
  */
 import { Schema } from "effect";
 import { CloudClientConfig } from "./clientConfig";
+import { CloudImagesResponse } from "./images";
 import { CloudNotificationsResponse } from "./notifications";
 
 import { CloudDeleteAccountResponse, CloudMeResponse, CloudRunPushData } from "./account";
@@ -96,8 +97,33 @@ const share = {
 };
 
 export const cloudFixtures = {
+  images: fixture(CloudImagesResponse, {
+    images: [
+      {
+        fileId: "file_1",
+        conversationId: "conv_1",
+        messageId: "msg_a1",
+        prompt: "A blue desk",
+        mimeType: "image/png",
+        size: 4096,
+        width: 1024,
+        height: 1024,
+        createdAt: at,
+      },
+    ],
+    nextCursor: null,
+  }),
   notifications: fixture(CloudNotificationsResponse, {
-    notifications: [{ id: "run_1", conversationId: "conv_1", conversationTitle: "Trip plan", status: "succeeded", finishedAt: at, readAt: null }],
+    notifications: [
+      {
+        id: "run_1",
+        conversationId: "conv_1",
+        conversationTitle: "Trip plan",
+        status: "succeeded",
+        finishedAt: at,
+        readAt: null,
+      },
+    ],
     unreadCount: 1,
     nextCursor: null,
   }),

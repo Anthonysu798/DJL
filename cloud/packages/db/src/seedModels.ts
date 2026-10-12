@@ -25,6 +25,7 @@ interface SeedModel {
   readonly sortOrder: number;
   /** Cheap models the weekly free allowance may be spent on. */
   readonly freeEligible?: boolean;
+  readonly enabled?: boolean;
 }
 
 const TEXT = ["text.chat", "tools", "vision", "json"] as const;
@@ -195,6 +196,7 @@ export const SEED_MODELS: readonly SeedModel[] = [
   },
   {
     modelId: "flux-1.1-pro",
+    enabled: false,
     provider: "openrouter",
     upstreamModelId: "black-forest-labs/flux-1.1-pro",
     displayName: "FLUX 1.1 Pro",
@@ -250,6 +252,7 @@ export async function seedModels(databaseUrl: string, margin = 0.4): Promise<num
           qualityScore: m.qualityScore,
           sortOrder: m.sortOrder,
           freeEligible: m.freeEligible ?? false,
+          status: m.enabled == false ? "disabled" : "active",
         })
         .onConflictDoNothing({ target: modelCatalog.modelId })
         .returning({ id: modelCatalog.modelId });

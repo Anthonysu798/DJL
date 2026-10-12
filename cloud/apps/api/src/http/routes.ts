@@ -8,6 +8,7 @@ import { HttpBody, HttpRouter, HttpServerRequest, HttpServerResponse } from "eff
 
 import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
 import { makeClientConfigRoutes, type ClientConfigDeps } from "../client-config/routes.ts";
+import { makeImageRoutes, type ImageRouteDeps } from "../images/routes.ts";
 import { makeNotificationRoutes, type NotificationRouteDeps } from "../notifications/routes.ts";
 import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
 import { makeChatRoutes, type ChatRouteDeps } from "../chat/routes.ts";
@@ -57,7 +58,8 @@ export interface RouteDeps
     AuthRouteDeps,
     NativeAuthRouteDeps,
     PushRouteDeps,
-    NotificationRouteDeps {
+    NotificationRouteDeps,
+    ImageRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
@@ -123,6 +125,7 @@ export function makeRoutes(deps: RouteDeps) {
     ready,
     makeClientConfigRoutes(deps.clientConfig),
     makeNotificationRoutes(deps),
+    makeImageRoutes(deps),
     authRoutes,
     makeAccountRoutes(deps),
     makeBillingRoutes(deps),

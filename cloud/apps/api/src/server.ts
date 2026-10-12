@@ -70,6 +70,7 @@ import { NativeAuthService } from "./nativeAuth/NativeAuthService.ts";
 import { abusePolicy } from "./security/abusePolicy.ts";
 import { createRedisLockouts } from "./security/throttle.ts";
 import { ApiError } from "./http/errors.ts";
+import { ImageService } from "./images/ImageService.ts";
 import { NotificationService } from "./notifications/NotificationService.ts";
 
 export interface ApiRuntime {
@@ -310,6 +311,7 @@ export async function startApi(
   const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
   const routes = makeRoutes({
     notifications: new NotificationService(db),
+    images: new ImageService({ db, chat, gateway }),
     clientConfig: {
       auth: { google: Boolean(env.google), apple: Boolean(env.apple) },
       gateway,
