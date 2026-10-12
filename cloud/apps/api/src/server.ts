@@ -308,6 +308,22 @@ export async function startApi(
   });
   const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
   const routes = makeRoutes({
+    clientConfig: {
+      auth: { google: Boolean(env.google), apple: Boolean(env.apple) },
+      gateway,
+      fileParsing:
+        process.env.PARSER_CONFIGURED === "fly:available" ||
+        (process.env.SANDBOX_BACKEND === "fly" && Boolean(process.env.FLY_API_TOKEN)),
+      pushConfigured:
+        process.env.APNS_CONFIGURED === "available:available:available" ||
+        Boolean(
+          process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_PRIVATE_KEY,
+        ),
+      policyUrls: {
+        terms: process.env.PUBLIC_TERMS_URL || null,
+        privacy: process.env.PUBLIC_PRIVACY_URL || null,
+      },
+    },
     env,
     auth,
     readiness,

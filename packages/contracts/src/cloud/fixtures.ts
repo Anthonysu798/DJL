@@ -5,6 +5,7 @@
  * tests to catch drift from these schemas.
  */
 import { Schema } from "effect";
+import { CloudClientConfig } from "./clientConfig";
 
 import { CloudDeleteAccountResponse, CloudMeResponse, CloudRunPushData } from "./account";
 import { CloudAccessTokenResponse, CloudCsrfResponse } from "./base";
@@ -94,6 +95,12 @@ const share = {
 };
 
 export const cloudFixtures = {
+  "client-config": fixture(CloudClientConfig, {
+    auth: { google: true, apple: false },
+    tools: { imageGeneration: true, imageEditing: false, fileParsing: false },
+    pushConfigured: false,
+    policyUrls: { terms: null, privacy: null },
+  }),
   csrf: fixture(CloudCsrfResponse, { token: "Q2hhbmdlTWVDaGFuZ2VNZUNoYW5nZU1lQ2hhbmdlTWU" }),
   "access-token": fixture(CloudAccessTokenResponse, {
     token: "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ1c2VyXzEiLCJzaWQiOiJzZXNzXzEifQ.c2ln",

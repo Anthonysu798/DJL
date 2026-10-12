@@ -23,6 +23,10 @@ x-server-environment: &server-environment
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  PUBLIC_TERMS_URL: ${PUBLIC_TERMS_URL:-}
+  PUBLIC_PRIVACY_URL: ${PUBLIC_PRIVACY_URL:-}
+  APNS_CONFIGURED: "${APNS_KEY_ID:+available}:${APNS_TEAM_ID:+available}:${APNS_PRIVATE_KEY:+available}"
+  PARSER_CONFIGURED: "${SANDBOX_BACKEND:-disabled}:${FLY_API_TOKEN:+available}"
 
 services:
   postgres:
