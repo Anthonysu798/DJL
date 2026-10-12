@@ -42,7 +42,13 @@ final class CloudService {
         didSet { UserDefaults.standard.set(selectedModelID, forKey: Self.selectedModelKey) }
     }
 
-    @ObservationIgnored private var images: [String: UIImage] = [:]
+    @ObservationIgnored private let imageCache = CloudImageCache()
+    @ObservationIgnored private var imageDownloads = 0
+    @ObservationIgnored private var galleryStore: CloudImageGallery?
+    var gallery: CloudImageGallery {
+        if let galleryStore { return galleryStore }
+        let store = CloudImageGallery(cloud: self); galleryStore = store; return store
+    }
     @ObservationIgnored private var pushToken: String?
     @ObservationIgnored private var pushObserver: NSObjectProtocol?
     @ObservationIgnored private var openObserver: NSObjectProtocol?
@@ -149,7 +155,8 @@ final class CloudService {
         selectedModelID = nil
         pendingConversationID = nil
         isLoadingConversations = false
-        images = [:]
+        imageCache.clear()
+        galleryStore?.reset()
     }
 
     /// Every call site funnels errors here so an ended session always returns to the welcome screen.
@@ -325,24 +332,31 @@ final class CloudService {
 
     // MARK: Images
 
-    func cachedImage(fileId: String) -> UIImage? { images[fileId] }
+    func cachedImage(fileId: String) -> UIImage? { imageCache.image(fileID: fileId) }
 
     func image(fileId: String) async -> UIImage? {
-        if let cached = images[fileId] { return cached }
+        let revision = sessionRevision
+        if let cached = cachedImage(fileId: fileId) { return cached }
+        while imageDownloads >= 2 {
+            do { try await Task.sleep(for: .milliseconds(50)) } catch { return nil }
+            guard revision == sessionRevision, isSignedIn else { return nil }
+        }
+        guard !Task.isCancelled, revision == sessionRevision, isSignedIn else { return nil }
+        imageDownloads += 1
+        defer { imageDownloads -= 1 }
         do {
             let data = try await client.fileData(fileId: fileId)
-            guard let image = UIImage(data: data) else { return nil }
-            images[fileId] = image
+            guard !Task.isCancelled, revision == sessionRevision, isSignedIn,
+                  let image = CloudImageCache.decode(data) else { return nil }
+            imageCache.store(image, fileID: fileId)
             return image
         } catch {
-            handle(error)
+            if revision == sessionRevision, !Task.isCancelled { handle(error) }
             return nil
         }
     }
 
-    func remember(_ image: UIImage, fileId: String) {
-        images[fileId] = image
-    }
+    func remember(_ image: UIImage, fileId: String) { imageCache.store(image, fileID: fileId) }
 
     // MARK: Push (task completion)
 

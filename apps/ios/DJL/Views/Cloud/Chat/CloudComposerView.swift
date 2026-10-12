@@ -15,6 +15,7 @@ struct CloudComposerView: View {
     @Binding var attachments: [CloudPendingAttachment]
     @Bindable var session: CloudChatSession
     let onSend: () -> Void
+    let onCreateImage: () -> Void
     let voice: CloudVoiceInput
     let playback: CloudSpeechPlayback
 
@@ -124,6 +125,9 @@ struct CloudComposerView: View {
 
     private var attachMenu: some View {
         Menu {
+            if cloud.clientConfig?.tools.imageGeneration == true {
+                Button(action: onCreateImage) { Label("Create image", systemImage: "wand.and.stars") }.disabled(session.isRunning || session.isSending)
+            }
             if cloud.selectedModel?.acceptsImages == true {
                 Button { isShowingPhotos = true } label: { Label("Photos", systemImage: "photo.on.rectangle") }
             }

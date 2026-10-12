@@ -38,6 +38,7 @@ private struct CloudChatContent: View {
     @State private var editing: CloudMessage?
     @State private var shareURL: URL?
     @State private var isCreatingShare = false
+    @State private var showingImageCreation = false
     @State private var loadedScope: String?
     @State private var loadedDraftKey = "new"
     @State private var displayed = true
@@ -105,6 +106,7 @@ private struct CloudChatContent: View {
                     attachments: $attachments,
                     session: session,
                     onSend: send,
+                    onCreateImage: { showingImageCreation = true },
                     voice: voice,
                     playback: playback
                 )
@@ -153,6 +155,7 @@ private struct CloudChatContent: View {
         .fullScreenCover(item: $preview) { payload in
             imagePreview(payload)
         }
+        .sheet(isPresented: $showingImageCreation) { CloudImageCreationSheet(session: session) {} }
         .sheet(item: $editing) { message in
             CloudEditMessageSheet(original: message.text) { newText in
                 Task { await session.edit(message, newText: newText) }

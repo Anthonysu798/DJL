@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class CloudNavigationState {
-    enum Destination: Equatable { case chat, notifications, settings }
+    enum Destination: Equatable { case chat, images, notifications, settings }
     var destination: Destination = .chat
     var isMenuOpen = false
     private(set) var selectedConversationID: String?

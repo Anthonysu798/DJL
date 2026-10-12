@@ -23,6 +23,7 @@ struct CloudNavigationMenu: View {
                         .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
                 }
                 action("Chat", icon: "bubble.left.and.bubble.right") { cloud.navigation.destination = .chat; cloud.navigation.isMenuOpen = false }
+                action("Images", icon: "photo.on.rectangle") { cloud.navigation.destination = .images; cloud.navigation.isMenuOpen = false }
                 action("Remote", icon: "laptopcomputer") { cloud.navigation.isMenuOpen = false; cloud.sectionPreference = .myMacs }
                 Button { cloud.navigation.destination = .notifications; cloud.navigation.isMenuOpen = false } label: {
                     HStack {

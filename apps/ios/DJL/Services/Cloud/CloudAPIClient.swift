@@ -331,6 +331,14 @@ nonisolated final class CloudAPIClient: Sendable {
         try await send("GET", "v1/conversations/search", query: [URLQueryItem(name: "q", value: text)], as: CloudConversationSearchResponse.self).results
     }
 
+    func images(cursor: String? = nil) async throws -> CloudImageGalleryPage {
+        try await send("GET", "v1/images", query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? [])
+    }
+
+    func createImage(conversationID: String, input: CloudCreateImageInput) async throws -> CloudSendMessageResponse {
+        try await send("POST", "v1/conversations/\(conversationID)/images", body: input)
+    }
+
     func createConversation(clientConversationId: String? = nil) async throws -> CloudConversation {
         let body = clientConversationId.map { ["clientConversationId": $0] } ?? [:]
         return try await send("POST", "v1/conversations", body: body)

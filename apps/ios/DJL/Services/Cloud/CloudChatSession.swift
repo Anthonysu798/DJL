@@ -65,6 +65,7 @@ final class CloudChatSession {
     @ObservationIgnored private let sessionRevision: UInt64
     @ObservationIgnored private let creationID = UUID().uuidString
     @ObservationIgnored private var pendingInput: (text: String, files: [UUID], image: CloudMessagePart?, model: String, mode: Mode)?
+    @ObservationIgnored private var pendingImage: (prompt: String, ratio: String, id: String)?
     @ObservationIgnored private var uploadedParts: [UUID: CloudMessagePart] = [:]
 
     init(cloud: CloudService, conversation: CloudConversation?) {
@@ -165,6 +166,37 @@ final class CloudChatSession {
         let accepted = await attempt()
         if accepted { imageToEdit = nil }
         return accepted
+    }
+
+    @discardableResult
+    func generateImage(prompt: String, aspectRatio: String) async -> Bool {
+        let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isCurrent, !isSending, !isRunning, !text.isEmpty else { return false }
+        guard cloud.clientConfig?.tools.imageGeneration == true else { errorMessage = "Image generation isn't available yet."; return false }
+        guard ["1:1", "4:3", "3:4"].contains(aspectRatio) else { return false }
+        let id: String
+        if let pendingImage, pendingImage.prompt == text, pendingImage.ratio == aspectRatio { id = pendingImage.id }
+        else { id = UUID().uuidString; pendingImage = (text, aspectRatio, id) }
+        let attempt: () async -> Bool = { [weak self] in await self?.postImage(prompt: text, aspectRatio: aspectRatio, id: id) ?? false }
+        lastAttempt = attempt
+        return await attempt()
+    }
+
+    private func postImage(prompt: String, aspectRatio: String, id: String) async -> Bool {
+        guard isCurrent else { return false }
+        isSending = true
+        defer { isSending = false }
+        do {
+            if conversation == nil {
+                let created = try await cloud.client.createConversation(clientConversationId: creationID)
+                guard isCurrent else { return false }
+                conversation = created; cloud.upsert(created)
+            }
+            let response = try await cloud.client.createImage(conversationID: conversation!.id, input: CloudCreateImageInput(clientMessageId: id, prompt: prompt, aspectRatio: aspectRatio))
+            guard isCurrent else { return false }
+            accept(response)
+            return true
+        } catch { report(error); return false }
     }
 
     @discardableResult
@@ -288,6 +320,7 @@ final class CloudChatSession {
     private func accept(_ response: CloudSendMessageResponse) {
         guard isCurrent else { return }
         lastAttempt = nil
+        pendingImage = nil
         pendingInput = nil
         uploadedParts = [:]
         for message in [response.message, response.reply] {
