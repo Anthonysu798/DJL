@@ -4,7 +4,7 @@ import type {
   CloudRunMode,
   CloudUserMessagePart,
 } from "@synara/contracts/cloud";
-import { ArrowUp, FileText, Loader2, Paperclip, Square, Telescope, X } from "lucide-react";
+import { ArrowUp, FileText, Loader2, Plus, Square, Telescope, X } from "lucide-react";
 import {
   forwardRef,
   useCallback,
@@ -49,6 +49,7 @@ export interface ComposerHandle {
   /** Starts an "Edit image" message with an existing image attached. */
   editImage(part: CloudImageRefPart, prefix: string): void;
   focus(): void;
+  setMode(mode: CloudRunMode): void;
 }
 
 export interface ComposerProps {
@@ -66,6 +67,8 @@ export interface ComposerProps {
   }) => Promise<{ ok: true } | { ok: false; error: string | null }>;
   readonly blocked?: boolean;
   readonly autoFocus?: boolean;
+  readonly compact?: boolean;
+  readonly onModeChange?: (mode: CloudRunMode) => void;
 }
 
 export function problemMessage(d: Dict, name: string, problem: AttachmentProblem): string {
@@ -98,7 +101,7 @@ function ExistingImageThumb({ fileId }: { fileId: string }) {
 }
 
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { running, onStop, onSubmit, blocked = false, autoFocus = false },
+  { running, onStop, onSubmit, blocked = false, autoFocus = false, onModeChange, compact = false },
   ref,
 ) {
   const { d } = useLocale();
@@ -212,8 +215,12 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         });
       },
       focus: () => textarea.current?.focus(),
+      setMode: (next) => {
+        setMode(next);
+        onModeChange?.(next);
+      },
     }),
-    [addFiles, d],
+    [addFiles, d, onModeChange],
   );
 
   const remove = (key: string) => {
@@ -225,6 +232,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     setErrors([]);
   };
 
+  const inline = compact && attachments.length === 0 && !text.includes("\n");
   const hasContent = text.trim().length > 0 || attachments.length > 0;
   const uploading = attachments.some((a) => a.status === "uploading");
 
@@ -263,7 +271,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     <form
       noValidate
       onSubmit={(e) => void submit(e)}
-      className="rounded-[1.75rem] border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04),0_8px_24px_-12px_rgb(0_0_0/0.12)] transition-shadow focus-within:border-ring/60 dark:shadow-none"
+      className={cn(
+        "cloud-composer rounded-[1.75rem] border border-border transition-colors focus-within:border-input",
+        inline && "grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center p-2",
+      )}
     >
       {attachments.length > 0 ? (
         <ul className="flex gap-2 overflow-x-auto px-3 pt-3" aria-label={d.chat.attach}>
@@ -345,9 +356,12 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           addFiles(files);
         }}
         aria-describedby={errors.length ? "composer-errors" : undefined}
-        className="block max-h-52 w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
+        className={cn(
+          "block max-h-52 w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground",
+          inline ? "col-start-2 row-start-1 px-2 py-2" : "px-5 pt-4 pb-2",
+        )}
       />
-      <div className="flex items-center gap-1.5 px-2.5 pb-2.5">
+      <div className={inline ? "contents" : "flex items-center gap-1.5 px-2.5 pb-2.5"}>
         <input
           ref={fileInput}
           type="file"
@@ -366,11 +380,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               type="button"
               variant="ghost"
               size="icon"
-              className="size-9 rounded-full"
+              className="col-start-1 row-start-1 size-9 rounded-full"
               aria-label={d.chat.attach}
               onClick={() => fileInput.current?.click()}
             >
-              <Paperclip />
+              <Plus />
             </Button>
           </TooltipTrigger>
           <TooltipContent>{d.chat.attach}</TooltipContent>
@@ -382,9 +396,13 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               variant="ghost"
               size="sm"
               aria-pressed={mode === "task"}
-              onClick={() => setMode((m) => (m === "task" ? "chat" : "task"))}
+              onClick={() => {
+                const next = mode === "task" ? "chat" : "task";
+                setMode(next);
+                onModeChange?.(next);
+              }}
               className={cn(
-                "h-9 rounded-full border px-3",
+                "col-start-3 row-start-1 h-9 rounded-full border px-3",
                 mode === "task"
                   ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                   : "border-border text-muted-foreground",
@@ -396,7 +414,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           </TooltipTrigger>
           <TooltipContent className="max-w-60">{d.chat.taskModeHint}</TooltipContent>
         </Tooltip>
-        <div className="ml-auto">
+        <div className={inline ? "col-start-4 row-start-1 ml-2" : "ml-auto"}>
           {running ? (
             <Button
               type="button"
@@ -424,7 +442,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         <div
           id="composer-errors"
           role="alert"
-          className="border-t border-border px-5 py-2.5 text-sm text-danger-fg"
+          className="col-span-full border-t border-border px-5 py-2.5 text-sm text-danger-fg"
         >
           {errors.map((err) => (
             <p key={err}>{err}</p>

@@ -3,7 +3,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { AuthFrame, PasswordInput, ProviderIcon } from "@/components/AuthFrame";
+
 import { authClient } from "@/lib/auth-client";
+import { APPLE_SIGN_IN_ENABLED, GOOGLE_SIGN_IN_ENABLED } from "@/lib/config";
 import { useLocale } from "@/lib/locale-context";
 import { safeNext } from "@/lib/safeNext";
 
@@ -39,9 +42,22 @@ function SignInForm() {
     authClient.signIn.social({ provider, callbackURL: `${window.location.origin}${next}` });
 
   return (
-    <div className="card space-y-5">
-      <h1 className="text-xl font-semibold">{d.signIn}</h1>
-      <form onSubmit={submit} className="space-y-3">
+    <AuthFrame
+      footer={
+        <>
+          {d.noAccount}{" "}
+          <Link
+            className="font-medium text-neutral-900 underline underline-offset-4"
+            href={`/sign-up?next=${encodeURIComponent(next)}`}
+          >
+            {d.signUp}
+          </Link>
+        </>
+      }
+    >
+      <h1 className="text-[30px] leading-tight font-medium tracking-tight">{d.auth.signInTitle}</h1>
+      <p className="mt-3 mb-8 text-[15px] leading-6 text-neutral-500">{d.auth.signInBody}</p>
+      <form onSubmit={submit} className="space-y-5">
         <div>
           <label className="label" htmlFor="email">
             {d.email}
@@ -52,6 +68,7 @@ function SignInForm() {
             type="email"
             autoComplete="email"
             required
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -60,41 +77,56 @@ function SignInForm() {
           <label className="label" htmlFor="password">
             {d.password}
           </label>
-          <input
+          <PasswordInput
             id="password"
             className="input"
             type="password"
             autoComplete="current-password"
             required
+            placeholder={d.auth.passwordPlaceholder}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
         {error ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
         ) : null}
         <button className="btn w-full" disabled={busy} type="submit">
-          {d.continue}
+          {busy ? d.loading : d.signIn}
         </button>
       </form>
-      <div className="text-center text-xs text-neutral-500">{d.orContinueWith}</div>
-      <div className="grid grid-cols-2 gap-2">
-        <button className="btn-secondary" type="button" onClick={() => void social("google")}>
-          {d.google}
-        </button>
-        <button className="btn-secondary" type="button" onClick={() => void social("apple")}>
-          {d.apple}
-        </button>
+      {GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED ? (
+        <div className="my-6 flex items-center gap-4 text-xs text-neutral-500">
+          <span className="h-px flex-1 bg-neutral-200" />
+          {d.orContinueWith}
+          <span className="h-px flex-1 bg-neutral-200" />
+        </div>
+      ) : null}
+      <div className="flex gap-3 [&>button]:flex-1">
+        {GOOGLE_SIGN_IN_ENABLED ? (
+          <button
+            className="btn-secondary gap-2"
+            type="button"
+            onClick={() => void social("google")}
+          >
+            <ProviderIcon provider="google" />
+            {d.google}
+          </button>
+        ) : null}
+        {APPLE_SIGN_IN_ENABLED ? (
+          <button
+            className="btn-secondary gap-2"
+            type="button"
+            onClick={() => void social("apple")}
+          >
+            <ProviderIcon provider="apple" />
+            {d.apple}
+          </button>
+        ) : null}
       </div>
-      <p className="text-sm text-neutral-600">
-        {d.noAccount}{" "}
-        <Link className="underline" href={`/sign-up?next=${encodeURIComponent(next)}`}>
-          {d.signUp}
-        </Link>
-      </p>
-    </div>
+    </AuthFrame>
   );
 }
 

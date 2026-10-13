@@ -7,6 +7,8 @@ import { THEME_BOOT_SCRIPT } from "@/components/theme";
 import { detectLocale } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/locale-context";
 
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +22,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1b1c1f" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
   ],
 };
 

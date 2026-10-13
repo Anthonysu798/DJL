@@ -3,71 +3,69 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * DJL Cloud web theme, shared with the admin console: light first, white
- * surfaces with hairline borders on a soft gray canvas, one blue accent.
- * Dark mode is its own set of steps, not an inverted light palette.
- */
+/* Neutral surfaces keep conversations and controls in focus. */
 :root {
   --radius: 0.875rem;
-  --background: oklch(0.975 0.002 260);
-  --foreground: oklch(0.17 0.01 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.01 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.01 260);
-  --primary: oklch(0.546 0.215 263);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.955 0.004 260);
-  --secondary-foreground: oklch(0.25 0.01 260);
-  --muted: oklch(0.955 0.004 260);
-  --muted-foreground: oklch(0.5 0.012 260);
-  --accent: oklch(0.945 0.005 260);
-  --accent-foreground: oklch(0.2 0.01 260);
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #171717;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1f1;
+  --secondary-foreground: #252525;
+  --muted: #f1f1f1;
+  --muted-foreground: #686868;
+  --accent: #ececec;
+  --accent-foreground: #171717;
   --destructive: oklch(0.58 0.21 25);
-  --border: oklch(0.91 0.005 260);
-  --input: oklch(0.91 0.005 260);
-  --ring: oklch(0.546 0.215 263 / 0.35);
+  --border: #e5e5e5;
+  --input: #d4d4d4;
+  --ring: #88888880;
   --success-bg: oklch(0.96 0.04 160);
   --success-fg: oklch(0.42 0.13 160);
   --danger-bg: oklch(0.96 0.03 10);
   --danger-fg: oklch(0.5 0.18 15);
   --warning-bg: oklch(0.97 0.04 85);
   --warning-fg: oklch(0.47 0.11 70);
-  --sidebar: oklch(0.975 0.002 260);
-  --code-bg: oklch(0.975 0.003 260);
+  --sidebar: #f8f8f8;
+  --code-bg: #f5f5f5;
 }
 
 .dark {
-  --background: oklch(0.14 0.005 260);
-  --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.18 0.006 260);
-  --card-foreground: oklch(0.95 0.005 260);
-  --popover: oklch(0.2 0.006 260);
-  --popover-foreground: oklch(0.95 0.005 260);
-  --primary: oklch(0.623 0.188 260);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.24 0.006 260);
-  --secondary-foreground: oklch(0.92 0.005 260);
-  --muted: oklch(0.24 0.006 260);
-  --muted-foreground: oklch(0.68 0.01 260);
-  --accent: oklch(0.25 0.008 260);
-  --accent-foreground: oklch(0.95 0.005 260);
+  --background: #0d0d0d;
+  --foreground: #ededed;
+  --card: #0d0d0d;
+  --card-foreground: #ededed;
+  --popover: #212121;
+  --popover-foreground: #ededed;
+  --primary: #ededed;
+  --primary-foreground: #171717;
+  --secondary: #212121;
+  --secondary-foreground: #ededed;
+  --muted: #212121;
+  --muted-foreground: #a1a1a1;
+  --accent: #282828;
+  --accent-foreground: #ededed;
   --destructive: oklch(0.66 0.19 25);
-  --border: oklch(1 0 0 / 0.09);
-  --input: oklch(1 0 0 / 0.12);
-  --ring: oklch(0.623 0.188 260 / 0.4);
+  --border: #303030;
+  --input: #404040;
+  --ring: #a1a1a180;
   --success-bg: oklch(0.3 0.05 160);
   --success-fg: oklch(0.85 0.12 160);
   --danger-bg: oklch(0.3 0.06 15);
   --danger-fg: oklch(0.85 0.1 15);
   --warning-bg: oklch(0.3 0.05 80);
   --warning-fg: oklch(0.86 0.1 85);
-  --sidebar: oklch(0.14 0.005 260);
-  --code-bg: oklch(0.155 0.006 260);
+  --sidebar: #101010;
+  --code-bg: #171717;
 }
 
 @theme inline {
+  --font-sans: "Geist Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -276,4 +274,87 @@
 .dark .hljs-comment,
 .dark .hljs-quote {
   color: oklch(0.62 0.02 260);
+}
+
+/* The rail stays in place while the conversation history can be collapsed. */
+.cloud-rail {
+  background: #f1f1f1;
+}
+.dark .cloud-rail {
+  background: #080808;
+}
+.cloud-composer {
+  background: var(--secondary);
+}
+.auth-frame {
+  --background: #fff;
+  --foreground: #171717;
+  --muted-foreground: #737373;
+  --border: #dedede;
+  --input: #dedede;
+  --primary: #171717;
+  --primary-foreground: #fff;
+  --ring: #88888880;
+  background: #fff;
+  color: #171717;
+  color-scheme: light;
+}
+.auth-frame .input {
+  height: 3.1rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #171717;
+  font-size: 15px;
+}
+.auth-frame .input:user-invalid {
+  border-color: #dc2626;
+}
+.auth-frame .label {
+  color: #292929;
+  font-size: 14px;
+  margin-bottom: 0.5rem;
+}
+.auth-frame .btn {
+  height: 3rem;
+  border-radius: 0.75rem;
+}
+.auth-frame .btn-secondary {
+  height: 3rem;
+  border-radius: 0.75rem;
+  color: #171717;
+  background: #fff;
+  border-color: #dedede;
+}
+.auth-preview {
+  background: #f5f5f5;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 3px,
+    #00000003 3px,
+    #00000003 4px
+  );
+}
+.auth-preview-window {
+  transform: rotate(-5deg);
+  transform-origin: top left;
+}
+.cloud-settings-row {
+  display: flex;
+  min-height: 86px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
