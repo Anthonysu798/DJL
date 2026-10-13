@@ -10,11 +10,13 @@ test("work mode, settings, theme persistence, and language switch", async ({ pag
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("heading", { name: "General", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Appearance", exact: true }).click();
-  await page.getByLabel("Theme", { exact: true }).selectOption("light");
+  await page.getByRole("combobox", { name: "Theme" }).click();
+  await page.getByRole("option", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await page.reload();
-  await expect(page.getByLabel("Theme", { exact: true })).toHaveValue("light");
-  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+  await expect(page.getByRole("combobox", { name: "Theme" })).toHaveText("Light");
+  await page.getByRole("combobox", { name: "Theme" }).click();
+  await page.getByRole("option", { name: "Dark", exact: true }).click();
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
   await expect(page.getByRole("menuitemcheckbox", { name: "Dark mode" })).toHaveAttribute(
     "aria-checked",
@@ -22,7 +24,8 @@ test("work mode, settings, theme persistence, and language switch", async ({ pag
   );
   await page.keyboard.press("Escape");
   await page.getByRole("link", { name: "General", exact: true }).click();
-  await page.getByLabel("Language", { exact: true }).selectOption("zh-Hans");
+  await page.getByRole("combobox", { name: "Language" }).click();
+  await page.getByRole("option", { name: "简体中文", exact: true }).click();
   await expect(page.getByRole("heading", { name: "通用", exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hans");
 });

@@ -4,6 +4,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
+import { AccountPanel, DevicesPanel } from "@/components/account/AccountPanels";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useTheme } from "@/components/theme";
 import { useLocale } from "@/lib/locale-context";
 import { UsageMeter } from "./Usage";
@@ -30,6 +39,8 @@ export function SettingsNav({ onNavigate }: { onNavigate?: () => void }) {
           ["general", d.workspace.general, Settings],
           ["appearance", d.workspace.appearance, Sun],
           ["usage", d.chat.usage, Gauge],
+          ["account", d.account, UserRound],
+          ["devices", d.devices, Monitor],
         ] as const
       ).map(([id, label, Icon]) => {
         return (
@@ -45,22 +56,6 @@ export function SettingsNav({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         );
       })}
-      <Link
-        onClick={() => onNavigate?.()}
-        href="/account"
-        className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-accent"
-      >
-        <UserRound className="size-4" />
-        {d.account}
-      </Link>
-      <Link
-        onClick={() => onNavigate?.()}
-        href="/account"
-        className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-accent"
-      >
-        <Monitor className="size-4" />
-        {d.devices}
-      </Link>
       <Link
         onClick={() => onNavigate?.()}
         href="/billing"
@@ -86,23 +81,33 @@ function SettingsContent() {
             ? d.workspace.appearance
             : tab === "usage"
               ? d.chat.usage
-              : d.workspace.general}
+              : tab === "account"
+                ? d.account
+                : tab === "devices"
+                  ? d.devices
+                  : d.workspace.general}
         </h2>
-        {tab === "appearance" ? (
+        {tab === "account" ? (
+          <AccountPanel />
+        ) : tab === "devices" ? (
+          <DevicesPanel />
+        ) : tab === "appearance" ? (
           <div className="cloud-settings-row">
             <div>
               <p className="text-sm font-medium">{d.workspace.theme}</p>
               <p className="mt-1 text-sm text-muted-foreground">{d.workspace.themeHint}</p>
             </div>
-            <select
-              aria-label={d.workspace.theme}
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as "dark" | "light")}
-              className="rounded-full border border-input bg-secondary px-4 py-2 text-sm"
-            >
-              <option value="dark">{d.darkMode}</option>
-              <option value="light">{d.lightMode}</option>
-            </select>
+            <Select value={theme} onValueChange={(value) => setTheme(value as "dark" | "light")}>
+              <SelectTrigger aria-label={d.workspace.theme} className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="end">
+                <SelectGroup>
+                  <SelectItem value="dark">{d.darkMode}</SelectItem>
+                  <SelectItem value="light">{d.lightMode}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         ) : tab === "usage" ? (
           <div className="rounded-2xl border border-border p-6">
@@ -120,18 +125,23 @@ function SettingsContent() {
               <p className="text-sm font-medium">{d.workspace.language}</p>
               <p className="mt-1 text-sm text-muted-foreground">{d.workspace.languageHint}</p>
             </div>
-            <select
-              aria-label={d.workspace.language}
+            <Select
               value={locale}
-              onChange={(e) => {
-                document.cookie = `djl_locale=${e.target.value};path=/;max-age=31536000;SameSite=Lax`;
+              onValueChange={(value) => {
+                document.cookie = `djl_locale=${value};path=/;max-age=31536000;SameSite=Lax`;
                 window.location.reload();
               }}
-              className="rounded-full border border-input bg-secondary px-4 py-2 text-sm"
             >
-              <option value="en">English</option>
-              <option value="zh-Hans">简体中文</option>
-            </select>
+              <SelectTrigger aria-label={d.workspace.language} className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="end">
+                <SelectGroup>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="zh-Hans">简体中文</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
