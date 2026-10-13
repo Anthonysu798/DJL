@@ -1,8 +1,10 @@
 "use client";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { ArrowUp, Check, Eye, EyeOff, AlertCircle, Plus, SquarePen } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { AiNotice } from "./AiNotice";
 import { useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 
 import { DjlLogo } from "@/components/DjlLogo";
@@ -17,7 +19,7 @@ export function AuthFrame({ children, footer }: { children: ReactNode; footer: R
       const media = gsap.matchMedia();
       media.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.from(".auth-form-content", { y: 16, opacity: 0, duration: 0.55, ease: "power2.out" });
-        gsap.from(".auth-preview-window", {
+        gsap.from(".auth-portrait", {
           y: 32,
           opacity: 0,
           duration: 0.8,
@@ -30,73 +32,41 @@ export function AuthFrame({ children, footer }: { children: ReactNode; footer: R
     { scope },
   );
   return (
-    <main
-      ref={scope}
-      className="auth-frame grid min-h-dvh w-full overflow-x-hidden lg:grid-cols-[44%_56%]"
-    >
-      <div className="flex min-h-dvh flex-col px-6 sm:px-12 lg:px-16">
+    <main ref={scope} className="auth-frame grid min-h-dvh w-full overflow-x-hidden lg:grid-cols-2">
+      <section className="flex min-h-dvh flex-col px-6 sm:px-12">
         <header className="flex h-24 shrink-0 items-center">
-          <Link
-            href="/chat"
-            className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"
-          >
-            <DjlLogo className="size-12" /> DJL{" "}
-            <span className="font-normal text-neutral-500">Cloud</span>
+          <Link href="/chat" className="flex items-center gap-2 text-xl font-medium tracking-tight">
+            <DjlLogo className="size-10" /> DJL Cloud
           </Link>
         </header>
-        <div className="auth-form-content mx-auto flex w-full max-w-[390px] flex-1 flex-col justify-center py-10">
+        <div className="auth-form-content mx-auto flex w-full max-w-[336px] flex-1 flex-col justify-center py-10">
           {children}
+          <p className="mt-8 text-center text-[13px] text-[#667085]">{footer}</p>
         </div>
-        <footer className="pb-9 text-center text-sm text-neutral-500">{footer}</footer>
-      </div>
+        <footer className="mx-auto max-w-md pb-6">
+          <AiNotice />
+        </footer>
+      </section>
       <aside
-        className="auth-preview relative my-5 mr-5 hidden overflow-hidden rounded-[28px] border border-neutral-200 lg:block"
+        className="auth-portrait relative hidden min-h-dvh overflow-hidden bg-[#b2bdcb] lg:block"
         aria-label={d.auth.previewLabel}
       >
-        <div className="relative z-10 px-12 pt-16 xl:px-16 xl:pt-20">
-          <h2 className="max-w-xl text-[clamp(1.75rem,2.5vw,2.5rem)] leading-tight font-medium tracking-tight">
+        <Image
+          src="/auth-portrait-glass.png"
+          alt=""
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover object-top"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#101828]/75 via-transparent to-transparent" />
+        <div className="absolute right-10 bottom-14 left-10 text-white xl:right-12 xl:left-12">
+          <h2 className="max-w-xl text-[clamp(1.75rem,2.7vw,2.65rem)] leading-[1.3] font-medium tracking-tight">
             {d.auth.previewTitle}
           </h2>
-          <p className="mt-4 max-w-lg text-base leading-7 text-neutral-600">{d.auth.previewBody}</p>
-          <div className="mt-6 flex items-center gap-2 text-sm text-neutral-600">
-            <Check className="size-4" aria-hidden />
-            {d.auth.previewNote}
-          </div>
-        </div>
-        <div
-          className="auth-preview-window absolute top-[42%] left-14 h-[650px] w-[850px] overflow-hidden rounded-2xl border border-neutral-600 bg-[#0d0d0d] text-[#ededed] shadow-2xl"
-          aria-hidden="true"
-        >
-          <div className="flex h-11 items-center gap-1.5 border-b border-white/10 bg-[#171717] px-4">
-            <span className="size-2 rounded-full bg-neutral-600" />
-            <span className="size-2 rounded-full bg-neutral-600" />
-            <span className="size-2 rounded-full bg-neutral-600" />
-            <span className="mx-auto text-xs text-neutral-400">DJL Cloud</span>
-          </div>
-          <div className="flex h-full">
-            <div className="w-48 shrink-0 border-r border-white/10 bg-[#101010] p-5 text-sm">
-              <p className="mb-8 text-base font-semibold">DJL</p>
-              <p className="mb-9 flex items-center gap-2">
-                <SquarePen className="size-4" />
-                {d.chat.newChat}
-              </p>
-              <p className="mb-4 text-xs text-neutral-500">{d.chat.pinned}</p>
-              <p className="mb-4">{d.auth.previewChat}</p>
-              <p className="mb-8 text-neutral-400">{d.auth.previewChatTwo}</p>
-              <p className="text-xs text-neutral-500">{d.chat.today}</p>
-            </div>
-            <div className="flex flex-1 flex-col items-center pt-36">
-              <DjlLogo className="mb-6 size-16 brightness-0 invert" />
-              <p className="text-2xl tracking-tight">{d.chat.emptyTitle}</p>
-              <div className="mt-8 flex w-[85%] items-center gap-3 rounded-full border border-white/10 bg-[#212121] p-4 text-sm text-neutral-400">
-                <Plus className="size-5" />
-                {d.chat.placeholder}
-                <span className="ml-auto flex size-8 items-center justify-center rounded-full bg-white text-black">
-                  <ArrowUp className="size-4" />
-                </span>
-              </div>
-            </div>
-          </div>
+          <p className="mt-5 max-w-lg text-base leading-7 text-white/85">{d.auth.previewBody}</p>
+          <p className="mt-8 text-lg font-medium">DJL Cloud</p>
+          <p className="mt-1 text-sm text-white/75">{d.auth.previewNote}</p>
         </div>
       </aside>
     </main>

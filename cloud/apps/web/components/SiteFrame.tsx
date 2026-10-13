@@ -12,7 +12,10 @@ const FULL_SCREEN = /^\/(chat|share)(\/|$)/;
 export function SiteFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const { d } = useLocale();
-  if (FULL_SCREEN.test(pathname) || /^\/(sign-in|sign-up|billing)(\/|$)/.test(pathname))
+  if (
+    FULL_SCREEN.test(pathname) ||
+    /^\/(sign-in|sign-up|forgot-password|reset-password|billing)(\/|$)/.test(pathname)
+  )
     return <>{children}</>;
   return (
     <>

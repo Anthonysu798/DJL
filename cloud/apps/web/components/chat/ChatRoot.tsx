@@ -6,6 +6,8 @@ import { AuthGate } from "@/components/AuthGate";
 import { chatClient, MOCK_API } from "@/lib/chat/api";
 import { ChatProvider } from "@/lib/chat/context";
 
+import { GuestChat } from "./GuestChat";
+
 import { ChatShell } from "./ChatShell";
 
 /** Signed-in chat area. The mock API has no sessions, so it skips the gate. */
@@ -17,5 +19,9 @@ export function ChatRoot({ children }: { children: ReactNode }) {
     </ChatProvider>
   );
   if (MOCK_API) return content;
-  return <AuthGate next={pathname}>{content}</AuthGate>;
+  return (
+    <AuthGate next={pathname} signedOut={pathname === "/chat" ? <GuestChat /> : undefined}>
+      {content}
+    </AuthGate>
+  );
 }

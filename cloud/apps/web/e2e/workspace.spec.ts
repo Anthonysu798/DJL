@@ -67,7 +67,7 @@ test("sign-in validation, password visibility, auth error, and safe return path"
   await expect(page.getByLabel("Email", { exact: true })).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByLabel("Email", { exact: true })).toHaveCSS(
     "border-color",
-    "rgb(220, 38, 38)",
+    "rgb(217, 45, 32)",
   );
   await page.getByLabel("Email", { exact: true }).fill("qa@example.invalid");
   await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
@@ -121,7 +121,7 @@ test("provider sign-in preserves the callback destination", async ({ page }) => 
     });
   });
   await page.goto("/sign-in?next=%2Fchat%2Fsettings");
-  await page.getByRole("button", { name: "Google", exact: true }).click();
+  await page.getByRole("button", { name: "Log in with Google", exact: true }).click();
   await expect
     .poll(() => requestBody)
     .toMatchObject({ provider: "google", callbackURL: new URL("/chat/settings", page.url()).href });
@@ -181,7 +181,7 @@ test("sign-up custom validation rejects missing fields, malformed email, and sho
   );
   await expect(page.getByLabel("Password", { exact: true })).toHaveCSS(
     "border-color",
-    "rgb(220, 38, 38)",
+    "rgb(217, 45, 32)",
   );
   expect(requests).toBe(0);
 });

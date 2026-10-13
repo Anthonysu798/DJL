@@ -49,8 +49,21 @@ function SignUpForm() {
     router.push(`/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
   };
 
-  const social = (provider: "google" | "apple") =>
-    authClient.signIn.social({ provider, callbackURL: `${window.location.origin}${next}` });
+  const social = async (provider: "google" | "apple") => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await authClient.signIn.social({
+        provider,
+        callbackURL: `${window.location.origin}${next}`,
+      });
+      if (result.error) setError(result.error.message ?? d.error);
+    } catch {
+      setError(d.error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <AuthFrame
@@ -68,7 +81,38 @@ function SignUpForm() {
     >
       <h1 className="text-[30px] leading-tight font-medium tracking-tight">{d.auth.signUpTitle}</h1>
       <p className="mt-3 mb-8 text-[15px] leading-6 text-neutral-500">{d.auth.signUpBody}</p>
-      <form noValidate onSubmit={submit} className="space-y-5">
+      <div className="flex flex-col gap-3">
+        {GOOGLE_SIGN_IN_ENABLED ? (
+          <button
+            className="btn-secondary w-full gap-2"
+            type="button"
+            disabled={busy}
+            onClick={() => void social("google")}
+          >
+            <ProviderIcon provider="google" />
+            {d.auth.continueGoogle}
+          </button>
+        ) : null}
+        {APPLE_SIGN_IN_ENABLED ? (
+          <button
+            className="btn-secondary w-full gap-2"
+            type="button"
+            disabled={busy}
+            onClick={() => void social("apple")}
+          >
+            <ProviderIcon provider="apple" />
+            {d.auth.continueApple}
+          </button>
+        ) : null}
+      </div>
+      {GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED ? (
+        <div className="my-6 flex items-center gap-4 text-xs text-neutral-500">
+          <span className="h-px flex-1 bg-neutral-200" />
+          {d.auth.or}
+          <span className="h-px flex-1 bg-neutral-200" />
+        </div>
+      ) : null}
+      <form noValidate onSubmit={submit} className="space-y-6">
         <AuthField id="name" label={d.name} error={fieldErrors.name}>
           <input
             id="name"
@@ -92,7 +136,7 @@ function SignUpForm() {
             type="email"
             autoComplete="email"
             required
-            placeholder="you@example.com"
+            placeholder=""
             aria-invalid={!!fieldErrors.email}
             aria-describedby={fieldErrors.email ? "email-error" : undefined}
             value={email}
@@ -111,7 +155,7 @@ function SignUpForm() {
             autoComplete="new-password"
             minLength={10}
             required
-            placeholder={d.auth.passwordPlaceholder}
+            placeholder=""
             aria-invalid={!!fieldErrors.password}
             aria-describedby={fieldErrors.password ? "password-error" : "password-hint"}
             value={password}
@@ -135,35 +179,6 @@ function SignUpForm() {
         </button>
         <p className="text-xs text-neutral-500">{d.agree}</p>
       </form>
-      {GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED ? (
-        <div className="my-6 flex items-center gap-4 text-xs text-neutral-500">
-          <span className="h-px flex-1 bg-neutral-200" />
-          {d.orContinueWith}
-          <span className="h-px flex-1 bg-neutral-200" />
-        </div>
-      ) : null}
-      <div className="flex gap-3 [&>button]:flex-1">
-        {GOOGLE_SIGN_IN_ENABLED ? (
-          <button
-            className="btn-secondary gap-2"
-            type="button"
-            onClick={() => void social("google")}
-          >
-            <ProviderIcon provider="google" />
-            {d.google}
-          </button>
-        ) : null}
-        {APPLE_SIGN_IN_ENABLED ? (
-          <button
-            className="btn-secondary gap-2"
-            type="button"
-            onClick={() => void social("apple")}
-          >
-            <ProviderIcon provider="apple" />
-            {d.apple}
-          </button>
-        ) : null}
-      </div>
     </AuthFrame>
   );
 }
