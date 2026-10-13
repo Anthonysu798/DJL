@@ -1,10 +1,12 @@
 "use client";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { ArrowUp, Check, Eye, EyeOff, Orbit, Plus, SquarePen } from "lucide-react";
+import { ArrowUp, Check, Eye, EyeOff, AlertCircle, Plus, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 
+import { DjlLogo } from "@/components/DjlLogo";
+import type { Dict } from "@/lib/i18n";
 import { useLocale } from "@/lib/locale-context";
 
 export function AuthFrame({ children, footer }: { children: ReactNode; footer: ReactNode }) {
@@ -38,7 +40,7 @@ export function AuthFrame({ children, footer }: { children: ReactNode; footer: R
             href="/chat"
             className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"
           >
-            <Orbit className="size-7" aria-hidden /> DJL{" "}
+            <DjlLogo className="size-12" /> DJL{" "}
             <span className="font-normal text-neutral-500">Cloud</span>
           </Link>
         </header>
@@ -84,7 +86,7 @@ export function AuthFrame({ children, footer }: { children: ReactNode; footer: R
               <p className="text-xs text-neutral-500">{d.chat.today}</p>
             </div>
             <div className="flex flex-1 flex-col items-center pt-36">
-              <Orbit className="mb-6 size-9 text-neutral-500" />
+              <DjlLogo className="mb-6 size-16 brightness-0 invert" />
               <p className="text-2xl tracking-tight">{d.chat.emptyTitle}</p>
               <div className="mt-8 flex w-[85%] items-center gap-3 rounded-full border border-white/10 bg-[#212121] p-4 text-sm text-neutral-400">
                 <Plus className="size-5" />
@@ -143,5 +145,57 @@ export function ProviderIcon({ provider }: { provider: "google" | "apple" }) {
     <svg viewBox="0 0 24 24" className="size-5 fill-current" aria-hidden="true">
       <path d="M17.1 12.3c0-2 1.6-3 1.7-3.1-1-1.5-2.6-1.7-3.2-1.7-1.4-.2-2.7.8-3.4.8-.7 0-1.8-.8-3-.8-1.5 0-2.9.9-3.6 2.2-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.5 2.1 2.6 2.1 1.1 0 1.4-.7 2.7-.7s1.6.7 2.8.7c1.2 0 1.9-1 2.6-2 .8-1.2 1.2-2.4 1.2-2.5-.1 0-2.5-1-2.5-3.6ZM14.9 6.1c.6-.8 1.1-1.9 1-3.1-1 .1-2.1.7-2.8 1.5-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.5 2.8-1.3Z" />
     </svg>
+  );
+}
+
+export type AuthFieldErrors = Record<string, string | undefined>;
+
+export function validateAuthForm(form: HTMLFormElement, d: Dict): AuthFieldErrors {
+  const errors: AuthFieldErrors = {};
+  for (const input of form.querySelectorAll<HTMLInputElement>("input[required]")) {
+    if (!input.value || (input.id !== "password" && !input.value.trim())) {
+      errors[input.id] =
+        input.id === "email"
+          ? d.auth.emailRequired
+          : input.id === "name"
+            ? d.auth.nameRequired
+            : d.auth.passwordRequired;
+    } else if (input.type === "email" && input.validity.typeMismatch) {
+      errors[input.id] = d.auth.emailInvalid;
+    } else if (input.minLength > 0 && input.value.length < input.minLength) {
+      errors[input.id] = d.auth.passwordHint;
+    }
+  }
+  return errors;
+}
+
+export function AuthField({
+  id,
+  label,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  error: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <label className="label" htmlFor={id}>
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="mt-2 flex items-start gap-1.5 text-[13px] leading-5 text-red-700"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

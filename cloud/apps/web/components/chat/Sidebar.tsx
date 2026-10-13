@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { DjlLogo } from "@/components/DjlLogo";
 import { useTheme } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,9 +99,10 @@ export function Sidebar({
         <Link
           href="/chat"
           onClick={onNavigate}
-          className="rounded-md px-2 py-1 text-[15px] font-semibold tracking-tight focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[15px] font-semibold tracking-tight focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
         >
-          DJL <span className="font-normal text-muted-foreground">Cloud</span>
+          <DjlLogo className="size-8 dark:brightness-0 dark:invert" /> DJL{" "}
+          <span className="font-normal text-muted-foreground">Cloud</span>
         </Link>
         {onCollapse ? (
           <Button

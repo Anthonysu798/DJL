@@ -3,7 +3,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { AuthFrame, PasswordInput, ProviderIcon } from "@/components/AuthFrame";
+import {
+  AuthFrame,
+  AuthField,
+  PasswordInput,
+  ProviderIcon,
+  validateAuthForm,
+  type AuthFieldErrors,
+} from "@/components/AuthFrame";
 
 import { authClient } from "@/lib/auth-client";
 import { APPLE_SIGN_IN_ENABLED, GOOGLE_SIGN_IN_ENABLED } from "@/lib/config";
@@ -18,10 +25,18 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [busy, setBusy] = useState(false);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const found = validateAuthForm(event.currentTarget, d);
+    setFieldErrors(found);
+    setError(null);
+    if (Object.keys(found).length) {
+      event.currentTarget.querySelector<HTMLInputElement>(`#${Object.keys(found)[0]}`)?.focus();
+      return;
+    }
     setBusy(true);
     setError(null);
     const result = await authClient.signIn.email({ email, password });
@@ -57,11 +72,8 @@ function SignInForm() {
     >
       <h1 className="text-[30px] leading-tight font-medium tracking-tight">{d.auth.signInTitle}</h1>
       <p className="mt-3 mb-8 text-[15px] leading-6 text-neutral-500">{d.auth.signInBody}</p>
-      <form onSubmit={submit} className="space-y-5">
-        <div>
-          <label className="label" htmlFor="email">
-            {d.email}
-          </label>
+      <form noValidate onSubmit={submit} className="space-y-5">
+        <AuthField id="email" label={d.email} error={fieldErrors.email}>
           <input
             id="email"
             className="input"
@@ -69,14 +81,17 @@ function SignInForm() {
             autoComplete="email"
             required
             placeholder="you@example.com"
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldErrors((errors) => ({ ...errors, email: undefined }));
+              setError(null);
+            }}
           />
-        </div>
-        <div>
-          <label className="label" htmlFor="password">
-            {d.password}
-          </label>
+        </AuthField>
+        <AuthField id="password" label={d.password} error={fieldErrors.password}>
           <PasswordInput
             id="password"
             className="input"
@@ -84,10 +99,16 @@ function SignInForm() {
             autoComplete="current-password"
             required
             placeholder={d.auth.passwordPlaceholder}
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={fieldErrors.password ? "password-error" : undefined}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldErrors((errors) => ({ ...errors, password: undefined }));
+              setError(null);
+            }}
           />
-        </div>
+        </AuthField>
         {error ? (
           <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}

@@ -306,8 +306,13 @@
   color: #171717;
   font-size: 15px;
 }
-.auth-frame .input:user-invalid {
+.auth-frame .input[aria-invalid="true"] {
   border-color: #dc2626;
+  background: #fff7f7;
+}
+.auth-frame .input[aria-invalid="true"]:focus-visible {
+  border-color: #dc2626;
+  --tw-ring-color: #dc262633;
 }
 .auth-frame .label {
   color: #292929;

@@ -59,6 +59,13 @@ test("sign-in validation, password visibility, auth error, and safe return path"
   await page.goto("/sign-in?next=%2Fchat%2Fsettings");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   expect(requestBody).toBeUndefined();
+  await expect(page.getByText("Enter your email address.", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Email", { exact: true })).toBeFocused();
+  await expect(page.getByLabel("Email", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Email", { exact: true })).toHaveCSS(
+    "border-color",
+    "rgb(220, 38, 38)",
+  );
   await page.getByLabel("Email", { exact: true }).fill("qa@example.invalid");
   await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
   await page.getByRole("button", { name: "Show password" }).click();
@@ -137,4 +144,41 @@ test("authentication screens fit desktop and mobile and respect reduced motion",
       ).toBe(true);
     }
   }
+});
+
+test("sign-up custom validation rejects missing fields, malformed email, and short passwords", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/v1/auth/sign-up/email", async (route) => {
+    requests++;
+    await route.abort();
+  });
+  await page.goto("/sign-up");
+  await expect(page.locator("header img")).toHaveAttribute("src", /djl-logo/);
+  expect(
+    await page.locator("header img").evaluate((image) => (image as HTMLImageElement).naturalWidth),
+  ).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toBeFocused();
+  await expect(page.getByText("Enter your name.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enter your email address.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enter your password.", { exact: true })).toBeVisible();
+  await page.getByLabel("Name", { exact: true }).fill("QA");
+  await expect(page.getByText("Enter your name.", { exact: true })).toBeHidden();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveAttribute("aria-invalid", "false");
+  await page.getByLabel("Email", { exact: true }).fill("invalid-email");
+  await page.getByLabel("Password", { exact: true }).fill("short");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(page.getByText("Enter a valid email address.", { exact: true })).toBeVisible();
+  await expect(page.locator("#password-error")).toHaveText("Use at least 10 characters.");
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
+    "aria-describedby",
+    "password-error",
+  );
+  await expect(page.getByLabel("Password", { exact: true })).toHaveCSS(
+    "border-color",
+    "rgb(220, 38, 38)",
+  );
+  expect(requests).toBe(0);
 });
