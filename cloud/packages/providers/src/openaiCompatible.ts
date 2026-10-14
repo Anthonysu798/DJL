@@ -3,6 +3,7 @@
  * chat completions, requests images, and embeddings using plain fetch so the
  * exact wire format is visible and the SDK version cannot drift under us.
  */
+import { decodeRaster } from "./raster.ts";
 import { KeyRing } from "./keys.ts";
 import { parseSse } from "./sse.ts";
 import {
@@ -36,11 +37,48 @@ function classify(status: number): { code: ProviderError["code"]; retryable: boo
   return { code: "unknown", retryable: false };
 }
 
-async function imageResult(response: Response): Promise<ImageResult> {
+async function imageResult(response: Response, provider: ProviderId): Promise<ImageResult> {
   const json = (await response.json()) as {
-    data?: { b64_json?: string; url?: string; revised_prompt?: string }[];
+    data?: { b64_json?: string; url?: string; revised_prompt?: string; media_type?: string }[];
   };
-  const images = json.data ?? [];
+  const data = json.data;
+  if (
+    !Array.isArray(data) ||
+    data.length === 0 ||
+    data.some(
+      (image) =>
+        (!image.b64_json && !image.url) ||
+        (image.media_type && !["image/png", "image/jpeg", "image/webp"].includes(image.media_type)),
+    )
+  ) {
+    throw new ProviderError(
+      provider,
+      502,
+      "bad_request",
+      "The provider returned no supported raster image.",
+      false,
+    );
+  }
+  if (provider === "openrouter") {
+    try {
+      for (const image of data) {
+        if (!image.b64_json) throw new Error("Missing image");
+        decodeRaster(image.b64_json, image.media_type);
+      }
+    } catch {
+      throw new ProviderError(
+        provider,
+        502,
+        "bad_request",
+        "The provider returned invalid raster bytes.",
+        false,
+      );
+    }
+  }
+  const images = data.map(({ media_type, ...image }) => ({
+    ...image,
+    ...(media_type ? { mediaType: media_type } : {}),
+  }));
   return { images, count: images.length };
 }
 
@@ -141,21 +179,47 @@ export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions):
     },
     async generateImage(req: ImageRequest, signal: AbortSignal): Promise<ImageResult> {
       const response = await request(
-        "/images/generations",
-        {
-          model: req.model,
-          prompt: req.prompt,
-          n: req.n,
-          size: req.size,
-          quality: req.quality,
-          user: req.user,
-        },
+        options.id === "openrouter" ? "/images" : "/images/generations",
+        options.id === "openrouter"
+          ? {
+              model: req.model,
+              prompt: req.prompt,
+              n: req.n,
+              ...(req.size
+                ? {
+                    aspect_ratio:
+                      (
+                        { "1024x1024": "1:1", "1536x1024": "4:3", "1024x1536": "3:4" } as Record<
+                          string,
+                          string
+                        >
+                      )[req.size] ?? req.size,
+                  }
+                : {}),
+            }
+          : {
+              model: req.model,
+              prompt: req.prompt,
+              n: req.n,
+              size: req.size,
+              quality: req.quality,
+              user: req.user,
+            },
         signal,
         false,
       );
-      return imageResult(response);
+      return imageResult(response, options.id);
     },
     async editImage(req: ImageEditRequest, signal: AbortSignal): Promise<ImageResult> {
+      if (options.id === "openrouter") {
+        throw new ProviderError(
+          options.id,
+          400,
+          "bad_request",
+          "This OpenRouter adapter has no verified image editing endpoint.",
+          false,
+        );
+      }
       const form = new FormData();
       form.set("model", req.model);
       form.set("prompt", req.prompt);
@@ -168,7 +232,7 @@ export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions):
         new Blob([req.image.bytes as BlobPart], { type: req.image.mimeType }),
         `image.${extension}`,
       );
-      return imageResult(await request("/images/edits", form, signal, false));
+      return imageResult(await request("/images/edits", form, signal, false), options.id);
     },
     async embed(req: EmbeddingRequest, signal: AbortSignal): Promise<EmbeddingResult> {
       const response = await request(

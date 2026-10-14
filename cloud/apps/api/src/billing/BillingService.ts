@@ -3,7 +3,7 @@
  * webhook processing that turns Stripe facts into ledger entries.
  *
  * Idempotency: every Stripe event id is inserted into stripe_events before
- * processing; a replayed event is a no-op. Every ledger write carries an
+ * processing; a successfully processed event is a no-op on replay. Every ledger write carries an
  * idempotency key derived from the Stripe object id so a retried webhook can
  * never double-grant.
  */
@@ -13,7 +13,8 @@ import { TOPUP_MIN_USD_CENTS, usdCentsToMicro, type PlanId } from "@djl/domain";
 import type Stripe from "stripe";
 
 import { writeAudit } from "../audit/AuditLog.ts";
-import type { LedgerService } from "../credits/LedgerService.ts";
+import { DuplicateIdempotencyKeyError, LedgerService } from "../credits/LedgerService.ts";
+import type { Tx } from "../usage/windowStore.ts";
 import { ApiError } from "../http/errors.ts";
 import type { StripeGateway } from "./StripeGateway.ts";
 
@@ -34,7 +35,6 @@ function toStatus(status: string): SubscriptionStatus {
 export class BillingService {
   constructor(
     private readonly db: DjlDatabase,
-    private readonly ledger: LedgerService,
     private readonly stripe: StripeGateway,
     private readonly config: BillingConfig,
   ) {}
@@ -149,7 +149,7 @@ export class BillingService {
 
   /**
    * Verify and record a webhook, then process it. Returns "duplicate" when the
-   * event id was already recorded.
+   * event id was already processed. Failed events remain retryable.
    */
   async handleWebhook(
     payload: string,
@@ -157,23 +157,29 @@ export class BillingService {
   ): Promise<"processed" | "duplicate" | "ignored"> {
     let event: Stripe.Event;
     try {
-      event = this.stripe.constructEvent(payload, signature);
+      event = await this.stripe.constructEvent(payload, signature);
     } catch {
       throw new ApiError(400, "bad_signature", "Webhook signature failed.");
     }
-    const inserted = await this.db
+    await this.db
       .insert(schema.stripeEvents)
       .values({ id: event.id, type: event.type })
-      .onConflictDoNothing({ target: schema.stripeEvents.id })
-      .returning({ id: schema.stripeEvents.id });
-    if (inserted.length === 0) return "duplicate";
+      .onConflictDoNothing({ target: schema.stripeEvents.id });
     try {
-      const outcome = await this.process(event);
-      await this.db
-        .update(schema.stripeEvents)
-        .set({ processedAt: new Date() })
-        .where(eq(schema.stripeEvents.id, event.id));
-      return outcome;
+      return await this.db.transaction(async (tx) => {
+        const [record] = await tx
+          .select()
+          .from(schema.stripeEvents)
+          .where(eq(schema.stripeEvents.id, event.id))
+          .for("update");
+        if (record?.processedAt) return "duplicate";
+        const outcome = await this.process(event, tx, new LedgerService(tx));
+        await tx
+          .update(schema.stripeEvents)
+          .set({ processedAt: new Date(), error: null })
+          .where(eq(schema.stripeEvents.id, event.id));
+        return outcome;
+      });
     } catch (error) {
       await this.db
         .update(schema.stripeEvents)
@@ -183,27 +189,43 @@ export class BillingService {
     }
   }
 
-  private async process(event: Stripe.Event): Promise<"processed" | "ignored"> {
+  private async process(
+    event: Stripe.Event,
+    db: DjlDatabase | Tx,
+    ledger: LedgerService,
+  ): Promise<"processed" | "ignored"> {
     switch (event.type) {
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const session = event.data.object;
         const meta = session.metadata ?? {};
         if (meta.kind === "topup" && meta.orgId && session.payment_status === "paid") {
-          const cents = session.amount_total ?? Number(meta.usd) * 100;
-          await this.ledger.grant({
-            orgId: meta.orgId,
-            bucket: "topup",
-            type: "topup",
-            amount: usdCentsToMicro(cents),
-            idempotencyKey: `stripe:checkout:${session.id}`,
-            actor: `stripe:${event.id}`,
-            reason: "top-up",
-            metadata: {
-              paymentIntent: String(session.payment_intent ?? ""),
-              amountUsdCents: cents,
-            },
-          });
-          await writeAudit(this.db, {
+          const cents =
+            (session.amount_total ?? Number(meta.usd) * 100) -
+            (session.total_details?.amount_tax ?? 0);
+          if (session.currency && session.currency !== "usd")
+            throw new ApiError(400, "bad_currency", "Top-ups must be paid in USD.");
+          if (!Number.isSafeInteger(cents) || cents <= 0)
+            throw new ApiError(400, "bad_amount", "Invalid paid top-up amount.");
+          try {
+            await ledger.grant({
+              orgId: meta.orgId,
+              bucket: "topup",
+              type: "topup",
+              amount: usdCentsToMicro(cents),
+              idempotencyKey: `stripe:checkout:${session.id}`,
+              actor: `stripe:${event.id}`,
+              reason: "top-up",
+              metadata: {
+                paymentIntent: String(session.payment_intent ?? ""),
+                amountUsdCents: cents,
+              },
+            });
+          } catch (error) {
+            if (error instanceof DuplicateIdempotencyKeyError) return "processed";
+            throw error;
+          }
+          await writeAudit(db, {
             actorType: "stripe",
             actorId: event.id,
             action: "credits.topup",
@@ -225,7 +247,7 @@ export class BillingService {
         const item = sub.items.data[0];
         const periodStart = new Date((item?.current_period_start ?? 0) * 1000);
         const periodEnd = new Date((item?.current_period_end ?? 0) * 1000);
-        await this.db
+        await db
           .insert(schema.subscriptions)
           .values({
             orgId,
@@ -256,25 +278,25 @@ export class BillingService {
             ? invoice.parent.subscription_details.subscription
             : invoice.parent?.subscription_details?.subscription?.id;
         if (!subId) return "ignored";
-        const sub = await this.db.query.subscriptions.findFirst({
+        const sub = await db.query.subscriptions.findFirst({
           where: eq(schema.subscriptions.stripeSubscriptionId, subId),
         });
         if (!sub) return "ignored";
-        const plan = await this.db.query.plans.findFirst({
+        const plan = await db.query.plans.findFirst({
           where: eq(schema.plans.id, sub.planId),
         });
         if (!plan) return "ignored";
         const line = invoice.lines.data[0];
         const periodStart = new Date((line?.period?.start ?? invoice.period_start) * 1000);
         // Expire leftover plan credits from the previous period, then grant the new allowance.
-        await this.ledger.expire({
+        await ledger.expire({
           orgId: sub.orgId,
           bucket: "plan",
           idempotencyKey: `stripe:invoice:${invoice.id}:expire`,
           actor: `stripe:${event.id}`,
           reason: "cycle rollover",
         });
-        await this.ledger.grant({
+        await ledger.grant({
           orgId: sub.orgId,
           bucket: "plan",
           type: "plan_grant",
@@ -283,11 +305,11 @@ export class BillingService {
           actor: `stripe:${event.id}`,
           reason: `${plan.name} ${sub.interval}ly allowance`,
         });
-        await this.db
+        await db
           .update(schema.subscriptions)
           .set({ lastGrantedPeriodStart: periodStart })
           .where(eq(schema.subscriptions.id, sub.id));
-        await this.db
+        await db
           .insert(schema.invoices)
           .values({
             id: invoice.id,

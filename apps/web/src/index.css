@@ -2869,3 +2869,319 @@ diffs-container {
   -webkit-background-clip: text;
   animation: ultrathink-rainbow 10s linear infinite;
 }
+
+/* Desktop workspace chrome follows the compact rail/sidebar layout. */
+.djl-desktop-shell {
+  --djl-chrome: var(--card);
+  --djl-navigation: color-mix(
+    in srgb,
+    var(--app-sidebar-surface, var(--card)) 55%,
+    var(--background)
+  );
+  --djl-settings-font-size: calc(var(--app-font-size-ui, 12px) * 1.1666667);
+  --app-settings-card: var(--card);
+  --app-content-card-radius: 0px;
+  height: 100svh;
+  min-height: 0;
+  padding: 46px 0 0 52px;
+  overflow: hidden;
+  background: var(--djl-chrome);
+}
+.djl-desktop-shell > [data-slot="sidebar"] > [data-slot="sidebar-container"] {
+  top: 46px;
+  left: 52px;
+  height: calc(100svh - 46px);
+}
+.djl-desktop-shell
+  > [data-slot="sidebar"]
+  > [data-slot="sidebar-container"]
+  > [data-slot="sidebar-inner"] {
+  border-radius: 16px 0 0 16px;
+  overflow: hidden;
+}
+.djl-desktop-shell
+  > [data-slot="sidebar"][data-state="collapsed"]
+  > [data-slot="sidebar-container"] {
+  left: calc(52px - var(--sidebar-width));
+}
+.djl-desktop-shell > .chat-content-card-backing,
+.djl-desktop-shell .h-dvh,
+.djl-desktop-shell .h-svh {
+  height: 100%;
+}
+.djl-desktop-shell .chat-content-card-backing::after {
+  display: none;
+}
+.djl-desktop-shell .chat-content-card {
+  --seam-shadow-x: 0px;
+  box-shadow: none;
+}
+.djl-desktop-shell .chat-content-card::before {
+  clip-path: inset(0 calc(100% - 1px) 0 0);
+}
+.djl-desktop-shell [data-slot="sidebar-gap"]::before {
+  display: none;
+}
+.djl-desktop-topbar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 45;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  background: var(--djl-chrome);
+}
+.djl-desktop-window-navigation {
+  width: calc(52px + var(--sidebar-width));
+  min-width: 220px;
+  padding-left: 96px;
+  flex-shrink: 0;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+.djl-desktop-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.djl-desktop-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 160px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--secondary);
+  font-size: 13px;
+}
+.djl-desktop-tab-add,
+.djl-desktop-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.djl-desktop-tab-add:hover,
+.djl-desktop-header-icon:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.djl-desktop-rail {
+  position: fixed;
+  inset: 46px auto 0 0;
+  z-index: 40;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+  background: var(--djl-chrome);
+}
+.djl-desktop-rail-button {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.djl-desktop-rail-button:hover,
+.djl-desktop-rail-button[aria-current="page"] {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.djl-desktop-rail-button:focus-visible,
+.djl-desktop-tab-add:focus-visible,
+.djl-desktop-header-icon:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.djl-desktop-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d97ab4;
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+}
+.djl-desktop-account-menu {
+  width: 264px;
+  border-radius: 16px !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px #0003;
+}
+.djl-desktop-account-menu [data-slot="menu-item"] {
+  gap: 12px;
+  padding: 10px 12px;
+  min-height: 36px;
+  font-size: 15px;
+  border-radius: 10px;
+}
+.djl-desktop-update-button,
+.djl-desktop-update-button:hover {
+  background: #0078d4 !important;
+}
+.djl-desktop-shell .djl-desktop-sidebar-heading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 14px 16px 12px;
+  min-height: 52px;
+}
+.djl-desktop-shell .djl-desktop-secondary-action,
+.djl-desktop-shell .djl-desktop-legacy-footer {
+  display: none;
+}
+.djl-desktop-shell [data-slot="sidebar-content"] {
+  scrollbar-width: none;
+}
+.djl-desktop-shell [data-slot="sidebar-content"]::-webkit-scrollbar {
+  display: none;
+}
+.djl-desktop-shell [data-slot="sidebar-menu-button"] {
+  font-size: 14px;
+  min-height: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.djl-desktop-shell .djl-settings-heading {
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.djl-desktop-shell .djl-settings-heading > span:first-child {
+  display: none;
+}
+.djl-desktop-shell .djl-settings-navigation input {
+  height: 40px;
+  border-radius: 24px;
+  background: var(--secondary);
+}
+.djl-desktop-shell .djl-settings-navigation nav button {
+  min-height: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.djl-desktop-shell .djl-settings-page-description {
+  display: none;
+}
+.djl-desktop-shell [data-slot="settings-row"] {
+  scroll-margin-top: 24px;
+}
+@media (max-width: 767px) {
+  .djl-desktop-shell {
+    padding-left: 0;
+  }
+  .djl-desktop-rail {
+    display: none;
+  }
+  .djl-desktop-window-navigation {
+    width: 180px;
+    min-width: 180px;
+  }
+}
+
+.djl-desktop-toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 55%;
+}
+.djl-desktop-toolbar header {
+  height: 46px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+}
+.djl-desktop-toolbar header::after {
+  display: none;
+}
+.djl-desktop-toolbar h2 {
+  display: none;
+}
+.djl-desktop-toolbar .chat-surface-divider {
+  background-image: none;
+}
+.djl-desktop-shell .djl-settings-navigation [data-slot="input-control"] {
+  border: 0;
+  border-radius: 24px;
+  background: var(--secondary);
+}
+.djl-desktop-shell .djl-settings-navigation input {
+  background: transparent;
+}
+.djl-desktop-tab-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  min-width: 0;
+  scrollbar-width: none;
+}
+.djl-desktop-tab {
+  flex-shrink: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  padding: 0 8px 0 10px;
+}
+.djl-desktop-tab[data-active="true"] {
+  background: var(--secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+.djl-desktop-tab a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+.djl-desktop-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: var(--muted-foreground);
+}
+.djl-desktop-tab-close:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.djl-desktop-tabs[data-settings="true"] {
+  visibility: hidden;
+}
+
+.djl-desktop-shell .app-sidebar-surface {
+  background: var(--djl-navigation);
+}
+.djl-desktop-shell [data-slot="sidebar-menu-button"],
+.djl-desktop-shell .djl-settings-navigation nav button {
+  font-size: var(--djl-settings-font-size);
+  height: calc(var(--app-density-row-height, 28px) + 4px);
+  min-height: calc(var(--app-density-row-height, 28px) + 4px);
+}
+.djl-desktop-shell [role="radio"][aria-checked="true"] {
+  color: var(--foreground);
+}

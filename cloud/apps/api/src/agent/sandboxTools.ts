@@ -36,6 +36,7 @@ function describeExec(result: ExecResult): string {
 export function createSandboxTools(deps: {
   readonly db: DjlDatabase;
   readonly blobs: BlobStore;
+  readonly sandboxEnabled?: boolean;
 }): AgentTool[] {
   const readFile: AgentTool = {
     name: "read_file",
@@ -68,6 +69,10 @@ export function createSandboxTools(deps: {
       }
       const extension = PARSED_TYPES[file.mimeType];
       if (!extension) throw new ToolError(`Files of type ${file.mimeType} cannot be read.`);
+      if (deps.sandboxEnabled === false)
+        throw new ToolError(
+          "Document parsing is not enabled on this server. Attach a text file instead.",
+        );
       const { url } = await deps.blobs.presignDownload(file.storageKey, DOWNLOAD_URL_SECONDS);
       const sandbox = await ctx.sandbox();
       const result = await ctx.charge("sandbox_second", SANDBOX_RESERVE_SECONDS, async () => {
@@ -111,5 +116,5 @@ export function createSandboxTools(deps: {
     },
   };
 
-  return [readFile, python];
+  return deps.sandboxEnabled === false ? [readFile] : [readFile, python];
 }

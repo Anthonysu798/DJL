@@ -14,6 +14,21 @@ const production = {
 };
 
 describe("loadApiEnv security settings", () => {
+  it("disables SMS unless explicitly enabled", () => {
+    expect(loadApiEnv(production).smsEnabled).toBe(false);
+    expect(loadApiEnv({ ...production, SMS_ENABLED: "true" }).smsEnabled).toBe(true);
+    expect(loadApiEnv({ DJL_ENV: "test", SMS_ENABLED: "false" }).smsEnabled).toBe(false);
+  });
+  it("trusts Apple's callback origin only when Apple sign-in is configured", () => {
+    expect(loadApiEnv(production).trustedOrigins).not.toContain("https://appleid.apple.com");
+    expect(
+      loadApiEnv({
+        ...production,
+        APPLE_OAUTH_CLIENT_ID: "app.djl.web",
+        APPLE_OAUTH_CLIENT_SECRET: "test-secret",
+      }).trustedOrigins,
+    ).toContain("https://appleid.apple.com");
+  });
   it("requires a separate IP hash salt outside local and test", () => {
     const { IP_HASH_SALT: _omit, ...withoutSalt } = production;
     expect(() => loadApiEnv(withoutSalt)).toThrow(/IP_HASH_SALT/);

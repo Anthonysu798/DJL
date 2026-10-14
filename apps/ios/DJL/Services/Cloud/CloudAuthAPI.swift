@@ -29,7 +29,6 @@ nonisolated struct CloudAuthAPI: Sendable {
         if let token = Self.extractToken(data: data, response: response) {
             return .signedIn(sessionToken: token)
         }
-        try await sendEmailCode(email: email, purpose: "email-verification")
         return .verificationRequired
     }
 
@@ -40,6 +39,14 @@ nonisolated struct CloudAuthAPI: Sendable {
 
     func signIn(email: String, code: String) async throws -> String {
         try await sessionToken(from: post("sign-in/email-otp", ["email": email, "otp": code]))
+    }
+
+    func requestPasswordReset(email: String) async throws {
+        _ = try await post("email-otp/request-password-reset", ["email": email])
+    }
+
+    func resetPassword(email: String, code: String, password: String) async throws {
+        _ = try await post("email-otp/reset-password", ["email": email, "otp": code, "password": password])
     }
 
     func verifyEmail(email: String, code: String) async throws -> String {
@@ -86,7 +93,9 @@ nonisolated struct CloudAuthAPI: Sendable {
         guard (200..<300).contains(http.statusCode) else {
             // A 401 here means wrong credentials, not an expired session.
             if http.statusCode == 401 {
-                throw CloudAPIError.server(status: 401, code: "invalid_credentials", message: "That email and password don't match.", traceId: nil, resetsAt: nil)
+                let failure = try? JSONDecoder().decode(AuthFailure.self, from: data)
+                let message = route == "sign-in/email" ? "That email and password don't match." : (failure?.message ?? "Couldn't sign in. Please try again.")
+                throw CloudAPIError.server(status: 401, code: failure?.code ?? "invalid_credentials", message: message, traceId: nil, resetsAt: nil)
             }
             throw CloudAPIError.from(status: http.statusCode, data: data)
         }
@@ -113,4 +122,5 @@ nonisolated struct CloudAuthAPI: Sendable {
     }
 
     private struct TokenBody: Decodable { let token: String? }
+    private struct AuthFailure: Decodable { let code: String?; let message: String? }
 }

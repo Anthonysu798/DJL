@@ -49,6 +49,7 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceNavigationMotion
+    @AppStorage("djl.appearance.mode") private var appearanceMode = "system"
 
     @State private var viewModel = ContentViewModel()
     @State private var isSidebarOpen = false
@@ -117,10 +118,10 @@ struct ContentView: View {
     private static var isSidebarDebugLoggingEnabled: Bool { false }
 
     var body: some View {
-        // Signed-in users land in DJL Cloud chat; desktop pairing lives in its own "My Macs" section.
+        Group {
         switch cloud.route(hasPairedMac: codex.hasReconnectCandidate) {
         case .cloudHome:
-            CloudHomeView()
+            CloudShellView()
         case .welcome:
             CloudWelcomeView()
         case .myMacs:
@@ -128,6 +129,37 @@ struct ContentView: View {
                 .onAppear {
                     normalizeInitialPairingScreenIfNeeded()
                 }
+        }
+        }
+        .preferredColorScheme(appearanceMode == "dark" ? .dark : appearanceMode == "light" ? .light : nil)
+        .onChange(of: cloud.sectionPreference) { _, _ in
+            isNavigationDrawerOpen = false; isSidebarOpen = false
+            let displayed = cloud.route(hasPairedMac: codex.hasReconnectCandidate) == .myMacs ? selectedThread?.id : nil
+            codex.handleDisplayedThreadChange(from: codex.activeThreadId, to: displayed)
+            codex.activeThreadId = displayed
+        }
+        .task(id: cloud.accountScopeKey) { cloud.notifications.setForeground(scenePhase == .active) }
+        .onChange(of: scenePhase) { _, phase in
+            codex.setForegroundState(phase != .background)
+            cloud.notifications.setForeground(phase == .active)
+        }
+        .overlay(alignment: .top) {
+            if let item = cloud.notifications.banner {
+                CloudNotificationBanner(item: item, open: { Task { await cloud.notifications.open(item) } }, dismiss: { cloud.notifications.dismissBanner() })
+            }
+        }
+        .onChange(of: codex.threadCompletionBanner?.id) { _, _ in
+            guard let item = codex.threadCompletionBanner, let mac = codex.normalizedCurrentTrustedMacDeviceId else { return }
+            let turn = codex.lastRunStartTurnIDByThread[item.threadId] ?? item.id.uuidString
+            cloud.remoteActivity.record(eventID: "completion:\(item.threadId):\(turn)", threadID: item.threadId, macID: mac, title: item.title, kind: .completed)
+        }
+        .onChange(of: codex.pendingApprovals.map(\.id)) { _, _ in
+            guard let mac = codex.normalizedCurrentTrustedMacDeviceId else { return }
+            for item in codex.pendingApprovals {
+                guard let thread = item.threadId else { continue }
+                let title = codex.threads.first { $0.id == thread }?.displayTitle ?? "Remote task"
+                cloud.remoteActivity.record(eventID: "approval:\(item.id)", threadID: thread, macID: mac, title: title, kind: .approval)
+            }
         }
     }
 

@@ -223,7 +223,7 @@ export class GatewayService {
   async listModels() {
     const models = await this.catalog();
     return models
-      .filter((m) => m.status !== "disabled")
+      .filter((m) => m.status !== "disabled" && this.deps.providers[m.provider])
       .map((m) => ({
         id: m.modelId,
         provider: m.provider,

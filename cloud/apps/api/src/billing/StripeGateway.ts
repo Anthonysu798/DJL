@@ -28,7 +28,10 @@ export interface StripeGateway {
     readonly customerId: string;
     readonly returnUrl: string;
   }) => Promise<{ readonly url: string }>;
-  readonly constructEvent: (payload: string, signature: string) => Stripe.Event;
+  readonly constructEvent: (
+    payload: string,
+    signature: string,
+  ) => Stripe.Event | Promise<Stripe.Event>;
   readonly refundPaymentIntent: (
     paymentIntentId: string,
     idempotencyKey: string,
@@ -40,7 +43,6 @@ export function createStripeGateway(input: {
   readonly webhookSecret: string;
 }): StripeGateway {
   const stripe = new Stripe(input.secretKey, {
-    apiVersion: "2026-08-27.basil" as Stripe.LatestApiVersion,
     typescript: true,
   });
   return {
@@ -80,7 +82,7 @@ export function createStripeGateway(input: {
       return { url: p.url };
     },
     constructEvent(payload, signature) {
-      return stripe.webhooks.constructEvent(payload, signature, input.webhookSecret);
+      return stripe.webhooks.constructEventAsync(payload, signature, input.webhookSecret);
     },
     async refundPaymentIntent(paymentIntentId, idempotencyKey) {
       const r = await stripe.refunds.create(

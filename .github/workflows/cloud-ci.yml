@@ -91,6 +91,7 @@ jobs:
       - run: bun run cloud:db:migrate
       - run: bun run cloud:db:seed
       - run: bun run cloud:test
+      - run: bun run cloud:infra:test
 
   secrets-scan:
     name: Secret and dependency audit

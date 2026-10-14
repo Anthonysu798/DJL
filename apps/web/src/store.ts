@@ -2020,7 +2020,8 @@ function toLegacyProvider(providerName: string | null): ProviderKind {
     providerName === "droid" ||
     providerName === "kilo" ||
     providerName === "opencode" ||
-    providerName === "pi"
+    providerName === "pi" ||
+    providerName === "djlCloud"
   ) {
     return providerName;
   }

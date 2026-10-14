@@ -8,7 +8,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:vps": "bun run build && DJL_RUN_VPS_TESTS=1 vitest run vps/relay.test.mjs"
   },
   "dependencies": {
     "@synara/remote-protocol": "workspace:*"
@@ -17,6 +18,8 @@
     "@cloudflare/workers-types": "^5.20260718.1",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^4.112.0"
+    "workerd": "1.20260714.1",
+    "wrangler": "^4.112.0",
+    "ws": "8.21.0"
   }
 }

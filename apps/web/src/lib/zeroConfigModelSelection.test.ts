@@ -39,6 +39,25 @@ function input(
 }
 
 describe("selectZeroConfigModel", () => {
+  it("keeps the selected cloud model instead of replacing it with a CLI model", () => {
+    expect(
+      selectZeroConfigModel(
+        input({
+          currentSelection: { provider: "djlCloud", modelSlug: "cloud-live" },
+          providerStatuses: [providerStatus("codex"), providerStatus("djlCloud")],
+          modelOptionsByProvider: {
+            codex: [{ slug: "gpt-5" }],
+            djlCloud: [{ slug: "cloud-live", processingLocality: "remote" }],
+          },
+        }),
+      ),
+    ).toEqual({
+      kind: "selected",
+      provider: "djlCloud",
+      modelSlug: "cloud-live",
+      source: "current",
+    });
+  });
   it("preserves a healthy current selection before applying fallback order", () => {
     expect(
       selectZeroConfigModel(

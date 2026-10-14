@@ -29,6 +29,15 @@ async function rejectsWith(promise: Promise<unknown>, status: number) {
 }
 
 describe("conversations and messages", () => {
+  it("a retried conversation creation returns the original owned conversation", async () => {
+    const { p } = await h.user("conversation-retry");
+    const body = Object.assign({ title: "Retry" }, { clientConversationId: crypto.randomUUID() });
+    const first = await h.chat.create(p, body);
+    const second = await h.chat.create(p, body);
+    expect(second.id).toBe(first.id);
+    const { p: other } = await h.user("conversation-retry-other");
+    await rejectsWith(h.chat.create(other, body), 404);
+  });
   it("sending twice with the same clientMessageId returns the original message and run", async () => {
     const { p, facts } = await h.user("chat-idem");
     const c = await h.chat.create(p, {});

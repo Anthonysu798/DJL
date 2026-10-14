@@ -10,7 +10,9 @@
     "**/routeTree.gen.ts",
     "apps/web/public/mockServiceWorker.js",
     ".next",
-    "cloud/packages/db/drizzle"
+    "cloud/packages/db/drizzle",
+    "cloud/infra/vps/.secrets",
+    "cloud/infra/vps/backups"
   ],
   "sortPackageJson": {}
 }

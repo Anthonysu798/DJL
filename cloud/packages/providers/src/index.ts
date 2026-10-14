@@ -4,3 +4,5 @@ export * from "./breaker.ts";
 export * from "./sse.ts";
 export * from "./openaiCompatible.ts";
 export * from "./anthropic.ts";
+
+export * from "./raster.ts";

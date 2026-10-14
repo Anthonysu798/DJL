@@ -10,7 +10,7 @@ import { createAuth } from "./src/auth/auth.ts";
 import { createSessionRevocations } from "./src/auth/revocations.ts";
 import { loadApiEnv } from "./src/config/env.ts";
 
-const env = loadApiEnv({ ...process.env, DJL_ENV: "local" });
+const env = loadApiEnv({ ...process.env, DJL_ENV: "local", SMS_ENABLED: "true" });
 const { db } = createDatabase(env.databaseUrl, { max: 1 });
 const noop = async () => {};
 // Never connects: the CLI only reads schemas.
@@ -22,6 +22,7 @@ export const auth = createAuth({
   notifier: {
     sendEmailOtp: noop,
     sendPhoneOtp: noop,
+    confirmPhoneOtp: noop,
     sendPasswordReset: noop,
     sendOrganizationInvitation: noop,
     sendTwoFactorOtp: noop,

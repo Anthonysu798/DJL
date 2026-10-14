@@ -168,7 +168,7 @@ export function attachmentsForPreparedWorkTurn(
 ): ReadonlyArray<ChatAttachment> {
   const modelSelection = job.request.modelSelection ?? thread.modelSelection;
   // Native bridges consume the cited text/OCR in preparedPrompt, not OpenCode file parts.
-  if (["codex", "claudeAgent", "cursor"].includes(modelSelection.provider)) return [];
+  if (["codex", "claudeAgent", "cursor", "djlCloud"].includes(modelSelection.provider)) return [];
   const routing = resolveWorkModelDocumentRouting(modelSelection);
   // A nonvision or unknown model receives normalized cited OCR/text only. This
   // avoids unsupported file parts and prevents an image from being sent to a
@@ -1867,12 +1867,15 @@ const make = Effect.gen(function* () {
       event.payload.modelSelection?.provider ??
       thread.session?.providerName ??
       thread.modelSelection.provider;
-    const isNativeProvider = ["codex", "claudeAgent", "cursor"].includes(selectedProvider);
+    const isNativeProvider = ["codex", "claudeAgent", "cursor", "djlCloud"].includes(
+      selectedProvider,
+    );
     const isPlainNativeChat =
       project?.kind === "chat" &&
       (selectedProvider === "codex" ||
         selectedProvider === "claudeAgent" ||
-        selectedProvider === "cursor") &&
+        selectedProvider === "cursor" ||
+        selectedProvider === "djlCloud") &&
       !preparedJob &&
       (message.attachments?.length ?? 0) === 0 &&
       event.payload.memoryContext?.searchProject !== true &&

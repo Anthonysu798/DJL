@@ -119,6 +119,9 @@ export const files = pgTable(
     sizeBytes: integer("size_bytes").notNull(),
     storageKey: text("storage_key").notNull(),
     status: fileStatusEnum("status").notNull().default("pending"),
+    messageId: uuid("message_id").references((): AnyPgColumn => messages.id, {
+      onDelete: "cascade",
+    }),
     source: text("source").notNull().default("upload"), // upload | generated
     purpose: text("purpose").notNull().default("attachment"), // attachment | image
     /** Text extracted from a document, when available; sent to the model with the file. */
@@ -133,6 +136,9 @@ export const files = pgTable(
   (t) => [
     uniqueIndex("files_storage_key_idx").on(t.storageKey),
     index("files_user_created_idx").on(t.userId, t.createdAt),
+    index("files_generated_gallery_idx")
+      .on(t.userId, t.orgId, t.createdAt, t.id)
+      .where(sql`${t.source} = 'generated' AND ${t.deletedAt} IS NULL`),
   ],
 );
 
@@ -196,6 +202,7 @@ export const runs = pgTable(
       .notNull()
       .references((): AnyPgColumn => messages.id, { onDelete: "cascade" }),
     mode: runModeEnum("mode").notNull(),
+    imageAspectRatio: text("image_aspect_ratio"),
     status: runStatusEnum("status").notNull().default("queued"),
     model: text("model").notNull(),
     error: jsonb("error").$type<{ readonly code: string; readonly message: string }>(),
@@ -218,6 +225,9 @@ export const runs = pgTable(
   (t) => [
     index("runs_conversation_created_idx").on(t.conversationId, t.createdAt),
     index("runs_user_created_idx").on(t.userId, t.createdAt),
+    index("runs_task_finished_idx")
+      .on(t.userId, t.orgId, t.finishedAt, t.id)
+      .where(sql`${t.mode} = 'task' AND ${t.status} IN ('succeeded', 'failed')`),
     // Resumable work: unfinished runs by lease expiry.
     index("runs_active_lease_idx")
       .on(t.status, t.leaseExpiresAt)

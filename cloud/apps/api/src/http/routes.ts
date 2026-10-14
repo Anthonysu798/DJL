@@ -7,6 +7,9 @@ import { Effect, Layer, Stream } from "effect";
 import { HttpBody, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
+import { makeClientConfigRoutes, type ClientConfigDeps } from "../client-config/routes.ts";
+import { makeImageRoutes, type ImageRouteDeps } from "../images/routes.ts";
+import { makeNotificationRoutes, type NotificationRouteDeps } from "../notifications/routes.ts";
 import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
 import { makeChatRoutes, type ChatRouteDeps } from "../chat/routes.ts";
 import { makeFileRoutes, type FileRouteDeps } from "../files/routes.ts";
@@ -54,11 +57,14 @@ export interface RouteDeps
     RunRouteDeps,
     AuthRouteDeps,
     NativeAuthRouteDeps,
-    PushRouteDeps {
+    PushRouteDeps,
+    NotificationRouteDeps,
+    ImageRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
   readonly version: string;
+  readonly clientConfig: ClientConfigDeps;
 }
 
 export function makeRoutes(deps: RouteDeps) {
@@ -117,6 +123,9 @@ export function makeRoutes(deps: RouteDeps) {
   return Layer.mergeAll(
     health,
     ready,
+    makeClientConfigRoutes(deps.clientConfig),
+    makeNotificationRoutes(deps),
+    makeImageRoutes(deps),
     authRoutes,
     makeAccountRoutes(deps),
     makeBillingRoutes(deps),

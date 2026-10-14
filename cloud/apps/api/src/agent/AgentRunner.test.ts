@@ -7,6 +7,8 @@ import { agentHarness } from "../testing/agent.ts";
 import { AGENT_LIMITS, RunInterruptedError } from "./AgentRunner.ts";
 import { FINAL_STEP_NOTE, SYSTEM_PROMPT } from "./context.ts";
 import { createFakeWebSearch } from "./exa.ts";
+import { RunNotifier } from "./RunNotifier.ts";
+import { createSandboxTools } from "./sandboxTools.ts";
 import { resumeBlockedRuns, resumeWindowBlockedRuns, windowsHaveRoom } from "./resume.ts";
 
 const h = agentHarness();
@@ -586,6 +588,29 @@ describe("files and sandbox", () => {
 });
 
 describe("completion notifications", () => {
+  it("falls back to email when APNs is not configured, without revoking device tokens", async () => {
+    const t = await h.task("agent-no-apns", "x");
+    const token = crypto.randomUUID().replaceAll("-", "").repeat(2);
+    await h.db
+      .insert(schema.pushTokens)
+      .values({ userId: t.p.userId, token, environment: "sandbox" });
+    const run = await h.run(t.runId);
+    const notifier = new RunNotifier({
+      db: h.db,
+      push: null,
+      email: h.outbox,
+      webPublicUrl: "https://app.test",
+    });
+    expect(await notifier.runFinished({ ...run, status: "succeeded" })).toBe("email");
+    expect(
+      (await h.db.query.pushTokens.findFirst({ where: eq(schema.pushTokens.token, token) }))!
+        .revokedAt,
+    ).toBeNull();
+  });
+  it("does not advertise Python without an isolated sandbox", () => {
+    const tools = createSandboxTools({ db: h.db, blobs: h.blobs, sandboxEnabled: false });
+    expect(tools.map((t) => t.name)).toEqual(["read_file"]);
+  });
   it("pushes to the user's devices when the task finishes", async () => {
     const t = await h.task("agent-push", "x");
     const token = crypto.randomUUID().replaceAll("-", "").repeat(2);

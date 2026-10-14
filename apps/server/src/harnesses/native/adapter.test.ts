@@ -20,6 +20,22 @@ const resumeFactory = async (input: Parameters<import("./types").NativeDriverFac
 });
 
 describe("fresh native adapter lifecycle", () => {
+  it("starts hosted DJL Cloud chat without a local project folder", async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const adapter = yield* makeNativeAdapter("djlCloud", resumeFactory);
+          const session = yield* adapter.startSession({
+            threadId,
+            runtimeMode: "approval-required",
+            modelSelection: { provider: "djlCloud", model: "cloud-live" },
+          });
+          expect(session.provider).toBe("djlCloud");
+          yield* adapter.stopSession(threadId);
+        }),
+      ),
+    );
+  });
   it("preserves explicit restrictive Codex policies through serialized cursor recovery", async () => {
     await Effect.runPromise(
       Effect.scoped(

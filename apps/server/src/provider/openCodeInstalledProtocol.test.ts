@@ -109,6 +109,51 @@ describe("installed OpenCode protocol", () => {
       "/global/health",
     ]);
   });
+  it.each([
+    ["accepts a slow valid server", 6_000, true],
+    ["still rejects an unresponsive server", 20_000, false],
+  ] as const)("%s during HTTP protocol validation", async (_name, delay, compatible) => {
+    vi.useFakeTimers();
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      const controller = new AbortController();
+      setTimeout(
+        () => controller.abort(new DOMException("Timed out", "TimeoutError")),
+        milliseconds,
+      );
+      return controller.signal;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (url: URL, init?: RequestInit) =>
+          new Promise<Response>((resolve, reject) => {
+            const timer = setTimeout(
+              () =>
+                resolve(
+                  Response.json(url.pathname === "/doc" ? document() : { version: "1.18.29" }),
+                ),
+              delay,
+            );
+            init?.signal?.addEventListener(
+              "abort",
+              () => {
+                clearTimeout(timer);
+                reject(init?.signal?.reason);
+              },
+              { once: true },
+            );
+          }),
+      ),
+    );
+    const result = assertOpenCodeServerCompatibility("http://127.0.0.1:5000").then(
+      () => ({ compatible: true }),
+      (error: OpenCodeProtocolError) => ({ compatible: false, code: error.code }),
+    );
+    await vi.advanceTimersByTimeAsync(15_001);
+    expect(await result).toMatchObject(
+      compatible ? { compatible: true } : { compatible: false, code: "timeout" },
+    );
+  });
   it("reports timeouts without leaking response or credential details", async () => {
     vi.stubGlobal(
       "fetch",

@@ -70,7 +70,10 @@ describe("OpenAI-compatible adapter", () => {
         n += 1;
         const auth = new Headers(init?.headers).get("authorization");
         if (auth === "Bearer bad") return new Response("nope", { status: 401 });
-        return new Response(JSON.stringify({ data: [{ b64_json: "AAA" }] }), { status: 200 });
+        return new Response(
+          JSON.stringify({ data: [{ b64_json: "iVBORw0KGgoAAAAAAAAAAAAAAAAAAAAA" }] }),
+          { status: 200 },
+        );
       },
     });
     const result = await adapter.generateImage(
@@ -241,4 +244,75 @@ describe("circuit breaker", () => {
     b.success();
     expect(b.state()).toBe("closed");
   });
+});
+
+describe("OpenRouter dedicated images", () => {
+  it("uses /images, requested count and supported aspect ratio, preserving raster MIME", async () => {
+    let url = "";
+    let body: Record<string, unknown> = {};
+    const adapter = createOpenAiCompatibleAdapter({
+      id: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      keys: new KeyRing("test", null),
+      fetchImpl: async (input, init) => {
+        url = String(input);
+        body = JSON.parse(String(init?.body));
+        return Response.json({
+          data: [{ b64_json: "UklGRgQAAABXRUJQ", media_type: "image/webp" }],
+        });
+      },
+    });
+    const result = await adapter.generateImage(
+      { model: "recraft/recraft-v4.1-flash", prompt: "A desk", n: 1, size: "1536x1024" },
+      new AbortController().signal,
+    );
+    expect(url).toBe("https://openrouter.ai/api/v1/images");
+    expect(body).toEqual({
+      model: "recraft/recraft-v4.1-flash",
+      prompt: "A desk",
+      n: 1,
+      aspect_ratio: "4:3",
+    });
+    expect(result.images[0]?.mediaType).toBe("image/webp");
+  });
+  it.each([
+    [[]],
+    [[{ b64_json: "QUJD", media_type: "image/svg+xml" }]],
+    [[{}]],
+    [[{ b64_json: "QUJD", media_type: "image/png" }]],
+  ])("rejects empty or unsupported results before settlement", async (data) => {
+    const adapter = createOpenAiCompatibleAdapter({
+      id: "openrouter",
+      baseUrl: "https://test.invalid",
+      keys: new KeyRing("test", null),
+      fetchImpl: async () => Response.json({ data }),
+    });
+    await expect(
+      adapter.generateImage(
+        { model: "image", prompt: "A desk", n: 1 },
+        new AbortController().signal,
+      ),
+    ).rejects.toBeInstanceOf(ProviderError);
+  });
+});
+
+it.each([
+  ["image/png", "iVBORw0KGgoAAAAAAAAAAAAAAAAAAAAA"],
+  ["image/jpeg", "/9j/AAAA"],
+  ["image/webp", "UklGRgQAAABXRUJQ"],
+])("normalizes %s from OpenRouter without changing direct OpenAI", async (mediaType, base64) => {
+  const adapter = createOpenAiCompatibleAdapter({
+    id: "openrouter",
+    baseUrl: "https://or.test/v1",
+    keys: new KeyRing("test", null),
+    fetchImpl: async () => Response.json({ data: [{ b64_json: base64, media_type: mediaType }] }),
+  });
+  expect(
+    (
+      await adapter.generateImage(
+        { model: "image", prompt: "Desk", n: 1 },
+        new AbortController().signal,
+      )
+    ).images[0]?.mediaType,
+  ).toBe(mediaType);
 });

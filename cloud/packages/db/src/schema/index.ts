@@ -5,3 +5,4 @@ export * from "./admin.ts";
 export * from "./sync.ts";
 export * from "./chat.ts";
 export * from "./nativeAuth.ts";
+export * from "./notifications.ts";

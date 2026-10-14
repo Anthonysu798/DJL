@@ -100,8 +100,13 @@ export class CloudAccount {
       checkedAt,
     };
     try {
-      const credits = await client.get<CloudAccountStatus["credits"]>("/v1/credits", session.token);
-      return { ...base, ...(credits ? { credits } : {}) };
+      const [credits, usage] = await Promise.all([
+        client.get<CloudAccountStatus["credits"]>("/v1/credits", session.token),
+        client
+          .get<CloudAccountStatus["usage"]>("/v1/usage/windows", session.token)
+          .catch(() => undefined),
+      ]);
+      return { ...base, ...(credits ? { credits } : {}), ...(usage ? { usage } : {}) };
     } catch (error) {
       if (error instanceof CloudApiError) {
         if (error.detail.status === 401) return { ...base, problem: "session_expired" };
@@ -216,10 +221,17 @@ export class CloudAccount {
 
   async signOut(): Promise<CloudAccountStatus> {
     const session = await this.session();
+    this.pendingBrowserSignIns.clear();
+    await clearCloudSession(this.deps.secretsDir);
     if (session) {
       const client = await this.client(session.apiBaseUrl);
-      await client.post("/v1/auth/sign-out", {}, session.token).catch(() => undefined);
-      await clearCloudSession(this.deps.secretsDir);
+      // Local logout must work offline; revoke the cloud session in the background.
+      void client.post("/v1/auth/sign-out", {}, session.token).catch(() => undefined);
+      return {
+        signedIn: false,
+        apiBaseUrl: session.apiBaseUrl,
+        checkedAt: new Date().toISOString(),
+      };
     }
     return this.status();
   }

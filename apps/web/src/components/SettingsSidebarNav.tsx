@@ -151,20 +151,20 @@ export function SettingsSidebarNav(props: {
   );
 
   return (
-    <div className="px-1.5 py-1.5">
-      <div className="mb-3">
+    <div className="djl-settings-navigation px-2 py-2">
+      <div className="mb-4">
         <button
           type="button"
-          className={cn(
-            SETTINGS_SIDEBAR_ITEM_CLASS_NAME,
-            SETTINGS_SIDEBAR_ROW_FILL_HOVER_CLASS_NAME,
-          )}
+          className={cn("djl-settings-heading flex items-center gap-2")}
           onClick={props.onBack}
+          aria-label={t("search.back")}
         >
           <SidebarLeadingIcon size="sm" tone="text-inherit">
             <CentralIcon name="arrow-left" className={SETTINGS_SIDEBAR_ICON_CLASS_NAME} />
           </SidebarLeadingIcon>
-          <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>{t("search.back")}</span>
+          <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>
+            {t("sidebar.settings", { ns: "shell" })}
+          </span>
         </button>
       </div>
 

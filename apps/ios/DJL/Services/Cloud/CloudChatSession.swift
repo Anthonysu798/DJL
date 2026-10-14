@@ -61,12 +61,25 @@ final class CloudChatSession {
 
     @ObservationIgnored private let cloud: CloudService
     @ObservationIgnored private var streamTask: Task<Void, Never>?
-    @ObservationIgnored private var lastAttempt: (() async -> Void)?
+    @ObservationIgnored private var lastAttempt: (() async -> Bool)?
+    @ObservationIgnored private let sessionRevision: UInt64
+    @ObservationIgnored private var creationID: String
+    @ObservationIgnored private let startedWithoutConversation: Bool
+    @ObservationIgnored private var pendingInput: (text: String, files: [UUID], image: CloudMessagePart?, model: String, mode: Mode)?
+    @ObservationIgnored private var pendingImage: (prompt: String, ratio: String, id: String)?
+    @ObservationIgnored private var uploadedParts: [UUID: CloudMessagePart] = [:]
 
     init(cloud: CloudService, conversation: CloudConversation?) {
         self.cloud = cloud
+        sessionRevision = cloud.sessionRevision
         self.conversation = conversation
+        startedWithoutConversation = conversation == nil
+        creationID = conversation == nil ? cloud.accountScopeKey.map { cloud.drafts.creationID(accountID: $0) } ?? UUID().uuidString : UUID().uuidString
     }
+
+    private var isCurrent: Bool { cloud.isSignedIn && cloud.sessionRevision == sessionRevision }
+    var isCurrentSession: Bool { isCurrent }
+    var canRetry: Bool { lastAttempt != nil || run?.status == "failed" }
 
     var visibleMessages: [CloudMessage] {
         CloudMessageTree(messages: messages).visibleBranch(selections: branchSelections)
@@ -96,6 +109,7 @@ final class CloudChatSession {
         defer { isLoading = false }
         do {
             let detail = try await cloud.client.conversation(id)
+            guard isCurrent else { return }
             conversation = detail.conversation
             messages = detail.messages
             await resumeUnfinishedRun()
@@ -125,18 +139,94 @@ final class CloudChatSession {
 
     // MARK: Sending
 
-    func send(text: String, attachments: [CloudPendingAttachment]) async {
+    @discardableResult
+    func send(text: String, attachments: [CloudPendingAttachment]) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty || !attachments.isEmpty, !isSending else { return }
+        guard isCurrent, !isSending, !trimmed.isEmpty || !attachments.isEmpty else { return false }
+        if attachments.isEmpty, imageToEdit == nil, let scope = cloud.accountScopeKey,
+           let stored = cloud.drafts.pendingSend(accountID: scope, conversationID: conversation?.id ?? "new"),
+           stored.parts.compactMap({ if case .text(let value) = $0 { return value }; return nil }).joined(separator: "\n") == trimmed {
+            let attempt: () async -> Bool = { [weak self] in
+                await self?.post(parts: stored.parts, parentId: stored.parentId, clientMessageId: stored.clientMessageId, model: stored.model, requestedMode: Mode(rawValue: stored.mode) ?? .chat) ?? false
+            }
+            lastAttempt = attempt
+            return await attempt()
+        }
+        guard let model = cloud.selectedModel?.id else {
+            errorMessage = "No model is available right now."
+            return false
+        }
         let parentId = visibleMessages.last?.id
+        if attachments.contains(where: \.isImage), cloud.selectedModel?.acceptsImages != true {
+            errorMessage = "Choose a model that can view images before sending this attachment."
+            return false
+        }
+        let files = attachments.map(\.id)
+        if let pending = pendingInput, pending.text == trimmed, pending.files == files,
+           pending.image == imageToEdit, pending.model == model, pending.mode == mode, lastAttempt != nil {
+            return await retryLastSend()
+        }
+        pendingInput = (trimmed, files, imageToEdit, model, mode)
+        uploadedParts = [:]
         let clientMessageId = UUID().uuidString
         let editImage = imageToEdit
-        let attempt: () async -> Void = { [weak self] in
-            await self?.post(text: trimmed, attachments: attachments, extraPart: editImage, parentId: parentId, clientMessageId: clientMessageId)
+        let requestedMode = mode
+        let attempt: () async -> Bool = { [weak self] in
+            await self?.post(text: trimmed, attachments: attachments, extraPart: editImage, parentId: parentId, clientMessageId: clientMessageId, model: model, requestedMode: requestedMode) ?? false
         }
         lastAttempt = attempt
-        imageToEdit = nil
-        await attempt()
+        let accepted = await attempt()
+        if accepted { imageToEdit = nil }
+        return accepted
+    }
+
+    @discardableResult
+    func generateImage(prompt: String, aspectRatio: String) async -> Bool {
+        let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isCurrent, !isSending, !isRunning, !text.isEmpty else { return false }
+        guard cloud.clientConfig?.tools.imageGeneration == true else { errorMessage = "Image generation isn't available yet."; return false }
+        guard ["1:1", "4:3", "3:4"].contains(aspectRatio) else { return false }
+        let id: String
+        if let scope = cloud.accountScopeKey, let stored = cloud.drafts.pendingImage(accountID: scope, conversationID: conversation?.id ?? "new"), stored.prompt == text, stored.aspectRatio == aspectRatio { id = stored.clientMessageId }
+        else if let pendingImage, pendingImage.prompt == text, pendingImage.ratio == aspectRatio { id = pendingImage.id }
+        else { id = UUID().uuidString; pendingImage = (text, aspectRatio, id) }
+        let attempt: () async -> Bool = { [weak self] in await self?.postImage(prompt: text, aspectRatio: aspectRatio, id: id) ?? false }
+        lastAttempt = attempt
+        return await attempt()
+    }
+
+    private func postImage(prompt: String, aspectRatio: String, id: String) async -> Bool {
+        guard isCurrent else { return false }
+        isSending = true
+        defer { isSending = false }
+        do {
+            if conversation == nil {
+                if let scope = cloud.accountScopeKey { creationID = cloud.drafts.creationID(accountID: scope) }
+                let created = try await cloud.client.createConversation(clientConversationId: creationID)
+                guard isCurrent else { return false }
+                conversation = created; cloud.upsert(created)
+            }
+            let input = CloudCreateImageInput(clientMessageId: id, prompt: prompt, aspectRatio: aspectRatio)
+            if let scope = cloud.accountScopeKey {
+                cloud.drafts.savePendingImage(input, accountID: scope, conversationID: conversation!.id)
+                if startedWithoutConversation { cloud.drafts.savePendingImage(input, accountID: scope, conversationID: "new") }
+            }
+            let response = try await cloud.client.createImage(conversationID: conversation!.id, input: input)
+            guard isCurrent else { return false }
+            accept(response)
+            return true
+        } catch { report(error); return false }
+    }
+
+    @discardableResult
+    func retryLastSend() async -> Bool {
+        guard isCurrent, !isSending else { return false }
+        if let lastAttempt { return await lastAttempt() }
+        if let reply = visibleMessages.last(where: { !$0.isUser }), run?.status == "failed" {
+            await regenerate(reply)
+            return errorMessage == nil
+        }
+        return false
     }
 
     /// Editing creates a sibling of the original user message; the old branch stays reachable.
@@ -145,11 +235,13 @@ final class CloudChatSession {
         guard message.isUser, !trimmed.isEmpty, !isSending else { return }
         let kept = message.parts.filter { if case .text = $0 { return false } else { return true } }
         let clientMessageId = UUID().uuidString
-        let attempt: () async -> Void = { [weak self] in
-            await self?.post(parts: [.text(trimmed)] + kept, parentId: message.parentId, clientMessageId: clientMessageId)
+        guard let model = cloud.selectedModel?.id else { return }
+        let requestedMode = mode
+        let attempt: () async -> Bool = { [weak self] in
+            await self?.post(parts: [.text(trimmed)] + kept, parentId: message.parentId, clientMessageId: clientMessageId, model: model, requestedMode: requestedMode) ?? false
         }
         lastAttempt = attempt
-        await attempt()
+        _ = await attempt()
     }
 
     func regenerate(_ reply: CloudMessage) async {
@@ -179,11 +271,12 @@ final class CloudChatSession {
         if let run, run.status == "blocked_on_usage" {
             startStreaming()
         } else {
-            await lastAttempt?()
+            _ = await lastAttempt?()
         }
     }
 
-    private func post(text: String, attachments: [CloudPendingAttachment], extraPart: CloudMessagePart?, parentId: String?, clientMessageId: String) async {
+    private func post(text: String, attachments: [CloudPendingAttachment], extraPart: CloudMessagePart?, parentId: String?, clientMessageId: String, model: String, requestedMode: Mode) async -> Bool {
+        guard isCurrent else { return false }
         isSending = true
         defer { isSending = false }
         do {
@@ -191,48 +284,83 @@ final class CloudChatSession {
             if !text.isEmpty { parts.append(.text(text)) }
             if let extraPart { parts.append(extraPart) }
             for attachment in attachments {
+                if let saved = uploadedParts[attachment.id] { parts.append(saved); continue }
                 let file = try await cloud.client.uploadFile(name: attachment.name, mimeType: attachment.mimeType, data: attachment.data)
+                guard isCurrent else { throw CancellationError() }
+                let part: CloudMessagePart
                 if attachment.isImage {
-                    parts.append(.imageRef(fileId: file.id, mimeType: file.mimeType, width: nil, height: nil))
+                    part = .imageRef(fileId: file.id, mimeType: file.mimeType, width: nil, height: nil)
                 } else {
-                    parts.append(.fileRef(fileId: file.id, name: file.name, mimeType: file.mimeType, size: file.size))
+                    part = .fileRef(fileId: file.id, name: file.name, mimeType: file.mimeType, size: file.size)
                 }
+                uploadedParts[attachment.id] = part
+                parts.append(part)
             }
-            try await postParts(parts, parentId: parentId, clientMessageId: clientMessageId)
+            try await postParts(parts, parentId: parentId, clientMessageId: clientMessageId, model: model, requestedMode: requestedMode)
+            return true
         } catch {
             report(error)
+            return false
         }
     }
 
-    private func post(parts: [CloudMessagePart], parentId: String?, clientMessageId: String) async {
+    private func post(parts: [CloudMessagePart], parentId: String?, clientMessageId: String, model: String, requestedMode: Mode) async -> Bool {
+        guard isCurrent else { return false }
         isSending = true
         defer { isSending = false }
         do {
-            try await postParts(parts, parentId: parentId, clientMessageId: clientMessageId)
+            try await postParts(parts, parentId: parentId, clientMessageId: clientMessageId, model: model, requestedMode: requestedMode)
+            return true
         } catch {
             report(error)
+            return false
         }
     }
 
-    private func postParts(_ parts: [CloudMessagePart], parentId: String?, clientMessageId: String) async throws {
-        guard let model = cloud.selectedModel?.id else {
-            throw CloudAPIError.server(status: 0, code: "no_model", message: "No model is available right now.", traceId: nil, resetsAt: nil)
-        }
+    private func postParts(_ parts: [CloudMessagePart], parentId: String?, clientMessageId: String, model: String, requestedMode: Mode) async throws {
+        guard isCurrent else { throw CancellationError() }
         let conversationId: String
         if let existing = conversation?.id {
             conversationId = existing
         } else {
-            let created = try await cloud.client.createConversation()
+            if let scope = cloud.accountScopeKey { creationID = cloud.drafts.creationID(accountID: scope) }
+            let created = try await cloud.client.createConversation(clientConversationId: creationID)
+            guard isCurrent else { throw CancellationError() }
             conversation = created
             cloud.upsert(created)
             conversationId = created.id
         }
-        if mode == .task { cloud.enableTaskNotifications() }
-        let input = CloudSendMessageInput(clientMessageId: clientMessageId, parentId: parentId, parts: parts, model: model, mode: mode.rawValue)
-        accept(try await cloud.client.sendMessage(conversationId: conversationId, input: input))
+        if requestedMode == .task { cloud.enableTaskNotifications() }
+        let input = CloudSendMessageInput(clientMessageId: clientMessageId, parentId: parentId, parts: parts, model: model, mode: requestedMode.rawValue)
+        if let scope = cloud.accountScopeKey {
+            cloud.drafts.savePendingSend(input, accountID: scope, conversationID: conversationId)
+            if startedWithoutConversation { cloud.drafts.savePendingSend(input, accountID: scope, conversationID: "new") }
+        }
+        let response = try await cloud.client.sendMessage(conversationId: conversationId, input: input)
+        guard isCurrent else { throw CancellationError() }
+        accept(response)
     }
 
     private func accept(_ response: CloudSendMessageResponse) {
+        guard isCurrent else { return }
+        if let scope = cloud.accountScopeKey {
+            let currentImage = cloud.drafts.pendingImage(accountID: scope, conversationID: response.run.conversationId)
+            if let currentImage, cloud.drafts.pendingImage(accountID: scope, conversationID: "new")?.clientMessageId == currentImage.clientMessageId {
+                cloud.drafts.clearPendingImage(accountID: scope, conversationID: "new")
+                cloud.drafts.clearCreationID(accountID: scope)
+            }
+            cloud.drafts.clearPendingImage(accountID: scope, conversationID: response.run.conversationId)
+            let current = cloud.drafts.pendingSend(accountID: scope, conversationID: response.run.conversationId)
+            if let current, cloud.drafts.pendingSend(accountID: scope, conversationID: "new")?.clientMessageId == current.clientMessageId {
+                cloud.drafts.clearPendingSend(accountID: scope, conversationID: "new")
+                cloud.drafts.clearCreationID(accountID: scope)
+            }
+            cloud.drafts.clearPendingSend(accountID: scope, conversationID: response.run.conversationId)
+        }
+        lastAttempt = nil
+        pendingImage = nil
+        pendingInput = nil
+        uploadedParts = [:]
         for message in [response.message, response.reply] {
             if let index = messages.firstIndex(where: { $0.id == message.id }) {
                 messages[index] = message
@@ -251,7 +379,7 @@ final class CloudChatSession {
 
     /// Starts (or resumes, after backgrounding) the live event stream from the last applied seq.
     func startStreaming() {
-        guard let run, !run.isTerminal else { return }
+        guard isCurrent, let run, !run.isTerminal else { return }
         streamTask?.cancel()
         let runId = run.id
         let after = run.lastSeq
@@ -273,11 +401,12 @@ final class CloudChatSession {
     }
 
     private func apply(_ event: CloudRunEvent) {
-        guard var run, event.runId == run.id, event.seq > run.lastSeq else { return }
+        guard isCurrent, var run, event.runId == run.id, event.seq > run.lastSeq else { return }
         run.lastSeq = event.seq
         CloudRunEventReducer.apply(event, to: &messages, steps: &steps)
         if case .status(let status, let error) = event.payload {
             run.status = status
+            if run.isTerminal, run.mode == "task" { Task { await cloud.notifications.refresh() } }
             run.error = error
             if status == "blocked_on_usage" { usageBlockedUntil = cloud.usage?.exhaustedWindow?.resetsAt ?? "" }
             if let error, status == "failed" { errorMessage = error.message }
@@ -292,6 +421,7 @@ final class CloudChatSession {
     }
 
     private func report(_ error: Error) {
+        guard isCurrent else { return }
         if let apiError = error as? CloudAPIError, apiError.code == "usage_window_exhausted" {
             if case .server(_, _, _, _, let resetsAt) = apiError { usageBlockedUntil = resetsAt ?? "" }
             Task { await cloud.refreshUsage() }

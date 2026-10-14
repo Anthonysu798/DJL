@@ -8,6 +8,18 @@ import {
 } from "./remoteGatewayRuntime";
 
 describe("remote gateway runtime", () => {
+  it("uses the managed VPS relay without a manual bridge installation", () => {
+    expect(resolveRemoteRelayUrl({ DJL_CLOUD_API_URL: "https://api-staging.slcor.com" })).toBe(
+      "wss://api-staging.slcor.com/relay",
+    );
+    expect(resolveRemoteRelayUrl({})).toBe("wss://api.slcor.com/relay");
+    expect(resolveRemoteRelayUrl({ DJL_CLOUD_API_URL: "http://127.0.0.1:8787" })).toBe(
+      "ws://127.0.0.1:8787/relay",
+    );
+    expect(
+      resolveRemoteRelayUrl({ DJL_CLOUD_API_URL: "https://user:secret@evil.test" }),
+    ).toBeNull();
+  });
   it("accepts only credential-free WebSocket relay URLs", () => {
     expect(normalizeRemoteRelayUrl(" wss://relay.djl.app/relay/ ")).toBe(
       "wss://relay.djl.app/relay",

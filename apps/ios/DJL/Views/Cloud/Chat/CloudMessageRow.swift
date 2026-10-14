@@ -15,6 +15,8 @@ struct CloudMessageRow: View {
     let onEdit: () -> Void
     let onRegenerate: () -> Void
     let onSwitchBranch: (Int) -> Void
+    let playback: CloudSpeechPlayback
+    let onReadAloud: () -> Void
 
     var body: some View {
         if message.isUser {
@@ -60,6 +62,7 @@ struct CloudMessageRow: View {
 
     private var assistantBody: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if isStreaming, message.parts.isEmpty { ProgressView().controlSize(.small).accessibilityLabel("DJL is working") }
             ForEach(Array(message.parts.enumerated()), id: \.offset) { index, part in
                 switch part {
                 case .text(let text):
@@ -107,6 +110,10 @@ struct CloudMessageRow: View {
                 .accessibilityLabel("Copy")
             Button(action: onRegenerate) { Image(systemName: "arrow.clockwise") }
                 .accessibilityLabel("Regenerate")
+            if !message.text.isEmpty {
+                Button(action: onReadAloud) { Image(systemName: playback.messageID == message.id ? "stop.circle" : "speaker.wave.2") }
+                    .accessibilityLabel(playback.messageID == message.id ? "Stop reading reply" : "Read aloud")
+            }
             branchSwitcher
             Spacer(minLength: 0)
             if let model = message.model {
@@ -183,6 +190,7 @@ struct CloudImagePartView: View {
         .aspectRatio(aspectRatio, contentMode: .fit)
         .frame(maxHeight: maxHeight)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onDisappear { image = nil; failed = false }
         .task(id: fileId) {
             guard let fileId else { return }
             image = cloud.cachedImage(fileId: fileId)

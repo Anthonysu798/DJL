@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PhoneNavigationMenu: View {
     @Environment(CodexService.self) private var codex
+    @Environment(CloudService.self) private var cloud
     let selectedThreadID: String?
     let isRemoteSelected: Bool
     let onRemote: () -> Void
@@ -35,6 +36,11 @@ struct PhoneNavigationMenu: View {
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
+                Button { cloud.sectionPreference = .cloud } label: {
+                    Label("Cloud chat", systemImage: "cloud")
+                        .font(.system(.body, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14).frame(minHeight: 52)
+                }
                 Button(action: onRemote) {
                     HStack(spacing: 14) {
                         Image(systemName: "laptopcomputer")

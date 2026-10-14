@@ -23,15 +23,15 @@ final class CloudChatLogicTests: XCTestCase {
     }
 
     func testCloudServiceRoutesFromTheStoredSession() {
-        let signedIn = CloudService(sessionStore: CloudMemorySessionStore(token: "s"), urlSession: CloudStubURLProtocol.session())
+        let signedIn = CloudService(sessionStore: CloudMemorySessionStore(token: "s"), urlSession: CloudStubURLProtocol.session(), draftStore: CloudDraftStore(defaults: UserDefaults(suiteName: "djl-tests-\(UUID())")!))
         XCTAssertEqual(signedIn.route(hasPairedMac: true), .cloudHome)
-        let signedOut = CloudService(sessionStore: CloudMemorySessionStore(), urlSession: CloudStubURLProtocol.session())
+        let signedOut = CloudService(sessionStore: CloudMemorySessionStore(), urlSession: CloudStubURLProtocol.session(), draftStore: CloudDraftStore(defaults: UserDefaults(suiteName: "djl-tests-\(UUID())")!))
         XCTAssertEqual(signedOut.route(hasPairedMac: false), .welcome)
     }
 
     func testUnauthorizedErrorsSignOutLocally() {
         let store = CloudMemorySessionStore(token: "s")
-        let cloud = CloudService(sessionStore: store, urlSession: CloudStubURLProtocol.session())
+        let cloud = CloudService(sessionStore: store, urlSession: CloudStubURLProtocol.session(), draftStore: CloudDraftStore(defaults: UserDefaults(suiteName: "djl-tests-\(UUID())")!))
         cloud.handle(CloudAPIError.unauthorized)
         XCTAssertFalse(cloud.isSignedIn)
         XCTAssertNil(store.readSessionToken())

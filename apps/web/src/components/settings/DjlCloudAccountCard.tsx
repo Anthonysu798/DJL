@@ -11,8 +11,11 @@ import { Button } from "~/components/ui/button";
 import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
+import { cloudSignInUrl, type CloudSignInMethod } from "~/lib/cloudSignInUrl";
 import { SettingsSection } from "./SettingsPanelPrimitives";
 import { settingsLoadErrorDetail } from "./SettingsLoadError";
+import { UsageProgressTrack } from "~/components/UsageProgressTrack";
+import { formatRateLimitResetCountdown } from "~/lib/rateLimits";
 
 export const CLOUD_ACCOUNT_QUERY_KEY = ["cloud-account"] as const;
 
@@ -21,7 +24,7 @@ function openExternalLink(url: string): void {
     .shell.openExternal(url)
     .catch(() => window.open(url, "_blank", "noopener,noreferrer"));
 }
-const BILLING_URL = "https://app.slcor.com/billing";
+const BILLING_URL = `${(import.meta.env.VITE_DJL_CLOUD_WEB_URL ?? "https://app.slcor.com").replace(/\/+$/, "")}/billing`;
 
 type SignInPhase =
   | { kind: "idle" }
@@ -36,8 +39,8 @@ type SignInPhase =
  * for new chats. Rendered above the CLI harness accounts because it is the
  * first-party provider.
  */
-export function DjlCloudAccountCard() {
-  const { t } = useTranslation("settings");
+export function DjlCloudAccountCard({ showUsage = false }: { showUsage?: boolean }) {
+  const { t, i18n } = useTranslation("settings");
   const queryClient = useQueryClient();
   const { settings, updateSettings } = useAppSettings();
   const [phase, setPhase] = useState<SignInPhase>({ kind: "idle" });
@@ -49,6 +52,7 @@ export function DjlCloudAccountCard() {
   });
 
   const afterAccountChange = async (next: CloudAccountStatus) => {
+    await queryClient.cancelQueries({ queryKey: CLOUD_ACCOUNT_QUERY_KEY });
     queryClient.setQueryData(CLOUD_ACCOUNT_QUERY_KEY, next);
     await Promise.all([
       ensureNativeApi()
@@ -99,32 +103,40 @@ export function DjlCloudAccountCard() {
     onError: () => setPhase({ kind: "idle" }),
   });
   const { mutate: completeWithCallback } = completeBrowserSignIn;
-  useEffect(
-    () => window.desktopBridge?.onCloudAuthCallback?.((callback) => completeWithCallback(callback)),
-    [completeWithCallback],
-  );
+  useEffect(() => {
+    if (phase.kind !== "browser") return;
+    return window.desktopBridge?.onCloudAuthCallback?.((callback) =>
+      completeWithCallback(callback),
+    );
+  }, [completeWithCallback, phase.kind]);
 
   const browserSignIn = useMutation({
-    mutationFn: () => ensureNativeApi().cloud.startBrowserSignIn(),
-    onSuccess: ({ authorizeUrl }) => {
+    mutationFn: (_method: CloudSignInMethod) => ensureNativeApi().cloud.startBrowserSignIn(),
+    onSuccess: ({ authorizeUrl }, method) => {
+      const selectedUrl = cloudSignInUrl(authorizeUrl, method);
       stopPolling();
       completeBrowserSignIn.reset();
-      setPhase({ kind: "browser", authorizeUrl });
-      openExternalLink(authorizeUrl);
+      setPhase({ kind: "browser", authorizeUrl: selectedUrl });
+      openExternalLink(selectedUrl);
     },
   });
 
   const signIn = useMutation({
-    mutationFn: () => ensureNativeApi().cloud.startSignIn(),
-    onSuccess: (start) => {
+    mutationFn: (_method: CloudSignInMethod) => ensureNativeApi().cloud.startSignIn(),
+    onSuccess: (start, method) => {
       setPhase({ kind: "waiting", start });
-      openExternalLink(start.verificationUriComplete ?? start.verificationUri);
+      openExternalLink(
+        cloudSignInUrl(start.verificationUriComplete ?? start.verificationUri, method),
+      );
       poll(start, Math.max(start.intervalSeconds, 3));
     },
   });
   const signOut = useMutation({
+    onMutate: () => queryClient.cancelQueries({ queryKey: CLOUD_ACCOUNT_QUERY_KEY }),
     mutationFn: () => ensureNativeApi().cloud.signOut(),
     onSuccess: async (next) => {
+      stopPolling();
+      setPhase({ kind: "idle" });
       await afterAccountChange(next);
     },
   });
@@ -135,7 +147,17 @@ export function DjlCloudAccountCard() {
   };
 
   const data = status.data;
-  const signedIn = Boolean(data?.signedIn && !data.problem);
+  // Unpackaged macOS/Linux apps cannot reliably receive OS URL callbacks.
+  const development = window.desktopBridge?.getBuildInfo?.().kind === "development";
+  const startSelectedSignIn = (method: CloudSignInMethod) =>
+    development ? signIn.mutate(method) : browserSignIn.mutate(method);
+  const signingIn =
+    browserSignIn.isPending ||
+    signIn.isPending ||
+    completeBrowserSignIn.isPending ||
+    phase.kind === "browser" ||
+    phase.kind === "waiting";
+  const signedIn = Boolean(data?.signedIn && data.problem !== "session_expired");
   const statusLine = !data
     ? t("accounts.checking")
     : data.problem === "session_expired"
@@ -161,21 +183,33 @@ export function DjlCloudAccountCard() {
               </div>
             ) : null}
           </div>
+          {showUsage && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={status.isFetching}
+              onClick={() => void status.refetch()}
+            >
+              {t("actions.refresh", { ns: "common" })}
+            </Button>
+          )}
           {signedIn ? (
             <>
               <Button size="sm" variant="outline" onClick={() => openExternalLink(BILLING_URL)}>
                 {t("cloud.buyCredits")}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={settings.defaultProvider === "djlCloud"}
-                onClick={() => updateSettings({ defaultProvider: "djlCloud" })}
-              >
-                {settings.defaultProvider === "djlCloud"
-                  ? t("accounts.default")
-                  : t("accounts.useForNewChats")}
-              </Button>
+              {!showUsage && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={settings.defaultProvider === "djlCloud"}
+                  onClick={() => updateSettings({ defaultProvider: "djlCloud" })}
+                >
+                  {settings.defaultProvider === "djlCloud"
+                    ? t("accounts.default")
+                    : t("accounts.useForNewChats")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -189,24 +223,93 @@ export function DjlCloudAccountCard() {
             <>
               <Button
                 size="sm"
-                disabled={browserSignIn.isPending || completeBrowserSignIn.isPending}
-                onClick={() => browserSignIn.mutate()}
+                disabled={signingIn || status.isPending}
+                onClick={() => startSelectedSignIn("email")}
               >
                 {browserSignIn.isPending || completeBrowserSignIn.isPending
                   ? t("accounts.checking")
-                  : t("cloud.signInWithBrowser")}
+                  : t("cloud.signInWithEmail")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={signingIn || status.isPending}
+                onClick={() => startSelectedSignIn("google")}
+              >
+                <img src="/google-sign-in.png" alt="" className="size-4" />
+                {t("cloud.signInWithGoogle")}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 disabled={signIn.isPending || phase.kind === "waiting" || status.isLoading}
-                onClick={() => signIn.mutate()}
+                onClick={() => signIn.mutate("email")}
               >
                 {t("cloud.useCodeInstead")}
               </Button>
             </>
           )}
         </div>
+        {showUsage && signedIn && !data?.problem && (
+          <div className="space-y-4 border-t pt-4">
+            {data?.usage ? (
+              <>
+                <div className="text-xs text-muted-foreground">{data.usage.planId}</div>
+                {[data.usage.windows.fiveHour, data.usage.windows.week].map((window) => {
+                  const label = t(
+                    window.kind === "five_hour"
+                      ? "usage.rateLimits.fiveHours"
+                      : "usage.rateLimits.weekly",
+                  );
+                  const limit = Number(window.limit);
+                  const remaining = Number(window.remaining);
+                  const percent =
+                    limit > 0 && Number.isFinite(limit) && Number.isFinite(remaining)
+                      ? Math.min(100, Math.max(0, (remaining / limit) * 100))
+                      : null;
+                  const remainingLabel =
+                    percent === null
+                      ? null
+                      : new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language, {
+                          style: "percent",
+                          maximumFractionDigits: 0,
+                        }).format(percent / 100);
+                  return (
+                    <div key={window.kind} className="space-y-2">
+                      <div className="text-xs font-medium">{label}</div>
+                      {percent !== null && remainingLabel ? (
+                        <>
+                          <UsageProgressTrack
+                            label={t("usage.remainingAriaLabel", {
+                              label,
+                              remaining: remainingLabel,
+                            })}
+                            remainingPercent={percent}
+                            fillClassName="bg-emerald-500"
+                            markerClassName="bg-emerald-500"
+                          />
+                          <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                            <span>{t("usage.left", { remaining: remainingLabel })}</span>
+                            {window.resetsAt && (
+                              <span>{formatRateLimitResetCountdown(window.resetsAt, t)}</span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">{t("usage.noData")}</p>
+                      )}
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-muted-foreground">
+                  {t("cloud.bankedResets", { count: data.usage.banks.count })}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("cloud.usageUnavailable")}</p>
+            )}
+          </div>
+        )}
         {phase.kind === "browser" ? (
           <div className="space-y-2 rounded-lg border px-4 py-3" role="status">
             <p className="text-sm text-muted-foreground">{t("cloud.finishInBrowser")}</p>

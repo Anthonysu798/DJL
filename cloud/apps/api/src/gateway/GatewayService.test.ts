@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { creditsToMicro } from "@djl/domain";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Principal } from "../auth/guard.ts";
 import { Settings } from "../config/settings.ts";
@@ -197,6 +197,46 @@ beforeAll(async () => {
 afterAll(() => conn.close());
 
 describe("GatewayService chat", () => {
+  it("lists only models whose provider is configured", async () => {
+    const configured = makeGateway({ providers: { openrouter: { ...fake, id: "openrouter" } } });
+    const models = await configured.listModels();
+    expect(models.map((model) => model.id)).toContain("fake-cheap");
+    expect(models.every((model) => model.provider === "openrouter")).toBe(true);
+  });
+
+  it("streams and settles a zero-cost model without charging credits", async () => {
+    const modelId = `free-${crypto.randomUUID()}`;
+    await conn.db.insert(schema.modelCatalog).values({
+      modelId,
+      provider: "openrouter",
+      upstreamModelId: "free-upstream",
+      displayName: "Free model",
+      capabilities: ["text.chat"],
+      maxOutputTokens: 1000,
+      freeEligible: true,
+    });
+    try {
+      const p = await principalFor("gw-zero-cost");
+      const { stream, requestId } = await gateway.chatStream(facts(p), {
+        model: modelId,
+        messages: [{ role: "user", content: "hello" }],
+        max_tokens: 100,
+      });
+      const out = await readSse(stream);
+      expect(out.content).toBe("echo: hello");
+      expect(out.done).toBe(true);
+      expect(out.error).toBeNull();
+      expect(out.trailer.settled).toBe("0");
+      expect(await ledger.available(p.orgId)).toBe(0n);
+      const row = await conn.db.query.usageRequests.findFirst({
+        where: eq(schema.usageRequests.id, requestId),
+      });
+      expect(row?.status).toBe("settled");
+    } finally {
+      await conn.db.delete(schema.modelCatalog).where(eq(schema.modelCatalog.modelId, modelId));
+    }
+  });
+
   it("streams, settles the actual cost, records usage, and fires the trial hook", async () => {
     const p = await principalFor("gw-chat");
     await ledger.grant({
@@ -238,17 +278,26 @@ describe("GatewayService chat", () => {
       idempotencyKey: `g:${p.orgId}`,
       actor: "test",
     });
-    const { stream, requestId } = await gateway.chatStream(facts(p), {
-      model: "text.fast",
-      messages: [{ role: "user", content: "hi" }],
-      max_tokens: 50,
-    });
-    await readSse(stream);
-    const row = await conn.db.query.usageRequests.findFirst({
-      where: eq(schema.usageRequests.id, requestId),
-    });
-    expect(row?.modelId).toBe("fake-cheap");
-    expect(row?.routeReason).toBe("capability:text.fast");
+    const candidates = (await gateway.catalog()).filter((model) =>
+      ["fake-chat", "fake-cheap"].includes(model.modelId),
+    );
+    // Keep seeded production models out of this two-model routing fixture.
+    const catalog = vi.spyOn(gateway, "catalog").mockResolvedValue(candidates);
+    try {
+      const { stream, requestId } = await gateway.chatStream(facts(p), {
+        model: "text.fast",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 50,
+      });
+      await readSse(stream);
+      const row = await conn.db.query.usageRequests.findFirst({
+        where: eq(schema.usageRequests.id, requestId),
+      });
+      expect(row?.modelId).toBe("fake-cheap");
+      expect(row?.routeReason).toBe("capability:text.fast");
+    } finally {
+      catalog.mockRestore();
+    }
   });
 
   it("refuses with 402 when the reservation cannot be covered and leaves the balance untouched", async () => {

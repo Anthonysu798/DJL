@@ -21,6 +21,8 @@ export interface SmsSender {
     readonly code: string;
     readonly locale: Locale;
   }) => Promise<{ readonly id: string }>;
+  /** Confirm successful app-side OTP verification to the delivery provider. */
+  readonly approveVerification: (verificationId: string) => Promise<void>;
   /** Carrier lookup: is this a real mobile line? Blocks VoIP for trial credits. */
   readonly lookupLineType: (phoneNumber: string) => Promise<PhoneLineType>;
   /** Plain transactional text (P0 alerts). */

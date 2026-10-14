@@ -19,6 +19,7 @@ export interface ApiEnv {
   /** WebAuthn relying party: the registrable parent domain shared by app and api hosts. */
   readonly passkeyRpId: string;
   readonly mockExternals: boolean;
+  readonly smsEnabled: boolean;
   readonly trustedOrigins: readonly string[];
   /** Parent domain for the shared session cookie in staging/production, e.g. ".slcor.com". */
   readonly cookieDomain: string | null;
@@ -90,9 +91,11 @@ export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     ipHashSalt: required("IP_HASH_SALT", env, "local-ip-hash-salt"),
     passkeyRpId: env.PASSKEY_RP_ID?.trim() || (isLocal ? "localhost" : "slcor.com"),
     mockExternals,
+    smsEnabled: env.SMS_ENABLED === "true",
     trustedOrigins: [
       webPublicUrl,
       "djl://app",
+      ...(apple ? ["https://appleid.apple.com"] : []),
       ...(env.ADMIN_PUBLIC_URL?.trim() ? [env.ADMIN_PUBLIC_URL.trim()] : []),
       ...(isLocal ? ["http://localhost:5173", "http://localhost:3001"] : []),
     ],

@@ -1,0 +1,17 @@
+**
+!package.json
+!bun.lock
+!bunfig.toml
+!patches/**
+!apps/*/package.json
+!packages/*/package.json
+!scripts/package.json
+!cloud/**/package.json
+!apps/remote-relay/**
+!packages/remote-protocol/**
+**/node_modules
+**/dist
+**/.wrangler
+**/.env
+**/.env.*
+**/*.test.ts

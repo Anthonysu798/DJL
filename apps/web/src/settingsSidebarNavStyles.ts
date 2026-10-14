@@ -11,13 +11,13 @@ import {
   SIDEBAR_ROW_HOVER_CLASS_NAME,
   SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
 } from "./sidebarRowStyles";
-import { SETTINGS_SECTION_LABEL_CLASS_NAME } from "./settingsPanelStyles";
 
 /** Wrapper for each settings group — break before the next header matches the project list rhythm. */
-export const SETTINGS_SIDEBAR_SECTION_CLASS_NAME = "flex flex-col not-first:mt-3";
+export const SETTINGS_SIDEBAR_SECTION_CLASS_NAME = "flex flex-col not-first:mt-7";
 
 /** Section labels ("App", "Synara") — shared with the settings content panel. */
-export const SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME = SETTINGS_SECTION_LABEL_CLASS_NAME;
+export const SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME =
+  "px-2 pt-1 pb-3 text-sm text-muted-foreground";
 
 /** Nav row — same chrome as project/chat sidebar header rows. */
 export const SETTINGS_SIDEBAR_ITEM_CLASS_NAME = SIDEBAR_HEADER_ROW_CLASS_NAME;
