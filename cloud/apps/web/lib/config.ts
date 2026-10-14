@@ -5,3 +5,6 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:878
 );
 export const AUTH_URL = `${API_URL}/v1/auth`;
 export const SUPPORT_EMAIL = "support@slcor.com";
+
+export const GOOGLE_SIGN_IN_ENABLED = (process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN ?? "true") === "true";
+export const APPLE_SIGN_IN_ENABLED = (process.env.NEXT_PUBLIC_APPLE_SIGN_IN ?? "true") === "true";

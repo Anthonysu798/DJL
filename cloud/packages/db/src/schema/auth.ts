@@ -10,6 +10,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import { devices } from "./usage.ts";
+
 export const user = pgTable("user", {
   id: uuid("id")
     .default(sql`pg_catalog.gen_random_uuid()`)
@@ -51,6 +53,7 @@ export const session = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    deviceId: uuid("device_id").references(() => devices.id, { onDelete: "set null" }),
     activeOrganizationId: text("active_organization_id"),
     impersonatedBy: text("impersonated_by"),
   },

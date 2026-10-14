@@ -4,9 +4,12 @@
 import { eq } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import { formatCredits, totalAvailable } from "@djl/domain";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Schema } from "effect";
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http";
 
+import { CloudRegisterDeviceInput } from "@synara/contracts/cloud";
+
+import { registerSessionDevice, listDeviceSessions } from "./DeviceSessions.ts";
 import type { PrincipalResolver } from "../auth/guard.ts";
 import { requirePrincipal } from "../auth/guard.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
@@ -106,38 +109,24 @@ export function makeAccountRoutes(deps: AccountDeps) {
     handle(
       Effect.gen(function* () {
         const p = yield* requirePrincipal(deps.principals);
-        const body = (yield* readJson) as Partial<{
-          kind: string;
-          name: string;
-          publicKey: string;
-          fingerprint: string;
-          appVersion: string;
-          platform: string;
-        }>;
-        if (!body.kind || !["desktop", "web", "ios"].includes(body.kind) || !body.fingerprint) {
-          return yield* Effect.fail(
-            new ApiError(400, "bad_request", "kind and fingerprint are required."),
-          );
-        }
-        const [device] = yield* Effect.promise(() =>
-          deps.db
-            .insert(schema.devices)
-            .values({
-              userId: p.userId,
-              kind: body.kind!,
-              name: body.name ?? null,
-              publicKey: body.publicKey ?? null,
-              fingerprint: body.fingerprint!,
-              appVersion: body.appVersion ?? null,
-              platform: body.platform ?? null,
-              lastSeenAt: new Date(),
-            })
-            .returning({
-              id: schema.devices.id,
-              kind: schema.devices.kind,
-              syncEnabled: schema.devices.syncEnabled,
-            }),
-        );
+        const body = yield* readJson;
+        const input = yield* Effect.try({
+          try: () => Schema.decodeUnknownSync(CloudRegisterDeviceInput)(body),
+          catch: () =>
+            new ApiError(
+              400,
+              "bad_request",
+              "A valid device kind and install identifier are required.",
+            ),
+        });
+        const device = yield* Effect.tryPromise({
+          try: () => registerSessionDevice(deps.db, p, input),
+          // Database errors can contain registration metadata; keep them out of logs and responses.
+          catch: (error) =>
+            error instanceof ApiError
+              ? error
+              : new ApiError(500, "registration_failed", "Could not register this device."),
+        });
         return json({ device }, 201);
       }),
     ),
@@ -167,5 +156,16 @@ export function makeAccountRoutes(deps: AccountDeps) {
     ),
   );
 
-  return Layer.mergeAll(me, credits, ledger, registerDevice, listDevices);
+  const deviceSessions = HttpRouter.add(
+    "GET",
+    "/v1/devices/sessions",
+    handle(
+      Effect.gen(function* () {
+        const p = yield* requirePrincipal(deps.principals);
+        const sessions = yield* Effect.promise(() => listDeviceSessions(deps.db, p));
+        return json({ sessions });
+      }),
+    ),
+  );
+  return Layer.mergeAll(me, credits, ledger, registerDevice, listDevices, deviceSessions);
 }

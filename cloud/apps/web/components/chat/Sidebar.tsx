@@ -14,6 +14,8 @@ import {
   PinOff,
   Search,
   SquarePen,
+  Settings,
+  MessageCircle,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -21,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { DjlLogo } from "@/components/DjlLogo";
 import { useTheme } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -96,9 +99,10 @@ export function Sidebar({
         <Link
           href="/chat"
           onClick={onNavigate}
-          className="rounded-md px-2 py-1 text-[15px] font-semibold tracking-tight focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[15px] font-semibold tracking-tight focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
         >
-          DJL
+          <DjlLogo className="size-8 dark:brightness-0 dark:invert" /> DJL{" "}
+          <span className="font-normal text-muted-foreground">Cloud</span>
         </Link>
         {onCollapse ? (
           <Button
@@ -182,7 +186,7 @@ export function Sidebar({
         )}
       </div>
 
-      <div className="border-t border-border p-2">
+      <div className="border-t border-border p-2 md:hidden">
         <AccountMenu onArchived={() => setArchivedOpen(true)} />
       </div>
 
@@ -237,6 +241,9 @@ function ConversationRow({
         aria-current={active ? "page" : undefined}
         className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 text-sm focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
       >
+        {c.pinned ? (
+          <MessageCircle className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        ) : null}
         <span className="truncate">{title}</span>
       </Link>
       <DropdownMenu>
@@ -274,7 +281,13 @@ function ConversationRow({
   );
 }
 
-function AccountMenu({ onArchived }: { onArchived: () => void }) {
+export function AccountMenu({
+  onArchived,
+  compact = false,
+}: {
+  onArchived: () => void;
+  compact?: boolean;
+}) {
   const { d } = useLocale();
   const router = useRouter();
   const me = useChat((s) => s.me);
@@ -296,15 +309,18 @@ function AccountMenu({ onArchived }: { onArchived: () => void }) {
         <button
           type="button"
           aria-label={d.chat.accountMenu}
-          className="flex w-full items-center gap-2.5 rounded-lg p-2 text-left hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent"
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-xl p-2 text-left hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-accent",
+            compact && "justify-center",
+          )}
         >
           <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#d989b5] text-sm font-medium text-white"
             aria-hidden
           >
             {(email[0] ?? "?").toUpperCase()}
           </span>
-          <span className="min-w-0 flex-1">
+          <span className={cn("min-w-0 flex-1", compact && "sr-only")}>
             <span className="block truncate text-sm font-medium">{email || d.loading}</span>
             {usage ? (
               <span className="block text-xs text-muted-foreground">
@@ -312,14 +328,22 @@ function AccountMenu({ onArchived }: { onArchived: () => void }) {
               </span>
             ) : null}
           </span>
-          <ChevronsUpDown className="size-4 text-muted-foreground" aria-hidden />
+          {!compact ? (
+            <ChevronsUpDown className="size-4 text-muted-foreground" aria-hidden />
+          ) : null}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="top"
         align="start"
-        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64 p-1.5"
+        className="w-72 rounded-2xl border-border p-2 shadow-xl"
       >
+        <div className="px-2 py-3">
+          <p className="truncate text-sm font-medium">{email}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {usage ? planName(d, usage.planId) : d.loading}
+          </p>
+        </div>
         {usage ? (
           <div className="px-2 pt-1.5 pb-3">
             <p className="mb-2.5 text-xs font-medium text-muted-foreground">{d.chat.usage}</p>
@@ -350,6 +374,11 @@ function AccountMenu({ onArchived }: { onArchived: () => void }) {
           </span>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
+          <Link href="/chat/settings">
+            <Settings /> {d.workspace.settings}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/account">
             <UserRound /> {d.chat.accountSettings}
           </Link>
@@ -368,7 +397,7 @@ function AccountMenu({ onArchived }: { onArchived: () => void }) {
   );
 }
 
-function ArchivedDialog({
+export function ArchivedDialog({
   open,
   onOpenChange,
   onNavigate,

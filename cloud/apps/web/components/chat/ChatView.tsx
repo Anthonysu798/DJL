@@ -45,6 +45,7 @@ export function ChatView({ conversationId }: { conversationId: string | null }) 
   const blocked = useChat((s) => s.usageBlock !== null);
   const onFreePlan = useChat((s) => s.usage?.planId === "free");
   const [model, setModel] = useModelChoice(models, onFreePlan);
+  const [mode, setMode] = useState<"chat" | "task">("chat");
   const [shareOpen, setShareOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
@@ -194,6 +195,8 @@ export function ChatView({ conversationId }: { conversationId: string | null }) 
         running={!!activeRun}
         blocked={blocked || !model}
         autoFocus
+        onModeChange={setMode}
+        compact={empty}
         onStop={() =>
           activeRun && void store.cancel(activeRun.id).catch(() => toast(d.error, "error"))
         }
@@ -210,9 +213,29 @@ export function ChatView({ conversationId }: { conversationId: string | null }) 
       onDragOver={(e) => onDrag(e, "over")}
       onDrop={(e) => onDrag(e, "drop")}
     >
-      <header className="flex h-14 shrink-0 items-center gap-1 px-2 sm:px-3">
+      <header className="relative flex h-16 shrink-0 items-center gap-1 px-2 sm:px-5">
         <SidebarButton />
         <ModelPicker models={models} value={model} onChange={setModel} />
+        <div
+          className="absolute left-1/2 flex -translate-x-1/2 rounded-full bg-secondary p-1 max-lg:hidden"
+          aria-label={d.workspace.modeLabel}
+        >
+          {(["chat", "task"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              onClick={() => {
+                setMode(value);
+                composer.current?.setMode(value);
+                composer.current?.focus();
+              }}
+              className={`min-w-24 rounded-full px-5 py-1.5 text-sm transition-colors ${mode === value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {value === "chat" ? d.workspace.chat : d.workspace.work}
+            </button>
+          ))}
+        </div>
         <div className="ml-auto flex items-center gap-1">
           {conversationId && branch.length > 0 ? (
             <Button
@@ -246,8 +269,8 @@ export function ChatView({ conversationId }: { conversationId: string | null }) 
           </Button>
         </div>
       ) : empty ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-7 pb-[12vh]">
-          <h1 className="px-6 text-center text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
+        <div className="flex flex-1 flex-col items-center justify-center gap-9 pb-[15vh]">
+          <h1 className="w-full max-w-5xl px-6 text-center text-[26px] font-normal tracking-tight sm:text-[30px]">
             {d.chat.emptyTitle}
           </h1>
           {composerEl}

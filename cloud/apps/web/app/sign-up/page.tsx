@@ -3,7 +3,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import {
+  AuthFrame,
+  AuthField,
+  PasswordInput,
+  ProviderIcon,
+  validateAuthForm,
+  type AuthFieldErrors,
+} from "@/components/AuthFrame";
+
 import { authClient } from "@/lib/auth-client";
+import { APPLE_SIGN_IN_ENABLED, GOOGLE_SIGN_IN_ENABLED } from "@/lib/config";
 import { useLocale } from "@/lib/locale-context";
 import { safeNext } from "@/lib/safeNext";
 
@@ -16,10 +26,18 @@ function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [busy, setBusy] = useState(false);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const found = validateAuthForm(event.currentTarget, d);
+    setFieldErrors(found);
+    setError(null);
+    if (Object.keys(found).length) {
+      event.currentTarget.querySelector<HTMLInputElement>(`#${Object.keys(found)[0]}`)?.focus();
+      return;
+    }
     setBusy(true);
     setError(null);
     const result = await authClient.signUp.email({ name, email, password });
@@ -31,69 +49,137 @@ function SignUpForm() {
     router.push(`/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
   };
 
+  const social = async (provider: "google" | "apple") => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await authClient.signIn.social({
+        provider,
+        callbackURL: `${window.location.origin}${next}`,
+      });
+      if (result.error) setError(result.error.message ?? d.error);
+    } catch {
+      setError(d.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="card space-y-5">
-      <h1 className="text-xl font-semibold">{d.signUp}</h1>
-      <form onSubmit={submit} className="space-y-3">
-        <div>
-          <label className="label" htmlFor="name">
-            {d.name}
-          </label>
+    <AuthFrame
+      footer={
+        <>
+          {d.haveAccount}{" "}
+          <Link
+            className="font-medium text-neutral-900 underline underline-offset-4"
+            href={`/sign-in?next=${encodeURIComponent(next)}`}
+          >
+            {d.signIn}
+          </Link>
+        </>
+      }
+    >
+      <h1 className="text-[30px] leading-tight font-medium tracking-tight">{d.auth.signUpTitle}</h1>
+      <p className="mt-3 mb-8 text-[15px] leading-6 text-neutral-500">{d.auth.signUpBody}</p>
+      <div className="flex flex-col gap-3">
+        {GOOGLE_SIGN_IN_ENABLED ? (
+          <button
+            className="btn-secondary w-full gap-2"
+            type="button"
+            disabled={busy}
+            onClick={() => void social("google")}
+          >
+            <ProviderIcon provider="google" />
+            {d.auth.continueGoogle}
+          </button>
+        ) : null}
+        {APPLE_SIGN_IN_ENABLED ? (
+          <button
+            className="btn-secondary w-full gap-2"
+            type="button"
+            disabled={busy}
+            onClick={() => void social("apple")}
+          >
+            <ProviderIcon provider="apple" />
+            {d.auth.continueApple}
+          </button>
+        ) : null}
+      </div>
+      {GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED ? (
+        <div className="my-6 flex items-center gap-4 text-xs text-neutral-500">
+          <span className="h-px flex-1 bg-neutral-200" />
+          {d.auth.or}
+          <span className="h-px flex-1 bg-neutral-200" />
+        </div>
+      ) : null}
+      <form noValidate onSubmit={submit} className="space-y-6">
+        <AuthField id="name" label={d.name} error={fieldErrors.name}>
           <input
             id="name"
             className="input"
             autoComplete="name"
             required
+            aria-invalid={!!fieldErrors.name}
+            aria-describedby={fieldErrors.name ? "name-error" : undefined}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setFieldErrors((errors) => ({ ...errors, name: undefined }));
+              setError(null);
+            }}
           />
-        </div>
-        <div>
-          <label className="label" htmlFor="email">
-            {d.email}
-          </label>
+        </AuthField>
+        <AuthField id="email" label={d.email} error={fieldErrors.email}>
           <input
             id="email"
             className="input"
             type="email"
             autoComplete="email"
             required
+            placeholder=""
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldErrors((errors) => ({ ...errors, email: undefined }));
+              setError(null);
+            }}
           />
-        </div>
-        <div>
-          <label className="label" htmlFor="password">
-            {d.password}
-          </label>
-          <input
+        </AuthField>
+        <AuthField id="password" label={d.password} error={fieldErrors.password}>
+          <PasswordInput
             id="password"
             className="input"
             type="password"
             autoComplete="new-password"
             minLength={10}
             required
+            placeholder=""
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={fieldErrors.password ? "password-error" : "password-hint"}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldErrors((errors) => ({ ...errors, password: undefined }));
+              setError(null);
+            }}
           />
-        </div>
+        </AuthField>
+        <p id="password-hint" className="text-xs text-neutral-500">
+          {d.auth.passwordHint}
+        </p>
         {error ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
         ) : null}
         <button className="btn w-full" disabled={busy} type="submit">
-          {d.continue}
+          {busy ? d.loading : d.signUp}
         </button>
         <p className="text-xs text-neutral-500">{d.agree}</p>
       </form>
-      <p className="text-sm text-neutral-600">
-        {d.haveAccount}{" "}
-        <Link className="underline" href={`/sign-in?next=${encodeURIComponent(next)}`}>
-          {d.signIn}
-        </Link>
-      </p>
-    </div>
+    </AuthFrame>
   );
 }
 
