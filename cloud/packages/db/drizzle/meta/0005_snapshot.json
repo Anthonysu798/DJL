@@ -1,5 +1,5 @@
 {
-  "id": "ef898a53-6a9a-4c2d-89dd-c1e427318b68",
+  "id": "0d029b23-7317-4ed9-9421-ed98066f0dd5",
   "prevId": "f47bc076-fee5-429c-a7c8-1f17570d204c",
   "version": "7",
   "dialect": "postgresql",
@@ -735,6 +735,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "device_id": {
+          "name": "device_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "active_organization_id": {
           "name": "active_organization_id",
           "type": "text",
@@ -777,6 +783,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "session_device_id_devices_id_fk": {
+          "name": "session_device_id_devices_id_fk",
+          "tableFrom": "session",
+          "tableTo": "devices",
+          "columnsFrom": [
+            "device_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -6136,92 +6155,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.notification_reads": {
-      "name": "notification_reads",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "run_id": {
-          "name": "run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "read_at": {
-          "name": "read_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "notification_reads_user_id_user_id_fk": {
-          "name": "notification_reads_user_id_user_id_fk",
-          "tableFrom": "notification_reads",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "notification_reads_org_id_organization_id_fk": {
-          "name": "notification_reads_org_id_organization_id_fk",
-          "tableFrom": "notification_reads",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "notification_reads_run_id_runs_id_fk": {
-          "name": "notification_reads_run_id_runs_id_fk",
-          "tableFrom": "notification_reads",
-          "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "notification_reads_user_id_run_id_pk": {
-          "name": "notification_reads_user_id_run_id_pk",
-          "columns": [
-            "user_id",
-            "run_id"
-          ]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

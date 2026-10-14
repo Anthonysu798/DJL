@@ -15,18 +15,28 @@ function readTheme(): Theme {
   } catch {
     /* storage unavailable */
   }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "dark";
 }
 
-/** Current theme and a setter that persists it per browser. Light is the default. */
+/** Current theme and a setter that persists it per browser. Dark is the default. */
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>("light");
-  useEffect(() => setThemeState(readTheme()), []);
+  const [theme, setThemeState] = useState<Theme>("dark");
+  useEffect(() => {
+    const sync = () => setThemeState(readTheme());
+    sync();
+    window.addEventListener("djl-theme-change", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("djl-theme-change", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
     document.documentElement.classList.toggle("dark", next === "dark");
     try {
       localStorage.setItem(KEY, next);
+      window.dispatchEvent(new Event("djl-theme-change"));
     } catch {
       /* ignore */
     }
@@ -51,4 +61,4 @@ export function ThemeToggle() {
 }
 
 /** Inline script so the first paint already has the right theme (no flash). */
-export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(KEY)});if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})();`;
+export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(KEY)});if(!t){t='dark'}if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})();`;

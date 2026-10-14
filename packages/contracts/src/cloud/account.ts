@@ -72,6 +72,26 @@ export type CloudRegisterDeviceResponse = typeof CloudRegisterDeviceResponse.Typ
 export const CloudDevicesResponse = Schema.Struct({ devices: Schema.Array(CloudDevice) });
 export type CloudDevicesResponse = typeof CloudDevicesResponse.Type;
 
+// GET /v1/devices/sessions: only the caller's unexpired sign-ins; never session tokens.
+export const CloudDeviceSession = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  deviceId: Schema.NullOr(CloudDeviceId),
+  kind: Schema.NullOr(CloudDeviceKind),
+  name: Schema.NullOr(Schema.String),
+  platform: Schema.NullOr(Schema.String),
+  ipAddress: Schema.NullOr(Schema.String),
+  userAgent: Schema.NullOr(Schema.String),
+  createdAt: Schema.String,
+  lastSeenAt: Schema.String,
+  expiresAt: Schema.String,
+  current: Schema.Boolean,
+});
+export type CloudDeviceSession = typeof CloudDeviceSession.Type;
+export const CloudDeviceSessionsResponse = Schema.Struct({
+  sessions: Schema.Array(CloudDeviceSession),
+});
+export type CloudDeviceSessionsResponse = typeof CloudDeviceSessionsResponse.Type;
+
 // POST /v1/devices/push-token → 204. Registers (or moves) an APNs token for
 // task-finished notifications; the same token re-registered is refreshed.
 // The push's custom keys are CloudRunPushData.

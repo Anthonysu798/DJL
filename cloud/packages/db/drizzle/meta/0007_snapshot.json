@@ -1,6 +1,6 @@
 {
-  "id": "007c31aa-04a3-48f1-ae1f-b0feebceb6a1",
-  "prevId": "37d67e7e-7780-49f0-acdf-aff570b73184",
+  "id": "1026abdf-7579-4434-a230-0ba0008b93fb",
+  "prevId": "a777bd4b-96fd-4cbb-83e3-315dff6a00bb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -735,6 +735,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "device_id": {
+          "name": "device_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "active_organization_id": {
           "name": "active_organization_id",
           "type": "text",
@@ -777,6 +783,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "session_device_id_devices_id_fk": {
+          "name": "session_device_id_devices_id_fk",
+          "tableFrom": "session",
+          "tableTo": "devices",
+          "columnsFrom": [
+            "device_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5240,12 +5259,6 @@
           "notNull": true,
           "default": "'pending'"
         },
-        "message_id": {
-          "name": "message_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "source": {
           "name": "source",
           "type": "text",
@@ -5340,40 +5353,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "files_generated_gallery_idx": {
-          "name": "files_generated_gallery_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"files\".\"source\" = 'generated' AND \"files\".\"deleted_at\" IS NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -5396,19 +5375,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "files_message_id_messages_id_fk": {
-          "name": "files_message_id_messages_id_fk",
-          "tableFrom": "files",
-          "tableTo": "messages",
-          "columnsFrom": [
-            "message_id"
           ],
           "columnsTo": [
             "id"
@@ -5698,12 +5664,6 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "image_aspect_ratio": {
-          "name": "image_aspect_ratio",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "status": {
           "name": "status",
