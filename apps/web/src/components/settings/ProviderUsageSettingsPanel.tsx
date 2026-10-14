@@ -36,6 +36,7 @@ import {
 } from "~/settingsPanelStyles";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
+import { CLOUD_ACCOUNT_QUERY_KEY, DjlCloudAccountCard } from "./DjlCloudAccountCard";
 
 const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none";
 
@@ -217,41 +218,52 @@ export function ProviderUsageSettingsPanel() {
   const isRefreshing = usageQuery.isFetching || refreshMutation.isPending;
 
   return (
-    <section className={SETTINGS_PANEL_SECTION_CLASS_NAME}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{t("usage.title")}</h2>
-        <Button
-          size="xs"
-          variant="outline"
-          className="shrink-0"
-          disabled={isRefreshing}
-          onClick={() => refreshMutation.mutate()}
-        >
-          <RotateCcwIcon className={cn("size-3.5", isRefreshing && "animate-spin")} />
-          {t("actions.refresh", { ns: "common" })}
-        </Button>
-      </div>
-
-      {showInitialLoading ? (
-        <SettingsCard>
-          <div className="px-4 py-3.5 text-xs text-muted-foreground">{t("usage.loading")}</div>
-        </SettingsCard>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {cards.map((snapshot) => (
-            <ProviderUsageCard
-              key={snapshot.provider}
-              snapshot={snapshot}
-              threadRateLimits={threadRateLimits}
-              codexHomePath={codexHomePath}
-            />
-          ))}
+    <div className={SETTINGS_PANEL_SECTION_CLASS_NAME}>
+      <DjlCloudAccountCard showUsage />
+      <section className={SETTINGS_PANEL_SECTION_CLASS_NAME}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{t("usage.title")}</h2>
+          <Button
+            size="xs"
+            variant="outline"
+            className="shrink-0"
+            disabled={isRefreshing}
+            onClick={() => {
+              refreshMutation.mutate();
+              void queryClient.invalidateQueries({ queryKey: CLOUD_ACCOUNT_QUERY_KEY });
+            }}
+          >
+            <RotateCcwIcon className={cn("size-3.5", isRefreshing && "animate-spin")} />
+            {t("actions.refresh", { ns: "common" })}
+          </Button>
         </div>
-      )}
 
-      <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
-        {t("usage.privacyDescription")}
-      </p>
-    </section>
+        {showInitialLoading ? (
+          <SettingsCard>
+            <div className="px-4 py-3.5 text-xs text-muted-foreground">{t("usage.loading")}</div>
+          </SettingsCard>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {cards.map((snapshot) => (
+              <ProviderUsageCard
+                key={snapshot.provider}
+                snapshot={snapshot}
+                threadRateLimits={threadRateLimits}
+                codexHomePath={codexHomePath}
+              />
+            ))}
+          </div>
+        )}
+
+        <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
+          {t("usage.privacyDescription")}
+        </p>
+        {refreshMutation.isError && (
+          <p role="alert" className="text-xs text-destructive">
+            {t("usage.status.unavailable")}
+          </p>
+        )}
+      </section>
+    </div>
   );
 }

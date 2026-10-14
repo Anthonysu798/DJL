@@ -90,6 +90,7 @@ const COMPOSER_PROVIDER_KINDS = [
   "kilo",
   "opencode",
   "pi",
+  "djlCloud",
 ] as const satisfies readonly ProviderKind[];
 const isProviderKind = Schema.is(ProviderKind);
 const GROK_REASONING_EFFORT_SET = new Set<string>(GROK_REASONING_EFFORT_OPTIONS);

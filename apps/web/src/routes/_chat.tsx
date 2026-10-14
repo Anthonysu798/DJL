@@ -603,9 +603,11 @@ function ChatRouteLayout() {
       defaultOpen
       open={resolvedSidebarOpen}
       onOpenChange={setSidebarOpen}
-      className="bg-[var(--app-shell-background)]"
+      className={cn("bg-[var(--app-shell-background)]", isElectron && "djl-desktop-shell")}
+      style={isElectron ? ({ "--sidebar-width": "238px" } as React.CSSProperties) : undefined}
       data-sidebar-side="left"
     >
+      {isElectron && <div id="djl-desktop-chrome" />}
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
       <FirstRunTour />

@@ -177,6 +177,18 @@ function providerModelOptions(options: ProviderModelOptions): ProviderModelOptio
 }
 
 describe("resolvePreferredComposerModelSelection", () => {
+  it("retains a cloud-only draft selection during promotion", () => {
+    expect(
+      resolvePreferredComposerModelSelection({
+        draft: {
+          activeProvider: null,
+          modelSelectionByProvider: { djlCloud: { provider: "djlCloud", model: "cloud-live" } },
+        },
+        threadModelSelection: null,
+        projectModelSelection: { provider: "codex", model: "gpt-5" },
+      }),
+    ).toEqual({ provider: "djlCloud", model: "cloud-live" });
+  });
   it("prefers the active draft provider selection over thread and project defaults", () => {
     expect(
       resolvePreferredComposerModelSelection({

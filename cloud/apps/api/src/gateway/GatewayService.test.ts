@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { creditsToMicro } from "@djl/domain";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Principal } from "../auth/guard.ts";
 import { Settings } from "../config/settings.ts";
@@ -278,17 +278,26 @@ describe("GatewayService chat", () => {
       idempotencyKey: `g:${p.orgId}`,
       actor: "test",
     });
-    const { stream, requestId } = await gateway.chatStream(facts(p), {
-      model: "text.fast",
-      messages: [{ role: "user", content: "hi" }],
-      max_tokens: 50,
-    });
-    await readSse(stream);
-    const row = await conn.db.query.usageRequests.findFirst({
-      where: eq(schema.usageRequests.id, requestId),
-    });
-    expect(row?.modelId).toBe("fake-cheap");
-    expect(row?.routeReason).toBe("capability:text.fast");
+    const candidates = (await gateway.catalog()).filter((model) =>
+      ["fake-chat", "fake-cheap"].includes(model.modelId),
+    );
+    // Keep seeded production models out of this two-model routing fixture.
+    const catalog = vi.spyOn(gateway, "catalog").mockResolvedValue(candidates);
+    try {
+      const { stream, requestId } = await gateway.chatStream(facts(p), {
+        model: "text.fast",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 50,
+      });
+      await readSse(stream);
+      const row = await conn.db.query.usageRequests.findFirst({
+        where: eq(schema.usageRequests.id, requestId),
+      });
+      expect(row?.modelId).toBe("fake-cheap");
+      expect(row?.routeReason).toBe("capability:text.fast");
+    } finally {
+      catalog.mockRestore();
+    }
   });
 
   it("refuses with 402 when the reservation cannot be covered and leaves the balance untouched", async () => {

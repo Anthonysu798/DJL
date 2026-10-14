@@ -25,11 +25,23 @@ export function resolveRemoteRelayUrl(
   env: NodeJS.ProcessEnv,
   packageMetadata: RemoteGatewayPackageMetadata | null = null,
 ): string | null {
-  return (
+  const configured =
     normalizeRemoteRelayUrl(env.DJL_REMOTE_RELAY_URL) ??
     normalizeRemoteRelayUrl(env.DJL_RELAY) ??
-    normalizeRemoteRelayUrl(packageMetadata?.djlRemoteRelayUrl)
-  );
+    normalizeRemoteRelayUrl(packageMetadata?.djlRemoteRelayUrl);
+  if (configured) return configured;
+  try {
+    const api = new URL(env.DJL_CLOUD_API_URL?.trim() || "https://api.slcor.com");
+    if (api.username || api.password || api.search || api.hash) return null;
+    if (api.protocol === "https:") api.protocol = "wss:";
+    else if (api.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(api.hostname))
+      api.protocol = "ws:";
+    else return null;
+    api.pathname = "/relay";
+    return normalizeRemoteRelayUrl(api.toString());
+  } catch {
+    return null;
+  }
 }
 
 export function createInitialRemoteGatewayState(input: {

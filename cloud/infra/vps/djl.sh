@@ -17,6 +17,13 @@ case "${1:-}" in
     "${compose[@]}" rm -f migrate policies s3-init
     "${compose[@]}" up -d --wait --wait-timeout 180
     ;;
+  remote-up)
+    setup check
+    "${compose[@]}" up -d --build --wait --wait-timeout 180 remote-relay
+    ;;
+  remote-down)
+    "${compose[@]}" stop remote-relay
+    ;;
   down) "${compose[@]}" down ;;
   status) "${compose[@]}" ps ;;
   verify)
@@ -36,5 +43,5 @@ case "${1:-}" in
       chrislusf/seaweedfs:4.47 -czf - -C /data . > "$target/files.tar.gz"
     echo "Backup saved to $target; keep a copy off the VPS."
     ;;
-  *) echo "Usage: $0 {init|check|up|down|status|verify|logs [service]|backup}" >&2; exit 2 ;;
+  *) echo "Usage: $0 {init|check|up|remote-up|remote-down|down|status|verify|logs [service]|backup}" >&2; exit 2 ;;
 esac

@@ -3,11 +3,17 @@
 }
 
 {$API_HOST} {
-    reverse_proxy {$API_UPSTREAM} {
-        flush_interval -1
-        header_up -Fly-Client-IP
-        header_up -CF-Connecting-IP
-        header_up X-Forwarded-For {remote_host}
+    @remote path /relay/* /v1/pairing/code/resolve /v1/trusted/session/resolve /v1/push/session/* /v1/sessions/*/revoke
+    handle @remote {
+        reverse_proxy {$REMOTE_RELAY_UPSTREAM}
+    }
+    handle {
+        reverse_proxy {$API_UPSTREAM} {
+            flush_interval -1
+            header_up -Fly-Client-IP
+            header_up -CF-Connecting-IP
+            header_up X-Forwarded-For {remote_host}
+        }
     }
 }
 

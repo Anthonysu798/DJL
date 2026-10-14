@@ -638,7 +638,7 @@ describe("ProviderCommandReactor", () => {
   );
 
   it.each(
-    (["codex", "claudeAgent", "cursor"] as const).flatMap((provider) =>
+    (["codex", "claudeAgent", "cursor", "djlCloud"] as const).flatMap((provider) =>
       (["attachment", "memory", "studio"] as const).map((kind) => ({ provider, kind })),
     ),
   )(
@@ -712,9 +712,13 @@ describe("ProviderCommandReactor", () => {
       expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
         input: expect.stringContaining("Prepared context"),
       });
-      expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
-        cwd: expect.stringContaining(workspaceRoot),
-      });
+      if (provider === "djlCloud" && kind !== "studio") {
+        expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
+      } else {
+        expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+          cwd: expect.stringContaining(workspaceRoot),
+        });
+      }
     },
   );
 

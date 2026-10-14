@@ -2503,20 +2503,20 @@ function SettingsRouteView() {
               // pane than the form sections to fit the heatmap + two-column layout.
               <div className="mx-auto w-full max-w-3xl px-6 py-8">{renderActivePanel()}</div>
             ) : (
-              <div className="mx-auto w-full max-w-2xl px-6 py-8">
-                <div className="mb-8 flex items-start justify-between gap-4">
+              <div className="djl-settings-content mx-auto w-full max-w-[776px] px-6 pt-[72px] pb-12">
+                <div className="mb-12 flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h1 className="text-xl font-medium tracking-tight text-foreground">
+                    <h1 className="text-[26px] font-semibold tracking-tight text-foreground">
                       {t(activeSectionItem.labelKey)}
                     </h1>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    <p className="djl-settings-page-description mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {t(activeSectionItem.descriptionKey)}
                     </p>
                   </div>
                   <Button
                     size="xs"
                     variant="outline"
-                    className="shrink-0"
+                    className={cn("shrink-0", changedSettingLabels.length === 0 && "invisible")}
                     disabled={changedSettingLabels.length === 0}
                     onClick={() => void restoreDefaults()}
                   >

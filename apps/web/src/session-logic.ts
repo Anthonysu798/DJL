@@ -53,6 +53,7 @@ export const PROVIDER_OPTIONS: Array<{
   { value: "codex", label: "Codex", available: true },
   { value: "claudeAgent", label: "Claude Code", available: true },
   { value: "cursor", label: "Cursor", available: true },
+  { value: "djlCloud", label: "DJL Cloud", available: true },
 ];
 
 export interface WorkLogEntry {
