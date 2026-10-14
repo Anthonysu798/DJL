@@ -54,8 +54,10 @@
 	<string>DJL uses Face ID to protect your remote coding sessions when you return to the app.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>DJL needs local network access to connect to your Codex app-server running on your Mac.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>DJL uses on-device speech recognition to turn your voice into editable message text.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>DJL needs microphone access to record voice notes for ChatGPT transcription.</string>
+	<string>DJL uses the microphone for voice input when you tap the microphone button.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_djl-permission._tcp</string>

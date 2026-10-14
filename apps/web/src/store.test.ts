@@ -2300,6 +2300,28 @@ describe("store read model sync", () => {
     expect(next.threads[0]?.session?.provider).toBe("pi");
   });
 
+  it("preserves DJL Cloud as the active session provider", () => {
+    const next = syncServerReadModel(
+      makeState(makeThread()),
+      makeReadModel(
+        makeReadModelThread({
+          modelSelection: { provider: "djlCloud", model: "nemotron-3.5-lightning-free" },
+          session: {
+            threadId: ThreadId.makeUnsafe("thread-1"),
+            status: "ready",
+            providerName: "djlCloud",
+            runtimeMode: "approval-required",
+            activeTurnId: null,
+            lastError: null,
+            updatedAt: "2026-10-13T00:00:00Z",
+          },
+        }),
+      ),
+    );
+    expect(next.threads[0]?.modelSelection.provider).toBe("djlCloud");
+    expect(next.threads[0]?.session?.provider).toBe("djlCloud");
+  });
+
   it("preserves exact OpenCode thread model slugs from the read model", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(

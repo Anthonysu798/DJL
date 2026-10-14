@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CloudAccount } from "./account";
 import { cloudSessionPath, readCloudSession, writeCloudSession } from "./session";
@@ -42,6 +42,79 @@ describe("cloud session store", () => {
 });
 
 describe("CloudAccount device flow", () => {
+  it("clears the local session before an offline logout request finishes", async () => {
+    await writeCloudSession(secretsDir, {
+      apiBaseUrl: "https://cloud.test",
+      token: "tok",
+      userId: "u1",
+      email: "a@b.c",
+      orgId: "o1",
+      createdAt: "x",
+    });
+    let finish!: (response: Response) => void;
+    const account = new CloudAccount({
+      secretsDir,
+      region: async () => "global",
+      fetchImpl: () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    });
+    const result = account.signOut();
+    await vi.waitFor(async () => expect(await readCloudSession(secretsDir)).toBeNull(), {
+      timeout: 300,
+    });
+    expect((await result).signedIn).toBe(false);
+    finish(jsonResponse(200, { success: true }));
+  });
+
+  it("returns cloud usage windows alongside credits without losing credits when usage fails", async () => {
+    await writeCloudSession(secretsDir, {
+      apiBaseUrl: "https://cloud.test",
+      token: "tok",
+      userId: "u1",
+      email: "a@b.c",
+      orgId: "o1",
+      createdAt: "x",
+    });
+    const usage = {
+      planId: "free",
+      windows: {
+        fiveHour: {
+          kind: "five_hour",
+          limit: "1000000",
+          used: "250000",
+          remaining: "750000",
+          resetsAt: null,
+        },
+        week: {
+          kind: "week",
+          limit: "2000000",
+          used: "250000",
+          remaining: "1750000",
+          resetsAt: null,
+        },
+      },
+      banks: { count: 0, nextExpiresAt: null },
+    };
+    let usageFails = false;
+    const account = new CloudAccount({
+      secretsDir,
+      region: async () => "global",
+      fetchImpl: async (url) => {
+        if (String(url).endsWith("/v1/usage/windows"))
+          return jsonResponse(usageFails ? 503 : 200, usage);
+        return jsonResponse(200, { display: { total: "2.00" } });
+      },
+    });
+    expect((await account.status()).usage).toEqual(usage);
+    usageFails = true;
+    const status = await account.status();
+    expect(status.credits?.display.total).toBe("2.00");
+    expect(status.problem).toBeUndefined();
+    expect(status.usage).toBeUndefined();
+  });
+
   it("starts sign-in, polls until approved, stores the session, and reports credits", async () => {
     const calls: string[] = [];
     let polls = 0;

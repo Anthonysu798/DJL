@@ -50,6 +50,7 @@ export interface AuthNotifier {
     readonly phoneNumber: string;
     readonly code: string;
   }) => Promise<void>;
+  readonly confirmPhoneOtp: (phoneNumber: string) => Promise<void>;
   readonly sendPasswordReset: (input: {
     readonly email: string;
     readonly url: string;
@@ -207,19 +208,26 @@ export function createAuth(input: {
           });
         },
       }),
-      phoneNumber({
-        otpLength: 6,
-        expiresIn: 300,
-        allowedAttempts: 5,
-        sendOTP: async ({ phoneNumber, code }) => {
-          await notifier.sendPhoneOtp({ phoneNumber, code });
-        },
-        signUpOnVerification: {
-          // Phone-only accounts get a placeholder email (decision: Identifiers).
-          getTempEmail: (phone) => `${phone.replace(/[^0-9]/g, "")}@phone.djl.invalid`,
-          getTempName: (phone) => phone,
-        },
-      }),
+      ...(env.smsEnabled
+        ? [
+            phoneNumber({
+              otpLength: 6,
+              expiresIn: 300,
+              allowedAttempts: 5,
+              sendOTP: async ({ phoneNumber, code }) => {
+                await notifier.sendPhoneOtp({ phoneNumber, code });
+              },
+              callbackOnVerification: async ({ phoneNumber }) => {
+                await notifier.confirmPhoneOtp(phoneNumber);
+              },
+              signUpOnVerification: {
+                // Phone-only accounts get a placeholder email (decision: Identifiers).
+                getTempEmail: (phone) => `${phone.replace(/[^0-9]/g, "")}@phone.djl.invalid`,
+                getTempName: (phone) => phone,
+              },
+            }),
+          ]
+        : []),
       emailOTP({
         otpLength: 6,
         expiresIn: 600,

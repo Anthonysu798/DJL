@@ -130,7 +130,7 @@ export const ledgerBucketEnum = pgEnum("ledger_bucket", ["free", "trial", "plan"
 
 /**
  * Append-only. No UPDATE or DELETE grant exists for the application role;
- * see infra/supabase/policies.sql. Amounts are signed microcredits.
+ * see infra/postgres/policies.sql. Amounts are signed microcredits.
  */
 export const creditLedger = pgTable(
   "credit_ledger",

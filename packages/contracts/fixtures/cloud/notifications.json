@@ -1,0 +1,14 @@
+{
+  "notifications": [
+    {
+      "id": "run_1",
+      "conversationId": "conv_1",
+      "conversationTitle": "Trip plan",
+      "status": "succeeded",
+      "finishedAt": "2026-09-26T12:00:00.000Z",
+      "readAt": null
+    }
+  ],
+  "nextCursor": null,
+  "unreadCount": 1
+}

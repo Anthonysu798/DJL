@@ -16,9 +16,15 @@ import UserNotifications
 final class CloudService {
     let client: CloudAPIClient
     let authAPI: CloudAuthAPI
+    let navigation = CloudNavigationState()
+    let drafts: CloudDraftStore
+    let remoteActivity = MobileRemoteActivityStore()
+    @ObservationIgnored private var notificationStorage: CloudNotificationStore?
     @ObservationIgnored private let sessionStore: CloudSessionStoring
 
     private(set) var isSignedIn: Bool
+    private(set) var sessionRevision: UInt64 = 0
+    private(set) var clientConfig: CloudClientConfig?
     var sectionPreference: CloudSectionPreference = .automatic
 
     private(set) var me: CloudMe?
@@ -27,6 +33,7 @@ final class CloudService {
     private(set) var models: [CloudModel] = []
     private(set) var conversations: [CloudConversation] = []
     private(set) var isLoadingConversations = false
+    private(set) var nextConversationCursor: String?
     var lastError: String?
     /// Set by a `djl://cloud/c/<id>` link or a task-completion push; the home view opens it.
     var pendingConversationID: String?
@@ -35,7 +42,13 @@ final class CloudService {
         didSet { UserDefaults.standard.set(selectedModelID, forKey: Self.selectedModelKey) }
     }
 
-    @ObservationIgnored private var images: [String: UIImage] = [:]
+    @ObservationIgnored private let imageCache = CloudImageCache()
+    @ObservationIgnored private var imageDownloads = 0
+    @ObservationIgnored private var galleryStore: CloudImageGallery?
+    var gallery: CloudImageGallery {
+        if let galleryStore { return galleryStore }
+        let store = CloudImageGallery(cloud: self); galleryStore = store; return store
+    }
     @ObservationIgnored private var pushToken: String?
     @ObservationIgnored private var pushObserver: NSObjectProtocol?
     @ObservationIgnored private var openObserver: NSObjectProtocol?
@@ -45,9 +58,11 @@ final class CloudService {
         configuration: CloudAPIConfiguration = .resolved(),
         sessionStore: CloudSessionStoring = CloudKeychainSessionStore(),
         urlSession: URLSession = .djlCloud,
-        tokenProvider: CloudAccessTokenProviding? = nil
+        tokenProvider: CloudAccessTokenProviding? = nil,
+        draftStore: CloudDraftStore = CloudDraftStore()
     ) {
         self.sessionStore = sessionStore
+        drafts = draftStore
         let provider = tokenProvider ?? CloudJWTAccessTokenProvider(
             configuration: configuration,
             sessionStore: sessionStore,
@@ -74,11 +89,32 @@ final class CloudService {
         models.first { $0.id == selectedModelID } ?? models.first(where: \.isSelectable)
     }
 
+    var accountScopeKey: String? {
+        guard let me else { return nil }
+        return "\(me.user.id):\(me.activeOrgId)"
+    }
+
+    var notifications: CloudNotificationStore {
+        if let notificationStorage { return notificationStorage }
+        let store = CloudNotificationStore(cloud: self)
+        notificationStorage = store
+        return store
+    }
+
+    func refreshClientConfig() async {
+        do { clientConfig = try await client.clientConfig() }
+        catch { /* Email sign-in remains available while configuration is unreachable. */ }
+    }
+
     // MARK: Session
 
     func completeSignIn(sessionToken: String) async {
-        sessionStore.writeSessionToken(sessionToken)
         await client.tokenProvider.invalidate()
+        guard !Task.isCancelled else { return }
+        sessionRevision &+= 1
+        clearAccountData()
+        lastError = nil
+        sessionStore.writeSessionToken(sessionToken)
         isSignedIn = true
         sectionPreference = .cloud
         await refreshAll()
@@ -86,10 +122,11 @@ final class CloudService {
     }
 
     func signOut() async {
-        if let token = sessionStore.readSessionToken() {
+        let token = sessionStore.readSessionToken()
+        clearLocalSession()
+        if let token {
             await authAPI.signOut(sessionToken: token)
         }
-        clearLocalSession()
     }
 
     func deleteAccount() async throws {
@@ -98,24 +135,42 @@ final class CloudService {
     }
 
     private func clearLocalSession() {
+        sessionRevision &+= 1
         sessionStore.writeSessionToken(nil)
         isSignedIn = false
+        clearAccountData()
+        let revision = sessionRevision
+        Task {
+            guard revision == self.sessionRevision, !self.isSignedIn else { return }
+            await client.tokenProvider.invalidate()
+        }
+    }
+
+    private func clearAccountData() {
+        notificationStorage?.reset()
+        drafts.clearAll()
+        navigation.newChat()
         me = nil
         credits = nil
         usage = nil
         conversations = []
-        images = [:]
-        Task { await client.tokenProvider.invalidate() }
+        nextConversationCursor = nil
+        models = []
+        selectedModelID = nil
+        pendingConversationID = nil
+        isLoadingConversations = false
+        imageCache.clear()
+        galleryStore?.reset()
     }
 
     /// Every call site funnels errors here so an ended session always returns to the welcome screen.
     func handle(_ error: Error) {
+        if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled { return }
         if let apiError = error as? CloudAPIError, apiError == .unauthorized {
             clearLocalSession()
             lastError = apiError.errorDescription
             return
         }
-        if error is CancellationError { return }
         lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
@@ -123,47 +178,70 @@ final class CloudService {
 
     func refreshAll() async {
         guard isSignedIn else { return }
+        let revision = sessionRevision
         async let meResult = client.me()
         async let modelsResult = client.models()
         async let listResult = client.conversations()
         do {
-            me = try await meResult
-            models = try await modelsResult
-            conversations = try await listResult.conversations
+            let account = try await meResult
+            let catalog = try await modelsResult
+            let history = try await listResult
+            guard revision == sessionRevision, isSignedIn else { return }
+            me = account
+            models = catalog
+            conversations = history.conversations
+            nextConversationCursor = history.nextCursor
+            if !catalog.contains(where: { $0.id == selectedModelID && $0.isSelectable }) {
+                selectedModelID = catalog.first(where: \.isSelectable)?.id
+            }
         } catch {
+            guard revision == sessionRevision else { return }
             handle(error)
         }
         await refreshUsage()
+        await refreshClientConfig()
     }
 
     func refreshUsage() async {
         guard isSignedIn else { return }
+        let revision = sessionRevision
         do {
             async let creditsResult = client.credits()
             async let usageResult = client.usageWindows()
-            credits = try await creditsResult
-            usage = try await usageResult
+            let balances = try await creditsResult
+            let windows = try await usageResult
+            guard revision == sessionRevision, isSignedIn else { return }
+            credits = balances
+            usage = windows
         } catch {
+            guard revision == sessionRevision else { return }
             handle(error)
         }
     }
 
     func refreshConversations() async {
         guard isSignedIn else { return }
+        let revision = sessionRevision
         isLoadingConversations = true
-        defer { isLoadingConversations = false }
+        defer { if revision == sessionRevision { isLoadingConversations = false } }
         do {
-            conversations = try await client.conversations().conversations
+            let list = try await client.conversations()
+            guard revision == sessionRevision, isSignedIn else { return }
+            conversations = list.conversations
+            nextConversationCursor = list.nextCursor
         } catch {
+            guard revision == sessionRevision else { return }
             handle(error)
         }
     }
 
     func search(_ text: String) async -> [CloudConversationSearchHit] {
+        let revision = sessionRevision
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
         do {
-            return try await client.searchConversations(String(query.prefix(200)))
+            let results = try await client.searchConversations(String(query.prefix(200)))
+            return revision == sessionRevision ? results : []
         } catch {
             handle(error)
             return []
@@ -171,6 +249,22 @@ final class CloudService {
     }
 
     // MARK: Conversation actions
+
+    func loadMoreConversations() async {
+        guard isSignedIn, !isLoadingConversations, let cursor = nextConversationCursor else { return }
+        let revision = sessionRevision
+        isLoadingConversations = true
+        defer { if revision == sessionRevision { isLoadingConversations = false } }
+        do {
+            let page = try await client.conversations(cursor: cursor)
+            guard revision == sessionRevision, isSignedIn else { return }
+            for conversation in page.conversations { upsert(conversation) }
+            nextConversationCursor = page.nextCursor == cursor ? nil : page.nextCursor
+        } catch {
+            guard revision == sessionRevision else { return }
+            handle(error)
+        }
+    }
 
     func upsert(_ conversation: CloudConversation) {
         if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
@@ -191,29 +285,37 @@ final class CloudService {
     }
 
     func archive(_ conversation: CloudConversation) async {
+        let revision = sessionRevision
         conversations.removeAll { $0.id == conversation.id }
         do {
             _ = try await client.updateConversation(conversation.id, archived: true)
         } catch {
+            guard revision == sessionRevision else { return }
             upsert(conversation)
             handle(error)
         }
     }
 
     func delete(_ conversation: CloudConversation) async {
+        let revision = sessionRevision
         conversations.removeAll { $0.id == conversation.id }
         do {
             try await client.deleteConversation(conversation.id)
         } catch {
+            guard revision == sessionRevision else { return }
             upsert(conversation)
             handle(error)
         }
     }
 
     private func update(_ original: CloudConversation, _ call: () async throws -> CloudConversation) async {
+        let revision = sessionRevision
         do {
-            upsert(try await call())
+            let updated = try await call()
+            guard revision == sessionRevision, isSignedIn else { return }
+            upsert(updated)
         } catch {
+            guard revision == sessionRevision else { return }
             upsert(original)
             handle(error)
         }
@@ -234,29 +336,37 @@ final class CloudService {
 
     // MARK: Images
 
-    func cachedImage(fileId: String) -> UIImage? { images[fileId] }
+    func cachedImage(fileId: String) -> UIImage? { imageCache.image(fileID: fileId) }
 
     func image(fileId: String) async -> UIImage? {
-        if let cached = images[fileId] { return cached }
+        let revision = sessionRevision
+        if let cached = cachedImage(fileId: fileId) { return cached }
+        while imageDownloads >= 2 {
+            do { try await Task.sleep(for: .milliseconds(50)) } catch { return nil }
+            guard revision == sessionRevision, isSignedIn else { return nil }
+        }
+        guard !Task.isCancelled, revision == sessionRevision, isSignedIn else { return nil }
+        imageDownloads += 1
+        defer { imageDownloads -= 1 }
         do {
             let data = try await client.fileData(fileId: fileId)
-            guard let image = UIImage(data: data) else { return nil }
-            images[fileId] = image
+            guard !Task.isCancelled, revision == sessionRevision, isSignedIn,
+                  let image = CloudImageCache.decode(data) else { return nil }
+            imageCache.store(image, fileID: fileId)
             return image
         } catch {
-            handle(error)
+            if revision == sessionRevision, !Task.isCancelled { handle(error) }
             return nil
         }
     }
 
-    func remember(_ image: UIImage, fileId: String) {
-        images[fileId] = image
-    }
+    func remember(_ image: UIImage, fileId: String) { imageCache.store(image, fileID: fileId) }
 
     // MARK: Push (task completion)
 
     /// Asks once for notification permission when the user starts their first task.
     func enableTaskNotifications() {
+        guard clientConfig?.pushConfigured == true else { return }
         Task {
             let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
             if granted { UIApplication.shared.registerForRemoteNotifications() }

@@ -12,9 +12,14 @@
 import Foundation
 
 enum CloudDebugLaunch {
+    private static var resetSignInSession = false
     private static var environment: [String: String] { ProcessInfo.processInfo.environment }
 
     static func seedSessionIfRequested(sessionStore: CloudSessionStoring) {
+        if screen == "sign-in" {
+            if !resetSignInSession { sessionStore.writeSessionToken(nil); resetSignInSession = true }
+            return
+        }
         guard let token = environment["DJL_CLOUD_DEBUG_SESSION_TOKEN"], !token.isEmpty else { return }
         sessionStore.writeSessionToken(token)
     }

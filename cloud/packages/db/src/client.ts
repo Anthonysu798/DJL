@@ -6,13 +6,12 @@ import * as schema from "./schema/index.ts";
 export type DjlDatabase = ReturnType<typeof createDatabase>["db"];
 
 /**
- * One connection pool per process. `max` stays small because Fly instances
- * scale horizontally and Supabase pools connections in front of Postgres.
+ * Keep each process's pool small so the API and worker can share Postgres.
  */
 export function createDatabase(databaseUrl: string, options: { readonly max?: number } = {}) {
   const sql = postgres(databaseUrl, {
     max: options.max ?? 8,
-    prepare: false, // Supabase transaction pooler does not support prepared statements
+    prepare: false,
     idle_timeout: 20,
     connect_timeout: 10,
   });

@@ -4,7 +4,7 @@
  */
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { loadApiEnv } from "../config/env.ts";
 import { startApi, type ApiRuntime } from "../server.ts";
@@ -12,7 +12,12 @@ import { TestClient } from "../testing/client.ts";
 
 let api: ApiRuntime;
 beforeAll(async () => {
-  const env = loadApiEnv({ ...process.env, DJL_ENV: "test", DJL_MOCK_EXTERNALS: "true" });
+  const env = loadApiEnv({
+    ...process.env,
+    DJL_ENV: "test",
+    DJL_MOCK_EXTERNALS: "true",
+    SMS_ENABLED: "true",
+  });
   api = await startApi({ env, port: 0, host: "127.0.0.1" });
 });
 afterAll(async () => {
@@ -23,6 +28,85 @@ const lastOtp = (email: string) =>
   api
     .outbox!.emails.findLast((m) => m.to === email && m.tag === "otp")!
     .subject.match(/^(\d{6})/)![1]!;
+
+describe("phone verification feedback", () => {
+  it("starts real-service mode without Twilio credentials when SMS is disabled", async () => {
+    for (const key of ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID"])
+      vi.stubEnv(key, "");
+    vi.stubEnv("RESEND_API_KEY", "re_qa_only");
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_qa_only");
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_qa_only");
+    vi.stubEnv("STRIPE_TOPUP_PRICE_ID", "price_qa_only");
+    vi.stubEnv("STORAGE_S3_ENDPOINT", "http://127.0.0.1:8333");
+    vi.stubEnv("STORAGE_ACCESS_KEY_ID", "qa-only");
+    vi.stubEnv("STORAGE_SECRET_ACCESS_KEY", "qa-only");
+    let real: ApiRuntime | undefined;
+    try {
+      real = await startApi({
+        env: loadApiEnv({
+          ...process.env,
+          DJL_ENV: "test",
+          DJL_MOCK_EXTERNALS: "false",
+          SMS_ENABLED: "false",
+        }),
+        port: 0,
+        host: "127.0.0.1",
+      });
+      expect((await TestClient.for(real).call("/ready")).status).toBe(200);
+      expect(real.outbox).toBeNull();
+    } finally {
+      await real?.close();
+      vi.unstubAllEnvs();
+    }
+  });
+  it("does not expose SMS OTP routes when SMS is disabled", async () => {
+    const noSms = await startApi({
+      env: loadApiEnv({
+        ...process.env,
+        DJL_ENV: "test",
+        DJL_MOCK_EXTERNALS: "true",
+        SMS_ENABLED: "false",
+      }),
+      port: 0,
+      host: "127.0.0.1",
+    });
+    try {
+      const client = TestClient.for(noSms);
+      const response = await client.call("/v1/auth/phone-number/send-otp", {
+        method: "POST",
+        json: { phoneNumber: "+15551234567" },
+      });
+      expect(response.status).toBe(404);
+      expect(noSms.outbox!.sms).toHaveLength(0);
+    } finally {
+      await noSms.close();
+    }
+  });
+  it("approves the SMS verification only after the correct code is accepted", async () => {
+    const client = TestClient.for(api);
+    const phoneNumber = `+1555${String(crypto.getRandomValues(new Uint32Array(1))[0]!)
+      .slice(0, 7)
+      .padStart(7, "0")}`;
+    const sent = await client.call("/v1/auth/phone-number/send-otp", {
+      method: "POST",
+      json: { phoneNumber },
+    });
+    expect(sent.status).toBe(200);
+    const code = api.outbox!.sms.findLast((sms) => sms.phoneNumber === phoneNumber)!.code!;
+    const wrong = await client.call("/v1/auth/phone-number/verify", {
+      method: "POST",
+      json: { phoneNumber, code: code === "000000" ? "111111" : "000000" },
+    });
+    expect(wrong.status).not.toBe(200);
+    expect(api.outbox!.approvedVerifications ?? []).toHaveLength(0);
+    const verified = await client.call("/v1/auth/phone-number/verify", {
+      method: "POST",
+      json: { phoneNumber, code },
+    });
+    expect(verified.status).toBe(200);
+    expect(api.outbox!.approvedVerifications).toEqual([expect.stringMatching(/^mock_sms_/)]);
+  });
+});
 
 describe("bearer clients", () => {
   it("returns the session token in set-auth-token for email+password and email-code sign-in", async () => {
@@ -144,4 +228,39 @@ describe("browser clients", () => {
     expect(res.headers.getSetCookie().some((c) => c.includes("session_token"))).toBe(true);
     expect(((await res.json()) as { user?: { email?: string } }).user?.email).toBe(email);
   });
+});
+
+it("recovers a disposable account with an emailed OTP and refuses code reuse", async () => {
+  const registered = TestClient.for(api);
+  const { email, password } = await registered.signUp(api, "password-recovery");
+  const anonymous = new TestClient(registered.base);
+  expect(
+    (
+      await anonymous.call("/v1/auth/email-otp/request-password-reset", {
+        method: "POST",
+        json: { email },
+      })
+    ).status,
+  ).toBe(200);
+  const otp = lastOtp(email),
+    nextPassword = `QA-${crypto.randomUUID()}-only`;
+  const reset = () =>
+    anonymous.call("/v1/auth/email-otp/reset-password", {
+      method: "POST",
+      json: { email, otp, password: nextPassword },
+    });
+  expect((await reset()).status).toBe(200);
+  expect((await reset()).status).toBeGreaterThanOrEqual(400);
+  expect(
+    (await anonymous.call("/v1/auth/sign-in/email", { method: "POST", json: { email, password } }))
+      .status,
+  ).toBe(401);
+  expect(
+    (
+      await anonymous.call("/v1/auth/sign-in/email", {
+        method: "POST",
+        json: { email, password: nextPassword },
+      })
+    ).status,
+  ).toBe(200);
 });

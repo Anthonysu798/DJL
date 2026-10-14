@@ -3,6 +3,8 @@
 // Exports: Sidebar
 
 import { CentralIcon } from "~/lib/central-icons";
+import { DjlAccountEntry } from "./DjlAccountEntry";
+import { DesktopShellChrome } from "./DesktopShellChrome";
 import {
   ArchiveIcon,
   CheckCircle2Icon,
@@ -170,7 +172,6 @@ import {
 } from "../lib/automationState";
 import { formatCadence, groupHeartbeatAutomationsByTargetThread } from "../lib/automationForm";
 import { shouldRenderTerminalWorkspace } from "./ChatView.logic";
-import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
 import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";
 import { ProjectSidebarIcon } from "./ProjectSidebarIcon";
 import { ThreadHoverCardContent } from "./ThreadHoverCardContent";
@@ -320,7 +321,6 @@ import {
 import type { LastThreadRoute } from "../chatRouteRestore";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
 import { useCopyPathToClipboard, useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
-import { DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS } from "~/hooks/useDesktopTopBarGutter";
 import { cn } from "~/lib/utils";
 import {
   disclosureContentClassName,
@@ -1204,6 +1204,9 @@ function SidebarPrimaryAction({
         aria-current={active ? "page" : undefined}
         className={cn(
           "group/sidebar-primary-action",
+          isElectron &&
+            (Icon === SearchIcon || Icon === TerminalIcon || Icon === ClockIcon) &&
+            "djl-desktop-secondary-action",
           SIDEBAR_HEADER_ROW_CLASS_NAME,
           active
             ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
@@ -1347,7 +1350,7 @@ function SidebarSegmentedPicker({
       ? `calc(${cell} + 0.125rem + 1px + ${OVERHANG})`
       : `calc(${cell})`;
   return (
-    <div className="px-3 pt-0.5 pb-2.5">
+    <div className={cn("px-3 pt-0.5 pb-2.5", isElectron && "djl-desktop-view-picker")}>
       <div className="sidebar-segmented-picker relative isolate inline-flex w-full rounded-lg p-0.5">
         {/* Single highlighted pill that glides between segments instead of snapping per-button.
             A slim vertical overhang plus an outward horizontal lean on the end segments make
@@ -6691,17 +6694,7 @@ export default function Sidebar() {
     setAllProjectsExpanded(true);
   }, [allProjectsExpanded, collapseProjectsExcept, focusedProjectId, setAllProjectsExpanded]);
 
-  // Only macOS draws the traffic lights in the renderer's top-left, so only there
-  // does the open-sidebar header need to reserve the gutter (mirrors the mac guard
-  // in useDesktopTopBarTrafficLightGutterClassName used by the closed-state surfaces).
-  const isMacDesktop = typeof navigator !== "undefined" ? isMacPlatform(navigator.platform) : false;
-
-  // Open-sidebar (in-sidebar) and non-electron wordmark clusters share the one
-  // SidebarLeadingControls primitive with the closed-state host headers, so the
-  // toggle + arrows look identical whether the sidebar is open or collapsed; only
-  // the wrapper layout differs per host.
-  const titlebarControls = <SidebarLeadingControls className="hidden md:flex" />;
-
+  // Web navigation reuses the desktop titlebar controls.
   const headerControls = <SidebarLeadingControls className="ml-auto hidden md:flex" />;
 
   const wordmark = (
@@ -6750,15 +6743,141 @@ export default function Sidebar() {
     <>
       {isElectron ? (
         <>
-          <SidebarHeader
-            className={cn(
-              "drag-region flex-row items-center gap-2 px-4 py-0 font-system-ui",
-              CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-              isMacDesktop && DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS,
-            )}
-          >
-            {titlebarControls}
-          </SidebarHeader>
+          <DesktopShellChrome
+            title={
+              isOnSettings
+                ? t("sidebar.settings", { ns: "shell" })
+                : isOnAutomations
+                  ? t("sidebar.actions.automations", { ns: "shell" })
+                  : isOnKanban
+                    ? t("sidebar.actions.kanban", { ns: "shell" })
+                    : isOnWorkspace
+                      ? t("sidebar.views.workspace", { ns: "shell" })
+                      : ((activeSidebarThreadId
+                          ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
+                          : undefined) ??
+                        t("sidebar.actions.newChat", { ns: "shell", defaultValue: "New chat" }))
+            }
+            newChatLabel={t("sidebar.actions.newThread", { ns: "shell" })}
+            onNewChat={handlePrimaryNewThread}
+            items={[
+              {
+                label: t("sidebar.tabs.projects", { ns: "shell", defaultValue: "Projects" }),
+                icon: "home",
+                onboardingTarget: "project-mode",
+                active:
+                  !isOnSettings && !isOnStudio && !isOnWorkspace && !isOnKanban && !isOnAutomations,
+                onClick: () => {
+                  if (!navigateToBackTarget(resolveBackToThreadsTarget())) {
+                    void navigate({ to: "/" });
+                  }
+                },
+              },
+              ...(studioSectionVisible
+                ? [
+                    {
+                      label: t(SIDEBAR_VIEW_LABEL_KEYS.studio),
+                      icon: "chat-bubble-7",
+                      onboardingTarget: "work-mode",
+                      active: isOnStudio,
+                      onClick: () => handleSidebarViewChange("studio"),
+                    },
+                  ]
+                : []),
+              {
+                label: t("sidebar.actions.kanban", { ns: "shell" }),
+                icon: "folders-2",
+                active: isOnKanban,
+                onClick: () => {
+                  void navigate({ to: "/workspaces" });
+                },
+              },
+              {
+                label: t("sidebar.actions.automations", { ns: "shell" }),
+                icon: "clock",
+                active: isOnAutomations,
+                onClick: () => {
+                  void navigate({ to: "/automations" });
+                },
+              },
+              {
+                label: t("navigation.items.remote.label", { ns: "settings" }),
+                icon: "phone-haptic",
+                active: isOnSettings && activeSettingsSection === "remote",
+                onClick: () => {
+                  void navigate({ to: "/settings", search: { section: "remote" } });
+                },
+              },
+              {
+                label: t("sidebar.settings", { ns: "shell" }),
+                icon: "settings-gear-1",
+                onboardingTarget: "settings",
+                active: isOnSettings && activeSettingsSection !== "remote",
+                onClick: () => {
+                  void navigate({ to: "/settings" });
+                },
+              },
+            ]}
+            account={
+              <DjlAccountEntry
+                rail
+                onSettings={(section) => {
+                  void navigate({ to: "/settings", search: { section } });
+                }}
+              />
+            }
+            update={
+              showDesktopUpdateButton ? (
+                <DesktopUpdateSidebarButton
+                  label={desktopUpdateTooltip}
+                  disabled={desktopUpdateButtonDisabled}
+                  busy={desktopUpdateIconBusy}
+                  onClick={handleDesktopUpdateButtonClick}
+                />
+              ) : null
+            }
+          />
+          {!isOnSettings && (
+            <SidebarHeader className="djl-desktop-sidebar-heading">
+              <Menu>
+                <MenuTrigger className="flex items-center gap-2 text-lg font-semibold">
+                  DJL
+                  <ChevronDownIcon className="size-3 text-muted-foreground" />
+                </MenuTrigger>
+                <MenuPopup align="start" className="w-56">
+                  {[
+                    ...(studioSectionVisible ? ["studio" as const] : []),
+                    "threads" as const,
+                    ...(workspaceSectionVisible ? ["workspace" as const] : []),
+                  ].map((view) => (
+                    <MenuItem key={view} onClick={() => handleSidebarViewChange(view)}>
+                      {t(SIDEBAR_VIEW_LABEL_KEYS[view])}
+                    </MenuItem>
+                  ))}
+                </MenuPopup>
+              </Menu>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  className="djl-desktop-header-icon"
+                  aria-label={t("navigation.items.notifications.label", { ns: "settings" })}
+                  onClick={() => {
+                    void navigate({ to: "/settings", search: { section: "notifications" } });
+                  }}
+                >
+                  <CentralIcon name="bell" className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  className="djl-desktop-header-icon"
+                  aria-label={t("actions.search", { ns: "common" })}
+                  onClick={() => setSearchPaletteOpen(true)}
+                >
+                  <SearchIcon className="size-4" />
+                </button>
+              </div>
+            </SidebarHeader>
+          )}
         </>
       ) : (
         <SidebarHeader className="gap-3 px-3 py-2.5 font-system-ui sm:gap-2.5 sm:px-4 sm:py-3">
@@ -6811,16 +6930,18 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            <SidebarSegmentedPicker
-              views={[
-                ...(studioSectionVisible ? (["studio"] as const) : []),
-                "threads",
-                ...(workspaceSectionVisible ? (["workspace"] as const) : []),
-              ]}
-              activeView={isOnStudio ? "studio" : isOnWorkspace ? "workspace" : "threads"}
-              onSelectView={handleSidebarViewChange}
-              onPrewarmView={prewarmSidebarViewTarget}
-            />
+            {!isElectron && (
+              <SidebarSegmentedPicker
+                views={[
+                  ...(studioSectionVisible ? (["studio"] as const) : []),
+                  "threads",
+                  ...(workspaceSectionVisible ? (["workspace"] as const) : []),
+                ]}
+                activeView={isOnStudio ? "studio" : isOnWorkspace ? "workspace" : "threads"}
+                onSelectView={handleSidebarViewChange}
+                onPrewarmView={prewarmSidebarViewTarget}
+              />
+            )}
             {/* Keyed per segment so switching surfaces (Studio <-> Projects <->
                 Workspace) remounts the content with a short enter animation
                 instead of a hard cut. The picker above stays outside the key so
@@ -7357,7 +7478,10 @@ export default function Sidebar() {
         ) : null}
       </SidebarContent>
 
-      <SidebarFooter className="gap-2 p-2 font-system-ui">
+      <SidebarFooter
+        className={cn("gap-2 p-2 font-system-ui", isElectron && "djl-desktop-legacy-footer")}
+      >
+        {!isElectron && <DjlAccountEntry />}
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex flex-col gap-1">

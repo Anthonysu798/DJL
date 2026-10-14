@@ -69,6 +69,7 @@ const PROVIDER_PRIORITY = [
   "droid",
   "kilo",
   "pi",
+  "djlCloud",
 ] as const satisfies ReadonlyArray<ProviderKind>;
 
 type LocalIdentity = {

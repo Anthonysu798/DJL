@@ -1,9 +1,11 @@
 import type { DesktopBridge } from "@synara/contracts";
+import "../../index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { DjlCloudAccountCard } from "./DjlCloudAccountCard";
+import { DjlAccountEntry } from "../DjlAccountEntry";
 
 const appSettings = vi.hoisted(() => ({
   settings: { defaultProvider: "opencode" },
@@ -44,12 +46,13 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("~/nativeApi", () => ({ ensureNativeApi: () => api }));
 vi.mock("~/appSettings", () => ({ useAppSettings: () => appSettings }));
+vi.mock("~/env", () => ({ isElectron: true }));
 
-function renderCard() {
+function renderCard(showUsage = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <DjlCloudAccountCard />
+      <DjlCloudAccountCard showUsage={showUsage} />
     </QueryClientProvider>,
   );
 }
@@ -70,11 +73,154 @@ function installDeepLinkBridge() {
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  api.server.refreshProviders.mockResolvedValue(undefined);
+  api.shell.openExternal.mockResolvedValue(undefined);
   delete window.desktopBridge;
 });
 
 describe("DjlCloudAccountCard", () => {
+  it("shows DJL credits and cloud limits with accessible remaining meters", async () => {
+    api.cloud.getStatus.mockResolvedValue({
+      ...signedIn,
+      usage: {
+        planId: "free",
+        windows: {
+          fiveHour: {
+            kind: "five_hour",
+            limit: "1000000",
+            used: "250000",
+            remaining: "750000",
+            resetsAt: null,
+          },
+          week: {
+            kind: "week",
+            limit: "2000000",
+            used: "500000",
+            remaining: "1500000",
+            resetsAt: "2026-10-20T00:00:00Z",
+          },
+        },
+        banks: { count: 2, nextExpiresAt: null },
+      },
+    });
+    renderCard(true);
+    await expect.element(page.getByText("2000.00 credits available")).toBeVisible();
+    await expect
+      .element(page.getByRole("progressbar", { name: "5h: 75% left" }))
+      .toHaveAttribute("aria-valuenow", "75");
+    await expect.element(page.getByRole("progressbar", { name: "Weekly: 75% left" })).toBeVisible();
+    await expect.element(page.getByText("Banked resets: 2")).toBeVisible();
+  });
+
+  it("keeps cloud credits visible when limits are unavailable", async () => {
+    api.cloud.getStatus.mockResolvedValue(signedIn);
+    renderCard(true);
+    await expect.element(page.getByText("2000.00 credits available")).toBeVisible();
+    await expect
+      .element(page.getByText("Cloud usage limits are unavailable. Refresh to try again."))
+      .toBeVisible();
+    await expect.element(page.getByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("refreshes DJL Cloud credits independently of provider usage", async () => {
+    api.cloud.getStatus.mockResolvedValueOnce(signedIn).mockResolvedValue({
+      ...signedIn,
+      credits: { ...signedIn.credits, display: { ...signedIn.credits.display, total: "0.00" } },
+    });
+    renderCard(true);
+    await expect.element(page.getByText("2000.00 credits available")).toBeVisible();
+    await page.getByRole("button", { name: "Refresh" }).click();
+    await expect.element(page.getByText("0.00 credits available", { exact: true })).toBeVisible();
+  });
+
+  it("opens sign-in from the signed-out rail menu heading", async () => {
+    localStorage.setItem("djl.account.welcome.dismissed", "true");
+    api.cloud.getStatus.mockResolvedValue(signedOut);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <DjlAccountEntry rail />
+      </QueryClientProvider>,
+    );
+    await page.getByTestId("djl-account-entry").click();
+    await page.getByRole("menuitem", { name: "Sign in to DJL DJL Cloud" }).click();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Continue with email" })).toBeVisible();
+  });
+
+  it("signs out from the rail and offers sign-in again", async () => {
+    localStorage.setItem("djl.account.welcome.dismissed", "true");
+    api.cloud.getStatus.mockResolvedValue(signedIn);
+    api.cloud.signOut.mockResolvedValue(signedOut);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <DjlAccountEntry rail />
+      </QueryClientProvider>,
+    );
+    await expect.element(page.getByRole("button", { name: "me@test.invalid" })).toBeVisible();
+    await page.getByTestId("djl-account-entry").click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+    expect(api.cloud.signOut).toHaveBeenCalledTimes(1);
+    expect(client.getQueryData(["cloud-account"])).toEqual(signedOut);
+  });
+
+  it("uses browser approval with polling for an unpackaged development app", async () => {
+    window.desktopBridge = {
+      getBuildInfo: () => ({ kind: "development", version: null, commit: null }),
+    } as unknown as DesktopBridge;
+    api.cloud.getStatus.mockResolvedValueOnce(signedOut);
+    api.cloud.startSignIn.mockResolvedValueOnce({
+      deviceCode: "dev-1",
+      userCode: "ABCD-EFGH",
+      verificationUri: "https://app.test/device",
+      verificationUriComplete: "https://app.test/device?user_code=ABCD-EFGH",
+      expiresInSeconds: 600,
+      intervalSeconds: 1,
+    });
+    api.cloud.pollSignIn.mockResolvedValueOnce({ state: "complete", status: signedIn });
+    renderCard();
+    await page.getByRole("button", { name: "Continue with Google" }).click();
+    expect(api.cloud.startBrowserSignIn).not.toHaveBeenCalled();
+    expect(api.shell.openExternal).toHaveBeenCalledWith(
+      "https://app.test/device?user_code=ABCD-EFGH&method=google",
+    );
+    await expect.element(page.getByText("Signed in as me@test.invalid")).toBeVisible();
+  });
+  it("welcomes a new desktop user and completes the selected Google handoff", async () => {
+    localStorage.removeItem("djl.account.welcome.dismissed");
+    const deliver = installDeepLinkBridge();
+    api.cloud.getStatus.mockResolvedValue(signedOut);
+    api.cloud.startBrowserSignIn.mockResolvedValueOnce({
+      authorizeUrl: "https://app.test/authorize?state=s1",
+      expiresInSeconds: 600,
+    });
+    api.cloud.completeBrowserSignIn.mockResolvedValueOnce(signedIn);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <DjlAccountEntry />
+      </QueryClientProvider>,
+    );
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    await page.getByRole("button", { name: "Keep working locally" }).click();
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+    await page.getByTestId("djl-account-entry").click();
+    await page.getByRole("button", { name: "Continue with Google" }).click();
+    expect(api.shell.openExternal).toHaveBeenCalledWith(
+      "https://app.test/authorize?state=s1&method=google",
+    );
+    deliver({ code: "code-1", state: "s1" });
+    await expect
+      .element(page.getByTestId("djl-account-entry"))
+      .toHaveTextContent("me@test.invalid");
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+    await page.getByTestId("djl-account-entry").click();
+    await expect.element(page.getByText("Signed in as me@test.invalid")).toBeVisible();
+  });
   it("runs the device sign-in flow: shows the code, opens the browser, polls, then shows credits", async () => {
     api.cloud.getStatus.mockResolvedValueOnce(signedOut);
     api.cloud.startSignIn.mockResolvedValueOnce({
@@ -93,7 +239,7 @@ describe("DjlCloudAccountCard", () => {
     await page.getByRole("button", { name: "Use a code instead" }).click();
     await expect.element(page.getByText("ABCD-EFGH")).toBeVisible();
     expect(api.shell.openExternal).toHaveBeenCalledWith(
-      "https://app.test/device?user_code=ABCD-EFGH",
+      "https://app.test/device?user_code=ABCD-EFGH&method=email",
     );
     await expect
       .element(page.getByText("Signed in as me@test.invalid"), { timeout: 10_000 })
@@ -114,11 +260,29 @@ describe("DjlCloudAccountCard", () => {
     await expect.element(page.getByText("Not signed in")).toBeVisible();
   });
 
+  it("opens the rail account menu and navigates to settings without signing out", async () => {
+    localStorage.setItem("djl.account.welcome.dismissed", "true");
+    api.cloud.getStatus.mockResolvedValue(signedIn);
+    const onSettings = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <DjlAccountEntry rail onSettings={onSettings} />
+      </QueryClientProvider>,
+    );
+    await expect.element(page.getByRole("button", { name: "me@test.invalid" })).toBeVisible();
+    await page.getByTestId("djl-account-entry").click();
+    await expect.element(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+    await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
+    expect(onSettings).toHaveBeenCalledWith();
+    expect(api.cloud.signOut).not.toHaveBeenCalled();
+  });
+
   it("explains an expired session", async () => {
     api.cloud.getStatus.mockResolvedValueOnce({ ...signedIn, problem: "session_expired" });
     renderCard();
     await expect.element(page.getByText("Your session expired. Sign in again.")).toBeVisible();
-    await expect.element(page.getByRole("button", { name: "Sign in with browser" })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Continue with email" })).toBeVisible();
   });
 
   it("signs in through the browser and finishes when the deep link comes back", async () => {
@@ -130,8 +294,10 @@ describe("DjlCloudAccountCard", () => {
     });
     api.cloud.completeBrowserSignIn.mockResolvedValueOnce(signedIn);
     renderCard();
-    await page.getByRole("button", { name: "Sign in with browser" }).click();
-    expect(api.shell.openExternal).toHaveBeenCalledWith("https://app.test/authorize?state=s1");
+    await page.getByRole("button", { name: "Continue with email" }).click();
+    expect(api.shell.openExternal).toHaveBeenCalledWith(
+      "https://app.test/authorize?state=s1&method=email",
+    );
     await expect
       .element(
         page.getByText("Finish signing in in your browser. DJL continues here automatically."),
@@ -145,9 +311,14 @@ describe("DjlCloudAccountCard", () => {
   it("explains a browser sign-in that the app refused", async () => {
     const deliver = installDeepLinkBridge();
     api.cloud.getStatus.mockResolvedValue(signedOut);
+    api.cloud.startBrowserSignIn.mockResolvedValueOnce({
+      authorizeUrl: "https://app.test/authorize?state=issued",
+      expiresInSeconds: 600,
+    });
     api.cloud.completeBrowserSignIn.mockRejectedValueOnce(new Error("state mismatch"));
     renderCard();
     await expect.element(page.getByText("Not signed in")).toBeVisible();
+    await page.getByRole("button", { name: "Continue with email" }).click();
     deliver({ code: "code-1", state: "forged" });
     await expect
       .element(page.getByText("Browser sign-in did not complete. Try again or use a code instead."))

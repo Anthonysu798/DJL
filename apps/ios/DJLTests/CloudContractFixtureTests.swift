@@ -5,6 +5,9 @@ import XCTest
 /// iOS Codable models. A new fixture without a decoder here fails the suite on purpose.
 final class CloudContractFixtureTests: XCTestCase {
     private let decoders: [String: (Data) throws -> Any] = [
+        "images": { try JSONDecoder().decode(CloudImageGalleryPage.self, from: $0) },
+        "client-config": { try JSONDecoder().decode(CloudClientConfig.self, from: $0) },
+        "notifications": { try JSONDecoder().decode(CloudNotificationsPage.self, from: $0) },
         "access-token": { try JSONDecoder().decode(CloudAccessToken.self, from: $0) },
         "account-delete": { try JSONDecoder().decode(CloudDeleteAccountResponse.self, from: $0) },
         "conversation": { try JSONDecoder().decode(CloudConversation.self, from: $0) },

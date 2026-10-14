@@ -14,7 +14,7 @@ import type { RunRow } from "../runs/wire.ts";
 
 export interface RunNotifierDeps {
   readonly db: DjlDatabase;
-  readonly push: PushSender;
+  readonly push: PushSender | null;
   readonly email: EmailSender;
   readonly webPublicUrl: string;
 }
@@ -34,14 +34,16 @@ export class RunNotifier {
       status: run.status,
       url: cloudConversationDeepLink(run.conversationId),
     };
-    const tokens = await db
-      .select()
-      .from(schema.pushTokens)
-      .where(and(eq(schema.pushTokens.userId, run.userId), isNull(schema.pushTokens.revokedAt)));
+    const tokens = this.deps.push
+      ? await db
+          .select()
+          .from(schema.pushTokens)
+          .where(and(eq(schema.pushTokens.userId, run.userId), isNull(schema.pushTokens.revokedAt)))
+      : [];
     let delivered = false;
     let live = tokens.length;
     for (const token of tokens) {
-      const result = await this.deps.push.send({
+      const result = await this.deps.push!.send({
         token: token.token,
         environment: token.environment === "sandbox" ? "sandbox" : "production",
         message: {

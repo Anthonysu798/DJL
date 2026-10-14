@@ -12,7 +12,10 @@ struct CloudModelPicker: View {
 
     var body: some View {
         Menu {
-            ForEach(cloud.models.filter(\.isSelectable)) { model in
+            let groups = Dictionary(grouping: cloud.models.filter(\.isSelectable), by: \.provider)
+            ForEach(groups.keys.sorted(), id: \.self) { provider in
+              Section(provider == "openrouter" ? "OpenRouter" : provider == "openai" ? "OpenAI" : provider == "anthropic" ? "Anthropic" : provider) {
+              ForEach(groups[provider] ?? []) { model in
                 Button {
                     cloud.selectedModelID = model.id
                 } label: {
@@ -22,6 +25,8 @@ struct CloudModelPicker: View {
                         Text(model.displayName)
                     }
                 }
+            }
+              }
             }
         } label: {
             HStack(spacing: 4) {
@@ -45,7 +50,7 @@ struct CloudTaskStepsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                if isRunning { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green) }
+                if isRunning { ProgressView().controlSize(.small) }
                 Text(isRunning ? "Working on it" : "Task finished")
                     .font(AppFont.subheadline(weight: .semibold))
                 Spacer()

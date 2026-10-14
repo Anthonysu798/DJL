@@ -4,6 +4,7 @@
  * `generated`) in the blob store; the reply references it with an image_ref
  * part. Image bytes never appear in run events or tool results.
  */
+import { decodeRaster } from "@djl/providers";
 import { schema, type DjlDatabase } from "@djl/db";
 import type { CloudImageRefPart } from "@synara/contracts/cloud";
 
@@ -38,10 +39,12 @@ export async function saveGeneratedImage(
   deps: { readonly db: DjlDatabase; readonly blobs: BlobStore },
   run: RunRow,
   bytes: Uint8Array,
+  fileId?: string,
 ): Promise<CloudImageRefPart> {
+  if (bytes.length > MAX_IMAGE_BYTES) throw new ToolError("The generated image is too large.");
   const mimeType = detectType(bytes);
   if (!mimeType) throw new ToolError("The image provider returned an unsupported image.");
-  const id = crypto.randomUUID();
+  const id = fileId ?? crypto.randomUUID();
   const key = storageKey(run.orgId, id);
   await deps.blobs.write(key, bytes, mimeType);
   const size = pngSize(bytes);
@@ -55,6 +58,7 @@ export async function saveGeneratedImage(
     storageKey: key,
     status: "ready",
     source: "generated",
+    messageId: run.messageId,
     purpose: "image",
     sha256: await sha256Hex(bytes),
     width: size?.width ?? null,
@@ -70,11 +74,11 @@ export async function saveGeneratedImage(
   };
 }
 
-async function imageBytes(
-  image: { readonly b64_json?: string; readonly url?: string },
+export async function imageBytes(
+  image: { readonly b64_json?: string; readonly url?: string; readonly mediaType?: string },
   signal: AbortSignal,
 ): Promise<Uint8Array> {
-  if (image.b64_json) return new Uint8Array(Buffer.from(image.b64_json, "base64"));
+  if (image.b64_json) return decodeRaster(image.b64_json, image.mediaType);
   if (image.url) {
     const response = await safeFetch(image.url, {
       signal,
@@ -94,7 +98,11 @@ export function createImageTools(deps: {
 }): AgentTool[] {
   const saved = async (
     run: RunRow,
-    data: readonly { readonly b64_json?: string; readonly url?: string }[],
+    data: readonly {
+      readonly b64_json?: string;
+      readonly url?: string;
+      readonly mediaType?: string;
+    }[],
     signal: AbortSignal,
     verb: string,
   ): Promise<ToolOutput> => {

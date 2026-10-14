@@ -80,7 +80,7 @@ function rowToEntry(row: typeof creditLedger.$inferSelect): LedgerEntry {
 }
 
 export class LedgerService {
-  constructor(private readonly db: DjlDatabase) {}
+  constructor(private readonly db: DjlDatabase | Tx) {}
 
   /** Read the materialized balances without locking. */
   async balances(orgId: string): Promise<Balances> {

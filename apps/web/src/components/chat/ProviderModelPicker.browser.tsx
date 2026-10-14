@@ -179,6 +179,31 @@ async function mountPicker(props: {
 }
 
 describe("ProviderModelPicker", () => {
+  it("selects an authenticated DJL Cloud model from the provider submenu", async () => {
+    const mounted = await mountPicker({
+      provider: "codex",
+      model: "gpt-5",
+      lockedProvider: null,
+      providers: [
+        {
+          provider: "djlCloud",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-10-13T00:00:00Z",
+        },
+      ],
+    });
+    try {
+      await page.getByRole("button").click();
+      await page.getByRole("menuitem", { name: "DJL Cloud", exact: true }).hover();
+      await page.getByRole("menuitemradio", { name: "Claude Sonnet 5" }).click();
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("djlCloud", "claude-sonnet-5");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();

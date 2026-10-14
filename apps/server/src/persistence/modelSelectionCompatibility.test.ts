@@ -7,6 +7,15 @@ import { assert, it } from "@effect/vitest";
 
 import { normalizePersistedModelSelection } from "./modelSelectionCompatibility.ts";
 
+it("preserves explicit DJL Cloud selections rather than inferring a local CLI", () => {
+  for (const model of ["nemotron-3.5-lightning-free", "claude-sonnet-5", "gpt-5"]) {
+    assert.deepEqual(normalizePersistedModelSelection({ provider: "djlCloud", model }), {
+      provider: "djlCloud",
+      model,
+    });
+  }
+});
+
 it("preserves canonical Pi model selections", () => {
   assert.deepEqual(normalizePersistedModelSelection({ provider: "pi", model: "openai/gpt-5.5" }), {
     provider: "pi",

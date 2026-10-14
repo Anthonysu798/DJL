@@ -65,7 +65,13 @@ const VISIBLE_NAME_PATTERN =
 const UI_CALL_PATTERN = /(?:alert|confirm|notify|set[A-Za-z]*Error|showToast|toast)$/;
 
 // Only product names, identifiers, paths, command examples, and raw protocol text belong here.
-const NONTRANSLATABLE_BY_FILE = new Set(["components/Sidebar.tsx:e.g. npm run dev"]);
+const NONTRANSLATABLE_BY_FILE = new Set([
+  "components/Sidebar.tsx:e.g. npm run dev",
+  // Sidebar view IDs index SIDEBAR_VIEW_LABEL_KEYS; their visible labels use t().
+  "components/Sidebar.tsx:studio",
+  "components/Sidebar.tsx:threads",
+  "components/Sidebar.tsx:workspace",
+]);
 
 function activeChatFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

@@ -132,13 +132,19 @@ export function createCloudClient(baseUrl: string, fetchImpl: FetchLike = fetch)
   return {
     baseUrl,
     get: async (path, token) =>
-      check(await fetchImpl(`${baseUrl}${path}`, { headers: headers(token) })),
+      check(
+        await fetchImpl(`${baseUrl}${path}`, {
+          headers: headers(token),
+          signal: AbortSignal.timeout(10_000),
+        }),
+      ),
     post: async (path, body, token) =>
       check(
         await fetchImpl(`${baseUrl}${path}`, {
           method: "POST",
           headers: headers(token),
           body: JSON.stringify(body),
+          signal: AbortSignal.timeout(10_000),
         }),
       ),
     stream: async (path, body, token, signal) => {

@@ -10,10 +10,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct CloudComposerView: View {
+    @Environment(CloudService.self) private var cloud
     @Binding var text: String
     @Binding var attachments: [CloudPendingAttachment]
     @Bindable var session: CloudChatSession
     let onSend: () -> Void
+    let onCreateImage: () -> Void
+    let voice: CloudVoiceInput
+    let playback: CloudSpeechPlayback
 
     @State private var photoSelection: [PhotosPickerItem] = []
     @State private var isShowingPhotos = false
@@ -22,7 +26,7 @@ struct CloudComposerView: View {
     @State private var attachmentError: String?
 
     private var canSend: Bool {
-        !session.isSending && (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty)
+        cloud.selectedModel != nil && !session.isSending && (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty)
     }
 
     var body: some View {
@@ -30,10 +34,21 @@ struct CloudComposerView: View {
             if !attachments.isEmpty || session.imageToEdit != nil {
                 attachmentStrip
             }
+            if case .failed(let error) = voice.state {
+                Text(error).font(AppFont.caption()).foregroundStyle(.secondary)
+            }
+            if voice.isBusy {
+                HStack {
+                    Image(systemName: "waveform").foregroundStyle(.tint)
+                    Text(voice.state == .preparing ? "Preparing on-device dictation…" : voice.state == .stopping ? "Finishing…" : "Listening. Tap stop to review your text.")
+                        .font(AppFont.caption()).foregroundStyle(.secondary)
+                }
+            }
             if let attachmentError {
                 Text(attachmentError).font(AppFont.caption()).foregroundStyle(.red)
             }
             TextField(session.imageToEdit == nil ? "Message DJL" : "Describe the change", text: $text, axis: .vertical)
+                .accessibilityIdentifier("cloud.compose.input")
                 .font(AppFont.body())
                 .lineLimit(1...6)
                 .padding(.horizontal, 4)
@@ -41,18 +56,20 @@ struct CloudComposerView: View {
                 attachMenu
                 modeToggle
                 Spacer()
+                CloudVoiceControls(voice: voice, playback: playback, draft: $text)
+                    .disabled(session.isSending || session.isRunning)
                 sendButton
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .adaptiveGlass(.regular, in: .rect(cornerRadius: 26))
         .photosPicker(isPresented: $isShowingPhotos, selection: $photoSelection, maxSelectionCount: 4, matching: .images)
         .onChange(of: photoSelection) { _, items in loadPhotos(items) }
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraImagePicker { data in add(name: "Photo.jpg", mimeType: "image/jpeg", data: data) }
                 .ignoresSafeArea()
         }
-        .fileImporter(isPresented: $isShowingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+        .fileImporter(isPresented: $isShowingFiles, allowedContentTypes: cloud.clientConfig?.tools.fileParsing == true ? [.item] : [.plainText, .json, .sourceCode], allowsMultipleSelection: true) { result in
             loadFiles(result)
         }
     }
@@ -108,8 +125,13 @@ struct CloudComposerView: View {
 
     private var attachMenu: some View {
         Menu {
-            Button { isShowingPhotos = true } label: { Label("Photos", systemImage: "photo.on.rectangle") }
-            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            if cloud.clientConfig?.tools.imageGeneration == true {
+                Button(action: onCreateImage) { Label("Create image", systemImage: "wand.and.stars") }.disabled(session.isRunning || session.isSending)
+            }
+            if cloud.selectedModel?.acceptsImages == true {
+                Button { isShowingPhotos = true } label: { Label("Photos", systemImage: "photo.on.rectangle") }
+            }
+            if cloud.selectedModel?.acceptsImages == true, UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button { isShowingCamera = true } label: { Label("Camera", systemImage: "camera") }
             }
             Button { isShowingFiles = true } label: { Label("Files", systemImage: "folder") }
@@ -137,6 +159,7 @@ struct CloudComposerView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Task mode")
         .accessibilityValue(session.mode == .task ? "On" : "Off")
+        .disabled(session.isSending || session.isRunning)
     }
 
     @ViewBuilder
@@ -163,7 +186,7 @@ struct CloudComposerView: View {
                 .frame(width: 34, height: 34)
                 .background(canSend ? Color.primary : Color.secondary.opacity(0.4), in: Circle())
             }
-            .disabled(!canSend)
+            .disabled(!canSend || voice.isBusy)
             .accessibilityLabel("Send")
         }
     }

@@ -1,5 +1,9 @@
 # DJL Cloud Phase 0 — build status (2026-09-12)
 
+> Hosting was updated on 2026-10-11: DJL staging now runs on a VPS Compose stack.
+> See `infra/vps/README.md` for current setup and verification. The entries below
+> are the original build record; their external hosting prerequisites are superseded.
+
 Spec: `docs/specs/2026-09-12-phase-0-cloud-control-plane.md`. Everything below was built and
 verified locally against Postgres 17 and Redis with external services mocked. Nothing has
 been deployed: staging and production need the accounts listed under Prerequisites.
@@ -9,7 +13,7 @@ been deployed: staging and production need the accounts listed under Prerequisit
 | Area                                                                                                                                                                                                                 | Where                                                 | Proof                                                                         |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Domain rules: microcredits, margin pricing, append-only ledger, plans, trial fraud rules, admission priority                                                                                                         | `packages/domain`                                     | 24 unit tests incl. a 200-step reserve/settle invariant                       |
-| Schema + migration, append-only grants and RLS policies                                                                                                                                                              | `packages/db`, `infra/supabase/policies.sql`          | migration applies; app role cannot UPDATE the ledger or DELETE audit rows     |
+| Schema + migration, append-only grants and RLS policies                                                                                                                                                              | `packages/db`, `infra/postgres/policies.sql`          | migration applies; app role cannot UPDATE the ledger or DELETE audit rows     |
 | Accounts: email/password (argon2id), email OTP, phone OTP, Google/Apple, TOTP, passkeys, organizations, hidden personal org per user, 15-min JWT + 30-day session, device-authorization flow                         | `apps/api/src/auth`                                   | end-to-end suite signs up, verifies, switches orgs, completes the device flow |
 | Credits: Postgres ledger with per-org row locking, reserve/settle/release/expiry, refold repair                                                                                                                      | `apps/api/src/credits`                                | 25-way race test never overspends                                             |
 | Billing: Stripe Checkout (tiers, whole-dollar top-ups), Customer Portal, idempotent webhooks, plan grants per invoice                                                                                                | `apps/api/src/billing`                                | replayed webhooks are no-ops; kill switch refuses checkouts                   |
@@ -40,13 +44,12 @@ top-up → model list → streamed reply settled for 2,758 microcredits → sign
 
 ## Prerequisites the owner must provide
 
-Fly.io account and token; Supabase projects in the DJL organization (connector currently sees only
-another organization); DJL Stripe account with three monthly and three annual prices plus a top-up price
-(set `STRIPE_TOPUP_PRICE_ID` and the plan price ids in admin → Plans); Twilio Verify service;
-Resend domain verification for `slcor.com`; OpenAI, Anthropic, OpenRouter keys (primary and
-fallback); Google OAuth client and Apple Sign-In service id; Cloudflare DNS records per
-`infra/cloudflare/dns.md`; Grafana Cloud OTLP endpoint; Sentry DSN; incident.io status page;
-Terms, Privacy, and refund policy text; the first admin created with `bun run --cwd cloud/apps/api admin:create`.
+An SSH-accessible VPS and DNS access; a private environment configured as documented in
+`infra/vps/README.md`; DJL Stripe sandbox products and webhook; a verified Resend sending
+domain; a chosen model provider key; Google OAuth credentials. Apple sign-in, APNs,
+Exa search, monitoring, and an isolated code sandbox are optional integrations. SMS and
+Supabase are not required. Production also needs legal policy text, validated model
+pricing, an admin account with MFA, backups, and a reviewed security posture.
 
 ## Local development
 

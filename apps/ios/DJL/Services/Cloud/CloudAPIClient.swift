@@ -143,6 +143,8 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
     private let now: @Sendable () -> Date
     private var cached: (token: String, expiresAt: Date)?
     private var inFlight: Task<String, Error>?
+    private var generation = 0
+    private var sessionIdentity: String?
 
     init(
         configuration: CloudAPIConfiguration,
@@ -157,22 +159,32 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
     }
 
     func accessToken() async throws -> String {
+        guard let session = sessionStore.readSessionToken() else { throw CloudAPIError.unauthorized }
+        if sessionIdentity != session { invalidate(); sessionIdentity = session }
+        let version = generation
         if let cached, cached.expiresAt.timeIntervalSince(now()) > 60 {
             return cached.token
         }
-        if let inFlight { return try await inFlight.value }
-        let task = Task { try await self.exchange() }
+        if let inFlight {
+            let token = try await inFlight.value
+            guard generation == version, sessionStore.readSessionToken() == session else { throw CancellationError() }
+            return token
+        }
+        let task = Task { try await self.exchange(session: session, generation: version) }
         inFlight = task
-        defer { inFlight = nil }
-        return try await task.value
+        defer { if generation == version { inFlight = nil } }
+        let token = try await task.value
+        guard generation == version, sessionStore.readSessionToken() == session else { throw CancellationError() }
+        return token
     }
 
     func invalidate() {
+        generation += 1
+        inFlight?.cancel(); inFlight = nil
         cached = nil
     }
 
-    private func exchange() async throws -> String {
-        guard let session = sessionStore.readSessionToken() else { throw CloudAPIError.unauthorized }
+    private func exchange(session: String, generation version: Int) async throws -> String {
         var request = URLRequest(url: configuration.baseURL.appending(path: "v1/auth/token"))
         request.setValue("Bearer \(session)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -182,6 +194,8 @@ actor CloudJWTAccessTokenProvider: CloudAccessTokenProviding {
         } catch {
             throw CloudAPIError.transport(error.localizedDescription)
         }
+        try Task.checkCancellation()
+        guard generation == version, sessionStore.readSessionToken() == session else { throw CancellationError() }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else { throw CloudAPIError.from(status: status, data: data) }
         guard let body = try? JSONDecoder().decode(CloudAccessToken.self, from: data) else {
@@ -219,6 +233,12 @@ nonisolated final class CloudAPIClient: Sendable {
     }
 
     // MARK: Transport
+
+    func clientConfig() async throws -> CloudClientConfig {
+        let (data, response) = try await transport(makeRequest("GET", "v1/client-config"))
+        guard response.statusCode == 200 else { throw CloudAPIError.from(status: response.statusCode, data: data) }
+        return try JSONDecoder().decode(CloudClientConfig.self, from: data)
+    }
 
     func url(_ path: String, query: [URLQueryItem] = []) -> URL {
         var components = URLComponents(url: configuration.baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
@@ -325,8 +345,17 @@ nonisolated final class CloudAPIClient: Sendable {
         try await send("GET", "v1/conversations/search", query: [URLQueryItem(name: "q", value: text)], as: CloudConversationSearchResponse.self).results
     }
 
-    func createConversation() async throws -> CloudConversation {
-        try await send("POST", "v1/conversations", body: [String: String]())
+    func images(cursor: String? = nil) async throws -> CloudImageGalleryPage {
+        try await send("GET", "v1/images", query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? [])
+    }
+
+    func createImage(conversationID: String, input: CloudCreateImageInput) async throws -> CloudSendMessageResponse {
+        try await send("POST", "v1/conversations/\(conversationID)/images", body: input)
+    }
+
+    func createConversation(clientConversationId: String? = nil) async throws -> CloudConversation {
+        let body = clientConversationId.map { ["clientConversationId": $0] } ?? [:]
+        return try await send("POST", "v1/conversations", body: body)
     }
 
     func conversation(_ id: String) async throws -> CloudConversationDetail {
@@ -387,6 +416,14 @@ nonisolated final class CloudAPIClient: Sendable {
     }
 
     // MARK: Runs
+
+    func notifications(cursor: String? = nil) async throws -> CloudNotificationsPage {
+        try await send("GET", "v1/notifications", query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? [])
+    }
+
+    func markNotificationsRead(ids: [String]) async throws -> CloudNotificationReadResult {
+        try await send("POST", "v1/notifications/read", body: ["ids": ids])
+    }
 
     func run(_ id: String) async throws -> CloudRun { try await send("GET", "v1/runs/\(id)", as: CloudRunResponse.self).run }
 

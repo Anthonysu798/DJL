@@ -80,7 +80,8 @@ export async function assertOpenCodeServerCompatibility(
       ["/global/health", "/doc"].map(async (path) => {
         const response = await fetch(new URL(path, url), {
           headers,
-          signal: AbortSignal.timeout(5_000),
+          // A cold local server can announce its URL before protocol responses are ready.
+          signal: AbortSignal.timeout(15_000),
         });
         if (!response.ok) throw new OpenCodeProtocolError("incompatible");
         return response.json() as Promise<unknown>;

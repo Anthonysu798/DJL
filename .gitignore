@@ -70,3 +70,7 @@ apps/server/.tmp-document-renderer-tests/
 # DJL Cloud (cloud/)
 .next/
 coverage/
+apps/ios/BuildSupport/PrivateOverrides.xcconfig
+cloud/infra/vps/.secrets/
+cloud/infra/vps/Caddyfile.host
+cloud/infra/vps/backups/

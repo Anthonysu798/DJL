@@ -127,7 +127,7 @@ export const adminSessions = pgTable(
 
 /**
  * Insert-only audit trail. The application role has no UPDATE or DELETE on
- * this table (infra/supabase/policies.sql). Every admin mutation and every
+ * this table (infra/postgres/policies.sql). Every admin mutation and every
  * external write records actor, action, target, before, after.
  */
 export const auditEvents = pgTable(

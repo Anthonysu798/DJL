@@ -1,3 +1,4 @@
+import { DesktopHeaderPortal } from "./DesktopHeaderPortal";
 import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
 import { getStartupSession } from "../startup/session";
 import type { TerminalCliKind } from "@synara/shared/terminalThreads";
@@ -2441,11 +2442,7 @@ export default function ChatView({
       ),
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, composerModelHintByProvider.pi),
-      djlCloud: getAppModelOptions(
-        "djlCloud",
-        customModelsByProvider.djlCloud,
-        composerModelHintByProvider.djlCloud,
-      ),
+      djlCloud: [],
     };
     const result: Record<
       ProviderKind,
@@ -2491,7 +2488,7 @@ export default function ChatView({
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
         result[provider] =
-          provider === "opencode"
+          provider === "opencode" || provider === "djlCloud"
             ? mergeDynamicModelOptions({ provider, staticOptions: [], dynamicModels })
             : mergeDynamicModelOptions({
                 provider,
@@ -11813,110 +11810,112 @@ export default function ChatView({
         )}
       />
       {/* Top bar */}
-      <header
-        className={cn(
-          CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
-          !isEditorRail && CHAT_SURFACE_HEADER_PADDING_X_CLASS,
-          "flex items-center",
-          isEditorRail ? "h-10" : CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-          isElectron && "drag-region",
-          // The editor-rail chat header sits in the editor's second row (inside the
-          // right-side chat pane), not flush against the window edges — the editor's
-          // own top bar already reserves both desktop window-control gutters. Applying
-          // them here just leaves redundant empty space on the sides.
-          !isEditorRail && desktopTopBarTrafficLightGutterClassName,
-          !isEditorRail && desktopTopBarWindowControlsGutterClassName,
-        )}
-      >
-        <ChatHeader
-          activeThreadId={activeThread.id}
-          activeThreadTitle={activeThreadDisplayTitle}
-          activeThreadEntryPoint={terminalState.entryPoint}
-          activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
-          activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
-          threadBreadcrumbs={threadBreadcrumbs}
-          {...(isEditorRail
-            ? { className: cn(CHAT_SURFACE_HEADER_PADDING_X_CLASS, "h-full") }
-            : {})}
-          isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
-          hideSidebarControls={isEditorRail}
-          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
-          isGitRepo={isGitRepo}
-          openInTarget={threadWorkspaceCwd}
-          activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}
-          preferredScriptId={
-            activeProject ? (lastInvokedScriptByProjectId[activeProject.id] ?? null) : null
-          }
-          keybindings={keybindings}
-          availableEditors={availableEditors}
-          diffToggleShortcutLabel={diffPanelShortcutLabel}
-          handoffBadgeLabel={handoffBadgeLabel}
-          handoffActionLabel={handoffActionLabel}
-          handoffDisabled={handoffDisabled}
-          handoffActionTargetProviders={handoffTargetProviders}
-          handoffBadgeSourceProvider={handoffBadgeSourceProvider}
-          handoffBadgeTargetProvider={handoffBadgeTargetProvider}
-          gitCwd={threadWorkspaceCwd}
-          diffTotals={repoDiffTotals}
-          showGitActions={showGitActions && !isEditorRail}
-          showPanelLauncher={!isEditorRail}
-          browserOpen={resolvedBrowserOpen}
-          diffOpen={resolvedDiffOpen}
-          diffDisabledReason={diffDisabledReason}
-          environment={isEditorRail ? null : environmentHeaderState}
-          surfaceMode={surfaceMode}
-          chatLayoutAction={
-            surfaceMode === "single" && onSplitSurface
-              ? {
-                  kind: "split",
-                  label: t("header.splitChat"),
-                  shortcutLabel: chatSplitShortcutLabel,
-                  onClick: onSplitSurface,
-                }
-              : surfaceMode === "split" && isFocusedPane && onMaximizeSurface
+      <DesktopHeaderPortal enabled={isElectron && !isEditorRail && surfaceMode === "single"}>
+        <header
+          className={cn(
+            CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
+            !isEditorRail && CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+            "flex items-center",
+            isEditorRail ? "h-10" : CHAT_SURFACE_HEADER_HEIGHT_CLASS,
+            isElectron && "drag-region",
+            // The editor-rail chat header sits in the editor's second row (inside the
+            // right-side chat pane), not flush against the window edges — the editor's
+            // own top bar already reserves both desktop window-control gutters. Applying
+            // them here just leaves redundant empty space on the sides.
+            !isEditorRail && desktopTopBarTrafficLightGutterClassName,
+            !isEditorRail && desktopTopBarWindowControlsGutterClassName,
+          )}
+        >
+          <ChatHeader
+            activeThreadId={activeThread.id}
+            activeThreadTitle={activeThreadDisplayTitle}
+            activeThreadEntryPoint={terminalState.entryPoint}
+            activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
+            activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
+            threadBreadcrumbs={threadBreadcrumbs}
+            {...(isEditorRail
+              ? { className: cn(CHAT_SURFACE_HEADER_PADDING_X_CLASS, "h-full") }
+              : {})}
+            isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
+            hideSidebarControls={isEditorRail}
+            hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+            isGitRepo={isGitRepo}
+            openInTarget={threadWorkspaceCwd}
+            activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}
+            preferredScriptId={
+              activeProject ? (lastInvokedScriptByProjectId[activeProject.id] ?? null) : null
+            }
+            keybindings={keybindings}
+            availableEditors={availableEditors}
+            diffToggleShortcutLabel={diffPanelShortcutLabel}
+            handoffBadgeLabel={handoffBadgeLabel}
+            handoffActionLabel={handoffActionLabel}
+            handoffDisabled={handoffDisabled}
+            handoffActionTargetProviders={handoffTargetProviders}
+            handoffBadgeSourceProvider={handoffBadgeSourceProvider}
+            handoffBadgeTargetProvider={handoffBadgeTargetProvider}
+            gitCwd={threadWorkspaceCwd}
+            diffTotals={repoDiffTotals}
+            showGitActions={showGitActions && !isEditorRail}
+            showPanelLauncher={!isEditorRail}
+            browserOpen={resolvedBrowserOpen}
+            diffOpen={resolvedDiffOpen}
+            diffDisabledReason={diffDisabledReason}
+            environment={isEditorRail ? null : environmentHeaderState}
+            surfaceMode={surfaceMode}
+            chatLayoutAction={
+              surfaceMode === "single" && onSplitSurface
                 ? {
-                    kind: "maximize",
-                    label: t("header.expandChat"),
-                    shortcutLabel: null,
-                    onClick: onMaximizeSurface,
+                    kind: "split",
+                    label: t("header.splitChat"),
+                    shortcutLabel: chatSplitShortcutLabel,
+                    onClick: onSplitSurface,
+                  }
+                : surfaceMode === "split" && isFocusedPane && onMaximizeSurface
+                  ? {
+                      kind: "maximize",
+                      label: t("header.expandChat"),
+                      shortcutLabel: null,
+                      onClick: onMaximizeSurface,
+                    }
+                  : null
+            }
+            editorChatControls={
+              isEditorRail && activeProject
+                ? {
+                    projectId: activeProject.id,
+                    activeSurface: terminalWorkspaceTerminalTabActive ? "terminal" : "chat",
+                    terminalAvailable: terminalState.terminalOpen,
+                    terminalHasRunningActivity: terminalState.runningTerminalIds.length > 0,
+                    onNewChat: onNewEditorChat,
+                    onNewTerminal: onOpenEditorTerminal,
+                    onOpenChat: onOpenEditorChat,
+                    onOpenTerminal: onOpenEditorTerminal,
+                    onCloseTerminal: onCloseEditorTerminal,
                   }
                 : null
-          }
-          editorChatControls={
-            isEditorRail && activeProject
-              ? {
-                  projectId: activeProject.id,
-                  activeSurface: terminalWorkspaceTerminalTabActive ? "terminal" : "chat",
-                  terminalAvailable: terminalState.terminalOpen,
-                  terminalHasRunningActivity: terminalState.runningTerminalIds.length > 0,
-                  onNewChat: onNewEditorChat,
-                  onNewTerminal: onOpenEditorTerminal,
-                  onOpenChat: onOpenEditorChat,
-                  onOpenTerminal: onOpenEditorTerminal,
-                  onCloseTerminal: onCloseEditorTerminal,
-                }
-              : null
-          }
-          changeThreadAction={
-            surfaceMode === "split" && isFocusedPane && onChangeThreadInSplitPane
-              ? {
-                  label: t("header.changeThread"),
-                  onClick: onChangeThreadInSplitPane,
-                }
-              : null
-          }
-          onRunProjectScript={onRunProjectScriptFromHeader}
-          onAddProjectScript={saveProjectScript}
-          onUpdateProjectScript={updateProjectScript}
-          onDeleteProjectScript={deleteProjectScript}
-          onOpenBrowser={onOpenBrowser}
-          onToggleDiff={onToggleDiff}
-          onCreateHandoff={onCreateHandoffThread}
-          onNavigateToThread={onNavigateToThread}
-          onRenameThread={() => setRenameDialogOpen(true)}
-          {...(onCloseThreadPane ? { onCloseThreadPane } : {})}
-        />
-      </header>
+            }
+            changeThreadAction={
+              surfaceMode === "split" && isFocusedPane && onChangeThreadInSplitPane
+                ? {
+                    label: t("header.changeThread"),
+                    onClick: onChangeThreadInSplitPane,
+                  }
+                : null
+            }
+            onRunProjectScript={onRunProjectScriptFromHeader}
+            onAddProjectScript={saveProjectScript}
+            onUpdateProjectScript={updateProjectScript}
+            onDeleteProjectScript={deleteProjectScript}
+            onOpenBrowser={onOpenBrowser}
+            onToggleDiff={onToggleDiff}
+            onCreateHandoff={onCreateHandoffThread}
+            onNavigateToThread={onNavigateToThread}
+            onRenameThread={() => setRenameDialogOpen(true)}
+            {...(onCloseThreadPane ? { onCloseThreadPane } : {})}
+          />
+        </header>
+      </DesktopHeaderPortal>
 
       <RenameThreadDialog
         open={renameDialogOpen}

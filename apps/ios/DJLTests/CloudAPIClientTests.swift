@@ -358,3 +358,26 @@ final class CloudAPIClientTests: XCTestCase {
         }
     }
 }
+
+extension CloudAPIClientTests {
+    func testInvalidationCannotReuseOrCacheAnotherAccountsDelayedTokenExchange() async throws {
+        let store=CloudMemorySessionStore(token:"account-A")
+        let started=expectation(description:"A exchange started")
+        CloudStubURLProtocol.install { request,_ in
+            if request.value(forHTTPHeaderField:"Authorization")=="Bearer account-A" {
+                started.fulfill(); Thread.sleep(forTimeInterval:0.2)
+                return .json(200,#"{"token":"token-A"}"#)
+            }
+            return .json(200,#"{"token":"token-B"}"#)
+        }
+        let provider=CloudJWTAccessTokenProvider(configuration:CloudAPIConfiguration(baseURL:URL(string:"https://test.invalid")!),sessionStore:store,urlSession:CloudStubURLProtocol.session())
+        let old=Task { try await provider.accessToken() }
+        await fulfillment(of:[started],timeout:2)
+        await provider.invalidate(); store.writeSessionToken("account-B")
+        let current=try await provider.accessToken()
+        XCTAssertEqual(current,"token-B")
+        _ = try? await old.value
+        let cached=try await provider.accessToken()
+        XCTAssertEqual(cached,"token-B")
+    }
+}

@@ -152,13 +152,16 @@ export const makeNativeAdapter = (
       },
       startSession: (input) =>
         attempt("startSession", async () => {
-          if (!input.cwd || !isAbsolute(input.cwd))
-            throw new Error("Native sessions require an explicit absolute project directory");
-          const directory = await stat(input.cwd).catch(() => null);
-          if (!directory?.isDirectory())
-            throw new Error(
-              `Working folder is unavailable: ${input.cwd}. Choose an existing project folder before retrying.`,
-            );
+          // Hosted chat never reads the local workspace; local runtimes still require it.
+          if (provider !== "djlCloud") {
+            if (!input.cwd || !isAbsolute(input.cwd))
+              throw new Error("Native sessions require an explicit absolute project directory");
+            const directory = await stat(input.cwd).catch(() => null);
+            if (!directory?.isDirectory())
+              throw new Error(
+                `Working folder is unavailable: ${input.cwd}. Choose an existing project folder before retrying.`,
+              );
+          }
           const configured = await readProfile();
           if (sessions.has(input.threadId)) throw new Error("Native session already exists");
           if (input.modelSelection && input.modelSelection.provider !== provider)

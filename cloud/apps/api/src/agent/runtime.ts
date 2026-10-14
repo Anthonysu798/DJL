@@ -3,11 +3,8 @@
  * environment. With DJL_MOCK_EXTERNALS the model, search, sandbox, and push
  * are all fakes: nothing leaves the machine and no user code ever runs.
  *
- * Environment (outside mock mode):
- *   EXA_API_KEY                        web_search and read_page
- *   FLY_API_TOKEN_SANDBOX, FLY_SANDBOX_APP, FLY_SANDBOX_IMAGE, FLY_SANDBOX_REGION (optional)
- *   APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY, APNS_TOPIC (default app.djl.ios)
- *   plus the gateway's provider keys (OPENAI_API_KEY, ...).
+ * Search and push are enabled when their credentials are configured.
+ * SANDBOX_BACKEND=disabled runs chat agents without Python or document parsing.
  */
 import type { DjlDatabase } from "@djl/db";
 import { MockPushSender, createApnsSender, type EmailSender, type PushSender } from "@djl/notify";
@@ -18,6 +15,7 @@ import { LedgerService } from "../credits/LedgerService.ts";
 import { GatewayService } from "../gateway/GatewayService.ts";
 import { buildProviders } from "../gateway/providers.ts";
 import { createMemoryRateLimiter, createRedisRateLimiter } from "../gateway/RateLimiter.ts";
+import { ImageRunExecutor } from "../images/ImageRunExecutor.ts";
 import { RunLog } from "../runs/RunLog.ts";
 import type { BlobStore } from "../sync/BlobStore.ts";
 import { TrialService } from "../trial/TrialService.ts";
@@ -34,6 +32,8 @@ import { createWebTools } from "./webTools.ts";
 export {
   AGENT_RUN_JOB,
   AGENT_RUN_QUEUE_OPTIONS,
+  IMAGE_RUN_JOB,
+  IMAGE_RUN_QUEUE_OPTIONS,
   type AgentRunJobData,
 } from "../runs/RunExecutor.ts";
 export { RunInterruptedError } from "./AgentRunner.ts";
@@ -56,6 +56,7 @@ export interface AgentRuntimeInput {
 
 export interface AgentRuntime {
   readonly runner: AgentRunner;
+  readonly imageRunner: ImageRunExecutor;
   /** Destroys stray sandbox machines; null in mock mode. */
   readonly reap: (() => Promise<number>) | null;
 }
@@ -90,29 +91,49 @@ export function createAgentRuntime(input: AgentRuntimeInput): AgentRuntime {
 
   let sandbox: Sandbox;
   let reap: AgentRuntime["reap"] = null;
-  let push: PushSender;
+  let push: PushSender | null = null;
+  const sandboxEnabled = mockExternals || env.SANDBOX_BACKEND !== "disabled";
   if (mockExternals) {
     sandbox = createMockSandbox();
     push = new MockPushSender();
   } else {
-    const machines = new FlyMachines({
-      token: required(env, "FLY_API_TOKEN_SANDBOX"),
-      app: required(env, "FLY_SANDBOX_APP"),
-      image: required(env, "FLY_SANDBOX_IMAGE"),
-      ...(env.FLY_SANDBOX_REGION ? { region: env.FLY_SANDBOX_REGION } : {}),
-    });
-    sandbox = createFlySandbox(machines);
-    reap = () => reapSandboxes(machines);
-    push = createApnsSender({
-      keyId: required(env, "APNS_KEY_ID"),
-      teamId: required(env, "APNS_TEAM_ID"),
-      privateKey: required(env, "APNS_PRIVATE_KEY").replaceAll("\\n", "\n"),
-      topic: env.APNS_TOPIC ?? "app.djl.ios",
-    });
+    if (sandboxEnabled) {
+      if (env.SANDBOX_BACKEND && env.SANDBOX_BACKEND !== "fly")
+        throw new Error("SANDBOX_BACKEND must be disabled or fly");
+      const machines = new FlyMachines({
+        token: required(env, "FLY_API_TOKEN_SANDBOX"),
+        app: required(env, "FLY_SANDBOX_APP"),
+        image: required(env, "FLY_SANDBOX_IMAGE"),
+        ...(env.FLY_SANDBOX_REGION ? { region: env.FLY_SANDBOX_REGION } : {}),
+      });
+      sandbox = createFlySandbox(machines);
+      reap = () => reapSandboxes(machines);
+    } else {
+      sandbox = {
+        open: async () => {
+          throw new Error("Code execution is disabled on this server.");
+        },
+      };
+    }
+    if (env.APNS_KEY_ID || env.APNS_TEAM_ID || env.APNS_PRIVATE_KEY)
+      push = createApnsSender({
+        keyId: required(env, "APNS_KEY_ID"),
+        teamId: required(env, "APNS_TEAM_ID"),
+        privateKey: required(env, "APNS_PRIVATE_KEY").replaceAll("\\n", "\n"),
+        topic: env.APNS_TOPIC ?? "app.djl.ios",
+      });
   }
+  const searchEnabled = mockExternals || Boolean(env.EXA_API_KEY);
   const web = mockExternals
     ? createFakeWebSearch()
-    : createExaClient({ apiKey: required(env, "EXA_API_KEY") });
+    : env.EXA_API_KEY
+      ? createExaClient({ apiKey: env.EXA_API_KEY })
+      : {
+          search: async () => {
+            throw new Error("Web search is not configured.");
+          },
+          contents: async () => null,
+        };
 
   const runner = new AgentRunner({
     db,
@@ -124,10 +145,20 @@ export function createAgentRuntime(input: AgentRuntimeInput): AgentRuntime {
     billing: new ToolBilling(db, ledger),
     notifier: new RunNotifier({ db, push, email: input.email, webPublicUrl: input.webPublicUrl }),
     tools: [
-      ...createWebTools(web),
+      ...createWebTools(web).filter((tool) => searchEnabled || tool.name === "read_page"),
       ...createImageTools({ db, blobs, gateway }),
-      ...createSandboxTools({ db, blobs }),
+      ...createSandboxTools({ db, blobs, sandboxEnabled }),
     ],
   });
-  return { runner, reap };
+  return {
+    runner,
+    reap,
+    imageRunner: new ImageRunExecutor({
+      db,
+      blobs,
+      gateway,
+      log: new RunLog(db, redis),
+      notifier: new RunNotifier({ db, push, email: input.email, webPublicUrl: input.webPublicUrl }),
+    }),
+  };
 }

@@ -1,0 +1,16 @@
+{
+  "auth": {
+    "google": true,
+    "apple": false
+  },
+  "tools": {
+    "imageGeneration": true,
+    "imageEditing": false,
+    "fileParsing": false
+  },
+  "pushConfigured": false,
+  "policyUrls": {
+    "terms": null,
+    "privacy": null
+  }
+}

@@ -110,6 +110,14 @@
 		E25879D6AB99138E4AA66824 /* CloudSSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E55E54346D95D2B18AD75D7 /* CloudSSEParserTests.swift */; };
 		36470468F4ED9B490A03FF0B /* CloudAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */; };
 		B8FDCC4775A339C2E90E65A1 /* CloudChatLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */; };
+		872C17159149BD0CAC92AE30 /* CloudAuthRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93188DDD0ADFD9C9385DD87A /* CloudAuthRecoveryTests.swift */; };
+		348B04D49B53D95EBD1F10FC /* CloudDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC868526324AF4AEA74DF7D7 /* CloudDraftStoreTests.swift */; };
+		97D10EDBE5F79A54CCD0402A /* CloudNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAB9ADFDF06D162CD482CF5 /* CloudNavigationTests.swift */; };
+		EC1DE31B4629EA73D22615AD /* CloudChatSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFC6A9382407DF08A0BB314D /* CloudChatSessionTests.swift */; };
+		048E7D1207BEAAD776C2C977 /* CloudNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588BC860872F0A975644F3CE /* CloudNotificationTests.swift */; };
+		471647FFF722C13D972CDF45 /* MobileRemoteActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A29B0BDBBB027A6D6C1CEAD /* MobileRemoteActivityTests.swift */; };
+		185B371B0BE8C40963F8BB9D /* CloudVoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC19CDCEDF3A110607FB9EE1 /* CloudVoiceTests.swift */; };
+		AEF42D8FFEAB4956FDD0230E /* CloudImageGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16688B1C0B72BB2A9B8393E5 /* CloudImageGenerationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -233,6 +241,14 @@
 		9E55E54346D95D2B18AD75D7 /* CloudSSEParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudSSEParserTests.swift; sourceTree = "<group>"; };
 		74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudAPIClientTests.swift; sourceTree = "<group>"; };
 		477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudChatLogicTests.swift; sourceTree = "<group>"; };
+		93188DDD0ADFD9C9385DD87A /* CloudAuthRecoveryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudAuthRecoveryTests.swift; sourceTree = "<group>"; };
+		FC868526324AF4AEA74DF7D7 /* CloudDraftStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudDraftStoreTests.swift; sourceTree = "<group>"; };
+		FEAB9ADFDF06D162CD482CF5 /* CloudNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudNavigationTests.swift; sourceTree = "<group>"; };
+		AFC6A9382407DF08A0BB314D /* CloudChatSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudChatSessionTests.swift; sourceTree = "<group>"; };
+		588BC860872F0A975644F3CE /* CloudNotificationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudNotificationTests.swift; sourceTree = "<group>"; };
+		0A29B0BDBBB027A6D6C1CEAD /* MobileRemoteActivityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MobileRemoteActivityTests.swift; sourceTree = "<group>"; };
+		EC19CDCEDF3A110607FB9EE1 /* CloudVoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudVoiceTests.swift; sourceTree = "<group>"; };
+		16688B1C0B72BB2A9B8393E5 /* CloudImageGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudImageGenerationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -332,6 +348,14 @@
 				F68717090AD7FEF6D1732D82 /* CloudTestSupport.swift */,
 				585B0E82E78D9619A24D7521 /* CloudContractFixtureTests.swift */,
 				9E55E54346D95D2B18AD75D7 /* CloudSSEParserTests.swift */,
+				93188DDD0ADFD9C9385DD87A /* CloudAuthRecoveryTests.swift */,
+				FC868526324AF4AEA74DF7D7 /* CloudDraftStoreTests.swift */,
+				FEAB9ADFDF06D162CD482CF5 /* CloudNavigationTests.swift */,
+				AFC6A9382407DF08A0BB314D /* CloudChatSessionTests.swift */,
+				588BC860872F0A975644F3CE /* CloudNotificationTests.swift */,
+				0A29B0BDBBB027A6D6C1CEAD /* MobileRemoteActivityTests.swift */,
+				EC19CDCEDF3A110607FB9EE1 /* CloudVoiceTests.swift */,
+				16688B1C0B72BB2A9B8393E5 /* CloudImageGenerationTests.swift */,
 				74D2BEF9680A675A9082AA09 /* CloudAPIClientTests.swift */,
 				477D50C00EC9F4117F02F99E /* CloudChatLogicTests.swift */,
 				42197F8800238DFD2074AFA6 /* RemoteProviderSelectionTests.swift */,
@@ -704,6 +728,14 @@
 				88B5E39C9CDC53AF1D8BC4F6 /* CloudTestSupport.swift in Sources */,
 				7EC278BFE36E58A455104F63 /* CloudContractFixtureTests.swift in Sources */,
 				E25879D6AB99138E4AA66824 /* CloudSSEParserTests.swift in Sources */,
+				872C17159149BD0CAC92AE30 /* CloudAuthRecoveryTests.swift in Sources */,
+				348B04D49B53D95EBD1F10FC /* CloudDraftStoreTests.swift in Sources */,
+				97D10EDBE5F79A54CCD0402A /* CloudNavigationTests.swift in Sources */,
+				EC1DE31B4629EA73D22615AD /* CloudChatSessionTests.swift in Sources */,
+				048E7D1207BEAAD776C2C977 /* CloudNotificationTests.swift in Sources */,
+				471647FFF722C13D972CDF45 /* MobileRemoteActivityTests.swift in Sources */,
+				185B371B0BE8C40963F8BB9D /* CloudVoiceTests.swift in Sources */,
+				AEF42D8FFEAB4956FDD0230E /* CloudImageGenerationTests.swift in Sources */,
 				36470468F4ED9B490A03FF0B /* CloudAPIClientTests.swift in Sources */,
 				B8FDCC4775A339C2E90E65A1 /* CloudChatLogicTests.swift in Sources */,
 				D7D0647F64B696D4C64AFAD7 /* RemoteProviderSelectionTests.swift in Sources */,

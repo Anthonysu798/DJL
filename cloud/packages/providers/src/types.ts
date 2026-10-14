@@ -104,6 +104,7 @@ export interface ImageResult {
     readonly b64_json?: string;
     readonly url?: string;
     readonly revised_prompt?: string;
+    readonly mediaType?: string;
   }[];
   readonly count: number;
 }
