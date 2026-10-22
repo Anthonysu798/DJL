@@ -3038,6 +3038,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "마케팅 스튜디오",
         "automations": "자동화",
         "deleteWorkspace": "작업공간 삭제",
         "kanban": "워크스페이스",

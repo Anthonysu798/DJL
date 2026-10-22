@@ -3038,6 +3038,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "行銷工作室",
         "automations": "自動化",
         "deleteWorkspace": "刪除工作區",
         "kanban": "工作空間",

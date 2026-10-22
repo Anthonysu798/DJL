@@ -3038,6 +3038,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "营销工作室",
         "automations": "自动化",
         "deleteWorkspace": "删除工作区",
         "kanban": "工作空间",

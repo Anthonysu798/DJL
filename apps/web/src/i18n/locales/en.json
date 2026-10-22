@@ -3038,6 +3038,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "Marketing Studio",
         "automations": "Automations",
         "deleteWorkspace": "Delete workspace",
         "kanban": "Workspaces",

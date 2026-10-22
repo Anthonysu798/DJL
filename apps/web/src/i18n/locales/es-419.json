@@ -3038,6 +3038,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "Estudio de marketing",
         "automations": "Automatizaciones",
         "deleteWorkspace": "Eliminar espacio de trabajo",
         "kanban": "Espacios de trabajo",

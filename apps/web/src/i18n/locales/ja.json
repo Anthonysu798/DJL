@@ -3038,6 +3038,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "マーケティングスタジオ",
         "automations": "自動化",
         "deleteWorkspace": "ワークスペースの削除",
         "kanban": "ワークスペース",

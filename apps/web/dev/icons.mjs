@@ -1,6 +1,17 @@
 // Dev optimizer entry: export only the icons DJL uses, instead of whole icon packs.
 // Keep named imports here when adding icons; production uses the original packages.
 export {
+  IconLayoutDashboard,
+  IconPhoto,
+  IconMovie,
+  IconSend,
+  IconCalendar,
+  IconLink,
+  IconUpload,
+  IconActivity,
+  IconPlayerTrackNext,
+  IconPlayerTrackPrev,
+  IconScissors,
   IconAdjustments,
   IconAlertCircle,
   IconAlertTriangle,
