@@ -2,6 +2,10 @@
 
 Updated 2026-10-22. This branch is an **incomplete implementation** of the approved full production brief. Do not describe it as production-ready or all phases complete.
 
+## Current entry point
+
+The subsequent user correction replaces the primary studio navigation with chat-driven preparation and inline interactive review cards. See [CHAT-WORKFLOW.md](CHAT-WORKFLOW.md) for the current UX, provider support, and remaining limits. The older route is retained for saved data, not promoted as the main workflow.
+
 ## Implemented local workflows
 
 - `/marketing` lives in the existing desktop/web shell; Work's `/studio` redirect is unchanged.

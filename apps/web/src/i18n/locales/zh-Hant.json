@@ -991,6 +991,32 @@
       "running": "正在執行設定動作",
       "runningNamed": "正在執行設定動作：{{name}}",
       "starting": "正在啟動工作階段"
+    },
+    "marketing": {
+      "ready": "DJL 已為你準備好",
+      "draft": "內容預覽",
+      "platforms": "選擇平台預覽",
+      "addMedia": "把照片或影片傳到這個聊天，DJL 會在這裡幫你整理。",
+      "video": "影片",
+      "caption": "發佈文案",
+      "save": "儲存修改",
+      "cancel": "取消",
+      "noCopy": "告訴 DJL 你想發佈到哪個平台。",
+      "edit": "改文案",
+      "shorter": "更簡短",
+      "premium": "更有質感",
+      "review": "預覽並發佈",
+      "finalCheck": "發佈前，再看一眼",
+      "assisted": "目前尚未接通平台直接發佈。確認這一版後，可一鍵下載圖片、影片和各平台文案，再前往對應平台完成發佈。這個操作不會自動發文。",
+      "approveDownload": "確認並下載發佈包",
+      "downloaded": "發佈包已準備好，尚未自動發佈任何內容。",
+      "openPlatform": "開啟{{platform}}",
+      "manualConfirmed": "你已標記為發佈完成",
+      "iPosted": "我已發佈這一版",
+      "error": "操作未完成，請重試。",
+      "sendFailed": "暫時無法傳送，請等 DJL 完成目前工作後重試。",
+      "shorterPrompt": "請把這個對話的行銷宣傳文案改得更簡短，並更新預覽，保留所有事實。",
+      "premiumPrompt": "請把這個對話的行銷宣傳文案改得更有質感，並更新預覽，不要改變價格、日期或加入未經確認的宣傳承諾。"
     }
   },
   "common": {

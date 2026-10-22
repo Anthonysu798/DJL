@@ -1,3 +1,5 @@
+import * as SqlClient from "effect/unstable/sql/SqlClient";
+import { listThreadCampaigns } from "../../marketing/chatTools";
 // FILE: ProviderCommandReactor.ts
 // Purpose: Routes orchestration intents into provider sessions and maintains replay-safe context.
 // Layer: Orchestration provider reactor
@@ -88,7 +90,11 @@ import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import type { WorkPreparationJobRecord } from "../../persistence/Services/WorkPreparationRepository.ts";
 import { resolveWorkModelDocumentRouting } from "../../work/modelDocumentRouting.ts";
-import { buildGroundedWorkPrompt, decideWorkTurnPolicy } from "../../work/workRouter.ts";
+import {
+  buildGroundedWorkPrompt,
+  decideWorkTurnPolicy,
+  isMarketingRequest,
+} from "../../work/workRouter.ts";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
@@ -367,6 +373,7 @@ const make = Effect.gen(function* () {
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
   const serverConfig = yield* ServerConfig;
+  const marketingSql = yield* Effect.serviceOption(SqlClient.SqlClient);
   const checkpointStore = yield* CheckpointStore;
   const studioOutputReactor = yield* StudioOutputReactor;
   const git = yield* GitCore;
@@ -2000,10 +2007,17 @@ const make = Effect.gen(function* () {
     const providerAttachments = preparedJob
       ? attachmentsForPreparedWorkTurn(preparedJob, thread)
       : message.attachments;
+    const hasMarketingCampaign = Option.isSome(marketingSql)
+      ? (yield* listThreadCampaigns(event.payload.threadId).pipe(
+          Effect.provideService(SqlClient.SqlClient, marketingSql.value),
+          Effect.orElseSucceed(() => []),
+        )).length > 0
+      : false;
     const workTurnPolicy =
-      preparedJob || isWorkSurface
+      preparedJob || isWorkSurface || isMarketingRequest(message.text) || hasMarketingCampaign
         ? decideWorkTurnPolicy({
             prompt: message.text,
+            hasMarketingCampaign,
             hasAttachments: (message.attachments?.length ?? 0) > 0,
           })
         : undefined;

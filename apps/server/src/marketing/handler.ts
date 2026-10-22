@@ -1,3 +1,5 @@
+import { publishingKit } from "./kit";
+import { listThreadCampaigns } from "./chatTools";
 import sharp from "sharp";
 import { listMarketingModels, generateCampaignCopy } from "./generation";
 import { recoverJobs, startExport, cancelExport, type ExportJob } from "./jobs";
@@ -84,6 +86,31 @@ export function marketingHandler(config: ServerConfigShape) {
     const url = HttpServerRequest.toURL(request)!;
     const operation = url.pathname.slice("/api/marketing/".length);
     const root = path.join(config.stateDir, "marketing", "originals");
+    const kitMatch = /^kit\/([a-f0-9-]{36})$/.exec(operation);
+    if (kitMatch && request.method === "GET")
+      return HttpServerResponse.uint8Array(
+        yield* publishingKit(
+          config.stateDir,
+          kitMatch[1]!,
+          Number(url.searchParams.get("revision")),
+        ),
+        {
+          headers: {
+            "Content-Type": "application/zip",
+            "Content-Disposition": 'attachment; filename="publishing-kit.zip"',
+            "Cache-Control": "no-store",
+          },
+        },
+      );
+    if (operation.startsWith("thread/") && request.method === "GET") {
+      const threadId = decodeURIComponent(operation.slice("thread/".length));
+      const campaigns = yield* listThreadCampaigns(threadId);
+      const ids = new Set(campaigns.flatMap((c) => c.value.assetIds));
+      const assets = (yield* listDocuments("asset")).filter((a) =>
+        ids.has((a.value as MediaAsset).id),
+      );
+      return json({ campaigns, assets });
+    }
     if (operation === "state" && request.method === "GET") {
       const campaigns = yield* listDocuments("campaign");
       const assets = yield* listDocuments("asset");

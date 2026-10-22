@@ -10,6 +10,17 @@ const OFFICE_DOCUMENT_READ =
   /\b(read|open|inspect|review)\b.{0,80}(?:^|\s)[\w.@%+~/-]+\.(?:docx|xlsx|pptx|pdf)\b|(?:读取|打开|检查|查看).{0,40}[\w.@%+~/-]+\.(?:docx|xlsx|pptx|pdf)\b/i;
 const CODING =
   /\b(code|coding|bug|typescript|javascript|python|compile|unit test|run (?:the )?test|patch)\b|代码|编程|修复.{0,12}(?:错误|问题)|运行.{0,8}测试/i;
+const MARKETING =
+  /(?:instagram|facebook|tiktok|youtube|小红书|小紅書|抖音|营销|行銷|宣传|宣傳|推广|推廣|マーケティング|마케팅|campaña|campagne|social media|marketing campaign|publish campaign|marketing preview)/i;
+export const isMarketingRequest = (prompt: string) =>
+  MARKETING.test(prompt) && !CODING.test(prompt);
+export const marketingTurnPolicy = (): WorkTurnPolicy => ({
+  route: "marketing",
+  visibleTools: ["djl_marketing_status", "djl_prepare_marketing"],
+  requireSuccessfulTool: true,
+  evidenceRequired: true,
+  instructionScope: "authorized-root",
+});
 const EXPLICIT_FILE =
   /(?:^|\s)(?:\/[\w.@%+~/-]+|[A-Za-z]:\\[^\s]+)|\b(read|list|search|write|edit)\b.{0,30}\b(file|folder|directory)\b|读取.{0,20}(?:文件|目录)|列出.{0,12}(?:文件|目录)/i;
 
@@ -51,8 +62,10 @@ const policy = (
 export function decideWorkTurnPolicy(input: {
   readonly prompt: string;
   readonly hasAttachments?: boolean;
+  readonly hasMarketingCampaign?: boolean;
 }): WorkTurnPolicy {
   const prompt = input.prompt.trim();
+  if (isMarketingRequest(prompt)) return marketingTurnPolicy();
   if (SYSTEM_INFO.test(prompt)) {
     return policy("system-info", ["djl_system_info"], true, true);
   }
@@ -73,6 +86,7 @@ export function decideWorkTurnPolicy(input: {
       true,
     );
   }
+  if (input.hasMarketingCampaign) return marketingTurnPolicy();
   if (input.hasAttachments || EXPLICIT_FILE.test(prompt)) {
     const requestsWrite =
       /\b(write|edit|modify|create|delete|move|rename)\b|写入|编辑|修改|创建|删除|移动|重命名/i.test(
@@ -104,6 +118,15 @@ export function buildGroundedWorkPrompt(
     return userPrompt;
   }
   const behavior = [
+    ...(turnPolicy.route === "marketing"
+      ? [
+          "This is a beginner-friendly marketing request. Keep the whole workflow in this conversation; never send the user to Marketing Studio or ask them to configure models or editing parameters.",
+          "Call djl_marketing_status first. Use saved brand facts, the user request, and their attached media. Write distinct captions yourself with the current model, then call djl_prepare_marketing to produce the actual review card. Do not invoke another paid model just to rewrite text.",
+          "Infer sensible creative defaults; ask only for facts essential to avoid inventing prices, offers, claims, or destinations. Editing follow-ups update the existing campaign with its latest version.",
+          "When the user requests image adjustments, supply imageAdjustments to apply actual local processing. Supported operations are basic color/exposure adjustments only; do not claim unsupported video editing or generative transformations.",
+          "The card is the user-facing review and approval surface. Never approve or publish with a tool. Direct social publishing is not configured: explain assisted publishing accurately, without claiming a successful post.",
+        ]
+      : []),
     "Do not write an answer before a visible tool succeeds.",
     "Use only successful tool output as evidence. Memory and prior prose are not evidence.",
     "If the tool is unavailable, denied, empty, or conflicting, say that directly and do not guess.",

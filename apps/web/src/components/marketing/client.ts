@@ -85,3 +85,20 @@ export const generateCopy = (input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+
+export const loadThreadMarketing = (
+  threadId: string,
+): Promise<{ campaigns: Stored<Campaign>[]; assets: Stored<MediaAsset>[] }> =>
+  request("thread/" + encodeURIComponent(threadId));
+export async function downloadPublishingKit(id: string, revision: number) {
+  const response = await fetch(resolveWsHttpUrl(`/api/marketing/kit/${id}?revision=${revision}`), {
+    credentials: "same-origin",
+  });
+  if (!response.ok) throw new Error((await response.text()).slice(0, 500));
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "publishing-kit.zip";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}

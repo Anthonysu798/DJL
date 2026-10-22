@@ -1,3 +1,4 @@
+import { MARKETING_TOOLS, type MarketingToolHandler } from "../../marketing/chatTools";
 // FILE: WorkMcpServer.ts
 // Purpose: Localhost-only, bearer-scoped Streamable HTTP MCP implementation for Work tools.
 
@@ -42,6 +43,7 @@ interface SessionScope {
   readonly projectId: ProjectId;
   readonly authorizedRoot: string;
   readonly attachmentsRoot?: string;
+  readonly marketing?: MarketingToolHandler;
 }
 
 interface JsonRpcRequest {
@@ -471,6 +473,18 @@ async function executeTool(
   rawArguments: unknown,
 ): Promise<unknown> {
   const args = object(rawArguments ?? {});
+  if (name === "djl_marketing_status" || name === "djl_prepare_marketing") {
+    if (!scope.marketing) throw new Error("Marketing tools are unavailable in this runtime.");
+    return scope.marketing(
+      {
+        threadId: scope.threadId,
+        authorizedRoot: scope.authorizedRoot,
+        attachmentFiles: await scopedAttachmentInputFiles(scope),
+      },
+      name,
+      args,
+    );
+  }
   switch (name) {
     case "djl_system_info": {
       const processors = cpus();
@@ -716,7 +730,9 @@ async function handleRpcRequest(
     case "ping":
       return jsonRpcResult(request.id, {});
     case "tools/list":
-      return jsonRpcResult(request.id, { tools: TOOLS });
+      return jsonRpcResult(request.id, {
+        tools: scope.marketing ? [...TOOLS, ...MARKETING_TOOLS] : TOOLS,
+      });
     case "tools/call": {
       const params = object(request.params);
       const name = stringField(params, "name");
@@ -744,167 +760,172 @@ async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-const make = Effect.gen(function* () {
-  const addressRef = yield* Ref.make<string | null>(null);
-  const scopes = new Map<string, SessionScope>();
+const make = (marketing?: MarketingToolHandler) =>
+  Effect.gen(function* () {
+    const addressRef = yield* Ref.make<string | null>(null);
+    const scopes = new Map<string, SessionScope>();
 
-  const requestHandler: http.RequestListener = (request, response) => {
-    void (async () => {
-      const address = await Effect.runPromise(Ref.get(addressRef));
-      const expectedUrl = address ? new URL(address) : null;
-      const expectedHost = expectedUrl?.host ?? null;
-      if (
-        !isLoopbackAddress(request.socket.remoteAddress) ||
-        !expectedUrl ||
-        !expectedHost ||
-        (request.headers.host !== expectedHost &&
-          request.headers.host !== `localhost:${expectedUrl.port}`)
-      ) {
-        response.writeHead(403, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
-        response.end("Forbidden");
-        return;
-      }
-      if (request.url !== "/mcp") {
-        response.writeHead(404, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
-        response.end("Not Found");
-        return;
-      }
-      if (request.method !== "POST") {
-        response.writeHead(405, {
-          Allow: "POST",
-          "Content-Type": "text/plain",
-          "Cache-Control": "no-store",
-        });
-        response.end("Method Not Allowed");
-        return;
-      }
-      const authorization = request.headers.authorization;
-      const rawToken = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
-      const scope = rawToken ? scopes.get(tokenKey(rawToken)) : undefined;
-      if (!scope) {
-        response.writeHead(401, {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-          "WWW-Authenticate": "Bearer",
-        });
-        response.end(JSON.stringify(jsonRpcError(null, -32001, "Unauthorized")));
-        return;
-      }
-      try {
-        const body = await readJsonBody(request);
-        const requests = Array.isArray(body) ? body : [body];
-        const results = (
-          await Promise.all(
-            requests.map((entry) => handleRpcRequest(scope, entry as JsonRpcRequest)),
-          )
-        ).filter((entry): entry is Record<string, unknown> => entry !== null);
-        if (results.length === 0) {
-          response.writeHead(202, { "Cache-Control": "no-store" });
-          response.end();
+    const requestHandler: http.RequestListener = (request, response) => {
+      void (async () => {
+        const address = await Effect.runPromise(Ref.get(addressRef));
+        const expectedUrl = address ? new URL(address) : null;
+        const expectedHost = expectedUrl?.host ?? null;
+        if (
+          !isLoopbackAddress(request.socket.remoteAddress) ||
+          !expectedUrl ||
+          !expectedHost ||
+          (request.headers.host !== expectedHost &&
+            request.headers.host !== `localhost:${expectedUrl.port}`)
+        ) {
+          response.writeHead(403, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
+          response.end("Forbidden");
           return;
         }
-        response.writeHead(200, {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-          "X-Content-Type-Options": "nosniff",
-        });
-        response.end(JSON.stringify(Array.isArray(body) ? results : results[0]));
-      } catch (error) {
-        response.writeHead(400, {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        });
-        response.end(
-          JSON.stringify(
-            jsonRpcError(null, -32700, error instanceof Error ? error.message : "Parse error"),
-          ),
-        );
-      }
-    })().catch(() => {
-      if (!response.headersSent) response.writeHead(500, { "Cache-Control": "no-store" });
-      response.end();
-    });
-  };
-
-  // Bind within the layer scope so the endpoint is ready before any provider
-  // session can register and is always closed with the server runtime.
-  const server = http.createServer(requestHandler);
-  const address = yield* Effect.tryPromise({
-    try: () =>
-      new Promise<string>((resolve, reject) => {
-        server.once("error", reject);
-        server.listen(0, "127.0.0.1", () => {
-          server.off("error", reject);
-          const bound = server.address();
-          if (!bound || typeof bound === "string")
-            reject(new Error("MCP server has no TCP address"));
-          else resolve(`http://127.0.0.1:${bound.port}/mcp`);
-        });
-      }),
-    catch: (cause) => new WorkMcpServerError({ operation: "start", detail: String(cause), cause }),
-  });
-  yield* Ref.set(addressRef, address);
-  yield* Effect.addFinalizer(() =>
-    Effect.promise(
-      () =>
-        new Promise<void>((resolve) => {
-          scopes.clear();
-          server.close(() => resolve());
-        }),
-    ),
-  );
-
-  const start: WorkMcpServerShape["start"] = Effect.void;
-
-  const registerSession: WorkMcpServerShape["registerSession"] = (input) =>
-    Effect.tryPromise({
-      try: async () => {
-        const address = await Effect.runPromise(Ref.get(addressRef));
-        if (!address) throw new Error("Work MCP server is not started.");
-        const root = await realpath(input.authorizedRoot);
-        const info = await lstat(root);
-        if (!info.isDirectory() || info.isSymbolicLink()) {
-          throw new Error("The authorized Work root is not a safe directory.");
+        if (request.url !== "/mcp") {
+          response.writeHead(404, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
+          response.end("Not Found");
+          return;
         }
-        const bearerToken = randomBytes(32).toString("base64url");
-        if (input.attachmentsRoot) {
-          await mkdir(input.attachmentsRoot, { recursive: true, mode: 0o700 });
+        if (request.method !== "POST") {
+          response.writeHead(405, {
+            Allow: "POST",
+            "Content-Type": "text/plain",
+            "Cache-Control": "no-store",
+          });
+          response.end("Method Not Allowed");
+          return;
         }
-        const attachmentsRoot = input.attachmentsRoot
-          ? await realpath(input.attachmentsRoot)
-          : undefined;
-        if (attachmentsRoot) {
-          const attachmentsInfo = await lstat(attachmentsRoot);
-          if (!attachmentsInfo.isDirectory() || attachmentsInfo.isSymbolicLink()) {
-            throw new Error("The Work attachment root is not a safe directory.");
+        const authorization = request.headers.authorization;
+        const rawToken = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+        const scope = rawToken ? scopes.get(tokenKey(rawToken)) : undefined;
+        if (!scope) {
+          response.writeHead(401, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+            "WWW-Authenticate": "Bearer",
+          });
+          response.end(JSON.stringify(jsonRpcError(null, -32001, "Unauthorized")));
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const requests = Array.isArray(body) ? body : [body];
+          const results = (
+            await Promise.all(
+              requests.map((entry) => handleRpcRequest(scope, entry as JsonRpcRequest)),
+            )
+          ).filter((entry): entry is Record<string, unknown> => entry !== null);
+          if (results.length === 0) {
+            response.writeHead(202, { "Cache-Control": "no-store" });
+            response.end();
+            return;
           }
+          response.writeHead(200, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+          });
+          response.end(JSON.stringify(Array.isArray(body) ? results : results[0]));
+        } catch (error) {
+          response.writeHead(400, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          });
+          response.end(
+            JSON.stringify(
+              jsonRpcError(null, -32700, error instanceof Error ? error.message : "Parse error"),
+            ),
+          );
         }
-        scopes.set(tokenKey(bearerToken), {
-          threadId: input.threadId,
-          projectId: input.projectId ?? ProjectId.makeUnsafe(`work-${input.threadId}`),
-          authorizedRoot: root,
-          ...(attachmentsRoot ? { attachmentsRoot } : {}),
-        });
-        return {
-          name: `djl_work_${createHash("sha256").update(input.threadId).digest("hex").slice(0, 12)}`,
-          url: address,
-          bearerToken,
-        };
-      },
-      catch: (cause) =>
-        new WorkMcpServerError({
-          operation: "registerSession",
-          detail: cause instanceof Error ? cause.message : String(cause),
-          cause,
+      })().catch(() => {
+        if (!response.headersSent) response.writeHead(500, { "Cache-Control": "no-store" });
+        response.end();
+      });
+    };
+
+    // Bind within the layer scope so the endpoint is ready before any provider
+    // session can register and is always closed with the server runtime.
+    const server = http.createServer(requestHandler);
+    const address = yield* Effect.tryPromise({
+      try: () =>
+        new Promise<string>((resolve, reject) => {
+          server.once("error", reject);
+          server.listen(0, "127.0.0.1", () => {
+            server.off("error", reject);
+            const bound = server.address();
+            if (!bound || typeof bound === "string")
+              reject(new Error("MCP server has no TCP address"));
+            else resolve(`http://127.0.0.1:${bound.port}/mcp`);
+          });
         }),
+      catch: (cause) =>
+        new WorkMcpServerError({ operation: "start", detail: String(cause), cause }),
     });
+    yield* Ref.set(addressRef, address);
+    yield* Effect.addFinalizer(() =>
+      Effect.promise(
+        () =>
+          new Promise<void>((resolve) => {
+            scopes.clear();
+            server.close(() => resolve());
+          }),
+      ),
+    );
 
-  const unregisterSession: WorkMcpServerShape["unregisterSession"] = (bearerToken) =>
-    Effect.sync(() => {
-      scopes.delete(tokenKey(bearerToken));
-    });
+    const start: WorkMcpServerShape["start"] = Effect.void;
 
-  return { start, registerSession, unregisterSession } satisfies WorkMcpServerShape;
-});
+    const registerSession: WorkMcpServerShape["registerSession"] = (input) =>
+      Effect.tryPromise({
+        try: async () => {
+          const address = await Effect.runPromise(Ref.get(addressRef));
+          if (!address) throw new Error("Work MCP server is not started.");
+          const root = await realpath(input.authorizedRoot);
+          const info = await lstat(root);
+          if (!info.isDirectory() || info.isSymbolicLink()) {
+            throw new Error("The authorized Work root is not a safe directory.");
+          }
+          const bearerToken = randomBytes(32).toString("base64url");
+          if (input.attachmentsRoot) {
+            await mkdir(input.attachmentsRoot, { recursive: true, mode: 0o700 });
+          }
+          const attachmentsRoot = input.attachmentsRoot
+            ? await realpath(input.attachmentsRoot)
+            : undefined;
+          if (attachmentsRoot) {
+            const attachmentsInfo = await lstat(attachmentsRoot);
+            if (!attachmentsInfo.isDirectory() || attachmentsInfo.isSymbolicLink()) {
+              throw new Error("The Work attachment root is not a safe directory.");
+            }
+          }
+          scopes.set(tokenKey(bearerToken), {
+            threadId: input.threadId,
+            projectId: input.projectId ?? ProjectId.makeUnsafe(`work-${input.threadId}`),
+            authorizedRoot: root,
+            ...(marketing ? { marketing } : {}),
+            ...(attachmentsRoot ? { attachmentsRoot } : {}),
+          });
+          return {
+            name: `djl_work_${createHash("sha256").update(input.threadId).digest("hex").slice(0, 12)}`,
+            url: address,
+            bearerToken,
+          };
+        },
+        catch: (cause) =>
+          new WorkMcpServerError({
+            operation: "registerSession",
+            detail: cause instanceof Error ? cause.message : String(cause),
+            cause,
+          }),
+      });
 
-export const WorkMcpServerLive = Layer.effect(WorkMcpServer, make);
+    const unregisterSession: WorkMcpServerShape["unregisterSession"] = (bearerToken) =>
+      Effect.sync(() => {
+        scopes.delete(tokenKey(bearerToken));
+      });
+
+    return { start, registerSession, unregisterSession } satisfies WorkMcpServerShape;
+  });
+
+export const makeWorkMcpServerLive = (marketing?: MarketingToolHandler) =>
+  Layer.effect(WorkMcpServer, make(marketing));
+export const WorkMcpServerLive = makeWorkMcpServerLive();

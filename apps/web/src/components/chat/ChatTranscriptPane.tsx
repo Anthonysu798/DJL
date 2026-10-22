@@ -1,3 +1,4 @@
+import { MarketingChatCards } from "../marketing/MarketingChatCards";
 // FILE: ChatTranscriptPane.tsx
 // Purpose: Isolate the transcript shell so composer state changes do not re-render it unnecessarily.
 // Layer: Chat transcript shell
@@ -35,6 +36,7 @@ import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
 
 interface ChatTranscriptPaneProps {
+  onMarketingPrompt?: (text: string) => Promise<boolean>;
   activeThreadId: string;
   activeTurnId?: TurnId | null;
   activeTurnInProgress: boolean;
@@ -92,6 +94,7 @@ interface ChatTranscriptPaneProps {
 }
 
 export const ChatTranscriptPane = memo(function ChatTranscriptPane({
+  onMarketingPrompt,
   activeThreadId,
   activeTurnId,
   activeTurnInProgress,
@@ -197,6 +200,13 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
           />
         ) : (
           <MessagesTimeline
+            marketingCards={
+              <MarketingChatCards
+                threadId={activeThreadId}
+                isWorking={isWorking}
+                {...(onMarketingPrompt ? { onPrompt: onMarketingPrompt } : {})}
+              />
+            }
             key={activeThreadId}
             hasMessages={hasMessages}
             isWorking={isWorking}

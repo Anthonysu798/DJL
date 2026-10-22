@@ -18,7 +18,7 @@ const compactTokens = (value: string | undefined) =>
 
 // Official Agent SDK; the CLI owns ~/.claude credentials throughout.
 // https://code.claude.com/docs/en/agent-sdk/permissions
-export const createClaudeDriver: NativeDriverFactory = async (input, sink) => {
+export const createClaudeDriver: NativeDriverFactory = async (input, sink, workTools) => {
   if (input.approvalPolicy)
     throw new Error(
       "Claude SDK does not expose the requested Codex approval policy; use native permission modes",
@@ -104,6 +104,17 @@ export const createClaudeDriver: NativeDriverFactory = async (input, sink) => {
   const runtime = query({
     prompt,
     options: {
+      ...(workTools
+        ? {
+            mcpServers: {
+              [workTools.name]: {
+                type: "http" as const,
+                url: workTools.url,
+                headers: { Authorization: `Bearer ${workTools.bearerToken}` },
+              },
+            },
+          }
+        : {}),
       cwd: input.cwd!,
       ...(input.modelSelection ? { model: input.modelSelection.model } : {}),
       ...(input.resumeCursor === undefined ? { sessionId: id } : { resume: id }),

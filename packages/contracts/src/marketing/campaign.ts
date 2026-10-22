@@ -80,6 +80,7 @@ export interface Publication {
   revision: number;
 }
 export interface Campaign {
+  threadId?: string;
   id: string;
   name: string;
   brief: string;

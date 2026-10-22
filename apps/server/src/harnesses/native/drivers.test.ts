@@ -586,3 +586,24 @@ describe("new official protocol drivers", () => {
     ).rejects.toThrow("does not support session resume");
   });
 });
+
+describe("Codex conversation-scoped marketing MCP", () => {
+  it("passes a per-session MCP URL and an environment-backed bearer without changing permission policy", async () => {
+    const binary = fixture(`
+    if(m.method==='initialize')reply(m,{});
+    if(m.method==='thread/start'){
+      const server=m.params.config?.mcp_servers?.djl_test;
+      if(server?.url!=='http://127.0.0.1:12345/mcp'||server?.bearer_token_env_var!=='DJL_WORK_MCP_TOKEN'||process.env.DJL_WORK_MCP_TOKEN!=='fixture-token')throw Error('MCP configuration missing');
+      if(m.params.approvalPolicy!=='untrusted')throw Error('Permission policy changed');
+      reply(m,{thread:{id:'scoped-thread'}});
+    }
+  `);
+    const driver = await createCodexDriver(
+      { ...input, providerOptions: { codex: { binaryPath: binary } } },
+      sink([]),
+      { name: "djl_test", url: "http://127.0.0.1:12345/mcp", bearerToken: "fixture-token" },
+    );
+    expect(driver.id).toBe("scoped-thread");
+    driver.close();
+  });
+});

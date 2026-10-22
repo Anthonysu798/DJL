@@ -66,6 +66,7 @@ export const WorkRouteDecision = Schema.Literals([
   "chat",
   "web-research",
   "system-info",
+  "marketing",
   "office",
   "file",
   "coding",

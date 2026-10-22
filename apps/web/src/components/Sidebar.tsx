@@ -6793,14 +6793,6 @@ export default function Sidebar() {
                 },
               },
               {
-                label: t("sidebar.actions.marketing", { ns: "shell" }),
-                icon: "folders-2",
-                active: pathname.startsWith("/marketing"),
-                onClick: () => {
-                  void navigate({ to: "/marketing" });
-                },
-              },
-              {
                 label: t("sidebar.actions.automations", { ns: "shell" }),
                 icon: "clock",
                 active: isOnAutomations,
@@ -7014,14 +7006,6 @@ export default function Sidebar() {
                         active={isOnKanban}
                         onClick={() => {
                           void navigate({ to: "/workspaces" });
-                        }}
-                      />
-                      <SidebarPrimaryAction
-                        icon={TerminalIcon}
-                        label={t("sidebar.actions.marketing", { ns: "shell" })}
-                        active={pathname.startsWith("/marketing")}
-                        onClick={() => {
-                          void navigate({ to: "/marketing" });
                         }}
                       />
                       <SidebarPrimaryAction
