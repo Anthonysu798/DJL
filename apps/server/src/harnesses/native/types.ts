@@ -1,3 +1,4 @@
+import type { WorkMcpSessionRegistration } from "../../work/Services/WorkMcpServer";
 import type {
   CanonicalRequestType,
   ProviderApprovalDecision,
@@ -36,4 +37,5 @@ export interface NativeDriver {
 export type NativeDriverFactory = (
   input: ProviderSessionStartInput,
   sink: NativeSink,
+  workTools?: WorkMcpSessionRegistration,
 ) => Promise<NativeDriver>;

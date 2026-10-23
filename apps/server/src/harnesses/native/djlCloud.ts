@@ -1,3 +1,4 @@
+import { runMarketingConversation } from "../../marketing/cloudConversation";
 /**
  * DJL Cloud native driver: streams OpenAI-compatible chat completions from
  * the DJL Cloud gateway using the stored account session. Text prompts only
@@ -54,10 +55,17 @@ async function requireSession(secretsDir: string): Promise<CloudSession> {
 
 export const createDjlCloudDriverFactory =
   (deps: DjlCloudDriverDeps): NativeDriverFactory =>
-  async (input, sink: NativeSink): Promise<NativeDriver> => {
+  async (input, sink: NativeSink, workTools): Promise<NativeDriver> => {
     const session = await requireSession(deps.secretsDir);
     const client = createCloudClient(session.apiBaseUrl, deps.fetchImpl);
     const history: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
+    const marketingSystem: Record<string, unknown>[] = [
+      {
+        role: "system",
+        content:
+          "You are DJL. Handle marketing requests conversationally using the available marketing tools. Read djl_marketing_status, prepare platform-specific copy from verified user facts, then call djl_prepare_marketing. Keep revisions in this conversation. Do not ask beginners to open a studio or configure models. Never claim an external publication: no publishing tool is available. The user reviews the inline card and explicitly approves export.",
+      },
+    ];
     let model = input.modelSelection?.model ?? "claude-sonnet-5";
     let controller: AbortController | null = null;
 
@@ -65,6 +73,80 @@ export const createDjlCloudDriverFactory =
       id: randomUUID(),
       async send(request) {
         if (request.modelSelection?.model) model = request.modelSelection.model;
+        if (workTools && request.workTurnPolicy?.route === "marketing") {
+          controller = new AbortController();
+          const marketingHistory: Record<string, unknown>[] = [
+            ...marketingSystem,
+            ...history
+              .slice(1)
+              .map((message) => ({ role: message.role, content: message.content })),
+            { role: "user", content: request.input! },
+          ];
+          try {
+            const reply = await runMarketingConversation({
+              messages: marketingHistory,
+              model,
+              signal: controller.signal,
+              stream: (body, signal) =>
+                client.stream("/v1/chat/completions", body, session.token, signal),
+              execute: async (name, args) => {
+                const response = await fetch(workTools.url, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${workTools.bearerToken}`,
+                    "Content-Type": "application/json",
+                    Accept: "application/json, text/event-stream",
+                  },
+                  body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: randomUUID(),
+                    method: "tools/call",
+                    params: { name, arguments: args },
+                  }),
+                  signal: controller!.signal,
+                });
+                if (!response.ok) throw new Error("The local marketing tools are unavailable.");
+                const rpc = (await response.json()) as {
+                  result?: {
+                    structuredContent?: unknown;
+                    isError?: boolean;
+                    content?: { text?: string }[];
+                  };
+                  error?: unknown;
+                };
+                if (rpc.error || rpc.result?.isError)
+                  throw new Error(rpc.result?.content?.[0]?.text ?? "Campaign preparation failed.");
+                return rpc.result?.structuredContent;
+              },
+              onTool: (name, id, result) =>
+                sink.emit({
+                  type: "item.completed",
+                  itemId: id,
+                  payload: {
+                    itemType: "dynamic_tool_call",
+                    status:
+                      result && typeof result === "object" && "error" in result
+                        ? "failed"
+                        : "completed",
+                    title: name,
+                    data: { tool: name, output: result },
+                  },
+                }),
+            });
+            sink.emit({
+              type: "content.delta",
+              itemId: `assistant-${randomUUID()}`,
+              payload: { streamKind: "assistant_text", delta: reply },
+            });
+            history.push(
+              { role: "user", content: request.input! },
+              { role: "assistant", content: reply },
+            );
+          } finally {
+            controller = null;
+          }
+          return;
+        }
         history.push({ role: "user", content: request.input! });
         controller = new AbortController();
         const itemId = `assistant-${randomUUID()}`;

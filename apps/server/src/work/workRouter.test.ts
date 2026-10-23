@@ -150,3 +150,21 @@ describe("decideWorkTurnPolicy", () => {
     expect(prompt).toContain("until that exact tool succeeds");
   });
 });
+
+describe("marketing conversation routing", () => {
+  it("routes beginner requests to marketing tools without intercepting coding requests", () => {
+    for (const prompt of [
+      "帮我把这些照片做成小红书宣传，一键发布",
+      "Create an Instagram campaign for these hotel photos",
+    ]) {
+      expect(decideWorkTurnPolicy({ prompt, hasAttachments: true })).toMatchObject({
+        route: "marketing",
+        visibleTools: ["djl_marketing_status", "djl_prepare_marketing"],
+      });
+    }
+    expect(
+      decideWorkTurnPolicy({ prompt: "Write TypeScript code for an Instagram marketing API" })
+        .route,
+    ).toBe("coding");
+  });
+});

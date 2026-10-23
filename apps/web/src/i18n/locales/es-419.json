@@ -991,6 +991,32 @@
       "running": "Ejecutando acción de configuración",
       "runningNamed": "Ejecutando acción de configuración: {{name}}",
       "starting": "Iniciando sesión"
+    },
+    "marketing": {
+      "ready": "DJL preparó tu campaña",
+      "draft": "Vista previa",
+      "platforms": "Elige la vista previa de una plataforma",
+      "addMedia": "Agrega tus fotos o videos a este chat. DJL los preparará aquí.",
+      "video": "Vídeo",
+      "caption": "Texto de la publicación",
+      "save": "Guardar cambios",
+      "cancel": "Cancelar",
+      "noCopy": "Dile a DJL en qué plataforma quieres publicar.",
+      "edit": "Editar texto",
+      "shorter": "Más breve",
+      "premium": "Más elegante",
+      "review": "Revisar y publicar",
+      "finalCheck": "Una última revisión antes de publicar",
+      "assisted": "La publicación directa aún no está conectada. Aprueba esta versión para descargar un paquete con tus archivos y todos los textos. Luego termina la publicación en las plataformas elegidas. No se publicará automáticamente.",
+      "approveDownload": "Aprobar y descargar paquete",
+      "downloaded": "Tu paquete está listo. No se publicó nada automáticamente.",
+      "openPlatform": "Abrir {{platform}}",
+      "manualConfirmed": "Marcado como publicado por ti",
+      "iPosted": "Ya publiqué esta versión",
+      "error": "No se pudo completar la acción. Inténtalo de nuevo.",
+      "sendFailed": "No se pudo enviar la solicitud. Inténtalo cuando DJL termine su tarea actual.",
+      "shorterPrompt": "Haz más breves los textos de la campaña de marketing de esta conversación y actualiza la vista previa. Conserva todos los datos.",
+      "premiumPrompt": "Dale un tono más elegante a la campaña de marketing de esta conversación y actualiza la vista previa. No cambies precios, fechas ni afirmaciones."
     }
   },
   "common": {
@@ -3038,6 +3064,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "Estudio de marketing",
         "automations": "Automatizaciones",
         "deleteWorkspace": "Eliminar espacio de trabajo",
         "kanban": "Espacios de trabajo",

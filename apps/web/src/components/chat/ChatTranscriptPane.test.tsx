@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MessageId, ThreadId } from "@synara/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import { createInstance, type i18n } from "i18next";
@@ -19,48 +20,50 @@ function renderTranscriptPaneMarkup(
   props: Partial<ComponentProps<typeof ChatTranscriptPane>> = {},
 ) {
   return renderToStaticMarkup(
-    <I18nextProvider i18n={testI18n}>
-      <ChatTranscriptPane
-        activeThreadId="thread-1"
-        activeTurnId={null}
-        activeTurnInProgress={false}
-        activeTurnStartedAt={null}
-        chatFontSizePx={14}
-        emptyStateProjectName={undefined}
-        hasMessages
-        isRevertingCheckpoint={false}
-        isWorking={false}
-        worktreeSetup={null}
-        followLiveOutput={false}
-        listRef={createRef<LegendListRef | null>()}
-        markdownCwd={undefined}
-        onExpandTimelineImage={() => {}}
-        onIsAtEndChange={() => {}}
-        onMessagesClickCapture={() => {}}
-        onMessagesMouseUp={() => {}}
-        onMessagesPointerCancel={() => {}}
-        onMessagesPointerDown={() => {}}
-        onMessagesPointerUp={() => {}}
-        onMessagesScroll={() => {}}
-        onMessagesTouchEnd={() => {}}
-        onMessagesTouchMove={() => {}}
-        onMessagesTouchStart={() => {}}
-        onMessagesWheel={() => {}}
-        onOpenTurnDiff={() => {}}
-        onOpenThread={(_threadId: ThreadId) => {}}
-        onRevertUserMessage={(_messageId: MessageId) => {}}
-        onScrollToBottom={() => {}}
-        resolvedTheme="light"
-        revertTurnCountByUserMessageId={new Map()}
-        scrollButtonVisible
-        terminalWorkspaceTerminalTabActive={false}
-        timelineEntries={[]}
-        timestampFormat="locale"
-        turnDiffSummaryByAssistantMessageId={new Map()}
-        workspaceRoot={undefined}
-        {...props}
-      />
-    </I18nextProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <I18nextProvider i18n={testI18n}>
+        <ChatTranscriptPane
+          activeThreadId="thread-1"
+          activeTurnId={null}
+          activeTurnInProgress={false}
+          activeTurnStartedAt={null}
+          chatFontSizePx={14}
+          emptyStateProjectName={undefined}
+          hasMessages
+          isRevertingCheckpoint={false}
+          isWorking={false}
+          worktreeSetup={null}
+          followLiveOutput={false}
+          listRef={createRef<LegendListRef | null>()}
+          markdownCwd={undefined}
+          onExpandTimelineImage={() => {}}
+          onIsAtEndChange={() => {}}
+          onMessagesClickCapture={() => {}}
+          onMessagesMouseUp={() => {}}
+          onMessagesPointerCancel={() => {}}
+          onMessagesPointerDown={() => {}}
+          onMessagesPointerUp={() => {}}
+          onMessagesScroll={() => {}}
+          onMessagesTouchEnd={() => {}}
+          onMessagesTouchMove={() => {}}
+          onMessagesTouchStart={() => {}}
+          onMessagesWheel={() => {}}
+          onOpenTurnDiff={() => {}}
+          onOpenThread={(_threadId: ThreadId) => {}}
+          onRevertUserMessage={(_messageId: MessageId) => {}}
+          onScrollToBottom={() => {}}
+          resolvedTheme="light"
+          revertTurnCountByUserMessageId={new Map()}
+          scrollButtonVisible
+          terminalWorkspaceTerminalTabActive={false}
+          timelineEntries={[]}
+          timestampFormat="locale"
+          turnDiffSummaryByAssistantMessageId={new Map()}
+          workspaceRoot={undefined}
+          {...props}
+        />
+      </I18nextProvider>
+    </QueryClientProvider>,
   );
 }
 

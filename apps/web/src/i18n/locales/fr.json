@@ -991,6 +991,32 @@
       "running": "Exécution de l’action de configuration",
       "runningNamed": "Exécution de l’action de configuration : {{name}}",
       "starting": "Démarrage de la session"
+    },
+    "marketing": {
+      "ready": "DJL a préparé votre campagne",
+      "draft": "Aperçu",
+      "platforms": "Choisir un aperçu par plateforme",
+      "addMedia": "Ajoutez vos photos ou vidéos dans cette conversation. DJL les préparera ici.",
+      "video": "Vidéo",
+      "caption": "Texte de publication",
+      "save": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "noCopy": "Indiquez à DJL la plateforme sur laquelle vous souhaitez publier.",
+      "edit": "Modifier le texte",
+      "shorter": "Raccourcir",
+      "premium": "Ton plus haut de gamme",
+      "review": "Vérifier et publier",
+      "finalCheck": "Une dernière vérification avant de publier",
+      "assisted": "La publication directe n’est pas encore connectée. Approuvez cette version pour télécharger les médias et les textes de toutes les plateformes dans un seul fichier. Terminez ensuite la publication sur les plateformes choisies. Rien ne sera publié automatiquement.",
+      "approveDownload": "Approuver et télécharger le dossier",
+      "downloaded": "Votre dossier est prêt. Rien n’a été publié automatiquement.",
+      "openPlatform": "Ouvrir {{platform}}",
+      "manualConfirmed": "Vous avez indiqué que ce contenu était publié",
+      "iPosted": "J’ai publié cette version",
+      "error": "L’opération a échoué. Veuillez réessayer.",
+      "sendFailed": "Impossible d’envoyer la demande. Réessayez lorsque DJL aura terminé son travail.",
+      "shorterPrompt": "Raccourcissez les textes de la campagne marketing de cette conversation et actualisez l’aperçu. Conservez tous les faits.",
+      "premiumPrompt": "Donnez un ton plus haut de gamme à la campagne marketing de cette conversation et actualisez l’aperçu. Ne modifiez pas les prix, les dates ou les affirmations."
     }
   },
   "common": {
@@ -3038,6 +3064,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "Studio marketing",
         "automations": "Automatisations",
         "deleteWorkspace": "Supprimer l'espace de travail",
         "kanban": "Espaces de travail",

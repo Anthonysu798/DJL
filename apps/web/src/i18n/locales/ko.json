@@ -991,6 +991,32 @@
       "running": "설정 작업 실행 중",
       "runningNamed": "설정 작업 실행 중: {{name}}",
       "starting": "세션 시작 중"
+    },
+    "marketing": {
+      "ready": "DJL이 캠페인을 준비했어요",
+      "draft": "미리보기",
+      "platforms": "플랫폼 미리보기 선택",
+      "addMedia": "이 채팅에 사진이나 동영상을 추가하세요. DJL이 여기서 준비할게요.",
+      "video": "동영상",
+      "caption": "게시글",
+      "save": "변경 저장",
+      "cancel": "취소",
+      "noCopy": "게시할 플랫폼을 DJL에 알려 주세요.",
+      "edit": "문구 수정",
+      "shorter": "더 짧게",
+      "premium": "더 고급스럽게",
+      "review": "확인 후 게시",
+      "finalCheck": "게시 전 마지막 확인",
+      "assisted": "직접 게시 기능은 아직 연결되지 않았어요. 이 버전을 승인하면 미디어와 플랫폼별 문구를 한 번에 다운로드할 수 있어요. 선택한 플랫폼에서 게시를 완료하세요. 자동으로 게시되지는 않아요.",
+      "approveDownload": "승인하고 게시 패키지 다운로드",
+      "downloaded": "패키지가 준비됐어요. 자동으로 게시된 내용은 없어요.",
+      "openPlatform": "{{platform}} 열기",
+      "manualConfirmed": "사용자가 게시 완료로 표시함",
+      "iPosted": "이 버전을 게시했어요",
+      "error": "작업을 완료하지 못했어요. 다시 시도해 주세요.",
+      "sendFailed": "요청을 보내지 못했어요. DJL이 현재 작업을 마치면 다시 시도해 주세요.",
+      "shorterPrompt": "이 대화의 마케팅 캠페인 문구를 더 짧게 만들고 미리보기를 업데이트해 주세요. 사실은 그대로 유지해 주세요.",
+      "premiumPrompt": "이 대화의 마케팅 캠페인 문구를 더 고급스럽게 바꾸고 미리보기를 업데이트해 주세요. 가격, 날짜, 홍보 주장은 변경하지 마세요."
     }
   },
   "common": {
@@ -3038,6 +3064,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "마케팅 스튜디오",
         "automations": "자동화",
         "deleteWorkspace": "작업공간 삭제",
         "kanban": "워크스페이스",
