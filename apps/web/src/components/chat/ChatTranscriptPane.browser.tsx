@@ -10,13 +10,14 @@ import { render as renderBrowser } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-const render = (ui: ReactNode) =>
+const render = (ui: ReactNode, options?: Parameters<typeof renderBrowser>[1]) =>
   renderBrowser(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       {ui}
     </QueryClientProvider>,
+    options,
   );
 
 import { ChatTranscriptPane } from "./ChatTranscriptPane";
