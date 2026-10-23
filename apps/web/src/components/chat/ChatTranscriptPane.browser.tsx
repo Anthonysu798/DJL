@@ -6,7 +6,18 @@ import { type LegendListRef } from "@legendapp/list/react";
 import { page } from "vitest/browser";
 import { useCallback, useRef, useState, type ComponentProps, type FunctionComponent } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-react";
+import { render as renderBrowser } from "vitest-browser-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+
+const render = (ui: ReactNode) =>
+  renderBrowser(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      {ui}
+    </QueryClientProvider>,
+  );
 
 import { ChatTranscriptPane } from "./ChatTranscriptPane";
 import { useTranscriptAssistantSelectionAction } from "./useTranscriptAssistantSelectionAction";
