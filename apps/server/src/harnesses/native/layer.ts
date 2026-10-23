@@ -1,4 +1,5 @@
-import { Effect, Layer, ServiceMap } from "effect";
+import { WorkMcpServer } from "../../work/Services/WorkMcpServer";
+import { Effect, Layer, ServiceMap, Option } from "effect";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
 import type { ProviderAdapterError } from "../../provider/Errors";
 import { ServerSettingsService } from "../../serverSettings";
@@ -65,7 +66,43 @@ export const makeConfiguredNativeAdapter = (
 ) =>
   Effect.gen(function* () {
     const settings = yield* ServerSettingsService;
-    return yield* makeNativeAdapter(provider, factory, async () =>
+    const workTools = yield* Effect.serviceOption(WorkMcpServer);
+    const config = yield* Effect.serviceOption(ServerConfig);
+    const scopedFactory: NativeDriverFactory = async (input, sink) => {
+      if (
+        !["codex", "claudeAgent", "djlCloud"].includes(provider) ||
+        Option.isNone(workTools) ||
+        !input.cwd
+      )
+        return factory(input, sink);
+      const tools = workTools.value;
+      const registration = await Effect.runPromise(
+        tools.registerSession({
+          threadId: input.threadId,
+          authorizedRoot: input.cwd,
+          ...(Option.isSome(config) ? { attachmentsRoot: config.value.attachmentsDir } : {}),
+        }),
+      );
+      try {
+        const driver = await factory(input, sink, registration);
+        return {
+          ...driver,
+          close: () => {
+            try {
+              driver.close();
+            } finally {
+              void Effect.runPromise(tools.unregisterSession(registration.bearerToken)).catch(
+                () => undefined,
+              );
+            }
+          },
+        };
+      } catch (error) {
+        await Effect.runPromise(tools.unregisterSession(registration.bearerToken));
+        throw error;
+      }
+    };
+    return yield* makeNativeAdapter(provider, scopedFactory, async () =>
       nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
     );
   });

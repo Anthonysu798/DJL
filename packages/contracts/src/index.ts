@@ -32,3 +32,4 @@ export * from "./rpc";
 export * from "./harnessAccounts";
 
 export * from "./runtimePermissions";
+export * from "./marketing/campaign";

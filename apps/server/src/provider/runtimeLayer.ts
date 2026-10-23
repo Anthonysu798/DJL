@@ -1,3 +1,4 @@
+import { executeMarketingTool } from "../marketing/chatTools";
 import { Effect, FileSystem, Layer, Path } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -19,7 +20,7 @@ import { ProviderService } from "./Services/ProviderService";
 import { ProviderSessionDirectory } from "./Services/ProviderSessionDirectory";
 import { ProviderSessionRuntimeRepositoryLive } from "../persistence/Layers/ProviderSessionRuntime";
 import { WorkMcpServer, WorkMcpServerError } from "../work/Services/WorkMcpServer";
-import { WorkMcpServerLive } from "../work/Layers/WorkMcpServer";
+import { makeWorkMcpServerLive } from "../work/Layers/WorkMcpServer";
 import { LocalModelsService } from "../localModels/LocalModelsService";
 
 export function makeServerProviderLayer(): Layer.Layer<
@@ -59,7 +60,12 @@ export function makeServerProviderLayer(): Layer.Layer<
     }).pipe(Layer.provide(ServerSettingsLive));
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(openCodeAdapterLayer),
-      Layer.provide(NativeHarnessesLive.pipe(Layer.provide(ServerSettingsLive))),
+      Layer.provide(
+        NativeHarnessesLive.pipe(
+          Layer.provide(ServerSettingsLive),
+          Layer.provide(Layer.succeed(WorkMcpServer, workMcpServer)),
+        ),
+      ),
       Layer.provideMerge(providerSessionDirectoryLayer),
     );
     const providerServiceLayer = makeProviderServiceLive(
@@ -77,5 +83,20 @@ export function makeServerProviderLayer(): Layer.Layer<
       adapterRegistryLayer,
       providerSessionDirectoryLayer,
     );
-  }).pipe(Layer.unwrap, Layer.provide(WorkMcpServerLive));
+  }).pipe(
+    Layer.unwrap,
+    Layer.provide(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        const config = yield* ServerConfig;
+        return makeWorkMcpServerLive((scope, name, args) =>
+          Effect.runPromise(
+            executeMarketingTool({ ...scope, stateDir: config.stateDir }, name, args).pipe(
+              Effect.provideService(SqlClient.SqlClient, sql),
+            ),
+          ),
+        );
+      }).pipe(Layer.unwrap),
+    ),
+  );
 }

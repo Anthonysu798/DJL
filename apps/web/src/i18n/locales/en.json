@@ -991,6 +991,32 @@
       "running": "Running setup action",
       "runningNamed": "Running setup action: {{name}}",
       "starting": "Starting session"
+    },
+    "marketing": {
+      "ready": "DJL prepared your campaign",
+      "draft": "Preview",
+      "platforms": "Choose a platform preview",
+      "addMedia": "Add your photos or videos to this chat. DJL will prepare them here.",
+      "video": "Video",
+      "caption": "Caption",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "noCopy": "Tell DJL which platform you want to post to.",
+      "edit": "Edit copy",
+      "shorter": "Make it shorter",
+      "premium": "More premium",
+      "review": "Review & publish",
+      "finalCheck": "One last look before publishing",
+      "assisted": "Direct posting is not connected yet. Approve this version to download one package with your media and all captions, then finish posting on the selected platforms. This will not publish automatically.",
+      "approveDownload": "Approve & download publishing kit",
+      "downloaded": "Your kit is ready. Nothing has been posted automatically.",
+      "openPlatform": "Open {{platform}}",
+      "manualConfirmed": "Marked as posted by you",
+      "iPosted": "I posted this version",
+      "error": "Something went wrong. Please try again.",
+      "sendFailed": "Could not send the request. Please try again when DJL is ready.",
+      "shorterPrompt": "Please make this conversation’s marketing campaign captions shorter and update the preview. Keep all facts unchanged.",
+      "premiumPrompt": "Please give this conversation’s marketing campaign a more premium tone and update the preview. Keep all prices, dates, and claims unchanged."
     }
   },
   "common": {
@@ -3038,6 +3064,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "Marketing Studio",
         "automations": "Automations",
         "deleteWorkspace": "Delete workspace",
         "kanban": "Workspaces",

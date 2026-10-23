@@ -1,0 +1,884 @@
+.ms-root {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-ui-family);
+  font-size: 13px;
+}
+.ms-root * {
+  box-sizing: border-box;
+}
+.ms-root button,
+.ms-root a,
+.ms-root input,
+.ms-root select,
+.ms-root textarea {
+  outline-offset: 3px;
+}
+.ms-root button:focus-visible,
+.ms-root a:focus-visible {
+  outline: 2px solid var(--ring);
+}
+.ms-root button {
+  cursor: pointer;
+}
+.ms-root button:disabled {
+  cursor: default;
+}
+.ms-topbar {
+  min-height: 55px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--app-surface-divider);
+  -webkit-app-region: drag;
+}
+.ms-topbar button,
+.ms-topbar a {
+  -webkit-app-region: no-drag;
+}
+.ms-topbar strong {
+  font-size: 13px;
+}
+.ms-divider {
+  height: 14px;
+  width: 1px;
+  background: var(--border);
+}
+.ms-muted {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.ms-spacer {
+  flex: 1;
+}
+.ms-local {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-foreground);
+}
+.ms-local > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success, #64866c);
+}
+.ms-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.ms-nav {
+  width: 200px;
+  flex-shrink: 0;
+  padding: 22px 12px;
+  border-right: 1px solid var(--app-surface-divider);
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--muted) 26%, transparent);
+}
+.ms-nav-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px 18px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.ms-nav nav {
+  display: grid;
+  gap: 5px;
+}
+.ms-nav nav > button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 7px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.ms-nav nav > button:hover {
+  background: var(--muted);
+}
+.ms-nav nav > button.active {
+  color: var(--foreground);
+  background: var(--accent);
+  font-weight: 600;
+}
+.ms-nav-collapsed {
+  width: 62px;
+  padding-inline: 7px;
+}
+.ms-nav-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 22px 8px 0;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.ms-nav-foot svg {
+  flex-shrink: 0;
+}
+.ms-nav-foot span {
+  opacity: 0.7;
+}
+.ms-main {
+  padding: 32px 34px 48px;
+  overflow: auto;
+  flex: 1;
+  min-width: 0;
+}
+.ms-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 27px;
+}
+.ms-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin-bottom: 10px;
+}
+.ms-root h1 {
+  font-size: clamp(21px, 2.1vw, 30px);
+  font-weight: 550;
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  margin: 0;
+}
+.ms-root h2 {
+  font-size: 16px;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+}
+.ms-root h3 {
+  font-size: 13px;
+  font-weight: 550;
+}
+.ms-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ms-campaign-bar {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.ms-campaign-bar label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.ms-root input:not([type="checkbox"]):not([type="range"]),
+.ms-root select,
+.ms-root textarea {
+  width: 100%;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 11px;
+  color: var(--foreground);
+  font: inherit;
+}
+.ms-root textarea {
+  resize: vertical;
+}
+.ms-campaign-bar select {
+  min-width: 170px;
+}
+.ms-pill {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+.ms-workflow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  margin: 10px 0 32px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.ms-workflow button {
+  text-align: left;
+  padding: 20px 16px;
+  border-right: 1px solid var(--border);
+  display: grid;
+  gap: 7px;
+}
+.ms-workflow button:last-child {
+  border: 0;
+}
+.ms-workflow button:hover {
+  background: var(--muted);
+}
+.ms-workflow strong {
+  font-weight: 550;
+  font-size: 13px;
+}
+.ms-workflow small {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.ms-step {
+  font-family: var(--font-mono-family);
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-bottom: 9px;
+}
+.ms-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.ms-section-title > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.ms-campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 18px;
+}
+.ms-campaign-card {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card);
+}
+.ms-campaign-card:hover {
+  border-color: var(--ring);
+}
+.ms-card-media {
+  overflow: hidden;
+  height: 170px;
+  background: var(--muted);
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+}
+.ms-card-media img,
+.ms-card-media video {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+.ms-card-status {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  background: var(--background);
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+}
+.ms-card-copy {
+  padding: 17px;
+}
+.ms-card-copy h3 {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.ms-card-copy p,
+.ms-card-bottom {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.ms-card-copy p span {
+  padding: 0 6px;
+}
+.ms-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+}
+.ms-empty {
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 40px;
+  color: var(--muted-foreground);
+}
+.ms-empty h2 {
+  color: var(--foreground);
+  font-size: 21px;
+}
+.ms-empty p {
+  max-width: 430px;
+  line-height: 1.8;
+  font-size: 13px;
+}
+.ms-status {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  padding: 8px 20px;
+  border-top: 1px solid var(--border);
+}
+.ms-create {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  border: 1px solid var(--border);
+  padding: 18px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.ms-create label {
+  flex: 1;
+}
+.ms-root label {
+  font-size: 12px;
+  display: grid;
+  gap: 7px;
+}
+.ms-notice,
+.ms-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--muted);
+  padding: 14px 16px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 16px 0;
+}
+.ms-error {
+  color: var(--destructive);
+  border: 1px solid var(--destructive);
+}
+.ms-library-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+.ms-library-toolbar input {
+  max-width: 320px;
+}
+.ms-library-toolbar span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.ms-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  margin-bottom: 22px;
+}
+.ms-dropzone small {
+  color: var(--muted-foreground);
+}
+.ms-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 15px;
+}
+.ms-asset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+.ms-asset > button {
+  width: 100%;
+  height: 145px;
+  background: var(--muted);
+}
+.ms-asset img,
+.ms-asset video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ms-asset > div {
+  padding: 12px;
+}
+.ms-asset strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.ms-asset small {
+  display: block;
+  margin: 6px 0;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.ms-root .ms-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.ms-filmstrip {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding: 0 0 16px;
+}
+.ms-filmstrip button,
+.ms-filmstrip a {
+  height: 65px;
+  width: 85px;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--muted);
+}
+.ms-filmstrip .selected {
+  border-color: var(--ring);
+}
+.ms-filmstrip img,
+.ms-filmstrip video {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+.ms-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.ms-preview-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ms-preview-toolbar {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.ms-canvas {
+  min-height: 420px;
+  flex: 1;
+  background: color-mix(in srgb, var(--muted) 65%, var(--background));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 25px;
+  overflow: hidden;
+}
+.ms-canvas img,
+.ms-canvas video {
+  max-height: 550px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.ms-inspector {
+  padding: 18px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ms-inspector p {
+  line-height: 1.8;
+}
+.ms-range > span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.ms-range output {
+  font-family: var(--font-mono-family);
+  color: var(--muted-foreground);
+}
+.ms-range input {
+  width: 100%;
+  accent-color: var(--foreground);
+}
+.ms-inspector-section {
+  display: grid;
+  gap: 15px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+.ms-download {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  padding: 9px;
+  border-radius: 6px;
+}
+.ms-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.ms-panel {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 24px;
+  background: var(--card);
+}
+.ms-panel p {
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.ms-panel h2 {
+  margin-bottom: 12px;
+}
+.ms-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 24px 0;
+}
+.ms-form-grid .wide {
+  grid-column: 1/-1;
+}
+.ms-brand-form {
+  max-width: 850px;
+}
+.ms-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 350px);
+  gap: 26px;
+}
+.ms-destinations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 15px 0 25px;
+}
+.ms-destinations label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.ms-destinations .selected {
+  background: var(--accent);
+}
+.ms-composer section > label {
+  margin-top: 18px;
+}
+.ms-post-preview {
+  padding: 16px 4px;
+}
+.ms-social-card {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--card);
+  margin-top: 20px;
+}
+.ms-social-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+}
+.ms-social-header small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+.ms-avatar {
+  background: var(--muted);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+}
+.ms-social-media {
+  aspect-ratio: 1;
+  background: var(--muted);
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+}
+.ms-social-media img,
+.ms-social-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.ms-social-copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 18px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.ms-post-preview > p {
+  margin-top: 14px;
+}
+.ms-assisted {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+.ms-root a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.ms-root a:hover {
+  text-decoration: underline;
+}
+.ms-account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+.ms-account-grid .ms-section-title {
+  margin-top: 0;
+}
+.ms-account-grid h2 {
+  margin: 0;
+}
+.ms-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.ms-metrics > div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  display: grid;
+  gap: 10px;
+}
+.ms-metrics span,
+.ms-metrics small {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.ms-metrics strong {
+  font-size: 30px;
+  font-weight: 500;
+}
+.ms-root table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+.ms-root th,
+.ms-root td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.ms-two-column {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+.ms-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.ms-calendar > div {
+  height: 90px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 12px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.ms-calendar .today {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.ms-activity {
+  width: 260px;
+  border-left: 1px solid var(--border);
+  padding: 20px;
+  overflow: auto;
+}
+.ms-activity p {
+  font-size: 11px;
+  line-height: 1.8;
+  margin: 15px 0;
+}
+@media (max-width: 1100px) {
+  .ms-nav {
+    width: 170px;
+  }
+  .ms-main {
+    padding: 24px;
+  }
+  .ms-workflow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .ms-workflow button:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--border);
+  }
+  .ms-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ms-composer {
+    grid-template-columns: 1fr;
+  }
+  .ms-post-preview {
+    max-width: 420px;
+  }
+  .ms-editor {
+    grid-template-columns: 1fr;
+  }
+  .ms-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .ms-topbar > .ms-muted {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .ms-nav {
+    width: 55px;
+    padding-inline: 3px;
+  }
+  .ms-nav nav span,
+  .ms-nav-heading span,
+  .ms-nav-foot {
+    display: none;
+  }
+  .ms-main {
+    padding: 18px 14px;
+  }
+  .ms-campaign-bar {
+    flex-wrap: wrap;
+  }
+  .ms-two-column,
+  .ms-form-grid,
+  .ms-metrics {
+    grid-template-columns: 1fr;
+  }
+  .ms-dropzone {
+    flex-direction: column;
+  }
+  .ms-create {
+    flex-wrap: wrap;
+  }
+  .ms-local {
+    display: none;
+  }
+  .ms-topbar {
+    padding-inline: 16px;
+  }
+  .ms-activity {
+    position: absolute;
+    right: 0;
+    top: 55px;
+    bottom: 30px;
+    background: var(--background);
+    z-index: 20;
+  }
+  .ms-canvas {
+    min-height: 260px;
+  }
+  .ms-calendar > div {
+    height: 55px;
+    padding: 6px;
+  }
+}
+.ms-timeline {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  background: var(--muted);
+}
+.ms-track {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  min-height: 85px;
+}
+.ms-track button {
+  min-width: 135px;
+  max-width: 350px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  text-align: left;
+  padding: 14px;
+  background: var(--background);
+}
+.ms-track button.active {
+  border-color: var(--ring);
+  background: var(--accent);
+}
+.ms-track strong {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+.ms-track small {
+  display: block;
+  font-size: 10px;
+  margin-top: 12px;
+  color: var(--muted-foreground);
+}

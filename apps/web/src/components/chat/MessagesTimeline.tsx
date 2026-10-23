@@ -389,6 +389,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
 }
 
 interface MessagesTimelineProps {
+  marketingCards?: ReactNode;
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
@@ -455,6 +456,7 @@ interface MessagesTimelineProps {
 }
 
 export const MessagesTimeline = memo(function MessagesTimeline({
+  marketingCards,
   hasMessages,
   isWorking,
   activeTurnInProgress,
@@ -600,8 +602,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const timelineRootRef = useRef<HTMLDivElement | null>(null);
   const bottomSpacerHeightPx = Math.max(bottomContentInsetPx ?? 0, MIN_BOTTOM_CONTENT_INSET_PX);
   const listFooter = useMemo(
-    () => <div aria-hidden="true" style={{ height: bottomSpacerHeightPx }} />,
-    [bottomSpacerHeightPx],
+    () => (
+      <>
+        {marketingCards}
+        <div aria-hidden="true" style={{ height: bottomSpacerHeightPx }} />
+      </>
+    ),
+    [bottomSpacerHeightPx, marketingCards],
   );
 
   const presentedWorktreeSetup = useWorktreeSetupPresentation(worktreeSetup);

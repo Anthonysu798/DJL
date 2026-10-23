@@ -33,7 +33,7 @@ export function codexPermissions(input: ProviderSessionStartInput) {
     approvalsReviewer: autoReview ? ("auto_review" as const) : ("user" as const),
   };
 }
-export const createCodexDriver: NativeDriverFactory = async (input, sink) => {
+export const createCodexDriver: NativeDriverFactory = async (input, sink, workTools) => {
   if (input.runtimeMode === "auto-approval") {
     const modes = await nativePermissionModes("codex", input.providerOptions ?? {});
     const automatic = modes.find((entry) => entry.mode === "auto-approval");
@@ -46,7 +46,10 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink) => {
     ["app-server"],
     input.cwd!,
     withDjlThreadId(
-      options?.homePath ? { ...process.env, CODEX_HOME: options.homePath } : process.env,
+      {
+        ...(options?.homePath ? { ...process.env, CODEX_HOME: options.homePath } : process.env),
+        ...(workTools ? { DJL_WORK_MCP_TOKEN: workTools.bearerToken } : {}),
+      },
       input.threadId,
     ),
   );
@@ -203,6 +206,18 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink) => {
         cwd: input.cwd,
         model: input.modelSelection?.model,
         ...codexPermissions(input),
+        ...(workTools
+          ? {
+              config: {
+                mcp_servers: {
+                  [workTools.name]: {
+                    url: workTools.url,
+                    bearer_token_env_var: "DJL_WORK_MCP_TOKEN",
+                  },
+                },
+              },
+            }
+          : {}),
       }),
     );
     const requestedPermissions = codexPermissions(input);

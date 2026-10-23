@@ -991,6 +991,32 @@
       "running": "正在运行设置操作",
       "runningNamed": "正在运行设置操作：{{name}}",
       "starting": "正在启动会话"
+    },
+    "marketing": {
+      "ready": "DJL 已为你准备好",
+      "draft": "内容预览",
+      "platforms": "选择平台预览",
+      "addMedia": "把照片或视频发到这个聊天，DJL 会在这里帮你整理。",
+      "video": "视频",
+      "caption": "发布文案",
+      "save": "保存修改",
+      "cancel": "取消",
+      "noCopy": "告诉 DJL 你想发布到哪个平台。",
+      "edit": "改文案",
+      "shorter": "更简短",
+      "premium": "更有高级感",
+      "review": "预览并发布",
+      "finalCheck": "发布前，再看一眼",
+      "assisted": "目前还未接通平台直接发布。确认这一版后，可一键下载图片、视频和各平台文案，再前往对应平台完成发布。这个操作不会自动发帖。",
+      "approveDownload": "确认并下载发布包",
+      "downloaded": "发布包已准备好，尚未自动发布任何内容。",
+      "openPlatform": "打开{{platform}}",
+      "manualConfirmed": "你已标记为发布完成",
+      "iPosted": "我已发布这一版",
+      "error": "操作未完成，请重试。",
+      "sendFailed": "暂时无法发送，请等 DJL 完成当前工作后重试。",
+      "shorterPrompt": "请把这个对话的营销宣传文案改得更简短，并更新预览，保留所有事实。",
+      "premiumPrompt": "请把这个对话的营销宣传文案改得更有高级感，并更新预览，不要改变价格、日期或添加未经确认的宣传承诺。"
     }
   },
   "common": {
@@ -3038,6 +3064,7 @@
     },
     "sidebar": {
       "actions": {
+        "marketing": "营销工作室",
         "automations": "自动化",
         "deleteWorkspace": "删除工作区",
         "kanban": "工作空间",

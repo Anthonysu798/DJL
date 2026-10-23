@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProviderSessionStartInput } from "@synara/contracts";
 import { ThreadId } from "@synara/contracts";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { writeCloudSession } from "../../cloud/session";
 import { createDjlCloudDriverFactory } from "./djlCloud";
@@ -137,4 +137,97 @@ describe("DJL Cloud driver", () => {
       createDjlCloudDriverFactory({ secretsDir: empty })(start, sink().s),
     ).rejects.toThrow(/Sign in to DJL Cloud/);
   });
+});
+
+describe("marketing chat context", () => {
+  it("preserves earlier facts and releases marketing tools when the route changes", async () => {
+    const bodies: { messages: { content: string }[]; tools?: unknown }[] = [];
+    const fetchImpl: FetchLike = async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return sse([
+        'data: {"choices":[{"delta":{"content":"Saved"},"finish_reason":"stop"}]}\n\n',
+        "data: [DONE]\n\n",
+      ]);
+    };
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(start, sink().s, {
+      name: "local",
+      url: "http://127.0.0.1:9999/mcp",
+      bearerToken: "test-only",
+    });
+    await driver.send({ threadId: start.threadId, input: "Our room price is $199, no discount." });
+    await driver.send({
+      threadId: start.threadId,
+      input: "Use those facts for Instagram",
+      workTurnPolicy: {
+        route: "marketing",
+        visibleTools: ["djl_marketing_status", "djl_prepare_marketing"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "authorized-root",
+      },
+    });
+    expect(bodies[1]!.messages.some((m) => m.content.includes("$199"))).toBe(true);
+    await driver.send({
+      threadId: start.threadId,
+      input: "Now explain binary search",
+      workTurnPolicy: {
+        route: "coding",
+        visibleTools: [],
+        requireSuccessfulTool: false,
+        evidenceRequired: false,
+        instructionScope: "authorized-root",
+      },
+    });
+    expect(bodies[2]!.tools).toBeUndefined();
+  });
+});
+
+it("reports a failed marketing tool as failed in the chat activity", async () => {
+  let round = 0;
+  const fetchImpl: FetchLike = async () => {
+    round++;
+    return round === 1
+      ? sse([
+          'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"failed-call","function":{"name":"djl_prepare_marketing","arguments":"{}"}}]}}]}\n\n',
+          "data: [DONE]\n\n",
+        ])
+      : sse([
+          'data: {"choices":[{"delta":{"content":"The media could not be prepared."}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]);
+  };
+  const network = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        result: { isError: true, content: [{ type: "text", text: "Invalid media" }] },
+      }),
+    ),
+  );
+  try {
+    const captured = sink();
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(start, captured.s, {
+      name: "scoped",
+      url: "http://127.0.0.1:9999/mcp",
+      bearerToken: "fixture-token",
+    });
+    await driver.send({
+      threadId: start.threadId,
+      input: "Prepare a marketing campaign",
+      workTurnPolicy: {
+        route: "marketing",
+        visibleTools: ["djl_prepare_marketing"],
+        requireSuccessfulTool: true,
+        evidenceRequired: true,
+        instructionScope: "authorized-root",
+      },
+    });
+    expect(captured.events).toContainEqual(
+      expect.objectContaining({
+        type: "item.completed",
+        payload: expect.objectContaining({ status: "failed" }),
+      }),
+    );
+  } finally {
+    network.mockRestore();
+  }
 });

@@ -9201,6 +9201,11 @@ export default function ChatView({
   const onSubmitPlanFollowUpRef = useRef(onSubmitPlanFollowUp);
   onSendRef.current = onSend;
   onSubmitPlanFollowUpRef.current = onSubmitPlanFollowUp;
+  const handleMarketingPrompt = useCallback(
+    (text: string) =>
+      onSubmitPlanFollowUpRef.current({ text, interactionMode: "default", dispatchMode: "queue" }),
+    [],
+  );
   useStartupDraftBridge({
     threadId,
     surface: isStudioContainer ? "work" : "home",
@@ -12040,6 +12045,7 @@ export default function ChatView({
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                   <ChatTranscriptPane
+                    onMarketingPrompt={handleMarketingPrompt}
                     activeThreadId={activeThread.id}
                     activeTurnId={activeThread.session?.activeTurnId ?? null}
                     agentActivityDetail={openAgentActivityDetail}
