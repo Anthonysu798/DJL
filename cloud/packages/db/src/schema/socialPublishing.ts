@@ -11,6 +11,7 @@ import {
 import { organization, user } from "./auth.ts";
 
 export interface SocialDraftContent {
+  publicationMode?: "now" | "scheduled" | undefined;
   caption: string;
   captions: Record<string, string>;
   tiktokOptions?:

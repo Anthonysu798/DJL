@@ -161,7 +161,10 @@ export class PublishingService {
           revision,
           accountId,
           state: "queued" as const,
-          dueAt: new Date(draft.content.scheduledAt),
+          dueAt:
+            draft.content.publicationMode === "now"
+              ? new Date()
+              : new Date(draft.content.scheduledAt),
         })),
       );
     });

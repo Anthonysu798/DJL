@@ -53,6 +53,29 @@ async function fixture() {
   return { p, input };
 }
 describe("durable publishing revisions", () => {
+  it("binds immediate publication intent to the reviewed revision and uses confirmation time", async () => {
+    const { p, input } = await fixture();
+    const draft = await service.create(p, {
+      ...input,
+      publicationMode: "now",
+      scheduledAt: "2030-01-01T00:00:00Z",
+    });
+    expect(draft.tasks).toHaveLength(0);
+    expect(draft.confirmedAt).toBeNull();
+    const before = Date.now();
+    const result = await service.confirm(p, draft.id, 1);
+    expect(result.tasks[0]!.dueAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(result.tasks[0]!.dueAt.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(result.content.publicationMode).toBe("now");
+    const changed = await service.edit(p, draft.id, 1, {
+      ...input,
+      publicationMode: "scheduled",
+      scheduledAt: "2030-01-01T00:00:00Z",
+    });
+    expect(changed.confirmedAt).toBeNull();
+    await expect(service.confirm(p, draft.id, 1)).rejects.toMatchObject({ status: 409 });
+  });
+
   it("concurrent confirmation creates one task and stale edits cannot confirm", async () => {
     const { p, input } = await fixture();
     const draft = await service.create(p, input);

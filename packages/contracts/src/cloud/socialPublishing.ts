@@ -17,6 +17,7 @@ export const CloudSocialDraftInput = Schema.Struct({
   ),
   mediaFileIds: Schema.Array(Schema.String),
   accountIds: Schema.Array(Schema.String),
+  publicationMode: Schema.optional(Schema.Literals(["now", "scheduled"])),
   scheduledAt: Schema.String,
   timezone: Schema.String,
 });
@@ -64,6 +65,7 @@ export const CloudSocialDraft = Schema.Struct({
     captions: Schema.Record(Schema.String, Schema.String),
     mediaFileIds: Schema.Array(Schema.String),
     accountIds: Schema.Array(Schema.String),
+    publicationMode: CloudSocialDraftInput.fields.publicationMode,
     scheduledAt: Schema.String,
     timezone: Schema.String,
     tiktokOptions: CloudSocialDraftInput.fields.tiktokOptions,
