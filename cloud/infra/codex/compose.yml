@@ -1,0 +1,49 @@
+# Apply with the VPS compose file. The broker is trusted; task containers never receive its socket.
+services:
+  codex-image:
+    image: djl-codex:0.125.0
+    build:
+      context: ../../..
+      dockerfile: cloud/infra/codex/runner.Dockerfile
+      args: { CODEX_VERSION: "0.125.0" }
+    entrypoint: [codex, --version]
+    network_mode: none
+    restart: "no"
+
+  codex-broker:
+    build:
+      context: ../../..
+      dockerfile: cloud/infra/codex/broker.Dockerfile
+    restart: unless-stopped
+    environment:
+      CODEX_BROKER_TOKEN: ${CODEX_BROKER_TOKEN:?Generate a private broker credential}
+      CODEX_IMAGE: djl-codex:0.125.0
+      CODEX_NETWORK: ${COMPOSE_PROJECT_NAME:-djl-cloud}-codex
+      CODEX_GATEWAY_URL: http://worker:8081
+    volumes: [/var/run/docker.sock:/var/run/docker.sock]
+    networks: [codex, outbound]
+    depends_on:
+      codex-image: { condition: service_completed_successfully }
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        [CMD, bun, -e, "const r=await fetch('http://127.0.0.1:8090/health');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    environment:
+      CLOUD_TASK_ENGINE: codex
+      CLOUD_CODEX_ALLOWED_ORGS: ${CLOUD_CODEX_ALLOWED_ORGS:?Set explicit pilot organization IDs}
+      CODEX_BROKER_URL: http://codex-broker:8090
+      CODEX_BROKER_TOKEN: ${CODEX_BROKER_TOKEN:?Generate a private broker credential}
+      CODEX_GATEWAY_PORT: "8081"
+    depends_on:
+      codex-broker: { condition: service_healthy }
+
+networks:
+  codex:
+    name: ${COMPOSE_PROJECT_NAME:-djl-cloud}-codex
+    internal: true

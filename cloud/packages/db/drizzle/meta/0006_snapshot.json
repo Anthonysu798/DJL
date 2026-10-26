@@ -1,6 +1,6 @@
 {
-  "id": "a777bd4b-96fd-4cbb-83e3-315dff6a00bb",
-  "prevId": "0d029b23-7317-4ed9-9421-ed98066f0dd5",
+  "id": "37d67e7e-7780-49f0-acdf-aff570b73184",
+  "prevId": "ef898a53-6a9a-4c2d-89dd-c1e427318b68",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -735,12 +735,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "device_id": {
-          "name": "device_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "active_organization_id": {
           "name": "active_organization_id",
           "type": "text",
@@ -783,19 +777,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "session_device_id_devices_id_fk": {
-          "name": "session_device_id_devices_id_fk",
-          "tableFrom": "session",
-          "tableTo": "devices",
-          "columnsFrom": [
-            "device_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5803,6 +5784,40 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "runs_task_finished_idx": {
+          "name": "runs_task_finished_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "finished_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"runs\".\"mode\" = 'task' AND \"runs\".\"status\" IN ('succeeded', 'failed')",
           "concurrently": false,
           "method": "btree",
           "with": {}

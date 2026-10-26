@@ -6,6 +6,7 @@ import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import type { BlobStore } from "@djl/api/blobs";
 import type { LedgerService } from "@djl/api/credits";
+import { collectAnalyticsSources, pruneAnalytics } from "./analytics.ts";
 
 import {
   bulkGrant,
@@ -209,6 +210,8 @@ export const JOBS = {
   "users.purge-deleted": purgeDeletedUsers,
   "chat.purge-deleted": purgeDeletedConversations,
   "stats.daily": rollupDailyStats,
+  "analytics.collect": collectAnalyticsSources,
+  "analytics.retention": pruneAnalytics,
   "usage.grantPlanResets": grantPlanResets,
   "usage.bulkGrant": bulkGrant,
   "usage.expireBanks": expireBanks,

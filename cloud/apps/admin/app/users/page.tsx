@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
 
 interface UserRow {
   id: string;
@@ -38,6 +39,7 @@ interface UserRow {
 const PAGE = 25;
 
 function UsersView() {
+  const { t, number, date } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
@@ -54,12 +56,9 @@ function UsersView() {
   );
   const page = cursors.length;
   return (
-    <Shell
-      title="Users"
-      subtitle="Every account on DJL Cloud. Search by email, name, phone, or id."
-    >
+    <Shell title={t("nav.users")} subtitle={t("users.description")}>
       <PageCard
-        title="All users"
+        title={t("users.all")}
         action={
           <form
             noValidate
@@ -72,12 +71,12 @@ function UsersView() {
           >
             <Input
               className="h-10 w-72 rounded-xl"
-              placeholder="Search users…"
+              placeholder={t("users.search")}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Button type="submit" className="h-10 rounded-xl">
-              Search
+              {t("common.search")}
             </Button>
           </form>
         }
@@ -91,14 +90,14 @@ function UsersView() {
           <TableHeader>
             <TableRow className={headRowClass}>
               <TableHead className="w-10">
-                <span className="sr-only">Row</span>
+                <span className="sr-only">{t("common.row")}</span>
               </TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Joined</TableHead>
+              <TableHead>{t("common.user")}</TableHead>
+              <TableHead>{t("common.phone")}</TableHead>
+              <TableHead>{t("common.status")}</TableHead>
+              <TableHead>{t("common.joined")}</TableHead>
               <TableHead className="w-12 text-right">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t("common.actions")}</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -122,16 +121,14 @@ function UsersView() {
                 <TableCell className="text-muted-foreground">{u.phoneNumber ?? "—"}</TableCell>
                 <TableCell>
                   {u.banned ? (
-                    <StatusPill tone="danger">Suspended</StatusPill>
+                    <StatusPill tone="danger">{t("common.suspended")}</StatusPill>
                   ) : u.emailVerified ? (
-                    <StatusPill tone="success">Active</StatusPill>
+                    <StatusPill tone="success">{t("common.active")}</StatusPill>
                   ) : (
-                    <StatusPill tone="neutral">Unverified</StatusPill>
+                    <StatusPill tone="neutral">{t("common.unverified")}</StatusPill>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {new Date(u.createdAt).toLocaleDateString()}
-                </TableCell>
+                <TableCell className="text-muted-foreground">{date(u.createdAt)}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -139,26 +136,26 @@ function UsersView() {
                         variant="ghost"
                         size="icon"
                         className="size-8 text-muted-foreground"
-                        aria-label={`Actions for ${u.email}`}
+                        aria-label={t("users.actionsFor", { email: u.email })}
                       >
                         <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => router.push(`/users/${u.id}`)}>
-                        Open profile
+                        {t("users.openProfile")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() =>
                           navigator.clipboard.writeText(u.email).catch(() => undefined)
                         }
                       >
-                        Copy email
+                        {t("users.copyEmail")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() => navigator.clipboard.writeText(u.id).catch(() => undefined)}
                       >
-                        Copy user id
+                        {t("users.copyId")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -168,16 +165,18 @@ function UsersView() {
           </TableBody>
         </Table>
         {users.data && users.data.users.length === 0 ? (
-          <p className="p-3 text-sm text-muted-foreground">No users match.</p>
+          <p className="p-3 text-sm text-muted-foreground">{t("users.noMatch")}</p>
         ) : null}
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>Page {page}</span>
+          <span>
+            {t("common.page")} {number(page)}
+          </span>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="icon"
               className="size-9 rounded-lg"
-              aria-label="Previous page"
+              aria-label={t("common.previousPage")}
               disabled={cursors.length <= 1}
               onClick={() => setCursors((c) => c.slice(0, -1))}
             >
@@ -187,7 +186,7 @@ function UsersView() {
               variant="outline"
               size="icon"
               className="size-9 rounded-lg"
-              aria-label="Next page"
+              aria-label={t("common.nextPage")}
               disabled={!users.data?.nextCursor}
               onClick={() => setCursors((c) => [...c, users.data?.nextCursor ?? null])}
             >

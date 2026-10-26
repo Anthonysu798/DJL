@@ -6,6 +6,7 @@
 import { decodeRaster } from "./raster.ts";
 import { KeyRing } from "./keys.ts";
 import { parseSse } from "./sse.ts";
+import { responseChunk } from "./responses.ts";
 import {
   ProviderError,
   type ChatChunk,
@@ -112,12 +113,12 @@ export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions):
     }
     if (!response.ok) {
       const { code, retryable } = classify(response.status);
-      const text = (await response.text().catch(() => "")).slice(0, 300);
+      await response.body?.cancel();
       throw new ProviderError(
         options.id,
         response.status,
         code,
-        `${options.id} ${response.status}: ${text}`,
+        `${options.id} returned HTTP ${response.status}`,
         retryable,
       );
     }
@@ -126,6 +127,50 @@ export function createOpenAiCompatibleAdapter(options: OpenAiCompatibleOptions):
 
   return {
     id: options.id,
+    async *responsesStream(req, signal) {
+      const response = await request(
+        "/responses",
+        { ...req, stream: true, store: false },
+        signal,
+        true,
+      );
+      if (!response.body)
+        throw new ProviderError(options.id, 502, "unavailable", "Empty Responses stream.", true);
+      let completed = false;
+      for await (const { data } of parseSse(response.body, signal)) {
+        if (data === "[DONE]") break;
+        let event: Record<string, unknown>;
+        try {
+          event = JSON.parse(data);
+        } catch {
+          throw new ProviderError(options.id, 502, "unknown", "Invalid Responses event.", false);
+        }
+        if (event.type === "error" || event.type === "response.failed")
+          throw new ProviderError(
+            options.id,
+            502,
+            "unknown",
+            "The Responses request failed.",
+            false,
+          );
+        const chunk = responseChunk(event);
+        if (event.type === "response.completed" || event.type === "response.incomplete") {
+          if (!chunk.usage)
+            throw new ProviderError(options.id, 502, "unknown", "Missing Responses usage.", false);
+          completed = true;
+        }
+        yield chunk;
+        if (completed) return;
+      }
+      if (!signal.aborted && !completed)
+        throw new ProviderError(
+          options.id,
+          502,
+          "unavailable",
+          "Responses stream ended before completion.",
+          true,
+        );
+    },
     async *chatStream(req: ChatRequest, signal: AbortSignal): AsyncIterable<ChatChunk> {
       const response = await request(
         "/chat/completions",

@@ -8,7 +8,9 @@
     "./blobs": "./src/sync/BlobStore.ts",
     "./credits": "./src/credits/LedgerService.ts",
     "./free-allowance": "./src/credits/freeAllowance.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./analytics-sources": "./src/analytics/sources.ts",
+    "./social-publishing": "./src/social/publishing/index.ts"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",

@@ -8,7 +8,7 @@ import {
   CloudResetBanksResponse,
   CloudUsageWindowsResponse,
 } from "@synara/contracts/cloud";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { bankExpiresAt } from "@djl/domain";
 import { Schema } from "effect";
@@ -19,6 +19,7 @@ import { startApi, type ApiRuntime } from "./server.ts";
 
 let api: ApiRuntime;
 let base: string;
+let modelFixtures: (typeof schema.modelCatalog.$inferSelect)[] = [];
 const jar = new Map<string, string>();
 
 function cookieHeader() {
@@ -55,9 +56,27 @@ async function call(path: string, init: RequestInit & { json?: unknown } = {}) {
 beforeAll(async () => {
   const env = loadApiEnv({ ...process.env, DJL_ENV: "test", DJL_MOCK_EXTERNALS: "true" });
   api = await startApi({ env, port: 0, host: "127.0.0.1" });
+  // This suite calls deterministic mock providers, not the disabled paid seed routes.
+  modelFixtures = await api.db.query.modelCatalog.findMany({
+    where: inArray(schema.modelCatalog.modelId, ["gpt-5-mini", "gpt-image-1"]),
+  });
+  await api.db
+    .update(schema.modelCatalog)
+    .set({ status: "active" })
+    .where(
+      inArray(
+        schema.modelCatalog.modelId,
+        modelFixtures.map((m) => m.modelId),
+      ),
+    );
   base = `http://127.0.0.1:${api.address.port}`;
 });
 afterAll(async () => {
+  for (const model of modelFixtures)
+    await api.db
+      .update(schema.modelCatalog)
+      .set({ status: model.status })
+      .where(eq(schema.modelCatalog.modelId, model.modelId));
   await api.close();
 });
 

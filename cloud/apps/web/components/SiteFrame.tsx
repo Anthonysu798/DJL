@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { ProductAnalyticsTracker } from "./ProductAnalytics";
 import { ThemeToggle } from "@/components/theme";
 import { useLocale } from "@/lib/locale-context";
 
@@ -16,9 +17,15 @@ export function SiteFrame({ children }: { children: ReactNode }) {
     FULL_SCREEN.test(pathname) ||
     /^\/(sign-in|sign-up|forgot-password|reset-password|billing)(\/|$)/.test(pathname)
   )
-    return <>{children}</>;
+    return (
+      <>
+        <ProductAnalyticsTracker />
+        {children}
+      </>
+    );
   return (
     <>
+      <ProductAnalyticsTracker />
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <Link href="/chat" className="text-sm font-semibold tracking-tight">

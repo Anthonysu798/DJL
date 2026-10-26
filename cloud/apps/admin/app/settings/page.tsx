@@ -11,8 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { admin, usd } from "@/lib/api";
+import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
 import { decimal, integer, ipList, parseIpList } from "@/lib/validation";
 
 interface Setting {
@@ -35,136 +36,134 @@ interface Def {
   show: (v: unknown) => string;
   parse: (s: string) => unknown;
 }
-const int = (
-  name: string,
-  label: string,
-  min: number,
-  max: number,
-  hint?: string,
-): ReasonField => ({
-  name,
-  label,
-  inputMode: "numeric",
-  validate: integer(min, max, label),
-  hint: hint ?? `Whole number between ${min.toLocaleString()} and ${max.toLocaleString()}.`,
-});
-const DEFS: Record<string, Def> = {
-  "trial.credits": {
-    group: "Trial",
-    label: "Trial credits",
-    description: "Credits granted once phone verification and the first real request succeed.",
-    field: int("value", "Credits", 0, 10_000),
-    show: (v) => `${Number(v ?? 0).toLocaleString()} credits`,
-    parse: Number,
-  },
-  "trial.expiry_days": {
-    group: "Trial",
-    label: "Trial expiry",
-    description: "Unused trial credits expire this many days after the grant.",
-    field: int("value", "Days", 1, 365),
-    show: (v) => `${Number(v ?? 0)} days`,
-    parse: Number,
-  },
-  "trial.daily_budget_usd_cents": {
-    group: "Trial",
-    label: "Daily trial budget",
-    description: "Global cap on trial credits granted per day. Overflow waits in the trial queue.",
-    field: int(
-      "value",
-      "Budget in cents",
-      0,
-      100_000_000,
-      "Whole number of US cents, for example 10000 for $100.00.",
-    ),
-    show: (v) => `${usd(Number(v ?? 0))} per day`,
-    parse: Number,
-  },
-  "gateway.soft_cap_streams": {
-    group: "Gateway",
-    label: "Soft cap on streams",
-    description: "Above this many in-flight streams per instance, trial traffic is deprioritized.",
-    field: int("value", "Streams", 1, 10_000),
-    show: (v) => `${Number(v ?? 0).toLocaleString()} streams`,
-    parse: Number,
-  },
-  "gateway.hard_cap_streams": {
-    group: "Gateway",
-    label: "Hard cap on streams",
-    description:
-      "Above this many in-flight streams per instance, new requests are refused and autoscaling adds capacity.",
-    field: int("value", "Streams", 1, 10_000),
-    show: (v) => `${Number(v ?? 0).toLocaleString()} streams`,
-    parse: Number,
-  },
-  "gateway.ip_requests_per_minute": {
-    group: "Gateway",
-    label: "Requests per network",
-    description: "Gateway requests allowed per client IP address per minute, across all accounts.",
-    field: int("value", "Requests per minute", 1, 1_000_000),
-    show: (v) => `${Number(v ?? 0).toLocaleString()} per minute`,
-    parse: Number,
-  },
-  "pricing.margin": {
-    group: "Pricing",
-    label: "Margin over provider cost",
-    description: "Applied when credit prices are derived from provider prices. 0.4 means 40%.",
-    field: {
-      name: "value",
-      label: "Margin",
-      inputMode: "decimal",
-      validate: decimal(0, 0.95, 3, "Margin"),
-      hint: "Decimal between 0 and 0.95, up to three places.",
-    },
-    show: (v) => `${Math.round(Number(v ?? 0) * 100)}%`,
-    parse: Number,
-  },
-  "admin.ip_allowlist": {
-    group: "Console security",
-    label: "Allowed networks",
-    description:
-      "Only these IPs or CIDR ranges may reach the admin API. Empty allows every network, so set it before production.",
-    field: {
-      name: "value",
-      label: "One IP or CIDR per line",
-      kind: "textarea",
-      validate: ipList,
-      placeholder: "203.0.113.0/24\n2001:db8::1",
-      hint: "Leave empty to allow every network (local development only).",
-    },
-    show: (v) =>
-      Array.isArray(v) && v.length
-        ? `${v.length} ${v.length === 1 ? "entry" : "entries"}`
-        : "Every network",
-    parse: parseIpList,
-  },
-  "admin.ip_blocklist": {
-    group: "Console security",
-    label: "Blocked networks",
-    description:
-      "Refused before anything else, even if allowed above. Managed from the Team page too.",
-    field: {
-      name: "value",
-      label: "One IP or CIDR per line",
-      kind: "textarea",
-      validate: ipList,
-      placeholder: "198.51.100.7",
-    },
-    show: (v) => (Array.isArray(v) && v.length ? `${v.length} blocked` : "None"),
-    parse: parseIpList,
-  },
-};
-const asText = (key: string, v: unknown) =>
-  Array.isArray(v) ? v.join("\n") : v === null || v === undefined ? "" : String(v);
-
 export default function SettingsPage() {
+  const { t, number, currency, date, percent } = useI18n();
+  const usd = (cents: number) => currency(cents / 100);
+  const int = (
+    name: string,
+    label: string,
+    min: number,
+    max: number,
+    hint?: string,
+  ): ReasonField => ({
+    name,
+    label,
+    inputMode: "numeric",
+    validate: integer(min, max, label),
+    hint: hint ?? t("settings.integerHint", { min: number(min), max: number(max) }),
+  });
+  const DEFS: Record<string, Def> = {
+    "trial.credits": {
+      group: t("plan.trial"),
+      label: t("settings.trialCredits"),
+      description: t("settings.trialHint"),
+      field: int("value", t("settings.credits"), 0, 10_000),
+      show: (v) => t("settings.creditValue", { count: number(Number(v ?? 0)) }),
+      parse: Number,
+    },
+    "trial.expiry_days": {
+      group: t("plan.trial"),
+      label: t("settings.expiry"),
+      description: t("settings.expiryHint"),
+      field: int("value", t("settings.days"), 1, 365),
+      show: (v) => t("settings.dayValue", { count: number(Number(v ?? 0)) }),
+      parse: Number,
+    },
+    "trial.daily_budget_usd_cents": {
+      group: t("plan.trial"),
+      label: t("settings.dailyBudget"),
+      description: t("settings.dailyHint"),
+      field: int("value", t("settings.budgetCents"), 0, 100_000_000, t("settings.centsHint")),
+      show: (v) => t("settings.dailyValue", { amount: usd(Number(v ?? 0)) }),
+      parse: Number,
+    },
+    "gateway.soft_cap_streams": {
+      group: t("settings.gateway"),
+      label: t("settings.softStreams"),
+      description: t("settings.softHint"),
+      field: int("value", t("settings.streams"), 1, 10_000),
+      show: (v) => t("settings.streamCount", { count: number(Number(v ?? 0)) }),
+      parse: Number,
+    },
+    "gateway.hard_cap_streams": {
+      group: t("settings.gateway"),
+      label: t("settings.hardStreams"),
+      description: t("settings.hardHint"),
+      field: int("value", t("settings.streams"), 1, 10_000),
+      show: (v) => t("settings.streamCount", { count: number(Number(v ?? 0)) }),
+      parse: Number,
+    },
+    "gateway.ip_requests_per_minute": {
+      group: t("settings.gateway"),
+      label: t("settings.networkRequests"),
+      description: t("settings.networkHint"),
+      field: int("value", t("plans.rpm"), 1, 1_000_000),
+      show: (v) => t("settings.perMinute", { count: number(Number(v ?? 0)) }),
+      parse: Number,
+    },
+    "pricing.margin": {
+      group: t("settings.pricing"),
+      label: t("settings.marginTitle"),
+      description: t("settings.marginHint"),
+      field: {
+        name: "value",
+        label: t("settings.margin"),
+        inputMode: "decimal",
+        validate: decimal(0, 0.95, 3, t("settings.margin")),
+        hint: t("settings.decimalHint"),
+      },
+      show: (v) => percent(Number(v ?? 0)),
+      parse: Number,
+    },
+    "admin.ip_allowlist": {
+      group: t("settings.consoleSecurity"),
+      label: t("settings.allowed"),
+      description: t("settings.allowedHint"),
+      field: {
+        name: "value",
+        label: t("settings.ipLine"),
+        kind: "textarea",
+        validate: ipList,
+        placeholder: "203.0.113.0/24\n2001:db8::1",
+        hint: t("settings.emptyNetworks"),
+      },
+      show: (v) =>
+        Array.isArray(v) && v.length
+          ? t("settings.entries", { count: number(v.length) })
+          : t("settings.everyNetwork"),
+      parse: parseIpList,
+    },
+    "admin.ip_blocklist": {
+      group: t("settings.consoleSecurity"),
+      label: t("settings.blocked"),
+      description: t("settings.blockedHint"),
+      field: {
+        name: "value",
+        label: t("settings.ipLine"),
+        kind: "textarea",
+        validate: ipList,
+        placeholder: "198.51.100.7",
+      },
+      show: (v) =>
+        Array.isArray(v) && v.length
+          ? t("settings.blockedCount", { count: number(v.length) })
+          : t("common.none"),
+      parse: parseIpList,
+    },
+  };
+  const asText = (v: unknown) =>
+    Array.isArray(v) ? v.join("\n") : v === null || v === undefined ? "" : String(v);
+
   const settings = useLoad(() => admin<Setting[]>("/settings"), []);
   const byKey = new Map((settings.data ?? []).map((s) => [s.key, s]));
-  const groups = [...new Set(Object.values(DEFS).map((d) => d.group))];
+  const groups = [
+    { id: "trial", label: t("plan.trial") },
+    { id: "gateway", label: t("settings.gateway") },
+    { id: "pricing", label: t("settings.pricing") },
+    { id: "admin", label: t("settings.consoleSecurity") },
+  ];
   return (
-    <Shell
-      title="Settings"
-      subtitle="Runtime knobs the API reads on every use. Each change is audited with a reason."
-    >
+    <Shell title={t("nav.settings")} subtitle={t("settings.description")}>
       {settings.error ? (
         <p role="alert" className="mb-4 text-sm text-destructive">
           {settings.error}
@@ -172,19 +171,19 @@ export default function SettingsPage() {
       ) : null}
       <div className="space-y-5">
         {groups.map((group) => (
-          <PageCard key={group} title={group}>
+          <PageCard key={group.id} title={group.label}>
             <Table>
               <TableHeader>
                 <TableRow className={headRowClass}>
-                  <TableHead className="w-[42%]">Setting</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Updated</TableHead>
+                  <TableHead className="w-[42%]">{t("settings.setting")}</TableHead>
+                  <TableHead>{t("common.value")}</TableHead>
+                  <TableHead>{t("settings.updated")}</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {Object.entries(DEFS)
-                  .filter(([, d]) => d.group === group)
+                  .filter(([, d]) => d.group === group.label)
                   .map(([key, d]) => {
                     const s = byKey.get(key);
                     return (
@@ -200,19 +199,21 @@ export default function SettingsPage() {
                           {d.show(s?.value)}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {s?.updatedAt ? new Date(s.updatedAt).toLocaleString() : "Default"}
+                          {s?.updatedAt
+                            ? date(s.updatedAt, { dateStyle: "medium", timeStyle: "short" })
+                            : t("common.default")}
                         </TableCell>
                         <TableCell className="text-right">
                           <ReasonDialog
                             trigger={
                               <Button size="sm" variant="outline">
-                                Edit
+                                {t("common.edit")}
                               </Button>
                             }
                             title={d.label}
                             description={d.description}
-                            fields={[{ ...d.field, defaultValue: asText(key, s?.value) }]}
-                            confirmLabel="Save"
+                            fields={[{ ...d.field, defaultValue: asText(s?.value) }]}
+                            confirmLabel={t("common.save")}
                             onConfirm={async (v, reason) => {
                               await admin(`/settings/${key}`, {
                                 method: "PUT",

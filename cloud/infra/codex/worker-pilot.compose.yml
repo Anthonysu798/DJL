@@ -1,0 +1,12 @@
+# Apply to the existing VPS stack after the separate rootless broker is healthy.
+services:
+  worker:
+    environment:
+      CLOUD_TASK_ENGINE: codex
+      CLOUD_CODEX_ALLOWED_ORGS: ${CLOUD_CODEX_ALLOWED_ORGS:?Set explicit pilot org IDs}
+      CODEX_BROKER_URL: ${CODEX_BROKER_URL:?Set the private broker URL}
+      CODEX_BROKER_TOKEN: ${CODEX_BROKER_TOKEN:?Set the private broker credential}
+      CODEX_GATEWAY_PORT: "8081"
+      AGENT_CONCURRENCY: "1"
+    ports:
+      - ${CODEX_GATEWAY_BIND:?Bind to the private host bridge only}:8081

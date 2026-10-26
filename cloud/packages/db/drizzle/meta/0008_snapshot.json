@@ -1,6 +1,6 @@
 {
-  "id": "c691ca9d-bcc9-4d0d-b274-711c055841b6",
-  "prevId": "1026abdf-7579-4434-a230-0ba0008b93fb",
+  "id": "4b0409f3-1725-413c-b62f-6a337e55a393",
+  "prevId": "007c31aa-04a3-48f1-ae1f-b0feebceb6a1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -735,12 +735,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "device_id": {
-          "name": "device_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "active_organization_id": {
           "name": "active_organization_id",
           "type": "text",
@@ -750,6 +744,12 @@
         "impersonated_by": {
           "name": "impersonated_by",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         }

@@ -7,9 +7,11 @@ import { LoginEventsTable, type LoginEvent } from "@/components/team/LoginEvents
 import { Badge } from "@/components/ui/badge";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
 import { MemberStatus, ROLE_LABEL, type Member } from "../page";
 
 export default function TeamMemberPage() {
+  const { t, date } = useI18n();
   const { id } = useParams<{ id: string }>();
   const members = useLoad(() => admin<Member[]>("/admins"), []);
   const logins = useLoad(() => admin<LoginEvent[]>(`/admins/${id}/logins`), [id]);
@@ -18,7 +20,7 @@ export default function TeamMemberPage() {
   return (
     <Shell
       title={m?.name ?? "Team member"}
-      subtitle={m ? `${m.email} · ${ROLE_LABEL[m.role]}` : undefined}
+      subtitle={m ? `${m.email} · ${t(ROLE_LABEL[m.role])}` : undefined}
     >
       {members.error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -26,7 +28,7 @@ export default function TeamMemberPage() {
         </p>
       ) : null}
       {members.data && !m ? (
-        <p className="text-sm text-muted-foreground">No such team member.</p>
+        <p className="text-sm text-muted-foreground">{t("team.notFound")}</p>
       ) : null}
       {m ? (
         <div className="space-y-5">
@@ -35,47 +37,49 @@ export default function TeamMemberPage() {
               <Initials name={m.name || m.email} className="size-14 text-lg" />
               <dl className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
                 <div>
-                  <dt className="text-muted-foreground">Status</dt>
+                  <dt className="text-muted-foreground">{t("common.status")}</dt>
                   <dd className="mt-1">
                     <MemberStatus status={m.status} />
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Role</dt>
+                  <dt className="text-muted-foreground">{t("team.role")}</dt>
                   <dd className="mt-1">
-                    <Badge variant="secondary">{ROLE_LABEL[m.role]}</Badge>
+                    <Badge variant="secondary">{t(ROLE_LABEL[m.role])}</Badge>
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Email verified</dt>
+                  <dt className="text-muted-foreground">{t("team.emailVerified")}</dt>
                   <dd className="mt-1">
-                    {m.emailVerifiedAt
-                      ? new Date(m.emailVerifiedAt).toLocaleDateString()
-                      : "Not yet"}
+                    {m.emailVerifiedAt ? date(m.emailVerifiedAt) : t("team.notYet")}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Authenticator</dt>
-                  <dd className="mt-1">{m.totpEnabled ? "Enrolled" : "Not enrolled"}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Added</dt>
-                  <dd className="mt-1">{new Date(m.createdAt).toLocaleDateString()}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Last sign-in</dt>
+                  <dt className="text-muted-foreground">{t("team.authenticator")}</dt>
                   <dd className="mt-1">
-                    {m.lastLoginAt ? new Date(m.lastLoginAt).toLocaleString() : "Never"}
+                    {m.totpEnabled ? t("team.enrolled") : t("team.notEnrolled")}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Last IP</dt>
+                  <dt className="text-muted-foreground">{t("team.added")}</dt>
+                  <dd className="mt-1">{date(m.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t("team.lastSignIn")}</dt>
+                  <dd className="mt-1">
+                    {m.lastLoginAt
+                      ? date(m.lastLoginAt, { dateStyle: "medium", timeStyle: "short" })
+                      : t("team.never")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t("team.lastIp")}</dt>
                   <dd className="mt-1 font-mono text-xs">{m.lastLoginIp ?? "—"}</dd>
                 </div>
               </dl>
             </div>
           </PageCard>
-          <PageCard title="Sign-in history">
+          <PageCard title={t("team.signInHistory")}>
             <LoginEventsTable
               events={logins.data ?? []}
               bans={bans.data ?? []}

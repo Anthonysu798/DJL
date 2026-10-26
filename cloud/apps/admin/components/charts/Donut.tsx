@@ -1,14 +1,17 @@
+"use client";
+import { useI18n } from "../LocaleProvider";
+
 /**
  * Composition donut with a hero number in the hole, a legend (identity never
  * by color alone), 2px surface gaps between segments, and a table view.
- * Categorical hues are assigned in fixed order and validated for both
- * light and dark surfaces (dataviz validator).
+ * Each plan gets its own categorical hue; labels retain its identity in both themes.
  */
 const HUES = [
   "var(--color-chart-1)",
   "var(--color-chart-2)",
   "var(--color-chart-3)",
   "var(--color-chart-4)",
+  "var(--color-chart-5)",
 ] as const;
 
 export function Donut({
@@ -24,6 +27,7 @@ export function Donut({
   slices: readonly { label: string; value: number }[];
   action?: React.ReactNode;
 }) {
+  const { number } = useI18n();
   const sum = Math.max(
     1,
     slices.reduce((a, s) => a + s.value, 0),
@@ -34,10 +38,7 @@ export function Donut({
   return (
     <figure className="panel p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <figcaption className="flex items-center gap-3 text-lg font-medium">
-          <span className="size-2.5 rounded-full bg-primary ring-4 ring-primary/15" />
-          {title}
-        </figcaption>
+        <figcaption className="flex items-center gap-3 text-lg font-medium">{title}</figcaption>
         {action}
       </div>
       <div className="flex flex-wrap items-center gap-8">
@@ -81,7 +82,7 @@ export function Donut({
             textAnchor="middle"
             className="fill-foreground text-[15px] font-semibold"
           >
-            {total.toLocaleString()}
+            {number(total)}
           </text>
           <text x="60" y="72" textAnchor="middle" className="fill-muted-foreground text-[7px]">
             {totalLabel}
@@ -97,9 +98,7 @@ export function Donut({
                 />
                 {s.label}
               </dt>
-              <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                {s.value.toLocaleString()}
-              </dd>
+              <dd className="mt-1 text-2xl font-semibold tabular-nums">{number(s.value)}</dd>
             </div>
           ))}
         </dl>

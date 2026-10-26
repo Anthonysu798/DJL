@@ -1,3 +1,5 @@
+import { makeSocialRoutes, type SocialRouteDeps } from "../social/routes.ts";
+import { makePublishingRoutes, type PublishingService } from "../social/publishing/index.ts";
 /**
  * HTTP routes. Each route is an HttpRouter layer, mirroring the open-source
  * server. Better Auth is mounted by converting the Effect request to a web
@@ -23,6 +25,7 @@ import { makeNativeAuthRoutes, type NativeAuthRouteDeps } from "../nativeAuth/ro
 import { makeSyncRoutes, type SyncRouteDeps } from "../sync/routes.ts";
 import { makeTrialRoutes, type TrialRouteDeps } from "../trial/routes.ts";
 import { makeUsageRoutes, type UsageRouteDeps } from "../usage/routes.ts";
+import { makeAnalyticsRoutes, type AnalyticsRouteDeps } from "../analytics/routes.ts";
 import type { DjlAuth } from "../auth/auth.ts";
 import type { ApiEnv } from "../config/env.ts";
 import { RequestContext } from "./context.ts";
@@ -44,6 +47,7 @@ function fromWebKeepingType(response: Response): HttpServerResponse.HttpServerRe
 
 export interface RouteDeps
   extends
+    SocialRouteDeps,
     AccountDeps,
     BillingRouteDeps,
     TrialRouteDeps,
@@ -59,8 +63,10 @@ export interface RouteDeps
     NativeAuthRouteDeps,
     PushRouteDeps,
     NotificationRouteDeps,
-    ImageRouteDeps {
+    ImageRouteDeps,
+    AnalyticsRouteDeps {
   readonly env: ApiEnv;
+  readonly publishing: PublishingService;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
   readonly version: string;
@@ -124,6 +130,8 @@ export function makeRoutes(deps: RouteDeps) {
     health,
     ready,
     makeClientConfigRoutes(deps.clientConfig),
+    makeSocialRoutes(deps),
+    makePublishingRoutes(deps),
     makeNotificationRoutes(deps),
     makeImageRoutes(deps),
     authRoutes,
@@ -141,6 +149,7 @@ export function makeRoutes(deps: RouteDeps) {
     makeAuthRoutes(deps),
     makeNativeAuthRoutes(deps),
     makePushRoutes(deps),
+    makeAnalyticsRoutes(deps),
     fallback,
   );
 }

@@ -1,0 +1,34 @@
+services:
+  operations-gateway:
+    image: djl-cloud-api:local
+    command: [bun, cloud/apps/api/src/operations/gateway.ts]
+    restart: unless-stopped
+    environment:
+      DJL_ENV: ${DJL_ENV:-staging}
+      API_PUBLIC_URL: https://${API_HOST}
+      WEB_PUBLIC_URL: https://${WEB_HOST}
+      ADMIN_PUBLIC_URL: https://${ADMIN_HOST}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      PASSKEY_RP_ID: ${PASSKEY_RP_ID}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      IP_HASH_SALT: ${IP_HASH_SALT}
+      DATABASE_URL: postgres://djl_api:${POSTGRES_API_PASSWORD}@postgres:5432/djl
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      SERVER_CONTROL_URL: ${SERVER_CONTROL_URL:?Set the private VPS controller URL}
+      SERVER_CONTROL_TOKEN: ${SERVER_CONTROL_TOKEN:?Set the private VPS controller credential}
+      SERVER_CONTROL_ADMINS: ${SERVER_CONTROL_ADMINS:?Set explicit operator admin IDs}
+      ADMIN_MFA_REQUIRED: "true"
+      SMS_ENABLED: "false"
+    ports: ["127.0.0.1:8788:8788"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [data, outbound]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        [CMD, bun, -e, "const r=await fetch('http://127.0.0.1:8788/ready');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10

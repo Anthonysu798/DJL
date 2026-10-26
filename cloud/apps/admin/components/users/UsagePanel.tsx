@@ -10,8 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { admin, credits } from "@/lib/api";
+import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
+import type { MessageKey } from "@/lib/i18n";
 import { integer } from "@/lib/validation";
 
 interface Window {
@@ -44,23 +46,27 @@ interface UserUsage {
   events: WindowEvent[];
 }
 
-const SOURCE = { admin: "Admin", bulk: "Bulk", plan_schedule: "Plan schedule" } as const;
-const EVENT: Record<string, string> = {
-  bank_granted: "Bank granted",
-  bank_redeemed: "Bank redeemed",
-  bank_revoked: "Bank revoked",
-  bank_expired: "Bank expired",
-  admin_reset: "Admin reset",
+const SOURCE = {
+  admin: "role.admin",
+  bulk: "usage.bulk",
+  plan_schedule: "usage.schedule",
+} as const;
+const EVENT: Record<string, MessageKey> = {
+  bank_granted: "usage.granted",
+  bank_redeemed: "usage.redeemed",
+  bank_revoked: "usage.revoked",
+  bank_expired: "usage.expired",
+  admin_reset: "usage.resetLimits",
 };
-
-function bankState(b: Bank): { label: string; tone: "success" | "danger" | "neutral" } {
-  if (b.redeemedAt) return { label: "Redeemed", tone: "neutral" };
-  if (b.revokedAt) return { label: "Revoked", tone: "danger" };
-  if (new Date(b.expiresAt) <= new Date()) return { label: "Expired", tone: "neutral" };
-  return { label: "Available", tone: "success" };
+function bankState(b: Bank): { label: MessageKey; tone: "success" | "danger" | "neutral" } {
+  if (b.redeemedAt) return { label: "usage.redeemed", tone: "neutral" };
+  if (b.revokedAt) return { label: "usage.revoked", tone: "danger" };
+  if (new Date(b.expiresAt) <= new Date()) return { label: "usage.expired", tone: "neutral" };
+  return { label: "usage.available", tone: "success" };
 }
 
 function Meter({ label, window }: { label: string; window: Window }) {
+  const { t, credits, date } = useI18n();
   const limit = BigInt(window.limit);
   const used = BigInt(window.used);
   const percent = limit > 0n ? Number((used * 100n) / limit) : 100;
@@ -70,7 +76,7 @@ function Meter({ label, window }: { label: string; window: Window }) {
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground tabular-nums">
-          {credits(window.used)} of {credits(window.limit)}
+          {t("usage.meter", { used: credits(window.used), limit: credits(window.limit) })}
         </span>
       </div>
       <div
@@ -88,8 +94,10 @@ function Meter({ label, window }: { label: string; window: Window }) {
       </div>
       <p className="text-[13px] text-muted-foreground">
         {window.resetsAt
-          ? `${full ? "Full until" : "Frees up from"} ${new Date(window.resetsAt).toLocaleString()}`
-          : "Nothing used"}
+          ? t(full ? "usage.fullUntil" : "usage.freesFrom", {
+              date: date(window.resetsAt, { dateStyle: "medium", timeStyle: "short" }),
+            })
+          : t("usage.nothingUsed")}
       </p>
     </div>
   );
@@ -97,32 +105,33 @@ function Meter({ label, window }: { label: string; window: Window }) {
 
 /** Both usage windows, banked resets, and window history for one user, with admin actions. */
 export function UsagePanel({ userId }: { userId: string }) {
+  const { t, number, date } = useI18n();
   const usage = useLoad(() => admin<UserUsage>(`/users/${userId}/usage`), [userId]);
   const u = usage.data;
-  const live = u?.banks.filter((b) => bankState(b).label === "Available").length ?? 0;
+  const live = u?.banks.filter((b) => bankState(b).label === "usage.available").length ?? 0;
   return (
     <PageCard
-      title="Usage windows"
+      title={t("nav.usage")}
       action={
         <div className="flex gap-2">
           <ReasonDialog
             trigger={
               <Button size="sm" variant="secondary">
-                Grant banked reset
+                {t("usage.grantReset")}
               </Button>
             }
-            title="Grant banked resets"
-            description="The user can redeem each one to zero both windows. Banks expire after 90 days."
+            title={t("usage.grantMany")}
+            description={t("usage.userGrantDescription")}
             fields={[
               {
                 name: "count",
-                label: "How many",
+                label: t("usage.howMany"),
                 inputMode: "numeric",
-                validate: integer(1, 10, "How many"),
+                validate: integer(1, 10, t("usage.howMany")),
                 defaultValue: "1",
               },
             ]}
-            confirmLabel="Grant"
+            confirmLabel={t("common.grant")}
             onConfirm={(v, reason) =>
               admin(`/users/${userId}/usage/banks`, {
                 method: "POST",
@@ -133,11 +142,11 @@ export function UsagePanel({ userId }: { userId: string }) {
           <ReasonDialog
             trigger={
               <Button size="sm" variant="secondary">
-                Reset limits
+                {t("usage.resetLimits")}
               </Button>
             }
-            title="Reset limits"
-            description="Zeroes both usage windows and clears rate limits, concurrency holds, and open abuse flags. Credits and banked resets are never changed."
+            title={t("usage.resetLimits")}
+            description={t("usage.limitsDescription")}
             onConfirm={(_v, reason) =>
               admin(`/users/${userId}/reset-limits`, { method: "POST", json: { reason } }).then(
                 usage.reload,
@@ -155,21 +164,20 @@ export function UsagePanel({ userId }: { userId: string }) {
       {u ? (
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <Meter label="5-hour window" window={u.windows.fiveHour} />
-            <Meter label="Weekly window" window={u.windows.week} />
+            <Meter label={t("usage.fiveWindow")} window={u.windows.fiveHour} />
+            <Meter label={t("usage.weekWindow")} window={u.windows.week} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Caps from the {u.planId} plan · {live} banked {live === 1 ? "reset" : "resets"}{" "}
-            available
+            {t("usage.availableSummary", { plan: u.planId, count: number(live) })}
           </p>
           {u.banks.length ? (
             <Table>
               <TableHeader>
                 <TableRow className={headRowClass}>
-                  <TableHead>Granted</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>State</TableHead>
+                  <TableHead>{t("usage.granted")}</TableHead>
+                  <TableHead>{t("common.source")}</TableHead>
+                  <TableHead>{t("usage.expires")}</TableHead>
+                  <TableHead>{t("common.state")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -179,31 +187,29 @@ export function UsagePanel({ userId }: { userId: string }) {
                   return (
                     <TableRow key={b.id} className={rowClass}>
                       <TableCell className="text-muted-foreground">
-                        {new Date(b.grantedAt).toLocaleString()}
+                        {date(b.grantedAt, { dateStyle: "medium", timeStyle: "short" })}
                       </TableCell>
                       <TableCell>
-                        {SOURCE[b.source]}
+                        {t(SOURCE[b.source])}
                         {b.reason ? (
                           <div className="text-xs text-muted-foreground">{b.reason}</div>
                         ) : null}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(b.expiresAt).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{date(b.expiresAt)}</TableCell>
                       <TableCell>
-                        <StatusPill tone={state.tone}>{state.label}</StatusPill>
+                        <StatusPill tone={state.tone}>{t(state.label)}</StatusPill>
                       </TableCell>
                       <TableCell className="text-right">
-                        {state.label === "Available" ? (
+                        {state.label === "usage.available" ? (
                           <ReasonDialog
                             trigger={
                               <Button size="sm" variant="ghost">
-                                Revoke
+                                {t("usage.revoke")}
                               </Button>
                             }
-                            title="Revoke banked reset"
+                            title={t("usage.revokeReset")}
                             destructive
-                            confirmLabel="Revoke"
+                            confirmLabel={t("usage.revoke")}
                             onConfirm={(_v, reason) =>
                               admin(`/usage/banks/${b.id}/revoke`, {
                                 method: "POST",
@@ -219,16 +225,18 @@ export function UsagePanel({ userId }: { userId: string }) {
               </TableBody>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">No banked resets yet.</p>
+            <p className="text-sm text-muted-foreground">{t("usage.noBanks")}</p>
           )}
           {u.events.length ? (
             <div>
-              <h3 className="mb-2 text-sm font-medium">History</h3>
+              <h3 className="mb-2 text-sm font-medium">{t("common.history")}</h3>
               <ul className="space-y-1 text-sm">
                 {u.events.map((e) => (
                   <li key={e.id} className="flex flex-wrap gap-x-3 text-muted-foreground">
-                    <span className="text-foreground">{EVENT[e.kind] ?? e.kind}</span>
-                    <span>{new Date(e.createdAt).toLocaleString()}</span>
+                    <span className="text-foreground">
+                      {EVENT[e.kind] ? t(EVENT[e.kind]!) : e.kind}
+                    </span>
+                    <span>{date(e.createdAt, { dateStyle: "medium", timeStyle: "short" })}</span>
                     <span>{e.actor}</span>
                     {e.reason ? <span>· {e.reason}</span> : null}
                   </li>
@@ -238,7 +246,7 @@ export function UsagePanel({ userId }: { userId: string }) {
           ) : null}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       )}
     </PageCard>
   );

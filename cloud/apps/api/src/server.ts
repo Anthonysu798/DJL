@@ -1,3 +1,6 @@
+import { SocialConnectionService } from "./social/SocialConnectionService.ts";
+import { createSocialProviders } from "./social/providers/index.ts";
+import { PublishingService } from "./social/publishing/index.ts";
 /**
  * Composes env, database, auth, notifiers, and routes into a running HTTP
  * server. `startApi` returns the bound address and a close function so tests
@@ -63,6 +66,9 @@ import {
 import { buildProviders } from "./gateway/providers.ts";
 import { loadApiEnv, type ApiEnv } from "./config/env.ts";
 import { Settings } from "./config/settings.ts";
+import { ControllerClient } from "./operations/ControllerClient.ts";
+import { ServerOperations } from "./operations/ServerOperations.ts";
+import { TrafficMonitor } from "./operations/TrafficMonitor.ts";
 import { startObservability, stopObservability } from "./observability.ts";
 import { makeMiddleware } from "./http/middleware.ts";
 import { makeRoutes } from "./http/routes.ts";
@@ -72,6 +78,8 @@ import { createRedisLockouts } from "./security/throttle.ts";
 import { ApiError } from "./http/errors.ts";
 import { ImageService } from "./images/ImageService.ts";
 import { NotificationService } from "./notifications/NotificationService.ts";
+import { AnalyticsService } from "./analytics/AnalyticsService.ts";
+import { AnalyticsAdminService } from "./analytics/AnalyticsAdminService.ts";
 
 export interface ApiRuntime {
   readonly env: ApiEnv;
@@ -144,6 +152,7 @@ export async function startApi(
     readonly env?: ApiEnv;
     readonly port?: number;
     readonly host?: string;
+    readonly operationsController?: import("./operations/ControllerClient.ts").HostController;
   } = {},
 ): Promise<ApiRuntime> {
   const env = options.env ?? loadApiEnv();
@@ -309,7 +318,28 @@ export async function startApi(
     version,
   });
   const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
+  const traffic = new TrafficMonitor(redis);
+  const operations = new ServerOperations(
+    db,
+    options.operationsController ??
+      new ControllerClient(process.env.SERVER_CONTROL_URL, process.env.SERVER_CONTROL_TOKEN),
+    adminAuth,
+    traffic,
+    env.env === "local" || env.env === "test"
+      ? null
+      : (process.env.SERVER_CONTROL_ADMINS ?? "").split(",").filter(Boolean),
+  );
+  const socialConnections = new SocialConnectionService(db, createSocialProviders(process.env), {
+    enabled: process.env.SOCIAL_PUBLISHING_ENABLED === "true",
+    encryptionKey: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY,
+    publicUrl: env.apiPublicUrl,
+  });
   const routes = makeRoutes({
+    socialConnections,
+    socialWebPublicUrl: env.webPublicUrl,
+    publishing: new PublishingService(db, blobs, socialConnections),
+    analytics: new AnalyticsService(db),
+    analyticsAdmin: new AnalyticsAdminService(db, undefined, env.env),
     notifications: new NotificationService(db),
     images: new ImageService({ db, chat, gateway }),
     clientConfig: {
@@ -342,6 +372,7 @@ export async function startApi(
     nativeAuth: new NativeAuthService(db, auth),
     adminAuth,
     admin,
+    operations,
     secureCookies: env.env !== "local" && env.env !== "test",
     gatewayStatus: () => gateway.status(),
     sync,
@@ -366,7 +397,7 @@ export async function startApi(
       { host: options.host ?? "0.0.0.0", port: options.port ?? env.port },
     );
     const app = yield* HttpRouter.toHttpEffect(routes);
-    yield* server.serve(makeMiddleware(env, region)(app));
+    yield* server.serve(makeMiddleware(env, region, traffic)(app));
     return server.address;
   });
 
@@ -395,6 +426,7 @@ export async function startApi(
       await Effect.runPromise(Scope.close(scope, { _tag: "Success", value: undefined } as never));
       await runner.stop();
       await tasks.close();
+      await traffic.close();
       redis.disconnect();
       await closeDb();
       await stopObservability();

@@ -1,3 +1,4 @@
+import { createSocialTools, type SocialToolServices } from "./socialTools.ts";
 /**
  * Builds the agent runtime the worker runs `agent.run` jobs with, from the
  * environment. With DJL_MOCK_EXTERNALS the model, search, sandbox, and push
@@ -9,6 +10,11 @@
 import type { DjlDatabase } from "@djl/db";
 import { MockPushSender, createApnsSender, type EmailSender, type PushSender } from "@djl/notify";
 import type { Redis } from "ioredis";
+import { and, eq } from "drizzle-orm";
+import { schema } from "@djl/db";
+import { ApiError } from "../http/errors.ts";
+import { CodexHost } from "./codex/CodexHost.ts";
+import { ScopedGateway } from "./codex/ScopedGateway.ts";
 
 import { Settings } from "../config/settings.ts";
 import { LedgerService } from "../credits/LedgerService.ts";
@@ -40,6 +46,7 @@ export { RunInterruptedError } from "./AgentRunner.ts";
 export { resumeBlockedRuns, windowsHaveRoom } from "./resume.ts";
 
 export interface AgentRuntimeInput {
+  readonly social?: SocialToolServices;
   readonly db: DjlDatabase;
   readonly redis: Redis;
   readonly blobs: BlobStore;
@@ -55,6 +62,7 @@ export interface AgentRuntimeInput {
 }
 
 export interface AgentRuntime {
+  readonly close?: () => void;
   readonly runner: AgentRunner;
   readonly imageRunner: ImageRunExecutor;
   /** Destroys stray sandbox machines; null in mock mode. */
@@ -135,7 +143,44 @@ export function createAgentRuntime(input: AgentRuntimeInput): AgentRuntime {
           contents: async () => null,
         };
 
+  let taskHarness: CodexHost | undefined;
+  let close: (() => void) | undefined;
+  if (env.CLOUD_TASK_ENGINE === "codex") {
+    const scoped = new ScopedGateway(gateway);
+    const server = Bun.serve({
+      hostname: "0.0.0.0",
+      port: Number(env.CODEX_GATEWAY_PORT ?? 8081),
+      maxRequestBodySize: 6 * 1024 * 1024,
+      fetch: (request) => scoped.handle(request),
+    });
+    close = () => {
+      server.stop(true);
+    };
+    taskHarness = new CodexHost({
+      baseUrl: required(env, "CODEX_BROKER_URL"),
+      controlToken: required(env, "CODEX_BROKER_TOKEN"),
+      gateway: scoped,
+      resolveModel: (requested) => gateway.taskModel(requested),
+      allowedOrgs: new Set((env.CLOUD_CODEX_ALLOWED_ORGS ?? "").split(",").filter(Boolean)),
+      authorize: async (facts) => {
+        const user = await db.query.user.findFirst({
+          where: eq(schema.user.id, facts.principal.userId),
+        });
+        const member = await db.query.member.findFirst({
+          where: and(
+            eq(schema.member.userId, facts.principal.userId),
+            eq(schema.member.organizationId, facts.principal.orgId),
+          ),
+        });
+        if (!user || user.banned || !member)
+          throw new ApiError(403, "forbidden", "This account can no longer run tasks.");
+        return facts;
+      },
+    });
+  } else if (env.CLOUD_TASK_ENGINE && env.CLOUD_TASK_ENGINE !== "legacy")
+    throw new Error("CLOUD_TASK_ENGINE must be codex or legacy");
   const runner = new AgentRunner({
+    ...(taskHarness ? { taskHarness } : {}),
     db,
     blobs,
     settings,
@@ -148,9 +193,11 @@ export function createAgentRuntime(input: AgentRuntimeInput): AgentRuntime {
       ...createWebTools(web).filter((tool) => searchEnabled || tool.name === "read_page"),
       ...createImageTools({ db, blobs, gateway }),
       ...createSandboxTools({ db, blobs, sandboxEnabled }),
+      ...(input.social ? createSocialTools(input.social) : []),
     ],
   });
   return {
+    ...(close ? { close } : {}),
     runner,
     reap,
     imageRunner: new ImageRunExecutor({

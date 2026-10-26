@@ -17,11 +17,17 @@ import {
 } from "./AdminAuth.ts";
 import type { AdminService } from "./AdminService.ts";
 import type { UsageAdminService } from "../usage/UsageAdminService.ts";
+import type { ServerOperations } from "../operations/ServerOperations.ts";
+import { makeServerRoutes } from "../operations/routes.ts";
+import type { AnalyticsAdminService } from "../analytics/AnalyticsAdminService.ts";
+import type { AnalyticsPlatform, AnalyticsRange } from "@synara/contracts/cloud";
 
 export interface AdminRouteDeps {
   readonly adminAuth: AdminAuth;
   readonly admin: AdminService;
   readonly usageAdmin: UsageAdminService;
+  readonly operations?: ServerOperations;
+  readonly analyticsAdmin: AnalyticsAdminService;
   readonly secureCookies: boolean;
   readonly gatewayStatus: () => {
     readonly inFlight: number;
@@ -88,6 +94,75 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
 
   const setCookie = (token: string, expiresAt: Date) =>
     `${ADMIN_SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/admin; HttpOnly; SameSite=Strict; Expires=${expiresAt.toUTCString()}${deps.secureCookies ? "; Secure" : ""}`;
+
+  const analytics = HttpRouter.add(
+    "GET",
+    "/admin/v1/analytics",
+    handle(
+      Effect.gen(function* () {
+        const p = yield* principal();
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        const query = new URL(request.url, "http://localhost").searchParams;
+        return json(
+          yield* attempt(
+            () =>
+              deps.analyticsAdmin.report(p, {
+                range: (query.get("range") ?? "week") as AnalyticsRange,
+                platform: query.get("platform") as AnalyticsPlatform | null,
+                includeTest: query.get("includeTest") === "true",
+              }),
+            FAIL,
+          ),
+        );
+      }),
+    ),
+  );
+
+  const accountAnalytics = HttpRouter.add(
+    "GET",
+    "/admin/v1/users/:id/analytics",
+    handle(
+      Effect.gen(function* () {
+        const p = yield* principal();
+        const params = yield* HttpRouter.params;
+        return json(yield* attempt(() => deps.analyticsAdmin.accountActivity(p, params.id!), FAIL));
+      }),
+    ),
+  );
+
+  const analyticsExport = HttpRouter.add(
+    "POST",
+    "/admin/v1/analytics/export",
+    handle(
+      Effect.gen(function* () {
+        const p = yield* principal();
+        const body = (yield* readJson) as {
+          range?: AnalyticsRange;
+          platform?: AnalyticsPlatform;
+          includeTest?: boolean;
+        };
+        if (
+          !body ||
+          typeof body !== "object" ||
+          Array.isArray(body) ||
+          Object.keys(body).some((key) => !["range", "platform", "includeTest"].includes(key))
+        )
+          return yield* Effect.fail(
+            new ApiError(400, "invalid_analytics_filter", "Invalid analytics filter."),
+          );
+        const csv = yield* attempt(
+          () =>
+            deps.analyticsAdmin.export(p, {
+              range: body.range ?? "week",
+              platform: body.platform ?? null,
+              includeTest: body.includeTest === true,
+            }),
+          FAIL,
+        );
+        return json({ csv });
+      }),
+    ),
+  );
 
   const login = HttpRouter.add(
     "POST",
@@ -627,6 +702,10 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
     me,
     totpEnroll,
     totpConfirm,
+    analytics,
+    analyticsExport,
+    accountAnalytics,
     ...routes,
+    makeServerRoutes(deps.adminAuth, deps.operations),
   );
 }

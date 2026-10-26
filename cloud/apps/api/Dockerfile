@@ -12,6 +12,8 @@ FROM oven/bun:1.3.13-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app /app
+# Deployment archives can preserve private directory modes. Keep code root-owned and readable.
+RUN chmod -R a+rX /app/cloud /app/packages
 ARG DJL_VERSION=dev
 ENV DJL_VERSION=$DJL_VERSION
 ENV API_PORT=8787

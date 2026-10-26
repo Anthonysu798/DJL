@@ -9,8 +9,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadApiEnv } from "../config/env.ts";
 import { startApi, type ApiRuntime } from "../server.ts";
 import { TestClient, type CallInit } from "../testing/client.ts";
+import { activateMockModels } from "../testing/db.ts";
 
 let api: ApiRuntime;
+let restoreModels: (() => Promise<void>) | undefined;
 
 type Call = (path: string, init?: CallInit) => Promise<Response>;
 
@@ -61,10 +63,12 @@ let bob: { call: Call; orgId: string };
 beforeAll(async () => {
   const env = loadApiEnv({ ...process.env, DJL_ENV: "test", DJL_MOCK_EXTERNALS: "true" });
   api = await startApi({ env, port: 0, host: "127.0.0.1" });
+  restoreModels = await activateMockModels(api.db, ["gpt-5-mini"]);
   alice = await signUp("alice");
   bob = await signUp("bob");
 });
 afterAll(async () => {
+  await restoreModels?.();
   await api.close();
 });
 

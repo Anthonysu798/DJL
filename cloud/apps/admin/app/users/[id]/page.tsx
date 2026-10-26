@@ -1,10 +1,13 @@
 "use client";
+import { statusLabel } from "@/lib/i18n/status";
+import { useI18n } from "@/components/LocaleProvider";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import { PageCard, StatusPill, headRowClass, rowClass } from "@/components/PageCard";
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { Shell } from "@/components/Shell";
+import { ProductActivityPanel } from "@/components/users/ProductActivityPanel";
 import { UsagePanel } from "@/components/users/UsagePanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,20 +71,25 @@ interface Detail {
 }
 
 export default function UserDetailPage() {
+  const { t, number, date, credits } = useI18n();
   const { id } = useParams<{ id: string }>();
   const detail = useLoad(() => admin<Detail>(`/users/${id}`), [id]);
   const [message, setMessage] = useState<string | null>(null);
   const done = (label: string) => {
-    setMessage(`${label}: done`);
+    setMessage(t("users.actionDone", { action: label }));
     detail.reload();
   };
   const d = detail.data;
   return (
     <Shell
-      title={d?.user.email ?? "User"}
+      title={d?.user.email ?? t("common.user")}
       subtitle={
         d
-          ? `${d.user.name} · joined ${new Date(d.user.createdAt).toLocaleDateString()} · ${d.activeSessions} active sessions`
+          ? t("users.joined", {
+              name: d.user.name,
+              date: date(d.user.createdAt),
+              count: number(d.activeSessions),
+            })
           : undefined
       }
     >
@@ -96,18 +104,23 @@ export default function UserDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               {d.user.banned ? (
                 <StatusPill tone="danger">
-                  Suspended{d.user.banReason ? ` · ${d.user.banReason}` : ""}
+                  {t("common.suspended")}
+                  {d.user.banReason ? ` · ${d.user.banReason}` : ""}
                 </StatusPill>
               ) : (
-                <StatusPill tone="success">Active</StatusPill>
+                <StatusPill tone="success">{t("common.active")}</StatusPill>
               )}
-              <Badge variant="secondary">{d.user.twoFactorEnabled ? "2FA on" : "2FA off"}</Badge>
               <Badge variant="secondary">
-                phone {d.user.phoneVerified ? "verified" : "unverified"}
+                {d.user.twoFactorEnabled ? t("users.twoFactorOn") : t("users.twoFactorOff")}
+              </Badge>
+              <Badge variant="secondary">
+                {t("users.phoneStatus", {
+                  status: d.user.phoneVerified ? t("common.verified") : t("common.unverified"),
+                })}
               </Badge>
               {d.trial ? (
                 <Badge variant="secondary">
-                  trial {d.trial.status}
+                  {t("users.trialStatus", { status: d.trial.status })}
                   {d.trial.reasons.length ? ` · ${d.trial.reasons.join(", ")}` : ""}
                 </Badge>
               ) : null}
@@ -115,26 +128,26 @@ export default function UserDetailPage() {
             <div className="mt-4 flex flex-wrap gap-2">
               {d.user.banned ? (
                 <ReasonDialog
-                  trigger={<Button variant="secondary">Unsuspend</Button>}
-                  title="Unsuspend account"
+                  trigger={<Button variant="secondary">{t("users.unsuspend")}</Button>}
+                  title={t("users.unsuspendAccount")}
                   onConfirm={(_v, reason) =>
                     admin(`/users/${id}/suspend`, {
                       method: "POST",
                       json: { suspend: false, reason },
-                    }).then(() => done("Unsuspend"))
+                    }).then(() => done(t("users.unsuspend")))
                   }
                 />
               ) : (
                 <ReasonDialog
-                  trigger={<Button variant="destructive">Suspend</Button>}
-                  title="Suspend account"
-                  description="All sessions are revoked immediately."
+                  trigger={<Button variant="destructive">{t("users.suspend")}</Button>}
+                  title={t("users.suspendAccount")}
+                  description={t("users.sessionsRevoked")}
                   destructive
                   onConfirm={(_v, reason) =>
                     admin(`/users/${id}/suspend`, {
                       method: "POST",
                       json: { suspend: true, reason },
-                    }).then(() => done("Suspend"))
+                    }).then(() => done(t("users.suspend")))
                   }
                 />
               )}
@@ -142,21 +155,21 @@ export default function UserDetailPage() {
                 variant="secondary"
                 onClick={() =>
                   admin(`/users/${id}/sessions/revoke`, { method: "POST", json: {} }).then(() =>
-                    done("Revoke sessions"),
+                    done(t("users.revokeSessions")),
                   )
                 }
               >
-                Revoke sessions
+                {t("users.revokeSessions")}
               </Button>
               <ReasonDialog
-                trigger={<Button variant="destructive">Delete account</Button>}
-                title="Delete account"
-                description="Soft delete: the account locks now and is purged after 30 days."
+                trigger={<Button variant="destructive">{t("users.deleteAccount")}</Button>}
+                title={t("users.deleteAccount")}
+                description={t("users.deleteDescription")}
                 destructive
-                confirmLabel="Delete"
+                confirmLabel={t("common.delete")}
                 onConfirm={(_v, reason) =>
                   admin(`/users/${id}`, { method: "DELETE", json: { reason } }).then(() =>
-                    done("Delete"),
+                    done(t("common.delete")),
                   )
                 }
               />
@@ -167,14 +180,14 @@ export default function UserDetailPage() {
               </p>
             ) : null}
           </PageCard>
-          <PageCard title="Organizations and credits">
+          <PageCard title={t("users.organizations")}>
             <Table>
               <TableHeader>
                 <TableRow className={headRowClass}>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Credits</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead>{t("team.role")}</TableHead>
+                  <TableHead>{t("common.plan")}</TableHead>
+                  <TableHead>{t("settings.credits")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -184,39 +197,43 @@ export default function UserDetailPage() {
                     <TableCell>
                       {o.name}
                       {o.personal ? (
-                        <span className="ml-2 text-xs text-muted-foreground">personal</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {t("users.personal")}
+                        </span>
                       ) : null}
                     </TableCell>
-                    <TableCell>{o.role}</TableCell>
+                    <TableCell>{statusLabel(o.role, t)}</TableCell>
                     <TableCell>
                       {o.plan}
                       {o.subscriptionStatus ? ` · ${o.subscriptionStatus}` : ""}
                     </TableCell>
-                    <TableCell className="tabular-nums">{o.total}</TableCell>
+                    <TableCell className="tabular-nums">{credits(o.total)}</TableCell>
                     <TableCell className="text-right">
                       <ReasonDialog
                         trigger={
                           <Button size="sm" variant="secondary">
-                            Grant credits
+                            {t("users.grantCredits")}
                           </Button>
                         }
-                        title={`Grant credits to ${o.name}`}
+                        title={t("users.grantTo", { name: o.name })}
                         fields={[
                           {
                             name: "credits",
-                            label: "Credits",
+                            label: t("settings.credits"),
                             inputMode: "numeric",
-                            validate: integer(1, 1_000_000, "Credits"),
-                            hint: "Whole credits. Employees are capped at 500 per grant.",
+                            validate: integer(1, 1_000_000, t("settings.credits")),
+                            hint: t("users.grantHint"),
                             placeholder: "200",
                           },
                         ]}
-                        confirmLabel="Grant"
+                        confirmLabel={t("common.grant")}
                         onConfirm={(v, reason) =>
                           admin(`/orgs/${o.id}/credits/grant`, {
                             method: "POST",
                             json: { credits: Number(v.credits), reason },
-                          }).then(() => done(`Grant ${v.credits} credits`))
+                          }).then(() =>
+                            done(t("users.grantCount", { count: number(Number(v.credits)) })),
+                          )
                         }
                       />
                     </TableCell>
@@ -226,19 +243,20 @@ export default function UserDetailPage() {
             </Table>
           </PageCard>
           <UsagePanel userId={id} />
+          <ProductActivityPanel userId={id} />
           <div className="grid gap-4 xl:grid-cols-2">
-            <PageCard title="Devices">
+            <PageCard title={t("users.devices")}>
               {d.devices.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No devices yet.</p>
+                <p className="text-sm text-muted-foreground">{t("users.noDevices")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className={headRowClass}>
-                      <TableHead>Kind</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Trust</TableHead>
-                      <TableHead>Sync</TableHead>
-                      <TableHead>Last seen</TableHead>
+                      <TableHead>{t("users.kind")}</TableHead>
+                      <TableHead>{t("common.name")}</TableHead>
+                      <TableHead>{t("users.trust")}</TableHead>
+                      <TableHead>{t("switches.sync")}</TableHead>
+                      <TableHead>{t("users.lastSeen")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -246,10 +264,12 @@ export default function UserDetailPage() {
                       <TableRow key={v.id} className={rowClass}>
                         <TableCell>{v.kind}</TableCell>
                         <TableCell>{v.name ?? "—"}</TableCell>
-                        <TableCell>{v.trustState}</TableCell>
-                        <TableCell>{v.syncEnabled ? "on" : "off"}</TableCell>
+                        <TableCell>{statusLabel(v.trustState, t)}</TableCell>
+                        <TableCell>{v.syncEnabled ? t("common.on") : t("common.off")}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {v.lastSeenAt ? new Date(v.lastSeenAt).toLocaleString() : "—"}
+                          {v.lastSeenAt
+                            ? date(v.lastSeenAt, { dateStyle: "medium", timeStyle: "short" })
+                            : "—"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -257,17 +277,17 @@ export default function UserDetailPage() {
                 </Table>
               )}
             </PageCard>
-            <PageCard title="Abuse flags">
+            <PageCard title={t("users.abuse")}>
               {d.abuseFlags.length === 0 ? (
-                <p className="text-sm text-muted-foreground">None.</p>
+                <p className="text-sm text-muted-foreground">{t("users.none")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className={headRowClass}>
-                      <TableHead>Kind</TableHead>
-                      <TableHead>Severity</TableHead>
-                      <TableHead>When</TableHead>
-                      <TableHead>State</TableHead>
+                      <TableHead>{t("users.kind")}</TableHead>
+                      <TableHead>{t("users.severity")}</TableHead>
+                      <TableHead>{t("common.when")}</TableHead>
+                      <TableHead>{t("common.state")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -276,13 +296,15 @@ export default function UserDetailPage() {
                         <TableCell>{f.kind}</TableCell>
                         <TableCell>
                           <Badge variant={f.severity === "suspend" ? "destructive" : "secondary"}>
-                            {f.severity}
+                            {statusLabel(f.severity, t)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {new Date(f.createdAt).toLocaleString()}
+                          {date(f.createdAt, { dateStyle: "medium", timeStyle: "short" })}
                         </TableCell>
-                        <TableCell>{f.resolvedAt ? "resolved" : "open"}</TableCell>
+                        <TableCell>
+                          {f.resolvedAt ? t("common.resolved") : t("common.open")}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -290,28 +312,30 @@ export default function UserDetailPage() {
               )}
             </PageCard>
           </div>
-          <PageCard title="Recent usage">
+          <PageCard title={t("users.recentUsage")}>
             {d.recentUsage.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No gateway requests yet.</p>
+              <p className="text-sm text-muted-foreground">{t("users.noGateway")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow className={headRowClass}>
-                    <TableHead>When</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Settled (µcr)</TableHead>
+                    <TableHead>{t("common.when")}</TableHead>
+                    <TableHead>{t("common.model")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("users.settled")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {d.recentUsage.map((u) => (
                     <TableRow key={u.id} className={rowClass}>
                       <TableCell className="text-muted-foreground">
-                        {new Date(u.createdAt).toLocaleString()}
+                        {date(u.createdAt, { dateStyle: "medium", timeStyle: "short" })}
                       </TableCell>
                       <TableCell>{u.model}</TableCell>
-                      <TableCell>{u.status}</TableCell>
-                      <TableCell className="tabular-nums">{u.settled ?? "—"}</TableCell>
+                      <TableCell>{statusLabel(u.status, t)}</TableCell>
+                      <TableCell className="tabular-nums">
+                        {u.settled == null ? "—" : number(BigInt(u.settled))}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -320,7 +344,7 @@ export default function UserDetailPage() {
           </PageCard>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       )}
     </Shell>
   );

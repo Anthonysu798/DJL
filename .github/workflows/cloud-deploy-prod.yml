@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: cloud-deploy-prod
@@ -54,4 +55,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Back up, migrate, deploy, and verify VPS
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash cloud/infra/vps/deploy.sh

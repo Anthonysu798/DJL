@@ -63,6 +63,11 @@ export const AGENT_LIMITS: AgentLimits = {
 };
 
 export interface AgentRunnerDeps {
+  readonly taskHarness?: {
+    readonly execute: (input: TaskHarnessInput) => Promise<AgentOutcome>;
+    readonly resolveModel: (requested: string) => Promise<string>;
+    readonly accepts: (facts: RequestFacts) => boolean;
+  };
   readonly db: DjlDatabase;
   readonly log: RunLog;
   readonly blobs: BlobStore;
@@ -86,9 +91,30 @@ export class RunInterruptedError extends Error {
   readonly _tag = "RunInterruptedError";
 }
 
-type Outcome =
+export type AgentOutcome =
   | { readonly status: "succeeded" | "cancelled" }
   | { readonly status: "failed" | "blocked_on_usage"; readonly error: CloudRunError };
+
+type Outcome = AgentOutcome;
+
+export interface TaskHarnessInput {
+  readonly run: RunRow;
+  readonly facts: RequestFacts;
+  readonly signal: AbortSignal;
+  readonly messages: readonly ChatMessage[];
+  readonly parts: readonly CloudMessagePart[];
+  readonly cap: bigint;
+  readonly deadline: number;
+  readonly limits: AgentLimits;
+  readonly log: RunWriter;
+  readonly cancelRequested: () => Promise<boolean>;
+  readonly addParts: (parts: readonly CloudMessagePart[]) => Promise<void>;
+  readonly recordUsage: (
+    result: import("../gateway/GatewayService.ts").StepResult,
+  ) => Promise<void>;
+  readonly beginStep: () => Promise<void>;
+  readonly recordToolCall: (count: number) => Promise<void>;
+}
 
 const fail = (code: string, message: string): Outcome => ({
   status: "failed",
@@ -97,6 +123,7 @@ const fail = (code: string, message: string): Outcome => ({
 
 /** Mutable state of one execution. */
 interface Work {
+  readonly useTaskHarness: boolean;
   readonly run: RunRow;
   readonly facts: RequestFacts;
   readonly log: RunWriter;
@@ -260,8 +287,16 @@ export class AgentRunner implements RunExecutor {
     const context = await conversationContext({ db, blobs }, run);
     const cap =
       run.budgetCapMicro ?? BigInt(await settings.get("agent.run_credit_cap")) * 1_000_000n;
+    let model = run.model;
+    const useTaskHarness = this.deps.taskHarness?.accepts(facts) ?? false;
+    if (useTaskHarness && this.deps.taskHarness) {
+      model = await this.deps.taskHarness.resolveModel(run.model);
+      if (model !== run.model)
+        await db.update(schema.runs).set({ model }).where(eq(schema.runs.id, run.id));
+    }
     return {
-      run,
+      useTaskHarness,
+      run: model === run.model ? run : { ...run, model },
       facts,
       log,
       parts: [...((reply?.parts ?? []) as CloudMessagePart[])],
@@ -300,6 +335,54 @@ export class AgentRunner implements RunExecutor {
   // ---- loop ------------------------------------------------------------------
 
   private async loop(w: Work, signal: AbortSignal): Promise<Outcome> {
+    if (w.useTaskHarness && this.deps.taskHarness)
+      return this.deps.taskHarness.execute({
+        run: w.run,
+        facts: w.facts,
+        signal,
+        messages: w.base,
+        parts: w.parts,
+        cap: w.cap,
+        deadline: w.deadline,
+        limits: this.limits,
+        log: w.log,
+        cancelRequested: () => this.cancelRequested(w.run.id),
+        addParts: (parts) => this.addParts(w, parts),
+        beginStep: async () => {
+          if (w.steps >= this.limits.maxSteps)
+            throw new ApiError(400, "step_limit", "The task reached its step limit.");
+          w.steps += 1;
+          await this.deps.db
+            .update(schema.runs)
+            .set({ steps: w.steps })
+            .where(eq(schema.runs.id, w.run.id));
+          await w.log.append("step.started", { step: w.steps, maxSteps: this.limits.maxSteps });
+        },
+        recordUsage: async ({ usage, error }) => {
+          if (usage) {
+            w.spent += BigInt(usage.settled);
+            await this.deps.db
+              .update(schema.runs)
+              .set({ spentMicro: w.spent })
+              .where(eq(schema.runs.id, w.run.id));
+            await w.log.append("usage", usage);
+          }
+          if (error)
+            throw new ApiError(
+              error.code === "insufficient_credits" || error.code === "budget_exhausted"
+                ? 402
+                : 502,
+              error.code,
+              error.message,
+            );
+        },
+        recordToolCall: async (toolCalls) => {
+          await this.deps.db
+            .update(schema.runs)
+            .set({ toolCalls })
+            .where(eq(schema.runs.id, w.run.id));
+        },
+      });
     const definitions = this.deps.tools.map(toolDefinition);
     for (;;) {
       const replay = replayParts(w.parts);

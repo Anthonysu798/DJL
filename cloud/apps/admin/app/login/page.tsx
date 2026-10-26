@@ -1,8 +1,11 @@
 "use client";
-import { KeyRound } from "lucide-react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { Eye, EyeOff, Menu } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 
 import { Field, FormError, invalid } from "@/components/Field";
 import { Button } from "@/components/ui/button";
@@ -11,9 +14,18 @@ import { admin, setToken, AdminApiError } from "@/lib/api";
 import { loginClient } from "@/lib/client";
 import { email as emailRule, required, validate } from "@/lib/validation";
 
+import { AuthenticatorSetup } from "./AuthenticatorSetup";
+import styles from "./login.module.css";
+import { VerificationCode } from "./VerificationCode";
+import { useI18n } from "@/components/LocaleProvider";
+import { LanguageSelector } from "@/components/LanguageSelector";
+
+gsap.registerPlugin(useGSAP);
+
 const TOTP = /^\d{6}$/;
 
 function LoginForm() {
+  const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const [step, setStep] = useState<"login" | "totp" | "enroll">(
@@ -26,6 +38,25 @@ function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; totp?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const root = useRef<HTMLElement>(null);
+  useGSAP(
+    () => {
+      const media = gsap.matchMedia();
+      media.add(
+        "(prefers-reduced-motion: no-preference)",
+        () => {
+          gsap
+            .timeline({ defaults: { ease: "power2.out", duration: 0.65 } })
+            .from(".login-art", { opacity: 0, scale: 0.98 })
+            .from(".login-reveal", { opacity: 0, y: 16, stagger: 0.12 }, 0.1);
+        },
+        root,
+      );
+      return () => media.revert();
+    },
+    { scope: root },
+  );
   const joined = params.get("joined");
 
   const login = async (event: React.FormEvent) => {
@@ -34,9 +65,9 @@ function LoginForm() {
       { email, password, totp },
       {
         email: emailRule,
-        password: required("Password"),
+        password: required(t("auth.password")),
         ...(step === "totp"
-          ? { totp: (v: string) => (TOTP.test(v.trim()) ? null : "Enter the 6-digit code.") }
+          ? { totp: (v: string) => (TOTP.test(v.trim()) ? null : t("auth.enterCode")) }
           : {}),
       },
     );
@@ -71,13 +102,11 @@ function LoginForm() {
     } catch (e) {
       const err = e as AdminApiError;
       if (err.code === "totp_required") setStep("totp");
-      else if (err.code === "bad_totp") setErrors({ totp: "That code is wrong or expired." });
-      else if (err.code === "bad_credentials")
-        setFormError("Email or password is wrong. Sign-in attempts are logged.");
-      else if (err.code === "locked_out")
-        setFormError("Too many failed attempts. Wait 15 minutes and try again.");
+      else if (err.code === "bad_totp") setErrors({ totp: t("auth.badCode") });
+      else if (err.code === "bad_credentials") setFormError(t("auth.badCredentials"));
+      else if (err.code === "locked_out") setFormError(t("auth.lockedOut"));
       else if (err.code === "ip_blocked" || err.code === "ip_not_allowed")
-        setFormError("This network cannot reach the admin console.");
+        setFormError(t("auth.ipBlocked"));
       else setFormError(err.message);
     } finally {
       setBusy(false);
@@ -87,7 +116,7 @@ function LoginForm() {
   const confirm = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!TOTP.test(totp.trim())) {
-      setErrors({ totp: "Enter the 6-digit code from your authenticator." });
+      setErrors({ totp: t("auth.enterAuthenticatorCode") });
       return;
     }
     setBusy(true);
@@ -96,139 +125,210 @@ function LoginForm() {
       await admin("/auth/totp/confirm", { method: "POST", json: { code: totp.trim() } });
       router.replace("/");
     } catch {
-      setErrors({ totp: "That code is wrong. Check the time on your phone and try again." });
+      setErrors({ totp: t("auth.checkClock") });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="panel w-full max-w-sm p-8 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-primary">
-            <span className="size-4 rounded-full border-[3px] border-primary-foreground" />
-          </span>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">DJL Admin</h1>
-            <p className="text-xs text-muted-foreground">
-              Internal tool · restricted networks only
+    <main ref={root} className={styles.page}>
+      <aside className={styles.artPanel} aria-hidden="true">
+        <div className={styles.artFrame}>
+          <Image
+            src="/admin-login-art.png"
+            alt=""
+            fill
+            sizes="(max-width: 760px) 1px, 52vw"
+            priority
+            className="login-art"
+          />
+        </div>
+      </aside>
+
+      <section className={styles.formPanel} aria-label={t("auth.region")}>
+        <header className={styles.navigation}>
+          <Link href="/login" className={styles.brand} aria-label={t("auth.brand")}>
+            <Image src="/djl-logo.png" alt="" width={36} height={36} className={styles.brandLogo} />
+            DJL<span>{t("role.admin")}</span>
+          </Link>
+          <LanguageSelector />
+          <details className={styles.help}>
+            <summary aria-label={t("auth.help")}>
+              <Menu size={24} aria-hidden="true" />
+            </summary>
+            <div className={styles.helpContent}>
+              <p>{t("auth.authorized")}</p>
+              <Link href="https://staging.slcor.com">{t("auth.openDJL")}</Link>
+            </div>
+          </details>
+        </header>
+
+        <div
+          className={
+            step === "enroll" ? `${styles.content} ${styles.enrollmentContent}` : styles.content
+          }
+        >
+          <div className={`${styles.intro} login-reveal`}>
+            <h1>
+              {step === "enroll"
+                ? t("auth.secureTitle")
+                : step === "totp"
+                  ? t("auth.verifyTitle")
+                  : t("auth.welcome")}
+            </h1>
+            <p>
+              {step === "enroll"
+                ? t("auth.connectAuthenticator")
+                : step === "totp"
+                  ? t("auth.verifyAuthenticator")
+                  : t("auth.signInDescription")}
             </p>
           </div>
-        </div>
-        {joined ? (
-          <p className="mb-4 rounded-lg border border-success-fg/20 bg-success-bg px-3 py-2 text-[13px] text-success-fg">
-            Your email is verified and your password is set. Sign in to continue.
-          </p>
-        ) : null}
-        {step !== "enroll" ? (
-          <form onSubmit={login} className="space-y-4" noValidate>
-            <Field id="email" label="Email" error={errors.email}>
-              <Input
-                id="email"
-                type="text"
-                inputMode="email"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors(({ email: _drop, ...rest }) => rest);
-                }}
-                className="h-11 rounded-xl"
-                {...invalid("email", errors.email)}
-              />
-            </Field>
-            <Field id="password" label="Password" error={errors.password}>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors(({ password: _drop, ...rest }) => rest);
-                }}
-                className="h-11 rounded-xl"
-                {...invalid("password", errors.password)}
-              />
-            </Field>
-            {step === "totp" ? (
-              <Field id="totp" label="Authenticator code" error={errors.totp}>
+          {joined ? (
+            <p role="status" className={styles.notice}>
+              {t("auth.joined")}
+            </p>
+          ) : null}
+          {step !== "enroll" ? (
+            <form
+              onSubmit={login}
+              className={`${styles.form} login-reveal`}
+              noValidate
+              aria-busy={busy}
+            >
+              <Field id="email" label={t("auth.email")} error={errors.email}>
                 <Input
-                  id="totp"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={totp}
+                  id="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  disabled={busy}
                   onChange={(e) => {
-                    setTotp(e.target.value.replace(/\D/g, ""));
-                    if (errors.totp) setErrors(({ totp: _drop, ...rest }) => rest);
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors(({ email: _drop, ...rest }) => rest);
                   }}
-                  className="h-11 rounded-xl font-mono tracking-[0.3em]"
-                  {...invalid("totp", errors.totp)}
+                  className={styles.input}
+                  {...invalid("email", errors.email)}
                 />
               </Field>
-            ) : null}
-            <FormError error={formError} />
-            <Button className="h-11 w-full rounded-xl" disabled={busy} type="submit">
-              {busy ? "Signing in…" : "Sign in"}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={confirm} className="space-y-4" noValidate>
-            <p className="flex items-start gap-2 text-sm text-muted-foreground">
-              <KeyRound className="mt-0.5 size-4 shrink-0" />
-              Every admin needs an authenticator. Add this secret to your authenticator app, then
-              enter the current code.
-            </p>
-            {enroll ? (
-              <div className="rounded-xl border bg-secondary p-3">
-                <p className="font-mono text-xs break-all">{enroll.secret}</p>
-                <Link
-                  className="mt-2 inline-block text-xs text-primary underline"
-                  href={enroll.uri}
-                >
-                  Open in authenticator app
-                </Link>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  admin<{ secret: string; uri: string }>("/auth/totp/enroll", {
-                    method: "POST",
-                    json: {},
-                  }).then(setEnroll)
-                }
-              >
-                Generate secret
+              <Field id="password" label={t("auth.password")} error={errors.password}>
+                <div className={styles.passwordField}>
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    disabled={busy}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors(({ password: _drop, ...rest }) => rest);
+                    }}
+                    className={styles.input}
+                    {...invalid("password", errors.password)}
+                  />
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                    aria-pressed={showPassword}
+                    disabled={busy}
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} aria-hidden="true" />
+                    ) : (
+                      <Eye size={20} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </Field>
+              {step === "totp" ? (
+                <Field id="totp" label={t("auth.authenticatorCode")} error={errors.totp}>
+                  <VerificationCode
+                    id="totp"
+                    value={totp}
+                    disabled={busy}
+                    error={errors.totp}
+                    onChange={(value) => {
+                      setTotp(value);
+                      if (errors.totp) setErrors(({ totp: _drop, ...rest }) => rest);
+                    }}
+                  />
+                </Field>
+              ) : null}
+              <FormError error={formError} />
+              <Button className={styles.submit} disabled={busy} type="submit">
+                {busy ? t("auth.signingIn") : t("auth.signIn")}
               </Button>
-            )}
-            <Field id="code" label="Current code" error={errors.totp}>
-              <Input
-                id="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                value={totp}
-                onChange={(e) => {
-                  setTotp(e.target.value.replace(/\D/g, ""));
-                  if (errors.totp) setErrors({});
-                }}
-                className="h-11 rounded-xl font-mono tracking-[0.3em]"
-                {...invalid("code", errors.totp)}
-              />
-            </Field>
-            <FormError error={formError} />
-            <Button className="h-11 w-full rounded-xl" disabled={busy || !enroll} type="submit">
-              Confirm
-            </Button>
-          </form>
-        )}
-      </div>
+              <details className={styles.recovery}>
+                <summary>{t("auth.forgotPassword")}</summary>
+                <p>{t("auth.recovery")}</p>
+              </details>
+            </form>
+          ) : (
+            <form
+              onSubmit={confirm}
+              className={`${styles.form} login-reveal`}
+              noValidate
+              aria-busy={busy}
+            >
+              {enroll ? (
+                <AuthenticatorSetup key={enroll.uri} secret={enroll.secret} uri={enroll.uri} />
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  className={styles.generate}
+                  onClick={async () => {
+                    setBusy(true);
+                    setFormError(null);
+                    try {
+                      setEnroll(
+                        await admin<{ secret: string; uri: string }>("/auth/totp/enroll", {
+                          method: "POST",
+                          json: {},
+                        }),
+                      );
+                    } catch (e) {
+                      setFormError((e as AdminApiError).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {busy ? t("auth.generating") : t("auth.generateSecret")}
+                </Button>
+              )}
+              <Field id="code" label={t("auth.verificationCode")} error={errors.totp}>
+                <VerificationCode
+                  id="code"
+                  value={totp}
+                  disabled={busy}
+                  error={errors.totp}
+                  onChange={(value) => {
+                    setTotp(value);
+                    if (errors.totp) setErrors(({ totp: _drop, ...rest }) => rest);
+                  }}
+                />
+              </Field>
+              <FormError error={formError} />
+              <Button
+                className={styles.submit}
+                disabled={busy || !enroll || !TOTP.test(totp)}
+                type="submit"
+              >
+                {busy ? t("auth.verifying") : t("auth.verifyContinue")}
+              </Button>
+            </form>
+          )}
+        </div>
+        <footer className={styles.footer}>{t("auth.footer")}</footer>
+      </section>
     </main>
   );
 }

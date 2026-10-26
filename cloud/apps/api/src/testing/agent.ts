@@ -31,7 +31,7 @@ import { ChatRunner } from "../runs/ChatRunner.ts";
 import { RunLog, type RunEvent } from "../runs/RunLog.ts";
 import { RunService } from "../runs/RunService.ts";
 import { FakeBlobStore } from "../sync/BlobStore.ts";
-import { seedOrg, testDatabase } from "./db.ts";
+import { activateMockModels, seedOrg, testDatabase } from "./db.ts";
 
 export interface Turn {
   readonly text?: string;
@@ -93,6 +93,7 @@ export const MODEL = "gpt-5-mini";
 export function agentHarness() {
   const conn = testDatabase();
   const db = conn.db;
+  const fixtures = activateMockModels(db, ["gpt-5-mini", "gpt-image-1"]);
   const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:63799", {
     maxRetriesPerRequest: 2,
   });
@@ -158,6 +159,7 @@ export function agentHarness() {
     credits = 100,
     plan: "business" | "free" = "business",
   ): Promise<{ p: Principal; facts: RequestFacts }> {
+    await fixtures;
     const { orgId, userId } = await seedOrg(db, label);
     // A paid plan, so the 5-hour and weekly windows are wide enough for tool-heavy tasks.
     if (plan === "business")
@@ -283,6 +285,9 @@ export function agentHarness() {
     events,
     priceTools,
     close: async () => {
+      await (
+        await fixtures
+      )();
       redis.disconnect();
       await conn.close();
     },

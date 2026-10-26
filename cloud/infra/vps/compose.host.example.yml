@@ -1,0 +1,12 @@
+# Optional HOST-ONLY override. Copy privately to compose.host.yml after review.
+# Preserve this VPS's existing Codex pilot and operations gateway; never add a
+# second relay here because the existing djl-remote-staging project owns :8789.
+services:
+  worker:
+    extends:
+      file: ../codex/worker-pilot.compose.yml
+      service: worker
+  operations-gateway:
+    extends:
+      file: operations.compose.yml
+      service: operations-gateway

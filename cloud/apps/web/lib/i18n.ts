@@ -6,6 +6,9 @@ export type Locale = "en" | "zh-Hans";
 
 const dict = {
   en: {
+    productAnalytics: "Product analytics",
+    productAnalyticsDescription:
+      "Optional app activity goes to DJL servers. Signed-in activity is linked to your account. Chats, files, passwords and API keys are never included.",
     accountUi: {
       details: "Account details",
       detailsHint: "Your identity and sign-in information.",
@@ -366,6 +369,9 @@ const dict = {
     },
   },
   "zh-Hans": {
+    productAnalytics: "产品分析",
+    productAnalyticsDescription:
+      "可选择向DJL服务器发送应用活动。登录后的活动会关联至您的账户。不会发送聊天内容、文件、密码或API密钥。",
     accountUi: {
       details: "账户详情",
       detailsHint: "你的身份和登录信息。",

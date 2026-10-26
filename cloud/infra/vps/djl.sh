@@ -3,6 +3,10 @@ set -euo pipefail
 umask 077
 cd "$(dirname "$0")"
 compose=(docker compose --env-file .env -f compose.yml)
+# Host-only settings survive source deployments and apply to every command.
+if [[ -f compose.host.yml ]]; then
+  compose+=(-f compose.host.yml)
+fi
 setup() {
   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/setup" -w /setup \
     oven/bun:1.3.13-slim bun setup.ts "$1"
@@ -10,6 +14,12 @@ setup() {
 case "${1:-}" in
   init) setup init ;;
   check) setup check; "${compose[@]}" config --quiet ;;
+  deploy)
+    setup check
+    "${compose[@]}" build api worker web
+    "${compose[@]}" rm -f migrate policies s3-init
+    "${compose[@]}" up -d --wait --wait-timeout 180 api worker web
+    ;;
   up)
     setup check
     "${compose[@]}" build
@@ -17,12 +27,15 @@ case "${1:-}" in
     "${compose[@]}" rm -f migrate policies s3-init
     "${compose[@]}" up -d --wait --wait-timeout 180
     ;;
-  remote-up)
+  codex-up)
     setup check
-    "${compose[@]}" up -d --build --wait --wait-timeout 180 remote-relay
+    compose+=(-f ../codex/compose.yml)
+    "${compose[@]}" build codex-image codex-broker worker api admin
+    "${compose[@]}" up -d --wait --wait-timeout 180
     ;;
-  remote-down)
-    "${compose[@]}" stop remote-relay
+  codex-down)
+    compose+=(-f ../codex/compose.yml)
+    "${compose[@]}" stop worker codex-broker
     ;;
   down) "${compose[@]}" down ;;
   status) "${compose[@]}" ps ;;
@@ -43,5 +56,5 @@ case "${1:-}" in
       chrislusf/seaweedfs:4.47 -czf - -C /data . > "$target/files.tar.gz"
     echo "Backup saved to $target; keep a copy off the VPS."
     ;;
-  *) echo "Usage: $0 {init|check|up|remote-up|remote-down|down|status|verify|logs [service]|backup}" >&2; exit 2 ;;
+  *) echo "Usage: $0 {init|check|deploy|up|codex-up|codex-down|down|status|verify|logs [service]|backup}" >&2; exit 2 ;;
 esac

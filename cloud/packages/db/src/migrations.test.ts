@@ -11,20 +11,17 @@ const folder = new URL("../drizzle/", import.meta.url);
 const journal = JSON.parse(await readFile(new URL("meta/_journal.json", folder), "utf8"));
 type Entry = (typeof journal.entries)[number];
 const base = journal.entries.slice(0, 5);
-const legacy = journal.entries.slice(6, 9).map((entry: Entry, index: number) => ({
-  ...entry,
-  idx: index + 5,
-  when: [1791776856415, 1791777168849, 1791780761906][index],
-}));
+const legacy = journal.entries.slice(5, 8);
+const sessionDevice = journal.entries[8];
+const compatibilityRepairs = journal.entries.slice(11, 14);
 
 for (const [name, entries] of [
   ["fresh database", []],
-  ["PR41 account/device database", journal.entries.slice(0, 6)],
+  ["PR41 account/device database", [...base, sessionDevice]],
   ["PR42 notification/gallery database", [...base, ...legacy]],
-  [
-    "VPS with both branches already applied",
-    [...base, ...legacy, { ...journal.entries[5], idx: 8 }],
-  ],
+  ["VPS with both branches already applied", journal.entries.slice(0, 9)],
+  ["deployed VPS analytics history", journal.entries.slice(0, 11)],
+  ["current main repair history", [...base, sessionDevice, ...compatibilityRepairs]],
 ] as const) {
   it(`upgrades ${name} without losing data and can run again`, async () => {
     const url = new URL(process.env.DATABASE_URL ?? "postgres://djl:djl@localhost:54329/djl");

@@ -18,6 +18,7 @@ import { ApiError } from "../http/errors.ts";
 import type { TrialService } from "../trial/TrialService.ts";
 import { planForOrg } from "../usage/plans.ts";
 import { resetWindows } from "../usage/windowStore.ts";
+import { deleteAnalyticsForUser } from "../analytics/AnalyticsService.ts";
 import {
   ADMIN_ROLES,
   isIpOrCidr,
@@ -31,7 +32,8 @@ export interface AdminDeps {
   readonly db: DjlDatabase;
   readonly ledger: LedgerService;
   readonly limiter: RateLimiter;
-  readonly gateway: Pick<GatewayService, "invalidateCatalog">;
+  readonly gateway: Pick<GatewayService, "invalidateCatalog"> &
+    Partial<Pick<GatewayService, "providerAvailable" | "responsesAvailable">>;
   readonly trial: Pick<TrialService, "approve">;
   readonly auth: Pick<AdminAuth, "issueInvite" | "revokeSessions" | "revokeSessionsFromIp">;
   /** Denylists user sessions so their access tokens stop working before they expire. */
@@ -264,6 +266,7 @@ export class AdminService {
         .set({ banned: true, banReason: "self_delete", banExpires: new Date() })
         .where(eq(schema.user.id, userId));
       await tx.delete(schema.session).where(eq(schema.session.userId, userId));
+      await deleteAnalyticsForUser(userId, tx);
       await writeAudit(tx, {
         actorType: "admin",
         actorId: p.adminId,
@@ -487,6 +490,7 @@ export class AdminService {
       "maxOutputTokens",
       "capabilities",
       "upstreamModelId",
+      "provider",
       "freeEligible",
     ] as const;
     const set: Record<string, unknown> = {};
@@ -497,6 +501,48 @@ export class AdminService {
             ? BigInt(String(patch[key]))
             : patch[key];
     if (Object.keys(set).length === 0) throw new ApiError(400, "bad_request", "Nothing to update.");
+    if ("provider" in set || "upstreamModelId" in set || "capabilities" in set) {
+      needReason(reason);
+      const provider = String(set.provider ?? before.provider);
+      const upstream = set.upstreamModelId ?? before.upstreamModelId;
+      const capabilities = set.capabilities ?? before.capabilities;
+      if (
+        !["openrouter", "openai", "anthropic"].includes(provider) ||
+        typeof upstream !== "string" ||
+        !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$/.test(upstream) ||
+        upstream.includes("//") ||
+        !Array.isArray(capabilities) ||
+        !capabilities.every((c) => typeof c === "string")
+      )
+        throw new ApiError(
+          400,
+          "bad_request",
+          "Invalid provider, upstream model, or capabilities.",
+        );
+      if (provider === "openrouter" && !upstream.includes("/"))
+        throw new ApiError(
+          400,
+          "bad_request",
+          "OpenRouter requires the complete provider/model slug.",
+        );
+      if (!this.deps.gateway.providerAvailable?.(provider))
+        throw new ApiError(
+          409,
+          "provider_not_configured",
+          "Configure the provider's server credential before changing the route.",
+        );
+      if (capabilities.includes("responses") && !this.deps.gateway.responsesAvailable?.(provider))
+        throw new ApiError(
+          400,
+          "responses_unsupported",
+          "This provider does not support Codex Responses transport. Use OpenRouter for this model.",
+        );
+      if (
+        capabilities.includes("responses") &&
+        (!capabilities.includes("text.chat") || !capabilities.includes("tools"))
+      )
+        throw new ApiError(400, "bad_request", "Codex models must support chat and tools.");
+    }
     await this.deps.db.transaction(async (tx) => {
       await tx.update(schema.modelCatalog).set(set).where(eq(schema.modelCatalog.modelId, modelId));
       await writeAudit(tx, {
@@ -576,11 +622,18 @@ export class AdminService {
 
   async getSettings(p: AdminPrincipal) {
     requirePermission(p, "stats.read");
-    return this.deps.db.query.settings.findMany();
+    const rows = await this.deps.db.query.settings.findMany();
+    return rows.filter((row) => !row.key.startsWith("operations."));
   }
 
   async putSetting(p: AdminPrincipal, key: string, value: unknown, reason: string | null) {
     requirePermission(p, "settings.write");
+    if (key.startsWith("operations."))
+      throw new ApiError(
+        403,
+        "forbidden",
+        "Server operation receipts and MFA state cannot be edited.",
+      );
     if (!/^[a-z0-9_.]{3,64}$/.test(key)) throw new ApiError(400, "bad_request", "Bad setting key.");
     const before = await this.deps.db.query.settings.findFirst({
       where: eq(schema.settings.key, key),

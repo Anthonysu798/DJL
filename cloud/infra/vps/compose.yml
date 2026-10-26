@@ -1,6 +1,13 @@
 name: ${COMPOSE_PROJECT_NAME:-djl-cloud}
 
 x-server-environment: &server-environment
+  SOCIAL_PUBLISHING_ENABLED: ${SOCIAL_PUBLISHING_ENABLED:-false}
+  SOCIAL_TOKEN_ENCRYPTION_KEY: ${SOCIAL_TOKEN_ENCRYPTION_KEY:-}
+  SOCIAL_INSTAGRAM_CLIENT_ID: ${SOCIAL_INSTAGRAM_CLIENT_ID:-}
+  SOCIAL_INSTAGRAM_CLIENT_SECRET: ${SOCIAL_INSTAGRAM_CLIENT_SECRET:-}
+  SOCIAL_INSTAGRAM_GRAPH_VERSION: ${SOCIAL_INSTAGRAM_GRAPH_VERSION:-}
+  SOCIAL_TIKTOK_CLIENT_KEY: ${SOCIAL_TIKTOK_CLIENT_KEY:-}
+  SOCIAL_TIKTOK_CLIENT_SECRET: ${SOCIAL_TIKTOK_CLIENT_SECRET:-}
   DJL_ENV: ${DJL_ENV:-staging}
   DJL_MOCK_EXTERNALS: ${DJL_MOCK_EXTERNALS:-false}
   API_PUBLIC_URL: https://${API_HOST:?Set API_HOST}
@@ -215,6 +222,9 @@ services:
       APNS_TEAM_ID: ${APNS_TEAM_ID:-}
       APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
       APNS_TOPIC: ${APNS_TOPIC:-app.djl.ios}
+      ANALYTICS_GITHUB_REPO: ${ANALYTICS_GITHUB_REPO:-Anthonysu798/DJL}
+      ANALYTICS_STATS_URL: ${ANALYTICS_STATS_URL:-https://djl-stats.slcor.workers.dev}
+      ANALYTICS_STATS_READ_TOKEN: ${ANALYTICS_STATS_READ_TOKEN:-}
     depends_on:
       api: { condition: service_healthy }
     networks: [data, outbound]
@@ -273,29 +283,6 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
 
-  remote-relay:
-    build:
-      context: ../../..
-      dockerfile: apps/remote-relay/vps/Dockerfile
-    restart: unless-stopped
-    ports: ["${REMOTE_RELAY_BIND:-127.0.0.1:8789}:8789"]
-    environment:
-      RELAY_ADMIN_TOKEN: ${RELAY_ADMIN_TOKEN:-}
-      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
-      APNS_KEY_ID: ${APNS_KEY_ID:-}
-      APNS_BUNDLE_ID: app.djl.ios
-      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
-    volumes: [remote-relay-state:/data]
-    networks: [outbound]
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-    healthcheck:
-      test:
-        [CMD, bun, -e, "const r=await fetch('http://127.0.0.1:8789/health');process.exit(r.ok?0:1)"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-
   proxy:
     image: caddy:2.11-alpine
     profiles: [edge]
@@ -307,7 +294,6 @@ services:
       STORAGE_HOST: ${STORAGE_HOST}
       TLS_EMAIL: ${TLS_EMAIL:?Set TLS_EMAIL}
       API_UPSTREAM: api:8787
-      REMOTE_RELAY_UPSTREAM: remote-relay:8789
       WEB_UPSTREAM: web:3000
       ADMIN_UPSTREAM: admin:3000
       STORAGE_UPSTREAM: s3:8333
@@ -327,6 +313,5 @@ volumes:
   postgres-data:
   redis-data:
   s3-data:
-  remote-relay-state:
   caddy-data:
   caddy-config:

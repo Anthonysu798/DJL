@@ -558,6 +558,42 @@ export class AdminAuth {
     return true;
   }
 
+  /** Step-up verification for VPS actions; consumed with the operation audit transaction. */
+  async verifyOperationCode(principal: AdminPrincipal, code: unknown): Promise<number> {
+    requirePermission(principal, "servers.control");
+    const key = "operations:" + principal.adminId;
+    if (await this.lockouts.isLocked(key))
+      throw new ApiError(429, "locked_out", "Too many failed codes. Wait 15 minutes.");
+    const admin = await this.db.query.admins.findFirst({
+      where: eq(schema.admins.id, principal.adminId),
+    });
+    if (
+      typeof code !== "string" ||
+      !/^\d{6}$/.test(code) ||
+      !admin?.totpEnabled ||
+      !admin.totpSecretEncrypted ||
+      admin.disabled ||
+      admin.role !== "admin" ||
+      admin.deletedAt
+    ) {
+      await this.lockouts.noteFailure(key);
+      throw new ApiError(403, "verification_failed", "Enter a current authenticator code.");
+    }
+    const totp = new OTPAuth.TOTP({
+      secret: OTPAuth.Secret.fromBase32(
+        await decryptSecret(admin.totpSecretEncrypted, this.appSecret),
+      ),
+      digits: 6,
+      period: 30,
+    });
+    const delta = totp.validate({ token: code, window: 1 });
+    if (delta === null) {
+      await this.lockouts.noteFailure(key);
+      throw new ApiError(403, "verification_failed", "Authenticator code is wrong or expired.");
+    }
+    return Math.floor(Date.now() / 30_000) + delta;
+  }
+
   private async checkTotp(adminId: string, code: string): Promise<boolean> {
     const admin = await this.db.query.admins.findFirst({ where: eq(schema.admins.id, adminId) });
     if (!admin?.totpSecretEncrypted) return false;

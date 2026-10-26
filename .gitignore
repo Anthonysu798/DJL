@@ -74,3 +74,6 @@ apps/ios/BuildSupport/PrivateOverrides.xcconfig
 cloud/infra/vps/.secrets/
 cloud/infra/vps/Caddyfile.host
 cloud/infra/vps/backups/
+
+# Server-specific deployment override; never package into a release.
+cloud/infra/vps/compose.host.yml

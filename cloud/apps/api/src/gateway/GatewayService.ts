@@ -26,6 +26,8 @@ import {
   type ProviderAdapter,
   type ProviderId,
   type Usage,
+  type ResponseRequest,
+  validateResponseRequest,
 } from "@djl/providers";
 
 import type { Principal } from "../auth/guard.ts";
@@ -48,7 +50,12 @@ import {
   type PlanLimits,
 } from "./admission.ts";
 import type { RateLimiter } from "./RateLimiter.ts";
-import { estimateInputTokens, resolveModel, type CatalogModel } from "./routing.ts";
+import {
+  CAPABILITY_ALIASES,
+  estimateInputTokens,
+  resolveModel,
+  type CatalogModel,
+} from "./routing.ts";
 
 export interface GatewayConfig {
   readonly region: string;
@@ -88,6 +95,7 @@ export interface RequestFacts {
 
 /** One OpenAI-compatible `chat.completion.chunk`. */
 export interface ChatCompletionChunk {
+  readonly responseEvent?: Record<string, unknown>;
   readonly id: string;
   readonly object: "chat.completion.chunk";
   readonly created: number;
@@ -102,6 +110,10 @@ export interface ChatCompletionChunk {
 }
 
 export interface StepOptions {
+  /** Runs before a Responses terminal event is delivered to the harness. */
+  readonly onResponseSettled?: (result: StepResult) => Promise<void>;
+  /** Native transport; normalized chat input is used only for reservation estimation. */
+  readonly responses?: ResponseRequest;
   /** Aborting stops the provider call; what was used so far is settled. */
   readonly signal?: AbortSignal;
   /** Most this step may spend, in microcredits; the stream is cut when it is reached. */
@@ -211,6 +223,31 @@ export class GatewayService {
 
   invalidateCatalog(): void {
     this.catalogCache = null;
+  }
+
+  providerAvailable(provider: string): boolean {
+    return Boolean(this.deps.providers[provider as ProviderId]);
+  }
+
+  responsesAvailable(provider: string): boolean {
+    return Boolean(this.deps.providers[provider as ProviderId]?.responsesStream);
+  }
+
+  async taskModel(requested: string): Promise<string> {
+    const catalog = (await this.catalog()).filter(
+      (model) =>
+        model.capabilities.includes("responses") &&
+        model.capabilities.includes("tools") &&
+        this.responsesAvailable(model.provider),
+    );
+    const model = this.route(requested, catalog).model;
+    if (model.modelId !== requested && !CAPABILITY_ALIASES[requested])
+      throw new ApiError(
+        503,
+        "bound_model_unavailable",
+        "The task's model is unavailable. Choose another model for a new task.",
+      );
+    return model.modelId;
   }
 
   /** In-flight streams and breaker states for the admin status page. */
@@ -404,6 +441,93 @@ export class GatewayService {
     return { stream, requestId: step.requestId };
   }
 
+  async completeResponseStep(
+    facts: RequestFacts,
+    value: unknown,
+    options: StepOptions = {},
+  ): Promise<Step> {
+    let body: ResponseRequest;
+    try {
+      body = validateResponseRequest(value);
+    } catch (error) {
+      throw new ApiError(
+        400,
+        "bad_request",
+        error instanceof Error ? error.message : "Invalid Responses request.",
+      );
+    }
+    return this.completeStep(
+      facts,
+      {
+        model: body.model,
+        messages: [
+          {
+            role: "user",
+            content: JSON.stringify({
+              input: body.input,
+              instructions: body.instructions,
+              tools: body.tools,
+            }),
+          },
+        ],
+        max_tokens: body.max_output_tokens ?? 4096,
+      },
+      { ...options, responses: body },
+    );
+  }
+
+  async responsesStream(facts: RequestFacts, body: unknown, options: StepOptions = {}) {
+    const abort = new AbortController();
+    const step = await this.completeResponseStep(facts, body, {
+      ...options,
+      signal: options.signal ? AbortSignal.any([abort.signal, options.signal]) : abort.signal,
+    });
+    const events = async function* () {
+      let terminal: Record<string, unknown> | undefined;
+      try {
+        for await (const chunk of step.chunks) {
+          const event = chunk.responseEvent;
+          if (!event) continue;
+          if (event.type === "response.completed" || event.type === "response.incomplete")
+            terminal = event;
+          else yield `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
+        }
+      } finally {
+        await options.onResponseSettled?.(await step.result);
+      }
+      const result = await step.result;
+      if (result.error || !terminal) {
+        const error = result.error ?? {
+          code: "provider_unknown",
+          message: "Responses stream did not complete.",
+        };
+        const event = {
+          type: "response.failed",
+          response: { id: step.requestId, object: "response", status: "failed", error },
+        };
+        yield `event: response.failed\ndata: ${JSON.stringify(event)}\n\n`;
+      } else yield `event: ${terminal.type}\ndata: ${JSON.stringify(terminal)}\n\n`;
+    };
+    const iterator = events();
+    // Enter the generator now so an immediate disconnect still executes its settlement finalizer.
+    let first: Promise<IteratorResult<string, void>> | null = iterator.next();
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        const pending = first;
+        first = null;
+        const next = await (pending ?? iterator.next());
+        if (next.done) controller.close();
+        else controller.enqueue(encoder.encode(next.value));
+      },
+      async cancel() {
+        abort.abort();
+        await iterator.return(undefined);
+      },
+    });
+    return { stream, requestId: step.requestId };
+  }
+
   /**
    * One model call, in process: admit, route, reserve, stream from the
    * provider while tracking running cost, cut at zero (or at `budgetCap`),
@@ -422,18 +546,38 @@ export class GatewayService {
     try {
       const catalog = await this.catalog();
       const { model, reason } = this.route(body.model, catalog);
+      if (
+        options.responses &&
+        (model.modelId !== body.model ||
+          !model.capabilities.includes("responses") ||
+          !this.deps.providers[model.provider]?.responsesStream)
+      )
+        throw new ApiError(
+          400,
+          "responses_unsupported",
+          "Choose a tested Responses model. Cloud tasks do not fall back to another model.",
+        );
       if (!model.capabilities.includes("text.chat"))
         throw new ApiError(400, "bad_request", "That model does not support chat.");
       if (body.tools?.length && !model.capabilities.includes("tools"))
         throw new ApiError(400, "bad_request", "That model does not support tools.");
       const price = priceOf(model);
-      const inputTokens = estimateInputTokens(body.messages);
+      const estimatedInputTokens = estimateInputTokens(body.messages);
+      const inputTokens = options.responses
+        ? new TextEncoder().encode(JSON.stringify(body.messages)).byteLength
+        : estimatedInputTokens;
       const maxOutput = Math.min(body.max_tokens ?? 4096, model.maxOutputTokens ?? 8192);
       const estimate = estimateReservation(price, {
         inputTokens,
         maxOutputTokens: maxOutput,
         images: 0,
       });
+      if (options.responses && options.budgetCap !== undefined && estimate > options.budgetCap)
+        throw new ApiError(
+          402,
+          "budget_exhausted",
+          "This request exceeds the task's remaining spending cap.",
+        );
       let reservation;
       try {
         reservation = await this.deps.ledger.reserve({
@@ -457,7 +601,9 @@ export class GatewayService {
       }
       reserved = estimate;
       const budget = streamBudget(
-        spendable(reservation.balances, model.freeEligible) + estimate, // what the org could spend
+        options.responses
+          ? estimate
+          : spendable(reservation.balances, model.freeEligible) + estimate,
         reservation.windowHold !== null && reservation.windowHold < estimate
           ? reservation.windowHold
           : null,
@@ -467,7 +613,7 @@ export class GatewayService {
         id: requestId,
         facts,
         model,
-        endpoint: "chat.completions",
+        endpoint: options.responses ? "responses" : "chat.completions",
         routeReason: reason,
         reserved: estimate,
       });
@@ -477,6 +623,7 @@ export class GatewayService {
       const abort = new AbortController();
       const onAbort = () => abort.abort();
       options.signal?.addEventListener("abort", onAbort, { once: true });
+      if (options.signal?.aborted) abort.abort();
       const upstream: ChatRequest = {
         ...body,
         model: model.upstreamModelId,
@@ -498,7 +645,7 @@ export class GatewayService {
         let failed: ApiError | null = null;
         const settle = async (): Promise<StepResult> => {
           const finalUsage: Usage = usage ?? {
-            input_tokens: inputTokens,
+            input_tokens: estimatedInputTokens,
             output_tokens: Math.ceil(outputChars / 4),
             cached_input_tokens: 0,
           };
@@ -519,13 +666,15 @@ export class GatewayService {
               });
               return { usage: null, error: { code: failed.code, message: failed.message } };
             }
-            const actual = costOfUsage(price, {
+            const measured = costOfUsage(price, {
               inputTokens: finalUsage.input_tokens,
               cachedInputTokens: finalUsage.cached_input_tokens,
               outputTokens: finalUsage.output_tokens,
               images: 0,
               requests: 1,
             });
+            // A late usage frame must never charge beyond this task's reservation or cap.
+            const actual = options.responses && measured > budget.amount ? budget.amount : measured;
             const { balances } = await this.deps.ledger.settle({
               orgId: facts.principal.orgId,
               reservationId: requestId,
@@ -578,7 +727,17 @@ export class GatewayService {
           }
         };
         try {
-          for await (const chunk of provider.chatStream(upstream, abort.signal)) {
+          const chunks = options.responses
+            ? provider.responsesStream!(
+                {
+                  ...options.responses,
+                  model: model.upstreamModelId,
+                  max_output_tokens: maxOutput,
+                },
+                abort.signal,
+              )
+            : provider.chatStream(upstream, abort.signal);
+          for await (const chunk of chunks) {
             if (firstTokenAt === null) firstTokenAt = Date.now();
             upstreamId ??= chunk.id || null;
             if (chunk.delta.content) outputChars += chunk.delta.content.length;
@@ -588,9 +747,9 @@ export class GatewayService {
             if (chunk.usage) usage = chunk.usage;
             // Running cost check: cut immediately at zero (decision: Out of credits).
             const running = costOfUsage(price, {
-              inputTokens,
-              cachedInputTokens: 0,
-              outputTokens: Math.ceil(outputChars / 4),
+              inputTokens: usage?.input_tokens ?? estimatedInputTokens,
+              cachedInputTokens: usage?.cached_input_tokens ?? 0,
+              outputTokens: usage?.output_tokens ?? Math.ceil(outputChars / 4),
               images: 0,
               requests: 1,
             });
@@ -603,9 +762,11 @@ export class GatewayService {
               chunk.delta.content !== undefined ||
               chunk.delta.tool_calls ||
               chunk.delta.role ||
-              chunk.finish_reason
+              chunk.finish_reason ||
+              chunk.responseEvent
             ) {
               yield {
+                ...(chunk.responseEvent ? { responseEvent: chunk.responseEvent } : {}),
                 id: requestId,
                 object: "chat.completion.chunk",
                 created: Math.floor(startedAt / 1000),

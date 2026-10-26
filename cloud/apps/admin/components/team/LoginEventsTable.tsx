@@ -1,4 +1,6 @@
 "use client";
+import { useI18n } from "../LocaleProvider";
+import type { MessageKey } from "@/lib/i18n";
 import { Ban } from "lucide-react";
 
 import { StatusPill, headRowClass, rowClass } from "@/components/PageCard";
@@ -28,17 +30,17 @@ export interface LoginEvent {
   createdAt: string;
 }
 
-const OUTCOME: Record<string, { label: string; tone: "success" | "danger" | "neutral" }> = {
-  success: { label: "Signed in", tone: "success" },
-  bad_password: { label: "Wrong password", tone: "danger" },
-  bad_totp: { label: "Wrong 2FA code", tone: "danger" },
-  totp_required: { label: "Password ok, 2FA pending", tone: "neutral" },
-  locked_out: { label: "Locked out", tone: "danger" },
-  disabled: { label: "Disabled account", tone: "danger" },
-  ip_blocked: { label: "Blocked network", tone: "danger" },
-  ip_not_allowed: { label: "Network not allowed", tone: "danger" },
-  not_active: { label: "Invite not accepted", tone: "neutral" },
-  unknown_email: { label: "Unknown email", tone: "danger" },
+const OUTCOME: Record<string, { label: MessageKey; tone: "success" | "danger" | "neutral" }> = {
+  success: { label: "login.success", tone: "success" },
+  bad_password: { label: "login.badPassword", tone: "danger" },
+  bad_totp: { label: "login.badTotp", tone: "danger" },
+  totp_required: { label: "login.pending", tone: "neutral" },
+  locked_out: { label: "login.locked", tone: "danger" },
+  disabled: { label: "login.disabled", tone: "danger" },
+  ip_blocked: { label: "login.blockedNetwork", tone: "danger" },
+  ip_not_allowed: { label: "login.networkDenied", tone: "danger" },
+  not_active: { label: "login.invitePending", tone: "neutral" },
+  unknown_email: { label: "login.unknownEmail", tone: "danger" },
 };
 
 /** Compress a user agent into browser + OS words a human can scan. */
@@ -80,40 +82,41 @@ export function LoginEventsTable({
   bans?: readonly string[];
   onBan?: ((ip: string) => Promise<unknown>) | undefined;
 }) {
+  const { t, date } = useI18n();
   if (events.length === 0)
-    return <p className="text-sm text-muted-foreground">No sign-in attempts yet.</p>;
+    return <p className="text-sm text-muted-foreground">{t("login.empty")}</p>;
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className={headRowClass}>
-            <TableHead>When</TableHead>
-            {showMember ? <TableHead>Who</TableHead> : null}
-            <TableHead>Outcome</TableHead>
-            <TableHead>Network</TableHead>
-            <TableHead>Device</TableHead>
+            <TableHead>{t("common.when")}</TableHead>
+            {showMember ? <TableHead>{t("common.who")}</TableHead> : null}
+            <TableHead>{t("login.outcome")}</TableHead>
+            <TableHead>{t("login.network")}</TableHead>
+            <TableHead>{t("login.device")}</TableHead>
             {onBan ? (
               <TableHead className="w-10">
-                <span className="sr-only">Ban</span>
+                <span className="sr-only">{t("login.ban")}</span>
               </TableHead>
             ) : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.map((e) => {
-            const o = OUTCOME[e.outcome] ?? { label: e.outcome, tone: "neutral" as const };
+            const o = OUTCOME[e.outcome];
             const banned = e.ip ? bans.includes(e.ip) : false;
             return (
               <TableRow key={e.id} className={rowClass}>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {new Date(e.createdAt).toLocaleString()}
+                  {date(e.createdAt, { dateStyle: "medium", timeStyle: "short" })}
                 </TableCell>
                 {showMember ? <TableCell className="max-w-48 truncate">{e.email}</TableCell> : null}
                 <TableCell>
-                  <StatusPill tone={o.tone}>{o.label}</StatusPill>
+                  <StatusPill tone={o?.tone ?? "neutral"}>{o ? t(o.label) : e.outcome}</StatusPill>
                 </TableCell>
                 <TableCell>
-                  <span className="block font-mono text-xs">{e.ip ?? "unknown"}</span>
+                  <span className="block font-mono text-xs">{e.ip ?? t("common.unknown")}</span>
                   <span className="block text-xs text-muted-foreground">
                     {[e.country, e.timezone, e.locale].filter(Boolean).join(" · ")}
                   </span>
@@ -126,7 +129,7 @@ export function LoginEventsTable({
                   </span>
                   <span
                     className="block font-mono text-[11px] text-muted-foreground"
-                    title="Browser device id"
+                    title={t("login.deviceId")}
                   >
                     {e.deviceId ? e.deviceId.slice(0, 18) : ""}
                   </span>
@@ -138,14 +141,14 @@ export function LoginEventsTable({
                         variant="ghost"
                         size="icon"
                         className="size-8 text-muted-foreground hover:text-destructive"
-                        aria-label={`Block ${e.ip}`}
-                        title={`Block ${e.ip}`}
+                        aria-label={t("login.blockIp", { ip: e.ip })}
+                        title={t("login.blockIp", { ip: e.ip })}
                         onClick={() => onBan(e.ip!)}
                       >
                         <Ban className="size-4" />
                       </Button>
                     ) : banned ? (
-                      <span className="text-xs text-destructive">blocked</span>
+                      <span className="text-xs text-destructive">{t("login.blocked")}</span>
                     ) : null}
                   </TableCell>
                 ) : null}

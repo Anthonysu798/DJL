@@ -20,6 +20,7 @@ import type {
 } from "@synara/contracts/cloud";
 
 import { ChatApiError, type ChatClient, sendMessageIdempotent } from "./client";
+import { recordWebFeature } from "../productAnalytics";
 import {
   applyEventToParts,
   followRun,
@@ -318,6 +319,13 @@ export class ChatStore {
       sendMessageIdempotent(this.client, conversationId, input),
     );
     this.acceptTurn(conversationId, response);
+    recordWebFeature("cloud_chat");
+    if (
+      this.state.models
+        .find((model) => model.id === request.model)
+        ?.capabilities.includes("image.generate")
+    )
+      recordWebFeature("images");
     return conversationId;
   }
 

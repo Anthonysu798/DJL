@@ -20,7 +20,7 @@ import { RunLog } from "../runs/RunLog.ts";
 import { RunService } from "../runs/RunService.ts";
 import { ShareService } from "../shares/ShareService.ts";
 import { FakeBlobStore } from "../sync/BlobStore.ts";
-import { seedOrg, testDatabase } from "./db.ts";
+import { activateMockModels, seedOrg, testDatabase } from "./db.ts";
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -40,6 +40,7 @@ function slow(provider: ProviderAdapter, id: ProviderAdapter["id"]): ProviderAda
 export function chatHarness() {
   const conn = testDatabase();
   const db = conn.db;
+  const fixtures = activateMockModels(db, ["gpt-5-mini", "gpt-image-1"]);
   const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:63799", {
     maxRetriesPerRequest: 2,
   });
@@ -75,6 +76,7 @@ export function chatHarness() {
 
   /** A user in a fresh org with 100 credits. */
   async function user(label: string): Promise<{ p: Principal; facts: RequestFacts }> {
+    await fixtures;
     const { orgId, userId } = await seedOrg(db, label);
     await ledger.grant({
       orgId,
@@ -140,6 +142,9 @@ export function chatHarness() {
     user,
     uploadFile,
     close: async () => {
+      await (
+        await fixtures
+      )();
       await runner.stop();
       redis.disconnect();
       await conn.close();

@@ -243,6 +243,50 @@ describe("admin api", () => {
     expect(status.body.version).toBe("dev");
   });
 
+  it("validates and audits provider source changes without accepting arbitrary upstream hosts", async () => {
+    const rows = await api.db.query.modelCatalog.findMany();
+    const model = rows.find((m) => m.modelId === "gpt-5-mini")!;
+    for (const patch of [
+      { provider: "unknown" },
+      { provider: "openrouter", upstreamModelId: "gpt-5-mini" },
+      { upstreamModelId: "https://evil.example/model" },
+    ]) {
+      const result = await admin(`/admin/v1/models/${model.modelId}`, {
+        method: "PATCH",
+        token: ownerToken,
+        json: { ...patch, reason: "routing test" },
+      });
+      expect(result.status).toBe(400);
+    }
+    try {
+      const result = await admin(`/admin/v1/models/${model.modelId}`, {
+        method: "PATCH",
+        token: ownerToken,
+        json: {
+          provider: "openai",
+          upstreamModelId: "gpt-5-mini",
+          reason: "configured native API route test",
+        },
+      });
+      expect(result.status).toBe(200);
+      const audit = await api.db.query.auditEvents.findMany({
+        where: eq(schema.auditEvents.targetId, model.modelId),
+      });
+      expect(
+        audit.some(
+          (event) =>
+            event.action === "admin.model.update" &&
+            (event.after as { provider?: string })?.provider === "openai",
+        ),
+      ).toBe(true);
+    } finally {
+      await api.db
+        .update(schema.modelCatalog)
+        .set({ provider: model.provider, upstreamModelId: model.upstreamModelId })
+        .where(eq(schema.modelCatalog.modelId, model.modelId));
+    }
+  });
+
   it("logs out and the token stops working", async () => {
     const out = await admin("/admin/v1/auth/logout", { token: supportToken, json: {} });
     expect(out.status).toBe(200);

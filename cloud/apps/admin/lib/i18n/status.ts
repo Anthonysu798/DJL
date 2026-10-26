@@ -1,0 +1,38 @@
+import type { MessageKey } from "./index";
+const labels: Readonly<Record<string, MessageKey>> = {
+  running: "status.running",
+  healthy: "status.healthy",
+  unhealthy: "status.unhealthy",
+  unavailable: "status.unavailable",
+  stopped: "status.stopped",
+  exited: "status.stopped",
+  starting: "status.starting",
+  queued: "status.queued",
+  succeeded: "status.succeeded",
+  failed: "status.failed",
+  scheduled: "status.scheduled",
+  settled: "status.settled",
+  reserved: "status.reserved",
+  streaming: "status.streaming",
+  released: "status.released",
+  cut_off: "status.cutOff",
+  pending: "status.pending",
+  completed: "status.completed",
+  trusted: "status.trusted",
+  revoked: "status.revoked",
+  low: "status.low",
+  high: "status.high",
+  critical: "status.critical",
+  warning: "status.warning",
+  active: "common.active",
+  disabled: "common.disabled",
+  degraded: "common.degraded",
+  suspend: "common.suspended",
+  owner: "role.owner",
+  admin: "role.admin",
+  member: "role.member",
+  employee: "role.employee",
+};
+/** Unknown protocol values remain visible for diagnosis; never change values sent to the API. */
+export const statusLabel = (value: string, t: (key: MessageKey) => string) =>
+  labels[value] ? t(labels[value]!) : value;

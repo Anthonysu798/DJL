@@ -4,10 +4,32 @@
  * file creates its own organization ids so files can run in parallel.
  */
 import { createDatabase, schema } from "@djl/db";
+import { eq, inArray } from "drizzle-orm";
 
 export function testDatabase() {
   const url = process.env.DATABASE_URL ?? "postgres://djl:djl@localhost:54329/djl";
   return createDatabase(url, { max: 4 });
+}
+
+/** Mock suites enable only their explicit fixtures and restore the deployment catalog afterward. */
+export async function activateMockModels(
+  db: ReturnType<typeof testDatabase>["db"],
+  ids: readonly string[],
+) {
+  const saved = await db.query.modelCatalog.findMany({
+    where: inArray(schema.modelCatalog.modelId, [...ids]),
+  });
+  await db
+    .update(schema.modelCatalog)
+    .set({ status: "active" })
+    .where(inArray(schema.modelCatalog.modelId, [...ids]));
+  return async () => {
+    for (const model of saved)
+      await db
+        .update(schema.modelCatalog)
+        .set({ status: model.status })
+        .where(eq(schema.modelCatalog.modelId, model.modelId));
+  };
 }
 
 /** Insert a minimal user + organization pair and return the ids. */

@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
 import { integer, oneOf } from "@/lib/validation";
 
 interface Model {
   modelId: string;
   provider: string;
+  upstreamModelId: string;
   displayName: string;
   status: "active" | "degraded" | "disabled";
   qualityScore: number;
@@ -36,12 +38,10 @@ const STATUS_STYLE: Record<Model["status"], string> = {
 };
 
 export default function ModelsPage() {
+  const { t, number } = useI18n();
   const models = useLoad(() => admin<Model[]>("/models"), []);
   return (
-    <Shell
-      title="Model catalog"
-      subtitle="Prices are microcredits per token or per image (1 credit = 1,000,000 microcredits). Edits take effect within 30 seconds and are audited."
-    >
+    <Shell title={t("models.title")} subtitle={t("models.pricingDescription")}>
       <PageCard>
         {models.error ? (
           <p role="alert" className="text-sm text-destructive">
@@ -51,14 +51,14 @@ export default function ModelsPage() {
         <Table>
           <TableHeader>
             <TableRow className={headRowClass}>
-              <TableHead>Model</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Quality</TableHead>
-              <TableHead>Input µcr/tok</TableHead>
-              <TableHead>Output µcr/tok</TableHead>
-              <TableHead>µcr/image</TableHead>
-              <TableHead>Capabilities</TableHead>
+              <TableHead>{t("common.model")}</TableHead>
+              <TableHead>{t("common.provider")}</TableHead>
+              <TableHead>{t("common.status")}</TableHead>
+              <TableHead>{t("common.quality")}</TableHead>
+              <TableHead>{t("models.inputShort")}</TableHead>
+              <TableHead>{t("models.outputShort")}</TableHead>
+              <TableHead>{t("models.imageShort")}</TableHead>
+              <TableHead>{t("common.capabilities")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -69,31 +69,101 @@ export default function ModelsPage() {
                   <div className="font-medium">{m.displayName}</div>
                   <div className="text-xs text-muted-foreground">{m.modelId}</div>
                 </TableCell>
-                <TableCell>{m.provider}</TableCell>
+                <TableCell>
+                  <ReasonDialog
+                    trigger={
+                      <Button size="sm" variant="outline">
+                        {m.provider === "openrouter"
+                          ? "OpenRouter"
+                          : m.provider === "openai"
+                            ? "OpenAI API"
+                            : "Anthropic API"}
+                      </Button>
+                    }
+                    title={t("models.sourceDialog", { model: m.displayName })}
+                    description={t("models.securityHint")}
+                    fields={[
+                      {
+                        name: "provider",
+                        label: t("models.source"),
+                        kind: "select",
+                        defaultValue: m.provider,
+                        options: [
+                          { value: "openrouter", label: "OpenRouter" },
+                          { value: "openai", label: "OpenAI API" },
+                          { value: "anthropic", label: "Anthropic API" },
+                        ],
+                        validate: oneOf(
+                          ["openrouter", "openai", "anthropic"],
+                          t("common.provider"),
+                        ),
+                      },
+                      {
+                        name: "upstreamModelId",
+                        label: t("models.upstream"),
+                        defaultValue: m.upstreamModelId,
+                        hint: t("models.slugHint"),
+                      },
+                      {
+                        name: "coding",
+                        label: t("models.codexTasks"),
+                        kind: "select",
+                        defaultValue: m.capabilities.includes("responses") ? "verified" : "off",
+                        options: [
+                          { value: "off", label: t("common.off") },
+                          { value: "verified", label: t("models.responsesVerified") },
+                        ],
+                        hint: t("models.responsesHint"),
+                      },
+                    ]}
+                    onConfirm={async (values, reason) => {
+                      await admin(`/models/${encodeURIComponent(m.modelId)}`, {
+                        method: "PATCH",
+                        json: {
+                          provider: values.provider,
+                          upstreamModelId: values.upstreamModelId,
+                          capabilities: [
+                            ...m.capabilities.filter((c) => c !== "responses"),
+                            ...(values.coding === "verified" ? ["responses"] : []),
+                          ],
+                          reason,
+                        },
+                      });
+                      models.reload();
+                    }}
+                  />
+                  <div className="mt-1 text-xs text-muted-foreground">{m.upstreamModelId}</div>
+                </TableCell>
                 <TableCell>
                   <ReasonDialog
                     trigger={
                       <button type="button" className="flex items-center gap-2 text-sm">
                         <span className={`size-2 rounded-full ${STATUS_STYLE[m.status]}`} />
-                        {m.status}
+                        {
+                          {
+                            active: t("common.active"),
+                            degraded: t("common.degraded"),
+                            disabled: t("common.disabled"),
+                          }[m.status]
+                        }
                       </button>
                     }
-                    title={`Change status of ${m.displayName}`}
+                    title={t("models.statusDialog", { model: m.displayName })}
                     fields={[
                       {
                         name: "status",
-                        label: "Status",
+                        label: t("common.status"),
                         kind: "select",
                         options: [
-                          { value: "active", label: "Active" },
-                          { value: "degraded", label: "Degraded · routed around when possible" },
-                          { value: "disabled", label: "Disabled · hidden from clients" },
+                          { value: "active", label: t("common.active") },
+                          { value: "degraded", label: t("models.degraded") },
+                          { value: "disabled", label: t("models.disabled") },
                         ],
                         defaultValue: m.status,
-                        validate: oneOf(["active", "degraded", "disabled"], "Status"),
+                        validate: oneOf(["active", "degraded", "disabled"], t("common.status")),
                       },
                     ]}
-                    confirmLabel="Save"
+                    confirmLabel={t("common.save")}
                     onConfirm={(v, reason) =>
                       admin(`/models/${m.modelId}`, {
                         method: "PATCH",
@@ -102,10 +172,14 @@ export default function ModelsPage() {
                     }
                   />
                 </TableCell>
-                <TableCell className="tabular-nums">{m.qualityScore}</TableCell>
-                <TableCell className="tabular-nums">{m.inputMicroPerToken}</TableCell>
-                <TableCell className="tabular-nums">{m.outputMicroPerToken}</TableCell>
-                <TableCell className="tabular-nums">{m.microPerImage}</TableCell>
+                <TableCell className="tabular-nums">{number(m.qualityScore)}</TableCell>
+                <TableCell className="tabular-nums">
+                  {number(BigInt(m.inputMicroPerToken))}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {number(BigInt(m.outputMicroPerToken))}
+                </TableCell>
+                <TableCell className="tabular-nums">{number(BigInt(m.microPerImage))}</TableCell>
                 <TableCell>
                   {m.capabilities.map((c) => (
                     <Badge key={c} variant="secondary" className="mr-1 mb-1">
@@ -117,49 +191,49 @@ export default function ModelsPage() {
                   <ReasonDialog
                     trigger={
                       <Button size="sm" variant="secondary">
-                        Edit
+                        {t("common.edit")}
                       </Button>
                     }
-                    title={`Edit ${m.displayName}`}
-                    description="Leave a field unchanged to keep its value."
+                    title={t("models.editDialog", { model: m.displayName })}
+                    description={t("models.keepValue")}
                     fields={[
                       {
                         name: "qualityScore",
-                        label: "Quality score",
+                        label: t("models.qualityScore"),
                         inputMode: "numeric",
-                        validate: integer(0, 100, "Quality score"),
+                        validate: integer(0, 100, t("models.qualityScore")),
                         defaultValue: String(m.qualityScore),
                       },
                       {
                         name: "inputMicroPerToken",
-                        label: "Input microcredits per token",
+                        label: t("models.inputPrice"),
                         inputMode: "numeric",
-                        validate: integer(0, 1_000_000_000_000, "Input microcredits per token"),
+                        validate: integer(0, 1_000_000_000_000, t("models.inputPrice")),
                         defaultValue: m.inputMicroPerToken,
                       },
                       {
                         name: "outputMicroPerToken",
-                        label: "Output microcredits per token",
+                        label: t("models.outputPrice"),
                         inputMode: "numeric",
-                        validate: integer(0, 1_000_000_000_000, "Output microcredits per token"),
+                        validate: integer(0, 1_000_000_000_000, t("models.outputPrice")),
                         defaultValue: m.outputMicroPerToken,
                       },
                       {
                         name: "microPerImage",
-                        label: "Microcredits per image",
+                        label: t("models.imagePrice"),
                         inputMode: "numeric",
-                        validate: integer(0, 1_000_000_000_000, "Microcredits per image"),
+                        validate: integer(0, 1_000_000_000_000, t("models.imagePrice")),
                         defaultValue: m.microPerImage,
                       },
                       {
                         name: "sortOrder",
-                        label: "Sort order",
+                        label: t("models.sortOrder"),
                         inputMode: "numeric",
-                        validate: integer(0, 100000, "Sort order"),
+                        validate: integer(0, 100000, t("models.sortOrder")),
                         defaultValue: String(m.sortOrder),
                       },
                     ]}
-                    confirmLabel="Save"
+                    confirmLabel={t("common.save")}
                     onConfirm={(v, reason) =>
                       admin(`/models/${m.modelId}`, {
                         method: "PATCH",

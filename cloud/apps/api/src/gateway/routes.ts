@@ -111,6 +111,34 @@ export function makeGatewayRoutes(deps: GatewayRouteDeps) {
     ),
   );
 
+  const responses = HttpRouter.add(
+    "POST",
+    "/v1/responses",
+    handle(
+      Effect.gen(function* () {
+        const f = yield* facts;
+        const body = yield* readBody;
+        const { stream, requestId } = yield* attempt(
+          () => deps.gateway.responsesStream(f, body),
+          GATEWAY_FAILURE,
+        );
+        return HttpServerResponse.stream(
+          Stream.fromReadableStream({ evaluate: () => stream, onError: (error) => error }),
+          {
+            status: 200,
+            contentType: "text/event-stream; charset=utf-8",
+            headers: {
+              "cache-control": "no-store",
+              "x-accel-buffering": "no",
+              "x-request-id": requestId,
+              "x-trace-id": f.traceId,
+            },
+          },
+        );
+      }),
+    ),
+  );
+
   const images = HttpRouter.add(
     "POST",
     "/v1/images/generations",
@@ -227,5 +255,5 @@ export function makeGatewayRoutes(deps: GatewayRouteDeps) {
     ),
   );
 
-  return Layer.mergeAll(models, chat, images, imageEdits, embeddings, usage);
+  return Layer.mergeAll(models, chat, responses, images, imageEdits, embeddings, usage);
 }

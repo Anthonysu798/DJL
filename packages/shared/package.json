@@ -191,6 +191,10 @@
     "./orchestrationThreadEvents": {
       "types": "./src/orchestrationThreadEvents.ts",
       "import": "./src/orchestrationThreadEvents.ts"
+    },
+    "./productAnalytics": {
+      "types": "./src/productAnalytics.ts",
+      "import": "./src/productAnalytics.ts"
     }
   },
   "scripts": {

@@ -1,3 +1,9 @@
+import {
+  PublishingWorker,
+  SocialConnectionService,
+  createSocialProviders,
+} from "@djl/api/social-publishing";
+import { registerSocialJobs } from "./social.ts";
 /**
  * Worker entry: pg-boss on the same Postgres, cron schedules for the ledger,
  * trials, purge, stats, and usage window jobs, and the background agent
@@ -40,6 +46,14 @@ boss.on("error", (error) =>
   console.error(JSON.stringify({ level: "error", msg: "pg-boss", error: String(error) })),
 );
 await boss.start();
+const socialEnabled = process.env.SOCIAL_PUBLISHING_ENABLED === "true";
+const socialConnections = new SocialConnectionService(db, createSocialProviders(process.env), {
+  enabled: socialEnabled,
+  encryptionKey: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY,
+  publicUrl: process.env.API_PUBLIC_URL ?? "http://localhost:8787",
+});
+if (socialEnabled)
+  await registerSocialJobs(boss, new PublishingWorker(db, socialConnections, blobs));
 
 const SCHEDULES: Record<keyof typeof JOBS, string> = {
   "ledger.release-stale": "*/5 * * * *",
@@ -48,6 +62,8 @@ const SCHEDULES: Record<keyof typeof JOBS, string> = {
   "users.purge-deleted": "15 3 * * *",
   "chat.purge-deleted": "35 3 * * *",
   "stats.daily": "5 0 * * *",
+  "analytics.collect": "*/15 * * * *",
+  "analytics.retention": "25 3 * * *",
   "usage.grantPlanResets": "7 * * * *",
   "usage.bulkGrant": "* * * * *",
   "usage.expireBanks": "30 2 * * *",
@@ -115,6 +131,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     void boss
       .stop({ graceful: true, timeout: 10_000 })
       .then(() => redis.disconnect())
+      .then(() => agent.close?.())
       .then(close)
       .then(() => process.exit(0));
   });

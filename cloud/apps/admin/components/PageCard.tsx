@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** A titled white panel. The dot before the title echoes the reference and marks the section. */
+/** Shared panel for admin tables and controls. */
 export function PageCard({
   title,
   action,
@@ -13,14 +13,11 @@ export function PageCard({
   className?: string;
 }) {
   return (
-    <section className={`panel p-6 ${className}`}>
+    <section className={`panel min-w-0 p-6 ${className}`}>
       {title || action ? (
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 [&>form]:w-full [&>form]:max-w-full [&>form>input]:min-w-0 [&>form>input]:flex-1 sm:[&>form]:w-auto">
           {title ? (
-            <h2 className="flex items-center gap-3 text-lg font-medium">
-              <span className="size-2.5 rounded-full bg-primary ring-4 ring-primary/15" />
-              {title}
-            </h2>
+            <h2 className="flex items-center gap-3 text-lg font-medium">{title}</h2>
           ) : (
             <span />
           )}

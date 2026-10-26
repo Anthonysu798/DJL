@@ -27,6 +27,7 @@ export function setToken(next: string | null): void {
   } catch {
     /* ignore */
   }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("djl-admin-session-change"));
 }
 
 export class AdminApiError extends Error {

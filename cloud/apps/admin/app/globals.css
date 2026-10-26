@@ -3,21 +3,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * DJL Admin theme. Light first: white surfaces with hairline borders on a
- * soft gray canvas, one blue accent. Dark mode is its own set of
- * steps, not an inverted light palette. Chart hues are validated per mode
- * with the dataviz palette validator (all checks pass on both surfaces).
- */
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Neutral surfaces keep attention on platform data and status. */
 :root {
-  --radius: 0.875rem;
+  --radius: 0.625rem;
   --background: oklch(0.975 0.002 260);
   --foreground: oklch(0.17 0.01 260);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.17 0.01 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.01 260);
-  --primary: oklch(0.546 0.215 263);
+  --primary: #202020;
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.955 0.004 260);
   --secondary-foreground: oklch(0.25 0.01 260);
@@ -28,7 +30,7 @@
   --destructive: oklch(0.58 0.21 25);
   --border: oklch(0.91 0.005 260);
   --input: oklch(0.91 0.005 260);
-  --ring: oklch(0.546 0.215 263 / 0.35);
+  --ring: #7a7a7a;
   --chart-1: #2563eb;
   --chart-2: #b45309;
   --chart-3: #15803d;
@@ -42,34 +44,34 @@
 }
 
 .dark {
-  --background: oklch(0.14 0.005 260);
-  --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.18 0.006 260);
-  --card-foreground: oklch(0.95 0.005 260);
-  --popover: oklch(0.2 0.006 260);
-  --popover-foreground: oklch(0.95 0.005 260);
-  --primary: oklch(0.623 0.188 260);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.24 0.006 260);
-  --secondary-foreground: oklch(0.92 0.005 260);
-  --muted: oklch(0.24 0.006 260);
-  --muted-foreground: oklch(0.68 0.01 260);
-  --accent: oklch(0.25 0.008 260);
-  --accent-foreground: oklch(0.95 0.005 260);
-  --destructive: oklch(0.66 0.19 25);
-  --border: oklch(1 0 0 / 0.09);
-  --input: oklch(1 0 0 / 0.12);
-  --ring: oklch(0.623 0.188 260 / 0.4);
-  --chart-1: #3b82f6;
-  --chart-2: #b8860b;
-  --chart-3: #15803d;
-  --chart-4: #0891b2;
-  --chart-5: #ef4444;
-  --success-bg: oklch(0.3 0.05 160);
-  --success-fg: oklch(0.85 0.12 160);
-  --danger-bg: oklch(0.3 0.06 15);
-  --danger-fg: oklch(0.85 0.1 15);
-  --sidebar: oklch(0.16 0.006 260);
+  --background: #080808;
+  --foreground: #f3f3f3;
+  --card: #121212;
+  --card-foreground: #f3f3f3;
+  --popover: #181818;
+  --popover-foreground: #f3f3f3;
+  --primary: #e5e5e5;
+  --primary-foreground: #111111;
+  --secondary: #202020;
+  --secondary-foreground: #e8e8e8;
+  --muted: #202020;
+  --muted-foreground: #a3a3a3;
+  --accent: #202020;
+  --accent-foreground: #f3f3f3;
+  --destructive: #fb7185;
+  --border: #303030;
+  --input: #383838;
+  --ring: #a3a3a3;
+  --chart-1: #d4d4d4;
+  --chart-2: #d5ad76;
+  --chart-3: #81b6a0;
+  --chart-4: #9694c5;
+  --chart-5: #e88b93;
+  --success-bg: #1d3028;
+  --success-fg: #b0dfc8;
+  --danger-bg: #3c2429;
+  --danger-fg: #ffc2c8;
+  --sidebar: #0b0b0b;
 }
 
 @theme inline {
@@ -120,14 +122,48 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: "Geist", sans-serif;
     font-feature-settings: "cv11", "ss01";
   }
 }
 
 /* Surfaces used across the app. Named for their role, not their look. */
 @utility panel {
-  @apply rounded-2xl border border-border bg-card;
+  @apply rounded-xl border border-border bg-card;
 }
 @utility pill {
   @apply rounded-full border border-border bg-card;
+}
+
+.admin-sidebar {
+  transition: transform 180ms ease-out;
+}
+.admin-toolbar {
+  background: var(--sidebar);
+}
+.admin-frame :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.admin-frame [data-slot="table-head"] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+}
+.admin-frame [data-slot="table-cell"] {
+  padding-block: 16px;
+}
+.admin-frame [data-slot="table-row"] {
+  transition: background-color 140ms ease-out;
+}
+.admin-frame :is(code, .tabular-nums) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-frame *,
+  .admin-frame *::before,
+  .admin-frame *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

@@ -20,7 +20,7 @@ export class ApiError extends Error {
 let csrfToken: Promise<string> | null = null;
 
 /** Double-submit token the API requires on cookie-authenticated writes (GET /v1/csrf). */
-function csrf(): Promise<string> {
+export function csrf(): Promise<string> {
   csrfToken ??= fetch(`${API_URL}/v1/csrf`, { credentials: "include" })
     .then((res) => res.json() as Promise<{ token: string }>)
     .then((body) => body.token)

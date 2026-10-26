@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "../baseSchemas";
 
 import { CloudDeviceId, CloudOrgId, CloudOrgRole, CloudPlanId, CloudUserId } from "./base";
-import { CloudCreditsResponse, CloudUsageWindowsResponse } from "./usage";
+import { CloudCreditsResponse } from "./usage";
 
 // ---------------------------------------------------------------------------
 // GET /v1/me
@@ -207,7 +207,6 @@ export const CloudAccountStatus = Schema.Struct({
   orgId: Schema.optional(CloudOrgId),
   /** Present when signed in and the control plane answered. */
   credits: Schema.optional(CloudCreditsResponse),
-  usage: Schema.optional(CloudUsageWindowsResponse),
   /** Set when the stored session no longer works (expired, revoked, offline). */
   problem: Schema.optional(Schema.Literals(["unreachable", "session_expired", "suspended"])),
   checkedAt: Schema.String,

@@ -11,6 +11,7 @@ import { captureError, currentTraceId, httpRequests } from "../observability.ts"
 import { csrfRefusal } from "../security/csrf.ts";
 import { RequestContext, clientIp, newTraceId } from "./context.ts";
 import { errorResponse } from "./errors.ts";
+import type { TrafficMonitor } from "../operations/TrafficMonitor.ts";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
@@ -30,7 +31,7 @@ const CSRF_MESSAGES = {
   csrf_token: "Your page is out of date. Reload and try again.",
 } as const;
 
-export function makeMiddleware(env: ApiEnv, region: string) {
+export function makeMiddleware(env: ApiEnv, region: string, traffic?: TrafficMonitor) {
   const trusted = new Set(env.trustedOrigins);
   return <E, R>(
     app: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
@@ -49,7 +50,7 @@ export function makeMiddleware(env: ApiEnv, region: string) {
         corsHeaders["access-control-allow-origin"] = origin;
         corsHeaders["access-control-allow-credentials"] = "true";
         corsHeaders["access-control-allow-headers"] =
-          "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token";
+          "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token, x-djl-installation";
         corsHeaders["access-control-expose-headers"] = "x-trace-id, set-auth-token, set-auth-jwt";
         corsHeaders["access-control-allow-methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
         corsHeaders["access-control-max-age"] = "600";
@@ -96,6 +97,7 @@ export function makeMiddleware(env: ApiEnv, region: string) {
       );
       const routeKey = path.replace(/[0-9a-f-]{20,}/g, ":id");
       httpRequests.add(1, { route: routeKey, method: request.method, status: response.status });
+      traffic?.record(response.status, Date.now() - context.startedAt);
       return HttpServerResponse.setHeaders(response, {
         ...SECURITY_HEADERS,
         ...corsHeaders,

@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
+import type { MessageKey } from "@/lib/i18n";
 import { email as emailRule, ipOrCidr, length, oneOf } from "@/lib/validation";
 
 export interface Member {
@@ -42,21 +44,26 @@ export interface Member {
   createdAt: string;
 }
 
-export const ROLE_LABEL: Record<Member["role"], string> = { admin: "Admin", employee: "Employee" };
+export const ROLE_LABEL: Record<Member["role"], MessageKey> = {
+  admin: "role.admin",
+  employee: "role.employee",
+};
 export const ROLE_OPTIONS = [
-  { value: "employee", label: "Employee · support desk" },
-  { value: "admin", label: "Admin · full access" },
+  { value: "employee", label: "team.employeeRole" },
+  { value: "admin", label: "team.adminRole" },
 ];
 
 export function MemberStatus({ status }: { status: Member["status"] }) {
-  if (status === "active") return <StatusPill tone="success">Active</StatusPill>;
-  if (status === "disabled") return <StatusPill tone="danger">Disabled</StatusPill>;
-  return <StatusPill tone="neutral">Invited</StatusPill>;
+  const { t } = useI18n();
+  if (status === "active") return <StatusPill tone="success">{t("common.active")}</StatusPill>;
+  if (status === "disabled") return <StatusPill tone="danger">{t("common.disabled")}</StatusPill>;
+  return <StatusPill tone="neutral">{t("team.invited")}</StatusPill>;
 }
 
 type Action = "edit" | "disable" | "enable" | "resend" | "revoke" | "delete" | null;
 
 export default function TeamPage() {
+  const { t, date } = useI18n();
   const router = useRouter();
   const members = useLoad(() => admin<Member[]>("/admins"), []);
   const logins = useLoad(() => admin<LoginEvent[]>("/security/logins?limit=25"), []);
@@ -72,42 +79,45 @@ export default function TeamPage() {
 
   return (
     <Shell
-      title="Team"
-      subtitle="Everyone who can open this console. Admins run the platform; employees handle support."
+      title={t("nav.team")}
+      subtitle={t("team.description")}
       actions={
         <ReasonDialog
           trigger={
             <Button className="h-10 rounded-xl">
               <UserPlus className="size-4" />
-              Invite member
+              {t("team.inviteMember")}
             </Button>
           }
-          title="Invite a team member"
-          description="They receive a single-use link that verifies their email and lets them choose a password. It expires in 24 hours."
+          title={t("team.inviteTitle")}
+          description={t("team.inviteHint")}
           fields={[
             {
               name: "name",
-              label: "Full name",
-              validate: length(1, 80, "Name"),
+              label: t("team.fullName"),
+              validate: length(1, 80, t("common.name")),
               placeholder: "Ada Lovelace",
             },
             {
               name: "email",
-              label: "Work email",
+              label: t("team.workEmail"),
               validate: emailRule,
               inputMode: "email",
               placeholder: "ada@slcor.com",
             },
             {
               name: "role",
-              label: "Role",
+              label: t("team.role"),
               kind: "select",
-              options: ROLE_OPTIONS,
+              options: ROLE_OPTIONS.map((option) => ({
+                ...option,
+                label: t(option.label as MessageKey),
+              })),
               defaultValue: "employee",
-              validate: oneOf(["admin", "employee"], "Role"),
+              validate: oneOf(["admin", "employee"], t("team.role")),
             },
           ]}
-          confirmLabel="Send invite"
+          confirmLabel={t("team.sendInvite")}
           onConfirm={(v, reason) =>
             admin("/admins", { method: "POST", json: { ...v, reason } }).then(refresh)
           }
@@ -115,7 +125,7 @@ export default function TeamPage() {
       }
     >
       <div className="space-y-5">
-        <PageCard title="Members">
+        <PageCard title={t("team.members")}>
           {members.error ? (
             <p role="alert" className="text-sm text-destructive">
               {members.error}
@@ -124,13 +134,13 @@ export default function TeamPage() {
           <Table>
             <TableHeader>
               <TableRow className={headRowClass}>
-                <TableHead>Member</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>2FA</TableHead>
-                <TableHead>Last sign-in</TableHead>
+                <TableHead>{t("team.member")}</TableHead>
+                <TableHead>{t("team.role")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead>{t("team.twoFactor")}</TableHead>
+                <TableHead>{t("team.lastSignIn")}</TableHead>
                 <TableHead className="w-12 text-right">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("common.actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -144,7 +154,9 @@ export default function TeamPage() {
                         <span className="block truncate font-medium">
                           {m.name}
                           {m.id === me ? (
-                            <span className="ml-2 text-xs text-muted-foreground">you</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("team.you")}
+                            </span>
                           ) : null}
                         </span>
                         <span className="block truncate text-xs text-muted-foreground">
@@ -154,22 +166,24 @@ export default function TeamPage() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{ROLE_LABEL[m.role]}</Badge>
+                    <Badge variant="secondary">{t(ROLE_LABEL[m.role])}</Badge>
                   </TableCell>
                   <TableCell>
                     <MemberStatus status={m.status} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {m.totpEnabled ? "Enrolled" : "Not enrolled"}
+                    {m.totpEnabled ? t("team.enrolled") : t("team.notEnrolled")}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {m.lastLoginAt ? (
                       <>
-                        <span className="block">{new Date(m.lastLoginAt).toLocaleString()}</span>
+                        <span className="block">
+                          {date(m.lastLoginAt, { dateStyle: "medium", timeStyle: "short" })}
+                        </span>
                         <span className="block font-mono text-xs">{m.lastLoginIp ?? ""}</span>
                       </>
                     ) : (
-                      "Never"
+                      t("team.never")
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -179,27 +193,27 @@ export default function TeamPage() {
                           variant="ghost"
                           size="icon"
                           className="size-8 text-muted-foreground"
-                          aria-label={`Actions for ${m.email}`}
+                          aria-label={t("team.actionsFor", { email: m.email })}
                         >
                           <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
                         <DropdownMenuItem onSelect={() => router.push(`/team/${m.id}`)}>
-                          Open profile
+                          {t("users.openProfile")}
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setAction({ kind: "edit", member: m })}>
-                          Edit name and role
+                          {t("team.editRole")}
                         </DropdownMenuItem>
                         {m.status === "invited" ? (
                           <DropdownMenuItem
                             onSelect={() => setAction({ kind: "resend", member: m })}
                           >
-                            Resend invite
+                            {t("team.resendInvite")}
                           </DropdownMenuItem>
                         ) : null}
                         <DropdownMenuItem onSelect={() => setAction({ kind: "revoke", member: m })}>
-                          Sign out everywhere
+                          {t("team.signOutEverywhere")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {m.id !== me ? (
@@ -212,19 +226,17 @@ export default function TeamPage() {
                                 })
                               }
                             >
-                              {m.status === "disabled" ? "Enable" : "Disable"}
+                              {m.status === "disabled" ? t("common.enable") : t("common.disable")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               variant="destructive"
                               onSelect={() => setAction({ kind: "delete", member: m })}
                             >
-                              Remove from team
+                              {t("team.removeFromTeam")}
                             </DropdownMenuItem>
                           </>
                         ) : (
-                          <DropdownMenuItem disabled>
-                            You cannot disable or remove yourself
-                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled>{t("team.cannotRemoveSelf")}</DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -237,10 +249,10 @@ export default function TeamPage() {
 
         <div className="grid gap-5 xl:grid-cols-[2fr_1fr]">
           <PageCard
-            title="Sign-in activity"
+            title={t("team.activity")}
             action={
               <Button variant="ghost" size="sm" onClick={logins.reload}>
-                Refresh
+                {t("common.refresh")}
               </Button>
             }
           >
@@ -260,25 +272,25 @@ export default function TeamPage() {
             />
           </PageCard>
           <PageCard
-            title="Blocked networks"
+            title={t("settings.blocked")}
             action={
               <ReasonDialog
                 trigger={
                   <Button variant="outline" size="sm">
-                    Block an IP
+                    {t("team.blockIp")}
                   </Button>
                 }
-                title="Block a network"
-                description="Sessions from this address end immediately and sign-in from it is refused. Use a CIDR to block a range."
+                title={t("team.blockNetwork")}
+                description={t("team.blockHint")}
                 fields={[
                   {
                     name: "ip",
-                    label: "IP address or CIDR",
+                    label: t("team.ipCidr"),
                     validate: ipOrCidr,
                     placeholder: "203.0.113.42",
                   },
                 ]}
-                confirmLabel="Block"
+                confirmLabel={t("team.block")}
                 destructive
                 onConfirm={(v, reason) =>
                   admin("/security/ip-bans", {
@@ -290,7 +302,7 @@ export default function TeamPage() {
             }
           >
             {bans.data && bans.data.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No networks are blocked.</p>
+              <p className="text-sm text-muted-foreground">{t("team.noBlocked")}</p>
             ) : (
               <ul className="divide-y">
                 {(bans.data ?? []).map((ip) => (
@@ -299,11 +311,11 @@ export default function TeamPage() {
                     <ReasonDialog
                       trigger={
                         <Button variant="ghost" size="sm">
-                          Unblock
+                          {t("team.unblock")}
                         </Button>
                       }
-                      title={`Unblock ${ip}`}
-                      confirmLabel="Unblock"
+                      title={t("team.unblockIp", { ip })}
+                      confirmLabel={t("team.unblock")}
                       onConfirm={(_v, reason) =>
                         admin("/security/ip-bans/remove", {
                           method: "POST",
@@ -325,28 +337,28 @@ export default function TeamPage() {
           onOpenChange={(o) => {
             if (!o) close();
           }}
-          title={`Edit ${action.member.name}`}
+          title={t("team.editMember", { name: action.member.name })}
           fields={[
             {
               name: "name",
-              label: "Full name",
+              label: t("team.fullName"),
               defaultValue: action.member.name,
-              validate: length(1, 80, "Name"),
+              validate: length(1, 80, t("common.name")),
             },
             {
               name: "role",
-              label: "Role",
+              label: t("team.role"),
               kind: "select",
-              options: ROLE_OPTIONS,
+              options: ROLE_OPTIONS.map((option) => ({
+                ...option,
+                label: t(option.label as MessageKey),
+              })),
               defaultValue: action.member.role,
-              validate: oneOf(["admin", "employee"], "Role"),
-              hint:
-                action.member.id === me
-                  ? "You cannot change your own role."
-                  : "Changing the role signs them out everywhere.",
+              validate: oneOf(["admin", "employee"], t("team.role")),
+              hint: action.member.id === me ? t("team.ownRole") : t("team.roleSignsOut"),
             },
           ]}
-          confirmLabel="Save"
+          confirmLabel={t("common.save")}
           onConfirm={(v, reason) =>
             admin(`/admins/${action.member.id}`, {
               method: "PATCH",
@@ -361,9 +373,9 @@ export default function TeamPage() {
           onOpenChange={(o) => {
             if (!o) close();
           }}
-          title={`Resend invite to ${action.member.email}`}
-          description="The previous link stops working."
-          confirmLabel="Resend"
+          title={t("team.resendTo", { email: action.member.email })}
+          description={t("team.resendHint")}
+          confirmLabel={t("team.resend")}
           onConfirm={(_v, reason) =>
             admin(`/admins/${action.member.id}/resend-invite`, {
               method: "POST",
@@ -378,9 +390,9 @@ export default function TeamPage() {
           onOpenChange={(o) => {
             if (!o) close();
           }}
-          title={`Sign ${action.member.name} out everywhere`}
-          description="Every active session ends. They can sign in again."
-          confirmLabel="Sign out"
+          title={t("team.signOutMember", { name: action.member.name })}
+          description={t("team.signOutHint")}
+          confirmLabel={t("team.signOut")}
           onConfirm={(_v, reason) =>
             admin(`/admins/${action.member.id}/revoke-sessions`, {
               method: "POST",
@@ -395,14 +407,12 @@ export default function TeamPage() {
           onOpenChange={(o) => {
             if (!o) close();
           }}
-          title={`${action.kind === "disable" ? "Disable" : "Enable"} ${action.member.name}`}
-          description={
-            action.kind === "disable"
-              ? "They are signed out immediately and cannot sign in until enabled."
-              : undefined
-          }
+          title={t(action.kind === "disable" ? "team.disableMember" : "team.enableMember", {
+            name: action.member.name,
+          })}
+          description={action.kind === "disable" ? t("team.disableHint") : undefined}
           destructive={action.kind === "disable"}
-          confirmLabel={action.kind === "disable" ? "Disable" : "Enable"}
+          confirmLabel={action.kind === "disable" ? t("common.disable") : t("common.enable")}
           onConfirm={(_v, reason) =>
             admin(`/admins/${action.member.id}/disabled`, {
               method: "POST",
@@ -417,10 +427,10 @@ export default function TeamPage() {
           onOpenChange={(o) => {
             if (!o) close();
           }}
-          title={`Remove ${action.member.name} from the team`}
-          description="Their access ends now. The account and its audit history are kept for the record; the email can be invited again later."
+          title={t("team.removeMember", { name: action.member.name })}
+          description={t("team.removeHint")}
           destructive
-          confirmLabel="Remove"
+          confirmLabel={t("team.remove")}
           onConfirm={(_v, reason) =>
             admin(`/admins/${action.member.id}`, { method: "DELETE", json: { reason } }).then(
               refresh,

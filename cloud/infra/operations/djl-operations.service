@@ -1,0 +1,27 @@
+[Unit]
+Description=DJL private VPS operations controller
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/djl-operations/controller.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+BindReadOnlyPaths=/run/user/1001:/run/djl-codex-control
+ProtectSystem=strict
+ReadWritePaths=/var/lib/djl-operations /srv/djl-cloud-staging/cloud/infra/vps/backups
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=256M
+TasksMax=64
+CPUQuota=30%
+
+[Install]
+WantedBy=multi-user.target

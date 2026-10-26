@@ -12,6 +12,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { admin } from "@/lib/api";
+import { useI18n } from "./LocaleProvider";
 
 interface UserRow {
   id: string;
@@ -29,6 +30,7 @@ export function CommandPalette({
   onOpenChange: (open: boolean) => void;
   isAdmin?: boolean;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -52,14 +54,14 @@ export function CommandPalette({
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Search"
-      description="Jump to a page or find a user"
+      title={t("common.search")}
+      description={t("search.description")}
     >
-      <CommandInput placeholder="Search pages and users…" value={query} onValueChange={setQuery} />
+      <CommandInput placeholder={t("search.placeholder")} value={query} onValueChange={setQuery} />
       <CommandList>
-        <CommandEmpty>No results.</CommandEmpty>
+        <CommandEmpty>{t("search.empty")}</CommandEmpty>
         {users.length ? (
-          <CommandGroup heading="Users">
+          <CommandGroup heading={t("nav.users")}>
             {users.map((u) => (
               <CommandItem
                 key={u.id}
@@ -72,11 +74,11 @@ export function CommandPalette({
             ))}
           </CommandGroup>
         ) : null}
-        <CommandGroup heading="Pages">
+        <CommandGroup heading={t("search.pages")}>
           {[...NAV_MAIN, ...(isAdmin ? NAV_PLATFORM : [])].map(({ href, label, icon: Icon }) => (
-            <CommandItem key={href} value={label} onSelect={() => go(href)}>
+            <CommandItem key={href} value={t(label)} onSelect={() => go(href)}>
               <Icon className="size-4" />
-              {label}
+              {t(label)}
             </CommandItem>
           ))}
         </CommandGroup>

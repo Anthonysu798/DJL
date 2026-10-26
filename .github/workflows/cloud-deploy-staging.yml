@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: cloud-deploy-staging
@@ -59,4 +60,6 @@ jobs:
           conclusion=$(gh run list --workflow "Cloud CI" --commit "$(git rev-parse HEAD)" --json conclusion --jq '.[0].conclusion // "none"')
           test "$conclusion" = "success" || { echo "Cloud CI for this commit is $conclusion"; exit 1; }
       - name: Back up, migrate, deploy, and verify VPS
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash cloud/infra/vps/deploy.sh

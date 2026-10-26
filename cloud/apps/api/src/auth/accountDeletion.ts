@@ -10,6 +10,7 @@ import { schema, type DjlDatabase } from "@djl/db";
 
 import { writeAudit } from "../audit/AuditLog.ts";
 import type { DjlAuth } from "./auth.ts";
+import { deleteAnalyticsForUser } from "../analytics/AnalyticsService.ts";
 
 export async function deleteOwnAccount(input: {
   readonly db: DjlDatabase;
@@ -21,6 +22,7 @@ export async function deleteOwnAccount(input: {
   const { db, auth, userId } = input;
   const deletedAt = new Date();
   await db.transaction(async (tx) => {
+    await deleteAnalyticsForUser(userId, tx);
     await tx
       .update(schema.user)
       .set({ banned: true, banReason: "self_delete", banExpires: deletedAt })

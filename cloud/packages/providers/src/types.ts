@@ -59,6 +59,8 @@ export interface ChatRequest {
 
 /** OpenAI-style streaming chunk, normalized. */
 export interface ChatChunk {
+  /** Native Responses event, preserved without translating tools or reasoning. */
+  readonly responseEvent?: Record<string, unknown>;
   readonly id: string;
   readonly delta: {
     readonly role?: "assistant";
@@ -135,6 +137,10 @@ export class ProviderError extends Error {
 
 export interface ProviderAdapter {
   readonly id: ProviderId;
+  readonly responsesStream?: (
+    request: import("./responses.ts").ResponseRequest,
+    signal: AbortSignal,
+  ) => AsyncIterable<ChatChunk>;
   readonly chatStream: (request: ChatRequest, signal: AbortSignal) => AsyncIterable<ChatChunk>;
   readonly generateImage: (request: ImageRequest, signal: AbortSignal) => Promise<ImageResult>;
   readonly editImage: (request: ImageEditRequest, signal: AbortSignal) => Promise<ImageResult>;

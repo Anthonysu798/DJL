@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
 
 interface Audit {
   id: string;
@@ -30,6 +31,7 @@ interface Audit {
 }
 
 export default function AuditPage() {
+  const { t, date } = useI18n();
   const [filter, setFilter] = useState({ action: "", targetId: "", actorId: "" });
   const [applied, setApplied] = useState(filter);
   const audit = useLoad(
@@ -40,10 +42,7 @@ export default function AuditPage() {
     [applied],
   );
   return (
-    <Shell
-      title="Audit log"
-      subtitle="Every admin action and external write, with the values before and after."
-    >
+    <Shell title={t("nav.audit")} subtitle={t("audit.description")}>
       <PageCard
         action={
           <form
@@ -56,24 +55,24 @@ export default function AuditPage() {
           >
             <Input
               className="h-9 w-40"
-              placeholder="action prefix"
+              placeholder={t("audit.actionPrefix")}
               value={filter.action}
               onChange={(e) => setFilter({ ...filter, action: e.target.value })}
             />
             <Input
               className="h-9 w-56"
-              placeholder="target id"
+              placeholder={t("audit.targetId")}
               value={filter.targetId}
               onChange={(e) => setFilter({ ...filter, targetId: e.target.value })}
             />
             <Input
               className="h-9 w-56"
-              placeholder="actor id"
+              placeholder={t("audit.actorId")}
               value={filter.actorId}
               onChange={(e) => setFilter({ ...filter, actorId: e.target.value })}
             />
             <Button type="submit" size="sm" className="rounded-full">
-              Filter
+              {t("common.filter")}
             </Button>
           </form>
         }
@@ -86,19 +85,19 @@ export default function AuditPage() {
         <Table>
           <TableHeader>
             <TableRow className={headRowClass}>
-              <TableHead>When</TableHead>
-              <TableHead>Actor</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Change</TableHead>
+              <TableHead>{t("common.when")}</TableHead>
+              <TableHead>{t("common.actor")}</TableHead>
+              <TableHead>{t("common.action")}</TableHead>
+              <TableHead>{t("common.target")}</TableHead>
+              <TableHead>{t("common.reason")}</TableHead>
+              <TableHead>{t("common.change")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {audit.data?.map((a) => (
               <TableRow key={a.id} className={rowClass}>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {new Date(a.createdAt).toLocaleString()}
+                  {date(a.createdAt, { dateStyle: "medium", timeStyle: "short" })}
                 </TableCell>
                 <TableCell className="font-mono text-xs">
                   {a.actorType}:{a.actorId.slice(0, 12)}
@@ -117,7 +116,7 @@ export default function AuditPage() {
           </TableBody>
         </Table>
         {audit.data?.length === 0 ? (
-          <p className="p-3 text-sm text-muted-foreground">No entries match.</p>
+          <p className="p-3 text-sm text-muted-foreground">{t("audit.empty")}</p>
         ) : null}
       </PageCard>
     </Shell>

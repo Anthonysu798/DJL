@@ -14,3 +14,8 @@ export * from "./cloud/clientConfig";
 export * from "./cloud/notifications";
 
 export * from "./cloud/images";
+
+export * from "./cloud/analytics";
+
+export * from "./cloud/social";
+export * from "./cloud/socialPublishing";

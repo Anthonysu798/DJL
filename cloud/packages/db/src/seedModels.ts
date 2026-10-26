@@ -45,6 +45,7 @@ export const SEED_MODELS: readonly SeedModel[] = [
     qualityScore: 65,
     sortOrder: 45,
     freeEligible: true,
+    enabled: true,
   },
   {
     modelId: "gpt-5",
@@ -227,8 +228,9 @@ export async function seedModels(databaseUrl: string, margin = 0.4): Promise<num
         .insert(modelCatalog)
         .values({
           modelId: m.modelId,
-          provider: m.provider,
-          upstreamModelId: m.upstreamModelId,
+          provider: "openrouter",
+          upstreamModelId:
+            m.provider === "openrouter" ? m.upstreamModelId : `${m.provider}/${m.upstreamModelId}`,
           displayName: m.displayName,
           capabilities: [...m.capabilities],
           inputMicroPerToken:
@@ -252,7 +254,7 @@ export async function seedModels(databaseUrl: string, margin = 0.4): Promise<num
           qualityScore: m.qualityScore,
           sortOrder: m.sortOrder,
           freeEligible: m.freeEligible ?? false,
-          status: m.enabled == false ? "disabled" : "active",
+          status: m.enabled === true ? "active" : "disabled",
         })
         .onConflictDoNothing({ target: modelCatalog.modelId })
         .returning({ id: modelCatalog.modelId });

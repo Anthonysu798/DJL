@@ -124,8 +124,12 @@ export default function DevicePage() {
 function AuthGateWithCode() {
   const params = useSearchParams();
   const code = params.get("user_code");
+  const method = params.get("method");
+  const next = new URLSearchParams();
+  if (code) next.set("user_code", code);
+  if (method === "email" || method === "google") next.set("method", method);
   return (
-    <AuthGate next={code ? `/device?user_code=${encodeURIComponent(code)}` : "/device"}>
+    <AuthGate next={next.size ? `/device?${next}` : "/device"}>
       <DeviceApproval />
     </AuthGate>
   );

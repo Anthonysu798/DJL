@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
+import { ProductAnalyticsPreference } from "@/components/ProductAnalytics";
 import { AccountPanel, DevicesPanel } from "@/components/account/AccountPanels";
 import {
   Select,
@@ -88,7 +89,10 @@ function SettingsContent() {
                   : d.workspace.general}
         </h2>
         {tab === "account" ? (
-          <AccountPanel />
+          <>
+            <AccountPanel />
+            <ProductAnalyticsPreference />
+          </>
         ) : tab === "devices" ? (
           <DevicesPanel />
         ) : tab === "appearance" ? (

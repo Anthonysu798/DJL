@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { length, validate, type Validator } from "@/lib/validation";
+import { useI18n } from "./LocaleProvider";
 
 export interface ReasonField {
   readonly name: string;
@@ -48,7 +49,7 @@ export function ReasonDialog({
   title,
   description,
   fields = [],
-  confirmLabel = "Confirm",
+  confirmLabel,
   destructive = false,
   open: controlledOpen,
   onOpenChange,
@@ -64,6 +65,7 @@ export function ReasonDialog({
   onOpenChange?: ((open: boolean) => void) | undefined;
   onConfirm: (values: Record<string, string>, reason: string) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [innerOpen, setInnerOpen] = useState(false);
   const open = controlledOpen ?? innerOpen;
   const setOpen = (next: boolean) => {
@@ -163,7 +165,12 @@ export function ReasonDialog({
               </Field>
             );
           })}
-          <Field id="reason" label="Reason" hint="Recorded in the audit log." error={errors.reason}>
+          <Field
+            id="reason"
+            label={t("common.reason")}
+            hint={t("reason.auditHint")}
+            error={errors.reason}
+          >
             <Textarea
               id="reason"
               value={reason}
@@ -171,17 +178,17 @@ export function ReasonDialog({
                 setReason(e.target.value);
                 if (errors.reason) setErrors((er) => ({ ...er, reason: undefined }));
               }}
-              placeholder="Ticket number, what the customer reported, why…"
+              placeholder={t("reason.placeholder")}
               {...invalid("reason", errors.reason)}
             />
           </Field>
           <FormError error={formError} />
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" variant={destructive ? "destructive" : "default"} disabled={busy}>
-              {busy ? "Working…" : confirmLabel}
+              {busy ? t("common.working") : (confirmLabel ?? t("common.confirm"))}
             </Button>
           </DialogFooter>
         </form>

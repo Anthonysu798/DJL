@@ -1,0 +1,34 @@
+# Run this stack through a dedicated unprivileged Docker daemon, separate from the database engine.
+name: djl-codex-pilot
+services:
+  codex-broker:
+    image: djl-codex-broker:pilot
+    restart: unless-stopped
+    environment:
+      DOCKER_HOST: unix:///var/run/djl-codex.sock
+      CODEX_BROKER_TOKEN: ${CODEX_BROKER_TOKEN:?Set the private broker credential}
+      CODEX_IMAGE: djl-codex:0.125.0
+      CODEX_NETWORK: djl-codex-pilot-runtime
+      CODEX_GATEWAY_URL: ${CODEX_GATEWAY_URL:?Set the private worker gateway URL}
+      CODEX_CONCURRENCY: "1"
+    volumes:
+      - ${CODEX_ROOTLESS_SOCKET:?Set the rootless socket path}:/var/run/djl-codex.sock
+    ports:
+      - ${CODEX_BROKER_BIND:?Bind to the private host bridge only}:8090
+    networks: [runtime, outbound]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 256m
+    pids_limit: 256
+    healthcheck:
+      test:
+        [CMD, bun, -e, "const r=await fetch('http://127.0.0.1:8090/health');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+networks:
+  runtime:
+    name: djl-codex-pilot-runtime
+    internal: true
+  outbound: {}

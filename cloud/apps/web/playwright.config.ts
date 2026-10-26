@@ -22,7 +22,7 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 180_000,
     env: {
-      NEXT_PUBLIC_DJL_MOCK_API: process.env.NEXT_PUBLIC_DJL_MOCK_API ?? "true",
+      NEXT_PUBLIC_DJL_MOCK_API: "true",
       NEXT_PUBLIC_API_URL: "http://localhost:8787",
     },
   },

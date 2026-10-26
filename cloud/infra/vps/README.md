@@ -74,6 +74,35 @@ prices, and available balance. The seed includes a zero-priced OpenRouter model
 for bounded staging tests; free capacity is rate-limited by OpenRouter. Other seed
 prices remain placeholders that must be confirmed before enabling them for users.
 
+### DeepSeek through OpenRouter
+
+`cloud/packages/db/src/configureDeepSeekModel.ts prepare` verifies the current
+DeepSeek V4.1 Flash endpoints and creates an audited, **disabled** catalog entry.
+It needs `DATABASE_URL` for a maintenance account with catalog/audit write access.
+The prepared entry uses paid subscription/top-up credits, conservative endpoint
+and scheduled prices with the existing 40% margin, and an 8,192-token output cap.
+Preparation makes no inference requests and does not change provider spending limits.
+
+After funding the existing OpenRouter account, run the same command with `activate`
+and `OPENROUTER_API_KEY` in the private environment. Activation rechecks metadata,
+requires at least $0.01 of account balance and key allowance, and verifies a bounded,
+streamed image/tool response with usage before enabling the model. Failed checks
+leave the catalog unchanged. Clients pick up the catalog within its cache interval.
+Keep credentials out of command arguments and shell history.
+
+From `cloud/infra/vps/` on an existing VPS deployment, use its private `.env`
+and the one-off overlay (no image rebuild or API restart):
+
+```sh
+docker compose --env-file .env -f compose.yml -f deepseek.compose.yml run \
+  --rm --no-deps --pull never -T migrate \
+  bun cloud/packages/db/src/configureDeepSeekModel.ts prepare
+```
+
+Replace `prepare` with `activate` only after funding. The overlay mounts the
+maintenance script and supplies the existing provider key to the maintenance
+container; it does not modify the API/worker service configuration.
+
 Desktop already exposes **Settings → Account → DJL Cloud → Sign in with browser**.
 For a local desktop build set `DJL_CLOUD_API_URL=https://API_HOST` and
 `DJL_CLOUD_WEB_URL=https://WEB_HOST`; set `VITE_DJL_CLOUD_WEB_URL=https://WEB_HOST`

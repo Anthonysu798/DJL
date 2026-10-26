@@ -11,6 +11,7 @@
 !packages/*/package.json
 !scripts/package.json
 # The public API contract the cloud apps import as @synara/contracts/cloud.
+!packages/shared/src/**
 !packages/contracts/src/**
 !packages/contracts/fixtures/cloud/**
 !cloud/**
@@ -26,3 +27,5 @@ cloud/infra/cloudflare
 cloud/infra/vps/.secrets
 cloud/infra/vps/backups
 cloud/infra/vps/Caddyfile.host
+
+cloud/infra/vps/compose.host.yml

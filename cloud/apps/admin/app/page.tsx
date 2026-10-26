@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Users, UserPlus, Activity, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { Donut } from "@/components/charts/Donut";
@@ -23,8 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { admin, credits, usd } from "@/lib/api";
+import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
+import { useI18n } from "@/components/LocaleProvider";
 
 interface Stats {
   range: string;
@@ -54,19 +57,6 @@ interface UserRow {
 
 type Range = "day" | "week" | "month" | "year";
 type Metric = "requests" | "signups" | "active" | "revenue";
-const RANGE_LABEL: Record<Range, string> = {
-  day: "Today",
-  week: "Last 7 days",
-  month: "Last 30 days",
-  year: "Last 12 months",
-};
-const PLAN_LABEL: Record<string, string> = {
-  free: "Free",
-  trial: "Trial",
-  starter: "Starter",
-  business: "Business",
-  autopilot: "Autopilot",
-};
 const sum = (rows: readonly Record<string, unknown>[], key: string) =>
   rows.reduce((a, r) => a + Number(r[key] ?? 0), 0);
 
@@ -90,6 +80,23 @@ function fillDays(
 }
 
 export default function Overview() {
+  const { t, number, credits, currency, date } = useI18n();
+  const usd = (cents: number) => currency(cents / 100);
+  const RANGE_LABEL: Record<Range, string> = {
+    day: t("range.today"),
+    week: t("range.week"),
+    month: t("range.month"),
+    year: t("range.year"),
+  };
+  const PLAN_LABEL: Record<string, string> = {
+    free: t("plan.free"),
+    trial: t("plan.trial"),
+    starter: t("plan.starter"),
+    business: t("plan.business"),
+    autopilot: t("plan.autopilot"),
+  };
+
+  const router = useRouter();
   const [range, setRange] = useState<Range>("week");
   const [metric, setMetric] = useState<Metric>("requests");
   const stats = useLoad(() => admin<Stats>(`/stats?range=${range}`), [range]);
@@ -102,33 +109,33 @@ export default function Overview() {
   > = s
     ? {
         requests: {
-          title: "Gateway requests",
+          title: t("dashboard.gatewayRequests"),
           rows: fillDays(
             range,
             s.usage.map((r) => ({ day: r.day, value: r.requests })),
           ),
         },
         signups: {
-          title: "Signups",
+          title: t("dashboard.signups"),
           rows: fillDays(
             range,
             s.signups.map((r) => ({ day: r.day, value: r.n })),
           ),
         },
         active: {
-          title: "Active users",
+          title: t("dashboard.activeUsers"),
           rows: fillDays(
             range,
             s.usage.map((r) => ({ day: r.day, value: r.active })),
           ),
         },
         revenue: {
-          title: "Revenue",
+          title: t("dashboard.revenue"),
           rows: fillDays(
             range,
             s.revenue.map((r) => ({ day: r.day, value: r.cents / 100 })),
           ),
-          format: (v) => `$${v.toFixed(2)}`,
+          format: (v) => currency(v),
         },
       }
     : {
@@ -140,7 +147,7 @@ export default function Overview() {
 
   const rangeSelect = (
     <Select value={range} onValueChange={(v) => setRange(v as Range)}>
-      <SelectTrigger className="h-10 w-44 rounded-xl" aria-label="Range">
+      <SelectTrigger className="h-10 w-44 rounded-xl" aria-label={t("common.range")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -154,11 +161,7 @@ export default function Overview() {
   );
 
   return (
-    <Shell
-      title="Dashboard"
-      subtitle="Signups, usage, revenue, and the state of the platform."
-      actions={rangeSelect}
-    >
+    <Shell title={t("nav.dashboard")} subtitle={t("dashboard.description")} actions={rangeSelect}>
       {stats.error ? (
         <p role="alert" className="mb-4 text-sm text-destructive">
           {stats.error}
@@ -166,28 +169,37 @@ export default function Overview() {
       ) : null}
       {s ? (
         <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-flow-dense gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatTile
-              label="Total users"
-              value={s.totals.users.toLocaleString()}
-              hint={`${s.totals.orgs.toLocaleString()} organizations · ${s.totals.paid.toLocaleString()} paying`}
-              menu={[{ label: "Open users", onSelect: () => (window.location.href = "/users") }]}
+              label={t("dashboard.totalUsers")}
+              icon={Users}
+              value={number(s.totals.users)}
+              hint={t("dashboard.accountTotals", {
+                orgs: number(s.totals.orgs),
+                paid: number(s.totals.paid),
+              })}
+              menu={[{ label: t("dashboard.openUsers"), onSelect: () => router.push("/users") }]}
             />
             <StatTile
-              label={`Signups · ${RANGE_LABEL[range]}`}
-              value={sum(s.signups, "n").toLocaleString()}
+              label={t("dashboard.signups")}
+              icon={UserPlus}
+              value={number(sum(s.signups, "n"))}
               current={sum(s.signups, "n")}
               previous={s.previous.signups}
             />
             <StatTile
-              label={`Gateway requests · ${RANGE_LABEL[range]}`}
-              value={sum(s.usage, "requests").toLocaleString()}
+              label={t("dashboard.gatewayRequests")}
+              icon={Activity}
+              value={number(sum(s.usage, "requests"))}
               current={sum(s.usage, "requests")}
               previous={s.previous.requests}
-              hint={`${credits(String(sum(s.usage, "settled")))} credits settled`}
+              hint={t("dashboard.creditsSettled", {
+                credits: credits(s.usage.reduce((total, row) => total + BigInt(row.settled), 0n)),
+              })}
             />
             <StatTile
-              label={`Revenue · ${RANGE_LABEL[range]}`}
+              label={t("dashboard.revenue")}
+              icon={Wallet}
               value={usd(sum(s.revenue, "cents"))}
               current={sum(s.revenue, "cents")}
               previous={s.previous.cents}
@@ -200,20 +212,20 @@ export default function Overview() {
               format={series[metric].format}
               controls={
                 <Select value={metric} onValueChange={(v) => setMetric(v as Metric)}>
-                  <SelectTrigger className="h-9 w-44 rounded-lg" aria-label="Metric">
+                  <SelectTrigger className="h-9 w-44 rounded-lg" aria-label={t("common.metric")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="requests">Gateway requests</SelectItem>
-                    <SelectItem value="signups">Signups</SelectItem>
-                    <SelectItem value="active">Active users</SelectItem>
-                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="requests">{t("dashboard.gatewayRequests")}</SelectItem>
+                    <SelectItem value="signups">{t("dashboard.signups")}</SelectItem>
+                    <SelectItem value="active">{t("dashboard.activeUsers")}</SelectItem>
+                    <SelectItem value="revenue">{t("dashboard.revenue")}</SelectItem>
                   </SelectContent>
                 </Select>
               }
             />
             <Donut
-              title="Organizations by plan"
+              title={t("dashboard.organizationsByPlan")}
               total={s.totals.orgs}
               totalLabel="organizations"
               slices={["free", "trial", "starter", "business", "autopilot"].map((id) => ({
@@ -222,26 +234,26 @@ export default function Overview() {
               }))}
               action={
                 <Link href="/plans" className="text-sm text-primary hover:underline">
-                  View plans
+                  {t("dashboard.viewPlans")}
                 </Link>
               }
             />
           </div>
           <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
             <PageCard
-              title="Recent users"
+              title={t("dashboard.recentUsers")}
               action={
                 <Link href="/users" className="text-sm text-primary hover:underline">
-                  All users
+                  {t("users.all")}
                 </Link>
               }
             >
               <Table>
                 <TableHeader>
                   <TableRow className={headRowClass}>
-                    <TableHead>User</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined</TableHead>
+                    <TableHead>{t("common.user")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("common.joined")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -260,36 +272,34 @@ export default function Overview() {
                       </TableCell>
                       <TableCell>
                         {u.banned ? (
-                          <StatusPill tone="danger">Suspended</StatusPill>
+                          <StatusPill tone="danger">{t("common.suspended")}</StatusPill>
                         ) : u.emailVerified ? (
-                          <StatusPill tone="success">Active</StatusPill>
+                          <StatusPill tone="success">{t("common.active")}</StatusPill>
                         ) : (
-                          <StatusPill tone="neutral">Unverified</StatusPill>
+                          <StatusPill tone="neutral">{t("common.unverified")}</StatusPill>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{date(u.createdAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </PageCard>
             <div className="space-y-4">
-              <PageCard title="Top models">
+              <PageCard title={t("dashboard.topModels")}>
                 {s.byModel.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No settled requests in this range.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.noRequests")}</p>
                 ) : (
                   <ul className="space-y-2 text-sm">
                     {s.byModel.slice(0, 6).map((m) => (
                       <li key={m.model_id} className="flex items-center justify-between gap-3">
                         <span className="truncate">{m.model_id}</span>
                         <span className="flex items-center gap-3 text-muted-foreground">
-                          <span>{m.requests} req</span>
+                          <span>
+                            {m.requests} {t("common.requestsShort")}
+                          </span>
                           <Badge variant="secondary" className="tabular-nums">
-                            {credits(m.settled)} cr
+                            {credits(m.settled)} {t("common.creditsShort")}
                           </Badge>
                         </span>
                       </li>
@@ -297,43 +307,47 @@ export default function Overview() {
                   </ul>
                 )}
               </PageCard>
-              <PageCard title="Servers">
+              <PageCard title={t("nav.servers")}>
                 {status.data ? (
                   <dl className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <dt className="text-muted-foreground">Version</dt>
+                      <dt className="text-muted-foreground">{t("common.version")}</dt>
                       <dd className="font-medium">{status.data.version}</dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">In-flight streams</dt>
+                      <dt className="text-muted-foreground">{t("dashboard.inFlight")}</dt>
                       <dd className="font-medium tabular-nums">{status.data.inFlight}</dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">Open reservations</dt>
+                      <dt className="text-muted-foreground">{t("dashboard.reservations")}</dt>
                       <dd className="font-medium tabular-nums">{status.data.openReservations}</dd>
                     </div>
                     {Object.entries(status.data.breakers).map(([p, st]) => (
                       <div key={p}>
-                        <dt className="text-muted-foreground">{p} breaker</dt>
+                        <dt className="text-muted-foreground">
+                          {p} {t("dashboard.breaker")}
+                        </dt>
                         <dd className="font-medium">{st}</dd>
                       </div>
                     ))}
                     {Object.keys(status.data.breakers).length === 0 ? (
                       <div>
-                        <dt className="text-muted-foreground">Provider breakers</dt>
-                        <dd className="font-medium">all closed</dd>
+                        <dt className="text-muted-foreground">{t("dashboard.breakers")}</dt>
+                        <dd className="font-medium">{t("dashboard.allClosed")}</dd>
                       </div>
                     ) : null}
                   </dl>
                 ) : (
-                  <p className="text-sm text-muted-foreground">{status.error ?? "Loading…"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {status.error ?? t("common.loading")}
+                  </p>
                 )}
               </PageCard>
             </div>
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       )}
     </Shell>
   );

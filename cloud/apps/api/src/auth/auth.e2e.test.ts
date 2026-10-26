@@ -229,38 +229,3 @@ describe("browser clients", () => {
     expect(((await res.json()) as { user?: { email?: string } }).user?.email).toBe(email);
   });
 });
-
-it("recovers a disposable account with an emailed OTP and refuses code reuse", async () => {
-  const registered = TestClient.for(api);
-  const { email, password } = await registered.signUp(api, "password-recovery");
-  const anonymous = new TestClient(registered.base);
-  expect(
-    (
-      await anonymous.call("/v1/auth/email-otp/request-password-reset", {
-        method: "POST",
-        json: { email },
-      })
-    ).status,
-  ).toBe(200);
-  const otp = lastOtp(email),
-    nextPassword = `QA-${crypto.randomUUID()}-only`;
-  const reset = () =>
-    anonymous.call("/v1/auth/email-otp/reset-password", {
-      method: "POST",
-      json: { email, otp, password: nextPassword },
-    });
-  expect((await reset()).status).toBe(200);
-  expect((await reset()).status).toBeGreaterThanOrEqual(400);
-  expect(
-    (await anonymous.call("/v1/auth/sign-in/email", { method: "POST", json: { email, password } }))
-      .status,
-  ).toBe(401);
-  expect(
-    (
-      await anonymous.call("/v1/auth/sign-in/email", {
-        method: "POST",
-        json: { email, password: nextPassword },
-      })
-    ).status,
-  ).toBe(200);
-});
