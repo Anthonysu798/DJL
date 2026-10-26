@@ -77,3 +77,6 @@ cloud/infra/vps/backups/
 
 # Server-specific deployment override; never package into a release.
 cloud/infra/vps/compose.host.yml
+
+# Local Python controller test bytecode.
+cloud/infra/operations/__pycache__/
