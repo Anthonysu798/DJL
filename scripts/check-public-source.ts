@@ -131,7 +131,9 @@ export function findPublicSourceViolations(
       (file.path.startsWith("scripts/") ||
         file.path.includes("/scripts/") ||
         /\.(?:sh|py|cjs|mjs)$/i.test(file.path));
-    if (/[A-Za-z0-9._-]+@\d{1,3}(?:\.\d{1,3}){3}/.test(text)) {
+    // Database and HTTP URL userinfo is not an SSH destination.
+    const sshHostText = text.replace(/\b(?:https?|postgres(?:ql)?):\/\/[^\s"'`]+/gi, "");
+    if (/[A-Za-z0-9._-]+@\d{1,3}(?:\.\d{1,3}){3}/.test(sshHostText)) {
       violations.push({
         path: file.path,
         rule: "hard-coded-release-host",
