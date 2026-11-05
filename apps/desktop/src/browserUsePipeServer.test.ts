@@ -3,7 +3,9 @@
 // Layer: Desktop test
 // Depends on: Vitest and browserUsePipeServer path resolution exports
 
-import { existsSync, writeFileSync } from "node:fs";
+import { once } from "node:events";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
+import { createConnection } from "node:net";
 import { basename, dirname } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -13,6 +15,24 @@ import {
   resolveConfiguredBrowserUsePipePath,
   resolveDefaultBrowserUsePipePath,
 } from "./browserUsePipeServer";
+
+function testPipePath(label: string): string {
+  const suffix = `${label}-${process.pid}-${Date.now()}`;
+  return process.platform === "win32"
+    ? String.raw`\\.\pipe\codex-browser-use-synara-iab-${suffix}`
+    : `/tmp/codex-browser-use/synara-iab-${suffix}.sock`;
+}
+
+async function connectToPipe(pipePath: string): Promise<void> {
+  const socket = createConnection(pipePath);
+  const timeout = setTimeout(() => socket.destroy(new Error("IPC connection timed out")), 3_000);
+  try {
+    await once(socket, "connect");
+  } finally {
+    clearTimeout(timeout);
+    socket.destroy();
+  }
+}
 
 describe("browser-use pipe path resolution", () => {
   it("creates a discoverable unix socket path under the Codex browser-use directory", () => {
@@ -78,29 +98,55 @@ describe("browser-use pipe path resolution", () => {
     ).toMatch(/^\\\\\.\\pipe\\codex-browser-use-synara-iab-\d+$/);
   });
 
-  it("removes its Unix socket when disposed", async () => {
-    const pipePath = `/tmp/codex-browser-use/synara-iab-test-${process.pid}-${Date.now()}.sock`;
-    const server = new BrowserUsePipeServer({} as never, pipePath);
-
-    await server.start();
-    expect(existsSync(pipePath)).toBe(true);
-
-    await server.dispose();
-    expect(existsSync(pipePath)).toBe(false);
-  });
-
-  it("replaces a stale file before listening on its Unix socket", async () => {
-    const pipePath = `/tmp/codex-browser-use/synara-iab-stale-${process.pid}-${Date.now()}.sock`;
-    writeFileSync(pipePath, "stale");
+  it("closes its native IPC endpoint when disposed", async () => {
+    const pipePath = testPipePath("test");
     const server = new BrowserUsePipeServer({} as never, pipePath);
 
     try {
       await server.start();
-      expect(existsSync(pipePath)).toBe(true);
+      await expect(connectToPipe(pipePath)).resolves.toBeUndefined();
+      if (process.platform !== "win32") expect(lstatSync(pipePath).isSocket()).toBe(true);
     } finally {
       await server.dispose();
     }
 
     expect(existsSync(pipePath)).toBe(false);
+    await expect(connectToPipe(pipePath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("reuses its native endpoint without mistaking an active Windows pipe for a stale file", async () => {
+    const pipePath = testPipePath("stale");
+    const server = new BrowserUsePipeServer({} as never, pipePath);
+
+    if (process.platform !== "win32") {
+      mkdirSync(dirname(pipePath), { recursive: true });
+      writeFileSync(pipePath, "stale");
+    }
+    try {
+      await server.start();
+      if (process.platform === "win32") {
+        const duplicate = new BrowserUsePipeServer({} as never, pipePath);
+        try {
+          await expect(duplicate.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
+        } finally {
+          await duplicate.dispose();
+        }
+      } else {
+        expect(lstatSync(pipePath).isSocket()).toBe(true);
+      }
+      await expect(connectToPipe(pipePath)).resolves.toBeUndefined();
+    } finally {
+      await server.dispose();
+    }
+
+    expect(existsSync(pipePath)).toBe(false);
+    await expect(connectToPipe(pipePath)).rejects.toMatchObject({ code: "ENOENT" });
+    try {
+      await server.start();
+      await expect(connectToPipe(pipePath)).resolves.toBeUndefined();
+    } finally {
+      await server.dispose();
+    }
+    await expect(connectToPipe(pipePath)).rejects.toMatchObject({ code: "ENOENT" });
   });
 });

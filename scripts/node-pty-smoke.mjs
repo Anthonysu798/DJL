@@ -69,4 +69,6 @@ terminal.onExit((event) => {
     fail(`PTY process exited with code ${event.exitCode}.`, output);
   }
   console.log("[node-pty-smoke] node-pty loaded and spawned successfully.");
+  // All output/exit assertions have passed; lingering native handles must not keep this smoke CLI alive.
+  process.exit(0);
 });

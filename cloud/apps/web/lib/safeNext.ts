@@ -12,5 +12,8 @@ const UNSAFE = /[\\\u0000-\u001f\u007f]/;
 export function safeNext(value: string | null, fallback = "/chat"): string {
   if (!value?.startsWith("/") || value.startsWith("//") || UNSAFE.test(value)) return fallback;
   const url = new URL(value, BASE);
-  return url.origin === BASE ? `${url.pathname}${url.search}${url.hash}` : fallback;
+  // Dot-segment normalization can turn a single-leading-slash input into a network path.
+  return url.origin === BASE && !url.pathname.startsWith("//")
+    ? `${url.pathname}${url.search}${url.hash}`
+    : fallback;
 }

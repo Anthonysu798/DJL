@@ -11,11 +11,14 @@ import {
 } from "@/components/AuthFrame";
 import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/lib/locale-context";
+import { safeNext } from "@/lib/safeNext";
 
 function ResetForm() {
   const { d } = useLocale();
   const params = useSearchParams();
   const token = params.get("token");
+  const next = safeNext(params.get("next"), "");
+  const recoveryQuery = next ? `?${new URLSearchParams({ next })}` : "";
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<AuthFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ function ResetForm() {
     <AuthFrame
       footer={
         <Link
-          href={invalid ? "/forgot-password" : "/sign-in"}
+          href={`${invalid ? "/forgot-password" : "/sign-in"}${recoveryQuery}`}
           className="text-neutral-900 underline"
         >
           {invalid ? d.auth.forgot : d.signIn}

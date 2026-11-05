@@ -1,4 +1,5 @@
 "use client";
+import type { CommerceStaffRole } from "@synara/contracts/cloud";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,7 +34,8 @@ export interface Member {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "employee";
+  role: "admin" | "employee" | "commerce";
+  commerceRole?: CommerceStaffRole;
   status: "invited" | "active" | "disabled";
   emailVerifiedAt: string | null;
   totpEnabled: boolean;
@@ -42,11 +44,32 @@ export interface Member {
   createdAt: string;
 }
 
-export const ROLE_LABEL: Record<Member["role"], string> = { admin: "Admin", employee: "Employee" };
-export const ROLE_OPTIONS = [
+const PLATFORM_ROLE_LABEL = { admin: "Admin", employee: "Employee" };
+const PLATFORM_ROLE_OPTIONS = [
   { value: "employee", label: "Employee · support desk" },
   { value: "admin", label: "Admin · full access" },
 ];
+const COMMERCE_ROLE_LABEL: Record<CommerceStaffRole, string> = {
+  operations: "Commerce · Operations",
+  support: "Commerce · Support",
+  finance: "Commerce · Finance",
+  read_only: "Commerce · Read-only",
+  none: "Commerce · No access",
+};
+const COMMERCE_INVITE_OPTIONS = (["operations", "support", "finance", "read_only"] as const).map(
+  (value) => ({ value, label: COMMERCE_ROLE_LABEL[value] }),
+);
+const INVITE_OPTIONS = [...PLATFORM_ROLE_OPTIONS, ...COMMERCE_INVITE_OPTIONS];
+const COMMERCE_EDIT_OPTIONS = [
+  ...COMMERCE_INVITE_OPTIONS,
+  { value: "none", label: "Revoke commerce access" },
+];
+
+export function memberRoleLabel(member: Member): string {
+  return member.role === "commerce"
+    ? COMMERCE_ROLE_LABEL[member.commerceRole ?? "none"]
+    : PLATFORM_ROLE_LABEL[member.role];
+}
 
 export function MemberStatus({ status }: { status: Member["status"] }) {
   if (status === "active") return <StatusPill tone="success">Active</StatusPill>;
@@ -73,7 +96,7 @@ export default function TeamPage() {
   return (
     <Shell
       title="Team"
-      subtitle="Everyone who can open this console. Admins run the platform; employees handle support."
+      subtitle="Manage platform admins, support employees, and commerce-only staff."
       actions={
         <ReasonDialog
           trigger={
@@ -102,14 +125,28 @@ export default function TeamPage() {
               name: "role",
               label: "Role",
               kind: "select",
-              options: ROLE_OPTIONS,
+              options: INVITE_OPTIONS,
               defaultValue: "employee",
-              validate: oneOf(["admin", "employee"], "Role"),
+              validate: oneOf(
+                INVITE_OPTIONS.map((option) => option.value),
+                "Role",
+              ),
+              hint: "Commerce roles do not grant access to AI or platform administration.",
             },
           ]}
           confirmLabel="Send invite"
-          onConfirm={(v, reason) =>
-            admin("/admins", { method: "POST", json: { ...v, reason } }).then(refresh)
+          onConfirm={({ name, email, role }, reason) =>
+            admin("/admins", {
+              method: "POST",
+              json: {
+                name,
+                email,
+                reason,
+                ...(role === "admin" || role === "employee"
+                  ? { role }
+                  : { role: "commerce", commerceRole: role }),
+              },
+            }).then(refresh)
           }
         />
       }
@@ -154,7 +191,7 @@ export default function TeamPage() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{ROLE_LABEL[m.role]}</Badge>
+                    <Badge variant="secondary">{memberRoleLabel(m)}</Badge>
                   </TableCell>
                   <TableCell>
                     <MemberStatus status={m.status} />
@@ -326,6 +363,11 @@ export default function TeamPage() {
             if (!o) close();
           }}
           title={`Edit ${action.member.name}`}
+          description={
+            action.member.role === "commerce"
+              ? "Changing the commerce role signs them out everywhere. Revoking access keeps the account commerce-only."
+              : undefined
+          }
           fields={[
             {
               name: "name",
@@ -333,24 +375,42 @@ export default function TeamPage() {
               defaultValue: action.member.name,
               validate: length(1, 80, "Name"),
             },
-            {
-              name: "role",
-              label: "Role",
-              kind: "select",
-              options: ROLE_OPTIONS,
-              defaultValue: action.member.role,
-              validate: oneOf(["admin", "employee"], "Role"),
-              hint:
-                action.member.id === me
-                  ? "You cannot change your own role."
-                  : "Changing the role signs them out everywhere.",
-            },
+            action.member.role === "commerce"
+              ? {
+                  name: "commerceRole",
+                  label: "Commerce role",
+                  kind: "select",
+                  options: COMMERCE_EDIT_OPTIONS,
+                  defaultValue: action.member.commerceRole ?? "none",
+                  validate: oneOf(
+                    COMMERCE_EDIT_OPTIONS.map((option) => option.value),
+                    "Commerce role",
+                  ),
+                }
+              : {
+                  name: "role",
+                  label: "Role",
+                  kind: "select",
+                  options: PLATFORM_ROLE_OPTIONS,
+                  defaultValue: action.member.role,
+                  validate: oneOf(["admin", "employee"], "Role"),
+                  hint:
+                    action.member.id === me
+                      ? "You cannot change your own role."
+                      : "Changing the role signs them out everywhere.",
+                },
           ]}
           confirmLabel="Save"
           onConfirm={(v, reason) =>
             admin(`/admins/${action.member.id}`, {
               method: "PATCH",
-              json: { name: v.name, role: v.role, reason },
+              json: {
+                name: v.name,
+                reason,
+                ...(action.member.role === "commerce"
+                  ? { commerceRole: v.commerceRole }
+                  : { role: v.role }),
+              },
             }).then(refresh)
           }
         />

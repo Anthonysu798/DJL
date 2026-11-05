@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -31,9 +31,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { admin, getToken, setToken } from "@/lib/api";
+import {
+  admin,
+  getAdminSessionRevision,
+  getToken,
+  setToken,
+  subscribeAdminSession,
+} from "@/lib/api";
+import { adminHome, type AdminIdentity } from "@/lib/commerce-access";
 import { cn } from "@/lib/utils";
 
+const NAV_COMMERCE = [{ href: "/commerce", label: "Commerce", icon: Boxes }] as const;
 export const NAV_MAIN = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/users", label: "Users", icon: Users },
@@ -41,6 +49,7 @@ export const NAV_MAIN = [
   { href: "/audit", label: "Audit log", icon: ScrollText },
 ] as const;
 export const NAV_PLATFORM = [
+  ...NAV_COMMERCE,
   { href: "/models", label: "Models", icon: Sparkles },
   { href: "/plans", label: "Plans", icon: Boxes },
   { href: "/usage", label: "Usage windows", icon: Gauge },
@@ -49,10 +58,7 @@ export const NAV_PLATFORM = [
   { href: "/team", label: "Team", icon: UserRound },
 ] as const;
 
-interface Me {
-  admin: { id: string; email: string; role: "admin" | "employee"; mfaVerified: boolean };
-}
-const ROLE_LABEL = { admin: "Admin", employee: "Employee" } as const;
+const ROLE_LABEL = { admin: "Admin", employee: "Employee", commerce: "Commerce staff" } as const;
 interface AuditRow {
   id: string;
   action: string;
@@ -78,7 +84,7 @@ function NavGroup({
       </div>
       <nav className="flex flex-col gap-0.5">
         {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          const active = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
           return (
             <Link
               key={href}
@@ -173,21 +179,41 @@ export function Shell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [me, setMe] = useState<Me["admin"] | null>(null);
+  const revision = useSyncExternalStore(subscribeAdminSession, getAdminSessionRevision, () => 0);
+  const [profile, setProfile] = useState<{ identity: AdminIdentity; revision: number } | null>(
+    null,
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const me = profile?.revision === revision ? profile.identity : null;
+  const commerceStaff = me?.role === "commerce";
+  const platformStaff = me?.role === "admin" || me?.role === "employee";
+  const home = adminHome(me?.role);
+  const redirectToCommerce = commerceStaff && pathname !== home && !pathname.startsWith(`${home}/`);
+
   useEffect(() => {
     if (!getToken()) {
       router.replace("/login");
       return;
     }
-    admin<Me>("/me")
-      .then((m) => {
-        if (!m.admin.mfaVerified) router.replace("/login?step=totp");
-        else setMe(m.admin);
+    let active = true;
+    admin<{ admin: AdminIdentity }>("/me")
+      .then(({ admin: identity }) => {
+        if (!active || getAdminSessionRevision() !== revision) return;
+        if (!identity.mfaVerified) router.replace("/login?step=totp");
+        else setProfile({ identity, revision });
       })
-      .catch(() => router.replace("/login"));
-  }, [router]);
+      .catch(() => {
+        if (active && getAdminSessionRevision() === revision) router.replace("/login");
+      });
+    return () => {
+      active = false;
+    };
+  }, [revision, router]);
   useEffect(() => {
+    if (redirectToCommerce) router.replace(home);
+  }, [home, redirectToCommerce, router]);
+  useEffect(() => {
+    if (!platformStaff) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -196,25 +222,35 @@ export function Shell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [platformStaff]);
   const signOut = async () => {
     await admin("/auth/logout", { method: "POST", json: {} }).catch(() => undefined);
-    setToken(null);
-    router.replace("/login");
+    if (getAdminSessionRevision() === revision) setToken(null);
   };
+
+  if (!me || redirectToCommerce || (!commerceStaff && !platformStaff))
+    return (
+      <main className="px-8 pt-4 pb-10">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </main>
+    );
 
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-6 md:flex">
-        <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
+        <Link href={home} className="mb-8 flex items-center gap-2.5 px-2">
           <span className="grid size-8 place-items-center rounded-lg bg-primary">
             <span className="size-3.5 rounded-full border-[3px] border-primary-foreground" />
           </span>
           <span className="text-xl font-semibold tracking-tight">DJL</span>
         </Link>
         <div className="space-y-7">
-          <NavGroup title="Navigation" items={NAV_MAIN} pathname={pathname} />
-          {me?.role === "admin" ? (
+          <NavGroup
+            title="Navigation"
+            items={commerceStaff ? NAV_COMMERCE : NAV_MAIN}
+            pathname={pathname}
+          />
+          {me.role === "admin" ? (
             <NavGroup title="Platform" items={NAV_PLATFORM} pathname={pathname} />
           ) : null}
         </div>
@@ -229,40 +265,44 @@ export function Shell({
       </aside>
       <div className="min-w-0 flex-1">
         <header className="flex items-center gap-3 px-8 pt-6 pb-2">
-          <button
-            type="button"
-            onClick={() => setPaletteOpen(true)}
-            className="flex h-11 w-full max-w-md items-center gap-3 rounded-xl border bg-card px-4 text-left text-[15px] text-muted-foreground hover:bg-accent/40"
-          >
-            <Search className="size-[18px]" strokeWidth={1.75} />
-            <span className="flex-1">Search anything</span>
-            <kbd className="rounded-md border bg-background px-1.5 py-0.5 font-sans text-xs">⌘</kbd>
-            <kbd className="rounded-md border bg-background px-1.5 py-0.5 font-sans text-xs">K</kbd>
-          </button>
+          {platformStaff ? (
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="flex h-11 w-full max-w-md items-center gap-3 rounded-xl border bg-card px-4 text-left text-[15px] text-muted-foreground hover:bg-accent/40"
+            >
+              <Search className="size-[18px]" strokeWidth={1.75} />
+              <span className="flex-1">Search anything</span>
+              <kbd className="rounded-md border bg-background px-1.5 py-0.5 font-sans text-xs">
+                ⌘
+              </kbd>
+              <kbd className="rounded-md border bg-background px-1.5 py-0.5 font-sans text-xs">
+                K
+              </kbd>
+            </button>
+          ) : null}
           <div className="ml-auto flex items-center gap-4">
             {actions}
             <ThemeToggle />
             <span className="h-6 w-px bg-border" />
-            <Notifications />
+            {platformStaff ? <Notifications /> : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button type="button" aria-label="Account" className="rounded-xl">
                   <Avatar className="size-10 rounded-xl">
                     <AvatarFallback className="rounded-xl bg-primary/10 text-sm font-medium text-primary">
-                      {(me?.email ?? "?").slice(0, 2).toUpperCase()}
+                      {me.email.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
-                  <div className="truncate text-sm font-medium">{me?.email}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {me ? ROLE_LABEL[me.role] : ""}
-                  </div>
+                  <div className="truncate text-sm font-medium">{me.email}</div>
+                  <div className="text-xs text-muted-foreground">{ROLE_LABEL[me.role]}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {me?.role === "admin" ? (
+                {me.role === "admin" ? (
                   <>
                     <DropdownMenuItem onSelect={() => router.push("/team")}>Team</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => router.push("/settings")}>
@@ -283,14 +323,16 @@ export function Shell({
               {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
             </div>
           ) : null}
-          {me ? children : <p className="text-sm text-muted-foreground">Loading…</p>}
+          {children}
         </main>
       </div>
-      <CommandPalette
-        open={paletteOpen}
-        onOpenChange={setPaletteOpen}
-        isAdmin={me?.role === "admin"}
-      />
+      {platformStaff ? (
+        <CommandPalette
+          open={paletteOpen}
+          onOpenChange={setPaletteOpen}
+          isAdmin={me.role === "admin"}
+        />
+      ) : null}
     </div>
   );
 }

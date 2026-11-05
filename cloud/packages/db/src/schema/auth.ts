@@ -30,6 +30,7 @@ export const user = pgTable("user", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   role: text("role"),
   banned: boolean("banned").default(false),
+  commerceAuthGeneration: integer("commerce_auth_generation").default(0).notNull(),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
   /** Language for emails and texts ("en" | "zh-Hans"); null means English. */
@@ -60,6 +61,28 @@ export const session = pgTable(
   (table) => [index("session_userId_idx").on(table.userId)],
 );
 
+/** Commerce sign-ins share the user, but never the Cloud session table. */
+export const commerceAuthSession = pgTable(
+  "commerce_auth_session",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    authGeneration: integer("auth_generation").default(-1).notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("commerce_auth_session_user_id_idx").on(table.userId)],
+);
 export const account = pgTable(
   "account",
   {
@@ -104,6 +127,25 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+/** Email codes and second-factor challenges are scoped to the commerce realm. */
+export const commerceAuthVerification = pgTable(
+  "commerce_auth_verification",
+  {
+    id: uuid("id")
+      .default(sql`pg_catalog.gen_random_uuid()`)
+      .primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    authGeneration: integer("auth_generation").default(-1).notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("commerce_auth_verification_identifier_idx").on(table.identifier)],
+);
 export const organization = pgTable(
   "organization",
   {

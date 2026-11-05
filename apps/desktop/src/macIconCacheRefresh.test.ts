@@ -1,3 +1,4 @@
+import * as Path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,8 +11,9 @@ import {
 
 describe("resolveLaunchVersionRecordPath", () => {
   it("places the record file inside the userData directory", () => {
-    expect(resolveLaunchVersionRecordPath("/home/me/AppData/Synara")).toBe(
-      "/home/me/AppData/Synara/last-launch-version.json",
+    const userDataPath = Path.resolve("test-user-data");
+    expect(resolveLaunchVersionRecordPath(userDataPath)).toBe(
+      Path.join(userDataPath, "last-launch-version.json"),
     );
   });
 });

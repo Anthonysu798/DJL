@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -20,10 +21,17 @@ const id = () =>
 const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
 
 /**
- * Two roles (decision 2026-09-13): `admin` runs the platform and the team,
- * `employee` handles support work. Permission sets live in AdminAuth.
+ * Existing platform roles: `admin` and `employee`. Dedicated `commerce` accounts
+ * never inherit platform permissions, including on an older server rollback.
  */
-export const adminRoleEnum = pgEnum("admin_role", ["admin", "employee"]);
+export const adminRoleEnum = pgEnum("admin_role", ["admin", "employee", "commerce"]);
+export const commerceStaffRoleEnum = pgEnum("commerce_staff_role", [
+  "operations",
+  "support",
+  "finance",
+  "read_only",
+  "none",
+]);
 
 /**
  * Admin accounts are a separate population from users. Never share a table.
@@ -37,6 +45,8 @@ export const admins = pgTable(
     email: text("email").notNull(),
     name: text("name").notNull(),
     role: adminRoleEnum("role").notNull(),
+    /** Null retains legacy platform access; any value is exclusively commerce-scoped. */
+    commerceRole: commerceStaffRoleEnum("commerce_role"),
     /** Null until the invite is accepted. */
     passwordHash: text("password_hash"),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
@@ -53,6 +63,10 @@ export const admins = pgTable(
     invitedBy: uuid("invited_by"),
   },
   (t) => [
+    check(
+      "admins_commerce_scope_check",
+      sql`(${t.role}::text = 'commerce' and ${t.commerceRole} is not null) or (${t.role}::text in ('admin','employee') and ${t.commerceRole} is null)`,
+    ),
     uniqueIndex("admins_email_live_uidx")
       .on(t.email)
       .where(sql`${t.deletedAt} is null`),
