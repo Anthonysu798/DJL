@@ -5,6 +5,7 @@
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { fileURLToPath } from "node:url";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -14,7 +15,7 @@ if (!url) {
 const sql = postgres(url, { max: 1, prepare: false });
 try {
   await migrate(drizzle(sql), {
-    migrationsFolder: new URL("../drizzle", import.meta.url).pathname,
+    migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
   });
   console.log("migrations applied");
 } finally {

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'none'; img-src 'self' blob: data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>DJL 商城 · 交互原型</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <div class="demo-banner">
+      <span class="status-dot"></span>交互原型 ·
+      商品、订单与收益为模拟；识图为本地外观匹配，不会产生真实付款
+    </div>
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="#home" class="brand" aria-label="DJL 商城首页">DJL<span>商城</span></a>
+        <nav class="desktop-nav" aria-label="主导航">
+          <button data-view="home">商城</button><button data-view="find">图片找商品</button
+          ><button data-view="orders">订单</button><button data-view="profile">我的</button>
+        </nav>
+        <div class="header-actions">
+          <span class="locale">加拿大 · CAD</span
+          ><button class="icon-button cart-toggle" data-action="open-cart" aria-label="购物车">
+            <span data-icon="bag"></span><span class="cart-count" id="cart-count">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+    <main id="main"></main>
+    <footer class="site-footer">
+      <span>独立商城窗口 · 不影响你的 AI 工作区</span
+      ><button class="text-button" data-action="reset-confirm">重置演示数据</button>
+    </footer>
+    <nav class="mobile-nav" aria-label="手机主导航">
+      <button data-view="home" aria-label="商城"><span data-icon="home"></span>商城</button
+      ><button data-view="find" aria-label="找商品"><span data-icon="scan"></span>找商品</button
+      ><button data-view="orders" aria-label="订单"><span data-icon="orders"></span>订单</button
+      ><button data-view="profile" aria-label="我的"><span data-icon="user"></span>我的</button>
+    </nav>
+    <dialog id="product-dialog" class="product-dialog" aria-labelledby="product-title"></dialog>
+    <dialog id="cart-dialog" class="cart-dialog" aria-labelledby="cart-title"></dialog>
+    <dialog id="reset-dialog" class="small-dialog" aria-labelledby="reset-title">
+      <h2 id="reset-title">重置这份演示？</h2>
+      <p class="muted">将清空本机商城演示数据和当前识图照片，恢复示例收益。不会修改 AI 数据。</p>
+      <div class="dialog-actions">
+        <button class="button secondary" data-action="close-reset">取消</button
+        ><button class="button" data-action="reset">确认重置</button>
+      </div>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

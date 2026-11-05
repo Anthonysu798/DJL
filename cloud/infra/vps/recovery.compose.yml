@@ -1,0 +1,60 @@
+# Deliberately independent of compose.yml/.env: no API, worker, relay, ports or outbound network.
+services:
+  postgres:
+    image: ${RECOVERY_POSTGRES_IMAGE:?Verified backup image required}
+    pull_policy: never
+    restart: "no"
+    environment:
+      POSTGRES_USER: djl_admin
+      POSTGRES_DB: djl
+      POSTGRES_PASSWORD_FILE: /run/secrets/recovery-postgres-password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ${RECOVERY_TARGET:?Explicit new target required}/postgres-password
+        target: /run/secrets/recovery-postgres-password
+        read_only: true
+    networks: [isolated]
+    labels:
+      djl.recovery.run-id: ${RECOVERY_RUN_ID:?New run required}
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U djl_admin -d djl"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
+  files-restore:
+    image: ${RECOVERY_STORAGE_IMAGE:?Verified backup image required}
+    pull_policy: never
+    restart: "no"
+    profiles: [tools]
+    network_mode: none
+    user: "0"
+    entrypoint: [tar]
+    command: [-xzf, /backup/files.tar.gz, -C, /data]
+    volumes:
+      - type: volume
+        source: s3-data
+        target: /data
+        volume:
+          nocopy: true
+      - type: bind
+        source: ${RECOVERY_TARGET:?Explicit new target required}/source
+        target: /backup
+        read_only: true
+    labels:
+      djl.recovery.run-id: ${RECOVERY_RUN_ID:?New run required}
+
+networks:
+  isolated:
+    external: true
+    name: ${RECOVERY_PROJECT:?New project required}_isolated
+
+volumes:
+  postgres-data:
+    external: true
+    name: ${RECOVERY_PROJECT:?New project required}_postgres-data
+  s3-data:
+    external: true
+    name: ${RECOVERY_PROJECT:?New project required}_s3-data

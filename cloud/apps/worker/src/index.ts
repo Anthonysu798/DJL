@@ -6,6 +6,12 @@
 import { createAgentRuntime } from "@djl/api/agent";
 import { blobStoreFromEnv } from "@djl/api/blobs";
 import { LedgerService } from "@djl/api/credits";
+import { CommerceAlertsService, commerceAlertsEnabled } from "@djl/api/commerce-alerts";
+import {
+  CommerceAlertDeliveryService,
+  commerceAlertEmailConfig,
+  commerceAlertEmailSender,
+} from "@djl/api/commerce-alert-email";
 import { createDatabase } from "@djl/db";
 import { MockOutbox, createResendSender } from "@djl/notify";
 import { Redis } from "ioredis";
@@ -14,7 +20,7 @@ import { writeFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 
 import { registerAgentJobs } from "./agent.ts";
-import { JOBS } from "./jobs.ts";
+import { COMMERCE_IMAGE_CLEANUP, JOBS } from "./jobs.ts";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
@@ -47,6 +53,7 @@ const SCHEDULES: Record<keyof typeof JOBS, string> = {
   "ledger.refold": "43 * * * *",
   "users.purge-deleted": "15 3 * * *",
   "chat.purge-deleted": "35 3 * * *",
+  [COMMERCE_IMAGE_CLEANUP.name]: COMMERCE_IMAGE_CLEANUP.schedule,
   "stats.daily": "5 0 * * *",
   "usage.grantPlanResets": "7 * * * *",
   "usage.bulkGrant": "* * * * *",
@@ -66,6 +73,77 @@ for (const [name, handler] of Object.entries(JOBS) as [
     const result = await handler(deps);
     console.log(JSON.stringify({ level: "info", job: name, ms: Date.now() - started, result }));
   });
+}
+
+// Independent, database-only monitoring. Disabled by default and never requires provider credentials.
+const commerceAlerts = new CommerceAlertsService(db, {
+  enabled: commerceAlertsEnabled(
+    process.env.DJL_COMMERCE_ALERTS_ENABLED,
+    process.env.DJL_ENV ?? "local",
+  ),
+  environment: process.env.DJL_ENV ?? "local",
+});
+try {
+  await boss.createQueue("commerce.alerts.scan");
+  await boss.schedule("commerce.alerts.scan", "*/5 * * * *", undefined, { tz: "UTC" });
+  await boss.work("commerce.alerts.scan", { batchSize: 1 }, async () => {
+    try {
+      const result = await commerceAlerts.scan();
+      console.log(JSON.stringify({ level: "info", job: "commerce.alerts.scan", result }));
+    } catch {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          job: "commerce.alerts.scan",
+          code: "commerce_alert_scan_failed",
+        }),
+      );
+      throw new Error("commerce_alert_scan_failed");
+    }
+  });
+} catch {
+  // Missing monitoring must remain visible as never-scanned/stale, not stop unrelated AI jobs.
+  console.error(
+    JSON.stringify({
+      level: "error",
+      job: "commerce.alerts.scan",
+      code: "commerce_alert_registration_failed",
+    }),
+  );
+}
+
+// Separate from scanning and AI notifications. Default off; uses only its dedicated commerce key.
+const commerceEmailSender = commerceAlertEmailSender(process.env);
+const commerceEmail = new CommerceAlertDeliveryService(db, {
+  ...commerceAlertEmailConfig(process.env),
+  ...(commerceEmailSender ? { sender: commerceEmailSender } : {}),
+});
+try {
+  await boss.createQueue("commerce.alerts.email");
+  await boss.schedule("commerce.alerts.email", "*/5 * * * *", undefined, { tz: "UTC" });
+  await boss.work("commerce.alerts.email", { batchSize: 1 }, async () => {
+    try {
+      const result = await commerceEmail.dispatch();
+      console.log(JSON.stringify({ level: "info", job: "commerce.alerts.email", result }));
+    } catch {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          job: "commerce.alerts.email",
+          code: "commerce_alert_email_unavailable",
+        }),
+      );
+      throw new Error("commerce_alert_email_unavailable");
+    }
+  });
+} catch {
+  console.error(
+    JSON.stringify({
+      level: "error",
+      job: "commerce.alerts.email",
+      code: "commerce_alert_email_registration_failed",
+    }),
+  );
 }
 
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:63799", {

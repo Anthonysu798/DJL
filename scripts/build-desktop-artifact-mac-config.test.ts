@@ -133,6 +133,26 @@ describe("createDesktopPlatformBuildConfig", () => {
     });
   });
 
+  it("waits for Windows resource-write readiness without disabling packaging checks", () => {
+    const hook = "/repo/scripts/windows-after-pack.cjs";
+    const config = createDesktopPlatformBuildConfig({
+      platform: "win",
+      target: "nsis",
+      windowsAfterPackHook: hook,
+    });
+    assert.equal(config.afterPack, hook);
+    assert.equal("disableAsarIntegrity" in config, false);
+    assert.equal(config.win?.signAndEditExecutable, undefined);
+    assert.equal(config.win?.signExecutable, undefined);
+    for (const platform of ["linux", "mac"] as const) {
+      assert.equal(
+        createDesktopPlatformBuildConfig({ platform, target: "dir", windowsAfterPackHook: hook })
+          .afterPack,
+        undefined,
+      );
+    }
+  });
+
   it("keeps node-pty unpacked from ASAR in generated build config", () => {
     const config = createDesktopPlatformBuildConfig({
       platform: "linux",

@@ -3068,6 +3068,9 @@
         "automations": "Automatizaciones",
         "deleteWorkspace": "Eliminar espacio de trabajo",
         "kanban": "Espacios de trabajo",
+        "shop": "Tienda",
+        "shopWindow": "Ventana independiente ↗",
+        "shopOpenFailed": "No se pudo abrir la tienda. Permite las ventanas emergentes e inténtalo de nuevo.",
         "newTask": "Nueva tarea",
         "newThread": "Nuevo hilo",
         "newWorkspace": "Nuevo espacio de trabajo"

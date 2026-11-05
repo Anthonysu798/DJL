@@ -1,6 +1,18 @@
 [extend]
 useDefault = true
 
+# Checkout idempotency UUIDs identify synthetic requests, not credentials.
+[[allowlists]]
+description = "DJL Shop synthetic idempotency UUID fixtures"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^cloud/apps/web/lib/commerce-api\.test\.ts$''',
+  '''^cloud/apps/api/src/commerce/CommerceService\.test\.ts$''',
+]
+regexes = ['''\bidempotencyKey\s*[:=]\s*"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"''']
+
 # These first-party matches are identifiers or keyboard shortcuts, not stored credentials.
 [[allowlists]]
 description = "DJL credential type names, pairing alphabet, and keybinding fixtures"

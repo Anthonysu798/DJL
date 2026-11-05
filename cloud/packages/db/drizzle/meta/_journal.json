@@ -64,6 +64,104 @@
       "when": 1792008002000,
       "tag": "0008_generated_gallery",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792965600000,
+      "tag": "0009_commerce",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793016871327,
+      "tag": "0010_commerce_stripe_test",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793022213765,
+      "tag": "0011_commerce_external_refunds",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793026056155,
+      "tag": "0012_commerce_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793048699153,
+      "tag": "0013_commerce_alert_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793048926481,
+      "tag": "0014_commerce_alert_email_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793131856620,
+      "tag": "0015_commerce_manual_payment",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793226566627,
+      "tag": "0016_commerce_manual_payment_result",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793231033357,
+      "tag": "0017_commerce_supplier_payment_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793804400000,
+      "tag": "0018_commerce_favorites",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793841900000,
+      "tag": "0019_commerce_staff",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793875810003,
+      "tag": "0020_commerce_auth_realm",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793878023070,
+      "tag": "0021_commerce_photo_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793882156795,
+      "tag": "0022_commerce_image_cleanup_retry",
+      "breakpoints": true
     }
   ]
 }

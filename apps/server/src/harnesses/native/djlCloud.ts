@@ -148,7 +148,10 @@ export const createDjlCloudDriverFactory =
           return;
         }
         history.push({ role: "user", content: request.input! });
-        controller = new AbortController();
+        const requestController = new AbortController();
+        controller = requestController;
+        let releaseReader: (() => void) | undefined;
+        let reachedEof = false;
         const itemId = `assistant-${randomUUID()}`;
         let reply = "";
         let cutOff = false;
@@ -158,15 +161,19 @@ export const createDjlCloudDriverFactory =
             "/v1/chat/completions",
             { model, messages: history, stream: true, max_tokens: 4096 },
             session.token,
-            controller.signal,
+            requestController.signal,
           );
           if (!response.body) throw new Error("DJL Cloud returned an empty stream.");
           const reader = response.body.getReader();
+          releaseReader = () => reader.releaseLock();
           const decoder = new TextDecoder();
           let buffer = "";
           while (true) {
             const { value, done } = await reader.read();
-            if (done) break;
+            if (done) {
+              reachedEof = true;
+              break;
+            }
             buffer += decoder.decode(value, { stream: true });
             let index: number;
             while ((index = buffer.indexOf("\n\n")) >= 0) {
@@ -212,7 +219,7 @@ export const createDjlCloudDriverFactory =
             }
           }
         } catch (error) {
-          if (controller.signal.aborted) {
+          if (requestController.signal.aborted) {
             sink.emit({ type: "turn.completed", payload: { state: "interrupted" } });
             if (reply) history.push({ role: "assistant", content: reply });
             return;
@@ -233,7 +240,9 @@ export const createDjlCloudDriverFactory =
           }
           throw error;
         } finally {
-          controller = null;
+          if (!reachedEof) requestController.abort();
+          releaseReader?.();
+          if (controller === requestController) controller = null;
         }
         if (reply) history.push({ role: "assistant", content: reply });
         if (cutOff)

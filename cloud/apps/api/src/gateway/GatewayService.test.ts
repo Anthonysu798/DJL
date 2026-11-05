@@ -483,6 +483,120 @@ describe("GatewayService chat", () => {
     expect(before).toEqual(after);
   });
 
+  it("aborts a provider waiting for its next chunk before completing stream cancellation", async () => {
+    const p = await principalFor("gw-pending-cancel");
+    await fund(p);
+    const limiter = createMemoryRateLimiter();
+    let releaseStall!: () => void;
+    const stalled = new Promise<void>((resolve) => {
+      releaseStall = resolve;
+    });
+    let providerWaiting = false;
+    let providerSignal: AbortSignal | undefined;
+    let cleanupStarted = false;
+    let abortsBeforeCleanup = 0;
+    const provider: typeof fake = {
+      ...fake,
+      async *chatStream(_request, signal) {
+        providerSignal = signal;
+        yield {
+          id: "pending-cancel-fixture",
+          delta: { content: "first" },
+          finish_reason: null,
+        };
+        const onAbort = () => {
+          if (!cleanupStarted) abortsBeforeCleanup++;
+          releaseStall();
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+        providerWaiting = true;
+        if (signal.aborted) onAbort();
+        try {
+          await stalled;
+        } finally {
+          signal.removeEventListener("abort", onAbort);
+        }
+      },
+    };
+    const gw = makeGateway({ limiter, providers: { openai: provider } });
+    const settle = vi.spyOn(ledger, "settle");
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let pendingRead: ReturnType<ReadableStreamDefaultReader<Uint8Array>["read"]> | undefined;
+    let cancelling: Promise<void> | undefined;
+    let passed = false;
+    try {
+      const { stream, requestId } = await gw.chatStream(facts(p), {
+        model: "fake-chat",
+        messages: [{ role: "user", content: "pending cancel" }],
+        max_tokens: 100,
+      });
+      reader = stream.getReader();
+      const first = await reader.read();
+      expect(first.done).toBe(false);
+      expect(new TextDecoder().decode(first.value)).toContain('"content":"first"');
+      pendingRead = reader.read();
+      await expect.poll(() => providerWaiting, { timeout: 1000 }).toBe(true);
+      expect(providerSignal?.aborted).toBe(false);
+      expect(await limiter.inFlight(`org:${p.orgId}`)).toBe(1);
+      expect(gw.status().inFlight).toBe(1);
+      expect(await ledger.available(p.orgId)).toBeLessThan(creditsToMicro(100));
+      expect(
+        await conn.db.query.usageHolds.findFirst({ where: eq(schema.usageHolds.id, requestId) }),
+      ).toBeDefined();
+
+      let cancelSettled = false;
+      cancelling = reader.cancel();
+      void cancelling.then(
+        () => {
+          cancelSettled = true;
+        },
+        () => {
+          cancelSettled = true;
+        },
+      );
+      // The provider is already stalled; these must pass before failure cleanup can release it.
+      await expect.poll(() => abortsBeforeCleanup, { timeout: 1000 }).toBe(1);
+      expect(providerSignal?.aborted).toBe(true);
+      await expect.poll(() => cancelSettled, { timeout: 1000 }).toBe(true);
+      await cancelling;
+      await expect(pendingRead).resolves.toMatchObject({ done: true });
+      expect(cleanupStarted).toBe(false);
+      expect(settle).toHaveBeenCalledTimes(1);
+      expect(await limiter.inFlight(`org:${p.orgId}`)).toBe(0);
+      expect(gw.status().inFlight).toBe(0);
+      expect(
+        await conn.db.query.usageHolds.findFirst({ where: eq(schema.usageHolds.id, requestId) }),
+      ).toBeUndefined();
+      const row = await conn.db.query.usageRequests.findFirst({
+        where: eq(schema.usageRequests.id, requestId),
+      });
+      expect(row?.status).toBe("settled");
+      expect(row?.settledMicro).toBeGreaterThan(0n);
+      expect(await ledger.available(p.orgId)).toBe(creditsToMicro(100) - row!.settledMicro!);
+      const entries = await conn.db.query.creditLedger.findMany({
+        where: eq(schema.creditLedger.reservationId, requestId),
+      });
+      expect(entries.filter((entry) => entry.type === "settlement")).toHaveLength(1);
+      expect(
+        entries
+          .filter((entry) => entry.type === "reservation" || entry.type === "release")
+          .reduce((total, entry) => total + entry.amount, 0n),
+      ).toBe(0n);
+      const { before, after } = await ledger.refold(p.orgId);
+      expect(before).toEqual(after);
+      passed = true;
+    } finally {
+      if (!passed) {
+        // Only failure cleanup may manually free this test's synthetic provider wait.
+        cleanupStarted = true;
+        releaseStall();
+        cancelling ??= reader?.cancel();
+      }
+      await Promise.allSettled([pendingRead, cancelling]);
+      settle.mockRestore();
+    }
+  });
+
   it("rejects unknown models and models lacking a capability", async () => {
     const p = await principalFor("gw-unknown");
     await expect(

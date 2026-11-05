@@ -117,6 +117,7 @@ export const ComposerSendArrowIcon: LucideIcon = centralIconWrapper("arrow-up");
 export const HandoffIcon: LucideIcon = centralIconWrapper("arrow-left-right");
 export const SkillCubeIcon: LucideIcon = centralIconWrapper("building-blocks");
 export const NewThreadIcon: LucideIcon = centralIconWrapper("compose-pencil");
+export const ShoppingBagIcon: LucideIcon = centralIconWrapper("shopping-bag-1");
 export const EraserIcon: LucideIcon = centralIconWrapper("eraser");
 export const ArrowLeftIcon = adaptIcon(IconArrowLeft);
 export const BellIcon = adaptIcon(IconBell);

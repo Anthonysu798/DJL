@@ -10,6 +10,8 @@ import {
   resolveDesktopWsUrlFromEnv,
 } from "./desktopWsBridge";
 import { SERVER_TRANSCRIBE_VOICE_CHANNEL } from "./voiceTranscription";
+import { SHOP_OPEN_CHANNEL } from "./shopWindowPolicy";
+import { createMenuActionDelivery } from "./menuActionDelivery";
 import {
   CLOUD_AUTH_CALLBACK_CHANNEL,
   CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
@@ -49,6 +51,10 @@ const NOTIFICATIONS_SHOW_CHANNEL = "desktop:notifications-show";
 const ZOOM_FACTOR_CHANNEL = "desktop:zoom-factor";
 const ZOOM_FACTOR_CHANGED_CHANNEL = "desktop:zoom-factor-changed";
 
+// did-finish-load can precede React's menu subscriptions when restoring the AI window.
+const menuActions = createMenuActionDelivery();
+ipcRenderer.on(MENU_ACTION_CHANNEL, (_event, action: unknown) => menuActions.receive(action));
+
 function getDesktopWsUrl(): string | null {
   try {
     const ipcWsUrl = normalizeDesktopWsUrl(ipcRenderer.sendSync(DESKTOP_WS_URL_CHANNEL));
@@ -80,6 +86,7 @@ contextBridge.exposeInMainWorld("desktopBridge", {
   setTheme: (theme) => ipcRenderer.invoke(SET_THEME_CHANNEL, theme),
   showContextMenu: (items, position) => ipcRenderer.invoke(CONTEXT_MENU_CHANNEL, items, position),
   openExternal: (url: string) => ipcRenderer.invoke(OPEN_EXTERNAL_CHANNEL, url),
+  openShop: () => ipcRenderer.invoke(SHOP_OPEN_CHANNEL),
   printPdf: (url: string) => ipcRenderer.invoke(PRINT_PDF_CHANNEL, url),
   openPath: (path: string) => ipcRenderer.invoke(OPEN_PATH_CHANNEL, path),
   showInFolder: (path: string) => ipcRenderer.invoke(SHOW_IN_FOLDER_CHANNEL, path),
@@ -108,17 +115,7 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       };
     },
   },
-  onMenuAction: (listener) => {
-    const wrappedListener = (_event: Electron.IpcRendererEvent, action: unknown) => {
-      if (typeof action !== "string") return;
-      listener(action);
-    };
-
-    ipcRenderer.on(MENU_ACTION_CHANNEL, wrappedListener);
-    return () => {
-      ipcRenderer.removeListener(MENU_ACTION_CHANNEL, wrappedListener);
-    };
-  },
+  onMenuAction: (listener, actions) => menuActions.subscribe(listener, actions),
   onCloudAuthCallback: (listener) => {
     // Main keeps the newest callback until it is taken, so each one is handled once.
     const take = async () => {

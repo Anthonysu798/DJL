@@ -1,0 +1,1 @@
+ALTER TABLE "commerce_image_uploads" ADD COLUMN "cleanup_retry_at" timestamp with time zone;

@@ -19,11 +19,53 @@ export interface BlobStore {
   ) => Promise<{ readonly url: string; readonly expiresAt: string }>;
   /** Confirm an object exists and matches the expected size. */
   readonly head: (key: string) => Promise<{ readonly sizeBytes: number } | null>;
-  /** The object's bytes, or null when it does not exist. */
-  readonly read: (key: string) => Promise<Uint8Array | null>;
+  /** Object bytes, or null if missing. A supplied cap applies to actual bytes read. */
+  readonly read: (key: string, maxBytes?: number) => Promise<Uint8Array | null>;
   /** Server-side upload (generated files). */
   readonly write: (key: string, bytes: Uint8Array, mimeType: string) => Promise<void>;
   readonly remove: (key: string) => Promise<void>;
+}
+
+export class BlobReadLimitError extends Error {
+  constructor() {
+    super("Storage object exceeds the permitted size.");
+    this.name = "BlobReadLimitError";
+  }
+}
+
+function validateReadLimit(maxBytes: number) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
+    throw new RangeError("Invalid storage read limit.");
+}
+
+async function readBoundedResponse(response: Response, maxBytes: number): Promise<Uint8Array> {
+  const body = response.body;
+  const declared = response.headers.get("content-length");
+  if (declared !== null && /^\d+$/.test(declared) && Number(declared) > maxBytes) {
+    void body?.cancel().catch(() => undefined);
+    throw new BlobReadLimitError();
+  }
+  if (!body) return new Uint8Array();
+  const reader = body.getReader();
+  let complete = false;
+  try {
+    // Do not accumulate chunks or trust Content-Length to bound decoded bytes.
+    const bytes = new Uint8Array(maxBytes);
+    let size = 0;
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) {
+        complete = true;
+        return bytes.subarray(0, size);
+      }
+      if (chunk.value.byteLength > maxBytes - size) throw new BlobReadLimitError();
+      bytes.set(chunk.value, size);
+      size += chunk.value.byteLength;
+    }
+  } finally {
+    if (!complete) void reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
 }
 
 export class FakeBlobStore implements BlobStore {
@@ -52,8 +94,13 @@ export class FakeBlobStore implements BlobStore {
     const o = this.objects.get(key);
     return o ? { sizeBytes: o.sizeBytes } : null;
   }
-  async read(key: string) {
-    return this.objects.get(key)?.bytes ?? null;
+  async read(key: string, maxBytes?: number) {
+    const bytes = this.objects.get(key)?.bytes ?? null;
+    if (maxBytes !== undefined) {
+      validateReadLimit(maxBytes);
+      if (bytes && bytes.byteLength > maxBytes) throw new BlobReadLimitError();
+    }
+    return bytes;
   }
   async write(key: string, bytes: Uint8Array, mimeType: string) {
     this.put(key, bytes, mimeType);
@@ -84,6 +131,8 @@ export function createS3BlobStore(config: {
   readonly bucket: string;
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
+  /** Server-side writes for isolated corpora only; do not alter client upload grants. */
+  readonly writeOnce?: boolean;
   readonly fetchImpl?: typeof fetch;
 }): BlobStore {
   const fetchImpl = config.fetchImpl ?? fetch;
@@ -166,15 +215,25 @@ export function createS3BlobStore(config: {
       if (!res.ok) return null;
       return { sizeBytes: Number(res.headers.get("content-length") ?? "0") };
     },
-    async read(key) {
+    async read(key, maxBytes) {
+      if (maxBytes !== undefined) validateReadLimit(maxBytes);
       const { url } = await presign("GET", key, 60);
       const res = await fetchImpl(url);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`storage read failed: ${res.status}`);
-      return new Uint8Array(await res.arrayBuffer());
+      if (!res.ok) {
+        if (maxBytes !== undefined) void res.body?.cancel().catch(() => undefined);
+        if (res.status === 404) return null;
+        throw new Error(`storage read failed: ${res.status}`);
+      }
+      return maxBytes === undefined
+        ? new Uint8Array(await res.arrayBuffer())
+        : readBoundedResponse(res, maxBytes);
     },
     async write(key, bytes, mimeType) {
-      const headers = { "content-type": mimeType, "content-length": String(bytes.byteLength) };
+      const headers: Record<string, string> = {
+        "content-type": mimeType,
+        "content-length": String(bytes.byteLength),
+      };
+      if (config.writeOnce) headers["if-none-match"] = "*";
       const { url } = await presign("PUT", key, 60, headers);
       const res = await fetchImpl(url, { method: "PUT", headers, body: bytes as BodyInit });
       if (!res.ok) throw new Error(`storage write failed: ${res.status}`);

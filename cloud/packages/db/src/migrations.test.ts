@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -11,14 +12,16 @@ const folder = new URL("../drizzle/", import.meta.url);
 const journal = JSON.parse(await readFile(new URL("meta/_journal.json", folder), "utf8"));
 type Entry = (typeof journal.entries)[number];
 const base = journal.entries.slice(0, 5);
-const legacy = journal.entries.slice(6, 9).map((entry: Entry, index: number) => ({
-  ...entry,
-  idx: index + 5,
-  when: [1791776856415, 1791777168849, 1791780761906][index],
-}));
+const legacy = journal.entries.slice(6, 9).map((entry: Entry, index: number) =>
+  Object.assign({}, entry, {
+    idx: index + 5,
+    when: [1791776856415, 1791777168849, 1791780761906][index],
+  }),
+);
 
 for (const [name, entries] of [
   ["fresh database", []],
+  ["commerce database before staff scopes", journal.entries.slice(0, 19)],
   ["PR41 account/device database", journal.entries.slice(0, 6)],
   ["PR42 notification/gallery database", [...base, ...legacy]],
   [
@@ -31,6 +34,9 @@ for (const [name, entries] of [
     const admin = postgres(url.href, { max: 1 });
     const database = `djl_migrations_${randomUUID().replaceAll("-", "")}`;
     const temporary = await mkdtemp(join(tmpdir(), "djl-migrations-"));
+    const target = resolve(temporary);
+    if (dirname(target) !== resolve(tmpdir()) || !basename(target).startsWith("djl-migrations-"))
+      throw new Error("Unsafe migration fixture cleanup.");
     let client: ReturnType<typeof postgres> | undefined;
     try {
       await admin.unsafe(`CREATE DATABASE "${database}"`);
@@ -55,8 +61,15 @@ for (const [name, entries] of [
       if (entries.length) {
         await client`INSERT INTO "user" (id, name, email, created_at, updated_at) VALUES (${userId}, 'Migration QA', ${`${userId}@example.invalid`}, now(), now())`;
       }
-      await migrate(db, { migrationsFolder: folder.pathname });
-      await migrate(db, { migrationsFolder: folder.pathname });
+      const legacyAdmin = randomUUID();
+      if (name === "commerce database before staff scopes")
+        await client`INSERT INTO admins (id,email,name,role) VALUES (${legacyAdmin},${legacyAdmin + "@test.invalid"},'Legacy scope QA','employee')`;
+      await migrate(db, { migrationsFolder: fileURLToPath(folder) });
+      await migrate(db, { migrationsFolder: fileURLToPath(folder) });
+      if (name === "commerce database before staff scopes") {
+        const [admin] = await client`SELECT role,commerce_role FROM admins WHERE id=${legacyAdmin}`;
+        expect(admin).toMatchObject({ role: "employee", commerce_role: null });
+      }
       if (entries.length) {
         const [user] = await client`SELECT name FROM "user" WHERE id = ${userId}`;
         expect(user?.name).toBe("Migration QA");
@@ -70,6 +83,17 @@ for (const [name, entries] of [
           { table_name: "runs", column_name: "image_aspect_ratio" },
         ]),
       );
+      const manualPaymentColumns =
+        await client`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='commerce_withdrawals' AND column_name IN ('payment_operation_id','payment_started_by','payment_started_at','payment_unknown_at')`;
+      expect(manualPaymentColumns.map((row) => row.column_name).toSorted()).toEqual([
+        "payment_operation_id",
+        "payment_started_at",
+        "payment_started_by",
+        "payment_unknown_at",
+      ]);
+      const paymentGuard =
+        await client`SELECT tgname FROM pg_trigger WHERE tgrelid='public.commerce_withdrawals'::regclass AND tgname='commerce_withdrawal_payment_immutable'`;
+      expect(paymentGuard).toHaveLength(1);
       const constraints =
         await client`SELECT conname FROM pg_constraint WHERE conrelid IN ('public.session'::regclass, 'public.files'::regclass, 'public.notification_reads'::regclass)`;
       expect(constraints.map((row) => row.conname)).toEqual(
@@ -89,7 +113,7 @@ for (const [name, entries] of [
       await client?.end();
       await admin.unsafe(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
       await admin.end();
-      await rm(temporary, { recursive: true, force: true });
+      await rm(target, { recursive: true, force: true });
     }
   }, 30_000);
 }

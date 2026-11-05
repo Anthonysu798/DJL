@@ -82,6 +82,26 @@ describe("public source audit", () => {
     ]);
   });
 
+  it("distinguishes database and HTTP URL userinfo from SSH destinations", () => {
+    const loopback = ["127", "0", "0", "1"].join(".");
+    const documentationAddress = ["192", "0", "2", "123"].join(".");
+    const urls = [
+      `postgres://test:test@${loopback}:54329/test`,
+      `postgresql://test@${loopback}:54329/test`,
+      `http://user@${loopback}:9910`,
+      `https://user:password@${loopback}:9910`,
+      `postgres://qa:synthetic@${documentationAddress}:5432,decoy@${loopback}:54329/test`,
+    ].join("\n");
+
+    expect(findPublicSourceViolations([file("fixtures.test.ts", urls)])).toEqual([]);
+    expect(
+      findPublicSourceViolations([
+        file("scripts/release.sh", `${urls}\nssh root@${documentationAddress}`),
+        file("scripts/copy.sh", `scp source ssh://root@${documentationAddress}/path`),
+      ]).map(({ rule }) => rule),
+    ).toEqual(["hard-coded-release-host", "hard-coded-release-host"]);
+  });
+
   it("requires retained project and third-party license markers", () => {
     const licenses = [
       file(

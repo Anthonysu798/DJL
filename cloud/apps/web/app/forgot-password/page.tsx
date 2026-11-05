@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import {
   AuthField,
   AuthFrame,
@@ -9,8 +10,11 @@ import {
 } from "@/components/AuthFrame";
 import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/lib/locale-context";
+import { safeNext } from "@/lib/safeNext";
 
-export default function ForgotPassword() {
+function ForgotPasswordForm() {
+  const next = safeNext(useSearchParams().get("next"), "");
+  const recoveryQuery = next ? `?${new URLSearchParams({ next })}` : "";
   const { d } = useLocale();
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState<AuthFieldErrors>({});
@@ -20,7 +24,7 @@ export default function ForgotPassword() {
   return (
     <AuthFrame
       footer={
-        <Link href="/sign-in" className="text-neutral-900 underline">
+        <Link href={`/sign-in${recoveryQuery}`} className="text-neutral-900 underline">
           {d.signIn}
         </Link>
       }
@@ -48,7 +52,7 @@ export default function ForgotPassword() {
             try {
               const result = await authClient.requestPasswordReset({
                 email: email.trim(),
-                redirectTo: `${window.location.origin}/reset-password`,
+                redirectTo: `${window.location.origin}/reset-password${recoveryQuery}`,
               });
               if (result.error) setError(result.error.message ?? d.error);
               else setSent(true);
@@ -86,5 +90,13 @@ export default function ForgotPassword() {
         </form>
       )}
     </AuthFrame>
+  );
+}
+
+export default function ForgotPassword() {
+  return (
+    <Suspense>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

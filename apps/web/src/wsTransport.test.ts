@@ -4,13 +4,14 @@
 // Depends on: the global WebSocket constructor shim and desktop bridge URL contract.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WS_CHANNELS, WS_METHODS } from "@synara/contracts";
+import { ORCHESTRATION_WS_METHODS, WS_CHANNELS, WS_METHODS } from "@synara/contracts";
 import { Effect, Stream } from "effect";
 
 import { shouldKeepServerLifecycleStream, WsTransport } from "./wsTransport";
 
 type WsEventType = "open" | "message" | "close" | "error";
 type WsListener = (event?: { data?: unknown }) => void;
+type RpcRequestFrame = { _tag: "Request"; id: string; tag: string; payload: unknown };
 
 const sockets: MockWebSocket[] = [];
 
@@ -40,6 +41,32 @@ class MockWebSocket {
 
   send(data: unknown) {
     this.sent.push(data);
+  }
+
+  open() {
+    this.readyState = MockWebSocket.OPEN;
+    this.emit("open");
+  }
+
+  failOpen() {
+    this.emit("error");
+  }
+
+  requests(): RpcRequestFrame[] {
+    return this.sent
+      .filter((data): data is string => typeof data === "string")
+      .map((data) => JSON.parse(data) as RpcRequestFrame)
+      .filter((frame) => frame._tag === "Request");
+  }
+
+  succeed(request: RpcRequestFrame, value: unknown) {
+    this.emit("message", {
+      data: JSON.stringify({
+        _tag: "Exit",
+        requestId: request.id,
+        exit: { _tag: "Success", value },
+      }),
+    });
   }
 
   close() {
@@ -82,6 +109,311 @@ afterEach(() => {
 });
 
 describe("WsTransport", () => {
+  const shellSnapshot = {
+    snapshotSequence: 0,
+    projects: [],
+    threads: [],
+    updatedAt: "2026-10-26T00:00:00.000Z",
+  };
+  const createProject = {
+    type: "project.create",
+    commandId: "10c55022-b682-4cdc-b607-bcb07febf51e",
+    projectId: "924714c7-1356-43f5-bd18-2935cb0ea69d",
+    kind: "chat",
+    title: "Home",
+    workspaceRoot: "C:\\DJL\\home",
+    createdAt: "2026-10-26T00:00:00.000Z",
+  };
+
+  it("does not report open merely because the RPC client was constructed", async () => {
+    const transport = new WsTransport();
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(sockets[0]?.readyState).toBe(MockWebSocket.CONNECTING);
+      expect(transport.getState()).toBe("connecting");
+      expect(sockets[0]?.requests()).toEqual([]);
+    } finally {
+      await transport.dispose();
+    }
+  });
+
+  it("waits for the real read-only shell handshake before sending the first project create", async () => {
+    const transport = new WsTransport();
+    const result = transport
+      .request(ORCHESTRATION_WS_METHODS.dispatchCommand, { command: createProject })
+      .then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+    try {
+      sockets[0]!.open();
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(1));
+      const handshake = sockets[0]!.requests()[0]!;
+      expect(handshake.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      expect(transport.getState()).toBe("connecting");
+
+      sockets[0]!.succeed(handshake, shellSnapshot);
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(2));
+      const mutation = sockets[0]!.requests()[1]!;
+      expect(mutation.tag).toBe(ORCHESTRATION_WS_METHODS.dispatchCommand);
+      expect(mutation.payload).toEqual(createProject);
+      sockets[0]!.succeed(mutation, { sequence: 1 });
+      expect(await result).toEqual({ value: { sequence: 1 } });
+      expect(transport.getState()).toBe("open");
+    } finally {
+      await transport.dispose();
+      await result;
+    }
+  });
+
+  it("retries only session preparation after a cold socket failure, not the waiting mutation", async () => {
+    const transport = new WsTransport();
+    let settled = false;
+    const result = transport
+      .request(ORCHESTRATION_WS_METHODS.dispatchCommand, { command: createProject })
+      .then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      )
+      .finally(() => {
+        settled = true;
+      });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      sockets[0]!.failOpen();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(settled).toBe(false);
+      expect(sockets.flatMap((socket) => socket.requests())).toEqual([]);
+
+      await vi.waitFor(() => expect(sockets.length).toBeGreaterThan(1), { timeout: 2_000 });
+      const recovered = sockets.at(-1)!;
+      recovered.open();
+      await vi.waitFor(() => expect(recovered.requests()).toHaveLength(1));
+      expect(recovered.requests()[0]!.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      recovered.succeed(recovered.requests()[0]!, shellSnapshot);
+      await vi.waitFor(() => expect(recovered.requests()).toHaveLength(2));
+      const mutations = sockets
+        .flatMap((socket) => socket.requests())
+        .filter((frame) => frame.tag === ORCHESTRATION_WS_METHODS.dispatchCommand);
+      expect(mutations).toHaveLength(1);
+      recovered.succeed(mutations[0]!, { sequence: 1 });
+      expect(await result).toEqual({ value: { sequence: 1 } });
+    } finally {
+      await transport.dispose();
+      await result;
+    }
+  });
+
+  it("does not replay a project create whose socket fails after it was sent", async () => {
+    const transport = new WsTransport();
+    const result = transport
+      .request(ORCHESTRATION_WS_METHODS.dispatchCommand, { command: createProject })
+      .then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+    try {
+      sockets[0]!.open();
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(1));
+      const handshake = sockets[0]!.requests()[0]!;
+      expect(handshake.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      sockets[0]!.succeed(handshake, shellSnapshot);
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(2));
+      sockets[0]!.failOpen();
+      expect(await result).toHaveProperty("error");
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const mutations = sockets
+        .flatMap((socket) => socket.requests())
+        .filter((frame) => frame.tag === ORCHESTRATION_WS_METHODS.dispatchCommand);
+      expect(mutations).toHaveLength(1);
+    } finally {
+      await transport.dispose();
+      await result;
+    }
+  });
+
+  it("does not open or send a waiting mutation after disposal during the handshake", async () => {
+    const transport = new WsTransport();
+    const result = transport
+      .request(ORCHESTRATION_WS_METHODS.dispatchCommand, { command: createProject })
+      .then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+    try {
+      sockets[0]!.open();
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(1));
+      const handshake = sockets[0]!.requests()[0]!;
+      expect(handshake.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      await transport.dispose();
+      sockets[0]!.succeed(handshake, shellSnapshot);
+      expect(await result).toHaveProperty("error");
+      expect(transport.getState()).toBe("disposed");
+      expect(
+        sockets
+          .flatMap((socket) => socket.requests())
+          .filter((frame) => frame.tag === ORCHESTRATION_WS_METHODS.dispatchCommand),
+      ).toEqual([]);
+    } finally {
+      await transport.dispose();
+      await result;
+    }
+  });
+
+  it("ignores a late old handshake while the replacement session is preparing", async () => {
+    const transport = new WsTransport();
+    const states = vi.fn();
+    transport.onStateChange(states);
+    const internal = transport as unknown as { reconnect: () => Promise<unknown> };
+    let reconnected: Promise<unknown> | undefined;
+    try {
+      sockets[0]!.open();
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(1));
+      const oldSocket = sockets[0]!;
+      const oldHandshake = oldSocket.requests()[0]!;
+      oldSocket.succeed(oldHandshake, shellSnapshot);
+      reconnected = internal.reconnect();
+      await vi.waitFor(() => expect(sockets.length).toBeGreaterThan(1), { timeout: 2_000 });
+      expect(states).not.toHaveBeenCalledWith("open");
+
+      const current = sockets.at(-1)!;
+      current.open();
+      await vi.waitFor(() => expect(current.requests()).toHaveLength(1));
+      expect(current.requests()[0]!.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      current.succeed(current.requests()[0]!, shellSnapshot);
+      await reconnected;
+      expect(states.mock.calls.filter(([state]) => state === "open")).toHaveLength(1);
+      expect(transport.getState()).toBe("open");
+    } finally {
+      await transport.dispose();
+      await reconnected?.catch(() => undefined);
+    }
+  });
+
+  it("does not run a late old-session request on the replacement runtime", async () => {
+    const transport = new WsTransport();
+    const internal = transport as unknown as {
+      sessionVersion: number;
+      clientPromise: Promise<unknown>;
+      runtime: { runPromise: typeof Effect.runPromise };
+    };
+    const originalPromise = internal.clientPromise;
+    const originalRuntime = internal.runtime;
+    const oldCall = vi.fn(() => Effect.succeed("old session"));
+    const currentEffect = Effect.succeed("current session");
+    const currentCall = vi.fn(() => currentEffect);
+    const replacementRun = vi.fn();
+    const replacementRuntime = {
+      runPromise<A, E>(effect: Effect.Effect<A, E, never>): Promise<A> {
+        replacementRun(effect);
+        return Effect.runPromise(effect);
+      },
+    };
+    let releaseOld!: (client: unknown) => void;
+    internal.clientPromise = new Promise((resolve) => {
+      releaseOld = resolve;
+    });
+    const result = transport.request("test.session").then(
+      (value) => ({ value }),
+      (error: unknown) => ({ error }),
+    );
+    try {
+      internal.sessionVersion += 1;
+      internal.runtime = replacementRuntime;
+      internal.clientPromise = Promise.resolve({ "test.session": currentCall });
+      releaseOld({ "test.session": oldCall });
+      const completed = await result;
+      expect(oldCall).not.toHaveBeenCalled();
+      expect(completed).toEqual({ value: "current session" });
+      expect(currentCall).toHaveBeenCalledOnce();
+      expect(replacementRun).toHaveBeenCalledExactlyOnceWith(currentEffect);
+    } finally {
+      internal.runtime = originalRuntime;
+      internal.clientPromise = originalPromise;
+      await transport.dispose();
+      await result;
+    }
+  });
+
+  it("does not register a channel returned by a superseded client as the current session", async () => {
+    const transport = new WsTransport();
+    const internal = transport as unknown as {
+      sessionVersion: number;
+      clientPromise: Promise<unknown>;
+      startStream: (...input: readonly unknown[]) => void;
+    };
+    const originalPromise = internal.clientPromise;
+    const oldStream = Stream.never;
+    const currentStream = Stream.empty;
+    const oldSubscribe = vi.fn(() => oldStream);
+    const currentSubscribe = vi.fn(() => currentStream);
+    const startStream = vi.spyOn(internal, "startStream").mockImplementation(() => undefined);
+    let releaseOld!: (client: unknown) => void;
+    internal.clientPromise = new Promise((resolve) => {
+      releaseOld = resolve;
+    });
+    const unsubscribe = transport.subscribe(WS_CHANNELS.serverConfigUpdated, vi.fn());
+    try {
+      internal.sessionVersion += 1;
+      internal.clientPromise = Promise.resolve({
+        [WS_METHODS.subscribeServerConfig]: currentSubscribe,
+      });
+      releaseOld({ [WS_METHODS.subscribeServerConfig]: oldSubscribe });
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(oldSubscribe).not.toHaveBeenCalled();
+      expect(startStream.mock.calls.some((call) => call[1] === oldStream)).toBe(false);
+      expect(currentSubscribe).toHaveBeenCalledOnce();
+      expect(startStream).toHaveBeenCalledExactlyOnceWith(
+        "server.config",
+        currentStream,
+        expect.any(Function),
+        expect.any(Function),
+        expect.objectContaining({
+          session: expect.objectContaining({ version: internal.sessionVersion }),
+        }),
+      );
+    } finally {
+      unsubscribe();
+      internal.clientPromise = originalPromise;
+      await transport.dispose();
+    }
+  });
+
+  it("does not reconnect the current session when an older preparation rejects late", async () => {
+    const transport = new WsTransport();
+    const internal = transport as unknown as {
+      sessionVersion: number;
+      clientPromise: Promise<unknown>;
+      runtime: { runPromise: typeof Effect.runPromise };
+      reconnect: () => Promise<unknown>;
+    };
+    const originalPromise = internal.clientPromise;
+    const originalRuntime = internal.runtime;
+    const currentClient = { "test.session": () => Effect.succeed("current session") };
+    const reconnect = vi.spyOn(internal, "reconnect").mockResolvedValue(currentClient);
+    let rejectOld!: (error: Error) => void;
+    internal.clientPromise = new Promise((_resolve, reject) => {
+      rejectOld = reject;
+    });
+    const result = transport.request("test.session").then(
+      (value) => ({ value }),
+      (error: unknown) => ({ error }),
+    );
+    try {
+      internal.sessionVersion += 1;
+      internal.runtime = { runPromise: Effect.runPromise };
+      internal.clientPromise = Promise.resolve(currentClient);
+      rejectOld(new Error("old socket failed"));
+      expect(await result).toEqual({ value: "current session" });
+      expect(reconnect).not.toHaveBeenCalled();
+    } finally {
+      internal.runtime = originalRuntime;
+      internal.clientPromise = originalPromise;
+      await transport.dispose();
+      await result;
+    }
+  });
+
   it("waits for an in-flight reconnect before opening more terminal RPCs", async () => {
     const transport = new WsTransport();
     const internal = transport as unknown as {
@@ -203,6 +535,7 @@ describe("WsTransport", () => {
       stream,
       expect.any(Function),
       expect.any(Function),
+      expect.objectContaining({ session: expect.objectContaining({ client: expect.any(Object) }) }),
     );
 
     unsubscribe();
@@ -263,9 +596,15 @@ describe("WsTransport", () => {
   it("does not reconnect when a thread subscription is intentionally replaced", async () => {
     const transport = new WsTransport();
     const internal = transport as unknown as {
+      sessionVersion: number;
+      runtime: unknown;
       reconnect: () => Promise<unknown>;
       startThreadStream: (
-        client: Record<string, (input: unknown) => Stream.Stream<never>>,
+        session: {
+          version: number;
+          client: Record<string, (input: unknown) => Stream.Stream<never>>;
+          runtime: unknown;
+        },
         threadId: string,
         input: unknown,
       ) => void;
@@ -277,8 +616,9 @@ describe("WsTransport", () => {
     };
     const input = { threadId: "thread-1" };
 
-    internal.startThreadStream(client, input.threadId, input);
-    internal.startThreadStream(client, input.threadId, input);
+    const session = { version: internal.sessionVersion, client, runtime: internal.runtime };
+    internal.startThreadStream(session, input.threadId, input);
+    internal.startThreadStream(session, input.threadId, input);
 
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(subscribeThread).toHaveBeenCalledTimes(2);
@@ -289,9 +629,15 @@ describe("WsTransport", () => {
   it("does not reconnect when a draft thread subscription ends before the thread exists", async () => {
     const transport = new WsTransport();
     const internal = transport as unknown as {
+      sessionVersion: number;
+      runtime: unknown;
       reconnect: () => Promise<unknown>;
       startThreadStream: (
-        client: Record<string, (input: unknown) => Stream.Stream<never>>,
+        session: {
+          version: number;
+          client: Record<string, (input: unknown) => Stream.Stream<never>>;
+          runtime: unknown;
+        },
         threadId: string,
         input: unknown,
       ) => void;
@@ -301,7 +647,8 @@ describe("WsTransport", () => {
       "orchestration.subscribeThread": () => Stream.empty,
     };
 
-    internal.startThreadStream(client, "draft-thread", { threadId: "draft-thread" });
+    const session = { version: internal.sessionVersion, client, runtime: internal.runtime };
+    internal.startThreadStream(session, "draft-thread", { threadId: "draft-thread" });
 
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(reconnect).not.toHaveBeenCalled();

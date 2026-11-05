@@ -32,16 +32,11 @@ case "${1:-}" in
     ;;
   logs) "${compose[@]}" logs --tail 100 "${2:-api}" ;;
   backup)
-    mkdir -p backups
-    target="backups/$(date -u +%Y%m%dT%H%M%SZ)"
-    mkdir "$target"
-    "${compose[@]}" stop api worker s3
-    trap '"${compose[@]}" start s3 api worker' EXIT
-    "${compose[@]}" exec -T postgres pg_dump -U djl_admin -Fc djl > "$target/postgres.dump"
-    s3_container=$("${compose[@]}" ps --all --quiet s3)
-    docker run --rm --volumes-from "$s3_container:ro" --entrypoint tar \
-      chrislusf/seaweedfs:4.47 -czf - -C /data . > "$target/files.tar.gz"
-    echo "Backup saved to $target; keep a copy off the VPS."
+    bash recovery.sh backup
     ;;
-  *) echo "Usage: $0 {init|check|up|remote-up|remote-down|down|status|verify|logs [service]|backup}" >&2; exit 2 ;;
+  restore)
+    shift
+    bash recovery.sh restore "$@"
+    ;;
+  *) echo "Usage: $0 {init|check|up|remote-up|remote-down|down|status|verify|logs [service]|backup|restore BACKUP --target PATH --project NAME [--execute]}" >&2; exit 2 ;;
 esac

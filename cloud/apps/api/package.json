@@ -7,6 +7,9 @@
     "./agent": "./src/agent/runtime.ts",
     "./blobs": "./src/sync/BlobStore.ts",
     "./credits": "./src/credits/LedgerService.ts",
+    "./commerce-alerts": "./src/commerce/CommerceAlertsService.ts",
+    "./commerce-alert-email": "./src/commerce/CommerceAlertDeliveryService.ts",
+    "./commerce-image-uploads": "./src/commerce/CommerceImageUploads.ts",
     "./free-allowance": "./src/credits/freeAllowance.ts",
     "./server": "./src/server.ts"
   },
@@ -25,6 +28,7 @@
     "@djl/domain": "workspace:*",
     "@djl/notify": "workspace:*",
     "@djl/providers": "workspace:*",
+    "@effect/platform-bun": "catalog:",
     "@effect/platform-node": "catalog:",
     "@node-rs/argon2": "^2.2.1",
     "@opentelemetry/api": "^1.9.1",

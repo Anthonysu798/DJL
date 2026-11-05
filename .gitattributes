@@ -1,1 +1,17 @@
 *.sh text eol=lf
+# Match the cloud formatter on Windows without forcing binary assets to text.
+cloud/** text=auto eol=lf
+
+# Keep formatter-supported source text LF on Windows checkouts.
+*.ts text=auto eol=lf
+*.tsx text=auto eol=lf
+*.js text=auto eol=lf
+*.mjs text=auto eol=lf
+*.cjs text=auto eol=lf
+*.json text=auto eol=lf
+*.jsonc text=auto eol=lf
+*.css text=auto eol=lf
+*.html text=auto eol=lf
+*.md text=auto eol=lf
+*.yml text=auto eol=lf
+*.yaml text=auto eol=lf

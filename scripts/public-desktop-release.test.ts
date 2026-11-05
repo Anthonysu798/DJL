@@ -471,7 +471,7 @@ describe("public desktop release preparation", () => {
       setupAction,
       /key: bun-v2-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('bun\.lock', 'package\.json'\) \}\}/,
     );
-    for (const runner of ["macos-14", "macos-15-intel", "windows-2022"]) {
+    for (const runner of ["macos-15", "macos-15-intel", "windows-2022"]) {
       assert.match(ciWorkflow, new RegExp(`runner: ${runner}`));
       assert.match(releaseWorkflow, new RegExp(`runner: ${runner}`));
     }

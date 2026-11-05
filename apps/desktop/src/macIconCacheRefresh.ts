@@ -56,6 +56,6 @@ export function resolveMacAppBundlePath(
   if (platform !== "darwin") {
     return null;
   }
-  const bundlePath = Path.resolve(execPath, "..", "..", "..");
+  const bundlePath = Path.posix.resolve(execPath, "..", "..", "..");
   return bundlePath.endsWith(".app") ? bundlePath : null;
 }

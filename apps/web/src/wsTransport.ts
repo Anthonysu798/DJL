@@ -40,6 +40,11 @@ type PushListener<C extends WsPushChannel> = (message: WsPushMessage<C>) => void
 type RpcClientEffect = typeof makeRpcClient;
 type RpcClientInstance =
   RpcClientEffect extends Effect.Effect<infer Client, any, any> ? Client : never;
+type RpcClientSession = {
+  version: number;
+  client: RpcClientInstance;
+  runtime: ManagedRuntime.ManagedRuntime<RpcClient.Protocol, never>;
+};
 
 class WsTransportRpcError extends Data.TaggedError("WsTransportRpcError")<{
   readonly message: string;
@@ -149,15 +154,17 @@ export class WsTransport {
     _options?: { readonly timeoutMs?: number | null },
   ): Promise<T> {
     if (this.disposed) throw new Error("Transport disposed");
-    const client = await this.getClient();
+    let session = await this.getClientSession();
+    while (!this.isCurrentSession(session)) session = await this.getClientSession();
+    const { client, runtime } = session;
 
     if (method === WS_METHODS.gitRunStackedAction) {
-      return (await this.runGitActionStream(client, params)) as T;
+      return (await this.runGitActionStream(session, params)) as T;
     }
 
     if (method === ORCHESTRATION_WS_METHODS.subscribeShell) {
       this.shellSubscribed = true;
-      this.startShellStream(client);
+      this.startShellStream(session);
       return undefined as T;
     }
     if (method === ORCHESTRATION_WS_METHODS.unsubscribeShell) {
@@ -168,7 +175,7 @@ export class WsTransport {
     if (method === ORCHESTRATION_WS_METHODS.subscribeThread) {
       const threadId = (params as { threadId: string }).threadId;
       this.threadSubscriptions.set(threadId, params);
-      this.startThreadStream(client, threadId, params as never);
+      this.startThreadStream(session, threadId, params as never);
       return undefined as T;
     }
     if (method === ORCHESTRATION_WS_METHODS.unsubscribeThread) {
@@ -208,7 +215,7 @@ export class WsTransport {
               }),
             ),
           );
-    return (await this.runtime.runPromise(requestEffect)) as T;
+    return (await runtime.runPromise(requestEffect)) as T;
   }
 
   subscribe<C extends WsPushChannel>(
@@ -293,14 +300,18 @@ export class WsTransport {
     const clientScope = runtime.runSync(Scope.make());
     const clientPromise = runtime
       .runPromise(Scope.provide(clientScope)(makeRpcClient))
-      .then((client) => {
-        if (!this.disposed && this.sessionVersion === sessionVersion) {
-          this.setState("open");
-        }
+      .then(async (client) => {
+        const session = { version: sessionVersion, client, runtime };
+        if (!this.isCurrentSession(session)) throw new Error("Transport session superseded");
+        // Constructing an Effect RPC client does not await the socket opening.
+        // Only this read-only bootstrap is retried while the backend starts.
+        await runtime.runPromise(client[ORCHESTRATION_WS_METHODS.getShellSnapshot]({}));
+        if (!this.isCurrentSession(session)) throw new Error("Transport session superseded");
+        this.setState("open");
         return client;
       })
       .catch((error) => {
-        if (!this.disposed && this.sessionVersion === sessionVersion) {
+        if (this.isCurrentSession({ version: sessionVersion, runtime })) {
           this.setState("closed");
         }
         throw error;
@@ -316,12 +327,34 @@ export class WsTransport {
   private async getClient(): Promise<RpcClientInstance> {
     // During reconnect backoff clientPromise still belongs to the disposed session.
     if (this.reconnectPromise) return this.reconnectPromise;
+    const version = this.sessionVersion;
+    const promise = this.clientPromise;
     try {
-      return await this.clientPromise;
+      return await promise;
     } catch {
       if (this.disposed) throw new Error("Transport disposed");
+      if (version !== this.sessionVersion || promise !== this.clientPromise)
+        return this.getClient();
       return this.reconnect();
     }
+  }
+
+  private isCurrentSession(session: Pick<RpcClientSession, "version" | "runtime">): boolean {
+    return (
+      !this.disposed && session.version === this.sessionVersion && session.runtime === this.runtime
+    );
+  }
+
+  private async getClientSession(): Promise<RpcClientSession> {
+    while (!this.disposed) {
+      const version = this.sessionVersion;
+      const runtime = this.runtime;
+      const client = await this.getClient();
+      const session = { version, client, runtime };
+      // Re-select only before a request/stream has begun; never replay a mutation.
+      if (this.isCurrentSession(session)) return session;
+    }
+    throw new Error("Transport disposed");
   }
 
   private reconnect(): Promise<RpcClientInstance> {
@@ -380,15 +413,17 @@ export class WsTransport {
 
       try {
         const client = await session.clientPromise;
+        const readySession = { version: sessionVersion, client, runtime: session.runtime };
+        if (!this.isCurrentSession(readySession)) throw new Error("Transport session superseded");
         this.reconnectFailures = 0;
         for (const channel of this.listeners.keys()) {
           this.startChannelStream(channel as WsPushChannel);
         }
         if (this.shellSubscribed) {
-          this.startShellStream(client);
+          this.startShellStream(readySession);
         }
         for (const [threadId, input] of this.threadSubscriptions) {
-          this.startThreadStream(client, threadId, input);
+          this.startThreadStream(readySession, threadId, input);
         }
         return client;
       } catch (error) {
@@ -425,8 +460,11 @@ export class WsTransport {
   }
 
   private startChannelStream(channel: WsPushChannel): void {
-    void this.getClient()
-      .then((client) => {
+    void this.getClientSession()
+      .then((session) => {
+        if (!this.listeners.has(channel)) return;
+        if (!this.isCurrentSession(session)) return this.startChannelStream(channel);
+        const { client } = session;
         const restartChannel = () => {
           if (this.listeners.has(channel)) {
             this.startChannelStream(channel);
@@ -434,7 +472,7 @@ export class WsTransport {
         };
 
         if (isServerLifecyclePushChannel(channel)) {
-          this.startLifecycleStream(client);
+          this.startLifecycleStream(session);
         } else if (channel === WS_CHANNELS.serverConfigUpdated) {
           this.startStream(
             "server.config",
@@ -450,6 +488,7 @@ export class WsTransport {
               }
             },
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.serverProviderStatusesUpdated) {
           this.startStream(
@@ -458,6 +497,7 @@ export class WsTransport {
             (payload: ServerProviderStatusesUpdatedPayload) =>
               this.emit(WS_CHANNELS.serverProviderStatusesUpdated, payload),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.serverSettingsUpdated) {
           this.startStream(
@@ -466,6 +506,7 @@ export class WsTransport {
             (payload: ServerSettingsUpdatedPayload) =>
               this.emit(WS_CHANNELS.serverSettingsUpdated, payload),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.terminalEvent) {
           this.startStream(
@@ -473,6 +514,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeTerminalEvents]({}),
             (event: TerminalEvent) => this.emit(WS_CHANNELS.terminalEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.projectDevServerEvent) {
           this.startStream(
@@ -480,6 +522,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeProjectDevServerEvents]({}),
             (event: ProjectDevServerEvent) => this.emit(WS_CHANNELS.projectDevServerEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.workDocumentRenderEvent) {
           this.startStream(
@@ -487,6 +530,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeWorkDocumentRenderEvents]({}),
             (event: DocumentRenderEvent) => this.emit(WS_CHANNELS.workDocumentRenderEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.localModelEvent) {
           this.startStream(
@@ -494,6 +538,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeLocalModelEvents]({}),
             (event: LocalModelEvent) => this.emit(WS_CHANNELS.localModelEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.aiDetectorEvent) {
           this.startStream(
@@ -501,6 +546,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeAiDetectorEvents]({}),
             (event: AiDetectorEvent) => this.emit(WS_CHANNELS.aiDetectorEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.automationEvent) {
           this.startStream(
@@ -508,6 +554,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeAutomationEvents]({}),
             (event: AutomationStreamEvent) => this.emit(WS_CHANNELS.automationEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === WS_CHANNELS.serverEvent) {
           this.startStream(
@@ -515,6 +562,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeServerEvents]({}),
             (event: ServerCommandStreamEvent) => this.emit(WS_CHANNELS.serverEvent, event),
             restartChannel,
+            { session },
           );
         } else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent) {
           this.startStream(
@@ -522,6 +570,7 @@ export class WsTransport {
             client[WS_METHODS.subscribeOrchestrationDomainEvents]({}),
             (event: OrchestrationEvent) => this.emit(ORCHESTRATION_WS_CHANNELS.domainEvent, event),
             restartChannel,
+            { session },
           );
         }
       })
@@ -556,11 +605,13 @@ export class WsTransport {
     return shouldKeepServerLifecycleStream(new Set(this.listeners.keys()));
   }
 
-  private startLifecycleStream(client: RpcClientInstance): void {
+  private startLifecycleStream(session: RpcClientSession): void {
+    if (!this.isCurrentSession(session)) return;
+    const { client } = session;
     const restartLifecycle = () => {
       if (!this.shouldKeepLifecycleStream()) return;
-      void this.getClient()
-        .then((nextClient) => this.startLifecycleStream(nextClient))
+      void this.getClientSession()
+        .then((nextSession) => this.startLifecycleStream(nextSession))
         .catch((error) => console.warn("WebSocket RPC lifecycle stream failed to restart", error));
     };
     this.startStream(
@@ -574,13 +625,16 @@ export class WsTransport {
         }
       },
       restartLifecycle,
+      { session },
     );
   }
 
-  private startShellStream(client: RpcClientInstance): void {
+  private startShellStream(session: RpcClientSession): void {
+    if (!this.isCurrentSession(session)) return;
+    const { client } = session;
     const restartShell = () => {
-      void this.getClient()
-        .then((nextClient) => this.startShellStream(nextClient))
+      void this.getClientSession()
+        .then((nextSession) => this.startShellStream(nextSession))
         .catch((error) => console.warn("WebSocket RPC shell stream failed to restart", error));
     };
     this.startStream(
@@ -589,15 +643,18 @@ export class WsTransport {
       (event: OrchestrationShellStreamItem) =>
         this.emit(ORCHESTRATION_WS_CHANNELS.shellEvent, event),
       restartShell,
+      { session },
     );
   }
 
-  private startThreadStream(client: RpcClientInstance, threadId: string, input: unknown): void {
+  private startThreadStream(session: RpcClientSession, threadId: string, input: unknown): void {
+    if (!this.isCurrentSession(session)) return;
+    const { client } = session;
     const key = `orchestration.thread:${threadId}`;
     this.stopStream(key);
     const restartThread = () => {
-      void this.getClient()
-        .then((nextClient) => this.startThreadStream(nextClient, threadId, input))
+      void this.getClientSession()
+        .then((nextSession) => this.startThreadStream(nextSession, threadId, input))
         .catch((error) => console.warn("WebSocket RPC thread stream failed to restart", error));
     };
     this.startStream(
@@ -606,7 +663,7 @@ export class WsTransport {
       (event: OrchestrationThreadStreamItem) =>
         this.emit(ORCHESTRATION_WS_CHANNELS.threadEvent, event),
       restartThread,
-      { reconnectOnCleanEnd: false },
+      { reconnectOnCleanEnd: false, session },
     );
   }
 
@@ -615,10 +672,12 @@ export class WsTransport {
     stream: unknown,
     listener: (event: T) => void,
     restart?: (() => void) | undefined,
-    options: { readonly reconnectOnCleanEnd?: boolean } = {},
+    options: { readonly reconnectOnCleanEnd?: boolean; readonly session?: RpcClientSession } = {},
   ): void {
+    if (options.session && !this.isCurrentSession(options.session)) return;
     if (this.streamCleanups.has(key)) return;
-    const streamSessionVersion = this.sessionVersion;
+    const streamSessionVersion = options.session?.version ?? this.sessionVersion;
+    const runtime = options.session?.runtime ?? this.runtime;
     const runnableStream = stream as Stream.Stream<T, WsTransportRpcError, never>;
     let cancel: (() => void) | undefined;
     let synchronousExit: Exit.Exit<void, WsTransportRpcError> | undefined;
@@ -667,8 +726,12 @@ export class WsTransport {
         console.warn("WebSocket RPC stream failed", causeToError(exit.cause));
       }
     };
-    cancel = this.runtime.runCallback(
-      Stream.runForEach(runnableStream, (event) => Effect.sync(() => listener(event))),
+    cancel = runtime.runCallback(
+      Stream.runForEach(runnableStream, (event) =>
+        Effect.sync(() => {
+          if (!this.disposed && streamSessionVersion === this.sessionVersion) listener(event);
+        }),
+      ),
       {
         onExit: (exit) => {
           if (!cancel) {
@@ -693,11 +756,13 @@ export class WsTransport {
   }
 
   private async runGitActionStream(
-    client: RpcClientInstance,
+    session: RpcClientSession,
     params: unknown,
   ): Promise<GitRunStackedActionResult> {
     let result: GitRunStackedActionResult | null = null;
-    await this.runtime.runPromise(
+    if (!this.isCurrentSession(session)) throw new Error("Transport session superseded");
+    const { client, runtime } = session;
+    await runtime.runPromise(
       Stream.runForEach(client[WS_METHODS.gitRunStackedAction](params as never), (event) =>
         Effect.sync(() => {
           this.emit(WS_CHANNELS.gitActionProgress, event as GitActionProgressEvent);

@@ -159,7 +159,7 @@ jobs:
         include:
           - runner: ubuntu-24.04
             package: opencode-linux-x64
-          - runner: macos-14
+          - runner: macos-15
             package: opencode-darwin-arm64
           - runner: macos-15-intel
             package: opencode-darwin-x64
@@ -264,7 +264,7 @@ jobs:
       matrix:
         include:
           - label: macOS ARM64
-            runner: macos-14
+            runner: macos-15
             platform: mac
             target: dmg
             arch: arm64

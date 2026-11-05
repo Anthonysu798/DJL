@@ -1,3 +1,4 @@
+import * as Path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -25,8 +26,9 @@ const RECORD_PATH = "/userData/install-record.json";
 
 describe("resolveInstallRecordPath", () => {
   it("places the record inside userData", () => {
-    expect(resolveInstallRecordPath("/Users/me/Library/Application Support/djl")).toBe(
-      "/Users/me/Library/Application Support/djl/install-record.json",
+    const userDataPath = Path.resolve("test-user-data");
+    expect(resolveInstallRecordPath(userDataPath)).toBe(
+      Path.join(userDataPath, "install-record.json"),
     );
   });
 });

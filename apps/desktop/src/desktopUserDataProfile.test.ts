@@ -26,12 +26,12 @@ afterEach(() => {
 
 describe("desktopUserDataProfile", () => {
   it("resolves the canonical DJL profile names", () => {
-    const appDataBase = "/Users/tester/Library/Application Support";
+    const appDataBase = Path.resolve("test-app-data", "Application Support");
     expect(resolveDesktopUserDataPath({ appDataBase, isDevelopment: true })).toBe(
-      "/Users/tester/Library/Application Support/djl-dev",
+      Path.join(appDataBase, "djl-dev"),
     );
     expect(resolveDesktopUserDataPath({ appDataBase, isDevelopment: false })).toBe(
-      "/Users/tester/Library/Application Support/djl",
+      Path.join(appDataBase, "djl"),
     );
   });
 

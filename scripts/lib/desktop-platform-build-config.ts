@@ -24,6 +24,7 @@ export const AI_DETECTOR_ASAR_UNPACK_GLOBS = [
 ] as const;
 
 export interface DesktopPlatformBuildConfig {
+  readonly afterPack?: string;
   readonly afterSign?: string;
   readonly asarUnpack?: ReadonlyArray<string>;
   readonly dmg?: Record<string, unknown>;
@@ -41,6 +42,7 @@ export interface CreateDesktopPlatformBuildConfigInput {
   readonly macAfterSignHook?: string;
   readonly signed?: boolean;
   readonly windowsAzureSignOptions?: Record<string, string>;
+  readonly windowsAfterPackHook?: string;
 }
 
 export interface DesktopNativeBuildHostInput {
@@ -120,6 +122,7 @@ export function createDesktopPlatformBuildConfig(
 
   return {
     ...nativePackaging,
+    ...(input.windowsAfterPackHook ? { afterPack: input.windowsAfterPackHook } : {}),
     // Keep the Windows product registration stable while the public app ID changes.
     // This lets NSIS updates replace the existing installation and own its uninstaller.
     nsis: {

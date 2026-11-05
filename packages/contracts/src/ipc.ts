@@ -486,6 +486,8 @@ export interface DesktopBridge {
     position?: { x: number; y: number },
   ) => Promise<T | null>;
   openExternal: (url: string) => Promise<boolean>;
+  /** Opens the isolated local commerce prototype without changing the AI window. */
+  openShop?: () => Promise<boolean>;
   printPdf?: (url: string) => Promise<boolean>;
   openPath?: (path: string) => Promise<void>;
   showInFolder: (path: string) => Promise<void>;
@@ -503,7 +505,10 @@ export interface DesktopBridge {
     getState: () => Promise<DesktopWindowState>;
     onState: (listener: (state: DesktopWindowState) => void) => () => void;
   };
-  onMenuAction: (listener: (action: string) => void) => () => void;
+  /** Global shell owners declare their actions to receive commands that arrived before mount.
+   * Live events remain broadcasts; terminal/browser/notification actions are never buffered.
+   */
+  onMenuAction: (listener: (action: string) => void, actions?: readonly string[]) => () => void;
   /**
    * `djl://auth/callback` deep links (browser sign-in). Delivers a callback that
    * arrived before the listener was attached, and each callback only once.

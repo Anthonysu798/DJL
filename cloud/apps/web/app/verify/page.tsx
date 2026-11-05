@@ -1,6 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
 
 import { authClient } from "@/lib/auth-client";
 import { fill } from "@/lib/i18n";
@@ -26,6 +27,16 @@ function VerifyForm() {
     if (result.error) {
       setError(result.error.message ?? d.error);
       return;
+    }
+    if (
+      (window as Window & { djlCommerce?: CommerceDesktopBridge }).djlCommerce?.kind === "desktop"
+    ) {
+      const { pathname } = new URL(next, window.location.origin);
+      // The standalone storefront cannot navigate to other Cloud pages.
+      if (!/^\/shop(?:\/|$)/.test(pathname) || /%(?:2e|2f|5c)/i.test(pathname)) {
+        router.push("/shop");
+        return;
+      }
     }
     router.push(next);
   };

@@ -55,7 +55,7 @@ if (
 const ci = readFileSync(resolve(workflowDirectory, "desktop-ci.yml"), "utf8");
 const production = readFileSync(resolve(workflowDirectory, "desktop-release.yml"), "utf8");
 
-for (const runner of ["macos-14", "macos-15-intel", "windows-2022"]) {
+for (const runner of ["macos-15", "macos-15-intel", "windows-2022"]) {
   requireText(ci, `runner: ${runner}`);
   requireText(production, `runner: ${runner}`);
 }

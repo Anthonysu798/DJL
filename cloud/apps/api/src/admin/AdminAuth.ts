@@ -5,6 +5,7 @@
  */
 import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
+import { commerceStaffCan, type CommerceStaffRole } from "@djl/domain";
 import * as OTPAuth from "otpauth";
 
 import { hashIp, writeAudit } from "../audit/AuditLog.ts";
@@ -12,8 +13,8 @@ import { hashPassword, verifyPassword } from "../auth/password.ts";
 import { ApiError } from "../http/errors.ts";
 import type { Lockouts } from "../security/throttle.ts";
 
-export type AdminRole = "admin" | "employee";
-export const ADMIN_ROLES: readonly AdminRole[] = ["admin", "employee"];
+export type AdminRole = "admin" | "employee" | "commerce";
+export const ADMIN_ROLES: readonly AdminRole[] = ["admin", "employee", "commerce"];
 
 /** What the browser reports about itself at sign-in. Stored verbatim for forensics, never trusted for auth. */
 export interface LoginClient {
@@ -58,6 +59,8 @@ export interface AdminPrincipal {
   readonly adminId: string;
   readonly email: string;
   readonly role: AdminRole;
+  /** Present only for a dedicated commerce account; "none" remains scoped after revocation. */
+  readonly commerceRole?: CommerceStaffRole;
   readonly sessionId: string;
   readonly mfaVerified: boolean;
 }
@@ -228,7 +231,7 @@ export class AdminAuth {
   async create(input: {
     readonly email: string;
     readonly name: string;
-    readonly role: AdminRole;
+    readonly role: Exclude<AdminRole, "commerce">;
     readonly password: string;
     readonly invitedBy?: string | null;
   }) {
@@ -249,20 +252,38 @@ export class AdminAuth {
   // ---- invites -------------------------------------------------------------
 
   /** Issue a fresh single-use invite token, killing any earlier one for the same admin. */
-  async issueInvite(adminId: string, createdBy: string | null): Promise<string> {
+  async issueInvite(
+    adminId: string,
+    createdBy: string | null,
+    audit?: { readonly actorId: string; readonly reason: string },
+  ): Promise<string> {
     const token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(schema.adminInvites)
-        .set({ expiresAt: new Date() })
-        .where(and(eq(schema.adminInvites.adminId, adminId), isNull(schema.adminInvites.usedAt)));
-      await tx.insert(schema.adminInvites).values({
-        adminId,
-        tokenHash: await sha256(token),
-        expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-        createdBy,
+    await this.db
+      .transaction(async (tx) => {
+        await tx
+          .update(schema.adminInvites)
+          .set({ expiresAt: new Date() })
+          .where(and(eq(schema.adminInvites.adminId, adminId), isNull(schema.adminInvites.usedAt)));
+        await tx.insert(schema.adminInvites).values({
+          adminId,
+          tokenHash: await sha256(token),
+          expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+          createdBy,
+        });
+        if (audit)
+          await writeAudit(tx, {
+            actorType: "admin",
+            actorId: audit.actorId,
+            action: "admin.invite.issued",
+            targetType: "admin",
+            targetId: adminId,
+            reason: audit.reason,
+          });
+      })
+      .catch((error: unknown) => {
+        if (audit) throw new ApiError(500, "admin_error", "Admin operation failed.");
+        throw error;
       });
-    });
     return token;
   }
 
@@ -443,6 +464,7 @@ export class AdminAuth {
         adminId: live.id,
         email: live.email,
         role: live.role,
+        ...(live.commerceRole ? { commerceRole: live.commerceRole } : {}),
         sessionId: session!.id,
         mfaVerified: mfaVerified || !this.mfaRequired,
       },
@@ -493,6 +515,7 @@ export class AdminAuth {
       adminId: admin.id,
       email: admin.email,
       role: admin.role,
+      ...(admin.commerceRole ? { commerceRole: admin.commerceRole } : {}),
       sessionId: session.id,
       mfaVerified: Boolean(session.mfaVerifiedAt) || !this.mfaRequired,
     };
@@ -581,6 +604,7 @@ export class AdminAuth {
  */
 export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
   admin: new Set(["*"]),
+  commerce: new Set(),
   employee: new Set([
     "users.read",
     "users.write",
@@ -595,6 +619,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
 };
 
 export function can(principal: AdminPrincipal, permission: string): boolean {
+  if (principal.commerceRole != null)
+    return principal.role === "commerce" && commerceStaffCan(principal.commerceRole, permission);
   const perms = ROLE_PERMISSIONS[principal.role];
   return perms.has("*") || perms.has(permission);
 }

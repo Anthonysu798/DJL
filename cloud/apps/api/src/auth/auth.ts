@@ -13,6 +13,7 @@
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import {
   admin,
   bearer,
@@ -32,6 +33,7 @@ import type { Redis } from "ioredis";
 import type { ApiEnv } from "../config/env.ts";
 import { createRedisThrottle } from "../security/throttle.ts";
 import { ACCESS_TOKEN_AUDIENCE } from "./accessTokens.ts";
+import { revokeCommerceAuth } from "./commerceAuthGeneration.ts";
 import { hashPassword, verifyPassword } from "./password.ts";
 import type { SessionRevocations } from "./revocations.ts";
 
@@ -77,6 +79,7 @@ export function createAuth(input: {
   readonly onEmailVerified?: (userId: string) => Promise<void>;
 }) {
   const { env, db, notifier, redis, revocations, onEmailVerified } = input;
+  const nativeAdmin = admin();
   return betterAuth({
     appName: "DJL Cloud",
     baseURL: env.apiPublicUrl,
@@ -165,6 +168,27 @@ export function createAuth(input: {
       ...(env.cookieDomain
         ? { crossSubDomainCookies: { enabled: true, domain: env.cookieDomain } }
         : {}),
+    },
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        // Ordinary sign-out and individual revocations remain realm-local.
+        const result: unknown = ctx.context.returned;
+        if (typeof result !== "object" || result === null) return;
+        if (ctx.path === "/revoke-sessions" || ctx.path === "/revoke-other-sessions") {
+          const userId = ctx.context.session?.user.id;
+          if (userId && "status" in result && result.status === true)
+            await revokeCommerceAuth(db, userId);
+        } else if (
+          ctx.path === "/admin/revoke-user-sessions" &&
+          "success" in result &&
+          result.success === true
+        ) {
+          // Only the successful native permission-checked handler reaches here.
+          // Apply its exact schema so the scoped target equals the Cloud target.
+          const { userId } = nativeAdmin.endpoints.revokeUserSessions.options.body.parse(ctx.body);
+          await revokeCommerceAuth(db, userId);
+        }
+      }),
     },
     databaseHooks: {
       user: {
@@ -263,7 +287,7 @@ export function createAuth(input: {
       }),
       bearer(),
       haveIBeenPwned(),
-      admin(),
+      nativeAdmin,
       // OAuth device flow for desktop and iOS: the app shows a short code, the
       // user approves it in the browser after signing in by any method, and the
       // app polls for its session. No deep links, works on every platform.
