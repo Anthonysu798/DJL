@@ -3,7 +3,7 @@
  * server. Better Auth is mounted by converting the Effect request to a web
  * Request and the auth Response back.
  */
-import { Effect, Layer, Stream } from "effect";
+import { Effect, Layer } from "effect";
 import { HttpBody, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
@@ -11,6 +11,31 @@ import { makeClientConfigRoutes, type ClientConfigDeps } from "../client-config/
 import { makeImageRoutes, type ImageRouteDeps } from "../images/routes.ts";
 import { makeNotificationRoutes, type NotificationRouteDeps } from "../notifications/routes.ts";
 import { makeBillingRoutes, type BillingRouteDeps } from "../billing/routes.ts";
+import {
+  makeCommerceRoutes,
+  makeScopedCommerceRoutes,
+  type CommerceRouteDeps,
+} from "../commerce/routes.ts";
+import { makeCommerceAlertRoutes, type CommerceAlertRouteDeps } from "../commerce/alertRoutes.ts";
+import {
+  makeCommerceAddressLookupRoutes,
+  type CommerceAddressLookupRouteDeps,
+} from "../commerce/addressLookupRoutes.ts";
+import {
+  makeCommerceReconciliationRoutes,
+  type CommerceReconciliationRouteDeps,
+} from "../commerce/reconciliationRoutes.ts";
+import {
+  makeCommercePaymentRoutes,
+  type CommercePaymentRouteDeps,
+} from "../commerce/paymentRoutes.ts";
+import {
+  makeCommerceImageSearchRoutes,
+  makeCommerceImageUploadRoutes,
+  makeScopedCommerceImageRoutes,
+  type CommerceImageSearchRouteDeps,
+  type CommerceImageUploadRouteDeps,
+} from "../commerce/imageSearchRoutes.ts";
 import { makeChatRoutes, type ChatRouteDeps } from "../chat/routes.ts";
 import { makeFileRoutes, type FileRouteDeps } from "../files/routes.ts";
 import { makeAdminRoutes, type AdminRouteDeps } from "../admin/routes.ts";
@@ -24,28 +49,52 @@ import { makeSyncRoutes, type SyncRouteDeps } from "../sync/routes.ts";
 import { makeTrialRoutes, type TrialRouteDeps } from "../trial/routes.ts";
 import { makeUsageRoutes, type UsageRouteDeps } from "../usage/routes.ts";
 import type { DjlAuth } from "../auth/auth.ts";
+import type { createCommerceAuth } from "../auth/commerceAuth.ts";
+import { createCommerceCsrf } from "../auth/commerceCsrf.ts";
 import type { ApiEnv } from "../config/env.ts";
 import { RequestContext } from "./context.ts";
-import { errorResponse } from "./errors.ts";
+import { errorResponse, unauthorized } from "./errors.ts";
+import { attempt, handle } from "./handle.ts";
+import { json } from "./json.ts";
 
 /**
- * `HttpServerResponse.fromWeb` keeps status, headers, and every Set-Cookie,
- * but labels the body application/octet-stream, which web clients (Better
- * Auth's included) then refuse to parse as JSON. Re-attach the body with the
- * upstream Content-Type.
+ * Auth endpoints return finite bodies. Read them before handing off to the
+ * platform adapter: the web → Effect → web stream bridge can crash Windows
+ * Bun during concurrent session/catalog reloads. Keep the upstream MIME type,
+ * status and cookies. Chat and gateway streaming use separate routes.
  */
-function fromWebKeepingType(response: Response): HttpServerResponse.HttpServerResponse {
-  const converted = HttpServerResponse.fromWeb(response);
-  const contentType = response.headers.get("content-type");
-  if (!response.body || !contentType) return converted;
-  const body = Stream.fromReadableStream({ evaluate: () => response.body!, onError: (e) => e });
-  return HttpServerResponse.setBody(converted, HttpBody.stream(body, contentType));
+export async function fromWebKeepingType(
+  response: Response,
+): Promise<HttpServerResponse.HttpServerResponse> {
+  const bytes = response.body ? new Uint8Array(await response.arrayBuffer()) : null;
+  const converted = HttpServerResponse.fromWeb(
+    new Response(null, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    }),
+  );
+  return bytes === null
+    ? converted
+    : HttpServerResponse.setBody(
+        converted,
+        HttpBody.uint8Array(
+          bytes,
+          response.headers.get("content-type") ?? "application/octet-stream",
+        ),
+      );
 }
 
 export interface RouteDeps
   extends
     AccountDeps,
     BillingRouteDeps,
+    CommerceRouteDeps,
+    CommerceAlertRouteDeps,
+    CommerceReconciliationRouteDeps,
+    CommercePaymentRouteDeps,
+    CommerceImageSearchRouteDeps,
+    CommerceImageUploadRouteDeps,
     TrialRouteDeps,
     GatewayRouteDeps,
     AdminRouteDeps,
@@ -62,6 +111,8 @@ export interface RouteDeps
     ImageRouteDeps {
   readonly env: ApiEnv;
   readonly auth: DjlAuth;
+  readonly addressLookup?: CommerceAddressLookupRouteDeps["addressLookup"];
+  readonly testCommerceAuth?: ReturnType<typeof createCommerceAuth>;
   readonly readiness: { readonly ready: () => Promise<boolean> };
   readonly version: string;
   readonly clientConfig: ClientConfigDeps;
@@ -107,9 +158,71 @@ export function makeRoutes(deps: RouteDeps) {
         return errorResponse(500, "auth_unavailable", "Authentication service error.", ctx.traceId);
       const headers = new Headers(response.headers);
       headers.set("x-trace-id", ctx.traceId);
-      return fromWebKeepingType(new Response(response.body, { status: response.status, headers }));
+      return yield* Effect.promise(() =>
+        fromWebKeepingType(new Response(response.body, { status: response.status, headers })),
+      );
     }),
   );
+
+  const shopAuth = deps.testCommerceAuth;
+  const shopCsrf = shopAuth
+    ? createCommerceCsrf(shopAuth, deps.env.webPublicUrl, deps.env.betterAuthSecret)
+    : undefined;
+  const shopAuthRoutes =
+    shopAuth && shopCsrf
+      ? Layer.mergeAll(
+          HttpRouter.add(
+            "*",
+            "/v1/shop/auth/*",
+            Effect.gen(function* () {
+              const request = yield* HttpServerRequest.HttpServerRequest;
+              const webRequest = yield* HttpServerRequest.toWeb(request);
+              return yield* Effect.promise(async () =>
+                fromWebKeepingType(await shopAuth.handle(webRequest)),
+              );
+            }),
+          ),
+          HttpRouter.add(
+            "GET",
+            "/v1/shop/account",
+            Effect.gen(function* () {
+              const request = yield* HttpServerRequest.HttpServerRequest;
+              const ctx = yield* RequestContext;
+              const webRequest = yield* HttpServerRequest.toWeb(request);
+              const buyer = yield* Effect.promise(() => shopAuth.buyer(webRequest.headers));
+              if (!buyer) return unauthorized(ctx.traceId);
+              const { id, email, emailVerified } = buyer;
+              const wallet = yield* Effect.promise(() => deps.commerce.wallet(id));
+              return HttpServerResponse.jsonUnsafe(
+                { user: { id, email, emailVerified }, wallet },
+                { headers: { "cache-control": "no-store" } },
+              );
+            }),
+          ),
+          HttpRouter.add(
+            "GET",
+            "/v1/shop/csrf",
+            handle(
+              Effect.gen(function* () {
+                const request = yield* HttpServerRequest.HttpServerRequest;
+                return json(
+                  yield* attempt(() => shopCsrf.issue(new Headers(request.headers)), {
+                    status: 503,
+                    code: "commerce_auth_failed",
+                    message: "Shop session unavailable.",
+                  }),
+                );
+              }),
+            ),
+          ),
+          makeScopedCommerceRoutes({ commerce: deps.commerce, buyer: shopCsrf }),
+          makeScopedCommerceImageRoutes({
+            imageSearch: deps.imageSearch,
+            imageUploads: deps.imageUploads,
+            buyer: shopCsrf,
+          }),
+        )
+      : Layer.empty;
 
   const fallback = HttpRouter.add(
     "*",
@@ -127,8 +240,20 @@ export function makeRoutes(deps: RouteDeps) {
     makeNotificationRoutes(deps),
     makeImageRoutes(deps),
     authRoutes,
+    shopAuthRoutes,
     makeAccountRoutes(deps),
     makeBillingRoutes(deps),
+    makeCommerceRoutes(deps),
+    makeCommerceAlertRoutes(deps),
+    makeCommerceReconciliationRoutes(deps),
+    makeCommercePaymentRoutes(deps),
+    makeCommerceImageSearchRoutes(deps),
+    makeCommerceImageUploadRoutes(deps),
+    makeCommerceAddressLookupRoutes({
+      ...(deps.addressLookup ? { addressLookup: deps.addressLookup } : {}),
+      principals: deps.principals,
+      addressLookupLimiter: deps.limiter,
+    }),
     makeTrialRoutes(deps),
     makeGatewayRoutes(deps),
     makeAdminRoutes(deps),

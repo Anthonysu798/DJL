@@ -21,6 +21,11 @@ REVOKE UPDATE, DELETE ON run_events FROM djl_app;
 REVOKE DELETE ON stripe_events FROM djl_app;
 REVOKE DELETE ON usage_requests FROM djl_app;
 
+-- Commerce uses user/supplier scoping, never the AI org ledger. Mutable state keeps
+-- UPDATE, while every accounting history table loses deletion rights entirely.
+REVOKE UPDATE, DELETE, TRUNCATE ON commerce_ledger, commerce_operations, commerce_external_refund_allocations, commerce_supplier_payment_documents FROM djl_app;
+REVOKE DELETE, TRUNCATE ON commerce_orders, commerce_order_items, commerce_commissions, commerce_withdrawals, commerce_payment_attempts, commerce_provider_refunds, commerce_payment_events, commerce_external_refunds, commerce_alert_incidents, commerce_alert_email_deliveries FROM djl_app;
+
 -- Row level security mirrors the service-layer org scoping. The API sets
 -- `SET LOCAL app.org_id = '<uuid>'` per transaction; rows outside it are invisible.
 ALTER TABLE credit_ledger ENABLE ROW LEVEL SECURITY;

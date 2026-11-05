@@ -88,14 +88,23 @@ export function makePrincipalResolver(
     return { user: result.user, sessionId: result.session.id, activeOrgId };
   }
 
+  async function fromCredentials(headers: Headers): Promise<Caller> {
+    const authorization = headers.get("authorization");
+    if (authorization === null) return fromSession(headers);
+    const bearer = /^bearer\s+(\S+)$/i.exec(authorization)?.[1];
+    if (!bearer) throw unauthorized();
+    if (looksLikeJwt(bearer)) return fromAccessToken(bearer);
+
+    // Explicit authorization bypasses cookie CSRF checks. Better Auth may ignore an
+    // invalid bearer, so never let a browser cookie authenticate that request instead.
+    const bearerHeaders = new Headers(headers);
+    bearerHeaders.delete("cookie");
+    return fromSession(bearerHeaders);
+  }
+
   return {
     async resolve({ headers, requestedOrgId }) {
-      const authorization = headers.get("authorization") ?? "";
-      const bearer = /^bearer\s+/i.test(authorization)
-        ? authorization.replace(/^bearer\s+/i, "").trim()
-        : null;
-      const { user, sessionId, activeOrgId } =
-        bearer && looksLikeJwt(bearer) ? await fromAccessToken(bearer) : await fromSession(headers);
+      const { user, sessionId, activeOrgId } = await fromCredentials(headers);
       if (user.banned) throw new ApiError(403, "suspended", "This account is suspended.");
 
       const memberships = await db

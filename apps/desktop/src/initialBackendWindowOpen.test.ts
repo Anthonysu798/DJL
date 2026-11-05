@@ -4,6 +4,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  hasLiveMainWindow,
   openInitialBackendWindow,
   type InitialBackendWindowOpenOptions,
 } from "./initialBackendWindowOpen";
@@ -34,6 +35,37 @@ function createOptions(
 }
 
 describe("openInitialBackendWindow", () => {
+  it("only treats a live AI main window as existing", () => {
+    expect(hasLiveMainWindow(null)).toBe(false);
+    expect(hasLiveMainWindow({ isDestroyed: () => true })).toBe(false);
+    expect(hasLiveMainWindow({ isDestroyed: () => false })).toBe(true);
+  });
+
+  it("reopens the AI window when only the shop remains, without changing the shop", () => {
+    const shop = { isDestroyed: () => false, close: vi.fn(), focus: vi.fn() };
+    const mainWindow = null;
+    const options = createOptions({
+      hasExistingWindow: () => hasLiveMainWindow(mainWindow),
+    });
+
+    openInitialBackendWindow(options);
+
+    expect(options.createWindow).toHaveBeenCalledOnce();
+    expect(shop.isDestroyed()).toBe(false);
+    expect(shop.close).not.toHaveBeenCalled();
+    expect(shop.focus).not.toHaveBeenCalled();
+  });
+
+  it("replaces a destroyed main-window reference", () => {
+    const options = createOptions({
+      hasExistingWindow: () => hasLiveMainWindow({ isDestroyed: () => true }),
+    });
+
+    openInitialBackendWindow(options);
+
+    expect(options.createWindow).toHaveBeenCalledOnce();
+  });
+
   it("starts the development renderer while backend readiness is still pending", () => {
     const options = createOptions({
       isDevelopment: true,

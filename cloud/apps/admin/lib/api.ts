@@ -10,6 +10,18 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:878
 );
 
 let token: string | null = null;
+let sessionRevision = 0;
+const sessionListeners = new Set<() => void>();
+
+export function subscribeAdminSession(listener: () => void): () => void {
+  sessionListeners.add(listener);
+  return () => sessionListeners.delete(listener);
+}
+
+export function getAdminSessionRevision(): number {
+  return sessionRevision;
+}
+
 export function getToken(): string | null {
   if (token) return token;
   try {
@@ -20,12 +32,17 @@ export function getToken(): string | null {
   return token;
 }
 export function setToken(next: string | null): void {
+  const changed = next !== getToken();
   token = next;
   try {
     if (next) sessionStorage.setItem("djl_admin_token", next);
     else sessionStorage.removeItem("djl_admin_token");
   } catch {
     /* ignore */
+  }
+  if (changed) {
+    sessionRevision++;
+    for (const listener of sessionListeners) listener();
   }
 }
 
@@ -61,7 +78,7 @@ export async function admin<T>(
     } catch {
       /* no body */
     }
-    if (res.status === 401) setToken(null);
+    if (res.status === 401 && getToken() === t) setToken(null);
     throw new AdminApiError(
       res.status,
       body.error?.code ?? "http_error",

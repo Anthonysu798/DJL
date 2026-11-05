@@ -594,6 +594,8 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     platform === "mac" && signed
       ? join(yield* RepoRoot, "scripts", "notarize-macos-after-sign.cjs")
       : undefined;
+  const windowsAfterPackHook =
+    platform === "win" ? join(yield* RepoRoot, "scripts", "windows-after-pack.cjs") : undefined;
 
   const platformBuildConfigInput = {
     platform,
@@ -601,6 +603,7 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     signed,
     ...(platform === "mac" && !signed ? { macIdentity: "-" } : {}),
     ...(macAfterSignHook ? { macAfterSignHook } : {}),
+    ...(windowsAfterPackHook ? { windowsAfterPackHook } : {}),
     ...(windowsAzureSignOptions ? { windowsAzureSignOptions } : {}),
   } as const;
 

@@ -161,10 +161,26 @@ describe("conversations and messages", () => {
     const c = await h.chat.create(owner.p, { title: `Animals ${tag}` } as never);
     const sent = await h.chat.send(owner.facts, c.id, input(`tell me about the ${marker} please`));
     await h.runner.idle();
+    // The fake provider echoes the prompt and both rows share a transaction timestamp.
+    // Make the single-match case explicit, then independently check a strictly later match.
+    await h.db
+      .update(schema.messages)
+      .set({ parts: [{ type: "text", text: "A reply without the search term." }] })
+      .where(eq(schema.messages.id, sent.reply.id));
     const hits = await h.chat.search(owner.p, { q: marker } as never);
     expect(hits.results.map((r) => r.conversation.id)).toEqual([c.id]);
     expect(hits.results[0]!.snippet).toContain(marker);
     expect(hits.results[0]!.messageId).toBe(sent.message.id);
+    await h.db
+      .update(schema.messages)
+      .set({
+        parts: [{ type: "text", text: `A later note about ${marker}.` }],
+        createdAt: new Date(Date.parse(sent.message.createdAt) + 1),
+      })
+      .where(eq(schema.messages.id, sent.reply.id));
+    const latest = await h.chat.search(owner.p, { q: marker } as never);
+    expect(latest.results.map((r) => r.conversation.id)).toEqual([c.id]);
+    expect(latest.results[0]!.messageId).toBe(sent.reply.id);
     // A title-only match has no message to jump to.
     const titled = await h.chat.search(owner.p, { q: tag } as never);
     expect(titled.results.map((r) => [r.conversation.id, r.messageId])).toEqual([[c.id, null]]);

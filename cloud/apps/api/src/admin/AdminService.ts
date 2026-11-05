@@ -5,11 +5,19 @@
  */
 import { and, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import { creditsToMicro, formatCredits, totalAvailable, type Microcredits } from "@djl/domain";
+import {
+  creditsToMicro,
+  formatCredits,
+  totalAvailable,
+  isCommerceStaffRole,
+  type CommerceStaffRole,
+  type Microcredits,
+} from "@djl/domain";
 import { adminInvite, type EmailSender } from "@djl/notify";
 
 import type { ResumeWindowBlockedRuns } from "../agent/resume.ts";
 import { writeAudit } from "../audit/AuditLog.ts";
+import { revokeCommerceAuth } from "../auth/commerceAuthGeneration.ts";
 import type { SessionRevocations } from "../auth/revocations.ts";
 import type { LedgerService } from "../credits/LedgerService.ts";
 import type { GatewayService } from "../gateway/GatewayService.ts";
@@ -280,6 +288,7 @@ export class AdminService {
   async revokeSessions(p: AdminPrincipal, userId: string) {
     requirePermission(p, "users.write");
     const ended = await this.deps.db.transaction(async (tx) => {
+      await revokeCommerceAuth(tx, userId);
       const rows = await tx
         .delete(schema.session)
         .where(eq(schema.session.userId, userId))
@@ -691,6 +700,7 @@ export class AdminService {
       email: a.email,
       name: a.name,
       role: a.role,
+      ...(a.commerceRole ? { commerceRole: a.commerceRole } : {}),
       status: a.disabled
         ? ("disabled" as const)
         : a.passwordHash
@@ -747,6 +757,7 @@ export class AdminService {
       readonly name: unknown;
       readonly role: unknown;
       readonly reason: unknown;
+      readonly commerceRole?: unknown;
     },
   ) {
     requirePermission(p, "admins.write");
@@ -759,16 +770,50 @@ export class AdminService {
       throw new ApiError(400, "bad_request", "Name must be 1 to 80 characters.");
     if (!isRole(input.role))
       throw new ApiError(400, "bad_request", "Role must be admin or employee.");
+    if (input.commerceRole !== undefined && !isCommerceStaffRole(input.commerceRole))
+      throw new ApiError(400, "bad_request", "Unknown commerce staff role.");
+    const commerceRole = isCommerceStaffRole(input.commerceRole) ? input.commerceRole : undefined;
+    if ((commerceRole && input.role === "admin") || (!commerceRole && input.role === "commerce"))
+      throw new ApiError(400, "bad_request", "Commerce-only staff cannot be platform admins.");
+    const role = commerceRole ? "commerce" : input.role;
     const existing = await this.deps.db.query.admins.findFirst({
       where: and(eq(schema.admins.email, email), isNull(schema.admins.deletedAt)),
     });
     if (existing)
       throw new ApiError(409, "email_in_use", "A team member with that email already exists.");
-    const [row] = await this.deps.db
-      .insert(schema.admins)
-      .values({ email, name, role: input.role, invitedBy: p.adminId })
-      .returning();
-    const token = await this.deps.auth.issueInvite(row!.id, p.adminId);
+    const row = await this.deps.db
+      .transaction(async (tx) => {
+        const [created] = await tx
+          .insert(schema.admins)
+          .values({
+            email,
+            name,
+            role,
+            invitedBy: p.adminId,
+            ...(commerceRole ? { commerceRole } : {}),
+          })
+          .returning();
+        await writeAudit(tx, {
+          actorType: "admin",
+          actorId: p.adminId,
+          action: "admin.admin.invite",
+          targetType: "admin",
+          targetId: created!.id,
+          after: { email, name, role, ...(commerceRole ? { commerceRole } : {}) },
+          reason,
+        });
+        return created!;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError) throw error;
+        // Drizzle errors can embed SQL parameters, including the invited email.
+        throw new ApiError(500, "admin_error", "Admin operation failed.");
+      });
+    const token = await this.deps.auth.issueInvite(
+      row.id,
+      p.adminId,
+      commerceRole ? { actorId: p.adminId, reason } : undefined,
+    );
     await this.deps.email.send(
       adminInvite(
         email,
@@ -777,16 +822,7 @@ export class AdminService {
         "en",
       ),
     );
-    await writeAudit(this.deps.db, {
-      actorType: "admin",
-      actorId: p.adminId,
-      action: "admin.admin.invite",
-      targetType: "admin",
-      targetId: row!.id,
-      after: { email, name, role: input.role },
-      reason,
-    });
-    return this.teamRow(row!);
+    return this.teamRow(row);
   }
 
   async resendInvite(p: AdminPrincipal, adminId: string, reason: unknown) {
@@ -795,7 +831,11 @@ export class AdminService {
     const row = await this.liveAdmin(adminId);
     if (row.passwordHash || row.disabled)
       throw new ApiError(409, "not_pending", "That team member has already joined.");
-    const token = await this.deps.auth.issueInvite(row.id, p.adminId);
+    const token = await this.deps.auth.issueInvite(
+      row.id,
+      p.adminId,
+      row.commerceRole ? { actorId: p.adminId, reason: why } : undefined,
+    );
     await this.deps.email.send(
       adminInvite(
         row.email,
@@ -818,12 +858,17 @@ export class AdminService {
   async updateAdmin(
     p: AdminPrincipal,
     adminId: string,
-    patch: { readonly name?: unknown; readonly role?: unknown; readonly reason: unknown },
+    patch: {
+      readonly name?: unknown;
+      readonly role?: unknown;
+      readonly commerceRole?: unknown;
+      readonly reason: unknown;
+    },
   ) {
     requirePermission(p, "admins.write");
     const reason = needReason(patch.reason);
     const row = await this.liveAdmin(adminId);
-    const set: { name?: string; role?: AdminRole } = {};
+    const set: { name?: string; role?: AdminRole; commerceRole?: CommerceStaffRole } = {};
     if (patch.name !== undefined) {
       const name = typeof patch.name === "string" ? patch.name.trim() : "";
       if (name.length < 1 || name.length > 80)
@@ -833,6 +878,15 @@ export class AdminService {
     if (patch.role !== undefined) {
       if (!isRole(patch.role))
         throw new ApiError(400, "bad_request", "Role must be admin or employee.");
+      if (
+        (row.commerceRole != null && patch.role !== "commerce") ||
+        (row.commerceRole == null && patch.role === "commerce")
+      )
+        throw new ApiError(
+          400,
+          "bad_request",
+          "Account scope cannot be changed; invite a separate account.",
+        );
       if (patch.role !== row.role) {
         if (adminId === p.adminId)
           throw new ApiError(400, "bad_request", "You cannot change your own role.");
@@ -840,23 +894,66 @@ export class AdminService {
         set.role = patch.role;
       }
     }
+    if (patch.commerceRole !== undefined) {
+      if (row.commerceRole == null || !isCommerceStaffRole(patch.commerceRole))
+        throw new ApiError(
+          400,
+          "bad_request",
+          "Invite a dedicated commerce account; its scope cannot be removed.",
+        );
+      if (adminId === p.adminId)
+        throw new ApiError(400, "bad_request", "You cannot change your own commerce role.");
+      if (patch.commerceRole !== row.commerceRole) set.commerceRole = patch.commerceRole;
+    }
     if (Object.keys(set).length === 0) return this.teamRow(row);
-    await this.deps.db.transaction(async (tx) => {
-      await tx.update(schema.admins).set(set).where(eq(schema.admins.id, adminId));
-      await writeAudit(tx, {
-        actorType: "admin",
-        actorId: p.adminId,
-        action: "admin.admin.update",
-        targetType: "admin",
-        targetId: adminId,
-        before: pick(row, Object.keys(set)),
-        after: set,
-        reason,
+    const updated = await this.deps.db
+      .transaction(async (tx) => {
+        const current =
+          set.commerceRole !== undefined
+            ? (
+                await tx
+                  .select()
+                  .from(schema.admins)
+                  .where(and(eq(schema.admins.id, adminId), isNull(schema.admins.deletedAt)))
+                  .for("update")
+              )[0]
+            : row;
+        if (!current || (set.commerceRole !== undefined && current.commerceRole == null))
+          throw new ApiError(404, "not_found", "No such commerce team member.");
+        const [saved] = await tx
+          .update(schema.admins)
+          .set(set)
+          .where(eq(schema.admins.id, adminId))
+          .returning();
+        if (set.commerceRole !== undefined)
+          await tx
+            .update(schema.adminSessions)
+            .set({ revokedAt: new Date() })
+            .where(
+              and(
+                eq(schema.adminSessions.adminId, adminId),
+                isNull(schema.adminSessions.revokedAt),
+              ),
+            );
+        await writeAudit(tx, {
+          actorType: "admin",
+          actorId: p.adminId,
+          action: "admin.admin.update",
+          targetType: "admin",
+          targetId: adminId,
+          before: pick(current, Object.keys(set)),
+          after: set,
+          reason,
+        });
+        return saved!;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, "admin_error", "Admin operation failed.");
       });
-    });
     // A role change must not leave a session running with the old permissions.
     if (set.role) await this.deps.auth.revokeSessions(adminId);
-    return this.teamRow({ ...row, ...set });
+    return this.teamRow(updated);
   }
 
   async setAdminDisabled(p: AdminPrincipal, adminId: string, disabled: boolean, reason: string) {

@@ -31,6 +31,13 @@ describe("safeNext", () => {
       expect(safeNext(value), String(value)).toBe("/chat");
   });
 
+  it.each(["/..//outside.invalid", "/%2e%2e//outside.invalid"])(
+    "rejects a local-looking path that normalizes to a network-path reference: %s",
+    (value) => {
+      expect(safeNext(value)).toBe("/chat");
+      expect(safeNext(value, "")).toBe("");
+    },
+  );
   it("uses the given fallback", () => {
     expect(safeNext("//evil.example", "/chat")).toBe("/chat");
   });

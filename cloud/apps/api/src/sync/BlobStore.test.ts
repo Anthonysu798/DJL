@@ -20,7 +20,100 @@ function store(respond: (req: { method: string; url: URL }) => Response = () => 
   return { blobs, calls };
 }
 
+const commerceLimit = 10 * 1024 * 1024;
+function remoteStream(
+  chunks: readonly number[],
+  contentLength?: string,
+  cancel?: () => Promise<void>,
+) {
+  let pulls = 0;
+  let canceled = 0;
+  const response = new Response(
+    new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          const size = chunks[pulls++];
+          if (size === undefined) controller.close();
+          else controller.enqueue(new Uint8Array(size));
+        },
+        cancel() {
+          canceled++;
+          return cancel?.();
+        },
+      },
+      { highWaterMark: 0 },
+    ),
+    contentLength === undefined ? {} : { headers: { "content-length": contentLength } },
+  );
+  return { response, counts: () => ({ pulls, canceled }) };
+}
+
+// Keep assertion output bounded even on the pre-fix path that returns megabytes.
+const readOutcome = (read: Promise<Uint8Array | null>) =>
+  read.then(
+    (value) => ({ bytes: value?.byteLength ?? null }),
+    (error: unknown) => ({
+      sizeRefused: error instanceof Error && error.name === "BlobReadLimitError",
+    }),
+  );
+
 describe("S3 blob store", () => {
+  it.each([undefined, "2", "invalid"])(
+    "stops counting actual bytes before an oversized stream is accumulated (length %s)",
+    async (declared) => {
+      const remote = remoteStream(
+        [commerceLimit / 2, commerceLimit / 2 + 1, 32],
+        declared,
+        () => new Promise(() => {}),
+      );
+      const { blobs } = store(() => remote.response);
+      expect(
+        await readOutcome(blobs.read("commerce/image-uploads/synthetic/staging", commerceLimit)),
+      ).toEqual({
+        sizeRefused: true,
+      });
+      expect(remote.counts()).toEqual({ pulls: 2, canceled: 1 });
+      expect(remote.response.body?.locked).toBe(false);
+    },
+  );
+
+  it("refuses an oversized length without pulling bytes or waiting on cancellation", async () => {
+    const remote = remoteStream([1], String(commerceLimit + 1), () => new Promise(() => {}));
+    const { blobs } = store(() => remote.response);
+    expect(await readOutcome(blobs.read("synthetic/ready", commerceLimit))).toEqual({
+      sizeRefused: true,
+    });
+    expect(remote.counts()).toEqual({ pulls: 0, canceled: 1 });
+    expect(remote.response.body?.locked).toBe(false);
+  });
+
+  it("accepts the exact limit and keeps the generic one-argument read unchanged", async () => {
+    const exact = remoteStream([3, 1]);
+    const generic = remoteStream([3, 2], "5");
+    expect(await readOutcome(store(() => exact.response).blobs.read("synthetic/ready", 4))).toEqual(
+      { bytes: 4 },
+    );
+    expect(exact.counts()).toEqual({ pulls: 3, canceled: 0 });
+    expect(exact.response.body?.locked).toBe(false);
+    expect(
+      await readOutcome(store(() => generic.response).blobs.read("generic/ai/attachment")),
+    ).toEqual({ bytes: 5 });
+  });
+
+  it("releases the response reader on a remote stream failure", async () => {
+    const response = new Response(
+      new ReadableStream({
+        pull(controller) {
+          controller.error(new Error("Synthetic transport failure"));
+        },
+      }),
+    );
+    await expect(store(() => response).blobs.read("synthetic/ready", 4)).rejects.toThrow(
+      "Synthetic transport failure",
+    );
+    expect(response.body?.locked).toBe(false);
+  });
+
   it("signs public client URLs separately from internal server requests", async () => {
     const calls: URL[] = [];
     const blobs = createS3BlobStore({
@@ -112,6 +205,30 @@ describe("S3 blob store", () => {
     );
     const failing = store(() => new Response("no", { status: 403 }));
     await expect(failing.blobs.write("k", new Uint8Array([1]), "image/png")).rejects.toThrow();
+  });
+
+  it("signs server-side write-once PUTs and does not retry an existing object", async () => {
+    const calls: { url: URL; headers: Headers }[] = [];
+    const blobs = createS3BlobStore({
+      endpoint: "http://127.0.0.1:9000",
+      region: "us-east-1",
+      bucket: "evaluation-only",
+      accessKeyId: "synthetic-key",
+      secretAccessKey: "synthetic-secret",
+      writeOnce: true,
+      fetchImpl: (async (input: string, init?: RequestInit) => {
+        calls.push({ url: new URL(input), headers: new Headers(init?.headers) });
+        return new Response(null, { status: 412 });
+      }) as typeof fetch,
+    });
+    await expect(blobs.write("fixture/ready", new Uint8Array([1]), "image/png")).rejects.toThrow(
+      "storage write failed: 412",
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.headers.get("if-none-match")).toBe("*");
+    expect(calls[0]!.url.searchParams.get("X-Amz-SignedHeaders")).toBe(
+      "content-length;content-type;host;if-none-match",
+    );
   });
 });
 

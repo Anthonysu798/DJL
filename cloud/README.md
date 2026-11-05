@@ -17,6 +17,10 @@ admin, and infrastructure decision for Phase 0 is recorded there and is not re-o
 - `packages/notify` Resend, Twilio, Slack templates
 - `infra/` VPS Compose stack, native Postgres policies, optional isolated sandboxes, scripts
 
+The separate commerce test system adds buyer `/shop`, supplier `/shop/supplier`, and admin
+`/commerce` pages. Setup, isolation, funding gates and the uncompleted production acceptance
+criteria are documented in `../docs/commerce-development.md`. It does not reuse AI credit balances.
+
 ## Local development
 
 From the repository root:
@@ -34,7 +38,9 @@ bun run cloud:dev
 Container images build from the repo root, for example
 `docker build -f cloud/apps/api/Dockerfile .`.
 
-External services are mocked unless `DJL_MOCK_EXTERNALS=false`.
+Existing AI/account external services are mocked unless `DJL_MOCK_EXTERNALS=false`.
+Commerce's separate Stripe TEST adapter has its own explicit disabled-by-default opt-in;
+it does not require enabling unrelated AI payment or email services.
 
 ## VPS deployment
 
@@ -45,7 +51,8 @@ is disabled. Supabase is not required.
 ## Rules
 
 - Never edit or delete a ledger entry. Corrections are new entries.
-- Every table is scoped by `org_id`; missing scope fails closed.
+- AI data is scoped by `org_id`; missing scope fails closed. Commerce accounts and orders are
+  scoped by authenticated user ID, and supplier data by explicit supplier membership, never AI team roles.
 - Provider keys live only in the private VPS environment. Response bodies are never logged.
 - Production deploys only from a `cloud-v*` tag after the `production` environment approval.
   Plain `v*` tags release the desktop app.

@@ -376,7 +376,8 @@ export class GatewayService {
     facts: RequestFacts,
     body: ChatRequest & { readonly stream?: boolean },
   ): Promise<{ readonly stream: ReadableStream<Uint8Array>; readonly requestId: string }> {
-    const step = await this.completeStep(facts, body);
+    const abort = new AbortController();
+    const step = await this.completeStep(facts, body, { signal: abort.signal });
     const sse = async function* (): AsyncGenerator<string> {
       for await (const chunk of step.chunks) yield `data: ${JSON.stringify(chunk)}\n\n`;
       const { usage, error } = await step.result;
@@ -398,6 +399,7 @@ export class GatewayService {
       },
       async cancel() {
         // Client disconnected: stop the provider and settle what was used.
+        abort.abort();
         await iterator.return(undefined);
       },
     });

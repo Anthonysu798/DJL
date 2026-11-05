@@ -98,7 +98,7 @@ function InviteForm() {
             <div className="rounded-xl border bg-secondary px-3 py-2 text-sm">
               <div className="font-medium">{invite.name}</div>
               <div className="text-muted-foreground">
-                {invite.email} · {invite.role}
+                {invite.email} · {invite.role === "commerce" ? "Commerce-only staff" : invite.role}
               </div>
             </div>
             <Field

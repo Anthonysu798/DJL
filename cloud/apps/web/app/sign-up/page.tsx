@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
 
 import {
   AuthFrame,
@@ -28,6 +29,15 @@ function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [busy, setBusy] = useState(false);
+  const [embedded, setEmbedded] = useState<boolean | null>(null);
+  useEffect(
+    () =>
+      setEmbedded(
+        (window as Window & { djlCommerce?: CommerceDesktopBridge }).djlCommerce?.kind ===
+          "desktop",
+      ),
+    [],
+  );
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,6 +60,10 @@ function SignUpForm() {
   };
 
   const social = async (provider: "google" | "apple") => {
+    if (
+      (window as Window & { djlCommerce?: CommerceDesktopBridge }).djlCommerce?.kind === "desktop"
+    )
+      return;
     setBusy(true);
     setError(null);
     try {
@@ -82,7 +96,7 @@ function SignUpForm() {
       <h1 className="text-[30px] leading-tight font-medium tracking-tight">{d.auth.signUpTitle}</h1>
       <p className="mt-3 mb-8 text-[15px] leading-6 text-neutral-500">{d.auth.signUpBody}</p>
       <div className="flex flex-col gap-3">
-        {GOOGLE_SIGN_IN_ENABLED ? (
+        {embedded === false && GOOGLE_SIGN_IN_ENABLED ? (
           <button
             className="btn-secondary w-full gap-2"
             type="button"
@@ -93,7 +107,7 @@ function SignUpForm() {
             {d.auth.continueGoogle}
           </button>
         ) : null}
-        {APPLE_SIGN_IN_ENABLED ? (
+        {embedded === false && APPLE_SIGN_IN_ENABLED ? (
           <button
             className="btn-secondary w-full gap-2"
             type="button"
@@ -105,7 +119,12 @@ function SignUpForm() {
           </button>
         ) : null}
       </div>
-      {GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED ? (
+      {embedded ? (
+        <p className="my-4 text-sm text-neutral-600">
+          当前独立商城窗口仅支持邮箱和密码注册，暂不支持 Google / Apple；不会打开外部授权页面。
+        </p>
+      ) : null}
+      {embedded === false && (GOOGLE_SIGN_IN_ENABLED || APPLE_SIGN_IN_ENABLED) ? (
         <div className="my-6 flex items-center gap-4 text-xs text-neutral-500">
           <span className="h-px flex-1 bg-neutral-200" />
           {d.auth.or}

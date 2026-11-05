@@ -3068,6 +3068,9 @@
         "automations": "自動化",
         "deleteWorkspace": "ワークスペースの削除",
         "kanban": "ワークスペース",
+        "shop": "ショップ",
+        "shopWindow": "別ウィンドウ ↗",
+        "shopOpenFailed": "ショップを開けません。ポップアップを許可して、もう一度お試しください。",
         "newTask": "新しいタスク",
         "newThread": "新しいスレッド",
         "newWorkspace": "新しいワークスペース"

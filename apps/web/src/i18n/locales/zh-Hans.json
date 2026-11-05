@@ -3068,6 +3068,9 @@
         "automations": "自动化",
         "deleteWorkspace": "删除工作区",
         "kanban": "工作空间",
+        "shop": "商城",
+        "shopWindow": "独立窗口 ↗",
+        "shopOpenFailed": "无法打开商城，请允许弹出窗口后重试。",
         "newTask": "新任务",
         "newThread": "新话题",
         "newWorkspace": "新工作区"

@@ -4,6 +4,12 @@ import { Redis } from "ioredis";
 import { PgBoss } from "pg-boss";
 import postgres from "postgres";
 import { AGENT_RUN_JOB, AGENT_RUN_QUEUE_OPTIONS } from "../runs/RunExecutor.ts";
+import {
+  assertCommerceRuntimePrivileges,
+  COMMERCE_RUNTIME_TABLES,
+  COMMERCE_RUNTIME_PRIVILEGE_SQL,
+  type CommerceTablePrivileges,
+} from "./commercePermissions.ts";
 
 const { db: _db, sql, close } = createDatabase(process.env.DATABASE_URL!, { max: 1 });
 const redis = new Redis(process.env.REDIS_URL!, { lazyConnect: true, maxRetriesPerRequest: 1 });
@@ -22,10 +28,10 @@ const denied = async (query: PromiseLike<unknown>) => {
 let stage = "postgres";
 try {
   const [role] =
-    await sql`select current_user as name, rolsuper, rolcreatedb, rolcreaterole from pg_roles where rolname = current_user`;
+    await sql`select current_user as name, rolsuper, rolcreatedb, rolcreaterole, rolbypassrls from pg_roles where rolname = current_user`;
   assert(["djl_api", "djl_worker"].includes(role!.name), "Unexpected runtime database role");
   assert(
-    !role!.rolsuper && !role!.rolcreatedb && !role!.rolcreaterole,
+    !role!.rolsuper && !role!.rolcreatedb && !role!.rolcreaterole && !role!.rolbypassrls,
     "Runtime role is overprivileged",
   );
   const [grants] =
@@ -35,6 +41,19 @@ try {
     "Append-only grants are invalid",
   );
   assert(await denied(sql`delete from audit_events where false`), "Audit deletion was allowed");
+  const commerceGrants = await sql.unsafe<CommerceTablePrivileges[]>(
+    COMMERCE_RUNTIME_PRIVILEGE_SQL,
+    [[...COMMERCE_RUNTIME_TABLES]],
+  );
+  assertCommerceRuntimePrivileges(commerceGrants);
+  assert(
+    await denied(sql`update commerce_ledger set event_key=event_key where false`),
+    "Commerce ledger update was allowed",
+  );
+  assert(
+    await denied(sql`delete from commerce_orders where false`),
+    "Commerce order history deletion was allowed",
+  );
   assert(
     await denied(sql`create table public.djl_forbidden_probe (id integer)`),
     "Runtime DDL was allowed",
@@ -128,6 +147,7 @@ try {
       databaseRole: role!.name,
       databaseAuth: "passed",
       appendOnly: "passed",
+      commerceHistoryPermissions: "passed",
       redis: "passed",
       storage: "passed",
       queue: "passed",

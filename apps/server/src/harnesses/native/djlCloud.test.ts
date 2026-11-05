@@ -231,3 +231,165 @@ it("reports a failed marketing tool as failed in the chat activity", async () =>
     network.mockRestore();
   }
 });
+
+describe("DJL Cloud stream cleanup", () => {
+  const controlledStream = (frame: string, eof = false) => {
+    let upstream!: ReadableStreamDefaultController<Uint8Array>;
+    let signal: AbortSignal | undefined;
+    let aborts = 0;
+    let abortsBeforeCleanup = 0;
+    let cleanupStarted = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        upstream = controller;
+        controller.enqueue(new TextEncoder().encode(frame));
+        if (eof) controller.close();
+      },
+    });
+    const onAbort = () => {
+      aborts++;
+      if (!cleanupStarted) abortsBeforeCleanup++;
+      upstream.error(new DOMException("Fixture fetch aborted", "AbortError"));
+    };
+    const fetchImpl: FetchLike = async (_input, init) => {
+      if (!init?.signal) throw new Error("Expected the owned fetch signal");
+      signal = init.signal;
+      signal.addEventListener("abort", onAbort, { once: true });
+      if (signal.aborted) onAbort();
+      return new Response(body, { headers: { "content-type": "text/event-stream" } });
+    };
+    return {
+      body,
+      fetchImpl,
+      get signal() {
+        if (!signal) throw new Error("Fetch has not started");
+        return signal;
+      },
+      get aborts() {
+        return aborts;
+      },
+      get abortsBeforeCleanup() {
+        return abortsBeforeCleanup;
+      },
+      dispose() {
+        cleanupStarted = true;
+        signal?.removeEventListener("abort", onAbort);
+        upstream.error(new Error("Fixture-only failure cleanup"));
+      },
+    };
+  };
+  const delta = 'data: {"choices":[{"delta":{"content":"first"}}]}\n\n';
+
+  it("aborts an unfinished fetch and releases its reader after malformed SSE without hiding the parse error", async () => {
+    const stream = controlledStream("data: {broken\n\n");
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl: stream.fetchImpl })(
+      start,
+      sink().s,
+    );
+    try {
+      await expect(driver.send({ threadId: start.threadId, input: "x" })).rejects.toBeInstanceOf(
+        SyntaxError,
+      );
+      expect(stream.signal.aborted).toBe(true);
+      expect(stream.abortsBeforeCleanup).toBe(1);
+      expect(stream.body.locked).toBe(false);
+    } finally {
+      stream.dispose();
+      driver.close();
+    }
+  });
+
+  it("aborts an unfinished fetch and releases its reader after a sink failure without hiding that error", async () => {
+    const stream = controlledStream(delta);
+    const expected = new Error("Fixture sink failed");
+    const target: NativeSink = {
+      ...sink().s,
+      emit(event) {
+        if (event.type === "content.delta") throw expected;
+      },
+    };
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl: stream.fetchImpl })(
+      start,
+      target,
+    );
+    try {
+      await expect(driver.send({ threadId: start.threadId, input: "x" })).rejects.toBe(expected);
+      expect(stream.signal.aborted).toBe(true);
+      expect(stream.abortsBeforeCleanup).toBe(1);
+      expect(stream.body.locked).toBe(false);
+    } finally {
+      stream.dispose();
+      driver.close();
+    }
+  });
+
+  it("releases its reader without aborting a normal SSE EOF", async () => {
+    const stream = controlledStream(delta + "data: [DONE]\n\n", true);
+    const captured = sink();
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl: stream.fetchImpl })(
+      start,
+      captured.s,
+    );
+    try {
+      await driver.send({ threadId: start.threadId, input: "x" });
+      expect(stream.signal.aborted).toBe(false);
+      expect(stream.aborts).toBe(0);
+      expect(stream.body.locked).toBe(false);
+      expect(captured.events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "first" },
+        }),
+      );
+    } finally {
+      stream.dispose();
+      driver.close();
+    }
+  });
+
+  it.each(["interrupt", "close"] as const)(
+    "aborts and unlocks an active fetch when %s is requested",
+    async (action) => {
+      const stream = controlledStream(delta);
+      const captured = sink();
+      let sawDelta!: () => void;
+      let failedBeforeDelta!: (error: unknown) => void;
+      const firstDelta = new Promise<void>((resolve, reject) => {
+        sawDelta = resolve;
+        failedBeforeDelta = reject;
+      });
+      const target: NativeSink = {
+        ...captured.s,
+        emit(event) {
+          captured.s.emit(event);
+          if (event.type === "content.delta") sawDelta();
+        },
+      };
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl: stream.fetchImpl })(
+        start,
+        target,
+      );
+      const turn = driver.send({ threadId: start.threadId, input: "x" });
+      void turn.catch(failedBeforeDelta);
+      try {
+        await firstDelta;
+        expect(stream.signal.aborted).toBe(false);
+        expect(stream.body.locked).toBe(true);
+        if (action === "interrupt") await driver.interrupt();
+        else driver.close();
+        await turn;
+        expect(stream.signal.aborted).toBe(true);
+        expect(stream.abortsBeforeCleanup).toBe(1);
+        expect(stream.body.locked).toBe(false);
+        expect(captured.events).toContainEqual({
+          type: "turn.completed",
+          payload: { state: "interrupted" },
+        });
+      } finally {
+        stream.dispose();
+        driver.close();
+        await turn.catch(() => undefined);
+      }
+    },
+  );
+});

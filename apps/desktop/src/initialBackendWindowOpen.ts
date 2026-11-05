@@ -5,6 +5,11 @@
 
 export type BackendWindowReadySource = "listening" | "http";
 
+/** Auxiliary windows (for example the shop) must not suppress the AI main window. */
+export function hasLiveMainWindow(window: { isDestroyed: () => boolean } | null): boolean {
+  return window !== null && !window.isDestroyed();
+}
+
 export interface InitialBackendWindowOpenOptions {
   readonly isDevelopment: boolean;
   readonly baseUrl: string;

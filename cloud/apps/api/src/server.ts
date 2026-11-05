@@ -26,10 +26,28 @@ import { HttpRouter } from "effect/unstable/http";
 
 import { makeAccessTokenVerifier } from "./auth/accessTokens.ts";
 import { createAuth, PERSONAL_ORG_METADATA, type AuthNotifier } from "./auth/auth.ts";
+import { createCommerceAuth, requireCommerceAuthTestEnv } from "./auth/commerceAuth.ts";
 import { makePrincipalResolver } from "./auth/guard.ts";
 import { makeLocaleLookup } from "./auth/locale.ts";
 import { createSessionRevocations } from "./auth/revocations.ts";
 import { BillingService } from "./billing/BillingService.ts";
+import { CommerceService } from "./commerce/CommerceService.ts";
+import { CommerceReconciliationService } from "./commerce/CommerceReconciliationService.ts";
+import {
+  CommerceAlertDeliveryService,
+  commerceAlertEmailConfig,
+} from "./commerce/CommerceAlertDeliveryService.ts";
+import { CommerceAlertsService, commerceAlertsEnabled } from "./commerce/CommerceAlertsService.ts";
+import { CommercePaymentService } from "./commerce/CommercePaymentService.ts";
+import {
+  createCommerceStripeGateway,
+  type CommerceStripeGateway,
+} from "./commerce/CommerceStripeGateway.ts";
+import { createCommerceImageSearch } from "./commerce/ImageSearchService.ts";
+import { CommerceImageUploads } from "./commerce/CommerceImageUploads.ts";
+import { CommerceAddressLookup } from "./commerce/CommerceAddressLookup.ts";
+import { commerceAddressLookupKey } from "./commerce/addressLookupRoutes.ts";
+import { commerceRuntimeConfig } from "./config/commerce.ts";
 import {
   FakeStripeGateway,
   createStripeGateway,
@@ -78,6 +96,10 @@ export interface ApiRuntime {
   readonly db: ReturnType<typeof createDatabase>["db"];
   readonly ledger: LedgerService;
   readonly billing: BillingService;
+  readonly commerce: CommerceService;
+  readonly commerceAlerts: CommerceAlertsService;
+  readonly commerceReconciliation: CommerceReconciliationService;
+  readonly commercePayments: CommercePaymentService;
   readonly stripe: StripeGateway;
   readonly trial: TrialService;
   readonly gateway: GatewayService;
@@ -144,9 +166,20 @@ export async function startApi(
     readonly env?: ApiEnv;
     readonly port?: number;
     readonly host?: string;
+    readonly testCommerceAuth?: boolean;
   } = {},
 ): Promise<ApiRuntime> {
   const env = options.env ?? loadApiEnv();
+  const commerceConfig = commerceRuntimeConfig(env, process.env);
+  if (options.testCommerceAuth) {
+    requireCommerceAuthTestEnv(env);
+    if (
+      options.host !== "127.0.0.1" ||
+      commerceConfig.mode !== "test" ||
+      commerceConfig.paymentProvider !== "simulation"
+    )
+      throw new Error("Commerce authentication pilot requires loopback and simulated commerce.");
+  }
   startObservability({
     serviceName: "djl-api",
     version: process.env.DJL_VERSION ?? "dev",
@@ -192,10 +225,11 @@ export async function startApi(
   const redis = new Redis(env.redisUrl, { maxRetriesPerRequest: 2, lazyConnect: false });
   const revocations = createSessionRevocations(redis);
   const ledger = new LedgerService(db);
+  const notifier = makeNotifier(env, senders, makeLocaleLookup(db), redis);
   const auth = createAuth({
     env,
     db,
-    notifier: makeNotifier(env, senders, makeLocaleLookup(db), redis),
+    notifier,
     redis,
     revocations,
     onEmailVerified: async (userId) => {
@@ -309,7 +343,96 @@ export async function startApi(
     version,
   });
   const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
+  const commerceReconciliation = new CommerceReconciliationService(db, {
+    environment: env.env,
+    mode: commerceConfig.mode,
+  });
+  // Status only: the API never creates a commerce email sender or dispatches notifications.
+  const commerceAlertEmail = new CommerceAlertDeliveryService(
+    db,
+    commerceAlertEmailConfig({
+      ...process.env,
+      DJL_ENV: env.env,
+      DJL_MOCK_EXTERNALS: String(env.mockExternals),
+    }),
+  );
+  const commerceAlerts = new CommerceAlertsService(db, {
+    enabled: commerceAlertsEnabled(process.env.DJL_COMMERCE_ALERTS_ENABLED, env.env),
+    environment: env.env,
+    emailDelivery: commerceAlertEmail,
+  });
+  const commerce = new CommerceService(db, {
+    mode: commerceConfig.mode,
+    environment: env.env,
+    mediaPolicy: {
+      webPublicUrl: env.webPublicUrl,
+      apiPublicUrl: env.apiPublicUrl,
+      ...(process.env.DJL_COMMERCE_MEDIA_ORIGIN
+        ? { mediaOrigin: process.env.DJL_COMMERCE_MEDIA_ORIGIN }
+        : {}),
+    },
+    paymentProvider: commerceConfig.paymentProvider,
+    checkoutPaused: commerceConfig.checkoutPaused,
+    withdrawalsPaused: commerceConfig.withdrawalsPaused,
+    supplierPaymentDocumentsEnabled:
+      process.env.DJL_COMMERCE_SUPPLIER_PAYMENT_RECORDS_ENABLED === "true",
+  });
+  const stripeTestEnabled = commerceConfig.stripeEnabled;
+  let commerceStripe: CommerceStripeGateway | undefined;
+  if (stripeTestEnabled) {
+    try {
+      commerceStripe = createCommerceStripeGateway({
+        secretKey: process.env.DJL_COMMERCE_STRIPE_SECRET_KEY ?? "",
+        webhookSecret: process.env.DJL_COMMERCE_STRIPE_WEBHOOK_SECRET ?? "",
+      });
+    } catch {
+      // A broken opt-in shop integration must not take down existing AI services or leak keys.
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          msg: "commerce_stripe_disabled",
+          code: "configuration_invalid",
+        }),
+      );
+    }
+  }
+  const commercePayments = new CommercePaymentService(commerce, {
+    enabled: stripeTestEnabled,
+    environment: env.env,
+    webPublicUrl: env.webPublicUrl,
+    ...(commerceStripe ? { gateway: commerceStripe } : {}),
+  });
+  const imageUploads = new CommerceImageUploads(db, blobs, {
+    enabled: (): Promise<boolean> => imageSearch.available(),
+    limiter,
+  });
+  const imageSearch = createCommerceImageSearch({
+    db,
+    commerce,
+    uploads: imageUploads,
+    providers,
+    limiter,
+    redis,
+    mockExternals: env.mockExternals,
+    environment: env.env,
+    webPublicUrl: env.webPublicUrl,
+    apiPublicUrl: env.apiPublicUrl,
+    processEnv: process.env,
+  });
+  const addressLookupKey = commerceAddressLookupKey(env, process.env);
   const routes = makeRoutes({
+    ...(options.testCommerceAuth
+      ? { testCommerceAuth: createCommerceAuth({ env, db, redis, notifier }) }
+      : {}),
+    commerce,
+    commerceAlerts,
+    commerceReconciliation,
+    trustedOrigins: env.trustedOrigins,
+    adminMfaRequired: env.adminMfaRequired,
+    commercePayments,
+    imageSearch,
+    imageUploads,
+    ...(addressLookupKey ? { addressLookup: new CommerceAddressLookup(addressLookupKey) } : {}),
     notifications: new NotificationService(db),
     images: new ImageService({ db, chat, gateway }),
     clientConfig: {
@@ -358,15 +481,29 @@ export async function startApi(
   let nodeServer: http.Server | null = null;
 
   const program = Effect.gen(function* () {
-    const server = yield* NodeHttpServer.make(
-      () => {
-        nodeServer = http.createServer();
-        return nodeServer;
-      },
-      { host: options.host ?? "0.0.0.0", port: options.port ?? env.port },
-    );
+    const makeBun =
+      typeof Bun === "undefined"
+        ? null
+        : (yield* Effect.promise(() => import("@effect/platform-bun/BunHttpServer"))).make;
+    const server = makeBun
+      ? yield* makeBun({
+          hostname: options.host ?? "0.0.0.0",
+          port: options.port ?? env.port,
+          idleTimeout: 0,
+          maxRequestBodySize: Number.MAX_SAFE_INTEGER,
+          development: false,
+        })
+      : yield* NodeHttpServer.make(
+          () => {
+            nodeServer = http.createServer();
+            return nodeServer;
+          },
+          { host: options.host ?? "0.0.0.0", port: options.port ?? env.port },
+        );
     const app = yield* HttpRouter.toHttpEffect(routes);
-    yield* server.serve(makeMiddleware(env, region)(app));
+    yield* server.serve(
+      makeMiddleware(env, region, options.testCommerceAuth ? env.webPublicUrl : undefined)(app),
+    );
     return server.address;
   });
 
@@ -382,6 +519,10 @@ export async function startApi(
     ledger,
     billing,
     stripe,
+    commerce,
+    commerceAlerts,
+    commerceReconciliation,
+    commercePayments,
     trial,
     gateway,
     adminAuth,

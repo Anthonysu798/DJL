@@ -12,6 +12,7 @@ import { csrfRefusal } from "./csrf.ts";
 const trusted = new Set(["https://app.slcor.com"]);
 const token = "t".repeat(43);
 const session = "djl.session_token=abc";
+const newDevice = () => ({ kind: "desktop", fingerprint: crypto.randomUUID() });
 
 describe("csrfRefusal", () => {
   const post = (headers: Record<string, string>, path = "/v1/devices") =>
@@ -87,6 +88,52 @@ describe("csrf over HTTP", () => {
 
     const ok = await client.call("/v1/devices", { method: "POST", json: device });
     expect(ok.status).toBe(201);
+  });
+
+  it("does not fall back to the cookie when explicit credentials are invalid", async () => {
+    const browser = TestClient.for(api);
+    const { email, password } = await browser.signUp(api, "csrf-credential-precedence");
+    const denied: number[] = [];
+    for (const authorization of ["Basic Zml4dHVyZTppbnZhbGlk", "Bearer invalid.invalid"]) {
+      const response = await browser.call("/v1/devices", {
+        method: "POST",
+        csrf: false,
+        headers: { authorization },
+        json: newDevice(),
+      });
+      denied.push(response.status);
+    }
+    const readback = await browser.call("/v1/devices");
+    expect(readback.status).toBe(200);
+    const { devices } = (await readback.json()) as { devices: unknown[] };
+
+    const cookie = await browser.call("/v1/devices", { method: "POST", json: newDevice() });
+    const native = TestClient.for(api);
+    const signIn = await native.call("/v1/auth/sign-in/email", {
+      method: "POST",
+      json: { email, password },
+    });
+    expect(signIn.status).toBe(200);
+    const sessionToken = signIn.headers.get("set-auth-token");
+    if (!sessionToken) throw new Error("Synthetic sign-in did not issue a session token.");
+    const opaque = await native.call("/v1/devices", {
+      method: "POST",
+      bearer: sessionToken,
+      json: newDevice(),
+    });
+    const mint = await native.call("/v1/auth/token", { bearer: sessionToken });
+    expect(mint.status).toBe(200);
+    const { token: jwt } = (await mint.json()) as { token: string };
+    const access = await native.call("/v1/devices", {
+      method: "POST",
+      bearer: jwt,
+      json: newDevice(),
+    });
+    expect([cookie.status, opaque.status, access.status]).toEqual([201, 201, 201]);
+    expect({ statuses: denied, registered: devices.length }).toEqual({
+      statuses: [401, 401],
+      registered: 0,
+    });
   });
 
   it("keeps the same token across calls and sends it as an HttpOnly strict cookie", async () => {

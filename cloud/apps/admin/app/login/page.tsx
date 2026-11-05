@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { admin, setToken, AdminApiError } from "@/lib/api";
 import { loginClient } from "@/lib/client";
+import { adminHome, type AdminIdentity } from "@/lib/commerce-access";
 import { email as emailRule, required, validate } from "@/lib/validation";
 
 const TOTP = /^\d{6}$/;
@@ -16,7 +17,7 @@ const TOTP = /^\d{6}$/;
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [step, setStep] = useState<"login" | "totp" | "enroll">(
+  const [step, setStep] = useState<"login" | "totp" | "enroll" | "continue">(
     params.get("step") === "totp" ? "enroll" : "login",
   );
   const [email, setEmail] = useState("");
@@ -45,20 +46,17 @@ function LoginForm() {
     setBusy(true);
     setFormError(null);
     try {
-      const result = await admin<{ token: string; admin: { mfaVerified: boolean } }>(
-        "/auth/login",
-        {
-          method: "POST",
-          json: {
-            email: email.trim(),
-            password,
-            ...(totp ? { totp: totp.trim() } : {}),
-            client: loginClient(),
-          },
+      const result = await admin<{ token: string; admin: AdminIdentity }>("/auth/login", {
+        method: "POST",
+        json: {
+          email: email.trim(),
+          password,
+          ...(totp ? { totp: totp.trim() } : {}),
+          client: loginClient(),
         },
-      );
+      });
       setToken(result.token);
-      if (result.admin.mfaVerified) router.replace("/");
+      if (result.admin.mfaVerified) router.replace(adminHome(result.admin.role));
       else {
         setEnroll(
           await admin<{ secret: string; uri: string }>("/auth/totp/enroll", {
@@ -84,19 +82,49 @@ function LoginForm() {
     }
   };
 
+  const restartSignIn = () => {
+    setToken(null);
+    setStep("login");
+    setPassword("");
+    setTotp("");
+    setEnroll(null);
+    setFormError("Your verified session is unavailable. Sign in again to continue.");
+  };
+
+  const openConfirmedHome = async () => {
+    try {
+      const { admin: identity } = await admin<{ admin: AdminIdentity }>("/me");
+      if (identity.mfaVerified) router.replace(adminHome(identity.role));
+      else restartSignIn();
+    } catch (e) {
+      if (e instanceof AdminApiError && e.status === 401) restartSignIn();
+      else
+        setFormError("Authenticator confirmed, but your account could not be loaded. Try again.");
+    }
+  };
+
   const confirm = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!TOTP.test(totp.trim())) {
+    if (step === "enroll" && !TOTP.test(totp.trim())) {
       setErrors({ totp: "Enter the 6-digit code from your authenticator." });
       return;
     }
     setBusy(true);
     setFormError(null);
+    setErrors({});
     try {
-      await admin("/auth/totp/confirm", { method: "POST", json: { code: totp.trim() } });
-      router.replace("/");
-    } catch {
-      setErrors({ totp: "That code is wrong. Check the time on your phone and try again." });
+      if (step === "enroll") {
+        await admin("/auth/totp/confirm", { method: "POST", json: { code: totp.trim() } });
+        setStep("continue");
+        setTotp("");
+        setEnroll(null);
+      }
+      await openConfirmedHome();
+    } catch (e) {
+      if (e instanceof AdminApiError && e.code === "bad_totp")
+        setErrors({ totp: "That code is wrong. Check the time on your phone and try again." });
+      else if (e instanceof AdminApiError && e.status === 401) restartSignIn();
+      else setFormError("Could not confirm your authenticator. Try again.");
     } finally {
       setBusy(false);
     }
@@ -121,7 +149,15 @@ function LoginForm() {
             Your email is verified and your password is set. Sign in to continue.
           </p>
         ) : null}
-        {step !== "enroll" ? (
+        {step === "continue" ? (
+          <form onSubmit={confirm} className="space-y-4">
+            <p className="text-sm text-muted-foreground">Authenticator confirmed.</p>
+            <FormError error={formError} />
+            <Button className="h-11 w-full rounded-xl" disabled={busy} type="submit">
+              {busy ? "Loading…" : "Continue"}
+            </Button>
+          </form>
+        ) : step !== "enroll" ? (
           <form onSubmit={login} className="space-y-4" noValidate>
             <Field id="email" label="Email" error={errors.email}>
               <Input

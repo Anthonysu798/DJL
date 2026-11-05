@@ -5,6 +5,7 @@ export function buildSmokeEnvironment(baseEnvironment, smokeRoot, portOffset) {
   const environment = {
     ...baseEnvironment,
     HOME: join(smokeRoot, "home"),
+    USERPROFILE: join(smokeRoot, "home"),
     DJL_HOME: join(smokeRoot, "state"),
     SYNARA_HOME: join(smokeRoot, "state"),
     DJL_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
