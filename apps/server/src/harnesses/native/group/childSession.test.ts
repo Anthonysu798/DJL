@@ -128,12 +128,8 @@ describe("group child session", () => {
   });
 
   it("stop resolves the pending ask as stopped", async () => {
-    let release: () => void = () => {};
-    const child = await open(
-      fake(() => new Promise<void>((resolve) => (release = resolve)), {
-        interrupt: () => release(),
-      }),
-    );
+    const hung = Promise.withResolvers<void>();
+    const child = await open(fake(() => hung.promise, { interrupt: () => hung.resolve() }));
     const pending = child.ask("go", accept);
     await child.stop();
     expect((await pending).status).toBe("stopped");

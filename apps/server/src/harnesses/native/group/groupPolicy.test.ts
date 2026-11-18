@@ -155,6 +155,7 @@ describe("decideRequest", () => {
       memberId: "m1",
       proposeOnly: false,
       lock: createWriteLock(),
+      roots,
       type: "tool_user_input",
       args: { questions: [{ question: "Which file?", options: [{ label: "a.ts" }] }] },
     });
