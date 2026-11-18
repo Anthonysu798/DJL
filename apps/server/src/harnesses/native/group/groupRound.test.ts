@@ -397,4 +397,43 @@ describe("group rounds", () => {
     await round("@Claude go").done;
     expect(runtime.replies.map((reply) => reply.status)).toEqual(["empty"]);
   });
+
+  it("stop while a member's CLI is still opening never asks it", async () => {
+    const opening = gateOf();
+    const openChild = host.openChild;
+    host.openChild = async (entry, resume) => {
+      await opening.wait;
+      return openChild(entry, resume);
+    };
+    const running = round("@Claude edit the file");
+    await until(() => states.get("Claude") === "working");
+    await running.stopAll();
+    opening.release("");
+    await running.done;
+    expect(askedHandles).toEqual([]);
+    expect(runtime.replies).toEqual([]);
+  });
+
+  it("continuing a paused @all round stays propose-only", async () => {
+    pingPong("Claude", "Codex");
+    await round("@all start").done;
+    expect(runtime.pause.length).toBeGreaterThan(0);
+    expect(runtime.pause.every((handoff) => handoff.proposeOnly === true)).toBe(true);
+    runtime.requestResume();
+    const before = askedHandles.length;
+    await round("Continue").done;
+    expect(askedHandles.length).toBeGreaterThan(before);
+    expect([...flags.get("Claude")!, ...flags.get("Codex")!].every(Boolean)).toBe(true);
+  });
+
+  it("a storage error while recording a reply still ends the round", async () => {
+    const recordReply = runtime.recordReply;
+    let failures = 0;
+    runtime.recordReply = async (reply) => {
+      if (failures++ === 0) throw new Error("disk full");
+      return recordReply(reply);
+    };
+    await round("@Claude @Codex go").done;
+    expect(askedHandles.toSorted()).toEqual(["Claude", "Codex"]);
+  });
 });

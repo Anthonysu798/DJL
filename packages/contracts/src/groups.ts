@@ -64,6 +64,8 @@ export const GroupHandoff = Schema.Struct({
   fromMemberId: GroupMemberId,
   toMemberId: GroupMemberId,
   text: Schema.String,
+  /** The hand-off came from an @all round, so it stays read-only when continued. */
+  proposeOnly: Schema.optional(Schema.Boolean),
 });
 export type GroupHandoff = typeof GroupHandoff.Type;
 

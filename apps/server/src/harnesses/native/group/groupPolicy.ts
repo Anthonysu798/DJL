@@ -49,6 +49,8 @@ function realPath(path: string): string {
 function insideRoots(paths: readonly string[], roots: readonly string[]): boolean {
   const cwd = roots[0];
   if (!cwd || paths.length === 0) return false;
+  // `~` and `$VAR` are expanded by the agent, not by us, so they could point anywhere.
+  if (paths.some((path) => path.startsWith("~") || path.startsWith("$"))) return false;
   const realRoots = roots.map(realPath);
   return paths.every((path) => {
     const target = realPath(resolve(cwd, path));
@@ -119,6 +121,45 @@ function lookupPaths(
   return "not-lookup";
 }
 
+const CLAUDE_EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
+const ACP_EDIT_KINDS = new Set(["edit", "delete", "move"]);
+
+/** Files a change request would write, when the request names them; [] when it does not. */
+function changeTargets(
+  provider: GroupMemberProvider,
+  type: CanonicalRequestType,
+  args: unknown,
+): string[] {
+  const request = record(args);
+  if (provider === "claudeAgent") {
+    if (!CLAUDE_EDIT_TOOLS.has(String(request.tool))) return [];
+    const input = record(request.input);
+    return [...stringField(input, "file_path"), ...stringField(input, "notebook_path")];
+  }
+  if (provider === "codex") {
+    if (type !== "file_change_approval") return [];
+    const changes = record(request.item).changes;
+    return [
+      ...(Array.isArray(changes)
+        ? changes.flatMap((change) => stringField(record(change), "path"))
+        : []),
+      ...stringField(request, "grantRoot"),
+    ];
+  }
+  if (ACP_PROVIDERS.has(provider)) {
+    const toolCall = record(request.toolCall);
+    if (type !== "file_change_approval" && !ACP_EDIT_KINDS.has(String(toolCall.kind))) return [];
+    const rawInput = record(toolCall.rawInput);
+    return [
+      ...(Array.isArray(toolCall.locations)
+        ? toolCall.locations.flatMap((location) => stringField(record(location), "path"))
+        : []),
+      ...ACP_PATH_FIELDS.flatMap((field) => stringField(rawInput, field)),
+    ];
+  }
+  return [];
+}
+
 /**
  * `roots` are the folders an agent may read without asking; the first is its working folder.
  * A read that leaves them (symlinks followed), or names no path, counts as a change.
@@ -159,11 +200,11 @@ export function createWriteLock(options: { waitMs?: number } = {}): WriteLock {
 
   return {
     acquire(memberId, signal) {
+      if (signal?.aborted) return Promise.resolve(false);
       if (holder === null || holder === memberId) {
         holder = memberId;
         return Promise.resolve(true);
       }
-      if (signal?.aborted) return Promise.resolve(false);
       return new Promise<boolean>((resolve) => {
         const waiter = {
           memberId,
@@ -224,6 +265,9 @@ export async function decideRequest(input: {
   if (kind === "input") return refuseQuestions(input.args);
   if (kind === "lookup") return "accept";
   if (input.proposeOnly) return "decline";
+  // Named members edit only inside the group folder; the other roots are read-only.
+  const targets = changeTargets(input.provider, input.type, input.args);
+  if (targets.length > 0 && !insideRoots(targets, input.roots.slice(0, 1))) return "decline";
   const holder = input.lock.holder();
   const mustWait = holder !== null && holder !== input.memberId;
   if (mustWait) input.onWaiting?.(true);

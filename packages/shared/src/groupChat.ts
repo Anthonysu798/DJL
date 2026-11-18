@@ -12,8 +12,8 @@ export function providerSteersLiveTurn(provider: string): boolean {
 }
 
 const HANDLE_CHAR = /[\p{L}\p{N}_-]/u;
-// A mention cannot follow a word character, `.` or `@` (e-mail addresses, paths).
-const BLOCKS_MENTION = /[\p{L}\p{N}_.@-]/u;
+// A mention cannot follow a word character, `.`, `@`, `/` or `\` (e-mail addresses, links, paths).
+const BLOCKS_MENTION = /[\p{L}\p{N}_.@/\\-]/u;
 // After a handle, a Latin letter or digit means a longer, different word (`@Claudette`).
 // Other scripts run on without a space (`@审稿人请看`), so they end the handle.
 const CONTINUES_WORD = /[A-Za-z0-9_-]/;

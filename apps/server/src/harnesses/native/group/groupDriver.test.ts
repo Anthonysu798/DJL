@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeNativeAdapter } from "../adapter";
 import type { NativeDriverFactory } from "../types";
 import { createGroupDriverFactory } from "./groupDriver";
+import type { GroupLiveControls } from "../../../groups/Services/GroupService";
 import type { GroupRuntime } from "./groupRound";
 
 type Behaviour = { kind: "reply"; text: string } | { kind: "fail" } | { kind: "hang" };
@@ -32,12 +33,15 @@ let closed: Set<string>;
 let releases: Map<string, (text: string) => void>;
 let childFactoryCalls: number;
 let replies: GroupReply[];
+let openGates: Map<string, Promise<void>>;
+let live: GroupLiveControls | null;
 
 const handleFor = (provider: string) => (provider === "codex" ? "Codex" : "Claude");
 
 const fakeChildFactory: NativeDriverFactory = async (input, sink) => {
   childFactoryCalls += 1;
   const handle = handleFor(String(input.provider));
+  await openGates.get(handle);
   return {
     id: `native-${handle}`,
     async send(turn) {
@@ -133,7 +137,14 @@ function harness(provider: "group" | "codex" = "group") {
   const factory =
     provider === "group"
       ? createGroupDriverFactory({
-          bridge: () => ({ runtime, registerLive: () => () => {}, readRoots: [] }),
+          bridge: () => ({
+            runtime,
+            registerLive: (_threadId, controls) => {
+              live = controls;
+              return () => {};
+            },
+            readRoots: [],
+          }),
           childFactories,
           childOptions: async () => ({}),
           resolveAttachment: (attachment) =>
@@ -231,6 +242,8 @@ beforeEach(() => {
   releases = new Map();
   childFactoryCalls = 0;
   replies = [];
+  openGates = new Map();
+  live = null;
 });
 afterEach(() => rmSync(folder, { recursive: true, force: true }));
 
@@ -294,6 +307,21 @@ describe("group native driver", () => {
       "codex",
     );
     expect(supported).toBe(false);
+  });
+
+  it("a member removed while its CLI is starting does not keep that CLI", async () => {
+    const opening = Promise.withResolvers<void>();
+    openGates.set("Claude", opening.promise);
+    await scenario(async ({ adapter, events }) => {
+      await Effect.runPromise(adapter.sendTurn({ threadId, input: "@Claude go" }));
+      await until(() => childFactoryCalls === 1);
+      await live!.removeMember(GroupMemberId.makeUnsafe("claude"));
+      opening.resolve();
+      await until(() => turnCompleted(events));
+      // Checked before the session ends, which would close every child anyway.
+      expect(closed.has("Claude")).toBe(true);
+    });
+    expect(prompts.get("Claude")).toEqual([]);
   });
 
   it("a failing child does not fail the group turn", async () => {

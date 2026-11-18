@@ -66,6 +66,7 @@ describe("mention menu", () => {
     expect(activeMentionQuery("hi @Cl", 6)).toEqual({ start: 3, query: "Cl" });
     expect(activeMentionQuery("hi @", 4)).toEqual({ start: 3, query: "" });
     expect(activeMentionQuery("mail a@b", 8)).toBeNull();
+    expect(activeMentionQuery("medium.com/@Cl", 14)).toBeNull();
     expect(activeMentionQuery("@Claude done", 12)).toBeNull();
   });
   it("replaces the typed mention with the chosen handle", () => {

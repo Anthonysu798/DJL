@@ -10,6 +10,7 @@ import {
   decideRequest,
 } from "./groupPolicy";
 
+const claudeEdit = (file_path: string) => ({ tool: "Edit", input: { file_path } });
 const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 const sandbox = mkdtempSync(join(tmpdir(), "djl-group-policy-"));
@@ -100,6 +101,27 @@ describe("reads outside the allowed folders", () => {
     expect(acp({ kind: "search", locations: [{ path: folder }] })).toBe("lookup");
     expect(acp({ kind: "search", rawInput: { dir_path: outside } })).toBe("change");
     expect(acp({ kind: "search", rawInput: { path: folder } })).toBe("lookup");
+  });
+  it("treats home-relative and variable paths as changes", () => {
+    const claude = (tool: string, input: Record<string, unknown>) =>
+      classifyRequest(
+        "claudeAgent",
+        tool === "Read" ? "file_read_approval" : "command_execution_approval",
+        { tool, input },
+        roots,
+      );
+    expect(claude("Read", { file_path: "~/.ssh/id_rsa" })).toBe("change");
+    expect(claude("Read", { file_path: "$HOME/.ssh/id_rsa" })).toBe("change");
+    expect(claude("Grep", { pattern: "key", path: "~/.ssh" })).toBe("change");
+    expect(claude("Glob", { pattern: "*", path: "~" })).toBe("change");
+    expect(
+      classifyRequest(
+        "qwen",
+        "file_read_approval",
+        { toolCall: { kind: "read", rawInput: { absolute_path: "~/.ssh/id_rsa" } } },
+        roots,
+      ),
+    ).toBe("change");
   });
   it("treats a Read with no path as a change", () => {
     expect(classifyRequest("claudeAgent", "file_read_approval", { tool: "Read" }, roots)).toBe(
@@ -263,6 +285,53 @@ describe("decideRequest", () => {
     expect(lock.holder()).toBeNull();
   });
 
+  it("a named member's file change outside the group folder is declined", async () => {
+    const decide = (provider: "claudeAgent" | "codex" | "qwen", type: string, args: unknown) =>
+      decideRequest({
+        provider,
+        memberId: "m1",
+        proposeOnly: false,
+        lock: createWriteLock(),
+        roots: [folder, outside],
+        type: type as never,
+        args,
+      });
+    expect(
+      await decide("claudeAgent", "file_change_approval", claudeEdit(join(folder, "a.ts"))),
+    ).toBe("accept");
+    // A read root (skills, attachments) is not a place members may write.
+    expect(
+      await decide("claudeAgent", "file_change_approval", claudeEdit(join(outside, "a.ts"))),
+    ).toBe("decline");
+    expect(await decide("claudeAgent", "file_change_approval", claudeEdit("~/.zshrc"))).toBe(
+      "decline",
+    );
+    expect(
+      await decide("codex", "file_change_approval", {
+        item: { changes: [{ path: join(folder, "a.ts") }, { path: join(outside, "b.ts") }] },
+      }),
+    ).toBe("decline");
+    expect(await decide("codex", "file_change_approval", { grantRoot: outside })).toBe("decline");
+    expect(
+      await decide("qwen", "file_change_approval", {
+        toolCall: { kind: "edit", locations: [{ path: join(outside, "a.ts") }] },
+      }),
+    ).toBe("decline");
+    // Commands stay allowed for a named member: their effects cannot be read from the request.
+    expect(
+      await decide("claudeAgent", "command_execution_approval", {
+        tool: "Bash",
+        input: { command: "ls" },
+      }),
+    ).toBe("accept");
+  });
+  it("an already-stopped request never takes the lock", async () => {
+    const lock = createWriteLock();
+    const stopped = new AbortController();
+    stopped.abort();
+    expect(await lock.acquire("m1", stopped.signal)).toBe(false);
+    expect(lock.holder()).toBeNull();
+  });
   it("a wait that times out is declined", async () => {
     const lock = createWriteLock({ waitMs: 20 });
     await lock.acquire("m1");

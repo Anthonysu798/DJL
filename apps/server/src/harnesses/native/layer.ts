@@ -7,7 +7,7 @@ import { nativeProfileOptions } from "./profile";
 import type { NativeDriverFactory, NativeProvider } from "./types";
 import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
-import { createClaudeDriver } from "./claude";
+import { createClaudeDriver, createGroupMemberClaudeDriver } from "./claude";
 import { createCursorDriver } from "./cursor";
 import { createGeminiDriver } from "./gemini";
 import { createGroupDriverFactory } from "./group/groupDriver";
@@ -136,7 +136,7 @@ const NativeGroupAdapterLive = Layer.effect(
         // member shares the group's thread.
         childFactories: {
           codex: createCodexDriver,
-          claudeAgent: createClaudeDriver,
+          claudeAgent: createGroupMemberClaudeDriver,
           cursor: createCursorDriver,
           gemini: createGeminiDriver,
           grok: createGrokDriver,

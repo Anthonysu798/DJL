@@ -38,12 +38,15 @@ export function createGroupDriverFactory(deps: {
     const bridge = deps.bridge();
     const known = bridge ? await bridge.runtime.loadGroup(input.threadId) : null;
 
+    // Bumped whenever a member's CLI is dropped, so one still starting is closed, not kept.
+    const generations = new Map<string, number>();
     const closeChild = (memberId: string) => {
+      generations.set(memberId, (generations.get(memberId) ?? 0) + 1);
       children.get(memberId)?.close();
       children.delete(memberId);
     };
     const closeAll = () => {
-      for (const memberId of [...children.keys()]) closeChild(memberId);
+      for (const memberId of children.keys()) closeChild(memberId);
     };
 
     const unregister = known
@@ -77,6 +80,7 @@ export function createGroupDriverFactory(deps: {
     const openChild = async (member: GroupMember, resume: string | null, cwd: string) => {
       const existing = children.get(member.id);
       if (existing) return existing;
+      const generation = generations.get(member.id) ?? 0;
       const modelSelection = member.model
         ? ({ provider: member.provider, model: member.model } as ModelSelection)
         : undefined;
@@ -93,6 +97,10 @@ export function createGroupDriverFactory(deps: {
           ...(resume ? { resumeCursor: { nativeSessionId: resume } } : {}),
         },
       });
+      if ((generations.get(member.id) ?? 0) !== generation) {
+        child.close();
+        throw new Error("This member was stopped while it was starting.");
+      }
       children.set(member.id, child);
       return child;
     };

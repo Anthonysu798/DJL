@@ -10,7 +10,8 @@ You open it from **Multi agents** in the left rail. Design: `docs/superpowers/sp
 - Members are the native subscription agents: Codex, Claude, Cursor, Gemini, Grok, Kimi, iFlow,
   Qwen, CodeBuddy and Pi. The same agent can join twice with different roles.
 - Each member keeps its own CLI session. When it is woken it receives only the messages it has
-  not seen yet; a member added later gets the goal, the member list and the last 40 messages.
+  not seen yet; a member added later gets the group name (its goal), the member list and the last
+  40 messages.
 - Every skill switched on in Settings > Skills is listed for every member. You can also attach one
   skill to a message from the composer.
 
@@ -24,7 +25,8 @@ You open it from **Multi agents** in the left rail. Design: `docs/superpowers/sp
 
 - A member's final answer can `@` another member; that member is woken with the answer as its
   task. After 6 hand-offs in a row the group pauses with a **Continue / Stop** card. The pause is
-  stored, so it survives closing the app. The limit is a per-group setting.
+  stored, so it survives closing the app. Hand-offs from an `@all` round stay read-only after
+  Continue. The limit is a per-group setting.
 - A message sent while agents are still working joins the running round: an idle member starts
   at once, and a busy member gets it after its current task. Each typing row has its own Stop;
   **Stop all** stops the round.
@@ -38,11 +40,16 @@ You open it from **Multi agents** in the left rail. Design: `docs/superpowers/sp
 - There are no permission pop-ups. Every member runs with approvals on, and DJL answers each
   request by the rule above: in an `@all` round only reads, searches and web look-ups inside the
   group folder, the skill folders and the message's attachments are allowed; any change,
-  command, or read outside those folders is refused.
+  command, or read outside those folders (including `~` and `$VAR` paths) is refused. For Claude,
+  DJL also routes Read, Glob, Grep, Edit, Write, MultiEdit, NotebookEdit and Bash through this rule
+  even when your own Claude settings pre-allow them.
+- A member you `@` may run commands and change files, but a file change aimed outside the group
+  folder is declined.
 - Only one member changes files at a time. A second member that wants to edit waits for the
   first, then is declined with a reason if the wait runs out.
 - **Only Codex is held inside the group folder by a sandbox.** The other agents are told to stay
-  in it, but they can reach the rest of the disk when they are `@`'d. Pointing a group at a real
+  in it, and their file-change requests outside it are declined, but a command they run when
+  `@`'d can still reach the rest of the disk. Pointing a group at a real
   project folder removes the safety of a fresh folder; the group settings say so.
 - Under each reply a chip reads "Changed N files · ran N commands" when the member did either;
   clicking it lists them.
@@ -90,6 +97,10 @@ in-memory group store rather than the app):
   Codex's shell command (it wrote the file with a command, so no file change is listed).
 - `@all what is the latest released version of Node.js? Look it up`: Claude ran a web search,
   which an `@all` round allows; Codex answered without a recorded look-up.
+
+- After the final review: with `Write` pre-allowed in the group folder's
+  `.claude/settings.local.json`, an `@all` request to call Write anyway was refused and no file was
+  created. The same run without DJL's group hook (control) created the file.
 
 **In the app** (browser dev mode, `bun run dev`, with a separate home folder):
 

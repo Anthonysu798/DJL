@@ -117,15 +117,20 @@ export function startRound(
     if (finished || chainBusy > 0 || running.size > 0) return;
     if ([...queues.values()].some((queue) => queue.length > 0)) return;
     finished = true;
-    if (spoke.length > 0)
-      await runtime.saveRoundState(group.id, { lastSpeakers: [...spoke], lastRoundAll });
-    else
-      await runtime.saveRoundState(group.id, {
-        ...(await runtime.roundState(group.id)),
-        lastRoundAll,
-      });
-    if (pending.length > 0) await runtime.savePause(group.id, [...pending]);
-    resolveDone();
+    try {
+      if (spoke.length > 0)
+        await runtime.saveRoundState(group.id, { lastSpeakers: [...spoke], lastRoundAll });
+      else
+        await runtime.saveRoundState(group.id, {
+          ...(await runtime.roundState(group.id)),
+          lastRoundAll,
+        });
+      if (pending.length > 0) await runtime.savePause(group.id, [...pending]);
+    } catch {
+      // The group may have been deleted while the round finished; the round still ends.
+    } finally {
+      resolveDone();
+    }
   };
 
   const enqueue = (wake: Wake) => {
@@ -133,7 +138,7 @@ export function startRound(
     const queue = queues.get(wake.memberId) ?? [];
     queue.push(wake);
     queues.set(wake.memberId, queue);
-    if (!running.has(wake.memberId)) void drain(wake.memberId);
+    if (!running.has(wake.memberId)) void drain(wake.memberId).catch(() => undefined);
   };
 
   const promptMembers = (): PromptMember[] =>
@@ -157,12 +162,18 @@ export function startRound(
     return { child: await host.openChild(member, null), fresh: true, saved };
   };
 
+  const stoppedReply: ChildReply = { status: "stopped", work: { files: [], commands: [] } };
+  // Stop or removal can land while the member's CLI is still starting.
+  const isStopped = (memberId: string) =>
+    !members.has(memberId) || aborts.get(memberId)?.signal.aborted === true;
+
   const ask = async (
     member: GroupMember,
     wake: Wake,
   ): Promise<{ reply: ChildReply; child: ChildSession | null }> => {
     try {
       const { child, fresh, saved } = await openFor(member);
+      if (isStopped(member.id)) return { reply: stoppedReply, child: null };
       running.set(member.id, child);
       const after = fresh ? 0 : saved.readSeq;
       const entries = (await runtime.logAfter(group.id, after)).filter(
@@ -190,6 +201,7 @@ export function startRound(
         pastedSkills: wake.extras.pastedSkills ?? [],
       });
       const abort = aborts.get(member.id);
+      if (isStopped(member.id)) return { reply: stoppedReply, child: null };
       const reply = await child.ask(prompt, (type, args, signal) =>
         decideRequest({
           provider: member.provider,
@@ -301,6 +313,7 @@ export function startRound(
           fromMemberId: member.id as GroupMemberId,
           toMemberId: target.id,
           text: reply.text,
+          ...(wake.proposeOnly ? { proposeOnly: true } : {}),
         });
       }
     }
@@ -318,7 +331,12 @@ export function startRound(
         const { reply, child } = await ask(member, wake);
         lock.release(memberId);
         running.set(memberId, null);
-        await settle(member, wake, reply, child);
+        try {
+          await settle(member, wake, reply, child);
+        } catch {
+          // Saving the reply failed (storage error, or the group was deleted meanwhile).
+          runtime.setMemberState(group.id, memberId, "failed");
+        }
       }
     } finally {
       running.delete(memberId);
@@ -331,14 +349,14 @@ export function startRound(
     const resumed = await runtime.takeResume(group.id);
     const seq = await runtime.appendLog(group.id, "user", message);
     if (resumed.length > 0) {
-      lastRoundAll = false;
+      lastRoundAll = resumed.some((handoff) => handoff.proposeOnly === true);
       for (const handoff of resumed)
         enqueue({
           memberId: handoff.toMemberId,
           messageSeq: seq,
           fromLabel: label(handoff.fromMemberId),
           text: handoff.text,
-          proposeOnly: false,
+          proposeOnly: handoff.proposeOnly === true,
           extras: messageExtras,
           handedOver: false,
         });
@@ -408,6 +426,7 @@ export function startRound(
     },
     stopAll: async () => {
       await Promise.all([...members.keys()].map((memberId) => stopMember(memberId)));
+      await finishIfIdle();
     },
     done,
   };

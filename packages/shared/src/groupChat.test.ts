@@ -27,6 +27,11 @@ describe("parseGroupMentions", () => {
       handles: [],
     });
   });
+  it("ignores handles inside links and paths", () => {
+    expect(
+      parseGroupMentions("see medium.com/@Claude/post and C:\\@Codex", handles).handles,
+    ).toEqual([]);
+  });
   it("does not match a handle that is only the start of a longer word", () => {
     expect(parseGroupMentions("@Claudette hi", handles).handles).toEqual([]);
   });

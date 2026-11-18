@@ -31,7 +31,7 @@ export function activeMentionQuery(text: string, cursor: number): MentionQuery |
   while (index >= 0 && HANDLE_CHAR.test(before[index]!)) index -= 1;
   if (index < 0 || before[index] !== "@") return null;
   const previous = before[index - 1];
-  if (previous !== undefined && /[\p{L}\p{N}_.@-]/u.test(previous)) return null;
+  if (previous !== undefined && /[\p{L}\p{N}_.@/\\-]/u.test(previous)) return null;
   const start = before.slice(0, index).join("").length;
   return { start, query: before.slice(index + 1).join("") };
 }
