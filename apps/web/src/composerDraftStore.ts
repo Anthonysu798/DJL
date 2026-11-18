@@ -1243,6 +1243,7 @@ function makeModelSelection(
     case "qwen":
     case "codebuddy":
     case "djlCloud":
+    case "group":
       return { provider, model };
     case "codex":
       return {

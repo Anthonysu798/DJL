@@ -847,6 +847,7 @@ function getProviderStartOptionsCustomBinaryPath(
     case "pi":
       return normalizeCustomBinaryPath(providerOptions?.pi?.binaryPath);
     case "djlCloud":
+    case "group":
       return null;
   }
 }
@@ -2163,6 +2164,7 @@ export default function ChatView({
       opencode: resolveHint("opencode"),
       pi: resolveHint("pi"),
       djlCloud: resolveHint("djlCloud"),
+      group: null,
     };
   }, [
     activeProject?.defaultModelSelection,
@@ -2443,6 +2445,7 @@ export default function ChatView({
       opencode: [],
       pi: getAppModelOptions("pi", customModelsByProvider.pi, composerModelHintByProvider.pi),
       djlCloud: [],
+      group: [],
     };
     const result: Record<
       ProviderKind,
@@ -2467,6 +2470,7 @@ export default function ChatView({
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
       djlCloud: djlCloudDynamicModelsQuery.data,
+      group: undefined,
     };
 
     for (const provider of [
@@ -2542,6 +2546,7 @@ export default function ChatView({
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
       djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
+      group: [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -2575,6 +2580,8 @@ export default function ChatView({
     opencode: openCodeDynamicModelsQuery,
     pi: piDynamicModelsQuery,
     djlCloud: djlCloudDynamicModelsQuery,
+    // Group threads open in the Multi agents view, never here; this disabled query is inert.
+    group: djlCloudDynamicModelsQuery,
   } as const;
   const selectedRuntimeModel = useMemo(
     () =>

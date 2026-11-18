@@ -14,6 +14,7 @@ import {
   CodeBuddyModelOptions,
   PiModelOptions,
   DjlCloudModelOptions,
+  GroupModelOptions,
 } from "./model";
 import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
 import { ProjectKind } from "./project";
@@ -78,6 +79,7 @@ export const ProviderKind = Schema.Literals([
   "opencode",
   "pi",
   "djlCloud",
+  "group",
 ]);
 export type ProviderKind = typeof ProviderKind.Type;
 export const ProviderApprovalPolicy = Schema.Literals([
@@ -193,6 +195,14 @@ export const DjlCloudModelSelection = Schema.Struct({
 });
 export type DjlCloudModelSelection = typeof DjlCloudModelSelection.Type;
 
+// A Multi agents group thread: the model is a placeholder; each member keeps its own model.
+export const GroupModelSelection = Schema.Struct({
+  provider: Schema.Literal("group"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(GroupModelOptions),
+});
+export type GroupModelSelection = typeof GroupModelSelection.Type;
+
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   ClaudeModelSelection,
@@ -208,6 +218,7 @@ export const ModelSelection = Schema.Union([
   OpenCodeModelSelection,
   PiModelSelection,
   DjlCloudModelSelection,
+  GroupModelSelection,
 ]);
 export type ModelSelection = typeof ModelSelection.Type;
 
@@ -307,6 +318,7 @@ export const ProviderStartOptions = Schema.Struct({
   opencode: Schema.optional(OpenCodeProviderStartOptions),
   pi: Schema.optional(PiProviderStartOptions),
   djlCloud: Schema.optional(DjlCloudProviderStartOptions),
+  group: Schema.optional(Schema.Struct({})),
 });
 export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 export const NewTaskProviderStartOptions = ProviderStartOptions.check(

@@ -224,6 +224,7 @@ export function resolvePromptEffortFromModelSelection(
     case "kilo":
     case "opencode":
     case "djlCloud":
+    case "group":
       return null;
   }
 }

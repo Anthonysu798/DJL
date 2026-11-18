@@ -134,6 +134,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
   pi: new Set(getModelOptions("pi").map((option) => option.slug)),
   djlCloud: new Set(getModelOptions("djlCloud").map((option) => option.slug)),
+  group: new Set<string>(),
 };
 
 const withDefaults =
@@ -276,7 +277,11 @@ export interface AppModelOption extends ProviderModelOption {
 const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
 let serverSettingsMigrationInFlight = false;
 
-const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConfig> = {
+// Group threads have no models of their own, so they have no custom-model settings.
+const PROVIDER_CUSTOM_MODEL_CONFIG: Record<
+  Exclude<ProviderKind, "group">,
+  ProviderCustomModelConfig
+> = {
   codex: {
     provider: "codex",
     settingsKey: "customCodexModels",
@@ -462,7 +467,7 @@ export function resolveTerminalFontFamilyStack(value: string | null | undefined)
 }
 
 function normalizeProviderBinaryPathOverride(
-  provider: Exclude<ProviderKind, "djlCloud">,
+  provider: Exclude<ProviderKind, "djlCloud" | "group">,
   value: string | null | undefined,
 ): string {
   const trimmed = value?.trim() ?? "";
@@ -843,6 +848,7 @@ export function getCustomModelsForProvider(
   settings: Pick<AppSettings, CustomModelSettingsKey>,
   provider: ProviderKind,
 ): readonly string[] {
+  if (provider === "group") return [];
   return settings[PROVIDER_CUSTOM_MODEL_CONFIG[provider].settingsKey];
 }
 
@@ -850,6 +856,7 @@ export function getDefaultCustomModelsForProvider(
   defaults: Pick<AppSettings, CustomModelSettingsKey>,
   provider: ProviderKind,
 ): readonly string[] {
+  if (provider === "group") return [];
   return defaults[PROVIDER_CUSTOM_MODEL_CONFIG[provider].defaultSettingsKey];
 }
 
@@ -857,6 +864,7 @@ export function patchCustomModels(
   provider: ProviderKind,
   models: string[],
 ): Partial<Pick<AppSettings, CustomModelSettingsKey>> {
+  if (provider === "group") return {};
   return {
     [PROVIDER_CUSTOM_MODEL_CONFIG[provider].settingsKey]: models,
   };
@@ -880,6 +888,7 @@ export function getCustomModelsByProvider(
     opencode: getCustomModelsForProvider(settings, "opencode"),
     pi: getCustomModelsForProvider(settings, "pi"),
     djlCloud: getCustomModelsForProvider(settings, "djlCloud"),
+    group: [],
   };
 }
 
@@ -1030,6 +1039,7 @@ export function getCustomModelOptionsByProvider(
     opencode: getAppModelOptions("opencode", customModelsByProvider.opencode),
     pi: getAppModelOptions("pi", customModelsByProvider.pi),
     djlCloud: getAppModelOptions("djlCloud", customModelsByProvider.djlCloud),
+    group: [],
   };
 }
 
@@ -1162,6 +1172,7 @@ export function getCustomBinaryPathForProvider(
     case "pi":
       return normalizeProviderBinaryPathOverride(provider, settings.piBinaryPath);
     case "djlCloud":
+    case "group":
       return "";
   }
 }

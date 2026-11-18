@@ -195,6 +195,7 @@ describe("resolveAppModelSelection", () => {
           opencode: [],
           pi: [],
           djlCloud: [],
+          group: [],
         },
         "galapagos-alpha",
       ),
@@ -220,6 +221,7 @@ describe("resolveAppModelSelection", () => {
           opencode: [],
           pi: [],
           djlCloud: [],
+          group: [],
         },
         "",
       ),
@@ -245,6 +247,7 @@ describe("resolveAppModelSelection", () => {
           opencode: [],
           pi: [],
           djlCloud: [],
+          group: [],
         },
         "GPT-5.3 Codex",
       ),
@@ -270,6 +273,7 @@ describe("resolveAppModelSelection", () => {
           opencode: [],
           pi: [],
           djlCloud: [],
+          group: [],
         },
         "sonnet",
       ),
@@ -295,6 +299,7 @@ describe("resolveAppModelSelection", () => {
           opencode: [],
           pi: [],
           djlCloud: [],
+          group: [],
         },
         "custom/selected-model",
       ),
@@ -752,6 +757,7 @@ describe("provider-indexed custom model settings", () => {
       opencode: ["openrouter/gpt-oss-120b"],
       pi: ["anthropic/custom-pi"],
       djlCloud: [],
+      group: [],
     });
   });
 

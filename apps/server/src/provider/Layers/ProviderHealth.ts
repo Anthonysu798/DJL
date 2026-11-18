@@ -132,6 +132,7 @@ const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings)
     case "pi":
       return settings.providers.pi.binaryPath;
     case "djlCloud":
+    case "group":
       return "";
   }
 };
@@ -1993,6 +1994,8 @@ export function isProviderEnabledForSettings(
   provider: ProviderKind,
   settings: ServerSettings,
 ): boolean {
+  // Group threads run other providers' agents; they have no setting of their own.
+  if (provider === "group") return true;
   return settings.providers[provider].enabled !== false;
 }
 

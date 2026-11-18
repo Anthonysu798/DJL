@@ -465,7 +465,9 @@ function projectRootNamesForOrigin(origin: SkillsHomeOrigin): readonly string[] 
 function preferredOriginsForProvider(
   provider: ProviderKind | null | undefined,
 ): ReadonlyArray<SkillsHomeOrigin> {
-  return provider ? (PROVIDER_SKILL_ORIGIN_PREFERENCES[provider] ?? []) : [];
+  return provider && provider !== "group"
+    ? (PROVIDER_SKILL_ORIGIN_PREFERENCES[provider] ?? [])
+    : [];
 }
 
 function orderedOriginsForProvider(

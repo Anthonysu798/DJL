@@ -159,6 +159,10 @@ export const DroidModelOptions = Schema.Struct({
 });
 export type DroidModelOptions = typeof DroidModelOptions.Type;
 
+// Group threads carry no model options of their own; each member keeps its own model.
+export const GroupModelOptions = Schema.Struct({});
+export type GroupModelOptions = typeof GroupModelOptions.Type;
+
 export const ProviderModelOptions = Schema.Struct({
   codex: Schema.optional(CodexModelOptions),
   claudeAgent: Schema.optional(ClaudeModelOptions),
@@ -174,6 +178,7 @@ export const ProviderModelOptions = Schema.Struct({
   opencode: Schema.optional(OpenCodeModelOptions),
   djlCloud: Schema.optional(DjlCloudModelOptions),
   pi: Schema.optional(PiModelOptions),
+  group: Schema.optional(GroupModelOptions),
 });
 export type ProviderModelOptions = typeof ProviderModelOptions.Type;
 
@@ -929,6 +934,7 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
   pi: [],
+  group: [],
   cursor: [
     {
       slug: "auto",
@@ -1010,6 +1016,7 @@ export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
   djlCloud: "claude-sonnet-5",
+  group: "group",
   kimi: "kimi-code/kimi-for-coding",
   iflow: "glm-4.7",
   qwen: "qwen3-coder-plus",
@@ -1031,6 +1038,7 @@ export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "openai/gpt-5" as const;
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
   djlCloud: {},
+  group: {},
   kimi: {},
   iflow: {},
   qwen: {},
@@ -1192,4 +1200,5 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   opencode: "DJL",
   pi: "Pi",
   djlCloud: "DJL Cloud",
+  group: "Group",
 };

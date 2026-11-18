@@ -11,6 +11,7 @@ import {
   normalizeHiddenProviders,
   normalizeProviderOrder,
 } from "./providerOrdering";
+import { PROVIDER_OPTIONS } from "./session-logic";
 
 describe("providerOrdering", () => {
   it("exposes the active OpenCode runtime and newly built native harnesses", () => {
@@ -36,6 +37,8 @@ describe("providerOrdering", () => {
       DEFAULT_PROVIDER_ORDER.indexOf("claudeAgent") + 1,
     );
     expect(isProviderKind("droid")).toBe(false);
+    expect(isProviderKind("group")).toBe(false);
+    expect(PROVIDER_OPTIONS.some((option) => option.value === "group")).toBe(false);
     expect(normalizeProviderOrder(["droid", "codex"])).toEqual([
       "codex",
       "djlCloud",
