@@ -11,6 +11,7 @@ export type NativeProvider =
   | "codex"
   | "claudeAgent"
   | "cursor"
+  | "gemini"
   | "grok"
   | "kimi"
   | "iflow"
