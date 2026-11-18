@@ -12,6 +12,10 @@
       "types": "./src/djlStoragePaths.ts",
       "import": "./src/djlStoragePaths.ts"
     },
+    "./groupChat": {
+      "types": "./src/groupChat.ts",
+      "import": "./src/groupChat.ts"
+    },
     "./sharedStateLock": {
       "types": "./src/sharedStateLock.ts",
       "import": "./src/sharedStateLock.ts"
