@@ -64,6 +64,12 @@ const stringField = (value: Record<string, unknown>, key: string): string[] => {
   return typeof field === "string" && field ? [field] : [];
 };
 
+const ACP_PATH_FIELDS = ["path", "dir_path", "file_path", "absolute_path"];
+
+function patternLeavesFolder(pattern: string): boolean {
+  return isAbsolute(pattern) || pattern.startsWith("~") || pattern.split(/[\\/]/).includes("..");
+}
+
 /** Local paths a look-up would touch, null for a web look-up, or "not-lookup". */
 function lookupPaths(
   provider: GroupMemberProvider,
@@ -76,7 +82,14 @@ function lookupPaths(
     const input = record(request.input);
     if (CLAUDE_WEB_TOOLS.has(tool)) return null;
     if (CLAUDE_SEARCH_TOOLS.has(tool)) {
+      // Glob's pattern and Grep's glob are paths too: one that leaves the folder is not checked.
+      const patterns = [
+        ...(tool === "Glob" ? stringField(input, "pattern") : []),
+        ...stringField(input, "glob"),
+      ];
+      if (patterns.some(patternLeavesFolder)) return [];
       const path = stringField(input, "path");
+      // Claude's Grep and Glob search the working folder when no path is given.
       return path.length > 0 ? path : ["."];
     }
     if (tool === "Read" || type === "file_read_approval")
@@ -86,12 +99,19 @@ function lookupPaths(
   if (ACP_PROVIDERS.has(provider)) {
     const toolCall = record(request.toolCall);
     const kind = String(toolCall.kind);
-    const locations = Array.isArray(toolCall.locations)
-      ? toolCall.locations.flatMap((location) => stringField(record(location), "path"))
-      : [];
+    const rawInput = record(toolCall.rawInput);
+    const locations = [
+      ...(Array.isArray(toolCall.locations)
+        ? toolCall.locations.flatMap((location) => stringField(record(location), "path"))
+        : []),
+      ...ACP_PATH_FIELDS.flatMap((field) => stringField(rawInput, field)),
+      ...(Array.isArray(rawInput.paths)
+        ? rawInput.paths.filter((path): path is string => typeof path === "string" && !!path)
+        : []),
+    ];
     if (kind === "fetch") return null;
-    if (kind === "search") return locations.length > 0 ? locations : ["."];
-    if (kind === "read" || type === "file_read_approval") return locations;
+    // An empty list means the touched paths are unknown, which is not a look-up.
+    if (kind === "search" || kind === "read" || type === "file_read_approval") return locations;
     return "not-lookup";
   }
   if (type === "file_read_approval")

@@ -83,6 +83,24 @@ describe("reads outside the allowed folders", () => {
       ),
     ).toBe("change");
   });
+  it("treats searches whose pattern or glob leaves the folder as changes", () => {
+    const claude = (tool: string, input: Record<string, unknown>) =>
+      classifyRequest("claudeAgent", "command_execution_approval", { tool, input }, roots);
+    expect(claude("Glob", { pattern: "**/*.ts" })).toBe("lookup");
+    expect(claude("Glob", { pattern: "/etc/**" })).toBe("change");
+    expect(claude("Glob", { pattern: "~/.ssh/*" })).toBe("change");
+    expect(claude("Glob", { pattern: "../outside/*" })).toBe("change");
+    expect(claude("Grep", { pattern: "key", glob: "../outside/**" })).toBe("change");
+    expect(claude("Grep", { pattern: "key", path: outside })).toBe("change");
+  });
+  it("treats an ACP search with no known location as a change", () => {
+    const acp = (toolCall: Record<string, unknown>) =>
+      classifyRequest("qwen", "command_execution_approval", { toolCall }, roots);
+    expect(acp({ kind: "search" })).toBe("change");
+    expect(acp({ kind: "search", locations: [{ path: folder }] })).toBe("lookup");
+    expect(acp({ kind: "search", rawInput: { dir_path: outside } })).toBe("change");
+    expect(acp({ kind: "search", rawInput: { path: folder } })).toBe("lookup");
+  });
   it("treats a Read with no path as a change", () => {
     expect(classifyRequest("claudeAgent", "file_read_approval", { tool: "Read" }, roots)).toBe(
       "change",
@@ -126,7 +144,7 @@ describe("classifyRequest", () => {
       classifyRequest(
         "gemini",
         "command_execution_approval",
-        { toolCall: { kind: "search" } },
+        { toolCall: { kind: "search", locations: [{ path: folder }] } },
         roots,
       ),
     ).toBe("lookup");
