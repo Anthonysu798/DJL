@@ -3,7 +3,12 @@
 //          hop-limit Continue / Stop card, and the composer.
 // Layer: UI component
 
-import { GROUP_MODEL_SELECTION, type Group } from "@synara/contracts";
+import {
+  GROUP_MODEL_SELECTION,
+  type Group,
+  type ProviderSkillReference,
+  type UploadChatAttachment,
+} from "@synara/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,11 +20,18 @@ import { useStore } from "~/store";
 import { createThreadSelector } from "~/storeSelectors";
 import { useRetainVisibleThreadDetails } from "~/threadDetailSubscriptionRetention";
 
-import { deriveGroupChatRows, type GroupMemberRow } from "./groupChat.logic";
+import { deriveGroupChatRows } from "./groupChat.logic";
+import { GroupComposer, type GroupComposerHandle } from "./GroupComposer";
 import { GroupMessageRow } from "./GroupMessageRow";
+import { GroupReplyActions } from "./GroupReplyActions";
 import { useGroupStore } from "./groupStore";
 
-export type GroupSendInput = { text: string; dispatchMode?: "queue" | "steer" };
+export type GroupSendInput = {
+  text: string;
+  attachments?: UploadChatAttachment[];
+  skills?: ProviderSkillReference[];
+  dispatchMode?: "queue" | "steer";
+};
 
 export function useGroupSend(group: Group) {
   const { t } = useTranslation("shell");
@@ -35,7 +47,8 @@ export function useGroupSend(group: Group) {
           messageId: newMessageId(),
           role: "user",
           text: input.text,
-          attachments: [],
+          attachments: input.attachments ?? [],
+          ...(input.skills && input.skills.length > 0 ? { skills: input.skills } : {}),
         },
         modelSelection: GROUP_MODEL_SELECTION,
         dispatchMode: input.dispatchMode ?? "queue",
@@ -52,15 +65,7 @@ export function useGroupSend(group: Group) {
   return { send, error };
 }
 
-export function GroupChatView(props: {
-  group: Group;
-  headerActions?: ReactNode;
-  composer?: (input: {
-    running: boolean;
-    send: (input: GroupSendInput) => Promise<boolean>;
-  }) => ReactNode;
-  replyFooter?: (row: GroupMemberRow, rowIndex: number) => ReactNode;
-}) {
+export function GroupChatView(props: { group: Group; headerActions?: ReactNode }) {
   const { group } = props;
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
@@ -79,6 +84,7 @@ export function GroupChatView(props: {
   });
   const { send, error } = useGroupSend(group);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<GroupComposerHandle | null>(null);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [rows.length, busyMembers.length]);
@@ -118,7 +124,7 @@ export function GroupChatView(props: {
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto py-3" data-testid="group-chat-rows">
-        {rows.map((row, index) => (
+        {rows.map((row) => (
           <GroupMessageRow
             key={row.id}
             row={row}
@@ -128,7 +134,17 @@ export function GroupChatView(props: {
                 ? () => void navigate({ to: "/settings", search: { section: "accounts" } })
                 : undefined
             }
-            footer={row.kind === "member" ? props.replyFooter?.(row, index) : undefined}
+            footer={
+              row.kind === "member" ? (
+                <GroupReplyActions
+                  group={group}
+                  row={row}
+                  rows={rows}
+                  send={send}
+                  prefill={(value) => composerRef.current?.setText(value)}
+                />
+              ) : undefined
+            }
           />
         ))}
         {busyMembers.map((member) => (
@@ -172,44 +188,7 @@ export function GroupChatView(props: {
         <div ref={bottomRef} />
       </div>
       {error ? <p className="px-4 pb-1 text-xs text-destructive">{error}</p> : null}
-      {props.composer ? (
-        props.composer({ running, send })
-      ) : (
-        <SimpleGroupComposer running={running} send={send} />
-      )}
-    </div>
-  );
-}
-
-function SimpleGroupComposer(props: {
-  running: boolean;
-  send: (input: GroupSendInput) => Promise<boolean>;
-}) {
-  const { t } = useTranslation("shell");
-  const [text, setText] = useState("");
-  const submit = async () => {
-    const value = text.trim();
-    if (!value) return;
-    if (await props.send({ text: value })) setText("");
-  };
-  return (
-    <div className="flex items-end gap-2 border-t border-border p-3">
-      <textarea
-        className="min-h-10 flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-        rows={2}
-        value={text}
-        placeholder={t("multiAgents.chat.placeholder")}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-            event.preventDefault();
-            void submit();
-          }
-        }}
-      />
-      <Button size="sm" onClick={() => void submit()} disabled={!text.trim()}>
-        {t("multiAgents.chat.send")}
-      </Button>
+      <GroupComposer group={group} running={running} send={send} handle={composerRef} />
     </div>
   );
 }

@@ -23,6 +23,8 @@ import { ensureNativeApi } from "~/nativeApi";
 
 import { canCreate, defaultGroupName, memberChoices } from "./GroupSetupDialog.logic";
 
+const selectable = (ready: boolean | null) => ready !== false;
+
 export function GroupSetupDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,7 +46,6 @@ export function GroupSetupDialog(props: {
   const check = { checkFailed: accountsQuery.isError };
   const choices = memberChoices(accounts, check);
   const checking = accountsQuery.isPending;
-  const selectable = (ready: boolean | null) => ready !== false;
 
   useEffect(() => {
     if (!props.open) {
