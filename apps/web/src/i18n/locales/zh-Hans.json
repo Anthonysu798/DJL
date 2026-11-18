@@ -2732,6 +2732,7 @@
         "creating": "正在创建…",
         "setUp": "去设置",
         "notReady": "尚未设置",
+        "checking": "正在检查…",
         "needOne": "请至少选择一个已设置好的智能体。"
       },
       "chat": {

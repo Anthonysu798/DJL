@@ -114,9 +114,9 @@ export function GroupMembersPanel(props: { group: Group; onDeleted: (folder: str
     queryKey: ["harness-accounts"],
     queryFn: () => ensureNativeApi().harnesses.listAccounts(),
   });
-  const addable = memberChoices(accountsQuery.data?.accounts ?? []).filter(
-    (choice) => choice.ready,
-  );
+  const addable = memberChoices(accountsQuery.data?.accounts ?? [], {
+    checkFailed: accountsQuery.isError,
+  }).filter((choice) => choice.ready !== false);
   const onError = () => setError(t("multiAgents.errors.updateFailed"));
   const api = () => ensureNativeApi();
 

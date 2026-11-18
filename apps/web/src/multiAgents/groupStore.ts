@@ -49,7 +49,24 @@ export const useGroupStore = create<GroupStoreState>()((set) => ({
 
 /** Keeps the store subscribed to group events while a Multi agents screen is mounted. */
 export function useGroupEvents(): void {
-  useEffect(() => ensureNativeApi().groups.onEvent(useGroupStore.getState().applyEvent), []);
+  useEffect(() => {
+    const api = ensureNativeApi();
+    const { applyEvent } = useGroupStore.getState();
+    const unsubscribe = api.groups.onEvent(applyEvent);
+    // The stream's own snapshot arrives when the app starts, usually before this screen
+    // subscribes, so load the current state explicitly; later events keep it current.
+    let active = true;
+    void api.groups
+      .list()
+      .then(({ groups, replies }) => {
+        if (active) applyEvent({ type: "snapshot", groups, replies });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 }
 
 export function selectGroup(groupId: GroupId | null | undefined) {

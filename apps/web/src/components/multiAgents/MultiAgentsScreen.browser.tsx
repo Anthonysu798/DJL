@@ -18,10 +18,10 @@ const state = vi.hoisted(() => ({ groups: [] as unknown[] }));
 
 const api = vi.hoisted(() => ({
   groups: {
-    onEvent: vi.fn((callback: (event: GroupEvent) => void) => {
-      callback({ type: "snapshot", groups: state.groups as Group[], replies: [] });
-      return () => {};
-    }),
+    // The stream's snapshot is sent when the app starts, before this screen subscribes, so
+    // the screen must load the list itself.
+    onEvent: vi.fn((_callback: (event: GroupEvent) => void) => () => {}),
+    list: vi.fn(async () => ({ groups: state.groups as Group[], replies: [] })),
     create: vi.fn(),
   },
   harnesses: {

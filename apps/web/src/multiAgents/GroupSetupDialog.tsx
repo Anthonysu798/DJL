@@ -41,7 +41,10 @@ export function GroupSetupDialog(props: {
     enabled: props.open,
   });
   const accounts = accountsQuery.data?.accounts ?? [];
-  const choices = memberChoices(accounts);
+  const check = { checkFailed: accountsQuery.isError };
+  const choices = memberChoices(accounts, check);
+  const checking = accountsQuery.isPending;
+  const selectable = (ready: boolean | null) => ready !== false;
 
   useEffect(() => {
     if (!props.open) {
@@ -60,9 +63,9 @@ export function GroupSetupDialog(props: {
     );
 
   const create = async () => {
-    const ready = selected.filter((provider) =>
-      choices.some((choice) => choice.provider === provider && choice.ready),
-    );
+    // Only selectable agents can be ticked, so the picked list is the member list; re-checking
+    // it here would drop members whenever the account check refreshes in between.
+    const ready = selected;
     setCreating(true);
     setError(null);
     try {
@@ -72,8 +75,13 @@ export function GroupSetupDialog(props: {
       });
       props.onCreated(group);
       props.onOpenChange(false);
-    } catch {
-      setError(t("multiAgents.errors.createFailed"));
+    } catch (cause) {
+      const reason = cause instanceof Error ? cause.message : "";
+      setError(
+        reason
+          ? `${t("multiAgents.errors.createFailed")} ${reason}`
+          : t("multiAgents.errors.createFailed"),
+      );
     } finally {
       setCreating(false);
     }
@@ -93,11 +101,11 @@ export function GroupSetupDialog(props: {
               {choices.map((choice) => (
                 <li key={choice.provider}>
                   <label
-                    className={`flex items-center gap-3 rounded-lg px-2 py-2 ${choice.ready ? "cursor-pointer hover:bg-muted" : "opacity-60"}`}
+                    className={`flex items-center gap-3 rounded-lg px-2 py-2 ${selectable(choice.ready) && !checking ? "cursor-pointer hover:bg-muted" : "opacity-60"}`}
                   >
                     <input
                       type="checkbox"
-                      disabled={!choice.ready}
+                      disabled={checking || !selectable(choice.ready)}
                       checked={selected.includes(choice.provider)}
                       onChange={() => toggle(choice.provider)}
                     />
@@ -105,7 +113,11 @@ export function GroupSetupDialog(props: {
                     <span className="flex-1 text-sm">
                       {PROVIDER_DISPLAY_NAMES[choice.provider]}
                     </span>
-                    {choice.ready ? null : (
+                    {checking ? (
+                      <span className="text-xs text-muted-foreground">
+                        {t("multiAgents.setup.checking")}
+                      </span>
+                    ) : selectable(choice.ready) ? null : (
                       <>
                         <span className="text-xs text-muted-foreground">
                           {t("multiAgents.setup.notReady")}
@@ -143,14 +155,14 @@ export function GroupSetupDialog(props: {
         <DialogFooter>
           {step === "pick" ? (
             <>
-              {!canCreate(selected, accounts) ? (
+              {!canCreate(selected, accounts, check) ? (
                 <p className="mr-auto self-center text-xs text-muted-foreground">
                   {t("multiAgents.setup.needOne")}
                 </p>
               ) : null}
               <Button
                 size="sm"
-                disabled={!canCreate(selected, accounts)}
+                disabled={!canCreate(selected, accounts, check)}
                 onClick={() => setStep("name")}
               >
                 {t("multiAgents.setup.next")}

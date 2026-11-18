@@ -2732,6 +2732,7 @@
         "creating": "만드는 중…",
         "setUp": "설정하기",
         "notReady": "아직 설정 안 됨",
+        "checking": "확인 중…",
         "needOne": "설정된 에이전트를 하나 이상 고르세요."
       },
       "chat": {

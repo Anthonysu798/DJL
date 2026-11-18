@@ -30,6 +30,13 @@ describe("group setup", () => {
     expect(canCreate(["codex"], [account("codex", "required")])).toBe(false);
   });
 
+  it("lets any agent be picked when the account check failed", () => {
+    const choices = memberChoices([], { checkFailed: true });
+    expect(choices.every((choice) => choice.ready === null)).toBe(true);
+    expect(canCreate(["gemini"], [], { checkFailed: true })).toBe(true);
+    expect(canCreate([], [], { checkFailed: true })).toBe(false);
+  });
+
   it("suggests a name from the picked agents", () => {
     expect(defaultGroupName(["claudeAgent", "codex"])).toBe("Claude, Codex");
     expect(defaultGroupName(["claudeAgent", "codex", "gemini", "qwen"])).toBe(

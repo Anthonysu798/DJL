@@ -2732,6 +2732,7 @@
         "creating": "Création…",
         "setUp": "Configurer",
         "notReady": "Pas encore configuré",
+        "checking": "Vérification…",
         "needOne": "Choisissez au moins un agent déjà configuré."
       },
       "chat": {
