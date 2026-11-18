@@ -12,6 +12,8 @@ import { GroupRepositoryLive } from "../../persistence/Layers/GroupRepository.ts
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import { runMigrations } from "../../persistence/Migrations.ts";
 import { GroupService } from "../Services/GroupService";
+import { GroupDriverBridge, GroupDriverBridgeLive } from "../Services/GroupDriverBridge";
+import { ServerSettingsService } from "../../serverSettings";
 import { GroupServiceLive } from "./GroupService";
 
 const isWindows = process.platform === "win32";
@@ -35,12 +37,14 @@ const makeLayer = () =>
   GroupServiceLive.pipe(
     Layer.provideMerge(GroupRepositoryLive),
     Layer.provideMerge(Layer.succeed(OrchestrationEngineService, fakeEngine)),
+    Layer.provideMerge(GroupDriverBridgeLive),
+    Layer.provideMerge(ServerSettingsService.layerTest()),
     Layer.provideMerge(SqlitePersistenceMemory),
     Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "djl-group-service-test-" })),
     Layer.provide(NodeServices.layer),
   );
 
-const run = <A>(effect: Effect.Effect<A, unknown, GroupService>) =>
+const run = <A>(effect: Effect.Effect<A, unknown, GroupService | GroupDriverBridge>) =>
   Effect.gen(function* () {
     yield* runMigrations();
     return yield* effect;
@@ -118,6 +122,46 @@ describe.skipIf(isWindows)("GroupService", () => {
     expect(resetSessions).toHaveBeenCalledTimes(1);
     expect(updated).toMatchObject({ folder: other, folderIsAuto: false });
     expect(dispatched.at(-1)).toMatchObject({ type: "project.meta.update", workspaceRoot: other });
+  });
+
+  it("attaches a runtime the group driver can use to read and write the group", async () => {
+    const outcome = await run(
+      Effect.gen(function* () {
+        const service = yield* GroupService;
+        const bridge = yield* GroupDriverBridge;
+        const group = yield* service.create(threeMembers);
+        const attached = bridge.current();
+        if (!attached) throw new Error("bridge not attached");
+        const { runtime } = attached;
+        const loaded = yield* Effect.promise(() => runtime.loadGroup(group.threadId));
+        const seq = yield* Effect.promise(() => runtime.appendLog(group.id, "user", "hello"));
+        const after = yield* Effect.promise(() => runtime.logAfter(group.id, 0));
+        const claude = group.members[0]!;
+        yield* Effect.promise(() =>
+          runtime.saveMemberRuntime(claude.id, { nativeSessionId: "s1", readSeq: seq }),
+        );
+        const memberRuntime = yield* Effect.promise(() => runtime.memberRuntime(claude.id));
+        yield* Effect.promise(() =>
+          runtime.recordReply({
+            groupId: group.id,
+            replyId: "r1",
+            memberId: claude.id,
+            status: "ok",
+            error: null,
+            files: [],
+            commands: [],
+          }),
+        );
+        const replies = yield* service.listReplies();
+        return { loaded, seq, after, memberRuntime, replies, roots: attached.readRoots };
+      }),
+    );
+    expect(outcome.loaded?.name).toBe("Launch");
+    expect(outcome.seq).toBe(1);
+    expect(outcome.after).toEqual([{ seq: 1, author: "user", text: "hello" }]);
+    expect(outcome.memberRuntime).toEqual({ nativeSessionId: "s1", readSeq: 1 });
+    expect(outcome.replies.map((reply) => reply.replyId)).toEqual(["r1"]);
+    expect(outcome.roots.length).toBeGreaterThan(0);
   });
 
   it("rejects a folder that does not exist", async () => {

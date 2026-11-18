@@ -3,6 +3,7 @@ import {
   NativeClaudeAdapter,
   NativeCursorAdapter,
   NativeGeminiAdapter,
+  NativeGroupAdapter,
   NativeGrokAdapter,
   NativeKimiAdapter,
   NativeIFlowAdapter,
@@ -137,6 +138,7 @@ const fakeDroidAdapter: DroidAdapterShape = {
 };
 
 const fakeNativeGeminiAdapter = { ...fakeGrokAdapter, provider: "gemini" as const };
+const fakeNativeGroupAdapter = { ...fakeGrokAdapter, provider: "group" as const };
 
 const fakeOpenCodeAdapter: OpenCodeAdapterShape = {
   provider: "opencode",
@@ -202,6 +204,7 @@ const layer = it.layer(
         Layer.succeed(NativeCursorAdapter, fakeCursorAdapter),
         Layer.succeed(NativeGrokAdapter, fakeGrokAdapter),
         Layer.succeed(NativeGeminiAdapter, fakeNativeGeminiAdapter),
+        Layer.succeed(NativeGroupAdapter, fakeNativeGroupAdapter),
         Layer.succeed(NativeKimiAdapter, { ...fakeGrokAdapter, provider: "kimi" }),
         Layer.succeed(NativeIFlowAdapter, { ...fakeGrokAdapter, provider: "iflow" }),
         Layer.succeed(NativeQwenAdapter, { ...fakeGrokAdapter, provider: "qwen" }),
@@ -241,8 +244,10 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "codebuddy",
         "pi",
         "djlCloud",
+        "group",
       ]);
       assert.equal(yield* registry.getByProvider("gemini"), fakeNativeGeminiAdapter);
+      assert.equal(yield* registry.getByProvider("group"), fakeNativeGroupAdapter);
       assert.equal(yield* registry.getByProvider("codex"), fakeCodexAdapter);
       assert.equal(yield* registry.getByProvider("claudeAgent"), fakeClaudeAdapter);
       assert.equal(yield* registry.getByProvider("cursor"), fakeCursorAdapter);

@@ -50,6 +50,9 @@ export function nativeProfileOptions(
       };
     case "djlCloud":
       return { djlCloud: { region: settings.providers.djlCloud.region } };
+    case "group":
+      // Each member resolves its own profile when the group opens it.
+      return {};
     case "cursor":
       return {
         cursor: {

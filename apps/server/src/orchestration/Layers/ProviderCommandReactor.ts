@@ -1874,7 +1874,7 @@ const make = Effect.gen(function* () {
       event.payload.modelSelection?.provider ??
       thread.session?.providerName ??
       thread.modelSelection.provider;
-    const isNativeProvider = ["codex", "claudeAgent", "cursor", "djlCloud"].includes(
+    const isNativeProvider = ["codex", "claudeAgent", "cursor", "djlCloud", "group"].includes(
       selectedProvider,
     );
     const isPlainNativeChat =

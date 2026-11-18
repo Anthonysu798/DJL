@@ -299,9 +299,10 @@ export const makeNativeAdapter = (
           const state = requireSession(input.threadId);
           if (state.session.activeTurnId) throw new Error("A native turn is already running");
           if (!input.input?.trim()) throw new Error("A text prompt is required");
+          // Groups pass attachment paths and skills to members as text; other bridges cannot.
+          const acceptsFiles = provider === "group";
           if (
-            input.attachments?.length ||
-            input.skills?.length ||
+            (!acceptsFiles && (input.attachments?.length || input.skills?.length)) ||
             input.mentions?.length ||
             input.workTurnPolicy
           )

@@ -168,6 +168,7 @@ export function makeServerRuntimeServicesLayer() {
   const groupServiceLayer = GroupServiceLive.pipe(
     Layer.provideMerge(GroupRepositoryLive),
     Layer.provideMerge(OrchestrationLayerLive),
+    Layer.provideMerge(ServerSettingsLive),
   );
 
   return Layer.mergeAll(

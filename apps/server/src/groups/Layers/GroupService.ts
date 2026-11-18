@@ -29,6 +29,14 @@ import { join } from "node:path";
 import { ServerConfig } from "../../config";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine";
 import { GroupRepository } from "../../persistence/Services/GroupRepository.ts";
+import type { GroupRuntime } from "../../harnesses/native/group/groupRound";
+import {
+  discoverSkillsCatalog,
+  filterDisabledSkills,
+  skillsCatalogRoots,
+} from "../../provider/skillsCatalog";
+import { ServerSettingsService } from "../../serverSettings";
+import { GroupDriverBridge } from "../Services/GroupDriverBridge";
 import {
   GroupService,
   GroupServiceError,
@@ -57,6 +65,8 @@ const makeGroupService = Effect.gen(function* () {
   const config = yield* ServerConfig;
   const events = yield* PubSub.unbounded<GroupEvent>();
   const live = new Map<string, GroupLiveControls>();
+  const settingsService = yield* ServerSettingsService;
+  const bridge = yield* GroupDriverBridge;
 
   const publish: GroupServiceShape["publish"] = (event) =>
     PubSub.publish(events, event).pipe(Effect.asVoid);
@@ -352,6 +362,81 @@ const makeGroupService = Effect.gen(function* () {
       if (live.get(threadId) === controls) live.delete(threadId);
     };
   };
+
+  // The group harness reaches the repository through this promise-based runtime.
+  const run = <A>(effect: Effect.Effect<A, unknown>) => Effect.runPromise(effect);
+  const groupIdOf = (value: string) => GroupId.makeUnsafe(value);
+  const memberIdOf = (value: string) => GroupMemberId.makeUnsafe(value);
+  const runtime: GroupRuntime = {
+    loadGroup: (threadId) => run(repository.getByThreadId(ThreadId.makeUnsafe(threadId))),
+    appendLog: (groupId, author, text) =>
+      run(
+        repository.appendLog(
+          groupIdOf(groupId),
+          author === "user" ? "user" : memberIdOf(author),
+          text,
+        ),
+      ),
+    logAfter: (groupId, seq) =>
+      run(repository.logAfter(groupIdOf(groupId), seq)).then((rows) => [...rows]),
+    memberRuntime: (memberId) => run(repository.getMemberRuntime(memberIdOf(memberId))),
+    saveMemberRuntime: (memberId, patch) =>
+      run(repository.saveMemberRuntime(memberIdOf(memberId), patch)),
+    roundState: (groupId) =>
+      run(repository.getRoundState(groupIdOf(groupId))).then((state) => ({
+        lastSpeakers: [...state.lastSpeakers],
+        lastRoundAll: state.lastRoundAll,
+      })),
+    saveRoundState: (groupId, state) =>
+      run(
+        repository.setRoundState(groupIdOf(groupId), {
+          lastSpeakers: state.lastSpeakers.map(memberIdOf),
+          lastRoundAll: state.lastRoundAll,
+        }),
+      ),
+    takeResume: (groupId) => run(takeResume(groupIdOf(groupId))).then((handoffs) => [...handoffs]),
+    savePause: (groupId, handoffs) => run(savePause(groupIdOf(groupId), handoffs)),
+    recordReply: (reply) =>
+      run(
+        repository
+          .recordReply(reply)
+          .pipe(Effect.andThen(publish({ type: "reply.recorded", reply }))),
+      ),
+    setMemberState: (groupId, memberId, state) => {
+      Effect.runFork(
+        publish({
+          type: "member.state",
+          groupId: groupIdOf(groupId),
+          memberId: memberIdOf(memberId),
+          state,
+        }),
+      );
+    },
+    skills: async () => {
+      const settings = await run(settingsService.getSettings);
+      const skills = await discoverSkillsCatalog({
+        homeDir: config.homeDir,
+        synaraBaseDir: config.baseDir,
+      });
+      return filterDisabledSkills(skills, settings.skills.disabled)
+        .filter((skill) => skill.enabled)
+        .map((skill) => ({
+          name: skill.name,
+          description: skill.description ?? "",
+          path: skill.path,
+        }));
+    },
+  };
+  bridge.attach({
+    runtime,
+    registerLive,
+    readRoots: [
+      ...skillsCatalogRoots({ homeDir: config.homeDir, synaraBaseDir: config.baseDir }).map(
+        (root) => root.path,
+      ),
+      config.attachmentsDir,
+    ],
+  });
 
   return {
     list,

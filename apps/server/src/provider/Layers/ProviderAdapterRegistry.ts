@@ -20,6 +20,7 @@ import {
   NativeClaudeAdapter,
   NativeCursorAdapter,
   NativeGeminiAdapter,
+  NativeGroupAdapter,
   NativeGrokAdapter,
   NativeKimiAdapter,
   NativeIFlowAdapter,
@@ -52,6 +53,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
             yield* NativeCodeBuddyAdapter,
             yield* NativePiAdapter,
             yield* NativeDjlCloudAdapter,
+            yield* NativeGroupAdapter,
           ];
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
 

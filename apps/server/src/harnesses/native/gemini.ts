@@ -38,6 +38,7 @@ export const createGeminiDriver: NativeDriverFactory = async (input, sink, workT
     if (EARLY_EXIT.test(message))
       throw new Error(
         `Gemini CLI could not start in agent mode. Update Gemini CLI and try again. (${message})`,
+        { cause: error },
       );
     throw error;
   }

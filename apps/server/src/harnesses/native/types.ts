@@ -18,7 +18,8 @@ export type NativeProvider =
   | "qwen"
   | "codebuddy"
   | "pi"
-  | "djlCloud";
+  | "djlCloud"
+  | "group";
 export interface NativeSink {
   emit(event: Record<string, unknown>): void;
   request(
