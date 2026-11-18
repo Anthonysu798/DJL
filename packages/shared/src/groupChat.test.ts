@@ -30,6 +30,13 @@ describe("parseGroupMentions", () => {
   it("does not match a handle that is only the start of a longer word", () => {
     expect(parseGroupMentions("@Claudette hi", handles).handles).toEqual([]);
   });
+  it("matches a handle followed directly by Chinese text", () => {
+    expect(parseGroupMentions("@审稿人请看一下，@Codex你也看", handles).handles).toEqual([
+      "审稿人",
+      "Codex",
+    ]);
+    expect(parseGroupMentions("@所有人 仅回复收到", handles, ["所有人"]).all).toBe(true);
+  });
   it("recognises @all in any case and deduplicates", () => {
     expect(parseGroupMentions("@All @Codex @codex", handles)).toEqual({
       all: true,

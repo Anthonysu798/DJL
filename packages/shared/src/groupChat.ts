@@ -8,33 +8,46 @@ export const GROUP_ALL_HANDLE = "all";
 const HANDLE_CHAR = /[\p{L}\p{N}_-]/u;
 // A mention cannot follow a word character, `.` or `@` (e-mail addresses, paths).
 const BLOCKS_MENTION = /[\p{L}\p{N}_.@-]/u;
+// After a handle, a Latin letter or digit means a longer, different word (`@Claudette`).
+// Other scripts run on without a space (`@审稿人请看`), so they end the handle.
+const CONTINUES_WORD = /[A-Za-z0-9_-]/;
 
-/** Finds `@handle` and `@all` mentions; handles are returned in their canonical spelling. */
+/**
+ * Finds `@handle` and `@all` mentions; handles are returned in their canonical spelling.
+ * `allAliases` are localized spellings of `all`, such as `所有人`.
+ */
 export function parseGroupMentions(
   text: string,
   handles: readonly string[],
+  allAliases: readonly string[] = [],
 ): { all: boolean; handles: string[] } {
-  const byKey = new Map(handles.map((handle) => [handle.toLocaleLowerCase(), handle]));
+  const ALL = Symbol("all");
+  const candidates = [
+    ...handles.map((handle) => ({ key: Array.from(handle.toLocaleLowerCase()), value: handle })),
+    ...[GROUP_ALL_HANDLE, ...allAliases].map((alias) => ({
+      key: Array.from(alias.toLocaleLowerCase()),
+      value: ALL,
+    })),
+  ].toSorted((left, right) => right.key.length - left.key.length);
   const found: string[] = [];
   let all = false;
   const chars = Array.from(text);
+  const lower = chars.map((char) => char.toLocaleLowerCase());
   for (let index = 0; index < chars.length; index += 1) {
     if (chars[index] !== "@") continue;
     const previous = chars[index - 1];
     if (previous !== undefined && BLOCKS_MENTION.test(previous)) continue;
-    let end = index + 1;
-    while (end < chars.length && HANDLE_CHAR.test(chars[end]!)) end += 1;
-    const word = chars
-      .slice(index + 1, end)
-      .join("")
-      .toLocaleLowerCase();
-    if (!word) continue;
-    if (word === GROUP_ALL_HANDLE) all = true;
-    else {
-      const handle = byKey.get(word);
-      if (handle && !found.includes(handle)) found.push(handle);
-    }
-    index = end - 1;
+    const start = index + 1;
+    const match = candidates.find(
+      ({ key }) =>
+        key.length > 0 &&
+        key.every((char, offset) => lower[start + offset] === char) &&
+        !CONTINUES_WORD.test(chars[start + key.length] ?? ""),
+    );
+    if (!match) continue;
+    if (typeof match.value !== "string") all = true;
+    else if (!found.includes(match.value)) found.push(match.value);
+    index = start + match.key.length - 1;
   }
   return { all, handles: found };
 }
