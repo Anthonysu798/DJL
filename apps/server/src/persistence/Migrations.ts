@@ -77,6 +77,7 @@ import Migration0058 from "./Migrations/058_CanonicalizeDeprecatedDeepSeekModels
 import Migration0059 from "./Migrations/059_Servers.ts";
 import Migration0061 from "./Migrations/061_MarketingStudio.ts";
 import Migration0060 from "./Migrations/060_ServerCommands.ts";
+import Migration0062 from "./Migrations/062_Groups.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -150,6 +151,7 @@ export const migrationEntries = [
   [59, "Servers", Migration0059],
   [60, "ServerCommands", Migration0060],
   [61, "MarketingStudio", Migration0061],
+  [62, "Groups", Migration0062],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>
