@@ -19,6 +19,7 @@ describe("providerOrdering", () => {
       "opencode",
       "codex",
       "claudeAgent",
+      "gemini",
       "cursor",
       "grok",
       "kimi",
@@ -30,12 +31,17 @@ describe("providerOrdering", () => {
   });
 
   it("drops historical providers from picker order and visibility settings", () => {
-    expect(isProviderKind("gemini")).toBe(false);
-    expect(normalizeProviderOrder(["gemini", "codex"])).toEqual([
+    expect(isProviderKind("gemini")).toBe(true);
+    expect(DEFAULT_PROVIDER_ORDER.indexOf("gemini")).toBe(
+      DEFAULT_PROVIDER_ORDER.indexOf("claudeAgent") + 1,
+    );
+    expect(isProviderKind("droid")).toBe(false);
+    expect(normalizeProviderOrder(["droid", "codex"])).toEqual([
       "codex",
       "djlCloud",
       "opencode",
       "claudeAgent",
+      "gemini",
       "cursor",
       "grok",
       "kimi",
@@ -44,6 +50,6 @@ describe("providerOrdering", () => {
       "codebuddy",
       "pi",
     ]);
-    expect(normalizeHiddenProviders(["bogus", "gemini", "gemini"])).toEqual([]);
+    expect(normalizeHiddenProviders(["bogus", "droid", "droid"])).toEqual([]);
   });
 });

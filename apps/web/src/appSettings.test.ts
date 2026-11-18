@@ -385,6 +385,7 @@ describe("normalizeStoredAppSettings", () => {
         "djlCloud",
         "opencode",
         "claudeAgent",
+        "gemini",
         "grok",
         "kimi",
         "iflow",
