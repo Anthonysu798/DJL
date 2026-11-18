@@ -32,6 +32,16 @@ import {
   ServerUpdateInput,
 } from "./servers";
 import {
+  GroupAddMemberInput,
+  GroupCreateInput,
+  GroupEvent,
+  GroupMemberRef,
+  GroupRef,
+  GroupResolvePauseInput,
+  GroupUpdateInput,
+  GroupUpdateMemberInput,
+} from "./groups";
+import {
   ClientOrchestrationCommand,
   OrchestrationEvent,
   OrchestrationImportThreadInput,
@@ -343,6 +353,16 @@ export const WS_METHODS = {
   serversResolveCommand: "servers.commands.resolve",
   serversListCommands: "servers.commands.list",
   subscribeServerEvents: "servers.subscribe",
+  groupsList: "groups.list",
+  groupsCreate: "groups.create",
+  groupsUpdate: "groups.update",
+  groupsDelete: "groups.delete",
+  groupsAddMember: "groups.addMember",
+  groupsUpdateMember: "groups.updateMember",
+  groupsRemoveMember: "groups.removeMember",
+  groupsStopMember: "groups.stopMember",
+  groupsResolvePause: "groups.resolvePause",
+  subscribeGroupEvents: "groups.subscribe",
 
   // Automation methods
   automationList: "automation.list",
@@ -361,6 +381,7 @@ export const WS_METHODS = {
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
   serverEvent: "servers.event",
+  groupEvent: "groups.event",
   gitActionProgress: "git.actionProgress",
   terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
@@ -559,6 +580,16 @@ const WebSocketRequestBody = Schema.Union([
 
   // Server registry methods
   tagRequestBody(WS_METHODS.serversList, EmptyServersInput),
+  tagRequestBody(WS_METHODS.groupsList, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.groupsCreate, GroupCreateInput),
+  tagRequestBody(WS_METHODS.groupsUpdate, GroupUpdateInput),
+  tagRequestBody(WS_METHODS.groupsDelete, GroupRef),
+  tagRequestBody(WS_METHODS.groupsAddMember, GroupAddMemberInput),
+  tagRequestBody(WS_METHODS.groupsUpdateMember, GroupUpdateMemberInput),
+  tagRequestBody(WS_METHODS.groupsRemoveMember, GroupMemberRef),
+  tagRequestBody(WS_METHODS.groupsStopMember, GroupMemberRef),
+  tagRequestBody(WS_METHODS.groupsResolvePause, GroupResolvePauseInput),
+  tagRequestBody(WS_METHODS.subscribeGroupEvents, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serversCreate, ServerCreateInput),
   tagRequestBody(WS_METHODS.serversUpdate, ServerUpdateInput),
   tagRequestBody(WS_METHODS.serversDelete, ServerDeleteInput),
@@ -624,6 +655,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
   readonly [WS_CHANNELS.serverEvent]: typeof ServerCommandStreamEvent.Type;
+  readonly [WS_CHANNELS.groupEvent]: typeof GroupEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
@@ -674,6 +706,7 @@ export const WsPushServerEvent = makeWsPushSchema(
   WS_CHANNELS.serverEvent,
   ServerCommandStreamEvent,
 );
+export const WsPushGroupEvent = makeWsPushSchema(WS_CHANNELS.groupEvent, GroupEvent);
 export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
@@ -711,6 +744,7 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
   WS_CHANNELS.serverEvent,
+  WS_CHANNELS.groupEvent,
   WS_CHANNELS.terminalEvent,
   WS_CHANNELS.projectDevServerEvent,
   WS_CHANNELS.workDocumentRenderEvent,
@@ -730,6 +764,7 @@ export const WsPush = Schema.Union([
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
   WsPushServerEvent,
+  WsPushGroupEvent,
   WsPushGitActionProgress,
   WsPushTerminalEvent,
   WsPushProjectDevServerEvent,

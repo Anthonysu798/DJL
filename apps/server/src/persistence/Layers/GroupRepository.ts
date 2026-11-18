@@ -21,6 +21,13 @@ const decodeMemberIds = Schema.decodeUnknownEffect(Schema.Array(GroupMemberId));
 
 const json = (value: unknown) => JSON.parse(String(value)) as unknown;
 
+const toEntries = (rows: ReadonlyArray<Row>): GroupLogEntry[] =>
+  rows.map((row) => ({
+    seq: Number(row.seq),
+    author: String(row.author),
+    text: String(row.text),
+  }));
+
 const makeGroupRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   const run = <A>(operation: string, query: Effect.Effect<A, unknown>) =>
@@ -191,13 +198,6 @@ const makeGroupRepository = Effect.gen(function* () {
         }),
       ),
     );
-
-  const toEntries = (rows: ReadonlyArray<Row>): GroupLogEntry[] =>
-    rows.map((row) => ({
-      seq: Number(row.seq),
-      author: String(row.author),
-      text: String(row.text),
-    }));
 
   const logAfter: GroupRepositoryShape["logAfter"] = (groupId, seq) =>
     run(

@@ -8,7 +8,7 @@ import {
   GroupCreateInput,
   GroupMemberProvider,
 } from "./groups";
-import { ModelSelection } from "./orchestration";
+import { ModelSelection, NewTaskModelSelection } from "./orchestration";
 import { ProjectKind } from "./project";
 
 describe("group contracts", () => {
@@ -26,6 +26,11 @@ describe("group contracts", () => {
       model: "group",
     });
     expect(Schema.decodeUnknownSync(ProjectKind)("group")).toBe("group");
+  });
+  it("lets a new group thread be created", () => {
+    expect(Schema.decodeUnknownSync(NewTaskModelSelection)(GROUP_MODEL_SELECTION).provider).toBe(
+      "group",
+    );
   });
   it("requires at least one member and a name", () => {
     expect(() =>

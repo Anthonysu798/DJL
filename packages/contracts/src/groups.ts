@@ -169,4 +169,9 @@ export const GroupResolvePauseInput = Schema.Struct({
 export type GroupResolvePauseInput = typeof GroupResolvePauseInput.Type;
 
 export const GroupDeleteResult = Schema.Struct({ folder: Schema.String });
+export const GroupListResult = Schema.Struct({
+  groups: Schema.Array(Group),
+  replies: Schema.Array(GroupReply),
+});
+export type GroupListResult = typeof GroupListResult.Type;
 export type GroupDeleteResult = typeof GroupDeleteResult.Type;

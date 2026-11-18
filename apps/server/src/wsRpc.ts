@@ -50,6 +50,7 @@ import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 import { AutomationService } from "./automation/Services/AutomationService";
 import { ServerCommandService } from "./servers/Services/ServerCommandService";
 import { ServerService } from "./servers/Services/ServerService";
+import { GroupService } from "./groups/Services/GroupService";
 import { authErrorResponse, makeEffectAuthRequest } from "./auth/http";
 import { ServerAuth } from "./auth/Services/ServerAuth";
 import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
@@ -347,6 +348,7 @@ export const makeWsRpcLayer = () =>
       const automationService = yield* AutomationService;
       const serverService = yield* ServerService;
       const serverCommandService = yield* ServerCommandService;
+      const groupService = yield* GroupService;
       // Desktop-started git actions fan out here so remote observers (the
       // phone bridge) can follow progress that used to reach only the caller.
       const gitActionProgressPubSub = yield* PubSub.unbounded<GitActionProgressEvent>();
@@ -1809,6 +1811,40 @@ export const makeWsRpcLayer = () =>
             ),
             serverCommandService.streamEvents,
           ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server event stream failed"))),
+        [WS_METHODS.groupsList]: () =>
+          rpcEffect(
+            Effect.all({ groups: groupService.list(), replies: groupService.listReplies() }),
+            "Failed to list groups",
+          ),
+        [WS_METHODS.groupsCreate]: (input) =>
+          rpcEffect(groupService.create(input), "Failed to create group"),
+        [WS_METHODS.groupsUpdate]: (input) =>
+          rpcEffect(groupService.update(input), "Failed to update group"),
+        [WS_METHODS.groupsDelete]: (input) =>
+          rpcEffect(groupService.delete(input), "Failed to delete group"),
+        [WS_METHODS.groupsAddMember]: (input) =>
+          rpcEffect(groupService.addMember(input), "Failed to add member"),
+        [WS_METHODS.groupsUpdateMember]: (input) =>
+          rpcEffect(groupService.updateMember(input), "Failed to update member"),
+        [WS_METHODS.groupsRemoveMember]: (input) =>
+          rpcEffect(groupService.removeMember(input), "Failed to remove member"),
+        [WS_METHODS.groupsStopMember]: (input) =>
+          rpcEffect(groupService.stopMember(input), "Failed to stop member"),
+        [WS_METHODS.groupsResolvePause]: (input) =>
+          rpcEffect(groupService.resolvePause(input), "Failed to continue group"),
+        [WS_METHODS.subscribeGroupEvents]: () =>
+          Stream.merge(
+            Stream.fromEffect(
+              Effect.all({ groups: groupService.list(), replies: groupService.listReplies() }).pipe(
+                Effect.map(({ groups, replies }) => ({
+                  type: "snapshot" as const,
+                  groups,
+                  replies,
+                })),
+              ),
+            ),
+            groupService.streamEvents,
+          ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Group event stream failed"))),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationCreate]: (input) =>

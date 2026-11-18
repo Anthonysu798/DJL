@@ -226,6 +226,7 @@ export const NewTaskModelSelection = ModelSelection.check(
   Schema.makeFilter(
     (selection) =>
       selection.provider === "djlCloud" ||
+      selection.provider === "group" ||
       Schema.is(HarnessId)(selection.provider) ||
       new SchemaIssue.InvalidValue(Option.some(selection.provider), {
         message: "This harness does not have an active DJL runtime implementation",

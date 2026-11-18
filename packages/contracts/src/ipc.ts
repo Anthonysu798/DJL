@@ -76,6 +76,19 @@ import type {
   ServerUpdateInput,
 } from "./servers";
 import type {
+  Group,
+  GroupAddMemberInput,
+  GroupCreateInput,
+  GroupDeleteResult,
+  GroupEvent,
+  GroupListResult,
+  GroupMemberRef,
+  GroupRef,
+  GroupResolvePauseInput,
+  GroupUpdateInput,
+  GroupUpdateMemberInput,
+} from "./groups";
+import type {
   GitCheckoutInput,
   GitActionProgressEvent,
   GitCreateBranchInput,
@@ -845,6 +858,18 @@ export interface NativeApi {
     resolveCommand: (input: ServerResolveCommandInput) => Promise<ServerCommandRecord>;
     listCommands: (input: ServerListCommandsInput) => Promise<ServerListCommandsResult>;
     onEvent: (callback: (event: ServerCommandStreamEvent) => void) => () => void;
+  };
+  groups: {
+    list: () => Promise<GroupListResult>;
+    create: (input: GroupCreateInput) => Promise<Group>;
+    update: (input: GroupUpdateInput) => Promise<Group>;
+    delete: (input: GroupRef) => Promise<GroupDeleteResult>;
+    addMember: (input: GroupAddMemberInput) => Promise<Group>;
+    updateMember: (input: GroupUpdateMemberInput) => Promise<Group>;
+    removeMember: (input: GroupMemberRef) => Promise<Group>;
+    stopMember: (input: GroupMemberRef) => Promise<void>;
+    resolvePause: (input: GroupResolvePauseInput) => Promise<void>;
+    onEvent: (callback: (event: GroupEvent) => void) => () => void;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;

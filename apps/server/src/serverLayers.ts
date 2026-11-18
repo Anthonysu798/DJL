@@ -49,6 +49,8 @@ import { DocumentRendererLive } from "./work/Layers/DocumentRenderer";
 import { ProjectMemoryLive } from "./memory/Layers/ProjectMemory";
 import { MemoryReactorLive } from "./orchestration/Layers/MemoryReactor";
 import { AiDetectorServiceLive } from "./aiDetector/Layers/AiDetectorService";
+import { GroupServiceLive } from "./groups/Layers/GroupService";
+import { GroupRepositoryLive } from "./persistence/Layers/GroupRepository";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
 
@@ -163,9 +165,15 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(authServicesLayer),
   );
 
+  const groupServiceLayer = GroupServiceLive.pipe(
+    Layer.provideMerge(GroupRepositoryLive),
+    Layer.provideMerge(OrchestrationLayerLive),
+  );
+
   return Layer.mergeAll(
     automationServiceLayer,
     serverRegistryLayer,
+    groupServiceLayer,
     serverCommandLayer,
     automationSchedulerLayer,
     automationRunReactorLayer,

@@ -12,6 +12,7 @@ import {
   type AiDetectorEvent,
   type AutomationStreamEvent,
   type ServerCommandStreamEvent,
+  type GroupEvent,
   type DocumentRenderEvent,
   type GitActionProgressEvent,
   type GitRunStackedActionResult,
@@ -556,6 +557,14 @@ export class WsTransport {
             restartChannel,
             { session },
           );
+        } else if (channel === WS_CHANNELS.groupEvent) {
+          this.startStream(
+            "groups.events",
+            client[WS_METHODS.subscribeGroupEvents]({}),
+            (event: GroupEvent) => this.emit(WS_CHANNELS.groupEvent, event),
+            restartChannel,
+            { session },
+          );
         } else if (channel === WS_CHANNELS.serverEvent) {
           this.startStream(
             "servers.events",
@@ -597,6 +606,7 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.aiDetectorEvent) this.stopStream("aiDetector.events");
     else if (channel === WS_CHANNELS.automationEvent) this.stopStream("automation.events");
     else if (channel === WS_CHANNELS.serverEvent) this.stopStream("servers.events");
+    else if (channel === WS_CHANNELS.groupEvent) this.stopStream("groups.events");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)
       this.stopStream("orchestration.domain");
   }
