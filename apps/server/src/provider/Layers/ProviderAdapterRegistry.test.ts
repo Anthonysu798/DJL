@@ -2,6 +2,7 @@ import {
   NativeCodexAdapter,
   NativeClaudeAdapter,
   NativeCursorAdapter,
+  NativeGeminiAdapter,
   NativeGrokAdapter,
   NativeKimiAdapter,
   NativeIFlowAdapter,
@@ -135,6 +136,8 @@ const fakeDroidAdapter: DroidAdapterShape = {
   streamEvents: Stream.empty,
 };
 
+const fakeNativeGeminiAdapter = { ...fakeGrokAdapter, provider: "gemini" as const };
+
 const fakeOpenCodeAdapter: OpenCodeAdapterShape = {
   provider: "opencode",
   capabilities: { sessionModelSwitch: "in-session" },
@@ -198,6 +201,7 @@ const layer = it.layer(
         Layer.succeed(NativeClaudeAdapter, fakeClaudeAdapter),
         Layer.succeed(NativeCursorAdapter, fakeCursorAdapter),
         Layer.succeed(NativeGrokAdapter, fakeGrokAdapter),
+        Layer.succeed(NativeGeminiAdapter, fakeNativeGeminiAdapter),
         Layer.succeed(NativeKimiAdapter, { ...fakeGrokAdapter, provider: "kimi" }),
         Layer.succeed(NativeIFlowAdapter, { ...fakeGrokAdapter, provider: "iflow" }),
         Layer.succeed(NativeQwenAdapter, { ...fakeGrokAdapter, provider: "qwen" }),
@@ -229,6 +233,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "codex",
         "claudeAgent",
         "cursor",
+        "gemini",
         "grok",
         "kimi",
         "iflow",
@@ -237,6 +242,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "pi",
         "djlCloud",
       ]);
+      assert.equal(yield* registry.getByProvider("gemini"), fakeNativeGeminiAdapter);
       assert.equal(yield* registry.getByProvider("codex"), fakeCodexAdapter);
       assert.equal(yield* registry.getByProvider("claudeAgent"), fakeClaudeAdapter);
       assert.equal(yield* registry.getByProvider("cursor"), fakeCursorAdapter);

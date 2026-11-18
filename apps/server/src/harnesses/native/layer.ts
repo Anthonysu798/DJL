@@ -9,6 +9,7 @@ import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
 import { createClaudeDriver } from "./claude";
 import { createCursorDriver } from "./cursor";
+import { createGeminiDriver } from "./gemini";
 import { createGrokDriver } from "./grok";
 import { createKimiDriver } from "./kimi";
 import { createIFlowDriver } from "./iflow";
@@ -30,6 +31,10 @@ export class NativeCursorAdapter extends ServiceMap.Service<
   NativeCursorAdapter,
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/CursorAdapter") {}
+export class NativeGeminiAdapter extends ServiceMap.Service<
+  NativeGeminiAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/GeminiAdapter") {}
 export class NativeGrokAdapter extends ServiceMap.Service<
   NativeGrokAdapter,
   ProviderAdapterShape<ProviderAdapterError>
@@ -111,6 +116,7 @@ export const NativeHarnessesLive = Layer.mergeAll(
   Layer.effect(NativeCodexAdapter, makeConfiguredNativeAdapter("codex", createCodexDriver)),
   Layer.effect(NativeClaudeAdapter, makeConfiguredNativeAdapter("claudeAgent", createClaudeDriver)),
   Layer.effect(NativeCursorAdapter, makeConfiguredNativeAdapter("cursor", createCursorDriver)),
+  Layer.effect(NativeGeminiAdapter, makeConfiguredNativeAdapter("gemini", createGeminiDriver)),
   Layer.effect(NativeGrokAdapter, makeConfiguredNativeAdapter("grok", createGrokDriver)),
   Layer.effect(NativeKimiAdapter, makeConfiguredNativeAdapter("kimi", createKimiDriver)),
   Layer.effect(NativeIFlowAdapter, makeConfiguredNativeAdapter("iflow", createIFlowDriver)),
