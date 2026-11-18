@@ -10,6 +10,9 @@ import type {
   ProviderUserInputAnswers,
 } from "@synara/contracts";
 
+import { realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+
 import { nativeQuestions } from "../requests";
 
 export type RequestClass = "lookup" | "change" | "input";
@@ -17,8 +20,9 @@ export type RequestClass = "lookup" | "change" | "input";
 export const GROUP_INPUT_REFUSAL = "Ask your question in the group chat instead.";
 const DEFAULT_WAIT_MS = 10 * 60_000;
 
-const CLAUDE_LOOKUP_TOOLS = new Set(["Read", "Grep", "Glob", "WebFetch", "WebSearch"]);
-const ACP_LOOKUP_KINDS = new Set(["read", "search", "fetch", "think"]);
+// Web look-ups carry no local path; file look-ups must stay inside the allowed folders.
+const CLAUDE_WEB_TOOLS = new Set(["WebFetch", "WebSearch"]);
+const CLAUDE_SEARCH_TOOLS = new Set(["Grep", "Glob"]);
 const ACP_PROVIDERS = new Set<GroupMemberProvider>([
   "cursor",
   "grok",
@@ -32,21 +36,84 @@ const ACP_PROVIDERS = new Set<GroupMemberProvider>([
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
+/** Real path of `path`, following symlinks; a missing file resolves through its folder. */
+function realPath(path: string): string {
+  try {
+    return realpathSync.native(path);
+  } catch {
+    const parent = dirname(path);
+    return parent === path ? path : join(realPath(parent), basename(path));
+  }
+}
+
+function insideRoots(paths: readonly string[], roots: readonly string[]): boolean {
+  const cwd = roots[0];
+  if (!cwd || paths.length === 0) return false;
+  const realRoots = roots.map(realPath);
+  return paths.every((path) => {
+    const target = realPath(resolve(cwd, path));
+    return realRoots.some((rootPath) => {
+      const rel = relative(rootPath, target);
+      return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+    });
+  });
+}
+
+const stringField = (value: Record<string, unknown>, key: string): string[] => {
+  const field = value[key];
+  return typeof field === "string" && field ? [field] : [];
+};
+
+/** Local paths a look-up would touch, null for a web look-up, or "not-lookup". */
+function lookupPaths(
+  provider: GroupMemberProvider,
+  type: CanonicalRequestType,
+  args: unknown,
+): string[] | null | "not-lookup" {
+  const request = record(args);
+  if (provider === "claudeAgent") {
+    const tool = String(request.tool);
+    const input = record(request.input);
+    if (CLAUDE_WEB_TOOLS.has(tool)) return null;
+    if (CLAUDE_SEARCH_TOOLS.has(tool)) {
+      const path = stringField(input, "path");
+      return path.length > 0 ? path : ["."];
+    }
+    if (tool === "Read" || type === "file_read_approval")
+      return [...stringField(input, "file_path"), ...stringField(input, "notebook_path")];
+    return "not-lookup";
+  }
+  if (ACP_PROVIDERS.has(provider)) {
+    const toolCall = record(request.toolCall);
+    const kind = String(toolCall.kind);
+    const locations = Array.isArray(toolCall.locations)
+      ? toolCall.locations.flatMap((location) => stringField(record(location), "path"))
+      : [];
+    if (kind === "fetch") return null;
+    if (kind === "search") return locations.length > 0 ? locations : ["."];
+    if (kind === "read" || type === "file_read_approval") return locations;
+    return "not-lookup";
+  }
+  if (type === "file_read_approval")
+    return [...stringField(request, "path"), ...stringField(record(request.input), "path")];
+  return "not-lookup";
+}
+
+/**
+ * `roots` are the folders an agent may read without asking; the first is its working folder.
+ * A read that leaves them (symlinks followed), or names no path, counts as a change.
+ */
 export function classifyRequest(
   provider: GroupMemberProvider,
   type: CanonicalRequestType,
   args: unknown,
+  roots: readonly string[],
 ): RequestClass {
   if (type === "tool_user_input") return "input";
-  if (type === "file_read_approval") return "lookup";
-  if (provider === "claudeAgent" && CLAUDE_LOOKUP_TOOLS.has(String(record(args).tool)))
-    return "lookup";
-  if (
-    ACP_PROVIDERS.has(provider) &&
-    ACP_LOOKUP_KINDS.has(String(record(record(args).toolCall).kind))
-  )
-    return "lookup";
-  return "change";
+  const paths = lookupPaths(provider, type, args);
+  if (paths === "not-lookup") return "change";
+  if (paths === null) return "lookup";
+  return insideRoots(paths, roots) ? "lookup" : "change";
 }
 
 export interface WriteLock {
@@ -126,12 +193,14 @@ export async function decideRequest(input: {
   memberId: string;
   proposeOnly: boolean;
   lock: WriteLock;
+  /** Folders the member may read without asking; the first is its working folder. */
+  roots: readonly string[];
   type: CanonicalRequestType;
   args: unknown;
   signal?: AbortSignal;
   onWaiting?: (waiting: boolean) => void;
 }): Promise<ProviderApprovalDecision | ProviderUserInputAnswers> {
-  const kind = classifyRequest(input.provider, input.type, input.args);
+  const kind = classifyRequest(input.provider, input.type, input.args, input.roots);
   if (kind === "input") return refuseQuestions(input.args);
   if (kind === "lookup") return "accept";
   if (input.proposeOnly) return "decline";

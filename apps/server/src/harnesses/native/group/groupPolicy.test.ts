@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
 
 import {
   GROUP_INPUT_REFUSAL,
@@ -9,29 +12,139 @@ import {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
 
+const sandbox = mkdtempSync(join(tmpdir(), "djl-group-policy-"));
+const folder = join(sandbox, "group");
+const outside = join(sandbox, "outside");
+mkdirSync(folder);
+mkdirSync(outside);
+writeFileSync(join(outside, "id_rsa"), "secret");
+symlinkSync(join(outside, "id_rsa"), join(folder, "link-to-key"));
+const roots = [folder];
+afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
+describe("reads outside the allowed folders", () => {
+  it("accepts reads inside the group folder, relative or absolute", () => {
+    expect(
+      classifyRequest(
+        "claudeAgent",
+        "file_read_approval",
+        { tool: "Read", input: { file_path: "a.ts" } },
+        roots,
+      ),
+    ).toBe("lookup");
+    expect(
+      classifyRequest(
+        "claudeAgent",
+        "command_execution_approval",
+        { tool: "Grep", input: { pattern: "x" } },
+        roots,
+      ),
+    ).toBe("lookup");
+    expect(
+      classifyRequest(
+        "qwen",
+        "file_read_approval",
+        { toolCall: { kind: "read", locations: [{ path: join(folder, "b.md") }] } },
+        roots,
+      ),
+    ).toBe("lookup");
+  });
+  it("treats reads outside the folders, or through a symlink out, as changes", () => {
+    expect(
+      classifyRequest(
+        "claudeAgent",
+        "file_read_approval",
+        { tool: "Read", input: { file_path: join(outside, "id_rsa") } },
+        roots,
+      ),
+    ).toBe("change");
+    expect(
+      classifyRequest(
+        "claudeAgent",
+        "file_read_approval",
+        { tool: "Read", input: { file_path: "../outside/id_rsa" } },
+        roots,
+      ),
+    ).toBe("change");
+    expect(
+      classifyRequest(
+        "claudeAgent",
+        "file_read_approval",
+        { tool: "Read", input: { file_path: join(folder, "link-to-key") } },
+        roots,
+      ),
+    ).toBe("change");
+    expect(
+      classifyRequest(
+        "gemini",
+        "file_read_approval",
+        { toolCall: { kind: "read", locations: [{ path: join(outside, "id_rsa") }] } },
+        roots,
+      ),
+    ).toBe("change");
+  });
+  it("treats a Read with no path as a change", () => {
+    expect(classifyRequest("claudeAgent", "file_read_approval", { tool: "Read" }, roots)).toBe(
+      "change",
+    );
+  });
+  it("an @all round cannot read a file outside the folder", async () => {
+    expect(
+      await decideRequest({
+        provider: "claudeAgent",
+        memberId: "m1",
+        proposeOnly: true,
+        lock: createWriteLock(),
+        roots,
+        type: "file_read_approval",
+        args: { tool: "Read", input: { file_path: join(outside, "id_rsa") } },
+      }),
+    ).toBe("decline");
+  });
+  it("does not count ACP think calls as look-ups", () => {
+    expect(
+      classifyRequest("qwen", "command_execution_approval", { toolCall: { kind: "think" } }, roots),
+    ).toBe("change");
+  });
+});
+
 describe("classifyRequest", () => {
   it("classifies look-ups per agent", () => {
     expect(
-      classifyRequest("claudeAgent", "command_execution_approval", { tool: "WebSearch" }),
-    ).toBe("lookup");
-    expect(classifyRequest("claudeAgent", "command_execution_approval", { tool: "Grep" })).toBe(
-      "lookup",
-    );
-    expect(classifyRequest("claudeAgent", "command_execution_approval", { tool: "Bash" })).toBe(
-      "change",
-    );
-    expect(
-      classifyRequest("qwen", "command_execution_approval", { toolCall: { kind: "fetch" } }),
+      classifyRequest("claudeAgent", "command_execution_approval", { tool: "WebSearch" }, roots),
     ).toBe("lookup");
     expect(
-      classifyRequest("gemini", "command_execution_approval", { toolCall: { kind: "search" } }),
+      classifyRequest("claudeAgent", "command_execution_approval", { tool: "Grep" }, roots),
     ).toBe("lookup");
     expect(
-      classifyRequest("qwen", "command_execution_approval", { toolCall: { kind: "execute" } }),
+      classifyRequest("claudeAgent", "command_execution_approval", { tool: "Bash" }, roots),
     ).toBe("change");
-    expect(classifyRequest("codex", "file_read_approval", {})).toBe("lookup");
-    expect(classifyRequest("codex", "file_change_approval", {})).toBe("change");
-    expect(classifyRequest("pi", "tool_user_input", {})).toBe("input");
+    expect(
+      classifyRequest("qwen", "command_execution_approval", { toolCall: { kind: "fetch" } }, roots),
+    ).toBe("lookup");
+    expect(
+      classifyRequest(
+        "gemini",
+        "command_execution_approval",
+        { toolCall: { kind: "search" } },
+        roots,
+      ),
+    ).toBe("lookup");
+    expect(
+      classifyRequest(
+        "qwen",
+        "command_execution_approval",
+        { toolCall: { kind: "execute" } },
+        roots,
+      ),
+    ).toBe("change");
+    // A read that names no path cannot be checked against the folder, so it is not a look-up.
+    expect(classifyRequest("codex", "file_read_approval", {}, roots)).toBe("change");
+    expect(
+      classifyRequest("codex", "file_read_approval", { path: join(folder, "a.ts") }, roots),
+    ).toBe("lookup");
+    expect(classifyRequest("codex", "file_change_approval", {}, roots)).toBe("change");
+    expect(classifyRequest("pi", "tool_user_input", {}, roots)).toBe("input");
   });
 });
 
@@ -50,7 +163,13 @@ describe("decideRequest", () => {
 
   it("propose-only allows look-ups and refuses changes", async () => {
     const lock = createWriteLock();
-    const base = { provider: "claudeAgent" as const, memberId: "m1", proposeOnly: true, lock };
+    const base = {
+      provider: "claudeAgent" as const,
+      memberId: "m1",
+      proposeOnly: true,
+      lock,
+      roots,
+    };
     expect(
       await decideRequest({
         ...base,
@@ -71,6 +190,7 @@ describe("decideRequest", () => {
       args: {},
       proposeOnly: false,
       lock,
+      roots,
     };
     expect(await decideRequest({ ...change, provider: "codex", memberId: "m1" })).toBe("accept");
     expect(await decideRequest({ ...change, provider: "codex", memberId: "m1" })).toBe("accept");
@@ -103,6 +223,7 @@ describe("decideRequest", () => {
       memberId: "m2",
       proposeOnly: false,
       lock,
+      roots,
       type: "file_change_approval",
       args: {},
       signal: controller.signal,
@@ -132,6 +253,7 @@ describe("decideRequest", () => {
         memberId: "m2",
         proposeOnly: false,
         lock,
+        roots,
         type: "file_change_approval",
         args: {},
       }),
