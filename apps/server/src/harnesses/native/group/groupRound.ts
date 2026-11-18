@@ -196,7 +196,8 @@ export function startRound(
           memberId: member.id,
           proposeOnly: wake.proposeOnly,
           lock,
-          roots,
+          // A member may also read the exact files attached to the message it answers.
+          roots: [...roots, ...(wake.extras.attachments ?? [])],
           type,
           args,
           signal: signal ? AbortSignal.any([signal, abort!.signal]) : abort!.signal,

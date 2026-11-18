@@ -430,12 +430,11 @@ const makeGroupService = Effect.gen(function* () {
   bridge.attach({
     runtime,
     registerLive,
-    readRoots: [
-      ...skillsCatalogRoots({ homeDir: config.homeDir, synaraBaseDir: config.baseDir }).map(
-        (root) => root.path,
-      ),
-      config.attachmentsDir,
-    ],
+    // Skills folders only: a turn's attachments are added per message, never the whole
+    // attachments folder, which holds every chat's files.
+    readRoots: skillsCatalogRoots({ homeDir: config.homeDir, synaraBaseDir: config.baseDir }).map(
+      (root) => root.path,
+    ),
   });
 
   return {

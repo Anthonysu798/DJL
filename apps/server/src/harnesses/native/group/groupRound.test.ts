@@ -362,6 +362,36 @@ describe("group rounds", () => {
     expect(runtime.replies).toEqual([]);
   });
 
+  it("lets a member read the files attached to its message, and nothing else there", async () => {
+    const decisions: string[] = [];
+    host.openChild = async () => ({
+      nativeSessionId: "native",
+      async ask(_prompt, onRequest) {
+        decisions.push(
+          String(
+            await onRequest("file_read_approval", {
+              tool: "Read",
+              input: { file_path: "/attachments/t1/a.png" },
+            }),
+          ),
+        );
+        decisions.push(
+          String(
+            await onRequest("file_read_approval", {
+              tool: "Read",
+              input: { file_path: "/attachments/other/b.png" },
+            }),
+          ),
+        );
+        return { status: "ok", text: "seen", work: { files: [], commands: [] } };
+      },
+      async stop() {},
+      close() {},
+    });
+    await startRound(host, group, "@all look", { attachments: ["/attachments/t1/a.png"] }).done;
+    expect(decisions.slice(0, 2)).toEqual(["accept", "decline"]);
+  });
+
   it("records an empty reply without a hand-off", async () => {
     scripts.set("Claude", [{ kind: "reply", text: "" }]);
     await round("@Claude go").done;

@@ -162,6 +162,8 @@ describe.skipIf(isWindows)("GroupService", () => {
     expect(outcome.memberRuntime).toEqual({ nativeSessionId: "s1", readSeq: 1 });
     expect(outcome.replies.map((reply) => reply.replyId)).toEqual(["r1"]);
     expect(outcome.roots.length).toBeGreaterThan(0);
+    // Attachments from other chats must not become readable: only a turn's own files are.
+    expect(outcome.roots.some((root) => root.endsWith("attachments"))).toBe(false);
   });
 
   it("rejects a folder that does not exist", async () => {
