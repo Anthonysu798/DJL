@@ -23,6 +23,13 @@ it("preserves canonical Pi model selections", () => {
   });
 });
 
+it("preserves Multi agents group selections", () => {
+  assert.deepEqual(normalizePersistedModelSelection({ provider: "group", model: "group" }), {
+    provider: "group",
+    model: "group",
+  });
+});
+
 it("infers Pi from persisted instance labels", () => {
   assert.deepEqual(
     normalizePersistedModelSelection({
