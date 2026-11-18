@@ -263,6 +263,39 @@ describe("group native driver", () => {
     expect(replies).toHaveLength(2);
   });
 
+  it("steering a running round wakes an idle member at once", async () => {
+    behaviours.set("Claude", { kind: "hang" });
+    await scenario(async ({ adapter, events }) => {
+      expect(adapter.capabilities.supportsTurnSteering).toBe(true);
+      await Effect.runPromise(adapter.sendTurn({ threadId, input: "@Claude long task" }));
+      await until(() => releases.has("Claude"));
+      await Effect.runPromise(adapter.steerTurn!({ threadId, input: "@Codex quick question" }));
+      await until(() => replies.length === 1);
+      expect(replies[0]!.memberId).toBe("codex");
+      expect(turnCompleted(events)).toBe(false);
+      releases.get("Claude")!("done");
+      await until(() => turnCompleted(events));
+      expect(events.filter((event) => event.type === "turn.started")).toHaveLength(1);
+    });
+    expect(replies).toHaveLength(2);
+  });
+
+  it("a steer with no running round starts a new round", async () => {
+    await scenario(async ({ adapter, events }) => {
+      await Effect.runPromise(adapter.steerTurn!({ threadId, input: "@Codex hi" }));
+      await until(() => turnCompleted(events));
+    });
+    expect(replies.map((reply) => reply.memberId)).toEqual(["codex"]);
+  });
+
+  it("other native providers do not offer steering", async () => {
+    const supported = await scenario(
+      async ({ adapter }) => adapter.capabilities.supportsTurnSteering,
+      "codex",
+    );
+    expect(supported).toBe(false);
+  });
+
   it("a failing child does not fail the group turn", async () => {
     behaviours.set("Claude", { kind: "fail" });
     const events = await scenario(async ({ adapter, events }) => {

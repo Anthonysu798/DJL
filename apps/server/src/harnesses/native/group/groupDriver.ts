@@ -10,6 +10,7 @@ import type {
   GroupMemberId,
   GroupMemberProvider,
   ModelSelection,
+  ProviderSendTurnInput,
   ProviderStartOptions,
 } from "@synara/contracts";
 import { formatGroupItemId } from "@synara/shared/groupChat";
@@ -32,6 +33,8 @@ export function createGroupDriverFactory(deps: {
   return async (input, sink) => {
     const children = new Map<string, ChildSession>();
     let round: Round | null = null;
+    // Set while `send` prepares the round, so a steer in that gap waits for it.
+    let starting: Promise<Round | null> | null = null;
     const bridge = deps.bridge();
     const known = bridge ? await bridge.runtime.loadGroup(input.threadId) : null;
 
@@ -58,6 +61,18 @@ export function createGroupDriverFactory(deps: {
           },
         })
       : () => {};
+
+    const roundExtras = async (turn: ProviderSendTurnInput): Promise<RoundExtras> => ({
+      attachments: (turn.attachments ?? []).flatMap(
+        (attachment) => deps.resolveAttachment(attachment) ?? [],
+      ),
+      pastedSkills: await Promise.all(
+        (turn.skills ?? []).map(async (skill) => ({
+          name: skill.name,
+          markdown: await deps.readSkill(skill.path),
+        })),
+      ),
+    });
 
     const openChild = async (member: GroupMember, resume: string | null, cwd: string) => {
       const existing = children.get(member.id);
@@ -87,19 +102,20 @@ export function createGroupDriverFactory(deps: {
       async send(turn) {
         const runtime = deps.bridge();
         if (!runtime) throw new Error("Multi agents is still starting. Try again in a moment.");
-        const group = await runtime.runtime.loadGroup(turn.threadId);
-        if (!group) throw new Error("This group no longer exists.");
-        const extras: RoundExtras = {
-          attachments: (turn.attachments ?? []).flatMap(
-            (attachment) => deps.resolveAttachment(attachment) ?? [],
-          ),
-          pastedSkills: await Promise.all(
-            (turn.skills ?? []).map(async (skill) => ({
-              name: skill.name,
-              markdown: await deps.readSkill(skill.path),
-            })),
-          ),
-        };
+        const ready = Promise.withResolvers<Round | null>();
+        starting = ready.promise;
+        const group = await runtime.runtime.loadGroup(turn.threadId).catch((error) => {
+          ready.resolve(null);
+          throw error;
+        });
+        if (!group) {
+          ready.resolve(null);
+          throw new Error("This group no longer exists.");
+        }
+        const extras = await roundExtras(turn).catch((error) => {
+          ready.resolve(null);
+          throw error;
+        });
         const host: RoundHost = {
           runtime: runtime.runtime,
           openChild: (member, resume) => openChild(member, resume, group.folder),
@@ -124,11 +140,19 @@ export function createGroupDriverFactory(deps: {
         };
         const current = startRound(host, group, turn.input ?? "", extras);
         round = current;
+        ready.resolve(current);
         try {
           await current.done;
         } finally {
           if (round === current) round = null;
+          if (starting === ready.promise) starting = null;
         }
+      },
+      async steer(turn) {
+        const target = round ?? (starting ? await starting : null);
+        if (!target || target !== round) return false;
+        target.post(turn.input ?? "", await roundExtras(turn));
+        return true;
       },
       async interrupt() {
         await round?.stopAll();

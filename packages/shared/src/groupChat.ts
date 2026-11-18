@@ -1,9 +1,15 @@
 // FILE: groupChat.ts
 // Purpose: Pure helpers shared by the group chat server driver and renderer.
 // Layer: Shared runtime utilities
-// Exports: mention parsing, member handle generation, and group message-id encoding.
+// Exports: mention parsing, member handle generation, group message-id encoding, and the
+//          live-steer provider check.
 
 export const GROUP_ALL_HANDLE = "all";
+
+/** Providers whose running turn takes a new message without being interrupted. */
+export function providerSteersLiveTurn(provider: string): boolean {
+  return provider === "codex" || provider === "group";
+}
 
 const HANDLE_CHAR = /[\p{L}\p{N}_-]/u;
 // A mention cannot follow a word character, `.` or `@` (e-mail addresses, paths).

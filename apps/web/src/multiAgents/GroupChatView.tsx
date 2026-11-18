@@ -82,7 +82,10 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
     const state = memberStates[member.id];
     return running && (state === "working" || state === "waiting");
   });
-  const { send, error } = useGroupSend(group);
+  const { send: sendQueued, error } = useGroupSend(group);
+  // While a round runs, a new message joins it instead of waiting for it to end.
+  const send = (input: GroupSendInput) =>
+    sendQueued({ dispatchMode: running ? "steer" : "queue", ...input });
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<GroupComposerHandle | null>(null);
   useEffect(() => {
@@ -188,7 +191,7 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
         <div ref={bottomRef} />
       </div>
       {error ? <p className="px-4 pb-1 text-xs text-destructive">{error}</p> : null}
-      <GroupComposer group={group} running={running} send={send} handle={composerRef} />
+      <GroupComposer group={group} send={send} handle={composerRef} />
     </div>
   );
 }

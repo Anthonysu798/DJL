@@ -32,6 +32,8 @@ export interface NativeSink {
 export interface NativeDriver {
   id: string;
   send(input: ProviderSendTurnInput): Promise<void>;
+  /** Adds a message to the running turn; false when no turn can take it. */
+  steer?(input: ProviderSendTurnInput): Promise<boolean>;
   interrupt(): Promise<void>;
   close(): void;
   models(): Promise<ProviderListModelsResult>;

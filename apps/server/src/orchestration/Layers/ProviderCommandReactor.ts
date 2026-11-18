@@ -54,6 +54,7 @@ import {
   resolveTailUserMessageEditTarget,
 } from "@synara/shared/conversationEdit";
 import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
+import { providerSteersLiveTurn } from "@synara/shared/groupChat";
 import { claudeSelectionRequiresRestart } from "@synara/shared/model";
 import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
 import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
@@ -1930,11 +1931,12 @@ const make = Effect.gen(function* () {
     // The decider routes turn starts from the projected session, which can lag
     // the runtime: a message dispatched right as another turn begins (e.g. the
     // gap between a steer interrupt and the steered turn's start) would race a
-    // live provider turn. Codex steers ride the live turn natively; everything
-    // else re-queues and is promoted when the live turn settles.
+    // live provider turn. Codex and group steers ride the live turn natively;
+    // everything else re-queues and is promoted when the live turn settles.
     const providerName = thread.session?.providerName ?? thread.modelSelection.provider;
-    const isCodexSteer = event.payload.dispatchMode === "steer" && providerName === "codex";
-    if (!isCodexSteer && (yield* hasLiveProviderTurn(event.payload.threadId))) {
+    const isLiveSteer =
+      event.payload.dispatchMode === "steer" && providerSteersLiveTurn(providerName);
+    if (!isLiveSteer && (yield* hasLiveProviderTurn(event.payload.threadId))) {
       yield* enqueueQueuedTurnStart(event.payload);
       if (event.payload.dispatchMode === "steer") {
         // Preserve steer semantics: jump the queue (enqueue unshifts steers)
@@ -1999,8 +2001,7 @@ const make = Effect.gen(function* () {
         : {}),
     }).pipe(Effect.forkScoped);
     const immediateDispatchMode =
-      event.payload.dispatchMode === "steer" &&
-      (thread.session?.providerName ?? thread.modelSelection.provider) !== "codex"
+      event.payload.dispatchMode === "steer" && !providerSteersLiveTurn(providerName)
         ? "queue"
         : event.payload.dispatchMode;
     const editResendKey = editResendTurnStartKey(event.payload.threadId, event.payload.messageId);

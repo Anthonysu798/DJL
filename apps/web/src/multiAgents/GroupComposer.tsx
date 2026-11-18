@@ -48,7 +48,6 @@ const readDataUrl = (file: File) =>
 
 export function GroupComposer(props: {
   group: Group;
-  running: boolean;
   send: (input: GroupSendInput) => Promise<boolean>;
   handle?: Ref<GroupComposerHandle>;
 }) {
