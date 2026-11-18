@@ -14,6 +14,7 @@ import { Route as ChatIndexRouteImport } from './routes/_chat.index'
 import { Route as ChatWorldcupRouteImport } from './routes/_chat.worldcup'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
+import { Route as ChatMultiAgentsRouteImport } from './routes/_chat.multi-agents'
 import { Route as ChatMarketingRouteImport } from './routes/_chat.marketing'
 import { Route as ChatAutomationsRouteImport } from './routes/_chat.automations'
 import { Route as ChatThreadIdRouteImport } from './routes/_chat.$threadId'
@@ -51,6 +52,11 @@ const ChatSettingsRoute = ChatSettingsRouteImport.update({
 const ChatPluginsRoute = ChatPluginsRouteImport.update({
   id: '/plugins',
   path: '/plugins',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatMultiAgentsRoute = ChatMultiAgentsRouteImport.update({
+  id: '/multi-agents',
+  path: '/multi-agents',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatMarketingRoute = ChatMarketingRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/$threadId': typeof ChatThreadIdRoute
   '/automations': typeof ChatAutomationsRouteWithChildren
   '/marketing': typeof ChatMarketingRoute
+  '/multi-agents': typeof ChatMultiAgentsRoute
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
   '/worldcup': typeof ChatWorldcupRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/marketing': typeof ChatMarketingRoute
+  '/multi-agents': typeof ChatMultiAgentsRoute
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
   '/worldcup': typeof ChatWorldcupRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/_chat/$threadId': typeof ChatThreadIdRoute
   '/_chat/automations': typeof ChatAutomationsRouteWithChildren
   '/_chat/marketing': typeof ChatMarketingRoute
+  '/_chat/multi-agents': typeof ChatMultiAgentsRoute
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/settings': typeof ChatSettingsRoute
   '/_chat/worldcup': typeof ChatWorldcupRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/$threadId'
     | '/automations'
     | '/marketing'
+    | '/multi-agents'
     | '/plugins'
     | '/settings'
     | '/worldcup'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
   to:
     | '/$threadId'
     | '/marketing'
+    | '/multi-agents'
     | '/plugins'
     | '/settings'
     | '/worldcup'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/_chat/$threadId'
     | '/_chat/automations'
     | '/_chat/marketing'
+    | '/_chat/multi-agents'
     | '/_chat/plugins'
     | '/_chat/settings'
     | '/_chat/worldcup'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       path: '/plugins'
       fullPath: '/plugins'
       preLoaderRoute: typeof ChatPluginsRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/multi-agents': {
+      id: '/_chat/multi-agents'
+      path: '/multi-agents'
+      fullPath: '/multi-agents'
+      preLoaderRoute: typeof ChatMultiAgentsRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/marketing': {
@@ -410,6 +429,7 @@ interface ChatRouteChildren {
   ChatThreadIdRoute: typeof ChatThreadIdRoute
   ChatAutomationsRoute: typeof ChatAutomationsRouteWithChildren
   ChatMarketingRoute: typeof ChatMarketingRoute
+  ChatMultiAgentsRoute: typeof ChatMultiAgentsRoute
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatSettingsRoute: typeof ChatSettingsRoute
   ChatWorldcupRoute: typeof ChatWorldcupRoute
@@ -429,6 +449,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatThreadIdRoute: ChatThreadIdRoute,
   ChatAutomationsRoute: ChatAutomationsRouteWithChildren,
   ChatMarketingRoute: ChatMarketingRoute,
+  ChatMultiAgentsRoute: ChatMultiAgentsRoute,
   ChatPluginsRoute: ChatPluginsRoute,
   ChatSettingsRoute: ChatSettingsRoute,
   ChatWorldcupRoute: ChatWorldcupRoute,

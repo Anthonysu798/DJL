@@ -1,0 +1,39 @@
+import type { HarnessAccount } from "@synara/contracts";
+import { describe, expect, it } from "vitest";
+
+import { canCreate, defaultGroupName, memberChoices } from "./GroupSetupDialog.logic";
+
+const account = (id: HarnessAccount["id"], status: HarnessAccount["status"]): HarnessAccount => ({
+  id,
+  installed: status !== "missing",
+  enabled: true,
+  status,
+});
+
+describe("group setup", () => {
+  it("lists every member kind and marks readiness", () => {
+    const choices = memberChoices([account("codex", "ready"), account("qwen", "missing")]);
+    expect(choices).toHaveLength(10);
+    expect(choices.find((choice) => choice.provider === "codex")?.ready).toBe(true);
+    expect(choices.find((choice) => choice.provider === "qwen")?.ready).toBe(false);
+    expect(choices.find((choice) => choice.provider === "gemini")?.ready).toBe(false);
+  });
+
+  it("lists ready agents first", () => {
+    const choices = memberChoices([account("pi", "ready")]);
+    expect(choices[0]?.provider).toBe("pi");
+  });
+
+  it("needs at least one ready member", () => {
+    expect(canCreate([], [])).toBe(false);
+    expect(canCreate(["codex"], [account("codex", "ready")])).toBe(true);
+    expect(canCreate(["codex"], [account("codex", "required")])).toBe(false);
+  });
+
+  it("suggests a name from the picked agents", () => {
+    expect(defaultGroupName(["claudeAgent", "codex"])).toBe("Claude, Codex");
+    expect(defaultGroupName(["claudeAgent", "codex", "gemini", "qwen"])).toBe(
+      "Claude, Codex, Gemini +1",
+    );
+  });
+});

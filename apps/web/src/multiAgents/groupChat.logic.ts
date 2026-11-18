@@ -6,12 +6,10 @@
 import {
   GROUP_ALL_WARNING_MIN_MEMBERS,
   GROUP_LARGE_WARNING_MEMBERS,
-  type ChatAttachment,
   type Group,
   type GroupMemberId,
   type GroupMemberProvider,
   type GroupReply,
-  type OrchestrationMessage,
 } from "@synara/contracts";
 import { parseGroupMentions, parseGroupMessageId } from "@synara/shared/groupChat";
 
@@ -32,12 +30,20 @@ export type GroupMemberRow = {
 };
 
 export type GroupChatRow =
-  | { kind: "user"; id: string; text: string; attachments: readonly ChatAttachment[] }
+  | { kind: "user"; id: string; text: string; attachmentNames: string[] }
   | GroupMemberRow
   | { kind: "unknown-member"; id: string; text: string };
 
+/** The fields the group view needs from a thread message (server or renderer shape). */
+export type GroupSourceMessage = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  text: string;
+  attachments?: readonly { readonly type: string; readonly name?: string }[] | undefined;
+};
+
 export function deriveGroupChatRows(
-  messages: readonly OrchestrationMessage[],
+  messages: readonly GroupSourceMessage[],
   group: Group,
   replies: Readonly<Record<string, GroupReply>>,
 ): GroupChatRow[] {
@@ -49,7 +55,9 @@ export function deriveGroupChatRows(
         kind: "user",
         id: message.id,
         text: message.text,
-        attachments: message.attachments ?? [],
+        attachmentNames: (message.attachments ?? []).flatMap((attachment) =>
+          attachment.name ? [attachment.name] : [],
+        ),
       });
       continue;
     }

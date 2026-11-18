@@ -8,6 +8,8 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 export type DesktopRailItem = {
   label: string;
   icon: string;
+  /** Short tag shown on the icon, such as Beta. */
+  badge?: string;
   active?: boolean;
   onboardingTarget?: string;
   onClick: () => void;
@@ -49,7 +51,7 @@ export function DesktopShellChrome(props: {
                 render={
                   <button
                     type="button"
-                    className="djl-desktop-rail-button"
+                    className="djl-desktop-rail-button relative"
                     aria-label={item.label}
                     aria-current={item.active ? "page" : undefined}
                     data-onboarding-target={item.onboardingTarget}
@@ -62,8 +64,15 @@ export function DesktopShellChrome(props: {
                   variant={item.icon === "home" && item.active ? "fill" : "reversed"}
                   className="size-5"
                 />
+                {item.badge ? (
+                  <span className="pointer-events-none absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-primary px-1 text-[8px] leading-3 font-semibold text-primary-foreground">
+                    {item.badge}
+                  </span>
+                ) : null}
               </TooltipTrigger>
-              <TooltipPopup side="right">{item.label}</TooltipPopup>
+              <TooltipPopup side="right">
+                {item.badge ? `${item.label} · ${item.badge}` : item.label}
+              </TooltipPopup>
             </Tooltip>
           ))}
         </div>

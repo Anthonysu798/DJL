@@ -2713,6 +2713,114 @@
         "running": "隱藏舊的聊天..."
       }
     },
+    "multiAgents": {
+      "title": "多智慧體",
+      "beta": "測試版",
+      "newGroup": "新增群組",
+      "groups": "群組",
+      "emptyTitle": "把你的智慧體拉進一個群組",
+      "emptyBody": "新增群組後，輸入 @ 呼叫某個智慧體，或輸入 @所有人 讓大家一起回答。",
+      "noGroupSelected": "從左側選擇一個群組，或新增一個。",
+      "setup": {
+        "title": "新增群組",
+        "pickTitle": "選擇要加入群組的智慧體",
+        "nameTitle": "為群組取個名字",
+        "namePlaceholder": "群組名稱",
+        "next": "下一步",
+        "back": "上一步",
+        "create": "建立群組",
+        "creating": "正在建立…",
+        "setUp": "前往設定",
+        "notReady": "尚未設定",
+        "needOne": "請至少選擇一個已設定好的智慧體。"
+      },
+      "chat": {
+        "placeholder": "傳訊息到群組——輸入 @ 呼叫智慧體，或 @所有人",
+        "send": "傳送",
+        "stopAll": "全部停止",
+        "stopMember": "停止",
+        "you": "你",
+        "working": "{{name}} 正在處理…",
+        "waiting": "{{name}} 正在等待另一個智慧體完成修改…",
+        "failed": "{{name}} 無法回答：{{error}}",
+        "empty": "{{name}} 已完成，但沒有回覆。",
+        "tryAgain": "重試",
+        "removedAgent": "已移除的智慧體",
+        "members": "成員",
+        "allMembers": "群組裡的所有人"
+      },
+      "pause": {
+        "title": "智慧體之間已經互相轉交了 {{count}} 次。",
+        "body": "按「繼續」讓它們接著做；按「停止」結束這一輪。",
+        "continue": "繼續",
+        "stop": "停止"
+      },
+      "confirmAll": {
+        "title": "這會喚醒 {{count}} 個智慧體",
+        "body": "每個智慧體都會使用自己的訂閱額度來回答。",
+        "send": "傳給所有人",
+        "cancel": "取消",
+        "dontAsk": "這個群組不再詢問"
+      },
+      "reply": {
+        "copy": "複製",
+        "copied": "已複製",
+        "askAgain": "重新回答",
+        "replyTo": "回覆這則",
+        "askAnother": "讓另一個智慧體檢查",
+        "checkLead": "請檢查 {{name}} 的這個回答。",
+        "workFiles_one": "修改了 {{count}} 個檔案",
+        "workFiles_other": "修改了 {{count}} 個檔案",
+        "workCommands_one": "執行了 {{count}} 條指令",
+        "workCommands_other": "執行了 {{count}} 條指令",
+        "filesHeading": "檔案",
+        "commandsHeading": "指令"
+      },
+      "composer": {
+        "attach": "加入檔案",
+        "skill": "使用技能",
+        "noSkills": "還沒有啟用任何技能。",
+        "removeAttachment": "移除 {{name}}"
+      },
+      "members": {
+        "title": "群組設定",
+        "add": "新增成員",
+        "remove": "移除",
+        "role": "角色",
+        "roleNone": "無角色",
+        "roleCustom": "自訂角色",
+        "customRolePlaceholder": "描述這個成員的角色",
+        "model": "模型",
+        "modelPlaceholder": "智慧體預設模型",
+        "hopLimit": "暫停前允許的轉交次數",
+        "folder": "資料夾",
+        "folderAuto": "為這個群組建立",
+        "chooseFolder": "換一個資料夾",
+        "folderWarning": "智慧體可以修改這個資料夾裡的任何檔案。只有 Codex 會被沙盒限制在其中。",
+        "largeGroup": "成員越多，佔用的記憶體和訂閱額度也越多。",
+        "deleteGroup": "刪除群組",
+        "deleteConfirm": "刪除這個群組？聊天紀錄會被移除，檔案仍保留在 {{folder}}。",
+        "deleted": "群組已刪除。檔案仍在 {{folder}}。",
+        "state": {
+          "idle": "閒置",
+          "working": "處理中",
+          "waiting": "等待中",
+          "failed": "需要處理"
+        }
+      },
+      "roles": {
+        "planner": "規劃者",
+        "builder": "建置者",
+        "reviewer": "審閱者",
+        "researcher": "研究員",
+        "writer": "撰稿人"
+      },
+      "errors": {
+        "createFailed": "無法建立群組。",
+        "sendFailed": "訊息傳送失敗。",
+        "updateFailed": "無法更新群組。"
+      }
+    },
     "navigation": {
       "back": "返回",
       "backWithShortcut": "返回（{{shortcut}}）",

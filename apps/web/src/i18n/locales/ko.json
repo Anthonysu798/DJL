@@ -2713,6 +2713,114 @@
         "running": "오래된 채팅을..."
       }
     },
+    "multiAgents": {
+      "title": "멀티 에이전트",
+      "beta": "베타",
+      "newGroup": "새 그룹",
+      "groups": "그룹",
+      "emptyTitle": "에이전트를 한 채팅방에 모으세요",
+      "emptyBody": "그룹을 만든 뒤 @로 에이전트를 부르거나 @all로 모두에게 물어보세요.",
+      "noGroupSelected": "왼쪽에서 그룹을 고르거나 새로 만드세요.",
+      "setup": {
+        "title": "새 그룹",
+        "pickTitle": "이 그룹에 넣을 에이전트를 고르세요",
+        "nameTitle": "그룹 이름 정하기",
+        "namePlaceholder": "그룹 이름",
+        "next": "다음",
+        "back": "이전",
+        "create": "그룹 만들기",
+        "creating": "만드는 중…",
+        "setUp": "설정하기",
+        "notReady": "아직 설정 안 됨",
+        "needOne": "설정된 에이전트를 하나 이상 고르세요."
+      },
+      "chat": {
+        "placeholder": "그룹에 메시지 보내기 — @로 에이전트 호출, 또는 @all",
+        "send": "보내기",
+        "stopAll": "모두 중지",
+        "stopMember": "중지",
+        "you": "나",
+        "working": "{{name}} 작업 중…",
+        "waiting": "{{name}}이(가) 다른 에이전트의 편집이 끝나기를 기다리는 중…",
+        "failed": "{{name}}이(가) 답하지 못했습니다: {{error}}",
+        "empty": "{{name}}이(가) 답 없이 끝났습니다.",
+        "tryAgain": "다시 시도",
+        "removedAgent": "삭제된 에이전트",
+        "members": "멤버",
+        "allMembers": "그룹의 모든 사람"
+      },
+      "pause": {
+        "title": "에이전트끼리 {{count}}번 넘겨받았습니다.",
+        "body": "계속을 누르면 이어서 하고, 중지를 누르면 이번 라운드를 끝냅니다.",
+        "continue": "계속",
+        "stop": "중지"
+      },
+      "confirmAll": {
+        "title": "에이전트 {{count}}개를 깨웁니다",
+        "body": "각 에이전트는 자기 구독으로 답합니다.",
+        "send": "모두에게 보내기",
+        "cancel": "취소",
+        "dontAsk": "이 그룹에서는 다시 묻지 않기"
+      },
+      "reply": {
+        "copy": "복사",
+        "copied": "복사됨",
+        "askAgain": "다시 묻기",
+        "replyTo": "이 메시지에 답장",
+        "askAnother": "다른 에이전트에게 확인 요청",
+        "checkLead": "{{name}}의 이 답변을 확인해 주세요.",
+        "workFiles_one": "파일 {{count}}개 변경",
+        "workFiles_other": "파일 {{count}}개 변경",
+        "workCommands_one": "명령 {{count}}개 실행",
+        "workCommands_other": "명령 {{count}}개 실행",
+        "filesHeading": "파일",
+        "commandsHeading": "명령"
+      },
+      "composer": {
+        "attach": "파일 첨부",
+        "skill": "스킬 사용",
+        "noSkills": "켜진 스킬이 없습니다.",
+        "removeAttachment": "{{name}} 제거"
+      },
+      "members": {
+        "title": "그룹 설정",
+        "add": "멤버 추가",
+        "remove": "제거",
+        "role": "역할",
+        "roleNone": "역할 없음",
+        "roleCustom": "직접 정한 역할",
+        "customRolePlaceholder": "이 멤버의 역할을 설명하세요",
+        "model": "모델",
+        "modelPlaceholder": "에이전트 기본값",
+        "hopLimit": "일시 중지 전 넘겨주기 횟수",
+        "folder": "폴더",
+        "folderAuto": "이 그룹용으로 생성됨",
+        "chooseFolder": "다른 폴더 사용",
+        "folderWarning": "에이전트는 이 폴더의 어떤 파일이든 바꿀 수 있습니다. 샌드박스로 안에 묶이는 것은 Codex뿐입니다.",
+        "largeGroup": "그룹이 클수록 메모리와 구독을 더 많이 씁니다.",
+        "deleteGroup": "그룹 삭제",
+        "deleteConfirm": "이 그룹을 삭제할까요? 채팅은 지워지고 파일은 {{folder}}에 남습니다.",
+        "deleted": "그룹을 삭제했습니다. 파일은 {{folder}}에 그대로 있습니다.",
+        "state": {
+          "idle": "대기",
+          "working": "작업 중",
+          "waiting": "순서 대기",
+          "failed": "확인 필요"
+        }
+      },
+      "roles": {
+        "planner": "기획자",
+        "builder": "개발자",
+        "reviewer": "검토자",
+        "researcher": "조사원",
+        "writer": "작성자"
+      },
+      "errors": {
+        "createFailed": "그룹을 만들 수 없습니다.",
+        "sendFailed": "메시지를 보낼 수 없습니다.",
+        "updateFailed": "그룹을 업데이트할 수 없습니다."
+      }
+    },
     "navigation": {
       "back": "뒤로",
       "backWithShortcut": "뒤로 ({{shortcut}})",
