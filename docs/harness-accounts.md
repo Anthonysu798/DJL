@@ -1,6 +1,6 @@
 # Harness accounts in DJL
 
-DJL has new native integration code for Codex, Claude Code, Cursor, Grok Build, Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, and Pi alongside its active OpenCode runtime. These bridges do not reactivate the historical adapters. The Accounts screen is available in Electron; its authenticated RPC contracts are shared with the backend for a future iOS interface.
+DJL has new native integration code for Codex, Claude Code, Cursor, Gemini CLI, Grok Build, Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, and Pi alongside its active OpenCode runtime. These bridges do not reactivate the historical adapters. The Accounts screen is available in Electron; its authenticated RPC contracts are shared with the backend for a future iOS interface.
 
 ## Connect an account
 
@@ -27,6 +27,7 @@ Accounts includes direct connections for these officially supported plans:
 | MiniMax international / China | Separate Token Plan provider entries through OpenCode                                                                                                                                |
 | GitHub Copilot / GitLab Duo   | The installed OpenCode CLI's advertised sign-in methods                                                                                                                              |
 | Grok                          | Official Grok Build login and ACP runtime; provider eligibility and limits apply                                                                                                     |
+| Gemini CLI                    | The official Gemini CLI's own sign-in and ACP runtime (`gemini --acp`); background sessions never open a browser                                                                     |
 
 For Kimi OAuth, choose **Use existing CLI region**, **International**, or **Mainland China** before signing in. The default preserves the installed CLI's region. Explicit region selections use the official `kimi.ai` or `kimi.com` authentication and coding endpoints, respectively. DJL waits for the selection to save before enabling sign-in. The current Node-based `@moonshot-ai/kimi-code` runtime is supported; legacy Python kimi-cli credentials are not silently copied or migrated.
 
@@ -44,7 +45,7 @@ For older DJL-only logins, Accounts offers **Copy saved DJL logins to OpenCode**
 
 ## Provider tool updates
 
-Provider tools shows installed/latest versions for Codex, Claude Code, OpenCode, Grok Build, Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, Pi, and Cursor. iFlow CLI, Qwen Code, CodeBuddy Code and Pi are npm packages (`@iflow-ai/iflow-cli`, `@qwen-code/qwen-code`, `@tencent-ai/codebuddy-code`, `@earendil-works/pi-coding-agent`). **Update all** updates installed, supported, outdated tools sequentially and shows individual results. Missing tools are installed only through an explicit Install action. Custom or unrecognized installations retain their setup guide instead of updating a different installation.
+Provider tools shows installed/latest versions for Codex, Claude Code, OpenCode, Grok Build, Kimi Code, iFlow CLI, Qwen Code, CodeBuddy Code, Pi, Cursor, and Gemini CLI (npm `@google/gemini-cli`, Homebrew `gemini-cli`). iFlow CLI, Qwen Code, CodeBuddy Code and Pi are npm packages (`@iflow-ai/iflow-cli`, `@qwen-code/qwen-code`, `@tencent-ai/codebuddy-code`, `@earendil-works/pi-coding-agent`). **Update all** updates installed, supported, outdated tools sequentially and shows individual results. Missing tools are installed only through an explicit Install action. Custom or unrecognized installations retain their setup guide instead of updating a different installation.
 
 **Automatically update provider tools** is off by default and saved on the server. When enabled, DJL checks every six hours and defers maintenance while chats are running or terminals are open. Closing Settings does not stop the scheduler. This controls DJL's scheduler; official CLIs can also have their own update policies.
 
@@ -72,3 +73,16 @@ Validation for this change includes native protocol fixtures, real message-inges
 The implementation is covered by protocol fixtures, real SQLite ingestion for Grok and Kimi, regional endpoint tests, installer/maintenance tests, and rendered account controls. A separate Electron QA instance used official OpenCode 1.18.29, Grok 1.0.13, Kimi Code 0.41.0, and Cursor 2026.09.02-c22c1a3. Installed/latest version displays matched those runtimes. The China GLM action reached the API-key prompt with `zhipuai-coding-plan`; Kimi international login reached its official device-authorization page. Both test logins were cancelled without submitting credentials. Automatic-update and region settings persisted through the real backend. Authenticated paid generation for those new accounts was not exercised; users must complete the provider's login and have an eligible plan.
 
 Official references: [GLM international](https://docs.z.ai/devpack/tool/opencode), [GLM China](https://docs.bigmodel.cn/cn/guide/develop/opencode), [Kimi CLI](https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-command.html), [Kimi environment settings](https://www.kimi.com/code/docs/en/kimi-code-cli/configuration/env-vars.html), [Grok Build](https://docs.x.ai/build/overview), [Cursor installation and updates](https://cursor.com/docs/cli/installation).
+
+## Gemini verification (2026-11-18)
+
+The native Gemini CLI driver runs `gemini --acp` with the same browser-blocking environment as the
+existing Gemini health probe, so a background session never opens a sign-in window. Sign-in from
+Settings → Accounts opens the interactive CLI in the embedded terminal without that block, so its
+own login can open the browser. Covered by protocol fixtures: catalog and streamed reply, the
+runtime's own sign-in error, and an older CLI that exits before the handshake (reported as "Update
+Gemini CLI"). Gemini CLI's documentation names `--acp` as the current flag.
+
+Not verified: Gemini CLI was not installed on the verification machine, so no real model turn, no
+sign-in, and no session resume after relaunch were exercised. Whether the installed CLI advertises
+`loadSession` (needed to resume a saved chat) is therefore unknown.

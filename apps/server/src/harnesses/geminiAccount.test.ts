@@ -26,7 +26,12 @@ describe("Gemini CLI account", () => {
     expect(geminiSubscriptionEnvironment({ PATH: "/bin" }).NO_BROWSER).toBe("true");
   });
   it("falls back to gemini on PATH", () => {
-    const invocation = buildHarnessInvocation("gemini", settingsWith({ binaryPath: "" }), "/tmp/root", {});
+    const invocation = buildHarnessInvocation(
+      "gemini",
+      settingsWith({ binaryPath: "" }),
+      "/tmp/root",
+      {},
+    );
     expect(invocation.binary).toBe("gemini");
   });
 });
