@@ -46,6 +46,19 @@ const WORK_LINE_LIMIT = 200;
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const workLine = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, WORK_LINE_LIMIT);
 
+/** The files or command a completed Codex item records: one line per changed file. */
+function codexItemWork(payload: Record<string, unknown>): string[] {
+  const data = (payload.data ?? {}) as { command?: unknown; changes?: unknown };
+  const lines = Array.isArray(data.changes)
+    ? data.changes.map((change) => String((change as { path?: unknown })?.path ?? ""))
+    : Array.isArray(data.command)
+      ? [data.command.join(" ")]
+      : typeof data.command === "string"
+        ? [data.command]
+        : [String(payload.title ?? payload.detail ?? "")];
+  return lines.map(workLine).filter(Boolean);
+}
+
 interface Turn {
   readonly texts: Map<string, string>;
   lastItem: string | null;
@@ -90,10 +103,10 @@ export async function openChildSession(input: {
         return;
       }
       if (countsCodexItems && event.type === "item.completed") {
-        const label = workLine(String(payload.title ?? payload.detail ?? ""));
-        if (!label) return;
-        if (payload.itemType === "file_change") current.work.files.push(label);
-        if (payload.itemType === "command_execution") current.work.commands.push(label);
+        if (payload.status === "failed" || payload.status === "declined") return;
+        const work = codexItemWork(payload);
+        if (payload.itemType === "file_change") current.work.files.push(...work);
+        if (payload.itemType === "command_execution") current.work.commands.push(...work);
       }
     },
     request: async (type, args, signal) => {

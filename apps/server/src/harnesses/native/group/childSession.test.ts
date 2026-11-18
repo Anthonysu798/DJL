@@ -127,6 +127,46 @@ describe("group child session", () => {
     });
   });
 
+  it("reads Codex work from the item data the real driver sends", async () => {
+    const child = await open(
+      fake(async (sink) => {
+        sink.emit({
+          type: "item.completed",
+          itemId: "f1",
+          payload: {
+            itemType: "file_change",
+            status: "completed",
+            data: { type: "fileChange", changes: [{ path: "/g/a.txt" }, { path: "/g/b.txt" }] },
+          },
+        });
+        sink.emit({
+          type: "item.completed",
+          itemId: "f2",
+          payload: {
+            itemType: "file_change",
+            status: "declined",
+            data: { type: "fileChange", changes: [{ path: "/g/never.txt" }] },
+          },
+        });
+        sink.emit({
+          type: "item.completed",
+          itemId: "c1",
+          payload: {
+            itemType: "command_execution",
+            status: "completed",
+            data: { type: "commandExecution", command: "bun test" },
+          },
+        });
+        sink.emit(text("a", "done"));
+      }),
+      "codex",
+    );
+    expect((await child.ask("go", accept)).work).toEqual({
+      files: ["/g/a.txt", "/g/b.txt"],
+      commands: ["bun test"],
+    });
+  });
+
   it("stop resolves the pending ask as stopped", async () => {
     const hung = Promise.withResolvers<void>();
     const child = await open(fake(() => hung.promise, { interrupt: () => hung.resolve() }));
