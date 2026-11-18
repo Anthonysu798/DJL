@@ -5,6 +5,7 @@ import { resolveKimiBinaryPath } from "./kimiExecutable";
 import { kimiSubscriptionEnvironment, probeKimiSubscriptionAccount } from "./native/kimi";
 import { iflowSubscriptionEnvironment, probeIFlowSubscriptionAccount } from "./native/iflow";
 import { qwenSubscriptionEnvironment, probeQwenSubscriptionAccount } from "./native/qwen";
+import { probeGeminiSubscriptionAccount } from "./native/gemini";
 import { piSubscriptionEnvironment, probePiSubscriptionAccount } from "./native/pi";
 import {
   codeBuddySubscriptionEnvironment,
@@ -31,6 +32,7 @@ export const NATIVE_HARNESS_IDS = [
   "codex",
   "claudeAgent",
   "cursor",
+  "gemini",
   "grok",
   "kimi",
   "iflow",
@@ -72,6 +74,15 @@ export function buildHarnessInvocation(
       loginArgs: [] as string[],
       statusArgs: ["--version"],
       env: qwenSubscriptionEnvironment(env),
+    };
+  // Gemini CLI signs in from its interactive TUI, which opens the browser itself.
+  if (harness === "gemini")
+    return {
+      binary: settings.providers.gemini.binaryPath.trim() || "gemini",
+      prefixArgs: [] as string[],
+      loginArgs: [] as string[],
+      statusArgs: ["--version"],
+      env,
     };
   // CodeBuddy Code signs in with the TUI `/login` picker; there is no login subcommand.
   if (harness === "codebuddy")
@@ -231,6 +242,14 @@ export async function probeHarnessAccount(
       installed: true,
       enabled: true,
       status: await probeIFlowSubscriptionAccount(invocation.binary, process.cwd()),
+      version: version.stdout.trim().slice(0, 100),
+    };
+  if (harness === "gemini")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probeGeminiSubscriptionAccount(invocation.binary, process.cwd()),
       version: version.stdout.trim().slice(0, 100),
     };
   if (harness === "qwen")

@@ -19,6 +19,7 @@ import {
   QwenIcon,
   CodeBuddyIcon,
   PiIcon,
+  Gemini,
 } from "../Icons";
 
 interface TerminalIdentityIconProps {
@@ -37,6 +38,7 @@ export default function TerminalIdentityIcon({ iconKey, className }: TerminalIde
     grok: GrokIcon,
     iflow: IFlowIcon,
     qwen: QwenIcon,
+    gemini: Gemini,
     codebuddy: CodeBuddyIcon,
     pi: PiIcon,
     terminal: TerminalSquare,
