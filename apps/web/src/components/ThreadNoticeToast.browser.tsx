@@ -21,8 +21,11 @@ function renderToasts() {
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   render(<RouterProvider router={router} />);
-  // Toasts added before the viewport mounts are never shown.
-  return expect.element(page.getByRole("region", { name: "Notifications" })).toBeInTheDocument();
+  // Toasts added before the viewports mount are never shown. The provider mounts two of them:
+  // this one and a bottom-right one for provider updates.
+  return expect
+    .element(page.getByRole("region", { name: "Notifications" }).first())
+    .toBeInTheDocument();
 }
 
 function addNotice(onOpen: () => void) {
