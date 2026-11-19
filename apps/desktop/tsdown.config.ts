@@ -20,7 +20,9 @@ export default defineConfig([
     ...shared,
     entry: ["src/main.ts", "src/remoteGatewayChild.ts"],
     clean: true,
+    external: ["original-fs"],
     noExternal: (id) => id.startsWith("@synara/"),
+    inlineOnly: ["marked"],
   },
   {
     ...shared,
