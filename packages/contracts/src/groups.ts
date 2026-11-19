@@ -101,11 +101,19 @@ export type GroupReply = typeof GroupReply.Type;
 export const GroupMemberState = Schema.Literals(["idle", "working", "waiting", "failed"]);
 export type GroupMemberState = typeof GroupMemberState.Type;
 
+/** What is happening right now: busy members and the text each has written so far. */
+export const GroupLive = Schema.Struct({
+  memberStates: Schema.Record(GroupMemberId, GroupMemberState),
+  drafts: Schema.Record(GroupMemberId, Schema.String),
+});
+export type GroupLive = typeof GroupLive.Type;
+
 export const GroupEvent = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("snapshot"),
     groups: Schema.Array(Group),
     replies: Schema.Array(GroupReply),
+    live: Schema.optional(GroupLive),
   }),
   Schema.Struct({ type: Schema.Literal("group.upserted"), group: Group }),
   Schema.Struct({
@@ -120,6 +128,14 @@ export const GroupEvent = Schema.Union([
     state: GroupMemberState,
   }),
   Schema.Struct({ type: Schema.Literal("reply.recorded"), reply: GroupReply }),
+  Schema.Struct({
+    type: Schema.Literal("reply.draft"),
+    groupId: GroupId,
+    memberId: GroupMemberId,
+    delta: Schema.String,
+    /** The member began a new message: replace the draft with `delta` instead of appending. */
+    restart: Schema.Boolean,
+  }),
 ]);
 export type GroupEvent = typeof GroupEvent.Type;
 
@@ -174,6 +190,7 @@ export const GroupDeleteResult = Schema.Struct({ folder: Schema.String });
 export const GroupListResult = Schema.Struct({
   groups: Schema.Array(Group),
   replies: Schema.Array(GroupReply),
+  live: Schema.optional(GroupLive),
 });
 export type GroupListResult = typeof GroupListResult.Type;
 export type GroupDeleteResult = typeof GroupDeleteResult.Type;
