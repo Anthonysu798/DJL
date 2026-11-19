@@ -105,14 +105,15 @@ jobs:
         env:
           DJL_LOCAL_QA: '1'
         run: flutter test test/live
+      - name: Build Android debug APK
+        working-directory: apps/mobile
+        run: flutter build apk --debug
       - name: Android native status model tests
         working-directory: apps/mobile/android
         run: >-
           ./gradlew :app:testDebugUnitTest --no-daemon --max-workers=1
           '-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m'
           -Pkotlin.compiler.execution.strategy=in-process
-      - run: flutter build apk --debug
-        working-directory: apps/mobile
       - uses: actions/upload-artifact@v4
         with:
           name: mobile-android-debug
@@ -124,6 +125,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       - name: Test macOS native acceptance tooling
         working-directory: apps/mobile
         run: python3 -m unittest discover -s test/integration_support -p '*_test.py'

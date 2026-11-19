@@ -14,6 +14,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { terminateSmokeProcessTree } from "./smoke-test-process.mjs";
 
 assert.ok(["darwin", "win32"].includes(process.platform), "Use a native macOS or Windows runner");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -56,22 +57,20 @@ try {
     ],
     { cwd: root, stdio: "inherit" },
   );
-  // Electron does not use NODE_PATH for the initial application module.
+  // Link the external native package from the backend's installed dependency.
+  // Its own dependencies continue to resolve from the package's real path.
+  const backendRequire = createRequire(path.join(root, "../server/package.json"));
+  const fixtureModules = path.join(fixtureApp, "node_modules");
+  mkdirSync(fixtureModules);
   symlinkSync(
-    path.join(root, "../server/node_modules"),
-    path.join(fixtureApp, "node_modules"),
+    path.dirname(backendRequire.resolve("sharp/package.json")),
+    path.join(fixtureModules, "sharp"),
     "junction",
   );
   const electron = createRequire(import.meta.url)("electron");
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
-  env.NODE_PATH = [
-    path.join(root, "../server/node_modules"),
-    path.join(root, "../../node_modules"),
-    env.NODE_PATH,
-  ]
-    .filter(Boolean)
-    .join(path.delimiter);
+  delete env.NODE_PATH;
   const run = (phase) =>
     new Promise((resolve, reject) => {
       const log = path.join(directory, `${phase}.electron.log`);
@@ -86,10 +85,10 @@ try {
           "--enable-logging=file",
           `--log-file=${log}`,
         ],
-        { cwd: fixtureApp, env, stdio: "inherit" },
+        { cwd: fixtureApp, detached: process.platform !== "win32", env, stdio: "inherit" },
       );
       const timer = setTimeout(() => {
-        child.kill();
+        terminateSmokeProcessTree(child);
         reject(new Error(`Native ${phase} timed out`));
       }, 45000);
       child.on("error", reject);
@@ -133,5 +132,5 @@ try {
   console.log(JSON.stringify(report));
 } finally {
   await new Promise((resolve) => server.close(resolve));
-  rmSync(directory, { recursive: true, force: true });
+  rmSync(directory, { recursive: true, force: true, maxRetries: 6, retryDelay: 150 });
 }
