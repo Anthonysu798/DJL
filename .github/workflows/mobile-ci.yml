@@ -68,7 +68,7 @@ jobs:
         run: |
           bun apps/mobile/tool/generate_remote_fixture.ts
           git diff --exit-code -- apps/mobile/test/fixtures/remote-v2.json
-      - name: Native acceptance tooling and original gateway contracts
+      - name: Gateway acceptance fixtures
         working-directory: apps/mobile
         run: |
           bun test "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/desktop_runtime_fixture.test.ts" \
@@ -78,7 +78,6 @@ jobs:
             "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/fixture_git_scope.test.ts" \
             "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/fixture_resume.test.ts" \
             "$GITHUB_WORKSPACE/apps/mobile/test/integration_support/workspace_revert_gateway.test.ts"
-          python3 -m unittest discover -s test/integration_support -p '*_test.py'
       - name: Initialize disposable Cloud test infrastructure
         env:
           DATABASE_URL: postgres://djl:djl@127.0.0.1:54329/djl_flutter_qa_20261028
@@ -125,6 +124,9 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
+      - name: Test macOS native acceptance tooling
+        working-directory: apps/mobile
+        run: python3 -m unittest discover -s test/integration_support -p '*_test.py'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.5'

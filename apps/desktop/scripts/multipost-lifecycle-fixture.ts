@@ -21,9 +21,11 @@ import type {
   MultiPostState,
 } from "@synara/contracts";
 
-const [directory, endpoint, phase, icon] = process.argv.slice(2);
-if (!directory || !endpoint || !phase || !icon)
-  throw new Error("Missing lifecycle fixture arguments");
+const [directory, portArgument, phase, icon] = process.argv.slice(2);
+const port = Number(portArgument);
+if (!directory || !phase || !icon || !Number.isInteger(port) || port < 1 || port > 65535)
+  throw new Error("Invalid lifecycle fixture arguments");
+const endpoint = `http://127.0.0.1:${port}/hook`;
 app.setPath("userData", path.join(directory, "profile"));
 app.setPath("sessionData", path.join(directory, "sessions"));
 if (process.platform === "darwin") app.setActivationPolicy("accessory");

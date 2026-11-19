@@ -34,7 +34,7 @@ const server = createServer(async (req, res) => {
   );
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const endpoint = `http://127.0.0.1:${server.address().port}/hook`;
+const fixturePort = String(server.address().port);
 try {
   const fixtureApp = path.join(directory, "app");
   mkdirSync(fixtureApp);
@@ -80,7 +80,7 @@ try {
         [
           fixtureApp,
           directory,
-          endpoint,
+          fixturePort,
           phase,
           path.join(root, "../../assets/prod/djl-macos-legacy-1024.png"),
           "--enable-logging=file",
