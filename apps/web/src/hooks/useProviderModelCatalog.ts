@@ -290,6 +290,7 @@ export function useProviderModelCatalog(input: {
         customModelsByProvider.djlCloud,
         modelHintByProvider?.djlCloud,
       ),
+      group: [],
     };
     const result: Record<
       ProviderKind,
@@ -314,6 +315,7 @@ export function useProviderModelCatalog(input: {
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
       djlCloud: djlCloudDynamicModelsQuery.data,
+      group: undefined,
     };
 
     for (const provider of [
@@ -401,6 +403,7 @@ export function useProviderModelCatalog(input: {
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
       djlCloud: djlCloudDynamicModelsQuery.data?.models ?? [],
+      group: [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,

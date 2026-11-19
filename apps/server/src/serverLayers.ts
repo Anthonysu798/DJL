@@ -53,6 +53,8 @@ import { DocumentRendererLive } from "./work/Layers/DocumentRenderer";
 import { ProjectMemoryLive } from "./memory/Layers/ProjectMemory";
 import { MemoryReactorLive } from "./orchestration/Layers/MemoryReactor";
 import { AiDetectorServiceLive } from "./aiDetector/Layers/AiDetectorService";
+import { GroupServiceLive } from "./groups/Layers/GroupService";
+import { GroupRepositoryLive } from "./persistence/Layers/GroupRepository";
 import { ComputerActivityGenerationLive } from "./work/Layers/ComputerActivityGeneration";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
@@ -169,6 +171,12 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(authServicesLayer),
   );
 
+  const groupServiceLayer = GroupServiceLive.pipe(
+    Layer.provideMerge(GroupRepositoryLive),
+    Layer.provideMerge(OrchestrationLayerLive),
+    Layer.provideMerge(ServerSettingsLive),
+  );
+
   return Layer.mergeAll(
     ComputerServiceLive,
     WsConnectionSessionsLive,
@@ -176,6 +184,7 @@ export function makeServerRuntimeServicesLayer() {
     SocialReportDeliveryReactorLive.pipe(Layer.provideMerge(runtimeServicesLayer)),
     automationServiceLayer,
     serverRegistryLayer,
+    groupServiceLayer,
     serverCommandLayer,
     automationSchedulerLayer,
     automationRunReactorLayer,

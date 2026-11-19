@@ -85,7 +85,7 @@ export class ServerSettingsService extends ServiceMap.Service<
     );
 }
 
-const PROVIDER_ORDER: readonly ProviderWithDefaultModel[] = [
+const PROVIDER_ORDER: readonly Exclude<ProviderWithDefaultModel, "group">[] = [
   "codex",
   "claudeAgent",
   "gemini",
@@ -96,7 +96,7 @@ const PROVIDER_ORDER: readonly ProviderWithDefaultModel[] = [
 function resolveTextGenerationProvider(settings: ServerSettings): ServerSettings {
   const canonicalSettings = canonicalizeTextGenerationSelection(settings);
   const selection = canonicalSettings.textGenerationModelSelection;
-  if (settings.providers[selection.provider].enabled) {
+  if (selection.provider !== "group" && settings.providers[selection.provider].enabled) {
     return canonicalSettings;
   }
 

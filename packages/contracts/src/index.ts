@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./cloud";
 export * from "./automation";
 export * from "./servers";
+export * from "./groups";
 export * from "./browserAnnotations";
 export * from "./baseSchemas";
 export * from "./ipc";

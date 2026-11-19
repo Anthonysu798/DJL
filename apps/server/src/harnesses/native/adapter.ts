@@ -9,10 +9,10 @@ import {
   ThreadId,
   TurnId,
   type CanonicalRequestType,
+  type ProviderSendTurnInput,
   type ProviderSession,
   type ProviderUserInputAnswers,
   type ProviderApprovalDecision,
-  type ProviderSendTurnInput,
 } from "@synara/contracts";
 import { Effect, Queue, Schema, Stream } from "effect";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
@@ -29,6 +29,12 @@ const NativeResumeCursor = Schema.Struct({
   sandboxMode: Schema.optional(ProviderSandboxMode),
   providerOptions: Schema.optional(ProviderStartOptions),
 });
+
+// Waits briefly for a finishing turn to clear, so a late steer can start the next turn.
+const settled = async (state: SessionState, turnId: string) => {
+  for (let attempt = 0; attempt < 100 && state.session.activeTurnId === turnId; attempt += 1)
+    await new Promise((resolve) => setTimeout(resolve, 20));
+};
 
 interface SessionState {
   session: ProviderSession;
@@ -117,15 +123,12 @@ export const makeNativeAdapter = (
             detail: cause instanceof Error ? cause.message : "Native runtime operation failed",
           }),
       });
-    const unsupported = (method: string) =>
-      attempt(method, async () => {
-        throw new Error(`${method} is not supported by the native ${provider} bridge`);
-      });
     const validateTurn = (input: ProviderSendTurnInput) => {
       if (!input.input?.trim()) throw new Error("A text prompt is required");
+      // Groups pass attachment paths and skills to members as text; other bridges cannot.
+      const acceptsFiles = provider === "group";
       if (
-        input.attachments?.length ||
-        input.skills?.length ||
+        (!acceptsFiles && (input.attachments?.length || input.skills?.length)) ||
         input.mentions?.length ||
         input.workTurnPolicy
       )
@@ -135,6 +138,42 @@ export const makeNativeAdapter = (
       if (input.interactionMode === "plan" && provider === "codex")
         throw new Error("Native Codex plan mode is not implemented");
     };
+    const beginTurn = (state: SessionState, input: ProviderSendTurnInput) => {
+      validateTurn(input);
+      const turnId = TurnId.makeUnsafe(randomUUID());
+      state.completed = false;
+      state.session = {
+        ...state.session,
+        status: "running",
+        activeTurnId: turnId,
+        updatedAt: new Date().toISOString(),
+      };
+      emit(state, { type: "turn.started", payload: {} });
+      void state.driver!.send(input).then(
+        () => complete(state, "completed"),
+        (error: unknown) => {
+          if (!state.stopped) {
+            recordPermissionRejection(
+              provider,
+              state.session.runtimeMode,
+              state.profileOptions,
+              error,
+            );
+            complete(
+              state,
+              "failed",
+              error instanceof Error ? error.message : "Native turn failed",
+            );
+            stop(state);
+          }
+        },
+      );
+      return { threadId: input.threadId, turnId, resumeCursor: state.session.resumeCursor };
+    };
+    const unsupported = (method: string) =>
+      attempt(method, async () => {
+        throw new Error(`${method} is not supported by the native ${provider} bridge`);
+      });
     yield* Effect.addFinalizer(() =>
       Effect.sync(() => {
         for (const state of sessions.values()) stop(state);
@@ -162,7 +201,7 @@ export const makeNativeAdapter = (
         supportsNativeSlashCommandDiscovery: false,
         supportsPluginMentions: false,
         supportsPluginDiscovery: false,
-        supportsTurnSteering: provider === "codex",
+        supportsTurnSteering: provider === "group" || provider === "codex",
         supportsLiveTurnDiffPatch: false,
       },
       startSession: (input) =>
@@ -313,37 +352,35 @@ export const makeNativeAdapter = (
         attempt("sendTurn", async () => {
           const state = requireSession(input.threadId);
           if (state.session.activeTurnId) throw new Error("A native turn is already running");
-          validateTurn(input);
-          const turnId = TurnId.makeUnsafe(randomUUID());
-          state.completed = false;
-          state.session = {
-            ...state.session,
-            status: "running",
-            activeTurnId: turnId,
-            updatedAt: new Date().toISOString(),
-          };
-          emit(state, { type: "turn.started", payload: {} });
-          void state.driver!.send(input).then(
-            () => complete(state, "completed"),
-            (error: unknown) => {
-              if (!state.stopped) {
-                recordPermissionRejection(
-                  provider,
-                  state.session.runtimeMode,
-                  state.profileOptions,
-                  error,
-                );
-                complete(
-                  state,
-                  "failed",
-                  error instanceof Error ? error.message : "Native turn failed",
-                );
-                stop(state);
-              }
-            },
-          );
-          return { threadId: input.threadId, turnId, resumeCursor: state.session.resumeCursor };
+          return beginTurn(state, input);
         }),
+      // A group round takes a new message at any time; a steer with no round running starts one.
+      ...(provider === "group"
+        ? {
+            steerTurn: (input: ProviderSendTurnInput) =>
+              attempt("steerTurn", async () => {
+                const state = requireSession(input.threadId);
+                if (!state.driver!.steer)
+                  throw new Error(`The native ${provider} bridge cannot steer`);
+                const turnId = state.session.activeTurnId;
+                if (turnId) {
+                  if (!input.input?.trim()) throw new Error("A text prompt is required");
+                  if ((await state.driver!.steer(input)) !== false)
+                    return {
+                      threadId: input.threadId,
+                      turnId,
+                      resumeCursor: state.session.resumeCursor,
+                    };
+                  // The running turn was finishing; start the message as the next turn.
+                  await settled(state, turnId);
+                  if (state.session.activeTurnId)
+                    throw new Error("A native turn is already running");
+                }
+                return beginTurn(state, input);
+              }),
+          }
+        : {}),
+      // Codex steers only a turn that is still running.
       ...(provider === "codex"
         ? {
             steerTurn: (input: ProviderSendTurnInput) =>

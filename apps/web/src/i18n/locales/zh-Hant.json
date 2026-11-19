@@ -1406,6 +1406,7 @@
       "copiedError": "已複製錯誤訊息",
       "copyError": "複製錯誤訊息",
       "dismiss": "關閉通知",
+      "done": "已完成",
       "undo": "復原"
     },
     "untitledThread": "未命名對話"
@@ -3385,6 +3386,126 @@
         "progressOf_other": "{{total}}的{{count}}隱藏聊天.",
         "retryLater": "舊時的聊天會稍後再審.",
         "running": "隱藏舊的聊天..."
+      }
+    },
+    "multiAgents": {
+      "title": "多智慧體",
+      "beta": "測試版",
+      "newGroup": "新增群組",
+      "groups": "群組",
+      "emptyTitle": "把你的智慧體拉進一個群組",
+      "emptyBody": "新增群組後，輸入 @ 呼叫某個智慧體，或輸入 @所有人 讓大家一起回答。",
+      "noGroupSelected": "從左側選擇一個群組，或新增一個。",
+      "setup": {
+        "title": "新增群組",
+        "pickTitle": "選擇要加入群組的智慧體",
+        "pickBody": "它們共用一個聊天，還能互相交接工作。",
+        "nameBody": "這是群組清單裡顯示的名稱。",
+        "nameTitle": "為群組取個名字",
+        "namePlaceholder": "群組名稱",
+        "next": "下一步",
+        "back": "上一步",
+        "create": "建立群組",
+        "creating": "正在建立…",
+        "setUp": "前往設定",
+        "notReady": "尚未設定",
+        "checking": "正在檢查…",
+        "needOne": "請至少選擇一個已設定好的智慧體。"
+      },
+      "chat": {
+        "placeholder": "傳訊息到群組，或輸入 @ 選擇智慧體",
+        "startTitle": "開始對話",
+        "startBody": "群組裡的每個成員都能看到同一個聊天。輸入 @ 問某個智慧體，或輸入 @所有人 一起問。",
+        "starterMeet": "認識一下大家",
+        "starterMeetPrompt": "@所有人 請各自介紹一下，並說說最擅長什麼",
+        "starterOne": "問一個智慧體",
+        "starterOnePrompt": "@{{name}} 你能幫我做什麼？",
+        "starterReview": "聽聽第二種意見",
+        "starterReviewPrompt": "@{{first}} 為我的想法提一個計畫，然後請 @{{second}} 檢查一下",
+        "send": "傳送",
+        "stopAll": "全部停止",
+        "stopMember": "停止",
+        "you": "你",
+        "working": "{{name}} 正在處理…",
+        "waiting": "{{name}} 正在等待另一個智慧體完成修改…",
+        "failed": "{{name}} 無法回答：{{error}}",
+        "empty": "{{name}} 已完成，但沒有回覆。",
+        "tryAgain": "重試",
+        "removedAgent": "已移除的智慧體",
+        "members": "成員",
+        "allMembers": "群組裡的所有人"
+      },
+      "pause": {
+        "title": "智慧體之間已經互相轉交了 {{count}} 次。",
+        "body": "按「繼續」讓它們接著做；按「停止」結束這一輪。",
+        "continue": "繼續",
+        "stop": "停止"
+      },
+      "confirmAll": {
+        "title": "這會喚醒 {{count}} 個智慧體",
+        "body": "每個智慧體都會使用自己的訂閱額度來回答。",
+        "send": "傳給所有人",
+        "cancel": "取消",
+        "dontAsk": "這個群組不再詢問"
+      },
+      "reply": {
+        "copy": "複製",
+        "copied": "已複製",
+        "askAgain": "重新回答",
+        "replyTo": "回覆這則",
+        "askAnother": "讓另一個智慧體檢查",
+        "checkLead": "請檢查 {{name}} 的這個回答。",
+        "workFiles_one": "修改了 {{count}} 個檔案",
+        "workFiles_other": "修改了 {{count}} 個檔案",
+        "workCommands_one": "執行了 {{count}} 條指令",
+        "workCommands_other": "執行了 {{count}} 條指令",
+        "filesHeading": "檔案",
+        "commandsHeading": "指令"
+      },
+      "composer": {
+        "mention": "提及代理",
+        "sendsTo": "傳送給 {{names}}",
+        "sendsToAll": "傳送給所有人",
+        "skill": "使用技能"
+      },
+      "members": {
+        "close": "關閉群組設定",
+        "title": "群組設定",
+        "add": "新增成員",
+        "remove": "移除",
+        "role": "角色",
+        "roleNone": "無角色",
+        "roleCustom": "自訂角色",
+        "customRolePlaceholder": "描述這個成員的角色",
+        "model": "模型",
+        "modelPlaceholder": "智慧體預設模型",
+        "hopLimit": "暫停前允許的轉交次數",
+        "folder": "資料夾",
+        "folderAuto": "為這個群組建立",
+        "chooseFolder": "換一個資料夾",
+        "folderWarning": "智慧體可以修改這個資料夾裡的任何檔案。只有 Codex 會被沙盒限制在其中。",
+        "largeGroup": "成員越多，佔用的記憶體和訂閱額度也越多。",
+        "deleteGroup": "刪除群組",
+        "deleteConfirm": "刪除這個群組？聊天紀錄會被移除，檔案仍保留在 {{folder}}。",
+        "deleted": "群組已刪除。檔案仍在 {{folder}}。",
+        "state": {
+          "idle": "閒置",
+          "working": "處理中",
+          "waiting": "等待中",
+          "failed": "需要處理"
+        }
+      },
+      "roles": {
+        "planner": "規劃者",
+        "builder": "建置者",
+        "reviewer": "審閱者",
+        "researcher": "研究員",
+        "writer": "撰稿人"
+      },
+      "errors": {
+        "createFailed": "無法建立群組。",
+        "sendFailed": "訊息傳送失敗。",
+        "updateFailed": "無法更新群組。"
       }
     },
     "navigation": {

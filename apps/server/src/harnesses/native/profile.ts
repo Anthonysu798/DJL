@@ -20,6 +20,8 @@ export function nativeProfileOptions(
       return { iflow: { binaryPath: settings.providers.iflow.binaryPath.trim() || "iflow" } };
     case "qwen":
       return { qwen: { binaryPath: settings.providers.qwen.binaryPath.trim() || "qwen" } };
+    case "gemini":
+      return { gemini: { binaryPath: settings.providers.gemini.binaryPath.trim() || "gemini" } };
     case "codebuddy":
       return {
         codebuddy: { binaryPath: settings.providers.codebuddy.binaryPath.trim() || "codebuddy" },
@@ -48,6 +50,9 @@ export function nativeProfileOptions(
       };
     case "djlCloud":
       return { djlCloud: { region: settings.providers.djlCloud.region } };
+    case "group":
+      // Each member resolves its own profile when the group opens it.
+      return {};
     case "cursor":
       return {
         cursor: {

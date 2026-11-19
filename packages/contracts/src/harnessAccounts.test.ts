@@ -19,6 +19,7 @@ describe("fresh harness command contracts", () => {
     "qwen",
     "codebuddy",
     "pi",
+    "gemini",
   ])("accepts %s for a new chat turn", (provider) => {
     expect(
       Schema.decodeUnknownSync(NewTaskModelSelection)({ provider, model: "test-model" }).provider,
@@ -26,8 +27,13 @@ describe("fresh harness command contracts", () => {
   });
   it("keeps historical runtimes without a new implementation out of new chat turns", () => {
     expect(() =>
-      Schema.decodeUnknownSync(NewTaskModelSelection)({ provider: "gemini", model: "test-model" }),
+      Schema.decodeUnknownSync(NewTaskModelSelection)({ provider: "droid", model: "test-model" }),
     ).toThrow();
+  });
+  it("accepts Gemini CLI as a login harness", () => {
+    expect(Schema.decodeUnknownSync(HarnessLoginInput)({ harness: "gemini" }).harness).toBe(
+      "gemini",
+    );
   });
   it("rejects arbitrary executable names as login harness IDs", () => {
     expect(() => Schema.decodeUnknownSync(HarnessLoginInput)({ harness: "/bin/sh" })).toThrow();

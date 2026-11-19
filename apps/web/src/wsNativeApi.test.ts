@@ -7,6 +7,7 @@ import {
   ApprovalRequestId,
   AutomationId,
   AutomationRunId,
+  GroupId,
   CommandId,
   type ContextMenuItem,
   EventId,
@@ -451,6 +452,32 @@ describe("wsNativeApi", () => {
     });
     expect(onAutomationEvent).toHaveBeenCalledTimes(1);
     expect(onAutomationEvent).toHaveBeenCalledWith(event);
+  });
+
+  it("forwards group requests and events", async () => {
+    requestMock.mockResolvedValue({ groups: [], replies: [] });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+
+    const api = createWsNativeApi();
+    const onGroupEvent = vi.fn();
+    const unsubscribe = api.groups.onEvent(onGroupEvent);
+    const input = { name: "Launch", members: [{ provider: "codex" as const }] };
+    await api.groups.list();
+    await api.groups.create(input);
+
+    const event = {
+      type: "group.deleted",
+      groupId: GroupId.makeUnsafe("group-1"),
+      folder: "/tmp/group-1",
+    } as const;
+    emitPush(WS_CHANNELS.groupEvent, event);
+    unsubscribe();
+    emitPush(WS_CHANNELS.groupEvent, { ...event, groupId: GroupId.makeUnsafe("group-2") });
+
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.groupsList, {});
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.groupsCreate, input);
+    expect(onGroupEvent).toHaveBeenCalledTimes(1);
+    expect(onGroupEvent).toHaveBeenCalledWith(event);
   });
 
   it("wraps orchestration dispatch commands in the command envelope", async () => {

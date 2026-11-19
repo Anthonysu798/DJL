@@ -77,6 +77,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
     { slug: "gpt-5", name: "GPT-5" },
   ],
+  group: [],
 } as const satisfies Record<ProviderKind, ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>>;
 
 const MANY_OPENCODE_MODELS = Array.from({ length: 16 }, (_, index) => ({

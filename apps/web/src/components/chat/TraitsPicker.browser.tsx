@@ -56,6 +56,7 @@ function ClaudeTraitsPickerHarness(props: {
       opencode: [],
       pi: [],
       djlCloud: [],
+      group: [],
     },
   });
   const handlePromptChange = useCallback(
@@ -643,6 +644,7 @@ function OpenCodeTraitsPickerHarness(props: {
       opencode: [],
       pi: [],
       djlCloud: [],
+      group: [],
     },
   });
   const handlePromptChange = useCallback(

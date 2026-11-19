@@ -1246,6 +1246,21 @@ export function groupSidebarThreadsByProjectId(
   return byProjectId;
 }
 
+/** Projects that back Multi agents groups; they never appear in the normal lists. */
+export function collectGroupProjectIds(
+  projects: readonly Pick<Project, "id" | "kind">[],
+): Set<ProjectId> {
+  return new Set(projects.filter((project) => project.kind === "group").map((p) => p.id));
+}
+
+export function excludeGroupThreads<T extends Pick<SidebarThreadSummary, "projectId">>(
+  threads: readonly T[],
+  groupProjectIds: ReadonlySet<ProjectId>,
+): T[] {
+  if (groupProjectIds.size === 0) return [...threads];
+  return threads.filter((thread) => !groupProjectIds.has(thread.projectId));
+}
+
 export function partitionSidebarThreadsByProjectIds<
   T extends Pick<SidebarThreadSummary, "projectId">,
 >(

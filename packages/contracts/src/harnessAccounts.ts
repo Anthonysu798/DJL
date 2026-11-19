@@ -5,6 +5,7 @@ export const HarnessId = Schema.Literals([
   "codex",
   "claudeAgent",
   "cursor",
+  "gemini",
   "opencode",
   "grok",
   "kimi",
@@ -52,6 +53,7 @@ export const HarnessToolId = Schema.Literals([
   "codebuddy",
   "pi",
   "cursor",
+  "gemini",
 ]);
 export type HarnessToolId = typeof HarnessToolId.Type;
 export const HarnessTool = Schema.Struct({

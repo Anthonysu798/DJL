@@ -106,6 +106,20 @@ test("Electron adapter exposes only Electron's active chats with their own works
   assert.equal(result.data[0].runtimeMode, "approval-required");
 });
 
+test("Electron adapter keeps Multi agents group chats off the phone list", () => {
+  const groupThread = {
+    ...snapshot.threads[0],
+    id: "group-thread",
+    modelSelection: { provider: "group", model: "group" },
+  };
+  const result = listThreads({ ...snapshot, threads: [...snapshot.threads, groupThread] });
+
+  assert.deepEqual(
+    result.data.map((thread) => thread.id),
+    ["electron-thread"],
+  );
+});
+
 test("Electron adapter sends one current row per Electron thread identity", () => {
   const duplicateSnapshot = {
     ...snapshot,

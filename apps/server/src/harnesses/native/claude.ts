@@ -1,3 +1,4 @@
+import type { HookCallback } from "@anthropic-ai/claude-agent-sdk";
 import { randomUUID } from "node:crypto";
 import { withDjlThreadId } from "./driverEnv";
 import type { PermissionMode, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -18,7 +19,36 @@ const compactTokens = (value: string | undefined) =>
 
 // Official Agent SDK; the CLI owns ~/.claude credentials throughout.
 // https://code.claude.com/docs/en/agent-sdk/permissions
-export const createClaudeDriver: NativeDriverFactory = async (input, sink, workTools) => {
+// A group's policy must see every file and shell call, including ones the user's own Claude
+// settings pre-allow (and Read/Glob/Grep, which Claude runs without asking by default).
+const GROUP_APPROVAL_TOOLS = new Set([
+  "Read",
+  "Glob",
+  "Grep",
+  "Edit",
+  "Write",
+  "MultiEdit",
+  "NotebookEdit",
+  "Bash",
+]);
+const askForGroupTools: HookCallback = async (hook) =>
+  "tool_name" in hook && GROUP_APPROVAL_TOOLS.has(String(hook.tool_name))
+    ? { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "ask" } }
+    : {};
+
+export const createClaudeDriver: NativeDriverFactory = (input, sink, workTools) =>
+  startClaudeDriver(input, sink, workTools, false);
+
+/** A Multi agents member: the group policy answers every file and shell call. */
+export const createGroupMemberClaudeDriver: NativeDriverFactory = (input, sink, workTools) =>
+  startClaudeDriver(input, sink, workTools, true);
+
+const startClaudeDriver = async (
+  input: Parameters<NativeDriverFactory>[0],
+  sink: Parameters<NativeDriverFactory>[1],
+  workTools: Parameters<NativeDriverFactory>[2],
+  groupMember: boolean,
+): ReturnType<NativeDriverFactory> => {
   if (input.approvalPolicy)
     throw new Error(
       "Claude SDK does not expose the requested Codex approval policy; use native permission modes",
@@ -142,6 +172,7 @@ export const createClaudeDriver: NativeDriverFactory = async (input, sink, workT
       abortController: abort,
       includePartialMessages: true,
       settingSources: ["user", "project", "local"],
+      ...(groupMember ? { hooks: { PreToolUse: [{ hooks: [askForGroupTools] }] } } : {}),
       env: withDjlThreadId(process.env, input.threadId),
       canUseTool: async (tool, args, context) => {
         // Required user interaction still reaches this callback in native bypass mode.

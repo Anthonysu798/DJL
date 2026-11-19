@@ -444,6 +444,7 @@ function SettingsRouteView() {
     ),
     pi: Boolean(settings.piBinaryPath || settings.piAgentDir),
     djlCloud: false,
+    group: false,
   });
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
@@ -464,6 +465,7 @@ function SettingsRouteView() {
     opencode: "",
     pi: "",
     djlCloud: "",
+    group: "",
   });
   const [, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, CustomModelValidationError | null>>
@@ -837,6 +839,7 @@ function SettingsRouteView() {
       opencode: false,
       pi: false,
       djlCloud: false,
+      group: false,
     });
     setSelectedCustomModelProvider("codex");
     setCustomModelInputByProvider({
@@ -854,6 +857,7 @@ function SettingsRouteView() {
       opencode: "",
       pi: "",
       djlCloud: "",
+      group: "",
     });
     setCustomModelErrorByProvider({});
     setShowAllCustomModels(false);

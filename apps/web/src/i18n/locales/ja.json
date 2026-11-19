@@ -1406,6 +1406,7 @@
       "copiedError": "エラーメッセージをコピーしました",
       "copyError": "エラーメッセージをコピー",
       "dismiss": "通知を閉じる",
+      "done": "完了",
       "undo": "元に戻す"
     },
     "untitledThread": "無題のスレッド"
@@ -3385,6 +3386,126 @@
         "progressOf_other": "{{total}}チャットの{{count}}が隠されました。",
         "retryLater": "古いチャットは後で取得されます。",
         "running": "古いチャット..."
+      }
+    },
+    "multiAgents": {
+      "title": "マルチエージェント",
+      "beta": "ベータ",
+      "newGroup": "新しいグループ",
+      "groups": "グループ",
+      "emptyTitle": "エージェントをひとつのチャットに集めましょう",
+      "emptyBody": "グループを作成し、@ でエージェントを呼ぶか、@all で全員に聞きます。",
+      "noGroupSelected": "左からグループを選ぶか、新しく作成してください。",
+      "setup": {
+        "title": "新しいグループ",
+        "pickTitle": "このグループに入れるエージェントを選択",
+        "pickBody": "全員が 1 つのチャットを共有し、作業を引き継げます。",
+        "nameBody": "グループ一覧に表示される名前です。",
+        "nameTitle": "グループに名前を付ける",
+        "namePlaceholder": "グループ名",
+        "next": "次へ",
+        "back": "戻る",
+        "create": "グループを作成",
+        "creating": "作成中…",
+        "setUp": "設定する",
+        "notReady": "未設定",
+        "checking": "確認中…",
+        "needOne": "設定済みのエージェントを少なくとも1つ選んでください。"
+      },
+      "chat": {
+        "placeholder": "グループにメッセージ。@ でエージェントを選べます",
+        "startTitle": "会話を始めましょう",
+        "startBody": "このグループの全員が同じチャットを読みます。@ で 1 人に、@all で全員に聞けます。",
+        "starterMeet": "グループに挨拶する",
+        "starterMeetPrompt": "@all 自己紹介と得意なことを教えてください",
+        "starterOne": "1 人に聞く",
+        "starterOnePrompt": "@{{name}} 何を手伝ってもらえますか？",
+        "starterReview": "別の意見をもらう",
+        "starterReviewPrompt": "@{{first}} 私のアイデアの計画を提案して、その後 @{{second}} に確認を頼んでください",
+        "send": "送信",
+        "stopAll": "すべて停止",
+        "stopMember": "停止",
+        "you": "あなた",
+        "working": "{{name}} が作業中…",
+        "waiting": "{{name}} は別のエージェントの編集が終わるのを待っています…",
+        "failed": "{{name}} は回答できませんでした: {{error}}",
+        "empty": "{{name}} は回答せずに終了しました。",
+        "tryAgain": "再試行",
+        "removedAgent": "削除されたエージェント",
+        "members": "メンバー",
+        "allMembers": "グループ全員"
+      },
+      "pause": {
+        "title": "エージェント同士で {{count}} 回引き継ぎました。",
+        "body": "「続ける」で続行し、「停止」でこのラウンドを終えます。",
+        "continue": "続ける",
+        "stop": "停止"
+      },
+      "confirmAll": {
+        "title": "{{count}} 体のエージェントを起動します",
+        "body": "各エージェントはそれぞれのサブスクリプションで回答します。",
+        "send": "全員に送信",
+        "cancel": "キャンセル",
+        "dontAsk": "このグループでは今後確認しない"
+      },
+      "reply": {
+        "copy": "コピー",
+        "copied": "コピーしました",
+        "askAgain": "もう一度聞く",
+        "replyTo": "これに返信",
+        "askAnother": "別のエージェントに確認",
+        "checkLead": "{{name}} のこの回答を確認してください。",
+        "workFiles_one": "{{count}} 件のファイルを変更",
+        "workFiles_other": "{{count}} 件のファイルを変更",
+        "workCommands_one": "{{count}} 件のコマンドを実行",
+        "workCommands_other": "{{count}} 件のコマンドを実行",
+        "filesHeading": "ファイル",
+        "commandsHeading": "コマンド"
+      },
+      "composer": {
+        "mention": "エージェントをメンション",
+        "sendsTo": "{{names}} に送信",
+        "sendsToAll": "全員に送信",
+        "skill": "スキルを使う"
+      },
+      "members": {
+        "close": "グループ設定を閉じる",
+        "title": "グループ設定",
+        "add": "メンバーを追加",
+        "remove": "削除",
+        "role": "役割",
+        "roleNone": "役割なし",
+        "roleCustom": "カスタムの役割",
+        "customRolePlaceholder": "このメンバーの役割を説明",
+        "model": "モデル",
+        "modelPlaceholder": "エージェントの既定",
+        "hopLimit": "一時停止までの引き継ぎ回数",
+        "folder": "フォルダ",
+        "folderAuto": "このグループ用に作成",
+        "chooseFolder": "別のフォルダを使う",
+        "folderWarning": "エージェントはこのフォルダ内のどのファイルも変更できます。サンドボックスで中に閉じ込められるのは Codex だけです。",
+        "largeGroup": "大きなグループほどメモリとサブスクリプションを多く使います。",
+        "deleteGroup": "グループを削除",
+        "deleteConfirm": "このグループを削除しますか？チャットは消えますが、ファイルは {{folder}} に残ります。",
+        "deleted": "グループを削除しました。ファイルは {{folder}} に残っています。",
+        "state": {
+          "idle": "待機中",
+          "working": "作業中",
+          "waiting": "順番待ち",
+          "failed": "要確認"
+        }
+      },
+      "roles": {
+        "planner": "プランナー",
+        "builder": "ビルダー",
+        "reviewer": "レビュアー",
+        "researcher": "リサーチャー",
+        "writer": "ライター"
+      },
+      "errors": {
+        "createFailed": "グループを作成できませんでした。",
+        "sendFailed": "メッセージを送信できませんでした。",
+        "updateFailed": "グループを更新できませんでした。"
       }
     },
     "navigation": {

@@ -1406,6 +1406,7 @@
       "copiedError": "Mensaje de error copiado",
       "copyError": "Copiar mensaje de error",
       "dismiss": "Descartar aviso",
+      "done": "Listo",
       "undo": "Deshacer"
     },
     "untitledThread": "Hilo sin título"
@@ -3385,6 +3386,126 @@
         "progressOf_other": "{{count}} de {{total}} chats ocultos.",
         "retryLater": "Las viejas charlas serán retraídas más tarde.",
         "running": "Contratando viejos chats..."
+      }
+    },
+    "multiAgents": {
+      "title": "Multiagentes",
+      "beta": "Versión beta",
+      "newGroup": "Nuevo grupo",
+      "groups": "Grupos",
+      "emptyTitle": "Reúne a tus agentes en un chat",
+      "emptyBody": "Crea un grupo y escribe @ para llamar a un agente o @all para preguntarles a todos.",
+      "noGroupSelected": "Elige un grupo a la izquierda o crea uno nuevo.",
+      "setup": {
+        "title": "Nuevo grupo",
+        "pickTitle": "Elige los agentes de este grupo",
+        "pickBody": "Comparten un solo chat y pueden pasarse el trabajo.",
+        "nameBody": "Este es el nombre que verás en tu lista de grupos.",
+        "nameTitle": "Ponle nombre al grupo",
+        "namePlaceholder": "Nombre del grupo",
+        "next": "Siguiente",
+        "back": "Atrás",
+        "create": "Crear grupo",
+        "creating": "Creando…",
+        "setUp": "Configurar",
+        "notReady": "Sin configurar",
+        "checking": "Comprobando…",
+        "needOne": "Elige al menos un agente ya configurado."
+      },
+      "chat": {
+        "placeholder": "Escribe al grupo o usa @ para elegir un agente",
+        "startTitle": "Empieza la conversación",
+        "startBody": "Todos en este grupo leen el mismo chat. Escribe @ para preguntarle a un agente o @all para preguntarles a todos.",
+        "starterMeet": "Conoce al grupo",
+        "starterMeetPrompt": "@all preséntense y digan en qué son mejores",
+        "starterOne": "Pregúntale a un agente",
+        "starterOnePrompt": "@{{name}} ¿en qué me puedes ayudar?",
+        "starterReview": "Pide una segunda opinión",
+        "starterReviewPrompt": "@{{first}} propón un plan para mi idea y luego pídele a @{{second}} que lo revise",
+        "send": "Enviar",
+        "stopAll": "Detener todo",
+        "stopMember": "Detener",
+        "you": "Tú",
+        "working": "{{name}} está trabajando…",
+        "waiting": "{{name}} espera a que otro agente termine de editar…",
+        "failed": "{{name}} no pudo responder: {{error}}",
+        "empty": "{{name}} terminó sin responder.",
+        "tryAgain": "Reintentar",
+        "removedAgent": "Agente eliminado",
+        "members": "Miembros",
+        "allMembers": "Todos en el grupo"
+      },
+      "pause": {
+        "title": "Los agentes se han pasado el trabajo {{count}} veces.",
+        "body": "Continuar los deja seguir; Detener termina esta ronda.",
+        "continue": "Continuar",
+        "stop": "Detener"
+      },
+      "confirmAll": {
+        "title": "Esto despertará a {{count}} agentes",
+        "body": "Cada agente responde con su propia suscripción.",
+        "send": "Enviar a todos",
+        "cancel": "Cancelar",
+        "dontAsk": "No volver a preguntar en este grupo"
+      },
+      "reply": {
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "askAgain": "Preguntar de nuevo",
+        "replyTo": "Responder a esto",
+        "askAnother": "Pedirle a otro agente",
+        "checkLead": "Revisa esta respuesta de {{name}}.",
+        "workFiles_one": "Cambió {{count}} archivo",
+        "workFiles_other": "Cambió {{count}} archivos",
+        "workCommands_one": "ejecutó {{count}} comando",
+        "workCommands_other": "ejecutó {{count}} comandos",
+        "filesHeading": "Archivos",
+        "commandsHeading": "Comandos"
+      },
+      "composer": {
+        "mention": "Mencionar a un agente",
+        "sendsTo": "Se envía a {{names}}",
+        "sendsToAll": "Se envía a todos",
+        "skill": "Usar una habilidad"
+      },
+      "members": {
+        "close": "Cerrar la configuración del grupo",
+        "title": "Ajustes del grupo",
+        "add": "Agregar miembro",
+        "remove": "Quitar",
+        "role": "Rol",
+        "roleNone": "Sin rol",
+        "roleCustom": "Rol personalizado",
+        "customRolePlaceholder": "Describe el rol de este miembro",
+        "model": "Modelo",
+        "modelPlaceholder": "Predeterminado del agente",
+        "hopLimit": "Traspasos antes de pausar",
+        "folder": "Carpeta",
+        "folderAuto": "Creada para este grupo",
+        "chooseFolder": "Usar otra carpeta",
+        "folderWarning": "Los agentes pueden cambiar cualquier archivo de esta carpeta. Solo Codex queda limitado a ella por un sandbox.",
+        "largeGroup": "Los grupos grandes usan más memoria y más de tus suscripciones.",
+        "deleteGroup": "Eliminar grupo",
+        "deleteConfirm": "¿Eliminar este grupo? Se borra el chat; los archivos quedan en {{folder}}.",
+        "deleted": "Grupo eliminado. Sus archivos siguen en {{folder}}.",
+        "state": {
+          "idle": "Inactivo",
+          "working": "Trabajando",
+          "waiting": "Esperando",
+          "failed": "Requiere atención"
+        }
+      },
+      "roles": {
+        "planner": "Planificador",
+        "builder": "Constructor",
+        "reviewer": "Revisor",
+        "researcher": "Investigador",
+        "writer": "Redactor"
+      },
+      "errors": {
+        "createFailed": "No se pudo crear el grupo.",
+        "sendFailed": "No se pudo enviar el mensaje.",
+        "updateFailed": "No se pudo actualizar el grupo."
       }
     },
     "navigation": {

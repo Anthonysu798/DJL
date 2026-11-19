@@ -118,7 +118,7 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
     });
   },
 }));
-import { createClaudeDriver } from "./claude";
+import { createClaudeDriver, createGroupMemberClaudeDriver } from "./claude";
 const input = {
   threadId: ThreadId.makeUnsafe("claude-test"),
   cwd: "/tmp",
@@ -126,6 +126,38 @@ const input = {
 };
 
 describe("fresh Claude SDK bridge", () => {
+  it("sends a group member's file and shell tools to approval even when settings allow them", async () => {
+    type Hook = (input: { hook_event_name: string; tool_name: string }) => Promise<unknown>;
+    const sink = { emit: () => {}, request: async () => "cancel" as const, fail: () => {} };
+    const member = await createGroupMemberClaudeDriver(input, sink);
+    try {
+      const hooks = state.options?.hooks as { PreToolUse: { hooks: Hook[] }[] };
+      const decide = (tool: string) =>
+        hooks.PreToolUse[0]!.hooks[0]!({ hook_event_name: "PreToolUse", tool_name: tool });
+      for (const tool of [
+        "Read",
+        "Glob",
+        "Grep",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "NotebookEdit",
+        "Bash",
+      ])
+        expect(await decide(tool)).toEqual({
+          hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "ask" },
+        });
+      expect(await decide("TodoWrite")).toEqual({});
+    } finally {
+      member.close();
+    }
+    const plain = await createClaudeDriver(input, sink);
+    try {
+      expect(state.options?.hooks).toBeUndefined();
+    } finally {
+      plain.close();
+    }
+  });
   it("applies Ultracode at startup and reports the latest context including cache hits", async () => {
     state.reportUsage = true;
     const events: Record<string, unknown>[] = [];

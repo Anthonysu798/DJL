@@ -11,13 +11,15 @@ export type NativeProvider =
   | "codex"
   | "claudeAgent"
   | "cursor"
+  | "gemini"
   | "grok"
   | "kimi"
   | "iflow"
   | "qwen"
   | "codebuddy"
   | "pi"
-  | "djlCloud";
+  | "djlCloud"
+  | "group";
 export interface NativeSink {
   emit(event: Record<string, unknown>): void;
   request(
@@ -30,7 +32,8 @@ export interface NativeSink {
 export interface NativeDriver {
   id: string;
   send(input: ProviderSendTurnInput): Promise<void>;
-  steer?(input: ProviderSendTurnInput): Promise<void>;
+  /** Adds a message to the running turn; resolves false when no turn can take it. */
+  steer?(input: ProviderSendTurnInput): Promise<boolean | void>;
   interrupt(): Promise<void>;
   close(): void;
   models(): Promise<ProviderListModelsResult>;

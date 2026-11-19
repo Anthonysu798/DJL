@@ -1406,6 +1406,7 @@
       "copiedError": "Copied error message",
       "copyError": "Copy error message",
       "dismiss": "Dismiss toast",
+      "done": "Done",
       "undo": "Undo"
     },
     "untitledThread": "Untitled thread"
@@ -3385,6 +3386,126 @@
         "progressOf_other": "{{count}} of {{total}} chats hidden.",
         "retryLater": "Old chats will be retried later.",
         "running": "Hiding old chats..."
+      }
+    },
+    "multiAgents": {
+      "title": "Multi agents",
+      "beta": "Beta",
+      "newGroup": "New group",
+      "groups": "Groups",
+      "emptyTitle": "Put your agents in one chat",
+      "emptyBody": "Create a group, then type @ to call one agent or @all to ask everyone.",
+      "noGroupSelected": "Pick a group on the left, or create a new one.",
+      "setup": {
+        "title": "New group",
+        "pickTitle": "Pick the agents for this group",
+        "pickBody": "They share one chat and can hand work to each other.",
+        "nameBody": "This is the name you will see in your group list.",
+        "nameTitle": "Name the group",
+        "namePlaceholder": "Group name",
+        "next": "Next",
+        "back": "Back",
+        "create": "Create group",
+        "creating": "Creating…",
+        "setUp": "Set up",
+        "notReady": "Not set up yet",
+        "checking": "Checking…",
+        "needOne": "Pick at least one agent that is set up."
+      },
+      "chat": {
+        "placeholder": "Message the group, or type @ to pick an agent",
+        "startTitle": "Start the conversation",
+        "startBody": "Everyone in this group reads the same chat. Type @ to ask one agent, or @all to ask them together.",
+        "starterMeet": "Meet the group",
+        "starterMeetPrompt": "@all introduce yourselves and say what you are best at",
+        "starterOne": "Ask one agent",
+        "starterOnePrompt": "@{{name}} what can you help me with?",
+        "starterReview": "Get a second opinion",
+        "starterReviewPrompt": "@{{first}} suggest a plan for my idea, then ask @{{second}} to check it",
+        "send": "Send",
+        "stopAll": "Stop all",
+        "stopMember": "Stop",
+        "you": "You",
+        "working": "{{name}} is working…",
+        "waiting": "{{name}} is waiting for another agent to finish editing…",
+        "failed": "{{name}} could not answer: {{error}}",
+        "empty": "{{name}} finished without a reply.",
+        "tryAgain": "Try again",
+        "removedAgent": "Removed agent",
+        "members": "Members",
+        "allMembers": "Everyone in the group"
+      },
+      "pause": {
+        "title": "The agents have handed off to each other {{count}} times.",
+        "body": "Continue lets them carry on; Stop ends this round.",
+        "continue": "Continue",
+        "stop": "Stop"
+      },
+      "confirmAll": {
+        "title": "This will wake {{count}} agents",
+        "body": "Each agent answers using its own subscription.",
+        "send": "Send to everyone",
+        "cancel": "Cancel",
+        "dontAsk": "Don't ask again for this group"
+      },
+      "reply": {
+        "copy": "Copy",
+        "copied": "Copied",
+        "askAgain": "Ask again",
+        "replyTo": "Reply to this",
+        "askAnother": "Ask another agent",
+        "checkLead": "Please check this answer from {{name}}.",
+        "workFiles_one": "Changed {{count}} file",
+        "workFiles_other": "Changed {{count}} files",
+        "workCommands_one": "ran {{count}} command",
+        "workCommands_other": "ran {{count}} commands",
+        "filesHeading": "Files",
+        "commandsHeading": "Commands"
+      },
+      "composer": {
+        "mention": "Mention an agent",
+        "sendsTo": "Sends to {{names}}",
+        "sendsToAll": "Sends to everyone",
+        "skill": "Use a skill"
+      },
+      "members": {
+        "close": "Close group settings",
+        "title": "Group settings",
+        "add": "Add member",
+        "remove": "Remove",
+        "role": "Role",
+        "roleNone": "No role",
+        "roleCustom": "Custom role",
+        "customRolePlaceholder": "Describe this member's role",
+        "model": "Model",
+        "modelPlaceholder": "Agent default",
+        "hopLimit": "Hand-offs before pausing",
+        "folder": "Folder",
+        "folderAuto": "Created for this group",
+        "chooseFolder": "Use another folder",
+        "folderWarning": "Agents can change any file in this folder. Only Codex is kept inside it by a sandbox.",
+        "largeGroup": "Large groups use more memory and more of your subscriptions.",
+        "deleteGroup": "Delete group",
+        "deleteConfirm": "Delete this group? Its chat is removed; its files stay in {{folder}}.",
+        "deleted": "Group deleted. Its files are still in {{folder}}.",
+        "state": {
+          "idle": "Idle",
+          "working": "Working",
+          "waiting": "Waiting",
+          "failed": "Needs attention"
+        }
+      },
+      "roles": {
+        "planner": "Planner",
+        "builder": "Builder",
+        "reviewer": "Reviewer",
+        "researcher": "Researcher",
+        "writer": "Writer"
+      },
+      "errors": {
+        "createFailed": "Could not create the group.",
+        "sendFailed": "Could not send the message.",
+        "updateFailed": "Could not update the group."
       }
     },
     "navigation": {

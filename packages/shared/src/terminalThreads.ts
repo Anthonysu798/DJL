@@ -14,7 +14,8 @@ export type TerminalCliKind =
   | "iflow"
   | "qwen"
   | "codebuddy"
-  | "pi";
+  | "pi"
+  | "gemini";
 export type TerminalIconKey =
   | "terminal"
   | "openai"
@@ -26,7 +27,8 @@ export type TerminalIconKey =
   | "iflow"
   | "qwen"
   | "codebuddy"
-  | "pi";
+  | "pi"
+  | "gemini";
 export type TerminalActivityState = "running" | "attention" | "review";
 export type TerminalVisualState = "idle" | TerminalActivityState;
 export type TerminalAgentHookEventType = "Start" | "Stop" | "PermissionRequest";
@@ -41,6 +43,7 @@ export const MANAGED_TERMINAL_COMMAND_NAME_BY_CLI_KIND: Record<TerminalCliKind, 
   grok: "grok",
   iflow: "iflow",
   qwen: "qwen",
+  gemini: "gemini",
   codebuddy: "codebuddy",
   pi: "pi",
 };
@@ -54,6 +57,7 @@ const TERMINAL_TITLES: Record<TerminalCliKind, string> = {
   grok: "Grok",
   iflow: "iFlow CLI",
   qwen: "Qwen Code",
+  gemini: "Gemini CLI",
   codebuddy: "CodeBuddy Code",
   pi: "Pi",
 };

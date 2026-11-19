@@ -34,6 +34,7 @@ const TOOL_IDS = [
   "codebuddy",
   "pi",
   "cursor",
+  "gemini",
 ] as const;
 const KIMI_TOOL: PackageManagedProviderMaintenanceDefinition = {
   provider: "kimi",

@@ -182,6 +182,7 @@ const TerminalActivityEvent = Schema.Struct({
       "iflow",
       "qwen",
       "codebuddy",
+      "gemini",
       "pi",
     ]),
   ),
