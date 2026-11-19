@@ -8,7 +8,7 @@ import { memo, useId, useRef, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { GoTasklist } from "react-icons/go";
 
-import { PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { PluginIcon, ListChecksIcon, PaperclipIcon, PlusIcon } from "~/lib/icons";
 import { COMPOSER_ATTACHMENT_ACCEPT } from "../../lib/composerSend";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
@@ -31,6 +31,8 @@ export const ComposerExtrasMenu = memo(function ComposerExtrasMenu(props: {
   onAddAttachments: (files: File[]) => void;
   onToggleFastMode: () => void;
   onSetPlanMode: (enabled: boolean) => void;
+  onBrowsePlugins?: () => void;
+  onBrowseSkills?: () => void;
 }) {
   const { t } = useTranslation("chat");
   const inputId = useId();
@@ -80,6 +82,21 @@ export const ComposerExtrasMenu = memo(function ComposerExtrasMenu(props: {
             {t("composer.addFiles")}
           </MenuItem>
 
+          <MenuSeparator />
+          {props.onBrowsePlugins ? (
+            <MenuItem onClick={props.onBrowsePlugins}>
+              <PluginIcon className="size-4" />
+              {t("composer.pluginsAndMcp")}
+              <span className="ml-auto text-muted-foreground">@</span>
+            </MenuItem>
+          ) : null}
+          {props.onBrowseSkills ? (
+            <MenuItem onClick={props.onBrowseSkills}>
+              <ListChecksIcon className="size-4" />
+              {t("composer.skills")}
+              <span className="ml-auto text-muted-foreground">$</span>
+            </MenuItem>
+          ) : null}
           <MenuSeparator />
           <MenuCheckboxItem
             checked={props.interactionMode === "plan"}

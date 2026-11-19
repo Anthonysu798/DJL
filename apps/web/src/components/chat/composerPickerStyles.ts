@@ -275,3 +275,7 @@ export const COMPOSER_FOOTER_ROW_CLASS_NAME = [
   "pr-[var(--app-density-composer-footer-padding-end,0.5rem)]",
   "pb-[var(--app-density-composer-footer-padding,0.375rem)]",
 ].join(" ");
+
+export const RAISED_SURFACE_BORDER_CLASS_NAME = COMPOSER_SURFACE_BORDER_CLASS_NAME;
+export const COMPOSER_INLINE_ACTION_PILL_CLASS_NAME =
+  "shrink-0 rounded-md border border-[color:var(--color-border-light)] px-2.5 py-0.5 text-foreground/90 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background";

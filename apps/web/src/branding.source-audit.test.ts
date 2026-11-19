@@ -1,3 +1,4 @@
+import englishCatalog from "./i18n/locales/en.json";
 // FILE: branding.source-audit.test.ts
 // Purpose: Prevents the legacy product name from returning in user-facing web or desktop copy.
 // Layer: Cross-surface source audit
@@ -36,7 +37,11 @@ function isAllowedCompatibilityLiteral(value: string): boolean {
     value.includes("(DJL|Synara)") ||
     value === "Synara browser" ||
     value.startsWith("[Synara browser]") ||
-    value.startsWith("SynaraVoice-")
+    value.startsWith("SynaraVoice-") ||
+    // Persisted localization keys and the Swift module ID are compatibility identifiers.
+    (value.startsWith("settings:") &&
+      Object.hasOwn(englishCatalog.settings, value.slice("settings:".length))) ||
+    value === "SynaraAppSnapHelper"
   );
 }
 
@@ -89,4 +94,14 @@ describe("DJL source branding", () => {
 
     expect(violations).toEqual([]);
   }, 15_000);
+});
+
+it("preserves stable localization keys and native module IDs without exempting displayed legacy copy", () => {
+  expect(
+    isAllowedCompatibilityLiteral("settings:letsSynaraCaptureAnImageOfTheFrontmostWindow"),
+  ).toBe(true);
+  expect(isAllowedCompatibilityLiteral("SynaraAppSnapHelper")).toBe(true);
+  expect(isAllowedCompatibilityLiteral("Start Synara inside your Linux desktop session")).toBe(
+    false,
+  );
 });

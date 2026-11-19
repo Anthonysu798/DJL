@@ -4,6 +4,7 @@
 
 import { CentralIcon } from "~/lib/central-icons";
 import { DjlAccountEntry } from "./DjlAccountEntry";
+import { SidebarModeMenu } from "./SidebarModeMenu";
 import { DesktopShellChrome } from "./DesktopShellChrome";
 import {
   ArchiveIcon,
@@ -1498,6 +1499,7 @@ export default function Sidebar() {
   const isOnStudioRoute =
     pathname === "/work" || pathname.startsWith("/work/") || pathname.startsWith("/studio");
   const isOnKanban = pathname.startsWith("/workspaces") || pathname.startsWith("/kanban");
+  const isOnPlugins = pathname.startsWith("/plugins");
   const isOnAutomations = pathname.startsWith("/automations");
   const handleOpenShop = useCallback(() => {
     void openShop().then(
@@ -6769,18 +6771,20 @@ export default function Sidebar() {
         <>
           <DesktopShellChrome
             title={
-              isOnSettings
-                ? t("sidebar.settings", { ns: "shell" })
-                : isOnAutomations
-                  ? t("sidebar.actions.automations", { ns: "shell" })
-                  : isOnKanban
-                    ? t("sidebar.actions.kanban", { ns: "shell" })
-                    : isOnWorkspace
-                      ? t("sidebar.views.workspace", { ns: "shell" })
-                      : ((activeSidebarThreadId
-                          ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
-                          : undefined) ??
-                        t("sidebar.actions.newChat", { ns: "shell", defaultValue: "New chat" }))
+              isOnPlugins
+                ? t("pluginLibrary.plugins", { ns: "shell" })
+                : isOnSettings
+                  ? t("sidebar.settings", { ns: "shell" })
+                  : isOnAutomations
+                    ? t("sidebar.actions.automations", { ns: "shell" })
+                    : isOnKanban
+                      ? t("sidebar.actions.kanban", { ns: "shell" })
+                      : isOnWorkspace
+                        ? t("sidebar.views.workspace", { ns: "shell" })
+                        : ((activeSidebarThreadId
+                            ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
+                            : undefined) ??
+                          t("sidebar.actions.newChat", { ns: "shell", defaultValue: "New chat" }))
             }
             newChatLabel={t("sidebar.actions.newThread", { ns: "shell" })}
             onNewChat={handlePrimaryNewThread}
@@ -6790,7 +6794,12 @@ export default function Sidebar() {
                 icon: "home",
                 onboardingTarget: "project-mode",
                 active:
-                  !isOnSettings && !isOnStudio && !isOnWorkspace && !isOnKanban && !isOnAutomations,
+                  !isOnSettings &&
+                  !isOnStudio &&
+                  !isOnWorkspace &&
+                  !isOnKanban &&
+                  !isOnAutomations &&
+                  !isOnPlugins,
                 onClick: () => {
                   if (!navigateToBackTarget(resolveBackToThreadsTarget())) {
                     void navigate({ to: "/" });
@@ -6827,6 +6836,14 @@ export default function Sidebar() {
                 active: isOnAutomations,
                 onClick: () => {
                   void navigate({ to: "/automations" });
+                },
+              },
+              {
+                label: t("pluginLibrary.plugins", { ns: "shell" }),
+                icon: "puzzle",
+                active: isOnPlugins,
+                onClick: () => {
+                  void navigate({ to: "/plugins" });
                 },
               },
               {
@@ -6868,23 +6885,15 @@ export default function Sidebar() {
           />
           {!isOnSettings && (
             <SidebarHeader className="djl-desktop-sidebar-heading">
-              <Menu>
-                <MenuTrigger className="flex items-center gap-2 text-lg font-semibold">
-                  DJL
-                  <ChevronDownIcon className="size-3 text-muted-foreground" />
-                </MenuTrigger>
-                <MenuPopup align="start" className="w-56">
-                  {[
-                    ...(studioSectionVisible ? ["studio" as const] : []),
-                    "threads" as const,
-                    ...(workspaceSectionVisible ? ["workspace" as const] : []),
-                  ].map((view) => (
-                    <MenuItem key={view} onClick={() => handleSidebarViewChange(view)}>
-                      {t(SIDEBAR_VIEW_LABEL_KEYS[view])}
-                    </MenuItem>
-                  ))}
-                </MenuPopup>
-              </Menu>
+              <SidebarModeMenu
+                views={[
+                  ...(studioSectionVisible ? ["studio" as const] : []),
+                  "threads",
+                  ...(workspaceSectionVisible ? ["workspace" as const] : []),
+                ]}
+                activeView={isOnStudio ? "studio" : isOnWorkspace ? "workspace" : "threads"}
+                onSelectView={handleSidebarViewChange}
+              />
               <div className="ml-auto flex items-center gap-2">
                 <button
                   type="button"

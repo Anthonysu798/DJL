@@ -14,6 +14,7 @@ import type { CloudMessagePart, CloudRunError, CloudUsageTrailer } from "@synara
 import { appendSearchText, textOf } from "../chat/ChatService.ts";
 import { branchTo } from "../chat/tree.ts";
 import { DOWNLOAD_URL_SECONDS } from "../files/FileService.ts";
+import { bytesMatchType } from "../files/fileTypes.ts";
 import type { GatewayService, RequestFacts } from "../gateway/GatewayService.ts";
 import { ApiError } from "../http/errors.ts";
 import type { BlobStore } from "../sync/BlobStore.ts";
@@ -24,6 +25,9 @@ import type { RunRow } from "./wire.ts";
 export const TITLE_MODEL = "text.fast";
 const TITLE_PROMPT =
   "Write a short title (at most six words) for a conversation that starts with the user's message below. Reply with the title only.";
+const TEXT_FILE_TYPES = new Set(["text/plain", "text/markdown", "text/csv", "application/json"]);
+const MAX_TEXT_FILE_BYTES = 1024 * 1024;
+const MAX_DOCUMENT_TEXT_CHARS = 200_000;
 
 export interface ChatRunnerDeps {
   readonly db: DjlDatabase;
@@ -96,29 +100,36 @@ export class ChatRunner {
     let usage: CloudUsageTrailer | null = null;
     let error: CloudRunError | null = null;
     let cancelled = false;
+    let steps = 0;
     try {
-      const step = await this.deps.gateway.completeStep(
-        facts,
-        { model: run.model, messages: await this.history(run) },
-        { signal },
-      );
-      const pollMs = this.deps.cancelPollMs ?? 250;
-      let checkedAt = Date.now();
-      for await (const chunk of step.chunks) {
-        const delta = chunk.choices[0].delta.content;
-        if (delta) {
-          text += delta;
-          await log.append("text.delta", { messageId: run.messageId, text: delta });
-        }
-        if (Date.now() - checkedAt >= pollMs) {
-          checkedAt = Date.now();
-          if (await this.cancelRequested(runId)) {
-            cancelled = true;
-            break; // ends the step; the gateway settles what was used
+      const messages = await this.history(run);
+      if (await this.cancelRequested(runId)) {
+        cancelled = true;
+      } else {
+        steps = 1;
+        const step = await this.deps.gateway.completeStep(
+          facts,
+          { model: run.model, messages },
+          { signal },
+        );
+        const pollMs = this.deps.cancelPollMs ?? 250;
+        let checkedAt = Date.now();
+        for await (const chunk of step.chunks) {
+          const delta = chunk.choices[0].delta.content;
+          if (delta) {
+            text += delta;
+            await log.append("text.delta", { messageId: run.messageId, text: delta });
+          }
+          if (Date.now() - checkedAt >= pollMs) {
+            checkedAt = Date.now();
+            if (await this.cancelRequested(runId)) {
+              cancelled = true;
+              break; // ends the step; the gateway settles what was used
+            }
           }
         }
+        ({ usage, error } = await step.result);
       }
-      ({ usage, error } = await step.result);
     } catch (e) {
       if (!(e instanceof ApiError)) logError("chat run error", runId, e);
       error =
@@ -141,7 +152,7 @@ export class ChatRunner {
       .set({
         status,
         error: status === "failed" ? error : null,
-        steps: 1,
+        steps,
         spentMicro: usage ? BigInt(usage.settled) : 0n,
         finishedAt: new Date(),
       })
@@ -183,6 +194,7 @@ export class ChatRunner {
             and(
               inArray(schema.files.id, fileIds),
               eq(schema.files.orgId, run.orgId),
+              eq(schema.files.userId, run.userId),
               eq(schema.files.status, "ready"),
               isNull(schema.files.deletedAt),
             ),
@@ -208,7 +220,26 @@ export class ChatRunner {
           }
         }
         if (part.type === "file_ref") {
-          const extracted = byId.get(part.fileId)?.textContent;
+          const file = byId.get(part.fileId);
+          let extracted = file?.textContent;
+          if (
+            !extracted &&
+            file &&
+            TEXT_FILE_TYPES.has(file.mimeType) &&
+            file.sizeBytes <= MAX_TEXT_FILE_BYTES
+          ) {
+            const bytes = await blobs.read(file.storageKey);
+            if (
+              bytes &&
+              bytes.byteLength <= MAX_TEXT_FILE_BYTES &&
+              bytesMatchType(file.mimeType, bytes)
+            ) {
+              extracted = new TextDecoder("utf-8", { fatal: true })
+                .decode(bytes)
+                .slice(0, MAX_DOCUMENT_TEXT_CHARS);
+              file.textContent = extracted;
+            }
+          }
           content.push({
             type: "text",
             text: extracted

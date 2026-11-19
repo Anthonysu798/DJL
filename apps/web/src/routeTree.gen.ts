@@ -26,6 +26,7 @@ import { Route as ChatAutomationsIndexRouteImport } from './routes/_chat.automat
 import { Route as ChatWorkspacesProjectIdRouteImport } from './routes/_chat.workspaces.$projectId'
 import { Route as ChatWorkspaceWorkspaceIdRouteImport } from './routes/_chat.workspace.$workspaceId'
 import { Route as ChatWorkAiWritingCheckRouteImport } from './routes/_chat.work.ai-writing-check'
+import { Route as ChatSocialSocialThreadIdRouteImport } from './routes/_chat.social.$socialThreadId'
 import { Route as ChatKanbanProjectIdRouteImport } from './routes/_chat.kanban.$projectId'
 import { Route as ChatAutomationsAutomationIdRouteImport } from './routes/_chat.automations.$automationId'
 
@@ -114,6 +115,12 @@ const ChatWorkAiWritingCheckRoute = ChatWorkAiWritingCheckRouteImport.update({
   path: '/work/ai-writing-check',
   getParentRoute: () => ChatRoute,
 } as any)
+const ChatSocialSocialThreadIdRoute =
+  ChatSocialSocialThreadIdRouteImport.update({
+    id: '/social/$socialThreadId',
+    path: '/social/$socialThreadId',
+    getParentRoute: () => ChatRoute,
+  } as any)
 const ChatKanbanProjectIdRoute = ChatKanbanProjectIdRouteImport.update({
   id: '/kanban/$projectId',
   path: '/kanban/$projectId',
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/worldcup': typeof ChatWorldcupRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
+  '/social/$socialThreadId': typeof ChatSocialSocialThreadIdRoute
   '/work/ai-writing-check': typeof ChatWorkAiWritingCheckRoute
   '/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/workspaces/$projectId': typeof ChatWorkspacesProjectIdRoute
@@ -155,6 +163,7 @@ export interface FileRoutesByTo {
   '/': typeof ChatIndexRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
+  '/social/$socialThreadId': typeof ChatSocialSocialThreadIdRoute
   '/work/ai-writing-check': typeof ChatWorkAiWritingCheckRoute
   '/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/workspaces/$projectId': typeof ChatWorkspacesProjectIdRoute
@@ -177,6 +186,7 @@ export interface FileRoutesById {
   '/_chat/': typeof ChatIndexRoute
   '/_chat/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/_chat/kanban/$projectId': typeof ChatKanbanProjectIdRoute
+  '/_chat/social/$socialThreadId': typeof ChatSocialSocialThreadIdRoute
   '/_chat/work/ai-writing-check': typeof ChatWorkAiWritingCheckRoute
   '/_chat/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/_chat/workspaces/$projectId': typeof ChatWorkspacesProjectIdRoute
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/worldcup'
     | '/automations/$automationId'
     | '/kanban/$projectId'
+    | '/social/$socialThreadId'
     | '/work/ai-writing-check'
     | '/workspace/$workspaceId'
     | '/workspaces/$projectId'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/'
     | '/automations/$automationId'
     | '/kanban/$projectId'
+    | '/social/$socialThreadId'
     | '/work/ai-writing-check'
     | '/workspace/$workspaceId'
     | '/workspaces/$projectId'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/_chat/'
     | '/_chat/automations/$automationId'
     | '/_chat/kanban/$projectId'
+    | '/_chat/social/$socialThreadId'
     | '/_chat/work/ai-writing-check'
     | '/_chat/workspace/$workspaceId'
     | '/_chat/workspaces/$projectId'
@@ -375,6 +388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatWorkAiWritingCheckRouteImport
       parentRoute: typeof ChatRoute
     }
+    '/_chat/social/$socialThreadId': {
+      id: '/_chat/social/$socialThreadId'
+      path: '/social/$socialThreadId'
+      fullPath: '/social/$socialThreadId'
+      preLoaderRoute: typeof ChatSocialSocialThreadIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/_chat/kanban/$projectId': {
       id: '/_chat/kanban/$projectId'
       path: '/kanban/$projectId'
@@ -415,6 +435,7 @@ interface ChatRouteChildren {
   ChatWorldcupRoute: typeof ChatWorldcupRoute
   ChatIndexRoute: typeof ChatIndexRoute
   ChatKanbanProjectIdRoute: typeof ChatKanbanProjectIdRoute
+  ChatSocialSocialThreadIdRoute: typeof ChatSocialSocialThreadIdRoute
   ChatWorkAiWritingCheckRoute: typeof ChatWorkAiWritingCheckRoute
   ChatWorkspaceWorkspaceIdRoute: typeof ChatWorkspaceWorkspaceIdRoute
   ChatWorkspacesProjectIdRoute: typeof ChatWorkspacesProjectIdRoute
@@ -434,6 +455,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatWorldcupRoute: ChatWorldcupRoute,
   ChatIndexRoute: ChatIndexRoute,
   ChatKanbanProjectIdRoute: ChatKanbanProjectIdRoute,
+  ChatSocialSocialThreadIdRoute: ChatSocialSocialThreadIdRoute,
   ChatWorkAiWritingCheckRoute: ChatWorkAiWritingCheckRoute,
   ChatWorkspaceWorkspaceIdRoute: ChatWorkspaceWorkspaceIdRoute,
   ChatWorkspacesProjectIdRoute: ChatWorkspacesProjectIdRoute,

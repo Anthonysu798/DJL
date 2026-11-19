@@ -1,0 +1,1201 @@
+{
+  "extensionName": {
+    "message": "MultiPost",
+    "description": "Multipost Extension"
+  },
+  "extensionDisplayName": {
+    "message": "MultiPost",
+    "description": "Multipost Extension"
+  },
+  "extensionDescription": {
+    "message": "MultiPost is a tool to help you sync and publish content across multiple platforms.",
+    "description": "MultiPost is a tool to help you sync and publish content across multiple platforms."
+  },
+  "gDynamic": {
+    "message": "Dynamic",
+    "description": "dynamic"
+  },
+  "gVideo": {
+    "message": "Video",
+    "description": "video"
+  },
+  "gArticle": {
+    "message": "Article",
+    "description": "article"
+  },
+  "gTitle": {
+    "message": "Title",
+    "description": "title"
+  },
+  "gContent": {
+    "message": "Content",
+    "description": "content"
+  },
+  "gSend": {
+    "message": "Send",
+    "description": "send"
+  },
+  "popupSettingsTooltip": {
+    "message": "Settings",
+    "description": "Tooltip text for the settings button"
+  },
+  "popupSyncPublicTooltip": {
+    "message": "Sync Publish",
+    "description": "Sync publish button tooltip text"
+  },
+  "popupBubbleboxTooltip": {
+    "message": "Bubblebox",
+    "description": "Tooltip text for the bubblebox button"
+  },
+  "popupGiftTooltip": {
+    "message": "Gift",
+    "description": "Tooltip text for the gift button"
+  },
+  "popupDefaultNickname": {
+    "message": "No Nickname Set",
+    "description": "Default nickname text"
+  },
+  "optionsTitle": {
+    "message": "Multipost",
+    "description": "Options page title"
+  },
+  "optionsViewDocs": {
+    "message": "Docs",
+    "description": "View docs button text"
+  },
+  "optionsAccountManagement": {
+    "message": "Account Management",
+    "description": "Account management tab title"
+  },
+  "optionsDataSync": {
+    "message": "Data Sync",
+    "description": "Data sync tab title"
+  },
+  "optionsRunningLogs": {
+    "message": "Running Logs",
+    "description": "Running logs tab title"
+  },
+  "optionsDynamicTab": {
+    "message": "Dynamic",
+    "description": "Dynamic tab title"
+  },
+  "optionsEnterDynamicTitle": {
+    "message": "Title",
+    "description": "Dynamic title input placeholder"
+  },
+  "optionsEnterDynamicContent": {
+    "message": "Content",
+    "description": "Dynamic content input placeholder"
+  },
+  "optionsSyncDynamic": {
+    "message": "Sync Dynamic",
+    "description": "Sync dynamic button text"
+  },
+  "optionsPostTab": {
+    "message": "Post",
+    "description": "Post tab title"
+  },
+  "optionsVideoTab": {
+    "message": "Video",
+    "description": "Video tab title"
+  },
+  "optionsClearLogs": {
+    "message": "Clear Logs",
+    "description": "Clear logs button text"
+  },
+  "optionsFilterLevel": {
+    "message": "Filter Level",
+    "description": "Log level filter placeholder"
+  },
+  "optionsAllLevels": {
+    "message": "All Levels",
+    "description": "All log levels option"
+  },
+  "optionsInfo": {
+    "message": "Info",
+    "description": "Info level log"
+  },
+  "optionsWarning": {
+    "message": "Warning",
+    "description": "Warning level log"
+  },
+  "optionsError": {
+    "message": "Error",
+    "description": "Error level log"
+  },
+  "optionsFilterSource": {
+    "message": "Filter Source",
+    "description": "Log source filter placeholder"
+  },
+  "optionsAllSources": {
+    "message": "All Sources",
+    "description": "All log sources option"
+  },
+  "optionsNoLogs": {
+    "message": "No Logs",
+    "description": "Text displayed when no logs"
+  },
+  "optionsSyncSettingsTitle": {
+    "message": "Sync Service Settings & Management",
+    "description": "Sync settings page title"
+  },
+  "optionsSyncSettingsDescription": {
+    "message": "Here you can manage the data to be synced",
+    "description": "Sync settings page description"
+  },
+  "optionsGiftSyncTooltip": {
+    "message": "This will sync your gift data, including captain's log records",
+    "description": "Gift sync tooltip"
+  },
+  "optionsGiftSync": {
+    "message": "Gift Data Sync",
+    "description": "Gift sync option"
+  },
+  "optionsSyncedAt": {
+    "message": "Synced At",
+    "description": "Last sync time label"
+  },
+  "optionsNextSyncTime": {
+    "message": "Next Sync Time",
+    "description": "Next sync time prompt"
+  },
+  "optionsUserManagement": {
+    "message": "Account Management",
+    "description": "User management page title"
+  },
+  "optionsSyncIdle": {
+    "message": "Sync",
+    "description": "Sync button idle state text"
+  },
+  "optionsSyncSyncing": {
+    "message": "Syncing...",
+    "description": "Sync button syncing state text"
+  },
+  "optionsSyncSuccess": {
+    "message": "Success",
+    "description": "Sync button success state text"
+  },
+  "optionsSyncError": {
+    "message": "Failed",
+    "description": "Sync button failed state text"
+  },
+  "optionsLogin2SOMEren": {
+    "message": "Please login to Multipost",
+    "description": "Login to Multipost prompt"
+  },
+  "optionsNotBoundBilibili": {
+    "message": "Not Bound to Bilibili",
+    "description": "Not bound to Bilibili prompt"
+  },
+  "optionsBoundBilibili": {
+    "message": "Bound:",
+    "description": "Bound to Bilibili prompt"
+  },
+  "optionsNotLoggedIn": {
+    "message": "Not Logged In",
+    "description": "Not logged in status text"
+  },
+  "optionsUID": {
+    "message": "UID",
+    "description": "User ID label"
+  },
+  "optionsNotBound": {
+    "message": "Not Bound",
+    "description": "Not bound status text"
+  },
+  "optionsWaitingForNextSync": {
+    "message": "Waiting for next sync",
+    "description": "Text prompt for waiting for next sync"
+  },
+  "optionsSyncPaused": {
+    "message": "Sync paused",
+    "description": "Text prompt for sync paused"
+  },
+  "optionsGuardListSyncTooltip": {
+    "message": "This will sync your current guard list",
+    "description": "Tooltip text for guard list sync"
+  },
+  "optionsGuardListSync": {
+    "message": "Guard List Sync",
+    "description": "Guard list sync option"
+  },
+  "optionsDanmuTokenSyncTooltip": {
+    "message": "This will sync your danmu identity information",
+    "description": "Tooltip text for danmu token sync"
+  },
+  "optionsDanmuTokenSync": {
+    "message": "Danmu Identity Sync",
+    "description": "Danmu token sync option"
+  },
+  "optionsSessionSyncTooltip": {
+    "message": "This will sync your live session data",
+    "description": "Tooltip text for session sync"
+  },
+  "optionsSessionSync": {
+    "message": "Live Session Sync",
+    "description": "Live session sync option"
+  },
+  "optionsAutoPublish": {
+    "message": "Auto Publish",
+    "description": "Auto publish switch text"
+  },
+  "optionsEnterVideoTitle": {
+    "message": "Enter Video Title",
+    "description": "Video title input placeholder"
+  },
+  "optionsEnterVideoDescription": {
+    "message": "Enter Video Description",
+    "description": "Video description input placeholder"
+  },
+  "optionsSyncVideo": {
+    "message": "Sync Video",
+    "description": "Sync video button text"
+  },
+  "optionsDashboard": {
+    "message": "Dashboard"
+  },
+  "dashboardSyncPublic": {
+    "message": "Sync Public"
+  },
+  "optionsEnterUrl": {
+    "message": "Enter URL",
+    "description": "Placeholder for URL input"
+  },
+  "optionsImport": {
+    "message": "Import",
+    "description": "Import button text"
+  },
+  "optionsEnterPostTitle": {
+    "message": "Enter Post Title",
+    "description": "Placeholder for post title input"
+  },
+  "optionsEnterPostContent": {
+    "message": "Enter Post Content",
+    "description": "Placeholder for post content input"
+  },
+  "optionsSyncPost": {
+    "message": "Sync Post",
+    "description": "Sync post button text"
+  },
+  "optionsImportedContent": {
+    "message": "Content"
+  },
+  "options2SOMErenHomepage": {
+    "message": "Homepage",
+    "description": "Homepage button text"
+  },
+  "sidepanelTabsManagerTitle": {
+    "message": "Tabs Manager",
+    "description": "Title for the Tabs Manager in the side panel"
+  },
+  "sidepanelUntitledGroup": {
+    "message": "Untitled Group $1",
+    "description": "Title for an untitled group in the Tabs Manager"
+  },
+  "sidepanelReloadTab": {
+    "message": "Reload tab",
+    "description": "Aria label for the reload tab button"
+  },
+  "sidepanelCloseTab": {
+    "message": "Close tab",
+    "description": "Aria label for the close tab button"
+  },
+  "optionsAtLeastOneImage": {
+    "message": "Select at least one image"
+  },
+  "sidepanelTabsManager": {
+    "message": "Tabs Manager",
+    "description": "Title for the Tabs Manager tab in the side panel"
+  },
+  "sidepanelTabSummary": {
+    "message": "$1 tabs in $2 groups",
+    "description": "Summary of tabs and groups in the side panel"
+  },
+  "sidepanelLoading": {
+    "message": "Loading tabs…",
+    "description": "Loading state in the side panel"
+  },
+  "sidepanelLoadError": {
+    "message": "Unable to load tabs",
+    "description": "Error state in the side panel"
+  },
+  "sidepanelRetry": {
+    "message": "Try again",
+    "description": "Retry button in the side panel"
+  },
+  "sidepanelContentManager": {
+    "message": "Note Collection",
+    "description": "Title for the Content Manager tab in the side panel"
+  },
+  "sidepanelTabsAriaLabel": {
+    "message": "Side Panel Features",
+    "description": "Aria label for the side panel tabs"
+  },
+  "contentManagerTitle": {
+    "message": "Content Manager",
+    "description": "Title for the Content Manager section"
+  },
+  "sidepanelNoTabsMessage": {
+    "message": "You haven't created any sync tasks yet.",
+    "description": "Message displayed when no sync tasks are created"
+  },
+  "sidepanelCreateNewTabButton": {
+    "message": "Create New Sync Task",
+    "description": "Text for the button to create a new sync task"
+  },
+  "selectCollectionLabel": {
+    "message": "Select Collection",
+    "description": "Label for the collection selection dropdown"
+  },
+  "selectCollectionPlaceholder": {
+    "message": "Choose a collection",
+    "description": "Placeholder for the collection selection dropdown"
+  },
+  "addCollectionButtonLabel": {
+    "message": "Add new collection",
+    "description": "Aria label for the add collection button"
+  },
+  "addNewCollectionTitle": {
+    "message": "Add New Collection",
+    "description": "Title for the add new collection modal"
+  },
+  "collectionNameLabel": {
+    "message": "Collection Name",
+    "description": "Label for the collection name input"
+  },
+  "collectionNamePlaceholder": {
+    "message": "Enter collection name",
+    "description": "Placeholder for the collection name input"
+  },
+  "cancelButton": {
+    "message": "Cancel",
+    "description": "Text for the cancel button"
+  },
+  "addButton": {
+    "message": "Add",
+    "description": "Text for the add button"
+  },
+  "defaultCollectionTitle": {
+    "message": "Default Collection",
+    "description": "Title for the default collection"
+  },
+  "workCollectionTitle": {
+    "message": "Work Notes",
+    "description": "Title for the work collection"
+  },
+  "sidepanelCollectionSelectLabel": {
+    "message": "Select Collection",
+    "description": "Label for the collection selection dropdown"
+  },
+  "sidepanelCollectionSelectPlaceholder": {
+    "message": "Choose a collection",
+    "description": "Placeholder for the collection selection dropdown"
+  },
+  "sidepanelCollectionAddButtonLabel": {
+    "message": "Add new collection",
+    "description": "Aria label for the add collection button"
+  },
+  "sidepanelCollectionAddNewTitle": {
+    "message": "Add New Collection",
+    "description": "Title for the add new collection modal"
+  },
+  "sidepanelCollectionNameLabel": {
+    "message": "Collection Name",
+    "description": "Label for the collection name input"
+  },
+  "sidepanelCollectionNamePlaceholder": {
+    "message": "Enter collection name",
+    "description": "Placeholder for the collection name input"
+  },
+  "sidepanelCollectionCancelButton": {
+    "message": "Cancel",
+    "description": "Text for the cancel button"
+  },
+  "sidepanelCollectionAddButton": {
+    "message": "Add",
+    "description": "Text for the add button"
+  },
+  "sidepanelCollectionDefaultTitle": {
+    "message": "Default Collection",
+    "description": "Title for the default collection"
+  },
+  "sidepanelCollectionWorkTitle": {
+    "message": "Work Notes",
+    "description": "Title for the work collection"
+  },
+  "sidepanelCollectionEmpty": {
+    "message": "Click to create Collection"
+  },
+  "sidepanelCollectionItemsTitle": {
+    "message": "Collection Items",
+    "description": "Title for the collection items section"
+  },
+  "sidepanelCollectionItemDeleteButton": {
+    "message": "Delete item",
+    "description": "Aria label for the delete item button"
+  },
+  "sidepanelCollectionItemsEmpty": {
+    "message": "No items in this collection",
+    "description": "Message displayed when the collection is empty"
+  },
+  "dashboardSendBiliPrivateMsg": {
+    "message": "Send Bilibili Private Message"
+  },
+  "platformSSPai": {
+    "message": "SSPai",
+    "description": "Platform name for SSPai"
+  },
+  "platformEastmoney": {
+    "message": "Eastmoney",
+    "description": "Platform name for Eastmoney"
+  },
+  "platform51CTO": {
+    "message": "51CTO",
+    "description": "Platform name for 51CTO"
+  },
+  "platformCSDN": {
+    "message": "CSDN",
+    "description": "Platform name for CSDN"
+  },
+  "platformJuejin": {
+    "message": "Juejin",
+    "description": "Platform name for Juejin"
+  },
+  "platformJianshu": {
+    "message": "Jianshu",
+    "description": "Platform name for Jianshu"
+  },
+  "platformX": {
+    "message": "X",
+    "description": "Platform name for X (Twitter)"
+  },
+  "platformSegmentfault": {
+    "message": "Segmentfault",
+    "description": "Platform name for Segmentfault"
+  },
+  "platformBilibili": {
+    "message": "Bilibili",
+    "description": "Platform name for Bilibili"
+  },
+  "platformRednote": {
+    "message": "rednote",
+    "description": "Platform name for Rednote"
+  },
+  "platformDouban": {
+    "message": "Douban",
+    "description": "Platform name for Douban"
+  },
+  "platformDedao": {
+    "message": "Dedao",
+    "description": "Platform name for Dedao"
+  },
+  "platformWeixin": {
+    "message": "Weixin",
+    "description": "Platform name for Weixin"
+  },
+  "platformWeibo": {
+    "message": "Weibo",
+    "description": "Platform name for Weibo"
+  },
+  "platformXueqiu": {
+    "message": "Xueqiu",
+    "description": "Platform name for Xueqiu"
+  },
+  "platformZhihu": {
+    "message": "Zhihu",
+    "description": "Platform name for Zhihu"
+  },
+  "platformDouyin": {
+    "message": "Douyin",
+    "description": "Platform name for Douyin"
+  },
+  "platformOkjike": {
+    "message": "Okjike",
+    "description": "Platform name for Okjike"
+  },
+  "platformInstagram": {
+    "message": "Instagram",
+    "description": "Platform name for Instagram"
+  },
+  "platformYoutube": {
+    "message": "YouTube",
+    "description": "YouTube platform name"
+  },
+  "platformTiktok": {
+    "message": "Tiktok",
+    "description": "Platform name for Tiktok"
+  },
+  "platformFacebook": {
+    "message": "Facebook",
+    "description": "Platform name for Facebook"
+  },
+  "platformLinkedin": {
+    "message": "LinkedIn",
+    "description": "Platform name for LinkedIn"
+  },
+  "platformReddit": {
+    "message": "Reddit",
+    "description": "Platform name for Reddit"
+  },
+  "platformPinterest": {
+    "message": "Pinterest",
+    "description": "Platform name for Pinterest"
+  },
+  "platformWeiXinVideo": {
+    "message": "WeiXinVideo",
+    "description": "Platform name for WeiXinVideo"
+  },
+  "platformWebhook": {
+    "message": "Webhook",
+    "description": "Platform name for Webhook"
+  },
+  "platformXiaoheihe": {
+    "message": "Xiaoheihe",
+    "description": "Platform name for Xiaoheihe"
+  },
+  "platformToutiaohao": {
+    "message": "Toutiaohao",
+    "description": "Platform name for Toutiaohao"
+  },
+  "platformMaimai": {
+    "message": "Maimai",
+    "description": "Platform name for Maimai"
+  },
+  "optionsFeedbackPrefix": {
+    "message": "Missing a platform you need?"
+  },
+  "optionsFeedbackEmail": {
+    "message": "Send an email"
+  },
+  "optionsFeedback": {
+    "message": "Feedback",
+    "description": "Button text for feedback form"
+  },
+  "optionsHelpPrefix": {
+    "message": "Need help?"
+  },
+  "optionsOrText": {
+    "message": "or visit"
+  },
+  "optionsClearAll": {
+    "message": "Clear All"
+  },
+  "optionsClearPlatforms": {
+    "message": "Clear Platforms",
+    "description": "Button text to clear all selected platforms"
+  },
+  "aboutDescription": {
+    "message": "MultiPost Extension helps you publish content to multiple platforms simultaneously, improving your content distribution efficiency."
+  },
+  "gAbout": {
+    "message": "About"
+  },
+  "gSettings": {
+    "message": "Settings"
+  },
+  "syncPublicPageTitle": {
+    "message": ""
+  },
+  "settingsTrustedDomains": {
+    "message": "Trusted Domains"
+  },
+  "settingsTrustedDomainsDesc": {
+    "message": "Add trusted domains. Wildcard supported (e.g., *.multipost.app)"
+  },
+  "settingsAdd": {
+    "message": "Add"
+  },
+  "settingsDomainEmpty": {
+    "message": "Domain cannot be empty"
+  },
+  "settingsDomainInvalid": {
+    "message": "Invalid domain format"
+  },
+  "settingsTrustedDomainsWarning": {
+    "message": "After adding a trusted domain, web pages from that domain will be allowed to use the extension for content publishing operations. Please add trusted domains carefully and only add websites you trust."
+  },
+  "optionViewHomePagePublish": {
+    "message": "Publish on Web",
+    "description": "Text for the publish button in header that links to homepage publish section"
+  },
+  "optionsEnterArticleTitle": {
+    "message": "Enter Article Title",
+    "description": "Article title input placeholder"
+  },
+  "optionsEnterArticleContent": {
+    "message": "Enter Article Content",
+    "description": "Article content input placeholder"
+  },
+  "optionsSyncArticle": {
+    "message": "Sync Article",
+    "description": "Sync article button text"
+  },
+  "errorProcessingImages": {
+    "message": "Error processing images",
+    "description": "Error message when processing images"
+  },
+  "errorProcessingVideos": {
+    "message": "Error processing videos",
+    "description": "Error message when processing videos"
+  },
+  "errorProcessingFiles": {
+    "message": "Error processing files",
+    "description": "Error message when processing files"
+  },
+  "errorProcessingCover": {
+    "message": "Error processing cover image",
+    "description": "Error message when processing cover image"
+  },
+  "errorImportingContent": {
+    "message": "Error importing content",
+    "description": "Error message when importing content"
+  },
+  "processingImages": {
+    "message": "Processing images...",
+    "description": "Status message when processing images"
+  },
+  "processingVideos": {
+    "message": "Processing videos...",
+    "description": "Status message when processing videos"
+  },
+  "processingFiles": {
+    "message": "Processing files...",
+    "description": "Status message when processing files"
+  },
+  "errorEnterTitle": {
+    "message": "Please enter a title"
+  },
+  "errorSelectPlatform": {
+    "message": "Please select at least one platform"
+  },
+  "errorEnterUrl": {
+    "message": "Please enter a valid URL"
+  },
+  "optionsMarkdownEditor": {
+    "message": "Markdown Editor"
+  },
+  "optionsEnterMarkdown": {
+    "message": "Enter Markdown content..."
+  },
+  "platformKuaishou": {
+    "message": "Kuaishou",
+    "description": "Platform name for Kuaishou"
+  },
+  "platformBaijiahao": {
+    "message": "Baijiahao",
+    "description": "Platform name for Baijiahao"
+  },
+  "platformQiE": {
+    "message": "QiE",
+    "description": "Platform name for QiE"
+  },
+  "platformChejiahao": {
+    "message": "Chejiahao",
+    "description": "Platform name for Chejiahao"
+  },
+  "platformDewu": {
+    "message": "Dewu",
+    "description": "Platform name for Dewu"
+  },
+  "platformYiche": {
+    "message": "Yiche",
+    "description": "Platform name for Yiche"
+  },
+  "platformSohu": {
+    "message": "Sohu",
+    "description": "Platform name for Sohu"
+  },
+  "platformSohuTv": {
+    "message": "Sohu Video",
+    "description": "Platform name for Sohu Video"
+  },
+  "platformAliyun": {
+    "message": "Aliyun",
+    "description": "Platform name for Aliyun"
+  },
+  "platformTencentyun": {
+    "message": "Tencent Cloud",
+    "description": "Platform name for Tencent Cloud"
+  },
+  "platformVolcengine": {
+    "message": "Volcengine",
+    "description": "Platform name for Volcengine"
+  },
+  "platformNetease": {
+    "message": "NetEase",
+    "description": "Platform name for NetEase"
+  },
+  "platformDayu": {
+    "message": "Dayu",
+    "description": "Platform name for Dayu"
+  },
+  "platformAlipay": {
+    "message": "Alipay",
+    "description": "Platform name for Alipay"
+  },
+  "platformYidian": {
+    "message": "Yidian",
+    "description": "Platform name for Yidian"
+  },
+  "platformGelonghui": {
+    "message": "Gelonghui"
+  },
+  "platformJiankangjie": {
+    "message": "Jiankangjie"
+  },
+  "platformKaidiwang": {
+    "message": "Kaidiwang"
+  },
+  "platformDingduanhao": {
+    "message": "Dingduanhao"
+  },
+  "platformKuaichuanhao": {
+    "message": "Kuaichuanhao"
+  },
+  "platformPinduoduo": {
+    "message": "Pinduoduo",
+    "description": "Platform name for Pinduoduo"
+  },
+  "platformVivoVideo": {
+    "message": "Vivo Video",
+    "description": "Platform name for Vivo Video"
+  },
+  "platformToutiao": {
+    "message": "Toutiao",
+    "description": "Platform name for Toutiao"
+  },
+  "optionsQQGroup": {
+    "message": "QQ Group",
+    "description": "QQ group number"
+  },
+  "platformThreads": {
+    "message": "Threads",
+    "description": "Platform name for Threads"
+  },
+  "optionsNoticeDynamicVideo": {
+    "message": "Only some platforms that support both images and videos can upload videos, while other platforms only publish images and texts."
+  },
+  "platformBluesky": {
+    "message": "BlueSky"
+  },
+  "platformV2ex": {
+    "message": "V2EX"
+  },
+  "platformZSXQ": {
+    "message": "ZhiShiXingQiu"
+  },
+  "platformWordpress": {
+    "message": "WordPress"
+  },
+  "settingsTrustedDomainsOrigin": {
+    "message": "Origin Domain"
+  },
+  "settingsTrustedDomainsSafetyTip": {
+    "message": "Safety Notice"
+  },
+  "settingsTrustedDomainsConfirm": {
+    "message": "Please confirm that you trust this domain. Allowing this domain will:"
+  },
+  "settingsTrustedDomainsAllowPublish": {
+    "message": "Allow this website to publish content through the extension"
+  },
+  "settingsTrustedDomainsAllowAPI": {
+    "message": "Allow this website to call the extension's open APIs"
+  },
+  "settingsTrustedDomainsCancel": {
+    "message": "You can revoke trusted domains at any time in the extension's"
+  },
+  "settingsTrustedDomainsOnlyAllow": {
+    "message": "Only allow requests from"
+  },
+  "settingsTrustedDomainsConfirmText": {
+    "message": "I have read and understood the above content and confirm to allow this domain to access extension features"
+  },
+  "settingsTrustedDomainsReject": {
+    "message": "Reject"
+  },
+  "settingsTrustedDomainsAllow": {
+    "message": "Allow and Trust"
+  },
+  "settingsTrustedDomainsAdded": {
+    "message": "Added to trusted domains list"
+  },
+  "settingsTrustedDomainsRejected": {
+    "message": "Domain request rejected"
+  },
+  "settingsTrustedDomainsError": {
+    "message": "Error processing request"
+  },
+  "popupLogoAlt": {
+    "message": "MultiPost Icon",
+    "description": "Alt text for the logo image"
+  },
+  "popupLoadingMessage": {
+    "message": "Opening application...",
+    "description": "Loading message"
+  },
+  "optionsQQGroupTitle": {
+    "message": "QQ Group",
+    "description": "Title for QQ group popover"
+  },
+  "optionsEmailTitle": {
+    "message": "Email Support",
+    "description": "Title for email support popover"
+  },
+  "optionsEmailAddress": {
+    "message": "support@undersky.ai",
+    "description": "Support email address"
+  },
+  "optionsEmailTip": {
+    "message": "Click to send email",
+    "description": "Tip text for sending email"
+  },
+  "optionsGithubTitle": {
+    "message": "GitHub Issues",
+    "description": "Title for GitHub Issues popover"
+  },
+  "optionsGithubTip": {
+    "message": "Click to create an issue",
+    "description": "Tip text for creating GitHub issue"
+  },
+  "optionsContactUs": {
+    "message": "Contact Us",
+    "description": "Contact us text in footer"
+  },
+  "optionsContactPrefix": {
+    "message": "If you have any issues or want us to support new platforms, please contact us.",
+    "description": "Contact prefix text in footer"
+  },
+  "optionsCNPlatforms": {
+    "message": "China Platforms",
+    "description": "CN platforms tab title"
+  },
+  "optionsInternationalPlatforms": {
+    "message": "International Platforms",
+    "description": "International platforms tab title"
+  },
+  "optionViewHomePageDashboard": {
+    "message": "Dashboard"
+  },
+  "optionsSelectPublishPlatforms": {
+    "message": "Please select at least one platform"
+  },
+  "extraConfigOkjikeConfigureTopic": {
+    "message": "Configure Topic"
+  },
+  "extraConfigOkjikeSelectTopic": {
+    "message": "Select Topic"
+  },
+  "extraConfigOkjikeEnterTopicName": {
+    "message": "Enter topic name"
+  },
+  "extraConfigOkjikeAdd": {
+    "message": "Add"
+  },
+  "extraConfigOkjikeCancel": {
+    "message": "Cancel"
+  },
+  "extraConfigOkjikeSaveConfig": {
+    "message": "Save Configuration"
+  },
+  "extraConfigWebhookConfigure": {
+    "message": "Configure Webhook"
+  },
+  "extraConfigWebhookEnterUrl": {
+    "message": "Enter Webhook URL"
+  },
+  "extraConfigWebhookTest": {
+    "message": "Test"
+  },
+  "extraConfigWebhookAdd": {
+    "message": "Add URL"
+  },
+  "extraConfigWebhookCancel": {
+    "message": "Cancel"
+  },
+  "extraConfigWebhookSaveConfig": {
+    "message": "Save Configuration"
+  },
+  "extraConfigWebhookSupportedPlatforms": {
+    "message": "Currently only supports Feishu, WeCom, and DingTalk custom robot webhooks. Click the links to view the corresponding platform's configuration documentation."
+  },
+  "extraConfigWebhookFeishu": {
+    "message": "Feishu"
+  },
+  "extraConfigWebhookWecom": {
+    "message": "WeCom"
+  },
+  "extraConfigWebhookDingtalk": {
+    "message": "DingTalk"
+  },
+  "extraConfigWebhookTestSuccess": {
+    "message": "Webhook test successful!"
+  },
+  "extraConfigWebhookTestFailed": {
+    "message": "Webhook test failed: $1"
+  },
+  "extraConfigWebhookNetworkError": {
+    "message": "Webhook test failed: Network error"
+  },
+  "extraConfigWebhookInvalidUrl": {
+    "message": "Invalid URL format, please enter correct URL address"
+  },
+  "extraConfigWebhookUnsupportedPlatform": {
+    "message": "Unsupported Webhook platform"
+  },
+  "extraConfigZsxqSelectGroups": {
+    "message": "Select Groups"
+  },
+  "extraConfigZsxqConfigureGroups": {
+    "message": "Configure ZSXQ Groups"
+  },
+  "extraConfigZsxqLoading": {
+    "message": "Loading groups..."
+  },
+  "extraConfigZsxqCancel": {
+    "message": "Cancel"
+  },
+  "extraConfigZsxqSaveConfig": {
+    "message": "Save Configuration"
+  },
+  "extraConfigZsxqNoGroups": {
+    "message": "No groups found. Please make sure you are logged in to ZSXQ and refresh the page"
+  },
+  "extraConfigWordpressInvalidUrl": {
+    "message": "Invalid URL format. Please check your input."
+  },
+  "extraConfigWordpressConfigure": {
+    "message": "Configure"
+  },
+  "extraConfigWordpressEnterUrl": {
+    "message": "https://myweb.com/wp-admin/post-new.php"
+  },
+  "extraConfigWordpressAdd": {
+    "message": "Add URL"
+  },
+  "extraConfigWordpressCancel": {
+    "message": "Cancel"
+  },
+  "extraConfigWordpressSaveConfig": {
+    "message": "Save"
+  },
+  "linkExtensionTitle": {
+    "message": "Connect Extension to MultiPost.app",
+    "description": "Link extension page title"
+  },
+  "linkExtensionReject": {
+    "message": "Reject",
+    "description": "Reject connection button text"
+  },
+  "linkExtensionAllow": {
+    "message": "Allow",
+    "description": "Allow connection button text"
+  },
+  "linkExtensionSuccess": {
+    "message": "Connected to MultiPost.app",
+    "description": "Connection success message"
+  },
+  "linkExtensionRejected": {
+    "message": "Connection rejected",
+    "description": "Connection rejected message"
+  },
+  "linkExtensionError": {
+    "message": "An error occurred, please try again later",
+    "description": "Connection error message"
+  },
+  "linkExtensionProcessError": {
+    "message": "Error processing request",
+    "description": "Request processing error message"
+  },
+  "readMore": {
+    "message": "Read More",
+    "description": "Read more button text"
+  },
+  "webAppModalTitle": {
+    "message": "Publish On Web App",
+    "description": "Title for web app publish modal"
+  },
+  "webAppModalDescription": {
+    "message": "You can enjoy more advanced features and a smoother publishing experience on our web app. Jump to the web publishing page now to try more powerful multi-platform publishing features!",
+    "description": "Description text for web app modal"
+  },
+  "webAppModalLater": {
+    "message": "Later",
+    "description": "Button text to dismiss the modal"
+  },
+  "webAppModalGo": {
+    "message": "Go to Web App",
+    "description": "Button text to go to web app"
+  },
+  "optionsViewAutomation": {
+    "message": "Automation",
+    "description": "View automation docs button text"
+  },
+  "articleEditorAlertTitle": {
+    "message": "New Article Editor",
+    "description": "Article editor alert title"
+  },
+  "articleEditorAlertDescription": {
+    "message": "Edit, format, and publish articles with our new editor, supporting WeChat Official Account and more",
+    "description": "Article editor alert description"
+  },
+  "articleEditorAlertButton": {
+    "message": "Try Now",
+    "description": "Article editor alert button text"
+  },
+  "platformQQMusic": {
+    "message": "QQMusic(TME)"
+  },
+  "platformLizhi": {
+    "message": "LiZhi"
+  },
+  "platformSpotify": {
+    "message": "Spotify",
+    "description": "Spotify platform name"
+  },
+  "refreshAccountsTitle": {
+    "message": "Refresh Accounts",
+    "description": "Refresh accounts page title"
+  },
+  "refreshAccountsButton": {
+    "message": "Refresh Accounts",
+    "description": "Refresh accounts button text"
+  },
+  "refreshAccountsLoading": {
+    "message": "Refreshing account information...",
+    "description": "Refresh accounts loading state text"
+  },
+  "refreshAccountsError": {
+    "message": "Failed to refresh accounts",
+    "description": "Refresh accounts error state text"
+  },
+  "refreshAccountsNoAccounts": {
+    "message": "No account information available",
+    "description": "Text displayed when no accounts"
+  },
+  "refreshAccountsAutoClose": {
+    "message": "Auto Close",
+    "description": "Auto close switch text"
+  },
+  "publishing": {
+    "message": "Publishing Content"
+  },
+  "publishingInProgress": {
+    "message": "Publishing in progress..."
+  },
+  "processingContent": {
+    "message": "Processing content and images..."
+  },
+  "processingComplete": {
+    "message": "Processing complete, ready to publish..."
+  },
+  "publishComplete": {
+    "message": "Publishing complete"
+  },
+  "errorMessages": {
+    "message": "Error Messages"
+  },
+  "finishPublishing": {
+    "message": "Finish Publishing"
+  },
+  "finishAndCloseTabs": {
+    "message": "Finish and Close All Tabs"
+  },
+  "errorGetSyncData": {
+    "message": "Failed to get sync data"
+  },
+  "errorProcessContent": {
+    "message": "Error processing content, please try again"
+  },
+  "errorProcessImage": {
+    "message": "Failed to process image: $1"
+  },
+  "errorProcessFile": {
+    "message": "Failed to process file: $1"
+  },
+  "errorReloadTab": {
+    "message": "Failed to reload tab: $1"
+  },
+  "errorCloseTab": {
+    "message": "Failed to close tab: $1"
+  },
+  "errorCloseAllTabs": {
+    "message": "Failed to close all tabs: $1"
+  },
+  "contactUsIfProblem": {
+    "message": "If you have any issues or want us to support new platforms, please "
+  },
+  "publishAutoClose": {
+    "message": "Auto Close",
+    "description": "Auto close switch text for publish page"
+  },
+  "publishAutoCloseCountdown": {
+    "message": "Auto close in $1 seconds",
+    "description": "Auto close countdown text for publish page"
+  },
+  "platformSubstack": {
+    "message": "Substack",
+    "description": "Substack platform name"
+  },
+  "platformXimalaya": {
+    "message": "Ximalaya",
+    "description": "Ximalaya platform name"
+  },
+  "platformXiaoyuzhou": {
+    "message": "Xiaoyuzhou",
+    "description": "Xiaoyuzhou platform name"
+  },
+  "platformQingting": {
+    "message": "Qingting FM",
+    "description": "Qingting FM platform name"
+  },
+  "platformNeteasePodcast": {
+    "message": "NetEase Cloud Music Podcast",
+    "description": "NetEase Cloud Music Podcast platform name"
+  },
+  "platformMedium": {
+    "message": "Medium",
+    "description": "Medium platform name"
+  },
+  "platformOSChina": {
+    "message": "OSChina",
+    "description": "OSChina platform name"
+  },
+  "platformInfoQ": {
+    "message": "InfoQ",
+    "description": "InfoQ platform name"
+  },
+  "platformSMZDM": {
+    "message": "SMZDM",
+    "description": "SMZDM platform name"
+  },
+  "platformWoshipm": {
+    "message": "Woshipm",
+    "description": "Woshipm platform name"
+  },
+  "platformAutohome": {
+    "message": "Autohome",
+    "description": "Autohome platform name"
+  },
+  "platformJianpian": {
+    "message": "Jianpian"
+  },
+  "platformTonghuashun": {
+    "message": "Tonghuashun"
+  },
+  "platformDongchedi": {
+    "message": "Dongchedi"
+  },
+  "platformIqiyi": {
+    "message": "iQiyi",
+    "description": "iQiyi platform name"
+  },
+  "platformYouku": {
+    "message": "Youku",
+    "description": "Youku platform name"
+  },
+  "platformTencentVideo": {
+    "message": "Tencent Video",
+    "description": "Tencent Video platform name"
+  }
+}

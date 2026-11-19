@@ -1,3 +1,4 @@
+import { resolveDjlMigrationSources } from "./djlStoragePaths";
 import { describe, expect, it } from "vitest";
 
 import { resolveDesktopDjlHome, resolveDjlHome, resolveDjlStatePaths } from "./djlStoragePaths";
@@ -60,4 +61,17 @@ describe("resolveDjlStatePaths", () => {
       managedOpenCodeRootDir: "/Users/tester/.djl/userdata/opencode",
     });
   });
+});
+
+it("keeps an explicitly isolated QA profile out of every migration source", () => {
+  const input = {
+    baseDir: "/private/tmp/djl-fixture",
+    userHomeDir: "/Users/fixture",
+    requested: ["/Users/fixture/.djl"],
+  };
+  expect(resolveDjlMigrationSources(input)).toEqual([
+    "/Users/fixture/.djl",
+    "/Users/fixture/.synara",
+  ]);
+  expect(resolveDjlMigrationSources({ ...input, disabled: true })).toEqual([]);
 });

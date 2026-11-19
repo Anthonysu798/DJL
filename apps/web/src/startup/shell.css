@@ -1,15 +1,14 @@
 .djl-startup {
-  --startup-bg: #fafafa;
-  --startup-sidebar: #f1f1f1;
-  --startup-card: #fff;
-  --startup-text: #242424;
-  --startup-muted: #737373;
-  --startup-border: #dedede;
+  --startup-bg: #f5f6f8;
+  --startup-text: #252932;
+  --startup-muted: #6d737e;
+  --startup-border: #dce0e6;
+  --startup-accent: #687d9c;
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: grid;
-  grid-template-columns: var(--startup-sidebar-width, 260px) minmax(0, 1fr);
+  isolation: isolate;
+  overflow: hidden;
   background: var(--startup-bg);
   color: var(--startup-text);
   font:
@@ -17,47 +16,37 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  transition: opacity 260ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .djl-startup[data-theme="dark"] {
-  --startup-bg: #171717;
-  --startup-sidebar: #1e1e1e;
-  --startup-card: #242424;
-  --startup-text: #ededed;
-  --startup-muted: #a0a0a0;
-  --startup-border: #383838;
+  --startup-bg: #0d0f13;
+  --startup-text: #eceef2;
+  --startup-muted: #8b919d;
+  --startup-border: #292f39;
+  --startup-accent: #a5bada;
 }
-.djl-startup[data-native-mac="true"] {
-  background: transparent;
-  --startup-sidebar: color-mix(in srgb, var(--startup-card) 64%, transparent);
+.djl-startup .startup-background {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.48;
+  background: repeating-linear-gradient(90deg, transparent 0 8px, #9671cc0b 8px 10px);
+  mask-image: radial-gradient(ellipse 36% 42% at 50% 45%, #0002, #000b 75%, #000);
 }
-/* The full app mounts underneath while the shell is up. It must not paint
-   through the translucent macOS surfaces; layout stays measurable. */
-body:has(> .djl-startup) > #root {
+.djl-startup[data-theme="light"] .startup-background {
+  opacity: 0.3;
+}
+/* The full app remains measurable while it loads beneath the splash. */
+body:has(> .djl-startup:not([data-state="leaving"])) > #root {
   visibility: hidden;
 }
-.djl-startup .startup-surfaces {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  margin: 0 0 14px;
-  border-radius: 9px;
-  background: var(--startup-border);
+body:has(> .djl-startup[data-state="leaving"]) > #root {
+  animation: startup-app-reveal 280ms ease-out both;
 }
-.djl-startup .startup-surface {
-  flex: 1;
-  min-width: 0;
-  padding: 5px 4px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--startup-muted);
-  font-size: 12px;
-  font-weight: 500;
-}
-.djl-startup .startup-surface[aria-pressed="true"] {
-  background: var(--startup-card);
-  color: var(--startup-text);
-  box-shadow: 0 1px 3px #0000000a;
+.djl-startup[data-state="leaving"] {
+  opacity: 0;
+  pointer-events: none;
 }
 .djl-startup * {
   box-sizing: border-box;
@@ -65,138 +54,112 @@ body:has(> .djl-startup) > #root {
 .djl-startup [hidden] {
   display: none !important;
 }
-.djl-startup button,
-.djl-startup textarea {
+.djl-startup button {
   font: inherit;
   color: inherit;
+  cursor: pointer;
   -webkit-app-region: no-drag;
 }
-.djl-startup button {
-  cursor: pointer;
-}
-.djl-startup button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.djl-startup button:focus-visible,
-.djl-startup textarea:focus-visible {
-  outline: 2px solid #628ad7;
-  outline-offset: 3px;
+.djl-startup button:focus-visible {
+  outline: 2px solid var(--startup-accent);
+  outline-offset: 4px;
 }
 .djl-startup .startup-chrome {
   position: absolute;
+  z-index: 1;
   inset: 0 0 auto;
   height: 46px;
   -webkit-app-region: drag;
   display: flex;
   justify-content: flex-end;
 }
-.djl-startup .startup-sidebar {
-  padding: 62px 12px 20px;
-  background: var(--startup-sidebar);
-  border-right: 1px solid var(--startup-border);
-  overflow-y: auto;
-}
-.djl-startup .startup-nav {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  text-align: left;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.djl-startup .startup-nav:hover {
-  background: var(--startup-border);
-}
-.djl-startup .startup-section-label {
-  margin: 28px 12px 8px;
-  color: var(--startup-muted);
-  font-size: 12px;
-  font-weight: 500;
-}
 .djl-startup .startup-main {
-  background: var(--startup-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  padding: 70px 28px 40px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 52px 24px;
   overflow-y: auto;
 }
 .djl-startup .startup-content {
+  width: min(100%, 580px);
+  text-align: center;
+  padding-bottom: 30px;
+  animation: startup-arrive 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.djl-startup .startup-art {
+  position: relative;
   width: 100%;
-  max-width: 740px;
-  margin-top: -5vh;
+  aspect-ratio: 580 / 400;
+  color: var(--startup-accent);
+  transition: transform 260ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.djl-startup[data-state="leaving"] .startup-art {
+  transform: scale(1.035);
+}
+.djl-startup .startup-aura {
+  position: absolute;
+  inset: 15% 20%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #93b5ea20, #93b5ea00 70%);
+  animation: startup-breathe 4s ease-in-out infinite alternate;
+}
+.djl-startup .startup-particles {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 .djl-startup .startup-heading {
-  font-size: clamp(23px, 3vw, 30px);
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  text-align: center;
-  margin: 0 0 32px;
-}
-.djl-startup .startup-composer {
-  border: 1px solid var(--startup-border);
-  border-radius: 18px;
-  background: var(--startup-card);
-  padding: 16px;
-  box-shadow: 0 2px 8px #00000006;
-}
-.djl-startup .startup-textarea {
-  display: block;
-  resize: vertical;
-  width: 100%;
-  min-height: 90px;
-  max-height: 40vh;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  line-height: 1.65;
-  outline-offset: 5px;
-}
-.djl-startup .startup-textarea::placeholder {
-  color: var(--startup-muted);
-}
-.djl-startup .startup-composer-footer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 18px;
-}
-.djl-startup .startup-model {
-  color: var(--startup-muted);
-  font-size: 12px;
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.djl-startup .startup-send {
-  border: 0;
-  border-radius: 9px;
-  padding: 7px 13px;
-  background: var(--startup-text);
-  color: var(--startup-bg);
-}
-.djl-startup .startup-cancel,
-.djl-startup .startup-retry {
-  border: 1px solid var(--startup-border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  background: var(--startup-card);
+  margin: 4px 0 8px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
 }
 .djl-startup .startup-notice {
+  min-height: 21px;
+  max-width: 340px;
+  margin: 0 auto;
   color: var(--startup-muted);
-  font-size: 12px;
-  text-align: center;
-  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+.djl-startup .startup-activity {
+  position: relative;
+  width: 96px;
+  height: 2px;
+  margin: 26px auto 0;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--startup-border);
+}
+.djl-startup .startup-activity-light {
+  display: block;
+  width: 38px;
+  height: 100%;
+  background: var(--startup-accent);
+  border-radius: inherit;
+  animation: startup-loading 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 .djl-startup .startup-retry {
   display: block;
-  margin: 12px auto 0;
+  margin: 20px auto 0;
+  border: 1px solid var(--startup-border);
+  border-radius: 9px;
+  padding: 8px 18px;
+  background: transparent;
+  transition:
+    background 160ms ease,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.djl-startup .startup-retry:active {
+  transform: scale(0.97);
+}
+.djl-startup[data-state="error"] .startup-aura {
+  animation-play-state: paused;
 }
 .djl-startup .startup-caption-controls {
   display: flex;
@@ -209,24 +172,70 @@ body:has(> .djl-startup) > #root {
   background: transparent;
   font-size: 18px;
 }
-.djl-startup .startup-caption:hover {
-  background: var(--startup-border);
+@media (hover: hover) and (pointer: fine) {
+  .djl-startup .startup-retry:hover,
+  .djl-startup .startup-caption:hover {
+    background: var(--startup-border);
+  }
+  .djl-startup .startup-close:hover {
+    background: #c42b1c;
+    color: white;
+  }
 }
-.djl-startup .startup-close:hover {
-  background: #c42b1c;
-  color: white;
+@keyframes startup-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
-@media (max-width: 650px) {
-  .djl-startup {
-    grid-template-columns: 140px minmax(0, 1fr);
+@keyframes startup-app-reveal {
+  from {
+    opacity: 0.4;
   }
-  .djl-startup .startup-main {
-    padding: 60px 16px 24px;
+  to {
+    opacity: 1;
   }
-  .djl-startup .startup-composer-footer {
-    flex-wrap: wrap;
+}
+@keyframes startup-breathe {
+  from {
+    opacity: 0.4;
+    transform: scale(0.9);
   }
-  .djl-startup .startup-model {
-    flex-basis: 100%;
+  to {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+@keyframes startup-loading {
+  from {
+    transform: translateX(-38px);
+  }
+  to {
+    transform: translateX(96px);
+  }
+}
+@media (max-height: 540px) {
+  .djl-startup .startup-content {
+    width: min(100%, 340px);
+    padding-bottom: 0;
+  }
+  .djl-startup .startup-art {
+    max-height: 250px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .djl-startup,
+  .djl-startup *,
+  body:has(> .djl-startup) > #root {
+    animation: none !important;
+    transition: none !important;
+  }
+  .djl-startup .startup-activity-light {
+    width: 100%;
+    opacity: 0.6;
   }
 }

@@ -12,6 +12,7 @@ import {
   type ProviderSession,
   type ProviderUserInputAnswers,
   type ProviderApprovalDecision,
+  type ProviderSendTurnInput,
 } from "@synara/contracts";
 import { Effect, Queue, Schema, Stream } from "effect";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
@@ -120,6 +121,20 @@ export const makeNativeAdapter = (
       attempt(method, async () => {
         throw new Error(`${method} is not supported by the native ${provider} bridge`);
       });
+    const validateTurn = (input: ProviderSendTurnInput) => {
+      if (!input.input?.trim()) throw new Error("A text prompt is required");
+      if (
+        input.attachments?.length ||
+        input.skills?.length ||
+        input.mentions?.length ||
+        input.workTurnPolicy
+      )
+        throw new Error("This native bridge currently accepts text prompts only");
+      if (input.modelSelection && input.modelSelection.provider !== provider)
+        throw new Error("Model provider does not match runtime");
+      if (input.interactionMode === "plan" && provider === "codex")
+        throw new Error("Native Codex plan mode is not implemented");
+    };
     yield* Effect.addFinalizer(() =>
       Effect.sync(() => {
         for (const state of sessions.values()) stop(state);
@@ -147,7 +162,7 @@ export const makeNativeAdapter = (
         supportsNativeSlashCommandDiscovery: false,
         supportsPluginMentions: false,
         supportsPluginDiscovery: false,
-        supportsTurnSteering: false,
+        supportsTurnSteering: provider === "codex",
         supportsLiveTurnDiffPatch: false,
       },
       startSession: (input) =>
@@ -298,18 +313,7 @@ export const makeNativeAdapter = (
         attempt("sendTurn", async () => {
           const state = requireSession(input.threadId);
           if (state.session.activeTurnId) throw new Error("A native turn is already running");
-          if (!input.input?.trim()) throw new Error("A text prompt is required");
-          if (
-            input.attachments?.length ||
-            input.skills?.length ||
-            input.mentions?.length ||
-            input.workTurnPolicy
-          )
-            throw new Error("This native bridge currently accepts text prompts only");
-          if (input.modelSelection && input.modelSelection.provider !== provider)
-            throw new Error("Model provider does not match runtime");
-          if (input.interactionMode === "plan" && provider === "codex")
-            throw new Error("Native Codex plan mode is not implemented");
+          validateTurn(input);
           const turnId = TurnId.makeUnsafe(randomUUID());
           state.completed = false;
           state.session = {
@@ -340,6 +344,26 @@ export const makeNativeAdapter = (
           );
           return { threadId: input.threadId, turnId, resumeCursor: state.session.resumeCursor };
         }),
+      ...(provider === "codex"
+        ? {
+            steerTurn: (input: ProviderSendTurnInput) =>
+              attempt("steerTurn", async () => {
+                const state = requireSession(input.threadId);
+                const turnId = state.session.activeTurnId;
+                if (!turnId || state.completed)
+                  throw new Error("No active native turn available to steer");
+                validateTurn(input);
+                if (!state.driver?.steer)
+                  throw new Error("The native driver does not support steering");
+                await state.driver.steer(input);
+                return {
+                  threadId: input.threadId,
+                  turnId,
+                  resumeCursor: state.session.resumeCursor,
+                };
+              }),
+          }
+        : {}),
       interruptTurn: (threadId) =>
         attempt("interruptTurn", async () => {
           const state = requireSession(threadId);

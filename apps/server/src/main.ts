@@ -1,3 +1,5 @@
+import { resolveDjlMigrationSources } from "@synara/shared/djlStoragePaths";
+import { ComputerServiceLive } from "./computer/Layers/ComputerService";
 /**
  * CliConfig - CLI/runtime bootstrap service definitions.
  *
@@ -147,6 +149,9 @@ const CliEnvConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  disableStorageMigration: Config.boolean("DJL_DISABLE_STORAGE_MIGRATION").pipe(
+    Config.withDefault(false),
+  ),
   migrationSources: Config.string("DJL_MIGRATION_SOURCES").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -206,10 +211,12 @@ const ServerConfigLive = (input: CliInput) =>
         .filter(
           (source) => source.length > 0 && nodePath.resolve(source) !== nodePath.resolve(baseDir),
         );
-      const migrationSources = [
-        ...requestedMigrationSources,
-        nodePath.join(userHomeDir, LEGACY_DJL_HOME_DIR_NAME),
-      ];
+      const migrationSources = resolveDjlMigrationSources({
+        baseDir,
+        userHomeDir,
+        requested: requestedMigrationSources,
+        disabled: env.disableStorageMigration,
+      });
       const storageMigrations = yield* Effect.tryPromise({
         try: async () => {
           const results = [];
@@ -264,13 +271,24 @@ const ServerConfigLive = (input: CliInput) =>
         env.host ??
         (mode === "desktop" ? "127.0.0.1" : undefined);
 
+      const qaWorkspaceRoot =
+        process.env.DJL_COMPUTER_QA_PROFILE === "1"
+          ? nodePath.join(baseDir, "workspace")
+          : undefined;
+      if (qaWorkspaceRoot) {
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(qaWorkspaceRoot, { recursive: true });
+      }
       const { homeDir, chatWorkspaceRoot, studioWorkspaceRoot } =
-        yield* resolveCanonicalWorkspaceRoots({ homeDir: userHomeDir });
+        yield* resolveCanonicalWorkspaceRoots({
+          homeDir: userHomeDir,
+          ...(qaWorkspaceRoot ? { isolatedRoot: qaWorkspaceRoot } : {}),
+        });
 
       const config: ServerConfigShape = {
         mode,
         port,
-        cwd: cliConfig.cwd,
+        cwd: qaWorkspaceRoot ?? cliConfig.cwd,
         homeDir,
         chatWorkspaceRoot,
         studioWorkspaceRoot,
@@ -295,6 +313,7 @@ const LayerLive = (input: CliInput) => {
   const runtimeServicesLayer = makeServerRuntimeServicesLayer();
   const localModelsLayer = LocalModelsLive;
   const providerLayer = makeServerProviderLayer().pipe(
+    Layer.provideMerge(ComputerServiceLive),
     // Provider turn dispatch performs the local-runtime preflight, so construct
     // the provider graph with the same local-model service exposed to Server.
     Layer.provideMerge(localModelsLayer),

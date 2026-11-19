@@ -33,3 +33,23 @@ export * from "./harnessAccounts";
 
 export * from "./runtimePermissions";
 export * from "./marketing/campaign";
+export * from "./marketing/agentSources";
+export * from "./marketing/agentVideo";
+export * from "./marketing/agentWorkflows";
+export * from "./marketing/campaignLinks";
+
+export * from "./builtInPlugins";
+export * from "./computerUse";
+export * from "./computerActivity";
+export * from "./computerActivitySemantics";
+
+export * from "./computer";
+export * from "./computerBrowser";
+export * from "./computerSpaces";
+export * from "./computerAudit";
+export * from "./desktopComputerSetup";
+export * from "./asyncUserInput";
+export * from "./browserAutomationToolCatalogue";
+export * from "./computerApi";
+
+export * from "./multipost";

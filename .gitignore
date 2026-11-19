@@ -1,5 +1,6 @@
 node_modules
 .cache/djl/opencode/
+.cache/djl/media-tools/
 .bun
 .turbo
 .DS_Store

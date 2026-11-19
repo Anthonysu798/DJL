@@ -34,6 +34,7 @@
     "fixtures:cloud": "bun scripts/write-cloud-fixtures.ts && oxfmt fixtures/cloud"
   },
   "dependencies": {
+    "@synara/multipost": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

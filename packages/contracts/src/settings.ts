@@ -237,6 +237,12 @@ export const ServerSettingsPatch = Schema.Struct({
           agentDir: Schema.optionalKey(StringSetting),
         }),
       ),
+      djlCloud: Schema.optionalKey(
+        Schema.Struct({
+          enabled: Schema.optionalKey(Schema.Boolean),
+          region: Schema.optionalKey(Schema.Literals(["auto", "global", "asia"])),
+        }),
+      ),
     }),
   ),
   skills: Schema.optionalKey(

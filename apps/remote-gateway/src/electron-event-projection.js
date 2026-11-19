@@ -209,7 +209,13 @@ function projectSessionSet(threadId, state, event) {
       notification("turn/completed", {
         threadId,
         turnId: previousTurnId,
-        turn: { id: previousTurnId, status },
+        turn: {
+          id: previousTurnId,
+          status,
+          ...(status === "failed" && stringValue(session.lastError)
+            ? { error: { message: session.lastError } }
+            : {}),
+        },
       }),
     ];
   }
@@ -221,6 +227,16 @@ function projectActivity(threadId, state, event) {
   const activityId = stringValue(activity?.id);
   if (!activityId || state.activityIds.has(activityId)) return [];
   state.activityIds.add(activityId);
+  const reasoning = completedReasoningItemFromActivity(activity);
+  if (reasoning) {
+    return [
+      notification("item/completed", {
+        threadId,
+        turnId: activity.turnId,
+        item: reasoning,
+      }),
+    ];
+  }
   if (activity.tone === "tool") {
     return projectToolActivity(threadId, state, activity);
   }
@@ -246,6 +262,32 @@ function projectActivity(threadId, state, event) {
   ];
 }
 
+// Only the backend's completed, readable summary is public. Never project raw
+// provider reasoning boundaries or private/encrypted data from payload.data.
+function completedReasoningItemFromActivity(activity) {
+  const payload = activity?.payload || {};
+  const detail = payload.detail;
+  if (
+    activity?.tone !== "tool" ||
+    activity.kind !== "task.progress" ||
+    activity.summary !== "Reasoning trace" ||
+    !stringValue(activity.turnId) ||
+    (payload.status !== undefined && payload.status !== "completed") ||
+    typeof detail !== "string" ||
+    !detail.trim()
+  )
+    return null;
+  const id = stringValue(payload.data?.toolCallId) || stringValue(activity.id);
+  if (!id) return null;
+  return {
+    id,
+    type: "reasoning",
+    summary: [detail],
+    content: [],
+    createdAt: stringValue(activity.createdAt),
+  };
+}
+
 // Tool lifecycle activities carry the provider item type plus the command,
 // output, or patch in `payload.data`. They map onto the same item shapes the
 // phone already renders for Codex app-server tool items.
@@ -267,9 +309,27 @@ function toolItemFromActivity(activity) {
   const itemType = stringValue(payload.itemType);
   if (!itemType) return null;
   const data = payload.data && typeof payload.data === "object" ? payload.data : {};
-  const id = stringValue(data.toolCallId) || stringValue(data.callID) || stringValue(activity.id);
-  const status = stringValue(payload.status) === "inProgress" ? "inProgress" : "completed";
+  const id =
+    stringValue(data.toolCallId) ||
+    stringValue(data.callID) ||
+    stringValue(data.id) ||
+    stringValue(activity.id);
+  const status = ["inProgress", "failed"].includes(payload.status) ? payload.status : "completed";
   const detail = stringValue(payload.detail);
+
+  if (itemType === "mcp_tool_call") {
+    return {
+      id,
+      type: "mcpToolCall",
+      status,
+      server: stringValue(data.server),
+      tool: stringValue(data.tool),
+      arguments: data.arguments ?? {},
+      ...(data.result != null ? { result: data.result } : {}),
+      ...(data.error != null ? { error: data.error } : {}),
+      ...(Number.isInteger(data.durationMs) ? { durationMs: data.durationMs } : {}),
+    };
+  }
 
   if (itemType === "command_execution") {
     const item = {
@@ -381,6 +441,8 @@ function stringValue(value) {
 
 module.exports = {
   checkpointFileChangeItem,
+  completedReasoningItemFromActivity,
+  toolItemFromActivity,
   createThreadEventProjection,
   desktopGitProgressNotification,
 };

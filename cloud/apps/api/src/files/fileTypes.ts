@@ -17,11 +17,22 @@ const utf8Text = (b: Uint8Array) => {
   }
 };
 
+// ISO BMFF container signature only; this does not establish codecs or duration.
+// Exclude image-only AVIF/HEIF and audio-only brands even though they also use ftyp.
+const mp4 = (bytes: Uint8Array) => {
+  if (bytes.length < 16 || !startsWith(bytes, ascii("ftyp"), 4)) return false;
+  const size = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0);
+  if (size < 16 || size > bytes.length || size % 4 !== 0) return false;
+  const brand = new TextDecoder("ascii").decode(bytes.subarray(8, 12));
+  return ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1"].includes(brand);
+};
+
 const MATCHERS: Readonly<Record<string, (bytes: Uint8Array) => boolean>> = {
   "image/png": (b) => startsWith(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   "image/jpeg": (b) => startsWith(b, [0xff, 0xd8, 0xff]),
   "image/gif": (b) => startsWith(b, ascii("GIF8")),
   "image/webp": (b) => startsWith(b, ascii("RIFF")) && startsWith(b, ascii("WEBP"), 8),
+  "video/mp4": mp4,
   "application/pdf": (b) => startsWith(b, ascii("%PDF-")),
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": zip,
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": zip,

@@ -1,4 +1,5 @@
 import { executeMarketingTool } from "../marketing/chatTools";
+import { registerVideoTranscriber } from "../marketing/videoTools";
 import { Effect, FileSystem, Layer, Path } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -35,7 +36,7 @@ export function makeServerProviderLayer(): Layer.Layer<
   | ChildProcessSpawner.ChildProcessSpawner
 > {
   return Effect.gen(function* () {
-    const { logProviderEvents, providerEventLogPath } = yield* ServerConfig;
+    const { logProviderEvents, providerEventLogPath, stateDir } = yield* ServerConfig;
     const nativeEventLogger = logProviderEvents
       ? yield* makeEventNdjsonLogger(providerEventLogPath, {
           stream: "native",
@@ -77,11 +78,29 @@ export function makeServerProviderLayer(): Layer.Layer<
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
+    const videoTranscriptionLayer = Layer.effectDiscard(
+      Effect.gen(function* () {
+        const registry = yield* ProviderAdapterRegistry;
+        const unregister = registerVideoTranscriber(stateDir, (input) =>
+          registry
+            .getByProvider("codex")
+            .pipe(
+              Effect.flatMap((adapter) =>
+                adapter.transcribeVoice
+                  ? adapter.transcribeVoice(input)
+                  : Effect.fail(new Error("Codex voice transcription is unavailable.")),
+              ),
+            ),
+        );
+        yield* Effect.addFinalizer(() => Effect.sync(unregister));
+      }),
+    ).pipe(Layer.provide(adapterRegistryLayer));
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,
+      videoTranscriptionLayer,
     );
   }).pipe(
     Layer.unwrap,
@@ -89,12 +108,17 @@ export function makeServerProviderLayer(): Layer.Layer<
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
         const config = yield* ServerConfig;
-        return makeWorkMcpServerLive((scope, name, args) =>
-          Effect.runPromise(
-            executeMarketingTool({ ...scope, stateDir: config.stateDir }, name, args).pipe(
-              Effect.provideService(SqlClient.SqlClient, sql),
+        return makeWorkMcpServerLive(
+          (scope, name, args) =>
+            Effect.runPromise(
+              executeMarketingTool(
+                { ...scope, stateDir: config.stateDir, secretsDir: config.secretsDir },
+                name,
+                args,
+              ).pipe(Effect.provideService(SqlClient.SqlClient, sql)),
             ),
-          ),
+          sql,
+          config.stateDir,
         );
       }).pipe(Layer.unwrap),
     ),

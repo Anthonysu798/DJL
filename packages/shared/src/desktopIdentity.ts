@@ -12,3 +12,5 @@ export const SYNARA_DEVELOPMENT_BUNDLE_ID = `${SYNARA_PRODUCTION_BUNDLE_ID}.dev`
 export function synaraBundleId(isDevelopment: boolean): string {
   return isDevelopment ? SYNARA_DEVELOPMENT_BUNDLE_ID : SYNARA_PRODUCTION_BUNDLE_ID;
 }
+
+export const SYNARA_DESKTOP_BUNDLE_ID_ENV = "SYNARA_DESKTOP_BUNDLE_ID";

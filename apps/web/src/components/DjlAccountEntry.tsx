@@ -1,3 +1,4 @@
+import { resetSocialAccountCache, subscribeSocialAccountChanges } from "./marketing/accountCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -36,6 +37,7 @@ export function DjlAccountEntry(
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  useEffect(() => subscribeSocialAccountChanges(queryClient), [queryClient]);
   const status = useQuery({
     queryKey: CLOUD_ACCOUNT_QUERY_KEY,
     queryFn: () => ensureNativeApi().cloud.getStatus(),
@@ -48,6 +50,7 @@ export function DjlAccountEntry(
     mutationFn: () => ensureNativeApi().cloud.signOut(),
     onSuccess: async (next) => {
       queryClient.setQueryData(CLOUD_ACCOUNT_QUERY_KEY, next);
+      await resetSocialAccountCache(queryClient);
       setOpen(true);
       await ensureNativeApi()
         .server.refreshProviders()

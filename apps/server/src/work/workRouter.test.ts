@@ -159,7 +159,23 @@ describe("marketing conversation routing", () => {
     ]) {
       expect(decideWorkTurnPolicy({ prompt, hasAttachments: true })).toMatchObject({
         route: "marketing",
-        visibleTools: ["djl_marketing_status", "djl_prepare_marketing"],
+        visibleTools: expect.arrayContaining([
+          "djl_marketing_status",
+          "djl_inspect_social_media",
+          "djl_prepare_marketing",
+          "djl_social_status",
+          "djl_prepare_social_publish",
+          "djl_cancel_social_task",
+          "djl_social_metrics",
+          "djl_import_product_url",
+          "djl_brand_memory",
+          "djl_media_library",
+          "djl_repurpose_video",
+          "djl_transcribe_video",
+          "djl_social_workflows",
+          "djl_social_inbox",
+          "djl_social_coach",
+        ]),
       });
     }
     expect(
@@ -167,4 +183,29 @@ describe("marketing conversation routing", () => {
         .route,
     ).toBe("coding");
   });
+});
+
+it.each([
+  "Turn this product page into social posts",
+  "Find three clips from this video",
+  "Search my media library",
+  "Save this as my content workflow",
+  "Show my upcoming posts",
+  "Remember our brand tone",
+  "为这个视频添加字幕",
+  "搜索素材库",
+])("routes the social agent capability request: %s", (prompt) => {
+  expect(decideWorkTurnPolicy({ prompt }).route).toBe("marketing");
+});
+
+it("keeps an explicit social workspace workflow on social tools when its source contains coding terms", () => {
+  expect(
+    decideWorkTurnPolicy({
+      prompt:
+        "Social media workspace request. Resume Weekly Python tips and prepare a product post. Source text mentions code.",
+    }).route,
+  ).toBe("marketing");
+  expect(decideWorkTurnPolicy({ prompt: "Write TypeScript code for an Instagram API" }).route).toBe(
+    "coding",
+  );
 });

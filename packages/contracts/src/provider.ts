@@ -9,6 +9,7 @@ import {
   TurnId,
 } from "./baseSchemas";
 import {
+  ComputerTurnControl,
   ChatAttachment,
   ModelSelection,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
@@ -85,6 +86,8 @@ export const WorkTurnPolicy = Schema.Struct({
 export type WorkTurnPolicy = typeof WorkTurnPolicy.Type;
 
 export const ProviderSendTurnInput = Schema.Struct({
+  computerControl: Schema.optional(ComputerTurnControl),
+  computerActivityHistory: Schema.optional(Schema.Boolean),
   threadId: ThreadId,
   input: Schema.optional(
     TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),

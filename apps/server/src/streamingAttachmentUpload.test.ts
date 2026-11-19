@@ -108,3 +108,33 @@ describe("streaming attachment uploads", () => {
     }
   });
 });
+
+describe("social video attachment detection", () => {
+  it("recognizes MP4 bytes as a media file instead of rejecting it as a document", () => {
+    const header = Buffer.from([
+      0,
+      0,
+      0,
+      24,
+      ...Buffer.from("ftypisom"),
+      0,
+      0,
+      0,
+      1,
+      ...Buffer.from("isommp42"),
+    ]);
+    expect(
+      detectUploadedMediaType({ name: "clip.mp4", declaredMimeType: "video/mp4", header }),
+    ).toEqual({ type: "file", mediaType: "video/mp4", extension: ".mp4" });
+  });
+  it("does not accept an image container as video or a mismatched video extension", () => {
+    const image = Buffer.from([0, 0, 0, 16, ...Buffer.from("ftypavif"), 0, 0, 0, 0]);
+    expect(() =>
+      detectUploadedMediaType({ name: "clip.mp4", declaredMimeType: "video/mp4", header: image }),
+    ).toThrow();
+    const mp4 = Buffer.from([0, 0, 0, 16, ...Buffer.from("ftypisom"), 0, 0, 0, 0]);
+    expect(() =>
+      detectUploadedMediaType({ name: "clip.webm", declaredMimeType: "video/webm", header: mp4 }),
+    ).toThrow();
+  });
+});

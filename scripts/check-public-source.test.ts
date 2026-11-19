@@ -128,3 +128,15 @@ describe("public source audit", () => {
     ]);
   });
 });
+
+it("allows loopback fixture URLs without accepting fixed remote SSH targets", () => {
+  expect(
+    findPublicSourceViolations([
+      file("fixture.ts", "postgres://test:test@127.0.0.1:5432/test"),
+      file("fixture.ts", "http://user:pass@127.0.0.1:43210/computer-use"),
+    ]),
+  ).toEqual([]);
+  expect(
+    findPublicSourceViolations([file("release.sh", "root@" + ["203", "0", "113", "42"].join("."))]),
+  ).toEqual([expect.objectContaining({ rule: "hard-coded-release-host" })]);
+});

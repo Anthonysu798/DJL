@@ -1,3 +1,4 @@
+import { BUILT_IN_PLUGINS, BUILT_IN_SKILLS } from "@synara/contracts";
 import type {
   ProjectEntry,
   ProviderNativeCommandDescriptor,
@@ -164,7 +165,9 @@ export function useComposerCommandMenuItems(input: {
       })();
 
       const pluginItems = rankProviderDiscoveryItems(
-        providerPlugins.filter(({ plugin }) => isInstalledProviderPlugin(plugin)),
+        [...BUILT_IN_PLUGINS, ...providerPlugins].filter(({ plugin }) =>
+          isInstalledProviderPlugin(plugin),
+        ),
         query,
         ({ plugin }) => buildPluginSearchFields(plugin),
       ).map(({ plugin, mention }) => ({
@@ -280,7 +283,7 @@ export function useComposerCommandMenuItems(input: {
       // `/` is the universal picker surface; provider dispatch can adapt the
       // visible slash token to backend-specific skill syntax when needed.
       const skillItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
-        providerSkills,
+        [...BUILT_IN_SKILLS, ...providerSkills],
         query,
         buildSkillSearchFields,
       ).map((skill) => ({
@@ -295,15 +298,17 @@ export function useComposerCommandMenuItems(input: {
 
     if (composerTrigger.kind === "skill") {
       const query = normalizeProviderDiscoveryText(composerTrigger.query);
-      return rankProviderDiscoveryItems(providerSkills, query, buildSkillSearchFields).map(
-        (skill) => ({
-          id: `skill:${skill.path}`,
-          type: "skill" as const,
-          skill,
-          label: skill.interface?.displayName ?? skill.name,
-          description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
-        }),
-      );
+      return rankProviderDiscoveryItems(
+        [...BUILT_IN_SKILLS, ...providerSkills].filter((skill) => skill.enabled),
+        query,
+        buildSkillSearchFields,
+      ).map((skill) => ({
+        id: `skill:${skill.path}`,
+        type: "skill" as const,
+        skill,
+        label: skill.interface?.displayName ?? skill.name,
+        description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
+      }));
     }
 
     return rankProviderDiscoveryItems(searchableModelOptions, composerTrigger.query, (option) => [

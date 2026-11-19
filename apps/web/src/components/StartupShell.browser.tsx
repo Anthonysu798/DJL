@@ -1,8 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { page } from "vitest/browser";
 import { mountStartupShell } from "../startup/shell";
 import { getStartupCopy } from "../startup/copy";
+import { StartupSession } from "../startup/session";
+import { StartupStorage } from "../startup/storage";
+import { remainingSplashDuration } from "../startup/timing";
 import type { StartupDraft, StartupShellHandle, StartupShellOptions } from "../startup/types";
+
+vi.mock("../startup/timing", () => ({ remainingSplashDuration: vi.fn(() => 0) }));
 
 let shell: StartupShellHandle | undefined;
 const initial: StartupDraft = {
@@ -16,16 +21,12 @@ const initial: StartupDraft = {
   updatedAt: 1,
 };
 function mount(overrides: Partial<StartupShellOptions> = {}) {
-  let draft = { ...initial };
   const options: StartupShellOptions = {
-    draft,
+    draft: { ...initial },
     snapshot: null,
     locale: "en",
     editable: true,
-    onEdit: vi.fn((text: string) => {
-      draft = { ...draft, text, revision: draft.revision + 1 };
-      shell?.update(draft);
-    }),
+    onEdit: vi.fn(),
     onSend: vi.fn(),
     onCancelSend: vi.fn(),
     onNavigate: vi.fn(),
@@ -35,138 +36,196 @@ function mount(overrides: Partial<StartupShellOptions> = {}) {
   shell = mountStartupShell(options);
   return options;
 }
-function textarea() {
-  return document.querySelector<HTMLTextAreaElement>(".startup-textarea")!;
-}
 afterEach(() => {
   shell?.destroy();
   shell = undefined;
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+  vi.mocked(remainingSplashDuration).mockReturnValue(0);
 });
 
-it("hides the real app root while the shell is mounted and restores it on destroy", () => {
+it("shows branded artwork and loading status without an input or navigation", async () => {
+  const options = mount({ draft: { ...initial, text: "Saved draft" } });
+  await expect.element(page.getByRole("heading", { name: "DJL", exact: true })).toBeVisible();
+  await expect.element(page.getByRole("status")).toHaveTextContent(getStartupCopy("en").loading);
+  expect(document.querySelector("#app-startup img")).toBeNull();
+  const canvas = document.querySelector<HTMLCanvasElement>(".startup-particles")!;
+  await expect.poll(() => canvas.width > 0 && canvas.height > 0).toBe(true);
+  await expect
+    .poll(() =>
+      canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height)
+        .data.some((value, index) => index % 4 === 3 && value > 0),
+    )
+    .toBe(true);
+  expect(document.querySelector("textarea, input, nav")).toBeNull();
+  expect(shell!.isFocused()).toBe(false);
+  expect(shell!.isComposing()).toBe(false);
+  expect(shell!.selection()).toEqual({ start: 11, end: 11 });
+  expect(options.onSend).not.toHaveBeenCalled();
+});
+
+it("keeps the app hidden until readiness, then reveals it and removes the splash", async () => {
   const root = document.createElement("div");
   root.id = "root";
+  root.inert = true;
   document.body.append(root);
+  const session = new StartupSession(
+    new StartupStorage("splash-ready", localStorage),
+    "home",
+    null,
+  );
   try {
     mount();
+    session.attachShell(shell!);
     expect(getComputedStyle(root).visibility).toBe("hidden");
-    shell!.destroy();
-    shell = undefined;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect(session.previewActive).toBe(true);
+    expect(root.inert).toBe(true);
+    session.finishPreview();
+    expect(session.previewActive).toBe(false);
+    expect(root.inert).toBe(false);
     expect(getComputedStyle(root).visibility).toBe("visible");
+    await expect.poll(() => document.getElementById("app-startup")).toBeNull();
   } finally {
     root.remove();
   }
 });
 
-it("accepts multibyte input before any native API and keeps selection on status changes", async () => {
-  vi.stubGlobal("desktopBridge", undefined);
-  const options = mount();
-  await userEvent.fill(page.getByRole("textbox"), "你好 👋 café");
-  expect(options.onEdit).toHaveBeenCalledWith("你好 👋 café");
-  textarea().setSelectionRange(2, 4);
-  shell!.update({ ...initial, text: textarea().value }, "storage-error");
-  expect(shell!.selection()).toEqual({ start: 2, end: 4 });
-  expect(shell!.isFocused()).toBe(true);
-  await expect.element(page.getByRole("status")).toHaveTextContent("Draft is only in memory");
-});
-it("guards duplicate Send, freezes pending text, and supports Cancel", async () => {
-  const options = mount({ draft: { ...initial, text: "A task" } });
-  await page.getByRole("button", { name: "Send", exact: true }).click();
-  expect(options.onSend).toHaveBeenCalledTimes(1);
-  expect(textarea().readOnly).toBe(true);
-  textarea().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  expect(options.onSend).toHaveBeenCalledTimes(1);
-  shell!.update({ ...initial, text: "A task", sendState: "pending" });
-  await page.getByRole("button", { name: "Cancel send" }).click();
-  expect(options.onCancelSend).toHaveBeenCalledTimes(1);
-  shell!.update({ ...initial, text: "A task" });
-  expect(textarea().readOnly).toBe(false);
-});
-it("ignores composition Enter and Shift Enter, and accepts command Enter", () => {
-  const options = mount({ draft: { ...initial, text: "日本語" } });
-  const input = textarea();
-  input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
-  expect(shell!.isComposing()).toBe(true);
-  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  expect(options.onSend).not.toHaveBeenCalled();
-  input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
-  expect(shell!.isComposing()).toBe(false);
-  const newline = new KeyboardEvent("keydown", {
-    key: "Enter",
-    shiftKey: true,
-    bubbles: true,
-    cancelable: true,
-  });
-  input.dispatchEvent(newline);
-  expect(newline.defaultPrevented).toBe(false);
-  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
-  expect(options.onSend).toHaveBeenCalledTimes(1);
-});
-it("requires model and nonblank text before Send", async () => {
-  mount({ draft: { ...initial, text: "hello", model: null } });
-  await expect.element(page.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
-  await expect.element(page.getByText(getStartupCopy("en").modelRequired)).toBeVisible();
-  shell!.update({ ...initial, text: "   " });
-  await expect.element(page.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
-});
-it("renders snapshot titles literally and uses keyboard-accessible navigation", async () => {
-  const title = '<img src=x onerror="alert(1)">';
-  const options = mount({
-    snapshot: {
-      version: 1,
-      savedAt: 1,
-      locale: "en",
-      theme: "dark",
-      sidebarWidth: 260,
-      projects: [{ id: "p/1", title }],
-      threads: [{ id: "t1", title: "Earlier task" }],
-      model: null,
-    },
-  });
-  expect(document.querySelector("#app-startup img")).toBeNull();
-  await page.getByRole("button", { name: title, exact: true }).click();
-  expect(options.onNavigate).toHaveBeenCalledWith("/workspaces/p%2F1");
-  const work = document.querySelector<HTMLButtonElement>(".startup-surfaces button")!;
-  work.focus();
-  await userEvent.keyboard("{Enter}");
-  expect(options.onNavigate).toHaveBeenCalledWith("/work");
-  await expect
-    .element(page.getByRole("button", { name: "Projects", exact: true }))
-    .toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Projects", exact: true }).click();
-  expect(options.onNavigate).toHaveBeenLastCalledWith("/");
-  await page.getByRole("button", { name: "Workspaces", exact: true }).click();
-  expect(options.onNavigate).toHaveBeenLastCalledWith("/workspaces");
-  await page.getByRole("button", { name: "New task", exact: true }).click();
-  expect(options.onNavigate).toHaveBeenLastCalledWith("/");
-  shell!.update({ ...initial, surface: "work" });
-  await expect
-    .element(page.getByRole("button", { name: "Work", exact: true }))
-    .toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "New task", exact: true }).click();
-  expect(options.onNavigate).toHaveBeenLastCalledWith("/work");
-  await page.getByRole("button", { name: "Earlier task" }).click();
-  expect(options.onNavigate).toHaveBeenCalledWith("/t1");
-});
-it("shows recovery and retry, localizes copy, and tears down listeners", async () => {
-  const options = mount({
-    locale: "fr",
-    draft: { ...initial, text: "Bonjour", sendState: "uncertain" },
-  });
-  await expect.element(page.getByRole("status")).toHaveTextContent(getStartupCopy("fr").recovered);
-  shell!.update({ ...initial, text: "Bonjour" }, "runtime-error");
-  await page.getByRole("button", { name: "Réessayer" }).click();
+it("shows localized failure recovery and tears down retry listeners", async () => {
+  const options = mount({ locale: "fr" });
+  shell!.update(initial, "runtime-error");
+  await expect.element(page.getByRole("status")).toHaveTextContent(getStartupCopy("fr").sendFailed);
+  const retry = page.getByRole("button", { name: "Réessayer" });
+  await retry.click();
   expect(options.onRetry).toHaveBeenCalledTimes(1);
-  const input = textarea();
+  const button = document.querySelector<HTMLButtonElement>(".startup-retry")!;
   shell!.destroy();
+  button.click();
+  expect(options.onRetry).toHaveBeenCalledTimes(1);
   expect(document.getElementById("app-startup")).toBeNull();
-  input.dispatchEvent(new Event("input"));
-  expect(options.onEdit).not.toHaveBeenCalled();
 });
-it("does not autofocus or allow Send on a noneditable route", async () => {
-  mount({ editable: false, draft: { ...initial, text: "text" } });
-  expect(shell!.isFocused()).toBe(false);
-  expect(textarea().readOnly).toBe(true);
-  await expect.element(page.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
+
+it("preserves saved drafts without exposing their contents on the splash", async () => {
+  mount();
+  shell!.update(
+    { ...initial, text: "Private saved draft", sendState: "uncertain" },
+    "storage-error",
+  );
+  expect(document.getElementById("app-startup")!.textContent).not.toContain("Private saved draft");
+  await expect
+    .element(page.getByRole("status"))
+    .toHaveTextContent(getStartupCopy("en").storageError);
+  expect(shell!.selection()).toEqual({ start: 19, end: 19 });
+});
+
+it("keeps the illustration and recovery action inside a compact window", async () => {
+  await page.viewport(360, 480);
+  try {
+    mount();
+    shell!.update(initial, "runtime-error");
+    const art = document.querySelector<HTMLElement>(".startup-art")!.getBoundingClientRect();
+    const retry = document.querySelector<HTMLElement>(".startup-retry")!.getBoundingClientRect();
+    expect(art.left).toBeGreaterThanOrEqual(0);
+    expect(art.right).toBeLessThanOrEqual(360);
+    expect(retry.bottom).toBeLessThanOrEqual(480);
+    await expect.element(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  } finally {
+    await page.viewport(1000, 1000);
+  }
+});
+
+it("keeps reduced-motion particles static and reveals the app immediately", async () => {
+  const nativeMatchMedia = window.matchMedia.bind(window);
+  vi.stubGlobal("matchMedia", (query: string) => {
+    const media = nativeMatchMedia(query);
+    Object.defineProperty(media, "matches", { value: query.includes("prefers-reduced-motion") });
+    return media;
+  });
+  mount();
+  const canvas = document.querySelector<HTMLCanvasElement>(".startup-particles")!;
+  await expect
+    .poll(
+      () =>
+        canvas.width === Math.round(canvas.clientWidth * Math.min(devicePixelRatio || 1, 2)) &&
+        canvas.clientWidth > 0,
+    )
+    .toBe(true);
+  const pixels = () =>
+    canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+  const before = pixels();
+  canvas.dispatchEvent(new PointerEvent("pointermove", { clientX: 500, clientY: 500 }));
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  expect(pixels()).toEqual(before);
+  shell!.reveal!();
+  expect(document.getElementById("app-startup")).toBeNull();
+});
+
+it("stops drawing when the splash is destroyed", async () => {
+  mount();
+  const canvas = document.querySelector<HTMLCanvasElement>(".startup-particles")!;
+  const clear = vi.spyOn(canvas.getContext("2d")!, "clearRect");
+  try {
+    await expect.poll(() => clear.mock.calls.length).toBeGreaterThan(0);
+    shell!.destroy();
+    const calls = clear.mock.calls.length;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect(clear).toHaveBeenCalledTimes(calls);
+  } finally {
+    clear.mockRestore();
+  }
+});
+
+it("holds a ready app for seven seconds without letting duplicate readiness skip the intro", () => {
+  vi.mocked(remainingSplashDuration).mockReturnValue(7_000);
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const root = document.createElement("div");
+  root.id = "root";
+  root.inert = true;
+  document.body.append(root);
+  const session = new StartupSession(
+    new StartupStorage("splash-duration", localStorage),
+    "home",
+    null,
+  );
+  try {
+    mount();
+    session.attachShell(shell!);
+    session.finishPreview();
+    session.finishPreview();
+    vi.advanceTimersByTime(6_999);
+    expect(root.inert).toBe(true);
+    expect(getComputedStyle(root).visibility).toBe("hidden");
+    vi.advanceTimersByTime(1);
+    expect(root.inert).toBe(false);
+    expect(getComputedStyle(root).visibility).toBe("visible");
+    vi.advanceTimersByTime(280);
+    expect(document.getElementById("app-startup")).toBeNull();
+  } finally {
+    root.remove();
+  }
+});
+
+it("waits for actual readiness when loading takes longer than the intro", () => {
+  vi.mocked(remainingSplashDuration).mockReturnValue(7_000);
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  mount();
+  vi.advanceTimersByTime(10_000);
+  vi.mocked(remainingSplashDuration).mockReturnValue(0);
+  expect(document.getElementById("app-startup")?.dataset.state).toBe("loading");
+  const ready = vi.fn();
+  shell!.reveal!(ready);
+  expect(ready).toHaveBeenCalledTimes(1);
+});
+
+it("cancels a pending reveal when the splash is destroyed", () => {
+  vi.mocked(remainingSplashDuration).mockReturnValue(7_000);
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  mount();
+  const ready = vi.fn();
+  shell!.reveal!(ready);
+  shell!.destroy();
+  vi.advanceTimersByTime(10_000);
+  expect(ready).not.toHaveBeenCalled();
 });

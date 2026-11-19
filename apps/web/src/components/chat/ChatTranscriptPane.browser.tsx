@@ -1,3 +1,9 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterContextProvider,
+} from "@tanstack/react-router";
 import "../../index.css";
 
 import { MessageId, type BrowserFindingDraft } from "@synara/contracts";
@@ -12,11 +18,18 @@ import type { ReactNode } from "react";
 
 const render = (ui: ReactNode, options?: Parameters<typeof renderBrowser>[1]) =>
   renderBrowser(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    <RouterContextProvider
+      router={createRouter({
+        routeTree: createRootRoute(),
+        history: createMemoryHistory({ initialEntries: ["/"] }),
+      })}
     >
-      {ui}
-    </QueryClientProvider>,
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        {ui}
+      </QueryClientProvider>
+    </RouterContextProvider>,
     options,
   );
 

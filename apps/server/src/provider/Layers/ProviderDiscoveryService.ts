@@ -14,6 +14,9 @@ import {
   OpenCodeListModelProvidersInput,
   OpenCodeRemoveCredentialInput,
   OpenCodeSetApiKeyInput,
+  SaveCustomModelProviderInput,
+  RemoveCustomModelProviderInput,
+  FetchCustomModelsInput,
   type OpenCodeListModelProvidersResult,
   type ProviderSkillDescriptor,
 } from "@synara/contracts";
@@ -243,6 +246,8 @@ const make = Effect.gen(function* () {
         schema: ProviderListSkillsInput,
         payload: input,
       });
+      if (process.env.DJL_COMPUTER_QA_PROFILE === "1")
+        return { skills: [], source: "qa.builtin-only", cached: false };
       const adapter = yield* registry.getByProvider(parsed.provider);
       const nativeResult: ProviderListSkillsResult | null = adapter.listSkills
         ? yield* adapter
@@ -418,6 +423,61 @@ const make = Effect.gen(function* () {
       return yield* refreshOpenCodeProviders(adapter, true);
     });
 
+  const saveCustomProvider: ProviderDiscoveryServiceShape["saveCustomProvider"] = (input) =>
+    Effect.gen(function* () {
+      const parsed = yield* decodeInputOrValidationError({
+        operation: "ProviderDiscoveryService.saveCustomProvider",
+        schema: SaveCustomModelProviderInput,
+        payload: input,
+      });
+      const adapter = yield* registry.getByProvider("opencode");
+      if (!adapter.saveCustomProvider)
+        return yield* new ProviderValidationError({
+          operation: "ProviderDiscoveryService.saveCustomProvider",
+          issue: "Custom model APIs are unavailable.",
+        });
+      const result = yield* adapter.saveCustomProvider(parsed);
+      openCodeCatalogCache.markStale();
+      scheduleOpenCodeCatalogRefresh();
+      return result;
+    });
+
+  const removeCustomProvider: ProviderDiscoveryServiceShape["removeCustomProvider"] = (input) =>
+    Effect.gen(function* () {
+      const parsed = yield* decodeInputOrValidationError({
+        operation: "ProviderDiscoveryService.removeCustomProvider",
+        schema: RemoveCustomModelProviderInput,
+        payload: input,
+      });
+      const adapter = yield* registry.getByProvider("opencode");
+      if (!adapter.removeCustomProvider)
+        return yield* new ProviderValidationError({
+          operation: "ProviderDiscoveryService.removeCustomProvider",
+          issue: "Custom model APIs are unavailable.",
+        });
+      const result = yield* adapter.removeCustomProvider(parsed);
+      openCodeCatalogCache.markStale();
+      scheduleOpenCodeCatalogRefresh();
+      return result;
+    });
+
+  const fetchCustomModels: ProviderDiscoveryServiceShape["fetchCustomModels"] = (input) =>
+    Effect.gen(function* () {
+      const parsed = yield* decodeInputOrValidationError({
+        operation: "ProviderDiscoveryService.fetchCustomModels",
+        schema: FetchCustomModelsInput,
+        payload: input,
+      });
+      const adapter = yield* registry.getByProvider("opencode");
+      if (!adapter.fetchCustomModels)
+        return yield* new ProviderValidationError({
+          operation: "ProviderDiscoveryService.fetchCustomModels",
+          issue: "Custom model APIs are unavailable.",
+        });
+      const result = yield* adapter.fetchCustomModels(parsed);
+      return result;
+    });
+
   const setApiKey: ProviderDiscoveryServiceShape["setApiKey"] = (input) =>
     Effect.gen(function* () {
       const parsed = yield* decodeInputOrValidationError({
@@ -475,6 +535,9 @@ const make = Effect.gen(function* () {
     listAgents,
     listModelProviders,
     setApiKey,
+    saveCustomProvider,
+    removeCustomProvider,
+    fetchCustomModels,
     removeCredential,
   } satisfies ProviderDiscoveryServiceShape;
 });

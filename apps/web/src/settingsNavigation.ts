@@ -8,6 +8,7 @@ export const SETTINGS_SECTION_IDS = [
   "profile",
   "appearance",
   "notifications",
+  "computer",
   "remote",
   "behavior",
   "shortcuts",
@@ -66,6 +67,15 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
 ] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
+  {
+    id: "computer",
+    group: "app",
+    labelKey: "navigation.items.computer.label",
+    descriptionKey: "navigation.items.computer.description",
+    eyebrowKey: "navigation.items.computer.eyebrow",
+    icon: "computer-use",
+    desktopOnly: true,
+  },
   {
     id: "accounts",
     group: "synara",

@@ -28,6 +28,7 @@ import { createFlySandbox, createMockSandbox, type Sandbox } from "./sandbox/San
 import { createSandboxTools } from "./sandboxTools.ts";
 import { ToolBilling } from "./ToolBilling.ts";
 import { createWebTools } from "./webTools.ts";
+import { createSocialTools, type SocialToolServices } from "./socialTools.ts";
 
 export {
   AGENT_RUN_JOB,
@@ -47,6 +48,7 @@ export interface AgentRuntimeInput {
   readonly mockExternals: boolean;
   readonly webPublicUrl: string;
   readonly env: NodeJS.ProcessEnv;
+  readonly social?: SocialToolServices;
   readonly onAlert?: (alert: {
     readonly severity: "warn" | "p0";
     readonly title: string;
@@ -148,6 +150,7 @@ export function createAgentRuntime(input: AgentRuntimeInput): AgentRuntime {
       ...createWebTools(web).filter((tool) => searchEnabled || tool.name === "read_page"),
       ...createImageTools({ db, blobs, gateway }),
       ...createSandboxTools({ db, blobs, sandboxEnabled }),
+      ...(input.social ? createSocialTools(input.social) : []),
     ],
   });
   return {

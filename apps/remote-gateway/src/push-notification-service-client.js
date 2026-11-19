@@ -26,14 +26,34 @@ function createPushNotificationServiceClient({
     DEFAULT_PUSH_SERVICE_RETRY_BASE_DELAY_MS,
   );
 
-  async function registerDevice({ deviceToken, alertsEnabled, apnsEnvironment } = {}) {
+  async function registerDevice({ deviceToken, alertsEnabled, apnsEnvironment, provider } = {}) {
     return postJSON("/v1/push/session/register-device", {
       sessionId,
       notificationSecret,
       deviceToken,
       alertsEnabled,
       environment: apnsEnvironment,
+      ...(provider === "fcm" ? { provider } : {}),
     });
+  }
+
+  async function getCapabilities() {
+    if (!normalizedBaseUrl || typeof fetchImpl !== "function") return { providers: [] };
+    try {
+      const response = await fetchImpl(`${normalizedBaseUrl}/v1/push/capabilities`, {
+        method: "GET",
+        signal: AbortSignal.timeout(requestTimeoutMs > 0 ? requestTimeoutMs : 10_000),
+      });
+      if (!response.ok) return { providers: [] };
+      const body = safeParseJSON(await response.text());
+      return {
+        providers: Array.isArray(body?.providers)
+          ? body.providers.filter((value) => value === "apns" || value === "fcm")
+          : [],
+      };
+    } catch {
+      return { providers: [] };
+    }
   }
 
   async function notifyCompletion({ threadId, turnId, result, dedupeKey } = {}) {
@@ -123,6 +143,7 @@ function createPushNotificationServiceClient({
   return {
     hasConfiguredBaseUrl: Boolean(normalizedBaseUrl),
     registerDevice,
+    getCapabilities,
     notifyCompletion,
     logUnavailable() {
       if (!normalizedBaseUrl) {

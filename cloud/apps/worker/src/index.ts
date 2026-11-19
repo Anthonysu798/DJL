@@ -4,6 +4,15 @@
  * (task runs). Stripe webhooks are processed inline by the API.
  */
 import { createAgentRuntime } from "@djl/api/agent";
+import {
+  PublishingWorker,
+  PublishingService,
+  SocialConnectionService,
+  createSocialProviders,
+} from "@djl/api/social-publishing";
+import { registerSocialJobs } from "./social.ts";
+import { SocialReportService } from "@djl/api/social-reports";
+import { registerSocialReportJobs } from "./socialReports.ts";
 import { blobStoreFromEnv } from "@djl/api/blobs";
 import { LedgerService } from "@djl/api/credits";
 import { CommerceAlertsService, commerceAlertsEnabled } from "@djl/api/commerce-alerts";
@@ -46,6 +55,19 @@ boss.on("error", (error) =>
   console.error(JSON.stringify({ level: "error", msg: "pg-boss", error: String(error) })),
 );
 await boss.start();
+const socialEnabled = process.env.SOCIAL_PUBLISHING_ENABLED === "true";
+const socialConnections = new SocialConnectionService(db, createSocialProviders(process.env), {
+  enabled: socialEnabled,
+  encryptionKey: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY,
+  publicUrl: process.env.API_PUBLIC_URL ?? "http://localhost:8787",
+});
+if (socialEnabled) {
+  await registerSocialJobs(boss, new PublishingWorker(db, socialConnections, blobs));
+  await registerSocialReportJobs(
+    boss,
+    new SocialReportService(db, new PublishingService(db, blobs, socialConnections)),
+  );
+}
 
 const SCHEDULES: Record<keyof typeof JOBS, string> = {
   "ledger.release-stale": "*/5 * * * *",

@@ -1,0 +1,287 @@
+.connection-page {
+  --connection-signal: #8170f5;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--foreground);
+}
+.connection-header,
+.connection-page-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 40px;
+}
+.connection-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.06em;
+  text-decoration: none;
+}
+.connection-brand span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--connection-signal);
+  margin-top: 11px;
+}
+.connection-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 28px 20px 56px;
+}
+.connection-reveal {
+  width: min(100%, 460px);
+}
+.connection-card.spotlight-card {
+  padding: 0 0 38px;
+  border-radius: 28px;
+  --spotlight-card-surface: var(--card) !important;
+  --spotlight-card-border: var(--border) !important;
+}
+.connection-content {
+  position: relative;
+  padding: 0 36px;
+  text-align: center;
+}
+.connection-content h1 {
+  font-size: clamp(25px, 4vw, 30px);
+  font-weight: 580;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.connection-description {
+  margin: 12px auto 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+  max-width: 320px;
+  text-wrap: pretty;
+}
+.connection-illustration {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 238px;
+  padding: 8px 24px 30px;
+  isolation: isolate;
+}
+.connection-artwork {
+  width: min(100%, 340px);
+  height: auto;
+  object-fit: contain;
+  transform: translateY(-2px);
+  transition:
+    transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 200ms;
+}
+.connection-illustration:hover .connection-artwork {
+  transform: translateY(-6px);
+}
+.connection-illustration:is([data-state="failed"], [data-state="denied"]) .connection-artwork {
+  opacity: 0.55;
+}
+.connection-brand-pair {
+  position: absolute;
+  bottom: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  height: 43px;
+  padding: 7px 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 3px 10px #00000006;
+}
+.connection-brand-bridge {
+  width: 24px;
+  height: 1px;
+  background: var(--border);
+}
+.connection-illustration[data-state="working"] .connection-brand-bridge {
+  background: var(--connection-signal);
+  animation: connection-breathe 1.8s ease-in-out infinite;
+}
+.connection-platform-icon {
+  color: var(--foreground);
+}
+.connection-form {
+  margin-top: 26px;
+}
+.connection-label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+.connection-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 25px;
+}
+.connection-primary,
+.connection-secondary {
+  min-height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 550;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 160ms,
+    background 160ms,
+    opacity 160ms;
+}
+.connection-primary {
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 2px 3px #0000000a;
+}
+.connection-secondary {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+}
+.connection-primary:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.connection-secondary:hover:not(:disabled) {
+  background: var(--secondary);
+}
+.connection-primary:active:not(:disabled),
+.connection-secondary:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.connection-primary:disabled,
+.connection-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.connection-page a:focus-visible,
+.connection-page button:focus-visible {
+  outline: 2px solid var(--connection-signal);
+  outline-offset: 4px;
+}
+.connection-text-action {
+  border: 0;
+  background: transparent;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 5px 10px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.connection-text-action:hover {
+  color: var(--foreground);
+}
+.connection-note,
+.connection-status {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 18px;
+  text-wrap: pretty;
+}
+.connection-actions .connection-note {
+  margin-top: 0;
+}
+.connection-error {
+  margin-top: 17px;
+  border-radius: 12px;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: left;
+}
+.connection-error button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.connection-footer {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 22px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.connection-page-footer {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  padding-top: 0;
+}
+.connection-page-footer a {
+  text-decoration: none;
+}
+.connection-spin {
+  animation: connection-spin 1s linear infinite;
+}
+@keyframes connection-breathe {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes connection-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 520px) {
+  .connection-header,
+  .connection-page-footer {
+    padding: 22px;
+  }
+  .connection-main {
+    padding: 10px 16px 36px;
+  }
+  .connection-content {
+    padding: 0 25px;
+  }
+  .connection-illustration {
+    height: 215px;
+  }
+  .connection-card.spotlight-card {
+    border-radius: 24px;
+    padding-bottom: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connection-page *,
+  .connection-page *::before,
+  .connection-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

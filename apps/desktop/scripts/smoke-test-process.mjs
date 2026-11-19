@@ -52,8 +52,12 @@ export function findSmokeFailures(
   return failures;
 }
 
-export function buildSmokeLaunchArguments(mainJs, userDataDirectory) {
-  return [mainJs, `--user-data-dir=${userDataDirectory}`];
+export function buildSmokeLaunchArguments(mainJs, userDataDirectory, platform = process.platform) {
+  return [
+    mainJs,
+    `--user-data-dir=${userDataDirectory}`,
+    ...(platform === "linux" ? ["--disable-gpu"] : []),
+  ];
 }
 
 export function unixProcessGroupTarget(pid) {

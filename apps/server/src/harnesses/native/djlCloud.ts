@@ -1,3 +1,8 @@
+import { MULTIPOST_TOOLS } from "../../multipost/mcp";
+import { computerToolInstructions } from "../../agentGateway/computerGuidance";
+import { MARKETING_TOOLS } from "../../marketing/chatTools";
+import { COMPUTER_TOOLS } from "../../work/computerTools";
+import { BUILT_IN_PLUGINS } from "@synara/contracts";
 import { runMarketingConversation } from "../../marketing/cloudConversation";
 /**
  * DJL Cloud native driver: streams OpenAI-compatible chat completions from
@@ -63,37 +68,102 @@ export const createDjlCloudDriverFactory =
       {
         role: "system",
         content:
-          "You are DJL. Handle marketing requests conversationally using the available marketing tools. Read djl_marketing_status, prepare platform-specific copy from verified user facts, then call djl_prepare_marketing. Keep revisions in this conversation. Do not ask beginners to open a studio or configure models. Never claim an external publication: no publishing tool is available. The user reviews the inline card and explicitly approves export.",
+          "Use DJL multipost mcp for new social publishing. Inspect capabilities, accounts and real media before drafting. Prepare a versioned draft and show it for review. Submit only a user-approved revision or one covered by a valid UI-created standing grant. Never grant consent yourself. Report publication only from actual provider evidence; retain uncertain states.",
       },
     ];
     let model = input.modelSelection?.model ?? "claude-sonnet-5";
     let controller: AbortController | null = null;
+    let computerToolsActive = false;
+    let computerHistory: Record<string, unknown>[] | null = null;
 
     return {
       id: randomUUID(),
       async send(request) {
+        const computerRequestHeaders = workTools?.computer?.requestHeaders() ?? {};
         if (request.modelSelection?.model) model = request.modelSelection.model;
-        if (workTools && request.workTurnPolicy?.route === "marketing") {
+        let computerTools = COMPUTER_TOOLS;
+        let computerRequest: boolean;
+        if (workTools?.computer) {
+          const response = await fetch(workTools.url, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${workTools.bearerToken}`,
+              ...computerRequestHeaders,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ jsonrpc: "2.0", id: randomUUID(), method: "tools/list" }),
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!response.ok) throw new Error("The local Computer tools are unavailable.");
+          const rpc = (await response.json()) as { result?: { tools?: typeof COMPUTER_TOOLS } };
+          computerTools = (rpc.result?.tools ?? []).filter(
+            (tool) =>
+              tool.name.startsWith("computer_") ||
+              tool.name === "djl_computer_activity" ||
+              tool.name === "djl_computer_history",
+          );
+          computerRequest = computerTools.length > 0;
+        } else {
+          computerToolsActive ||= request.input?.includes("djl_computer_status") === true;
+          computerRequest = computerToolsActive;
+        }
+        if (workTools && (request.workTurnPolicy?.route === "marketing" || computerRequest)) {
           controller = new AbortController();
-          const marketingHistory: Record<string, unknown>[] = [
-            ...marketingSystem,
-            ...history
-              .slice(1)
-              .map((message) => ({ role: message.role, content: message.content })),
-            { role: "user", content: request.input! },
-          ];
+          const marketingHistory: Record<string, unknown>[] =
+            computerRequest && computerHistory
+              ? [...computerHistory, { role: "user", content: request.input! }]
+              : [
+                  ...(computerRequest
+                    ? [
+                        {
+                          role: "system",
+                          content: workTools.computer
+                            ? computerToolInstructions()
+                            : BUILT_IN_PLUGINS.find(
+                                (entry) => entry.plugin.id === "djl-computer-use",
+                              )!.instructions,
+                        },
+                      ]
+                    : marketingSystem),
+                  ...history
+                    .slice(1)
+                    .map((message) => ({ role: message.role, content: message.content })),
+                  { role: "user", content: request.input! },
+                ];
           try {
             const reply = await runMarketingConversation({
               messages: marketingHistory,
+              ...(computerRequest
+                ? {
+                    tools:
+                      request.workTurnPolicy?.route === "marketing"
+                        ? [...computerTools, ...MARKETING_TOOLS]
+                        : computerTools,
+                  }
+                : {}),
+              tools: computerRequest
+                ? request.workTurnPolicy?.route === "marketing"
+                  ? [
+                      ...computerTools,
+                      ...MARKETING_TOOLS,
+                      ...(workTools.multipost ? MULTIPOST_TOOLS : []),
+                    ]
+                  : computerTools
+                : [...MARKETING_TOOLS, ...(workTools.multipost ? MULTIPOST_TOOLS : [])],
               model,
               signal: controller.signal,
               stream: (body, signal) =>
                 client.stream("/v1/chat/completions", body, session.token, signal),
               execute: async (name, args) => {
-                const response = await fetch(workTools.url, {
+                const endpoint =
+                  name.startsWith("djl_multipost_") && workTools.multipost
+                    ? workTools.multipost
+                    : workTools;
+                const response = await fetch(endpoint.url, {
                   method: "POST",
                   headers: {
-                    Authorization: `Bearer ${workTools.bearerToken}`,
+                    Authorization: `Bearer ${endpoint.bearerToken}`,
+                    ...computerRequestHeaders,
                     "Content-Type": "application/json",
                     Accept: "application/json, text/event-stream",
                   },
@@ -110,13 +180,27 @@ export const createDjlCloudDriverFactory =
                   result?: {
                     structuredContent?: unknown;
                     isError?: boolean;
-                    content?: { text?: string }[];
+                    content?: { type?: string; text?: string; data?: string; mimeType?: string }[];
                   };
                   error?: unknown;
                 };
                 if (rpc.error || rpc.result?.isError)
                   throw new Error(rpc.result?.content?.[0]?.text ?? "Campaign preparation failed.");
-                return rpc.result?.structuredContent;
+                const samples = computerRequest
+                  ? (rpc.result?.content ?? []).flatMap((item) =>
+                      item.type === "image" &&
+                      typeof item.data === "string" &&
+                      typeof item.mimeType === "string"
+                        ? [{ data: item.data, mimeType: item.mimeType }]
+                        : [],
+                    )
+                  : [];
+                return samples.length
+                  ? {
+                      ...(rpc.result?.structuredContent as Record<string, unknown>),
+                      computerVisualSamples: samples,
+                    }
+                  : rpc.result?.structuredContent;
               },
               onTool: (name, id, result) =>
                 sink.emit({
@@ -133,6 +217,7 @@ export const createDjlCloudDriverFactory =
                   },
                 }),
             });
+            if (computerRequest) computerHistory = marketingHistory;
             sink.emit({
               type: "content.delta",
               itemId: `assistant-${randomUUID()}`,

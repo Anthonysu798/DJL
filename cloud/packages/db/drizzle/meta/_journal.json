@@ -162,6 +162,48 @@
       "when": 1793882156795,
       "tag": "0022_commerce_image_cleanup_retry",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794578400001,
+      "tag": "0023_social_connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794578400002,
+      "tag": "0024_social_publishing",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794578400003,
+      "tag": "0025_social_review_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794578400004,
+      "tag": "0026_social_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794578400005,
+      "tag": "0027_social_tracking_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794578400006,
+      "tag": "0028_fcm_installations",
+      "breakpoints": true
     }
   ]
 }

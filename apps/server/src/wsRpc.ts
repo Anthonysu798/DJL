@@ -1,3 +1,19 @@
+import { resolveDjlComputerIntent } from "./computer/djlComputerIntent";
+import * as RpcMiddleware from "effect/unstable/rpc/RpcMiddleware";
+import { COMPUTER_WS_METHODS, type ComputerEvent } from "@synara/contracts";
+import { ComputerService } from "./computer/Services/ComputerService";
+import { makeWsComputerHandlers } from "./computer/wsComputerHandlers";
+import { ComputerEventInterests } from "./computer/computerEventInterests";
+import {
+  WsConnectionSessions,
+  WS_CONNECTION_SESSION_HEADER,
+  provideWsConnectionSession,
+  CurrentWsSessionRole,
+} from "./wsConnectionSessions";
+import {
+  attachmentPrincipalForSession,
+  LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
+} from "./managedAttachmentPrincipal";
 import {
   listLegacyOpenCodeCredentials,
   transferLegacyOpenCodeCredentials,
@@ -44,7 +60,7 @@ import {
   Schema,
   Stream,
 } from "effect";
-import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { Headers, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
 import { AutomationService } from "./automation/Services/AutomationService";
@@ -340,8 +356,25 @@ function isShellRelevantEvent(event: OrchestrationEvent): boolean {
   }
 }
 
+class ComputerRpcContextMiddleware extends RpcMiddleware.Service<ComputerRpcContextMiddleware>()(
+  "djl/ComputerRpcContext",
+  { error: WsRpcError, requiredForClient: false },
+) {}
+const ComputerAwareWsRpcGroup = WsRpcGroup.middleware(ComputerRpcContextMiddleware);
+const computerRpcContextLayer = Layer.effect(
+  ComputerRpcContextMiddleware,
+  Effect.gen(function* () {
+    const sessions = yield* WsConnectionSessions;
+    return ((effect, options) =>
+      provideWsConnectionSession(
+        effect,
+        sessions.lookup(Headers.get(options.headers, WS_CONNECTION_SESSION_HEADER)),
+      )) satisfies RpcMiddleware.RpcMiddleware<never, WsRpcError, never>;
+  }),
+);
+
 export const makeWsRpcLayer = () =>
-  WsRpcGroup.toLayer(
+  ComputerAwareWsRpcGroup.toLayer(
     Effect.gen(function* () {
       const checkpointDiffQuery = yield* CheckpointDiffQuery;
       const automationService = yield* AutomationService;
@@ -351,6 +384,20 @@ export const makeWsRpcLayer = () =>
       // phone bridge) can follow progress that used to reach only the caller.
       const gitActionProgressPubSub = yield* PubSub.unbounded<GitActionProgressEvent>();
       const config = yield* ServerConfig;
+      const computerService = Option.getOrUndefined(yield* Effect.serviceOption(ComputerService));
+      const connectionSessions = yield* WsConnectionSessions;
+      const computerInterests = new ComputerEventInterests(connectionSessions.onClose);
+      const computerHandlers = makeWsComputerHandlers(computerService);
+      const requireComputerOwner = Effect.gen(function* () {
+        if ((yield* CurrentWsSessionRole) !== "owner")
+          return yield* Effect.fail(
+            new WsRpcError({
+              message:
+                "Only the desktop owner can change Computer control or read its audit history.",
+            }),
+          );
+      });
+
       const devServerManager = yield* DevServerManager;
       const documentIntelligence = yield* DocumentIntelligence;
       const documentRenderer = yield* DocumentRenderer;
@@ -706,6 +753,104 @@ export const makeWsRpcLayer = () =>
 
       const rpcEffect = <A, E, R>(effect: Effect.Effect<A, E, R>, fallbackMessage: string) =>
         effect.pipe(Effect.mapError((cause) => toWsRpcError(cause, fallbackMessage)));
+      const ownerComputerHandlers: typeof computerHandlers = {
+        [COMPUTER_WS_METHODS.setControlEnabled]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.setControlEnabled](input)),
+          ),
+        [COMPUTER_WS_METHODS.getStatus]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.getStatus](input)),
+          ),
+        [COMPUTER_WS_METHODS.getAuditHistory]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.getAuditHistory](input)),
+          ),
+        [COMPUTER_WS_METHODS.provision]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.provision](input)),
+          ),
+        [COMPUTER_WS_METHODS.listWindows]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.listWindows](input)),
+          ),
+        [COMPUTER_WS_METHODS.getState]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.getState](input)),
+          ),
+        [COMPUTER_WS_METHODS.getScreenSize]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.getScreenSize](input)),
+          ),
+        [COMPUTER_WS_METHODS.launchApp]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.launchApp](input)),
+          ),
+        [COMPUTER_WS_METHODS.click]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.click](input)),
+          ),
+        [COMPUTER_WS_METHODS.doubleClick]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.doubleClick](input)),
+          ),
+        [COMPUTER_WS_METHODS.rightClick]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.rightClick](input)),
+          ),
+        [COMPUTER_WS_METHODS.moveCursor]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.moveCursor](input)),
+          ),
+        [COMPUTER_WS_METHODS.drag]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.drag](input)),
+          ),
+        [COMPUTER_WS_METHODS.scroll]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.scroll](input)),
+          ),
+        [COMPUTER_WS_METHODS.typeText]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.typeText](input)),
+          ),
+        [COMPUTER_WS_METHODS.pressKey]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.pressKey](input)),
+          ),
+        [COMPUTER_WS_METHODS.hotkey]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.hotkey](input)),
+          ),
+        [COMPUTER_WS_METHODS.setValue]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.setValue](input)),
+          ),
+        [COMPUTER_WS_METHODS.performAction]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.performAction](input)),
+          ),
+        [COMPUTER_WS_METHODS.selectText]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.selectText](input)),
+          ),
+        [COMPUTER_WS_METHODS.getThreadState]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.getThreadState](input)),
+          ),
+        [COMPUTER_WS_METHODS.inputClick]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.inputClick](input)),
+          ),
+        [COMPUTER_WS_METHODS.inputScroll]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.inputScroll](input)),
+          ),
+        [COMPUTER_WS_METHODS.inputKey]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.inputKey](input)),
+          ),
+      };
       const cloudAccount = new CloudAccount({
         secretsDir: config.secretsDir,
         region: async () =>
@@ -713,12 +858,77 @@ export const makeWsRpcLayer = () =>
       });
 
       return WsRpcGroup.of({
+        ...ownerComputerHandlers,
+        [COMPUTER_WS_METHODS.setControlEnabled]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.setControlEnabled](input)),
+          ),
+        [COMPUTER_WS_METHODS.provision]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.provision](input)),
+          ),
+        [COMPUTER_WS_METHODS.getAuditHistory]: (input) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(computerHandlers[COMPUTER_WS_METHODS.getAuditHistory](input)),
+          ),
+        [COMPUTER_WS_METHODS.getThreadState]: (input, { headers }) =>
+          requireComputerOwner.pipe(
+            Effect.andThen(
+              Effect.suspend(() => {
+                computerInterests.watch(
+                  Headers.get(headers, WS_CONNECTION_SESSION_HEADER),
+                  input.threadId,
+                );
+                return computerHandlers[COMPUTER_WS_METHODS.getThreadState](input);
+              }),
+            ),
+          ),
+        [COMPUTER_WS_METHODS.subscribeEvents]: (_, { headers }) =>
+          Stream.unwrap(
+            requireComputerOwner.pipe(
+              Effect.as(
+                computerService?.supported !== true
+                  ? Stream.never
+                  : Stream.callback<ComputerEvent>((queue) =>
+                      Effect.gen(function* () {
+                        const unsubscribe = computerInterests.subscribe(
+                          Headers.get(headers, WS_CONNECTION_SESSION_HEADER),
+                          computerService.manager.onEvent.bind(computerService.manager),
+                          (event) => {
+                            Effect.runFork(Queue.offer(queue, event).pipe(Effect.asVoid));
+                          },
+                        );
+                        yield* Effect.addFinalizer(() => Effect.sync(unsubscribe));
+                      }),
+                    ),
+              ),
+            ),
+          ),
+
         [ORCHESTRATION_WS_METHODS.dispatchCommand]: (command) =>
           Effect.gen(function* () {
             const { command: normalizedCommand, prepareWorkspaceRoot } =
               yield* normalizeDispatchCommand({ command });
+            let commandWithComputerControl = normalizedCommand;
+            if (
+              normalizedCommand.type === "thread.turn.start" &&
+              computerService &&
+              process.env.DJL_COMPUTER_ENGINE === "cua"
+            ) {
+              yield* requireComputerOwner;
+              const state = yield* Effect.promise(() =>
+                computerService.manager.getThreadState(normalizedCommand.threadId),
+              );
+              commandWithComputerControl = {
+                ...normalizedCommand,
+                computerControl: {
+                  ...resolveDjlComputerIntent(normalizedCommand),
+                  generation: state.controlGeneration ?? 0,
+                },
+              };
+            }
             const result = yield* runtimeStartup.enqueueCommand(
-              orchestrationEngine.dispatch(normalizedCommand),
+              orchestrationEngine.dispatch(commandWithComputerControl),
             );
             // Only scaffold managed workspace-root subdirectories (Inbox/Outbox/work/outputs)
             // AFTER the decider has accepted the command. A rejected dispatch (e.g. a
@@ -1768,6 +1978,21 @@ export const makeWsRpcLayer = () =>
             ),
             "Failed to close sign-in",
           ),
+        [WS_METHODS.openCodeSaveCustomProvider]: (input) =>
+          rpcEffect(
+            providerDiscoveryService.saveCustomProvider(input),
+            "Failed to saveCustomProvider",
+          ),
+        [WS_METHODS.openCodeRemoveCustomProvider]: (input) =>
+          rpcEffect(
+            providerDiscoveryService.removeCustomProvider(input),
+            "Failed to removeCustomProvider",
+          ),
+        [WS_METHODS.openCodeFetchCustomModels]: (input) =>
+          rpcEffect(
+            providerDiscoveryService.fetchCustomModels(input),
+            "Failed to fetchCustomModels",
+          ),
         [WS_METHODS.openCodeSetApiKey]: (input) =>
           rpcEffect(providerDiscoveryService.setApiKey(input), "Failed to save API key"),
         [WS_METHODS.openCodeRemoveCredential]: (input) =>
@@ -1842,7 +2067,7 @@ export const makeWsRpcLayer = () =>
     }),
   );
 
-const makeRpcWebSocketHttpEffect = RpcServer.toHttpEffectWebsocket(WsRpcGroup, {
+const makeRpcWebSocketHttpEffect = RpcServer.toHttpEffectWebsocket(ComputerAwareWsRpcGroup, {
   spanPrefix: "ws.rpc",
   spanAttributes: {
     "rpc.transport": "websocket",
@@ -1851,7 +2076,14 @@ const makeRpcWebSocketHttpEffect = RpcServer.toHttpEffectWebsocket(WsRpcGroup, {
   // JSON keeps the wire format symmetric with any web build. A serialization
   // mismatch on this single multiplexed socket is a hard connect failure, and the
   // desktop/dev setup routinely runs server and web on independently-built copies.
-}).pipe(Effect.provide(makeWsRpcLayer().pipe(Layer.provideMerge(RpcSerialization.layerJson))));
+}).pipe(
+  Effect.provide(
+    makeWsRpcLayer().pipe(
+      Layer.provideMerge(computerRpcContextLayer),
+      Layer.provideMerge(RpcSerialization.layerJson),
+    ),
+  ),
+);
 
 export const websocketRpcRouteLayer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -1876,6 +2108,19 @@ export const websocketRpcRouteLayer = Layer.effectDiscard(
         ) {
           return HttpServerResponse.text("Forbidden", { status: 403 });
         }
+        const connectionSessions = yield* WsConnectionSessions;
+        const runConnected = (session: import("./wsConnectionSessions").WsConnectionSession) =>
+          Effect.gen(function* () {
+            const key = yield* connectionSessions.register(session);
+            return yield* rpcWebSocketHttpEffect.pipe(
+              Effect.provideService(
+                HttpServerRequest.HttpServerRequest,
+                request.modify({
+                  headers: Headers.set(request.headers, WS_CONNECTION_SESSION_HEADER, key),
+                }),
+              ),
+            );
+          });
         const legacyToken = url.searchParams.get("token");
         const authenticatedSession =
           !config.authToken || legacyToken === config.authToken
@@ -1883,12 +2128,19 @@ export const websocketRpcRouteLayer = Layer.effectDiscard(
             : yield* serverAuth.authenticateWebSocketUpgrade(makeEffectAuthRequest(request));
 
         if (!authenticatedSession) {
-          return yield* rpcWebSocketHttpEffect;
+          return yield* runConnected({
+            role: "owner",
+            attachmentPrincipal: LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
+          });
         }
 
         return yield* Effect.acquireUseRelease(
           sessions.markConnected(authenticatedSession.sessionId),
-          () => rpcWebSocketHttpEffect,
+          () =>
+            runConnected({
+              role: authenticatedSession.role,
+              attachmentPrincipal: attachmentPrincipalForSession(authenticatedSession.sessionId),
+            }),
           () => sessions.markDisconnected(authenticatedSession.sessionId),
         );
       }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),

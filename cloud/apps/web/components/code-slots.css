@@ -1,0 +1,109 @@
+/* React Bits CodeSlots styling, adapted for DJL's eight-character codes. */
+.code-slots {
+  --cs-accent: var(--primary);
+  --cs-ink: var(--foreground);
+  --cs-slot: var(--secondary);
+  --cs-digit: var(--primary-foreground);
+  --cs-danger: #e05252;
+  --cs-gap: clamp(4px, 1.2vw, 7px);
+  position: relative;
+  width: 100%;
+  font-family: var(--font-mono);
+}
+.code-slots__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cs-length), minmax(0, 1fr));
+  gap: var(--cs-gap);
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 180ms;
+}
+.code-slots__row[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.code-slots__input {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  opacity: 0;
+  cursor: inherit;
+  appearance: none;
+}
+.code-slots__slot {
+  position: relative;
+  min-width: 0;
+  height: clamp(47px, 9vw, 55px);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--cs-slot);
+  user-select: none;
+  pointer-events: none;
+  transition:
+    outline-color 150ms,
+    background-color 150ms;
+}
+.code-slots__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cs-accent);
+  transform-origin: center;
+}
+.code-slots__digit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: var(--cs-digit);
+  font-size: clamp(17px, 4.5vw, 23px);
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.code-slots__slot[data-active] {
+  outline: 2px solid var(--connection-signal);
+  outline-offset: -2px;
+}
+.code-slots__row[data-status="error"] .code-slots__slot {
+  outline: 1px solid var(--cs-danger);
+  outline-offset: -1px;
+}
+.code-slots__caret {
+  position: absolute;
+  left: calc(50% - 0.75px);
+  top: 28%;
+  height: 44%;
+  width: 1.5px;
+  background: var(--cs-ink);
+  animation: code-slots-blink 1s linear infinite;
+}
+@keyframes code-slots-blink {
+  0%,
+  49.9% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .code-slots * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

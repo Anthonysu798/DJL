@@ -2834,8 +2834,14 @@ const make = Effect.gen(function* () {
               return "running";
             case "session.exited":
               return "stopped";
-            case "turn.completed":
-              return runtimeTurnState(event) === "failed" ? "error" : "ready";
+            case "turn.completed": {
+              const outcome = runtimeTurnState(event);
+              return outcome === "failed"
+                ? "error"
+                : outcome === "interrupted" || outcome === "cancelled"
+                  ? "interrupted"
+                  : "ready";
+            }
             case "turn.aborted":
               return "interrupted";
             case "session.started":

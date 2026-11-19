@@ -406,6 +406,7 @@ describe("public desktop release preparation", () => {
       "desktop-release.yml",
       "desktop-signed-update-e2e.yml",
       "landing-deploy.yml",
+      ...(workflows.includes("mobile-ci.yml") ? ["mobile-ci.yml"] : []),
     ]);
 
     // The DJL Cloud backend deploys from its own `cloud-v*` tags. A desktop `v*` release tag must

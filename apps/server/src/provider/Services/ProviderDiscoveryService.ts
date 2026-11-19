@@ -18,6 +18,10 @@ import type {
   OpenCodeListModelProvidersResult,
   OpenCodeRemoveCredentialInput,
   OpenCodeSetApiKeyInput,
+  SaveCustomModelProviderInput,
+  RemoveCustomModelProviderInput,
+  FetchCustomModelsInput,
+  FetchCustomModelsResult,
 } from "@synara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -58,6 +62,15 @@ export interface ProviderDiscoveryServiceShape {
   readonly listModelProviders: (
     input: OpenCodeListModelProvidersInput,
   ) => Effect.Effect<OpenCodeListModelProvidersResult, ProviderDiscoveryError>;
+  readonly saveCustomProvider: (
+    input: SaveCustomModelProviderInput,
+  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;
+  readonly removeCustomProvider: (
+    input: RemoveCustomModelProviderInput,
+  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;
+  readonly fetchCustomModels: (
+    input: FetchCustomModelsInput,
+  ) => import("effect").Effect.Effect<FetchCustomModelsResult, ProviderDiscoveryError>;
   readonly setApiKey: (
     input: OpenCodeSetApiKeyInput,
   ) => Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;

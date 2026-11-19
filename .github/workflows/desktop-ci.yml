@@ -54,6 +54,9 @@ jobs:
       - name: Install frozen dependencies
         uses: ./.github/actions/setup-desktop
 
+      - name: Install video decoding tools for media integration tests
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Run desktop unit and contract tests
         run: bun run ci:desktop:test
 
@@ -106,7 +109,9 @@ jobs:
             --force
 
       - name: Run release helper tests
-        run: bun run ci:desktop:release-tests
+        run: |
+          bun run ci:desktop:release-tests
+          bun run --cwd scripts test -- desktop-media.test.ts
 
       - name: Audit public source, credentials, licenses, and branding
         run: |
@@ -213,6 +218,24 @@ jobs:
           if (integration.status !== 0) process.exit(integration.status ?? 1);
           NODE
 
+  multipost-native:
+    name: MultiPost native (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, windows-2022]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install frozen dependencies
+        uses: ./.github/actions/setup-desktop
+      - name: Verify MultiPost native publishing and recovery
+        run: bun run --cwd apps/desktop test:multipost-lifecycle
+
   desktop-ci:
     name: desktop-ci
     if: always()
@@ -223,6 +246,7 @@ jobs:
       - release-audit
       - runtime-smoke
       - installed-opencode
+      - multipost-native
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -234,6 +258,7 @@ jobs:
           RELEASE_AUDIT_RESULT: ${{ needs.release-audit.result }}
           RUNTIME_SMOKE_RESULT: ${{ needs.runtime-smoke.result }}
           INSTALLED_OPENCODE_RESULT: ${{ needs.installed-opencode.result }}
+          MULTIPOST_NATIVE_RESULT: ${{ needs.multipost-native.result }}
         run: |
           set -euo pipefail
           for result in \
@@ -242,7 +267,8 @@ jobs:
             "$RENDERER_TESTS_RESULT" \
             "$RELEASE_AUDIT_RESULT" \
             "$RUNTIME_SMOKE_RESULT" \
-            "$INSTALLED_OPENCODE_RESULT"
+            "$INSTALLED_OPENCODE_RESULT" \
+            "$MULTIPOST_NATIVE_RESULT"
           do
             [[ "$result" == "success" ]] || {
               echo "A required desktop CI lane finished with: $result" >&2
@@ -299,6 +325,45 @@ jobs:
         shell: bash
         run: bun run --cwd apps/server test -- src/localModels/hardwareProfile.native.test.ts
 
+      - name: Verify pinned native media tools
+        shell: bash
+        run: |
+          bun scripts/stage-desktop-media.ts --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}" --root "$RUNNER_TEMP/djl-media-smoke"
+          bun scripts/stage-desktop-media.ts --verify --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}" --root "$RUNNER_TEMP/djl-media-smoke"
+
+      - name: Verify pinned Cua and AppSnap engine
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal
+          echo "RUSTUP_TOOLCHAIN=1.97.1" >> "$GITHUB_ENV"
+          RUSTUP_TOOLCHAIN=1.97.1 node apps/desktop/scripts/provision-cua-driver.mjs --platform darwin --arch "${{ matrix.arch }}" --destination "$RUNNER_TEMP/djl-cua-smoke"
+          echo "SYNARA_CUA_ARTIFACT_DIR=$RUNNER_TEMP/djl-cua-smoke" >> "$GITHUB_ENV"
+          node apps/desktop/scripts/build-appsnap-helper.mjs --arch "${{ matrix.arch }}" --output "$RUNNER_TEMP/djl-appsnap-smoke"
+          bun run --cwd apps/desktop test -- scripts/cua-artifact-provenance.test.mjs scripts/cua-cache-key.test.mjs src/cuaDriverHost.test.ts src/cuaHostSocket.test.ts src/cuaRuntimeOwnership.test.ts src/computerDesktopLifecycle.test.ts src/computerStopPresentation.test.ts src/computerUseProviderInterrupt.test.ts
+
+      - name: Verify native computer-use helper
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          bun run --cwd scripts test -- stage-desktop-computer-use.test.ts
+          bash apps/desktop/native/computer-use/test-human-control-guard.sh
+          bash apps/desktop/native/computer-use/test-focus-routing-state.sh
+          bash apps/desktop/native/computer-use/test-process-event-timestamp.sh
+          bash apps/desktop/native/computer-use/test-app-local-focus-events.sh
+          bash apps/desktop/native/computer-use/test-running-app-admission.sh
+          bash apps/desktop/native/computer-use/test-application-scope-policy.sh
+          bash apps/desktop/native/computer-use/test-process-generation.sh
+          bash apps/desktop/native/computer-use/test-keyboard-target-policy.sh
+          bash apps/desktop/native/computer-use/test-selection.sh
+          bash apps/desktop/native/computer-use/test-activation-policies.sh
+          bash apps/desktop/native/computer-use/test-element-action-geometry.sh
+          bash apps/desktop/native/computer-use/test-clipboard-paste.sh
+          bash apps/desktop/native/computer-use/test-paste-representations.sh
+          bash apps/desktop/native/computer-use/test-interaction-history.sh
+          bun scripts/stage-desktop-computer-use.ts --platform mac --arch "${{ matrix.arch }}" --root "$RUNNER_TEMP/djl-computer-use-smoke"
+          bun scripts/stage-desktop-computer-use.ts --verify --platform mac --arch "${{ matrix.arch }}" --root "$RUNNER_TEMP/djl-computer-use-smoke"
+
       - name: Build native package
         shell: bash
         env:
@@ -341,6 +406,11 @@ jobs:
           export CSC_IDENTITY_AUTO_DISCOVERY=false
           bun run dist:desktop:artifact -- "${args[@]}"
 
+      - name: Verify native Computer Stop window lifecycle
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: bun run --cwd apps/desktop test:computer-stop-lifecycle
+
       - name: Verify unsigned macOS package smoke
         if: matrix.platform == 'mac'
         shell: bash
@@ -357,6 +427,7 @@ jobs:
           # Shared with the release workflow so bundle defects are caught here, on every push,
           # rather than mid-release after notarization has already been paid for.
           scripts/verify-macos-app-bundle.sh "$mount_point/DJL.app" "${{ matrix.arch }}"
+          bun scripts/stage-desktop-computer-use.ts --verify --packaged --platform mac --arch "${{ matrix.arch }}" --root "$mount_point/DJL.app/Contents/Resources/native"
 
       - name: Verify signed and timestamped Windows package smoke
         if: matrix.platform == 'win'

@@ -1,123 +1,168 @@
 "use client";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { LoaderCircle, RotateCcw } from "lucide-react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AuthGate } from "@/components/AuthGate";
+import CodeSlots from "@/components/CodeSlots";
+import { ConnectionShell, OpenDjl } from "@/components/ConnectionShell";
 import { AUTH_URL } from "@/lib/config";
 import { useLocale } from "@/lib/locale-context";
 
-type Phase = "claiming" | "ready" | "approved" | "denied" | "error";
+type Phase = "unverified" | "claiming" | "ready" | "working" | "approved" | "denied" | "error";
 
-/**
- * OAuth device flow approval page. The desktop or iOS app shows a short code;
- * the signed-in user claims it here (GET /device), then approves or denies.
- */
 function DeviceApproval() {
   const { d } = useLocale();
+  const copy = d.connectionUi;
   const params = useSearchParams();
   const initial = params.get("user_code") ?? "";
   const [userCode, setUserCode] = useState(initial);
-  const [phase, setPhase] = useState<Phase>(initial ? "claiming" : "ready");
+  const [phase, setPhase] = useState<Phase>(initial ? "claiming" : "unverified");
   const [error, setError] = useState<string | null>(null);
+  const operation = useRef(0);
+  const deciding = useRef(false);
 
   const claim = useCallback(
     async (code: string) => {
+      const current = ++operation.current;
       setError(null);
-      const res = await fetch(`${AUTH_URL}/device?user_code=${encodeURIComponent(code)}`, {
-        credentials: "include",
-      });
-      if (!res.ok) {
-        setPhase("error");
-        setError(d.error);
-        return;
+      setPhase("claiming");
+      try {
+        const res = await fetch(`${AUTH_URL}/device?user_code=${encodeURIComponent(code)}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("claim_failed");
+        if (current === operation.current) setPhase("ready");
+      } catch {
+        if (current === operation.current) {
+          setPhase("error");
+          setError(copy.verifyError);
+        }
       }
-      setPhase("ready");
     },
-    [d.error],
+    [copy.verifyError],
   );
 
   useEffect(() => {
     if (initial) void claim(initial);
+    return () => {
+      // This is a request counter, not a DOM ref: invalidate the latest in-flight claim.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      operation.current++;
+    };
   }, [initial, claim]);
 
   const decide = async (action: "approve" | "deny") => {
+    if (phase !== "ready" || deciding.current) return;
+    deciding.current = true;
     setError(null);
-    const res = await fetch(`${AUTH_URL}/device/${action}`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userCode }),
-    });
-    if (!res.ok) {
+    setPhase("working");
+    try {
+      const res = await fetch(`${AUTH_URL}/device/${action}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userCode }),
+      });
+      if (!res.ok) throw new Error("decision_failed");
+      setPhase(action === "approve" ? "approved" : "denied");
+    } catch {
       setPhase("error");
-      setError(d.error);
-      return;
+      setError(copy.decisionError);
+    } finally {
+      deciding.current = false;
     }
-    setPhase(action === "approve" ? "approved" : "denied");
   };
-
+  const finished = phase === "approved" || phase === "denied";
+  const busy = phase === "claiming" || phase === "working";
   return (
-    <div className="card space-y-5">
-      <h1 className="text-xl font-semibold">{d.deviceTitle}</h1>
-      <p className="text-sm text-neutral-600">{d.deviceBody}</p>
-      {phase === "approved" ? (
-        <p role="status" className="text-sm font-medium text-green-700">
-          {d.deviceApproved}
-        </p>
-      ) : null}
-      {phase === "denied" ? (
-        <p role="status" className="text-sm font-medium">
-          {d.deviceDenied}
-        </p>
-      ) : null}
-      {phase !== "approved" && phase !== "denied" ? (
+    <ConnectionShell
+      state={
+        phase === "approved"
+          ? "connected"
+          : phase === "denied"
+            ? "denied"
+            : phase === "error"
+              ? "failed"
+              : busy
+                ? "working"
+                : "ready"
+      }
+      title={
+        phase === "approved" ? copy.connected : phase === "denied" ? copy.denied : d.deviceTitle
+      }
+      description={finished ? undefined : copy.checkCode}
+    >
+      {finished ? (
         <>
-          <div>
-            <label className="label" htmlFor="user_code">
-              {d.deviceCode}
-            </label>
-            <input
-              id="user_code"
-              className="input font-mono text-lg tracking-widest"
-              value={userCode}
-              onChange={(e) => setUserCode(e.target.value.toUpperCase())}
-              onBlur={() => userCode && void claim(userCode)}
-            />
-          </div>
-          {error ? (
-            <p role="alert" className="text-sm text-red-600">
-              {error}
-            </p>
-          ) : null}
-          <div className="flex gap-2">
+          <p className="connection-status" role="status">
+            {phase === "approved" ? copy.deviceDone : d.deviceDenied}
+          </p>
+          <OpenDjl />
+        </>
+      ) : (
+        <form
+          className="connection-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (phase === "unverified") void claim(userCode);
+            else void decide("approve");
+          }}
+        >
+          <label className="connection-label" htmlFor="user_code">
+            {d.deviceCode}
+          </label>
+          <CodeSlots
+            id="user_code"
+            length={8}
+            value={userCode}
+            invalid={Boolean(error)}
+            ariaDescribedBy={error ? "connection-error" : undefined}
+            disabled={phase === "working"}
+            onChange={(code) => {
+              operation.current++;
+              setUserCode(code);
+              setPhase("unverified");
+              setError(null);
+            }}
+          />
+          {error && (
+            <div className="connection-error" id="connection-error">
+              <p role="alert">{error}</p>
+              <button type="button" onClick={() => void claim(userCode)}>
+                <RotateCcw size={12} aria-hidden="true" />
+                {copy.retry}
+              </button>
+            </div>
+          )}
+          <div className="connection-actions">
             <button
-              className="btn"
-              type="button"
-              disabled={!userCode || phase === "claiming"}
-              onClick={() => void decide("approve")}
+              className="connection-primary"
+              type="submit"
+              aria-label={phase === "unverified" ? d.continue : copy.approve}
+              disabled={userCode.length !== 8 || busy || phase === "error"}
             >
-              {d.approve}
+              {busy && <LoaderCircle size={16} className="connection-spin" aria-hidden="true" />}
+              {phase === "claiming"
+                ? copy.checking
+                : phase === "working"
+                  ? copy.approving
+                  : phase === "unverified"
+                    ? d.continue
+                    : copy.approve}
             </button>
             <button
-              className="btn-secondary"
+              className="connection-text-action"
               type="button"
-              disabled={!userCode || phase === "claiming"}
+              disabled={phase !== "ready"}
               onClick={() => void decide("deny")}
             >
-              {d.deny}
+              {copy.deny}
             </button>
           </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-export default function DevicePage() {
-  return (
-    <Suspense>
-      <AuthGateWithCode />
-    </Suspense>
+        </form>
+      )}
+    </ConnectionShell>
   );
 }
 
@@ -128,5 +173,12 @@ function AuthGateWithCode() {
     <AuthGate next={code ? `/device?user_code=${encodeURIComponent(code)}` : "/device"}>
       <DeviceApproval />
     </AuthGate>
+  );
+}
+export default function DevicePage() {
+  return (
+    <Suspense>
+      <AuthGateWithCode />
+    </Suspense>
   );
 }

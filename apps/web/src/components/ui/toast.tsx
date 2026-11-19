@@ -505,15 +505,23 @@ function ToastProvider({ children, position = "top-center", ...props }: ToastPro
     <Toast.Provider toastManager={toastManager} {...props}>
       {children}
       <Toasts position={position} />
+      <Toasts position="bottom-right" providerUpdates />
     </Toast.Provider>
   );
 }
 
-function Toasts({ position = "top-center" }: { position: ToastPosition }) {
+function Toasts({
+  position = "top-center",
+  providerUpdates = false,
+}: {
+  position: ToastPosition;
+  providerUpdates?: boolean;
+}) {
   const { toasts } = Toast.useToastManager<ThreadToastData>();
   const visibleThreadIds = useVisibleThreadIdsFromRoute();
   const isTop = position.startsWith("top");
   const visibleToasts = toasts
+    .filter((toast) => Boolean(toast.data?.providerUpdate) === providerUpdates)
     .filter((toast) => shouldRenderForActiveThread(toast.data, visibleThreadIds))
     .toSorted((left, right) => {
       const leftEnding = left.transitionStatus === "ending";

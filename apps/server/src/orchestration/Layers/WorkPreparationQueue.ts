@@ -1,6 +1,9 @@
 // FILE: WorkPreparationQueue.ts
 // Purpose: Restart-safe document preparation worker, independent of provider turn serialization.
 
+import * as SqlClient from "effect/unstable/sql/SqlClient";
+import { listThreadCampaigns } from "../../marketing/chatTools.ts";
+import { decideWorkTurnPolicy } from "../../work/workRouter.ts";
 import { createHash } from "node:crypto";
 
 import {
@@ -101,6 +104,7 @@ const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const documentIntelligence = yield* DocumentIntelligence;
   const projectMemory = yield* ProjectMemory;
+  const marketingSql = yield* Effect.serviceOption(SqlClient.SqlClient);
   // There is one provider-command consumer. A queue preserves prepared jobs
   // published during startup before that consumer has finished subscribing;
   // a PubSub could lose that handoff and leave Work permanently cancelled.
@@ -161,6 +165,18 @@ const make = Effect.gen(function* () {
         createdAt: now,
       });
 
+      const hasMarketingCampaign = Option.isSome(marketingSql)
+        ? (yield* listThreadCampaigns(job.threadId).pipe(
+            Effect.provideService(SqlClient.SqlClient, marketingSql.value),
+            Effect.orElseSucceed(() => []),
+          )).length > 0
+        : false;
+      const campaignMedia =
+        decideWorkTurnPolicy({ prompt: job.messageText, hasMarketingCampaign }).route ===
+          "marketing" &&
+        !/\b(ocr|read|extract|transcribe|recognize|recognise)\b|识别|識別|提取|读取|讀取|转录|轉錄/i.test(
+          job.messageText,
+        );
       const documentAttachments = job.attachments.filter(
         (attachment): attachment is WorkPreparationAttachment =>
           attachment.type === "file" || attachment.type === "image",
@@ -199,6 +215,7 @@ const make = Effect.gen(function* () {
                   projectId: job.projectId,
                   createdAt: now,
                   requireOcr: modelRouting.requireOcrForImages,
+                  ...(campaignMedia ? { purpose: "campaign-media" as const } : {}),
                   ...(ocr ? { ocr } : {}),
                 }),
               catch: preservePreparationFailure,

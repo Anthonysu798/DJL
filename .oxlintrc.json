@@ -8,7 +8,6 @@
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
     ".synara-*",
-    "vendor/opencode",
     ".next",
     "cloud/packages/db/drizzle"
   ],

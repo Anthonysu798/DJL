@@ -9,7 +9,7 @@ import {
   resolveAppLocalePreference,
 } from "@synara/shared/locale";
 import { createInstance, type i18n as I18nInstance, type ResourceKey } from "i18next";
-import { initReactI18next } from "react-i18next";
+import { initReactI18next, useTranslation as useReactTranslation } from "react-i18next";
 import englishCatalog from "./locales/en.json";
 import { readStoredAppLocalePreference } from "../appSettingsStorage";
 import { localeReviewStatus } from "./appLocaleOptions";
@@ -23,6 +23,7 @@ export const I18N_NAMESPACES = [
   "whatsNew",
   "work",
   "workspace",
+  "computer",
 ] as const;
 
 export type I18nNamespace = (typeof I18N_NAMESPACES)[number];
@@ -326,3 +327,16 @@ export async function changeRendererLocale(preference: AppLocalePreference): Pro
   await synchronizeDesktopLocalePreference(rendererController!, preference);
   return rendererController!.locale ?? locale;
 }
+
+export function t(message: string, values?: Record<string, unknown>): string {
+  const [namespace, key] = message.split(":");
+  const fallback = key
+    ? (englishCatalog as Record<string, Record<string, unknown>>)[namespace!]?.[key]
+    : undefined;
+  return translateRendererCopy(message, typeof fallback === "string" ? fallback : message, values);
+}
+export function useTranslation(): { t: typeof t; locale: string; formatLocale: string } {
+  const { i18n } = useReactTranslation(undefined, { i18n: rendererI18n, useSuspense: false });
+  return { t, locale: i18n.language || SOURCE_APP_LOCALE, formatLocale: rendererLocale() };
+}
+export const getFormatLocale = rendererLocale;

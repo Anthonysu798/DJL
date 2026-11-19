@@ -9,6 +9,7 @@
 !cloud/**/package.json
 !apps/remote-relay/**
 !packages/remote-protocol/**
+!packages/shared/src/fcm.ts
 **/node_modules
 **/dist
 **/.wrangler

@@ -3426,7 +3426,7 @@ test("live owner dedupes read-state broadcasts for already-clean threads", async
   const owner = createDesktopIpcLiveOwner({
     socketPath,
     snapshotDebounceMs: 1,
-    sendCodexRequest: async () => ({ ok: true }),
+    sendCodexRequest: async () => ({ thread: { id: "thread-read-dedupe", turns: [] } }),
     sendRawCodexMessage() {},
   });
 
@@ -3437,7 +3437,12 @@ test("live owner dedupes read-state broadcasts for already-clean threads", async
       params: { threadId: "thread-read-dedupe", input: [{ type: "text", text: "hi" }] },
     }),
   );
-  await waitFor(() => serverSocket);
+  // A connected socket can still be waiting for its initialize reply. Observe
+  // the first normal snapshot before testing deduplication on the ready client.
+  await waitForMessage(
+    frames,
+    (frame) => frame.type === "broadcast" && frame.method === "thread-stream-state-changed",
+  );
 
   const readCount = () =>
     frames.filter(

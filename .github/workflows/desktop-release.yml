@@ -306,6 +306,13 @@ jobs:
       - name: Align package versions
         run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
 
+      - name: Install pinned Cua compiler
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal
+          echo "RUSTUP_TOOLCHAIN=1.97.1" >> "$GITHUB_ENV"
+
       - name: Build native release
         shell: bash
         env:

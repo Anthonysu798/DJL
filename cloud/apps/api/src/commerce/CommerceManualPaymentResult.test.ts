@@ -88,7 +88,10 @@ const confirmationAudit = async (id: string) =>
   ).filter((row) => row.action === "commerce.withdrawal.confirm_payment_success");
 
 async function legacyDatabase(
-  work: (db: ReturnType<typeof createDatabase>["db"]) => Promise<void>,
+  work: (
+    db: ReturnType<typeof createDatabase>["db"],
+    latestMigrationCount: number,
+  ) => Promise<void>,
 ) {
   const base = new URL(process.env.DATABASE_URL ?? "postgres://djl:djl@localhost:54329/djl");
   if (
@@ -108,7 +111,7 @@ async function legacyDatabase(
     const journal = JSON.parse(await readFile(join(migrations, "meta/_journal.json"), "utf8")) as {
       entries: { idx: number; tag: string }[];
     };
-    expect(journal.entries).toHaveLength(23);
+    const latestMigrationCount = journal.entries.length;
     expect(journal.entries[18]).toMatchObject({ idx: 18, tag: "0018_commerce_favorites" });
     expect(journal.entries[19]).toMatchObject({ idx: 19, tag: "0019_commerce_staff" });
     expect(journal.entries[20]).toMatchObject({ idx: 20, tag: "0020_commerce_auth_realm" });
@@ -134,7 +137,7 @@ async function legacyDatabase(
         await connection.db.execute(sql`select count(*)::int n from drizzle.__drizzle_migrations`)
       )[0]?.n,
     ).toBe(16);
-    await work(connection.db);
+    await work(connection.db, latestMigrationCount);
   } finally {
     try {
       await connection?.close();
@@ -682,7 +685,7 @@ describe("manual TEST payment success result", () => {
   });
 
   it("upgrades nonempty migration16 records without rewriting their original payment identity", async () => {
-    await legacyDatabase(async (db) => {
+    await legacyDatabase(async (db, latestMigrationCount) => {
       const prior: { id: string; userId: string; status: string; operationId: string | null }[] =
         [];
       const startedAt = new Date("2026-10-28T10:00:00Z");
@@ -742,7 +745,7 @@ describe("manual TEST payment success result", () => {
       await migrate(db, { migrationsFolder: migrations });
       expect(
         (await db.execute(sql`select count(*)::int n from drizzle.__drizzle_migrations`))[0]?.n,
-      ).toBe(23);
+      ).toBe(latestMigrationCount);
       expect(await db.execute(sql`select * from commerce_favorites`)).toHaveLength(0);
       expect(
         await db.execute(sql`select id from "user" where commerce_auth_generation <> 0`),
