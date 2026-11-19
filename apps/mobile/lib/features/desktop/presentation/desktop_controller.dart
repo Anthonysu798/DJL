@@ -1832,6 +1832,13 @@ class DesktopController extends ChangeNotifier {
   bool get shouldQueueComposer => _selectedRunBusy || queuePauseMessage != null;
 
   bool _supportsModeSync = false;
+
+  /// The paired desktop can serve Multi agents groups to this phone.
+  bool supportsGroups = false;
+
+  /// Threads that belong to group chats. The groups feature reads their events
+  /// straight from the transport, so this controller leaves them alone.
+  final groupThreads = <String>{};
   bool _supportsTurnPagination = true;
   final _checkpointsByTurn = <_CheckpointKey, TurnCheckpoints>{};
   final _checkpointEnds = <_CheckpointKey, Future<void>>{};
@@ -3341,6 +3348,8 @@ class DesktopController extends ChangeNotifier {
             (initialized['capabilities']
                 as RemoteJson?)?['djlThreadRuntimeModeSync'] ==
             true;
+        supportsGroups =
+            (initialized['capabilities'] as RemoteJson?)?['djlGroups'] == true;
       } on RemoteRpcException catch (e) {
         if (generation != _connectGeneration) return;
         if (e.code != -32602 ||
@@ -6948,6 +6957,10 @@ class DesktopController extends ChangeNotifier {
         : <String, dynamic>{};
     if (rpc['djlReplayedEvent'] == true) params['djlReplayedEvent'] = true;
     if (method == null) return;
+    if (method.startsWith('djl/groups/') ||
+        groupThreads.contains(params['threadId'])) {
+      return;
+    }
     if (method == 'codex/event/user_message') {
       final identity = desktopResponseIdentity(params);
       final text = [

@@ -1,9 +1,12 @@
 import 'dart:ui' as ui;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../data/social_identity.dart';
 import 'auth_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class AuthWelcomePage extends StatefulWidget {
   const AuthWelcomePage({
@@ -63,13 +66,10 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
             : kThemeChangeDuration,
         backgroundColor: apple
             ? (dark ? Colors.white : Colors.black)
-            : CupertinoColors.secondarySystemBackground.resolveFrom(context),
-        disabledBackgroundColor: CupertinoColors.secondarySystemBackground
-            .resolveFrom(context),
+            : DjlColors.of(context).surfaceRaised,
+        disabledBackgroundColor: DjlColors.of(context).surfaceRaised,
         foregroundColor: foreground,
-        disabledForegroundColor: CupertinoColors.secondaryLabel.resolveFrom(
-          context,
-        ),
+        disabledForegroundColor: DjlColors.of(context).inkMuted,
         minimumSize: const Size(double.infinity, 52),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         shape: const StadiumBorder(),
@@ -106,7 +106,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
     listenable: widget.controller,
     builder: (context, _) {
       final auth = widget.controller,
-          secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
+          secondary = DjlColors.of(context).inkMuted;
       return Scaffold(
         body: SafeArea(
           child: CustomScrollView(
@@ -198,9 +198,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: CupertinoColors.systemRed.resolveFrom(
-                                    context,
-                                  ),
+                                  color: DjlColors.of(context).danger,
                                 ),
                               ),
                             ),
@@ -240,8 +238,8 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                                     ? 'Continue with Apple'
                                     : 'Continue with Google',
                                 icon: provider == SocialProvider.apple
-                                    ? Icons.apple
-                                    : Icons.g_mobiledata,
+                                    ? DjlIcons.apple
+                                    : DjlIcons.google,
                                 apple: provider == SocialProvider.apple,
                                 busy: auth.busy && _pending == provider,
                                 onPressed: auth.busy
@@ -252,7 +250,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                             ],
                           _action(
                             title: 'Continue with email',
-                            icon: CupertinoIcons.envelope_fill,
+                            icon: DjlIcons.mail,
                             onPressed: auth.busy ? null : widget.onEmail,
                           ),
                           const SizedBox(height: 12),
@@ -279,10 +277,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
-                                    CupertinoIcons.device_laptop,
-                                    size: 16,
-                                  ),
+                                  const Icon(DjlIcons.laptop, size: 16),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(

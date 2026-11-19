@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart' show CupertinoButton, CupertinoIcons;
+import 'package:flutter/cupertino.dart' show CupertinoButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,6 +9,8 @@ import '../data/workspace_repository.dart';
 import '../domain/workspace_models.dart';
 import 'workspace_code_view.dart';
 import 'workspace_linked_file_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class WorkspaceLinkedFilePage extends StatefulWidget {
   const WorkspaceLinkedFilePage({
@@ -112,7 +114,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                           const Text('Loading file'),
                         ]
                       : [
-                          const Icon(CupertinoIcons.doc_text, size: 38),
+                          const Icon(DjlIcons.document, size: 38),
                           const SizedBox(height: 16),
                           Text(
                             widget.path.split('/').last,
@@ -168,14 +170,14 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
       _ => colors.primary,
     };
     final glyph = switch (codeLanguage) {
-      'bash' => Icons.terminal_rounded,
-      'markdown' => CupertinoIcons.book,
-      'css' => CupertinoIcons.paintbrush,
-      'ruby' => CupertinoIcons.suit_diamond_fill,
-      'rust' => CupertinoIcons.gear_solid,
-      'sql' => Icons.storage_rounded,
-      'plain' => CupertinoIcons.doc_text,
-      _ => CupertinoIcons.chevron_left_slash_chevron_right,
+      'bash' => DjlIcons.terminal,
+      'markdown' => DjlIcons.book,
+      'css' => DjlIcons.appearance,
+      'ruby' => DjlIcons.diamond,
+      'rust' => DjlIcons.settings,
+      'sql' => DjlIcons.storage,
+      'plain' => DjlIcons.document,
+      _ => DjlIcons.code,
     };
     Widget chip(String text) => DecoratedBox(
       decoration: BoxDecoration(
@@ -227,20 +229,17 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
           IconButton(
             tooltip: 'Find in file',
             onPressed: () => setState(() => _findRevision++),
-            icon: const Icon(CupertinoIcons.search, size: 19),
+            icon: const Icon(DjlIcons.search, size: 19),
           ),
           IconButton(
             tooltip: 'Reload file',
             onPressed: () => _controller.load(widget.path),
-            icon: const Icon(CupertinoIcons.arrow_clockwise, size: 19),
+            icon: const Icon(DjlIcons.refresh, size: 19),
           ),
           IconButton(
             tooltip: 'Copy file contents',
             onPressed: () => _copy(file),
-            icon: Icon(
-              _copied ? Icons.check : CupertinoIcons.doc_on_doc,
-              size: 19,
-            ),
+            icon: Icon(_copied ? DjlIcons.check : DjlIcons.copy, size: 19),
           ),
         ],
       ),
@@ -390,7 +389,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                 ? [
                     _circle(
                       'Reload SVG preview',
-                      CupertinoIcons.arrow_clockwise,
+                      DjlIcons.refresh,
                       () => _controller.load(widget.path),
                     ),
                   ]
@@ -398,7 +397,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                     Builder(
                       builder: (buttonContext) => _circle(
                         'Share',
-                        CupertinoIcons.share,
+                        DjlIcons.share,
                         _exporting
                             ? null
                             : () {
@@ -418,7 +417,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                     ),
                     _circle(
                       'Save to Photos',
-                      CupertinoIcons.square_arrow_down,
+                      DjlIcons.download,
                       _exporting ? null : () => unawaited(_export(image)),
                     ),
                   ],
@@ -452,11 +451,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
         padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
         child: Row(
           children: [
-            _circle(
-              closeLabel,
-              CupertinoIcons.xmark,
-              () => Navigator.pop(context),
-            ),
+            _circle(closeLabel, DjlIcons.close, () => Navigator.pop(context)),
             const SizedBox(width: 11),
             Expanded(
               child: Align(

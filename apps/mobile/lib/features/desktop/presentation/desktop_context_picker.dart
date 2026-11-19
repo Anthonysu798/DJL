@@ -5,6 +5,8 @@ import '../data/desktop_composer_repository.dart';
 import '../data/remote_transport.dart';
 import '../domain/desktop_composer.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class DesktopContextPicker extends StatefulWidget {
   const DesktopContextPicker({
     super.key,
@@ -252,7 +254,7 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
                         enabled: !_stale,
                         onChanged: _search,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
+                          prefixIcon: const Icon(DjlIcons.search),
                           hintText: _kind == DesktopContextKind.file
                               ? 'Search files on your desktop'
                               : 'Search ${_label.toLowerCase()}',

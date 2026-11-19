@@ -1,6 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../domain/cloud_notification.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class CloudNotificationBanner extends StatelessWidget {
   const CloudNotificationBanner({
@@ -33,9 +34,7 @@ class CloudNotificationBanner extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        failed
-                            ? CupertinoIcons.exclamationmark_bubble
-                            : CupertinoIcons.chat_bubble_text,
+                        failed ? DjlIcons.feedback : DjlIcons.chatText,
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -72,7 +71,7 @@ class CloudNotificationBanner extends StatelessWidget {
             IconButton(
               tooltip: 'Dismiss notification',
               onPressed: onDismiss,
-              icon: const Icon(CupertinoIcons.xmark, size: 18),
+              icon: const Icon(DjlIcons.close, size: 18),
             ),
             const SizedBox(width: 4),
           ],

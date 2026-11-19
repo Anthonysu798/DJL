@@ -1,10 +1,12 @@
-import 'package:flutter/cupertino.dart' show CupertinoButton, CupertinoIcons;
+import 'package:flutter/cupertino.dart' show CupertinoButton;
 import 'package:flutter/material.dart';
 import '../../../core/presentation/cloud_chrome.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../chat/data/cloud_repository.dart';
 import '../../chat/presentation/message_view.dart' show CloudImage;
 import 'image_export_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class ImagePreviewPage extends StatefulWidget {
   const ImagePreviewPage({
@@ -112,7 +114,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                       children: [
                         _button(
                           'Close',
-                          CupertinoIcons.xmark,
+                          DjlIcons.close,
                           () => Navigator.pop(context),
                         ),
                         const SizedBox(width: 11),
@@ -143,7 +145,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                         Builder(
                           builder: (buttonContext) => _button(
                             'Share',
-                            CupertinoIcons.share,
+                            DjlIcons.share,
                             _export.busy
                                 ? null
                                 : () {
@@ -161,7 +163,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                         const SizedBox(width: 4),
                         _button(
                           'Save to Photos',
-                          CupertinoIcons.square_arrow_down,
+                          DjlIcons.download,
                           _export.busy
                               ? null
                               : () => _export.save(widget.fileId),

@@ -4,6 +4,8 @@ import '../domain/appearance.dart';
 import 'paired_usage_controller.dart';
 import 'settings_group.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class PairedUsageCard extends StatefulWidget {
   const PairedUsageCard({super.key, required this.controller});
   final PairedUsageController controller;
@@ -169,7 +171,7 @@ class _PairedUsageCardState extends State<PairedUsageCard>
                                 strokeWidth: 1.5,
                               ),
                             )
-                          : const Icon(Icons.refresh, size: 15),
+                          : const Icon(DjlIcons.refresh, size: 15),
                       label: Text(c.loading ? 'Refreshing...' : 'Refresh'),
                     ),
                   ),

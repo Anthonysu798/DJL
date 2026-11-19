@@ -3,6 +3,8 @@ import 'host_controller.dart';
 import 'paired_login_controller.dart';
 import 'paired_login_controls.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class HostPage extends StatelessWidget {
   const HostPage({super.key, required this.controller, this.login});
   final HostController controller;
@@ -74,13 +76,13 @@ class HostControls extends StatelessWidget {
             ),
           TextButton.icon(
             onPressed: host.live && !host.loading ? host.refresh : null,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(DjlIcons.refresh),
             label: const Text('Refresh host status'),
           ),
           const Divider(height: 28),
           OutlinedButton.icon(
             onPressed: host.canWake ? host.wakeDisplay : null,
-            icon: const Icon(Icons.wb_sunny_outlined),
+            icon: const Icon(DjlIcons.sun),
             label: const Text('Wake display'),
           ),
           const Text(
@@ -126,7 +128,7 @@ class HostControls extends StatelessWidget {
             onPressed: host.canUpdate
                 ? () => confirmHostBridgeUpdate(context, host)
                 : null,
-            icon: const Icon(Icons.system_update_alt),
+            icon: const Icon(DjlIcons.update),
             label: const Text('Update bridge'),
           ),
           if (!host.capabilities.bridgeUpdate)
@@ -214,7 +216,7 @@ class HostContinueAction extends StatelessWidget {
     listenable: controller,
     builder: (context, _) => IconButton(
       tooltip: 'Continue on desktop',
-      icon: const Icon(Icons.open_in_new),
+      icon: const Icon(DjlIcons.openExternal),
       onPressed: controller.canHandoff && threadId?.trim().isNotEmpty == true
           ? () => confirmHostContinue(context, controller, threadId!)
           : null,

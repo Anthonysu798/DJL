@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/cloud_chrome.dart';
 import '../../../core/presentation/djl_context_menu.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../chat/domain/cloud_models.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 Future<String?> showCloudChatActions(
   BuildContext context,
@@ -31,16 +34,16 @@ Future<String?> showCloudChatActions(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final action in [
-              ('pin', item.pinned ? 'Unpin' : 'Pin', CupertinoIcons.pin),
-              ('rename', 'Rename', CupertinoIcons.pencil),
-              ('archive', 'Archive', CupertinoIcons.archivebox),
-              ('delete', 'Delete', CupertinoIcons.trash),
+              ('pin', item.pinned ? 'Unpin' : 'Pin', DjlIcons.pin),
+              ('rename', 'Rename', DjlIcons.edit),
+              ('archive', 'Archive', DjlIcons.archive),
+              ('delete', 'Delete', DjlIcons.delete),
             ])
               TextButton(
                 onPressed: () => Navigator.pop(context, action.$1),
                 style: TextButton.styleFrom(
                   foregroundColor: action.$1 == 'delete'
-                      ? CupertinoColors.systemRed.resolveFrom(context)
+                      ? DjlColors.of(context).danger
                       : colors.onSurface,
                   minimumSize: const Size(0, 42),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -89,7 +92,7 @@ Future<bool> showCloudChatDeleteConfirmation(
             style: cloudBodyStyle.copyWith(
               letterSpacing: 0,
               fontWeight: FontWeight.w600,
-              color: CupertinoColors.systemRed.resolveFrom(context),
+              color: DjlColors.of(context).danger,
             ),
           ),
         ),
@@ -125,9 +128,7 @@ Widget _cloudMenuSurface(
   Widget child,
 ) {
   final colors = Theme.of(context).colorScheme;
-  final fill = colors.brightness == Brightness.dark
-      ? Color(confirmation ? 0xff1c1c1e : 0xff161618)
-      : const Color(0xfff2f2f7).withValues(alpha: .97);
+  final fill = colors.surfaceContainerLow;
   final outline = colors.onSurface.withValues(alpha: .14);
   return CustomPaint(
     painter: confirmation ? _DeletePointer(fill, outline) : null,
@@ -142,7 +143,7 @@ Widget _cloudMenuSurface(
         color:
             defaultTargetPlatform == TargetPlatform.android &&
                 colors.brightness == Brightness.dark
-            ? const Color(0xff121115).withValues(alpha: .9)
+            ? colors.surface.withValues(alpha: .9)
             : Colors.transparent,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(

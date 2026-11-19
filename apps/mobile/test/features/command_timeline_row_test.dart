@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:djl_mobile/core/design/djl_icons.dart';
+
 DesktopActivity command(String raw, [String status = 'running']) =>
     DesktopActivity(
       mac: 'mac-a',
@@ -169,13 +171,13 @@ void main() {
       Theme.of(tester.element(text)).colorScheme.onSurfaceVariant,
     );
     expect(
-      tester.widget<Icon>(find.byIcon(Icons.chevron_right)).fontWeight,
+      tester.widget<Icon>(find.byIcon(DjlIcons.chevronRight)).fontWeight,
       FontWeight.w600,
     );
     final glyph = find.byType(SvgPicture).first;
     expect(tester.getSize(glyph), const Size(17, 17));
     expect(tester.getTopLeft(text).dx - tester.getTopRight(glyph).dx, 6);
-    final chevron = find.byIcon(Icons.chevron_right);
+    final chevron = find.byIcon(DjlIcons.chevronRight);
     expect(tester.getSize(chevron), const Size(8, 8));
     expect(tester.getTopLeft(chevron).dx - tester.getTopRight(text).dx, 8);
     expect(tester.getTopRight(chevron).dx, lessThan(382));
@@ -373,7 +375,7 @@ void main() {
         closeTo(37.4, .01),
       );
       expect(
-        tester.getTopRight(find.byIcon(Icons.chevron_right)).dx,
+        tester.getTopRight(find.byIcon(DjlIcons.chevronRight)).dx,
         lessThanOrEqualTo(360),
       );
       await tester.tap(find.byType(ActivityCard));

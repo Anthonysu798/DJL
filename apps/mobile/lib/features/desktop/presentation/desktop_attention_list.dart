@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../domain/desktop_attention.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class DesktopAttentionList extends StatelessWidget {
   const DesktopAttentionList({
     super.key,
@@ -22,9 +24,9 @@ class DesktopAttentionList extends StatelessWidget {
           children: [
             ExcludeSemantics(
               child: Icon(
-                isFiltering ? Icons.search : Icons.check_circle_outline,
+                isFiltering ? DjlIcons.search : DjlIcons.checkCircle,
                 size: 30,
-                color: isFiltering ? scheme.onSurfaceVariant : Colors.green,
+                color: isFiltering ? scheme.onSurfaceVariant : scheme.onSurface,
               ),
             ),
             const SizedBox(height: 10),
@@ -94,14 +96,17 @@ class _AttentionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context), scheme = theme.colorScheme;
     final (icon, color) = switch (item.kind) {
-      DesktopAttentionKind.approval => (Icons.front_hand, Colors.orange),
-      DesktopAttentionKind.question => (Icons.question_answer, Colors.orange),
-      DesktopAttentionKind.failedRun => (Icons.warning_rounded, Colors.red),
+      DesktopAttentionKind.approval => (DjlIcons.hand, scheme.onSurface),
+      DesktopAttentionKind.question => (DjlIcons.chats, scheme.onSurface),
+      DesktopAttentionKind.failedRun => (DjlIcons.warning, scheme.error),
       DesktopAttentionKind.blockedGoal => (
-        Icons.pause_circle_filled,
-        Colors.purple,
+        DjlIcons.pauseCircle,
+        scheme.onSurface,
       ),
-      DesktopAttentionKind.completedRun => (Icons.check_circle, Colors.green),
+      DesktopAttentionKind.completedRun => (
+        DjlIcons.checkCircleFill,
+        scheme.onSurface,
+      ),
     };
     final elapsed = (DateTime.now().millisecondsSinceEpoch / 1000 - item.date)
         .clamp(0, double.infinity);
@@ -198,7 +203,7 @@ class _AttentionRow extends StatelessWidget {
                     Row(
                       children: [
                         const ExcludeSemantics(
-                          child: Icon(Icons.folder_outlined, size: 12),
+                          child: Icon(DjlIcons.folder, size: 12),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -220,7 +225,7 @@ class _AttentionRow extends StatelessWidget {
             const SizedBox(width: 8),
             ExcludeSemantics(
               child: Icon(
-                Icons.chevron_right,
+                DjlIcons.chevronRight,
                 size: 13,
                 color: scheme.onSurfaceVariant,
               ),

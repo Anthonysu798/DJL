@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../domain/subagent_action.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class SubagentActionCard extends StatefulWidget {
   const SubagentActionCard({
     super.key,
@@ -93,7 +95,7 @@ class _SubagentActionCardState extends State<SubagentActionCard> {
         initiallyExpanded: true,
         title: Text(action.title),
         subtitle: Text(action.status),
-        leading: const Icon(Icons.account_tree_outlined),
+        leading: const Icon(DjlIcons.branch),
         children: [
           if (action.children.isEmpty)
             const Padding(

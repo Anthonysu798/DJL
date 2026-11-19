@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../../core/design/djl_tokens.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../../pairing/data/pairing_repository.dart';
@@ -244,34 +244,8 @@ class DesktopConversationHero extends StatelessWidget {
 ({Color background, Color foreground}) desktopConversationPalette(
   BuildContext context,
 ) {
-  final scheme = Theme.of(context).colorScheme;
-  final bubble = DjlAppearance.of(context).bubble;
-  final dark = scheme.brightness == Brightness.dark;
-  if (bubble == UserBubbleColor.defaultColor) {
-    final fill = CupertinoColors.tertiarySystemFill.resolveFrom(context);
-    return (
-      background: fill.withValues(alpha: fill.a * .8),
-      foreground: scheme.onSurface,
-    );
-  }
-  if (bubble == UserBubbleColor.black) {
-    return (
-      background: scheme.onSurface.withValues(alpha: dark ? .9 : 1),
-      foreground: scheme.surface,
-    );
-  }
-  final color = bubble == UserBubbleColor.pink
-      ? Color.from(
-          alpha: 1,
-          red: 1,
-          green: dark ? .32 : .18,
-          blue: dark ? .70 : .62,
-        )
-      : bubble.swatch(scheme);
-  return (
-    background: color.withValues(alpha: dark ? .4 : .1),
-    foreground: dark ? Colors.white : color,
-  );
+  final colors = DjlColors.of(context);
+  return (background: colors.ink, foreground: colors.onInk);
 }
 
 // Port only MarkdownTextFormatter's heading normalization. Keep fence lines,
@@ -407,11 +381,7 @@ class DesktopConversationMessage extends StatelessWidget {
           color: foreground,
         ),
         a: TextStyle(
-          color: user
-              ? foreground
-              : appearance.bubble == UserBubbleColor.defaultColor
-              ? theme.colorScheme.onSurface
-              : appearance.bubble.swatch(theme.colorScheme),
+          color: foreground,
           decoration: TextDecoration.underline,
           decorationStyle: TextDecorationStyle.dotted,
         ),

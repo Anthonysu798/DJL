@@ -11,6 +11,7 @@ import 'package:djl_mobile/features/git/presentation/git_controller.dart';
 import 'package:djl_mobile/features/git/presentation/git_page.dart';
 import 'package:djl_mobile/features/git/presentation/git_new_branch_dialog.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_requests_test.dart' show TestTransport;
 
@@ -326,7 +327,7 @@ void main() {
         tester.getTopLeft(find.text('feature')).dy,
         lessThan(tester.getTopLeft(find.text('other')).dy),
       );
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      expect(find.byIcon(DjlIcons.check), findsOneWidget);
       await exposePicker(tester, find.text('New branch...'));
       expect(find.text('New branch...'), findsOneWidget);
       expect(find.text('Reload branch list'), findsOneWidget);

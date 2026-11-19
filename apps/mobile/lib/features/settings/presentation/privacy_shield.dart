@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'app_lock_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class PrivacyShield extends StatelessWidget {
   const PrivacyShield({
     super.key,
@@ -43,8 +45,8 @@ class PrivacyShield extends StatelessWidget {
                           ExcludeSemantics(
                             child: Icon(
                               controller.requiresUnlock
-                                  ? Icons.lock_outline
-                                  : Icons.visibility_off_outlined,
+                                  ? DjlIcons.lock
+                                  : DjlIcons.hidden,
                               size: 38,
                             ),
                           ),

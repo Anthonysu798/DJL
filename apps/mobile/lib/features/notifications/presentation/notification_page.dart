@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import '../../../core/presentation/cloud_chrome.dart';
 import 'package:flutter/material.dart';
 import '../domain/cloud_notification.dart';
 import 'notification_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({
@@ -56,7 +57,7 @@ class _NotificationPageState extends State<NotificationPage> {
               : Padding(
                   padding: const EdgeInsets.only(left: 16, top: 6, bottom: 6),
                   child: CloudNavigationButton(
-                    icon: CupertinoIcons.line_horizontal_3,
+                    icon: DjlIcons.menu,
                     label: 'Open navigation',
                     onPressed: widget.onOpenNavigation!,
                   ),
@@ -88,7 +89,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     padding: EdgeInsets.all(40),
                     child: Column(
                       children: [
-                        Icon(Icons.notifications_none, size: 40),
+                        Icon(DjlIcons.bell, size: 40),
                         SizedBox(height: 16),
                         Text('You’re all caught up'),
                         SizedBox(height: 8),
@@ -102,9 +103,7 @@ class _NotificationPageState extends State<NotificationPage> {
                 for (final item in c.items)
                   ListTile(
                     leading: Icon(
-                      item.unread
-                          ? Icons.notifications_active_outlined
-                          : Icons.task_alt,
+                      item.unread ? DjlIcons.bellRinging : DjlIcons.checkCircle,
                     ),
                     title: Text(
                       item.title ?? 'Task complete',

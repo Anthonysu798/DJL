@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../settings/domain/appearance.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class CloudShareLinkSheet extends StatefulWidget {
   const CloudShareLinkSheet({super.key, required this.url});
 
@@ -93,7 +95,10 @@ class _CloudShareLinkSheetState extends State<CloudShareLinkSheet> {
                         minimumSize: const Size(0, 52),
                         shape: shape,
                       ),
-                      icon: Icon(_copied ? Icons.check : Icons.copy, size: 18),
+                      icon: Icon(
+                        _copied ? DjlIcons.check : DjlIcons.copy,
+                        size: 18,
+                      ),
                       label: Text(_copied ? 'Copied' : 'Copy link'),
                     ),
                   ),
@@ -106,7 +111,7 @@ class _CloudShareLinkSheetState extends State<CloudShareLinkSheet> {
                           minimumSize: const Size(0, 52),
                           shape: shape,
                         ),
-                        icon: const Icon(Icons.ios_share, size: 18),
+                        icon: const Icon(DjlIcons.share, size: 18),
                         label: const Text('Share'),
                       ),
                     ),

@@ -17,9 +17,7 @@ Future<bool> showCloudUsageResetConfirmation(
         : const Duration(milliseconds: 150),
     pageBuilder: (context, _, _) {
       final colors = Theme.of(context).colorScheme;
-      final fill = colors.brightness == Brightness.dark
-          ? const Color(0xff161618)
-          : const Color(0xfff2f2f7).withValues(alpha: .97);
+      final fill = colors.surfaceContainerLow;
       final outline = colors.onSurface.withValues(alpha: .14);
       return CustomSingleChildLayout(
         delegate: _UsageReviewLayout(banner, MediaQuery.of(context)),

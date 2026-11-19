@@ -1,9 +1,10 @@
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/presentation/djl_glass.dart';
 import 'desktop_composer_options_menu.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class DesktopProjectControls extends StatefulWidget {
   const DesktopProjectControls({
@@ -302,7 +303,7 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
             icon: RotationTransition(
               turns: _rotation,
               child: Icon(
-                CupertinoIcons.chevron_right,
+                DjlIcons.chevronRight,
                 size: 14,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

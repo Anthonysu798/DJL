@@ -7,6 +7,10 @@ import 'account_controller.dart';
 import 'cloud_signout_confirmation.dart';
 import '../domain/account_snapshot.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 class AccountPage extends StatefulWidget {
   const AccountPage({
     super.key,
@@ -126,7 +130,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
           text,
           style: cloudBodyStyle.copyWith(
             color: destructive
-                ? CupertinoColors.systemRed.resolveFrom(context)
+                ? DjlColors.of(context).danger
                 : cloudActionColor(context),
           ),
         ),
@@ -157,9 +161,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                   ),
                   trailing: Container(
                     decoration: BoxDecoration(
-                      color: colors.brightness == Brightness.dark
-                          ? const Color(0xff202022)
-                          : const Color(0xfffdfdfd),
+                      color: colors.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: CupertinoButton(
@@ -292,7 +294,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                               horizontal: 16,
                             ),
                             leading: Icon(
-                              CupertinoIcons.device_laptop,
+                              DjlIcons.laptop,
                               size: 26,
                               color: colors.onSurface,
                             ),
@@ -328,7 +330,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
   Widget _usage(BuildContext context, String label, UsageWindow window) {
     final colors = Theme.of(context).colorScheme;
     final color = window.fraction >= 1
-        ? CupertinoColors.systemRed.resolveFrom(context)
+        ? DjlColors.of(context).danger
         : cloudActionColor(context);
     final reset = window.resetsAt == null
         ? null

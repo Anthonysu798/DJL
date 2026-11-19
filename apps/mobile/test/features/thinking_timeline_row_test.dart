@@ -7,6 +7,8 @@ import 'package:djl_mobile/features/reasoning/presentation/thinking_timeline_row
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/settings/domain/appearance.dart';
 
+import 'package:djl_mobile/core/design/djl_icons.dart';
+
 Future<void> showThinking(
   WidgetTester tester,
   String text, {
@@ -185,7 +187,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Checking files'), findsOneWidget);
       expect(find.byType(ExpansionTile), findsNothing);
-      expect(find.byIcon(Icons.build_outlined), findsNothing);
+      expect(find.byIcon(DjlIcons.tool), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
       d.dispose();
     },

@@ -4,6 +4,8 @@ import '../domain/desktop_composer.dart';
 import '../../pairing/data/pairing_repository.dart';
 import 'desktop_composer_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class DesktopComposerAttachments extends StatelessWidget {
   const DesktopComposerAttachments({super.key, required this.controller});
   final DesktopComposerController controller;
@@ -56,7 +58,7 @@ class DesktopComposerAttachments extends StatelessWidget {
                                     ),
                                   )
                                 : slot.error != null
-                                ? const Icon(Icons.error_outline, size: 24)
+                                ? const Icon(DjlIcons.error, size: 24)
                                 : DesktopImagePreview(
                                     source: slot.image!.dataUrl,
                                     label: slot.image!.name,
@@ -81,7 +83,7 @@ class DesktopComposerAttachments extends StatelessWidget {
                                 foregroundColor: Colors.white,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                              icon: const Icon(Icons.close, size: 12),
+                              icon: const Icon(DjlIcons.close, size: 12),
                             ),
                           ),
                         ],

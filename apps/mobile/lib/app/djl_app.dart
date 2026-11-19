@@ -911,13 +911,11 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
     theme: djlTheme(
       Brightness.light,
       font: _settingsController.font,
-      bubble: _settingsController.bubble,
       liquidGlass: _settingsController.liquidGlass,
     ),
     darkTheme: djlTheme(
       Brightness.dark,
       font: _settingsController.font,
-      bubble: _settingsController.bubble,
       liquidGlass: _settingsController.liquidGlass,
     ),
     themeMode: _settingsController.theme,

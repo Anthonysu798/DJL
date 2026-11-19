@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../domain/appearance.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 TextStyle settingsTextStyle(
   BuildContext context,
   double size, {
@@ -92,9 +96,9 @@ class SettingsLinkRow extends StatelessWidget {
           // The source spacer includes its minimum eight points and two HStack gaps.
           const SizedBox(width: 32),
           Icon(
-            CupertinoIcons.chevron_right,
+            DjlIcons.chevronRight,
             size: 11,
-            color: CupertinoColors.tertiaryLabel.resolveFrom(context),
+            color: DjlColors.of(context).inkFaint,
           ),
         ],
       ),
@@ -283,7 +287,7 @@ class _SettingsMenuRowState<T> extends State<SettingsMenuRow<T>> {
                     SizedBox(
                       width: 20,
                       child: option.key == widget.value
-                          ? const Icon(Icons.check, size: 20)
+                          ? const Icon(DjlIcons.check, size: 20)
                           : null,
                     ),
                   const SizedBox(width: 12),
@@ -386,7 +390,7 @@ class _SettingsMenuRowState<T> extends State<SettingsMenuRow<T>> {
                 if (widget.valueIcon == null) ...[
                   const SizedBox(width: 4),
                   Icon(
-                    CupertinoIcons.chevron_up_chevron_down,
+                    DjlIcons.expandVertical,
                     size: widget.nativePickerStyle ? 14 : 10,
                     color: widget.nativePickerStyle
                         ? scheme.onSurface

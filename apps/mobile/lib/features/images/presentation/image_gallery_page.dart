@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import '../../../core/presentation/cloud_chrome.dart';
 import '../../chat/data/cloud_repository.dart';
@@ -8,6 +7,8 @@ import '../../chat/presentation/message_view.dart';
 import '../domain/gallery_image.dart';
 import 'image_controller.dart';
 import 'image_preview_page.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class ImageGalleryPage extends StatefulWidget {
   const ImageGalleryPage({
@@ -122,7 +123,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                       child: Text('Edit in chat'),
                     ),
                   ],
-                  icon: const Icon(CupertinoIcons.ellipsis, size: 18),
+                  icon: const Icon(DjlIcons.more, size: 18),
                 ),
             ],
           ),
@@ -147,7 +148,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                 leading: widget.onOpenNavigation == null
                     ? const SizedBox.shrink()
                     : CloudNavigationButton(
-                        icon: CupertinoIcons.line_horizontal_3,
+                        icon: DjlIcons.menu,
                         label: 'Open navigation',
                         onPressed: widget.onOpenNavigation!,
                       ),
@@ -155,7 +156,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                     ? IconButton(
                         tooltip: 'Create image',
                         onPressed: widget.onCreate,
-                        icon: const Icon(CupertinoIcons.plus),
+                        icon: const Icon(DjlIcons.add),
                       )
                     : null,
               ),
@@ -171,7 +172,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  CupertinoIcons.photo_on_rectangle,
+                                  DjlIcons.images,
                                   size: 44,
                                   color: Theme.of(
                                     context,

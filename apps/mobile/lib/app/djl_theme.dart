@@ -1,138 +1,185 @@
+import 'package:flutter/cupertino.dart' show CupertinoThemeData;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../core/design/djl_tokens.dart';
 import '../features/settings/domain/appearance.dart';
 
 ThemeData djlTheme(
   Brightness brightness, {
   AppFontStyle font = AppFontStyle.system,
-  UserBubbleColor bubble = UserBubbleColor.defaultColor,
   bool liquidGlass = true,
 }) {
   final dark = brightness == Brightness.dark;
-  final scheme =
-      ColorScheme.fromSeed(
-        seedColor: Colors.black,
-        brightness: brightness,
-        dynamicSchemeVariant: DynamicSchemeVariant.monochrome,
-      ).copyWith(
-        primary: dark ? Colors.white : Colors.black,
-        onPrimary: dark ? Colors.black : Colors.white,
-        secondary: dark ? Colors.white : Colors.black,
-        onSecondary: dark ? Colors.black : Colors.white,
-        surface: dark ? Colors.black : Colors.white,
-        onSurface: dark ? Colors.white : Colors.black,
-        onSurfaceVariant: Color(dark ? 0xffb3b3b3 : 0xff626262),
-        surfaceContainerLow: Color(dark ? 0xff1c1c1c : 0xfff2f2f2),
-        surfaceContainerHigh: Color(dark ? 0xff2c2c2c : 0xffe5e5e5),
-        outlineVariant: Color(dark ? 0xff3a3a3a : 0xffd4d4d4),
-      );
+  final colors = dark ? DjlColors.dark : DjlColors.light;
+  // Every Material role is pinned to a token so no tinted default leaks in.
+  final scheme = ColorScheme(
+    brightness: brightness,
+    primary: colors.ink,
+    onPrimary: colors.onInk,
+    primaryContainer: colors.surfaceSunken,
+    onPrimaryContainer: colors.ink,
+    secondary: colors.ink,
+    onSecondary: colors.onInk,
+    secondaryContainer: colors.surfaceSunken,
+    onSecondaryContainer: colors.ink,
+    tertiary: colors.ink,
+    onTertiary: colors.onInk,
+    tertiaryContainer: colors.surfaceSunken,
+    onTertiaryContainer: colors.ink,
+    error: colors.danger,
+    onError: colors.onInk,
+    errorContainer: colors.surfaceRaised,
+    onErrorContainer: colors.danger,
+    surface: colors.surface,
+    onSurface: colors.ink,
+    onSurfaceVariant: colors.inkMuted,
+    surfaceDim: colors.surfaceSunken,
+    surfaceBright: colors.surface,
+    surfaceContainerLowest: colors.surface,
+    surfaceContainerLow: colors.surfaceRaised,
+    surfaceContainer: colors.surfaceRaised,
+    surfaceContainerHigh: colors.surfaceSunken,
+    surfaceContainerHighest: colors.surfaceSunken,
+    outline: colors.inkFaint,
+    outlineVariant: colors.hairline,
+    inverseSurface: colors.ink,
+    onInverseSurface: colors.onInk,
+    inversePrimary: colors.onInk,
+    surfaceTint: Colors.transparent,
+    shadow: const Color(0xff000000),
+    scrim: const Color(0xff000000),
+  );
+  // Android gets the bundled grotesk; iOS keeps the system face.
+  final family =
+      font.family ??
+      (defaultTargetPlatform == TargetPlatform.android ? 'Geist' : null);
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    fontFamily: font.family,
+    fontFamily: family,
+    splashFactory: NoSplash.splashFactory,
+    highlightColor: Colors.transparent,
   );
+  TextStyle? style(TextStyle? from, double size, FontWeight weight) =>
+      from?.copyWith(
+        fontSize: size,
+        fontWeight: weight,
+        letterSpacing: size >= 20 ? -.2 : 0,
+        color: colors.ink,
+      );
+  final text = base.textTheme;
   return base.copyWith(
-    textTheme: base.textTheme.copyWith(
-      headlineLarge: base.textTheme.headlineLarge?.copyWith(
-        fontSize: 30,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0,
-      ),
-      headlineMedium: base.textTheme.headlineMedium?.copyWith(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0,
-      ),
-      headlineSmall: base.textTheme.headlineSmall?.copyWith(
-        fontSize: 18,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0,
-      ),
-      titleLarge: base.textTheme.titleLarge?.copyWith(
-        fontSize: 20,
-        letterSpacing: 0,
-      ),
-      titleMedium: base.textTheme.titleMedium?.copyWith(
-        fontSize: 15.5,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0,
-      ),
-      titleSmall: base.textTheme.titleSmall?.copyWith(
-        fontSize: 14,
-        letterSpacing: 0,
-      ),
-      bodyLarge: base.textTheme.bodyLarge?.copyWith(
-        fontSize: 15,
-        letterSpacing: 0,
-      ),
-      bodyMedium: base.textTheme.bodyMedium?.copyWith(
-        fontSize: 15,
-        letterSpacing: 0,
-      ),
-      bodySmall: base.textTheme.bodySmall?.copyWith(
-        fontSize: 12,
-        letterSpacing: 0,
-      ),
-      labelLarge: base.textTheme.labelLarge?.copyWith(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0,
-      ),
-      labelMedium: base.textTheme.labelMedium?.copyWith(
-        fontSize: 11,
-        letterSpacing: 0,
-      ),
-      labelSmall: base.textTheme.labelSmall?.copyWith(
-        fontSize: 10,
-        letterSpacing: 0,
-      ),
+    textTheme: text.copyWith(
+      headlineLarge: style(text.headlineLarge, 30, FontWeight.w700),
+      headlineMedium: style(text.headlineMedium, 22, FontWeight.w700),
+      headlineSmall: style(text.headlineSmall, 18, FontWeight.w600),
+      titleLarge: style(text.titleLarge, 20, FontWeight.w600),
+      titleMedium: style(text.titleMedium, 16, FontWeight.w600),
+      titleSmall: style(text.titleSmall, 14, FontWeight.w600),
+      bodyLarge: style(text.bodyLarge, 16, FontWeight.w400),
+      bodyMedium: style(text.bodyMedium, 15, FontWeight.w400),
+      bodySmall: style(
+        text.bodySmall,
+        13,
+        FontWeight.w400,
+      )?.copyWith(color: colors.inkMuted),
+      labelLarge: style(text.labelLarge, 15, FontWeight.w600),
+      labelMedium: style(
+        text.labelMedium,
+        12,
+        FontWeight.w500,
+      )?.copyWith(color: colors.inkMuted),
+      labelSmall: style(
+        text.labelSmall,
+        11,
+        FontWeight.w500,
+      )?.copyWith(color: colors.inkMuted),
     ),
     extensions: [
-      DjlAppearance(font: font, bubble: bubble, liquidGlass: liquidGlass),
+      colors,
+      DjlAppearance(font: font, liquidGlass: liquidGlass),
     ],
-    scaffoldBackgroundColor: scheme.surface,
+    cupertinoOverrideTheme: CupertinoThemeData(
+      brightness: brightness,
+      primaryColor: colors.ink,
+      scaffoldBackgroundColor: colors.surface,
+      barBackgroundColor: colors.surface,
+    ),
+    scaffoldBackgroundColor: colors.surface,
+    iconTheme: IconThemeData(color: colors.ink, size: 22),
     appBarTheme: AppBarTheme(
-      backgroundColor: scheme.surface,
+      backgroundColor: colors.surface,
+      foregroundColor: colors.ink,
       scrolledUnderElevation: 0,
+      elevation: 0,
       centerTitle: false,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: scheme.surfaceContainerLow,
-      hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+      fillColor: colors.surfaceRaised,
+      hintStyle: TextStyle(color: colors.inkMuted),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DjlRadius.md),
         borderSide: BorderSide.none,
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(48, 52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        shape: const StadiumBorder(),
       ),
     ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: colors.ink),
+    ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: scheme.primary,
-      foregroundColor: scheme.onPrimary,
+      backgroundColor: colors.ink,
+      foregroundColor: colors.onInk,
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: colors.ink),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: colors.ink,
+      selectionColor: colors.ink.withValues(alpha: .18),
+      selectionHandleColor: colors.ink,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(DjlRadius.lg)),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DjlRadius.lg),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: colors.ink,
+      contentTextStyle: TextStyle(color: colors.onInk, fontSize: 14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DjlRadius.md),
+      ),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return null;
         return states.contains(WidgetState.selected)
-            ? scheme.onPrimary
-            : Colors.white;
+            ? colors.onInk
+            : colors.surface;
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return null;
         return states.contains(WidgetState.selected)
-            ? scheme.primary
-            : scheme.outline;
+            ? colors.ink
+            : colors.inkFaint;
       }),
       trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       trackOutlineWidth: const WidgetStatePropertyAll(0),
     ),
-    dividerTheme: DividerThemeData(
-      color: scheme.outlineVariant.withValues(alpha: .5),
-      space: 1,
-    ),
+    dividerTheme: DividerThemeData(color: colors.hairline, space: 1),
   );
 }

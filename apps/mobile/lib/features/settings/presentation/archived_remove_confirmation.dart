@@ -1,8 +1,9 @@
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
 import 'settings_group.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 Future<bool> showArchivedRemoveConfirmation(
   BuildContext context, {
@@ -27,9 +28,7 @@ Future<bool> showArchivedRemoveConfirmation(
     pageBuilder: (context, _, _) => Builder(
       builder: (context) {
         final colors = Theme.of(context).colorScheme;
-        final fill = colors.brightness == Brightness.dark
-            ? const Color(0xff161618)
-            : Colors.white.withValues(alpha: .97);
+        final fill = colors.surfaceContainerLow;
         final outline = colors.onSurface.withValues(alpha: .14);
         final layout = _RemovalLayout(point, MediaQuery.paddingOf(context));
         return CustomSingleChildLayout(
@@ -107,9 +106,7 @@ Future<bool> showArchivedRemoveConfirmation(
                               context,
                               17,
                               weight: FontWeight.w600,
-                              color: CupertinoColors.systemRed.resolveFrom(
-                                context,
-                              ),
+                              color: DjlColors.of(context).danger,
                             ),
                           ),
                         ),

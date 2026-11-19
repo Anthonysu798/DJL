@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import 'about_source_layout_test.dart' show showGuide;
 
 void main() {
@@ -15,10 +16,10 @@ void main() {
   const shutdown =
       'The bridge handles clean shutdown on `SIGINT` and `SIGTERM`.';
   final rows = <String, IconData>{
-    reconnect: CupertinoIcons.arrow_clockwise,
-    replay: CupertinoIcons.envelope_badge_fill,
-    runtime: Icons.memory,
-    shutdown: CupertinoIcons.power,
+    reconnect: DjlIcons.refresh,
+    replay: DjlIcons.mailCode,
+    runtime: DjlIcons.chip,
+    shutdown: DjlIcons.power,
   };
   for (final brightness in Brightness.values) {
     for (final scale in [1.0, 2.2]) {

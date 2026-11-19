@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../settings/domain/appearance.dart';
 import 'desktop_composer_options_menu.dart';
 import 'desktop_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 const _modes = [
   (
@@ -44,9 +45,7 @@ class DesktopAccessControl extends StatelessWidget {
       orElse: () => _modes.first,
     );
     final color = mode.$1 == 'full-access'
-        ? Colors.orange
-        : mode.$1 == 'auto-review'
-        ? Colors.blue
+        ? Theme.of(context).colorScheme.onSurface
         : Theme.of(context).colorScheme.onSurfaceVariant;
     return Builder(
       builder: (buttonContext) => Semantics(
@@ -147,8 +146,8 @@ class _AccessPopover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context), dark = theme.brightness == Brightness.dark;
-    final color = dark ? const Color(0xff151614) : const Color(0xfff7f7f7);
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.surfaceContainerLow;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = math.min(312.0, constraints.maxWidth);
@@ -262,7 +261,7 @@ class _AccessPopover extends StatelessWidget {
                                     Opacity(
                                       opacity: mode.$1 == selected ? 1 : 0,
                                       child: const Icon(
-                                        CupertinoIcons.check_mark,
+                                        DjlIcons.check,
                                         size: 15,
                                       ),
                                     ),

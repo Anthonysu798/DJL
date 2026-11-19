@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/presentation/djl_glass.dart';
@@ -7,6 +6,8 @@ import 'desktop_composer_options_menu.dart';
 import 'desktop_controller.dart';
 import 'desktop_model_catalog_sheet.dart';
 import 'desktop_runtime_labels.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 typedef _RuntimeChoice = ({String kind, String value, String? model});
 
@@ -246,7 +247,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                 width: 15,
                 child: Opacity(
                   opacity: selected ? 1 : 0,
-                  child: const Icon(CupertinoIcons.check_mark, size: 15),
+                  child: const Icon(DjlIcons.check, size: 15),
                 ),
               ),
               const SizedBox(width: 12),
@@ -279,7 +280,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
               ],
               if (other) ...[
                 const SizedBox(width: 8),
-                const Icon(CupertinoIcons.ellipsis, size: 18),
+                const Icon(DjlIcons.more, size: 18),
               ],
             ],
           ),
@@ -349,9 +350,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
           ),
           const SizedBox(width: 8),
           Icon(
-            _branch == branch
-                ? CupertinoIcons.chevron_down
-                : CupertinoIcons.chevron_forward,
+            _branch == branch ? DjlIcons.chevronDown : DjlIcons.chevronRight,
             size: 14,
           ),
         ],

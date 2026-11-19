@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../settings/domain/appearance.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 /// The inline command slice of CommandExecutionViews.swift. Humanization is
 /// display-only: the original command and actual status stay on the button.
 class CommandTimelineRow extends StatelessWidget {
@@ -63,7 +65,7 @@ class CommandTimelineRow extends StatelessWidget {
             const SizedBox(width: 8),
             // Source uses an SF fallback. Optical matching awaits native frames.
             Icon(
-              Icons.chevron_right,
+              DjlIcons.chevronRight,
               size: scaler.scale(8),
               fontWeight: FontWeight.w600,
               color: secondary,

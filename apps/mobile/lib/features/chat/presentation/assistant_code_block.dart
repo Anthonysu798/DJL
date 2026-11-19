@@ -1,11 +1,14 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../../settings/domain/appearance.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 /// Compared privately, never embedded in widget keys or diagnostic strings.
 @immutable
@@ -130,8 +133,7 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    final secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final secondary = DjlColors.of(context).inkMuted;
     const fontSize = 15 * .882;
     final body = SelectableText(
       widget.code,
@@ -148,11 +150,11 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
         decoration: BoxDecoration(
           // Neutral material-family fallback; native regular-material optics
           // still require matched device review.
-          color: CupertinoColors.systemGrey6.resolveFrom(context),
+          color: DjlColors.of(context).surfaceRaised,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             width: .5,
-            color: dark ? const Color(0xff424245) : const Color(0xffd2d2d7),
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
         child: Column(
@@ -179,9 +181,7 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
                     label: _wrap ? 'Disable word wrap' : 'Enable word wrap',
                     onTap: () => setState(() => _wrap = !_wrap),
                     child: Icon(
-                      _wrap
-                          ? CupertinoIcons.arrow_left_right
-                          : CupertinoIcons.text_alignleft,
+                      _wrap ? DjlIcons.swap : DjlIcons.textAlign,
                       size: 12,
                       color: secondary,
                     ),
@@ -194,11 +194,7 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_copied)
-                          Icon(
-                            CupertinoIcons.check_mark,
-                            size: 16,
-                            color: secondary,
-                          )
+                          Icon(DjlIcons.check, size: 16, color: secondary)
                         else
                           SvgPicture.asset(
                             'assets/icons/markdown/copy.svg',

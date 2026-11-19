@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../data/status_surface.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 /// Permission reads never prompt. Only these explicit actions can request access
 /// or retry the local surface; they have no chat/controller mutation dependency.
 class StatusPermissionControls extends StatefulWidget {
@@ -107,7 +109,7 @@ class _StatusPermissionControlsState extends State<StatusPermissionControls>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
-          leading: const Icon(Icons.timelapse_outlined),
+          leading: const Icon(DjlIcons.timer),
           title: const Text('Task status'),
           subtitle: Text(switch (permission?.state) {
             StatusPermissionState.allowed =>

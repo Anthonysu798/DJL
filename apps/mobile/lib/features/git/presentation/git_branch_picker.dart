@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,6 +5,10 @@ import '../domain/git_branch_picker_models.dart';
 import '../domain/git_creation_review.dart';
 import 'git_controller.dart';
 import 'git_new_branch_dialog.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 Future<GitBranchChoice?> showGitBranchPicker({
   required BuildContext context,
@@ -181,7 +184,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
 
   Widget _badge(String title) => DecoratedBox(
     decoration: BoxDecoration(
-      color: CupertinoColors.secondarySystemFill.resolveFrom(context),
+      color: DjlColors.of(context).surfaceRaised,
       borderRadius: BorderRadius.circular(99),
     ),
     child: Padding(
@@ -269,7 +272,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                   const SizedBox(width: 8),
                   if (selected)
                     Icon(
-                      Icons.check,
+                      DjlIcons.check,
                       size: 18,
                       color: enabled
                           ? colors.onSurface
@@ -374,7 +377,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                         IconButton(
                           tooltip: 'Close branch picker',
                           onPressed: _close,
-                          icon: const Icon(Icons.close, size: 18),
+                          icon: const Icon(DjlIcons.close, size: 18),
                         ),
                       ],
                     ),
@@ -400,7 +403,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                     hintText: 'Search branches',
                                     isDense: true,
                                     prefixIcon: const Icon(
-                                      Icons.search,
+                                      DjlIcons.search,
                                       size: 18,
                                     ),
                                     suffixIcon: _search.text.isEmpty
@@ -410,7 +413,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                             onPressed: () =>
                                                 setState(_search.clear),
                                             icon: const Icon(
-                                              Icons.close,
+                                              DjlIcons.close,
                                               size: 18,
                                             ),
                                           ),
@@ -488,7 +491,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                             ));
                                           }
                                         },
-                                  icon: Icons.add,
+                                  icon: DjlIcons.add,
                                 ),
                               _action(
                                 'New branch...',
@@ -497,7 +500,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                         _newBranch();
                                       }
                                     : null,
-                                icon: Icons.add,
+                                icon: DjlIcons.add,
                               ),
                               if (c.error != null)
                                 Padding(

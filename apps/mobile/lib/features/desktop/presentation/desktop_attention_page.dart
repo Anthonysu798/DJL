@@ -3,6 +3,8 @@ import '../domain/desktop_attention.dart';
 import 'desktop_attention_list.dart';
 import 'desktop_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class DesktopAttentionPage extends StatefulWidget {
   const DesktopAttentionPage({
     super.key,
@@ -59,7 +61,7 @@ class _DesktopAttentionPageState extends State<DesktopAttentionPage> {
                   onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
                     hintText: 'Search attention',
-                    prefixIcon: Icon(Icons.search),
+                    prefixIcon: Icon(DjlIcons.search),
                   ),
                 ),
               ),

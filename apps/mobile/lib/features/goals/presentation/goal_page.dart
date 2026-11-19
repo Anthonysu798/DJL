@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../domain/thread_goal.dart';
 import 'goal_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class GoalPage extends StatefulWidget {
   const GoalPage({
     super.key,
@@ -137,7 +139,7 @@ class _GoalPageState extends State<GoalPage> {
             IconButton(
               tooltip: 'Reload goal',
               onPressed: c.busy || !c.connected ? null : c.refresh,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(DjlIcons.refresh),
             ),
           ],
         ),
@@ -214,7 +216,7 @@ class _GoalPageState extends State<GoalPage> {
               ] else ...[
                 Row(
                   children: [
-                    const Icon(Icons.track_changes),
+                    const Icon(DjlIcons.goal),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -250,20 +252,20 @@ class _GoalPageState extends State<GoalPage> {
                 if (goal.status == GoalStatus.active)
                   OutlinedButton.icon(
                     onPressed: c.busy || !c.connected ? null : c.pause,
-                    icon: const Icon(Icons.pause),
+                    icon: const Icon(DjlIcons.pause),
                     label: const Text('Pause goal'),
                   ),
                 if (goal.status.isResumable)
                   OutlinedButton.icon(
                     onPressed: c.busy || !c.connected ? null : c.resume,
-                    icon: const Icon(Icons.play_arrow),
+                    icon: const Icon(DjlIcons.play),
                     label: const Text('Resume goal'),
                   ),
                 OutlinedButton.icon(
                   onPressed: c.busy || !c.connected || !c.supported
                       ? null
                       : () => _edit(fresh: goal.status == GoalStatus.complete),
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(DjlIcons.edit),
                   label: Text(
                     goal.status == GoalStatus.complete
                         ? 'New goal'
@@ -272,7 +274,7 @@ class _GoalPageState extends State<GoalPage> {
                 ),
                 TextButton.icon(
                   onPressed: c.busy || !c.connected ? null : _clear,
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(DjlIcons.delete),
                   label: const Text('Clear goal'),
                 ),
               ],

@@ -1,10 +1,11 @@
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../domain/desktop_queued_draft.dart';
 import 'desktop_composer_controller.dart';
 import 'desktop_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class DesktopQueuedStatus extends StatelessWidget {
   const DesktopQueuedStatus({
@@ -152,7 +153,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
         child: Row(
           children: [
             Icon(
-              CupertinoIcons.arrow_turn_down_right,
+              DjlIcons.arrowBendRight,
               size: 10,
               color: colors.onSurface.withValues(alpha: .3),
             ),
@@ -187,7 +188,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
                   color: colors.onSurface.withValues(alpha: .06),
                 ),
                 child: Icon(
-                  CupertinoIcons.arrow_down,
+                  DjlIcons.arrowDown,
                   size: 12,
                   color: colors.onSurface.withValues(alpha: restore ? 1 : .3),
                 ),
@@ -233,7 +234,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               padding: EdgeInsets.zero,
               icon: Icon(
-                CupertinoIcons.trash,
+                DjlIcons.delete,
                 size: 13,
                 color: colors.onSurfaceVariant,
               ),

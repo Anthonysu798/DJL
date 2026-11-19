@@ -2,9 +2,10 @@ import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/settings/domain/appearance.dart';
 import 'package:djl_mobile/features/settings/presentation/settings_group.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:djl_mobile/core/design/djl_icons.dart';
 
 Future<void> showSourceRows(
   WidgetTester tester, {
@@ -68,9 +69,7 @@ void main() {
         expect(style.fontFamily, 'GeistMono');
       }
       expect(
-        tester
-            .widget<Icon>(find.byIcon(CupertinoIcons.chevron_up_chevron_down))
-            .size,
+        tester.widget<Icon>(find.byIcon(DjlIcons.expandVertical)).size,
         10,
       );
       final changed = <String>[];

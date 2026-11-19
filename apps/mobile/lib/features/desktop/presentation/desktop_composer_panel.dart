@@ -1,8 +1,10 @@
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart'
-    show CupertinoIcons, CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 /// A single input stays in the same element slot while its chrome morphs.
 class DesktopComposerPanel extends StatefulWidget {
@@ -90,7 +92,7 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     ),
     iconSize: 20,
-    icon: Icon(widget.listening ? Icons.mic : Icons.mic_none),
+    icon: Icon(widget.listening ? DjlIcons.micActive : DjlIcons.mic),
   );
 
   Widget _resume() => IconButton(
@@ -103,13 +105,10 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
       height: 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: CupertinoDynamicColor.resolve(
-          CupertinoColors.systemGrey2,
-          context,
-        ),
+        color: DjlColors.of(context).inkFaint,
       ),
       child: Icon(
-        CupertinoIcons.arrow_clockwise,
+        DjlIcons.refresh,
         size: 14,
         color: Theme.of(context).colorScheme.surface,
       ),
@@ -128,7 +127,7 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
         style: IconButton.styleFrom(
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        icon: const Icon(Icons.stop, size: 20),
+        icon: const Icon(DjlIcons.stop, size: 20),
       );
     }
     if (!expanded && !widget.starting) return const SizedBox.shrink();
@@ -148,7 +147,7 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
                 semanticsLabel: 'Starting run',
               ),
             )
-          : const Icon(Icons.arrow_upward, size: 20),
+          : const Icon(DjlIcons.arrowUp, size: 20),
     );
   }
 

@@ -7,6 +7,8 @@ import 'desktop_controller.dart';
 import 'desktop_conversation_view.dart';
 import 'desktop_thread_actions.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class DesktopThreadLocationSheet extends StatefulWidget {
   const DesktopThreadLocationSheet({
     super.key,
@@ -122,7 +124,7 @@ class _DesktopThreadLocationSheetState
                     IconButton(
                       tooltip: 'Close location',
                       onPressed: _close,
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(DjlIcons.close),
                     ),
                   ],
                 ),
@@ -153,10 +155,7 @@ class _DesktopThreadLocationSheetState
                                 IconButton(
                                   tooltip: 'Rename conversation',
                                   onPressed: _rename,
-                                  icon: const Icon(
-                                    Icons.edit_outlined,
-                                    size: 20,
-                                  ),
+                                  icon: const Icon(DjlIcons.edit, size: 20),
                                 ),
                             ],
                           ),
@@ -177,7 +176,7 @@ class _DesktopThreadLocationSheetState
                                 tooltip: _copied ? 'Path copied' : 'Copy path',
                                 onPressed: _copying ? null : _copy,
                                 icon: Icon(
-                                  _copied ? Icons.check : Icons.copy_outlined,
+                                  _copied ? DjlIcons.check : DjlIcons.copy,
                                   size: 18,
                                 ),
                               ),

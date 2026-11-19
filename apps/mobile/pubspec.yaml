@@ -34,6 +34,7 @@ dependencies:
   path_provider: ^2.1.6
   re_editor: 0.10.0
   re_highlight: 0.0.3
+  phosphor_flutter: ^2.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -57,6 +58,7 @@ flutter:
     - assets/icons/guide/central-shield.svg
     - assets/icons/guide/central-devices-2.svg
     - assets/djl-logo.png
+    - assets/agents/
     - assets/icons/command/central-magnifying-glass.svg
     - assets/icons/command/central-scan-code.svg
     - assets/icons/command/central-folder-2.svg

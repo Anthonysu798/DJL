@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/design/djl_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,8 @@ import '../data/cloud_repository.dart';
 import '../../settings/domain/appearance.dart';
 import '../domain/cloud_models.dart';
 import '../../images/presentation/image_preview_page.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class MessageView extends StatelessWidget {
   const MessageView({
@@ -58,10 +61,8 @@ class MessageView extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: scheme.brightness == Brightness.dark
-                        ? const Color(0xff1c1c1e)
-                        : const Color(0xfff2f2f7),
-                    borderRadius: BorderRadius.circular(20),
+                    color: scheme.primary,
+                    borderRadius: BorderRadius.circular(DjlRadius.lg),
                   ),
                   child: SelectableText(
                     message.text,
@@ -69,7 +70,7 @@ class MessageView extends StatelessWidget {
                       fontFamily: appearance.font.family,
                       fontSize: 15,
                       height: 1.2,
-                      color: scheme.onSurface,
+                      color: scheme.onPrimary,
                     ),
                     contextMenuBuilder: (context, editable) =>
                         AdaptiveTextSelectionToolbar.buttonItems(
@@ -161,7 +162,7 @@ class MessageView extends StatelessWidget {
       _action(
         context,
         'Previous branch',
-        Icons.chevron_left,
+        DjlIcons.chevronLeft,
         _branchIndex > 0 && onSibling != null
             ? () => onSibling!(siblings[_branchIndex - 1])
             : null,
@@ -181,7 +182,7 @@ class MessageView extends StatelessWidget {
       _action(
         context,
         'Next branch',
-        Icons.chevron_right,
+        DjlIcons.chevronRight,
         _branchIndex < siblings.length - 1 && onSibling != null
             ? () => onSibling!(siblings[_branchIndex + 1])
             : null,
@@ -195,16 +196,16 @@ class MessageView extends StatelessWidget {
       _action(
         context,
         'Copy message',
-        Icons.copy_outlined,
+        DjlIcons.copy,
         () => Clipboard.setData(ClipboardData(text: message.text)),
       ),
       if (onRegenerate != null)
-        _action(context, 'Regenerate reply', Icons.refresh, onRegenerate),
+        _action(context, 'Regenerate reply', DjlIcons.refresh, onRegenerate),
       if (onSpeak != null)
         _action(
           context,
           speaking ? 'Stop reading' : 'Read aloud',
-          speaking ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
+          speaking ? DjlIcons.stopCircle : DjlIcons.speaker,
           onSpeak,
         ),
     ];
@@ -298,9 +299,7 @@ class MessageView extends StatelessWidget {
       styleSheet: DjlAppearance.of(context).markdown(
         context,
         foreground: message.role == 'user'
-            ? DjlAppearance.of(
-                context,
-              ).bubble.foreground(Theme.of(context).colorScheme)
+            ? Theme.of(context).colorScheme.onPrimary
             : null,
       ),
       onTapLink: (_, url, _) {
@@ -312,7 +311,7 @@ class MessageView extends StatelessWidget {
     'tool_call' => ExpansionTile(
       tilePadding: EdgeInsets.zero,
       title: Text(part['name'] as String),
-      leading: const Icon(Icons.build_outlined, size: 18),
+      leading: const Icon(DjlIcons.tool, size: 18),
       children: [
         SelectableText(
           part['arguments'] as String,
@@ -335,7 +334,7 @@ class MessageView extends StatelessWidget {
         Uri.parse(part['url'] as String),
         mode: LaunchMode.externalApplication,
       ),
-      icon: const Icon(Icons.link, size: 16),
+      icon: const Icon(DjlIcons.link, size: 16),
       label: Text(part['title'] as String? ?? part['url'] as String),
     ),
     'image_ref' => InkWell(
@@ -360,7 +359,7 @@ class MessageView extends StatelessWidget {
         final url = await repository.fileUrl(part['fileId'] as String);
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       },
-      icon: const Icon(Icons.description_outlined),
+      icon: const Icon(DjlIcons.document),
       label: Text(part['name'] as String),
     ),
     _ => const Text('This message contains content requiring a newer version.'),

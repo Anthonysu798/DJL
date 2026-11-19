@@ -125,7 +125,7 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
                       context,
                       14,
                       color: warning
-                          ? Colors.orange
+                          ? colors.onSurface
                           : mono
                           ? colors.onSurface
                           : colors.onSurfaceVariant,

@@ -1,8 +1,11 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../git/domain/git_models.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class DesktopDraftActions extends StatelessWidget {
   const DesktopDraftActions({
@@ -38,7 +41,7 @@ class DesktopDraftActions extends StatelessWidget {
             enabled: onGitTools != null,
             child: const Row(
               children: [
-                Icon(Icons.account_tree_outlined, size: 24),
+                Icon(DjlIcons.branch, size: 24),
                 SizedBox(width: 12),
                 Flexible(child: Text('Branches & worktrees')),
               ],
@@ -46,7 +49,7 @@ class DesktopDraftActions extends StatelessWidget {
           ),
         ],
         icon: Icon(
-          Icons.more_horiz,
+          DjlIcons.more,
           size: 24,
           color: onGitTools == null ? color.withValues(alpha: .45) : color,
         ),
@@ -76,10 +79,10 @@ class DesktopToolbarActions extends StatelessWidget {
     final color = Theme.of(context).colorScheme.onSurface;
     final enabled = onGit != null && !gitBusy;
     final statusColor = switch (gitStatus?.state) {
-      'not_initialized' => CupertinoColors.systemOrange.resolveFrom(context),
+      'not_initialized' => DjlColors.of(context).ink,
       'behind_only' ||
       'diverged' ||
-      'dirty_and_behind' => CupertinoColors.systemGrey2.resolveFrom(context),
+      'dirty_and_behind' => DjlColors.of(context).inkFaint,
       _ => null,
     };
     return Padding(

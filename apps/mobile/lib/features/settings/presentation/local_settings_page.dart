@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../desktop/presentation/desktop_controller.dart';
 import 'settings_controller.dart';
@@ -10,6 +9,8 @@ import 'device_name_sheet.dart';
 import 'paired_usage_card.dart';
 import 'archived_chats_page.dart';
 import 'about_djl_page.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class LocalSettingsPage extends StatelessWidget {
   const LocalSettingsPage({
@@ -176,7 +177,7 @@ class LocalSettingsPage extends StatelessWidget {
                           subtitle:
                               email ??
                               'Chat, images, and background tasks without your Mac',
-                          leading: const Icon(CupertinoIcons.cloud),
+                          leading: const Icon(DjlIcons.cloud),
                           onTap: onCloud,
                         ),
                       ],
@@ -208,9 +209,9 @@ class LocalSettingsPage extends StatelessWidget {
                       children: [
                         DeviceNameTile(desktop: desktop),
                         ListTile(
-                          leading: const Icon(Icons.laptop_mac),
+                          leading: const Icon(DjlIcons.laptop),
                           title: const Text('My Macs'),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: const Icon(DjlIcons.chevronRight),
                           onTap: onMyMacs,
                         ),
                       ],

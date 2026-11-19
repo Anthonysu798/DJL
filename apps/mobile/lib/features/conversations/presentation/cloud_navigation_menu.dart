@@ -6,6 +6,8 @@ import '../../chat/domain/cloud_models.dart';
 import 'conversation_controller.dart';
 import 'cloud_chat_actions.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 // AppFont.body in the Swift reference is 15pt; native Form rows use 17pt.
 const _menuBodyStyle = TextStyle(fontSize: 15, height: 1.2);
 
@@ -63,7 +65,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
           const SizedBox(
             width: 24,
             height: 24,
-            child: Icon(CupertinoIcons.bubble_left, size: 17),
+            child: Icon(DjlIcons.chat, size: 17),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -154,11 +156,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
       Widget surface(Widget child, {double radius = 28, Color? tint}) =>
           Container(
             decoration: BoxDecoration(
-              color:
-                  tint ??
-                  (colors.brightness == Brightness.dark
-                      ? const Color(0xff202022)
-                      : const Color(0xfffdfdfd)),
+              color: tint ?? (colors.surfaceContainerLow),
               borderRadius: BorderRadius.circular(radius),
               boxShadow: [
                 BoxShadow(
@@ -365,26 +363,26 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                   ),
                                 action(
                                   'Chat',
-                                  CupertinoIcons.bubble_left_bubble_right,
+                                  DjlIcons.chats,
                                   () => widget.onDestination(
                                     CloudDestination.chat,
                                   ),
                                 ),
                                 action(
                                   'Images',
-                                  CupertinoIcons.photo_on_rectangle,
+                                  DjlIcons.images,
                                   () => widget.onDestination(
                                     CloudDestination.images,
                                   ),
                                 ),
                                 action(
                                   'Remote',
-                                  CupertinoIcons.device_laptop,
+                                  DjlIcons.laptop,
                                   widget.onRemote,
                                 ),
                                 action(
                                   'Notifications',
-                                  CupertinoIcons.bell,
+                                  DjlIcons.bell,
                                   () => widget.onDestination(
                                     CloudDestination.notifications,
                                   ),
@@ -493,7 +491,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                 child: IconButton(
                                   onPressed: _toggleSearch,
                                   icon: Icon(
-                                    CupertinoIcons.search,
+                                    DjlIcons.search,
                                     size: 20,
                                     color: colors.onSurface,
                                   ),
@@ -536,7 +534,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      CupertinoIcons.square_pencil,
+                                      DjlIcons.compose,
                                       size: 18,
                                       color: colors.surface,
                                     ),
@@ -576,7 +574,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                     CloudDestination.settings,
                                   ),
                                   icon: Icon(
-                                    CupertinoIcons.gear_alt,
+                                    DjlIcons.settings,
                                     size: 22,
                                     color: colors.onSurface,
                                   ),

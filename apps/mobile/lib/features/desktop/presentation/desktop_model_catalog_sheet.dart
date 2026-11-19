@@ -1,5 +1,3 @@
-import 'package:flutter/cupertino.dart'
-    show CupertinoIcons, CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/presentation/djl_glass.dart';
@@ -7,6 +5,8 @@ import '../../pairing/data/pairing_repository.dart';
 import '../../settings/domain/runtime_defaults.dart';
 import 'desktop_controller.dart';
 import 'desktop_runtime_labels.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class DesktopModelCatalogSheet extends StatefulWidget {
   const DesktopModelCatalogSheet({
@@ -86,12 +86,9 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
             if (_current) setState(() => _provider = provider);
           },
           style: TextButton.styleFrom(
-            foregroundColor: selected ? Colors.white : colors.onSurface,
+            foregroundColor: selected ? colors.onPrimary : colors.onSurface,
             backgroundColor: selected
-                ? CupertinoDynamicColor.resolve(
-                    CupertinoColors.activeBlue,
-                    context,
-                  )
+                ? colors.primary
                 : colors.onSurface.withValues(alpha: .05),
             textStyle: const TextStyle(
               fontSize: 16,
@@ -131,15 +128,10 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(
-                  selected
-                      ? CupertinoIcons.check_mark_circled_solid
-                      : CupertinoIcons.circle,
+                  selected ? DjlIcons.checkCircleFill : DjlIcons.circle,
                   size: 18,
                   color: selected
-                      ? CupertinoDynamicColor.resolve(
-                          CupertinoColors.activeBlue,
-                          context,
-                        )
+                      ? colors.primary
                       : colors.onSurface.withValues(alpha: .25),
                 ),
               ),
@@ -291,10 +283,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(
-                                        CupertinoIcons.refresh,
-                                        size: 28,
-                                      ),
+                                    : const Icon(DjlIcons.refresh, size: 28),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -518,7 +507,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                               decoration: InputDecoration(
                                 hintText: 'Search providers or models',
                                 prefixIcon: const Icon(
-                                  CupertinoIcons.search,
+                                  DjlIcons.search,
                                   size: 24,
                                 ),
                                 suffixIcon: _search.text.isEmpty
@@ -529,7 +518,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                           if (_current) setState(_search.clear);
                                         },
                                         icon: const Icon(
-                                          CupertinoIcons.clear_circled_solid,
+                                          DjlIcons.clear,
                                           size: 18,
                                         ),
                                       ),

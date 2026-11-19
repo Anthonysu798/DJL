@@ -24,6 +24,8 @@ import 'package:re_highlight/languages/xml.dart';
 import 'package:re_highlight/languages/yaml.dart';
 import '../domain/workspace_models.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 String workspaceCodeLanguage(String name) {
   if (name.toLowerCase() == 'dockerfile') return 'bash';
   final suffix = name.contains('.') ? name.split('.').last.toLowerCase() : '';
@@ -303,17 +305,17 @@ class _WorkspaceCodeViewState extends State<WorkspaceCodeView> {
                       ),
                       IconButton(
                         tooltip: 'Previous match',
-                        icon: const Icon(Icons.keyboard_arrow_up),
+                        icon: const Icon(DjlIcons.chevronUp),
                         onPressed: controller.previousMatch,
                       ),
                       IconButton(
                         tooltip: 'Next match',
-                        icon: const Icon(Icons.keyboard_arrow_down),
+                        icon: const Icon(DjlIcons.chevronDown),
                         onPressed: controller.nextMatch,
                       ),
                       IconButton(
                         tooltip: 'Close find',
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(DjlIcons.close),
                         onPressed: () {
                           controller.findInputFocusNode.unfocus();
                           controller.close();

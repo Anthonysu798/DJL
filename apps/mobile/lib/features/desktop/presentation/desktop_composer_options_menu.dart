@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 import 'package:flutter/material.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 enum DesktopComposerMenuAlignment { leading, center, trailing }
 
 Future<String?> showDesktopComposerMenu({
@@ -66,7 +68,7 @@ class DesktopComposerOptionsMenu extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: 'Composer options',
     padding: EdgeInsets.zero,
-    icon: const Icon(Icons.add, size: 20),
+    icon: const Icon(DjlIcons.add, size: 20),
     style: IconButton.styleFrom(
       minimumSize: const Size(34, 34),
       maximumSize: const Size(34, 34),

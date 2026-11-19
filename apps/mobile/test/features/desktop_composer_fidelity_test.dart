@@ -5,6 +5,7 @@ import 'package:djl_mobile/features/desktop/domain/desktop_composer.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_composer_widgets.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_phone_drawer.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_new_chat_draft_test.dart'
     show DraftTransport, draftDesktop, finishDraft;
@@ -588,7 +589,7 @@ void main() {
       expect(
         tester
             .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.arrow_upward),
+              find.widgetWithIcon(IconButton, DjlIcons.arrowUp),
             )
             .onPressed,
         isNull,

@@ -4,6 +4,8 @@ import '../../desktop/presentation/desktop_controller.dart';
 import '../data/workspace_repository.dart';
 import 'checkpoint_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class CheckpointPage extends StatefulWidget {
   const CheckpointPage({
     super.key,
@@ -127,7 +129,7 @@ class _CheckpointPageState extends State<CheckpointPage> {
               onPressed: _turn == null || c.loading
                   ? null
                   : () => _loadDiff(_turn!),
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(DjlIcons.refresh),
             ),
           ],
         ),
@@ -207,7 +209,7 @@ class _CheckpointPageState extends State<CheckpointPage> {
                           widget.desktop.turnId != null
                       ? null
                       : _restore,
-                  icon: const Icon(Icons.restore),
+                  icon: const Icon(DjlIcons.restore),
                   label: const Text('Preview restore before this turn'),
                 ),
               ),

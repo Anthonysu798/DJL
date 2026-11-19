@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../domain/appearance.dart';
 import 'settings_group.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 final _support = Uri.parse('https://www.slcor.com/');
 final _source = Uri.parse('https://github.com/Anthonysu798/DJL');
@@ -39,26 +40,14 @@ class LocalAboutCard extends StatelessWidget {
       children: [
         row(
           'How DJL Works',
-          CupertinoIcons.info_circle,
+          DjlIcons.info,
           () => Navigator.of(
             context,
           ).push(MaterialPageRoute<void>(builder: (_) => const AboutDjlPage())),
         ),
-        row(
-          'Chat & Support',
-          CupertinoIcons.globe,
-          () => _open(context, _support),
-        ),
-        row(
-          'Privacy Policy',
-          CupertinoIcons.hand_raised,
-          () => _open(context, _privacy),
-        ),
-        row(
-          'Terms of Use',
-          CupertinoIcons.doc_text,
-          () => _open(context, _terms),
-        ),
+        row('Chat & Support', DjlIcons.globe, () => _open(context, _support)),
+        row('Privacy Policy', DjlIcons.hand, () => _open(context, _privacy)),
+        row('Terms of Use', DjlIcons.document, () => _open(context, _terms)),
       ],
     );
   }
@@ -71,10 +60,7 @@ class AboutDjlPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context), colors = theme.colorScheme;
     final appearance = DjlAppearance.of(context);
-    final fill = CupertinoDynamicColor.resolve(
-      CupertinoColors.tertiarySystemFill,
-      context,
-    );
+    final fill = colors.surfaceContainerLow;
     final secondary = colors.onSurfaceVariant;
     final tertiary = colors.onSurface.withValues(alpha: .3);
     Color surface(double opacity) => fill.withValues(alpha: fill.a * opacity);
@@ -148,8 +134,8 @@ class AboutDjlPage extends StatelessWidget {
         ),
     ], spacing: 8);
 
-    Widget callout(String asset, Color tint, String text) {
-      final color = CupertinoDynamicColor.resolve(tint, context);
+    Widget callout(String asset, String text) {
+      final color = colors.onSurface;
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -216,7 +202,7 @@ class AboutDjlPage extends StatelessWidget {
     Widget connection(String via) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(CupertinoIcons.arrow_right, size: 9, color: tertiary),
+        Icon(DjlIcons.arrowRight, size: 9, color: tertiary),
         const SizedBox(height: 2),
         Text(
           via,
@@ -340,7 +326,6 @@ class AboutDjlPage extends StatelessWidget {
         prose('Control **Codex** from your phone.'),
         callout(
           'central-imac',
-          CupertinoColors.systemCyan,
           'The Codex runtime stays on your paired device. Your phone is a secure remote control connected through a relay.',
         ),
       ]),
@@ -356,7 +341,6 @@ class AboutDjlPage extends StatelessWidget {
         ]),
         callout(
           'central-shield-check',
-          CupertinoColors.systemGreen,
           'Workspace tools and file edits run on your paired device. The relay routes encrypted traffic; it does not run your workspace.',
         ),
       ]),
@@ -366,15 +350,15 @@ class AboutDjlPage extends StatelessWidget {
           'A lightweight WebSocket server routes messages between your phone and paired device.',
         ),
         iconRow(
-          CupertinoIcons.arrow_2_circlepath,
+          DjlIcons.sync,
           "Handles session discovery so your phone finds the device's live session.",
         ),
         iconRow(
-          CupertinoIcons.eye_slash_fill,
+          DjlIcons.hiddenFill,
           'Never sees decrypted message contents after the handshake.',
         ),
         iconRow(
-          CupertinoIcons.tag_fill,
+          DjlIcons.tag,
           'Observes connection metadata such as session IDs, device IDs, and timing.',
         ),
         const SizedBox(height: 4),
@@ -434,21 +418,18 @@ class AboutDjlPage extends StatelessWidget {
         ),
       ]),
       section('Connection Resilience', [
+        iconRow(DjlIcons.refresh, 'Automatic reconnect uses bounded backoff.'),
         iconRow(
-          CupertinoIcons.arrow_clockwise,
-          'Automatic reconnect uses bounded backoff.',
-        ),
-        iconRow(
-          CupertinoIcons.envelope_badge_fill,
+          DjlIcons.mailCode,
           'Encrypted replay cursors help recover missed events. '
           'Uncertain actions are not silently resent after a disconnect.',
         ),
         iconRow(
-          Icons.memory,
+          DjlIcons.chip,
           'The runtime can keep working through a transient phone connection drop.',
         ),
         iconRow(
-          CupertinoIcons.power,
+          DjlIcons.power,
           'The bridge handles clean shutdown on `SIGINT` and `SIGTERM`.',
         ),
       ]),
@@ -458,7 +439,6 @@ class AboutDjlPage extends StatelessWidget {
         ),
         callout(
           'central-devices-2',
-          CupertinoColors.systemBlue,
           'The desktop app may not live-reload external writes. Use **Continue on desktop** in DJL to hand off the current thread.',
         ),
       ]),
@@ -492,11 +472,7 @@ class AboutDjlPage extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     shape: const CircleBorder(),
                   ),
-                  icon: Icon(
-                    CupertinoIcons.chevron_back,
-                    size: 22,
-                    color: colors.onSurface,
-                  ),
+                  icon: Icon(DjlIcons.back, size: 22, color: colors.onSurface),
                 ),
               ),
             ),

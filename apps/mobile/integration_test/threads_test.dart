@@ -13,6 +13,7 @@ import 'package:djl_mobile/features/goals/presentation/goal_page.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'package:djl_mobile/features/workspace/presentation/project_picker_page.dart';
 import 'package:djl_mobile/features/desktop/domain/desktop_overview.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import 'cloud_test.dart' show waitFor;
 
 Future<void> type(WidgetTester tester, Finder field, String value) async {
@@ -308,7 +309,7 @@ void main() {
         expect(
           tester
               .widget<IconButton>(
-                find.widgetWithIcon(IconButton, Icons.arrow_upward),
+                find.widgetWithIcon(IconButton, DjlIcons.arrowUp),
               )
               .onPressed,
           isNull,

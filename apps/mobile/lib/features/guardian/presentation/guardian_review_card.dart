@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../domain/guardian_review.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class GuardianReviewCard extends StatelessWidget {
   const GuardianReviewCard({super.key, required this.review, this.onRetry});
   final GuardianReview review;
@@ -9,9 +11,7 @@ class GuardianReviewCard extends StatelessWidget {
   Widget build(BuildContext context) => ExpansionTile(
     leading: review.isTerminal
         ? Icon(
-            review.status == 'denied'
-                ? Icons.warning_amber_rounded
-                : Icons.fact_check_outlined,
+            review.status == 'denied' ? DjlIcons.warning : DjlIcons.checklist,
             size: 20,
           )
         : const SizedBox(

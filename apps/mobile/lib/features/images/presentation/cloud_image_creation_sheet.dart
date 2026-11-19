@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../chat/presentation/chat_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 Future<bool?> showCloudImageCreationSheet(
   BuildContext context, {
   required ChatController controller,
@@ -233,8 +237,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                           hintText: 'A quiet studio in morning light…',
                           contentPadding: const EdgeInsets.all(16),
                           filled: true,
-                          fillColor: CupertinoColors.secondarySystemBackground
-                              .resolveFrom(context),
+                          fillColor: DjlColors.of(context).surfaceRaised,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
                             borderSide: BorderSide.none,
@@ -342,7 +345,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                               ),
                               if (!busy) ...[
                                 const SizedBox(width: 8),
-                                const Icon(CupertinoIcons.arrow_up, size: 17),
+                                const Icon(DjlIcons.arrowUp, size: 17),
                               ],
                             ],
                           ),

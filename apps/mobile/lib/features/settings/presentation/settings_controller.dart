@@ -11,14 +11,12 @@ class SettingsController extends ChangeNotifier {
   final SettingsStore store;
   static const themeKey = 'djl.appearance.mode',
       fontKey = 'codex.appFontStyle',
-      bubbleKey = 'codex.userBubbleColor',
       glassKey = 'codex.useLiquidGlass',
       lockKey = 'djl.security.biometricLockEnabled',
       inAppAlertsKey = 'djl.notifications.inApp',
       spokenRepliesKey = 'djl.voice.spokenReplies';
   ThemeMode theme = ThemeMode.system;
   AppFontStyle font = AppFontStyle.system;
-  UserBubbleColor bubble = UserBubbleColor.defaultColor;
   bool lockEnabled = true, ready = false, saving = false, _disposed = false;
   bool inAppAlerts = true, spokenReplies = false;
   bool liquidGlass = true;
@@ -148,11 +146,6 @@ class SettingsController extends ChangeNotifier {
           (values.containsKey('codex.useJetBrainsMono')
               ? AppFontStyle.jetBrainsMono
               : AppFontStyle.system);
-      bubble =
-          UserBubbleColor.values
-              .where((v) => v.storedValue == values[bubbleKey])
-              .firstOrNull ??
-          UserBubbleColor.defaultColor;
       liquidGlass = values[glassKey] is bool ? values[glassKey] as bool : true;
       _runtimeDefaults = RuntimeDefaults.fromPreferences(values);
       lockEnabled = values[lockKey] is bool ? values[lockKey] as bool : true;
@@ -205,8 +198,6 @@ class SettingsController extends ChangeNotifier {
       _save(themeKey, value.name, () => theme = value);
   Future<bool> setFont(AppFontStyle value) =>
       _save(fontKey, value.name, () => font = value);
-  Future<bool> setBubble(UserBubbleColor value) =>
-      _save(bubbleKey, value.storedValue, () => bubble = value);
   Future<bool> setLiquidGlass(bool value) =>
       _save(glassKey, value, () => liquidGlass = value);
   Future<bool> setLockEnabled(bool value) =>

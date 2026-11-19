@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/presentation/djl_glass.dart';
@@ -10,6 +9,10 @@ import '../../pairing/data/pairing_repository.dart';
 import 'archived_chat_row.dart';
 import 'archived_remove_confirmation.dart';
 import 'settings_group.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class SettingsArchivedChatsCard extends StatelessWidget {
   const SettingsArchivedChatsCard({super.key, required this.desktop});
@@ -25,7 +28,7 @@ class SettingsArchivedChatsCard extends StatelessWidget {
           SettingsLinkRow(
             title: 'Archived Chats',
             subtitle: count == 0 ? null : '$count saved locally',
-            leading: const Icon(CupertinoIcons.archivebox),
+            leading: const Icon(DjlIcons.archive),
             onTap: () => Navigator.push<void>(
               context,
               MaterialPageRoute(
@@ -145,7 +148,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
           value: 'unarchive',
           child: Row(
             children: [
-              const Icon(CupertinoIcons.tray_arrow_up, size: 20),
+              const Icon(DjlIcons.upload, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text('Unarchive', style: settingsTextStyle(context, 17)),
@@ -157,10 +160,10 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
           value: 'remove',
           child: Row(
             children: [
-              const Icon(
-                CupertinoIcons.trash,
+              Icon(
+                DjlIcons.delete,
                 size: 20,
-                color: CupertinoColors.systemRed,
+                color: DjlColors.of(context).danger,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -169,7 +172,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
                   style: settingsTextStyle(
                     context,
                     17,
-                    color: CupertinoColors.systemRed,
+                    color: DjlColors.of(context).danger,
                   ),
                 ),
               ),
@@ -236,7 +239,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
                       shape: const CircleBorder(),
                     ),
                     icon: Icon(
-                      CupertinoIcons.chevron_back,
+                      DjlIcons.back,
                       size: 22,
                       color: colors.onSurface,
                     ),
@@ -287,11 +290,9 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            CupertinoIcons.archivebox,
+                            DjlIcons.archive,
                             size: 36,
-                            color: CupertinoColors.tertiaryLabel.resolveFrom(
-                              context,
-                            ),
+                            color: DjlColors.of(context).inkFaint,
                           ),
                           const SizedBox(height: 12),
                           Text(

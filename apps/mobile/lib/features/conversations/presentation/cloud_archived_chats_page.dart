@@ -6,6 +6,8 @@ import '../../chat/data/cloud_repository.dart';
 import '../../chat/domain/cloud_models.dart';
 import '../../settings/presentation/settings_group.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class CloudArchivedChatsPage extends StatefulWidget {
   const CloudArchivedChatsPage({
     super.key,
@@ -92,7 +94,7 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
         CloudLargeNavigationBar(
           title: 'Archived chats',
           leading: CloudNavigationButton(
-            icon: CupertinoIcons.back,
+            icon: DjlIcons.back,
             label: 'Back',
             onPressed: () => Navigator.maybePop(context),
           ),
@@ -232,7 +234,7 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  CupertinoIcons.archivebox,
+                  DjlIcons.archive,
                   size: 48,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

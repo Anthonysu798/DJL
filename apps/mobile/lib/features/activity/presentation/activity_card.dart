@@ -4,6 +4,8 @@ import '../domain/desktop_activity.dart';
 import '../domain/activity_preview.dart';
 import 'command_timeline_row.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
     super.key,
@@ -77,7 +79,7 @@ class ActivityCard extends StatelessWidget {
                     activityWorkspacePath(file.path, cwd: activity.cwd) != null)
                   TextButton.icon(
                     onPressed: () => onOpenFile!(file.path, false),
-                    icon: const Icon(Icons.description_outlined),
+                    icon: const Icon(DjlIcons.document),
                     label: Text('Open ${file.path}'),
                   ),
               ],
@@ -114,9 +116,7 @@ class ActivityCard extends StatelessWidget {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(
-            activity.kind == 'fileChange'
-                ? Icons.difference_outlined
-                : Icons.build_outlined,
+            activity.kind == 'fileChange' ? DjlIcons.diff : DjlIcons.tool,
             size: 20,
           ),
           title: Text(
@@ -127,7 +127,7 @@ class ActivityCard extends StatelessWidget {
           subtitle: Text(
             '$_status${activity.exitCode == null ? '' : ' · Exit ${activity.exitCode}'}',
           ),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: const Icon(DjlIcons.chevronRight),
           onTap: () => _details(context),
         ),
       if (_image != null && onOpenFile != null)
@@ -135,7 +135,7 @@ class ActivityCard extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: () => onOpenFile!(_image!, true),
-            icon: const Icon(Icons.image_outlined),
+            icon: const Icon(DjlIcons.image),
             label: Text('Image · ${_image!.split('/').last}'),
           ),
         ),

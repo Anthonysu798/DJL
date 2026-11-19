@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import '../../images/data/native_image_actions.dart';
 import '../../workspace/domain/workspace_models.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class DesktopMarkdownImage extends StatefulWidget {
   const DesktopMarkdownImage({
@@ -288,7 +289,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
     children: [
       _previewButton(
         label: 'Close',
-        icon: CupertinoIcons.xmark,
+        icon: DjlIcons.close,
         onPressed: () => Navigator.pop(context),
       ),
       const SizedBox(width: 8),
@@ -320,7 +321,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       Builder(
         builder: (buttonContext) => _previewButton(
           label: 'Share',
-          icon: CupertinoIcons.share,
+          icon: DjlIcons.share,
           onPressed: available
               ? () {
                   final box = buttonContext.findRenderObject()! as RenderBox;
@@ -337,7 +338,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       const SizedBox(width: 4),
       _previewButton(
         label: 'Save to Photos',
-        icon: CupertinoIcons.square_arrow_down,
+        icon: DjlIcons.download,
         onPressed: available ? () => unawaited(_export()) : null,
       ),
     ],
@@ -393,10 +394,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
     ),
     child: Row(
       children: [
-        Icon(
-          _loading ? Icons.downloading_outlined : Icons.photo_outlined,
-          size: 32,
-        ),
+        Icon(_loading ? DjlIcons.download : DjlIcons.image, size: 32),
         const SizedBox(width: 12),
         Expanded(
           child: Column(

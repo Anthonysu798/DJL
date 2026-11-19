@@ -7,6 +7,10 @@ import '../../desktop/domain/desktop_overview.dart';
 import '../data/workspace_repository.dart';
 import 'project_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 Future<String?> showProjectPicker(
   BuildContext context, {
   required ProjectRepository repository,
@@ -17,7 +21,7 @@ Future<String?> showProjectPicker(
   useSafeArea: true,
   showDragHandle: true,
   clipBehavior: Clip.antiAlias,
-  backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(context),
+  backgroundColor: DjlColors.of(context).surface,
   builder: (_) => FractionallySizedBox(
     heightFactor: .96,
     child: ProjectPickerPage(repository: repository, initialPath: initialPath),
@@ -195,9 +199,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
       margin: EdgeInsets.zero,
       backgroundColor: Colors.transparent,
       decoration: BoxDecoration(
-        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
-          context,
-        ),
+        color: DjlColors.of(context).surfaceRaised,
         borderRadius: BorderRadius.circular(26),
       ),
       clipBehavior: Clip.antiAlias,
@@ -299,7 +301,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
           _row(
             'Parent Folder',
             listing!.parentPath!,
-            const Icon(CupertinoIcons.arrow_uturn_left, size: 22),
+            const Icon(DjlIcons.undo, size: 22),
             onTap: busy || c.creating
                 ? null
                 : () => _browse(listing.parentPath!),
@@ -339,9 +341,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
             ),
       ];
       return Scaffold(
-        backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
-          context,
-        ),
+        backgroundColor: DjlColors.of(context).surface,
         body: SafeArea(
           child: Column(
             children: [
@@ -363,7 +363,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
                         controller: _search,
                         placeholder: 'Search folders',
                         suffixIcon: const Icon(
-                          CupertinoIcons.xmark_circle_fill,
+                          DjlIcons.clear,
                           semanticLabel: 'Clear folder search',
                         ),
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(

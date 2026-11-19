@@ -8,6 +8,8 @@ import 'package:djl_mobile/features/workspace/data/workspace_repository.dart';
 import 'package:djl_mobile/features/workspace/presentation/workspace_linked_file_page.dart';
 import 'workspace_linked_file_controller_test.dart';
 
+import 'package:djl_mobile/core/design/djl_icons.dart';
+
 Future<void> open(
   WidgetTester tester,
   PreviewTransport t,
@@ -110,9 +112,9 @@ void main() {
     await tester.tap(find.byTooltip('Copy file contents'));
     await tester.pump();
     expect(copied, 'hello\nhi');
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.byIcon(DjlIcons.check), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1700));
-    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.byIcon(DjlIcons.check), findsNothing);
     await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
   });

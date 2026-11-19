@@ -3,6 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../domain/desktop_timeline_projection.dart';
 import 'desktop_focus_timeline.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 class DesktopTimelineGroup extends StatefulWidget {
   const DesktopTimelineGroup({
     super.key,
@@ -94,7 +98,7 @@ class _DesktopTimelineGroupState extends State<DesktopTimelineGroup> {
     final commands = widget.item.kind == DesktopTimelineKind.commands;
     final previous = widget.item.kind == DesktopTimelineKind.previous;
     final leadingDisclosure = commands || previous;
-    final color = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final color = DjlColors.of(context).inkMuted;
     final scaler = MediaQuery.textScalerOf(context);
     final disclosure = Semantics(
       container: true,
@@ -145,7 +149,7 @@ class _DesktopTimelineGroupState extends State<DesktopTimelineGroup> {
                 turns: _expanded ? .25 : 0,
                 duration: const Duration(milliseconds: 180),
                 child: Icon(
-                  CupertinoIcons.chevron_right,
+                  DjlIcons.chevronRight,
                   size: scaler.scale(previous ? 14 : 13),
                   color: color,
                 ),

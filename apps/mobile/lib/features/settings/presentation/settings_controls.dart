@@ -40,14 +40,6 @@ class _SettingsControlsState extends State<SettingsControls> {
     builder: (context, _) {
       final enabled = controller.ready && !controller.saving;
       final scheme = Theme.of(context).colorScheme;
-      Widget swatch(UserBubbleColor value) => Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(
-          color: value.swatch(scheme),
-          shape: BoxShape.circle,
-        ),
-      );
       String themeTitle(ThemeMode value) => switch (value) {
         ThemeMode.system => 'System',
         ThemeMode.light => 'Light',
@@ -71,32 +63,6 @@ class _SettingsControlsState extends State<SettingsControls> {
                     for (final value in AppFontStyle.values) value: value.title,
                   },
                   onChanged: enabled ? controller.setFont : null,
-                ),
-                SettingsMenuRow<UserBubbleColor>(
-                  key: const Key('bubble-setting'),
-                  label: 'Message Bubble',
-                  valueLabel: controller.bubble.title,
-                  value: controller.bubble,
-                  valueIcon: swatch(controller.bubble),
-                  options: {
-                    for (final value in UserBubbleColor.values)
-                      value: value.title,
-                  },
-                  optionIcon: (value) => Container(
-                    width: 20,
-                    height: 20,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: value == controller.bubble
-                          ? Border.all(color: scheme.onSurface)
-                          : null,
-                    ),
-                    child: swatch(value),
-                  ),
-                  optionKey: (value) => Key('bubble-${value.storedValue}'),
-                  optionLabel: (value) => '${value.title} bubble color',
-                  onChanged: enabled ? controller.setBubble : null,
                 ),
                 if (_glassSupported)
                   SwitchListTile.adaptive(

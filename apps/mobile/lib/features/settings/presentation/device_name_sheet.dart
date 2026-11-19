@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import '../../desktop/presentation/desktop_controller.dart';
 import '../../pairing/data/pairing_repository.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class DevicePreferencesStatus extends StatelessWidget {
   const DevicePreferencesStatus({super.key, required this.desktop});
@@ -75,7 +78,7 @@ class _DeviceNameTileState extends State<DeviceNameTile> {
                     p.publicKey == pair.publicKey,
               ))
             ListTile(
-              leading: const Icon(Icons.computer),
+              leading: const Icon(DjlIcons.desktop),
               title: Text(desktop.deviceName(pair)),
               subtitle: Text(
                 target?.nickname.trim().isNotEmpty == true
@@ -84,7 +87,7 @@ class _DeviceNameTileState extends State<DeviceNameTile> {
               ),
               trailing: IconButton(
                 tooltip: 'Edit device name',
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(DjlIcons.edit),
                 onPressed: !canEdit
                     ? null
                     : () => showModalBottomSheet<void>(
@@ -261,9 +264,7 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
                     ),
                     isDense: true,
                     filled: true,
-                    fillColor: CupertinoColors.secondarySystemFill.resolveFrom(
-                      context,
-                    ),
+                    fillColor: DjlColors.of(context).surfaceRaised,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 11,

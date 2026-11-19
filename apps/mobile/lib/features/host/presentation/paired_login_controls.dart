@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'paired_login_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class PairedLoginControls extends StatelessWidget {
   const PairedLoginControls({super.key, required this.controller});
   final PairedLoginController controller;
@@ -38,7 +40,7 @@ class PairedLoginControls extends StatelessWidget {
             ),
           FilledButton.icon(
             onPressed: login.canOpen ? login.openOnHost : null,
-            icon: const Icon(Icons.open_in_browser),
+            icon: const Icon(DjlIcons.openBrowser),
             label: Text(
               login.pending == null
                   ? 'Sign in on paired Mac'

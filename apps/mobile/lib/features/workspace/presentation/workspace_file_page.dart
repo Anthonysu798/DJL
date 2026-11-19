@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../data/workspace_repository.dart';
 import 'workspace_file_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class WorkspaceFilePage extends StatefulWidget {
   const WorkspaceFilePage({
     super.key,
@@ -68,12 +70,12 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
                         const SnackBar(content: Text('File contents copied.')),
                       );
                     },
-              icon: const Icon(Icons.copy),
+              icon: const Icon(DjlIcons.copy),
             ),
             IconButton(
               tooltip: 'Reload file',
               onPressed: c.loading ? null : _load,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(DjlIcons.refresh),
             ),
           ],
         ),

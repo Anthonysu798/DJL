@@ -3,6 +3,8 @@ import 'package:markdown/markdown.dart' as md;
 import '../../settings/domain/appearance.dart';
 import '../domain/thinking_disclosure.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class ThinkingTimelineRow extends StatefulWidget {
   const ThinkingTimelineRow({
     super.key,
@@ -99,7 +101,7 @@ class _ThinkingTimelineRowState extends State<ThinkingTimelineRow> {
             SizedBox(
               width: 10,
               child: Icon(
-                expanded ? Icons.keyboard_arrow_down : Icons.chevron_right,
+                expanded ? DjlIcons.chevronDown : DjlIcons.chevronRight,
                 size: 10,
                 fontWeight: FontWeight.w600,
                 color: color,

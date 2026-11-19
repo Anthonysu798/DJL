@@ -15,6 +15,10 @@ import 'git_new_branch_dialog.dart';
 import 'git_branch_picker.dart';
 import 'repository_diff_sheet.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 enum _GitCreationDecision { cancel, proceed, commitFirst }
 
 enum GitComposerAction { branch, worktree }
@@ -943,7 +947,7 @@ class _GitPageState extends State<GitPage> {
       } else if (!totals.hasChanges) {
         label = 'No changes';
         title = Text(label);
-        icon = Icon(CupertinoIcons.check_mark_circled, size: 20, color: color);
+        icon = Icon(DjlIcons.checkCircle, size: 20, color: color);
       } else {
         label =
             '+${totals.additions} -${totals.deletions}'
@@ -955,17 +959,13 @@ class _GitPageState extends State<GitPage> {
             Text(
               '+${totals.additions}',
               style: TextStyle(
-                color: enabled
-                    ? CupertinoColors.systemGreen.resolveFrom(context)
-                    : color,
+                color: enabled ? DjlColors.of(context).ink : color,
               ),
             ),
             Text(
               '-${totals.deletions}',
               style: TextStyle(
-                color: enabled
-                    ? CupertinoColors.systemRed.resolveFrom(context)
-                    : color,
+                color: enabled ? DjlColors.of(context).danger : color,
               ),
             ),
             if (totals.binaryFiles > 0)
@@ -1187,7 +1187,7 @@ class _GitPageState extends State<GitPage> {
             IconButton(
               tooltip: 'Refresh Git status',
               onPressed: c.loading || c.busy ? null : c.refresh,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(DjlIcons.refresh),
             ),
             PopupMenuButton<String>(
               enabled: !c.busy,

@@ -8,6 +8,7 @@ import 'package:djl_mobile/features/chat/presentation/message_view.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_controller.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_page.dart';
 import 'package:djl_mobile/features/settings/domain/appearance.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import 'cloud_composer_draft_page_test.dart' show DraftPageFixture;
 import 'cloud_composer_draft_store_test.dart' show DraftCredentials;
 import 'voice_controller_test.dart' show TestVoice;
@@ -220,7 +221,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('1 / 2'), findsOneWidget);
         final previous = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.chevron_left),
+          find.widgetWithIcon(IconButton, DjlIcons.chevronLeft),
         );
         expect(previous.onPressed, isNull);
         await tester.tap(find.byTooltip('Next branch'));
@@ -242,7 +243,7 @@ void main() {
         expect(
           tester
               .widget<IconButton>(
-                find.widgetWithIcon(IconButton, Icons.chevron_right),
+                find.widgetWithIcon(IconButton, DjlIcons.chevronRight),
               )
               .onPressed,
           isNull,

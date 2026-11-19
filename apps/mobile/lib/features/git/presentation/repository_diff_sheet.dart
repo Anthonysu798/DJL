@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../domain/repository_diff.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class RepositoryDiffSheet extends StatefulWidget {
   const RepositoryDiffSheet({
     super.key,
@@ -204,7 +206,7 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
                   _Counts(file.additions, file.deletions),
                 const SizedBox(width: 8),
                 Icon(
-                  Icons.north_east,
+                  DjlIcons.arrowUpRight,
                   size: 11,
                   color: colors.onSurfaceVariant,
                 ),
@@ -265,7 +267,7 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
               child: Row(
                 children: [
                   Icon(
-                    collapsed ? Icons.chevron_right : Icons.expand_more,
+                    collapsed ? DjlIcons.chevronRight : DjlIcons.chevronDown,
                     size: 14,
                     color: colors.onSurfaceVariant,
                   ),

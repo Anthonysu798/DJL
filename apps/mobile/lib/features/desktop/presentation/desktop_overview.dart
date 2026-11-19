@@ -4,13 +4,18 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../pairing/data/pairing_repository.dart';
-import '../../settings/domain/appearance.dart';
 import '../data/desktop_overview_repository.dart';
 import '../domain/desktop_overview.dart';
 import 'desktop_controller.dart';
 import 'desktop_composer_options_menu.dart';
 import 'desktop_thread_actions.dart';
 import 'desktop_thread_menu.dart';
+import '../../groups/presentation/groups_controller.dart';
+import '../../groups/presentation/groups_page.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class DesktopOverview extends StatefulWidget {
   const DesktopOverview({
@@ -28,6 +33,7 @@ class DesktopOverview extends StatefulWidget {
     this.onSettings,
     this.navigationNotice,
     this.switchOverlay,
+    this.groups,
   });
   final DesktopController desktop;
   final VoidCallback onNavigation,
@@ -45,6 +51,9 @@ class DesktopOverview extends StatefulWidget {
   final VoidCallback? onSettings;
   final Widget emptyPanel, feedback;
   final Widget? navigationNotice, switchOverlay;
+
+  /// Group chats on this Mac; adds the Groups tab when present.
+  final GroupsController? groups;
   @override
   State<DesktopOverview> createState() => _DesktopOverviewState();
 }
@@ -52,6 +61,7 @@ class DesktopOverview extends StatefulWidget {
 class _DesktopOverviewState extends State<DesktopOverview> {
   final _search = TextEditingController(), _searchFocus = FocusNode();
   DesktopOverviewScope _scope = DesktopOverviewScope.studio;
+  bool _groupsScope = false;
   final _expandedChildren = <String>{};
   Object? _binding;
   Object? _identity;
@@ -180,7 +190,10 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         query: _search.text,
       );
   void _chooseScope(DesktopOverviewScope scope) {
-    setState(() => _scope = scope);
+    setState(() {
+      _scope = scope;
+      _groupsScope = false;
+    });
   }
 
   void _toggleProject(String path) {
@@ -207,11 +220,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
   Color get _secondary => Theme.of(context).colorScheme.onSurfaceVariant;
   (Color, Color) get _accent {
     final scheme = Theme.of(context).colorScheme;
-    final bubble = DjlAppearance.of(context).bubble;
-    return bubble == UserBubbleColor.defaultColor ||
-            bubble == UserBubbleColor.black
-        ? (scheme.onSurface, scheme.surface)
-        : (bubble.swatch(scheme), Colors.white);
+    return (scheme.onSurface, scheme.surface);
   }
 
   Widget _surface(Widget child, {Color? fill}) => DecoratedBox(
@@ -325,7 +334,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             constraints: const BoxConstraints(minWidth: 220),
             icon: const SizedBox.square(
               dimension: 40,
-              child: Icon(CupertinoIcons.ellipsis, size: 20),
+              child: Icon(DjlIcons.more, size: 20),
             ),
             onSelected: (action) {
               switch (action) {
@@ -408,7 +417,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         ),
         if (widget.onSettings != null) ...[
           const SizedBox(width: 10),
-          _icon('Settings', CupertinoIcons.gear, widget.onSettings),
+          _icon('Settings', DjlIcons.settings, widget.onSettings),
         ],
       ],
     ),
@@ -431,7 +440,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                   ),
                   child: Row(
                     children: [
-                      Icon(CupertinoIcons.search, size: 15, color: _secondary),
+                      Icon(DjlIcons.search, size: 15, color: _secondary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: TextField(
@@ -466,7 +475,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           ),
           if (_searchFocus.hasFocus || _search.text.isNotEmpty) ...[
             const SizedBox(width: 8),
-            _icon('Dismiss search', CupertinoIcons.xmark, () {
+            _icon('Dismiss search', DjlIcons.close, () {
               _search.clear();
               _searchFocus.unfocus();
               desktop.threadList.filter(search: '');
@@ -504,7 +513,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: busy
-                          ? CupertinoColors.systemOrange
+                          ? Theme.of(context).colorScheme.onSurface
                           : _secondary.withValues(alpha: .45),
                     ),
                   ),
@@ -540,8 +549,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     const SizedBox(width: 8),
                   _button(
                     label: scope.title,
-                    selected: _scope == scope,
-                    fill: _scope == scope ? _accent.$1 : null,
+                    selected: !_groupsScope && _scope == scope,
+                    fill: !_groupsScope && _scope == scope ? _accent.$1 : null,
                     onTap: () => _chooseScope(scope),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -553,7 +562,31 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                         fontSize: 14,
                         height: 1.2,
                         fontWeight: FontWeight.w500,
-                        color: _scope == scope ? _accent.$2 : null,
+                        color: !_groupsScope && _scope == scope
+                            ? _accent.$2
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+                if (widget.groups != null) ...[
+                  const SizedBox(width: 8),
+                  _button(
+                    label: 'Groups',
+                    selected: _groupsScope,
+                    fill: _groupsScope ? _accent.$1 : null,
+                    onTap: () => setState(() => _groupsScope = true),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      'Groups',
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontSize: 14,
+                        height: 1.2,
+                        fontWeight: FontWeight.w500,
+                        color: _groupsScope ? _accent.$2 : null,
                       ),
                     ),
                   ),
@@ -562,7 +595,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             ),
           ),
         ),
-        if (_scope == DesktopOverviewScope.projects &&
+        if (!_groupsScope &&
+            _scope == DesktopOverviewScope.projects &&
             groups.any((g) => g.project)) ...[
           const SizedBox(width: 8),
           _icon(
@@ -574,7 +608,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     )
                 ? 'Expand all'
                 : 'Collapse all',
-            CupertinoIcons.arrow_up_left_arrow_down_right,
+            DjlIcons.expand,
             _owned(() => _toggleAll(groups)),
             size: 15,
           ),
@@ -669,8 +703,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       visualDensity: VisualDensity.compact,
                       icon: Icon(
                         _expandedChildren.contains(id)
-                            ? CupertinoIcons.chevron_down
-                            : CupertinoIcons.chevron_right,
+                            ? DjlIcons.chevronDown
+                            : DjlIcons.chevronRight,
                       ),
                       onPressed: toggleChildren,
                     ),
@@ -678,11 +712,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 PopupMenuButton<String>(
                   tooltip: 'Desktop chat actions',
                   padding: EdgeInsets.zero,
-                  icon: Icon(
-                    CupertinoIcons.ellipsis,
-                    size: 15,
-                    color: _secondary,
-                  ),
+                  icon: Icon(DjlIcons.more, size: 15, color: _secondary),
                   itemBuilder: (_) => desktopThreadActions(desktop, thread),
                   onSelected: (action) {
                     if (_currentBinding == owner) {
@@ -728,18 +758,16 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           value: 'archive',
           child: DesktopThreadMenuLabel(
             title: 'Archive Project',
-            icon: CupertinoIcons.archivebox,
+            icon: DjlIcons.archive,
           ),
         ),
         PopupMenuItem(
           value: 'remove',
           child: DefaultTextStyle.merge(
-            style: TextStyle(
-              color: CupertinoColors.destructiveRed.resolveFrom(anchor),
-            ),
+            style: TextStyle(color: DjlColors.of(anchor).danger),
             child: const DesktopThreadMenuLabel(
               title: 'Remove from Phone',
-              icon: CupertinoIcons.trash,
+              icon: DjlIcons.delete,
             ),
           ),
         ),
@@ -855,9 +883,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                           child: Row(
                             children: [
                               Icon(
-                                group.pinned
-                                    ? CupertinoIcons.pin
-                                    : CupertinoIcons.folder,
+                                group.pinned ? DjlIcons.pin : DjlIcons.folder,
                                 size: 17,
                               ),
                               const SizedBox(width: 8),
@@ -874,8 +900,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                                 const SizedBox(width: 6),
                                 Icon(
                                   collapsed
-                                      ? CupertinoIcons.chevron_right
-                                      : CupertinoIcons.chevron_down,
+                                      ? DjlIcons.chevronRight
+                                      : DjlIcons.chevronDown,
                                   size: 12,
                                   color: _secondary,
                                 ),
@@ -891,7 +917,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                   IconButton(
                     tooltip: 'New chat in $label',
                     iconSize: 18,
-                    icon: const Icon(CupertinoIcons.square_pencil),
+                    icon: const Icon(DjlIcons.compose),
                     onPressed: desktop.runtimeReady
                         ? _owned(
                             () => widget.onChat(
@@ -911,6 +937,45 @@ class _DesktopOverviewState extends State<DesktopOverview> {
   }
 
   Widget _bottom() {
+    final groupChats = _groupsScope ? widget.groups : null;
+    if (groupChats != null) {
+      final ready = groupChats.available;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: _button(
+            label: 'New group',
+            fill: ready
+                ? _accent.$1
+                : Theme.of(context).colorScheme.surfaceContainerHigh,
+            onTap: ready ? () => GroupsList.create(context, groupChats) : null,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  DjlIcons.group,
+                  size: 20,
+                  color: ready ? _accent.$2 : _secondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Group',
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                    letterSpacing: 0,
+                    color: ready ? _accent.$2 : _secondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
       child: Wrap(
@@ -940,7 +1005,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  CupertinoIcons.square_pencil,
+                  DjlIcons.compose,
                   size: 20,
                   color: desktop.runtimeReady ? _accent.$2 : _secondary,
                 ),
@@ -965,7 +1030,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: desktop,
+    listenable: Listenable.merge([desktop, widget.groups]),
     builder: (context, _) {
       final history =
           desktop.connected ||
@@ -1051,7 +1116,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                   .clamp(1.0, double.infinity);
               // Let all controls scroll when the keyboard or large type leaves
               // less room than the pinned chrome needs.
-              final compact = constraints.maxHeight < 260 * scale;
+              final compact =
+                  !_groupsScope && constraints.maxHeight < 260 * scale;
               final header = [
                 _searchBar(),
                 if (history)
@@ -1094,22 +1160,27 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         ...header,
-                        Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, body) => RefreshIndicator(
-                              onRefresh: refresh,
-                              child: ListView(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  12,
+                        if (_groupsScope && widget.groups != null)
+                          Expanded(
+                            child: GroupsList(controller: widget.groups!),
+                          )
+                        else
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, body) => RefreshIndicator(
+                                onRefresh: refresh,
+                                child: ListView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    12,
+                                  ),
+                                  children: content(body.maxHeight),
                                 ),
-                                children: content(body.maxHeight),
                               ),
                             ),
                           ),
-                        ),
                         _bottom(),
                       ],
                     ),

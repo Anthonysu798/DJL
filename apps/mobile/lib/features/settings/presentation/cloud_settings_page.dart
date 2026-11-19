@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +7,8 @@ import '../../../core/presentation/cloud_chrome.dart';
 import '../../remote_notifications/presentation/remote_push_controller.dart';
 import 'settings_controller.dart';
 import 'settings_group.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 class CloudSettingsPage extends StatefulWidget {
   const CloudSettingsPage({
@@ -199,7 +200,7 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
         ),
         trailing: disclosure
             ? Icon(
-                CupertinoIcons.chevron_right,
+                DjlIcons.chevronRight,
                 size: 15,
                 color: colors.onSurfaceVariant,
               )
@@ -233,8 +234,8 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
               title: 'Settings',
               leading: CloudNavigationButton(
                 icon: widget.onOpenNavigation == null
-                    ? CupertinoIcons.back
-                    : CupertinoIcons.line_horizontal_3,
+                    ? DjlIcons.back
+                    : DjlIcons.menu,
                 label: widget.onOpenNavigation == null
                     ? 'Back'
                     : 'Open navigation',
@@ -262,7 +263,7 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
                     children: [
                       action(
                         widget.email ?? 'DJL account',
-                        CupertinoIcons.person_crop_circle,
+                        DjlIcons.account,
                         widget.onAccount,
                         key: const Key('cloud.settings.account'),
                         tinted: true,
@@ -298,13 +299,13 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
                     children: [
                       action(
                         'Archived chats',
-                        CupertinoIcons.archivebox,
+                        DjlIcons.archive,
                         widget.onArchived,
                         disclosure: true,
                       ),
                       action(
                         'Remote access',
-                        CupertinoIcons.device_laptop,
+                        DjlIcons.laptop,
                         widget.onRemote,
                         tinted: true,
                       ),

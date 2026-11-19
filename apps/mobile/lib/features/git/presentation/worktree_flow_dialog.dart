@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../desktop/presentation/worktree_flow_controller.dart';
 import '../domain/git_creation_review.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 Future<bool?> showWorktreeFlowDialog({
   required BuildContext context,
@@ -234,7 +235,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
   Widget build(BuildContext context) {
     _dismissInvalid();
     final primary = Theme.of(context).colorScheme.onSurface;
-    final secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final secondary = DjlColors.of(context).inkMuted;
     final normalized = normalizedGitCreatedBranchName(_branch.text);
     final enabled =
         _flow.isCurrent &&
@@ -253,9 +254,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: CupertinoColors.secondarySystemBackground.resolveFrom(
-              context,
-            ),
+            color: DjlColors.of(context).surfaceRaised,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(

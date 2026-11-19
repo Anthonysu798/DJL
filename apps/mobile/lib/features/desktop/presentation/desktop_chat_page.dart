@@ -76,6 +76,10 @@ import '../../workspace/presentation/checkpoint_page.dart';
 import '../../workspace/presentation/response_undo_sheet.dart';
 import '../../workspace/domain/workspace_reference.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 String desktopItemText(RemoteJson item) {
   if (item['text'] is String) return item['text'] as String;
   final content = item['content'];
@@ -785,7 +789,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.unfold_more, size: 18),
+              const Icon(DjlIcons.expandVertical, size: 18),
             ],
           ),
         ),
@@ -1534,7 +1538,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                 questionnaire.outro!,
                 style: TextStyle(
                   fontSize: 13,
-                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  color: DjlColors.of(context).inkMuted,
                 ),
               ),
             ],
@@ -1984,7 +1988,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                       enabled: ownsToolbar() && desktop.host.canHandoff,
                       child: const DesktopThreadMenuLabel(
                         title: 'Hand off to Desktop',
-                        icon: Icons.swap_horiz,
+                        icon: DjlIcons.swap,
                       ),
                     ),
                     PopupMenuItem(
@@ -2008,7 +2012,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                       enabled: ownsToolbar() && desktop.runtimeReady,
                       child: const DesktopThreadMenuLabel(
                         title: 'New chat',
-                        icon: Icons.edit_square,
+                        icon: DjlIcons.compose,
                       ),
                     ),
                   ],
@@ -2282,8 +2286,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                     text,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: CupertinoColors.secondaryLabel
-                                          .resolveFrom(context),
+                                      color: DjlColors.of(context).inkMuted,
                                     ),
                                   ),
                                 );
@@ -2304,10 +2307,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                   nativePlan?.inlineResult != true &&
                                   inferred == null) {
                                 return ExpansionTile(
-                                  leading: const Icon(
-                                    Icons.build_outlined,
-                                    size: 18,
-                                  ),
+                                  leading: const Icon(DjlIcons.tool, size: 18),
                                   title: Text(
                                     activityString(type) ?? 'Activity',
                                   ),
@@ -2555,7 +2555,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                               'Review exact response changes',
                                           child: TextButton.icon(
                                             icon: const Icon(
-                                              Icons.undo,
+                                              DjlIcons.undo,
                                               size: 18,
                                             ),
                                             label: Text(
@@ -2893,7 +2893,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                         alignment: Alignment.centerRight,
                                         child: ActionChip(
                                           avatar: const Icon(
-                                            Icons.track_changes,
+                                            DjlIcons.goal,
                                             size: 18,
                                           ),
                                           label: Text(
@@ -2915,7 +2915,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                               message: 'Return to parent chat',
                               child: TextButton.icon(
                                 onPressed: desktop.returnToSubagentParent,
-                                icon: const Icon(Icons.subdirectory_arrow_left),
+                                icon: const Icon(DjlIcons.arrowBendLeft),
                                 label: Text(
                                   'Return to ${desktop.titleOf(parent)}',
                                   maxLines: 2,

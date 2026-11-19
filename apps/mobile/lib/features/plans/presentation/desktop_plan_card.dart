@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,19 +9,14 @@ import '../../../core/presentation/djl_glass.dart';
 import '../../chat/presentation/assistant_code_block.dart';
 import '../../settings/domain/appearance.dart';
 import '../domain/desktop_plan.dart';
+import '../../../core/design/djl_icons.dart';
 import '../../desktop/presentation/desktop_conversation_view.dart'
     show desktopAssistantHeadings;
 
+import '../../../core/design/djl_tokens.dart';
+
 Color _planTint(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xff0096ff)
-    : const Color.from(
-        alpha: 1,
-        red: .430,
-        green: .740,
-        blue: .983,
-        colorSpace: ui.ColorSpace.displayP3,
-      );
+    Theme.of(context).colorScheme.onSurface;
 
 class DesktopPlanAccessory extends StatelessWidget {
   const DesktopPlanAccessory({
@@ -42,9 +36,7 @@ class DesktopPlanAccessory extends StatelessWidget {
         : steps.any((s) => s['status'] == 'in_progress')
         ? 'In progress'
         : 'Pending';
-    final tint = complete
-        ? CupertinoColors.systemGreen.resolveFrom(context)
-        : _planTint(context);
+    final tint = complete ? DjlColors.of(context).ink : _planTint(context);
     return Tooltip(
       message: 'Open active plan',
       child: Semantics(
@@ -69,7 +61,7 @@ class DesktopPlanAccessory extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (steps.isEmpty)
-                  Icon(CupertinoIcons.circle_fill, size: 8, color: tint)
+                  Icon(DjlIcons.circleFill, size: 8, color: tint)
                 else
                   CustomPaint(
                     size: const Size(14, 14),
@@ -307,10 +299,10 @@ class _PlanStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = step['status'];
     final tint = status == 'completed'
-        ? CupertinoColors.systemGreen.resolveFrom(context)
+        ? DjlColors.of(context).ink
         : status == 'in_progress'
-        ? CupertinoColors.systemOrange.resolveFrom(context)
-        : CupertinoColors.secondaryLabel.resolveFrom(context);
+        ? DjlColors.of(context).ink
+        : DjlColors.of(context).inkMuted;
     final label = status == 'completed'
         ? 'Completed'
         : status == 'in_progress'
@@ -323,10 +315,10 @@ class _PlanStep extends StatelessWidget {
           padding: const EdgeInsets.only(top: 2),
           child: Icon(
             status == 'completed'
-                ? CupertinoIcons.checkmark_circle_fill
+                ? DjlIcons.checkCircleFill
                 : status == 'in_progress'
-                ? CupertinoIcons.clock
-                : CupertinoIcons.circle,
+                ? DjlIcons.clock
+                : DjlIcons.circle,
             size: 12,
             color: tint,
           ),
@@ -404,8 +396,7 @@ Future<void> showDesktopPlanDetails(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(56),
                 child: Material(
-                  color: CupertinoColors.secondarySystemGroupedBackground
-                      .resolveFrom(context),
+                  color: DjlColors.of(context).surfaceRaised,
                   child: DraggableScrollableSheet(
                     controller: extent,
                     expand: false,
@@ -629,14 +620,12 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: CupertinoColors.secondarySystemBackground.resolveFrom(context),
+        color: DjlColors.of(context).surfaceRaised,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: CupertinoColors.separator
-              .resolveFrom(context)
-              .withValues(
-                alpha: CupertinoColors.separator.resolveFrom(context).a * .12,
-              ),
+          color: DjlColors.of(
+            context,
+          ).hairline.withValues(alpha: DjlColors.of(context).hairline.a * .12),
         ),
       ),
       child: Column(
@@ -686,9 +675,7 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
                         Text(_expanded ? 'Collapse' : 'Expand'),
                         const SizedBox(width: 5),
                         Icon(
-                          _expanded
-                              ? CupertinoIcons.chevron_up
-                              : CupertinoIcons.chevron_down,
+                          _expanded ? DjlIcons.chevronUp : DjlIcons.chevronDown,
                           size: 10,
                         ),
                       ],
@@ -754,10 +741,7 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
                             radius: 7,
                             color: _planTint(context),
                           )
-                        : const Icon(
-                            CupertinoIcons.arrow_right_circle_fill,
-                            size: 13,
-                          ),
+                        : const Icon(DjlIcons.arrowCircleRight, size: 13),
                   ),
                   label: Text(
                     locked ? 'Starting...' : 'Implement',

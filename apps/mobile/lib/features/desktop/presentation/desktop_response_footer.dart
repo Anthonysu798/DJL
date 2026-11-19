@@ -1,9 +1,12 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../chat/presentation/assistant_code_block.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class DesktopResponseFooter extends StatefulWidget {
   const DesktopResponseFooter({
@@ -65,7 +68,7 @@ class _DesktopResponseFooterState extends State<DesktopResponseFooter> {
 
   @override
   Widget build(BuildContext context) {
-    final color = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final color = DjlColors.of(context).inkMuted;
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Align(
@@ -98,11 +101,7 @@ class _DesktopResponseFooterState extends State<DesktopResponseFooter> {
                           width: 20,
                           height: 20,
                           child: _copied
-                              ? Icon(
-                                  CupertinoIcons.check_mark,
-                                  size: 11,
-                                  color: color,
-                                )
+                              ? Icon(DjlIcons.check, size: 11, color: color)
                               : SvgPicture.asset(
                                   'assets/icons/markdown/copy.svg',
                                   colorFilter: ColorFilter.mode(

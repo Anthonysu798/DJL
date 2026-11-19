@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import '../../attachments/data/attachment_picker.dart';
 import 'chat_controller.dart';
 import 'cloud_usage_banner.dart';
@@ -17,6 +16,8 @@ import '../../voice/data/native_voice_driver.dart';
 import '../../voice/data/voice_driver.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../../settings/domain/appearance.dart';
+
+import '../../../core/design/djl_icons.dart';
 
 List<FontVariation>? _systemFontAxes(
   BuildContext context,
@@ -320,7 +321,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               : Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: CloudNavigationButton(
-                    icon: CupertinoIcons.line_horizontal_3,
+                    icon: DjlIcons.menu,
                     label: 'Open navigation',
                     onPressed: widget.onOpenNavigation!,
                   ),
@@ -373,7 +374,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                 child: m['id'] == chat.model
                                     ? ExcludeSemantics(
                                         child: Icon(
-                                          Icons.check,
+                                          DjlIcons.check,
                                           size: 20,
                                           color: scheme.onSurfaceVariant,
                                         ),
@@ -432,7 +433,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         ),
                         const SizedBox(width: 4),
                         Icon(
-                          CupertinoIcons.chevron_down,
+                          DjlIcons.chevronDown,
                           size: 18,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -453,7 +454,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.ios_share),
+                    : const Icon(DjlIcons.share),
               ),
           ],
         ),
@@ -572,7 +573,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.task_alt, size: 16),
+                        const Icon(DjlIcons.checkCircle, size: 16),
                         const SizedBox(width: 8),
                         Text(
                           'Step ${chat.steps.last['step']} of ${chat.steps.last['maxSteps']}',
@@ -813,7 +814,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                       ),
                                                 )
                                               : const Icon(
-                                                  CupertinoIcons.plus,
+                                                  DjlIcons.add,
                                                   size: 22,
                                                 ),
                                         ),
@@ -859,7 +860,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Icon(
-                                                    Icons.checklist,
+                                                    DjlIcons.checklist,
                                                     size: 17,
                                                     color: chat.mode == 'task'
                                                         ? Colors.white
@@ -926,8 +927,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                               },
                                         icon: Icon(
                                           _voice.listening
-                                              ? CupertinoIcons.stop_circle
-                                              : CupertinoIcons.mic,
+                                              ? DjlIcons.stopCircle
+                                              : DjlIcons.mic,
                                           size: 20,
                                         ),
                                       ),
@@ -977,8 +978,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                 )
                                               : Icon(
                                                   chat.streaming
-                                                      ? Icons.stop
-                                                      : CupertinoIcons.arrow_up,
+                                                      ? DjlIcons.stop
+                                                      : DjlIcons.arrowUp,
                                                   size: 20,
                                                   color: scheme.surface,
                                                 ),

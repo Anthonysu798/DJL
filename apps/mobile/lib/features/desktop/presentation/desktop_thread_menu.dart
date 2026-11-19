@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/design/djl_icons.dart';
+
 class DesktopThreadMenu extends StatelessWidget {
   const DesktopThreadMenu({
     super.key,
@@ -47,7 +49,7 @@ class DesktopThreadMenu extends StatelessWidget {
     tooltip: 'Thread actions',
     enabled: enabled,
     icon: Icon(
-      Icons.more_horiz,
+      DjlIcons.more,
       size: 24,
       color: enabled
           ? Theme.of(context).colorScheme.onSurface
@@ -61,7 +63,7 @@ class DesktopThreadMenu extends StatelessWidget {
         value: 'more-actions',
         child: DesktopThreadMenuLabel(
           title: 'More actions',
-          icon: Icons.more_horiz,
+          icon: DjlIcons.more,
         ),
       ),
     ],

@@ -1,6 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../settings/domain/appearance.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 const whatsNewNotes = <String, List<String>>{
   '0.1.0': [
@@ -73,7 +76,7 @@ class WhatsNewSheet extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Icon(
-                        CupertinoIcons.arrow_right,
+                        DjlIcons.arrowRight,
                         size: 11,
                         color: secondary,
                       ),
@@ -169,9 +172,7 @@ class WhatsNewSheet extends StatelessWidget {
                           width: 36,
                           height: 5,
                           decoration: BoxDecoration(
-                            color: CupertinoColors.systemGrey3.resolveFrom(
-                              context,
-                            ),
+                            color: DjlColors.of(context).inkFaint,
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),

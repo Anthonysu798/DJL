@@ -4,6 +4,10 @@ import '../../../core/presentation/cloud_chrome.dart';
 import 'chat_controller.dart';
 import 'cloud_usage_reset_confirmation.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+
 class CloudUsageBanner extends StatefulWidget {
   const CloudUsageBanner({
     super.key,
@@ -74,10 +78,8 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
       key: const ValueKey('cloud-usage-banner'),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colors.brightness == Brightness.dark
-            ? const Color(0xff1c1c1e)
-            : const Color(0xfff2f2f7),
-        borderRadius: BorderRadius.circular(16),
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(DjlRadius.md),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -86,11 +88,7 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                CupertinoIcons.hourglass,
-                size: 17,
-                color: CupertinoColors.systemOrange,
-              ),
+              Icon(DjlIcons.hourglass, size: 17, color: colors.onSurface),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

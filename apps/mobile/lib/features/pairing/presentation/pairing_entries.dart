@@ -116,7 +116,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                     child: Padding(
                       padding: const EdgeInsets.all(11),
                       child: Icon(
-                        CupertinoIcons.device_laptop,
+                        DjlIcons.laptop,
                         color: scheme.onSurface,
                         size: 22,
                       ),

@@ -2,7 +2,6 @@ import '../support/native_text_search.dart'
     show useAsciiNativeSearch, clearNativeSearchFixture;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +9,7 @@ import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_new_chat_draft_test.dart'
     show DraftTransport, draftDesktop, finishDraft;
@@ -90,21 +90,21 @@ void main() {
           expect(tester.getSize(button), Size(size, size));
         }
 
-        await expectNeutral(CupertinoIcons.search, 44);
-        await expectNeutral(CupertinoIcons.gear_alt, 50);
-        await tester.tap(circle(CupertinoIcons.search));
+        await expectNeutral(DjlIcons.search, 44);
+        await expectNeutral(DjlIcons.settings, 50);
+        await tester.tap(circle(DjlIcons.search));
         await tester.pumpAndSettle();
         await tester.enterText(
           find.byKey(const Key('navigation.search')),
           'local filter',
         );
         await tester.pumpAndSettle();
-        await expectNeutral(CupertinoIcons.xmark, 44);
-        await tester.tap(circle(CupertinoIcons.xmark));
+        await expectNeutral(DjlIcons.close, 44);
+        await tester.tap(circle(DjlIcons.close));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('navigation.search')), findsNothing);
-        await expectNeutral(CupertinoIcons.search, 44);
-        await tester.tap(circle(CupertinoIcons.gear_alt));
+        await expectNeutral(DjlIcons.search, 44);
+        await tester.tap(circle(DjlIcons.settings));
         await tester.pumpAndSettle();
         expect(settings, 1);
         expect(remote.calls.length, calls);

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../../integration_test/advanced_test.dart' show sendComposer;
 
 class NativeInputBinding extends AutomatedTestWidgetsFlutterBinding {
@@ -29,7 +30,7 @@ void main() {
                   ),
                   IconButton.filled(
                     tooltip: 'Send to desktop',
-                    icon: const Icon(Icons.arrow_upward),
+                    icon: const Icon(DjlIcons.arrowUp),
                     onPressed: text.text.isEmpty
                         ? null
                         : () {
@@ -92,7 +93,7 @@ void main() {
                   ),
                   IconButton.filled(
                     tooltip: 'Send to desktop',
-                    icon: const Icon(Icons.arrow_upward),
+                    icon: const Icon(DjlIcons.arrowUp),
                     onPressed: ready ? () => sends++ : null,
                   ),
                 ],

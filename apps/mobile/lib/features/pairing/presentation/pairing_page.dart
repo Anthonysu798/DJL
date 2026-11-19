@@ -4,11 +4,7 @@ import 'dart:math' as math;
 import '../../../core/presentation/djl_glass.dart';
 import '../../settings/presentation/settings_group.dart';
 import 'package:flutter/cupertino.dart'
-    show
-        CupertinoActivityIndicator,
-        CupertinoButton,
-        CupertinoColors,
-        CupertinoIcons;
+    show CupertinoActivityIndicator, CupertinoButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
@@ -29,6 +25,9 @@ import '../data/pairing_repository.dart';
 import 'device_recency_text.dart';
 import 'device_visibility_switch.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../groups/presentation/groups_controller.dart';
+import '../../../core/design/djl_tokens.dart';
 part 'pairing_entries.dart';
 part 'connections_sheet.dart';
 
@@ -121,8 +120,7 @@ Future<void> _selectSavedDevice(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context, true),
                             style: TextButton.styleFrom(
-                              foregroundColor: CupertinoColors.systemRed
-                                  .resolveFrom(context),
+                              foregroundColor: DjlColors.of(context).danger,
                               backgroundColor: colors.onSurface.withValues(
                                 alpha: colors.brightness == Brightness.dark
                                     ? .10
@@ -174,11 +172,7 @@ class _DeviceSwitchOverlay extends StatelessWidget {
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: ColoredBox(
                   key: const Key('device_switch_progress'),
-                  color: Color(
-                    colors.brightness == Brightness.dark
-                        ? 0xff2c2c2e
-                        : 0xfff2f2f2,
-                  ).withValues(alpha: .9),
+                  color: colors.surfaceContainerLow.withValues(alpha: .9),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
@@ -275,6 +269,14 @@ class PairingPage extends StatefulWidget {
 
 class _PairingPageState extends State<PairingPage> {
   String _payload = '', _code = '';
+  late final _groups = GroupsController(DesktopGroupsLink(widget.controller));
+
+  @override
+  void dispose() {
+    _groups.dispose();
+    super.dispose();
+  }
+
   String _relay = const String.fromEnvironment('DJL_REMOTE_RELAY_URL');
 
   bool get _canAdd => widget.controller.canEnterManualPairing;
@@ -541,7 +543,7 @@ class _PairingPageState extends State<PairingPage> {
           ListTile(
             enabled: !desktop.busy,
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.verified_user_outlined),
+            leading: const Icon(DjlIcons.shieldCheck),
             title: Text(desktop.deviceName(pair)),
             subtitle: Text(
               desktop.navigationTarget?.qualified == true
@@ -642,7 +644,7 @@ class _PairingPageState extends State<PairingPage> {
             OutlinedButton.icon(
               style: secondaryStyle,
               onPressed: _canAdd ? _pairWithCode : null,
-              icon: const Icon(CupertinoIcons.keyboard, size: 14),
+              icon: const Icon(DjlIcons.keyboard, size: 14),
               label: const Text('Pair with Code', textAlign: TextAlign.center),
             ),
           ],
@@ -669,7 +671,7 @@ class _PairingPageState extends State<PairingPage> {
 
   Widget _emptyPanel(DesktopController desktop) {
     final theme = Theme.of(context);
-    final tertiary = CupertinoColors.tertiaryLabel.resolveFrom(context);
+    final tertiary = DjlColors.of(context).inkFaint;
     final firstPairing = desktop.active == null && desktop.trusted.isEmpty;
     final title =
         desktop.selectedDeviceName ??
@@ -745,11 +747,9 @@ class _PairingPageState extends State<PairingPage> {
                         children: [
                           if (warning) ...[
                             Icon(
-                              CupertinoIcons.exclamationmark_triangle_fill,
+                              DjlIcons.warningFill,
                               size: 10,
-                              color: CupertinoColors.systemOrange.resolveFrom(
-                                context,
-                              ),
+                              color: DjlColors.of(context).ink,
                             ),
                             const SizedBox(width: 6),
                           ],
@@ -830,6 +830,7 @@ class _PairingPageState extends State<PairingPage> {
           onQuickChat: _startChat,
           onChat: _chat,
           onSettings: widget.onSettings,
+          groups: _groups,
           emptyPanel: _emptyPanel(desktop),
           feedback: _feedback(desktop),
           navigationNotice:

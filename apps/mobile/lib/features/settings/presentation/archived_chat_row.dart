@@ -1,7 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'settings_group.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class ArchivedChatRow extends StatefulWidget {
   const ArchivedChatRow({
@@ -117,14 +120,14 @@ class _ArchivedChatRowState extends State<ArchivedChatRow> {
                           _offset > 0
                               ? action(
                                   'Unarchive',
-                                  CupertinoIcons.tray_arrow_up,
-                                  const Color(0xff007aff),
+                                  DjlIcons.upload,
+                                  DjlColors.of(context).ink,
                                   widget.onUnarchive,
                                 )
                               : action(
                                   'Remove',
-                                  CupertinoIcons.trash,
-                                  const Color(0xffff3b30),
+                                  DjlIcons.delete,
+                                  DjlColors.of(context).danger,
                                   () => widget.onRemove(_anchor()),
                                 ),
                         ],

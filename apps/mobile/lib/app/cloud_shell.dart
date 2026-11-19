@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import '../core/presentation/cloud_chrome.dart';
 import '../features/chat/data/cloud_repository.dart';
 import '../features/chat/domain/cloud_models.dart';
@@ -17,6 +16,8 @@ import '../features/notifications/presentation/notification_controller.dart';
 import '../features/notifications/presentation/notification_page.dart';
 import '../features/settings/presentation/settings_controller.dart';
 import 'cloud_navigation.dart';
+
+import '../core/design/djl_icons.dart';
 
 class CloudShell extends StatefulWidget {
   const CloudShell({
@@ -109,7 +110,7 @@ class _CloudShellState extends State<CloudShell> {
       leading: Padding(
         padding: const EdgeInsets.only(left: 16),
         child: CloudNavigationButton(
-          icon: CupertinoIcons.line_horizontal_3,
+          icon: DjlIcons.menu,
           label: 'Open navigation',
           onPressed: _toggle,
         ),

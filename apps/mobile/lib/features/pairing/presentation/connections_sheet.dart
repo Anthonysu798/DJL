@@ -214,7 +214,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                                   opacity: 1,
                                                 ),
                                                 child: Icon(
-                                                  Icons.check,
+                                                  DjlIcons.check,
                                                   size: 14,
                                                   color:
                                                       colors.onSurfaceVariant,
@@ -358,7 +358,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
               height: 10,
               key: const Key('connected_device_dot'),
               decoration: BoxDecoration(
-                color: CupertinoColors.systemGreen.resolveFrom(context),
+                color: DjlColors.of(context).ink,
                 shape: BoxShape.circle,
                 border: Border.all(color: _groupColor(context), width: 2),
               ),
@@ -410,7 +410,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
           onPressed: () => Navigator.pop(context, value),
           style: TextButton.styleFrom(
             foregroundColor: value
-                ? CupertinoColors.systemRed.resolveFrom(context)
+                ? DjlColors.of(context).danger
                 : colors.onSurface,
             backgroundColor: colors.onSurface.withValues(
               alpha: theme.brightness == Brightness.dark ? .10 : .14,
@@ -644,7 +644,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
               )
             : const Tooltip(
                 message: 'Menu visibility unavailable',
-                child: Icon(Icons.error_outline, size: 18),
+                child: Icon(DjlIcons.error, size: 18),
               ),
       ),
     );
@@ -836,8 +836,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                       width: 6,
                                       height: 6,
                                       decoration: BoxDecoration(
-                                        color: CupertinoColors.systemGreen
-                                            .resolveFrom(context),
+                                        color: DjlColors.of(context).ink,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -854,8 +853,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                       statusColor:
                                           desktop.connected &&
                                               menu.any(desktop.isActiveDevice)
-                                          ? CupertinoColors.systemGreen
-                                                .resolveFrom(context)
+                                          ? DjlColors.of(context).ink
                                           : null,
                                       style: TextStyle(
                                         fontSize: 11,
@@ -867,7 +865,10 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                   ),
                                 ],
                               ),
-                              trailing: const Icon(Icons.unfold_more, size: 18),
+                              trailing: const Icon(
+                                DjlIcons.expandVertical,
+                                size: 18,
+                              ),
                               onTap: canChoose ? _chooseDevice : null,
                             ),
                           ),
@@ -939,7 +940,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                           iconColor: Theme.of(context).colorScheme.onSurface,
                           leading: const SizedBox(
                             width: 22,
-                            child: Icon(Icons.qr_code_scanner, size: 16),
+                            child: Icon(DjlIcons.scan, size: 16),
                           ),
                           title: const Text('Scan QR Code'),
                           onTap: canAdd
@@ -968,7 +969,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                           iconColor: Theme.of(context).colorScheme.onSurface,
                           leading: const SizedBox(
                             width: 22,
-                            child: Icon(Icons.keyboard_outlined, size: 16),
+                            child: Icon(DjlIcons.keyboard, size: 16),
                           ),
                           title: const Text('Pair with Code'),
                           onTap: canAdd
@@ -1059,8 +1060,8 @@ class _ConnectionSwipeRowState extends State<_ConnectionSwipeRow> {
           child: IconButton(
             tooltip: label,
             onPressed: callback == null ? null : () => _action(callback),
-            color: Colors.white,
-            disabledColor: Colors.white54,
+            color: DjlColors.of(context).onInk,
+            disabledColor: DjlColors.of(context).onInk.withValues(alpha: .54),
             icon: Icon(icon, size: 21),
           ),
         ),
@@ -1089,20 +1090,20 @@ class _ConnectionSwipeRowState extends State<_ConnectionSwipeRow> {
                   children: [
                     action(
                       'Scan QR',
-                      Icons.qr_code_scanner,
-                      const Color(0xff007aff),
+                      DjlIcons.scan,
+                      DjlColors.of(context).ink,
                       widget.onScan,
                     ),
                     action(
                       'Pair with Code',
-                      Icons.keyboard_outlined,
-                      const Color(0xff8e8e93),
+                      DjlIcons.keyboard,
+                      DjlColors.of(context).inkMuted,
                       widget.onCode,
                     ),
                     action(
                       'Forget desktop',
-                      Icons.delete_outline,
-                      const Color(0xffff3b30),
+                      DjlIcons.delete,
+                      DjlColors.of(context).danger,
                       widget.onForget,
                     ),
                   ],
