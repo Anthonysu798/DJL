@@ -1,10 +1,11 @@
+import { tmpdir } from "node:os";
 import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { resolveMediaBinary } from "./mediaBinary";
 
 it("discovers the matching packaged architecture and honors explicit binary paths", async () => {
-  const root = await mkdtemp("/private/tmp/djl-media-binary-");
+  const root = await mkdtemp(path.join(tmpdir(), "djl-media-binary-"));
   try {
     const resources = path.join(root, "Contents", "Resources", "media", "darwin-arm64");
     await mkdir(resources, { recursive: true });

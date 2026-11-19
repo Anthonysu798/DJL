@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
@@ -21,7 +23,7 @@ it.layer(SqlitePersistenceMemory)("social agent integration", (it) => {
     "prepares owner-scoped drafts and never exposes another account's campaign or brand",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-agent-integration-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-agent-integration-")));
         const scope = {
           threadId: "shared-local-thread",
           authorizedRoot: root,
@@ -72,9 +74,9 @@ it.layer(SqlitePersistenceMemory)("social agent integration", (it) => {
   it.effect("direct UI requests reject model-supplied identity and publication tools", () =>
     Effect.gen(function* () {
       const config = {
-        stateDir: "/private/tmp/missing-agent-session",
-        secretsDir: "/private/tmp/missing-agent-session/secrets",
-        cwd: "/private/tmp",
+        stateDir: join(tmpdir(), "missing-agent-session"),
+        secretsDir: join(tmpdir(), "missing-agent-session/secrets"),
+        cwd: tmpdir(),
       };
       for (const raw of [
         { threadId: "chat", tool: "djl_brand_memory", args: { action: "read" }, userId: "spoofed" },

@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile, chmod } from "node:fs/promises";
 import path from "node:path";
@@ -9,7 +10,7 @@ import { renderVideoClip, validateVideoClips, VIDEO_MAX_BYTES } from "./videoPro
 const exec = promisify(execFile);
 
 it("exports the chosen side of a manual crop and a real cover, preserving the source", async () => {
-  const root = await mkdtemp("/private/tmp/djl-crop-proof-");
+  const root = await mkdtemp(path.join(tmpdir(), "djl-crop-proof-"));
   try {
     const source = path.join(root, "source.mp4");
     await exec("ffmpeg", [
@@ -54,7 +55,7 @@ it("exports the chosen side of a manual crop and a real cover, preserving the so
 });
 
 it("compresses a genuinely oversized noisy export below 25 MB without truncating it", async () => {
-  const root = await mkdtemp("/private/tmp/djl-compression-test-");
+  const root = await mkdtemp(path.join(tmpdir(), "djl-compression-test-"));
   try {
     const source = path.join(root, "source.mp4");
     await exec("ffmpeg", [
@@ -92,7 +93,7 @@ it("compresses a genuinely oversized noisy export below 25 MB without truncating
 }, 90000);
 
 it("stops after three oversized encodes and preserves the original", async () => {
-  const root = await mkdtemp("/private/tmp/djl-compression-limit-");
+  const root = await mkdtemp(path.join(tmpdir(), "djl-compression-limit-"));
   const saved = process.env.DJL_FFMPEG_PATH;
   try {
     const source = path.join(root, "source.mp4"),

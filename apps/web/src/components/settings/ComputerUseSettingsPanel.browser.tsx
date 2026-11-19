@@ -589,22 +589,16 @@ describe("history consent and host status", () => {
       .querySelector('[aria-label="Capture interactions"]')
       ?.closest("section") as HTMLElement;
     consent.scrollIntoView({ block: "start" });
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/preserved-controls-consent-desktop.png",
-    });
+    await page.screenshot();
     await page
       .getByRole("group", { name: "Interaction observer", exact: true })
       .element()
       .scrollIntoView({ block: "center" });
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/preserved-controls-status-desktop.png",
-    });
+    await page.screenshot();
     await page.viewport(320, 900);
     container.style.width = "320px";
     await expect.poll(() => container.scrollWidth).toBeLessThanOrEqual(320);
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/preserved-controls-consent-narrow.png",
-    });
+    await page.screenshot();
   }, 5000);
   it("keeps edits made while Save is pending for the next Save", async () => {
     const fixture = passiveFixture();
@@ -687,9 +681,7 @@ describe("history consent and host status", () => {
       .querySelector('[aria-label="' + t("captureInteractions") + '"]')
       ?.closest("section")
       ?.scrollIntoView({ block: "start" });
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/preserved-controls-consent-french-narrow.png",
-    });
+    await page.screenshot();
     await page.getByRole("button", { name: t("passiveHistory"), exact: true }).click();
     await expect.element(page.getByText("1 résumé en attente", { exact: true })).toBeVisible();
     await expect
@@ -1039,9 +1031,7 @@ describe("timed history pause", () => {
     await expect
       .element(page.getByRole("menuitem", { name: "Until tomorrow at 09:00", exact: true }))
       .toBeVisible();
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/preserved-controls-menu-desktop.png",
-    });
+    await page.screenshot();
     await userEvent.keyboard("{Escape}");
     const catalog = await loadLocaleCatalog("fr");
     rendererI18n.addResourceBundle("fr", "settings", catalog.settings, true, true);
@@ -1054,9 +1044,7 @@ describe("timed history pause", () => {
       .toBeVisible();
     await expect.poll(() => container.scrollWidth).toBeLessThanOrEqual(320);
     await expect.poll(() => document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/preserved-controls-menu-french-narrow.png",
-    });
+    await page.screenshot();
     expect(pauseCalls(fixture.request)).toEqual([]);
   }, 5000);
 });
@@ -1166,31 +1154,21 @@ describe("passive history timeline", () => {
         overlay: false,
       }),
     );
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/timeline-controls-desktop.png",
-    });
+    await page.screenshot();
     article.element().scrollIntoView({ block: "start" });
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/semantic-desktop.png",
-    });
+    await page.screenshot();
     await page.viewport(320, 900);
     container.style.width = "320px";
     await expect.poll(() => container.scrollWidth).toBeLessThanOrEqual(320);
     await expect.poll(() => document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/semantic-320.png",
-    });
+    await page.screenshot();
     article
       .getByText("Source details", { exact: true })
       .element()
       .scrollIntoView({ block: "center" });
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/semantic-provenance-320.png",
-    });
+    await page.screenshot();
     article.getByText("Recording", { exact: true }).element().scrollIntoView({ block: "start" });
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/semantic-recording-320.png",
-    });
+    await page.screenshot();
     expect(errors.mock.calls).toEqual([]);
     expect(warnings.mock.calls).toEqual([]);
   }, 5000);
@@ -1315,9 +1293,7 @@ describe("passive history timeline", () => {
     await page.viewport(320, 900);
     article.element().scrollIntoView({ block: "start" });
     await expect.poll(() => document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
-    await page.screenshot({
-      path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/recorded-320.png",
-    });
+    await page.screenshot();
   }, 5000);
   it("separates bounded count cards and truncation from raw continuation and AI results", async () => {
     const fixture = passiveFixture({
@@ -1500,9 +1476,7 @@ describe("passive history timeline", () => {
       await page.viewport(320, 900);
       await expect.poll(() => document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
       disclosure.element().scrollIntoView({ block: "start" });
-      await page.screenshot({
-        path: "/private/tmp/djl-history-timeline-ui/20261029T013653Z/ax-full-dark-320.png",
-      });
+      await page.screenshot();
     } finally {
       document.documentElement.classList.toggle("dark", wasDark);
     }
@@ -1806,9 +1780,7 @@ it("keeps scoped deletion review and pending feedback usable on narrow French", 
     expect(getComputedStyle(dialog.element()).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
     await expect.poll(() => getComputedStyle(dialog.element()).opacity).toBe("1");
     expect(document.querySelector("vite-error-overlay")).toBeNull();
-    await page.screenshot({
-      path: "/private/tmp/djl-history-scoped-clear-ui/custom-french-320.png",
-    });
+    await page.screenshot();
     await dialog.getByRole("button", { name: t("confirmClear"), exact: true }).click();
     await expect.element(dialog.getByText(t("clearScope.pending"), { exact: true })).toBeVisible();
     await expect
@@ -1819,9 +1791,7 @@ it("keeps scoped deletion review and pending feedback usable on narrow French", 
       .toBeDisabled();
     await userEvent.keyboard("{Escape}");
     await expect.element(dialog).toBeVisible();
-    await page.screenshot({
-      path: "/private/tmp/djl-history-scoped-clear-ui/pending-french-320.png",
-    });
+    await page.screenshot();
     finish();
     await expect.element(page.getByText(t("cleared"), { exact: true })).toBeVisible();
     await expect.element(dialog).not.toBeInTheDocument();

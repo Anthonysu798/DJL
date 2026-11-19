@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
 import sharp from "sharp";
 import { vi } from "vitest";
@@ -14,7 +16,7 @@ import { saveDocument, readDocument } from "./store";
 it.layer(SqlitePersistenceMemory)("owned source workspace", (it) => {
   it.effect("persists brand memory and refuses stale versions and cross-owner bodies", () =>
     Effect.gen(function* () {
-      const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-brand-"));
+      const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-brand-")));
       const scope = {
         threadId: "brand",
         authorizedRoot: root,
@@ -70,7 +72,7 @@ it.layer(SqlitePersistenceMemory)("owned source workspace", (it) => {
     "indexes only current owned campaign media, persists evidence search and authorizes same-owner reuse",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-library-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-library-")));
         const scope = {
           threadId: "library",
           authorizedRoot: root,
@@ -196,7 +198,7 @@ it.layer(SqlitePersistenceMemory)("owned source workspace", (it) => {
   );
   it.effect("indexes verified legacy campaign media while denying unbound and foreign owners", () =>
     Effect.gen(function* () {
-      const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-legacy-library-"));
+      const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-legacy-library-")));
       const scope = {
         threadId: "legacy-library",
         authorizedRoot: root,
@@ -314,7 +316,7 @@ it.layer(SqlitePersistenceMemory)("owned source workspace", (it) => {
     "imports a decoded product image into the owned reusable library with persisted provenance",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-product-import-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-product-import-")));
         const scope = {
           threadId: "product-import",
           authorizedRoot: root,
@@ -390,7 +392,7 @@ it.layer(SqlitePersistenceMemory)("owned source workspace", (it) => {
   );
   it.effect("keeps sourced facts and reports image failure without creating a fake asset", () =>
     Effect.gen(function* () {
-      const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-product-failure-"));
+      const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-product-failure-")));
       const scope = {
         threadId: "product-failure",
         authorizedRoot: root,
@@ -441,8 +443,8 @@ it.layer(SqlitePersistenceMemory)("owned source workspace", (it) => {
     Effect.gen(function* () {
       const scope = {
         threadId: "empty",
-        authorizedRoot: "/private/tmp",
-        stateDir: "/private/tmp/djl-no-session-sources",
+        authorizedRoot: tmpdir(),
+        stateDir: join(tmpdir(), "djl-no-session-sources"),
         attachmentFiles: [],
       };
       assert.include(String(yield* readAgentBrand(scope).pipe(Effect.flip)), "Sign in");

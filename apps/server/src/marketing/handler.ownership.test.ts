@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { it, assert } from "@effect/vitest";
 import { vi } from "vitest";
@@ -48,7 +50,7 @@ it.layer(SqlitePersistenceMemory)("marketing HTTP ownership", (it) => {
     "denies foreign campaign writes before checking their revision and denies foreign export access",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-handler-owner-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-handler-owner-")));
         try {
           yield* Effect.promise(() => writeCloudSession(root + "/secrets", session));
           const campaign = { ...createCampaign("Foreign"), ownerKey: "another-owner" };
@@ -82,7 +84,7 @@ it.layer(SqlitePersistenceMemory)("marketing HTTP ownership", (it) => {
     "scopes legacy studio brand operations to the signed-in BrandProfile and preserves offline defaults",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-handler-brand-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-handler-brand-")));
         try {
           yield* Effect.promise(() => writeCloudSession(root + "/secrets", session));
           const initial = yield* request(root, "state");
@@ -123,7 +125,7 @@ it.layer(SqlitePersistenceMemory)("marketing HTTP ownership", (it) => {
   );
   it.effect("uses owner-scoped brand facts for caption generation", () =>
     Effect.gen(function* () {
-      const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-handler-generation-"));
+      const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-handler-generation-")));
       const generate = vi
         .spyOn(generation, "generateCampaignCopy")
         .mockResolvedValue({ instagram: "Saved brand copy" });
@@ -172,7 +174,7 @@ it.layer(SqlitePersistenceMemory)("marketing HTTP ownership", (it) => {
     "filters recipes, timelines and export jobs using their accessible parent records",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-handler-state-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-handler-state-")));
         try {
           yield* Effect.promise(() => writeCloudSession(root + "/secrets", session));
           const scope = {

@@ -4260,9 +4260,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           .toBeVisible();
         expect(wsRequests.map(readDispatchedCommand).filter(Boolean)).toEqual([]);
         action.element().focus();
-        await page.screenshot({
-          path: `/private/tmp/djl-history-suggestion-ui-20261029T163400Z/banner-followup/settings-desktop-${providerAvailable}.png`,
-        });
+        await page.screenshot();
         await userEvent.keyboard("{Enter}");
         const path = await waitForURL(
           mounted.router,
@@ -4382,14 +4380,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
           );
           expect(document.body.textContent).not.toContain("Retry the task");
         }
-        await page.screenshot({
-          path: `/private/tmp/djl-history-suggestion-ui-20261029T163400Z/banner-followup/unsent-composer-desktop-${providerAvailable}.png`,
-        });
+        await page.screenshot();
         await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 390, height: 844 });
         await expect.poll(() => document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
-        await page.screenshot({
-          path: `/private/tmp/djl-history-suggestion-ui-20261029T163400Z/banner-followup/unsent-composer-narrow-${providerAvailable}.png`,
-        });
+        await page.screenshot();
         console.log(
           "HISTORY_SUGGESTION_QA",
           JSON.stringify({
@@ -4427,9 +4421,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ),
         );
         await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280, height: 1000 });
-        await page.screenshot({
-          path: `/private/tmp/djl-history-suggestion-ui-20261029T163400Z/banner-followup/resumed-existing-draft-${providerAvailable}.png`,
-        });
+        await page.screenshot();
         expect(hasDispatchedCommandType("thread.turn.start")).toBe(false);
         await mounted.router.navigate({ to: "/$threadId", params: { threadId: newId } });
         await vi.waitFor(() =>

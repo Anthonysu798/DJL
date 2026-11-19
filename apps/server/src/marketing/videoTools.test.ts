@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
@@ -23,7 +24,7 @@ let assetId = "11111111-1111-4111-8111-111111111111";
 function fixture(duration = 3) {
   return Effect.gen(function* () {
     assetId = crypto.randomUUID();
-    const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-video-tools-"));
+    const root = yield* Effect.promise(() => mkdtemp(path.join(tmpdir(), "djl-video-tools-")));
     const scope = {
       threadId: crypto.randomUUID(),
       stateDir: root,

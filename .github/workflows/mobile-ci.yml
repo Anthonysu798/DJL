@@ -55,6 +55,7 @@ jobs:
           flutter-version: '3.38.5'
           cache: true
       - run: bun install --frozen-lockfile
+      - run: bun run --cwd packages/remote-protocol build
       - run: flutter pub get
         working-directory: apps/mobile
       - name: Format, analyze, unit and widget tests

@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import sharp from "sharp";
 import { it, assert } from "@effect/vitest";
@@ -17,7 +19,7 @@ it.layer(SqlitePersistenceMemory)("chat marketing tools", (it) => {
     "replaces media without accumulating old files and preserves the replacement on copy-only edits",
     () =>
       Effect.gen(function* () {
-        const root = yield* Effect.promise(() => mkdtemp("/private/tmp/djl-media-replace-"));
+        const root = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "djl-media-replace-")));
         try {
           const a = root + "/a.png",
             b = root + "/b.png";
