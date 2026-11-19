@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,9 +11,11 @@ import {
 
 describe("desktop smoke process isolation", () => {
   it("removes inherited authentication and isolates all writable state", () => {
+    const smokeRoot = "/tmp/djl-smoke";
     const environment = buildSmokeEnvironment(
       {
         HOME: "/Users/example",
+        USERPROFILE: "C:\\fake-old-home",
         DJL_HOME: "/Users/example/.djl",
         SYNARA_HOME: "/Users/example/.synara",
         DJL_DESKTOP_USER_DATA_DIR: "/Users/example/Library/DJL",
@@ -20,7 +24,7 @@ describe("desktop smoke process isolation", () => {
         VITE_DEV_SERVER_URL: "http://localhost:5733",
         SYNARA_AUTH_TOKEN: "must-not-leak",
       },
-      "/tmp/djl-smoke",
+      smokeRoot,
       "4317",
     );
 
@@ -28,11 +32,12 @@ describe("desktop smoke process isolation", () => {
     expect(environment).not.toHaveProperty("ELECTRON_RUN_AS_NODE");
     expect(environment).not.toHaveProperty("VITE_DEV_SERVER_URL");
     expect(environment).toMatchObject({
-      HOME: "/tmp/djl-smoke/home",
-      DJL_HOME: "/tmp/djl-smoke/state",
-      SYNARA_HOME: "/tmp/djl-smoke/state",
-      DJL_DESKTOP_USER_DATA_DIR: "/tmp/djl-smoke/profile",
-      SYNARA_DESKTOP_USER_DATA_DIR: "/tmp/djl-smoke/profile",
+      HOME: join(smokeRoot, "home"),
+      USERPROFILE: join(smokeRoot, "home"),
+      DJL_HOME: join(smokeRoot, "state"),
+      SYNARA_HOME: join(smokeRoot, "state"),
+      DJL_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
+      SYNARA_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
       SYNARA_PORT_OFFSET: "4317",
       SYNARA_NO_BROWSER: "1",
       SYNARA_DISABLE_AUTO_UPDATE: "1",

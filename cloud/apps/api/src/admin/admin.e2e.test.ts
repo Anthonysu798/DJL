@@ -126,6 +126,75 @@ describe("admin api", () => {
     expect(me.body.admin.mfaVerified).toBe(true);
   });
 
+  it("protects real administrator-cookie commerce mutations with Origin and double submit", async () => {
+    const origin = "http://localhost:3001";
+    const csrf = await fetch(`${base}/v1/csrf`, { headers: { origin } });
+    expect(csrf.status).toBe(200);
+    const token = ((await csrf.json()) as { token: string }).token;
+    const csrfPair = csrf.headers
+      .getSetCookie()
+      .find((raw) => raw.startsWith("djl_csrf="))
+      ?.split(";")[0];
+    expect(csrfPair).toBeDefined();
+    const input = {
+      name: `Cookie CSRF fixture ${crypto.randomUUID()}`,
+      returnAddress: "Synthetic test-only return address",
+      reason: "Authenticated commerce cookie CSRF regression",
+      idempotencyKey: crypto.randomUUID(),
+    };
+    const call = (extra: Record<string, string>) =>
+      fetch(`${base}/admin/v1/commerce/suppliers`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "fly-client-ip": "203.0.113.10",
+          cookie: `djl_admin=${encodeURIComponent(ownerToken)}; ${csrfPair}`,
+          ...extra,
+        },
+        body: JSON.stringify(input),
+      });
+    const wrong = `${token[0] === "a" ? "b" : "a"}${token.slice(1)}`;
+    for (const [headers, code] of [
+      [{ "x-csrf-token": token }, "csrf_origin"],
+      [{ origin: "https://untrusted.test", "x-csrf-token": token }, "csrf_origin"],
+      [{ origin }, "csrf_token"],
+      [{ origin, "x-csrf-token": wrong }, "csrf_token"],
+    ] as const) {
+      const refused = await call(headers);
+      expect(refused.status).toBe(403);
+      expect((await refused.json()).error.code).toBe(code);
+      expect(
+        await api.db
+          .select({ id: schema.commerceSuppliers.id })
+          .from(schema.commerceSuppliers)
+          .where(eq(schema.commerceSuppliers.name, input.name)),
+      ).toHaveLength(0);
+    }
+    const invalidBearer = await call({ authorization: "Bearer invalid-commerce-csrf-fixture" });
+    expect(invalidBearer.status).toBe(401);
+    expect(
+      await api.db
+        .select({ id: schema.commerceSuppliers.id })
+        .from(schema.commerceSuppliers)
+        .where(eq(schema.commerceSuppliers.name, input.name)),
+    ).toHaveLength(0);
+    const accepted = await call({ origin, "x-csrf-token": token });
+    expect(accepted.status).toBe(200);
+    const supplierId = ((await accepted.json()) as { supplier: { id: string } }).supplier.id;
+    expect(
+      await api.db
+        .select({ id: schema.commerceSuppliers.id })
+        .from(schema.commerceSuppliers)
+        .where(eq(schema.commerceSuppliers.name, input.name)),
+    ).toEqual([{ id: supplierId }]);
+    expect(
+      await api.db
+        .select({ action: schema.auditEvents.action })
+        .from(schema.auditEvents)
+        .where(eq(schema.auditEvents.targetId, supplierId)),
+    ).toEqual([{ action: "commerce.supplier.create" }]);
+  });
+
   it("locks out after repeated bad passwords", async () => {
     const email = `lock-${crypto.randomUUID().slice(0, 6)}@slcor.test`;
     await api.adminAuth.create({ email, name: "L", role: "employee", password });

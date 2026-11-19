@@ -4,7 +4,8 @@
  */
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { BlobStore } from "@djl/api/blobs";
+import { FakeBlobStore, type BlobStore } from "@djl/api/blobs";
+import { purgeExpiredCommerceImageUploads } from "@djl/api/commerce-image-uploads";
 import type { LedgerService } from "@djl/api/credits";
 
 import {
@@ -159,6 +160,31 @@ export async function purgeDeletedConversations(
   return due.length;
 }
 
+export const COMMERCE_IMAGE_CLEANUP = {
+  name: "commerce.image-uploads.purge-expired",
+  schedule: "*/5 * * * *",
+} as const;
+
+/** Expire private shop uploads even while product image search is disabled. */
+async function purgeCommerceImages(
+  deps: Pick<JobDeps, "db" | "now"> & { readonly blobs: Pick<BlobStore, "remove"> },
+): Promise<{ removed: number; failed: number } | { skipped: "durable_storage_unavailable" }> {
+  // An in-memory deletion cannot justify dropping a durable object's DB row.
+  if (deps.blobs instanceof FakeBlobStore) return { skipped: "durable_storage_unavailable" };
+  try {
+    const { removed, failed } = await purgeExpiredCommerceImageUploads(
+      deps.db,
+      deps.blobs,
+      20,
+      deps.now?.() ?? new Date(),
+    );
+    return { removed, failed };
+  } catch {
+    // Queue job errors may be persisted; never retain upstream URL or object details.
+    throw new Error("commerce_image_cleanup_failed");
+  }
+}
+
 /** Roll up yesterday's signups, active users, gateway usage, and revenue per country. */
 export async function rollupDailyStats(deps: JobDeps, day?: string): Promise<void> {
   const target =
@@ -208,6 +234,7 @@ export const JOBS = {
   "ledger.refold": refoldActiveOrgs,
   "users.purge-deleted": purgeDeletedUsers,
   "chat.purge-deleted": purgeDeletedConversations,
+  [COMMERCE_IMAGE_CLEANUP.name]: purgeCommerceImages,
   "stats.daily": rollupDailyStats,
   "usage.grantPlanResets": grantPlanResets,
   "usage.bulkGrant": bulkGrant,

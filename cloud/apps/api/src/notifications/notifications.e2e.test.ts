@@ -13,15 +13,8 @@ let foreign: Awaited<ReturnType<typeof task>>;
 
 async function signUp(label: string) {
   const client = TestClient.for(api);
-  const email = `${label}-${crypto.randomUUID()}@test.invalid`;
-  await client.call("/v1/auth/sign-up/email", {
-    method: "POST",
-    json: { email, name: label, password: "correct-horse-battery-staple" },
-  });
-  const otp = api.outbox!.emails.find((entry) => entry.to === email)!.subject.match(/^(\d{6})/)![1];
-  await client.call("/v1/auth/email-otp/verify-email", { method: "POST", json: { email, otp } });
-  const me = await (await client.call("/v1/me")).json();
-  return { client, userId: me.user.id as string, orgId: me.activeOrgId as string };
+  const { userId, orgId } = await client.signUp(api, label);
+  return { client, userId, orgId };
 }
 
 async function task(

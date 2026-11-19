@@ -6,6 +6,11 @@ export * from "./sync.ts";
 export * from "./chat.ts";
 export * from "./nativeAuth.ts";
 export * from "./notifications.ts";
+export * from "./commerce.ts";
+export * from "./commercePayments.ts";
+export * from "./commerceAlerts.ts";
+export * from "./commerceAlertDeliveries.ts";
+export * from "./commerceImageUploads.ts";
 
 export * from "./social.ts";
 export * from "./socialPublishing.ts";

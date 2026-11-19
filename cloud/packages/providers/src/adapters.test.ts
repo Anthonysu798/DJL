@@ -316,3 +316,34 @@ it.each([
     ).images[0]?.mediaType,
   ).toBe(mediaType);
 });
+
+it("normalizes a fresh image object without mutating upstream data or its prototype", async () => {
+  const image = Object.freeze(
+    JSON.parse(
+      '{"b64_json":"QUJD","media_type":"image/png","revised_prompt":"Desk","provider_extra":"keep","__proto__":{"unexpected":true}}',
+    ),
+  );
+  const response = Response.json({});
+  Object.defineProperty(response, "json", { value: async () => ({ data: [image] }) });
+  const adapter = createOpenAiCompatibleAdapter({
+    id: "openai",
+    baseUrl: "https://test.invalid",
+    keys: new KeyRing("test", null),
+    fetchImpl: async () => response,
+  });
+
+  const result = await adapter.generateImage(
+    { model: "image", prompt: "Desk", n: 1 },
+    new AbortController().signal,
+  );
+  const normalized = result.images[0]!;
+  expect(normalized).not.toBe(image);
+  expect(normalized.mediaType).toBe("image/png");
+  expect(normalized).toHaveProperty("revised_prompt", "Desk");
+  expect(normalized).toHaveProperty("provider_extra", "keep");
+  expect(Object.hasOwn(normalized, "__proto__")).toBe(true);
+  expect(Object.getPrototypeOf(normalized)).toBe(Object.prototype);
+  expect(Object.hasOwn(normalized, "media_type")).toBe(false);
+  expect(image.media_type).toBe("image/png");
+  expect(Object.hasOwn(image, "mediaType")).toBe(false);
+});

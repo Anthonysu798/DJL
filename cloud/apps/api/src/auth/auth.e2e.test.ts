@@ -264,3 +264,45 @@ it("recovers a disposable account with an emailed OTP and refuses code reuse", a
     ).status,
   ).toBe(200);
 });
+
+it("rejects an externally reported compromised password without creating an account", async () => {
+  const password = "synthetic-compromised-password-only";
+  const hash = Buffer.from(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password)))
+    .toString("hex")
+    .toUpperCase();
+  const realFetch = globalThis.fetch;
+  let lookups = 0;
+  vi.stubGlobal(
+    "fetch",
+    Object.assign(
+      (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+        const url = new URL(input instanceof Request ? input.url : String(input));
+        if (
+          url.hostname === "api.pwnedpasswords.com" &&
+          url.pathname === `/range/${hash.slice(0, 5)}`
+        ) {
+          lookups++;
+          return Promise.resolve(
+            new Response(`${hash.slice(5)}:7\r\n`, { headers: { "content-type": "text/plain" } }),
+          );
+        }
+        return realFetch(input, init);
+      },
+      { preconnect: realFetch.preconnect },
+    ) satisfies typeof fetch,
+  );
+  const email = `breach-${crypto.randomUUID()}@test.invalid`;
+  try {
+    const response = await TestClient.for(api).call("/v1/auth/sign-up/email", {
+      method: "POST",
+      json: { email, password, name: "Synthetic breach check" },
+    });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { code?: string }).code).toBe("PASSWORD_COMPROMISED");
+    expect(lookups).toBe(1);
+    const found = await api.db.query.user.findFirst({ where: eq(schema.user.email, email) });
+    expect(Boolean(found)).toBe(false);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

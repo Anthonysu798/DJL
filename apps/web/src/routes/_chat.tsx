@@ -497,14 +497,17 @@ function ChatRouteGlobalShortcuts() {
       return;
     }
 
-    const unsubscribe = onMenuAction((action) => {
-      if (action === "toggle-sidebar") {
-        toggleSidebar();
-        return;
-      }
-      if (action !== "open-settings") return;
-      void navigate({ to: "/settings" });
-    });
+    const unsubscribe = onMenuAction(
+      (action) => {
+        if (action === "toggle-sidebar") {
+          toggleSidebar();
+          return;
+        }
+        if (action !== "open-settings") return;
+        void navigate({ to: "/settings" });
+      },
+      ["toggle-sidebar", "open-settings"],
+    );
 
     return () => {
       unsubscribe?.();

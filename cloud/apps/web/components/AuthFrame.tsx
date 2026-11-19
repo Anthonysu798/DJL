@@ -5,7 +5,8 @@ import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { AiNotice } from "./AiNotice";
-import { useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
 
 import { DjlLogo } from "@/components/DjlLogo";
 import type { Dict } from "@/lib/i18n";
@@ -14,6 +15,12 @@ import { useLocale } from "@/lib/locale-context";
 export function AuthFrame({ children, footer }: { children: ReactNode; footer: ReactNode }) {
   const { d } = useLocale();
   const scope = useRef<HTMLDivElement>(null);
+  const [embedded, setEmbedded] = useState<boolean | null>(null);
+  useEffect(() => {
+    setEmbedded(
+      (window as Window & { djlCommerce?: CommerceDesktopBridge }).djlCommerce?.kind === "desktop",
+    );
+  }, []);
   useGSAP(
     () => {
       const media = gsap.matchMedia();
@@ -31,21 +38,33 @@ export function AuthFrame({ children, footer }: { children: ReactNode; footer: R
     },
     { scope },
   );
+  const brandClass = "flex items-center gap-2 text-xl font-medium tracking-tight";
+  const brand = (
+    <>
+      <DjlLogo className="size-10" /> DJL Cloud
+    </>
+  );
   return (
     <main ref={scope} className="auth-frame grid min-h-dvh w-full overflow-x-hidden lg:grid-cols-2">
       <section className="flex min-h-dvh flex-col px-6 sm:px-12">
         <header className="flex h-24 shrink-0 items-center">
-          <Link href="/chat" className="flex items-center gap-2 text-xl font-medium tracking-tight">
-            <DjlLogo className="size-10" /> DJL Cloud
-          </Link>
+          {embedded === null ? (
+            <span className={brandClass}>{brand}</span>
+          ) : (
+            <Link href={embedded ? "/shop" : "/chat"} className={brandClass}>
+              {brand}
+            </Link>
+          )}
         </header>
         <div className="auth-form-content mx-auto flex w-full max-w-[336px] flex-1 flex-col justify-center py-10">
           {children}
           <p className="mt-8 text-center text-[13px] text-[#667085]">{footer}</p>
         </div>
-        <footer className="mx-auto max-w-md pb-6">
-          <AiNotice />
-        </footer>
+        {embedded === false ? (
+          <footer className="mx-auto max-w-md pb-6">
+            <AiNotice />
+          </footer>
+        ) : null}
       </section>
       <aside
         className="auth-portrait relative hidden min-h-dvh overflow-hidden bg-[#b2bdcb] lg:block"

@@ -45,7 +45,7 @@ export function resolveDefaultBrowserUsePipePath(platform = process.platform): s
   if (platform === "win32") {
     return `${BROWSER_USE_WINDOWS_PIPE_PREFIX}${BROWSER_USE_PIPE_NAME_PREFIX}-${process.pid}`;
   }
-  return Path.join(
+  return Path.posix.join(
     BROWSER_USE_UNIX_PIPE_DIR,
     `${BROWSER_USE_PIPE_NAME_PREFIX}-${process.pid}.sock`,
   );
@@ -55,7 +55,7 @@ function isDiscoverableBrowserUsePipePath(pipePath: string, platform: NodeJS.Pla
   if (platform === "win32") {
     return pipePath.startsWith(BROWSER_USE_WINDOWS_PIPE_PREFIX);
   }
-  return Path.dirname(pipePath) === BROWSER_USE_UNIX_PIPE_DIR;
+  return Path.posix.dirname(pipePath) === BROWSER_USE_UNIX_PIPE_DIR;
 }
 
 export function resolveConfiguredBrowserUsePipePath(

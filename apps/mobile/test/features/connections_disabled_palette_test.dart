@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui' show Tristate;
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +36,7 @@ void main() {
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     for (final brightness in Brightness.values) {
       testWidgets(
-        'Connections disabled ON and OFF paint preserve source state on $platform/$brightness',
+        'Connections preserves grayscale ON and OFF paint when disabled on $platform/$brightness',
         (tester) async {
           tester.view.physicalSize = const Size(402, 874);
           tester.view.devicePixelRatio = 1;
@@ -72,14 +71,10 @@ void main() {
             await tester.pumpAndSettle();
             final on = find.byKey(const ValueKey('device_visibility_B'));
             final off = find.byKey(const ValueKey('device_visibility_C'));
-            final context = tester.element(on);
+            final scheme = theme.colorScheme;
             final group = brightness == Brightness.dark
-                ? theme.colorScheme.surfaceContainerHigh
-                : theme.colorScheme.surface;
-            final green = CupertinoColors.systemGreen.resolveFrom(context);
-            final neutral = Color(
-              brightness == Brightness.dark ? 0xff656569 : 0xffc5c5c7,
-            );
+                ? scheme.surfaceContainerHigh
+                : scheme.surface;
             final before = Map<String, String>.of(f.credentials.values);
             Future<List<Color>> samples() async {
               final a = tester.getRect(on), b = tester.getRect(off);
@@ -92,9 +87,9 @@ void main() {
             }
 
             final enabled = await samples();
-            closeColor(enabled[0], green);
-            closeColor(enabled[1], Colors.white);
-            closeColor(enabled[2], neutral);
+            closeColor(enabled[0], scheme.primary);
+            closeColor(enabled[1], scheme.onPrimary);
+            closeColor(enabled[2], scheme.outline);
             closeColor(enabled[3], Colors.white);
             f.pairs.resolveGate = Completer();
             await openConnectionSwitcher(tester);
@@ -141,9 +136,9 @@ void main() {
               Colors.black.withValues(alpha: .12),
               Color.alphaBlend(base.withValues(alpha: base.a * .5), group),
             );
-            closeColor(disabled[0], composite(green));
-            closeColor(disabled[1], composite(Colors.white));
-            closeColor(disabled[2], composite(neutral));
+            closeColor(disabled[0], composite(scheme.primary));
+            closeColor(disabled[1], composite(scheme.onPrimary));
+            closeColor(disabled[2], composite(scheme.outline));
             closeColor(disabled[3], composite(Colors.white));
             expect(f.credentials.values, before);
             expect(

@@ -28,6 +28,6 @@ export default defineConfig([
   },
   {
     ...shared,
-    entry: ["src/computerStopPreload.ts"],
+    entry: ["src/computerStopPreload.ts", "src/commerce-preload.ts"],
   },
 ]);

@@ -37,5 +37,5 @@ and the pinned digest; expiry/revocation are checked again after storage IO. The
 bytes rather than a storage URL. Changed or deleted media becomes unavailable instead of silently
 changing the reviewed snapshot. Previously downloaded bytes cannot be recalled from a reviewer.
 
-Schema migration: `0011_social_review_links.sql`. Tests use only synthetic fixtures in an isolated
+Schema migration: `0025_social_review_links.sql`. Tests use only synthetic fixtures in an isolated
 disposable database. No production account, draft, or publication is needed for verification.

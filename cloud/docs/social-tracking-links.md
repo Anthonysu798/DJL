@@ -46,5 +46,5 @@ characters, common secret query keys and recognizable credential formats are ref
 URL validation policy, not a promise to detect every secret or harmful destination; no destination
 is fetched or DNS-resolved by DJL during creation or redirection.
 
-Migration: `0013_social_tracking_links.sql`. Verification uses synthetic links and an isolated
+Migration: `0027_social_tracking_links.sql`. Verification uses synthetic links and an isolated
 local database; production publication and real customer links are unnecessary.

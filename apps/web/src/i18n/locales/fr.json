@@ -3762,6 +3762,9 @@
         "deleteWorkspace": "Supprimer l'espace de travail",
         "kanban": "Espaces de travail",
         "marketing": "Studio marketing",
+        "shop": "Boutique",
+        "shopWindow": "Fenêtre séparée ↗",
+        "shopOpenFailed": "Impossible d’ouvrir la boutique. Autorisez les fenêtres contextuelles et réessayez.",
         "newTask": "Nouvelle tâche",
         "newThread": "Nouveau fil",
         "newWorkspace": "Nouvel espace de travail"

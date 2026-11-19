@@ -30,6 +30,23 @@ import { COMPUTER_USE_IPC_CHANNELS } from "./computerUseIpcChannels";
 // Depends on: Electron, backend startup helpers, browser manager, and update runtime.
 
 import { createRemotePairingRenewal } from "./remotePairingRenewal";
+import {
+  openVerifiedShopCheckout,
+  readCheckoutStatus,
+  SHOP_CHECKOUT_CHANNEL,
+} from "./shopCheckout";
+import {
+  getShopEntryUrl,
+  isShopNavigationUrl,
+  isShopOpenerUrl,
+  isShopResourceUrl,
+  selectAiMenuWindow,
+  SHOP_OPEN_CHANNEL,
+  SHOP_WEB_PREFERENCES,
+  resolveShopDestination,
+  shopSessionPartition,
+  type ShopDestination,
+} from "./shopWindowPolicy";
 import * as ChildProcess from "node:child_process";
 import * as Crypto from "node:crypto";
 import * as FS from "node:fs";
@@ -114,7 +131,7 @@ import {
   shouldRefreshIconCache,
 } from "./macIconCacheRefresh";
 import { collectMacUpdateDiagnostics } from "./macUpdateDiagnostics";
-import { openInitialBackendWindow } from "./initialBackendWindowOpen";
+import { hasLiveMainWindow, openInitialBackendWindow } from "./initialBackendWindowOpen";
 import { createWindowRevealGate, RENDERER_READY_CHANNEL } from "./windowReveal";
 import {
   reportInstallOnce,
@@ -335,6 +352,10 @@ const browserPerfLoggingEnabled = process.env.SYNARA_BROWSER_PERF === "1";
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
 let mainWindow: BrowserWindow | null = null;
+let shopWindow: BrowserWindow | null = null;
+let shopDestination: ShopDestination | null = null;
+let shopCheckoutOpening = false;
+let shopSessionConfigured = false;
 // The replacement is opt-in until packaged acceptance; one actuator is chosen at boot.
 const useCuaComputerEngine = computerQaBuild || process.env.DJL_COMPUTER_ENGINE === "cua";
 const cuaCapability = Crypto.randomBytes(32).toString("hex");
@@ -834,7 +855,7 @@ function ensureInitialBackendWindowOpen(baseUrl: string): void {
   openInitialBackendWindow({
     isDevelopment,
     baseUrl,
-    hasExistingWindow: () => (mainWindow ?? BrowserWindow.getAllWindows()[0] ?? null) !== null,
+    hasExistingWindow: () => hasLiveMainWindow(mainWindow),
     createWindow: () => {
       mainWindow = createWindow();
     },
@@ -1456,8 +1477,12 @@ function registerDesktopProtocol(): void {
 }
 
 function dispatchMenuAction(action: string): void {
-  const existingWindow =
-    BrowserWindow.getFocusedWindow() ?? mainWindow ?? BrowserWindow.getAllWindows()[0];
+  const existingWindow = selectAiMenuWindow(
+    BrowserWindow.getFocusedWindow(),
+    mainWindow,
+    BrowserWindow.getAllWindows(),
+    shopWindow,
+  );
   const targetWindow = existingWindow ?? createWindow();
   if (!existingWindow) {
     mainWindow = targetWindow;
@@ -1535,7 +1560,7 @@ function handleCheckForUpdatesMenuClick(): void {
     return;
   }
 
-  if (!BrowserWindow.getAllWindows().length) {
+  if (!hasLiveMainWindow(mainWindow)) {
     mainWindow = createWindow();
   }
   void checkForUpdatesFromMenu();
@@ -3445,7 +3470,214 @@ function getPreferredSystemLanguageCandidates(): readonly string[] {
   return locale && !preferred.includes(locale) ? [...preferred, locale] : preferred;
 }
 
+async function openShopWindow(): Promise<boolean> {
+  if (shopWindow && !shopWindow.isDestroyed()) {
+    if (shopWindow.isMinimized()) shopWindow.restore();
+    shopWindow.show();
+    shopWindow.focus();
+    return true;
+  }
+
+  const rendererEntry = isDevelopment
+    ? (process.env.VITE_DEV_SERVER_URL as string)
+    : SYNARA_DESKTOP_ENTRY_URL;
+  let destination: ShopDestination;
+  try {
+    destination = resolveShopDestination(rendererEntry, process.env, isDevelopment);
+  } catch {
+    writeDesktopLogHeader("shop configuration is invalid; refusing to open a window");
+    return false;
+  }
+  const partition = shopSessionPartition(destination);
+  const shopSession = session.fromPartition(partition);
+  if (!shopSessionConfigured) {
+    // Commerce gets neither the AI session's credentials nor its local API access.
+    shopSession.setPermissionRequestHandler((_contents, permission, callback) => {
+      callback(permission === "clipboard-sanitized-write");
+    });
+    shopSession.setPermissionCheckHandler(
+      (_contents, permission) => permission === "clipboard-sanitized-write",
+    );
+    shopSession.on("will-download", (event) => event.preventDefault());
+    shopSession.webRequest.onBeforeRequest((details, callback) => {
+      callback({
+        cancel: !isShopResourceUrl(details.url, rendererEntry, destination, details.method),
+      });
+    });
+    if (!isDevelopment && destination.kind === "prototype") {
+      const staticRoot = resolveServedStaticRoot()?.dir;
+      if (!staticRoot) return false;
+      const shopRoot = Path.resolve(staticRoot, "shop");
+      shopSession.protocol.registerFileProtocol(DESKTOP_SCHEME, (request, callback) => {
+        try {
+          if (!isShopResourceUrl(request.url, rendererEntry)) {
+            callback({ error: -6 });
+            return;
+          }
+          const relative = decodeURIComponent(new URL(request.url).pathname.slice("/shop/".length));
+          const file = Path.resolve(shopRoot, relative);
+          if (!file.startsWith(`${shopRoot}${Path.sep}`) || !FS.statSync(file).isFile()) {
+            callback({ error: -6 });
+            return;
+          }
+          callback({ path: file });
+        } catch {
+          callback({ error: -6 });
+        }
+      });
+    }
+    shopSessionConfigured = true;
+  }
+
+  const window = new BrowserWindow({
+    width: 1180,
+    height: 820,
+    minWidth: 390,
+    minHeight: 620,
+    title: destination.kind === "cloud" ? "DJL 商城" : "DJL 商城 · 演示原型",
+    backgroundColor: "#fbfaf7",
+    autoHideMenuBar: true,
+    show: false,
+    ...getIconOption(),
+    webPreferences: {
+      ...SHOP_WEB_PREFERENCES,
+      partition,
+      ...(destination.kind === "cloud"
+        ? { preload: Path.join(__dirname, "commerce-preload.js") }
+        : {}),
+    },
+  });
+  shopWindow = window;
+  shopDestination = destination;
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event, url) => {
+    if (!isShopNavigationUrl(url, rendererEntry, destination)) event.preventDefault();
+  });
+  window.webContents.on("will-redirect", (event, url) => {
+    if (!isShopNavigationUrl(url, rendererEntry, destination)) event.preventDefault();
+  });
+  window.on("closed", () => {
+    if (shopWindow === window) {
+      shopWindow = null;
+      shopDestination = null;
+    }
+  });
+  window.once("ready-to-show", () => window.show());
+  try {
+    await window.loadURL(getShopEntryUrl(rendererEntry, destination));
+    return true;
+  } catch (error) {
+    writeDesktopLogHeader(
+      `shop window load failed: ${error instanceof Error ? error.name : "unknown error"}`,
+    );
+    if (!window.isDestroyed()) window.destroy();
+    return false;
+  }
+}
+
 function registerIpcHandlers(): void {
+  ipcMain.removeHandler(SHOP_OPEN_CHANNEL);
+  ipcMain.handle(SHOP_OPEN_CHANNEL, async (event) => {
+    const owner = mainWindow;
+    const rendererEntry = isDevelopment
+      ? (process.env.VITE_DEV_SERVER_URL as string)
+      : SYNARA_DESKTOP_ENTRY_URL;
+    if (
+      !owner ||
+      owner.isDestroyed() ||
+      event.sender !== owner.webContents ||
+      event.senderFrame !== owner.webContents.mainFrame ||
+      !isShopOpenerUrl(event.senderFrame.url, rendererEntry)
+    ) {
+      return false;
+    }
+    return openShopWindow();
+  });
+  ipcMain.removeHandler(SHOP_CHECKOUT_CHANNEL);
+  ipcMain.handle(SHOP_CHECKOUT_CHANNEL, async (event, input: unknown) => {
+    const owner = shopWindow;
+    const destination = shopDestination;
+    const senderFrame = event.senderFrame;
+    const rendererEntry = isDevelopment
+      ? (process.env.VITE_DEV_SERVER_URL as string)
+      : SYNARA_DESKTOP_ENTRY_URL;
+    if (
+      !owner ||
+      owner.isDestroyed() ||
+      shopCheckoutOpening ||
+      destination?.kind !== "cloud" ||
+      destination.scopedTest ||
+      !destination.apiOrigin ||
+      event.sender !== owner.webContents ||
+      !senderFrame ||
+      senderFrame !== owner.webContents.mainFrame ||
+      !isShopNavigationUrl(senderFrame.url, rendererEntry, destination)
+    )
+      return false;
+    const sourceUrl = senderFrame.url;
+    const checkoutContents = owner.webContents;
+    const checkoutSession = checkoutContents.session;
+    let navigated = false;
+    let cookiesChanged = false;
+    const invalidate = (details: { isMainFrame: boolean }) => {
+      if (details.isMainFrame) navigated = true;
+    };
+    const invalidateCookies = () => {
+      cookiesChanged = true;
+    };
+    const assertCurrent = () => {
+      if (
+        navigated ||
+        cookiesChanged ||
+        owner.isDestroyed() ||
+        shopWindow !== owner ||
+        shopDestination !== destination ||
+        event.sender !== checkoutContents ||
+        checkoutContents.isDestroyed() ||
+        event.senderFrame !== senderFrame ||
+        senderFrame !== checkoutContents.mainFrame ||
+        senderFrame.url !== sourceUrl ||
+        !isShopNavigationUrl(senderFrame.url, rendererEntry, destination)
+      )
+        throw new Error("Shop checkout context changed.");
+    };
+    checkoutContents.on("did-start-navigation", invalidate);
+    checkoutSession.cookies.on("changed", invalidateCookies);
+    shopCheckoutOpening = true;
+    try {
+      return await openVerifiedShopCheckout(input, {
+        sessionFingerprint: async (orderId) => {
+          assertCurrent();
+          const endpoint = `${destination.apiOrigin}/v1/commerce/orders/${orderId}/payment`;
+          const cookies = await checkoutSession.cookies.get({ url: endpoint });
+          assertCurrent();
+          const values = cookies
+            .map(({ name, domain, path, value }) => JSON.stringify([name, domain, path, value]))
+            .toSorted();
+          return Crypto.createHash("sha256").update(JSON.stringify(values)).digest("hex");
+        },
+        payment: async (orderId) => {
+          assertCurrent();
+          const endpoint = `${destination.apiOrigin}/v1/commerce/orders/${orderId}/payment`;
+          const response = await checkoutSession.fetch(endpoint, {
+            credentials: "include",
+            redirect: "error",
+            headers: { accept: "application/json" },
+            signal: AbortSignal.timeout(10_000),
+          });
+          return readCheckoutStatus(response);
+        },
+        openExternal: async (url) => {
+          assertCurrent();
+          await shell.openExternal(url);
+        },
+      });
+    } finally {
+      shopCheckoutOpening = false;
+      checkoutContents.removeListener("did-start-navigation", invalidate);
+      checkoutSession.cookies.removeListener("changed", invalidateCookies);
+    }
+  });
   const storageSnapshotPath = resolveDjlStorageSnapshotReadPath(app.getPath("userData"));
   const localePreferencePath = resolveDesktopLocalePreferencePath(app.getPath("userData"));
 
@@ -4190,6 +4422,10 @@ if (!hasSingleInstanceLock) {
   app.on("second-instance", (_event, argv) => {
     const callback = findCloudAuthCallbackInArgv(argv);
     if (callback) deliverCloudAuthCallback(callback);
+    if (!hasLiveMainWindow(mainWindow)) {
+      ensureInitialBackendWindowOpen(backendHttpUrl);
+      return;
+    }
     focusMainWindow();
   });
   // macOS delivers deep links as open-url, before ready on a cold start.
@@ -4307,7 +4543,7 @@ if (hasSingleInstanceLock) {
 
       app.on("activate", () => {
         handleDesktopAppForegrounded();
-        if (BrowserWindow.getAllWindows().length === 0) {
+        if (!hasLiveMainWindow(mainWindow)) {
           ensureInitialBackendWindowOpen(backendHttpUrl);
           return;
         }

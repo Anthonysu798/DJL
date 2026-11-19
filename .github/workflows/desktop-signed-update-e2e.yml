@@ -28,7 +28,7 @@ jobs:
     name: Build private signed ARM64 baseline
     if: github.repository == 'Anthonysu798/DJL' && github.ref == 'refs/heads/main'
     environment: production
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 360
     steps:
       - name: Checkout protected main

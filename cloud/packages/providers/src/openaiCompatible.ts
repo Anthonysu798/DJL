@@ -75,10 +75,9 @@ async function imageResult(response: Response, provider: ProviderId): Promise<Im
       );
     }
   }
-  const images = data.map(({ media_type, ...image }) => ({
-    ...image,
-    ...(media_type ? { mediaType: media_type } : {}),
-  }));
+  const images = data.map(({ media_type, ...image }) =>
+    Object.assign(image, media_type ? { mediaType: media_type } : {}),
+  );
   return { images, count: images.length };
 }
 

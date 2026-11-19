@@ -3,6 +3,7 @@
  * and a verified second factor on everything except enrollment.
  */
 import { Effect, Layer } from "effect";
+import { COMMERCE_ADMIN_PERMISSIONS } from "@djl/domain";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { RequestContext } from "../http/context.ts";
@@ -11,6 +12,7 @@ import { attempt, handle } from "../http/handle.ts";
 import { json, readJson } from "../http/json.ts";
 import {
   ADMIN_SESSION_COOKIE,
+  can,
   type AdminAuth,
   type AdminPrincipal,
   type LoginClient,
@@ -124,6 +126,9 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
             id: result.principal.adminId,
             email: result.principal.email,
             role: result.principal.role,
+            ...(result.principal.commerceRole
+              ? { commerceRole: result.principal.commerceRole }
+              : {}),
             mfaVerified: result.principal.mfaVerified,
           },
           token: result.token,
@@ -204,7 +209,20 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
       Effect.gen(function* () {
         const p = yield* principal({ mfa: false });
         return json({
-          admin: { id: p.adminId, email: p.email, role: p.role, mfaVerified: p.mfaVerified },
+          admin: {
+            id: p.adminId,
+            email: p.email,
+            role: p.role,
+            mfaVerified: p.mfaVerified,
+            ...(p.commerceRole
+              ? {
+                  commerceRole: p.commerceRole,
+                  commercePermissions: COMMERCE_ADMIN_PERMISSIONS.filter((permission) =>
+                    can(p, permission),
+                  ),
+                }
+              : {}),
+          },
         });
       }),
     ),
@@ -526,6 +544,7 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
                 email: b.email,
                 name: b.name,
                 role: b.role,
+                ...(b.commerceRole !== undefined ? { commerceRole: b.commerceRole } : {}),
                 reason: b.reason,
               }),
             FAIL,
@@ -541,6 +560,7 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
         deps.admin.updateAdmin(p, id, {
           ...(b.name !== undefined ? { name: b.name } : {}),
           ...(b.role !== undefined ? { role: b.role } : {}),
+          ...(b.commerceRole !== undefined ? { commerceRole: b.commerceRole } : {}),
           reason: b.reason,
         }),
       ),

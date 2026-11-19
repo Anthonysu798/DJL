@@ -11,10 +11,11 @@ const desktopUserDataDir = process.env.SYNARA_DESKTOP_USER_DATA_DIR?.trim() || n
 const requiredFiles = [
   "dist-electron/main.js",
   "dist-electron/preload.js",
+  "dist-electron/commerce-preload.js",
   "../server/dist/index.mjs",
 ];
 const watchedDirectories = [
-  { directory: "dist-electron", files: new Set(["main.js", "preload.js"]) },
+  { directory: "dist-electron", files: new Set(["main.js", "preload.js", "commerce-preload.js"]) },
   { directory: "../server/dist", files: new Set(["index.mjs"]) },
 ];
 const forcedShutdownTimeoutMs = 1_500;

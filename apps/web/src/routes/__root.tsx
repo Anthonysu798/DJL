@@ -559,11 +559,14 @@ function GlobalShortcutsDialog() {
       return;
     }
 
-    const unsubscribe = onMenuAction((action) => {
-      if (action === "show-shortcuts") {
-        setOpen(true);
-      }
-    });
+    const unsubscribe = onMenuAction(
+      (action) => {
+        if (action === "show-shortcuts") {
+          setOpen(true);
+        }
+      },
+      ["show-shortcuts"],
+    );
 
     return () => {
       unsubscribe?.();

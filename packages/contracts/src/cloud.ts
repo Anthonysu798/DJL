@@ -14,6 +14,10 @@ export * from "./cloud/clientConfig";
 export * from "./cloud/notifications";
 
 export * from "./cloud/images";
+export * from "./cloud/commerce";
+export * from "./cloud/commerceNative";
+export * from "./cloud/commerceReconciliation";
+export * from "./cloud/commerceAdmin";
 
 export * from "./cloud/social";
 export * from "./cloud/socialPublishing";

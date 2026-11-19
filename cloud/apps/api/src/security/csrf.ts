@@ -1,9 +1,9 @@
 /**
  * CSRF defense for cookie-authenticated mutations on DJL's own routes.
  *
- * A mutating `/v1/*` request that carries the Better Auth session cookie and no
- * `Authorization` header must (1) come from a trusted Origin and (2) repeat the
- * `djl_csrf` cookie in the `x-csrf-token` header (double submit). The web app
+ * A mutating `/v1/*` Better Auth cookie request or `/admin/v1/commerce/*` admin
+ * cookie request with no `Authorization` header must (1) come from a trusted Origin
+ * and (2) repeat the `djl_csrf` cookie in the `x-csrf-token` header (double submit). The web app
  * reads the token from GET /v1/csrf. Bearer clients (desktop, iOS, admin) are
  * exempt because a browser never attaches their credential on its own.
  * Better Auth's `/v1/auth/*` endpoints run their own origin check.
@@ -17,6 +17,7 @@ export const CSRF_HEADER = CLOUD_CSRF_HEADER;
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_COOKIE = /(?:^|;\s*)(?:__Secure-)?djl\.session_token=/;
+const COMMERCE_ADMIN_COOKIE = /(?:^|;\s*)djl_admin=/;
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
 
 export function readCookie(cookieHeader: string | undefined, name: string): string | null {
@@ -49,10 +50,16 @@ export function csrfRefusal(
   trustedOrigins: ReadonlySet<string>,
 ): "csrf_origin" | "csrf_token" | null {
   if (SAFE_METHODS.has(request.method)) return null;
-  if (!request.path.startsWith("/v1/") || request.path.startsWith("/v1/auth/")) return null;
+  // The isolated commerce callback authenticates the bounded raw body with its own Stripe signature.
+  if (request.method === "POST" && request.path === "/v1/commerce/webhooks/stripe-test")
+    return null;
+  const commerceAdmin = request.path.startsWith("/admin/v1/commerce/");
+  if (!commerceAdmin && (!request.path.startsWith("/v1/") || request.path.startsWith("/v1/auth/")))
+    return null;
   if (request.headers["authorization"]) return null;
   const cookies = request.headers["cookie"];
-  if (!cookies || !SESSION_COOKIE.test(cookies)) return null;
+  if (!cookies || !(commerceAdmin ? COMMERCE_ADMIN_COOKIE : SESSION_COOKIE).test(cookies))
+    return null;
 
   const origin = request.headers["origin"];
   if (!origin || !trustedOrigins.has(origin)) return "csrf_origin";

@@ -37,17 +37,28 @@ describe("desktop locale preference cache", () => {
     expect(readDesktopLocalePreference(cachePath)).toBe("system");
   });
 
-  it("atomically persists a validated preference with owner-only permissions", () => {
+  it("atomically persists a validated preference using restrictive file creation", () => {
     const userData = makeUserDataDir();
     const cachePath = resolveDesktopLocalePreferencePath(userData);
-    writeDesktopLocalePreference(cachePath, "zh-Hant");
+    const openSync = vi.fn(FS.openSync);
+    const chmodSync = vi.fn(FS.chmodSync);
+    writeDesktopLocalePreference(cachePath, "zh-Hant", {
+      fileSystem: { ...FS, openSync, chmodSync },
+    });
 
     expect(readDesktopLocalePreference(cachePath)).toBe("zh-Hant");
     expect(JSON.parse(FS.readFileSync(cachePath, "utf8"))).toEqual({
       version: 1,
       preference: "zh-Hant",
     });
-    expect(FS.statSync(cachePath).mode & 0o777).toBe(0o600);
+    expect(openSync).toHaveBeenCalledWith(
+      expect.stringContaining(`${cachePath}.tmp-`),
+      "wx",
+      0o600,
+    );
+    expect(chmodSync).toHaveBeenCalledWith(cachePath, 0o600);
+    // Windows mode bits do not represent its ACL; check the actual mode only on POSIX.
+    if (process.platform !== "win32") expect(FS.statSync(cachePath).mode & 0o777).toBe(0o600);
     expect(FS.readdirSync(userData)).toEqual([Path.basename(cachePath)]);
   });
 

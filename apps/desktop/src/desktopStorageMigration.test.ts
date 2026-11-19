@@ -24,8 +24,9 @@ const snapshot = (exportedAt = "2026-07-09T00:00:00.000Z") => ({
 
 describe("desktopStorageMigration", () => {
   it("uses the DJL snapshot filename for new profiles", () => {
-    expect(resolveDjlStorageSnapshotPath("/profiles/djl")).toBe(
-      "/profiles/djl/djl-storage-origin-v1.json",
+    const userDataPath = Path.resolve("test-user-data");
+    expect(resolveDjlStorageSnapshotPath(userDataPath)).toBe(
+      Path.join(userDataPath, "djl-storage-origin-v1.json"),
     );
   });
 

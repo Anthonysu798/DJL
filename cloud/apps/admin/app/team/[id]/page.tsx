@@ -7,7 +7,7 @@ import { LoginEventsTable, type LoginEvent } from "@/components/team/LoginEvents
 import { Badge } from "@/components/ui/badge";
 import { admin } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { MemberStatus, ROLE_LABEL, type Member } from "../page";
+import { MemberStatus, memberRoleLabel, type Member } from "../page";
 
 export default function TeamMemberPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,7 +18,7 @@ export default function TeamMemberPage() {
   return (
     <Shell
       title={m?.name ?? "Team member"}
-      subtitle={m ? `${m.email} · ${ROLE_LABEL[m.role]}` : undefined}
+      subtitle={m ? `${m.email} · ${memberRoleLabel(m)}` : undefined}
     >
       {members.error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -43,7 +43,7 @@ export default function TeamMemberPage() {
                 <div>
                   <dt className="text-muted-foreground">Role</dt>
                   <dd className="mt-1">
-                    <Badge variant="secondary">{ROLE_LABEL[m.role]}</Badge>
+                    <Badge variant="secondary">{memberRoleLabel(m)}</Badge>
                   </dd>
                 </div>
                 <div>

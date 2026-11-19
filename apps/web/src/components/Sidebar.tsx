@@ -26,6 +26,7 @@ import {
   PinIcon,
   PlayIcon,
   SearchIcon,
+  ShoppingBagIcon,
   SettingsIcon,
   SparklesIcon,
   StopFilledIcon,
@@ -102,6 +103,7 @@ import {
   useAppSettings,
 } from "../appSettings";
 import { isElectron } from "../env";
+import { openShop } from "../openShop";
 import { showConfirmDialogFallback } from "../confirmDialogFallback";
 import { formatRelativeTime } from "../lib/relativeTime";
 import { useSelectedLocale } from "../i18n/intl";
@@ -1185,6 +1187,7 @@ function SidebarPrimaryAction({
   disabled = false,
   shortcutLabel,
   badgeCount,
+  secondaryLabel,
 }: {
   icon: LucideIcon;
   label: string;
@@ -1193,6 +1196,7 @@ function SidebarPrimaryAction({
   disabled?: boolean;
   shortcutLabel?: string | null;
   badgeCount?: number | null;
+  secondaryLabel?: string;
 }) {
   const shortcutParts = shortcutLabel ? splitShortcutLabel(shortcutLabel) : [];
   const showBadge = typeof badgeCount === "number" && badgeCount > 0;
@@ -1233,6 +1237,8 @@ function SidebarPrimaryAction({
               ))}
             </KbdGroup>
           </span>
+        ) : secondaryLabel ? (
+          <span className="ml-auto text-[10px] text-muted-foreground">{secondaryLabel}</span>
         ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -1495,6 +1501,24 @@ export default function Sidebar() {
   const isOnKanban = pathname.startsWith("/workspaces") || pathname.startsWith("/kanban");
   const isOnPlugins = pathname.startsWith("/plugins");
   const isOnAutomations = pathname.startsWith("/automations");
+  const handleOpenShop = useCallback(() => {
+    void openShop().then(
+      (opened) => {
+        if (!opened) {
+          toastManager.add({
+            type: "error",
+            title: t("sidebar.actions.shopOpenFailed", { ns: "shell" }),
+          });
+        }
+      },
+      () => {
+        toastManager.add({
+          type: "error",
+          title: t("sidebar.actions.shopOpenFailed", { ns: "shell" }),
+        });
+      },
+    );
+  }, [t]);
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
   const automationListQuery = useQuery({
@@ -6794,6 +6818,11 @@ export default function Sidebar() {
                   ]
                 : []),
               {
+                label: t("sidebar.actions.shop", { ns: "shell" }),
+                icon: "shopping-bag-1",
+                onClick: handleOpenShop,
+              },
+              {
                 label: t("sidebar.actions.kanban", { ns: "shell" }),
                 icon: "folders-2",
                 active: isOnKanban,
@@ -6992,6 +7021,12 @@ export default function Sidebar() {
                         }}
                         shortcutLabel={searchShortcutLabel}
                       />
+                      <SidebarPrimaryAction
+                        icon={ShoppingBagIcon}
+                        label={t("sidebar.actions.shop", { ns: "shell" })}
+                        secondaryLabel={t("sidebar.actions.shopWindow", { ns: "shell" })}
+                        onClick={handleOpenShop}
+                      />
                     </>
                   ) : (
                     <>
@@ -7008,6 +7043,12 @@ export default function Sidebar() {
                           setSearchPaletteOpen(true);
                         }}
                         shortcutLabel={searchShortcutLabel}
+                      />
+                      <SidebarPrimaryAction
+                        icon={ShoppingBagIcon}
+                        label={t("sidebar.actions.shop", { ns: "shell" })}
+                        secondaryLabel={t("sidebar.actions.shopWindow", { ns: "shell" })}
+                        onClick={handleOpenShop}
                       />
                       <SidebarPrimaryAction
                         icon={TerminalIcon}

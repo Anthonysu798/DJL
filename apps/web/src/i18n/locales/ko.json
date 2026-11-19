@@ -3762,6 +3762,9 @@
         "deleteWorkspace": "작업공간 삭제",
         "kanban": "워크스페이스",
         "marketing": "마케팅 스튜디오",
+        "shop": "스토어",
+        "shopWindow": "별도 창 ↗",
+        "shopOpenFailed": "스토어를 열 수 없습니다. 팝업을 허용한 후 다시 시도하세요.",
         "newTask": "새 작업",
         "newThread": "새 스레드",
         "newWorkspace": "새로운 작업공간"

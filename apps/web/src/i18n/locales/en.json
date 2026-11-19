@@ -3762,6 +3762,9 @@
         "deleteWorkspace": "Delete workspace",
         "kanban": "Workspaces",
         "marketing": "Marketing Studio",
+        "shop": "Shop",
+        "shopWindow": "Separate window ↗",
+        "shopOpenFailed": "Unable to open the shop. Please allow pop-up windows and try again.",
         "newTask": "New task",
         "newThread": "New thread",
         "newWorkspace": "New workspace"
