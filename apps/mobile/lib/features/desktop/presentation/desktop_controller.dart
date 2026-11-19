@@ -6957,7 +6957,10 @@ class DesktopController extends ChangeNotifier {
         : <String, dynamic>{};
     if (rpc['djlReplayedEvent'] == true) params['djlReplayedEvent'] = true;
     if (method == null) return;
-    if (method.startsWith('djl/groups/') ||
+    // The bridge's five-second presence heartbeat changes nothing on screen;
+    // falling through would rebuild the page and rewrite the chat cache.
+    if (method == 'djl/presence/heartbeat' ||
+        method.startsWith('djl/groups/') ||
         groupThreads.contains(params['threadId'])) {
       return;
     }
@@ -7471,7 +7474,9 @@ class DesktopController extends ChangeNotifier {
           state = params['online'] == true ? 'connected' : 'desktop offline';
         }
     }
-    _rememberCurrent();
+    // A streaming reply is cached when it completes. Caching every delta
+    // re-encrypted the whole chat cache several times a second.
+    if (method != 'item/agentMessage/delta') _rememberCurrent();
     _notify();
   }
 

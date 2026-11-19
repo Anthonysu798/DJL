@@ -863,7 +863,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                     DjlIcons.checklist,
                                                     size: 17,
                                                     color: chat.mode == 'task'
-                                                        ? Colors.white
+                                                        ? scheme.onPrimary
                                                         : scheme.onSurface,
                                                   ),
                                                   const SizedBox(width: 8),
@@ -880,7 +880,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                             semibold: true,
                                                           ),
                                                       color: chat.mode == 'task'
-                                                          ? Colors.white
+                                                          ? scheme.onPrimary
                                                           : scheme.onSurface,
                                                     ),
                                                   ),

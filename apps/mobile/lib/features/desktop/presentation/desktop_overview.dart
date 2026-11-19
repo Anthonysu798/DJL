@@ -223,18 +223,12 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     return (scheme.onSurface, scheme.surface);
   }
 
+  // A flat raised fill reads the same in light and dark; a shadow on a
+  // page-coloured pill disappears on black.
   Widget _surface(Widget child, {Color? fill}) => DecoratedBox(
     decoration: BoxDecoration(
-      color:
-          fill ?? Theme.of(context).colorScheme.surface.withValues(alpha: .96),
-      borderRadius: BorderRadius.circular(100),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: .055),
-          blurRadius: 22,
-          offset: const Offset(0, 7),
-        ),
-      ],
+      color: fill ?? DjlColors.of(context).surfaceRaised,
+      borderRadius: BorderRadius.circular(DjlRadius.pill),
     ),
     child: child,
   );

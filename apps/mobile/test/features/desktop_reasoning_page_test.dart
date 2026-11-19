@@ -8,7 +8,7 @@ import 'desktop_reasoning_controller_test.dart'
 void main() {
   for (final longHistory in [false, true]) {
     testWidgets(
-      'actual Page renders a completed canonical summary with long history=$longHistory',
+      'actual Page keeps a completed canonical summary off the phone with long history=$longHistory',
       (tester) async {
         tester.view.physicalSize = const Size(393, 881);
         tester.view.devicePixelRatio = 1;
@@ -77,19 +77,21 @@ void main() {
         final desktop = await reasoningDesktop(transport);
         try {
           await showConversation(tester, desktop);
-          final disclosure = find.text('1 previous message');
-          expect(disclosure, findsOneWidget);
+          expect(find.textContaining('previous message'), findsNothing);
           expect(
-            tester.getRect(disclosure).top,
+            find.textContaining('Computing the modular solution'),
+            findsNothing,
+          );
+          final answer = find.text('n = 840,256');
+          expect(answer, findsOneWidget);
+          expect(
+            tester.getRect(answer).top,
             greaterThan(
               tester
                   .getRect(find.text('Public modular arithmetic question'))
                   .bottom,
             ),
           );
-          await tester.tap(disclosure);
-          await tester.pumpAndSettle();
-          expect(find.text('Computing the modular solution'), findsOneWidget);
           expect(tester.takeException(), isNull);
         } finally {
           await finishDraft(tester, desktop);

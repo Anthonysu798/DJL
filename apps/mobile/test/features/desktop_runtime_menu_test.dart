@@ -1,9 +1,9 @@
 import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart'
-    show CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/desktop/domain/desktop_composer.dart';
@@ -119,24 +119,19 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets(
-    'source catalog blue and leading provider alignment ignore monochrome app accent',
+    'catalog selection uses ink and keeps leading provider alignment',
     (tester) async {
       final remote = DraftTransport(PairingRepository(TestCredentials()));
       final desktop = await runtime125Page(
         tester,
         remote,
-        theme: ThemeData(
-          colorScheme: const ColorScheme.light(primary: Colors.black),
-        ),
+        theme: djlTheme(Brightness.light),
       );
       await runtime125Catalog(tester);
       final all = find.byKey(const Key('runtime.provider.all'));
       final button = tester.widget<TextButton>(all);
-      final blue = CupertinoDynamicColor.resolve(
-        CupertinoColors.activeBlue,
-        tester.element(all),
-      );
-      expect(button.style!.backgroundColor!.resolve({}), blue);
+      final ink = DjlColors.light.ink;
+      expect(button.style!.backgroundColor!.resolve({}), ink);
       expect(
         tester.getTopLeft(all).dx,
         tester.getTopLeft(find.byKey(const Key('runtime.catalog.list'))).dx +
@@ -150,7 +145,7 @@ void main() {
             )
             .first,
       );
-      expect(selectedIcon.color, blue);
+      expect(selectedIcon.color, ink);
       await finishDraft(tester, desktop);
     },
   );

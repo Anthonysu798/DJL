@@ -31,6 +31,7 @@ class GroupsList extends StatelessWidget {
     final created = await showModalBottomSheet<Group>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (_) => GroupCreateSheet(controller: controller),
     );
@@ -111,7 +112,9 @@ class GroupsList extends StatelessWidget {
     if (writing.length == 1) return '${writing.single} is writing';
     if (writing.length > 1) return '${writing.length} agents are writing';
     if (group.pendingHandoffs > 0) return 'Paused, waiting for you';
-    return group.members.map((member) => member.handle).join(', ');
+    final names = group.members.map((member) => member.handle).join(', ');
+    // A group left with its suggested name would show the same line twice.
+    return names == group.name ? '${group.members.length} agents' : names;
   }
 }
 

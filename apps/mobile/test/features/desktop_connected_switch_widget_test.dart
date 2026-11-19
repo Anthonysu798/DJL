@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart'
     show CupertinoActivityIndicator, CupertinoButton;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'desktop_connected_switch_test.dart';
@@ -81,7 +82,7 @@ void main() {
               .foregroundColor!
               .resolve({})!
               .toARGB32(),
-          0xffff3b30,
+          DjlColors.light.danger.toARGB32(),
         );
         await tester.tapAt(const Offset(390, 800));
         await tester.pumpAndSettle();

@@ -240,6 +240,16 @@ class RemoteTransport {
       'epoch': _replayEpoch,
     }),
   );
+  // The cursor only decides how much the desktop replays after a cold start,
+  // and replays are applied idempotently. Writing it to the Keychain after
+  // every frame held up the next frame, so it trails the stream instead.
+  Timer? _cursorSave;
+  void _saveCursorSoon() =>
+      _cursorSave ??= Timer(const Duration(milliseconds: 500), () {
+        _cursorSave = null;
+        if (_pairing != null) unawaited(_saveCursor().catchError((_) {}));
+      });
+
   Future<void> _read(int generation) async {
     Object? failure;
     final iterator = _iterator!;
@@ -279,7 +289,7 @@ class RemoteTransport {
         if (generation != _generation) return;
         if (seq != null) {
           _seq = seq;
-          await _saveCursor();
+          _saveCursorSoon();
         }
       }
     } catch (error) {
@@ -394,6 +404,11 @@ class RemoteTransport {
 
   Future<void> disconnect() async {
     _generation++;
+    if (_cursorSave != null) {
+      _cursorSave!.cancel();
+      _cursorSave = null;
+      if (_pairing != null) await _saveCursor().catchError((_) {});
+    }
     _cipher = null;
     final iterator = _iterator;
     _iterator = null;

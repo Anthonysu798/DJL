@@ -6,12 +6,12 @@ import 'package:djl_mobile/features/guardian/domain/guardian_review.dart';
 import 'package:djl_mobile/features/guardian/presentation/guardian_review_card.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
-import 'package:djl_mobile/features/subagents/domain/subagent_action.dart';
-import 'package:djl_mobile/features/subagents/presentation/subagent_card.dart';
 import '../../integration_test/threads_test.dart'
     show reveal, securePairingEntry;
 import '../features/desktop_subagents_test.dart' show SubagentTransport;
 import '../features/desktop_activity_test.dart' show ActivityCacheStore;
+
+const _child = Key('fixture-child');
 
 GuardianReviewCard _guardian() => GuardianReviewCard(
   review: GuardianReview(
@@ -33,23 +33,6 @@ Future<void> _pumpLazyCards(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  final changes = ChangeNotifier();
-  addTearDown(changes.dispose);
-  final action = SubagentAction(
-    mac: 'fixture-mac',
-    thread: 'fixture-parent',
-    turn: 'fixture-turn',
-    item: 'fixture-spawn',
-    tool: 'spawnagent',
-    status: 'completed',
-    children: [
-      SubagentChild(
-        'fixture-child',
-        nickname: 'Fixture Scout',
-        status: 'completed',
-      ),
-    ],
-  );
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark().copyWith(
@@ -62,13 +45,9 @@ Future<void> _pumpLazyCards(
           itemBuilder: (context, index) {
             if (index == 4 && guardianPresent) return _guardian();
             if (index == 52) {
-              return SubagentActionCard(
-                action: action,
-                changes: changes,
-                resolve: (child) => child,
-                metadataState: (_) => 'Details loaded',
-                onOpen: (_) async {},
-                hydrate: () async {},
+              return const Card(
+                key: _child,
+                child: SizedBox(height: 180, child: Text('Fixture Scout')),
               );
             }
             return SizedBox(height: 110, child: Text('Fixture row $index'));
@@ -86,7 +65,7 @@ void main() {
     (tester) async {
       await _pumpLazyCards(tester);
       final guardian = find.byType(GuardianReviewCard);
-      final child = find.byType(SubagentActionCard);
+      final child = find.byKey(_child);
       expect(guardian, findsOneWidget);
       await reveal(tester, child);
       expect(child.hitTestable(), findsOneWidget);
@@ -110,7 +89,7 @@ void main() {
     tester,
   ) async {
     await _pumpLazyCards(tester);
-    final child = find.byType(SubagentActionCard);
+    final child = find.byKey(_child);
     expect(child, findsNothing);
     await reveal(tester, child);
     expect(child.hitTestable(), findsOneWidget);
@@ -185,7 +164,7 @@ void main() {
     tester,
   ) async {
     await _pumpLazyCards(tester, guardianPresent: false);
-    await reveal(tester, find.byType(SubagentActionCard));
+    await reveal(tester, find.byKey(_child));
     final guardian = find.byType(GuardianReviewCard);
     await expectLater(
       () => reveal(tester, guardian),

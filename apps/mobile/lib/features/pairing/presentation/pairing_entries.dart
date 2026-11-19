@@ -334,7 +334,6 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
                     maxLines: 5,
                     autocorrect: false,
                     decoration: InputDecoration(
-                      fillColor: Theme.of(context).colorScheme.surface,
                       label: const Text('Paste pairing code'),
                       hintText: 'RMX1:… or QR JSON',
                     ),
@@ -370,7 +369,6 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
                     onChanged: widget.onRelayChanged,
                     enabled: !widget.desktop.busy && !widget.desktop.connected,
                     decoration: InputDecoration(
-                      fillColor: Theme.of(context).colorScheme.surface,
                       label: const Text('Desktop relay URL'),
                       hintText: 'wss://your-relay/relay',
                     ),

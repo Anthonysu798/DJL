@@ -145,14 +145,19 @@ ThemeData djlTheme(
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: colors.surface,
       surfaceTintColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(DjlRadius.lg)),
+      // The hairline keeps a sheet's edge visible on a black page.
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colors.hairline),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(DjlRadius.lg),
+        ),
       ),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: colors.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
+        side: BorderSide(color: colors.hairline),
         borderRadius: BorderRadius.circular(DjlRadius.lg),
       ),
     ),

@@ -1,5 +1,4 @@
 import '../../reasoning/domain/desktop_reasoning.dart';
-import '../../reasoning/presentation/thinking_timeline_row.dart';
 import '../../../app/desktop_deep_link.dart';
 import 'desktop_focus_timeline.dart';
 import 'desktop_conversation_view.dart';
@@ -12,11 +11,8 @@ import '../domain/desktop_worktree_routing.dart';
 import 'desktop_markdown_image.dart';
 import '../../host/presentation/host_controls.dart';
 import '../../subagents/domain/subagent_action.dart';
-import '../../subagents/presentation/subagent_card.dart';
 import '../../guardian/domain/guardian_review.dart';
 import '../../activity/domain/desktop_activity.dart';
-import '../../activity/domain/activity_preview.dart';
-import '../../activity/presentation/activity_card.dart';
 import '../../guardian/presentation/guardian_review_card.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -125,6 +121,8 @@ class DesktopChatPage extends StatefulWidget {
   @override
   State<DesktopChatPage> createState() => _DesktopChatPageState();
 }
+
+final _agentDetail = Expando<bool>('agentDetail');
 
 class _DesktopChatPageState extends State<DesktopChatPage>
     with WidgetsBindingObserver {
@@ -1637,9 +1635,41 @@ class _DesktopChatPageState extends State<DesktopChatPage>
           _projectRoutingAvailable &&
           !_gitBusy &&
           projectStatus?.isRepo == true;
+      // The phone shows what an agent says, not how it got there: reasoning,
+      // commands, file edits, sub-agent steps and other tool rows stay on the
+      // desktop. Reviews that need an answer are kept.
+      // A row's kind does not change once it exists, so it is classified
+      // once instead of on every rebuild while a reply streams. Plan rows are
+      // the exception: whether one shows inline depends on its content.
+      bool agentDetail(RemoteJson row) {
+        final known = _agentDetail[row];
+        if (known != null) return known;
+        final detail =
+            !isGuardianRow(row) &&
+            (row.containsKey(reasoningMetadataKey) ||
+                DesktopActivity.fromRow(row) != null ||
+                SubagentAction.decode(
+                      row,
+                      mac: desktop.active?.macDeviceId ?? '',
+                      thread: desktop.thread?['id'] as String? ?? '',
+                      turn: subagentString(row['turnId']) ?? '',
+                    ) !=
+                    null ||
+                !{
+                      'agentMessage',
+                      'userMessage',
+                      'systemMessage',
+                    }.contains(row['type']) &&
+                    DesktopPlan.fromRow(row)?.inlineResult != true &&
+                    desktop.inferredPlanQuestionnaire(row) == null);
+        if (!desktopIsPlanItem(row)) _agentDetail[row] = detail;
+        return detail;
+      }
+
       Set<int> hiddenTimelineRows() => {
         for (var i = 0; i < desktop.timeline.length; i++)
-          if (desktopIsPlanItem(desktop.timeline[i]) &&
+          if (agentDetail(desktop.timeline[i]) ||
+              desktopIsPlanItem(desktop.timeline[i]) &&
                   DesktopPlan.fromRow(desktop.timeline[i])?.inlineResult !=
                       true ||
               desktop.timeline[i].containsKey(reasoningMetadataKey) &&
@@ -2181,99 +2211,6 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                   ),
                                 );
                               }
-                              final subagent = SubagentAction.decode(
-                                item,
-                                mac: desktop.active?.macDeviceId ?? '',
-                                thread: desktop.thread?['id'] as String? ?? '',
-                                turn: subagentString(item['turnId']) ?? '',
-                              );
-                              if (subagent != null) {
-                                return SubagentActionCard(
-                                  key: ValueKey(subagent.id),
-                                  action:
-                                      desktop.subagents.items[subagent.id] ??
-                                      subagent,
-                                  changes: desktop,
-                                  resolve: desktop.resolvedSubagent,
-                                  metadataState: desktop.subagentMetadataState,
-                                  hydrate: () =>
-                                      desktop.hydrateSubagents(subagent),
-                                  onOpen: (child) =>
-                                      desktop.openSubagent(subagent, child),
-                                );
-                              }
-                              final savedActivity = DesktopActivity.fromRow(
-                                item,
-                              );
-                              if (savedActivity != null) {
-                                final activity =
-                                    timeline.activityOverrides[index] ??
-                                    desktop.activity.items[savedActivity.id] ??
-                                    savedActivity;
-                                final cwd =
-                                    activity.cwd ??
-                                    activityString(desktop.thread?['cwd']);
-                                return ActivityCard(
-                                  key: ValueKey(activity.id),
-                                  activity: activity,
-                                  changes: desktop,
-                                  onOpenFile: cwd == null
-                                      ? null
-                                      : (path, image) {
-                                          if (!desktop.connected ||
-                                              desktop.transport.macDeviceId !=
-                                                  activity.mac ||
-                                              desktop.active?.macDeviceId !=
-                                                  activity.mac ||
-                                              desktop.thread?['id'] !=
-                                                  activity.thread) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Reopen the activity from its paired workspace to preview this file.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-                                          final resolved =
-                                              activityWorkspacePath(
-                                                path,
-                                                cwd: cwd,
-                                              );
-                                          if (resolved == null) return;
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute<void>(
-                                              fullscreenDialog: true,
-                                              builder: (_) =>
-                                                  WorkspaceLinkedFilePage(
-                                                    repository:
-                                                        WorkspaceRepository(
-                                                          desktop.transport,
-                                                          cwd: cwd,
-                                                          threadId:
-                                                              activity.thread,
-                                                        ),
-                                                    path: resolved,
-                                                  ),
-                                            ),
-                                          );
-                                        },
-                                );
-                              }
-                              if (item.containsKey(reasoningMetadataKey)) {
-                                if (!desktop.reasoningRowMatchesHost(item)) {
-                                  return const SizedBox.shrink();
-                                }
-                                return ThinkingTimelineRow(
-                                  key: ValueKey(item['id']),
-                                  messageId: item['id'] as String,
-                                  text: DesktopReasoning.fromRow(item)!.text,
-                                );
-                              }
                               final text = desktopItemText(item);
                               final inferred = desktop
                                   .inferredPlanQuestionnaire(item);
@@ -2300,25 +2237,6 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                   ? null
                                   : desktop.responsePlanProposal(item);
                               final displayText = envelope?.prose ?? text;
-                              if (!{
-                                    'agentMessage',
-                                    'userMessage',
-                                  }.contains(type) &&
-                                  nativePlan?.inlineResult != true &&
-                                  inferred == null) {
-                                return ExpansionTile(
-                                  leading: const Icon(DjlIcons.tool, size: 18),
-                                  title: Text(
-                                    activityString(type) ?? 'Activity',
-                                  ),
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: SelectableText(text),
-                                    ),
-                                  ],
-                                );
-                              }
                               final imageEpoch = _bindingEpoch,
                                   imageScope = _scope,
                                   imagePin =

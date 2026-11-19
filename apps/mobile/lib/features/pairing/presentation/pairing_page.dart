@@ -277,7 +277,7 @@ class _PairingPageState extends State<PairingPage> {
     super.dispose();
   }
 
-  String _relay = const String.fromEnvironment('DJL_REMOTE_RELAY_URL');
+  String _relay = defaultRelayUrl();
 
   bool get _canAdd => widget.controller.canEnterManualPairing;
 

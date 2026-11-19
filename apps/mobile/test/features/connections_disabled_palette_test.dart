@@ -72,9 +72,7 @@ void main() {
             final on = find.byKey(const ValueKey('device_visibility_B'));
             final off = find.byKey(const ValueKey('device_visibility_C'));
             final scheme = theme.colorScheme;
-            final group = brightness == Brightness.dark
-                ? scheme.surfaceContainerHigh
-                : scheme.surface;
+            final group = scheme.surfaceContainerLow;
             final before = Map<String, String>.of(f.credentials.values);
             Future<List<Color>> samples() async {
               final a = tester.getRect(on), b = tester.getRect(off);

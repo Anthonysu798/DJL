@@ -322,10 +322,9 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
       ? null
       : widget.desktop.devicePreferences(pair)?.lastActivityAt;
 
+  // Sheets are the page colour, so grouped rows take the raised fill.
   Color _groupColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-      ? Theme.of(context).colorScheme.surfaceContainerHigh
-      : Theme.of(context).colorScheme.surface;
+      Theme.of(context).colorScheme.surfaceContainerLow;
 
   Widget _avatar(Pairing pair) => SizedBox.square(
     dimension: 36,
@@ -683,9 +682,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
             foregroundColor: colors.onSurfaceVariant,
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? colors.surfaceContainerHigh
-                : colors.surface,
+            backgroundColor: colors.surfaceContainerLow,
             minimumSize: const Size(0, 36),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

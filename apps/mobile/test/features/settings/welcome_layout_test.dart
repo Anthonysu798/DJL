@@ -20,10 +20,7 @@ Future<AppLockController> mountWelcome(
   final credentials = TestCredentials();
   if (shielded) credentials.values['desktop.trusted'] = savedPair();
   final store = MemorySettingsStore()
-    ..values.addAll({
-      SettingsController.fontKey: 'geistMono',
-      SettingsController.bubbleKey: 'pink',
-    });
+    ..values.addAll({SettingsController.fontKey: 'geistMono'});
   final settings = SettingsController(store);
   final owner = FakeOwnerAuth();
   if (shielded) owner.pending = Completer<bool>();
@@ -48,7 +45,6 @@ Future<AppLockController> mountWelcome(
   await tester.pumpAndSettle();
   await openCloudFromDesktop(tester);
   expect(settings.font, AppFontStyle.geistMono);
-  expect(settings.bubble, UserBubbleColor.pink);
   return lock;
 }
 

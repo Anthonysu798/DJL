@@ -272,6 +272,47 @@ String desktopAssistantHeadings(String text) {
       .join('\n');
 }
 
+final _orderedListLine = RegExp(r'^\s*\d+[.)]\s', multiLine: true);
+final _lastListMarkers = <String, int?>{};
+
+/// The largest number an ordered list in [markdown] counts to, used to size
+/// the list gutter. Most messages have no numbered list, so the extra parse is
+/// skipped for them, and settled messages are answered from a small cache
+/// instead of being parsed again on every rebuild.
+int? _lastListMarker(String markdown) {
+  if (!_orderedListLine.hasMatch(markdown)) return null;
+  if (_lastListMarkers.containsKey(markdown)) return _lastListMarkers[markdown];
+  int? last;
+  void inspect(md.Node node) {
+    if (node is! md.Element) return;
+    final children = node.children ?? const <md.Node>[];
+    if (node.tag == 'ol') {
+      final count = children
+          .whereType<md.Element>()
+          .where((n) => n.tag == 'li')
+          .length;
+      if (count > 0) {
+        final end =
+            (int.tryParse(node.attributes['start'] ?? '1') ?? 1) + count - 1;
+        if (last == null || end > last!) last = end;
+      }
+    }
+    for (final child in children) {
+      inspect(child);
+    }
+  }
+
+  for (final node in md.Document(
+    extensionSet: md.ExtensionSet.gitHubFlavored,
+  ).parseLines(markdown.split('\n'))) {
+    inspect(node);
+  }
+  if (_lastListMarkers.length >= 64) {
+    _lastListMarkers.remove(_lastListMarkers.keys.first);
+  }
+  return _lastListMarkers[markdown] = last;
+}
+
 class DesktopConversationMessage extends StatelessWidget {
   const DesktopConversationMessage({
     super.key,
@@ -299,31 +340,7 @@ class DesktopConversationMessage extends StatelessWidget {
     final foreground = user ? palette.foreground : theme.colorScheme.onSurface;
     final markdownText = desktopAssistantHeadings(text);
     final markdownStyle = appearance.markdown(context, foreground: foreground);
-    int? lastMarker;
-    void inspectLists(md.Node node) {
-      if (node is! md.Element) return;
-      final children = node.children ?? const <md.Node>[];
-      if (node.tag == 'ol') {
-        final count = children
-            .whereType<md.Element>()
-            .where((n) => n.tag == 'li')
-            .length;
-        if (count > 0) {
-          final end =
-              (int.tryParse(node.attributes['start'] ?? '1') ?? 1) + count - 1;
-          if (lastMarker == null || end > lastMarker!) lastMarker = end;
-        }
-      }
-      for (final child in children) {
-        inspectLists(child);
-      }
-    }
-
-    for (final node in md.Document(
-      extensionSet: md.ExtensionSet.gitHubFlavored,
-    ).parseLines(markdownText.split('\n'))) {
-      inspectLists(node);
-    }
+    final lastMarker = _lastListMarker(markdownText);
     var listIndent = markdownStyle.listIndent!;
     if (lastMarker != null) {
       final painter = TextPainter(

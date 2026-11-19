@@ -115,7 +115,6 @@ void main() {
         ..values.addAll({
           'djl.appearance.mode': 'dark',
           'codex.appFontStyle': 'geistMono',
-          'codex.userBubbleColor': 'blue',
         });
       final settings = SettingsController(store);
       await settings.load();
@@ -123,16 +122,8 @@ void main() {
         ListenableBuilder(
           listenable: settings,
           builder: (_, _) => MaterialApp(
-            theme: djlTheme(
-              Brightness.light,
-              font: settings.font,
-              bubble: settings.bubble,
-            ),
-            darkTheme: djlTheme(
-              Brightness.dark,
-              font: settings.font,
-              bubble: settings.bubble,
-            ),
+            theme: djlTheme(Brightness.light, font: settings.font),
+            darkTheme: djlTheme(Brightness.dark, font: settings.font),
             themeMode: settings.theme,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
@@ -155,28 +146,7 @@ void main() {
       expect(Theme.of(context).textTheme.bodyMedium?.fontFamily, 'GeistMono');
       expect(MediaQuery.textScalerOf(context).scale(10), 20);
       expect(MediaQuery.disableAnimationsOf(context), true);
-      final bubble = find.byKey(const Key('bubble-setting'));
-      await tester.ensureVisible(bubble);
-      await tester.tap(bubble);
-      await tester.pumpAndSettle();
-      final blue = find.byKey(const Key('bubble-blue'));
-      await tester.ensureVisible(blue);
-      final semantics = tester.ensureSemantics();
-      await tester.pump();
-      expect(
-        tester.getSemantics(blue).getSemanticsData().flagsCollection.isSelected,
-        Tristate.isTrue,
-      );
-      expect(
-        tester.getSemantics(blue).getSemanticsData().label,
-        'Blue bubble color',
-      );
-      final pink = find.byKey(const Key('bubble-pink'));
-      await tester.ensureVisible(pink);
-      await tester.tap(pink);
-      await tester.pumpAndSettle();
-      expect(store.values['codex.userBubbleColor'], 'pink');
-      expect(DjlAppearance.of(context).bubble, UserBubbleColor.pink);
+      expect(find.byKey(const Key('bubble-setting')), findsNothing);
       final font = find.byKey(const Key('font-setting'));
       await tester.ensureVisible(font);
       await tester.tap(font);
@@ -195,7 +165,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(Theme.of(context).brightness, Brightness.light);
       expect(tester.takeException(), isNull);
-      semantics.dispose();
     },
   );
   testWidgets(
@@ -219,7 +188,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(store.values, isEmpty);
-      expect(find.byKey(const Key('bubble-blue')), findsNothing);
+      expect(find.text('JetBrains Mono'), findsNothing);
       store.failWrite = true;
       await tester.tap(find.byKey(const Key('font-setting')));
       await tester.pumpAndSettle();
@@ -412,35 +381,6 @@ void main() {
       },
     );
   }
-  testWidgets('opening a long bubble menu reveals its saved final selection', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 320);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final store = MemorySettingsStore()
-      ..values['codex.userBubbleColor'] = 'black';
-    final settings = SettingsController(store);
-    await settings.load();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: SettingsControls(controller: settings),
-          ),
-        ),
-      ),
-    );
-    await tester.ensureVisible(find.byKey(const Key('bubble-setting')));
-    await tester.tap(find.byKey(const Key('bubble-setting')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('bubble-black')).hitTestable(), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(store.values, {'codex.userBubbleColor': 'black'});
-    settings.dispose();
-  });
   testWidgets(
     'privacy shield covers pushed routes and modal hit tests and semantics',
     (tester) async {

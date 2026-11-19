@@ -40,6 +40,8 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  flutter_driver:
+    sdk: flutter
   flutter_lints: ^6.0.0
   google_sign_in_platform_interface: 3.1.0
 flutter:
@@ -59,7 +61,6 @@ flutter:
     - assets/icons/guide/central-devices-2.svg
     - assets/djl-logo.png
     - assets/agents/
-    - assets/icons/command/central-magnifying-glass.svg
     - assets/icons/command/central-scan-code.svg
     - assets/icons/command/central-folder-2.svg
     - assets/icons/command/central-folder-restricted.svg
@@ -79,7 +80,6 @@ flutter:
     - assets/icons/command/central-arrow-up-circle.svg
     - assets/icons/command/central-circle-plus.svg
     - assets/icons/command/central-exclamation-circle.svg
-    - assets/icons/command/central-exclamation-circle-bold.svg
   fonts:
     - family: Geist
       fonts:

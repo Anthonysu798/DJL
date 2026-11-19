@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:ui' show SemanticsAction;
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/git/data/git_repository.dart';
 import 'package:djl_mobile/features/git/domain/git_branch_picker_models.dart';
@@ -147,7 +147,7 @@ Future<void> exposePicker(
 void main() {
   for (final brightness in Brightness.values) {
     testWidgets(
-      'source branch badges retain visible system fill in $brightness',
+      'source branch badges retain visible raised fill in $brightness',
       (tester) async {
         final remote = PickerTransport(PairingRepository(TestCredentials()));
         final current = ValueNotifier(true), results = <GitBranchChoice?>[];
@@ -166,7 +166,7 @@ void main() {
           final decoration =
               tester.widget<DecoratedBox>(capsule).decoration as BoxDecoration;
           final context = tester.element(text);
-          final fill = CupertinoColors.secondarySystemFill.resolveFrom(context);
+          final fill = DjlColors.of(context).surfaceRaised;
           expect(decoration.color, fill);
           final row = Theme.of(context).colorScheme.surface;
           expect(Color.alphaBlend(decoration.color!, row), isNot(row));

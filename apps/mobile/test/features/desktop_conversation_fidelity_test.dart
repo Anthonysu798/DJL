@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:djl_mobile/features/workspace/presentation/workspace_linked_file_page.dart';
 import 'package:re_editor/re_editor.dart';
@@ -11,6 +10,7 @@ import 'package:djl_mobile/features/desktop/presentation/desktop_composer_widget
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
@@ -46,14 +46,13 @@ Future<void> showConversation(
   DesktopNewChatDraft? draft,
   Brightness brightness = Brightness.light,
   AppFontStyle font = AppFontStyle.system,
-  UserBubbleColor bubble = UserBubbleColor.blue,
   double scale = 1,
   double keyboard = 0,
   DesktopLinkTarget? focus,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      theme: djlTheme(brightness, font: font, bubble: bubble),
+      theme: djlTheme(brightness, font: font),
       home: Builder(
         builder: (context) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -323,14 +322,11 @@ void main() {
     final markdown = tester
         .widgetList<MarkdownBody>(find.byType(MarkdownBody))
         .first;
-    expect(markdown.styleSheet!.p!.color, const Color(0xff007aff));
+    expect(markdown.styleSheet!.p!.color, DjlColors.light.onInk);
     final fill = tester.widget<Container>(
       find.byKey(const ValueKey('desktop-user-bubble')),
     );
-    expect(
-      (fill.decoration as BoxDecoration).color,
-      const Color(0xff007aff).withValues(alpha: .1),
-    );
+    expect((fill.decoration as BoxDecoration).color, DjlColors.light.ink);
     expect(
       text.top -
           tester.getRect(find.byKey(const ValueKey('desktop-user-bubble'))).top,
@@ -549,105 +545,58 @@ void main() {
   }
 
   for (final brightness in Brightness.values) {
-    for (final bubble in [
-      UserBubbleColor.blue,
-      UserBubbleColor.defaultColor,
-      UserBubbleColor.black,
-      UserBubbleColor.pink,
-    ]) {
-      testWidgets(
-        'painted source palette $brightness $bubble and selectable live prose',
-        (tester) async {
-          final remote = DraftTransport(PairingRepository(TestCredentials()));
-          final desktop = await draftDesktop(remote);
-          desktop.thread = {'id': 'saved'};
-          desktop.timeline = [
-            {
-              'id': 'u',
-              'type': 'userMessage',
-              'text': 'User literal /repo/a.dart:12',
-            },
-            {
-              'id': 'a',
-              'type': 'agentMessage',
-              'text':
-                  '# Heading\n\n[Web](https://example.com/path%20name)\n\n```dart\n# untouched\n```',
-            },
-          ];
-          await showConversation(
-            tester,
-            desktop,
-            brightness: brightness,
-            bubble: bubble,
-          );
-          final context = tester.element(
-            find.byType(DesktopConversationMessage).first,
-          );
-          final dark = brightness == Brightness.dark;
-          final fill = tester.widget<Container>(
-            find.byKey(const ValueKey('desktop-user-bubble')),
-          );
-          final expected = switch (bubble) {
-            UserBubbleColor.blue => Color(
-              dark ? 0xff0a84ff : 0xff007aff,
-            ).withValues(alpha: dark ? .4 : .1),
-            UserBubbleColor.black =>
-              (dark ? Colors.white : Colors.black).withValues(
-                alpha: dark ? .9 : 1,
-              ),
-            UserBubbleColor.pink => Color.from(
-              alpha: dark ? .4 : .1,
-              red: 1,
-              green: dark ? .32 : .18,
-              blue: dark ? .70 : .62,
-            ),
-            _ =>
-              CupertinoColors.tertiarySystemFill
-                  .resolveFrom(context)
-                  .withValues(
-                    alpha:
-                        CupertinoColors.tertiarySystemFill
-                            .resolveFrom(context)
-                            .a *
-                        .8,
-                  ),
-          };
-          expect((fill.decoration as BoxDecoration).color, expected);
-          expect(
-            tester.renderObject(
-              find.byKey(const ValueKey('desktop-user-bubble')),
-            ),
-            paints..rrect(color: expected),
-          );
-          final bodies = tester
-              .widgetList<MarkdownBody>(find.byType(MarkdownBody))
-              .toList();
-          expect(bodies.first.data, 'User literal /repo/a.dart:12');
-          expect(bodies.every((body) => body.selectable), isTrue);
-          expect(
-            bodies.last.data,
-            '**Heading**\n\n[Web](https://example.com/path%20name)\n\n```dart\n# untouched\n```',
-          );
-          final element = tester.element(
-            find.byKey(const ValueKey<dynamic>('a')),
-          );
-          desktop.timeline.last['text'] = 'Live replacement keeps stable row';
-          desktop.notifyListeners();
-          await tester.pumpAndSettle();
-          expect(
-            tester.element(find.byKey(const ValueKey<dynamic>('a'))),
-            same(element),
-          );
-          expect(
-            find.text('Live replacement keeps stable row'),
-            findsOneWidget,
-          );
-          expect(find.byTooltip('Read aloud'), findsNothing);
-          expect(tester.takeException(), isNull);
-          await finishDraft(tester, desktop);
+    testWidgets('painted source palette $brightness and selectable live prose', (
+      tester,
+    ) async {
+      final remote = DraftTransport(PairingRepository(TestCredentials()));
+      final desktop = await draftDesktop(remote);
+      desktop.thread = {'id': 'saved'};
+      desktop.timeline = [
+        {
+          'id': 'u',
+          'type': 'userMessage',
+          'text': 'User literal /repo/a.dart:12',
         },
+        {
+          'id': 'a',
+          'type': 'agentMessage',
+          'text':
+              '# Heading\n\n[Web](https://example.com/path%20name)\n\n```dart\n# untouched\n```',
+        },
+      ];
+      await showConversation(tester, desktop, brightness: brightness);
+      final dark = brightness == Brightness.dark;
+      final fill = tester.widget<Container>(
+        find.byKey(const ValueKey('desktop-user-bubble')),
       );
-    }
+      final expected = (dark ? DjlColors.dark : DjlColors.light).ink;
+      expect((fill.decoration as BoxDecoration).color, expected);
+      expect(
+        tester.renderObject(find.byKey(const ValueKey('desktop-user-bubble'))),
+        paints..rrect(color: expected),
+      );
+      final bodies = tester
+          .widgetList<MarkdownBody>(find.byType(MarkdownBody))
+          .toList();
+      expect(bodies.first.data, 'User literal /repo/a.dart:12');
+      expect(bodies.every((body) => body.selectable), isTrue);
+      expect(
+        bodies.last.data,
+        '**Heading**\n\n[Web](https://example.com/path%20name)\n\n```dart\n# untouched\n```',
+      );
+      final element = tester.element(find.byKey(const ValueKey<dynamic>('a')));
+      desktop.timeline.last['text'] = 'Live replacement keeps stable row';
+      desktop.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(
+        tester.element(find.byKey(const ValueKey<dynamic>('a'))),
+        same(element),
+      );
+      expect(find.text('Live replacement keeps stable row'), findsOneWidget);
+      expect(find.byTooltip('Read aloud'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await finishDraft(tester, desktop);
+    });
   }
 
   testWidgets('media-only and context-only messages have no empty text fill', (
@@ -887,17 +836,11 @@ void main() {
     },
   );
   for (final sample in [
-    (Brightness.light, UserBubbleColor.black, Colors.white, Colors.black),
-    (Brightness.dark, UserBubbleColor.black, Colors.black, Colors.white),
-    (
-      Brightness.dark,
-      UserBubbleColor.blue,
-      Colors.white,
-      const Color(0xff0a84ff),
-    ),
+    (Brightness.light, DjlColors.light),
+    (Brightness.dark, DjlColors.dark),
   ]) {
     testWidgets(
-      'user links keep foreground contrast and destinations ${sample.$1} ${sample.$2}',
+      'user links keep foreground contrast and destinations ${sample.$1}',
       (tester) async {
         final remote = ConversationLinkTransport(
           PairingRepository(TestCredentials()),
@@ -932,17 +875,12 @@ void main() {
             null,
           ),
         );
-        await showConversation(
-          tester,
-          desktop,
-          brightness: sample.$1,
-          bubble: sample.$2,
-        );
+        await showConversation(tester, desktop, brightness: sample.$1);
         final row = find.byKey(const ValueKey<dynamic>('user-link'));
         final userBody = tester.widget<MarkdownBody>(
           find.descendant(of: row, matching: find.byType(MarkdownBody)),
         );
-        expect(userBody.styleSheet!.a!.color, sample.$3);
+        expect(userBody.styleSheet!.a!.color, sample.$2.onInk);
         expect(
           userBody.styleSheet!.a!.decorationStyle,
           TextDecorationStyle.dotted,
@@ -959,7 +897,7 @@ void main() {
             return true;
           });
         }
-        expect(visibleLinkColors, [sample.$3, sample.$3]);
+        expect(visibleLinkColors, [sample.$2.onInk, sample.$2.onInk]);
         final fill =
             (tester
                         .widget<Container>(
@@ -968,10 +906,7 @@ void main() {
                         .decoration
                     as BoxDecoration)
                 .color!;
-        final surface = sample.$1 == Brightness.dark
-            ? Colors.black
-            : Colors.white;
-        final paintedBackground = Color.alphaBlend(fill, surface);
+        final paintedBackground = Color.alphaBlend(fill, sample.$2.surface);
         final linkLuminance = visibleLinkColors.first!.computeLuminance();
         final fillLuminance = paintedBackground.computeLuminance();
         final contrast = linkLuminance > fillLuminance
@@ -984,7 +919,7 @@ void main() {
             matching: find.byType(MarkdownBody),
           ),
         );
-        expect(assistantBody.styleSheet!.a!.color, sample.$4);
+        expect(assistantBody.styleSheet!.a!.color, sample.$2.ink);
         expect(
           remote.calls.where(
             (call) => call['method'].toString().startsWith('workspace/'),

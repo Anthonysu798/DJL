@@ -8,6 +8,24 @@ import '../../../core/security/remote_crypto.dart';
 
 typedef RemoteJson = Map<String, dynamic>;
 
+/// The relay a pairing code is resolved against. A build can name one;
+/// otherwise it is DJL Cloud's own relay, the same fallback the desktop uses,
+/// so nobody has to type a relay address to pair.
+String defaultRelayUrl({
+  String configured = const String.fromEnvironment('DJL_REMOTE_RELAY_URL'),
+  String cloud = const String.fromEnvironment(
+    'DJL_CLOUD_API_URL',
+    defaultValue: 'https://api.slcor.com',
+  ),
+}) {
+  if (configured.isNotEmpty) return configured;
+  final api = Uri.tryParse(cloud);
+  if (api == null || !api.hasScheme || api.host.isEmpty) return '';
+  return api
+      .replace(scheme: api.scheme == 'https' ? 'wss' : 'ws', path: '/relay')
+      .toString();
+}
+
 class RemoteRelayUnavailable implements Exception {
   const RemoteRelayUnavailable(this.message);
   final String message;

@@ -239,8 +239,8 @@ void main() {
           tester.platformDispatcher.platformBrightnessTestValue = brightness;
           await tester.pumpAndSettle();
           final dark = brightness == Brightness.dark;
-          final surface = djlTheme(brightness).colorScheme.surfaceContainerLow;
-          final foreground = dark ? Colors.white : Colors.black;
+          final surface = djlTheme(brightness).bottomSheetTheme.backgroundColor;
+          final foreground = djlTheme(brightness).colorScheme.onSurface;
           expect(tester.element(sheet), same(sheetElement));
           expect(ModalRoute.of(tester.element(find.text(title))), same(route));
           expect(route.isCurrent, isTrue);
@@ -327,10 +327,8 @@ void main() {
             await expectDistinctPaint(
               tester,
               capsule,
-              dark
-                  ? theme.colorScheme.surfaceContainerHigh
-                  : theme.colorScheme.surface,
               theme.colorScheme.surfaceContainerLow,
+              theme.bottomSheetTheme.backgroundColor!,
               capsule: true,
             );
             expect(
@@ -387,8 +385,8 @@ void main() {
             await expectDistinctPaint(
               tester,
               tester.getRect(field),
-              theme.colorScheme.surface,
               theme.colorScheme.surfaceContainerLow,
+              theme.bottomSheetTheme.backgroundColor!,
             );
             expectFieldLabelVisible(tester, label);
             expect(tester.getSemantics(field).label, contains(label));
@@ -412,8 +410,8 @@ void main() {
             await expectDistinctPaint(
               tester,
               tester.getRect(field),
-              theme.colorScheme.surface,
               theme.colorScheme.surfaceContainerLow,
+              theme.bottomSheetTheme.backgroundColor!,
             );
             expectFieldLabelVisible(tester, label);
             expect(tester.getSemantics(field).label, contains(label));
@@ -437,8 +435,8 @@ void main() {
             await expectDistinctPaint(
               tester,
               tester.getRect(field),
-              theme.colorScheme.surface,
               theme.colorScheme.surfaceContainerLow,
+              theme.bottomSheetTheme.backgroundColor!,
             );
           }
           await close(tester, 'Close');

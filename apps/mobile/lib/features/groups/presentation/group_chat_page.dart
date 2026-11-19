@@ -179,7 +179,9 @@ class _GroupChatPageState extends State<GroupChatPage> {
                 children: [
                   Expanded(
                     child: !_groups.messagesLoaded(group)
-                        ? const _Loading()
+                        ? _groups.available
+                              ? const _Loading()
+                              : const _Offline()
                         : messages.isEmpty && writing.isEmpty
                         ? _EmptyChat(
                             group: group,
@@ -291,12 +293,14 @@ class _GroupChatPageState extends State<GroupChatPage> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
+                      // Solid behind the status bar, then clear by the
+                      // bottom of the header.
                       colors: [
                         colors.surface,
-                        colors.surface.withValues(alpha: .9),
+                        colors.surface,
                         colors.surface.withValues(alpha: 0),
                       ],
-                      stops: const [0, .55, 1],
+                      stops: [0, (top - 72) / top, 1],
                     ),
                   ),
                 ),
@@ -487,28 +491,43 @@ class _MessageRow extends StatelessWidget {
         ).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
       );
     } else {
-      body = MarkdownBody(
-        data: message.text,
-        styleSheet: DjlAppearance.of(context)
-            .markdown(context)
-            .copyWith(
-              p: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.35),
-            ),
-        // Files an agent made stay on the Mac; a broken remote image would
-        // only add noise.
-        sizedImageBuilder: (config) => Text(
-          config.alt?.isNotEmpty == true ? config.alt! : 'Image on your Mac',
-        ),
-        onTapLink: (_, url, _) {
-          final uri = url == null ? null : Uri.tryParse(url);
-          if (uri != null && uri.hasScheme && uri.scheme.startsWith('http')) {
-            unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
-          }
-        },
-      );
+      body = _ReplyText(message.text);
     }
     return _AgentRow(member: member, child: body);
   }
+}
+
+/// An agent's words. Live drafts and finished replies share this, so a reply
+/// does not reflow when it settles.
+class _ReplyText extends StatelessWidget {
+  const _ReplyText(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => MarkdownBody(
+    data: text,
+    styleSheet: DjlAppearance.of(context)
+        .markdown(context)
+        .copyWith(
+          p: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.35),
+          horizontalRuleDecoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: DjlColors.of(context).hairline),
+            ),
+          ),
+        ),
+    // Files an agent made stay on the Mac; a broken remote image would only
+    // add noise.
+    sizedImageBuilder: (config) => Text(
+      config.alt?.isNotEmpty == true ? config.alt! : 'Image on your Mac',
+    ),
+    onTapLink: (_, url, _) {
+      final uri = url == null ? null : Uri.tryParse(url);
+      if (uri != null && uri.hasScheme && uri.scheme.startsWith('http')) {
+        unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+      }
+    },
+  );
 }
 
 /// An agent's avatar and name beside whatever it is saying.
@@ -590,12 +609,7 @@ class _WritingRow extends StatelessWidget {
                 label: waiting ? 'Waiting for its turn' : 'Writing',
                 child: const _TypingDots(),
               )
-            : Text(
-                text,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(height: 1.35),
-              ),
+            : _ReplyText(text),
       ),
     ),
   );
@@ -925,6 +939,24 @@ class _Notice extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The chat was opened before the Mac was reachable; nothing to show yet.
+class _Offline extends StatelessWidget {
+  const _Offline();
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(DjlSpace.xxxl),
+      child: Text(
+        'Messages appear here once your Mac is connected.',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: DjlColors.of(context).inkMuted),
+      ),
+    ),
+  );
 }
 
 class _Loading extends StatelessWidget {
