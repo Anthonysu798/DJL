@@ -13,6 +13,10 @@ import type {
   OpenCodeListModelProvidersResult,
   OpenCodeRemoveCredentialInput,
   OpenCodeSetApiKeyInput,
+  SaveCustomModelProviderInput,
+  RemoveCustomModelProviderInput,
+  FetchCustomModelsInput,
+  FetchCustomModelsResult,
 } from "@synara/contracts";
 
 import type { ProviderAdapterError } from "../Errors.ts";
@@ -23,6 +27,15 @@ export interface OpenCodeAdapterShape extends ProviderAdapterShape<ProviderAdapt
   readonly listModelProviders: (
     input: OpenCodeListModelProvidersInput,
   ) => import("effect").Effect.Effect<OpenCodeListModelProvidersResult, ProviderAdapterError>;
+  readonly saveCustomProvider?: (
+    input: SaveCustomModelProviderInput,
+  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderAdapterError>;
+  readonly removeCustomProvider?: (
+    input: RemoveCustomModelProviderInput,
+  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderAdapterError>;
+  readonly fetchCustomModels?: (
+    input: FetchCustomModelsInput,
+  ) => import("effect").Effect.Effect<FetchCustomModelsResult, ProviderAdapterError>;
   readonly setApiKey: (
     input: OpenCodeSetApiKeyInput,
   ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderAdapterError>;

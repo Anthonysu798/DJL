@@ -1,6 +1,10 @@
+import { ComputerServiceLive } from "./computer/Layers/ComputerService";
+import { WsConnectionSessionsLive } from "./wsConnectionSessions";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
+import { SocialOAuthResumeReactorLive } from "./marketing/SocialOAuthResumeReactor";
+import { SocialReportDeliveryReactorLive } from "./marketing/SocialReportDeliveryReactor";
 import { AutomationRunReactorLive } from "./automation/Layers/AutomationRunReactor";
 import { AutomationSchedulerLive } from "./automation/Layers/AutomationScheduler";
 import { AutomationServiceLive } from "./automation/Layers/AutomationService";
@@ -51,6 +55,7 @@ import { MemoryReactorLive } from "./orchestration/Layers/MemoryReactor";
 import { AiDetectorServiceLive } from "./aiDetector/Layers/AiDetectorService";
 import { GroupServiceLive } from "./groups/Layers/GroupService";
 import { GroupRepositoryLive } from "./persistence/Layers/GroupRepository";
+import { ComputerActivityGenerationLive } from "./work/Layers/ComputerActivityGeneration";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
 
@@ -64,6 +69,7 @@ export function makeServerRuntimeServicesLayer() {
 
   const runtimeServicesLayer = Layer.mergeAll(
     OrchestrationLayerLive,
+    ComputerServiceLive,
     checkpointStoreLayer,
     checkpointDiffQueryLayer,
     RuntimeReceiptBusLive,
@@ -172,6 +178,10 @@ export function makeServerRuntimeServicesLayer() {
   );
 
   return Layer.mergeAll(
+    ComputerServiceLive,
+    WsConnectionSessionsLive,
+    SocialOAuthResumeReactorLive.pipe(Layer.provideMerge(runtimeServicesLayer)),
+    SocialReportDeliveryReactorLive.pipe(Layer.provideMerge(runtimeServicesLayer)),
     automationServiceLayer,
     serverRegistryLayer,
     groupServiceLayer,
@@ -194,6 +204,7 @@ export function makeServerRuntimeServicesLayer() {
     TerminalLayerLive,
     KeybindingsLive,
     ServerSettingsLive,
+    ComputerActivityGenerationLive.pipe(Layer.provide(ServerSettingsLive)),
     ServerEnvironmentLive,
     ProfileStatsQueryLive,
     authServicesLayer,

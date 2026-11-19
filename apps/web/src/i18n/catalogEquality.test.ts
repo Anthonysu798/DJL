@@ -1,3 +1,5 @@
+import computerReferenceFallback from "./computerReferenceFallback.json";
+import { APP_LOCALE_REVIEW_STATUS } from "@synara/shared/locale";
 import { describe, expect, it } from "vitest";
 import englishCatalog from "./locales/en.json";
 import simplifiedChineseCatalog from "./locales/zh-Hans.json";
@@ -18,6 +20,14 @@ const SECONDARY_CATALOGS = {
 
 // Whole-value product names and technical tokens only. Ordinary UI copy must be translated.
 const ENGLISH_EQUAL_INVARIANTS = new Map<string, string>([
+  ["computer.pID", "PID"],
+  ["computer.localhost", "localhost:"],
+  ["computer.symbol", "“{{label}}”"],
+  ["computer.symbol2", "+{{value0}} {{value1}}"],
+  ["computer.symbol3", "{{value0}}  {{value1}}"],
+  ["computer.pID_computerParameter", "PID"],
+  ["computer.actionPayload", "{{action}} {{payload}}"],
+  ["settings.rrggbb", "#rrggbb"],
   ["chat.panels.names.git", "Git"],
   ["chat.panels.names.side", "Side"],
   ["settings.navigation.groups.djl", "DJL"],
@@ -27,6 +37,7 @@ const ENGLISH_EQUAL_INVARIANTS = new Map<string, string>([
   ["settings.remote.design.phoneDevice", "iPhone"],
   ["settings.servers.form.importKeyPlaceholder", "-----BEGIN OPENSSH PRIVATE KEY-----"],
   ["settings.servers.form.keyPathPlaceholder", "~/.ssh/id_ed25519"],
+  ["shell.pluginLibrary.mcpProvider", "{{plugin}} · MCP"],
 ]);
 
 function collectLeaves(value: unknown, path: readonly string[] = []): Map<string, unknown> {
@@ -130,18 +141,35 @@ describe("secondary locale catalog translations", () => {
       const sharedWords =
         locale === "es-419"
           ? [
+              "computer.actionPayloadTarget",
+              "computer.actionTarget",
               "workspace.agents.error",
               "workspace.agents.shell",
               "workspace.agents.terminalCount_one",
             ]
           : locale === "fr"
             ? [
+                "settings.computerUse.agentSource",
+                "settings.computerUse.events.action",
                 "settings.subscriptions.international",
                 "workspace.agents.shell",
                 "workspace.agents.terminalCount_one",
               ]
             : [];
-      expect(equalPaths).toEqual([...ENGLISH_EQUAL_INVARIANTS.keys(), ...sharedWords].toSorted());
+      // The pinned reference ships English, Chinese and Spanish. The new Computer
+      // messages use explicit English fallbacks in these already-draft locales;
+      // this inventory does not exempt existing DJL copy or approve a locale.
+      const referenceFallback =
+        computerReferenceFallback[locale as keyof typeof computerReferenceFallback] ?? [];
+      if (referenceFallback.length > 0)
+        expect(APP_LOCALE_REVIEW_STATUS[locale as keyof typeof APP_LOCALE_REVIEW_STATUS]).toBe(
+          "draft",
+        );
+      expect(equalPaths).toEqual(
+        [
+          ...new Set([...ENGLISH_EQUAL_INVARIANTS.keys(), ...sharedWords, ...referenceFallback]),
+        ].toSorted(),
+      );
       for (const [path, expectedValue] of ENGLISH_EQUAL_INVARIANTS) {
         expect(englishLeaves.get(path)).toBe(expectedValue);
         expect(secondaryLeaves.get(path)).toBe(expectedValue);

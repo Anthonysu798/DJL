@@ -1,3 +1,4 @@
+import { COMPUTER_WS_METHODS, COMPUTER_WS_CHANNELS, type ComputerEvent } from "@synara/contracts";
 // FILE: wsNativeApi.ts
 // Purpose: NativeApi implementation backed by the browser WebSocket RPC transport.
 // Layer: Web transport adapter
@@ -48,6 +49,7 @@ import { WsTransport } from "./wsTransport";
 import { emitWsTransportState } from "./wsTransportEvents";
 
 let instance: { api: NativeApi; transport: WsTransport } | null = null;
+const computerEventListeners = new Set<(event: ComputerEvent) => void>();
 const welcomeListeners = new Set<(payload: WsWelcomePayload) => void>();
 const serverConfigUpdatedListeners = new Set<(payload: ServerConfigUpdatedPayload) => void>();
 const serverProviderStatusesUpdatedListeners = new Set<
@@ -331,6 +333,9 @@ export function createWsNativeApi(): NativeApi {
   }
 
   const transport = new WsTransport();
+  transport.subscribe(COMPUTER_WS_CHANNELS.event, (event) => {
+    for (const listener of computerEventListeners) listener(event.data);
+  });
   transport.onStateChange((state) => emitWsTransportState(state));
 
   transport.subscribe(WS_CHANNELS.serverWelcome, (message) => {
@@ -529,6 +534,36 @@ export function createWsNativeApi(): NativeApi {
         return showConfirmDialogFallback(message);
       },
     },
+    computer: {
+      request: (input) => {
+        const bridge = window.desktopBridge?.computer;
+        if (!bridge) return Promise.reject(new Error("Desktop Computer Use is unavailable."));
+        return bridge.request(input);
+      },
+      stopAll: async () => {
+        await window.desktopBridge?.computer?.stopAll();
+      },
+      ...(window.desktopBridge?.computer?.onThreadStopped
+        ? { onThreadStopped: window.desktopBridge.computer.onThreadStopped }
+        : {}),
+      getStatus: (input) => transport.request(COMPUTER_WS_METHODS.getStatus, input),
+      getAuditHistory: (input) => transport.request(COMPUTER_WS_METHODS.getAuditHistory, input),
+      getState: (input) => transport.request(COMPUTER_WS_METHODS.getState, input),
+      provision: (input) =>
+        transport.request(COMPUTER_WS_METHODS.provision, input, { timeoutMs: null }),
+      getThreadState: (input) => transport.request(COMPUTER_WS_METHODS.getThreadState, input),
+      setControlEnabled: (input) => transport.request(COMPUTER_WS_METHODS.setControlEnabled, input),
+      inputClick: (input) => transport.request(COMPUTER_WS_METHODS.inputClick, input),
+      inputScroll: (input) => transport.request(COMPUTER_WS_METHODS.inputScroll, input),
+      inputKey: (input) => transport.request(COMPUTER_WS_METHODS.inputKey, input),
+      onEvent: (listener) => {
+        computerEventListeners.add(listener);
+        return () => {
+          computerEventListeners.delete(listener);
+        };
+      },
+    },
+
     terminal: {
       open: (input) => transport.request(WS_METHODS.terminalOpen, input),
       write: (input) => transport.request(WS_METHODS.terminalWrite, input),
@@ -839,6 +874,12 @@ export function createWsNativeApi(): NativeApi {
       listModelProviders: (input) =>
         transport.request(WS_METHODS.openCodeListModelProviders, input, { timeoutMs: 25_000 }),
       setApiKey: (input) => transport.request(WS_METHODS.openCodeSetApiKey, input),
+      saveCustomProvider: (input) =>
+        transport.request(WS_METHODS.openCodeSaveCustomProvider, input),
+      removeCustomProvider: (input) =>
+        transport.request(WS_METHODS.openCodeRemoveCustomProvider, input),
+      fetchCustomModels: (input) => transport.request(WS_METHODS.openCodeFetchCustomModels, input),
+
       removeCredential: (input) => transport.request(WS_METHODS.openCodeRemoveCredential, input),
     },
     orchestration: {
@@ -941,6 +982,7 @@ export function createWsNativeApi(): NativeApi {
         };
       },
     },
+
     browser: {
       open: async (input) => {
         if (window.desktopBridge) {

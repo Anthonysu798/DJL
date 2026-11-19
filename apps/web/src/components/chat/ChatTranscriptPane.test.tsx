@@ -1,3 +1,9 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterContextProvider,
+} from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MessageId, ThreadId } from "@synara/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
@@ -10,6 +16,10 @@ import englishCatalog from "../../i18n/locales/en.json";
 import { ChatTranscriptPane } from "./ChatTranscriptPane";
 
 let testI18n: i18n;
+const testRouter = createRouter({
+  routeTree: createRootRoute(),
+  history: createMemoryHistory({ initialEntries: ["/"] }),
+});
 
 beforeAll(async () => {
   testI18n = createInstance();
@@ -20,50 +30,52 @@ function renderTranscriptPaneMarkup(
   props: Partial<ComponentProps<typeof ChatTranscriptPane>> = {},
 ) {
   return renderToStaticMarkup(
-    <QueryClientProvider client={new QueryClient()}>
-      <I18nextProvider i18n={testI18n}>
-        <ChatTranscriptPane
-          activeThreadId="thread-1"
-          activeTurnId={null}
-          activeTurnInProgress={false}
-          activeTurnStartedAt={null}
-          chatFontSizePx={14}
-          emptyStateProjectName={undefined}
-          hasMessages
-          isRevertingCheckpoint={false}
-          isWorking={false}
-          worktreeSetup={null}
-          followLiveOutput={false}
-          listRef={createRef<LegendListRef | null>()}
-          markdownCwd={undefined}
-          onExpandTimelineImage={() => {}}
-          onIsAtEndChange={() => {}}
-          onMessagesClickCapture={() => {}}
-          onMessagesMouseUp={() => {}}
-          onMessagesPointerCancel={() => {}}
-          onMessagesPointerDown={() => {}}
-          onMessagesPointerUp={() => {}}
-          onMessagesScroll={() => {}}
-          onMessagesTouchEnd={() => {}}
-          onMessagesTouchMove={() => {}}
-          onMessagesTouchStart={() => {}}
-          onMessagesWheel={() => {}}
-          onOpenTurnDiff={() => {}}
-          onOpenThread={(_threadId: ThreadId) => {}}
-          onRevertUserMessage={(_messageId: MessageId) => {}}
-          onScrollToBottom={() => {}}
-          resolvedTheme="light"
-          revertTurnCountByUserMessageId={new Map()}
-          scrollButtonVisible
-          terminalWorkspaceTerminalTabActive={false}
-          timelineEntries={[]}
-          timestampFormat="locale"
-          turnDiffSummaryByAssistantMessageId={new Map()}
-          workspaceRoot={undefined}
-          {...props}
-        />
-      </I18nextProvider>
-    </QueryClientProvider>,
+    <RouterContextProvider router={testRouter}>
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nextProvider i18n={testI18n}>
+          <ChatTranscriptPane
+            activeThreadId="thread-1"
+            activeTurnId={null}
+            activeTurnInProgress={false}
+            activeTurnStartedAt={null}
+            chatFontSizePx={14}
+            emptyStateProjectName={undefined}
+            hasMessages
+            isRevertingCheckpoint={false}
+            isWorking={false}
+            worktreeSetup={null}
+            followLiveOutput={false}
+            listRef={createRef<LegendListRef | null>()}
+            markdownCwd={undefined}
+            onExpandTimelineImage={() => {}}
+            onIsAtEndChange={() => {}}
+            onMessagesClickCapture={() => {}}
+            onMessagesMouseUp={() => {}}
+            onMessagesPointerCancel={() => {}}
+            onMessagesPointerDown={() => {}}
+            onMessagesPointerUp={() => {}}
+            onMessagesScroll={() => {}}
+            onMessagesTouchEnd={() => {}}
+            onMessagesTouchMove={() => {}}
+            onMessagesTouchStart={() => {}}
+            onMessagesWheel={() => {}}
+            onOpenTurnDiff={() => {}}
+            onOpenThread={(_threadId: ThreadId) => {}}
+            onRevertUserMessage={(_messageId: MessageId) => {}}
+            onScrollToBottom={() => {}}
+            resolvedTheme="light"
+            revertTurnCountByUserMessageId={new Map()}
+            scrollButtonVisible
+            terminalWorkspaceTerminalTabActive={false}
+            timelineEntries={[]}
+            timestampFormat="locale"
+            turnDiffSummaryByAssistantMessageId={new Map()}
+            workspaceRoot={undefined}
+            {...props}
+          />
+        </I18nextProvider>
+      </QueryClientProvider>
+    </RouterContextProvider>,
   );
 }
 

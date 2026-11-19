@@ -1,3 +1,4 @@
+import { AsyncUserInput } from "./asyncUserInput";
 import { Option, Schema, SchemaIssue, Struct } from "effect";
 import { HarnessId } from "./harnessAccounts";
 import {
@@ -341,6 +342,14 @@ export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 export const ProviderInteractionMode = Schema.Literals(["default", "plan"]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;
 export const DEFAULT_PROVIDER_INTERACTION_MODE: ProviderInteractionMode = "default";
+export const ComputerControlMode = Schema.Literals(["off", "request", "chat"]);
+export type ComputerControlMode = typeof ComputerControlMode.Type;
+export const ComputerTurnControl = Schema.Struct({
+  mode: ComputerControlMode,
+  generation: NonNegativeInt,
+  explicitInvocation: Schema.Boolean,
+});
+export type ComputerTurnControl = typeof ComputerTurnControl.Type;
 const SidechatSourceThreadId = Schema.optional(Schema.NullOr(ThreadId)).pipe(
   Schema.withDecodingDefault(() => null),
 );
@@ -354,7 +363,7 @@ export type TurnDispatchMode = typeof TurnDispatchMode.Type;
 export const DEFAULT_TURN_DISPATCH_MODE: TurnDispatchMode = "queue";
 // Marks who dispatched a user turn: a person typing, or an automation run.
 // Absent is treated as "user"; only automation-dispatched turns carry the flag.
-export const MessageDispatchOrigin = Schema.Literals(["user", "automation"]);
+export const MessageDispatchOrigin = Schema.Literals(["user", "automation", "agent"]);
 export type MessageDispatchOrigin = typeof MessageDispatchOrigin.Type;
 export const ProviderReviewTarget = Schema.Union([
   Schema.Struct({
@@ -388,6 +397,7 @@ export const OrchestrationMessageSource = Schema.Literals([
   "native",
   "handoff-import",
   "fork-import",
+  "async-user-input",
 ]);
 export type OrchestrationMessageSource = typeof OrchestrationMessageSource.Type;
 
@@ -619,6 +629,7 @@ export const OrchestrationMessage = Schema.Struct({
   id: MessageId,
   role: OrchestrationMessageRole,
   text: Schema.String,
+  asyncUserInput: Schema.optional(AsyncUserInput),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
@@ -1262,6 +1273,8 @@ export const ThreadTurnStartCommand = Schema.Struct({
   type: Schema.Literal("thread.turn.start"),
   commandId: CommandId,
   threadId: ThreadId,
+  enableComputerControl: Schema.optional(Schema.Boolean),
+  computerControl: Schema.optional(ComputerTurnControl),
   message: Schema.Struct({
     messageId: MessageId,
     role: Schema.Literal("user"),
@@ -1293,6 +1306,7 @@ const ClientThreadTurnStartCommand = Schema.Struct({
   type: Schema.Literal("thread.turn.start"),
   commandId: CommandId,
   threadId: ThreadId,
+  enableComputerControl: Schema.optional(Schema.Boolean),
   message: Schema.Struct({
     messageId: MessageId,
     role: Schema.Literal("user"),
@@ -1327,6 +1341,8 @@ const ThreadDispatchQueuedTurnCommand = Schema.Struct({
   type: Schema.Literal("thread.turn.dispatch-queued"),
   commandId: CommandId,
   threadId: ThreadId,
+  enableComputerControl: Schema.optional(Schema.Boolean),
+  computerControl: Schema.optional(ComputerTurnControl),
   messageId: MessageId,
   modelSelection: Schema.optional(NewTaskModelSelection),
   providerOptions: Schema.optional(NewTaskProviderStartOptions),
@@ -1839,6 +1855,8 @@ export const ThreadMessageSentPayload = Schema.Struct({
 
 export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
+  enableComputerControl: Schema.optional(Schema.Boolean),
+  computerControl: Schema.optional(ComputerTurnControl),
   messageId: MessageId,
   memoryContext: Schema.optional(MemoryContextRequest),
   modelSelection: Schema.optional(ModelSelection),

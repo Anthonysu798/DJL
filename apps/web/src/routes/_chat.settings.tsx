@@ -1,3 +1,8 @@
+import { ComputerSettingsPanel } from "../components/settings/ComputerSettingsPanel";
+import { useHistorySuggestionDraft } from "../hooks/useHistorySuggestionDraft";
+import { rendererI18n } from "../i18n";
+import { ComputerUseSettingsPanel } from "../components/settings/ComputerUseSettingsPanel";
+import type { ComputerUseRequest, ComputerUseResponse } from "@synara/contracts";
 // FILE: _chat.settings.tsx
 // Purpose: Render the dedicated settings experience with its own section sidebar and grouped panels.
 // Layer: Route screen
@@ -365,6 +370,7 @@ function SettingsRouteView() {
 
   const { isDefaultActiveTheme, resetAllThemes, resolvedTheme, theme, setTheme } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
+  const historySuggestionDraft = useHistorySuggestionDraft();
   // oxlint-disable-next-line oxc/no-map-spread -- Copy entries to preserve immutable source snapshots.
   const themeOptions = THEME_OPTIONS.map((option) => ({
     ...option,
@@ -2412,6 +2418,26 @@ function SettingsRouteView() {
         return renderGeneralPanel();
       case "appearance":
         return renderAppearancePanel();
+      case "computer":
+        return (
+          <div className="space-y-8">
+            {window.desktopBridge?.computer?.engine !== "legacy" ? (
+              <ComputerSettingsPanel
+                settings={settings}
+                defaults={defaults}
+                updateSettings={updateSettings}
+                active
+              />
+            ) : null}
+            <ComputerUseSettingsPanel
+              historyOnly={window.desktopBridge?.computer?.engine === "cua"}
+              suggestionDraft={historySuggestionDraft}
+              request={requestDesktopComputer}
+              subscribe={subscribeDesktopComputer}
+              stopAll={stopDesktopComputer}
+            />
+          </div>
+        );
       case "notifications":
         return renderNotificationsPanel();
       case "remote":
@@ -2545,6 +2571,27 @@ function SettingsRouteView() {
       </RouteInsetSurface>
     </div>
   );
+}
+
+async function requestDesktopComputer(request: ComputerUseRequest): Promise<ComputerUseResponse> {
+  const bridge = window.desktopBridge?.computer;
+  return bridge
+    ? bridge.request({ threadId: "desktop:settings", request })
+    : {
+        method: request.method,
+        error: {
+          code: "unsupported",
+          message: rendererI18n.t("computerUse.unsupported", { ns: "settings" }),
+        },
+      };
+}
+function subscribeDesktopComputer(listener: () => void): () => void {
+  return window.desktopBridge?.computer?.onEvent(listener) ?? (() => {});
+}
+async function stopDesktopComputer(): Promise<void> {
+  await requestDesktopComputer({ method: "stop" }).then((response) => {
+    if ("error" in response) throw new Error(response.error.message);
+  });
 }
 
 export const Route = createFileRoute("/_chat/settings")({

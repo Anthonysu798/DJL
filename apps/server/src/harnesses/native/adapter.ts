@@ -123,7 +123,7 @@ export const makeNativeAdapter = (
             detail: cause instanceof Error ? cause.message : "Native runtime operation failed",
           }),
       });
-    const beginTurn = (state: SessionState, input: ProviderSendTurnInput) => {
+    const validateTurn = (input: ProviderSendTurnInput) => {
       if (!input.input?.trim()) throw new Error("A text prompt is required");
       // Groups pass attachment paths and skills to members as text; other bridges cannot.
       const acceptsFiles = provider === "group";
@@ -137,6 +137,9 @@ export const makeNativeAdapter = (
         throw new Error("Model provider does not match runtime");
       if (input.interactionMode === "plan" && provider === "codex")
         throw new Error("Native Codex plan mode is not implemented");
+    };
+    const beginTurn = (state: SessionState, input: ProviderSendTurnInput) => {
+      validateTurn(input);
       const turnId = TurnId.makeUnsafe(randomUUID());
       state.completed = false;
       state.session = {
@@ -198,7 +201,7 @@ export const makeNativeAdapter = (
         supportsNativeSlashCommandDiscovery: false,
         supportsPluginMentions: false,
         supportsPluginDiscovery: false,
-        supportsTurnSteering: provider === "group",
+        supportsTurnSteering: provider === "group" || provider === "codex",
         supportsLiveTurnDiffPatch: false,
       },
       startSession: (input) =>
@@ -351,21 +354,53 @@ export const makeNativeAdapter = (
           if (state.session.activeTurnId) throw new Error("A native turn is already running");
           return beginTurn(state, input);
         }),
-      steerTurn: (input) =>
-        attempt("steerTurn", async () => {
-          const state = requireSession(input.threadId);
-          if (!state.driver!.steer) throw new Error(`The native ${provider} bridge cannot steer`);
-          const turnId = state.session.activeTurnId;
-          if (turnId) {
-            if (!input.input?.trim()) throw new Error("A text prompt is required");
-            if (await state.driver!.steer(input))
-              return { threadId: input.threadId, turnId, resumeCursor: state.session.resumeCursor };
-            // The running turn was finishing; start the message as the next turn.
-            await settled(state, turnId);
-            if (state.session.activeTurnId) throw new Error("A native turn is already running");
+      // A group round takes a new message at any time; a steer with no round running starts one.
+      ...(provider === "group"
+        ? {
+            steerTurn: (input: ProviderSendTurnInput) =>
+              attempt("steerTurn", async () => {
+                const state = requireSession(input.threadId);
+                if (!state.driver!.steer)
+                  throw new Error(`The native ${provider} bridge cannot steer`);
+                const turnId = state.session.activeTurnId;
+                if (turnId) {
+                  if (!input.input?.trim()) throw new Error("A text prompt is required");
+                  if ((await state.driver!.steer(input)) !== false)
+                    return {
+                      threadId: input.threadId,
+                      turnId,
+                      resumeCursor: state.session.resumeCursor,
+                    };
+                  // The running turn was finishing; start the message as the next turn.
+                  await settled(state, turnId);
+                  if (state.session.activeTurnId)
+                    throw new Error("A native turn is already running");
+                }
+                return beginTurn(state, input);
+              }),
           }
-          return beginTurn(state, input);
-        }),
+        : {}),
+      // Codex steers only a turn that is still running.
+      ...(provider === "codex"
+        ? {
+            steerTurn: (input: ProviderSendTurnInput) =>
+              attempt("steerTurn", async () => {
+                const state = requireSession(input.threadId);
+                const turnId = state.session.activeTurnId;
+                if (!turnId || state.completed)
+                  throw new Error("No active native turn available to steer");
+                validateTurn(input);
+                if (!state.driver?.steer)
+                  throw new Error("The native driver does not support steering");
+                await state.driver.steer(input);
+                return {
+                  threadId: input.threadId,
+                  turnId,
+                  resumeCursor: state.session.resumeCursor,
+                };
+              }),
+          }
+        : {}),
       interruptTurn: (threadId) =>
         attempt("interruptTurn", async () => {
           const state = requireSession(threadId);

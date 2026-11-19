@@ -42,6 +42,7 @@ import {
   type OrchestrationEngineShape,
 } from "../Services/OrchestrationEngine.ts";
 import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
+import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import { ServerConfig } from "../../config.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 
@@ -142,7 +143,7 @@ type ProviderRuntimeTestCheckpoint = ProviderRuntimeTestThread["checkpoints"][nu
 
 describe("ProviderRuntimeIngestion", () => {
   let runtime: ManagedRuntime.ManagedRuntime<
-    OrchestrationEngineService | ProviderRuntimeIngestionService,
+    OrchestrationEngineService | ProviderRuntimeIngestionService | ProjectionSnapshotQuery,
     unknown
   > | null = null;
   let scope: Scope.Closeable | null = null;
@@ -189,6 +190,7 @@ describe("ProviderRuntimeIngestion", () => {
     runtime = ManagedRuntime.make(layer);
     const engine = await runtime.runPromise(Effect.service(OrchestrationEngineService));
     const ingestion = await runtime.runPromise(Effect.service(ProviderRuntimeIngestionService));
+    const snapshotQuery = await runtime.runPromise(Effect.service(ProjectionSnapshotQuery));
     scope = await Effect.runPromise(Scope.make("sequential"));
     await Effect.runPromise(ingestion.start.pipe(Scope.provide(scope)));
     const drain = () => Effect.runPromise(ingestion.drain);
@@ -254,6 +256,7 @@ describe("ProviderRuntimeIngestion", () => {
 
     return {
       engine,
+      snapshotQuery,
       emit: provider.emit,
       setProviderSession: provider.setSession,
       drain,
@@ -301,6 +304,43 @@ describe("ProviderRuntimeIngestion", () => {
     expect(thread.session?.status).toBe("error");
     expect(thread.session?.lastError).toBe("turn failed");
   });
+
+  it.each(["interrupted", "cancelled"] as const)(
+    "preserves %s completion as an interrupted turn",
+    async (state) => {
+      const harness = await createHarness();
+      const turnId = asTurnId(`turn-${state}-completion`);
+      harness.emit({
+        type: "turn.started",
+        eventId: asEventId(`evt-${state}-start`),
+        provider: "codex",
+        threadId: asThreadId("thread-1"),
+        createdAt: new Date().toISOString(),
+        turnId,
+      });
+      await waitForThread(harness.engine, (thread) => thread.session?.activeTurnId === turnId);
+      harness.emit({
+        type: "turn.completed",
+        eventId: asEventId(`evt-${state}-completion`),
+        provider: "codex",
+        threadId: asThreadId("thread-1"),
+        createdAt: new Date().toISOString(),
+        turnId,
+        payload: { state },
+      });
+      const thread = await waitForThread(
+        harness.engine,
+        (entry) => entry.session?.activeTurnId === null,
+      );
+      expect(thread.session?.status).toBe("interrupted");
+      await harness.drain();
+      const snapshot = await Effect.runPromise(harness.snapshotQuery.getSnapshot());
+      expect(snapshot.threads.find((entry) => entry.id === "thread-1")?.latestTurn).toMatchObject({
+        turnId,
+        state: "interrupted",
+      });
+    },
+  );
 
   it("applies provider session.state.changed transitions directly", async () => {
     const harness = await createHarness();

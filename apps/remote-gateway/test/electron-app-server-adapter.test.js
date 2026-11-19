@@ -160,6 +160,321 @@ test("Electron adapter extracts only visible input text", () => {
   assert.equal(extractInputText([{ type: "image" }]), "");
 });
 
+test("reopened Electron history keeps completed reasoning before its assistant answer", () => {
+  const detail = "Public calculation summary 🌙\nChecked remainders.";
+  const thread = {
+    ...snapshot.threads[0],
+    activities: [
+      {
+        id: "canonical-reasoning",
+        turnId: "turn-1",
+        tone: "tool",
+        kind: "task.progress",
+        summary: "Reasoning trace",
+        createdAt: "2026-07-19T12:00:01.000Z",
+        payload: { status: "completed", detail, data: { toolCallId: "reasoning-1" } },
+      },
+    ],
+  };
+  const turns = appServerTurns(thread);
+  assert.deepEqual(
+    turns[0].items.map((item) => item.type),
+    ["userMessage", "reasoning", "agentMessage"],
+  );
+  assert.deepEqual(turns[0].items[1], {
+    id: "reasoning-1",
+    type: "reasoning",
+    summary: [detail],
+    content: [],
+    createdAt: "2026-07-19T12:00:01.000Z",
+  });
+});
+
+test("interrupted reasoning-only turns keep their summary without inventing an assistant", () => {
+  const thread = {
+    ...snapshot.threads[0],
+    messages: [],
+    latestTurn: { turnId: "turn-1", state: "interrupted" },
+    activities: [
+      {
+        id: "canonical-reasoning",
+        turnId: "turn-1",
+        tone: "tool",
+        kind: "task.progress",
+        summary: "Reasoning trace",
+        createdAt: "2026-07-19T12:00:01.000Z",
+        payload: {
+          status: "completed",
+          detail: "Public partial summary",
+          data: { toolCallId: "reasoning-1" },
+        },
+      },
+    ],
+  };
+  const turns = appServerTurns(thread);
+  assert.equal(turns[0].status, "interrupted");
+  assert.deepEqual(
+    turns[0].items.map((item) => item.type),
+    ["reasoning"],
+  );
+  assert.deepEqual(turns[0].items[0].summary, ["Public partial summary"]);
+});
+
+function toolHistoryActivity(id, kind, itemType, data, second, turnId = "turn-1") {
+  return {
+    id,
+    turnId,
+    tone: "tool",
+    kind,
+    createdAt: `2026-07-19T12:00:01.${second}00Z`,
+    payload: { itemType, status: kind === "tool.started" ? "inProgress" : "completed", data },
+  };
+}
+
+test("reopened command history merges its lifecycle into one ordered card", () => {
+  const activities = [
+    toolHistoryActivity(
+      "start",
+      "tool.started",
+      "command_execution",
+      { toolCallId: "cmd", command: "printf QA" },
+      0,
+    ),
+    toolHistoryActivity(
+      "done",
+      "tool.completed",
+      "command_execution",
+      { toolCallId: "cmd", output: "QA", exitCode: 0 },
+      1,
+    ),
+  ];
+  const turns = appServerTurns({ ...snapshot.threads[0], activities });
+  assert.deepEqual(
+    turns[0].items.map((item) => item.type),
+    ["userMessage", "commandExecution", "agentMessage"],
+  );
+  assert.deepEqual(turns[0].items[1], {
+    id: "cmd",
+    type: "commandExecution",
+    status: "completed",
+    command: "printf QA",
+    aggregatedOutput: "QA",
+    exitCode: 0,
+    createdAt: activities[0].createdAt,
+  });
+});
+
+test("reopened history retains patch and generic tool results", () => {
+  const activities = [
+    toolHistoryActivity(
+      "patch",
+      "tool.completed",
+      "file_change",
+      { toolCallId: "edit", path: "a.txt", unifiedDiff: "@@ -1 +1 @@\n-a\n+b" },
+      0,
+    ),
+    {
+      ...toolHistoryActivity(
+        "dynamic",
+        "tool.completed",
+        "dynamic_tool_call",
+        { toolCallId: "lookup" },
+        1,
+      ),
+      payload: {
+        itemType: "dynamic_tool_call",
+        title: "Read QA resource",
+        detail: "Public result",
+        status: "completed",
+        data: { toolCallId: "lookup" },
+      },
+    },
+  ];
+  const items = appServerTurns({ ...snapshot.threads[0], activities })[0].items;
+  assert.deepEqual(
+    items.map((item) => item.type),
+    ["userMessage", "fileChange", "toolCall", "agentMessage"],
+  );
+  assert.deepEqual(items[1].changes, [
+    { path: "a.txt", kind: "update", diff: "@@ -1 +1 @@\n-a\n+b" },
+  ]);
+  assert.equal(items[2].name, "Read QA resource");
+  assert.equal(items[2].output, "Public result");
+});
+
+test("interrupted tool-only turns retain their last known lifecycle state", () => {
+  const activities = [
+    toolHistoryActivity(
+      "start",
+      "tool.started",
+      "command_execution",
+      { toolCallId: "cmd", command: "read-only QA" },
+      0,
+    ),
+  ];
+  const turns = appServerTurns({
+    ...snapshot.threads[0],
+    messages: [],
+    activities,
+    latestTurn: { turnId: "turn-1", state: "interrupted" },
+  });
+  assert.equal(turns[0].status, "interrupted");
+  assert.equal(turns[0].items.length, 1);
+  assert.equal(turns[0].items[0].status, "inProgress");
+  assert.equal(turns[0].items[0].command, "read-only QA");
+});
+
+test("history tool identity is scoped to its turn and ignores unrelated activities", () => {
+  const first = toolHistoryActivity(
+    "one",
+    "tool.completed",
+    "command_execution",
+    { toolCallId: "reused", command: "first", output: "one" },
+    0,
+  );
+  const second = toolHistoryActivity(
+    "two",
+    "tool.completed",
+    "command_execution",
+    { toolCallId: "reused", command: "second", output: "two" },
+    1,
+    "turn-2",
+  );
+  const activities = [
+    first,
+    second,
+    { ...first, id: "unowned", turnId: null },
+    { ...first, id: "info", tone: "info" },
+    { ...first, id: "unrelated", kind: "task.progress" },
+  ];
+  const turns = appServerTurns({
+    ...snapshot.threads[0],
+    messages: [],
+    activities,
+    latestTurn: null,
+  });
+  assert.deepEqual(
+    turns.map((turn) => [turn.id, turn.items.map((item) => item.command)]),
+    [
+      ["turn-1", ["first"]],
+      ["turn-2", ["second"]],
+    ],
+  );
+});
+
+for (const status of ["completed", "failed"]) {
+  test(`native MCP ${status} history keeps one card with its structured result`, () => {
+    const data = {
+      id: "native-mcp-1",
+      type: "mcpToolCall",
+      server: "qa",
+      tool: "inspect",
+      arguments: { fixture: "public" },
+    };
+    const result = { content: [{ type: "text", text: "Public QA result" }] };
+    const error = { message: "Public QA failure" };
+    const started = toolHistoryActivity("start", "tool.started", "mcp_tool_call", data, 0);
+    const done = toolHistoryActivity(
+      "done",
+      "tool.completed",
+      "mcp_tool_call",
+      {
+        ...data,
+        result: status === "completed" ? result : null,
+        error: status === "failed" ? error : null,
+        durationMs: 12,
+        privateBoundary: "omit-me",
+      },
+      1,
+    );
+    done.payload.status = status;
+    const items = appServerTurns({ ...snapshot.threads[0], activities: [started, done] })[0].items;
+    assert.deepEqual(
+      items.map((item) => item.type),
+      ["userMessage", "mcpToolCall", "agentMessage"],
+    );
+    assert.deepEqual(items[1], {
+      id: "native-mcp-1",
+      type: "mcpToolCall",
+      status,
+      server: "qa",
+      tool: "inspect",
+      arguments: { fixture: "public" },
+      durationMs: 12,
+      ...(status === "completed" ? { result } : { error }),
+      createdAt: started.createdAt,
+    });
+  });
+}
+
+test("failed initialization retains its real turn and provider error beside an unlinked user message", () => {
+  const turns = appServerTurns({
+    messages: [
+      {
+        id: "pending-message",
+        role: "user",
+        turnId: null,
+        text: "Public QA request",
+        createdAt: "2026-11-17T10:00:00.000Z",
+      },
+    ],
+    latestTurn: { turnId: "failed-turn", state: "error", requestedAt: "2026-11-17T10:00:00.000Z" },
+    session: {
+      activeTurnId: null,
+      lastError: "This chat uses openai, but your current provider is custom.",
+    },
+    activities: [],
+  });
+  assert.equal(
+    turns.filter((turn) => turn.items.some((item) => item.type === "userMessage")).length,
+    1,
+  );
+  assert.deepEqual(
+    turns.find((turn) => turn.id === "failed-turn"),
+    {
+      id: "failed-turn",
+      status: "failed",
+      createdAt: "2026-11-17T10:00:00.000Z",
+      items: [],
+      error: { message: "This chat uses openai, but your current provider is custom." },
+    },
+  );
+});
+
+test("terminal activities preserve old failures when the latest turn succeeds", () => {
+  const turns = appServerTurns({
+    messages: [
+      {
+        id: "old",
+        role: "assistant",
+        turnId: "failed-turn",
+        text: "Partial",
+        createdAt: "2026-11-17T10:00:00.000Z",
+      },
+      {
+        id: "new",
+        role: "assistant",
+        turnId: "finished-turn",
+        text: "Complete",
+        createdAt: "2026-11-17T10:01:00.000Z",
+      },
+    ],
+    latestTurn: { turnId: "finished-turn", state: "completed" },
+    session: { activeTurnId: null, lastError: null },
+    activities: [
+      {
+        kind: "turn.completed",
+        turnId: "failed-turn",
+        payload: { state: "failed", errorMessage: "Provider failed" },
+      },
+    ],
+  });
+  assert.equal(turns[0].status, "failed");
+  assert.deepEqual(turns[0].error, { message: "Provider failed" });
+  assert.equal(turns[1].status, "completed");
+  assert.equal(turns[1].error, undefined);
+});
+
 test("Electron adapter sends mutation commands as the direct Electron RPC payload", async () => {
   const requests = [];
   const backend = {

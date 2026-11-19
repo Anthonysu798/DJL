@@ -1,7 +1,7 @@
 // FILE: OpenCodeModelsSettingsPanel.tsx
 // Purpose: Manage shared OpenCode provider credentials and the authenticated model catalog.
 
-import type { OpenCodeModelProviderConnection } from "@synara/contracts";
+import type { CustomModelProvider, OpenCodeModelProviderConnection } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,6 +30,7 @@ import {
   SETTINGS_INSET_LIST_CLASS_NAME,
 } from "~/settingsPanelStyles";
 import { SettingsSection, SettingsSelectPopup } from "./SettingsPanelPrimitives";
+import { CustomModelProviderDialog } from "./CustomModelProviderDialog";
 
 export function modelProviderStatusText(
   providerCount: number,
@@ -85,8 +86,40 @@ function ProviderCredentialRow(props: {
   onSave: () => void;
   onDisconnect: () => void;
   onTest: () => void;
+  onEditCustom: () => void;
+  onRemoveCustom: () => void;
 }) {
   const { t } = useTranslation(["settings", "common"]);
+  if (props.provider.custom)
+    return (
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>{props.provider.name}</span>
+            <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {t("models.custom.badge")}
+            </span>
+          </div>
+          <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+            {props.provider.custom.baseUrl}
+          </p>
+          <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
+            {t("models.modelCount", { count: props.provider.modelCount })}
+          </p>
+        </div>
+        <Button size="sm" variant="outline" disabled={props.busy} onClick={props.onEditCustom}>
+          {t("models.custom.edit")}
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive-outline"
+          disabled={props.busy}
+          onClick={props.onRemoveCustom}
+        >
+          {t("models.custom.remove")}
+        </Button>
+      </div>
+    );
   return (
     <div>
       <div className="flex min-h-12 items-center gap-3 px-4 py-2.5">
@@ -205,6 +238,9 @@ export function OpenCodeModelsSettingsPanel(props: {
   const { settings, updateSettings } = useAppSettings();
   const [openProviderIds, setOpenProviderIds] = useState<ReadonlySet<string>>(() => new Set());
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [customDialog, setCustomDialog] = useState<{ definition?: CustomModelProvider } | null>(
+    null,
+  );
   const providerAccessRef = useRef<HTMLDivElement | null>(null);
   const connectionsQuery = useQuery(openCodeModelProvidersQueryOptions(cwd));
   const connectedCount = connectionsQuery.data?.configuredProviderCount ?? 0;
@@ -277,6 +313,18 @@ export function OpenCodeModelsSettingsPanel(props: {
     },
   });
 
+  const removeCustomMutation = useMutation({
+    mutationFn: (providerId: string) =>
+      ensureNativeApi().provider.removeCustomProvider({ providerId }),
+    onSuccess: () => refreshCatalog(),
+    onError: (error) =>
+      toastManager.add({
+        type: "error",
+        title: t("models.custom.removeFailed"),
+        description: error instanceof Error ? error.message : undefined,
+      }),
+  });
+
   const modelsByProvider = useMemo(() => {
     const result = new Map<string, Array<{ slug: string; name: string }>>();
     for (const model of models) {
@@ -327,52 +375,67 @@ export function OpenCodeModelsSettingsPanel(props: {
                   )}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={connectionsQuery.isFetching}
-                onClick={() => void refreshCatalog()}
-              >
-                {t("actions.refresh", { ns: "common" })}
-              </Button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button size="sm" onClick={() => setCustomDialog({})}>
+                  {t("models.custom.add")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={connectionsQuery.isFetching}
+                  onClick={() => void refreshCatalog()}
+                >
+                  {t("actions.refresh", { ns: "common" })}
+                </Button>
+              </div>
             </div>
           </div>
-          {(connectionsQuery.data?.providers ?? []).map((provider) => (
-            <ProviderCredentialRow
-              key={provider.id}
-              provider={provider}
-              models={modelsByProvider.get(provider.id) ?? []}
-              apiKey={apiKeys[provider.id] ?? ""}
-              open={openProviderIds.has(provider.id)}
-              busy={setKeyMutation.isPending || removeMutation.isPending}
-              onApiKeyChange={(value) =>
-                setApiKeys((current) => ({ ...current, [provider.id]: value }))
-              }
-              onToggle={() =>
-                setOpenProviderIds((current) => {
-                  const next = new Set(current);
-                  if (next.has(provider.id)) next.delete(provider.id);
-                  else next.add(provider.id);
-                  return next;
-                })
-              }
-              onSave={() =>
-                setKeyMutation.mutate({
-                  providerId: provider.id,
-                  apiKey: apiKeys[provider.id] ?? "",
-                })
-              }
-              onDisconnect={() => removeMutation.mutate(provider.id)}
-              onTest={() => {
-                void refreshCatalog().then(() =>
-                  toastManager.add({
-                    type: "success",
-                    title: t("models.toasts.connectionRefreshed", { provider: provider.name }),
-                  }),
-                );
-              }}
-            />
-          ))}
+          {(connectionsQuery.data?.providers ?? [])
+            .toSorted((left, right) => Number(Boolean(right.custom)) - Number(Boolean(left.custom)))
+            .map((provider) => (
+              <ProviderCredentialRow
+                key={provider.id}
+                provider={provider}
+                models={modelsByProvider.get(provider.id) ?? []}
+                apiKey={apiKeys[provider.id] ?? ""}
+                open={openProviderIds.has(provider.id)}
+                busy={
+                  setKeyMutation.isPending ||
+                  removeMutation.isPending ||
+                  removeCustomMutation.isPending
+                }
+                onEditCustom={() => {
+                  if (provider.custom) setCustomDialog({ definition: provider.custom });
+                }}
+                onRemoveCustom={() => removeCustomMutation.mutate(provider.id)}
+                onApiKeyChange={(value) =>
+                  setApiKeys((current) => ({ ...current, [provider.id]: value }))
+                }
+                onToggle={() =>
+                  setOpenProviderIds((current) => {
+                    const next = new Set(current);
+                    if (next.has(provider.id)) next.delete(provider.id);
+                    else next.add(provider.id);
+                    return next;
+                  })
+                }
+                onSave={() =>
+                  setKeyMutation.mutate({
+                    providerId: provider.id,
+                    apiKey: apiKeys[provider.id] ?? "",
+                  })
+                }
+                onDisconnect={() => removeMutation.mutate(provider.id)}
+                onTest={() => {
+                  void refreshCatalog().then(() =>
+                    toastManager.add({
+                      type: "success",
+                      title: t("models.toasts.connectionRefreshed", { provider: provider.name }),
+                    }),
+                  );
+                }}
+              />
+            ))}
           {connectionsQuery.isError ? (
             <SettingsLoadError
               summary={t("models.runtimeUnavailable")}
@@ -387,6 +450,17 @@ export function OpenCodeModelsSettingsPanel(props: {
         </SettingsSection>
       </div>
 
+      {customDialog ? (
+        <CustomModelProviderDialog
+          key={customDialog.definition?.providerId ?? "new-custom-api"}
+          open
+          {...(customDialog.definition ? { definition: customDialog.definition } : {})}
+          onOpenChange={(open) => {
+            if (!open) setCustomDialog(null);
+          }}
+          onSaved={refreshCatalog}
+        />
+      ) : null}
       <SettingsSection title={t("models.generationDefaultsTitle")}>
         <div className="flex flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -12,7 +12,8 @@
     "test:vps": "bun run build && DJL_RUN_VPS_TESTS=1 vitest run vps/relay.test.mjs"
   },
   "dependencies": {
-    "@synara/remote-protocol": "workspace:*"
+    "@synara/remote-protocol": "workspace:*",
+    "@synara/shared": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260718.1",

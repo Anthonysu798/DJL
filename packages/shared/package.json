@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./fcm": {
+      "types": "./src/fcm.ts",
+      "import": "./src/fcm.ts"
+    },
     "./openCodeCompatibility": {
       "types": "./src/openCodeCompatibility.ts",
       "import": "./src/openCodeCompatibility.ts"
@@ -195,7 +199,53 @@
     "./orchestrationThreadEvents": {
       "types": "./src/orchestrationThreadEvents.ts",
       "import": "./src/orchestrationThreadEvents.ts"
-    }
+    },
+    "./computerInvocation": {
+      "types": "./src/computerInvocation.ts",
+      "import": "./src/computerInvocation.ts"
+    },
+    "./cuaDriverProtocol": {
+      "types": "./src/cuaDriverProtocol.ts",
+      "import": "./src/cuaDriverProtocol.ts"
+    },
+    "./cuaActionDiagnostics": {
+      "types": "./src/cuaActionDiagnostics.ts",
+      "import": "./src/cuaActionDiagnostics.ts"
+    },
+    "./appSnapShortcut": {
+      "types": "./src/appSnapShortcut.ts",
+      "import": "./src/appSnapShortcut.ts"
+    },
+    "./byteAccumulator": {
+      "types": "./src/byteAccumulator.ts",
+      "import": "./src/byteAccumulator.ts"
+    },
+    "./computerFrame": {
+      "types": "./src/computerFrame.ts",
+      "import": "./src/computerFrame.ts"
+    },
+    "./computerGrants": {
+      "types": "./src/computerGrants.ts",
+      "import": "./src/computerGrants.ts"
+    },
+    "./desktopOperationQueue": {
+      "types": "./src/desktopOperationQueue.ts",
+      "import": "./src/desktopOperationQueue.ts"
+    },
+    "./frameTransport": {
+      "types": "./src/frameTransport.ts",
+      "import": "./src/frameTransport.ts"
+    },
+    "./modelImageBudget": {
+      "types": "./src/modelImageBudget.ts",
+      "import": "./src/modelImageBudget.ts"
+    },
+    "./uiTreeTargeting": {
+      "types": "./src/uiTreeTargeting.ts",
+      "import": "./src/uiTreeTargeting.ts"
+    },
+    "./desktopComputerBuild": "./src/desktopComputerBuild.ts",
+    "./computerQaScope": "./src/computerQaScope.ts"
   },
   "scripts": {
     "prepare": "effect-language-service patch",

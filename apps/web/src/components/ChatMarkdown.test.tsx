@@ -247,3 +247,13 @@ describe("ChatMarkdown", () => {
     expect(messagesTimelineSource).toContain("<ChatMarkdown");
   });
 });
+
+it("keeps scoped MultiPost approval links in the DJL window", async () => {
+  const markup = await renderMarkdown(
+    "[Review workflow](#/social/thread?multipostView=authorizations&workflowId=workflow)",
+  );
+  expect(markup).toContain(
+    'href="#/social/thread?multipostView=authorizations&amp;workflowId=workflow"',
+  );
+  expect(markup).not.toContain('target="_blank"');
+});

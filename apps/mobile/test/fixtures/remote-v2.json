@@ -1,0 +1,39 @@
+{
+  "input": {
+    "sessionId": "fixture-session",
+    "protocolVersion": 2,
+    "handshakeMode": "qr_bootstrap",
+    "keyEpoch": 7,
+    "macDeviceId": "fixture-mac",
+    "phoneDeviceId": "fixture-phone",
+    "macIdentityPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+    "phoneIdentityPublicKey": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+    "macEphemeralPublicKey": "Xf7dO2vUf2+ijuFdlp1bsOpTd01Ii9r53xxuASSz7yI=",
+    "phoneEphemeralPublicKey": "rAGyIJ6GNU+4UyN7XeD0+rE8f8v0M6YcAZNpYX/s8Qs=",
+    "clientNonce": "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU=",
+    "serverNonce": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY=",
+    "expiresAtForTranscript": 1793161200000
+  },
+  "transcript": "AAAAC2RqbC1lMmVlLXYxAAAAD2ZpeHR1cmUtc2Vzc2lvbgAAAAEyAAAADHFyX2Jvb3RzdHJhcAAAAAE3AAAAC2ZpeHR1cmUtbWFjAAAADWZpeHR1cmUtcGhvbmUAAAAgiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1wAAAAggTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5QAAAAgXf7dO2vUf2+ijuFdlp1bsOpTd01Ii9r53xxuASSz7yIAAAAgrAGyIJ6GNU+4UyN7XeD0+rE8f8v0M6YcAZNpYX/s8QsAAAAgBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAAAAgBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYAAAANMTc5MzE2MTIwMDAwMA==",
+  "macSignature": "J1SpazJTwLt4IoaSnDS/WTa4W8V6CUIGO1reaG+tGpTB8iWBXU1oeECxgP0Ob4bvvN2KoESk/ZHznEaMNFmjCA==",
+  "phoneSignature": "CLfS1ANGyIu4zE5yQf0OK4yYSI6KgLqw0amsVqdoQaH5GpnndIwzmaav5K6eQvxNVPUlHyIoqfSyupNozmmHDw==",
+  "phoneSeed": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+  "phoneEphemeralSeed": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+  "sharedSecret": "QOR6P1Jb3KxJHUGJeNfbWvYjrHr+diPG14pdT86dD2M=",
+  "phoneToMacKey": "w28qnmZ8rcVDTNErlVzoWiCqYn6wBhzWnYSpH4xGplE=",
+  "macToPhoneKey": "IVfVieaTaOHGeXUsY0H4lFPGsVfnXCf4zS/OgDGmemY=",
+  "envelope": {
+    "kind": "encryptedEnvelope",
+    "v": 2,
+    "sessionId": "fixture-session",
+    "keyEpoch": 7,
+    "sender": "mac",
+    "counter": 0,
+    "ciphertext": "H7F5XZat+oGz72sZPx7Gy6y1frujn16F5Ip2ltxK3wl90KK+uarZufLfnY7C/QUkp6/Xof77PPNu5Pvcsd5V+LP8FIBN0Kz9kT0LHcc84LlbNaQ=",
+    "tag": "Hf5niaWACBREsAEcyfumGA=="
+  },
+  "payload": {
+    "bridgeOutboundSeq": 1,
+    "payloadText": "{\"id\":\"rpc-1\",\"result\":{\"ok\":true}}"
+  }
+}

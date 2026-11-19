@@ -1,3 +1,4 @@
+import { COMPUTER_WS_METHODS, COMPUTER_WS_CHANNELS, type ComputerEvent } from "@synara/contracts";
 // FILE: wsTransport.ts
 // Purpose: Browser-side Effect RPC transport over the Synara WebSocket endpoint.
 // Layer: Web transport
@@ -54,14 +55,14 @@ class WsTransportRpcError extends Data.TaggedError("WsTransportRpcError")<{
 
 const makeRpcClient = RpcClient.make(WsRpcGroup);
 
-function resolveRpcUrl(rawUrl: string): string {
+function resolveRpcUrl(rawUrl: string, wsPath = "/ws"): string {
   const url = new URL(rawUrl);
-  url.pathname = "/ws";
+  url.pathname = wsPath;
   return url.toString();
 }
 
-function makeSocketUrl(explicitUrl: string | null): string {
-  if (explicitUrl) return resolveRpcUrl(explicitUrl);
+export function makeSocketUrl(explicitUrl: string | null, wsPath = "/ws"): string {
+  if (explicitUrl) return resolveRpcUrl(explicitUrl, wsPath);
   const bridgeUrl = window.desktopBridge?.getWsUrl();
   const envUrl = import.meta.env.VITE_WS_URL as string | undefined;
   const rawUrl =
@@ -70,7 +71,7 @@ function makeSocketUrl(explicitUrl: string | null): string {
       : envUrl && envUrl.length > 0
         ? envUrl
         : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
-  return resolveRpcUrl(rawUrl);
+  return resolveRpcUrl(rawUrl, wsPath);
 }
 
 function makeProtocolLayer(url: string) {
@@ -80,7 +81,10 @@ function makeProtocolLayer(url: string) {
   // JSON keeps the wire format symmetric with any server build: a serialization
   // mismatch on this single multiplexed socket is a hard connect failure, and the
   // desktop/dev setup routinely runs web and server on independently-built copies.
-  return RpcClient.layerProtocolSocket().pipe(
+  // A packaged renderer can connect before its backend starts listening. Keep
+  // unsent requests pending through those open failures; failures after a
+  // connection opens still terminate requests and never replay dispatched writes.
+  return RpcClient.layerProtocolSocket({ retryTransientErrors: true }).pipe(
     Layer.provide(Layer.mergeAll(socketLayer, RpcSerialization.layerJson)),
   );
 }
@@ -474,6 +478,14 @@ export class WsTransport {
 
         if (isServerLifecyclePushChannel(channel)) {
           this.startLifecycleStream(session);
+        } else if (channel === COMPUTER_WS_CHANNELS.event) {
+          this.startStream(
+            "computer.events",
+            client[COMPUTER_WS_METHODS.subscribeEvents]({}),
+            (event: ComputerEvent) => this.emit(COMPUTER_WS_CHANNELS.event, event),
+            restartChannel,
+            { session },
+          );
         } else if (channel === WS_CHANNELS.serverConfigUpdated) {
           this.startStream(
             "server.config",
@@ -598,6 +610,7 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.serverProviderStatusesUpdated)
       this.stopStream("server.providers");
     else if (channel === WS_CHANNELS.serverSettingsUpdated) this.stopStream("server.settings");
+    else if (channel === COMPUTER_WS_CHANNELS.event) this.stopStream("computer.events");
     else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");
     else if (channel === WS_CHANNELS.workDocumentRenderEvent)

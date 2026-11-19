@@ -9,6 +9,8 @@ const { createHash, randomUUID } = require("crypto");
 const { createElectronBackendRpcClient } = require("./electron-backend-rpc");
 const {
   checkpointFileChangeItem,
+  completedReasoningItemFromActivity,
+  toolItemFromActivity,
   createThreadEventProjection,
   desktopGitProgressNotification,
 } = require("./electron-event-projection");
@@ -459,6 +461,9 @@ function createElectronAppServerTransport({
               : latest?.state === "error"
                 ? "failed"
                 : "completed",
+          ...(latest?.state === "error" && stringValue(thread.session?.lastError)
+            ? { error: { message: thread.session.lastError } }
+            : {}),
         },
       });
     }
@@ -1158,6 +1163,41 @@ function appServerTurns(thread) {
     entry.items.push(appServerMessageItem(message));
     byTurn.set(turnId, entry);
   }
+  for (const activity of thread.activities || []) {
+    const turnId = stringValue(activity.turnId);
+    if (!turnId) continue;
+    const item =
+      completedReasoningItemFromActivity(activity) ||
+      (activity.tone === "tool" &&
+      ["tool.started", "tool.updated", "tool.completed"].includes(activity.kind)
+        ? toolItemFromActivity(activity)
+        : null);
+    if (!item) continue;
+    item.createdAt = stringValue(activity.createdAt);
+    const entry = byTurn.get(turnId) || {
+      id: turnId,
+      status: thread.session?.activeTurnId === turnId ? "inProgress" : "completed",
+      createdAt: item.createdAt,
+      items: [],
+    };
+    const previousIndex = entry.items.findIndex((existing) => existing.id === item.id);
+    if (previousIndex >= 0) {
+      const previous = entry.items[previousIndex];
+      // Completion may contain output only; retain the command and first position.
+      if (item.type === "commandExecution") {
+        item.command ||= previous.command;
+        item.aggregatedOutput ||= previous.aggregatedOutput;
+      }
+      if (item.type === "fileChange" && item.changes.length === 0) item.changes = previous.changes;
+      entry.items[previousIndex] = { ...item, createdAt: previous.createdAt };
+      continue;
+    }
+    const index = entry.items.findIndex(
+      (existing) => stringValue(existing.createdAt) > item.createdAt,
+    );
+    entry.items.splice(index < 0 ? entry.items.length : index, 0, item);
+    byTurn.set(turnId, entry);
+  }
   // Reopened threads show their edits: one file-change card per checkpoint.
   for (const checkpoint of thread.checkpoints || []) {
     const item = checkpointFileChangeItem(checkpoint);
@@ -1171,6 +1211,49 @@ function appServerTurns(thread) {
     };
     entry.items.push(item);
     byTurn.set(turnId, entry);
+  }
+  for (const activity of thread.activities || []) {
+    const turnId = stringValue(activity.turnId);
+    const state = activity.payload?.state;
+    if (
+      activity.kind !== "turn.completed" ||
+      !turnId ||
+      !["failed", "error", "interrupted"].includes(state)
+    )
+      continue;
+    const entry = byTurn.get(turnId) || {
+      id: turnId,
+      createdAt: activity.createdAt,
+      items: [],
+    };
+    if (entry.status === "inProgress") continue;
+    entry.status = state === "interrupted" ? "interrupted" : "failed";
+    const message = stringValue(activity.payload?.errorMessage);
+    if (entry.status === "failed" && message) entry.error = { message };
+    byTurn.set(turnId, entry);
+  }
+  const latest = thread.latestTurn;
+  const latestId = stringValue(latest?.turnId);
+  const statuses = {
+    running: "inProgress",
+    error: "failed",
+    interrupted: "interrupted",
+    completed: "completed",
+  };
+  if (latestId && statuses[latest.state]) {
+    const entry = byTurn.get(latestId) || {
+      id: latestId,
+      createdAt: latest.startedAt || latest.requestedAt,
+      items: [],
+    };
+    entry.status = statuses[latest.state];
+    if (entry.status === "failed" && stringValue(thread.session?.lastError)) {
+      entry.error = { message: thread.session.lastError };
+    } else if (entry.status !== "failed") {
+      delete entry.error;
+    }
+    byTurn.delete(latestId);
+    byTurn.set(latestId, entry);
   }
   return Array.from(byTurn.values());
 }

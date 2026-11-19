@@ -9,6 +9,6 @@ const startup = startLocalInterface();
 const loadApplication = () => {
   void import("./main").catch(() => startup?.setStatus("runtime-error"));
 };
-// Let the tiny local editor paint before evaluating the full application graph.
+// Let the lightweight splash paint before evaluating the full application graph.
 if (startup) requestAnimationFrame(() => requestAnimationFrame(loadApplication));
 else loadApplication();

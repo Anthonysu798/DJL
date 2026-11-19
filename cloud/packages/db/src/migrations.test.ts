@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { expect, it } from "vitest";
+import { applyCloudMigrations } from "./applyMigrations.ts";
 
 const folder = new URL("../drizzle/", import.meta.url);
 const journal = JSON.parse(await readFile(new URL("meta/_journal.json", folder), "utf8"));
@@ -18,10 +19,25 @@ const legacy = journal.entries.slice(6, 9).map((entry: Entry, index: number) =>
     when: [1791776856415, 1791777168849, 1791780761906][index],
   }),
 );
+const legacySocial = journal.entries.slice(23, 29).map((entry: Entry, index: number) =>
+  Object.assign({}, entry, {
+    idx: index + 9,
+    when: [
+      1792008003000, 1792008004000, 1792008005000, 1792008006000, 1792008007000, 1794578400000,
+    ][index],
+  }),
+);
 
 for (const [name, entries] of [
   ["fresh database", []],
   ["commerce database before staff scopes", journal.entries.slice(0, 19)],
+  ["current Shop database", journal.entries.slice(0, 23)],
+  [
+    "social-only database before FCM",
+    [...journal.entries.slice(0, 9), ...legacySocial.slice(0, 5)],
+  ],
+  ["social and FCM fork database", [...journal.entries.slice(0, 9), ...legacySocial]],
+  ["Shop and legacy social database", [...journal.entries.slice(0, 23), ...legacySocial]],
   ["PR41 account/device database", journal.entries.slice(0, 6)],
   ["PR42 notification/gallery database", [...base, ...legacy]],
   [
@@ -61,11 +77,29 @@ for (const [name, entries] of [
       if (entries.length) {
         await client`INSERT INTO "user" (id, name, email, created_at, updated_at) VALUES (${userId}, 'Migration QA', ${`${userId}@example.invalid`}, now(), now())`;
       }
+      const hasLegacyInstallation = entries.some((entry: Entry) => entry.when === 1794578400000);
+      const installationId = randomUUID();
+      if (hasLegacyInstallation) {
+        await client`INSERT INTO fcm_installations (user_id, installation_id) VALUES (${userId}, ${installationId})`;
+      }
       const legacyAdmin = randomUUID();
       if (name === "commerce database before staff scopes")
         await client`INSERT INTO admins (id,email,name,role) VALUES (${legacyAdmin},${legacyAdmin + "@test.invalid"},'Legacy scope QA','employee')`;
-      await migrate(db, { migrationsFolder: fileURLToPath(folder) });
-      await migrate(db, { migrationsFolder: fileURLToPath(folder) });
+      await applyCloudMigrations(client, fileURLToPath(folder));
+      await applyCloudMigrations(client, fileURLToPath(folder));
+      if (hasLegacyInstallation) {
+        const rows =
+          await client`SELECT user_id FROM fcm_installations WHERE installation_id = ${installationId}`;
+        expect(rows).toEqual([{ user_id: userId }]);
+      }
+      const combinedReceipts = await client`
+        SELECT created_at FROM drizzle.__drizzle_migrations
+        WHERE created_at BETWEEN 1794578400001 AND 1794578400006
+        ORDER BY created_at
+      `;
+      expect(combinedReceipts.map((row) => Number(row.created_at))).toEqual(
+        Array.from({ length: 6 }, (_, index) => 1794578400001 + index),
+      );
       if (name === "commerce database before staff scopes") {
         const [admin] = await client`SELECT role,commerce_role FROM admins WHERE id=${legacyAdmin}`;
         expect(admin).toMatchObject({ role: "employee", commerce_role: null });
@@ -75,12 +109,13 @@ for (const [name, entries] of [
         expect(user?.name).toBe("Migration QA");
       }
       const columns =
-        await client`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name IN ('device_id', 'message_id', 'image_aspect_ratio')`;
+        await client`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name IN ('device_id', 'message_id', 'image_aspect_ratio', 'installation_id')`;
       expect(columns).toEqual(
         expect.arrayContaining([
           { table_name: "session", column_name: "device_id" },
           { table_name: "files", column_name: "message_id" },
           { table_name: "runs", column_name: "image_aspect_ratio" },
+          { table_name: "fcm_installations", column_name: "installation_id" },
         ]),
       );
       const manualPaymentColumns =
@@ -107,7 +142,12 @@ for (const [name, entries] of [
       );
       const indexes = await client`SELECT indexname FROM pg_indexes WHERE schemaname = 'public'`;
       expect(indexes.map((row) => row.indexname)).toEqual(
-        expect.arrayContaining(["runs_task_finished_idx", "files_generated_gallery_idx"]),
+        expect.arrayContaining([
+          "runs_task_finished_idx",
+          "files_generated_gallery_idx",
+          "fcm_installations_installation_idx",
+          "fcm_installations_user_idx",
+        ]),
       );
     } finally {
       await client?.end();

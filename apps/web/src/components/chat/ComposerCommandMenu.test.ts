@@ -1,3 +1,4 @@
+import { SOCIAL_PLUGIN, SOCIAL_PLUGIN_MENTION, mcpMention } from "@synara/contracts";
 import type { ServerRecord } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
@@ -153,4 +154,34 @@ describe("groupCommandItems", () => {
       },
     ]);
   });
+});
+
+it("groups MCP references separately from plugins", () => {
+  const items: ComposerCommandItem[] = [
+    {
+      id: "social",
+      type: "plugin",
+      plugin: SOCIAL_PLUGIN,
+      mention: SOCIAL_PLUGIN_MENTION,
+      label: "Social Media",
+      description: "Draft posts",
+    },
+    {
+      id: "mcp-social",
+      type: "plugin",
+      plugin: SOCIAL_PLUGIN,
+      mention: mcpMention("DJL Work Tools", SOCIAL_PLUGIN_MENTION),
+      label: "DJL Work Tools",
+      description: "Social tools",
+    },
+  ];
+  expect(
+    groupCommandItems(items, "mention", true).map((group) => ({
+      id: group.id,
+      items: group.items.map((item) => item.id),
+    })),
+  ).toEqual([
+    { id: "plugins", items: ["social"] },
+    { id: "mcp", items: ["mcp-social"] },
+  ]);
 });

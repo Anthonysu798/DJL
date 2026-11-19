@@ -1,3 +1,4 @@
+import { MCP_MENTION_PREFIX } from "@synara/contracts";
 import {
   type ProjectEntry,
   type ModelSlug,
@@ -98,7 +99,7 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   }
 
   if (item.type === "plugin") {
-    return "Plugin";
+    return item.mention.path.startsWith(MCP_MENTION_PREFIX) ? "MCP" : "Plugin";
   }
 
   if (item.type === "server") {
@@ -256,7 +257,12 @@ export function groupCommandItems(
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
     const handoffItems = items.filter((item) => item.type === "handoff-model");
-    const pluginItems = items.filter((item) => item.type === "plugin");
+    const pluginItems = items.filter(
+      (item) => item.type === "plugin" && !item.mention.path.startsWith(MCP_MENTION_PREFIX),
+    );
+    const mcpItems = items.filter(
+      (item) => item.type === "plugin" && item.mention.path.startsWith(MCP_MENTION_PREFIX),
+    );
     const serverItems = items.filter((item) => item.type === "server");
     const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
     const agentItems = items.filter((item) => item.type === "agent");
@@ -280,6 +286,9 @@ export function groupCommandItems(
     }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", labelKey: "commandMenu.groups.plugins", items: pluginItems });
+    }
+    if (mcpItems.length > 0) {
+      groups.push({ id: "mcp", labelKey: "commandMenu.groups.mcp", items: mcpItems });
     }
     if (serverItems.length > 0) {
       groups.push({ id: "servers", labelKey: "commandMenu.groups.servers", items: serverItems });

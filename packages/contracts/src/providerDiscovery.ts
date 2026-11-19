@@ -26,6 +26,66 @@ const ProviderDiscoveryKind = Schema.Literals([
   "group",
 ]);
 
+export const CustomModelApiProtocol = Schema.Literals([
+  "openai-chat",
+  "openai-responses",
+  "anthropic",
+]);
+export type CustomModelApiProtocol = typeof CustomModelApiProtocol.Type;
+export const CustomModel = Schema.Struct({
+  id: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+});
+export const CustomModelBaseUrl = TrimmedNonEmptyString.check(
+  Schema.isMaxLength(2048),
+  Schema.makeFilter((value) => {
+    try {
+      const url = new URL(value);
+      return (
+        ["http:", "https:"].includes(url.protocol) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash
+      );
+    } catch {
+      return false;
+    }
+  }),
+);
+const CustomProviderId = TrimmedNonEmptyString.check(
+  Schema.isPattern(/^[a-z][a-z0-9-]{0,63}$/),
+  Schema.makeFilter((value) => !["constructor", "prototype", "ollama", "lmstudio"].includes(value)),
+);
+export const CustomModelProvider = Schema.Struct({
+  providerId: CustomProviderId,
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(100)),
+  baseUrl: CustomModelBaseUrl,
+  protocol: CustomModelApiProtocol,
+  models: Schema.Array(CustomModel).check(
+    Schema.isMaxLength(500),
+    Schema.makeFilter((models) => new Set(models.map((model) => model.id)).size === models.length),
+  ),
+});
+export type CustomModelProvider = typeof CustomModelProvider.Type;
+export const SaveCustomModelProviderInput = Schema.Struct({
+  ...CustomModelProvider.fields,
+  replaceExisting: Schema.optional(Schema.Boolean),
+  apiKey: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(16_384))),
+});
+export type SaveCustomModelProviderInput = typeof SaveCustomModelProviderInput.Type;
+export const RemoveCustomModelProviderInput = Schema.Struct({ providerId: CustomProviderId });
+export type RemoveCustomModelProviderInput = typeof RemoveCustomModelProviderInput.Type;
+export const FetchCustomModelsInput = Schema.Struct({
+  providerId: Schema.optional(CustomProviderId),
+  baseUrl: CustomModelBaseUrl,
+  protocol: CustomModelApiProtocol,
+  apiKey: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(16_384))),
+});
+export type FetchCustomModelsInput = typeof FetchCustomModelsInput.Type;
+export const FetchCustomModelsResult = Schema.Struct({ models: Schema.Array(CustomModel) });
+export type FetchCustomModelsResult = typeof FetchCustomModelsResult.Type;
+
 export const OpenCodeModelProviderConnection = Schema.Struct({
   id: TrimmedNonEmptyString,
   name: TrimmedNonEmptyString,
@@ -35,6 +95,7 @@ export const OpenCodeModelProviderConnection = Schema.Struct({
   connected: Schema.Boolean,
   modelCount: Schema.Number,
   error: Schema.optional(TrimmedNonEmptyString),
+  custom: Schema.optional(CustomModelProvider),
 });
 export type OpenCodeModelProviderConnection = typeof OpenCodeModelProviderConnection.Type;
 

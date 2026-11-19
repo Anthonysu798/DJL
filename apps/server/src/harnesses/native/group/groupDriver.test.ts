@@ -301,14 +301,6 @@ describe("group native driver", () => {
     expect(replies.map((reply) => reply.memberId)).toEqual(["codex"]);
   });
 
-  it("other native providers do not offer steering", async () => {
-    const supported = await scenario(
-      async ({ adapter }) => adapter.capabilities.supportsTurnSteering,
-      "codex",
-    );
-    expect(supported).toBe(false);
-  });
-
   it("a member removed while its CLI is starting does not keep that CLI", async () => {
     const opening = Promise.withResolvers<void>();
     openGates.set("Claude", opening.promise);

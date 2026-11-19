@@ -20,6 +20,89 @@ const resumeFactory = async (input: Parameters<import("./types").NativeDriverFac
 });
 
 describe("fresh native adapter lifecycle", () => {
+  it("steers Codex on the existing canonical turn without a second send or start event", async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const sent: unknown[] = [],
+            steered: unknown[] = [],
+            events: ProviderRuntimeEvent[] = [];
+          let release!: () => void;
+          const adapter = yield* makeNativeAdapter("codex", async () => ({
+            id: "steer-session",
+            send: (input) => {
+              sent.push(input);
+              return new Promise<void>((resolve) => {
+                release = resolve;
+              });
+            },
+            steer: async (input) => {
+              steered.push(input);
+            },
+            interrupt: async () => {},
+            close: () => {},
+            models: async () => ({ models: [] }),
+          }));
+          expect(adapter.capabilities.supportsTurnSteering).toBe(true);
+          expect(adapter.steerTurn).toBeTypeOf("function");
+          yield* Stream.runForEach(adapter.streamEvents, (event) =>
+            Effect.sync(() => {
+              events.push(event);
+            }),
+          ).pipe(Effect.forkChild);
+          yield* adapter.startSession(start);
+          const running = yield* adapter.sendTurn({ threadId, input: "original" });
+          for (const invalid of [
+            { input: "" },
+            {
+              input: "image",
+              attachments: [
+                {
+                  type: "image" as const,
+                  id: "qa-image",
+                  name: "qa.png",
+                  mimeType: "image/png",
+                  sizeBytes: 1,
+                },
+              ],
+            },
+            { input: "foreign", modelSelection: { provider: "grok" as const, model: "other" } },
+            { input: "plan", interactionMode: "plan" as const },
+          ]) {
+            expect((yield* Effect.exit(adapter.steerTurn!({ threadId, ...invalid })))._tag).toBe(
+              "Failure",
+            );
+          }
+          expect(steered).toHaveLength(0);
+          const result = yield* adapter.steerTurn!({ threadId, input: "redirect" });
+          expect(result.turnId).toBe(running.turnId);
+          expect(sent).toHaveLength(1);
+          expect(steered).toEqual([{ threadId, input: "redirect" }]);
+          yield* Effect.promise(tick);
+          expect(events.filter((event) => event.type === "turn.started")).toHaveLength(1);
+          expect((yield* adapter.listSessions())[0]?.activeTurnId).toBe(running.turnId);
+          release();
+          yield* Effect.promise(tick);
+          const failure = yield* Effect.exit(adapter.steerTurn!({ threadId, input: "late" }));
+          expect(failure._tag).toBe("Failure");
+          expect(steered).toHaveLength(1);
+        }),
+      ),
+    );
+  });
+
+  it("does not advertise steering for other native providers", async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const adapter = yield* makeNativeAdapter("djlCloud", resumeFactory);
+          expect(adapter.capabilities.supportsTurnSteering).toBe(false);
+          expect(adapter.steerTurn).toBeUndefined();
+        }),
+      ),
+    );
+  });
+
   it("starts hosted DJL Cloud chat without a local project folder", async () => {
     await Effect.runPromise(
       Effect.scoped(

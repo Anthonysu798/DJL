@@ -631,6 +631,7 @@ export interface NormalizeDocumentInput {
   readonly projectId: ProjectId;
   readonly createdAt: string;
   readonly requireOcr?: boolean;
+  readonly purpose?: "campaign-media";
   readonly ocr?: (filePath: string) => Promise<OcrRecognitionResult>;
 }
 
@@ -676,6 +677,15 @@ export async function normalizeDocument(input: NormalizeDocumentInput): Promise<
       );
     }
     if (blocks.length === 0) needsOcr = true;
+  } else if (
+    input.purpose === "campaign-media" &&
+    /^(image|video)\//.test(input.attachment.mimeType)
+  ) {
+    // Campaign tools use the immutable original bytes; placing media does not require reading its text.
+    blocks = [];
+    warnings.push(
+      "Campaign media retained for placement. No text or visual content was extracted.",
+    );
   } else if (input.attachment.type === "image" || input.attachment.mimeType.startsWith("image/")) {
     blocks = [];
     needsOcr = true;

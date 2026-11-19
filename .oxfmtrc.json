@@ -12,7 +12,11 @@
     ".next",
     "cloud/packages/db/drizzle",
     "cloud/infra/vps/.secrets",
-    "cloud/infra/vps/backups"
+    "cloud/infra/vps/backups",
+    "packages/multipost/vendor",
+    "packages/multipost/src/generated.json",
+    "packages/multipost/src/turndown.json",
+    "**/__screenshots__"
   ],
   "sortPackageJson": {}
 }

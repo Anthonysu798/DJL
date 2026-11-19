@@ -61,4 +61,30 @@ describe("installed OpenCode process environment", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("loads custom relay definitions into the installed runtime without legacy credentials", async () => {
+    const root = await mkdtemp(join(tmpdir(), "djl-relay-env-"));
+    try {
+      await writeFile(
+        join(root, "custom-providers.json"),
+        JSON.stringify([
+          {
+            providerId: "my-relay",
+            name: "My relay",
+            baseUrl: "https://relay.test/v1",
+            protocol: "openai-chat",
+            models: [{ id: "org/model", name: "Relay model" }],
+          },
+        ]),
+      );
+      const env = await prepareInstalledOpenCodeEnvironment(root, {});
+      expect(JSON.parse(env.OPENCODE_CONFIG_CONTENT!).provider["my-relay"]).toMatchObject({
+        npm: "@ai-sdk/openai-compatible",
+        options: { baseURL: "https://relay.test/v1" },
+        models: { "org/model": { name: "Relay model" } },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

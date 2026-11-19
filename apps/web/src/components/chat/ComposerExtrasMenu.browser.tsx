@@ -15,10 +15,13 @@ async function mountMenu(props?: {
   fastModeEnabled?: boolean;
   interactionMode?: "default" | "plan";
   supportsFastMode?: boolean;
+  browse?: boolean;
 }) {
   const onAddAttachments = vi.fn<(files: File[]) => void>();
   const onToggleFastMode = vi.fn();
   const onSetPlanMode = vi.fn();
+  const onBrowsePlugins = vi.fn();
+  const onBrowseSkills = vi.fn();
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
@@ -29,6 +32,7 @@ async function mountMenu(props?: {
       onAddAttachments={onAddAttachments}
       onToggleFastMode={onToggleFastMode}
       onSetPlanMode={onSetPlanMode}
+      {...(props?.browse ? { onBrowsePlugins, onBrowseSkills } : {})}
     />,
     { container: host },
   );
@@ -44,12 +48,24 @@ async function mountMenu(props?: {
     onAddAttachments,
     onToggleFastMode,
     onSetPlanMode,
+    onBrowsePlugins,
+    onBrowseSkills,
   };
 }
 
 describe("ComposerExtrasMenu", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("opens plugin/MCP and skill pickers from the plus menu", async () => {
+    await using menu = await mountMenu({ browse: true });
+    await page.getByLabelText("Composer extras").click();
+    await page.getByRole("menuitem", { name: /Plugins \/ MCP/ }).click();
+    expect(menu.onBrowsePlugins).toHaveBeenCalledTimes(1);
+    await page.getByLabelText("Composer extras").click();
+    await page.getByRole("menuitem", { name: /Skills/ }).click();
+    expect(menu.onBrowseSkills).toHaveBeenCalledTimes(1);
   });
 
   it("accepts Work documents and images from one file picker", async () => {

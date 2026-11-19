@@ -1,0 +1,61 @@
+{
+  "scope": "Preserved native Swift continuous-drawer shadow over white public marker,settled open;not glass/frame cadence",
+  "reference_sha256": "94fbcaa41c6a29e27eaf7808319fb84a6aab0790f05bc55f48ac9d5e2f2215a6",
+  "reference_file": "build/device-evidence/drawer135-swift-native/5D9D2846-1E4A-4BBA-8F80-65FC8491FD54.png",
+  "logical_size": [
+    402,
+    874
+  ],
+  "dpr": 3,
+  "panel_fraction": 0.7,
+  "samples": [
+    {
+      "distance": 1,
+      "gray": 229
+    },
+    {
+      "distance": 2,
+      "gray": 230
+    },
+    {
+      "distance": 4,
+      "gray": 231
+    },
+    {
+      "distance": 8,
+      "gray": 232
+    },
+    {
+      "distance": 12,
+      "gray": 236
+    },
+    {
+      "distance": 16,
+      "gray": 238
+    },
+    {
+      "distance": 24,
+      "gray": 242
+    },
+    {
+      "distance": 32,
+      "gray": 246
+    },
+    {
+      "distance": 40,
+      "gray": 248
+    },
+    {
+      "distance": 56,
+      "gray": 253
+    },
+    {
+      "distance": 80,
+      "gray": 255
+    },
+    {
+      "distance": 100,
+      "gray": 255
+    }
+  ]
+}

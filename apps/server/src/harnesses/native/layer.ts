@@ -1,12 +1,13 @@
 import { WorkMcpServer } from "../../work/Services/WorkMcpServer";
 import { Effect, Layer, ServiceMap, Option } from "effect";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
-import type { ProviderAdapterError } from "../../provider/Errors";
+import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
 import { ServerSettingsService } from "../../serverSettings";
 import { nativeProfileOptions } from "./profile";
 import type { NativeDriverFactory, NativeProvider } from "./types";
 import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
+import { transcribeNativeCodexVoice } from "./codexTranscription";
 import { createClaudeDriver, createGroupMemberClaudeDriver } from "./claude";
 import { createCursorDriver } from "./cursor";
 import { createGeminiDriver } from "./gemini";
@@ -22,6 +23,7 @@ import { createPiDriver } from "./pi";
 import { createCodeBuddyDriver } from "./codebuddy";
 import { createDjlCloudDriverFactory } from "./djlCloud";
 import { ServerConfig } from "../../config";
+import { VoiceTranscriptionError } from "../../voiceTranscription";
 
 export class NativeCodexAdapter extends ServiceMap.Service<
   NativeCodexAdapter,
@@ -92,6 +94,20 @@ export const makeConfiguredNativeAdapter = (
       const registration = await Effect.runPromise(
         tools.registerSession({
           threadId: input.threadId,
+          provider,
+          requestComputerApproval: async (request, signal) => {
+            const answer = await sink.request(
+              "command_execution_approval",
+              {
+                tool: request.tool,
+                input: request.arguments,
+                computerControl: true,
+                foreground: request.foreground,
+              },
+              signal,
+            );
+            return typeof answer === "string" ? answer : "decline";
+          },
           authorizedRoot: input.cwd,
           ...(Option.isSome(config) ? { attachmentsRoot: config.value.attachmentsDir } : {}),
         }),
@@ -100,7 +116,23 @@ export const makeConfiguredNativeAdapter = (
         const driver = await factory(input, sink, registration);
         return {
           ...driver,
+          send: async (request) => {
+            const computerTurnId = await registration.computer?.begin(
+              request.computerControl,
+              request.computerActivityHistory === true,
+            );
+            try {
+              await driver.send(request);
+            } finally {
+              if (computerTurnId) await registration.computer?.end(computerTurnId);
+            }
+          },
+          interrupt: async () => {
+            await registration.computer?.end();
+            await driver.interrupt();
+          },
           close: () => {
+            void registration.computer?.end().catch(() => undefined);
             try {
               driver.close();
             } finally {
@@ -115,9 +147,28 @@ export const makeConfiguredNativeAdapter = (
         throw error;
       }
     };
-    return yield* makeNativeAdapter(provider, scopedFactory, async () =>
+    const adapter = yield* makeNativeAdapter(provider, scopedFactory, async () =>
       nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
     );
+    if (provider !== "codex") return adapter;
+    return {
+      ...adapter,
+      transcribeVoice: (input) =>
+        Effect.tryPromise({
+          try: async () =>
+            transcribeNativeCodexVoice(
+              input,
+              nativeProfileOptions("codex", await Effect.runPromise(settings.getSettings)),
+            ),
+          catch: (cause) =>
+            new ProviderAdapterRequestError({
+              provider: "codex",
+              method: "transcribeVoice",
+              detail: cause instanceof Error ? cause.message : "Native voice transcription failed.",
+              ...(cause instanceof VoiceTranscriptionError ? { cause } : {}),
+            }),
+        }),
+    } satisfies ProviderAdapterShape<ProviderAdapterError>;
   });
 
 const MAX_PASTED_SKILL_CHARS = 24_000;

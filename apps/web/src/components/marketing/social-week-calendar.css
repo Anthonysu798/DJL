@@ -1,0 +1,102 @@
+.social-week-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.social-calendar-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.social-calendar-toolbar strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  font-size: 13px;
+}
+.social-calendar-toolbar select {
+  max-width: 180px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 11px;
+}
+.social-calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.social-calendar-day {
+  min-height: 150px;
+  padding: 8px 5px;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.social-calendar-day:last-child {
+  border: 0;
+}
+.social-calendar-day h4 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.social-calendar-day[data-today] h4 {
+  color: var(--foreground);
+  font-weight: 700;
+}
+.social-calendar-post.spotlight-card {
+  padding: 9px;
+  border-radius: 9px;
+  margin-bottom: 7px;
+  --spotlight-card-surface: var(--secondary) !important;
+  --spotlight-card-border: var(--border) !important;
+}
+.social-calendar-post a {
+  display: block;
+  font-size: 11px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+  margin: 5px 0;
+}
+.social-calendar-time,
+.social-calendar-state {
+  display: block;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.social-calendar-post button {
+  font-size: 10px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+.social-calendar-post a:focus-visible,
+.social-calendar-post button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.social-calendar-empty {
+  color: var(--muted-foreground);
+  opacity: 0.3;
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .social-calendar-week {
+    grid-template-columns: 1fr;
+  }
+  .social-calendar-day {
+    min-height: 60px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+  .social-calendar-post.spotlight-card {
+    padding: 12px;
+  }
+}

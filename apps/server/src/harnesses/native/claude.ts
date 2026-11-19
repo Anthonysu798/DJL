@@ -137,6 +137,15 @@ const startClaudeDriver = async (
       ...(workTools
         ? {
             mcpServers: {
+              ...(workTools.multipost
+                ? {
+                    [workTools.multipost.name]: {
+                      type: "http" as const,
+                      url: workTools.multipost.url,
+                      headers: { Authorization: `Bearer ${workTools.multipost.bearerToken}` },
+                    },
+                  }
+                : {}),
               [workTools.name]: {
                 type: "http" as const,
                 url: workTools.url,

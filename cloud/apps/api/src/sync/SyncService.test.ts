@@ -66,7 +66,11 @@ beforeAll(async () => {
       priorityWeight: 1,
       syncQuotaBytes: 100n * 1024n * 1024n,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: schema.plans.id,
+      // Other suites seed the shared trial row with a different quota.
+      set: { syncQuotaBytes: 100n * 1024n * 1024n },
+    });
   await conn.db
     .insert(schema.killSwitches)
     .values({ name: "sync", engaged: false })

@@ -1,3 +1,4 @@
+import { COMPUTER_WS_CHANNELS, ComputerEvent } from "./computer";
 import { Schema, Struct } from "effect";
 import {
   HarnessProfileAccountInput,
@@ -142,6 +143,10 @@ import {
   ProviderSkillsCatalogInput,
   OpenCodeListModelProvidersInput,
   OpenCodeSetApiKeyInput,
+  SaveCustomModelProviderInput,
+  RemoveCustomModelProviderInput,
+  FetchCustomModelsInput,
+  FetchCustomModelsResult,
   OpenCodeRemoveCredentialInput,
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
@@ -308,6 +313,10 @@ export const WS_METHODS = {
   providerListAgents: "provider.listAgents",
   openCodeListModelProviders: "opencode.listModelProviders",
   openCodeSetApiKey: "opencode.setApiKey",
+  openCodeSaveCustomProvider: "opencode.saveCustomProvider",
+  openCodeRemoveCustomProvider: "opencode.removeCustomProvider",
+  openCodeFetchCustomModels: "opencode.fetchCustomModels",
+
   openCodeRemoveCredential: "opencode.removeCredential",
 
   // Desktop local-model runtimes
@@ -534,6 +543,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
   tagRequestBody(WS_METHODS.openCodeListModelProviders, OpenCodeListModelProvidersInput),
   tagRequestBody(WS_METHODS.openCodeSetApiKey, OpenCodeSetApiKeyInput),
+  tagRequestBody(WS_METHODS.openCodeSaveCustomProvider, SaveCustomModelProviderInput),
+  tagRequestBody(WS_METHODS.openCodeRemoveCustomProvider, RemoveCustomModelProviderInput),
+  tagRequestBody(WS_METHODS.openCodeFetchCustomModels, FetchCustomModelsInput),
+
   tagRequestBody(WS_METHODS.harnessProfileAccount, HarnessProfileAccountInput),
   tagRequestBody(WS_METHODS.harnessListAccounts, Schema.Struct({})),
   tagRequestBody(WS_METHODS.harnessListLegacyOpenCodeCredentials, Schema.Struct({})),
@@ -648,6 +661,7 @@ export const WsWelcomePayload = Schema.Struct({
 export type WsWelcomePayload = typeof WsWelcomePayload.Type;
 
 export interface WsPushPayloadByChannel {
+  readonly [COMPUTER_WS_CHANNELS.event]: typeof ComputerEvent.Type;
   readonly [WS_CHANNELS.serverWelcome]: WsWelcomePayload;
   readonly [WS_CHANNELS.serverMaintenanceUpdated]: ServerLifecycleStreamEvent;
   readonly [WS_CHANNELS.serverConfigUpdated]: typeof ServerConfigUpdatedPayload.Type;
@@ -735,7 +749,9 @@ export const WsPushOrchestrationThreadEvent = makeWsPushSchema(
   OrchestrationThreadStreamItem,
 );
 
+export const WsPushComputerEvent = makeWsPushSchema(COMPUTER_WS_CHANNELS.event, ComputerEvent);
 export const WsPushChannelSchema = Schema.Literals([
+  COMPUTER_WS_CHANNELS.event,
   WS_CHANNELS.gitActionProgress,
   WS_CHANNELS.serverWelcome,
   WS_CHANNELS.serverMaintenanceUpdated,
@@ -757,6 +773,7 @@ export const WsPushChannelSchema = Schema.Literals([
 export type WsPushChannelSchema = typeof WsPushChannelSchema.Type;
 
 export const WsPush = Schema.Union([
+  WsPushComputerEvent,
   WsPushServerWelcome,
   WsPushServerMaintenanceUpdated,
   WsPushServerConfigUpdated,

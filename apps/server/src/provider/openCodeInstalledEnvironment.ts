@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { customProviderConfig, readCustomProviders } from "./customModelProviders";
 import {
   createOpenCodeCompatibilityPluginSource,
   type OpenCodeCompatibilityPolicy,
@@ -60,6 +61,9 @@ export async function prepareInstalledOpenCodeEnvironment(
         models: { ...object(existing.models), ...object(managed.models) },
       };
     }
+  }
+  for (const custom of await readCustomProviders(root)) {
+    provider[custom.providerId] = customProviderConfig(custom);
   }
   return {
     ...env,

@@ -198,3 +198,5 @@ export function hasVisibleComposerTraitControls(
       (selection.fastModeDescriptor !== null || selection.caps.supportsFastMode))
   );
 }
+
+export type ComposerTraitSelection = ReturnType<typeof getComposerTraitSelection>;

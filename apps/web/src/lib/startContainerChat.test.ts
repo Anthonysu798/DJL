@@ -18,6 +18,23 @@ function successfulHandler() {
 }
 
 describe("startContainerChat", () => {
+  it("preserves the provider selected by a plugin example", async () => {
+    const handleNewThread = vi.fn(async () => undefined);
+    const draftId = ThreadId.makeUnsafe("plugin-draft");
+    await startContainerChat({
+      ensureProjectId: async () => ProjectId.makeUnsafe("studio"),
+      handleNewThread,
+      fresh: true,
+      startupDraftId: draftId,
+      provider: "claudeAgent",
+      errorLabel: "Unable to prepare task",
+    });
+    expect(handleNewThread).toHaveBeenCalledWith(
+      ProjectId.makeUnsafe("studio"),
+      expect.objectContaining({ provider: "claudeAgent", startupDraftId: draftId }),
+    );
+  });
+
   it("keeps the localized preparation summary when ensuring the project fails unexpectedly", async () => {
     const rawDetail = "project.create failed with status 409";
 

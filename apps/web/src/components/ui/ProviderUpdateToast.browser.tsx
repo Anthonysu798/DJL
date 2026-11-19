@@ -84,6 +84,9 @@ describe("DJL provider-update notification", () => {
         expect(bounds.top).toBeGreaterThanOrEqual(0);
         expect(bounds.left).toBeGreaterThanOrEqual(0);
         expect(bounds.right).toBeLessThanOrEqual(width);
+        expect(bounds.bottom).toBeLessThanOrEqual(720);
+        expect(width - bounds.right).toBeLessThanOrEqual(32);
+        expect(720 - bounds.bottom).toBeLessThanOrEqual(32);
         expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth + 2);
         expect(getComputedStyle(card.querySelector(".djl-update-heading")!).opacity).toBe("1");
       });
@@ -94,6 +97,24 @@ describe("DJL provider-update notification", () => {
       expect(
         (Math.max(ink, background) + 0.05) / (Math.min(ink, background) + 0.05),
       ).toBeGreaterThanOrEqual(4.5);
+      const otherId = toastManager.add({ title: "Unrelated notification", timeout: 0 });
+      try {
+        await expect.element(page.getByText("Unrelated notification")).toBeVisible();
+        const other = page.getByText("Unrelated notification").element();
+        expect(other.closest('[data-slot="toast-viewport"]')?.getAttribute("data-position")).toBe(
+          "top-center",
+        );
+        expect(button.closest('[data-slot="toast-viewport"]')?.getAttribute("data-position")).toBe(
+          "bottom-right",
+        );
+      } finally {
+        toastManager.close(otherId);
+      }
+      await vi.waitFor(() =>
+        expect(
+          document.querySelector('[data-position="top-center"] [data-slot="toast-close"]'),
+        ).toBeNull(),
+      );
       await page.screenshot({
         element: document.querySelector(".djl-provider-update-toast")!,
         path: `/tmp/djl-provider-update-${mode}-${width}.png`,

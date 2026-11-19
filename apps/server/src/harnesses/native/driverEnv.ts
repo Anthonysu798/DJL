@@ -7,6 +7,15 @@ export function withDjlThreadId(
   env: NodeJS.ProcessEnv,
   threadId: string | undefined,
 ): NodeJS.ProcessEnv {
-  if (!threadId) return { ...env };
-  return { ...env, DJL_THREAD_ID: threadId };
+  const scoped = { ...env };
+  delete scoped.DJL_COMPUTER_USE_BRIDGE_TOKEN;
+  delete scoped.DJL_COMPUTER_USE_BRIDGE_URL;
+  delete scoped.SYNARA_CUA_HOST_SOCKET;
+  delete scoped.SYNARA_BROWSER_HOST_CAPABILITY;
+  delete scoped.SYNARA_BROWSER_HOST_CAPABILITY_FD;
+  delete scoped.SYNARA_AUTH_TOKEN;
+  delete scoped.DJL_MULTIPOST_HOST_URL;
+  delete scoped.DJL_MULTIPOST_HOST_TOKEN;
+
+  return threadId ? { ...scoped, DJL_THREAD_ID: threadId } : scoped;
 }
