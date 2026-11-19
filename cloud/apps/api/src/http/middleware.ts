@@ -55,7 +55,7 @@ export function makeMiddleware(env: ApiEnv, region: string, scopedShopOrigin?: s
         corsHeaders["access-control-allow-credentials"] = "true";
         corsHeaders["access-control-allow-headers"] = scoped
           ? "content-type, x-trace-id, x-csrf-token"
-          : "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token";
+          : "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token, x-review-token";
         corsHeaders["access-control-expose-headers"] = scoped
           ? "x-trace-id"
           : "x-trace-id, set-auth-token, set-auth-jwt";

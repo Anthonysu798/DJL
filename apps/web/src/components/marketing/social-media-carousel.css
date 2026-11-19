@@ -1,0 +1,107 @@
+.social-media-carousel {
+  width: 100%;
+  min-width: 0;
+}
+.social-carousel-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--muted);
+}
+.social-carousel-slide img {
+  display: block;
+  width: 100%;
+  height: min(340px, 42vh);
+  object-fit: contain;
+}
+.social-carousel-count {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  background: #171717c9;
+  color: white;
+  pointer-events: none;
+}
+.social-carousel-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 9px;
+}
+.social-carousel-dots {
+  display: flex;
+  gap: 1px;
+  overflow: auto;
+  max-width: 70%;
+}
+.social-carousel-dots button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.social-carousel-dots button::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  opacity: 0.25;
+  transition:
+    width 180ms,
+    opacity 180ms;
+}
+.social-carousel-dots button[aria-pressed="true"]::after {
+  width: 16px;
+  border-radius: 8px;
+  opacity: 1;
+}
+.social-carousel-dots button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  border-radius: 5px;
+}
+.social-media-order {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.social-media-order-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.social-media-order-row img {
+  width: 33px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 7px;
+}
+.social-media-order-number {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.social-media-order-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .social-carousel-dots button::after {
+    transition: none;
+  }
+}

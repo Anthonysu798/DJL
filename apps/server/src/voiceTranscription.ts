@@ -15,6 +15,17 @@ const CHATGPT_TRANSCRIPTIONS_URL = "https://chatgpt.com/backend-api/transcribe";
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 const MAX_DURATION_MS = 120_000;
 
+/** Contains only fixed public messages and an HTTP status, never provider bodies or credentials. */
+export class VoiceTranscriptionError extends Error {
+  constructor(
+    readonly reason: "browser-verification" | "authentication" | "provider",
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 export interface ChatGptVoiceAuthContext {
   readonly token: string;
   readonly transcriptionUrl?: string;
@@ -41,7 +52,9 @@ export async function transcribeVoiceWithChatGptSession(input: {
     ...(auth.transcriptionUrl ? { transcriptionUrl: auth.transcriptionUrl } : {}),
   });
 
-  if (response.status === 401 || response.status === 403) {
+  if (!response.ok) {
+    const failure = await readTranscriptionError(response);
+    if (failure.reason !== "authentication") throw failure;
     auth = await input.resolveAuth(true);
     response = await requestTranscription({
       fetchImpl,
@@ -50,10 +63,7 @@ export async function transcribeVoiceWithChatGptSession(input: {
       token: auth.token,
       ...(auth.transcriptionUrl ? { transcriptionUrl: auth.transcriptionUrl } : {}),
     });
-  }
-
-  if (!response.ok) {
-    throw new Error(await readTranscriptionErrorMessage(response));
+    if (!response.ok) throw await readTranscriptionError(response);
   }
 
   const payload = (await response.json().catch(() => null)) as {
@@ -121,27 +131,56 @@ async function requestTranscription(input: {
   });
 }
 
-async function readTranscriptionErrorMessage(response: Response): Promise<string> {
-  let errorMessage = `Transcription failed with status ${response.status}.`;
-  try {
-    const payload = (await response.json()) as {
-      error?: { message?: unknown };
-      message?: unknown;
-    } | null;
-    const providerMessage =
-      readString(payload?.error?.message) ?? readString(payload?.message) ?? null;
-    if (providerMessage) {
-      errorMessage = providerMessage;
+async function readTranscriptionError(response: Response): Promise<VoiceTranscriptionError> {
+  const body = await response.text().catch(() => "");
+  const html =
+    response.headers.get("content-type")?.includes("text/html") ||
+    /^\s*<!doctype html|^\s*<html/i.test(body);
+  if (
+    response.status === 403 &&
+    html &&
+    /cloudflare|cf-chl|browser.verification|just a moment|challenge/i.test(body)
+  ) {
+    return new VoiceTranscriptionError(
+      "browser-verification",
+      response.status,
+      "The transcription service requires browser verification (HTTP 403). Automatic transcription is unavailable with the current service. Retry later or supply timestamped subtitles.",
+    );
+  }
+  let authError = response.status === 401 && !html;
+  if (response.status === 403 && !html) {
+    try {
+      const payload = JSON.parse(body) as {
+        error?: { message?: unknown; code?: unknown; type?: unknown };
+        message?: unknown;
+      };
+      const hint = [
+        payload?.error?.code,
+        payload?.error?.type,
+        payload?.error?.message,
+        payload?.message,
+      ]
+        .filter((value) => typeof value === "string")
+        .join(" ");
+      authError =
+        /token[_ -]?(expired|invalid)|expired.{0,20}(token|session)|unauthorized|authentication|session.{0,20}expired/i.test(
+          hint,
+        );
+    } catch {
+      /* Non-JSON service failures do not prove an expired login. */
     }
-  } catch {
-    // Keep the generic status-based message when the provider body is empty or invalid.
   }
-
-  if (response.status === 401 || response.status === 403) {
-    return "Your ChatGPT login has expired. Sign in again.";
-  }
-
-  return errorMessage;
+  return authError
+    ? new VoiceTranscriptionError(
+        "authentication",
+        response.status,
+        "Your ChatGPT login has expired. Sign in again.",
+      )
+    : new VoiceTranscriptionError(
+        "provider",
+        response.status,
+        `The transcription service rejected automatic transcription (HTTP ${response.status}). Retry later or supply timestamped subtitles.`,
+      );
 }
 
 function normalizeBase64(value: string): string | null {

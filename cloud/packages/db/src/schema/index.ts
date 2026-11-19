@@ -11,3 +11,9 @@ export * from "./commercePayments.ts";
 export * from "./commerceAlerts.ts";
 export * from "./commerceAlertDeliveries.ts";
 export * from "./commerceImageUploads.ts";
+
+export * from "./social.ts";
+export * from "./socialPublishing.ts";
+export * from "./socialReviewLinks.ts";
+export * from "./socialReports.ts";
+export * from "./socialTrackingLinks.ts";

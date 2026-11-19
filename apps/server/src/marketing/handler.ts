@@ -1,4 +1,9 @@
+import { executeAgentRequest } from "./agentHandler";
+import { readAgentBrand, executeSourceTool } from "./sourceTools";
+import { assertMarketingRecordOwner, readAgentOwner } from "./agentScope";
 import { publishingKit } from "./kit";
+import { socialBridge } from "./socialBridge";
+import { publishingBridge } from "./publishingBridge";
 import { listThreadCampaigns } from "./chatTools";
 import sharp from "sharp";
 import { listMarketingModels, generateCampaignCopy } from "./generation";
@@ -80,14 +85,48 @@ const attempt = <A>(body: () => Promise<A>) =>
 const json = (value: unknown) =>
   HttpServerResponse.jsonUnsafe(value, { headers: { "Cache-Control": "no-store" } });
 
+export const readSocialBody = (request: HttpServerRequest.HttpServerRequest) =>
+  Effect.gen(function* () {
+    const bytes = yield* collectBoundedStream(request.stream, 64 * 1024).pipe(
+      Effect.mapError(
+        () => new MarketingError("Social request body exceeds 64 KB or could not be read.", 413),
+      ),
+    );
+    return yield* Effect.try({
+      try: () => JSON.parse(new TextDecoder().decode(bytes)),
+      catch: () => new MarketingError("Invalid social request JSON."),
+    });
+  });
+
 export function marketingHandler(config: ServerConfigShape) {
   return Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     const url = HttpServerRequest.toURL(request)!;
     const operation = url.pathname.slice("/api/marketing/".length);
+    if (operation === "agent" && request.method === "POST")
+      return json(yield* executeAgentRequest(config, yield* readSocialBody(request)));
+    const scope = {
+      threadId: "http",
+      authorizedRoot: config.cwd,
+      attachmentFiles: [],
+      stateDir: config.stateDir,
+      secretsDir: config.secretsDir,
+    };
+    const owner = yield* readAgentOwner(scope);
+    const accessible = (value: unknown) =>
+      !(value as { ownerKey?: string } | null)?.ownerKey ||
+      (value as { ownerKey: string }).ownerKey === owner?.key;
+    if (operation === "social" && request.method === "POST") {
+      return json(yield* socialBridge(config.secretsDir, yield* readSocialBody(request)));
+    }
+    if (operation === "social-publishing" && request.method === "POST") {
+      return json(yield* publishingBridge(config, yield* readSocialBody(request)));
+    }
     const root = path.join(config.stateDir, "marketing", "originals");
     const kitMatch = /^kit\/([a-f0-9-]{36})$/.exec(operation);
-    if (kitMatch && request.method === "GET")
+    if (kitMatch && request.method === "GET") {
+      const saved = yield* readDocument("campaign", kitMatch[1]!);
+      if (saved) yield* assertMarketingRecordOwner(scope, saved.value);
       return HttpServerResponse.uint8Array(
         yield* publishingKit(
           config.stateDir,
@@ -102,22 +141,44 @@ export function marketingHandler(config: ServerConfigShape) {
           },
         },
       );
+    }
     if (operation.startsWith("thread/") && request.method === "GET") {
       const threadId = decodeURIComponent(operation.slice("thread/".length));
-      const campaigns = yield* listThreadCampaigns(threadId);
+      const campaigns = (yield* listThreadCampaigns(threadId)).filter((record) =>
+        accessible(record.value),
+      );
       const ids = new Set(campaigns.flatMap((c) => c.value.assetIds));
-      const assets = (yield* listDocuments("asset")).filter((a) =>
-        ids.has((a.value as MediaAsset).id),
+      const assets = (yield* listDocuments("asset")).filter(
+        (a) => ids.has((a.value as MediaAsset).id) && accessible(a.value),
       );
       return json({ campaigns, assets });
     }
     if (operation === "state" && request.method === "GET") {
-      const campaigns = yield* listDocuments("campaign");
-      const assets = yield* listDocuments("asset");
-      const brand = yield* readDocument("brand", "default");
-      const recipes = yield* listDocuments("recipe");
-      const timelines = yield* listDocuments("timeline");
-      const jobs = yield* recoverJobs();
+      const campaigns = (yield* listDocuments("campaign")).filter((record) =>
+        accessible(record.value),
+      );
+      const assets = (yield* listDocuments("asset")).filter((record) => accessible(record.value));
+      const ownedBrand = owner ? yield* readAgentBrand(scope) : null;
+      const brand = ownedBrand
+        ? { value: ownedBrand.profile, version: ownedBrand.version ?? 0 }
+        : yield* readDocument("brand", "default");
+      const assetIds = new Set(assets.map((record) => (record.value as MediaAsset).id));
+      const campaignIds = new Set(campaigns.map((record) => (record.value as Campaign).id));
+      const recipes = (yield* listDocuments("recipe")).filter(
+        (record) => accessible(record.value) && assetIds.has((record.value as { id: string }).id),
+      );
+      const timelines = (yield* listDocuments("timeline")).filter((record) => {
+        const timeline = record.value as { campaignId: string; clips?: { assetId: string }[] };
+        return (
+          accessible(record.value) &&
+          campaignIds.has(timeline.campaignId) &&
+          (timeline.clips ?? []).every((clip) => assetIds.has(clip.assetId))
+        );
+      });
+      const jobs = (yield* recoverJobs()).filter(
+        (record) =>
+          accessible(record.value) && campaignIds.has((record.value as ExportJob).campaignId),
+      );
       return json({
         campaigns,
         assets,
@@ -149,16 +210,22 @@ export function marketingHandler(config: ServerConfigShape) {
           new MarketingError("Approve sending the brief and selected media to the model first."),
         );
       const record = yield* readDocument("campaign", input.campaignId);
-      if (!record || record.version !== input.version)
+      if (!record) return yield* Effect.fail(new MarketingError("Campaign not found.", 404));
+      yield* assertMarketingRecordOwner(scope, record.value);
+      if (record.version !== input.version)
         return yield* Effect.fail(
           new MarketingError("Campaign changed. Reload before generating.", 409),
         );
       const campaign = record.value as Campaign;
-      const brand = yield* readDocument("brand", "default");
+      const brand = owner
+        ? (yield* readAgentBrand(scope)).profile
+        : (((yield* readDocument("brand", "default"))?.value as BrandProfile | undefined) ??
+          defaultBrand);
       const images: string[] = [];
       if (input.includeImages) {
         for (const id of campaign.assetIds.slice(0, 4)) {
           const asset = yield* readDocument("asset", id);
+          if (asset) yield* assertMarketingRecordOwner(scope, asset.value);
           if (asset && (asset.value as MediaAsset).mime.startsWith("image/")) {
             const image = yield* attempt(async () =>
               sharp(await readFile(path.join(root, id)), { limitInputPixels: 80000000 })
@@ -176,7 +243,7 @@ export function marketingHandler(config: ServerConfigShape) {
           secretsDir: config.secretsDir,
           model: input.model,
           campaign,
-          brand: (brand?.value as BrandProfile) ?? defaultBrand,
+          brand,
           images,
         }),
       );
@@ -194,7 +261,14 @@ export function marketingHandler(config: ServerConfigShape) {
           try: () => createCampaign(command.name ?? ""),
           catch: (e) => new MarketingError(String(e)),
         });
-        return json(yield* saveDocument("campaign", campaign.id, campaign, null));
+        return json(
+          yield* saveDocument(
+            "campaign",
+            campaign.id,
+            { ...campaign, ...(owner ? { ownerKey: owner.key } : {}) },
+            null,
+          ),
+        );
       }
       if (command.action === "brand") {
         const brand = yield* Effect.try({
@@ -203,10 +277,20 @@ export function marketingHandler(config: ServerConfigShape) {
         });
         if (Object.values(brand).some((v) => v.length > 20000))
           return yield* Effect.fail(new MarketingError("Brand field is too long."));
+        if (owner) {
+          const saved = yield* executeSourceTool(scope, "djl_brand_memory", {
+            action: "save",
+            profile: brand,
+            version: command.version || null,
+          });
+          return json({ value: saved.profile, version: saved.version });
+        }
         return json(yield* saveDocument("brand", "default", brand, command.version || null));
       }
       if (command.action === "recipe") {
-        if (!command.id || !(yield* readDocument("asset", command.id)))
+        const asset = command.id ? yield* readDocument("asset", command.id) : null;
+        if (asset) yield* assertMarketingRecordOwner(scope, asset.value);
+        if (!command.id || !asset)
           return yield* Effect.fail(new MarketingError("Media not found.", 404));
         const recipe = yield* Effect.try({
           try: () => Schema.decodeUnknownSync(recipeSchema)(command.value),
@@ -216,15 +300,18 @@ export function marketingHandler(config: ServerConfigShape) {
       }
       const record = yield* readDocument("campaign", command.id ?? "");
       if (!record) return yield* Effect.fail(new MarketingError("Campaign not found.", 404));
+      yield* assertMarketingRecordOwner(scope, record.value);
       if (record.version !== command.version)
         return yield* Effect.fail(
           new MarketingError("Campaign changed. Reload before saving.", 409),
         );
       const campaign = record.value as Campaign;
       if (command.action === "update" && command.patch?.assetIds) {
-        for (const id of command.patch.assetIds)
-          if (!(yield* readDocument("asset", id)))
-            return yield* Effect.fail(new MarketingError("A selected asset is missing."));
+        for (const id of command.patch.assetIds) {
+          const asset = yield* readDocument("asset", id);
+          if (!asset) return yield* Effect.fail(new MarketingError("A selected asset is missing."));
+          yield* assertMarketingRecordOwner(scope, asset.value);
+        }
       }
       const updated = yield* Effect.try({
         try: () => {
@@ -284,6 +371,7 @@ export function marketingHandler(config: ServerConfigShape) {
         bytes: bytes.length,
         createdAt: new Date().toISOString(),
         ...metadata,
+        ...(owner ? { ownerKey: owner.key } : {}),
       };
       return json(yield* saveDocument("asset", id, asset, null));
     }
@@ -294,13 +382,15 @@ export function marketingHandler(config: ServerConfigShape) {
           Schema.decodeUnknownSync(timelineSchema)(JSON.parse(new TextDecoder().decode(bytes))),
         catch: () => new MarketingError("Invalid timeline."),
       });
-      if (!(yield* readDocument("campaign", input.campaignId)))
-        return yield* Effect.fail(new MarketingError("Select a campaign.", 404));
+      const campaignRecord = yield* readDocument("campaign", input.campaignId);
+      if (!campaignRecord) return yield* Effect.fail(new MarketingError("Select a campaign.", 404));
+      yield* assertMarketingRecordOwner(scope, campaignRecord.value);
       const clips: ResolvedClip[] = [];
       for (const clip of input.clips) {
         const record = yield* readDocument("asset", clip.assetId);
         if (!record || !(record.value as MediaAsset).mime.startsWith("video/"))
           return yield* Effect.fail(new MarketingError("Video asset not found.", 404));
+        yield* assertMarketingRecordOwner(scope, record.value);
         const source = path.join(root, clip.assetId);
         const meta = yield* attempt(() => inspectVideo(source));
         clips.push({ ...clip, ...meta, path: source });
@@ -325,7 +415,12 @@ export function marketingHandler(config: ServerConfigShape) {
     if (jobMatch) {
       const record = yield* readDocument("job", jobMatch[1]!);
       if (!record) return yield* Effect.fail(new MarketingError("Export not found.", 404));
+      yield* assertMarketingRecordOwner(scope, record.value);
       const job = record.value as ExportJob;
+      const campaign = yield* readDocument("campaign", job.campaignId);
+      if (!campaign)
+        return yield* Effect.fail(new MarketingError("Export campaign not found.", 404));
+      yield* assertMarketingRecordOwner(scope, campaign.value);
       if (request.method === "POST" && jobMatch[2]) {
         yield* Effect.try({
           try: () => cancelExport(job.id),
@@ -344,6 +439,7 @@ export function marketingHandler(config: ServerConfigShape) {
           headers: {
             "Content-Type": "video/mp4",
             "Content-Disposition": 'attachment; filename="campaign.mp4"',
+            "Cache-Control": "no-store",
           },
         });
       }
@@ -352,6 +448,7 @@ export function marketingHandler(config: ServerConfigShape) {
     if (match && request.method === "GET") {
       const record = yield* readDocument("asset", match[2]!);
       if (!record) return yield* Effect.fail(new MarketingError("Media not found.", 404));
+      yield* assertMarketingRecordOwner(scope, record.value);
       const asset = record.value as MediaAsset;
       const bytes = yield* attempt(() => readFile(path.join(root, asset.id)));
       let output: Uint8Array = bytes;

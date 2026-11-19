@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ImageRecipe } from "@synara/contracts";
+import { resolveMediaBinary } from "./mediaBinary";
 const exec = promisify(execFile);
 const maxPixels = 80_000_000;
 export async function inspectImage(bytes: Uint8Array) {
@@ -62,7 +63,7 @@ export async function renderImage(bytes: Uint8Array, recipe: ImageRecipe) {
 }
 export async function inspectVideo(path: string) {
   const { stdout } = await exec(
-    process.env.DJL_FFPROBE_PATH || "ffprobe",
+    resolveMediaBinary("ffprobe"),
     [
       "-v",
       "error",

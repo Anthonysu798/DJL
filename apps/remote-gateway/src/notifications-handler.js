@@ -14,7 +14,7 @@ function createNotificationsHandler({ pushServiceClient, logPrefix = "[djl]" } =
     }
 
     const method = typeof parsed?.method === "string" ? parsed.method.trim() : "";
-    if (method !== "notifications/push/register") {
+    if (method !== "notifications/push/register" && method !== "notifications/push/capabilities") {
       return false;
     }
 
@@ -45,11 +45,36 @@ function createNotificationsHandler({ pushServiceClient, logPrefix = "[djl]" } =
   }
 
   async function handleNotificationsMethod(method, params) {
+    if (method === "notifications/push/capabilities")
+      return pushServiceClient?.getCapabilities
+        ? pushServiceClient.getCapabilities()
+        : { providers: [] };
     if (!pushServiceClient?.hasConfiguredBaseUrl) {
       return { ok: false, skipped: true };
     }
 
-    const deviceToken = readString(params.deviceToken);
+    const provider = params.provider ?? "apns";
+    if (provider !== "apns" && provider !== "fcm")
+      throw notificationsError("invalid_push_provider", "Push provider is invalid.");
+    if (
+      provider === "fcm" &&
+      (typeof params.deviceToken !== "string" ||
+        !/^[^\s\x00-\x1f\x7f]{1,200}$/.test(params.deviceToken) ||
+        params.appEnvironment !== "production")
+    )
+      throw notificationsError(
+        "invalid_fcm_installation",
+        "Android notification registration is invalid.",
+      );
+    if (provider === "fcm") {
+      const capabilities = await pushServiceClient.getCapabilities?.();
+      if (!capabilities?.providers?.includes("fcm"))
+        throw notificationsError(
+          "fcm_not_configured",
+          "Android remote notifications are unavailable on this service.",
+        );
+    }
+    const deviceToken = provider === "fcm" ? params.deviceToken : readString(params.deviceToken);
     const alertsEnabled = Boolean(params.alertsEnabled);
     const apnsEnvironment = readAPNsEnvironment(params.appEnvironment);
     if (!deviceToken) {
@@ -63,6 +88,7 @@ function createNotificationsHandler({ pushServiceClient, logPrefix = "[djl]" } =
       deviceToken,
       alertsEnabled,
       apnsEnvironment,
+      ...(provider === "fcm" ? { provider } : {}),
     });
 
     return {

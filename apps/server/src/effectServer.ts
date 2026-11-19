@@ -1,3 +1,4 @@
+import { desktopComputerRoutes } from "./computer/desktopRoutes";
 import http from "node:http";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
@@ -5,6 +6,8 @@ import type { ServerSettingsError } from "@synara/contracts";
 import { Effect, Exit, FileSystem, Layer, Path, Schema, Scope, ServiceMap } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
+import { SocialOAuthResumeReactor } from "./marketing/SocialOAuthResumeReactor";
+import { SocialReportDeliveryReactor } from "./marketing/SocialReportDeliveryReactor";
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
 import { AutomationScheduler } from "./automation/Services/AutomationScheduler";
 import { AutomationService } from "./automation/Services/AutomationService";
@@ -40,6 +43,8 @@ export interface ServerShape {
     | FileSystem.FileSystem
     | Path.Path
     | Keybindings
+    | SocialOAuthResumeReactor
+    | SocialReportDeliveryReactor
     | AutomationRunReactor
     | AutomationScheduler
     | AutomationService
@@ -70,6 +75,8 @@ export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycl
 
 export const createEffectServer = Effect.fn(function* () {
   const config = yield* ServerConfig;
+  const socialOAuthResumeReactor = yield* SocialOAuthResumeReactor;
+  const socialReportDeliveryReactor = yield* SocialReportDeliveryReactor;
   const automationRunReactor = yield* AutomationRunReactor;
   const automationScheduler = yield* AutomationScheduler;
   const keybindings = yield* Keybindings;
@@ -106,7 +113,11 @@ export const createEffectServer = Effect.fn(function* () {
     Effect.mapError((cause) => new ServerLifecycleError({ operation: "httpServerListen", cause })),
   );
 
-  const routesLayer = Layer.mergeAll(makeEffectHttpRouteLayer(readiness), websocketRpcRouteLayer);
+  const routesLayer = Layer.mergeAll(
+    makeEffectHttpRouteLayer(readiness),
+    websocketRpcRouteLayer,
+    desktopComputerRoutes,
+  );
   const httpApp = yield* HttpRouter.toHttpEffect(routesLayer);
   yield* httpServer
     .serve(httpApp)
@@ -141,6 +152,8 @@ export const createEffectServer = Effect.fn(function* () {
   yield* Scope.provide(orchestrationReactor.start, subscriptionsScope);
   yield* Scope.provide(automationScheduler.start(), subscriptionsScope);
   yield* Scope.provide(automationRunReactor.start(), subscriptionsScope);
+  yield* Scope.provide(socialOAuthResumeReactor.start(), subscriptionsScope);
+  yield* Scope.provide(socialReportDeliveryReactor.start(), subscriptionsScope);
   yield* Scope.provide(threadDeletionReactor.start(), subscriptionsScope);
   yield* Scope.provide(providerSessionReaper.start(), subscriptionsScope);
   yield* readiness.markOrchestrationSubscriptionsReady;

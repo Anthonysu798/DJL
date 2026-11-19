@@ -5,6 +5,10 @@
 
 export const MICROPHONE_USAGE_DESCRIPTION =
   "DJL needs microphone access so you can record voice notes and transcribe them into the chat composer.";
+export const COMPUTER_USE_ACCESSIBILITY_DESCRIPTION =
+  "DJL uses Accessibility to observe and control the app window you select for computer use.";
+export const COMPUTER_USE_SCREEN_CAPTURE_DESCRIPTION =
+  "DJL captures the app window you select for a computer-use session and displays its preview.";
 export const MAC_ENTITLEMENTS_PATH = "apps/desktop/resources/entitlements.mac.plist";
 export const MAC_INHERITED_ENTITLEMENTS_PATH =
   "apps/desktop/resources/entitlements.mac.inherit.plist";
@@ -92,6 +96,8 @@ export function createDesktopPlatformBuildConfig(
       entitlementsInherit: MAC_INHERITED_ENTITLEMENTS_PATH,
       extendInfo: {
         NSMicrophoneUsageDescription: MICROPHONE_USAGE_DESCRIPTION,
+        NSAccessibilityUsageDescription: COMPUTER_USE_ACCESSIBILITY_DESCRIPTION,
+        NSScreenCaptureUsageDescription: COMPUTER_USE_SCREEN_CAPTURE_DESCRIPTION,
       },
     } satisfies Record<string, unknown>;
 

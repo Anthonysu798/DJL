@@ -5,7 +5,7 @@ import path from "node:path";
 import { crc32 } from "node:zlib";
 
 import { ProjectId, ThreadId } from "@synara/contracts";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildTrustedWorkPrompt,
@@ -127,6 +127,32 @@ describe("normalizeDocument", () => {
         ),
       ),
     ).rejects.toMatchObject({ code: "macro_rejected" });
+  });
+
+  it("retains immutable campaign media without invoking OCR and still validates its hash", async () => {
+    const filePath = tempFile("logo.png", Buffer.from("fixture-image"));
+    const base = normalizerInput(filePath, "logo.png", "image/png");
+    const ocr = vi.fn(async () => {
+      throw new Error("OCR must not run for media placement");
+    });
+    const artifact = await normalizeDocument({
+      ...base,
+      purpose: "campaign-media",
+      requireOcr: true,
+      ocr,
+    });
+    expect(ocr).not.toHaveBeenCalled();
+    expect(artifact.blocks).toEqual([]);
+    expect(artifact.warnings).toContain(
+      "Campaign media retained for placement. No text or visual content was extracted.",
+    );
+    await expect(
+      normalizeDocument({
+        ...base,
+        purpose: "campaign-media",
+        attachment: { ...base.attachment, contentHash: "0".repeat(64) },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_document" });
   });
 
   it("requires OCR for a nonvision route and records OCR confidence and engine metadata", async () => {

@@ -132,10 +132,11 @@ export interface ResolvedWorkspaceRoots {
  */
 export const resolveCanonicalWorkspaceRoots = Effect.fn(function* (input: {
   readonly homeDir: string;
+  readonly isolatedRoot?: string;
   readonly platform?: NodeJS.Platform;
 }): Effect.fn.Return<ResolvedWorkspaceRoots, never, FileSystem.FileSystem | Path.Path> {
   const platform = input.platform ?? process.platform;
-  const homeDir = yield* realpathNearestExisting(input.homeDir);
+  const homeDir = yield* realpathNearestExisting(input.isolatedRoot ?? input.homeDir);
   const chatWorkspaceRoot = yield* realpathNearestExisting(
     resolveDefaultChatWorkspaceRoot({ homeDir, platform }),
   );

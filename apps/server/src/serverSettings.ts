@@ -38,6 +38,8 @@ export interface ServerSettingsShape {
   readonly start: Effect.Effect<void, ServerSettingsError>;
   readonly ready: Effect.Effect<void, ServerSettingsError>;
   readonly getSettings: Effect.Effect<ServerSettings, ServerSettingsError>;
+  /** Saved/canonical selection before fallback; unavailable if its load was invalid. */
+  readonly getConfiguredSettings: Effect.Effect<ServerSettings, ServerSettingsError>;
   readonly updateSettings: (
     patch: ServerSettingsPatch,
   ) => Effect.Effect<ServerSettings, ServerSettingsError>;
@@ -63,6 +65,9 @@ export class ServerSettingsService extends ServiceMap.Service<
           start: Effect.void,
           ready: Effect.void,
           getSettings: Ref.get(currentSettingsRef).pipe(Effect.map(resolveTextGenerationProvider)),
+          getConfiguredSettings: Ref.get(currentSettingsRef).pipe(
+            Effect.map(canonicalizeTextGenerationSelection),
+          ),
           updateSettings: (patch) =>
             Ref.get(currentSettingsRef).pipe(
               Effect.flatMap((currentSettings) =>
@@ -162,6 +167,7 @@ const makeServerSettings = Effect.gen(function* () {
   const writeSemaphore = yield* Semaphore.make(1);
   const changesPubSub = yield* PubSub.unbounded<ServerSettings>();
   const settingsRef = yield* Ref.make<ServerSettings>(DEFAULT_SERVER_SETTINGS);
+  const configuredSettingsValidRef = yield* Ref.make(false);
   const startedRef = yield* Ref.make(false);
   const startedDeferred = yield* Deferred.make<void, ServerSettingsError>();
 
@@ -180,6 +186,7 @@ const makeServerSettings = Effect.gen(function* () {
       ),
     );
     if (!exists) {
+      yield* Ref.set(configuredSettingsValidRef, true);
       return DEFAULT_SERVER_SETTINGS;
     }
 
@@ -201,6 +208,7 @@ const makeServerSettings = Effect.gen(function* () {
       });
       return DEFAULT_SERVER_SETTINGS;
     }
+    yield* Ref.set(configuredSettingsValidRef, true);
     return decoded.value;
   });
 
@@ -260,6 +268,16 @@ const makeServerSettings = Effect.gen(function* () {
     start,
     ready: Deferred.await(startedDeferred),
     getSettings: Ref.get(settingsRef).pipe(Effect.map(resolveTextGenerationProvider)),
+    getConfiguredSettings: Effect.gen(function* () {
+      yield* Deferred.await(startedDeferred);
+      if (!(yield* Ref.get(configuredSettingsValidRef))) {
+        return yield* new ServerSettingsError({
+          settingsPath,
+          detail: "configured model settings unavailable after an invalid settings load",
+        });
+      }
+      return canonicalizeTextGenerationSelection(yield* Ref.get(settingsRef));
+    }),
     updateSettings: (patch) =>
       writeSemaphore.withPermits(1)(
         Effect.gen(function* () {
@@ -269,6 +287,12 @@ const makeServerSettings = Effect.gen(function* () {
           );
           yield* writeSettingsAtomically(next);
           yield* Ref.set(settingsRef, next);
+          if (
+            patch.textGenerationModelSelection?.provider !== undefined &&
+            patch.textGenerationModelSelection.model?.trim()
+          ) {
+            yield* Ref.set(configuredSettingsValidRef, true);
+          }
           yield* emitChange(next);
           return resolveTextGenerationProvider(next);
         }),

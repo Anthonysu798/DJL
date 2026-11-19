@@ -20,6 +20,14 @@ const config: NextConfig = {
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
       ],
     },
+    // Public reviews keep their bearer token in the fragment and stay out of search engines.
+    {
+      source: "/social/review",
+      headers: [
+        { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        { key: "Cache-Control", value: "no-store, private" },
+      ],
+    },
     // Share links carry a secret token: keep them out of search engines.
     { source: "/share/:token*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
   ],

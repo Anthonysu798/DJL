@@ -18,3 +18,9 @@ export * from "./cloud/commerce";
 export * from "./cloud/commerceNative";
 export * from "./cloud/commerceReconciliation";
 export * from "./cloud/commerceAdmin";
+
+export * from "./cloud/social";
+export * from "./cloud/socialPublishing";
+export * from "./cloud/reviewLinks";
+export * from "./cloud/socialReports";
+export * from "./cloud/trackingLinks";

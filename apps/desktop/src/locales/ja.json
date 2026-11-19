@@ -83,5 +83,15 @@
     "gatewayExited": "リモートゲートウェイが終了しました（{{reason}}）。再接続しています…",
     "stoppedUnexpectedly": "リモートアクセスが予期せず停止しました。再接続しています…",
     "unknownReason": "不明"
+  },
+  "computerStop": {
+    "title": "DJL コンピューター操作",
+    "stop": "停止",
+    "stopping": "停止中…",
+    "failure": "停止を確認できませんでした。もう一度お試しください。"
+  },
+  "multipost": {
+    "open": "DJLを開く",
+    "quit": "DJLを終了"
   }
 }

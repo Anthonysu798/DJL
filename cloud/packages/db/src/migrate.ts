@@ -2,10 +2,9 @@
  * Applies pending SQL migrations from ./drizzle. Used by CI, local dev, and the
  * deploy pipeline. Fails closed: any error exits non-zero.
  */
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { fileURLToPath } from "node:url";
+import { applyCloudMigrations } from "./applyMigrations.ts";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -14,9 +13,7 @@ if (!url) {
 }
 const sql = postgres(url, { max: 1, prepare: false });
 try {
-  await migrate(drizzle(sql), {
-    migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
-  });
+  await applyCloudMigrations(sql, fileURLToPath(new URL("../drizzle", import.meta.url)));
   console.log("migrations applied");
 } finally {
   await sql.end();

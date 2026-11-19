@@ -41,9 +41,12 @@ export const InlineMentionChip = memo(function InlineMentionChip(props: InlineMe
     ...(props.kind ? { kind: props.kind } : {}),
     ...(props.mentionReferences ? { mentionReferences: props.mentionReferences } : {}),
   });
-  // A server token is the server's name, not a path; show it verbatim.
+  // Plugin/MCP names may include a parent path; preserve their full identity.
   const label =
-    props.label ?? (resolvedKind === "server" ? props.path : basenameOfPath(props.path));
+    props.label ??
+    (resolvedKind === "server" || resolvedKind === "plugin"
+      ? props.path
+      : basenameOfPath(props.path));
   const inner = (
     <InlineChipContent
       icon={

@@ -25,6 +25,10 @@ import type {
   OpenCodeListModelProvidersResult,
   OpenCodeRemoveCredentialInput,
   OpenCodeSetApiKeyInput,
+  SaveCustomModelProviderInput,
+  RemoveCustomModelProviderInput,
+  FetchCustomModelsInput,
+  FetchCustomModelsResult,
   ProviderListPluginsInput,
   ProviderListPluginsResult,
   ProviderReadPluginInput,
@@ -246,6 +250,15 @@ export interface ProviderAdapterShape<TError> {
     input: OpenCodeListModelProvidersInput,
   ) => Effect.Effect<OpenCodeListModelProvidersResult, TError>;
 
+  readonly saveCustomProvider?: (
+    input: SaveCustomModelProviderInput,
+  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, TError>;
+  readonly removeCustomProvider?: (
+    input: RemoveCustomModelProviderInput,
+  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, TError>;
+  readonly fetchCustomModels?: (
+    input: FetchCustomModelsInput,
+  ) => import("effect").Effect.Effect<FetchCustomModelsResult, TError>;
   readonly setApiKey?: (
     input: OpenCodeSetApiKeyInput,
   ) => Effect.Effect<OpenCodeCredentialMutationResult, TError>;

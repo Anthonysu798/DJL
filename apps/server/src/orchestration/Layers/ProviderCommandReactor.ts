@@ -1,3 +1,8 @@
+import { computerToolInstructions } from "../../agentGateway/computerGuidance";
+import { computerApprovalGate } from "../../computer/ComputerApprovalGate";
+import { beginComputerUseTurn } from "../../work/computerTurnLifecycle";
+import { executeComputerTool } from "../../work/computerTools";
+import { resolveBuiltInPluginReferences } from "@synara/contracts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { listThreadCampaigns } from "../../marketing/chatTools";
 // FILE: ProviderCommandReactor.ts
@@ -1137,6 +1142,7 @@ const make = Effect.gen(function* () {
   const dispatchTurnForThread = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
     readonly messageId: string;
+    readonly computerControl?: import("@synara/contracts").ComputerTurnControl;
     readonly messageText: string;
     readonly attachments?: ReadonlyArray<ChatAttachment>;
     readonly skills?: ReadonlyArray<ProviderSkillReference>;
@@ -1150,6 +1156,17 @@ const make = Effect.gen(function* () {
     readonly workTurnPolicy?: WorkTurnPolicy;
     readonly createdAt: string;
   }) {
+    // Only the original user-selected skill grants this turn access to recorded activity.
+    // Reference resolution removes built-in paths and may inject instructions into text.
+    const allowActivityHistory =
+      input.skills?.some((skill) => skill.path === "builtin://djl/computer-use/history") === true;
+    input = resolveBuiltInPluginReferences(
+      input,
+      process.env.DJL_COMPUTER_ENGINE === "cua"
+        ? { computerInstructions: computerToolInstructions() }
+        : {},
+    );
+    yield* Effect.promise(() => beginComputerUseTurn(input.threadId, { allowActivityHistory }));
     const thread = yield* resolveThread(input.threadId);
     if (!thread) {
       return;
@@ -1373,6 +1390,8 @@ const make = Effect.gen(function* () {
       const inputWithServers = appendSelectedServersBlock(messageText, selectedServers);
       return providerService.sendTurn({
         threadId: input.threadId,
+        computerActivityHistory: allowActivityHistory,
+        ...(input.computerControl ? { computerControl: input.computerControl } : {}),
         ...(inputWithServers ? { input: inputWithServers } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
@@ -2040,6 +2059,7 @@ const make = Effect.gen(function* () {
           )
         : message.text,
       ...(providerAttachments !== undefined ? { attachments: providerAttachments } : {}),
+      ...(event.payload.computerControl ? { computerControl: event.payload.computerControl } : {}),
       ...(message.skills !== undefined ? { skills: message.skills } : {}),
       ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
       ...(event.payload.modelSelection !== undefined
@@ -2136,6 +2156,9 @@ const make = Effect.gen(function* () {
           commandId: serverCommandId("dispatch-queued-turn"),
           threadId,
           messageId: nextQueuedTurn.messageId,
+          ...(nextQueuedTurn.computerControl
+            ? { computerControl: nextQueuedTurn.computerControl }
+            : {}),
           ...(nextQueuedTurn.modelSelection !== undefined
             ? { modelSelection: nextQueuedTurn.modelSelection }
             : {}),
@@ -2220,16 +2243,32 @@ const make = Effect.gen(function* () {
   const processTurnInterruptRequested = Effect.fnUntraced(function* (
     event: Extract<ProviderIntentEvent, { type: "thread.turn-interrupt-requested" }>,
   ) {
-    yield* interruptProviderTurn({
-      threadId: event.payload.threadId,
-      turnId: event.payload.turnId,
-      createdAt: event.payload.createdAt,
-    });
+    yield* Effect.all(
+      [
+        Effect.promise(() =>
+          executeComputerTool({ threadId: event.payload.threadId }, "djl_computer_stop", {}),
+        ).pipe(Effect.catch(() => Effect.void)),
+        interruptProviderTurn({
+          threadId: event.payload.threadId,
+          turnId: event.payload.turnId,
+          createdAt: event.payload.createdAt,
+        }),
+      ],
+      { concurrency: "unbounded" },
+    );
   });
 
   const processApprovalResponseRequested = Effect.fnUntraced(function* (
     event: Extract<ProviderIntentEvent, { type: "thread.approval-response-requested" }>,
   ) {
+    if (
+      computerApprovalGate.respond(
+        event.payload.threadId,
+        event.payload.requestId,
+        event.payload.decision,
+      )
+    )
+      return;
     const thread = yield* resolveThread(event.payload.threadId);
     if (!thread) {
       return;

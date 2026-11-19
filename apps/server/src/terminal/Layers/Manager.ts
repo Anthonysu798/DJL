@@ -865,7 +865,7 @@ function toSessionKey(threadId: string, terminalId: string): string {
 
 function shouldExcludeTerminalEnvKey(key: string): boolean {
   const normalizedKey = key.toUpperCase();
-  if (normalizedKey.startsWith("SYNARA_")) {
+  if (normalizedKey.startsWith("SYNARA_") || normalizedKey.startsWith("DJL_COMPUTER_USE_BRIDGE_")) {
     return true;
   }
   if (normalizedKey.startsWith("VITE_")) {

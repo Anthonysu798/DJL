@@ -1,0 +1,26 @@
+{
+  "name": "@synara/multipost",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
+    "./skills": "./src/skills.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "generate": "bun scripts/import-upstream.ts",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
+  },
+  "dependencies": {
+    "marked": "15.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/browser-playwright": "^4.0.18",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

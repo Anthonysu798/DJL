@@ -1,3 +1,5 @@
+import { scopedDjlToolName } from "../scopedDjlToolName";
+import { computerToolInstructions } from "../../agentGateway/computerGuidance";
 import { randomUUID } from "node:crypto";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -64,6 +66,7 @@ import {
   type OpenCodeInventory,
   OPENCODE_CLI_SPEC,
   resolveDjlOpenCodeBinaryPath,
+  resolveOpenCodeAuthFilePath,
   type OpenCodeRuntimeShape,
   OpenCodeRuntime,
   OpenCodeRuntimeLive,
@@ -88,6 +91,13 @@ import type {
 } from "../../work/Services/WorkMcpServer.ts";
 import { recordProviderModelDocumentCapabilities } from "../../work/modelDocumentRouting.ts";
 import { isSupportedOfficialDeepSeekCatalogModel } from "../deepSeekCompatibility.ts";
+import {
+  readCustomProviders,
+  writeCustomProvider,
+  removeCustomProvider as deleteCustomProvider,
+  fetchCustomModels as discoverCustomModels,
+  fetchSavedCustomModels,
+} from "../customModelProviders";
 
 const collectKnownMessageIds = (context: OpenCodeSessionContext): Set<string> =>
   new Set(context.messageRoleById.keys());
@@ -152,6 +162,8 @@ function sdkServerPasswordOption(
 }
 
 const OPENCODE_PROMPT_ACCEPTED_ACTIVITY_TIMEOUT_MS = 60_000;
+// Cover the five-minute Computer task approval and the subsequent native action.
+const COMPUTER_MCP_REQUEST_TIMEOUT_MS = 6 * 60_000;
 const OPENCODE_PROMPT_ACCEPTED_RECOVERY_DELAYS_MS = [2_000, 5_000, 10_000, 20_000] as const;
 const OPENCODE_PROMPT_SUBMISSION_INLINE_WAIT_MS = 500;
 
@@ -177,6 +189,7 @@ interface OpenCodeSessionContext {
   readonly directory: string;
   readonly openCodeSessionId: string;
   readonly workMcpName: string | null;
+  readonly workMcpRegistration?: WorkMcpSessionRegistration | null;
   readonly pendingPermissions: Map<string, PermissionRequest>;
   /** Permission request ids auto-approved server-side in full-access mode (never surfaced to the UI). */
   readonly autoApprovedPermissionIds: Set<string>;
@@ -727,6 +740,7 @@ function updateProviderSession(
 }
 
 function clearActiveTurnState(context: OpenCodeSessionContext): void {
+  void context.workMcpRegistration?.computer?.end().catch(() => undefined);
   context.activeTurnId = undefined;
   context.settleTurn?.();
   context.settleTurn = null;
@@ -4258,6 +4272,42 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                     ? yield* workMcpServer.registerSession({
                         threadId: input.threadId,
                         authorizedRoot: directory,
+                        provider,
+                        publishComputerApproval: async (request) => {
+                          const context = ensureAdapterSessionContext(input.threadId);
+                          await Effect.runPromise(
+                            emit({
+                              ...buildEventBase({
+                                threadId: input.threadId,
+                                turnId: context.activeTurnId,
+                                requestId: request.requestId,
+                              }),
+                              ...(request.decision === undefined
+                                ? {
+                                    type: "request.opened" as const,
+                                    payload: {
+                                      requestType: "command_execution_approval" as const,
+                                      detail: request.foreground
+                                        ? "Allow Computer to bring the target window in front for this task?"
+                                        : "Allow Computer to control the requested target for this task?",
+                                      args: {
+                                        tool: request.tool,
+                                        input: request.arguments,
+                                        computerControl: true,
+                                        foreground: request.foreground,
+                                      },
+                                    },
+                                  }
+                                : {
+                                    type: "request.resolved" as const,
+                                    payload: {
+                                      requestType: "command_execution_approval" as const,
+                                      decision: request.decision,
+                                    },
+                                  }),
+                            }),
+                          );
+                        },
                         attachmentsRoot: serverConfig.attachmentsDir,
                       })
                     : null;
@@ -4277,10 +4327,35 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                           Authorization: `Bearer ${workMcpRegistration.bearerToken}`,
                         },
                         oauth: false,
-                        timeout: 15_000,
+                        timeout: workMcpRegistration.computer
+                          ? COMPUTER_MCP_REQUEST_TIMEOUT_MS
+                          : 15_000,
                       },
                     }),
                   );
+                  if (workMcpRegistration.multipost) {
+                    const mp = workMcpRegistration.multipost;
+                    const connected = yield* runOpenCodeSdk("mcp.add", () =>
+                      client.mcp.add({
+                        directory,
+                        name: mp.name,
+                        config: {
+                          type: "remote",
+                          url: mp.url,
+                          enabled: true,
+                          headers: { Authorization: `Bearer ${mp.bearerToken}` },
+                          oauth: false,
+                          timeout: 15000,
+                        },
+                      }),
+                    );
+                    if (connected.data?.[mp.name]?.status !== "connected")
+                      return yield* new ProviderAdapterValidationError({
+                        provider,
+                        operation: "startSession",
+                        issue: "DJL MultiPost MCP did not connect.",
+                      });
+                  }
                   const mcpStatus = mcpResult.data?.[workMcpRegistration.name];
                   if (!mcpStatus || mcpStatus.status !== "connected") {
                     const detail =
@@ -4400,6 +4475,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   client,
                   openCodeSessionId,
                   workMcpName: workMcpRegistration?.name ?? null,
+                  workMcpRegistration,
                   modelContextLimitBySlug: modelMetadata.contextLimits,
                   modelToolSupportBySlug: modelMetadata.toolSupport,
                 };
@@ -4449,6 +4525,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             directory,
             openCodeSessionId: started.openCodeSessionId,
             workMcpName: started.workMcpName,
+            workMcpRegistration: started.workMcpRegistration,
             pendingPermissions: new Map(),
             autoApprovedPermissionIds: new Set(),
             pendingQuestions: new Map(),
@@ -4565,8 +4642,48 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             );
           }
 
+          if (context.workMcpRegistration?.computer) {
+            const registration = context.workMcpRegistration;
+            yield* Effect.tryPromise({
+              try: () =>
+                registration.computer!.begin(
+                  input.computerControl,
+                  input.computerActivityHistory === true,
+                ),
+              catch: (cause) =>
+                new ProviderAdapterRequestError({
+                  provider,
+                  method: "sendTurn",
+                  detail:
+                    cause instanceof Error ? cause.message : "Computer turn admission failed.",
+                }),
+            });
+            yield* runOpenCodeSdk("mcp.add", () =>
+              context.client.mcp.add({
+                directory: context.directory,
+                name: registration.name,
+                config: {
+                  type: "remote",
+                  url: registration.url,
+                  enabled: true,
+                  headers: {
+                    Authorization: `Bearer ${registration.bearerToken}`,
+                    ...registration.computer!.requestHeaders(),
+                  },
+                  oauth: false,
+                  timeout: COMPUTER_MCP_REQUEST_TIMEOUT_MS,
+                },
+              }),
+            ).pipe(Effect.mapError(toAdapterRequestError));
+          }
+
           const baseText = withProviderPlanModePrompt({
-            text: input.input?.trim() ?? "",
+            text:
+              input.computerControl?.mode &&
+              input.computerControl.mode !== "off" &&
+              context.workMcpRegistration?.computer
+                ? `${computerToolInstructions()}\n\n${input.input?.trim() ?? ""}`
+                : (input.input?.trim() ?? ""),
             interactionMode: input.interactionMode,
           }).trim();
           const text =
@@ -4615,11 +4732,17 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           }
           if (provider === "opencode" && managedRootDir) {
             const policy = input.workTurnPolicy;
+            const computerQaTools =
+              process.env.DJL_COMPUTER_QA_PROFILE === "1"
+                ? (context.workMcpRegistration?.computer?.toolNames() ?? [])
+                : undefined;
             const usesAliases = ["ollama", "lmstudio", "deepseek"].includes(parsedModel.providerID);
             const nativeTool = (tool: string) =>
-              tool.startsWith("djl_") && context.workMcpName
-                ? `${context.workMcpName}_${tool}`
-                : tool;
+              scopedDjlToolName(
+                tool,
+                context.workMcpName,
+                context.workMcpRegistration?.multipost?.name,
+              );
             const policySystem = policy
               ? policy.visibleTools.reduce(
                   (text, tool) => (usesAliases ? text : text.replaceAll(tool, nativeTool(tool))),
@@ -4629,16 +4752,25 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             const permission =
               context.modelToolSupportBySlug.get(modelSlug) === false
                 ? [{ permission: "*", pattern: "*", action: "deny" as const }]
-                : policy
+                : computerQaTools
                   ? [
                       { permission: "*", pattern: "*", action: "deny" as const },
-                      ...policy.visibleTools.map((tool) => ({
+                      ...computerQaTools.map((tool) => ({
                         permission: nativeTool(tool),
                         pattern: "*",
                         action: "allow" as const,
                       })),
                     ]
-                  : buildOpenCodePermissionRules(context.session.runtimeMode);
+                  : policy
+                    ? [
+                        { permission: "*", pattern: "*", action: "deny" as const },
+                        ...policy.visibleTools.map((tool) => ({
+                          permission: nativeTool(tool),
+                          pattern: "*",
+                          action: "allow" as const,
+                        })),
+                      ]
+                    : buildOpenCodePermissionRules(context.session.runtimeMode);
             yield* runOpenCodeSdk("session.update", () =>
               context.client.session.update({ sessionID: context.openCodeSessionId, permission }),
             ).pipe(Effect.mapError(toAdapterRequestError));
@@ -4647,17 +4779,21 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 writeOpenCodeSessionPolicy(
                   managedRootDir,
                   context.openCodeSessionId,
-                  policy
-                    ? {
-                        instructionScope:
-                          policy.instructionScope === "work-isolated" ? "work-isolated" : "native",
-                        system: [policySystem],
-                        requiredToolCall: policy.requireSuccessfulTool,
-                        visibleTools: policy.visibleTools.map((tool) =>
-                          usesAliases ? tool : nativeTool(tool),
-                        ),
-                      }
-                    : { instructionScope: "native" },
+                  computerQaTools
+                    ? { instructionScope: "native", visibleTools: computerQaTools.map(nativeTool) }
+                    : policy
+                      ? {
+                          instructionScope:
+                            policy.instructionScope === "work-isolated"
+                              ? "work-isolated"
+                              : "native",
+                          system: [policySystem],
+                          requiredToolCall: policy.requireSuccessfulTool,
+                          visibleTools: policy.visibleTools.map((tool) =>
+                            usesAliases ? tool : nativeTool(tool),
+                          ),
+                        }
+                      : { instructionScope: "native" },
                 ),
               catch: (cause) =>
                 new ProviderAdapterRequestError({
@@ -4743,9 +4879,14 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                         ? buildWorkTurnSystemPrompt(input.workTurnPolicy)
                         : input.workTurnPolicy.visibleTools.reduce(
                             (text, tool) =>
-                              tool.startsWith("djl_") && context.workMcpName
-                                ? text.replaceAll(tool, `${context.workMcpName}_${tool}`)
-                                : text,
+                              text.replaceAll(
+                                tool,
+                                scopedDjlToolName(
+                                  tool,
+                                  context.workMcpName,
+                                  context.workMcpRegistration?.multipost?.name,
+                                ),
+                              ),
                             buildWorkTurnSystemPrompt(input.workTurnPolicy),
                           ),
                       requiredToolCall: input.workTurnPolicy.requireSuccessfulTool,
@@ -4788,9 +4929,14 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                         ? buildWorkTurnSystemPrompt(input.workTurnPolicy)
                         : input.workTurnPolicy.visibleTools.reduce(
                             (text, tool) =>
-                              tool.startsWith("djl_") && context.workMcpName
-                                ? text.replaceAll(tool, `${context.workMcpName}_${tool}`)
-                                : text,
+                              text.replaceAll(
+                                tool,
+                                scopedDjlToolName(
+                                  tool,
+                                  context.workMcpName,
+                                  context.workMcpRegistration?.multipost?.name,
+                                ),
+                              ),
                             buildWorkTurnSystemPrompt(input.workTurnPolicy),
                           ),
                       requiredToolCall: input.workTurnPolicy.requireSuccessfulTool,
@@ -4857,6 +5003,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         function* (threadId, turnId) {
           const context = ensureAdapterSessionContext(threadId);
           const activeTurnId = turnId ?? context.activeTurnId;
+          yield* Effect.promise(
+            () => context.workMcpRegistration?.computer?.end() ?? Promise.resolve(),
+          );
           yield* runOpenCodeSdk("session.abort", () =>
             context.client.session.abort({
               sessionID: context.openCodeSessionId,
@@ -5430,31 +5579,171 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         });
       };
 
+      const customProviderError = (cause: unknown) =>
+        new ProviderAdapterRequestError({
+          provider,
+          method: "customProvider",
+          detail: cause instanceof Error ? cause.message : "Custom provider operation failed.",
+        });
+
       const listModelProviders: OpenCodeAdapterShape["listModelProviders"] = (input) =>
-        withDiscoveryInventory(
-          input.cwd ? { cwd: input.cwd } : {},
-          ({ client, inventory, credentialProviderIDs }) =>
-            runOpenCodeSdk("provider.auth", () => client.provider.auth()).pipe(
-              Effect.map((response) => {
-                const providers = flattenOpenCodeProviderConnections({
-                  providers: inventory.providerList.all,
-                  connectedProviderIds: [
-                    ...new Set([...credentialProviderIDs, ...inventory.providerList.connected]),
-                  ],
-                  storedCredentialProviderIds: credentialProviderIDs,
-                  authMethods: response.data ?? {},
-                });
-                return {
-                  providers,
-                  configuredProviderCount: providers.filter((entry) => entry.connected).length,
-                  modelCount: providers
-                    .filter((entry) => entry.connected)
-                    .reduce((total, entry) => total + entry.modelCount, 0),
-                } satisfies OpenCodeListModelProvidersResult;
-              }),
+        Effect.gen(function* () {
+          const customProviders = managedRootDir
+            ? yield* Effect.tryPromise({
+                try: () => readCustomProviders(managedRootDir),
+                catch: customProviderError,
+              })
+            : [];
+          return yield* withDiscoveryInventory(
+            input.cwd ? { cwd: input.cwd } : {},
+            ({ client, inventory, credentialProviderIDs }) =>
+              runOpenCodeSdk("provider.auth", () => client.provider.auth()).pipe(
+                Effect.map((response) => {
+                  const catalogProviders = flattenOpenCodeProviderConnections({
+                    providers: inventory.providerList.all,
+                    connectedProviderIds: [
+                      ...new Set([...credentialProviderIDs, ...inventory.providerList.connected]),
+                    ],
+                    storedCredentialProviderIds: credentialProviderIDs,
+                    authMethods: response.data ?? {},
+                  });
+                  const customIds = new Set(customProviders.map((entry) => entry.providerId));
+                  const providers = [
+                    ...catalogProviders.filter((entry) => !customIds.has(entry.id)),
+                    ...customProviders.map((custom) => ({
+                      id: custom.providerId,
+                      name: custom.name,
+                      supportsApiKey: true,
+                      hasStoredCredential: credentialProviderIDs.includes(custom.providerId),
+                      connected: true,
+                      modelCount: custom.models.length,
+                      custom,
+                    })),
+                  ];
+                  return {
+                    providers,
+                    configuredProviderCount: providers.filter((entry) => entry.connected).length,
+                    modelCount: providers
+                      .filter((entry) => entry.connected)
+                      .reduce((total, entry) => total + entry.modelCount, 0),
+                  } satisfies OpenCodeListModelProvidersResult;
+                }),
+                Effect.mapError(toAdapterRequestError),
+              ),
+          );
+        });
+
+      const customProviderMutations = yield* Semaphore.make(1);
+      const saveCustomProvider: NonNullable<OpenCodeAdapterShape["saveCustomProvider"]> = (input) =>
+        withDiscoveryInventory({}, ({ client, inventory }) =>
+          Effect.gen(function* () {
+            if (!managedRootDir)
+              return yield* new ProviderAdapterRequestError({
+                provider,
+                method: "saveCustomProvider",
+                detail: "Custom provider storage is unavailable.",
+              });
+            const existing = yield* Effect.tryPromise({
+              try: () => readCustomProviders(managedRootDir),
+              catch: customProviderError,
+            });
+            const exists = existing.some((entry) => entry.providerId === input.providerId);
+            if ((exists && !input.replaceExisting) || (!exists && input.replaceExisting))
+              return yield* customProviderError(
+                new Error(
+                  exists
+                    ? "This provider ID already exists. Choose another ID."
+                    : "This custom provider no longer exists. Create it again.",
+                ),
+              );
+            if (
+              !exists &&
+              inventory.providerList.all.some((entry) => entry.id === input.providerId)
+            ) {
+              return yield* new ProviderAdapterRequestError({
+                provider,
+                method: "saveCustomProvider",
+                detail: "This provider ID belongs to the built-in catalog. Choose another ID.",
+              });
+            }
+            if (input.apiKey)
+              yield* runOpenCodeSdk("auth.set", () =>
+                client.auth.set({
+                  providerID: input.providerId,
+                  auth: { type: "api", key: input.apiKey! },
+                }),
+              ).pipe(Effect.mapError(toAdapterRequestError));
+            yield* Effect.tryPromise({
+              try: () => writeCustomProvider(managedRootDir, input, input.replaceExisting),
+              catch: customProviderError,
+            });
+            return { providerId: input.providerId, connected: true };
+          }),
+        ).pipe(customProviderMutations.withPermit);
+
+      const removeCustomProvider: NonNullable<OpenCodeAdapterShape["removeCustomProvider"]> = (
+        input,
+      ) =>
+        withDiscoveryClient({}, ({ client }) =>
+          Effect.gen(function* () {
+            if (!managedRootDir)
+              return yield* new ProviderAdapterRequestError({
+                provider,
+                method: "removeCustomProvider",
+                detail: "Custom provider storage is unavailable.",
+              });
+            const existing = yield* Effect.tryPromise({
+              try: () => readCustomProviders(managedRootDir),
+              catch: customProviderError,
+            });
+            if (!existing.some((entry) => entry.providerId === input.providerId))
+              return yield* new ProviderAdapterRequestError({
+                provider,
+                method: "removeCustomProvider",
+                detail: "Custom provider not found.",
+              });
+            yield* runOpenCodeSdk("auth.remove", () =>
+              client.auth.remove({ providerID: input.providerId }),
+            ).pipe(Effect.mapError(toAdapterRequestError));
+            yield* Effect.tryPromise({
+              try: () => deleteCustomProvider(managedRootDir, input.providerId),
+              catch: customProviderError,
+            });
+            return { providerId: input.providerId, connected: false };
+          }),
+        ).pipe(customProviderMutations.withPermit);
+
+      const fetchCustomModels: NonNullable<OpenCodeAdapterShape["fetchCustomModels"]> = (input) => {
+        if (!input.providerId || input.apiKey)
+          return Effect.tryPromise({
+            try: () => discoverCustomModels(input),
+            catch: customProviderError,
+          });
+        return withDiscoveryClient({}, ({ client }) =>
+          Effect.gen(function* () {
+            if (!managedRootDir)
+              return yield* customProviderError(
+                new Error("Custom provider storage is unavailable."),
+              );
+            const paths = yield* runOpenCodeSdk("path.get", () => client.path.get()).pipe(
               Effect.mapError(toAdapterRequestError),
-            ),
+            );
+            if (!paths.data)
+              return yield* customProviderError(
+                new Error("Credential location is unavailable. Enter the API key again."),
+              );
+            return yield* Effect.tryPromise({
+              try: () =>
+                fetchSavedCustomModels(
+                  managedRootDir,
+                  { ...input, providerId: input.providerId! },
+                  resolveOpenCodeAuthFilePath(paths.data!),
+                ),
+              catch: customProviderError,
+            });
+          }),
         );
+      };
 
       const setApiKey: OpenCodeAdapterShape["setApiKey"] = (input) =>
         withDiscoveryInventory(input.cwd ? { cwd: input.cwd } : {}, ({ client, inventory }) =>
@@ -5602,6 +5891,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         listModels,
         listModelProviders,
         setApiKey,
+        saveCustomProvider,
+        removeCustomProvider,
+        fetchCustomModels,
         removeCredential,
         listAgents,
         ...(provider === "opencode" ? { listCommands } : {}),

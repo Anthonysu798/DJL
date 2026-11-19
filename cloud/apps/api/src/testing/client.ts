@@ -82,7 +82,9 @@ export class TestClient {
       json: { email, otp },
     });
     if (verify.status !== 200) throw new Error(`verify failed: ${verify.status}`);
-    const me = (await (await this.call("/v1/me")).json()) as {
+    const account = await this.call("/v1/me");
+    if (!account.ok) throw new Error(`account lookup after verification failed: ${account.status}`);
+    const me = (await account.json()) as {
       user: { id: string };
       activeOrgId: string;
     };

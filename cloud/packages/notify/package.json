@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@synara/shared": "workspace:*",
     "effect": "catalog:",
     "resend": "^6.28.0",
     "twilio": "^6.1.1"

@@ -1,3 +1,4 @@
+import { withDjlThreadId } from "../../harnesses/native/driverEnv";
 /**
  * GeminiAdapterLive - Scoped live implementation for the Gemini provider adapter.
  *
@@ -736,7 +737,7 @@ const makeGeminiAdapter = Effect.fn("makeGeminiAdapter")(function* (
 
     if (Object.keys(aliases).length === 0) {
       return {
-        env: { ...process.env, DJL_THREAD_ID: input.threadId },
+        env: withDjlThreadId(process.env, input.threadId),
         systemSettingsPath: undefined,
       };
     }
@@ -774,7 +775,7 @@ const makeGeminiAdapter = Effect.fn("makeGeminiAdapter")(function* (
     return {
       systemSettingsPath,
       env: {
-        ...process.env,
+        ...withDjlThreadId(process.env, input.threadId),
         GEMINI_CLI_SYSTEM_SETTINGS_PATH: systemSettingsPath,
         DJL_THREAD_ID: input.threadId,
       },

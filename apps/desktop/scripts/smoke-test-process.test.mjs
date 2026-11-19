@@ -67,9 +67,17 @@ describe("desktop smoke process isolation", () => {
   });
 
   it("passes an isolated Electron profile on launch", () => {
-    expect(buildSmokeLaunchArguments("/app/main.js", "/tmp/djl-smoke/profile")).toEqual([
+    expect(buildSmokeLaunchArguments("/app/main.js", "/tmp/djl-smoke/profile", "darwin")).toEqual([
       "/app/main.js",
       "--user-data-dir=/tmp/djl-smoke/profile",
+    ]);
+  });
+
+  it("uses software rendering for Linux smoke tests", () => {
+    expect(buildSmokeLaunchArguments("/app/main.js", "/tmp/djl-smoke/profile", "linux")).toEqual([
+      "/app/main.js",
+      "--user-data-dir=/tmp/djl-smoke/profile",
+      "--disable-gpu",
     ]);
   });
 

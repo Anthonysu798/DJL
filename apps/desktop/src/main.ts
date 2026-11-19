@@ -1,3 +1,29 @@
+import { DesktopMultiPostRuntime } from "./multipost/runtime";
+import { startMultiPostHost } from "./multipost/host";
+import { MultiPostTray } from "./multipost/tray";
+import { ComputerStopPresentation, computerStopWindowOptions } from "./computerStopPresentation";
+import { readComputerQaWindows, computerQaNativeCallAllowed } from "@synara/shared/computerQaScope";
+import {
+  COMPUTER_QA_BUILD,
+  isComputerQaBuild,
+  computerQaBackendEnvironment,
+} from "@synara/shared/desktopComputerBuild";
+import { DesktopComputerRuntime } from "./desktopComputerRuntime";
+import { DESKTOP_IPC_CHANNELS as COMPUTER_IPC } from "./ipcChannels";
+import {
+  APP_SNAP_SETTINGS_PANE_URLS,
+  registerAppSnapIpcHandlers,
+  sendAppSnapState,
+  sendAppSnapPermissionGuideState,
+  sendAppSnapCaptured,
+  sendAppSnapError,
+} from "./appSnapIpc";
+import { notifyBackendComputerEmergencyStop } from "./computerEmergencyStopNotice";
+import { CUA_HOST_SOCKET_ENV } from "@synara/shared/cuaDriverProtocol";
+import { interruptComputerUseProvider } from "./computerUseProviderInterrupt";
+import { ComputerUseManager } from "./computerUseManager";
+import { registerComputerUseIpcHandlers, isTrustedComputerUseUrl } from "./computerUseIpc";
+import { COMPUTER_USE_IPC_CHANNELS } from "./computerUseIpcChannels";
 // FILE: main.ts
 // Purpose: Starts the Electron shell, backend process, native menus, IPC bridges, and updater.
 // Layer: Desktop main process
@@ -41,6 +67,8 @@ import {
   nativeImage,
   nativeTheme,
   protocol,
+  powerMonitor,
+  screen,
   session,
   shell,
   systemPreferences,
@@ -202,6 +230,7 @@ import {
   CLOUD_AUTH_PROTOCOL,
   CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
   findCloudAuthCallbackInArgv,
+  isDesktopOpenUrl,
   parseCloudAuthCallbackUrl,
   type CloudAuthCallback,
 } from "./cloudAuthDeepLink";
@@ -259,22 +288,31 @@ const REMOTE_GATEWAY_PREFERENCES_FILE = "remote-gateway-preferences.json";
 const REMOTE_GATEWAY_RESTART_BASE_DELAY_MS = 1_000;
 const REMOTE_GATEWAY_RESTART_MAX_DELAY_MS = 30_000;
 const REMOTE_GATEWAY_STOP_TIMEOUT_MS = 5_000;
-const BASE_DIR = resolveDesktopDjlHome(
-  process.env,
-  OS.homedir(),
-  process.env.LOCALAPPDATA,
-  process.platform,
-);
+const computerQaBuild = (() => {
+  try {
+    return isComputerQaBuild(
+      JSON.parse(FS.readFileSync(Path.join(app.getAppPath(), "package.json"), "utf8")),
+    );
+  } catch {
+    return false;
+  }
+})();
+const BASE_DIR = computerQaBuild
+  ? Path.join(app.getPath("appData"), COMPUTER_QA_BUILD.profileDirectory)
+  : resolveDesktopDjlHome(process.env, OS.homedir(), process.env.LOCALAPPDATA, process.platform);
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
 const DESKTOP_SCHEME = SYNARA_DESKTOP_SCHEME;
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
-const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
+const isDevelopment = !computerQaBuild && Boolean(process.env.VITE_DEV_SERVER_URL);
 const configuredDesktopDisplayName = process.env.SYNARA_DESKTOP_DISPLAY_NAME?.trim();
-const APP_DISPLAY_NAME =
-  isDevelopment && configuredDesktopDisplayName && configuredDesktopDisplayName.length <= 64
+const APP_DISPLAY_NAME = computerQaBuild
+  ? COMPUTER_QA_BUILD.displayName
+  : isDevelopment && configuredDesktopDisplayName && configuredDesktopDisplayName.length <= 64
     ? configuredDesktopDisplayName
     : resolveAppDisplayName(isDevelopment);
-const APP_USER_MODEL_ID = synaraBundleId(isDevelopment);
+const APP_USER_MODEL_ID = computerQaBuild
+  ? COMPUTER_QA_BUILD.bundleId
+  : synaraBundleId(isDevelopment);
 const COMMIT_HASH_PATTERN = /^[0-9a-f]{7,40}$/i;
 const COMMIT_HASH_DISPLAY_LENGTH = 12;
 const LOG_DIR = Path.join(STATE_DIR, "logs");
@@ -318,6 +356,184 @@ let shopWindow: BrowserWindow | null = null;
 let shopDestination: ShopDestination | null = null;
 let shopCheckoutOpening = false;
 let shopSessionConfigured = false;
+// The replacement is opt-in until packaged acceptance; one actuator is chosen at boot.
+const useCuaComputerEngine = computerQaBuild || process.env.DJL_COMPUTER_ENGINE === "cua";
+const cuaCapability = Crypto.randomBytes(32).toString("hex");
+let cuaRuntime: DesktopComputerRuntime | null = null;
+let cuaHostEndpoint: string | undefined;
+const cuaPreviewSubscribers = new Map<number, () => void>();
+function trustedComputerSender(
+  event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent,
+): boolean {
+  return (
+    !!mainWindow &&
+    !mainWindow.isDestroyed() &&
+    event.sender === mainWindow.webContents &&
+    event.senderFrame === event.sender.mainFrame &&
+    isTrustedComputerUseUrl(
+      event.senderFrame.url,
+      isDevelopment ? process.env.VITE_DEV_SERVER_URL! : SYNARA_DESKTOP_ENTRY_URL,
+    )
+  );
+}
+function initializeCuaRuntime(): DesktopComputerRuntime | null {
+  if (!useCuaComputerEngine || process.platform !== "darwin") return null;
+  if (cuaRuntime) return cuaRuntime;
+  let appBundlePath = Path.dirname(app.getPath("exe"));
+  while (!appBundlePath.endsWith(".app") && Path.dirname(appBundlePath) !== appBundlePath)
+    appBundlePath = Path.dirname(appBundlePath);
+  const qaActivity = {
+    runId: Crypto.randomUUID(),
+    mainPid: process.pid,
+    nativeRequestsActive: 0,
+    nativeRequestsSequence: 0,
+    stopRequests: 0,
+    stopConfirmed: 0,
+  };
+  const publishQaActivity = () => {
+    if (!computerQaBuild) return;
+    const destination = Path.join(BASE_DIR, "computer-qa-native-state.json");
+    try {
+      FS.writeFileSync(
+        `${destination}.tmp`,
+        JSON.stringify({ ...qaActivity, updatedAt: Date.now() }),
+        { mode: 0o600 },
+      );
+      FS.renameSync(`${destination}.tmp`, destination);
+    } catch {
+      safeConsoleError("[DJL computer] QA readiness state is unavailable.");
+    }
+  };
+  publishQaActivity();
+  const presentation = new ComputerStopPresentation({
+    ipc: ipcMain,
+    createWindow: () => {
+      const panel = new BrowserWindow(
+        computerStopWindowOptions(
+          screen.getPrimaryDisplay().workArea,
+          Path.join(__dirname, "computerStopPreload.js"),
+        ),
+      );
+      panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      panel.setAlwaysOnTop(true, "floating");
+      return panel;
+    },
+    copy: () => ({
+      title: desktopT("computerStop.title"),
+      stop: desktopT("computerStop.stop"),
+      stopping: desktopT("computerStop.stopping"),
+      failure: desktopT("computerStop.failure"),
+    }),
+    stop: (tasks) => {
+      if (!cuaRuntime) return Promise.reject(new Error("Computer runtime is unavailable."));
+      qaActivity.stopRequests += 1;
+      publishQaActivity();
+      return cuaRuntime.stopTasks(tasks).then(() => {
+        qaActivity.stopConfirmed += 1;
+        publishQaActivity();
+      });
+    },
+    onError: () => safeConsoleError("[DJL computer] Floating Stop could not be confirmed."),
+  });
+  cuaRuntime = new DesktopComputerRuntime({
+    presentation,
+    ...(computerQaBuild
+      ? {
+          onActionActivity: (active: boolean) => {
+            qaActivity.nativeRequestsActive += active ? 1 : -1;
+            if (active) qaActivity.nativeRequestsSequence += 1;
+            publishQaActivity();
+          },
+        }
+      : {}),
+    stopProviderThread: (threadId) =>
+      interruptComputerUseProvider(backendWsUrl, threadId, { revokeComputerControl: true }).catch(
+        () => {
+          throw new Error("Computer provider Stop could not be confirmed.");
+        },
+      ),
+    binaryPath: app.isPackaged
+      ? Path.join(process.resourcesPath, "cua-driver", "cua-driver")
+      : Path.join(ROOT_DIR, "apps/desktop/resources/cua-driver/cua-driver"),
+    helperPath: app.isPackaged
+      ? Path.resolve(process.resourcesPath, "..", "Helpers", "synara-appsnap-helper")
+      : Path.join(ROOT_DIR, "apps/desktop/.electron-runtime/appsnap/synara-appsnap-helper"),
+    bundleId: APP_USER_MODEL_ID,
+    capability: cuaCapability,
+    ...(computerQaBuild
+      ? {
+          authorizeCall: (name: string, args: unknown, deliveryMode?: unknown) =>
+            deliveryMode !== "foreground" &&
+            computerQaNativeCallAllowed(
+              readComputerQaWindows(Path.join(BASE_DIR, "computer-qa-scope.json")),
+              name,
+              args,
+            ),
+        }
+      : {}),
+    stateDirectory: STATE_DIR,
+    ownPids: () => new Set([process.pid, ...app.getAppMetrics().map((metric) => metric.pid)]),
+    powerMonitor,
+    sendFrame: (channel, frame) => {
+      for (const id of cuaPreviewSubscribers.keys()) {
+        const contents = mainWindow?.webContents;
+        if (contents?.id === id && !contents.isDestroyed()) contents.send(channel, frame);
+      }
+    },
+    onEmergencyStop: () =>
+      notifyBackendComputerEmergencyStop({ backendHttpUrl, shutdownToken: backendAuthToken }),
+    onError: (error) => safeConsoleError("[DJL computer] Cua runtime error", error),
+    appSnap: {
+      appDisplayName: APP_DISPLAY_NAME,
+      appBundlePath,
+      onState: (state) => sendAppSnapState(mainWindow?.webContents, state),
+      onPermissionGuideState: (state) =>
+        sendAppSnapPermissionGuideState(mainWindow?.webContents, state),
+      onCaptured: (capture) => sendAppSnapCaptured(mainWindow?.webContents, capture),
+      onError: (error) => sendAppSnapError(mainWindow?.webContents, error),
+      openSettingsPane: (pane) => {
+        void shell.openExternal(APP_SNAP_SETTINGS_PANE_URLS[pane]).catch(() => undefined);
+      },
+    },
+  });
+  return cuaRuntime;
+}
+let computerUseManager: ComputerUseManager | null = null;
+let multiPostRuntime: DesktopMultiPostRuntime | null = null;
+let multiPostEndpoint: Awaited<ReturnType<typeof startMultiPostHost>> | null = null;
+let multiPostTray: MultiPostTray | null = null;
+let computerUseEndpoint: { url: string; token: string } | null = null;
+function getComputerUseManager(): ComputerUseManager {
+  if (!computerUseManager) {
+    const helperRoot = !app.isPackaged
+      ? Path.join(ROOT_DIR, "apps", "desktop", "native", "computer-use", ".build")
+      : Path.join(process.resourcesPath, "native");
+    computerUseManager = new ComputerUseManager({
+      controlEngine: useCuaComputerEngine ? "cua" : "legacy",
+      helperPath: Path.join(
+        helperRoot,
+        "DJL Computer Use.app",
+        "Contents",
+        "MacOS",
+        "DJLComputerUse",
+      ),
+      historyDirectory: Path.join(STATE_DIR, "computer-use"),
+    });
+    computerUseManager.onEvent((event) => {
+      if (event.type === "show-thread")
+        dispatchMenuAction(`notification-open-thread:${event.threadId}`);
+      if (event.type === "thread-stopped" && backendWsUrl)
+        void interruptComputerUseProvider(backendWsUrl, event.threadId).catch(() =>
+          console.warn("[DJL computer] Provider interrupt could not be acknowledged"),
+        );
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send(COMPUTER_USE_IPC_CHANNELS.event, event);
+      }
+    });
+  }
+  return computerUseManager;
+}
+
 let backendProcess: ChildProcess.ChildProcess | null = null;
 let sharedStateLock: Awaited<ReturnType<typeof acquireSharedStateLock>> | null = null;
 let remoteGatewayProcess: ChildProcess.ChildProcess | null = null;
@@ -1018,6 +1234,11 @@ function resolveBackendEntry(): string {
 }
 
 function resolveBackendCwd(): string {
+  if (computerQaBuild) {
+    const workspace = Path.join(BASE_DIR, "workspace");
+    FS.mkdirSync(workspace, { recursive: true, mode: 0o700 });
+    return workspace;
+  }
   if (!app.isPackaged) {
     return resolveAppRoot();
   }
@@ -1320,6 +1541,7 @@ function hasConfiguredUpdateFeed(): boolean {
 }
 
 function resolveAutoUpdateDisabledReason(): string | null {
+  if (computerQaBuild) return "Updates are disabled for this local Computer acceptance build.";
   return getAutoUpdateDisabledReason({
     isDevelopment,
     isPackaged: app.isPackaged,
@@ -1449,8 +1671,8 @@ function deliverCloudAuthCallback(callback: CloudAuthCallback): void {
 }
 
 function registerCloudAuthProtocol(): void {
-  // Isolated smoke runs must not replace the user's installed sign-in handler.
-  if (process.env.DJL_DESKTOP_SMOKE_TEST === "1") return;
+  // Disposable smoke profiles must not replace the user's djl:// handler.
+  if (computerQaBuild || process.env.DJL_DESKTOP_SMOKE_TEST === "1") return;
   // An unpackaged run (`electron .`) must name its entry script for the OS to relaunch it.
   const registered =
     process.defaultApp && process.argv[1]
@@ -1521,6 +1743,7 @@ function showDesktopNotification(input: {
  * package.json. We override it to a stable lowercase DJL profile name.
  */
 function resolveUserDataPath(): string {
+  if (computerQaBuild) return Path.join(BASE_DIR, "electron");
   const configuredPath =
     process.env.DJL_DESKTOP_USER_DATA_DIR?.trim() ??
     process.env.SYNARA_DESKTOP_USER_DATA_DIR?.trim();
@@ -2619,12 +2842,14 @@ function backendNodeArgs(): string[] {
 
 function backendEnv(): NodeJS.ProcessEnv {
   const servedStaticRoot = resolveServedStaticRoot();
-  const migrationSources = [
-    resolveDjlHome({}, OS.homedir()),
-    ...(isDevelopment ? [Path.join(ROOT_DIR, ".djl", "electron-dev")] : []),
-  ].filter((candidate) => Path.resolve(candidate) !== Path.resolve(BASE_DIR));
+  const migrationSources = computerQaBuild
+    ? []
+    : [
+        resolveDjlHome({}, OS.homedir()),
+        ...(isDevelopment ? [Path.join(ROOT_DIR, ".djl", "electron-dev")] : []),
+      ].filter((candidate) => Path.resolve(candidate) !== Path.resolve(BASE_DIR));
   return {
-    ...process.env,
+    ...(computerQaBuild ? computerQaBackendEnvironment(process.env) : process.env),
     // Point the backend's HTTP static route at the same swap-immune snapshot the
     // synara:// protocol serves, so both surfaces survive app.asar being replaced.
     ...(servedStaticRoot?.snapshotted ? { SYNARA_STATIC_DIR: servedStaticRoot.dir } : {}),
@@ -2634,10 +2859,25 @@ function backendEnv(): NodeJS.ProcessEnv {
     DJL_SHARED_STATE: "1",
     DJL_SKIP_STATE_LOCK: "1",
     DJL_MIGRATION_SOURCES: migrationSources.join(Path.delimiter),
+    ...(computerQaBuild
+      ? {
+          DJL_DISABLE_STORAGE_MIGRATION: "true",
+          DJL_COMPUTER_QA_PROFILE: "1",
+          SYNARA_COMPUTER_BACKEND: "cua",
+          SYNARA_LOG_PROVIDER_EVENTS: "false",
+          SYNARA_LOG_WS_EVENTS: "false",
+          DJL_COMPUTER_QA_SCOPE_PATH: Path.join(BASE_DIR, "computer-qa-scope.json"),
+          SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+          XDG_CONFIG_HOME: Path.join(BASE_DIR, "xdg/config"),
+          XDG_DATA_HOME: Path.join(BASE_DIR, "xdg/data"),
+          XDG_CACHE_HOME: Path.join(BASE_DIR, "xdg/cache"),
+        }
+      : {}),
     DJL_HOME: BASE_DIR,
     SYNARA_HOME: BASE_DIR,
     // bootstrap() awaits syncShellEnvironment before spawning the backend.
     DJL_SHELL_ENV_SYNCED: "1",
+    ...(useCuaComputerEngine ? { DJL_COMPUTER_ENGINE: "cua" } : {}),
     ...(localAiRuntimeInfo.hostArch === "arm64" || localAiRuntimeInfo.hostArch === "x64"
       ? { DJL_HOST_ARCH: localAiRuntimeInfo.hostArch }
       : {}),
@@ -2646,7 +2886,22 @@ function backendEnv(): NodeJS.ProcessEnv {
       : {}),
     DJL_RUNNING_UNDER_TRANSLATION: localAiRuntimeInfo.runningUnderArm64Translation ? "1" : "0",
     SYNARA_AUTH_TOKEN: backendAuthToken,
+    ...(cuaHostEndpoint
+      ? { [CUA_HOST_SOCKET_ENV]: cuaHostEndpoint, SYNARA_BROWSER_HOST_CAPABILITY: cuaCapability }
+      : {}),
     [SYNARA_BROWSER_USE_PIPE_ENV]: SYNARA_BROWSER_USE_PIPE_PATH,
+    ...(multiPostEndpoint
+      ? {
+          DJL_MULTIPOST_HOST_URL: multiPostEndpoint.url,
+          DJL_MULTIPOST_HOST_TOKEN: multiPostEndpoint.token,
+        }
+      : {}),
+    ...(computerUseEndpoint
+      ? {
+          DJL_COMPUTER_USE_BRIDGE_URL: computerUseEndpoint.url,
+          DJL_COMPUTER_USE_BRIDGE_TOKEN: computerUseEndpoint.token,
+        }
+      : {}),
   };
 }
 
@@ -2891,7 +3146,7 @@ function setRemoteGatewayState(state: DesktopRemoteGatewayState): void {
 }
 
 function initializeRemoteGatewayConfiguration(): void {
-  remoteGatewayEnabled = readRemoteGatewayEnabled();
+  remoteGatewayEnabled = !computerQaBuild && readRemoteGatewayEnabled();
   remoteGatewayRelayUrl = resolveRemoteRelayUrl(process.env, readRemoteGatewayPackageMetadata());
   remoteGatewayState = createInitialRemoteGatewayState({
     enabled: remoteGatewayEnabled,
@@ -3163,7 +3418,20 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
       clearUpdateCheckTimeoutTimer();
       clearUpdatePollTimer();
       cancelBackendReadinessWait();
+      await cuaRuntime?.dispose();
+      cuaRuntime = null;
+      cuaHostEndpoint = undefined;
+      for (const release of cuaPreviewSubscribers.values()) release();
+      await computerUseManager?.dispose();
+      computerUseManager = null;
+      computerUseEndpoint = null;
       await disposeBrowserUsePipeServerForShutdown(reason);
+      multiPostTray?.dispose();
+      multiPostTray = null;
+      multiPostRuntime?.dispose();
+      multiPostRuntime = null;
+      await multiPostEndpoint?.close();
+      multiPostEndpoint = null;
       await stopRemoteGateway();
       await stopBackendAndWaitForExit();
       await sharedStateLock?.release();
@@ -3434,12 +3702,14 @@ function registerIpcHandlers(): void {
       getPreferredSystemLanguageCandidates(),
     );
     configureApplicationMenu();
+    multiPostTray?.refresh();
+    cuaRuntime?.refreshPresentation();
     return locale;
   });
 
   ipcMain.removeAllListeners(STORAGE_MIGRATION_IPC_CHANNELS.read);
   ipcMain.on(STORAGE_MIGRATION_IPC_CHANNELS.read, (event: IpcMainEvent) => {
-    event.returnValue = readSynaraStorageSnapshot(storageSnapshotPath);
+    event.returnValue = computerQaBuild ? null : readSynaraStorageSnapshot(storageSnapshotPath);
   });
 
   ipcMain.removeHandler(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge);
@@ -3855,6 +4125,58 @@ function registerIpcHandlers(): void {
     );
   });
 
+  ipcMain.on("desktop:computer-engine", (event) => {
+    event.returnValue = trustedComputerSender(event) && useCuaComputerEngine ? "cua" : "legacy";
+  });
+  registerComputerUseIpcHandlers(ipcMain, getComputerUseManager, (event) => {
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    return (
+      !!owner &&
+      !owner.isDestroyed() &&
+      owner.webContents === event.sender &&
+      event.senderFrame === event.sender.mainFrame &&
+      isTrustedComputerUseUrl(
+        event.senderFrame.url,
+        isDevelopment ? process.env.VITE_DEV_SERVER_URL! : SYNARA_DESKTOP_ENTRY_URL,
+      )
+    );
+  });
+  const computerRuntime = initializeCuaRuntime();
+  if (computerRuntime) {
+    registerAppSnapIpcHandlers(ipcMain, computerRuntime.appSnap, {
+      isTrustedSender: trustedComputerSender,
+      openPermissionSettingsPane: async (pane) => {
+        await shell.openExternal(APP_SNAP_SETTINGS_PANE_URLS[pane]);
+        return true;
+      },
+      restartApp: () => {
+        app.relaunch();
+        app.quit();
+      },
+    });
+    ipcMain.handle(COMPUTER_IPC.computerSetCursorStyle, (event, style: unknown) => {
+      if (!trustedComputerSender(event)) throw new Error("Untrusted Computer sender.");
+      return computerRuntime.setCursorStyle(style);
+    });
+    ipcMain.on(COMPUTER_IPC.computerPreviewSubscribe, (event) => {
+      if (!trustedComputerSender(event) || cuaPreviewSubscribers.has(event.sender.id)) return;
+      const sender = event.sender;
+      const release = () => {
+        if (cuaPreviewSubscribers.get(sender.id) !== release) return;
+        cuaPreviewSubscribers.delete(sender.id);
+        sender.removeListener("destroyed", release);
+        sender.removeListener("did-start-navigation", release);
+        computerRuntime.setPreviewSubscribed(cuaPreviewSubscribers.size > 0);
+      };
+      cuaPreviewSubscribers.set(sender.id, release);
+      sender.once("destroyed", release);
+      sender.once("did-start-navigation", release);
+      computerRuntime.setPreviewSubscribed(true);
+    });
+    ipcMain.on(COMPUTER_IPC.computerPreviewUnsubscribe, (event) => {
+      if (trustedComputerSender(event)) cuaPreviewSubscribers.get(event.sender.id)?.();
+    });
+  }
   registerBrowserIpcHandlers(ipcMain, browserManager);
 }
 
@@ -4032,6 +4354,7 @@ function createWindow(): BrowserWindow {
     browserManager.setWindow(null);
   });
 
+  multiPostTray?.attach(window, () => isQuitting);
   return window;
 }
 
@@ -4108,6 +4431,10 @@ if (!hasSingleInstanceLock) {
   // macOS delivers deep links as open-url, before ready on a cold start.
   app.on("open-url", (event, url) => {
     event.preventDefault();
+    if (isDesktopOpenUrl(url)) {
+      focusMainWindow();
+      return;
+    }
     const callback = parseCloudAuthCallbackUrl(url);
     if (callback) deliverCloudAuthCallback(callback);
   });
@@ -4115,6 +4442,7 @@ if (!hasSingleInstanceLock) {
 
 async function bootstrap(): Promise<void> {
   writeDesktopLogHeader("bootstrap start");
+  if (computerQaBuild) FS.rmSync(Path.join(BASE_DIR, "computer-qa-scope.json"), { force: true });
   sharedStateLock = await acquireSharedStateLock(BASE_DIR);
   backendAuthToken = Crypto.randomBytes(24).toString("hex");
   await reserveBackendEndpoint("bootstrap");
@@ -4128,6 +4456,16 @@ async function bootstrap(): Promise<void> {
   // still inherit the complete shell environment, including PATH and SSH agents.
   await shellEnvironmentReady;
   if (isQuitting) return;
+  try {
+    computerUseEndpoint = await getComputerUseManager().start();
+  } catch {
+    console.warn("[DJL computer] Native computer-use bridge unavailable");
+  }
+  if (cuaRuntime) cuaHostEndpoint = await cuaRuntime.listen();
+  multiPostRuntime = new DesktopMultiPostRuntime();
+  multiPostEndpoint = await startMultiPostHost(multiPostRuntime);
+  multiPostTray = new MultiPostTray(resolveIconPath("png"), () => focusMainWindow());
+  if (mainWindow) multiPostTray.attach(mainWindow, () => isQuitting);
   startRemoteGateway();
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");

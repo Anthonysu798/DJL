@@ -20,7 +20,9 @@ export default defineConfig([
     ...shared,
     entry: ["src/main.ts", "src/remoteGatewayChild.ts"],
     clean: true,
+    external: ["original-fs"],
     noExternal: (id) => id.startsWith("@synara/"),
+    inlineOnly: ["marked"],
   },
   {
     ...shared,
@@ -28,6 +30,6 @@ export default defineConfig([
   },
   {
     ...shared,
-    entry: ["src/commerce-preload.ts"],
+    entry: ["src/computerStopPreload.ts", "src/commerce-preload.ts"],
   },
 ]);

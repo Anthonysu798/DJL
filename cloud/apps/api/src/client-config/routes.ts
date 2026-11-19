@@ -9,6 +9,7 @@ export interface ClientConfigDeps {
   readonly gateway: Pick<GatewayService, "listModels">;
   readonly fileParsing: boolean;
   readonly pushConfigured: boolean;
+  readonly fcmConfigured?: boolean;
   readonly policyUrls: { readonly terms: string | null; readonly privacy: string | null };
 }
 
@@ -34,6 +35,10 @@ export async function clientConfig(deps: ClientConfigDeps): Promise<CloudClientC
       fileParsing: deps.fileParsing,
     },
     pushConfigured: deps.pushConfigured,
+    pushProviders: [
+      ...(deps.pushConfigured ? ["apns" as const] : []),
+      ...(deps.fcmConfigured ? ["fcm" as const] : []),
+    ],
     policyUrls: {
       terms: publicPolicyUrl(deps.policyUrls.terms),
       privacy: publicPolicyUrl(deps.policyUrls.privacy),

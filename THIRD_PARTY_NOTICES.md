@@ -20,3 +20,7 @@ Emanuele Di Pietro and Anthony Su.
   [apps/ios/DJL/Terminal/Vendor/GHOSTTY_LICENSE](apps/ios/DJL/Terminal/Vendor/GHOSTTY_LICENSE).
 
 Package-level licenses retained inside vendored source trees continue to apply to those packages.
+
+## MultiPost
+
+DJL embeds the Apache-2.0 public components of leaperone/MultiPost-Extension, commit `5522ca01100a58572de3a652aebd7851f5fa648a`. Original sources and hashes are retained in `packages/multipost/vendor`; DJL adds a separate browser host and submission gating. Proprietary MultiPost Agent components are not included. See `docs/licenses/MULTIPOST_LICENSE`. The Aliyun adapter uses Turndown 7.2.0 (MIT); its license is retained in `packages/multipost/vendor/TURNDOWN_LICENSE`.

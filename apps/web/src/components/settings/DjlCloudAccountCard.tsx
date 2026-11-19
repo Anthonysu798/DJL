@@ -1,3 +1,4 @@
+import { resetSocialAccountCache } from "../marketing/accountCache";
 import type {
   CloudAccountStatus,
   CloudBrowserSignInCompleteInput,
@@ -54,6 +55,7 @@ export function DjlCloudAccountCard({ showUsage = false }: { showUsage?: boolean
   const afterAccountChange = async (next: CloudAccountStatus) => {
     await queryClient.cancelQueries({ queryKey: CLOUD_ACCOUNT_QUERY_KEY });
     queryClient.setQueryData(CLOUD_ACCOUNT_QUERY_KEY, next);
+    await resetSocialAccountCache(queryClient);
     await Promise.all([
       ensureNativeApi()
         .server.refreshProviders()

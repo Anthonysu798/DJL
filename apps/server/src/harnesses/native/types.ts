@@ -30,6 +30,7 @@ export interface NativeSink {
 export interface NativeDriver {
   id: string;
   send(input: ProviderSendTurnInput): Promise<void>;
+  steer?(input: ProviderSendTurnInput): Promise<void>;
   interrupt(): Promise<void>;
   close(): void;
   models(): Promise<ProviderListModelsResult>;

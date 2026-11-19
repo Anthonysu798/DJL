@@ -14,7 +14,6 @@ export class PushTokenService {
   constructor(private readonly db: DjlDatabase) {}
 
   async register(p: Principal, input: CloudPushTokenInput): Promise<void> {
-    const token = input.token.toLowerCase();
     const deviceId = input.deviceId ?? null;
     if (deviceId) {
       // A device id must be one of the caller's own devices.
@@ -25,6 +24,17 @@ export class PushTokenService {
       if (!device) throw new ApiError(404, "not_found", "Not found.");
     }
     const now = new Date();
+    if (input.provider === "fcm") {
+      await this.db
+        .insert(schema.fcmInstallations)
+        .values({ userId: p.userId, deviceId, installationId: input.token })
+        .onConflictDoUpdate({
+          target: schema.fcmInstallations.installationId,
+          set: { userId: p.userId, deviceId, lastSeenAt: now, revokedAt: null },
+        });
+      return;
+    }
+    const token = input.token.toLowerCase();
     await this.db
       .insert(schema.pushTokens)
       .values({ userId: p.userId, deviceId, token, environment: input.environment })

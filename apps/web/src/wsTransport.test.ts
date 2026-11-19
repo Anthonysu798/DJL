@@ -4,7 +4,13 @@
 // Depends on: the global WebSocket constructor shim and desktop bridge URL contract.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ORCHESTRATION_WS_METHODS, WS_CHANNELS, WS_METHODS } from "@synara/contracts";
+import {
+  COMPUTER_WS_CHANNELS,
+  COMPUTER_WS_METHODS,
+  ORCHESTRATION_WS_METHODS,
+  WS_CHANNELS,
+  WS_METHODS,
+} from "@synara/contracts";
 import { Effect, Stream } from "effect";
 
 import { shouldKeepServerLifecycleStream, WsTransport } from "./wsTransport";
@@ -72,6 +78,10 @@ class MockWebSocket {
   close() {
     this.readyState = MockWebSocket.CLOSED;
     this.emit("close");
+  }
+
+  receive(value: unknown) {
+    this.emit("message", { data: JSON.stringify(value) });
   }
 
   private emit(type: WsEventType, event?: { data?: unknown }) {
@@ -414,6 +424,80 @@ describe("WsTransport", () => {
     }
   });
 
+  it("keeps a Computer subscription pending while the packaged backend is starting", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const transport = new WsTransport();
+    const listener = vi.fn();
+    const unsubscribe = transport.subscribe(COMPUTER_WS_CHANNELS.event, listener);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(sockets[0]!.requests()).toEqual([]);
+      sockets[0]!.failOpen();
+      await vi.waitFor(() => expect(sockets.length).toBeGreaterThan(1), { timeout: 3_000 });
+      const connected = sockets.at(-1)!;
+      connected.open();
+      await vi.waitFor(() => expect(connected.requests()).toHaveLength(1));
+      const handshake = connected.requests()[0]!;
+      expect(handshake.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      connected.succeed(handshake, shellSnapshot);
+      const request = () =>
+        connected.requests().find((message) => message.tag === COMPUTER_WS_METHODS.subscribeEvents);
+      await vi.waitFor(() => expect(request()?.id).toBeDefined());
+      connected.receive({
+        _tag: "Chunk",
+        requestId: request()!.id,
+        values: [{ type: "computer.input-stopped", stopped: true }],
+      });
+      await vi.waitFor(() =>
+        expect(listener).toHaveBeenCalledWith(
+          expect.objectContaining({ data: { type: "computer.input-stopped", stopped: true } }),
+        ),
+      );
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      unsubscribe();
+      await transport.dispose();
+    }
+  });
+  it("does not replay a write dispatched before an established socket fails", async () => {
+    const transport = new WsTransport();
+    try {
+      sockets[0]!.open();
+      await vi.waitFor(() => expect(sockets[0]!.requests()).toHaveLength(1));
+      const handshake = sockets[0]!.requests()[0]!;
+      expect(handshake.tag).toBe(ORCHESTRATION_WS_METHODS.getShellSnapshot);
+      sockets[0]!.succeed(handshake, shellSnapshot);
+      const result = transport
+        .request(COMPUTER_WS_METHODS.setControlEnabled, {
+          threadId: "synthetic-thread",
+          enabled: false,
+        })
+        .then(
+          () => "succeeded",
+          () => "failed",
+        );
+      await vi.waitFor(() =>
+        expect(sockets[0]!.requests().map((frame) => frame.tag)).toContain(
+          COMPUTER_WS_METHODS.setControlEnabled,
+        ),
+      );
+      sockets[0]!.failOpen();
+      expect(await result).toBe("failed");
+      await vi.waitFor(() => expect(sockets.length).toBeGreaterThan(1), { timeout: 3_000 });
+      const reconnected = sockets.at(-1)!;
+      reconnected.open();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const writes = sockets.flatMap((socket) =>
+        socket.sent
+          .map((data) => JSON.parse(String(data)) as { tag?: string })
+          .filter((message) => message.tag === COMPUTER_WS_METHODS.setControlEnabled),
+      );
+      expect(writes).toHaveLength(1);
+      expect(reconnected.requests()).toEqual([]);
+    } finally {
+      await transport.dispose();
+    }
+  });
   it("waits for an in-flight reconnect before opening more terminal RPCs", async () => {
     const transport = new WsTransport();
     const internal = transport as unknown as {

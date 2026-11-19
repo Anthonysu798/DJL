@@ -232,6 +232,122 @@ it("reports a failed marketing tool as failed in the chat activity", async () =>
   }
 });
 
+it("keeps scoped computer tools and their results available for follow-up turns", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  let round = 0;
+  const fetchImpl: FetchLike = async (_url, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    round++;
+    return round % 2 === 1
+      ? sse([
+          'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"computer-call-' +
+            round +
+            '","function":{"name":"djl_computer_status","arguments":"{}"}}]}}]}\n\n',
+          "data: [DONE]\n\n",
+        ])
+      : sse([
+          'data: {"choices":[{"delta":{"content":"The helper reported its current capabilities."}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]);
+  };
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer thread-only-token");
+    expect(JSON.parse(String(init?.body)).params).toEqual({
+      name: "djl_computer_status",
+      arguments: {},
+    });
+    return new Response(
+      JSON.stringify({
+        result: {
+          isError: false,
+          structuredContent: { method: "status", result: { available: true } },
+        },
+      }),
+    );
+  });
+  try {
+    const captured = sink();
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(start, captured.s, {
+      name: "local",
+      url: "http://127.0.0.1:9999/mcp",
+      bearerToken: "thread-only-token",
+    });
+    await driver.send({
+      threadId: start.threadId,
+      input: "Use djl_computer_status for my selected Computer Use plugin",
+    });
+    await driver.send({ threadId: start.threadId, input: "Check it again" });
+    expect(
+      (bodies[0]!.tools as { function: { name: string } }[]).map((tool) => tool.function.name),
+    ).toContain("djl_computer_observe");
+    expect(bodies[2]!.tools).toBeDefined();
+    expect(
+      (bodies[2]!.messages as { role: string }[]).some((message) => message.role === "tool"),
+    ).toBe(true);
+    expect(network).toHaveBeenCalledTimes(2);
+  } finally {
+    network.mockRestore();
+  }
+});
+
+it("retries a rate-limited final reply without repeating the completed computer tool", async () => {
+  const bodies: unknown[] = [];
+  const fetchImpl: FetchLike = async (_url, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    if (bodies.length === 1)
+      return sse([
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"stop-1","function":{"name":"djl_computer_stop","arguments":"{}"}}]}}]}\n\n',
+        "data: [DONE]\n\n",
+      ]);
+    if (bodies.length === 2)
+      return new Response(
+        JSON.stringify({
+          error: { code: "rate_limited", message: "Too many requests. Retry in 1s." },
+        }),
+        { status: 429 },
+      );
+    return sse([
+      'data: {"choices":[{"delta":{"content":"Stopped after verifying the selected text."}}]}\n\n',
+      "data: [DONE]\n\n",
+    ]);
+  };
+  const network = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        result: { structuredContent: { method: "stop", result: { stoppedSessionIds: [] } } },
+      }),
+    ),
+  );
+  vi.useFakeTimers();
+  try {
+    const captured = sink();
+    const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(start, captured.s, {
+      name: "local",
+      url: "http://127.0.0.1:9999/mcp",
+      bearerToken: "test-only",
+    });
+    const result = driver.send({
+      threadId: start.threadId,
+      input: "Use djl_computer_status guidance and Stop",
+    });
+    const assertion = expect(result).resolves.toBeUndefined();
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(network).toHaveBeenCalledTimes(1);
+    expect(bodies).toHaveLength(3);
+    expect(bodies[2]).toEqual(bodies[1]);
+    expect(captured.events).toContainEqual(
+      expect.objectContaining({
+        type: "content.delta",
+        payload: expect.objectContaining({ delta: "Stopped after verifying the selected text." }),
+      }),
+    );
+  } finally {
+    vi.useRealTimers();
+    network.mockRestore();
+  }
+});
+
 describe("DJL Cloud stream cleanup", () => {
   const controlledStream = (frame: string, eof = false) => {
     let upstream!: ReadableStreamDefaultController<Uint8Array>;

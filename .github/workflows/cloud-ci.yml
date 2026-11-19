@@ -7,6 +7,7 @@ on:
     paths:
       - "cloud/**"
       - "packages/contracts/**"
+      - "packages/shared/**"
       - "package.json"
       - "bun.lock"
       - "bunfig.toml"
@@ -20,6 +21,7 @@ on:
     paths:
       - "cloud/**"
       - "packages/contracts/**"
+      - "packages/shared/**"
       - "package.json"
       - "bun.lock"
       - "bunfig.toml"
@@ -91,6 +93,7 @@ jobs:
       - run: bun run cloud:db:migrate
       - run: bun run cloud:db:seed
       - run: bun run cloud:test
+      - run: bunx vitest run packages/shared/src/fcm.test.ts
       - run: bun run cloud:infra:test
 
   secrets-scan:

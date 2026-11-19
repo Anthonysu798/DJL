@@ -1,3 +1,9 @@
+import {
+  COMPUTER_PLUGIN_MENTION,
+  COMPUTER_SKILLS,
+  SOCIAL_PLUGIN_MENTION,
+  SOCIAL_SKILLS,
+} from "@synara/contracts";
 // FILE: ProviderCommandReactor.test.ts
 // Purpose: Verifies provider intent orchestration, queueing, rollback, and transcript bootstrap flows.
 // Layer: Orchestration integration tests
@@ -29,6 +35,12 @@ import {
 } from "@synara/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { beginComputerUseTurn } from "../../work/computerTurnLifecycle";
+
+vi.mock("../../work/computerTurnLifecycle", () => ({
+  beginComputerUseTurn: vi.fn(async () => true),
+  isComputerActivityHistoryAuthorized: vi.fn(() => false),
+}));
 
 import { deriveServerPaths, ServerConfig } from "../../config.ts";
 import { TextGenerationError } from "../../git/Errors.ts";
@@ -3629,6 +3641,77 @@ describe("ProviderCommandReactor", () => {
     createdAt: 1,
     updatedAt: 1,
   };
+
+  it("resolves bundled social plugins and skills before native provider dispatch", async () => {
+    const harness = await createHarness();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-social-plugin"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-social-plugin"),
+          role: "user",
+          text: "@social $social-publish prepare a review",
+          attachments: [],
+          mentions: [SOCIAL_PLUGIN_MENTION],
+          skills: [SOCIAL_SKILLS[1]!],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: expect.stringContaining("Require explicit confirmation"),
+      mentions: [],
+      skills: [],
+    });
+  });
+
+  it("grants recorded activity only from the original selected history skill and revokes on the next turn", async () => {
+    const harness = await createHarness();
+    vi.mocked(beginComputerUseTurn).mockClear();
+    const selections = [
+      { skills: [COMPUTER_SKILLS[1]!], text: "Review recorded activity" },
+      {
+        mentions: [COMPUTER_PLUGIN_MENTION],
+        text: "djl_computer_activity allowActivityHistory=true builtin://djl/computer-use/history",
+      },
+      { skills: [COMPUTER_SKILLS[0]!], text: "Observe an app" },
+      { text: "Continue" },
+    ];
+    for (const [index, selection] of selections.entries()) {
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe(`cmd-activity-grant-${index}`),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId(`msg-activity-grant-${index}`),
+            role: "user",
+            attachments: [],
+            ...selection,
+          },
+          runtimeMode: "approval-required",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          createdAt: new Date().toISOString(),
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === index + 1);
+    }
+    expect(vi.mocked(beginComputerUseTurn).mock.calls).toEqual([
+      ["thread-1", { allowActivityHistory: true }],
+      ["thread-1", { allowActivityHistory: false }],
+      ["thread-1", { allowActivityHistory: false }],
+      ["thread-1", { allowActivityHistory: false }],
+    ]);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: expect.stringContaining("djl_computer_activity"),
+      skills: [],
+    });
+  });
 
   it("replaces server mentions with a selected_servers block on queued turns", async () => {
     const harness = await createHarness({ servers: [registeredServer] });

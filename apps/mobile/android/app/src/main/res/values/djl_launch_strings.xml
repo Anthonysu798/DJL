@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="djl_launch_name">DJL</string>
+    <string name="djl_launch_open_chat">Open chat</string>
+    <string name="djl_launch_accessibility">Open DJL</string>
+    <string name="djl_launch_widget_description">Quick access to DJL chat.</string>
+</resources>

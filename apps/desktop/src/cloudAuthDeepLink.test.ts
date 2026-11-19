@@ -6,11 +6,25 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CLOUD_AUTH_PROTOCOL,
   findCloudAuthCallbackInArgv,
+  isDesktopOpenUrl,
   parseCloudAuthCallbackUrl,
 } from "./cloudAuthDeepLink";
 
 const code = "c".repeat(43);
 const state = "s".repeat(32);
+
+it("only recognizes the credential-free desktop open URI", () => {
+  expect(isDesktopOpenUrl("djl://open")).toBe(true);
+  for (const value of [
+    "djl://open?code=secret",
+    "djl://open/other",
+    "https://open",
+    "djl://auth/callback",
+    undefined,
+  ])
+    expect(isDesktopOpenUrl(value)).toBe(false);
+  expect(parseCloudAuthCallbackUrl("djl://open")).toBeNull();
+});
 
 describe("parseCloudAuthCallbackUrl", () => {
   it("accepts the exact callback with a code and state", () => {
@@ -66,7 +80,12 @@ describe("registerCloudAuthProtocol source behavior without Electron or registry
   }
 
   // Execute the real function body, not main.ts startup, with only synthetic side effects.
-  function runRegistration(smoke: string | undefined, defaultApp = false, registered = true) {
+  function runRegistration(
+    smoke: string | undefined,
+    defaultApp = false,
+    registered = true,
+    computerQaBuild = false,
+  ) {
     const setAsDefaultProtocolClient = vi.fn(() => registered);
     const writeDesktopLogHeader = vi.fn();
     runInNewContext(`(() => {\n${body}\n})()`, {
@@ -79,6 +98,7 @@ describe("registerCloudAuthProtocol source behavior without Electron or registry
       },
       Path,
       CLOUD_AUTH_PROTOCOL,
+      computerQaBuild,
       writeDesktopLogHeader,
     });
     return { setAsDefaultProtocolClient, writeDesktopLogHeader };
@@ -104,6 +124,12 @@ describe("registerCloudAuthProtocol source behavior without Electron or registry
       }
     },
   );
+
+  it("does not replace the installed handler from a Computer Use QA build", () => {
+    expect(
+      runRegistration(undefined, false, true, true).setAsDefaultProtocolClient,
+    ).not.toHaveBeenCalled();
+  });
 
   it.each([false, true])("preserves failed registration logging (defaultApp=%s)", (defaultApp) => {
     const result = runRegistration(undefined, defaultApp, false);

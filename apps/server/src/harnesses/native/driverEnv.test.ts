@@ -16,3 +16,18 @@ describe("withDjlThreadId", () => {
     expect(withDjlThreadId({ PATH: "/bin" }, undefined).DJL_THREAD_ID).toBeUndefined();
   });
 });
+
+it("keeps the desktop computer broker credentials out of provider processes", () => {
+  const base = {
+    PATH: "/bin",
+    DJL_COMPUTER_USE_BRIDGE_TOKEN: "private",
+    SYNARA_CUA_HOST_SOCKET: "/private/tmp/fixture.sock",
+    SYNARA_BROWSER_HOST_CAPABILITY: "private-cua-capability",
+    SYNARA_BROWSER_HOST_CAPABILITY_FD: "9",
+    SYNARA_AUTH_TOKEN: "private-backend-token",
+    DJL_COMPUTER_USE_BRIDGE_URL: "http://127.0.0.1:1/computer-use",
+  };
+  expect(withDjlThreadId(base, "thread-1")).toEqual({ PATH: "/bin", DJL_THREAD_ID: "thread-1" });
+  expect(withDjlThreadId(base, undefined)).toEqual({ PATH: "/bin" });
+  expect(base.DJL_COMPUTER_USE_BRIDGE_TOKEN).toBe("private");
+});

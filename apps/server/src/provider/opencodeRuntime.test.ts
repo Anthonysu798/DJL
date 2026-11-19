@@ -346,6 +346,73 @@ describe("OpenCodeRuntime startup diagnostics", () => {
 });
 
 describe("OpenCodeRuntime local server pool", () => {
+  async function startupFixture(failures: readonly string[], exitOnFailure = true) {
+    const events: string[] = [];
+    let attempts = 0;
+    const spawner = Layer.succeed(
+      ChildProcessSpawner.ChildProcessSpawner,
+      ChildProcessSpawner.make(() => {
+        const attempt = attempts++;
+        events.push(`spawn:${attempt}`);
+        const stderr = failures[attempt];
+        return Effect.succeed(
+          mockOpenCodeServerHandle({
+            stdout: stderr ? "" : "opencode server listening on http://127.0.0.1:58123\n",
+            stderr: stderr ?? "",
+            ...(stderr
+              ? {
+                  exitCode: exitOnFailure
+                    ? Effect.sleep("10 millis").pipe(Effect.as(1 as ChildProcessSpawner.ExitCode))
+                    : Effect.never,
+                }
+              : {}),
+            kill: () => Effect.sync(() => void events.push(`close:${attempt}`)),
+          }),
+        );
+      }),
+    );
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const runtime = yield* OpenCodeRuntime;
+          return yield* Effect.exit(
+            runtime.connectToOpenCodeServer({ binaryPath: "opencode", port: 58123, timeoutMs: 25 }),
+          );
+        }),
+      ).pipe(Effect.provide(OpenCodeRuntimeLive.pipe(Layer.provide(spawner)))),
+    );
+    return { result, attempts, events };
+  }
+
+  it("retries a locked database only after the failed startup process is closed", async () => {
+    const { result, attempts, events } = await startupFixture([
+      "Error: database is locked\n",
+      "Error: database is locked\n",
+    ]);
+    expect(Exit.isSuccess(result)).toBe(true);
+    expect(attempts).toBe(3);
+    expect(events.indexOf("close:0")).toBeLessThan(events.indexOf("spawn:1"));
+    expect(events.indexOf("close:1")).toBeLessThan(events.indexOf("spawn:2"));
+  });
+
+  it("bounds locked-database startup retries", async () => {
+    const { result, attempts } = await startupFixture(Array(5).fill("database is locked"));
+    expect(Exit.isFailure(result)).toBe(true);
+    expect(attempts).toBe(3);
+  });
+
+  it("does not retry other startup failures", async () => {
+    const { result, attempts } = await startupFixture(["invalid configuration"]);
+    expect(Exit.isFailure(result)).toBe(true);
+    expect(attempts).toBe(1);
+  });
+
+  it("does not retry an uncertain live startup even if stderr mentions a database lock", async () => {
+    const { result, attempts } = await startupFixture(["database is locked"], false);
+    expect(Exit.isFailure(result)).toBe(true);
+    expect(attempts).toBe(1);
+  });
+
   it("reuses a local server while scoped sessions are active and closes it after idling", async () => {
     const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
 
@@ -411,45 +478,58 @@ describe("OpenCodeRuntime local server pool", () => {
     );
   });
 
-  it("starts a fresh managed server after an atomic config revision", async () => {
-    const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
-    const managedRootDir = await mkdtemp(join(tmpdir(), "synara-opencode-config-"));
-    const configDir = join(managedRootDir, "config", "opencode");
-    const configPath = join(configDir, "opencode.json");
-    await mkdir(configDir, { recursive: true });
-    await writeFile(configPath, '{"provider":{}}\n');
+  it.each(["local", "custom"])(
+    "starts a fresh managed server after an atomic %s config revision",
+    async (kind) => {
+      const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
+      const managedRootDir = await mkdtemp(join(tmpdir(), "synara-opencode-config-"));
+      const configDir = join(managedRootDir, "config", "opencode");
+      const configPath =
+        kind === "custom"
+          ? join(managedRootDir, "custom-providers.json")
+          : join(configDir, "opencode.json");
+      await mkdir(configDir, { recursive: true });
+      await writeFile(configPath, kind === "custom" ? "[]\n" : '{"provider":{}}\n');
 
-    try {
-      await Effect.runPromise(
-        Effect.scoped(
-          Effect.gen(function* () {
-            const runtime = yield* OpenCodeRuntime;
-            const firstScope = yield* Scope.make();
-            const secondScope = yield* Scope.make();
-            const first = yield* runtime
-              .connectToOpenCodeServer({ binaryPath: "opencode", managedRootDir })
-              .pipe(Effect.provideService(Scope.Scope, firstScope));
+      try {
+        await Effect.runPromise(
+          Effect.scoped(
+            Effect.gen(function* () {
+              const runtime = yield* OpenCodeRuntime;
+              const firstScope = yield* Scope.make();
+              const secondScope = yield* Scope.make();
+              const first = yield* runtime
+                .connectToOpenCodeServer({ binaryPath: "opencode", managedRootDir })
+                .pipe(Effect.provideService(Scope.Scope, firstScope));
 
-            const temporaryPath = `${configPath}.tmp`;
-            yield* Effect.promise(() => writeFile(temporaryPath, '{"provider":{"ollama":{}}}\n'));
-            yield* Effect.promise(() => rename(temporaryPath, configPath));
+              const temporaryPath = `${configPath}.tmp`;
+              yield* Effect.promise(() =>
+                writeFile(
+                  temporaryPath,
+                  kind === "custom"
+                    ? '[{"providerId":"relay","name":"Relay","baseUrl":"http://localhost:9000/v1","protocol":"openai-chat","models":[]}]\n'
+                    : '{"provider":{"ollama":{}}}\n',
+                ),
+              );
+              yield* Effect.promise(() => rename(temporaryPath, configPath));
 
-            const second = yield* runtime
-              .connectToOpenCodeServer({ binaryPath: "opencode", managedRootDir })
-              .pipe(Effect.provideService(Scope.Scope, secondScope));
+              const second = yield* runtime
+                .connectToOpenCodeServer({ binaryPath: "opencode", managedRootDir })
+                .pipe(Effect.provideService(Scope.Scope, secondScope));
 
-            expect(first.url).toBe("http://127.0.0.1:59000");
-            expect(second.url).toBe("http://127.0.0.1:59001");
-            expect(state.killUrls).toEqual([]);
-            yield* Scope.close(firstScope, Exit.void);
-            yield* Scope.close(secondScope, Exit.void);
-          }),
-        ).pipe(Effect.provide(openCodeRuntimePoolTestLayer(state))),
-      );
-    } finally {
-      await rm(managedRootDir, { recursive: true, force: true });
-    }
-  });
+              expect(first.url).toBe("http://127.0.0.1:59000");
+              expect(second.url).toBe("http://127.0.0.1:59001");
+              expect(state.killUrls).toEqual([]);
+              yield* Scope.close(firstScope, Exit.void);
+              yield* Scope.close(secondScope, Exit.void);
+            }),
+          ).pipe(Effect.provide(openCodeRuntimePoolTestLayer(state))),
+        );
+      } finally {
+        await rm(managedRootDir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("starts a fresh server after shared CLI credentials change", async () => {
     const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
@@ -958,4 +1038,16 @@ describe("shared OpenCode credential paths", () => {
       vi.unstubAllEnvs();
     }
   });
+});
+
+it("does not pass desktop computer broker secrets to OpenCode", () => {
+  expect(
+    buildOpenCodeServerProcessEnv({
+      baseEnv: {
+        PATH: "/bin",
+        DJL_COMPUTER_USE_BRIDGE_URL: "http://127.0.0.1:1/computer-use",
+        DJL_COMPUTER_USE_BRIDGE_TOKEN: "private",
+      },
+    }),
+  ).toEqual({ PATH: "/bin" });
 });

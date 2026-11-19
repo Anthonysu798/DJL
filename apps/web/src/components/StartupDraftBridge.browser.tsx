@@ -1,6 +1,6 @@
 import { ThreadId, type ModelSelection } from "@synara/contracts";
 import { StrictMode, useRef, useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
@@ -9,6 +9,9 @@ import { StartupStorage } from "../startup/storage";
 import { StartupSession, getStartupSession, setStartupSession } from "../startup/session";
 import { mountStartupShell } from "../startup/shell";
 import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
+
+// These tests isolate draft handoff; the splash duration is covered separately.
+vi.mock("../startup/timing", () => ({ remainingSplashDuration: vi.fn(() => 0) }));
 
 const model: ModelSelection = { provider: "codex", model: "gpt-5.3-codex" };
 const initialDrafts = useComposerDraftStore.getState();
@@ -106,36 +109,18 @@ afterEach(async () => {
   sends.length = 0;
 });
 
-it("preserves typed text, profile backup and selection when the full editor takes over", async () => {
+it("restores a saved draft only after the full composer is ready", async () => {
   const session = start();
+  session.edit("Draft 中文 text");
   const screen = await render(<FullComposer active={false} />);
-  await page
-    .getByRole("textbox", { name: "Ask anything, or describe a task…" })
-    .fill("Draft 中文 text");
-  const textarea = document.querySelector<HTMLTextAreaElement>("[data-startup-draft]")!;
-  textarea.focus();
-  textarea.setSelectionRange(6, 8);
-  expect(session.isFocused()).toBe(true);
+  expect(document.querySelector("[data-startup-draft]")).toBeNull();
+  expect(session.previewActive).toBe(true);
   expect(session.storage.readDraft("home")?.text).toBe("Draft 中文 text");
   await screen.rerender(<FullComposer active />);
   await expect.poll(() => session.previewActive).toBe(false);
   await expect.element(page.getByTestId("composer-editor")).toHaveTextContent("Draft 中文 text");
-  await expect.poll(() => window.getSelection()?.toString()).toBe("中文");
-});
-
-it("waits for IME composition and transfers the final revision", async () => {
-  const session = start();
-  const screen = await render(<FullComposer active={false} />);
-  const textarea = document.querySelector<HTMLTextAreaElement>("[data-startup-draft]")!;
-  textarea.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
-  await screen.rerender(<FullComposer active />);
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  expect(session.previewActive).toBe(true);
-  textarea.value = "最终文字";
-  textarea.dispatchEvent(new InputEvent("input", { bubbles: true }));
-  textarea.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
-  await expect.poll(() => session.previewActive).toBe(false);
-  await expect.element(page.getByTestId("composer-editor")).toHaveTextContent("最终文字");
+  await expect.poll(() => document.getElementById("app-startup")).toBeNull();
+  expect(sends).toEqual([]);
 });
 
 it("dispatches one pending intent after readiness under StrictMode", async () => {

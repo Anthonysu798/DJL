@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/djl_widget_launch"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:background="@drawable/djl_launch_widget_background"
+    android:contentDescription="@string/djl_launch_accessibility">
+    <ImageView
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="12dp"
+        android:src="@drawable/djl_launch_logo"
+        android:tint="#FF141414"
+        android:importantForAccessibility="no"
+        android:contentDescription="@null" />
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:importantForAccessibility="noHideDescendants">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/djl_launch_name"
+            android:textColor="#FF141414"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/djl_launch_open_chat"
+            android:textColor="#FF494949"
+            android:textSize="14sp"
+            android:maxLines="1" />
+    </LinearLayout>
+</LinearLayout>

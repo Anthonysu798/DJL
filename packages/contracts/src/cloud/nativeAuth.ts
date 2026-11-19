@@ -15,6 +15,8 @@ import { TrimmedNonEmptyString } from "../baseSchemas";
 import { CloudOrgId, CloudUserId } from "./base";
 
 export const DJL_NATIVE_AUTH_REDIRECT_URI = "djl://auth/callback";
+/** Bring the desktop app forward without exchanging credentials or approving anything. */
+export const DJL_NATIVE_OPEN_URI = "djl://open";
 export const DJL_DESKTOP_CLIENT_ID = "djl-desktop";
 
 const NativeClientId = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{2,31}$/));
