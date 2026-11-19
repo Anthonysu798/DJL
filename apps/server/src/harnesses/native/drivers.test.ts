@@ -12,6 +12,7 @@ import { createIFlowDriver } from "./iflow";
 import { createQwenDriver } from "./qwen";
 import { createPiDriver } from "./pi";
 import { createCodeBuddyDriver } from "./codebuddy";
+import { createGeminiDriver } from "./gemini";
 import type { NativeSink } from "./types";
 
 const dirs: string[] = [];
@@ -194,6 +195,61 @@ describe("new official protocol drivers", () => {
     await expect(
       createQwenDriver({ ...input, providerOptions: { qwen: { binaryPath: binary } } }, sink([])),
     ).rejects.toThrow("Authentication required");
+  });
+  it("Gemini CLI runs ACP with the browser blocked and its advertised catalog", async () => {
+    const binary = fixture(`
+      if(process.argv.slice(2).join(' ')!=='--acp')throw Error('bad command');
+      if(process.env.NO_BROWSER!=='true')throw Error('browser not blocked');
+      if(m.method==='initialize')reply(m,{protocolVersion:1,agentCapabilities:{loadSession:true}});
+      if(m.method==='session/new')reply(m,{sessionId:'gemini-test',models:{availableModels:[{modelId:'gemini-2.5-pro',name:'Gemini 2.5 Pro'}]},modes:{currentModeId:'default',availableModes:[{id:'default'},{id:'plan'}]}});
+      if(m.method==='session/set_model'){if(m.params.modelId!=='gemini-2.5-pro')throw Error('wrong model');reply(m,{})}
+      if(m.method==='session/set_mode'){if(m.params.modeId!=='default')throw Error('wrong mode');reply(m,{})}
+      if(m.method==='session/prompt'){note('session/update',{sessionId:'gemini-test',update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:'hello gemini'}}});reply(m,{stopReason:'end_turn'})}
+    `);
+    const events: Record<string, unknown>[] = [];
+    const driver = await createGeminiDriver(
+      {
+        ...input,
+        providerOptions: { gemini: { binaryPath: binary } },
+        modelSelection: { provider: "gemini", model: "gemini-2.5-pro" },
+      },
+      sink(events),
+    );
+    try {
+      expect((await driver.models()).models).toEqual([
+        { slug: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+      ]);
+      await driver.send({ threadId: input.threadId, input: "Hello" });
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: { streamKind: "assistant_text", delta: "hello gemini" },
+        }),
+      );
+    } finally {
+      driver.close();
+    }
+  });
+  it("Gemini CLI surfaces the runtime's own sign-in requirement", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{protocolVersion:1,agentCapabilities:{loadSession:true}});
+      if(m.method==='session/new')send({id:m.id,error:{code:-32000,message:'Authentication required'}});
+    `);
+    await expect(
+      createGeminiDriver(
+        { ...input, providerOptions: { gemini: { binaryPath: binary } } },
+        sink([]),
+      ),
+    ).rejects.toThrow("Authentication required");
+  });
+  it("Gemini CLI that exits before the handshake asks the user to update it", async () => {
+    const binary = fixture(`process.stderr.write('Unknown argument: acp');process.exit(1);`);
+    await expect(
+      createGeminiDriver(
+        { ...input, providerOptions: { gemini: { binaryPath: binary } } },
+        sink([]),
+      ),
+    ).rejects.toThrow(/Gemini CLI.*update/i);
   });
   it("Pi drives RPC mode, routes approvals through its extension UI, and streams text", async () => {
     const binary = fixture(`

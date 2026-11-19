@@ -46,6 +46,7 @@ import {
   sortProjectsForSidebar,
   sortThreadsForSidebar,
 } from "./Sidebar.logic";
+import { collectGroupProjectIds, excludeGroupThreads } from "./Sidebar.logic";
 import { ProjectId, ThreadId } from "@synara/contracts";
 import {
   DEFAULT_INTERACTION_MODE,
@@ -57,6 +58,22 @@ import {
 import { rendererI18n } from "../i18n";
 import englishCatalog from "../i18n/locales/en.json";
 import frenchCatalog from "../i18n/locales/fr.json";
+
+describe("Multi agents groups in the sidebar", () => {
+  it("keeps group projects and threads out of the normal sidebar", () => {
+    const projects = [
+      { id: ProjectId.makeUnsafe("p1"), kind: "project" as const },
+      { id: ProjectId.makeUnsafe("g1"), kind: "group" as const },
+    ];
+    const ids = collectGroupProjectIds(projects);
+    expect([...ids]).toEqual([ProjectId.makeUnsafe("g1")]);
+    const threads = [
+      { projectId: ProjectId.makeUnsafe("p1") },
+      { projectId: ProjectId.makeUnsafe("g1") },
+    ];
+    expect(excludeGroupThreads(threads, ids)).toEqual([{ projectId: ProjectId.makeUnsafe("p1") }]);
+  });
+});
 
 describe("sidebar provider branding", () => {
   it("renders the thread provider identity in sidebar rows", () => {

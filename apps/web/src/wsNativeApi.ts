@@ -37,6 +37,7 @@ import {
   type WsWelcomePayload,
   type AutomationStreamEvent,
   type ServerCommandStreamEvent,
+  type GroupEvent,
   type DocumentRenderEvent,
   type LocalModelEvent,
   type AiDetectorEvent,
@@ -81,6 +82,7 @@ const localModelEventListeners = new Set<(payload: LocalModelEvent) => void>();
 const aiDetectorEventListeners = new Set<(payload: AiDetectorEvent) => void>();
 const automationEventListeners = new Set<(payload: AutomationStreamEvent) => void>();
 const serverEventListeners = new Set<(payload: ServerCommandStreamEvent) => void>();
+const groupEventListeners = new Set<(payload: GroupEvent) => void>();
 const orchestrationDomainEventListeners = new Set<(payload: OrchestrationEvent) => void>();
 const orchestrationShellEventListeners = new Set<(payload: OrchestrationShellStreamItem) => void>();
 const orchestrationThreadEventListeners = new Set<
@@ -439,6 +441,16 @@ export function createWsNativeApi(): NativeApi {
   transport.subscribe(WS_CHANNELS.automationEvent, (message) => {
     const payload = message.data;
     for (const listener of automationEventListeners) {
+      try {
+        listener(payload);
+      } catch {
+        // Swallow listener errors
+      }
+    }
+  });
+  transport.subscribe(WS_CHANNELS.groupEvent, (message) => {
+    const payload = message.data;
+    for (const listener of groupEventListeners) {
       try {
         listener(payload);
       } catch {
@@ -937,6 +949,23 @@ export function createWsNativeApi(): NativeApi {
         };
       },
     },
+    groups: {
+      list: () => transport.request(WS_METHODS.groupsList, {}),
+      create: (input) => transport.request(WS_METHODS.groupsCreate, input),
+      update: (input) => transport.request(WS_METHODS.groupsUpdate, input),
+      delete: (input) => transport.request(WS_METHODS.groupsDelete, input),
+      addMember: (input) => transport.request(WS_METHODS.groupsAddMember, input),
+      updateMember: (input) => transport.request(WS_METHODS.groupsUpdateMember, input),
+      removeMember: (input) => transport.request(WS_METHODS.groupsRemoveMember, input),
+      stopMember: (input) => transport.request(WS_METHODS.groupsStopMember, input),
+      resolvePause: (input) => transport.request(WS_METHODS.groupsResolvePause, input),
+      onEvent: (callback) => {
+        groupEventListeners.add(callback);
+        return () => {
+          groupEventListeners.delete(callback);
+        };
+      },
+    },
     automation: {
       list: (input) => transport.request(WS_METHODS.automationList, input),
       create: (input) => transport.request(WS_METHODS.automationCreate, input),
@@ -1175,6 +1204,7 @@ export function resetWsNativeApiForTest(): void {
   localModelEventListeners.clear();
   automationEventListeners.clear();
   serverEventListeners.clear();
+  groupEventListeners.clear();
   orchestrationDomainEventListeners.clear();
   orchestrationShellEventListeners.clear();
   orchestrationThreadEventListeners.clear();

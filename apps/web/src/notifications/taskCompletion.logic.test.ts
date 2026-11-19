@@ -12,10 +12,15 @@ import {
 import {
   buildInputNeededCopy,
   buildTaskCompletionCopy,
+  buildTaskCompletionToast,
+  buildTerminalAttentionToast,
+  buildTerminalCompletionToast,
+  buildThreadAttentionToast,
   collectCompletedThreadCandidates,
   collectInputNeededThreadCandidates,
   isNotificationRuntimeFreshTimestamp,
   shouldShowThreadNotificationToast,
+  toNotificationPreview,
 } from "./taskCompletion.logic";
 import type { Thread } from "../types";
 import { showDesktopThreadNotification } from "./taskCompletion";
@@ -457,6 +462,98 @@ describe("buildTaskCompletionCopy", () => {
     ).toEqual({
       title: "Polish notifications",
       body: "Finished the task and everything looks good.",
+    });
+  });
+});
+
+describe("toNotificationPreview", () => {
+  it("drops markdown syntax so previews read as plain text", () => {
+    expect(
+      toNotificationPreview(
+        "I'm **Claude Opus 5.5** (model ID `claude-opus-5-5`). See [the docs](https://example.test).",
+      ),
+    ).toBe("I'm Claude Opus 5.5 (model ID claude-opus-5-5). See the docs.");
+  });
+
+  it("removes code blocks, headings and list markers but keeps snake_case and math", () => {
+    expect(
+      toNotificationPreview(
+        "## Summary\n- renamed my_var_name\n- 2 * 3 * 4 works\n```ts\nconst x = 1;\n```\nDone.",
+      ),
+    ).toBe("Summary renamed my_var_name 2 * 3 * 4 works Done.");
+  });
+
+  it("returns null when nothing readable is left", () => {
+    expect(toNotificationPreview("```\nonly code\n```")).toBeNull();
+  });
+});
+
+describe("thread toast notices", () => {
+  const completion = {
+    threadId: ThreadId.makeUnsafe("thread-1"),
+    projectId: ProjectId.makeUnsafe("project-1"),
+    title: "Game",
+    completedAt: "2026-04-05T10:00:05.000Z",
+    assistantSummary: "Both agents answered.",
+  };
+
+  it("leads a finished task with the chat name and a short status", () => {
+    expect(buildTaskCompletionToast(completion)).toEqual({
+      label: "Game",
+      status: "Done",
+      preview: "Both agents answered.",
+      tone: "done",
+    });
+  });
+
+  it("shows no preview line when the reply had no text", () => {
+    expect(buildTaskCompletionToast({ ...completion, title: " ", assistantSummary: null })).toEqual(
+      { label: "Untitled thread", status: "Done", preview: null, tone: "done" },
+    );
+  });
+
+  it("marks approvals and questions as needing attention", () => {
+    const base = {
+      threadId: ThreadId.makeUnsafe("thread-1"),
+      projectId: ProjectId.makeUnsafe("project-1"),
+      title: "Game",
+      createdAt: "2026-04-05T10:00:04.000Z",
+      requestId: ApprovalRequestId.makeUnsafe("request-1"),
+    };
+    expect(
+      buildThreadAttentionToast({
+        ...base,
+        kind: "approval",
+        requestKind: "command",
+        summary: "bun test",
+      }),
+    ).toEqual({ label: "Game", status: "Approval needed", preview: "bun test", tone: "attention" });
+    expect(buildThreadAttentionToast({ ...base, kind: "user-input" })).toEqual({
+      label: "Game",
+      status: "Input needed",
+      preview: null,
+      tone: "attention",
+    });
+  });
+
+  it("names the terminal for terminal notices", () => {
+    const terminal = {
+      threadId: ThreadId.makeUnsafe("thread-1"),
+      terminalId: "term-1",
+      cliKind: null,
+      title: "Codex CLI",
+    };
+    expect(buildTerminalCompletionToast(terminal)).toEqual({
+      label: "Codex CLI",
+      status: "Done",
+      preview: null,
+      tone: "done",
+    });
+    expect(buildTerminalAttentionToast(terminal)).toEqual({
+      label: "Codex CLI",
+      status: "Input needed",
+      preview: null,
+      tone: "attention",
     });
   });
 });

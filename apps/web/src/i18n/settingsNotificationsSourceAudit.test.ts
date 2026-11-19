@@ -49,6 +49,7 @@ const TECHNICAL_ALLOWLIST = new Set([
   "Claude Code",
   "Cursor",
   "Gemini",
+  "Gemini CLI",
   "Grok",
   "Grok Build",
   "Kimi Code",

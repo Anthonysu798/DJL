@@ -8,8 +8,13 @@ import type { NativeDriverFactory, NativeProvider } from "./types";
 import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
 import { transcribeNativeCodexVoice } from "./codexTranscription";
-import { createClaudeDriver } from "./claude";
+import { createClaudeDriver, createGroupMemberClaudeDriver } from "./claude";
 import { createCursorDriver } from "./cursor";
+import { createGeminiDriver } from "./gemini";
+import { createGroupDriverFactory } from "./group/groupDriver";
+import { GroupDriverBridge } from "../../groups/Services/GroupDriverBridge";
+import { resolveAttachmentPath } from "../../attachmentStore";
+import { readFile } from "node:fs/promises";
 import { createGrokDriver } from "./grok";
 import { createKimiDriver } from "./kimi";
 import { createIFlowDriver } from "./iflow";
@@ -32,6 +37,10 @@ export class NativeCursorAdapter extends ServiceMap.Service<
   NativeCursorAdapter,
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/CursorAdapter") {}
+export class NativeGeminiAdapter extends ServiceMap.Service<
+  NativeGeminiAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/GeminiAdapter") {}
 export class NativeGrokAdapter extends ServiceMap.Service<
   NativeGrokAdapter,
   ProviderAdapterShape<ProviderAdapterError>
@@ -57,6 +66,10 @@ export class NativeDjlCloudAdapter extends ServiceMap.Service<
   NativeDjlCloudAdapter,
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/DjlCloudAdapter") {}
+export class NativeGroupAdapter extends ServiceMap.Service<
+  NativeGroupAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/GroupAdapter") {}
 export class NativePiAdapter extends ServiceMap.Service<
   NativePiAdapter,
   ProviderAdapterShape<ProviderAdapterError>
@@ -158,10 +171,49 @@ export const makeConfiguredNativeAdapter = (
     } satisfies ProviderAdapterShape<ProviderAdapterError>;
   });
 
+const MAX_PASTED_SKILL_CHARS = 24_000;
+
+const NativeGroupAdapterLive = Layer.effect(
+  NativeGroupAdapter,
+  Effect.gen(function* () {
+    const settings = yield* ServerSettingsService;
+    const bridge = yield* GroupDriverBridge;
+    const config = yield* ServerConfig;
+    return yield* makeConfiguredNativeAdapter(
+      "group",
+      createGroupDriverFactory({
+        bridge: () => bridge.current(),
+        // Members run the plain drivers: DJL's work tools are registered per thread, and every
+        // member shares the group's thread.
+        childFactories: {
+          codex: createCodexDriver,
+          claudeAgent: createGroupMemberClaudeDriver,
+          cursor: createCursorDriver,
+          gemini: createGeminiDriver,
+          grok: createGrokDriver,
+          kimi: createKimiDriver,
+          iflow: createIFlowDriver,
+          qwen: createQwenDriver,
+          codebuddy: createCodeBuddyDriver,
+          pi: createPiDriver,
+        },
+        childOptions: async (provider) =>
+          nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
+        resolveAttachment: (attachment) =>
+          resolveAttachmentPath({ attachmentsDir: config.attachmentsDir, attachment }),
+        readSkill: async (path) =>
+          (await readFile(path, "utf8")).trim().slice(0, MAX_PASTED_SKILL_CHARS),
+      }),
+    );
+  }),
+);
+
 export const NativeHarnessesLive = Layer.mergeAll(
+  NativeGroupAdapterLive,
   Layer.effect(NativeCodexAdapter, makeConfiguredNativeAdapter("codex", createCodexDriver)),
   Layer.effect(NativeClaudeAdapter, makeConfiguredNativeAdapter("claudeAgent", createClaudeDriver)),
   Layer.effect(NativeCursorAdapter, makeConfiguredNativeAdapter("cursor", createCursorDriver)),
+  Layer.effect(NativeGeminiAdapter, makeConfiguredNativeAdapter("gemini", createGeminiDriver)),
   Layer.effect(NativeGrokAdapter, makeConfiguredNativeAdapter("grok", createGrokDriver)),
   Layer.effect(NativeKimiAdapter, makeConfiguredNativeAdapter("kimi", createKimiDriver)),
   Layer.effect(NativeIFlowAdapter, makeConfiguredNativeAdapter("iflow", createIFlowDriver)),

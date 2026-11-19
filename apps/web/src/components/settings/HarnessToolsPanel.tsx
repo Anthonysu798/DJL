@@ -23,6 +23,7 @@ const TOOLS = [
   },
   { id: "iflow", label: "iFlow CLI", docs: "https://github.com/iflow-ai/iflow-cli" },
   { id: "qwen", label: "Qwen Code", docs: "https://github.com/QwenLM/qwen-code" },
+  { id: "gemini", label: "Gemini CLI", docs: "https://github.com/google-gemini/gemini-cli" },
   {
     id: "codebuddy",
     label: "CodeBuddy Code",

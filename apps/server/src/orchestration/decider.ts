@@ -17,6 +17,7 @@ import {
   deriveAssociatedWorktreeMetadataPatch,
 } from "@synara/shared/threadWorkspace";
 import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
+import { providerSteersLiveTurn } from "@synara/shared/groupChat";
 import { doThreadMarkerRangesOverlap } from "@synara/shared/threadMarkers";
 import { derivePendingThreadRequestIds } from "@synara/shared/threadSummary";
 import {
@@ -1256,7 +1257,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const isThreadRunning =
         targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
       const shouldQueue =
-        isThreadRunning && (dispatchMode === "queue" || activeProvider !== "codex");
+        isThreadRunning && (dispatchMode === "queue" || !providerSteersLiveTurn(activeProvider));
       const queuedEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
           aggregateKind: "thread",

@@ -81,6 +81,19 @@ import {
   ServerTrustHostKeyInput,
   ServerUpdateInput,
 } from "./servers";
+import {
+  Group,
+  GroupAddMemberInput,
+  GroupCreateInput,
+  GroupDeleteResult,
+  GroupEvent,
+  GroupListResult,
+  GroupMemberRef,
+  GroupRef,
+  GroupResolvePauseInput,
+  GroupUpdateInput,
+  GroupUpdateMemberInput,
+} from "./groups";
 import { CommandId } from "./baseSchemas";
 
 import {
@@ -1343,6 +1356,58 @@ export const WsSubscribeServerEventsRpc = Rpc.make(WS_METHODS.subscribeServerEve
   stream: true,
 });
 
+export const WsGroupsListRpc = Rpc.make(WS_METHODS.groupsList, {
+  payload: Schema.Struct({}),
+  success: GroupListResult,
+  error: WsRpcError,
+});
+export const WsGroupsCreateRpc = Rpc.make(WS_METHODS.groupsCreate, {
+  payload: GroupCreateInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsUpdateRpc = Rpc.make(WS_METHODS.groupsUpdate, {
+  payload: GroupUpdateInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsDeleteRpc = Rpc.make(WS_METHODS.groupsDelete, {
+  payload: GroupRef,
+  success: GroupDeleteResult,
+  error: WsRpcError,
+});
+export const WsGroupsAddMemberRpc = Rpc.make(WS_METHODS.groupsAddMember, {
+  payload: GroupAddMemberInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsUpdateMemberRpc = Rpc.make(WS_METHODS.groupsUpdateMember, {
+  payload: GroupUpdateMemberInput,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsRemoveMemberRpc = Rpc.make(WS_METHODS.groupsRemoveMember, {
+  payload: GroupMemberRef,
+  success: Group,
+  error: WsRpcError,
+});
+export const WsGroupsStopMemberRpc = Rpc.make(WS_METHODS.groupsStopMember, {
+  payload: GroupMemberRef,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsGroupsResolvePauseRpc = Rpc.make(WS_METHODS.groupsResolvePause, {
+  payload: GroupResolvePauseInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+export const WsSubscribeGroupEventsRpc = Rpc.make(WS_METHODS.subscribeGroupEvents, {
+  payload: Schema.Struct({}),
+  success: GroupEvent,
+  error: WsRpcError,
+  stream: true,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1773,6 +1838,16 @@ export const WsRpcGroup = RpcGroup.make(
   WsServersResolveCommandRpc,
   WsServersListCommandsRpc,
   WsSubscribeServerEventsRpc,
+  WsGroupsListRpc,
+  WsGroupsCreateRpc,
+  WsGroupsUpdateRpc,
+  WsGroupsDeleteRpc,
+  WsGroupsAddMemberRpc,
+  WsGroupsUpdateMemberRpc,
+  WsGroupsRemoveMemberRpc,
+  WsGroupsStopMemberRpc,
+  WsGroupsResolvePauseRpc,
+  WsSubscribeGroupEventsRpc,
   WsAutomationListRpc,
   WsAutomationCreateRpc,
   WsAutomationUpdateRpc,

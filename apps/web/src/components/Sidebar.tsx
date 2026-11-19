@@ -12,6 +12,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ClockIcon,
+  UsersGroupIcon,
   CopyIcon,
   CircleQuestionIcon,
   ExternalLinkIcon,
@@ -295,6 +296,8 @@ import {
   getVisibleSidebarEntriesForPreview,
   groupSidebarThreadsByProjectId,
   partitionSidebarThreadsByProjectIds,
+  collectGroupProjectIds,
+  excludeGroupThreads,
   isLatestPinnedProjectMutation,
   isLatestPinnedThreadMutation,
   pruneProjectThreadListPagingForCollapsedProjects,
@@ -1501,6 +1504,7 @@ export default function Sidebar() {
   const isOnKanban = pathname.startsWith("/workspaces") || pathname.startsWith("/kanban");
   const isOnPlugins = pathname.startsWith("/plugins");
   const isOnAutomations = pathname.startsWith("/automations");
+  const isOnMultiAgents = pathname.startsWith("/multi-agents");
   const handleOpenShop = useCallback(() => {
     void openShop().then(
       (opened) => {
@@ -1729,8 +1733,18 @@ export default function Sidebar() {
   const visualActiveSidebarThreadId = optimisticActiveThreadId ?? routeThreadId;
   const selectSidebarThreads = useMemo(() => createSidebarThreadSummariesSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
-  const sidebarThreads = useStore(selectSidebarThreads);
-  const sidebarDisplayThreads = useStore(selectSidebarDisplayThreads);
+  const groupProjectIdSet = useMemo(() => collectGroupProjectIds(projects), [projects]);
+  // Multi agents group chats live in their own section, never in the normal thread lists.
+  const allSidebarThreads = useStore(selectSidebarThreads);
+  const allSidebarDisplayThreads = useStore(selectSidebarDisplayThreads);
+  const sidebarThreads = useMemo(
+    () => excludeGroupThreads(allSidebarThreads, groupProjectIdSet),
+    [allSidebarThreads, groupProjectIdSet],
+  );
+  const sidebarDisplayThreads = useMemo(
+    () => excludeGroupThreads(allSidebarDisplayThreads, groupProjectIdSet),
+    [allSidebarDisplayThreads, groupProjectIdSet],
+  );
   const studioProjectIdSet = useMemo(
     () => collectStudioProjectIds(projects, { homeDir, chatWorkspaceRoot, studioWorkspaceRoot }),
     [chatWorkspaceRoot, homeDir, projects, studioWorkspaceRoot],
@@ -6775,16 +6789,18 @@ export default function Sidebar() {
                 ? t("pluginLibrary.plugins", { ns: "shell" })
                 : isOnSettings
                   ? t("sidebar.settings", { ns: "shell" })
-                  : isOnAutomations
-                    ? t("sidebar.actions.automations", { ns: "shell" })
-                    : isOnKanban
-                      ? t("sidebar.actions.kanban", { ns: "shell" })
-                      : isOnWorkspace
-                        ? t("sidebar.views.workspace", { ns: "shell" })
-                        : ((activeSidebarThreadId
-                            ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
-                            : undefined) ??
-                          t("sidebar.actions.newChat", { ns: "shell", defaultValue: "New chat" }))
+                  : isOnMultiAgents
+                    ? t("multiAgents.title", { ns: "shell" })
+                    : isOnAutomations
+                      ? t("sidebar.actions.automations", { ns: "shell" })
+                      : isOnKanban
+                        ? t("sidebar.actions.kanban", { ns: "shell" })
+                        : isOnWorkspace
+                          ? t("sidebar.views.workspace", { ns: "shell" })
+                          : ((activeSidebarThreadId
+                              ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
+                              : undefined) ??
+                            t("sidebar.actions.newChat", { ns: "shell", defaultValue: "New chat" }))
             }
             newChatLabel={t("sidebar.actions.newThread", { ns: "shell" })}
             onNewChat={handlePrimaryNewThread}
@@ -6799,6 +6815,7 @@ export default function Sidebar() {
                   !isOnWorkspace &&
                   !isOnKanban &&
                   !isOnAutomations &&
+                  !isOnMultiAgents &&
                   !isOnPlugins,
                 onClick: () => {
                   if (!navigateToBackTarget(resolveBackToThreadsTarget())) {
@@ -6817,6 +6834,15 @@ export default function Sidebar() {
                     },
                   ]
                 : []),
+              {
+                label: t("multiAgents.title", { ns: "shell" }),
+                icon: "group-1",
+                badge: t("multiAgents.beta", { ns: "shell" }),
+                active: isOnMultiAgents,
+                onClick: () => {
+                  void navigate({ to: "/multi-agents" });
+                },
+              },
               {
                 label: t("sidebar.actions.shop", { ns: "shell" }),
                 icon: "shopping-bag-1",
@@ -7065,6 +7091,14 @@ export default function Sidebar() {
                         badgeCount={automationAttentionBadgeCount}
                         onClick={() => {
                           void navigate({ to: "/automations" });
+                        }}
+                      />
+                      <SidebarPrimaryAction
+                        icon={UsersGroupIcon}
+                        label={t("multiAgents.title", { ns: "shell" })}
+                        active={isOnMultiAgents}
+                        onClick={() => {
+                          void navigate({ to: "/multi-agents" });
                         }}
                       />
                     </>

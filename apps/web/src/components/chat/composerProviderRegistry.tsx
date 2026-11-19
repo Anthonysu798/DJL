@@ -338,6 +338,12 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("djlCloud", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("djlCloud", input),
   },
+  // Group threads are not composed here; members keep their own model traits.
+  group: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: () => null,
+    renderTraitsPicker: () => null,
+  },
 };
 
 export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {

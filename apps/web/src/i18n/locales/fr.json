@@ -1406,6 +1406,7 @@
       "copiedError": "Message d’erreur copié",
       "copyError": "Copier le message d’erreur",
       "dismiss": "Fermer la notification",
+      "done": "Terminé",
       "undo": "Annuler"
     },
     "untitledThread": "Discussion sans titre"
@@ -3385,6 +3386,126 @@
         "progressOf_other": "{{count}} des chats {{total}} cachés.",
         "retryLater": "Les vieilles conversations seront retravaillées plus tard.",
         "running": "Cacher de vieilles conversations..."
+      }
+    },
+    "multiAgents": {
+      "title": "Multi-agents",
+      "beta": "Bêta",
+      "newGroup": "Nouveau groupe",
+      "groups": "Groupes",
+      "emptyTitle": "Réunissez vos agents dans une discussion",
+      "emptyBody": "Créez un groupe, puis tapez @ pour appeler un agent ou @all pour interroger tout le monde.",
+      "noGroupSelected": "Choisissez un groupe à gauche ou créez-en un.",
+      "setup": {
+        "title": "Nouveau groupe",
+        "pickTitle": "Choisissez les agents de ce groupe",
+        "pickBody": "Ils partagent un seul chat et peuvent se passer le travail.",
+        "nameBody": "C'est le nom affiché dans votre liste de groupes.",
+        "nameTitle": "Nommez le groupe",
+        "namePlaceholder": "Nom du groupe",
+        "next": "Suivant",
+        "back": "Retour",
+        "create": "Créer le groupe",
+        "creating": "Création…",
+        "setUp": "Configurer",
+        "notReady": "Pas encore configuré",
+        "checking": "Vérification…",
+        "needOne": "Choisissez au moins un agent déjà configuré."
+      },
+      "chat": {
+        "placeholder": "Écrivez au groupe, ou tapez @ pour choisir un agent",
+        "startTitle": "Lancez la conversation",
+        "startBody": "Tous les membres du groupe lisent le même chat. Tapez @ pour interroger un agent, ou @all pour les interroger ensemble.",
+        "starterMeet": "Rencontrer le groupe",
+        "starterMeetPrompt": "@all présentez-vous et dites ce que vous faites le mieux",
+        "starterOne": "Interroger un agent",
+        "starterOnePrompt": "@{{name}} en quoi peux-tu m'aider ?",
+        "starterReview": "Demander un second avis",
+        "starterReviewPrompt": "@{{first}} propose un plan pour mon idée, puis demande à @{{second}} de le vérifier",
+        "send": "Envoyer",
+        "stopAll": "Tout arrêter",
+        "stopMember": "Arrêter",
+        "you": "Vous",
+        "working": "{{name}} travaille…",
+        "waiting": "{{name}} attend qu'un autre agent ait fini de modifier…",
+        "failed": "{{name}} n'a pas pu répondre : {{error}}",
+        "empty": "{{name}} a terminé sans répondre.",
+        "tryAgain": "Réessayer",
+        "removedAgent": "Agent retiré",
+        "members": "Membres",
+        "allMembers": "Tout le groupe"
+      },
+      "pause": {
+        "title": "Les agents se sont passé la main {{count}} fois.",
+        "body": "Continuer les laisse poursuivre ; Arrêter termine ce tour.",
+        "continue": "Continuer",
+        "stop": "Arrêter"
+      },
+      "confirmAll": {
+        "title": "Cela réveillera {{count}} agents",
+        "body": "Chaque agent répond avec son propre abonnement.",
+        "send": "Envoyer à tous",
+        "cancel": "Annuler",
+        "dontAsk": "Ne plus demander pour ce groupe"
+      },
+      "reply": {
+        "copy": "Copier",
+        "copied": "Copié",
+        "askAgain": "Redemander",
+        "replyTo": "Répondre à ceci",
+        "askAnother": "Demander à un autre agent",
+        "checkLead": "Vérifiez cette réponse de {{name}}.",
+        "workFiles_one": "{{count}} fichier modifié",
+        "workFiles_other": "{{count}} fichiers modifiés",
+        "workCommands_one": "{{count}} commande lancée",
+        "workCommands_other": "{{count}} commandes lancées",
+        "filesHeading": "Fichiers",
+        "commandsHeading": "Commandes"
+      },
+      "composer": {
+        "mention": "Mentionner un agent",
+        "sendsTo": "Envoyé à {{names}}",
+        "sendsToAll": "Envoyé à tout le monde",
+        "skill": "Utiliser une compétence"
+      },
+      "members": {
+        "close": "Fermer les paramètres du groupe",
+        "title": "Réglages du groupe",
+        "add": "Ajouter un membre",
+        "remove": "Retirer",
+        "role": "Rôle",
+        "roleNone": "Aucun rôle",
+        "roleCustom": "Rôle personnalisé",
+        "customRolePlaceholder": "Décrivez le rôle de ce membre",
+        "model": "Modèle",
+        "modelPlaceholder": "Par défaut de l'agent",
+        "hopLimit": "Relais avant la pause",
+        "folder": "Dossier",
+        "folderAuto": "Créé pour ce groupe",
+        "chooseFolder": "Utiliser un autre dossier",
+        "folderWarning": "Les agents peuvent modifier n'importe quel fichier de ce dossier. Seul Codex y est confiné par un bac à sable.",
+        "largeGroup": "Les grands groupes utilisent plus de mémoire et de vos abonnements.",
+        "deleteGroup": "Supprimer le groupe",
+        "deleteConfirm": "Supprimer ce groupe ? La discussion est effacée ; les fichiers restent dans {{folder}}.",
+        "deleted": "Groupe supprimé. Ses fichiers sont toujours dans {{folder}}.",
+        "state": {
+          "idle": "Inactif",
+          "working": "Au travail",
+          "waiting": "En attente",
+          "failed": "À vérifier"
+        }
+      },
+      "roles": {
+        "planner": "Planificateur",
+        "builder": "Bâtisseur",
+        "reviewer": "Relecteur",
+        "researcher": "Chercheur",
+        "writer": "Rédacteur"
+      },
+      "errors": {
+        "createFailed": "Impossible de créer le groupe.",
+        "sendFailed": "Impossible d'envoyer le message.",
+        "updateFailed": "Impossible de mettre à jour le groupe."
       }
     },
     "navigation": {

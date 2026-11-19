@@ -13,6 +13,7 @@ import {
   ClaudeAI,
   CursorIcon,
   DjlCloudIcon,
+  GroupChatIcon,
   Gemini,
   DroidIcon,
   GrokIcon,
@@ -83,6 +84,7 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
   opencode: OpenCodeProviderIcon,
   pi: PiIcon,
   djlCloud: DjlCloudIcon,
+  group: GroupChatIcon,
 };
 
 export function providerIconToneClassName(

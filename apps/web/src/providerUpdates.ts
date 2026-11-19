@@ -40,7 +40,7 @@ function isProviderEnabled(
   provider: ProviderKind,
   serverSettings: Pick<ServerSettings, "providers"> | null | undefined,
 ): boolean {
-  if (!serverSettings) {
+  if (!serverSettings || provider === "group") {
     return false;
   }
   return serverSettings.providers[provider]?.enabled !== false;

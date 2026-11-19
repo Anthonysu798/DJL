@@ -24,12 +24,17 @@ import {
   buildTerminalCompletionCopy,
   buildInputNeededCopy,
   buildTaskCompletionCopy,
+  buildTaskCompletionToast,
+  buildTerminalAttentionToast,
+  buildTerminalCompletionToast,
+  buildThreadAttentionToast,
   collectCompletedThreadCandidates,
   collectCompletedTerminalCandidates,
   collectInputNeededThreadCandidates,
   collectTerminalAttentionCandidates,
   isNotificationRuntimeFreshTimestamp,
   shouldShowThreadNotificationToast,
+  type ThreadToastNotice,
 } from "./taskCompletion.logic";
 
 export type BrowserNotificationPermissionState =
@@ -133,25 +138,19 @@ async function showSystemThreadNotification(
 }
 
 function showThreadToast(
-  copy: ThreadNotificationCopy,
+  notice: ThreadToastNotice,
   threadId: Thread["id"],
-  tone: "success" | "warning",
   navigate: ReturnType<typeof useNavigate>,
-  openLabel: string,
 ): void {
-  const { body, title } = copy;
   toastManager.add({
-    type: tone,
-    title,
-    description: body,
+    type: notice.tone === "done" ? "success" : "warning",
+    title: notice.label,
+    ...(notice.preview ? { description: notice.preview } : {}),
     data: {
       allowCrossThreadVisibility: true,
       threadId,
       dismissAfterVisibleMs: 8000,
-    },
-    actionProps: {
-      children: openLabel,
-      onClick: () => focusThread(threadId, navigate),
+      threadNotice: { ...notice, onOpen: () => focusThread(threadId, navigate) },
     },
   });
 }
@@ -258,7 +257,7 @@ export function TaskCompletionNotifications() {
           visibleThreadIds,
         })
       ) {
-        showThreadToast(copy, completion.threadId, "success", navigate, t("actions.open"));
+        showThreadToast(buildTaskCompletionToast(completion, t), completion.threadId, navigate);
       }
 
       if (shouldAttemptSystemNotification) {
@@ -275,7 +274,7 @@ export function TaskCompletionNotifications() {
           visibleThreadIds,
         })
       ) {
-        showThreadToast(copy, candidate.threadId, "warning", navigate, t("actions.open"));
+        showThreadToast(buildThreadAttentionToast(candidate, t), candidate.threadId, navigate);
       }
 
       if (shouldAttemptSystemNotification) {
@@ -292,7 +291,7 @@ export function TaskCompletionNotifications() {
           visibleThreadIds,
         })
       ) {
-        showThreadToast(copy, completion.threadId, "success", navigate, t("actions.open"));
+        showThreadToast(buildTerminalCompletionToast(completion, t), completion.threadId, navigate);
       }
 
       if (shouldAttemptSystemNotification) {
@@ -309,7 +308,7 @@ export function TaskCompletionNotifications() {
           visibleThreadIds,
         })
       ) {
-        showThreadToast(copy, candidate.threadId, "warning", navigate, t("actions.open"));
+        showThreadToast(buildTerminalAttentionToast(candidate, t), candidate.threadId, navigate);
       }
 
       if (shouldAttemptSystemNotification) {

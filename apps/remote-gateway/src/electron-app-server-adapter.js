@@ -1092,7 +1092,8 @@ function listThreads(snapshot, params = {}) {
     ? Math.max(0, Number(params.limit))
     : undefined;
   const data = readableThreads(snapshot)
-    .slice()
+    // Multi agents group chats have no phone view yet.
+    .filter((thread) => thread?.modelSelection?.provider !== "group")
     .toSorted((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
     .slice(0, limit)
     .map((thread) => appServerThread(thread, snapshot));

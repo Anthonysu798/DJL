@@ -481,6 +481,15 @@ export const DjlCloudIcon: Icon = (props) => (
   </svg>
 );
 
+export const GroupChatIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fill="currentColor"
+      d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0-2a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm7.5 3a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0-2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM2 20c0-3.3 3.1-6 7-6s7 2.7 7 6h-2c0-2.1-2.2-4-5-4s-5 1.9-5 4H2Zm15.2-5.9c2.8.3 4.8 2.3 4.8 4.9h-2c0-1.5-1.2-2.7-3-2.9l.2-2Z"
+    />
+  </svg>
+);
+
 export const OpenCodeIcon: Icon = (props) => (
   <svg {...props} viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g clipPath="url(#opencode__clip0_1311_94969)">

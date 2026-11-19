@@ -78,9 +78,23 @@ function isRunningStatus(status: ThreadSessionStatus | null | undefined): boolea
 
 const NOTIFICATION_SUMMARY_MAX_LENGTH = 140;
 
+/** Reply text as one plain line: markdown syntax and code blocks removed; null when empty. */
+export function toNotificationPreview(text: string): string | null {
+  const plain = text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}(?:#{1,6}|>|[-*+]|\d+[.)])\s+/gm, "")
+    // Emphasis markers only when they hug a word, so `2 * 3` and snake_case survive.
+    .replace(/(\*\*|__|~~|\*)(?=\S)(.+?)(?<=\S)\1/g, "$2")
+    .trim()
+    .replace(/\s+/g, " ");
+  return plain.length > 0 ? plain : null;
+}
+
 // Normalize + cap a message body so long output never leaks into OS chrome.
 function summarizeAssistantText(text: string): string | null {
-  const trimmed = text.trim().replace(/\s+/g, " ");
+  const trimmed = toNotificationPreview(text) ?? "";
   if (trimmed.length === 0) {
     return null;
   }
@@ -271,6 +285,7 @@ function notificationText(key: string, options?: Record<string, unknown>, t?: TF
     "terminal.inputBody": englishCatalog.notifications.terminal.inputBody,
     "terminal.inputTitle": englishCatalog.notifications.terminal.inputTitle,
     "terminal.label": englishCatalog.notifications.terminal.label,
+    "toast.done": englishCatalog.notifications.toast.done,
     untitledThread: englishCatalog.notifications.untitledThread,
   };
   const defaultValue = defaults[key] ?? key;
@@ -456,6 +471,70 @@ export function buildTerminalAttentionCopy(
   return {
     title: notificationText("terminal.inputTitle", undefined, t),
     body: notificationText("terminal.inputBody", { terminal: terminalLabel }, t),
+  };
+}
+
+/** What an in-app thread toast shows: the chat or terminal name, a short status, a reply line. */
+export interface ThreadToastNotice {
+  label: string;
+  status: string;
+  preview: string | null;
+  tone: "done" | "attention";
+}
+
+function threadLabel(title: string, t?: TFunction): string {
+  return title.trim() || notificationText("untitledThread", undefined, t);
+}
+
+export function buildTaskCompletionToast(
+  candidate: CompletedThreadCandidate,
+  t?: TFunction,
+): ThreadToastNotice {
+  return {
+    label: threadLabel(candidate.title, t),
+    status: notificationText("toast.done", undefined, t),
+    preview: candidate.assistantSummary || null,
+    tone: "done",
+  };
+}
+
+export function buildThreadAttentionToast(
+  candidate: ThreadAttentionCandidate,
+  t?: TFunction,
+): ThreadToastNotice {
+  return {
+    label: threadLabel(candidate.title, t),
+    status: notificationText(
+      candidate.kind === "approval" ? "approval.title" : "input.title",
+      undefined,
+      t,
+    ),
+    preview: candidate.summary ?? null,
+    tone: "attention",
+  };
+}
+
+export function buildTerminalCompletionToast(
+  candidate: CompletedTerminalCandidate,
+  t?: TFunction,
+): ThreadToastNotice {
+  return {
+    label: candidate.title.trim() || notificationText("terminal.label", undefined, t),
+    status: notificationText("toast.done", undefined, t),
+    preview: null,
+    tone: "done",
+  };
+}
+
+export function buildTerminalAttentionToast(
+  candidate: TerminalAttentionCandidate,
+  t?: TFunction,
+): ThreadToastNotice {
+  return {
+    label: candidate.title.trim() || notificationText("terminal.label", undefined, t),
+    status: notificationText("input.title", undefined, t),
+    preview: null,
+    tone: "attention",
   };
 }
 

@@ -8,6 +8,7 @@ import { ComputerServiceLive } from "./computer/Layers/ComputerService";
  *
  * @module CliConfig
  */
+import { GroupDriverBridgeLive } from "./groups/Services/GroupDriverBridge";
 import OS from "node:os";
 import nodePath from "node:path";
 import { Config, Data, Effect, FileSystem, Layer, Option, Path, Schema, ServiceMap } from "effect";
@@ -338,6 +339,8 @@ const LayerLive = (input: CliInput) => {
     Layer.provideMerge(SqlitePersistence.layerConfig),
     Layer.provideMerge(ServerLoggerLive),
     Layer.provideMerge(AnalyticsServiceLayerLive),
+    // One bridge shared by GroupService (runtime layer) and the group harness (provider layer).
+    Layer.provideMerge(GroupDriverBridgeLive),
     Layer.provideMerge(ServerConfigLive(input)),
   );
 };

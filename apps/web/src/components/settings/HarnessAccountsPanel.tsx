@@ -24,6 +24,7 @@ const HARNESSES: { id: HarnessId; label: string; docs: string }[] = [
   { id: "codex", label: "Codex", docs: "https://developers.openai.com/codex/cli/" },
   { id: "claudeAgent", label: "Claude Code", docs: "https://code.claude.com/docs/en/setup" },
   { id: "cursor", label: "Cursor", docs: "https://cursor.com/docs/cli/installation" },
+  { id: "gemini", label: "Gemini CLI", docs: "https://github.com/google-gemini/gemini-cli" },
   { id: "grok", label: "Grok Build", docs: "https://docs.x.ai/build/overview" },
   {
     id: "kimi",

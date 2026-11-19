@@ -23,6 +23,7 @@ import { ProviderSessionRuntimeRepositoryLive } from "../persistence/Layers/Prov
 import { WorkMcpServer, WorkMcpServerError } from "../work/Services/WorkMcpServer";
 import { makeWorkMcpServerLive } from "../work/Layers/WorkMcpServer";
 import { LocalModelsService } from "../localModels/LocalModelsService";
+import type { GroupDriverBridge } from "../groups/Services/GroupDriverBridge";
 
 export function makeServerProviderLayer(): Layer.Layer<
   ProviderService | ProviderDiscoveryService | ProviderAdapterRegistry | ProviderSessionDirectory,
@@ -34,6 +35,7 @@ export function makeServerProviderLayer(): Layer.Layer<
   | AnalyticsService
   | LocalModelsService
   | ChildProcessSpawner.ChildProcessSpawner
+  | GroupDriverBridge
 > {
   return Effect.gen(function* () {
     const { logProviderEvents, providerEventLogPath, stateDir } = yield* ServerConfig;

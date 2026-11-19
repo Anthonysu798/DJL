@@ -78,6 +78,7 @@ import Migration0059 from "./Migrations/059_Servers.ts";
 import Migration0062 from "./Migrations/062_MultiPost.ts";
 import Migration0061 from "./Migrations/061_MarketingStudio.ts";
 import Migration0060 from "./Migrations/060_ServerCommands.ts";
+import Migration0063 from "./Migrations/063_Groups.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -152,6 +153,7 @@ export const migrationEntries = [
   [60, "ServerCommands", Migration0060],
   [61, "MarketingStudio", Migration0061],
   [62, "MultiPost", Migration0062],
+  [63, "Groups", Migration0063],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

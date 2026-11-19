@@ -17,7 +17,8 @@ type ModelProviderKind =
   | "kilo"
   | "opencode"
   | "pi"
-  | "djlCloud";
+  | "djlCloud"
+  | "group";
 
 const NON_DROID_MODEL_SLUGS = new Set(
   Object.entries(MODEL_OPTIONS_BY_PROVIDER).flatMap(([provider, models]) =>
@@ -87,7 +88,8 @@ function inferLegacyModelProvider(provider: unknown, model: string): ModelProvid
     provider === "kilo" ||
     provider === "opencode" ||
     provider === "pi" ||
-    provider === "djlCloud"
+    provider === "djlCloud" ||
+    provider === "group"
   ) {
     return provider;
   }
