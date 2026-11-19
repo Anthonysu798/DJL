@@ -2,6 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 
 import {
   AI_DETECTOR_ASAR_UNPACK_GLOBS,
+  COMPUTER_USE_ACCESSIBILITY_DESCRIPTION,
+  COMPUTER_USE_SCREEN_CAPTURE_DESCRIPTION,
   createDesktopPlatformBuildConfig,
   MAC_ENTITLEMENTS_PATH,
   MAC_INHERITED_ENTITLEMENTS_PATH,
@@ -35,6 +37,14 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(mac.entitlements, MAC_ENTITLEMENTS_PATH);
     assert.equal(mac.entitlementsInherit, MAC_INHERITED_ENTITLEMENTS_PATH);
     assert.equal(extendInfo.NSMicrophoneUsageDescription, MICROPHONE_USAGE_DESCRIPTION);
+    assert.equal(
+      extendInfo.NSAccessibilityUsageDescription,
+      COMPUTER_USE_ACCESSIBILITY_DESCRIPTION,
+    );
+    assert.equal(
+      extendInfo.NSScreenCaptureUsageDescription,
+      COMPUTER_USE_SCREEN_CAPTURE_DESCRIPTION,
+    );
   });
 
   it("routes signed macOS builds through the repository-owned afterSign hook", () => {
@@ -51,6 +61,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(config.afterSign, "/repo/scripts/notarize-macos-after-sign.cjs");
     assert.deepStrictEqual(config.dmg, { sign: true });
     assert.equal(mac.hardenedRuntime, true);
+    assert.equal(mac.signIgnore, undefined);
   });
 
   it("never configures Electron Builder to submit notarization itself", () => {

@@ -40,5 +40,6 @@ export interface StartupShellHandle {
   selection: () => { start: number; end: number };
   isFocused: () => boolean;
   isComposing: () => boolean;
+  reveal?: (onReveal?: () => void) => void;
   destroy: () => void;
 }

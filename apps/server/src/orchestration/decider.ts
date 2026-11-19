@@ -1234,6 +1234,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       };
       const turnRequestPayload = {
         threadId: command.threadId,
+        ...(command.computerControl ? { computerControl: command.computerControl } : {}),
         messageId: command.message.messageId,
         ...(command.message.memoryContext !== undefined
           ? { memoryContext: command.message.memoryContext }
@@ -1308,6 +1309,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           messageId: command.messageId,
+          ...(command.computerControl ? { computerControl: command.computerControl } : {}),
           ...(command.modelSelection !== undefined
             ? { modelSelection: command.modelSelection }
             : {}),

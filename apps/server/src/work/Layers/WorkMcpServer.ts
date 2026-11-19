@@ -1,3 +1,12 @@
+import { scopedAttachmentInputFiles } from "../scopedAttachments";
+import { getMultiPost, multiPostScope } from "../../multipost/live";
+import type { SqlClient } from "effect/unstable/sql/SqlClient";
+import { COMPUTER_QA_TOOLS } from "@synara/shared/computerQaScope";
+import { CuaComputerSession } from "../cuaComputerSession";
+import { ComputerService } from "../../computer/Services/ComputerService";
+import { isComputerActivityHistoryAuthorized } from "../computerTurnLifecycle";
+import { COMPUTER_TOOLS, executeComputerTool, computerToolMcpResult } from "../computerTools";
+import { mediaEvidenceMcpResult, type MediaEvidence } from "../../marketing/mediaEvidence";
 import { MARKETING_TOOLS, type MarketingToolHandler } from "../../marketing/chatTools";
 // FILE: WorkMcpServer.ts
 // Purpose: Localhost-only, bearer-scoped Streamable HTTP MCP implementation for Work tools.
@@ -9,14 +18,7 @@ import { cpus, platform, release, totalmem } from "node:os";
 import path from "node:path";
 
 import { ProjectId, ThreadId } from "@synara/contracts";
-import { Effect, Layer, Ref } from "effect";
-
-import {
-  isSafeRegularAttachmentPath,
-  parseAttachmentIdFromRelativePath,
-  parseThreadSegmentFromAttachmentId,
-  toSafeThreadAttachmentSegment,
-} from "../../attachmentStore.ts";
+import { Effect, Layer, Ref, Option } from "effect";
 
 import {
   comparePdfDeliverable,
@@ -39,6 +41,9 @@ const MAX_DIRECTORY_ENTRIES = 500;
 const SUPPORTED_PROTOCOL_VERSIONS = new Set(["2025-06-18", "2025-03-26", "2024-11-05"]);
 
 interface SessionScope {
+  readonly computerEngine: "legacy" | "cua";
+  readonly computerQa: boolean;
+  readonly computer?: CuaComputerSession;
   readonly threadId: ThreadId;
   readonly projectId: ProjectId;
   readonly authorizedRoot: string;
@@ -75,6 +80,7 @@ interface ToolDefinition {
 }
 
 const TOOLS: ReadonlyArray<ToolDefinition> = [
+  ...COMPUTER_TOOLS,
   {
     name: "djl_system_info",
     description:
@@ -395,34 +401,6 @@ async function normalizeScopedDocument(scope: SessionScope, filePath: string) {
   });
 }
 
-async function scopedAttachmentInputFiles(scope: SessionScope): Promise<string[]> {
-  if (!scope.attachmentsRoot) return [];
-  const expectedThreadSegment = toSafeThreadAttachmentSegment(String(scope.threadId));
-  if (!expectedThreadSegment) return [];
-  const entries = await readdir(scope.attachmentsRoot, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries.slice(0, 10_000)) {
-    if (!entry.isFile() || entry.isSymbolicLink()) continue;
-    const attachmentId = parseAttachmentIdFromRelativePath(entry.name);
-    if (
-      !attachmentId ||
-      parseThreadSegmentFromAttachmentId(attachmentId) !== expectedThreadSegment
-    ) {
-      continue;
-    }
-    const candidate = path.join(scope.attachmentsRoot, entry.name);
-    if (
-      isSafeRegularAttachmentPath({
-        attachmentsDir: scope.attachmentsRoot,
-        candidatePath: candidate,
-      })
-    ) {
-      files.push(candidate);
-    }
-  }
-  return files;
-}
-
 function jsonRpcResult(id: unknown, result: unknown): Record<string, unknown> {
   return { jsonrpc: "2.0", id: id ?? null, result };
 }
@@ -471,9 +449,47 @@ async function executeTool(
   scope: SessionScope,
   name: string,
   rawArguments: unknown,
+  computerTurnId?: string,
 ): Promise<unknown> {
+  if (scope.computerEngine === "cua") {
+    if (name.startsWith("computer_")) {
+      if (!scope.computer) throw new Error("Computer control is unavailable in this runtime.");
+      return scope.computer.execute(name, object(rawArguments ?? {}), computerTurnId);
+    }
+    if (
+      name.startsWith("djl_computer_") &&
+      name !== "djl_computer_activity" &&
+      name !== "djl_computer_history"
+    )
+      throw new Error(
+        "This task uses the Cua engine. Use its advertised computer_* tools; legacy control is disabled.",
+      );
+  }
+  if (scope.computerQa)
+    throw new Error("Only the scoped Computer QA tools may run in this test package.");
+  if (COMPUTER_TOOLS.some((tool) => tool.name === name)) {
+    if (
+      scope.computerEngine === "cua" &&
+      (name === "djl_computer_activity" || name === "djl_computer_history") &&
+      !scope.computer?.canReadActivityHistory(computerTurnId)
+    )
+      throw new Error("This Computer history request is not authorized for the current turn.");
+    const result = await executeComputerTool(
+      { threadId: scope.threadId },
+      name,
+      rawArguments ?? {},
+    );
+    if (
+      scope.computerEngine === "cua" &&
+      (name === "djl_computer_activity" || name === "djl_computer_history") &&
+      (!scope.computer?.canReadActivityHistory(computerTurnId) ||
+        !isComputerActivityHistoryAuthorized(scope.threadId))
+    )
+      throw new Error("The Computer history turn ended before its result was returned.");
+    return result;
+  }
   const args = object(rawArguments ?? {});
-  if (name === "djl_marketing_status" || name === "djl_prepare_marketing") {
+  if (MARKETING_TOOLS.some((tool) => tool.name === name)) {
     if (!scope.marketing) throw new Error("Marketing tools are unavailable in this runtime.");
     return scope.marketing(
       {
@@ -706,6 +722,7 @@ async function executeTool(
 async function handleRpcRequest(
   scope: SessionScope,
   request: JsonRpcRequest,
+  computerTurnId?: string,
 ): Promise<Record<string, unknown> | null> {
   if (request.jsonrpc !== "2.0" || typeof request.method !== "string") {
     return jsonRpcError(request.id, -32600, "Invalid Request");
@@ -731,14 +748,35 @@ async function handleRpcRequest(
       return jsonRpcResult(request.id, {});
     case "tools/list":
       return jsonRpcResult(request.id, {
-        tools: scope.marketing ? [...TOOLS, ...MARKETING_TOOLS] : TOOLS,
+        tools: [
+          ...TOOLS.filter(
+            (tool) =>
+              !scope.computerQa &&
+              (scope.computerEngine !== "cua" ||
+                !tool.name.startsWith("djl_computer_") ||
+                ((tool.name === "djl_computer_activity" || tool.name === "djl_computer_history") &&
+                  scope.computer?.canReadActivityHistory(computerTurnId) &&
+                  isComputerActivityHistoryAuthorized(scope.threadId))),
+          ),
+          ...(scope.computer?.requestDefinitions(computerTurnId) ?? []),
+          ...(!scope.computerQa && scope.marketing ? MARKETING_TOOLS : []),
+        ],
       });
     case "tools/call": {
       const params = object(request.params);
       const name = stringField(params, "name");
       try {
-        const result = await executeTool(scope, name, params.arguments);
-        return jsonRpcResult(request.id, toolSuccess(sanitizeToolResultPaths(scope, result)));
+        const result = await executeTool(scope, name, params.arguments, computerTurnId);
+        return jsonRpcResult(
+          request.id,
+          scope.computerEngine === "cua" && name.startsWith("computer_")
+            ? result
+            : COMPUTER_TOOLS.some((tool) => tool.name === name)
+              ? computerToolMcpResult(result as Record<string, unknown>)
+              : name === "djl_inspect_social_media"
+                ? mediaEvidenceMcpResult(result as unknown as MediaEvidence)
+                : toolSuccess(sanitizeToolResultPaths(scope, result)),
+        );
       } catch (error) {
         return jsonRpcResult(request.id, toolFailure(error));
       }
@@ -760,8 +798,15 @@ async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-const make = (marketing?: MarketingToolHandler) =>
+const make = (
+  marketing?: MarketingToolHandler,
+  multiPostSql?: SqlClient,
+  multiPostStateDir?: string,
+) =>
   Effect.gen(function* () {
+    if (multiPostSql) yield* Effect.promise(() => getMultiPost(multiPostSql));
+    const computerService = yield* Effect.serviceOption(ComputerService);
+    const cuaEnabled = process.env.DJL_COMPUTER_ENGINE === "cua";
     const addressRef = yield* Ref.make<string | null>(null);
     const scopes = new Map<string, SessionScope>();
 
@@ -807,12 +852,17 @@ const make = (marketing?: MarketingToolHandler) =>
           response.end(JSON.stringify(jsonRpcError(null, -32001, "Unauthorized")));
           return;
         }
+        const turnHeader = request.headers["x-djl-computer-turn"];
+        const computerTurnId =
+          typeof turnHeader === "string" && turnHeader.length <= 128 ? turnHeader : undefined;
         try {
           const body = await readJsonBody(request);
           const requests = Array.isArray(body) ? body : [body];
           const results = (
             await Promise.all(
-              requests.map((entry) => handleRpcRequest(scope, entry as JsonRpcRequest)),
+              requests.map((entry) =>
+                handleRpcRequest(scope, entry as JsonRpcRequest, computerTurnId),
+              ),
             )
           ).filter((entry): entry is Record<string, unknown> => entry !== null);
           if (results.length === 0) {
@@ -863,17 +913,17 @@ const make = (marketing?: MarketingToolHandler) =>
     });
     yield* Ref.set(addressRef, address);
     yield* Effect.addFinalizer(() =>
-      Effect.promise(
-        () =>
-          new Promise<void>((resolve) => {
-            scopes.clear();
-            server.close(() => resolve());
-          }),
-      ),
+      Effect.promise(async () => {
+        const ownedScopes = [...scopes.values()];
+        scopes.clear();
+        await Promise.all(ownedScopes.map((scope) => scope.computer?.end()));
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }),
     );
 
     const start: WorkMcpServerShape["start"] = Effect.void;
 
+    const multipostTokens = new Map<string, string>();
     const registerSession: WorkMcpServerShape["registerSession"] = (input) =>
       Effect.tryPromise({
         try: async () => {
@@ -897,17 +947,57 @@ const make = (marketing?: MarketingToolHandler) =>
               throw new Error("The Work attachment root is not a safe directory.");
             }
           }
+          const computer =
+            cuaEnabled && Option.isSome(computerService)
+              ? new CuaComputerSession({
+                  manager: computerService.value.manager,
+                  threadId: input.threadId,
+                  sessionKey: tokenKey(bearerToken),
+                  provider: input.provider ?? "opencode",
+                  workspaceRoot: root,
+                  ...(process.env.DJL_COMPUTER_QA_PROFILE === "1"
+                    ? { allowedTools: COMPUTER_QA_TOOLS, requireSemanticTextTarget: true }
+                    : {}),
+                  ...(input.requestComputerApproval
+                    ? { requestApproval: input.requestComputerApproval }
+                    : {}),
+                  ...(input.publishComputerApproval
+                    ? { publishApproval: input.publishComputerApproval }
+                    : {}),
+                })
+              : undefined;
           scopes.set(tokenKey(bearerToken), {
+            computerEngine: cuaEnabled ? "cua" : "legacy",
+            computerQa: process.env.DJL_COMPUTER_QA_PROFILE === "1",
+            ...(computer ? { computer } : {}),
             threadId: input.threadId,
             projectId: input.projectId ?? ProjectId.makeUnsafe(`work-${input.threadId}`),
             authorizedRoot: root,
             ...(marketing ? { marketing } : {}),
             ...(attachmentsRoot ? { attachmentsRoot } : {}),
           });
+          const multipost =
+            multiPostSql && process.env.DJL_COMPUTER_QA_PROFILE !== "1"
+              ? await (
+                  await getMultiPost(multiPostSql)
+                ).mcp.register(await multiPostScope(root, input.threadId, multiPostStateDir))
+              : undefined;
+          if (multipost) multipostTokens.set(bearerToken, multipost.bearerToken);
           return {
+            ...(multipost ? { multipost } : {}),
             name: `djl_work_${createHash("sha256").update(input.threadId).digest("hex").slice(0, 12)}`,
             url: address,
             bearerToken,
+            ...(computer
+              ? {
+                  computer: {
+                    begin: computer.begin.bind(computer),
+                    end: computer.end.bind(computer),
+                    toolNames: () => computer.definitions().map((tool) => tool.name),
+                    requestHeaders: computer.requestHeaders.bind(computer),
+                  },
+                }
+              : {}),
           };
         },
         catch: (cause) =>
@@ -919,13 +1009,22 @@ const make = (marketing?: MarketingToolHandler) =>
       });
 
     const unregisterSession: WorkMcpServerShape["unregisterSession"] = (bearerToken) =>
-      Effect.sync(() => {
+      Effect.promise(async () => {
+        const scope = scopes.get(tokenKey(bearerToken));
         scopes.delete(tokenKey(bearerToken));
+        const multipostToken = multipostTokens.get(bearerToken);
+        if (multiPostSql && multipostToken)
+          (await getMultiPost(multiPostSql)).mcp.unregister(multipostToken);
+        multipostTokens.delete(bearerToken);
+        await scope?.computer?.end();
       });
 
     return { start, registerSession, unregisterSession } satisfies WorkMcpServerShape;
   });
 
-export const makeWorkMcpServerLive = (marketing?: MarketingToolHandler) =>
-  Layer.effect(WorkMcpServer, make(marketing));
+export const makeWorkMcpServerLive = (
+  marketing?: MarketingToolHandler,
+  multiPostSql?: SqlClient,
+  multiPostStateDir?: string,
+) => Layer.effect(WorkMcpServer, make(marketing, multiPostSql, multiPostStateDir));
 export const WorkMcpServerLive = makeWorkMcpServerLive();

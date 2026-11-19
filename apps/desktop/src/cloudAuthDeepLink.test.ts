@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { findCloudAuthCallbackInArgv, parseCloudAuthCallbackUrl } from "./cloudAuthDeepLink";
+import {
+  findCloudAuthCallbackInArgv,
+  isDesktopOpenUrl,
+  parseCloudAuthCallbackUrl,
+} from "./cloudAuthDeepLink";
 
 const code = "c".repeat(43);
 const state = "s".repeat(32);
+
+it("only recognizes the credential-free desktop open URI", () => {
+  expect(isDesktopOpenUrl("djl://open")).toBe(true);
+  for (const value of [
+    "djl://open?code=secret",
+    "djl://open/other",
+    "https://open",
+    "djl://auth/callback",
+    undefined,
+  ])
+    expect(isDesktopOpenUrl(value)).toBe(false);
+  expect(parseCloudAuthCallbackUrl("djl://open")).toBeNull();
+});
 
 describe("parseCloudAuthCallbackUrl", () => {
   it("accepts the exact callback with a code and state", () => {

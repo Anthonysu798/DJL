@@ -60,6 +60,10 @@ const approvedVisualAssetDigests = new Map<string, string>([
 
 const approvedPinnedThirdPartyAssetDigests = new Map<string, string>([
   [
+    "docs/licenses/SYNARA_COMPUTER_USE_LICENSE",
+    "305724dd050ca7ded99c662de813d755bc4ec3887c4543a37159c6662ca36d1b",
+  ],
+  [
     "apps/ios/DJL/Resources/Mermaid/mermaid.min.js",
     "25fa120a2fbd80869051e58d58203c9b3432baf76e341c73cba3f17c00ee6202",
   ],

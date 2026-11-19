@@ -76,4 +76,10 @@ grep -qF \
 
 node "$repo_root/scripts/check-no-bundled-opencode.ts" "$app"
 
+# This same native encode/probe check runs in Desktop CI and releases. App signing changes
+# executable hashes; staging verified vendor integrity before signing, while this checks
+# retained notices/provenance, actual architecture, codecs, cover generation and full decoding.
+node "$repo_root/scripts/stage-desktop-media.ts" \
+  --verify --packaged --platform mac --arch "$arch" --root "$app/Contents/Resources/media"
+
 echo "Verified $expected_arch bundle: $native_count native module(s), onnxruntime-node $expected_onnx."

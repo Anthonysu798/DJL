@@ -3,7 +3,13 @@
  * server. `startApi` returns the bound address and a close function so tests
  * can spin up a real server on an ephemeral port.
  */
+import { ReviewLinkService } from "./social/reviews/ReviewLinkService.ts";
+import { SocialReportService } from "./social/reports/SocialReportService.ts";
+import { TrackingLinkService } from "./social/tracking/TrackingLinkService.ts";
+import { SocialConnectionService } from "./social/SocialConnectionService.ts";
+import { createSocialProviders } from "./social/providers/index.ts";
 import http from "node:http";
+import { PublishingService } from "./social/publishing/index.ts";
 import { createHash } from "node:crypto";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
@@ -309,7 +315,19 @@ export async function startApi(
     version,
   });
   const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
+  const socialConnections = new SocialConnectionService(db, createSocialProviders(process.env), {
+    enabled: process.env.SOCIAL_PUBLISHING_ENABLED === "true",
+    encryptionKey: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY,
+    publicUrl: env.apiPublicUrl,
+  });
+  const publishing = new PublishingService(db, blobs, socialConnections);
   const routes = makeRoutes({
+    socialConnections,
+    socialWebPublicUrl: env.webPublicUrl,
+    publishing,
+    socialReports: new SocialReportService(db, publishing),
+    trackingLinks: new TrackingLinkService(db),
+    reviewLinks: new ReviewLinkService(db, blobs),
     notifications: new NotificationService(db),
     images: new ImageService({ db, chat, gateway }),
     clientConfig: {
@@ -322,6 +340,11 @@ export async function startApi(
         process.env.APNS_CONFIGURED === "available:available:available" ||
         Boolean(
           process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_PRIVATE_KEY,
+        ),
+      fcmConfigured:
+        process.env.FCM_CONFIGURED === "available:available:available" ||
+        Boolean(
+          process.env.FCM_PROJECT_ID && process.env.FCM_CLIENT_EMAIL && process.env.FCM_PRIVATE_KEY,
         ),
       policyUrls: {
         terms: process.env.PUBLIC_TERMS_URL || null,

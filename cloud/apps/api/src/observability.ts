@@ -48,6 +48,8 @@ export function startObservability(options: ObservabilityOptions): void {
           if (event.request.headers) {
             delete event.request.headers.authorization;
             delete event.request.headers.cookie;
+            delete event.request.headers["x-review-token"];
+            delete event.request.headers["X-Review-Token"];
           }
         }
         return event;

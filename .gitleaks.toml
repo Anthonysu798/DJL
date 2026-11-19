@@ -89,3 +89,36 @@ regexes = [
   '''"eyJhbGciOiJFZERTQSJ9\.eyJzdWIiOiJ1c2VyXzEiLCJzaWQiOiJzZXNzXzEifQ\.c2ln"''',
   '''"abcdef0123456789abcdef0123456789"''',
 ]
+
+# Public checksums and reproducible, non-credential protocol test vectors.
+[[allowlists]]
+description = "Flutter fixture hashes and deterministic pairing vectors"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^apps/mobile/ios/Podfile\.lock$''',
+  '''^apps/mobile/integration_test/native/status_source_hashes\.json$''',
+  '''^apps/mobile/test/fixtures/remote-v2\.json$''',
+]
+regexes = [
+  '''^\s*(AppAuth|GTMAppAuth|local_auth_darwin): [a-f0-9]{40}$''',
+  '''^\s*"[^"]+\.(?:dart|swift|kt|plist|yaml|xml|gradle|kts)": "[a-f0-9]{64}",?$''',
+  '''^\s*"(?:sharedSecret|phoneToMacKey|macToPhoneKey)": "[A-Za-z0-9+/]{43}="[,]?$''',
+]
+
+[[allowlists]]
+description = "DJL field names, cipher algorithm, and dummy redaction marker"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''^apps/mobile/lib/features/reasoning/domain/desktop_reasoning\.dart$''',
+  '''^apps/mobile/test/core/platform_credential_store_test\.dart$''',
+  '''^apps/desktop/native/computer-use/Tests/native-history-host-e2e\.ts$''',
+]
+regexes = [
+  '''='_djlReasoningV1'|= '_djlReasoningV1';''',
+  '''RSA_ECB_OAEPwithSHA_256andMGF1Padding''',
+  '''secret=synthetic-secret-123''',
+]

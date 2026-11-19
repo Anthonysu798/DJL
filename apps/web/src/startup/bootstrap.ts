@@ -81,7 +81,7 @@ export function startLocalInterface(): StartupSession | null {
       }),
     );
   mount();
-  performance.mark("djl.startup.local-input-ready");
+  performance.mark("djl.startup.splash-ready");
   requestAnimationFrame(() => requestAnimationFrame(() => window.desktopBridge?.notifyReady?.()));
   return session;
 }

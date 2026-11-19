@@ -49,3 +49,20 @@ export function resolveDjlStatePaths(
     managedOpenCodeRootDir: pathApi.join(baseDir, "userdata", "opencode"),
   };
 }
+
+/** QA profiles must never import the default or legacy user's storage. */
+export function resolveDjlMigrationSources(input: {
+  readonly baseDir: string;
+  readonly userHomeDir: string;
+  readonly requested: readonly string[];
+  readonly disabled?: boolean;
+}): string[] {
+  if (input.disabled) return [];
+  const api = pathApiFor(input.baseDir, input.userHomeDir);
+  return [
+    ...input.requested.filter(
+      (source) => source.trim().length > 0 && api.resolve(source) !== api.resolve(input.baseDir),
+    ),
+    api.join(input.userHomeDir, LEGACY_DJL_HOME_DIR_NAME),
+  ];
+}

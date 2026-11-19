@@ -1,0 +1,104 @@
+name: djl_mobile
+description: DJL native mobile client for Cloud and encrypted desktop sessions.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: ^3.10.4
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: 1.0.9
+  http: ^1.6.0
+  flutter_secure_storage: ^10.0.0
+  sign_in_with_apple: 7.0.1
+  google_sign_in: 7.2.0
+  cryptography: ^2.9.0
+  crypto: ^3.0.7
+  uuid: ^4.5.2
+  file_picker: ^10.3.10
+  mime: ^2.0.0
+  flutter_markdown: ^0.7.7+1
+  markdown: 7.3.1
+  url_launcher: ^6.3.2
+  shared_preferences: ^2.5.4
+  app_links: ^6.4.1
+  image_picker: ^1.2.1
+  mobile_scanner: ^7.1.4
+  local_auth: ^3.0.0
+  speech_to_text: ^7.3.0
+  flutter_tts: ^4.2.5
+  gal: ^2.3.3
+  share_plus: ^11.1.0
+  flutter_svg: ^2.3.0
+  liquid_glass_renderer: 0.2.0-dev.4
+  path_provider: ^2.1.6
+  re_editor: 0.10.0
+  re_highlight: 0.0.3
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  google_sign_in_platform_interface: 3.1.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/access/raising-hand-5-finger.svg
+    - assets/icons/access/shield-check-3.svg
+    - assets/icons/access/shield-access.svg
+    - assets/icons/runtime/zap.svg
+    - assets/icons/runtime/3d-box-top.svg
+    - assets/icons/runtime/layers-behind.svg
+    - assets/icons/markdown/copy.svg
+    - assets/icons/guide/central-imac.svg
+    - assets/icons/guide/central-shield-check.svg
+    - assets/icons/guide/central-key-1.svg
+    - assets/icons/guide/central-shield.svg
+    - assets/icons/guide/central-devices-2.svg
+    - assets/djl-logo.png
+    - assets/icons/command/central-magnifying-glass.svg
+    - assets/icons/command/central-scan-code.svg
+    - assets/icons/command/central-folder-2.svg
+    - assets/icons/command/central-folder-restricted.svg
+    - assets/icons/command/central-folder-add-right.svg
+    - assets/icons/command/central-folder-open-reversed.svg
+    - assets/icons/command/central-console.svg
+    - assets/icons/command/git-commit.svg
+    - assets/icons/command/git-branch.svg
+    - assets/icons/command/central-macbook-air.svg
+    - assets/icons/command/central-arrow-split-right.svg
+    - assets/icons/command/central-cross-medium.svg
+    - assets/icons/command/central-fork-code.svg
+    - assets/icons/command/GitHub_Invertocat_Black.svg
+    - assets/icons/command/cloud-upload.svg
+    - assets/icons/command/changes.svg
+    - assets/icons/command/central-arrows-repeat-circle.svg
+    - assets/icons/command/central-arrow-up-circle.svg
+    - assets/icons/command/central-circle-plus.svg
+    - assets/icons/command/central-exclamation-circle.svg
+    - assets/icons/command/central-exclamation-circle-bold.svg
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist-Regular.ttf
+        - asset: assets/fonts/Geist-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Geist-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Geist-Bold.ttf
+          weight: 700
+    - family: GeistMono
+      fonts:
+        - asset: assets/fonts/GeistMono-Regular.ttf
+        - asset: assets/fonts/GeistMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/GeistMono-Bold.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700

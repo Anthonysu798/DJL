@@ -10,7 +10,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import type { ProviderSkillDescriptor } from "@synara/contracts";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearSkillsCatalogCacheForTests,
@@ -53,6 +53,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -323,4 +324,15 @@ describe("filterDisabledSkills", () => {
     ]);
     expect(filterDisabledSkills(skills, [])).toHaveLength(2);
   });
+});
+
+it("does not scan or initialize filesystem skills in Computer QA", async () => {
+  await writeSkill(
+    path.join(homeDir, ".codex", "skills", "unrelated"),
+    "unrelated",
+    "Synthetic unrelated skill",
+  );
+  vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
+  expect(await discoverSkillsCatalog({ homeDir, synaraBaseDir })).toEqual([]);
+  await expect(access(path.join(synaraBaseDir, "skills"))).rejects.toThrow();
 });

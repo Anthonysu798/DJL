@@ -62,12 +62,13 @@ for (const [name, entries] of [
         expect(user?.name).toBe("Migration QA");
       }
       const columns =
-        await client`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name IN ('device_id', 'message_id', 'image_aspect_ratio')`;
+        await client`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name IN ('device_id', 'message_id', 'image_aspect_ratio', 'installation_id')`;
       expect(columns).toEqual(
         expect.arrayContaining([
           { table_name: "session", column_name: "device_id" },
           { table_name: "files", column_name: "message_id" },
           { table_name: "runs", column_name: "image_aspect_ratio" },
+          { table_name: "fcm_installations", column_name: "installation_id" },
         ]),
       );
       const constraints =
@@ -83,7 +84,12 @@ for (const [name, entries] of [
       );
       const indexes = await client`SELECT indexname FROM pg_indexes WHERE schemaname = 'public'`;
       expect(indexes.map((row) => row.indexname)).toEqual(
-        expect.arrayContaining(["runs_task_finished_idx", "files_generated_gallery_idx"]),
+        expect.arrayContaining([
+          "runs_task_finished_idx",
+          "files_generated_gallery_idx",
+          "fcm_installations_installation_idx",
+          "fcm_installations_user_idx",
+        ]),
       );
     } finally {
       await client?.end();

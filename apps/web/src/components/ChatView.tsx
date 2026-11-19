@@ -1,3 +1,8 @@
+import type { MultiPostView } from "./multipost/shared";
+import { useComputerChatControl } from "../hooks/useComputerChatControl";
+import { ComputerChatControlButton, ComputerChatStatus } from "./chat/ComputerChatControls";
+import { ComputerPreviewPopover } from "./chat/ComputerPreviewPopover";
+import { usePluginMcpServers } from "~/hooks/usePluginMcpServers";
 import { DesktopHeaderPortal } from "./DesktopHeaderPortal";
 import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
 import { getStartupSession } from "../startup/session";
@@ -287,6 +292,8 @@ import {
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
 import { PanelStateMessage } from "./chat/PanelStateMessage";
+
+const SocialToolsPage = lazy(() => import("./marketing/SocialToolsPage"));
 
 const ThreadTerminalDrawer = lazy(() => import("./ThreadTerminalDrawer"));
 import {
@@ -1009,6 +1016,9 @@ function ComposerModelLoadingControl(props: { widthClassName: string }) {
 }
 
 interface ChatViewProps {
+  socialToolsPage?: boolean;
+  socialToolsInitialView?: MultiPostView;
+  socialToolsWorkflowId?: string;
   threadId: ThreadId;
   paneScopeId?: string;
   surfaceMode?: "single" | "split";
@@ -1099,6 +1109,9 @@ function makeAutomationSetupBubble(role: "user" | "assistant", text: string): Ch
 }
 
 export default function ChatView({
+  socialToolsPage = false,
+  socialToolsInitialView,
+  socialToolsWorkflowId,
   threadId,
   paneScopeId = SINGLE_CHAT_PANE_SCOPE_ID,
   surfaceMode = "single",
@@ -1124,6 +1137,8 @@ export default function ChatView({
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
   const { settings, updateSettings } = useAppSettings();
+  const computerChatControl = useComputerChatControl(threadId, settings.computerControlEnabled);
+  const computerEngineAvailable = window.desktopBridge?.computer?.engine !== "legacy";
   const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -3599,10 +3614,17 @@ export default function ChatView({
       }),
     [activeProject?.cwd, activeThread?.branch, branchesQuery.data?.branches],
   );
+  const pluginMcp = usePluginMcpServers(
+    selectedProvider,
+    providerPluginsQuery.data,
+    composerSkillCwd,
+    threadId,
+    isMentionTrigger,
+  );
   // Keep plugin suggestions referentially stable so prompt-sync effects do not loop on rerender.
   const providerPlugins = useMemo(
-    () =>
-      providerPluginsQuery.data?.marketplaces.flatMap((marketplace) =>
+    () => [
+      ...(providerPluginsQuery.data?.marketplaces.flatMap((marketplace) =>
         marketplace.plugins.map((plugin) => ({
           plugin,
           mention: {
@@ -3610,8 +3632,23 @@ export default function ChatView({
             path: `plugin://${plugin.name}@${marketplace.name}`,
           } satisfies ProviderMentionReference,
         })),
-      ) ?? EMPTY_COMPOSER_PLUGIN_SUGGESTIONS,
-    [providerPluginsQuery.data],
+      ) ?? EMPTY_COMPOSER_PLUGIN_SUGGESTIONS),
+      ...pluginMcp.servers.map((server) => ({
+        plugin: {
+          ...server.plugin,
+          id: server.mention.path,
+          interface: {
+            ...server.plugin.interface,
+            displayName: server.name,
+            shortDescription: t("commandMenu.mcpServerDescription", {
+              plugin: server.plugin.interface?.displayName ?? server.plugin.name,
+            }),
+          },
+        },
+        mention: server.mention,
+      })),
+    ],
+    [providerPluginsQuery.data, pluginMcp.servers, t],
   );
   const providerNativeCommands =
     providerCommandsQuery.data?.commands ?? EMPTY_PROVIDER_NATIVE_COMMANDS;
@@ -8627,6 +8664,7 @@ export default function ChatView({
       });
       await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
+        enableComputerControl: computerChatControl.enabled,
         commandId: startupIdentity
           ? CommandId.makeUnsafe(startupIdentity.commandId)
           : newCommandId(),
@@ -9054,6 +9092,7 @@ export default function ChatView({
       });
       await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
+        enableComputerControl: computerChatControl.enabled,
         commandId: newCommandId(),
         threadId: threadIdForSend,
         message: {
@@ -9494,6 +9533,7 @@ export default function ChatView({
         });
         return api.orchestration.dispatchCommand({
           type: "thread.turn.start",
+          enableComputerControl: computerChatControl.enabled,
           commandId: newCommandId(),
           threadId: nextThreadId,
           message: {
@@ -11038,7 +11078,20 @@ export default function ChatView({
         onAddAttachments={addComposerAttachments}
         onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
+        onBrowsePlugins={() =>
+          setComposerPromptValue(
+            `${promptRef.current}${promptRef.current && !/\s$/.test(promptRef.current) ? " " : ""}@`,
+          )
+        }
+        onBrowseSkills={() =>
+          setComposerPromptValue(
+            `${promptRef.current}${promptRef.current && !/\s$/.test(promptRef.current) ? " " : ""}$`,
+          )
+        }
       />
+      {computerEngineAvailable ? (
+        <ComputerChatControlButton control={computerChatControl} iconOnly={options.iconOnly} />
+      ) : null}
       {!isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls
           {...runtimeUsageControlsProps}
@@ -11793,6 +11846,26 @@ export default function ChatView({
       </div>
     );
 
+  if (socialToolsPage) {
+    return (
+      <Suspense
+        fallback={
+          <PanelStateMessage>
+            {t("socialAgent.loading", { defaultValue: "Loading social tools…" })}
+          </PanelStateMessage>
+        }
+      >
+        <SocialToolsPage
+          {...(socialToolsInitialView ? { initialView: socialToolsInitialView } : {})}
+          {...(socialToolsWorkflowId ? { initialWorkflowId: socialToolsWorkflowId } : {})}
+          threadId={threadId}
+          onPrompt={handleMarketingPrompt}
+          onBack={() => void navigate({ to: "/$threadId", params: { threadId } })}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -12020,6 +12093,16 @@ export default function ChatView({
                       </h2>
                     </div>
                   )}
+                  {computerEngineAvailable ? (
+                    <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
+                      <ComputerChatStatus
+                        threadId={activeThread.id}
+                        enabled={computerChatControl.enabled}
+                        error={computerChatControl.error}
+                        messages={activeThread.messages}
+                      />
+                    </div>
+                  ) : null}
                   {composerSection}
                   {!isZeroConfigHomeLanding &&
                   ((isGitRepo && !environmentEnabled && !isCenteredEmptyLanding) ||
@@ -12124,6 +12207,16 @@ export default function ChatView({
                       : undefined
                   }
                 >
+                  {computerEngineAvailable ? (
+                    <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
+                      <ComputerChatStatus
+                        threadId={activeThread.id}
+                        enabled={computerChatControl.enabled}
+                        error={computerChatControl.error}
+                        messages={activeThread.messages}
+                      />
+                    </div>
+                  ) : null}
                   {composerSection}
                 </div>
                 {secondaryChromeReady &&
@@ -12187,6 +12280,13 @@ export default function ChatView({
               </Suspense>
             </div>
           ) : null}
+
+          <div className="pointer-events-none absolute right-4 top-4 z-30 max-h-[calc(100%-2rem)] max-w-[calc(100%-2rem)]">
+            <ComputerPreviewPopover
+              threadId={activeThread.id}
+              size={settings.computerPreviewSize}
+            />
+          </div>
 
           {/* Environment overlay — always mounted so open/close can transition in lockstep with inset. */}
           {environmentEnabled ? (

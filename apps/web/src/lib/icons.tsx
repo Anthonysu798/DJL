@@ -278,3 +278,10 @@ export const ZapIcon = adaptIcon(IconBolt);
 // trait badges, the Speed submenu, the /fast command) renders this one solid
 // lightning bolt from the Central fill set instead of mixing Tabler/Ionicons bolts.
 export const FastModeIcon: LucideIcon = centralIconWrapper("zap", "fill");
+
+export {
+  IconDeviceDesktop as MonitorIcon,
+  IconDeviceDesktop as ComputerUseIcon,
+  IconLayoutSidebarRightCollapse as PanelCollapseIcon,
+  IconLayoutSidebarRightExpand as PanelExpandIcon,
+} from "@tabler/icons-react";

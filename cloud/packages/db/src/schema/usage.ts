@@ -177,6 +177,26 @@ export const pushTokens = pgTable(
   ],
 );
 
+/** Android FCM installations are separate so legacy APNs workers cannot select them. */
+export const fcmInstallations = pgTable(
+  "fcm_installations",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    deviceId: uuid("device_id").references(() => devices.id, { onDelete: "cascade" }),
+    installationId: text("installation_id").notNull(),
+    createdAt: createdAt(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("fcm_installations_installation_idx").on(t.installationId),
+    index("fcm_installations_user_idx").on(t.userId),
+  ],
+);
+
 // ---- usage windows and banked resets ---------------------------------------
 //
 // Credits still pay; windows cap how fast they are spent. Window spend is the

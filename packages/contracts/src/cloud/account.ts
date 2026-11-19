@@ -92,15 +92,24 @@ export const CloudDeviceSessionsResponse = Schema.Struct({
 });
 export type CloudDeviceSessionsResponse = typeof CloudDeviceSessionsResponse.Type;
 
-// POST /v1/devices/push-token → 204. Registers (or moves) an APNs token for
+// POST /v1/devices/push-token → 204. Registers (or moves) an installation for
 // task-finished notifications; the same token re-registered is refreshed.
 // The push's custom keys are CloudRunPushData.
-export const CloudPushTokenInput = Schema.Struct({
-  /** APNs device token, hex. */
-  token: Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]{32,200}$/)),
-  environment: Schema.Literals(["production", "sandbox"]),
-  deviceId: Schema.optionalKey(CloudDeviceId),
-});
+export const CloudPushTokenInput = Schema.Union([
+  Schema.Struct({
+    provider: Schema.optionalKey(Schema.Literal("apns")),
+    /** APNs device token, hex. */
+    token: Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]{32,200}$/)),
+    environment: Schema.Literals(["production", "sandbox"]),
+    deviceId: Schema.optionalKey(CloudDeviceId),
+  }),
+  Schema.Struct({
+    provider: Schema.Literal("fcm"),
+    token: Schema.String.check(Schema.isPattern(/^[^\s\x00-\x1f\x7f]{1,200}$/)),
+    environment: Schema.Literal("production"),
+    deviceId: Schema.optionalKey(CloudDeviceId),
+  }),
+]);
 export type CloudPushTokenInput = typeof CloudPushTokenInput.Type;
 
 /** The deep link that opens a cloud conversation in the iOS app. */

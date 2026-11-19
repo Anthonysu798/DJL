@@ -14,7 +14,9 @@ export function SiteFrame({ children }: { children: ReactNode }) {
   const { d } = useLocale();
   if (
     FULL_SCREEN.test(pathname) ||
-    /^\/(sign-in|sign-up|forgot-password|reset-password|billing)(\/|$)/.test(pathname)
+    /^\/(sign-in|sign-up|forgot-password|reset-password|billing|device|social\/(connect|review))(\/|$)/.test(
+      pathname,
+    )
   )
     return <>{children}</>;
   return (

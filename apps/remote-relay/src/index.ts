@@ -3,7 +3,8 @@
 
 import { DurableObject } from "cloudflare:workers";
 
-import { normalizeDeviceToken, sendGenericPush } from "./apns";
+import { normalizeDeviceToken, sendGenericPush, type SendGenericPushInput } from "./apns";
+import { createRelayFcmSender, fcmConfigured, normalizeInstallationId } from "./fcm";
 import {
   DEFAULT_MESSAGES_PER_WINDOW,
   MAX_RELAY_MESSAGE_BYTES,
@@ -30,6 +31,9 @@ interface Env {
   readonly APNS_KEY_ID?: string;
   readonly APNS_BUNDLE_ID?: string;
   readonly APNS_PRIVATE_KEY?: string;
+  readonly FCM_PROJECT_ID?: string;
+  readonly FCM_CLIENT_EMAIL?: string;
+  readonly FCM_PRIVATE_KEY?: string;
 }
 
 interface SocketAttachment {
@@ -53,6 +57,7 @@ interface PairingCodeRecord {
 }
 
 interface PushRegistration {
+  readonly provider?: "apns" | "fcm";
   readonly deviceToken: string;
   readonly alertsEnabled: boolean;
   readonly environment: "development" | "production";
@@ -125,6 +130,16 @@ export default {
     if (request.method === "GET" && url.pathname === "/health") {
       return jsonResponse({ ok: true, service: "djl-remote-relay" });
     }
+    if (request.method === "GET" && url.pathname === "/v1/push/capabilities") {
+      return jsonResponse({
+        providers: [
+          ...(env.APNS_TEAM_ID && env.APNS_KEY_ID && env.APNS_BUNDLE_ID && env.APNS_PRIVATE_KEY
+            ? ["apns"]
+            : []),
+          ...(fcmConfigured(env) ? ["fcm"] : []),
+        ],
+      });
+    }
 
     if (
       request.method === "POST" &&
@@ -172,6 +187,7 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 export class DJLRelaySession extends DurableObject<Env> {
+  private readonly sendFcm = createRelayFcmSender(this.env);
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/internal/revoke") {
@@ -430,13 +446,30 @@ export class DJLRelaySession extends DurableObject<Env> {
         "The notification secret is invalid.",
       );
     }
-    const deviceToken = normalizeDeviceToken(body?.deviceToken);
+    const provider = body?.provider ?? "apns";
+    if (provider !== "apns" && provider !== "fcm")
+      return errorResponse(400, "invalid_push_provider", "Push provider is invalid.");
+    const deviceToken =
+      provider === "fcm"
+        ? normalizeInstallationId(body?.deviceToken)
+        : normalizeDeviceToken(body?.deviceToken);
     const environment = body?.environment === "development" ? "development" : "production";
-    if (!deviceToken)
-      return errorResponse(400, "invalid_device_token", "The APNs token is invalid.");
+    if (!deviceToken || (provider === "fcm" && body?.environment !== "production"))
+      return errorResponse(
+        400,
+        "invalid_device_token",
+        "The notification installation is invalid.",
+      );
+    if (provider === "fcm" && !fcmConfigured(this.env))
+      return errorResponse(
+        503,
+        "fcm_not_configured",
+        "Android remote notifications are unavailable on this service.",
+      );
     const existing = await this.ctx.storage.get<PushRegistration>("pushRegistration");
     const registration: PushRegistration = {
       deviceToken,
+      ...(provider === "fcm" ? { provider } : {}),
       alertsEnabled: body?.alertsEnabled !== false,
       environment,
       updatedAt: Date.now(),
@@ -475,15 +508,23 @@ export class DJLRelaySession extends DurableObject<Env> {
       return jsonResponse({ ok: true, deduplicated: true });
     }
 
-    const delivery = await sendGenericPush(this.env, {
+    const input: SendGenericPushInput = {
       deviceToken: registration.deviceToken,
       environment: registration.environment,
       threadId,
       ...(turnId ? { turnId } : {}),
       result: completionResult,
-    });
+    };
+    const delivery =
+      registration.provider === "fcm"
+        ? await this.sendFcm(input)
+        : await sendGenericPush(this.env, input);
     if (!delivery.ok) {
-      return errorResponse(502, "apns_delivery_failed", delivery.reason.slice(0, 512));
+      return errorResponse(
+        502,
+        registration.provider === "fcm" ? "fcm_delivery_failed" : "apns_delivery_failed",
+        delivery.reason.slice(0, 512),
+      );
     }
     await this.ctx.storage.put("pushRegistration", {
       ...registration,

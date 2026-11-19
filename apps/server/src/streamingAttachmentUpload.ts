@@ -86,6 +86,25 @@ function sniffImage(bytes: Uint8Array): DetectedUploadMedia | null {
   return null;
 }
 
+const VIDEO_MEDIA_BY_EXTENSION = new Map([
+  [".mp4", "video/mp4"],
+  [".m4v", "video/mp4"],
+  [".mov", "video/quicktime"],
+  [".webm", "video/webm"],
+]);
+function sniffVideo(bytes: Uint8Array): DetectedUploadMedia | null {
+  if (hasPrefix(bytes, [0x1a, 0x45, 0xdf, 0xa3]))
+    return { type: "file", mediaType: "video/webm", extension: ".webm" };
+  if (bytes.length < 16 || new TextDecoder().decode(bytes.subarray(4, 8)) !== "ftyp") return null;
+  const brand = new TextDecoder().decode(bytes.subarray(8, 12));
+  if (brand === "qt  ") return { type: "file", mediaType: "video/quicktime", extension: ".mov" };
+  if (
+    ["isom", "iso2", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1", "M4V ", "MSNV"].includes(brand)
+  )
+    return { type: "file", mediaType: "video/mp4", extension: ".mp4" };
+  return null;
+}
+
 function normalizeDeclaredMimeType(value: string): string {
   const normalized = value.split(";", 1)[0]?.trim().toLowerCase() ?? "";
   return normalized === "image/jpg" ? "image/jpeg" : normalized;
@@ -117,7 +136,7 @@ export function detectUploadedMediaType(input: {
   if (hasPrefix(input.header, [0x25, 0x50, 0x44, 0x46, 0x2d])) {
     detected = { type: "file", mediaType: "application/pdf", extension: ".pdf" };
   } else {
-    detected = sniffImage(input.header);
+    detected = sniffImage(input.header) ?? sniffVideo(input.header);
   }
 
   if (!detected && isZipHeader(input.header)) {
@@ -152,7 +171,12 @@ export function detectUploadedMediaType(input: {
       expectedExtension === extension || (extension === ".jpeg" && expectedExtension === ".jpg"),
   )?.[0];
   const expectedMedia =
-    extension === ".pdf" ? "application/pdf" : (expectedOfficeMedia ?? expectedImageMedia ?? null);
+    extension === ".pdf"
+      ? "application/pdf"
+      : (expectedOfficeMedia ??
+        expectedImageMedia ??
+        VIDEO_MEDIA_BY_EXTENSION.get(extension) ??
+        null);
   if (expectedMedia && expectedMedia !== detected.mediaType) {
     throw new Error(
       `File extension '${extension}' does not match detected MIME type '${detected.mediaType}'.`,

@@ -21,7 +21,7 @@ const fixture = (body: string, filename = "native-runtime") => {
   const binary = join(dir, filename);
   writeFileSync(
     binary,
-    `#!${process.execPath}\nif(process.argv.includes('--version')){console.log('codex-cli 0.153.4');process.exit(0)};const send=m=>process.stdout.write(JSON.stringify(m)+'\\n');const reply=(m,result)=>send({id:m.id,result});const note=(method,params)=>send({method,params});require('readline').createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);${body}});`,
+    `#!${process.execPath}\nif(process.argv.includes('--version')){console.log('codex-cli 0.153.4');process.exit(0)};if(process.argv.includes('mcp')&&process.argv.includes('list')){console.log('[{"name":"external_fixture","transport":{"type":"stdio"}}]');process.exit(0)};const send=m=>process.stdout.write(JSON.stringify(m)+'\\n');const reply=(m,result)=>send({id:m.id,result});const note=(method,params)=>send({method,params});require('readline').createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);${body}});`,
   );
   chmodSync(binary, 0o700);
   return binary;
@@ -588,6 +588,158 @@ describe("new official protocol drivers", () => {
 });
 
 describe("Codex conversation-scoped marketing MCP", () => {
+  it("refreshes the Computer MCP turn header and exact catalog before each turn, including Off", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{});
+      if(m.method==='thread/start')reply(m,{thread:{id:'computer-thread'}});
+      if(m.method==='thread/name/set'){require('fs').writeFileSync(process.argv[1]+'.persisted','yes');reply(m,{})}
+      if(m.method==='thread/resume'){
+        if(!require('fs').existsSync(process.argv[1]+'.persisted'))throw Error('Empty rollout was not persisted before refresh');
+        const config=m.params.config.mcp_servers.djl_test;
+        global.refresh=config;
+        if(config.tool_timeout_sec!==360||config.required!==true)throw Error('Unbounded or optional Computer MCP');
+        reply(m,{thread:{id:'computer-thread'}});
+      }
+      if(m.method==='turn/start'){
+        const expected=m.params.input[0].text;
+        if(!global.refresh)throw Error('No refresh before model execution');
+        if(expected==='off'){
+          if(global.refresh.enabled!==false||global.refresh.enabled_tools.length)throw Error('Off retained tools');
+        } else if(global.refresh.http_headers['x-djl-computer-turn']!==expected||JSON.stringify(global.refresh.enabled_tools)!=='["computer_get_state"]')throw Error('Stale Computer turn');
+        global.refresh=null;
+        reply(m,{turn:{id:expected}});
+        note('turn/completed',{threadId:'computer-thread',turn:{id:expected,status:'completed'}});
+      }
+    `);
+    let turn: string | undefined = "first";
+    const driver = await createCodexDriver(
+      { ...input, providerOptions: { codex: { binaryPath: binary } } },
+      sink([]),
+      {
+        name: "djl_test",
+        url: "http://127.0.0.1:12345/mcp",
+        bearerToken: "fixture-token",
+        computer: {
+          begin: async () => turn,
+          end: async () => {},
+          toolNames: () => (turn ? ["computer_get_state"] : []),
+          requestHeaders: () => (turn ? { "x-djl-computer-turn": turn } : {}),
+        },
+      },
+    );
+    try {
+      await driver.send({ threadId: input.threadId, input: "first" });
+      turn = "second";
+      await driver.send({ threadId: input.threadId, input: "second" });
+      turn = undefined;
+      await driver.send({ threadId: input.threadId, input: "off" });
+    } finally {
+      driver.close();
+    }
+  });
+
+  it("constrains the isolated Computer QA CLI before startup without changing ordinary profiles", async () => {
+    vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
+    const binary = fixture(`
+      if(m.method==='initialize'){
+        const args=process.argv.slice(2);
+        for(const flag of ['--strict-config','project_doc_max_bytes=0'])if(!args.includes(flag))throw Error('QA config discovery enabled');
+        if(!args.some(a=>a.startsWith('mcp_servers.external_fixture={command=')&&a.endsWith('enabled=false}')))throw Error('Inherited MCP remained enabled');
+        for(const name of ['shell_tool','unified_exec','apps','plugins','computer_use','browser_use','multi_agent','hooks','view_image'])if(!args.some((a,i)=>a==='--disable'&&args[i+1]===name))throw Error('QA tool not disabled '+name);
+        reply(m,{});
+      }
+      if(m.method==='thread/start'){
+        if(m.params.sandbox!=='read-only'||m.params.approvalPolicy!=='untrusted')throw Error('QA sandbox unrestricted');
+        if(m.params.config?.features?.shell_tool!==false||m.params.config?.mcp_servers?.external_fixture?.enabled!==false)throw Error('Thread overrides dropped QA restrictions');
+        reply(m,{thread:{id:'qa-thread'},modelProvider:'openai',approvalPolicy:'untrusted',sandbox:{type:'readOnly'}});
+      }
+    `);
+    const driver = await createCodexDriver(
+      { ...input, runtimeMode: "full-access", providerOptions: { codex: { binaryPath: binary } } },
+      sink([]),
+    );
+    driver.close();
+  });
+
+  it("approves only the current owned Computer MCP proxy in QA and declines foreign elicitation", async () => {
+    vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{});
+      if(m.method==='thread/start'||m.method==='thread/resume')reply(m,{thread:{id:'qa-computer'},modelProvider:'openai',approvalPolicy:'untrusted',sandbox:{type:'readOnly'}});
+      if(m.method==='thread/name/set')reply(m,{});
+      if(m.method==='mcpServerStatus/list')reply(m,{data:[{name:'djl_test',runtimeStatus:'connected'},{name:'external_fixture',runtimeStatus:'disabled'}]});
+      if(m.method==='turn/start'){
+        global.start=m;
+        note('turn/started',{threadId:'qa-computer',turn:{id:'qa-turn'}});
+        send({id:77,method:'mcpServer/elicitation/request',params:{threadId:'qa-computer',turnId:'qa-turn',serverName:'djl_test',mode:'form',_meta:{codex_approval_kind:'mcp_tool_call'},requestedSchema:{type:'object',properties:{}}}});
+      }
+      if(m.id===77&&!m.method){
+        if(m.result?.action!=='accept')throw Error('Owned Computer proxy was not accepted');
+        send({id:78,method:'mcpServer/elicitation/request',params:{threadId:'qa-computer',turnId:'qa-turn',serverName:'external_fixture',mode:'form',_meta:{codex_approval_kind:'mcp_tool_call'}}});
+      }
+      if(m.id===78&&!m.method){
+        if(m.result?.action!=='decline')throw Error('Foreign connector was accepted');
+        reply(global.start,{turn:{id:'qa-turn'}});
+        note('turn/completed',{threadId:'qa-computer',turn:{id:'qa-turn',status:'completed'}});
+      }
+    `);
+    const request = vi.fn(async () => "decline" as const);
+    const driver = await createCodexDriver(
+      { ...input, providerOptions: { codex: { binaryPath: binary } } },
+      sink([], request),
+      {
+        name: "djl_test",
+        url: "http://127.0.0.1:12345/mcp",
+        bearerToken: "fixture-token",
+        computer: {
+          begin: async () => "owned",
+          end: async () => {},
+          toolNames: () => ["computer_get_state"],
+          requestHeaders: () => ({ "x-djl-computer-turn": "owned" }),
+        },
+      },
+    );
+    try {
+      await driver.send({ threadId: input.threadId, input: "Read only the owned synthetic state" });
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      driver.close();
+    }
+  });
+
+  it("refuses model execution when the effective QA connector list contains a foreign server", async () => {
+    vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{});
+      if(m.method==='thread/start'||m.method==='thread/resume')reply(m,{thread:{id:'guarded'},modelProvider:'openai',approvalPolicy:'untrusted',sandbox:{type:'readOnly'}});
+      if(m.method==='thread/name/set')reply(m,{});
+      if(m.method==='mcpServerStatus/list')reply(m,{data:[{name:'unexpected',runtimeStatus:'connected'}]});
+      if(m.method==='turn/start'){reply(m,{turn:{id:'unsafe'}});note('turn/completed',{threadId:'guarded',turn:{id:'unsafe',status:'completed'}})}
+    `);
+    const driver = await createCodexDriver(
+      { ...input, providerOptions: { codex: { binaryPath: binary } } },
+      sink([]),
+      {
+        name: "djl_test",
+        url: "http://127.0.0.1:12345/mcp",
+        bearerToken: "fixture-token",
+        computer: {
+          begin: async () => "owned",
+          end: async () => {},
+          toolNames: () => ["computer_get_state"],
+          requestHeaders: () => ({ "x-djl-computer-turn": "owned" }),
+        },
+      },
+    );
+    try {
+      await expect(driver.send({ threadId: input.threadId, input: "Read state" })).rejects.toThrow(
+        "unscoped connector",
+      );
+    } finally {
+      driver.close();
+    }
+  });
+
   it("passes a per-session MCP URL and an environment-backed bearer without changing permission policy", async () => {
     const binary = fixture(`
     if(m.method==='initialize')reply(m,{});

@@ -1,11 +1,14 @@
+import { ComputerService } from "../../computer/Services/ComputerService";
+import { ComputerManager } from "../../computer/ComputerManager";
+import { FakeComputerBackend } from "../../computer/FakeComputerBackend";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { ProjectId, ThreadId } from "@synara/contracts";
-import { Effect, Exit, ManagedRuntime, Scope } from "effect";
-import { afterEach, describe, expect, it } from "vitest";
+import { Effect, Exit, ManagedRuntime, Scope, Layer } from "effect";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WorkMcpServer } from "../Services/WorkMcpServer.ts";
 import { attachmentIdForContentHash } from "../../streamingAttachmentUpload.ts";
@@ -27,10 +30,12 @@ async function rpc(
   registration: { url: string; bearerToken: string },
   body: Record<string, unknown>,
   token = registration.bearerToken,
+  extraHeaders: Readonly<Record<string, string>> = {},
 ) {
   return fetch(registration.url, {
     method: "POST",
     headers: {
+      ...extraHeaders,
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
@@ -110,10 +115,14 @@ describe("WorkMcpServer", () => {
         result: {
           tools: Array<{
             name: string;
+            inputSchema: { type?: string };
             _meta: { "djl/tool-classification": string };
           }>;
         };
       };
+      for (const tool of listedBody.result.tools) {
+        expect(tool.inputSchema.type).toBe("object");
+      }
       expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_create_document");
       expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_system_info");
       expect(listedBody.result.tools.map((tool) => tool.name)).toContain("djl_modify_office_copy");
@@ -301,4 +310,92 @@ describe("WorkMcpServer", () => {
       await runtime.dispose();
     }
   });
+});
+
+it("exposes the replacement catalog only to its admitted MCP turn and refuses legacy fallback", async () => {
+  vi.stubEnv("DJL_COMPUTER_ENGINE", "cua");
+  const manager = new ComputerManager({ backend: new FakeComputerBackend() });
+  const runtime = ManagedRuntime.make(
+    WorkMcpServerLive.pipe(
+      Layer.provide(
+        Layer.succeed(ComputerService, {
+          supported: true,
+          availability: { kind: "available", backend: "fake" },
+          manager,
+        }),
+      ),
+    ),
+  );
+  try {
+    const server = await runtime.runPromise(Effect.service(WorkMcpServer));
+    const first = await runtime.runPromise(
+      server.registerSession({
+        threadId: ThreadId.makeUnsafe("cua-first"),
+        authorizedRoot: makeRoot(),
+      }),
+    );
+    const second = await runtime.runPromise(
+      server.registerSession({
+        threadId: ThreadId.makeUnsafe("cua-second"),
+        authorizedRoot: makeRoot(),
+      }),
+    );
+    const names = async (registration: typeof first) => {
+      const body = (await (
+        await rpc(
+          registration,
+          { jsonrpc: "2.0", id: 1, method: "tools/list" },
+          registration.bearerToken,
+          registration.computer?.requestHeaders() ?? {},
+        )
+      ).json()) as { result: { tools: { name: string }[] } };
+      return body.result.tools.map((tool) => tool.name);
+    };
+    expect((await names(first)).some((name) => name.startsWith("computer_"))).toBe(false);
+    const firstComputerTurn = await first.computer!.begin({
+      mode: "request",
+      generation: 0,
+      explicitInvocation: true,
+    });
+    expect(await names(first)).toContain("computer_get_state");
+    expect(await names(first)).not.toContain("djl_computer_action");
+    expect((await names(second)).some((name) => name.startsWith("computer_"))).toBe(false);
+    const legacy = await rpc(first, {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "djl_computer_open",
+        arguments: { target: { bundleId: "dev.djl.fixture", pid: 123, windowId: 12 } },
+      },
+    });
+    expect(await legacy.json()).toMatchObject({ result: { isError: true } });
+    await first.computer!.begin({ mode: "request", generation: 0, explicitInvocation: true });
+    const lateOldTurn = await rpc(
+      first,
+      {
+        jsonrpc: "2.0",
+        id: 31,
+        method: "tools/call",
+        params: { name: "computer_list_windows", arguments: {} },
+      },
+      first.bearerToken,
+      { "x-djl-computer-turn": firstComputerTurn! },
+    );
+    expect(await lateOldTurn.json()).toMatchObject({ result: { isError: true } });
+    await manager.setControlEnabled("cua-first", false);
+    const stopped = await rpc(first, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "computer_list_windows", arguments: {} },
+    });
+    expect(await stopped.json()).toMatchObject({ result: { isError: true } });
+    await first.computer!.begin({ mode: "request", generation: 0, explicitInvocation: true });
+    expect((await names(first)).some((name) => name.startsWith("computer_"))).toBe(false);
+  } finally {
+    await runtime.dispose();
+    await manager.dispose();
+    vi.unstubAllEnvs();
+  }
 });

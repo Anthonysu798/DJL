@@ -221,7 +221,9 @@ test("session errors and interruptions map to failed and interrupted", () => {
   );
 
   assert.equal(failed[0].params.turn.status, "failed");
+  assert.deepEqual(failed[0].params.turn.error, { message: "boom" });
   assert.equal(interrupted[0].params.turn.status, "interrupted");
+  assert.equal(interrupted[0].params.turn.error, undefined);
 });
 
 test("approval activities become server requests exactly once", () => {
@@ -335,6 +337,64 @@ function toolActivityEvent(id, kind, payload, sequence, turnId = "turn-1") {
   );
 }
 
+test("completed canonical reasoning reaches the phone once without raw content", () => {
+  const projection = createThreadEventProjection();
+  projection.hydrate(THREAD, 10);
+  const detail = "Public math summary 🌙\nSecond line.";
+  const event = toolActivityEvent(
+    "canonical-reasoning",
+    "task.progress",
+    { status: "completed", detail, data: { toolCallId: "reasoning-1" } },
+    11,
+  );
+  event.payload.activity.summary = "Reasoning trace";
+  assert.deepEqual(projection.applyThreadEvent(event), [
+    {
+      kind: "notification",
+      method: "item/completed",
+      params: {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        item: {
+          id: "reasoning-1",
+          type: "reasoning",
+          summary: [detail],
+          content: [],
+          createdAt: "2026-09-04T10:00:03.000Z",
+        },
+      },
+    },
+  ]);
+  assert.deepEqual(projection.applyThreadEvent(event), []);
+  assert.deepEqual(projection.applyThreadEvent({ ...event, sequence: 12 }), []);
+});
+
+test("unrelated, empty, unfinished and unowned reasoning boundaries stay hidden", () => {
+  for (const patch of [
+    { summary: "Other progress" },
+    { payload: { detail: " " } },
+    { payload: { status: "inProgress", detail: "Not completed" } },
+    { payload: { data: { encryptedContent: "private-boundary" } } },
+    { turnId: null },
+    { tone: "info" },
+  ]) {
+    const projection = createThreadEventProjection();
+    projection.hydrate(THREAD, 10);
+    const event = toolActivityEvent(
+      "boundary",
+      "task.progress",
+      {
+        status: "completed",
+        detail: "Readable summary",
+        data: { toolCallId: "reasoning-1" },
+      },
+      11,
+    );
+    Object.assign(event.payload.activity, { summary: "Reasoning trace" }, patch);
+    assert.deepEqual(projection.applyThreadEvent(event), []);
+  }
+});
+
 test("command activities become started and completed command items", () => {
   const projection = createThreadEventProjection();
   projection.hydrate(THREAD, 10);
@@ -380,6 +440,64 @@ test("command activities become started and completed command items", () => {
   assert.equal(done[0].params.item.exitCode, 0);
   assert.equal(done[0].params.turnId, "turn-1");
 });
+
+for (const status of ["completed", "failed"]) {
+  test(`native MCP ${status} lifecycle preserves identity and public result fields`, () => {
+    const projection = createThreadEventProjection();
+    projection.hydrate(THREAD, 10);
+    const data = {
+      id: "native-mcp-1",
+      type: "mcpToolCall",
+      server: "qa",
+      tool: "inspect",
+      arguments: { fixture: "public" },
+    };
+    const started = projection.applyThreadEvent(
+      toolActivityEvent(
+        "start",
+        "tool.started",
+        {
+          itemType: "mcp_tool_call",
+          status: "inProgress",
+          data,
+        },
+        11,
+      ),
+    )[0].params.item;
+    const result = { content: [{ type: "text", text: "Public QA result" }] };
+    const error = { message: "Public QA failure" };
+    const done = projection.applyThreadEvent(
+      toolActivityEvent(
+        "done",
+        "tool.completed",
+        {
+          itemType: "mcp_tool_call",
+          status,
+          data: {
+            ...data,
+            result: status === "completed" ? result : null,
+            error: status === "failed" ? error : null,
+            durationMs: 12,
+            privateBoundary: "omit-me",
+          },
+        },
+        12,
+      ),
+    )[0].params.item;
+    assert.equal(started.id, "native-mcp-1");
+    assert.equal(started.status, "inProgress");
+    assert.deepEqual(done, {
+      id: "native-mcp-1",
+      type: "mcpToolCall",
+      status,
+      server: "qa",
+      tool: "inspect",
+      arguments: { fixture: "public" },
+      durationMs: 12,
+      ...(status === "completed" ? { result } : { error }),
+    });
+  });
+}
 
 test("file change activities and turn diffs become fileChange items", () => {
   const projection = createThreadEventProjection();

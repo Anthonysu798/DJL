@@ -4,8 +4,17 @@
  * Request and the auth Response back.
  */
 import { Effect, Layer, Stream } from "effect";
+import { makeReviewLinkRoutes } from "../social/reviews/routes.ts";
+import { makeSocialReportRoutes } from "../social/reports/routes.ts";
+import type { SocialReportService } from "../social/reports/SocialReportService.ts";
+import { makeTrackingLinkRoutes } from "../social/tracking/routes.ts";
+import type { TrackingLinkService } from "../social/tracking/TrackingLinkService.ts";
+import type { ReviewLinkService } from "../social/reviews/ReviewLinkService.ts";
+import { makePublishingRoutes } from "../social/publishing/index.ts";
+import type { PublishingService } from "../social/publishing/PublishingService.ts";
 import { HttpBody, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
+import { makeSocialRoutes, type SocialRouteDeps } from "../social/routes.ts";
 import { makeAccountRoutes, type AccountDeps } from "../account/routes.ts";
 import { makeClientConfigRoutes, type ClientConfigDeps } from "../client-config/routes.ts";
 import { makeImageRoutes, type ImageRouteDeps } from "../images/routes.ts";
@@ -44,6 +53,7 @@ function fromWebKeepingType(response: Response): HttpServerResponse.HttpServerRe
 
 export interface RouteDeps
   extends
+    SocialRouteDeps,
     AccountDeps,
     BillingRouteDeps,
     TrialRouteDeps,
@@ -61,6 +71,10 @@ export interface RouteDeps
     NotificationRouteDeps,
     ImageRouteDeps {
   readonly env: ApiEnv;
+  readonly publishing: PublishingService;
+  readonly reviewLinks: ReviewLinkService;
+  readonly socialReports: SocialReportService;
+  readonly trackingLinks: TrackingLinkService;
   readonly auth: DjlAuth;
   readonly readiness: { readonly ready: () => Promise<boolean> };
   readonly version: string;
@@ -124,6 +138,7 @@ export function makeRoutes(deps: RouteDeps) {
     health,
     ready,
     makeClientConfigRoutes(deps.clientConfig),
+    makeSocialRoutes(deps),
     makeNotificationRoutes(deps),
     makeImageRoutes(deps),
     authRoutes,
@@ -136,6 +151,10 @@ export function makeRoutes(deps: RouteDeps) {
     makeUsageRoutes(deps),
     makeChatRoutes(deps),
     makeFileRoutes(deps),
+    makePublishingRoutes(deps),
+    makeReviewLinkRoutes({ ...deps, socialWebPublicUrl: deps.env.webPublicUrl }),
+    makeSocialReportRoutes(deps),
+    makeTrackingLinkRoutes({ ...deps, socialWebPublicUrl: deps.env.webPublicUrl }),
     makeShareRoutes(deps),
     makeRunRoutes(deps),
     makeAuthRoutes(deps),

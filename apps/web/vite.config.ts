@@ -127,6 +127,11 @@ export default defineConfig(({ command }) => ({
   ],
   optimizeDeps: {
     include: [
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "react/jsx-runtime",
+      "@base-ui/react/tabs",
       // Prebundle our named icon exports, not tens of MB of unused icon packs.
       ...(command === "serve"
         ? [
@@ -160,6 +165,7 @@ export default defineConfig(({ command }) => ({
     "import.meta.env.APP_VERSION": JSON.stringify(pkg.version),
   },
   resolve: {
+    dedupe: ["react", "react-dom"],
     alias:
       command === "serve"
         ? [

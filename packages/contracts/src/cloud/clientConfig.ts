@@ -8,6 +8,7 @@ export const CloudClientConfig = Schema.Struct({
     fileParsing: Schema.Boolean,
   }),
   pushConfigured: Schema.Boolean,
+  pushProviders: Schema.optionalKey(Schema.Array(Schema.Literals(["apns", "fcm"]))),
   policyUrls: Schema.Struct({
     terms: Schema.NullOr(Schema.String),
     privacy: Schema.NullOr(Schema.String),

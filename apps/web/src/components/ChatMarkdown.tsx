@@ -994,14 +994,15 @@ function ChatMarkdown({
       a({ node: _node, href, children, ...props }) {
         const restoredHref = href ? restoreLiteralDollarPlaceholders(href) : href;
         const isExternalHttp = isExternalHttpHref(restoredHref);
+        const isMultiPostView = restoredHref?.startsWith("#/social/") === true;
         const targetPath = isExternalHttp ? null : resolveMarkdownFileLinkTarget(restoredHref, cwd);
         if (!targetPath) {
           return (
             <a
               {...props}
               href={restoredHref}
-              target="_blank"
-              rel="noopener noreferrer"
+              target={isMultiPostView ? undefined : "_blank"}
+              rel={isMultiPostView ? undefined : "noopener noreferrer"}
               className={isExternalHttp ? MARKDOWN_EXTERNAL_LINK_CLASS_NAME : props.className}
             >
               {isExternalHttp ? (

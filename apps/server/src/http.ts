@@ -1,3 +1,4 @@
+import { multiPostHandler } from "./multipost/handler";
 import { marketingHandler } from "./marketing/handler";
 import type http from "node:http";
 import nodePath from "node:path";
@@ -204,6 +205,7 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
     streamingAttachmentUploadEffectRouteLayer,
     aiDetectorAnalysisEffectRouteLayer,
     marketingEffectRouteLayer,
+    multiPostEffectRouteLayer,
     serverShimExecEffectRouteLayer,
     attachmentsEffectRouteLayer,
     staticAndDevEffectRouteLayer,
@@ -1548,6 +1550,43 @@ const marketingEffectRouteLayer = HttpRouter.add(
       });
     if (!isLegacyTokenAuthorized({ config, url })) yield* requireAuthenticatedRequest;
     const response = yield* marketingHandler(config);
+    return HttpServerResponse.setHeaders(response, headers);
+  }).pipe(Effect.catchTag("AuthError", (e) => Effect.succeed(authErrorResponse(e)))),
+);
+
+const multiPostEffectRouteLayer = HttpRouter.add(
+  "*",
+  "/api/multipost/*",
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const url = HttpServerRequest.toURL(request);
+    if (!url || !isLoopbackAddress(request.remoteAddress))
+      return HttpServerResponse.text("Marketing Studio requires a local connection.", {
+        status: 403,
+      });
+    const config = yield* ServerConfig;
+    const origin = request.headers.origin;
+    if (
+      origin &&
+      !isTrustedAppOrigin({
+        origin: normalizeCorsOrigin(origin) ?? "",
+        requestOrigin: url.origin,
+        config,
+      })
+    )
+      return HttpServerResponse.text("Forbidden", { status: 403 });
+    const headers = localPreviewCorsHeaders({ config, request, url });
+    if (request.method === "OPTIONS")
+      return HttpServerResponse.empty({
+        status: 204,
+        headers: {
+          ...headers,
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, X-DJL-Filename",
+        },
+      });
+    if (!isLegacyTokenAuthorized({ config, url })) yield* requireAuthenticatedRequest;
+    const response = yield* multiPostHandler;
     return HttpServerResponse.setHeaders(response, headers);
   }).pipe(Effect.catchTag("AuthError", (e) => Effect.succeed(authErrorResponse(e)))),
 );

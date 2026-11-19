@@ -4,7 +4,7 @@
  * are content-free (ids and the conversation deep link, CloudRunPushData).
  * Tokens APNs reports as dead are revoked.
  */
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import { taskFinished, type EmailSender, type PushSender } from "@djl/notify";
 import { cloudConversationDeepLink, type CloudRunPushData } from "@synara/contracts/cloud";
@@ -15,6 +15,7 @@ import type { RunRow } from "../runs/wire.ts";
 export interface RunNotifierDeps {
   readonly db: DjlDatabase;
   readonly push: PushSender | null;
+  readonly fcm?: PushSender | null;
   readonly email: EmailSender;
   readonly webPublicUrl: string;
 }
@@ -59,6 +60,48 @@ export class RunNotifier {
           .update(schema.pushTokens)
           .set({ revokedAt: new Date() })
           .where(eq(schema.pushTokens.id, token.id));
+      }
+    }
+    const installations = this.deps.fcm
+      ? await db
+          .select({
+            id: schema.fcmInstallations.id,
+            installationId: schema.fcmInstallations.installationId,
+            // Preserve Postgres microseconds for the concurrent-registration guard.
+            lastSeenAt: sql<string>`${schema.fcmInstallations.lastSeenAt}::text`,
+          })
+          .from(schema.fcmInstallations)
+          .where(
+            and(
+              eq(schema.fcmInstallations.userId, run.userId),
+              isNull(schema.fcmInstallations.revokedAt),
+            ),
+          )
+      : [];
+    live += installations.length;
+    for (const installation of installations) {
+      const result = await this.deps.fcm!.send({
+        token: installation.installationId,
+        environment: "production",
+        message: {
+          title: ok ? "DJL task finished" : "DJL task stopped",
+          body: "Open DJL to see the result.",
+          data,
+        },
+      });
+      if (result.ok) delivered = true;
+      else if (result.unregistered) {
+        live -= 1;
+        await db
+          .update(schema.fcmInstallations)
+          .set({ revokedAt: new Date() })
+          .where(
+            and(
+              eq(schema.fcmInstallations.id, installation.id),
+              eq(schema.fcmInstallations.userId, run.userId),
+              eq(schema.fcmInstallations.lastSeenAt, sql`${installation.lastSeenAt}::timestamptz`),
+            ),
+          );
       }
     }
     if (delivered) return "push";

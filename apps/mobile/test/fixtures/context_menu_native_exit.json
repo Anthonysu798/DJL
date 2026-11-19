@@ -1,0 +1,195 @@
+{
+  "scope": "Two preserved native Swift context-menu dismissals;far-sidebar RGB normalized between253 clear and204 dim;not geometry or frame-cadence proof",
+  "video": "build/device-evidence/context129-source-motion.mp4",
+  "video_sha256": "9532e066fb82e73c54a983468b0efc7409ac450e527c8365bc83d1e740ed1a58",
+  "onset_uncertainty_ms": 25,
+  "route_duration_ms": 220,
+  "cycles": [
+    {
+      "estimated_onset": 16.188214702937113,
+      "samples": [
+        {
+          "microseconds": 0,
+          "clear_fraction": 0
+        },
+        {
+          "microseconds": 0,
+          "clear_fraction": 0
+        },
+        {
+          "microseconds": 5118,
+          "clear_fraction": 0.08163265306122448
+        },
+        {
+          "microseconds": 23452,
+          "clear_fraction": 0.16326530612244897
+        },
+        {
+          "microseconds": 36785,
+          "clear_fraction": 0.2857142857142857
+        },
+        {
+          "microseconds": 56785,
+          "clear_fraction": 0.40816326530612246
+        },
+        {
+          "microseconds": 78452,
+          "clear_fraction": 0.5306122448979592
+        },
+        {
+          "microseconds": 93452,
+          "clear_fraction": 0.6530612244897959
+        },
+        {
+          "microseconds": 106785,
+          "clear_fraction": 0.7142857142857143
+        },
+        {
+          "microseconds": 123452,
+          "clear_fraction": 0.7959183673469388
+        },
+        {
+          "microseconds": 138452,
+          "clear_fraction": 0.8367346938775511
+        },
+        {
+          "microseconds": 153452,
+          "clear_fraction": 0.9183673469387755
+        },
+        {
+          "microseconds": 160118,
+          "clear_fraction": 0.9183673469387755
+        },
+        {
+          "microseconds": 170118,
+          "clear_fraction": 0.9387755102040817
+        },
+        {
+          "microseconds": 185118,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 191785,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 208452,
+          "clear_fraction": 0.9795918367346939
+        },
+        {
+          "microseconds": 210118,
+          "clear_fraction": 0.9795918367346939
+        },
+        {
+          "microseconds": 218452,
+          "clear_fraction": 0.9795918367346939
+        },
+        {
+          "microseconds": 238452,
+          "clear_fraction": 1
+        },
+        {
+          "microseconds": 255118,
+          "clear_fraction": 1
+        },
+        {
+          "microseconds": 268452,
+          "clear_fraction": 1
+        },
+        {
+          "microseconds": 273452,
+          "clear_fraction": 1
+        }
+      ]
+    },
+    {
+      "estimated_onset": 23.077855764992602,
+      "samples": [
+        {
+          "microseconds": 0,
+          "clear_fraction": 0
+        },
+        {
+          "microseconds": 0,
+          "clear_fraction": 0.02040816326530612
+        },
+        {
+          "microseconds": 8811,
+          "clear_fraction": 0.10204081632653061
+        },
+        {
+          "microseconds": 25477,
+          "clear_fraction": 0.22448979591836735
+        },
+        {
+          "microseconds": 42144,
+          "clear_fraction": 0.3469387755102041
+        },
+        {
+          "microseconds": 60477,
+          "clear_fraction": 0.42857142857142855
+        },
+        {
+          "microseconds": 77144,
+          "clear_fraction": 0.5510204081632653
+        },
+        {
+          "microseconds": 100477,
+          "clear_fraction": 0.6530612244897959
+        },
+        {
+          "microseconds": 117144,
+          "clear_fraction": 0.7346938775510204
+        },
+        {
+          "microseconds": 137144,
+          "clear_fraction": 0.7959183673469388
+        },
+        {
+          "microseconds": 150477,
+          "clear_fraction": 0.8571428571428571
+        },
+        {
+          "microseconds": 180477,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 197144,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 198811,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 202144,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 205477,
+          "clear_fraction": 0.9591836734693877
+        },
+        {
+          "microseconds": 215477,
+          "clear_fraction": 0.9795918367346939
+        },
+        {
+          "microseconds": 232144,
+          "clear_fraction": 0.9795918367346939
+        },
+        {
+          "microseconds": 248811,
+          "clear_fraction": 1
+        },
+        {
+          "microseconds": 267144,
+          "clear_fraction": 1
+        },
+        {
+          "microseconds": 280477,
+          "clear_fraction": 1
+        }
+      ]
+    }
+  ]
+}

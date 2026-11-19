@@ -1,4 +1,7 @@
 import { getStartupCopy } from "./copy";
+import { mountStartupParticles } from "./particles";
+import { mountStartupBackground } from "./background";
+import { remainingSplashDuration } from "./timing";
 import type { StartupDraft, StartupShellHandle, StartupShellOptions, StartupStatus } from "./types";
 import "./shell.css";
 
@@ -9,80 +12,53 @@ const node = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, 
   return element;
 };
 
-/** A local, dependency-free editor that can mount before the application graph loads. */
+/** Lightweight splash that paints before the application graph loads. */
 export function mountStartupShell(options: StartupShellOptions): StartupShellHandle {
+  const mountedAt = performance.now();
   const copy = getStartupCopy(options.locale);
   const events = new AbortController();
   let draft = options.draft;
   let status: StartupStatus = "loading";
-  let composing = false;
   let destroyed = false;
-  let sendRequested = false;
+  let revealRequested = false;
+  let revealTimer: ReturnType<typeof setTimeout> | undefined;
+  let removalTimer: ReturnType<typeof setTimeout> | undefined;
   const root = node("div", "djl-startup");
   root.id = "app-startup";
   root.lang = options.locale;
-  if (window.desktopBridge && /Mac/i.test(navigator.platform)) root.dataset.nativeMac = "true";
+  root.dataset.state = "loading";
   root.dataset.theme =
     options.snapshot?.theme ??
     (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  root.style.setProperty(
-    "--startup-sidebar-width",
-    `${Math.min(400, Math.max(200, options.snapshot?.sidebarWidth ?? 260))}px`,
-  );
-  const button = (label: string, action: () => void, className = "startup-nav") => {
+  const button = (label: string, action: () => void, className: string) => {
     const element = node("button", className, label);
     element.type = "button";
     element.addEventListener("click", action, { signal: events.signal });
     return element;
   };
   const chrome = node("header", "startup-chrome");
-  const sidebar = node("aside", "startup-sidebar");
-  const nav = node("nav", "startup-navigation");
-  nav.setAttribute("aria-label", "DJL");
-  const surfaces = node("div", "startup-surfaces");
-  const work = button(copy.work, () => options.onNavigate("/work"), "startup-surface");
-  const projects = button(copy.projects, () => options.onNavigate("/"), "startup-surface");
-  surfaces.append(work, projects);
-  nav.append(
-    surfaces,
-    button(copy.home, () => options.onNavigate(draft.surface === "work" ? "/work" : "/")),
-    button(copy.workspaces, () => options.onNavigate("/workspaces")),
-  );
-  sidebar.append(nav);
-  for (const [label, items, prefix] of [
-    [copy.projects, options.snapshot?.projects ?? [], "/workspaces/"],
-    [copy.recent, options.snapshot?.threads ?? [], "/"],
-  ] as const) {
-    if (!items.length) continue;
-    sidebar.append(node("h2", "startup-section-label", label));
-    for (const item of items)
-      sidebar.append(
-        button(item.title, () => options.onNavigate(`${prefix}${encodeURIComponent(item.id)}`)),
-      );
-  }
   const main = node("main", "startup-main");
   const content = node("div", "startup-content");
-  const heading = node("h1", "startup-heading", copy.heading);
-  const composer = node("div", "startup-composer");
-  const textarea = node("textarea", "startup-textarea");
-  textarea.dataset.startupDraft = "true";
-  textarea.placeholder = copy.placeholder;
-  textarea.setAttribute("aria-label", copy.placeholder);
-  textarea.maxLength = 65536;
-  textarea.value = draft.text;
-  const footer = node("div", "startup-composer-footer");
-  const model = node("span", "startup-model");
-  const send = button(copy.send, () => submit(), "startup-send");
-  const cancel = button(copy.cancel, () => options.onCancelSend(), "startup-cancel");
-  footer.append(model, cancel, send);
-  composer.append(textarea, footer);
+  const art = node("div", "startup-art");
+  art.setAttribute("aria-hidden", "true");
+  const aura = node("div", "startup-aura");
+  const canvas = node("canvas", "startup-particles");
+  art.append(aura, canvas);
+  const particles = mountStartupParticles(canvas, root.dataset.theme === "dark");
+  const heading = node("h1", "startup-heading", "DJL");
   const notice = node("p", "startup-notice");
   notice.setAttribute("role", "status");
   notice.setAttribute("aria-live", "polite");
+  const activity = node("div", "startup-activity");
+  activity.setAttribute("aria-hidden", "true");
+  activity.append(node("span", "startup-activity-light"));
   const retry = button(copy.retry, options.onRetry, "startup-retry");
-  content.append(heading, composer, notice, retry);
+  content.append(art, heading, notice, activity, retry);
   main.append(content);
-  root.append(chrome, sidebar, main);
+  const backdrop = node("div", "startup-background");
+  backdrop.setAttribute("aria-hidden", "true");
+  root.append(backdrop, chrome, main);
+  const background = mountStartupBackground(backdrop, root.dataset.theme === "dark");
 
   const controls = window.desktopBridge?.windowControls;
   let unsubscribe: (() => void) | undefined;
@@ -126,98 +102,63 @@ export function mountStartupShell(options: StartupShellOptions): StartupShellHan
     chrome.append(captions);
   }
 
-  function frozen() {
-    return sendRequested || draft.sendState === "pending" || draft.sendState === "claimed";
-  }
   function render() {
-    work.setAttribute("aria-pressed", String(draft.surface === "work"));
-    projects.setAttribute("aria-pressed", String(draft.surface === "home"));
-    const locked = frozen();
-    textarea.readOnly = !options.editable || locked;
-    send.disabled = !options.editable || locked || !draft.model || !textarea.value.trim();
-    cancel.hidden = !locked || draft.sendState === "claimed";
-    model.textContent = draft.model?.model ?? copy.modelRequired;
+    root.dataset.state = status === "runtime-error" ? "error" : "loading";
     notice.textContent =
-      status === "storage-error"
-        ? copy.storageError
-        : status === "runtime-error"
-          ? copy.sendFailed
-          : locked
-            ? copy.sending
-            : draft.sendState === "uncertain"
-              ? copy.recovered
-              : copy.loading;
+      status === "runtime-error"
+        ? copy.sendFailed
+        : status === "storage-error"
+          ? copy.storageError
+          : copy.loading;
+    particles.pause(status === "runtime-error");
+    background.pause(status === "runtime-error");
+    activity.hidden = status === "runtime-error";
     retry.hidden = status !== "runtime-error";
   }
-  function submit() {
-    if (composing || send.disabled) return;
-    sendRequested = true;
-    render();
-    options.onSend();
+  function destroy() {
+    destroyed = true;
+    clearTimeout(revealTimer);
+    clearTimeout(removalTimer);
+    events.abort();
+    particles.destroy();
+    background.destroy();
+    unsubscribe?.();
+    root.remove();
   }
-  textarea.addEventListener(
-    "input",
-    () => {
-      if (textarea.readOnly) return;
-      options.onEdit(textarea.value);
-      render();
-    },
-    { signal: events.signal },
-  );
-  textarea.addEventListener(
-    "compositionstart",
-    () => {
-      composing = true;
-    },
-    { signal: events.signal },
-  );
-  textarea.addEventListener(
-    "compositionend",
-    () => {
-      composing = false;
-    },
-    { signal: events.signal },
-  );
-  textarea.addEventListener(
-    "keydown",
-    (event) => {
-      if (
-        event.key !== "Enter" ||
-        event.isComposing ||
-        composing ||
-        event.keyCode === 229 ||
-        event.shiftKey
-      )
-        return;
-      event.preventDefault();
-      submit();
-    },
-    { signal: events.signal },
-  );
   render();
   document.body.append(root);
-  if (options.editable && !frozen()) textarea.focus({ preventScroll: true });
   return {
     update(nextDraft: StartupDraft, nextStatus?: StartupStatus) {
-      if (destroyed) return;
+      if (destroyed || root.dataset.state === "leaving") return;
       draft = nextDraft;
-      sendRequested = false;
       if (nextStatus) status = nextStatus;
-      if (textarea.value !== draft.text && !composing) {
-        const { selectionStart, selectionEnd, selectionDirection } = textarea;
-        textarea.value = draft.text;
-        textarea.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
-      }
       render();
     },
-    selection: () => ({ start: textarea.selectionStart, end: textarea.selectionEnd }),
-    isFocused: () => document.activeElement === textarea,
-    isComposing: () => composing,
-    destroy() {
-      destroyed = true;
-      events.abort();
-      unsubscribe?.();
-      root.remove();
+    // Retain saved-draft handoff without exposing an editor during startup.
+    selection: () => ({ start: draft.text.length, end: draft.text.length }),
+    isFocused: () => false,
+    isComposing: () => false,
+    reveal(onReveal = () => {}) {
+      if (destroyed || revealRequested) return;
+      revealRequested = true;
+      const transition = () => {
+        if (destroyed) return;
+        onReveal();
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          destroy();
+          return;
+        }
+        particles.reveal();
+        background.pause(true);
+        root.dataset.state = "leaving";
+        root.inert = true;
+        root.setAttribute("aria-hidden", "true");
+        removalTimer = setTimeout(destroy, 280);
+      };
+      const remaining = remainingSplashDuration(mountedAt);
+      if (remaining > 0) revealTimer = setTimeout(transition, remaining);
+      else transition();
     },
+    destroy,
   };
 }

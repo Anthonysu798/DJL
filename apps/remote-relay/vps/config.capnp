@@ -18,7 +18,10 @@ const relay :Workerd.Config = (
         (name = "APNS_TEAM_ID", fromEnvironment = "APNS_TEAM_ID"),
         (name = "APNS_KEY_ID", fromEnvironment = "APNS_KEY_ID"),
         (name = "APNS_BUNDLE_ID", fromEnvironment = "APNS_BUNDLE_ID"),
-        (name = "APNS_PRIVATE_KEY", fromEnvironment = "APNS_PRIVATE_KEY")
+        (name = "APNS_PRIVATE_KEY", fromEnvironment = "APNS_PRIVATE_KEY"),
+        (name = "FCM_PROJECT_ID", fromEnvironment = "FCM_PROJECT_ID"),
+        (name = "FCM_CLIENT_EMAIL", fromEnvironment = "FCM_CLIENT_EMAIL"),
+        (name = "FCM_PRIVATE_KEY", fromEnvironment = "FCM_PRIVATE_KEY")
       ]
     )),
     (name = "state", disk = (path = "/data", writable = true))

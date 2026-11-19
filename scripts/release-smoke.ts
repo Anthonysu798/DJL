@@ -48,6 +48,8 @@ if (
     "desktop-release.yml",
     "desktop-signed-update-e2e.yml",
     "landing-deploy.yml",
+    // Mobile CI is independent of the desktop release pipeline and may be present on shared worktrees.
+    ...(workflows.includes("mobile-ci.yml") ? ["mobile-ci.yml"] : []),
   ])
 ) {
   throw new Error(`Unexpected workflow inventory: ${workflows.join(", ")}`);

@@ -83,5 +83,15 @@
     "gatewayExited": "La puerta de enlace remota se cerró ({{reason}}). Reconectando…",
     "stoppedUnexpectedly": "El acceso remoto se detuvo inesperadamente. Reconectando…",
     "unknownReason": "desconocido"
+  },
+  "computerStop": {
+    "title": "DJL · Uso de la computadora",
+    "stop": "Detener",
+    "stopping": "Deteniendo…",
+    "failure": "No se pudo confirmar la detención. Inténtalo de nuevo."
+  },
+  "multipost": {
+    "open": "Abrir DJL",
+    "quit": "Salir de DJL"
   }
 }

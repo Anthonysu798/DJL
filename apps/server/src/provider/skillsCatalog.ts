@@ -549,6 +549,7 @@ export function providerNativeSkillRoots(input: SkillsCatalogRootInput): SkillRo
 export async function discoverSkillsCatalog(
   input: SkillsCatalogDiscoveryInput,
 ): Promise<ProviderSkillDescriptor[]> {
+  if (process.env.DJL_COMPUTER_QA_PROFILE === "1") return [];
   const cacheKey = [
     input.cwd?.trim() ?? "",
     input.provider ?? "",

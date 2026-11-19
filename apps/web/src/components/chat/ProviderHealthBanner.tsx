@@ -54,7 +54,9 @@ export const ProviderHealthBanner = memo(function ProviderHealthBanner({
         <AlertDescription className="text-[var(--notification-fg)]/72">
           <span>
             {status.status === "error"
-              ? t(`errors.providerFailure.${failureKind}.action`)
+              ? failureKind === "generic"
+                ? t("health.checkSettingsBeforeSending")
+                : t(`errors.providerFailure.${failureKind}.action`)
               : defaultMessage}
           </span>
           <TechnicalDetailsDisclosure detail={status.message} />

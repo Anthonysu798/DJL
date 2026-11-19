@@ -218,3 +218,19 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     expect(fs.realpathSync(result.studioWorkspaceRoot)).toBe(result.studioWorkspaceRoot);
   });
 });
+
+it("keeps every QA workspace root inside the synthetic root", async () => {
+  const temp = makeTempDir("qa-workspace-root-");
+  const personal = path.join(temp, "personal");
+  const isolated = path.join(temp, "owned-qa");
+  fs.mkdirSync(personal);
+  fs.mkdirSync(isolated);
+  const result = await Effect.runPromise(
+    resolveCanonicalWorkspaceRoots({ homeDir: personal, isolatedRoot: isolated }).pipe(
+      Effect.provide(NodeServices.layer),
+    ),
+  );
+  expect(result.homeDir).toBe(fs.realpathSync(isolated));
+  for (const root of [result.chatWorkspaceRoot, result.studioWorkspaceRoot])
+    expect(root.startsWith(fs.realpathSync(isolated) + path.sep)).toBe(true);
+});

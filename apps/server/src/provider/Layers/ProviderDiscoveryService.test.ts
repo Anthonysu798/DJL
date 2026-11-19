@@ -16,7 +16,7 @@ import type {
 } from "@synara/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   deriveServerPaths,
@@ -111,6 +111,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -246,4 +247,12 @@ describe("ProviderDiscoveryService.getComposerCapabilities", () => {
     expect(capabilities.supportsSkillDiscovery).toBe(true);
     expect(capabilities.supportsSkillMentions).toBe(true);
   });
+});
+
+it("does not invoke provider-native skill discovery in Computer QA", async () => {
+  vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
+  const native = vi.fn(() => Effect.succeed({ skills: [], source: "fixture", cached: false }));
+  const result = await runListSkills({ adapter: { listSkills: native }, provider: "opencode" });
+  expect(native).not.toHaveBeenCalled();
+  expect(result).toEqual({ skills: [], source: "qa.builtin-only", cached: false });
 });

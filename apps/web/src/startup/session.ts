@@ -212,11 +212,18 @@ export class StartupSession {
     return this.shell?.isComposing() ?? false;
   }
   finishPreview(): void {
+    if (!this.previewActive) return;
     this.previewActive = false;
-    this.shell?.destroy();
-    this.shell = null;
     const root = globalThis.document?.getElementById("root");
-    if (root) root.inert = false;
+    const activate = () => {
+      if (root) root.inert = false;
+    };
+    if (this.shell?.reveal) this.shell.reveal(activate);
+    else {
+      this.shell?.destroy();
+      activate();
+    }
+    this.shell = null;
     this.notify();
   }
 }

@@ -83,5 +83,15 @@
     "gatewayExited": "La passerelle distante s’est arrêtée ({{reason}}). Reconnexion…",
     "stoppedUnexpectedly": "L’accès à distance s’est arrêté de manière inattendue. Reconnexion…",
     "unknownReason": "inconnue"
+  },
+  "computerStop": {
+    "title": "DJL · Utilisation de l’ordinateur",
+    "stop": "Arrêter",
+    "stopping": "Arrêt en cours…",
+    "failure": "L’arrêt n’a pas pu être confirmé. Réessayez."
+  },
+  "multipost": {
+    "open": "Ouvrir DJL",
+    "quit": "Quitter DJL"
   }
 }

@@ -64,6 +64,48 @@
       "when": 1792008002000,
       "tag": "0008_generated_gallery",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792008003000,
+      "tag": "0009_social_connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792008004000,
+      "tag": "0010_social_publishing",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792008005000,
+      "tag": "0011_social_review_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792008006000,
+      "tag": "0012_social_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792008007000,
+      "tag": "0013_social_tracking_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794578400000,
+      "tag": "0014_fcm_installations",
+      "breakpoints": true
     }
   ]
 }

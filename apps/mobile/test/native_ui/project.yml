@@ -1,0 +1,30 @@
+name: DJLNativeInputQA
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: FQHGL4A4VW
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_ALLOWED: YES
+targets:
+  NativeInputGestureTests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ${DJL_NATIVE_QA_SOURCE}
+        excludes: [README.md, project.yml, verify_ui_runner.py]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.djl.qa.NativeInputGesture47
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: ""
+schemes:
+  NativeInputGestureQA:
+    build:
+      targets:
+        NativeInputGestureTests: all
+    test:
+      targets:
+        - NativeInputGestureTests
+      gatherCoverageData: false

@@ -83,5 +83,15 @@
     "gatewayExited": "Remote gateway exited ({{reason}}). Reconnecting…",
     "stoppedUnexpectedly": "Remote access stopped unexpectedly. Reconnecting…",
     "unknownReason": "unknown"
+  },
+  "computerStop": {
+    "title": "DJL Computer Use",
+    "stop": "Stop",
+    "stopping": "Stopping…",
+    "failure": "Stop could not be confirmed. Try again."
+  },
+  "multipost": {
+    "open": "Open DJL",
+    "quit": "Quit DJL"
   }
 }

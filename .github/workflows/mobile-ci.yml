@@ -1,0 +1,164 @@
+name: Mobile CI
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/remote-gateway/**'
+      - 'apps/remote-relay/**'
+      - 'apps/server/src/terminal/**'
+      - 'packages/remote-protocol/**'
+      - 'packages/contracts/fixtures/cloud/**'
+      - 'packages/contracts/src/cloud/**'
+      - '.github/workflows/mobile-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/remote-gateway/**'
+      - 'apps/remote-relay/**'
+      - 'apps/server/src/terminal/**'
+      - 'packages/remote-protocol/**'
+      - 'packages/contracts/fixtures/cloud/**'
+      - 'packages/contracts/src/cloud/**'
+      - '.github/workflows/mobile-ci.yml'
+permissions:
+  contents: read
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts-and-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: djl
+          POSTGRES_PASSWORD: djl
+          POSTGRES_DB: djl_flutter_qa_20261028
+        ports: ['54329:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['63807:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+      - run: bun install --frozen-lockfile
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - name: Format, analyze, unit and widget tests
+        working-directory: apps/mobile
+        run: |
+          dart format --output=none --set-exit-if-changed lib test integration_test test_driver
+          flutter analyze
+          flutter test
+      - name: Validate production-protocol crypto vectors
+        run: |
+          bun apps/mobile/tool/generate_remote_fixture.ts
+          git diff --exit-code -- apps/mobile/test/fixtures/remote-v2.json
+      - name: Native acceptance tooling and original gateway contracts
+        working-directory: apps/mobile
+        run: |
+          bun test "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/desktop_runtime_fixture.test.ts" \
+            "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/steering_runtime_fixture.test.ts" \
+            "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/stop_runtime_fixture.test.ts" \
+            "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/pairing_code_fixture.test.ts" \
+            "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/fixture_git_scope.test.ts" \
+            "$GITHUB_WORKSPACE/apps/mobile/integration_test/support/fixture_resume.test.ts" \
+            "$GITHUB_WORKSPACE/apps/mobile/test/integration_support/workspace_revert_gateway.test.ts"
+          python3 -m unittest discover -s test/integration_support -p '*_test.py'
+      - name: Initialize disposable Cloud test infrastructure
+        env:
+          DATABASE_URL: postgres://djl:djl@127.0.0.1:54329/djl_flutter_qa_20261028
+        run: |
+          bun cloud/packages/db/src/migrate.ts
+          bun cloud/packages/db/src/seed.ts
+          docker run -d --name mobile-qa-storage -p 127.0.0.1:8334:8333 \
+            -v "$GITHUB_WORKSPACE/cloud/infra/local/s3.json:/etc/seaweedfs/s3.json:ro" \
+            chrislusf/seaweedfs:4.47 server -s3 -s3.config=/etc/seaweedfs/s3.json -dir=/data
+          for attempt in $(seq 1 30); do
+            if docker exec mobile-qa-storage sh -c 'echo "s3.bucket.create -name djl-mobile-qa" | weed shell -master=localhost:9333'; then break; fi
+            sleep 1
+          done
+          bun apps/mobile/integration_test/support/start_cloud.ts > /tmp/mobile-qa-api.log 2>&1 &
+          REDIS_URL=redis://127.0.0.1:63807/14 DJL_ENV=test DJL_MOCK_EXTERNALS=true SOCIAL_PUBLISHING_ENABLED=false \
+            STORAGE_S3_ENDPOINT=http://127.0.0.1:8334 STORAGE_BUCKET=djl-mobile-qa \
+            STORAGE_ACCESS_KEY_ID=djl-local STORAGE_SECRET_ACCESS_KEY=djl-local-secret \
+            bun cloud/apps/worker/src/index.ts > /tmp/mobile-qa-worker.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if test -f /tmp/djl-mobile-qa/credentials.json; then break; fi
+            sleep 1
+          done
+      - name: Live local Cloud contract acceptance
+        working-directory: apps/mobile
+        env:
+          DJL_LOCAL_QA: '1'
+        run: flutter test test/live
+      - name: Android native status model tests
+        working-directory: apps/mobile/android
+        run: >-
+          ./gradlew :app:testDebugUnitTest --no-daemon --max-workers=1
+          '-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m'
+          -Pkotlin.compiler.execution.strategy=in-process
+      - run: flutter build apk --debug
+        working-directory: apps/mobile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-debug
+          path: apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
+  ios-simulator:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - name: Build Simulator app with local ad-hoc signing
+        working-directory: apps/mobile
+        run: |
+          flutter build ios --simulator --debug --config-only
+          cd ios
+          pod install
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
+            -derivedDataPath ../build/ios-ci build
+      - name: Verify Simulator identity and signatures
+        working-directory: apps/mobile
+        run: |
+          python3 tool/verify_ios_simulator_identity.py \
+            build/ios-ci/Build/Products/Debug-iphonesimulator/Runner.app/Runner \
+            --expected FQHGL4A4VW.app.djl.mobile
+          codesign --verify --deep --strict \
+            build/ios-ci/Build/Products/Debug-iphonesimulator/Runner.app
+      - name: Test native glass, scene links and status model
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' \
+            ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
+            -parallel-testing-enabled NO -collect-test-diagnostics never \
+            -enableCodeCoverage NO -enablePerformanceTestsDiagnostics NO \
+            -derivedDataPath ../build/ios-native-ci \
+            -only-testing:RunnerTests test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ios-simulator
+          path: apps/mobile/build/ios-ci/Build/Products/Debug-iphonesimulator/Runner.app

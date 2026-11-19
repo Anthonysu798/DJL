@@ -49,7 +49,7 @@ export function makeMiddleware(env: ApiEnv, region: string) {
         corsHeaders["access-control-allow-origin"] = origin;
         corsHeaders["access-control-allow-credentials"] = "true";
         corsHeaders["access-control-allow-headers"] =
-          "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token";
+          "authorization, content-type, x-trace-id, x-device-id, x-org-id, x-csrf-token, x-review-token";
         corsHeaders["access-control-expose-headers"] = "x-trace-id, set-auth-token, set-auth-jwt";
         corsHeaders["access-control-allow-methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
         corsHeaders["access-control-max-age"] = "600";

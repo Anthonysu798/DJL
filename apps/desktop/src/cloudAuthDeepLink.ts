@@ -7,15 +7,16 @@
  * The state is matched against the one the local server issued, single use,
  * before the code is redeemed there.
  */
+import { DJL_NATIVE_OPEN_URI } from "@synara/contracts/cloud";
+import type { CloudAuthCallback } from "./cloudAuthIpcChannels";
+export {
+  CLOUD_AUTH_CALLBACK_CHANNEL,
+  CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
+  type CloudAuthCallback,
+} from "./cloudAuthIpcChannels";
+
 export const CLOUD_AUTH_PROTOCOL = "djl";
-export const CLOUD_AUTH_CALLBACK_CHANNEL = "desktop:cloud-auth-callback";
-export const CLOUD_AUTH_TAKE_CALLBACK_CHANNEL = "desktop:cloud-auth-take-callback";
-
-export interface CloudAuthCallback {
-  readonly code: string;
-  readonly state: string;
-}
-
+export const isDesktopOpenUrl = (raw: unknown): boolean => raw === DJL_NATIVE_OPEN_URI;
 const TOKEN = /^[A-Za-z0-9_-]{16,256}$/;
 
 export function parseCloudAuthCallbackUrl(raw: unknown): CloudAuthCallback | null {

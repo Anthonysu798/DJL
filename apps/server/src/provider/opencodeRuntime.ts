@@ -123,6 +123,7 @@ export class OpenCodeRuntimeError extends Data.TaggedError(OPENCODE_RUNTIME_ERRO
   readonly operation: string;
   readonly cause?: unknown;
   readonly detail: string;
+  readonly startupDatabaseLocked?: boolean;
 }> {
   static readonly is = (u: unknown): u is OpenCodeRuntimeError =>
     P.isTagged(u, OPENCODE_RUNTIME_ERROR_TAG);
@@ -423,10 +424,19 @@ function pooledOpenCodeServerKey(input: {
   const managedConfigRevision = input.managedRootDir
     ? (() => {
         try {
-          const stat = statSync(
+          return [
             join(input.managedRootDir, "config", cliSpec.dataDirectoryName, "opencode.json"),
-          );
-          return `${stat.mtimeMs}:${stat.size}:${stat.ino}`;
+            join(input.managedRootDir, "custom-providers.json"),
+          ]
+            .map((path) => {
+              try {
+                const stat = statSync(path);
+                return `${stat.mtimeMs}:${stat.size}:${stat.ino}`;
+              } catch {
+                return "missing";
+              }
+            })
+            .join(":");
         } catch {
           return null;
         }
@@ -949,6 +959,13 @@ export function buildOpenCodeServerProcessEnv(input: {
   // Keep the installed CLI's home, configuration and credentials. The legacy root
   // is now used only for DJL's process-local compatibility and local-model overlay.
   delete env.DJL_MANAGED_AUTH;
+  delete env.DJL_COMPUTER_USE_BRIDGE_TOKEN;
+  delete env.DJL_COMPUTER_USE_BRIDGE_URL;
+  delete env.SYNARA_CUA_HOST_SOCKET;
+  delete env.SYNARA_BROWSER_HOST_CAPABILITY;
+  delete env.SYNARA_BROWSER_HOST_CAPABILITY_FD;
+  delete env.SYNARA_AUTH_TOKEN;
+
   return env;
 }
 
@@ -1167,6 +1184,10 @@ const makeOpenCodeRuntime = Effect.gen(function* () {
               readyDeferred,
               new OpenCodeRuntimeError({
                 operation: "startOpenCodeServerProcess",
+                startupDatabaseLocked:
+                  cliSpec.dataDirectoryName === "opencode" &&
+                  exitCode === 1 &&
+                  /\bdatabase is locked\b/i.test(redactedStderr),
                 detail: formatOpenCodeServerStartupDetail({
                   displayName: cliSpec.displayName,
                   summary: `${cliSpec.displayName} server exited before startup completed (code: ${String(exitCode)}).`,
@@ -1361,31 +1382,47 @@ const makeOpenCodeRuntime = Effect.gen(function* () {
         // Start lazily on first real use, then keep warm only while recent sessions need it.
         return yield* Effect.uninterruptibleMask((restore) =>
           Effect.gen(function* () {
-            const serverScope = yield* Scope.make();
-            const startedExit = yield* Effect.exit(
-              restore(
-                startOpenCodeServerProcess(input).pipe(
-                  Effect.provideService(Scope.Scope, serverScope),
+            let lockedStartupRetries = 0;
+            while (true) {
+              const serverScope = yield* Scope.make();
+              const startedExit = yield* Effect.exit(
+                restore(
+                  startOpenCodeServerProcess(input).pipe(
+                    Effect.provideService(Scope.Scope, serverScope),
+                  ),
                 ),
-              ),
-            );
+              );
 
-            if (Exit.isFailure(startedExit)) {
-              yield* Scope.close(serverScope, Exit.void).pipe(Effect.ignore);
-              return yield* Effect.failCause(startedExit.cause);
+              if (Exit.isFailure(startedExit)) {
+                yield* Scope.close(serverScope, Exit.void).pipe(Effect.ignore);
+                const failure = Cause.squash(startedExit.cause);
+                // This child exited before readiness: no prompt or tool call
+                // could have been submitted. Never retry timeouts or live calls.
+                if (
+                  lockedStartupRetries < 2 &&
+                  OpenCodeRuntimeError.is(failure) &&
+                  failure.operation === "startOpenCodeServerProcess" &&
+                  failure.startupDatabaseLocked === true
+                ) {
+                  lockedStartupRetries += 1;
+                  yield* restore(Effect.sleep("250 millis"));
+                  continue;
+                }
+                return yield* Effect.failCause(startedExit.cause);
+              }
+
+              const pooledServer: PooledOpenCodeServer = {
+                key,
+                server: startedExit.value,
+                scope: serverScope,
+                refCount: 1,
+                idleCloseFiber: null,
+                exitWatchFiber: null,
+              };
+              pooledServers.set(key, pooledServer);
+              yield* watchPooledServerExit(pooledServer);
+              return pooledServer;
             }
-
-            const pooledServer: PooledOpenCodeServer = {
-              key,
-              server: startedExit.value,
-              scope: serverScope,
-              refCount: 1,
-              idleCloseFiber: null,
-              exitWatchFiber: null,
-            };
-            pooledServers.set(key, pooledServer);
-            yield* watchPooledServerExit(pooledServer);
-            return pooledServer;
           }),
         );
       }),

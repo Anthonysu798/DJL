@@ -44,6 +44,7 @@ describe("real chat tools and publication kit", () => {
         return response.json() as Promise<{
           result: {
             isError: boolean;
+            content: { type: string; text?: string; data?: string }[];
             tools: { name: string }[];
             structuredContent: { campaignId: string };
           };
@@ -53,6 +54,14 @@ describe("real chat tools and publication kit", () => {
       expect(
         listed.result.tools.some((t: { name: string }) => t.name === "djl_prepare_marketing"),
       ).toBe(true);
+      const visual = await rpc("tools/call", {
+        name: "djl_inspect_social_media",
+        arguments: { mediaPaths: ["photo.png"] },
+      });
+      expect(visual.result.isError).toBe(false);
+      expect(visual.result.content.filter((part) => part.type === "image")).toHaveLength(1);
+      expect(visual.result.content[0]!.text).toContain("photo.png");
+      expect(visual.result.content[0]!.text).not.toContain(visual.result.content[1]!.data);
       const prepared = await rpc("tools/call", {
         name: "djl_prepare_marketing",
         arguments: {

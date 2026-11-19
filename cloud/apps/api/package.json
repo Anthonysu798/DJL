@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./social-publishing": "./src/social/publishing/index.ts",
+    "./social-reports": "./src/social/reports/index.ts",
     "./agent": "./src/agent/runtime.ts",
     "./blobs": "./src/sync/BlobStore.ts",
     "./credits": "./src/credits/LedgerService.ts",

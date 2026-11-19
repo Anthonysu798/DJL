@@ -1,4 +1,17 @@
 import type {
+  DesktopAppSnapCapture,
+  DesktopAppSnapPermissionKind,
+  DesktopAppSnapState,
+  DesktopAppSnapShortcut,
+  DesktopAppSnapShortcutAvailability,
+  DesktopAppSnapShortcutUpdateResult,
+  DesktopAppSnapWindowEntry,
+  DesktopAppSnapSettingsPane,
+  DesktopAppSnapPermissionGuideState,
+  DesktopAppSnapErrorEvent,
+} from "./desktopComputerSetup";
+import type { ComputerUseRequest, ComputerUseResponse } from "./computerUse";
+import type {
   HarnessTool,
   HarnessToolsResult,
   HarnessMaintainToolInput,
@@ -233,6 +246,10 @@ import type {
   OpenCodeListModelProvidersResult,
   OpenCodeRemoveCredentialInput,
   OpenCodeSetApiKeyInput,
+  SaveCustomModelProviderInput,
+  RemoveCustomModelProviderInput,
+  FetchCustomModelsInput,
+  FetchCustomModelsResult,
   ProviderListPluginsInput,
   ProviderListPluginsResult,
   ProviderListSkillsInput,
@@ -463,7 +480,59 @@ export interface DesktopBuildInfo {
   readonly commit: string | null;
 }
 
+export interface DesktopComputerPreviewFrame {
+  readonly windowId: number;
+  readonly seq: number;
+  readonly jpeg: Uint8Array;
+}
+export interface DesktopAgentCursorStyle {
+  readonly fill?: string;
+  readonly rim?: string;
+  readonly shadow?: string;
+}
+
 export interface DesktopBridge {
+  computerPreview?: {
+    onFrame: (listener: (frame: DesktopComputerPreviewFrame) => void) => () => void;
+  };
+  appSnap?: {
+    captureCurrentApp: (requestId: string) => Promise<DesktopAppSnapCapture>;
+    cancelCapture: (requestId: string) => Promise<void>;
+    getState: (
+      permissions?: readonly DesktopAppSnapPermissionKind[],
+    ) => Promise<DesktopAppSnapState>;
+    setEnabled: (enabled: boolean) => Promise<DesktopAppSnapState>;
+    checkShortcut: (
+      shortcut: DesktopAppSnapShortcut,
+    ) => Promise<DesktopAppSnapShortcutAvailability>;
+    setShortcut: (shortcut: DesktopAppSnapShortcut) => Promise<DesktopAppSnapShortcutUpdateResult>;
+    requestPermissions: (
+      permissions?: readonly DesktopAppSnapPermissionKind[],
+    ) => Promise<DesktopAppSnapState>;
+    /**
+     * Reads current grants without prompting, then walks the floating permission
+     * coach through each pane still missing a grant — opening its System
+     * Settings page and raising that pane's prompt as each step begins, so macOS
+     * never shows several permission dialogs at once.
+     */
+    startPermissionSetup: (
+      permissions: readonly DesktopAppSnapPermissionKind[],
+    ) => Promise<DesktopAppSnapState>;
+    listPendingCaptures: () => Promise<DesktopAppSnapCapture[]>;
+    acknowledgeCapture: (captureId: string) => Promise<void>;
+    listWindows: () => Promise<DesktopAppSnapWindowEntry[]>;
+    captureWindow: (input: { windowId: number }) => Promise<DesktopAppSnapCapture>;
+    openPermissionSettings: (pane: DesktopAppSnapSettingsPane) => Promise<boolean>;
+    restartApp: () => Promise<void>;
+    showPermissionGuide: (pane: DesktopAppSnapSettingsPane) => Promise<void>;
+    hidePermissionGuide: () => Promise<void>;
+    onPermissionGuideState: (
+      listener: (state: DesktopAppSnapPermissionGuideState) => void,
+    ) => () => void;
+    onCaptured: (listener: (capture: DesktopAppSnapCapture) => void) => () => void;
+    onError: (listener: (error: DesktopAppSnapErrorEvent) => void) => () => void;
+    onState: (listener: (state: DesktopAppSnapState) => void) => () => void;
+  };
   notifyReady?: () => void;
   getWsUrl: () => string | null;
   /** Opaque backend-profile identity for small local startup drafts and snapshots. */
@@ -539,6 +608,19 @@ export interface DesktopBridge {
       input: ServerVoiceTranscriptionInput,
     ) => Promise<ServerVoiceTranscriptionResult>;
   };
+  computer?:
+    | {
+        readonly engine?: "legacy" | "cua";
+        request: (input: {
+          threadId: string;
+          request: ComputerUseRequest;
+        }) => Promise<ComputerUseResponse>;
+        onEvent: (listener: () => void) => () => void;
+        onThreadStopped?: (listener: (threadId: string) => void) => () => void;
+        stopAll: () => Promise<void>;
+        setCursorStyle?: (style: DesktopAgentCursorStyle | null) => Promise<void>;
+      }
+    | undefined;
   browser: {
     open: (input: BrowserOpenInput) => Promise<ThreadBrowserState>;
     close: (input: BrowserThreadInput) => Promise<ThreadBrowserState>;
@@ -571,6 +653,8 @@ export interface DesktopBridge {
 }
 
 export interface NativeApi {
+  computer: import("./computerApi").ComputerApi &
+    Omit<NonNullable<DesktopBridge["computer"]>, "onEvent">;
   dialogs: {
     pickFolder: () => Promise<string | null>;
     saveFile?: (input: {
@@ -799,6 +883,13 @@ export interface NativeApi {
     listModelProviders: (
       input: OpenCodeListModelProvidersInput,
     ) => Promise<OpenCodeListModelProvidersResult>;
+    saveCustomProvider: (
+      input: SaveCustomModelProviderInput,
+    ) => Promise<OpenCodeCredentialMutationResult>;
+    removeCustomProvider: (
+      input: RemoveCustomModelProviderInput,
+    ) => Promise<OpenCodeCredentialMutationResult>;
+    fetchCustomModels: (input: FetchCustomModelsInput) => Promise<FetchCustomModelsResult>;
     setApiKey: (input: OpenCodeSetApiKeyInput) => Promise<OpenCodeCredentialMutationResult>;
     removeCredential: (
       input: OpenCodeRemoveCredentialInput,

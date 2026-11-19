@@ -12,7 +12,7 @@ const integration = it.runIf(process.env.DJL_RUN_VPS_TESTS === "1");
 const sockets = [];
 let worker, directory, base, adminToken;
 
-async function start() {
+async function start(testEnvironment = {}) {
   const port = await new Promise((resolve) => {
     const socket = createServer();
     socket.listen(0, "127.0.0.1", () => {
@@ -24,19 +24,26 @@ async function start() {
   directory ??= await mkdtemp(join(tmpdir(), "djl-relay-test-"));
   adminToken ??= randomBytes(32).toString("hex");
   worker = spawn(
-    process.execPath,
+    fileURLToPath(new URL("../node_modules/.bin/workerd", import.meta.url)),
     [
-      fileURLToPath(new URL("../node_modules/.bin/workerd", import.meta.url)),
       "serve",
       "--experimental",
       `--socket-addr=http=127.0.0.1:${port}`,
       `--directory-path=state=${directory}`,
       fileURLToPath(new URL("config.capnp", import.meta.url)),
     ],
-    { env: { ...process.env, RELAY_ADMIN_TOKEN: adminToken }, stdio: "ignore" },
+    {
+      env: { ...process.env, RELAY_ADMIN_TOKEN: adminToken, ...testEnvironment },
+      stdio: ["ignore", "ignore", "pipe"],
+    },
   );
+  let startupError = "";
+  worker.stderr.on("data", (chunk) => {
+    startupError = `${startupError}${chunk}`.slice(-4000);
+  });
   for (let n = 0; n < 100; n++) {
-    if (worker.exitCode !== null) throw new Error("Relay runtime exited before health check");
+    if (worker.exitCode !== null)
+      throw new Error(`Relay runtime exited before health check: ${startupError}`);
     if (
       await fetch(`${base}/health`)
         .then((r) => r.ok)
@@ -49,9 +56,15 @@ async function start() {
 }
 async function stop() {
   if (!worker || worker.exitCode !== null) return;
-  const exited = new Promise((resolve) => worker.once("exit", resolve));
-  worker.kill("SIGTERM");
-  await exited;
+  const stopping = worker;
+  const exited = new Promise((resolve) => stopping.once("exit", resolve));
+  stopping.kill("SIGTERM");
+  const deadline = setTimeout(() => stopping.kill("SIGKILL"), 2000);
+  try {
+    await exited;
+  } finally {
+    clearTimeout(deadline);
+  }
 }
 afterEach(async () => {
   for (const socket of sockets.splice(0)) socket.terminate();
@@ -87,6 +100,63 @@ const registration = (code = "ABCDEFGH23") => ({
   "x-pairing-version": "2",
   "x-pairing-expires-at": String(Date.now() + 120_000),
 });
+
+integration(
+  "keeps provider registration authenticated and distinguishes FCM from APNs",
+  async () => {
+    // Invalid test-only key prevents OAuth/network delivery while exercising real storage/routes.
+    await start({
+      FCM_PROJECT_ID: "djl-test-only",
+      FCM_CLIENT_EMAIL: "test@test.invalid",
+      FCM_PRIVATE_KEY: "invalid-test-only",
+    });
+    const sessionId = randomBytes(24).toString("base64url");
+    const headers = registration();
+    await open(sessionId, "mac", headers);
+    expect(await (await fetch(`${base}/v1/push/capabilities`)).json()).toEqual({
+      providers: ["fcm"],
+    });
+    const input = {
+      sessionId,
+      notificationSecret: headers["x-djl-notification-secret"],
+      provider: "fcm",
+      deviceToken: "AbC_Fid-123",
+      environment: "production",
+      alertsEnabled: true,
+    };
+    const register = (body) => post("/v1/push/session/register-device", body);
+    expect((await register({ ...input, notificationSecret: "wrong" })).status).toBe(401);
+    expect((await register({ ...input, provider: "other" })).status).toBe(400);
+    expect((await register({ ...input, deviceToken: " bad" })).status).toBe(400);
+    expect((await register({ ...input, environment: "development" })).status).toBe(400);
+    expect((await register(input)).status).toBe(200);
+    const completion = {
+      sessionId,
+      notificationSecret: input.notificationSecret,
+      threadId: "thread-1",
+      result: "completed",
+      dedupeKey: "done-1",
+    };
+    const delivery = await post("/v1/push/session/notify-completion", completion);
+    expect(delivery.status).toBe(502);
+    expect(await delivery.json()).toMatchObject({
+      code: "fcm_delivery_failed",
+      error: "fcm_auth_failed",
+    });
+    // Invalid provider writes did not replace the stored FCM registration.
+    expect((await register({ ...input, provider: "other" })).status).toBe(400);
+    expect(
+      await (await post("/v1/push/session/notify-completion", completion)).json(),
+    ).toMatchObject({ code: "fcm_delivery_failed" });
+    const legacy = { ...input, deviceToken: "ABCDEF", environment: "development" };
+    delete legacy.provider;
+    expect((await register(legacy)).status).toBe(200);
+    expect(
+      await (await post("/v1/push/session/notify-completion", completion)).json(),
+    ).toMatchObject({ code: "apns_delivery_failed" });
+  },
+  20_000,
+);
 
 integration(
   "forwards opaque frames and resolves the one-time pairing code",

@@ -4,6 +4,8 @@
  * that is not proxied through Cloudflare, chosen by a one-time latency probe
  * when the setting is "auto".
  */
+import { cloudRateLimitRetryDelay, waitForCloudRetry } from "./rateLimitRetry";
+
 export const DJL_CLOUD_HOSTS = {
   global: "https://api.slcor.com",
   asia: "https://api-asia.slcor.com",
@@ -148,14 +150,22 @@ export function createCloudClient(baseUrl: string, fetchImpl: FetchLike = fetch)
         }),
       ),
     stream: async (path, body, token, signal) => {
-      const res = await fetchImpl(`${baseUrl}${path}`, {
-        method: "POST",
-        headers: headers(token, { accept: "text/event-stream" }),
-        body: JSON.stringify(body),
-        signal,
-      });
-      if (!res.ok) throw new CloudApiError(await parseError(res));
-      return res;
+      for (let attempt = 0; ; attempt++) {
+        signal.throwIfAborted();
+        const res = await fetchImpl(`${baseUrl}${path}`, {
+          method: "POST",
+          headers: headers(token, { accept: "text/event-stream" }),
+          body: JSON.stringify(body),
+          signal,
+        });
+        if (res.ok) return res;
+        const detail = await parseError(res);
+        const delay = cloudRateLimitRetryDelay(detail.code, detail.message, attempt, res.headers);
+        if (detail.status !== 429 || delay === null) throw new CloudApiError(detail);
+        // Only retry rejected admission. Once a stream starts, its caller owns
+        // consumption; completed tool effects must never be replayed.
+        await waitForCloudRetry(delay, signal);
+      }
     },
   };
 }

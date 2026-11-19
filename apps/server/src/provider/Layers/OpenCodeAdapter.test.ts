@@ -2042,6 +2042,65 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(unregisterCalls).toEqual(["server-only-token"]);
   });
 
+  it("keeps Computer calls alive through task approval at startup and turn refresh", async () => {
+    const runtime = createMockOpenCodeRuntime();
+    const threadId = asThreadId("thread-computer-approval-window");
+    const workMcpServer = {
+      start: Effect.void,
+      registerSession: () =>
+        Effect.succeed({
+          name: "djl_work_computer_approval",
+          url: "http://127.0.0.1:41821/mcp",
+          bearerToken: "synthetic-work-token",
+          computer: {
+            begin: async () => "synthetic-computer-turn",
+            end: async () => {},
+            toolNames: () => ["computer_type_text"],
+            requestHeaders: () => ({ "x-djl-computer-turn": "synthetic-computer-turn" }),
+          },
+        }),
+      unregisterSession: () => Effect.void,
+    };
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
+        yield* adapter.sendTurn({
+          threadId,
+          input: "Type only in the owned synthetic editor.",
+          modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+          computerControl: { mode: "request", generation: 0, explicitInvocation: true },
+        });
+        yield* adapter.stopSession(threadId);
+      }).pipe(
+        Effect.provide(
+          makeOpenCodeAdapterLive({ runtime: runtime.runtime, workMcpServer }).pipe(
+            Layer.provideMerge(
+              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-computer-approval-test-" }),
+            ),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ),
+      ),
+    );
+
+    expect(runtime.mcpAddCalls).toHaveLength(2);
+    const humanApprovalWindowMs = 5 * 60_000;
+    const nativeActionBudgetMs = 30_000;
+    for (const call of runtime.mcpAddCalls) {
+      const config = call.config as { readonly timeout?: number };
+      expect(config.timeout).toBeGreaterThan(humanApprovalWindowMs + nativeActionBudgetMs);
+    }
+    expect(runtime.mcpAddCalls[1]).toMatchObject({
+      config: { headers: { "x-djl-computer-turn": "synthetic-computer-turn" } },
+    });
+  });
+
   it("fails session startup when OpenCode cannot connect to the Work MCP endpoint", async () => {
     const runtime = createMockOpenCodeRuntime({
       mcpAddData: {

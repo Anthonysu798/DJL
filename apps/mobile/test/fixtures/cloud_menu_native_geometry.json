@@ -1,0 +1,12 @@
+{
+  "source": "Unchanged Swift CloudNavigationMenu and PhoneNavigationDrawer, iOS26.5 CD2, cloudmenu156-native reference",
+  "logical_screen": [402, 874],
+  "safe_top": 62,
+  "safe_bottom": 34,
+  "action_width": 250,
+  "action_height": 42,
+  "pinned_first_action": [16, 493, 250, 42],
+  "selected_first_action": [16, 322.3333333333333, 250, 42],
+  "delete_review_button": [168, 427, 208, 48],
+  "note": "Action rectangles are native AX measurements. Preview enlargement is separately checked against the existing native-derived shared context-menu layout; AX row rectangles omit its visual transform."
+}

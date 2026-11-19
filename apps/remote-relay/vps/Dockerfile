@@ -13,4 +13,4 @@ COPY apps/remote-relay/vps/config.capnp ./apps/remote-relay/vps/config.capnp
 RUN mkdir /data && chown bun:bun /data
 USER bun
 EXPOSE 8789
-CMD ["bun", "apps/remote-relay/node_modules/.bin/workerd", "serve", "--experimental", "--socket-addr=http=*:8789", "apps/remote-relay/vps/config.capnp"]
+CMD ["apps/remote-relay/node_modules/.bin/workerd", "serve", "--experimental", "--socket-addr=http=*:8789", "apps/remote-relay/vps/config.capnp"]

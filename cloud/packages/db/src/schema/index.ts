@@ -6,3 +6,9 @@ export * from "./sync.ts";
 export * from "./chat.ts";
 export * from "./nativeAuth.ts";
 export * from "./notifications.ts";
+
+export * from "./social.ts";
+export * from "./socialPublishing.ts";
+export * from "./socialReviewLinks.ts";
+export * from "./socialReports.ts";
+export * from "./socialTrackingLinks.ts";

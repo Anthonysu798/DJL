@@ -131,7 +131,10 @@ export function findPublicSourceViolations(
       (file.path.startsWith("scripts/") ||
         file.path.includes("/scripts/") ||
         /\.(?:sh|py|cjs|mjs)$/i.test(file.path));
-    if (/[A-Za-z0-9._-]+@\d{1,3}(?:\.\d{1,3}){3}/.test(text)) {
+    const fixedRemoteHost = [...text.matchAll(/[A-Za-z0-9._-]+@(\d{1,3}(?:\.\d{1,3}){3})/g)].some(
+      ([, host]) => !host!.startsWith("127."),
+    );
+    if (fixedRemoteHost) {
       violations.push({
         path: file.path,
         rule: "hard-coded-release-host",

@@ -1,9 +1,17 @@
 #!/usr/bin/env node
+import { verifyPackagedCua } from "../apps/desktop/scripts/cua-packaged-provenance.mjs";
+import cuaRelease from "../packages/shared/src/cuaDriverRelease.json" with { type: "json" };
+import { COMPUTER_QA_BUILD } from "@synara/shared/desktopComputerBuild";
 // FILE: build-desktop-artifact.ts
 // Purpose: Stages and builds packaged desktop artifacts plus updater metadata for GitHub releases.
 // Layer: Release/build script
 // Depends on: apps/desktop package metadata, electron-builder, and desktop update config.
 
+import {
+  findPackagedMultiPostRoots,
+  multiPostExtraResources,
+  verifyMultiPostResources,
+} from "./lib/desktop-multipost-resources.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -39,6 +47,17 @@ import { finalizeMacDmgUpdateMetadata } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
 import { assertNoBundledOpenCode } from "./check-no-bundled-opencode.ts";
+import {
+  findPackagedMediaRoots,
+  smokeDesktopMedia,
+  stageDesktopMedia,
+  verifyDesktopMedia,
+} from "./lib/desktop-media.ts";
+import {
+  findPackagedComputerUseRoots,
+  stageDesktopComputerUse,
+  verifyDesktopComputerUse,
+} from "./stage-desktop-computer-use.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -206,6 +225,7 @@ interface ResolvedBuildOptions {
 }
 
 interface StagePackageJson {
+  readonly djlComputerBuild?: "cua-qa";
   readonly name: string;
   readonly version: string;
   readonly buildVersion: string;
@@ -758,9 +778,45 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   yield* assertPlatformBuildResources(options.platform, stageResourcesDir, options.verbose);
 
+  const computerQaBuild = process.env.DJL_DESKTOP_COMPUTER_QA === "1";
+  if (computerQaBuild && (options.platform !== "mac" || options.signed || options.target !== "dir"))
+    return yield* new BuildScriptError({
+      message: "Computer QA builds require an unsigned macOS dir target.",
+    });
+  if (options.platform === "mac") {
+    const provisioner = path.join(repoRoot, "apps/desktop/scripts/provision-cua-driver.mjs");
+    const destination = path.join(stageResourcesDir, "cua-driver");
+    yield* runCommand(
+      ChildProcess.make({
+        cwd: repoRoot,
+        ...commandOutputOptions(options.verbose),
+      })`node ${provisioner} --destination ${destination} --platform darwin --arch ${options.arch}`,
+    );
+    const helperBuilder = path.join(repoRoot, "apps/desktop/scripts/build-appsnap-helper.mjs");
+    const helper = path.join(stageRoot, "appsnap/synara-appsnap-helper");
+    yield* fs.makeDirectory(path.dirname(helper), { recursive: true });
+    yield* runCommand(
+      ChildProcess.make({
+        cwd: repoRoot,
+        ...commandOutputOptions(options.verbose),
+      })`node ${helperBuilder} --arch ${options.arch} --output ${helper}`,
+    );
+  }
+
   // electron-builder is filtering out stageResourcesDir directory in the AppImage for production
   yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
 
+  const computerUseResources = yield* Effect.try({
+    try: () =>
+      stageDesktopComputerUse({
+        platform: options.platform,
+        arch: options.arch,
+        root: path.join(stageRoot, "computer-use"),
+        repoRoot,
+      }),
+    catch: (cause) =>
+      new BuildScriptError({ message: "Native computer-use helper staging failed.", cause }),
+  });
   const desktopBuildConfig = yield* createBuildConfig(
     options.platform,
     options.target,
@@ -769,11 +825,67 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     options.mockUpdates,
     options.mockUpdateServerPort,
   );
+  desktopBuildConfig.extraResources = [
+    ...(Array.isArray(desktopBuildConfig.extraResources) ? desktopBuildConfig.extraResources : []),
+    ...multiPostExtraResources(repoRoot),
+  ];
+  if (options.platform === "mac") {
+    desktopBuildConfig.extraResources = [
+      ...(Array.isArray(desktopBuildConfig.extraResources)
+        ? desktopBuildConfig.extraResources
+        : []),
+      { from: path.join(stageResourcesDir, "cua-driver"), to: "cua-driver", filter: ["**/*"] },
+    ];
+    desktopBuildConfig.extraFiles = [
+      {
+        from: path.join(stageRoot, "appsnap/synara-appsnap-helper"),
+        to: "Helpers/synara-appsnap-helper",
+      },
+    ];
+  }
+  if (computerQaBuild) {
+    desktopBuildConfig.appId = COMPUTER_QA_BUILD.bundleId;
+    desktopBuildConfig.productName = COMPUTER_QA_BUILD.displayName;
+    desktopBuildConfig.protocols = [];
+    delete desktopBuildConfig.publish;
+  }
+  const mediaRoot = path.join(stageRoot, "media");
+  const mediaTargets = yield* Effect.tryPromise({
+    try: () =>
+      stageDesktopMedia({
+        platform: options.platform,
+        arch: options.arch,
+        mediaRoot,
+        cacheDir: path.join(repoRoot, ".cache/djl/media-tools"),
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Pinned desktop media staging or native encode/probe verification failed.",
+        cause,
+      }),
+  });
+  if (mediaTargets.length) {
+    desktopBuildConfig.extraResources = [
+      ...(Array.isArray(desktopBuildConfig.extraResources)
+        ? desktopBuildConfig.extraResources
+        : []),
+      { from: mediaRoot, to: "media", filter: ["**/*"] },
+    ];
+  }
+  if (computerUseResources) {
+    desktopBuildConfig.extraResources = [
+      ...(Array.isArray(desktopBuildConfig.extraResources)
+        ? desktopBuildConfig.extraResources
+        : []),
+      ...computerUseResources,
+    ];
+  }
   const stagePackageJson: StagePackageJson = {
     name: "synara-desktop",
     version: appVersion,
     buildVersion: appVersion,
     synaraCommitHash: commitHash,
+    ...(computerQaBuild ? { djlComputerBuild: COMPUTER_QA_BUILD.marker } : {}),
     private: true,
     description: "DJL desktop build",
     author: "Emanuele Di Pietro",
@@ -890,6 +1002,105 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
   }
 
+  yield* Effect.try({
+    try: () => {
+      const roots = findPackagedMultiPostRoots(
+        stageDistDir,
+        computerQaBuild ? COMPUTER_QA_BUILD.displayName : "DJL",
+      );
+      if (roots.length !== 1)
+        throw new Error(
+          `Expected one packaged MultiPost resource directory, received ${roots.length}.`,
+        );
+      verifyMultiPostResources(roots[0]!);
+    },
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Packaged MultiPost Skills or licenses are missing or changed.",
+        cause,
+      }),
+  });
+
+  if (options.platform === "mac") {
+    yield* Effect.tryPromise({
+      try: async () => {
+        const root = path.join(
+          stageDistDir,
+          options.arch === "universal" ? "mac-universal" : `mac-${options.arch}`,
+          `${computerQaBuild ? COMPUTER_QA_BUILD.displayName : "DJL"}.app`,
+          "Contents",
+          "Resources",
+          "cua-driver",
+        );
+        await verifyPackagedCua(
+          root,
+          cuaRelease,
+          options.arch === "universal" ? ["arm64", "x64"] : [options.arch],
+        );
+      },
+      catch: (cause) =>
+        new BuildScriptError({
+          message: "Packaged Cua signature or executable-code provenance verification failed.",
+          cause,
+        }),
+    });
+  }
+
+  if (computerUseResources) {
+    yield* Effect.try({
+      try: () => {
+        const roots = findPackagedComputerUseRoots(
+          stageDistDir,
+          computerQaBuild ? COMPUTER_QA_BUILD.displayName : "DJL",
+        );
+        if (roots.length !== 1)
+          throw new Error(
+            `Expected one packaged computer-use resource directory, received ${roots.length}.`,
+          );
+        verifyDesktopComputerUse({
+          root: roots[0]!,
+          arch: options.arch,
+          repoRoot,
+          packaged: true,
+          signed: options.signed,
+        });
+      },
+      catch: (cause) =>
+        new BuildScriptError({
+          message: "Packaged native computer-use helper verification failed.",
+          cause,
+        }),
+    });
+  }
+
+  if (mediaTargets.length) {
+    yield* Effect.tryPromise({
+      try: async () => {
+        const roots = findPackagedMediaRoots(
+          stageDistDir,
+          computerQaBuild ? COMPUTER_QA_BUILD.displayName : "DJL",
+        );
+        if (roots.length !== 1)
+          throw new Error(
+            `Expected exactly one packaged media resource directory, received ${roots.length}.`,
+          );
+        for (const target of mediaTargets) {
+          await verifyDesktopMedia(roots[0]!, target, true);
+          if (target === `${process.platform}-${process.arch}`) {
+            const smoke = await smokeDesktopMedia(roots[0]!, target);
+            console.log(`[desktop-artifact] Packaged media smoke: ${JSON.stringify(smoke)}`);
+          }
+        }
+      },
+      catch: (cause) =>
+        new BuildScriptError({
+          message:
+            "Packaged desktop media failed architecture/provenance or native encode/probe verification.",
+          cause,
+        }),
+    });
+  }
+
   const publishConfigs = desktopBuildConfig.publish;
   const primaryPublishConfig = Array.isArray(publishConfigs) ? publishConfigs[0] : undefined;
   if (
@@ -922,7 +1133,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
   }
 
-  if (options.platform === "mac") {
+  if (options.platform === "mac" && !computerQaBuild) {
     yield* Effect.log("[desktop-artifact] Repacking and validating macOS update zip...");
     const finalizedZip = yield* Effect.tryPromise({
       try: () =>
@@ -977,6 +1188,19 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* fs.makeDirectory(options.outputDir, { recursive: true });
 
   const copiedArtifacts: string[] = [];
+  if (computerQaBuild) {
+    const from = path.join(
+      stageDistDir,
+      `mac-${options.arch}`,
+      `${COMPUTER_QA_BUILD.displayName}.app`,
+    );
+    const to = path.join(options.outputDir, `${COMPUTER_QA_BUILD.displayName}.app`);
+    yield* runCommand(
+      ChildProcess.make({ ...commandOutputOptions(options.verbose) })`/usr/bin/ditto ${from} ${to}`,
+    );
+    copiedArtifacts.push(to);
+  }
+
   for (const entry of stageEntries) {
     const from = path.join(stageDistDir, entry);
     const stat = yield* fs.stat(from).pipe(Effect.catch(() => Effect.succeed(null)));

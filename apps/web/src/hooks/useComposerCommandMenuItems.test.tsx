@@ -5,12 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useComposerCommandMenuItems } from "./useComposerCommandMenuItems";
 import { groupCommandItems } from "../components/chat/ComposerCommandMenu";
 
-function discover(query: string) {
+function discover(query: string, kind: "mention" | "skill" = "mention") {
   const captured: { items: ReturnType<typeof useComposerCommandMenuItems> } = { items: [] };
   const providers: ProviderKind[] = ["codex", "claudeAgent", "cursor", "grok"];
   function Probe() {
     captured.items = useComposerCommandMenuItems({
-      composerTrigger: { kind: "mention", query, rangeStart: 0, rangeEnd: query.length + 1 },
+      composerTrigger: { kind, query, rangeStart: 0, rangeEnd: query.length + 1 },
       provider: "codex",
       providerPlugins: [],
       providerNativeCommands: [],
@@ -73,4 +73,38 @@ describe("Agent mode mention picker", () => {
     ).toBe(true);
     expect(groups.find((group) => group.id === "local")?.items[0]?.type).toBe("local-root");
   });
+});
+
+describe("bundled social discovery", () => {
+  it("offers Social Media without provider plugins", () => {
+    expect(discover("social")).toContainEqual(
+      expect.objectContaining({
+        type: "plugin",
+        mention: { name: "social", path: "plugin://djl/social" },
+      }),
+    );
+  });
+  it("offers runnable built-in skills with the dollar trigger", () => {
+    expect(discover("social-publish", "skill")).toContainEqual(
+      expect.objectContaining({
+        type: "skill",
+        skill: expect.objectContaining({ path: "builtin://djl/social/publish" }),
+      }),
+    );
+  });
+});
+
+it("offers the native Computer Use plugin and skill", () => {
+  expect(discover("computer")).toContainEqual(
+    expect.objectContaining({
+      type: "plugin",
+      mention: { name: "computer", path: "plugin://djl/computer-use" },
+    }),
+  );
+  expect(discover("computer-use", "skill")).toContainEqual(
+    expect.objectContaining({
+      type: "skill",
+      skill: expect.objectContaining({ path: "builtin://djl/computer-use/operate" }),
+    }),
+  );
 });

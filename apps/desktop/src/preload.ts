@@ -1,3 +1,6 @@
+import { DESKTOP_IPC_CHANNELS as IPC } from "./ipcChannels";
+import type { DesktopComputerPreviewFrame } from "@synara/contracts";
+import { COMPUTER_USE_IPC_CHANNELS } from "./computerUseIpcChannels";
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, DesktopBuildInfo } from "@synara/contracts";
 import { RENDERER_READY_CHANNEL } from "./windowReveal";
@@ -14,7 +17,7 @@ import {
   CLOUD_AUTH_CALLBACK_CHANNEL,
   CLOUD_AUTH_TAKE_CALLBACK_CHANNEL,
   type CloudAuthCallback,
-} from "./cloudAuthDeepLink";
+} from "./cloudAuthIpcChannels";
 import { STORAGE_MIGRATION_IPC_CHANNELS } from "./desktopStorageMigration";
 import { REMOTE_GATEWAY_IPC_CHANNELS } from "./remoteGatewayIpc";
 import {
@@ -57,6 +60,35 @@ function getDesktopWsUrl(): string | null {
     return resolveDesktopWsUrlFromEnv(process.env);
   }
 }
+
+function computerPreviewFrameBytes(value: unknown): Uint8Array | null {
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    (value as { readonly type?: unknown }).type === "Buffer" &&
+    Array.isArray((value as { readonly data?: unknown }).data)
+  ) {
+    return Uint8Array.from((value as { readonly data: readonly number[] }).data);
+  }
+  return null;
+}
+
+function parseComputerPreviewFrame(payload: unknown): DesktopComputerPreviewFrame | null {
+  if (!payload || typeof payload !== "object") return null;
+  const frame = payload as Record<string, unknown>;
+  if (typeof frame.windowId !== "number" || !Number.isFinite(frame.windowId)) return null;
+  if (typeof frame.seq !== "number" || !Number.isFinite(frame.seq)) return null;
+  const jpeg = computerPreviewFrameBytes(frame.jpeg);
+  if (!jpeg || jpeg.byteLength === 0) return null;
+  return { windowId: frame.windowId, seq: frame.seq, jpeg };
+}
+
+let computerPreviewListenerCount = 0;
 
 contextBridge.exposeInMainWorld("desktopBridge", {
   notifyReady: () => ipcRenderer.send(RENDERER_READY_CHANNEL),
@@ -182,12 +214,118 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       return () => ipcRenderer.removeListener(REMOTE_GATEWAY_IPC_CHANNELS.state, wrappedListener);
     },
   },
+  appSnap: {
+    captureCurrentApp: (requestId) => ipcRenderer.invoke(IPC.appSnap.captureCurrentApp, requestId),
+    cancelCapture: (requestId) => ipcRenderer.invoke(IPC.appSnap.cancelCapture, requestId),
+    getState: (permissions) => ipcRenderer.invoke(IPC.appSnap.getState, permissions),
+    setEnabled: (enabled) => ipcRenderer.invoke(IPC.appSnap.setEnabled, enabled),
+    checkShortcut: (shortcut) => ipcRenderer.invoke(IPC.appSnap.checkShortcut, shortcut),
+    setShortcut: (shortcut) => ipcRenderer.invoke(IPC.appSnap.setShortcut, shortcut),
+    requestPermissions: (permissions) =>
+      ipcRenderer.invoke(IPC.appSnap.requestPermissions, permissions),
+    startPermissionSetup: (permissions) =>
+      ipcRenderer.invoke(IPC.appSnap.startPermissionSetup, permissions),
+    listPendingCaptures: () => ipcRenderer.invoke(IPC.appSnap.listPendingCaptures),
+    acknowledgeCapture: (captureId) =>
+      ipcRenderer.invoke(IPC.appSnap.acknowledgeCapture, captureId),
+    listWindows: () => ipcRenderer.invoke(IPC.appSnap.listWindows),
+    captureWindow: (input) => ipcRenderer.invoke(IPC.appSnap.captureWindow, input),
+    openPermissionSettings: (pane) => ipcRenderer.invoke(IPC.appSnap.openPermissionSettings, pane),
+    restartApp: () => ipcRenderer.invoke(IPC.appSnap.restartApp),
+    showPermissionGuide: (pane) => ipcRenderer.invoke(IPC.appSnap.showPermissionGuide, pane),
+    hidePermissionGuide: () => ipcRenderer.invoke(IPC.appSnap.hidePermissionGuide),
+    onPermissionGuideState: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, state: unknown) => {
+        if (typeof state !== "string") return;
+        listener(state as Parameters<typeof listener>[0]);
+      };
+      ipcRenderer.on(IPC.appSnap.permissionGuideState, wrappedListener);
+      return () => ipcRenderer.removeListener(IPC.appSnap.permissionGuideState, wrappedListener);
+    },
+    onCaptured: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, capture: unknown) => {
+        if (typeof capture !== "object" || capture === null) return;
+        listener(capture as Parameters<typeof listener>[0]);
+      };
+      ipcRenderer.on(IPC.appSnap.captured, wrappedListener);
+      return () => ipcRenderer.removeListener(IPC.appSnap.captured, wrappedListener);
+    },
+    onError: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, error: unknown) => {
+        if (typeof error !== "object" || error === null) return;
+        listener(error as Parameters<typeof listener>[0]);
+      };
+      ipcRenderer.on(IPC.appSnap.error, wrappedListener);
+      return () => ipcRenderer.removeListener(IPC.appSnap.error, wrappedListener);
+    },
+    onState: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, state: unknown) => {
+        if (typeof state !== "object" || state === null) return;
+        listener(state as Parameters<typeof listener>[0]);
+      };
+      ipcRenderer.on(IPC.appSnap.state, wrappedListener);
+      return () => ipcRenderer.removeListener(IPC.appSnap.state, wrappedListener);
+    },
+  },
   storageMigration: {
     readSnapshot: () => ipcRenderer.sendSync(STORAGE_MIGRATION_IPC_CHANNELS.read),
     acknowledgeSnapshot: () => ipcRenderer.invoke(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge),
   },
   server: {
     transcribeVoice: (input) => ipcRenderer.invoke(SERVER_TRANSCRIBE_VOICE_CHANNEL, input),
+  },
+  computerPreview: {
+    onFrame: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+        const frame = parseComputerPreviewFrame(payload);
+        if (frame) listener(frame);
+      };
+
+      ipcRenderer.on(IPC.computerPreviewFrame, wrappedListener);
+      // A frame listener is the preview's demand signal: the main process runs
+      // the native capture helper only while this window has one.
+      computerPreviewListenerCount += 1;
+      if (computerPreviewListenerCount === 1) ipcRenderer.send(IPC.computerPreviewSubscribe);
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        ipcRenderer.removeListener(IPC.computerPreviewFrame, wrappedListener);
+        computerPreviewListenerCount -= 1;
+        if (computerPreviewListenerCount === 0) ipcRenderer.send(IPC.computerPreviewUnsubscribe);
+      };
+    },
+  },
+  computer: {
+    engine: ipcRenderer.sendSync("desktop:computer-engine") === "cua" ? "cua" : "legacy",
+    setCursorStyle: (style) => ipcRenderer.invoke(IPC.computerSetCursorStyle, style),
+    onThreadStopped: (listener) => {
+      const receive = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+        if (typeof payload !== "object" || payload === null) return;
+        const event = payload as { type?: unknown; threadId?: unknown };
+        if (
+          event.type === "thread-stopped" &&
+          typeof event.threadId === "string" &&
+          event.threadId.length <= 128
+        )
+          listener(event.threadId);
+      };
+      ipcRenderer.on(COMPUTER_USE_IPC_CHANNELS.event, receive);
+      return () => ipcRenderer.removeListener(COMPUTER_USE_IPC_CHANNELS.event, receive);
+    },
+    request: (input) => ipcRenderer.invoke(COMPUTER_USE_IPC_CHANNELS.request, input),
+    onEvent: (listener) => {
+      const receive = () => listener();
+      ipcRenderer.on(COMPUTER_USE_IPC_CHANNELS.event, receive);
+      return () => ipcRenderer.removeListener(COMPUTER_USE_IPC_CHANNELS.event, receive);
+    },
+    stopAll: async () => {
+      const response = await ipcRenderer.invoke(COMPUTER_USE_IPC_CHANNELS.request, {
+        threadId: "desktop:settings",
+        request: { method: "stop" },
+      });
+      if (response.error) throw new Error(response.error.message);
+    },
   },
   browser: {
     open: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.open, input),

@@ -4,6 +4,7 @@
 // Exports: SettingsCard, SettingsSection, SettingsListRow, SettingsRow, SettingsSelectPopup
 
 import { type ComponentProps, type ReactNode } from "react";
+import { useTranslation } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { settingRowAnchorId } from "~/settingsNavigation";
 import {
@@ -156,5 +157,34 @@ export function SettingsRow({
       </div>
       {children}
     </div>
+  );
+}
+
+export function SettingsSectionShell({
+  title,
+  translateTitle = true,
+  action,
+  id,
+  children,
+}: {
+  title: string;
+  translateTitle?: boolean;
+  action?: ReactNode;
+  id?: string;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section id={id} className={cn(SETTINGS_PANEL_SECTION_CLASS_NAME, id && "scroll-mt-24")}>
+      {action != null ? (
+        <div className="flex items-center justify-between gap-2">
+          <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{translateTitle ? t(title) : title}</h2>
+          {action}
+        </div>
+      ) : (
+        <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>{translateTitle ? t(title) : title}</h2>
+      )}
+      {children}
+    </section>
   );
 }

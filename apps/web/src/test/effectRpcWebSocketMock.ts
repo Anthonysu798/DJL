@@ -4,6 +4,7 @@
 // Exports: helpers for request parsing, subscription detection, plus Exit/Chunk/Pong responses.
 
 import {
+  COMPUTER_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
   WS_METHODS,
   type OrchestrationReadModel,
@@ -74,7 +75,11 @@ export function readEffectRpcClientMessage(
 // whole socket 500ms later; any request issued during that window never reaches the fixture
 // and its promise never settles. Fixtures must leave these requests open instead.
 const OPEN_SUBSCRIPTION_METHODS: ReadonlySet<string> = new Set<string>(
-  [...Object.entries(WS_METHODS), ...Object.entries(ORCHESTRATION_WS_METHODS)]
+  [
+    ...Object.entries(WS_METHODS),
+    ...Object.entries(ORCHESTRATION_WS_METHODS),
+    ...Object.entries(COMPUTER_WS_METHODS),
+  ]
     .filter(([key]) => key.startsWith("subscribe"))
     .map(([, method]) => method),
 );

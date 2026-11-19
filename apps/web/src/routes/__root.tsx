@@ -1,3 +1,4 @@
+import { useComputerEventBridge } from "../hooks/useComputerEventBridge";
 import { useStartupSnapshot } from "../startup/useStartupSnapshot";
 import { useStartupRouteReady } from "../startup/useStartupRouteReady";
 import { getStartupSession } from "../startup/session";
@@ -793,6 +794,7 @@ function shouldPollThreadDetailCatchup(threadId: ThreadId): boolean {
 }
 
 function EventRouter() {
+  useComputerEventBridge();
   const { t } = useTranslation("shell");
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const syncServerThreadDetailHotPath = useStore((store) => store.syncServerThreadDetailHotPath);
