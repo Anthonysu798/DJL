@@ -1,19 +1,42 @@
 // FILE: GroupComposer.tsx
-// Purpose: The group chat composer: @ menu for members and All, the "wake N agents" check
-//          before @all, file attachments and an explicit skill.
+// Purpose: The group chat composer, built from the main chat composer's pieces: the same card,
+//          `+` menu, `$` skill menu, image and file thumbnails and send button, plus the @ menu
+//          for members and All and the "wake N agents" check before @all.
 // Layer: UI component
 
 import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_FILE_BYTES,
   type Group,
-  type ProviderSkillReference,
+  type ProviderSkillDescriptor,
   type UploadChatAttachment,
 } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  ComposerCommandMenu,
+  type ComposerCommandItem,
+} from "~/components/chat/ComposerCommandMenu";
+import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
+import { ComposerReferenceAttachments } from "~/components/chat/ComposerReferenceAttachments";
+import type { ExpandedImagePreview } from "~/components/chat/ExpandedImagePreview";
+import {
+  CHAT_COLUMN_FRAME_CLASS_NAME,
+  COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME,
+  COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
+  COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
+  COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME,
+  COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
+  COMPOSER_EDITOR_PADDING_CLASS_NAME,
+  COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
+  COMPOSER_FOOTER_ROW_CLASS_NAME,
+  COMPOSER_INPUT_SHELL_CLASS_NAME,
+  COMPOSER_INPUT_SURFACE_CLASS_NAME,
+} from "~/components/chat/composerPickerStyles";
+import { GroupChatIcon } from "~/components/Icons";
+import { ProviderIcon } from "~/components/ProviderIcon";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -23,20 +46,41 @@ import {
   DialogPopup,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Menu, MenuItem, MenuTrigger } from "~/components/ui/menu";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
+import { detectComposerTrigger } from "~/composer-logic";
+import type { ComposerFileAttachment, ComposerImageAttachment } from "~/composerDraftStore";
+import { useTheme } from "~/hooks/useTheme";
+import { COMPOSER_ATTACHMENT_ACCEPT } from "~/lib/composerSend";
+import { ComposerSendArrowIcon, PaperclipIcon, PlusIcon, SkillCubeIcon } from "~/lib/icons";
+import {
+  buildSkillSearchFields,
+  normalizeProviderDiscoveryText,
+  rankProviderDiscoveryItems,
+} from "~/lib/providerDiscovery";
+import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
+import { parseGroupMentions } from "@synara/shared/groupChat";
 
+import { GroupAgentAvatar } from "./GroupAgentAvatar";
 import type { GroupSendInput } from "./GroupChatView";
 import { shouldConfirmAll } from "./groupChat.logic";
 import {
   activeMentionQuery,
+  composerTokens,
   insertMention,
+  insertSkillToken,
   mentionMenuItems,
-  type MentionQuery,
+  referencedSkills,
 } from "./groupComposer.logic";
 
 export type GroupComposerHandle = { setText: (text: string) => void; focus: () => void };
 
-type Attachment = { key: string; name: string; upload: UploadChatAttachment };
+type SkillRange = { query: string; rangeStart: number; rangeEnd: number };
+type ComposerMenu =
+  | { kind: "mention"; start: number; query: string }
+  | ({ kind: "skill" } & SkillRange)
+  | null;
 
 const readDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -46,60 +90,171 @@ const readDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const menuAt = (text: string, cursor: number): ComposerMenu => {
+  const mention = activeMentionQuery(text, cursor);
+  if (mention) return { kind: "mention", ...mention };
+  const trigger = detectComposerTrigger(text, cursor);
+  return trigger?.kind === "skill"
+    ? {
+        kind: "skill",
+        query: trigger.query,
+        rangeStart: trigger.rangeStart,
+        rangeEnd: trigger.rangeEnd,
+      }
+    : null;
+};
+
 export function GroupComposer(props: {
   group: Group;
   send: (input: GroupSendInput) => Promise<boolean>;
+  onExpandImage: (preview: ExpandedImagePreview) => void;
   handle?: Ref<GroupComposerHandle>;
 }) {
   const { t } = useTranslation("shell");
+  const { t: tChat } = useTranslation("chat");
+  const { resolvedTheme } = useTheme();
   const { group } = props;
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mirrorRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [text, setText] = useState("");
-  const [mention, setMention] = useState<MentionQuery | null>(null);
+  const [menu, setMenu] = useState<ComposerMenu>(null);
   const [highlight, setHighlight] = useState(0);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [skill, setSkill] = useState<ProviderSkillReference | null>(null);
-  const [skillMenuOpen, setSkillMenuOpen] = useState(false);
+  const [images, setImages] = useState<ComposerImageAttachment[]>([]);
+  const [files, setFiles] = useState<ComposerFileAttachment[]>([]);
+  const [chosenSkills, setChosenSkills] = useState<ProviderSkillDescriptor[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
 
   const skillsQuery = useQuery({
     queryKey: ["multi-agents", "skills", group.folder],
     queryFn: () => ensureNativeApi().provider.listSkillsCatalog({ cwd: group.folder }),
-    enabled: skillMenuOpen,
+    enabled: menu?.kind === "skill",
   });
-  const skills = (skillsQuery.data?.skills ?? []).filter((entry) => entry.enabled);
-  const menuItems = mention ? mentionMenuItems(group, mention.query) : [];
+  const skillItems: ComposerCommandItem[] =
+    menu?.kind === "skill"
+      ? rankProviderDiscoveryItems(
+          (skillsQuery.data?.skills ?? []).filter((entry) => entry.enabled),
+          normalizeProviderDiscoveryText(menu.query),
+          buildSkillSearchFields,
+        ).map((skill) => ({
+          id: `skill:${skill.path}`,
+          type: "skill",
+          skill,
+          label: skill.interface?.displayName ?? skill.name,
+          description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
+        }))
+      : [];
+  const mentionItems = menu?.kind === "mention" ? mentionMenuItems(group, menu.query) : [];
+  const menuLength = menu?.kind === "skill" ? skillItems.length : mentionItems.length;
+  const membersByHandle = new Map(group.members.map((member) => [member.handle, member]));
+  const handles = group.members.map((member) => member.handle);
+  const tokens = composerTokens(text, {
+    handles,
+    skillNames: chosenSkills.map((skill) => skill.name),
+  });
+  let tokenStart = 0;
+  const keyedTokens = tokens.map((token) => {
+    const start = tokenStart;
+    tokenStart += token.text.length;
+    return { kind: token.kind, text: token.text, start };
+  });
+  // Who this message will wake, shown beside Send while the user types.
+  const mentioned = parseGroupMentions(text, handles);
+  const recipients = mentioned.all
+    ? group.members
+    : mentioned.handles.flatMap((handle) => membersByHandle.get(handle) ?? []);
+  const recipientsLabel =
+    recipients.length === 0
+      ? null
+      : mentioned.all
+        ? t("multiAgents.composer.sendsToAll")
+        : t("multiAgents.composer.sendsTo", {
+            names: recipients.map((member) => member.handle).join(", "),
+          });
+
+  const placeCursor = (value: string, cursor: number) =>
+    requestAnimationFrame(() => {
+      const element = textareaRef.current;
+      if (!element) return;
+      element.focus();
+      element.setSelectionRange(cursor, cursor);
+      setMenu(menuAt(value, cursor));
+    });
 
   useImperativeHandle(props.handle, () => ({
     setText: (value) => {
       setText(value);
-      requestAnimationFrame(() => {
-        const element = textareaRef.current;
-        if (!element) return;
-        element.focus();
-        element.setSelectionRange(value.length, value.length);
-      });
+      placeCursor(value, value.length);
     },
     focus: () => textareaRef.current?.focus(),
   }));
 
-  const updateMention = (value: string, cursor: number) => {
-    setMention(activeMentionQuery(value, cursor));
+  const updateMenu = (value: string, cursor: number) => {
+    setMenu(menuAt(value, cursor));
     setHighlight(0);
   };
 
-  const choose = (handle: string) => {
-    if (!mention) return;
-    const next = insertMention(text, mention, handle);
+  const chooseMention = (handle: string) => {
+    if (menu?.kind !== "mention") return;
+    const next = insertMention(text, menu, handle);
     setText(next.text);
-    setMention(null);
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(next.cursor, next.cursor);
-    });
+    setMenu(null);
+    placeCursor(next.text, next.cursor);
   };
+
+  const chooseSkill = (item: ComposerCommandItem) => {
+    if (menu?.kind !== "skill" || item.type !== "skill") return;
+    const next = insertSkillToken(text, menu, item.skill.name);
+    setText(next.text);
+    setChosenSkills((current) =>
+      current.some((skill) => skill.path === item.skill.path) ? current : [...current, item.skill],
+    );
+    setMenu(null);
+    placeCursor(next.text, next.cursor);
+  };
+
+  const startToken = (symbol: "@" | "$") => {
+    const element = textareaRef.current;
+    const cursor = element?.selectionStart ?? text.length;
+    const before = text.slice(0, cursor);
+    const insert = before.length === 0 || /\s$/.test(before) ? symbol : ` ${symbol}`;
+    const next = before + insert + text.slice(cursor);
+    setText(next);
+    placeCursor(next, cursor + insert.length);
+  };
+
+  const addFiles = (incoming: readonly File[]) => {
+    const room = PROVIDER_SEND_TURN_MAX_ATTACHMENTS - images.length - files.length;
+    const accepted = incoming
+      .filter((file) => file.size <= PROVIDER_SEND_TURN_MAX_FILE_BYTES)
+      .slice(0, Math.max(0, room));
+    const nextImages: ComposerImageAttachment[] = [];
+    const nextFiles: ComposerFileAttachment[] = [];
+    for (const file of accepted) {
+      const base = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        file,
+      };
+      if (base.mimeType.startsWith("image/"))
+        nextImages.push({ ...base, type: "image", previewUrl: URL.createObjectURL(file) });
+      else nextFiles.push({ ...base, type: "file" });
+    }
+    if (nextImages.length > 0) setImages((current) => [...current, ...nextImages]);
+    if (nextFiles.length > 0) setFiles((current) => [...current, ...nextFiles]);
+  };
+
+  const removeImage = (id: string) =>
+    setImages((current) =>
+      current.filter((image) => {
+        if (image.id === id) URL.revokeObjectURL(image.previewUrl);
+        return image.id !== id;
+      }),
+    );
 
   const submit = async (confirmed = false) => {
     const value = text.trim();
@@ -108,15 +263,28 @@ export function GroupComposer(props: {
       setConfirming(true);
       return;
     }
+    const attachments: UploadChatAttachment[] = await Promise.all(
+      [...images, ...files].map(async (entry): Promise<UploadChatAttachment> => {
+        const dataUrl = await readDataUrl(entry.file);
+        const { name, mimeType, sizeBytes } = entry;
+        return entry.type === "image"
+          ? { type: "image", name, mimeType, sizeBytes, dataUrl }
+          : { type: "file", name, mimeType, sizeBytes, dataUrl };
+      }),
+    );
+    const skills = referencedSkills(value, chosenSkills).map(({ name, path }) => ({ name, path }));
     const sent = await props.send({
       text: value,
-      attachments: attachments.map((entry) => entry.upload),
-      ...(skill ? { skills: [skill] } : {}),
+      attachments,
+      ...(skills.length > 0 ? { skills } : {}),
     });
     if (sent) {
+      for (const image of images) URL.revokeObjectURL(image.previewUrl);
       setText("");
-      setAttachments([]);
-      setSkill(null);
+      setImages([]);
+      setFiles([]);
+      setChosenSkills([]);
+      setMenu(null);
     }
   };
 
@@ -129,171 +297,289 @@ export function GroupComposer(props: {
     await submit(true);
   };
 
-  const addFiles = async (files: FileList | null) => {
-    if (!files) return;
-    const next: Attachment[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > PROVIDER_SEND_TURN_MAX_FILE_BYTES) continue;
-      const dataUrl = await readDataUrl(file);
-      const mimeType = file.type || "application/octet-stream";
-      next.push({
-        key: `${file.name}-${file.size}-${file.lastModified}`,
-        name: file.name,
-        upload: mimeType.startsWith("image/")
-          ? { type: "image", name: file.name, mimeType, sizeBytes: file.size, dataUrl }
-          : { type: "file", name: file.name, mimeType, sizeBytes: file.size, dataUrl },
-      });
-    }
-    setAttachments((current) => [...current, ...next].slice(0, PROVIDER_SEND_TURN_MAX_ATTACHMENTS));
-  };
+  const menuOpen = menu !== null && (menu.kind === "skill" || mentionItems.length > 0);
 
   return (
-    <div className="relative border-t border-border p-3">
-      {menuItems.length > 0 ? (
-        <ul
-          role="listbox"
-          className="absolute bottom-full left-3 z-10 mb-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md"
+    <div className={cn(CHAT_COLUMN_FRAME_CLASS_NAME, "px-4 pt-1 pb-4")}>
+      <div className={cn(COMPOSER_INPUT_SHELL_CLASS_NAME, menuOpen && "overflow-visible")}>
+        <div
+          data-dragging={dragging ? "" : undefined}
+          className={cn(
+            COMPOSER_INPUT_SURFACE_CLASS_NAME,
+            "cursor-text focus-within:border-foreground/25 data-dragging:border-dashed data-dragging:border-foreground/40 dark:focus-within:border-foreground/25 dark:data-dragging:border-foreground/40",
+            menuOpen && "overflow-visible",
+          )}
+          onClick={(event) => {
+            // The whole card is the text field: a click on its padding focuses the input.
+            if (event.target === event.currentTarget) textareaRef.current?.focus();
+          }}
+          onDragOver={(event) => {
+            if (!event.dataTransfer.types.includes("Files")) return;
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+              setDragging(false);
+          }}
+          onDrop={(event) => {
+            setDragging(false);
+            if (event.dataTransfer.files.length === 0) return;
+            event.preventDefault();
+            addFiles(Array.from(event.dataTransfer.files));
+          }}
         >
-          {menuItems.map((item, index) => (
-            <li key={item.handle}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={index === highlight}
-                className={`w-full rounded-md px-2 py-1.5 text-left text-sm ${index === highlight ? "bg-muted" : ""}`}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  choose(item.handle);
-                }}
+          <div className={cn(COMPOSER_EDITOR_PADDING_CLASS_NAME, menuOpen && "overflow-visible")}>
+            {menuOpen ? (
+              <div className={COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME}>
+                {menu?.kind === "skill" ? (
+                  <ComposerCommandMenu
+                    items={skillItems}
+                    resolvedTheme={resolvedTheme}
+                    isLoading={skillsQuery.isLoading}
+                    triggerKind="skill"
+                    activeItemId={skillItems[highlight]?.id ?? null}
+                    onHighlightedItemChange={(itemId) => {
+                      const index = skillItems.findIndex((item) => item.id === itemId);
+                      if (index !== -1) setHighlight(index);
+                    }}
+                    onSelect={chooseSkill}
+                  />
+                ) : (
+                  <div className={COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME}>
+                    <div role="listbox" className="max-h-72 overflow-y-auto p-1">
+                      {mentionItems.map((item, index) => {
+                        const member = membersByHandle.get(item.handle);
+                        return (
+                          <div
+                            key={item.handle}
+                            role="option"
+                            aria-selected={index === highlight}
+                            className={cn(
+                              COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
+                              index === highlight && COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
+                            )}
+                            onMouseMove={() => setHighlight(index)}
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              chooseMention(item.handle);
+                            }}
+                          >
+                            <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/60">
+                              {member ? (
+                                <ProviderIcon provider={member.provider} className="size-3.5" />
+                              ) : (
+                                <GroupChatIcon className="size-3.5" />
+                              )}
+                            </span>
+                            <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
+                              @{item.handle}
+                            </span>
+                            <span className="truncate text-[11px] text-muted-foreground/55">
+                              {item.isAll ? t("multiAgents.chat.allMembers") : (member?.role ?? "")}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <ComposerReferenceAttachments
+              assistantSelections={[]}
+              fileComments={[]}
+              files={files}
+              images={images}
+              nonPersistedImageIdSet={new Set()}
+              onExpandImage={props.onExpandImage}
+              onRemoveAssistantSelections={() => undefined}
+              onRemoveFileComments={() => undefined}
+              onRemoveFile={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onRemoveImage={removeImage}
+            />
+            <div className="relative">
+              {/* The text is drawn here so mentions and skills can be coloured; the textarea on
+                  top keeps the caret, selection and typing, with its own text transparent. */}
+              <div
+                ref={mirrorRef}
+                aria-hidden
+                data-testid="group-composer-mirror"
+                className={cn(
+                  "pointer-events-none absolute inset-0 overflow-hidden wrap-break-word whitespace-pre-wrap text-foreground",
+                  COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
+                )}
               >
-                @{item.handle}
-                {item.isAll ? (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {t("multiAgents.chat.allMembers")}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {attachments.length > 0 || skill ? (
-        <div className="mb-2 flex flex-wrap gap-1">
-          {attachments.map((entry) => (
-            <button
-              key={entry.key}
-              type="button"
-              className="rounded-md bg-muted px-2 py-0.5 text-xs"
-              aria-label={t("multiAgents.composer.removeAttachment", { name: entry.name })}
-              onClick={() =>
-                setAttachments((current) => current.filter((item) => item.key !== entry.key))
-              }
-            >
-              {entry.name} ×
-            </button>
-          ))}
-          {skill ? (
-            <button
-              type="button"
-              className="rounded-md bg-primary/10 px-2 py-0.5 text-xs"
-              aria-label={t("multiAgents.composer.removeAttachment", { name: skill.name })}
-              onClick={() => setSkill(null)}
-            >
-              {skill.name} ×
-            </button>
-          ) : null}
+                {keyedTokens.map((token) =>
+                  token.kind === "text" ? (
+                    <span key={token.start}>{token.text}</span>
+                  ) : (
+                    <span
+                      key={token.start}
+                      data-token={token.kind}
+                      className="rounded-[4px] bg-[color-mix(in_srgb,var(--color-text-accent)_16%,transparent)] text-[var(--color-text-accent)] [box-decoration-break:clone]"
+                    >
+                      {token.text}
+                    </span>
+                  ),
+                )}
+                {"\u200b"}
+              </div>
+              <textarea
+                ref={textareaRef}
+                data-testid="group-composer-input"
+                aria-label={t("multiAgents.chat.placeholder")}
+                className={cn(
+                  "relative m-0 block max-h-[200px] w-full resize-none overflow-y-auto border-0 bg-transparent p-0 text-transparent caret-[var(--color-text-foreground)] [field-sizing:content] [scrollbar-width:none] focus:outline-none [&::-webkit-scrollbar]:hidden",
+                  COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
+                  COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
+                  "placeholder:text-muted-foreground/40",
+                )}
+                rows={2}
+                value={text}
+                placeholder={t("multiAgents.chat.placeholder")}
+                onScroll={(event) => {
+                  if (mirrorRef.current)
+                    mirrorRef.current.scrollTop = event.currentTarget.scrollTop;
+                }}
+                onChange={(event) => {
+                  setText(event.target.value);
+                  updateMenu(event.target.value, event.target.selectionStart);
+                }}
+                onClick={(event) =>
+                  updateMenu(event.currentTarget.value, event.currentTarget.selectionStart)
+                }
+                onPaste={(event) => {
+                  const pasted = Array.from(event.clipboardData.files);
+                  if (pasted.length === 0) return;
+                  event.preventDefault();
+                  addFiles(pasted);
+                }}
+                onKeyDown={(event) => {
+                  if (event.nativeEvent.isComposing) return;
+                  if (menuOpen) {
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                      event.preventDefault();
+                      if (menuLength === 0) return;
+                      const step = event.key === "ArrowDown" ? 1 : -1;
+                      setHighlight((current) => (current + step + menuLength) % menuLength);
+                      return;
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setMenu(null);
+                      return;
+                    }
+                    if ((event.key === "Enter" || event.key === "Tab") && menuLength > 0) {
+                      event.preventDefault();
+                      if (menu?.kind === "skill")
+                        chooseSkill(skillItems[highlight] ?? skillItems[0]!);
+                      else chooseMention((mentionItems[highlight] ?? mentionItems[0]!).handle);
+                      return;
+                    }
+                  }
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void submit();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div className={COMPOSER_FOOTER_ROW_CLASS_NAME}>
+            <div className="flex min-w-0 items-center gap-1">
+              <Menu>
+                <MenuTrigger
+                  render={
+                    <Button
+                      size="icon-sm"
+                      variant="chrome"
+                      className="shrink-0 rounded-md"
+                      aria-label={tChat("composer.extras")}
+                    />
+                  }
+                >
+                  <PlusIcon aria-hidden="true" className="size-4" />
+                </MenuTrigger>
+                <ComposerPickerMenuPopup align="start">
+                  <MenuItem onClick={() => fileInputRef.current?.click()}>
+                    <PaperclipIcon className="size-4 shrink-0" />
+                    {tChat("composer.addFiles")}
+                  </MenuItem>
+                  <MenuItem onClick={() => startToken("$")}>
+                    <SkillCubeIcon className="size-4 shrink-0" />
+                    {t("multiAgents.composer.skill")}
+                  </MenuItem>
+                </ComposerPickerMenuPopup>
+              </Menu>
+              {(
+                [
+                  ["@", t("multiAgents.composer.mention")],
+                  ["$", t("multiAgents.composer.skill")],
+                ] as const
+              ).map(([symbol, label]) => (
+                <Tooltip key={symbol}>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        aria-label={label}
+                        className="flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-[13px] text-[var(--color-text-foreground-secondary)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.94]"
+                        onClick={() => startToken(symbol)}
+                      />
+                    }
+                  >
+                    {symbol}
+                  </TooltipTrigger>
+                  <TooltipPopup side="top">{label}</TooltipPopup>
+                </Tooltip>
+              ))}
+            </div>
+            <div className="flex shrink-0 items-center gap-2.5">
+              {recipientsLabel ? (
+                <span
+                  data-testid="group-composer-recipients"
+                  title={recipientsLabel}
+                  className="flex animate-in items-center -space-x-1.5 duration-200 fade-in motion-reduce:animate-none"
+                >
+                  <span className="sr-only">{recipientsLabel}</span>
+                  {recipients.slice(0, 4).map((member) => (
+                    <GroupAgentAvatar
+                      key={member.id}
+                      provider={member.provider}
+                      size="xs"
+                      className="ring-2 ring-[var(--color-background-surface)]"
+                    />
+                  ))}
+                </span>
+              ) : null}
+              <Button
+                type="button"
+                variant="prominent"
+                size="icon-xs"
+                className="size-7 rounded-full transition-[opacity,transform,background-color] duration-200 ease-out active:scale-90 disabled:scale-90 sm:size-7"
+                disabled={!text.trim()}
+                aria-label={t("multiAgents.chat.send")}
+                onClick={() => void submit()}
+              >
+                <ComposerSendArrowIcon aria-hidden="true" className="size-5 shrink-0" />
+              </Button>
+            </div>
+          </div>
         </div>
-      ) : null}
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          className="min-h-10 flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-          rows={2}
-          value={text}
-          placeholder={t("multiAgents.chat.placeholder")}
-          onChange={(event) => {
-            setText(event.target.value);
-            updateMention(event.target.value, event.target.selectionStart);
-          }}
-          onClick={(event) =>
-            updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
-          }
-          onKeyDown={(event) => {
-            if (event.nativeEvent.isComposing) return;
-            if (menuItems.length > 0) {
-              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                event.preventDefault();
-                const step = event.key === "ArrowDown" ? 1 : -1;
-                setHighlight((current) => (current + step + menuItems.length) % menuItems.length);
-                return;
-              }
-              if (event.key === "Enter" || event.key === "Tab") {
-                event.preventDefault();
-                choose(menuItems[highlight]?.handle ?? menuItems[0]!.handle);
-                return;
-              }
-              if (event.key === "Escape") {
-                setMention(null);
-                return;
-              }
-            }
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void submit();
-            }
-          }}
-        />
-        <div className="flex flex-col gap-1">
-          <Button size="xs" variant="ghost" onClick={() => fileInputRef.current?.click()}>
-            {t("multiAgents.composer.attach")}
-          </Button>
-          <Button size="xs" variant="ghost" onClick={() => setSkillMenuOpen((open) => !open)}>
-            {t("multiAgents.composer.skill")}
-          </Button>
-        </div>
-        <Button size="sm" onClick={() => void submit()} disabled={!text.trim()}>
-          {t("multiAgents.chat.send")}
-        </Button>
       </div>
       <input
         ref={fileInputRef}
+        data-testid="group-composer-files"
         type="file"
+        accept={COMPOSER_ATTACHMENT_ACCEPT}
         multiple
-        hidden
+        className="sr-only"
         onChange={(event) => {
-          void addFiles(event.target.files);
+          addFiles(Array.from(event.target.files ?? []));
           event.target.value = "";
         }}
       />
-      {skillMenuOpen ? (
-        <ul className="absolute right-3 bottom-full z-10 mb-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md">
-          {skills.length === 0 ? (
-            <li className="px-2 py-1.5 text-xs text-muted-foreground">
-              {t("multiAgents.composer.noSkills")}
-            </li>
-          ) : (
-            skills.map((entry) => (
-              <li key={entry.path}>
-                <button
-                  type="button"
-                  className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-                  onClick={() => {
-                    setSkill({ name: entry.name, path: entry.path });
-                    setSkillMenuOpen(false);
-                  }}
-                >
-                  <span className="font-medium">{entry.name}</span>
-                  {entry.description ? (
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {entry.description}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
-      ) : null}
       <Dialog open={confirming} onOpenChange={setConfirming}>
         <DialogPopup className="max-w-sm gap-0 p-0">
           <DialogHeader className="gap-1 p-4 pr-12">

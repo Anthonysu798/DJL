@@ -1115,6 +1115,7 @@
       "copiedError": "Copied error message",
       "copyError": "Copy error message",
       "dismiss": "Dismiss toast",
+      "done": "Done",
       "undo": "Undo"
     },
     "untitledThread": "Untitled thread"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "New group",
         "pickTitle": "Pick the agents for this group",
+        "pickBody": "They share one chat and can hand work to each other.",
+        "nameBody": "This is the name you will see in your group list.",
         "nameTitle": "Name the group",
         "namePlaceholder": "Group name",
         "next": "Next",
@@ -2736,7 +2739,15 @@
         "needOne": "Pick at least one agent that is set up."
       },
       "chat": {
-        "placeholder": "Message the group — type @ to call an agent, or @all",
+        "placeholder": "Message the group, or type @ to pick an agent",
+        "startTitle": "Start the conversation",
+        "startBody": "Everyone in this group reads the same chat. Type @ to ask one agent, or @all to ask them together.",
+        "starterMeet": "Meet the group",
+        "starterMeetPrompt": "@all introduce yourselves and say what you are best at",
+        "starterOne": "Ask one agent",
+        "starterOnePrompt": "@{{name}} what can you help me with?",
+        "starterReview": "Get a second opinion",
+        "starterReviewPrompt": "@{{first}} suggest a plan for my idea, then ask @{{second}} to check it",
         "send": "Send",
         "stopAll": "Stop all",
         "stopMember": "Stop",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "Commands"
       },
       "composer": {
-        "attach": "Attach files",
-        "skill": "Use a skill",
-        "noSkills": "No skills are switched on.",
-        "removeAttachment": "Remove {{name}}"
+        "mention": "Mention an agent",
+        "sendsTo": "Sends to {{names}}",
+        "sendsToAll": "Sends to everyone",
+        "skill": "Use a skill"
       },
       "members": {
+        "close": "Close group settings",
         "title": "Group settings",
         "add": "Add member",
         "remove": "Remove",

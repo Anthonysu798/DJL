@@ -7,8 +7,11 @@ import {
   answeredUserText,
   askAgainText,
   askAnotherText,
+  composerTokens,
   insertMention,
+  insertSkillToken,
   mentionMenuItems,
+  referencedSkills,
   replyToText,
 } from "./groupComposer.logic";
 
@@ -90,11 +93,40 @@ describe("reply actions", () => {
   it("quotes multi-line answers line by line", () => {
     expect(replyToText({ ...claudeRow, text: "a\nb" })).toBe("@Claude\n> a\n> b\n\n");
   });
+  it("replaces the typed $query with the chosen skill", () => {
+    expect(
+      insertSkillToken("use $fro please", { rangeStart: 4, rangeEnd: 8 }, "frontend-design"),
+    ).toEqual({ text: "use $frontend-design  please", cursor: 21 });
+  });
+  it("sends only the chosen skills still named in the text", () => {
+    const design = { name: "frontend-design", path: "/s/fd/SKILL.md" };
+    const review = { name: "review", path: "/s/review/SKILL.md" };
+    expect(referencedSkills("please $frontend-design now", [design, review])).toEqual([design]);
+    expect(referencedSkills("$frontend-designer", [design])).toEqual([]);
+    expect(referencedSkills("end with $review", [design, review])).toEqual([review]);
+  });
+  it("marks mentions and chosen skills so the composer can colour them", () => {
+    expect(
+      composerTokens("hi @claude and @all, use $review. mail a@claude.dev @Claudette", {
+        handles: ["Claude", "Codex"],
+        skillNames: ["review"],
+      }),
+    ).toEqual([
+      { kind: "text", text: "hi " },
+      { kind: "mention", text: "@claude" },
+      { kind: "text", text: " and " },
+      { kind: "mention", text: "@all" },
+      { kind: "text", text: ", use " },
+      { kind: "skill", text: "$review" },
+      { kind: "text", text: ". mail a@claude.dev @Claudette" },
+    ]);
+    expect(composerTokens("", { handles: ["Claude"], skillNames: [] })).toEqual([]);
+  });
   it("finds the user message a reply answered", () => {
     const rows: GroupChatRow[] = [
-      { kind: "user", id: "u1", text: "first question", attachmentNames: [] },
+      { kind: "user", id: "u1", text: "first question", images: [], fileNames: [] },
       { ...claudeRow, id: "reply-1" },
-      { kind: "user", id: "u2", text: "second question", attachmentNames: [] },
+      { kind: "user", id: "u2", text: "second question", images: [], fileNames: [] },
       { ...claudeRow, id: "reply-2" },
     ];
     expect(answeredUserText(rows, "reply-2")).toBe("second question");

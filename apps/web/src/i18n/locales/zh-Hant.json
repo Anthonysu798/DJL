@@ -1115,6 +1115,7 @@
       "copiedError": "已複製錯誤訊息",
       "copyError": "複製錯誤訊息",
       "dismiss": "關閉通知",
+      "done": "已完成",
       "undo": "復原"
     },
     "untitledThread": "未命名對話"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "新增群組",
         "pickTitle": "選擇要加入群組的智慧體",
+        "pickBody": "它們共用一個聊天，還能互相交接工作。",
+        "nameBody": "這是群組清單裡顯示的名稱。",
         "nameTitle": "為群組取個名字",
         "namePlaceholder": "群組名稱",
         "next": "下一步",
@@ -2736,7 +2739,15 @@
         "needOne": "請至少選擇一個已設定好的智慧體。"
       },
       "chat": {
-        "placeholder": "傳訊息到群組——輸入 @ 呼叫智慧體，或 @所有人",
+        "placeholder": "傳訊息到群組，或輸入 @ 選擇智慧體",
+        "startTitle": "開始對話",
+        "startBody": "群組裡的每個成員都能看到同一個聊天。輸入 @ 問某個智慧體，或輸入 @所有人 一起問。",
+        "starterMeet": "認識一下大家",
+        "starterMeetPrompt": "@所有人 請各自介紹一下，並說說最擅長什麼",
+        "starterOne": "問一個智慧體",
+        "starterOnePrompt": "@{{name}} 你能幫我做什麼？",
+        "starterReview": "聽聽第二種意見",
+        "starterReviewPrompt": "@{{first}} 為我的想法提一個計畫，然後請 @{{second}} 檢查一下",
         "send": "傳送",
         "stopAll": "全部停止",
         "stopMember": "停止",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "指令"
       },
       "composer": {
-        "attach": "加入檔案",
-        "skill": "使用技能",
-        "noSkills": "還沒有啟用任何技能。",
-        "removeAttachment": "移除 {{name}}"
+        "mention": "提及代理",
+        "sendsTo": "傳送給 {{names}}",
+        "sendsToAll": "傳送給所有人",
+        "skill": "使用技能"
       },
       "members": {
+        "close": "關閉群組設定",
         "title": "群組設定",
         "add": "新增成員",
         "remove": "移除",

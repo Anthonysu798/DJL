@@ -1115,6 +1115,7 @@
       "copiedError": "已复制错误消息",
       "copyError": "复制错误消息",
       "dismiss": "关闭通知",
+      "done": "已完成",
       "undo": "撤销"
     },
     "untitledThread": "未命名话题"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "新建群聊",
         "pickTitle": "选择要加入群聊的智能体",
+        "pickBody": "它们共用一个聊天，还能互相交接工作。",
+        "nameBody": "这是群聊列表里显示的名称。",
         "nameTitle": "给群聊起个名字",
         "namePlaceholder": "群聊名称",
         "next": "下一步",
@@ -2736,7 +2739,15 @@
         "needOne": "请至少选择一个已设置好的智能体。"
       },
       "chat": {
-        "placeholder": "给群里发消息——输入 @ 呼叫智能体，或 @所有人",
+        "placeholder": "给群里发消息，或输入 @ 选择智能体",
+        "startTitle": "开始对话",
+        "startBody": "群里的每个成员都能看到同一个聊天。输入 @ 问某个智能体，或输入 @所有人 一起问。",
+        "starterMeet": "认识一下大家",
+        "starterMeetPrompt": "@所有人 请各自介绍一下，并说说最擅长什么",
+        "starterOne": "问一个智能体",
+        "starterOnePrompt": "@{{name}} 你能帮我做什么？",
+        "starterReview": "听听第二种意见",
+        "starterReviewPrompt": "@{{first}} 为我的想法提一个计划，然后请 @{{second}} 检查一下",
         "send": "发送",
         "stopAll": "全部停止",
         "stopMember": "停止",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "命令"
       },
       "composer": {
-        "attach": "添加文件",
-        "skill": "使用技能",
-        "noSkills": "还没有启用任何技能。",
-        "removeAttachment": "移除 {{name}}"
+        "mention": "提及智能体",
+        "sendsTo": "发送给 {{names}}",
+        "sendsToAll": "发送给所有人",
+        "skill": "使用技能"
       },
       "members": {
+        "close": "关闭群组设置",
         "title": "群聊设置",
         "add": "添加成员",
         "remove": "移除",

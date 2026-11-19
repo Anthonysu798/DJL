@@ -1115,6 +1115,7 @@
       "copiedError": "Mensaje de error copiado",
       "copyError": "Copiar mensaje de error",
       "dismiss": "Descartar aviso",
+      "done": "Listo",
       "undo": "Deshacer"
     },
     "untitledThread": "Hilo sin título"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "Nuevo grupo",
         "pickTitle": "Elige los agentes de este grupo",
+        "pickBody": "Comparten un solo chat y pueden pasarse el trabajo.",
+        "nameBody": "Este es el nombre que verás en tu lista de grupos.",
         "nameTitle": "Ponle nombre al grupo",
         "namePlaceholder": "Nombre del grupo",
         "next": "Siguiente",
@@ -2736,7 +2739,15 @@
         "needOne": "Elige al menos un agente ya configurado."
       },
       "chat": {
-        "placeholder": "Escribe al grupo: usa @ para llamar a un agente o @all",
+        "placeholder": "Escribe al grupo o usa @ para elegir un agente",
+        "startTitle": "Empieza la conversación",
+        "startBody": "Todos en este grupo leen el mismo chat. Escribe @ para preguntarle a un agente o @all para preguntarles a todos.",
+        "starterMeet": "Conoce al grupo",
+        "starterMeetPrompt": "@all preséntense y digan en qué son mejores",
+        "starterOne": "Pregúntale a un agente",
+        "starterOnePrompt": "@{{name}} ¿en qué me puedes ayudar?",
+        "starterReview": "Pide una segunda opinión",
+        "starterReviewPrompt": "@{{first}} propón un plan para mi idea y luego pídele a @{{second}} que lo revise",
         "send": "Enviar",
         "stopAll": "Detener todo",
         "stopMember": "Detener",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "Comandos"
       },
       "composer": {
-        "attach": "Adjuntar archivos",
-        "skill": "Usar una habilidad",
-        "noSkills": "No hay habilidades activadas.",
-        "removeAttachment": "Quitar {{name}}"
+        "mention": "Mencionar a un agente",
+        "sendsTo": "Se envía a {{names}}",
+        "sendsToAll": "Se envía a todos",
+        "skill": "Usar una habilidad"
       },
       "members": {
+        "close": "Cerrar la configuración del grupo",
         "title": "Ajustes del grupo",
         "add": "Agregar miembro",
         "remove": "Quitar",

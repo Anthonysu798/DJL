@@ -30,7 +30,7 @@ export type GroupMemberRow = {
 };
 
 export type GroupChatRow =
-  | { kind: "user"; id: string; text: string; attachmentNames: string[] }
+  | { kind: "user"; id: string; text: string; images: GroupRowImage[]; fileNames: string[] }
   | GroupMemberRow
   | { kind: "unknown-member"; id: string; text: string };
 
@@ -39,8 +39,18 @@ export type GroupSourceMessage = {
   id: string;
   role: "user" | "assistant" | "system";
   text: string;
-  attachments?: readonly { readonly type: string; readonly name?: string }[] | undefined;
+  attachments?:
+    | readonly {
+        readonly type: string;
+        readonly id?: string;
+        readonly name?: string;
+        readonly previewUrl?: string;
+      }[]
+    | undefined;
 };
+
+/** A sent image the chat can show as a thumbnail and open full size. */
+export type GroupRowImage = { id: string; name: string; previewUrl: string };
 
 export function deriveGroupChatRows(
   messages: readonly GroupSourceMessage[],
@@ -55,8 +65,19 @@ export function deriveGroupChatRows(
         kind: "user",
         id: message.id,
         text: message.text,
-        attachmentNames: (message.attachments ?? []).flatMap((attachment) =>
-          attachment.name ? [attachment.name] : [],
+        images: (message.attachments ?? []).flatMap((attachment) =>
+          attachment.type === "image" && attachment.id && attachment.previewUrl
+            ? [
+                {
+                  id: attachment.id,
+                  name: attachment.name ?? "",
+                  previewUrl: attachment.previewUrl,
+                },
+              ]
+            : [],
+        ),
+        fileNames: (message.attachments ?? []).flatMap((attachment) =>
+          attachment.type !== "image" && attachment.name ? [attachment.name] : [],
         ),
       });
       continue;
@@ -104,4 +125,47 @@ export function shouldConfirmAll(group: Group, text: string): boolean {
 
 export function isLargeGroup(group: Group): boolean {
   return group.members.length >= GROUP_LARGE_WARNING_MEMBERS;
+}
+
+export type ReplyImage = { src: string; label: string };
+
+const MARKDOWN_LINK = /(!?)\[([^\]]*)\]\((<[^>]+>|[^)\s]+)\)/g;
+const IMAGE_ONLY_LINE = /^\s*(?:(?:[-*+]|\d+[.)])\s+)?(?:!?\[[^\]]*\]\((?:<[^>]+>|[^)\s]+)\)\s*)+$/;
+const IMAGE_FILE = /\.(?:png|jpe?g|gif|webp|svg)$/i;
+
+const isLocalImage = (target: string) => {
+  const path = target.replace(/^<|>$/g, "");
+  return IMAGE_FILE.test(path) && !/^[a-z][a-z0-9+.-]*:\/\//i.test(path);
+};
+
+/**
+ * The local images a reply shows or links to. With two or more they become a gallery: `images`
+ * lists them in order, and `text` is the reply without the lines that only held those images.
+ */
+export function replyImages(text: string): { text: string; images: ReplyImage[] } {
+  const images = new Map<string, ReplyImage>();
+  for (const match of text.matchAll(MARKDOWN_LINK)) {
+    const [, , label = "", src = ""] = match;
+    if (isLocalImage(src) && !images.has(src)) images.set(src, { src, label });
+  }
+  if (images.size < 2) return { text, images: [] };
+  const kept = text
+    .split("\n")
+    .filter(
+      (line) =>
+        !IMAGE_ONLY_LINE.test(line) ||
+        ![...line.matchAll(MARKDOWN_LINK)].every((match) => isLocalImage(match[3] ?? "")),
+    )
+    .map((line) =>
+      line.replace(MARKDOWN_LINK, (whole, bang: string, _label: string, src: string) =>
+        bang && isLocalImage(src) ? "" : whole,
+      ),
+    );
+  return {
+    text: kept
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+    images: [...images.values()],
+  };
 }

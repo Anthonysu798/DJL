@@ -1115,6 +1115,7 @@
       "copiedError": "エラーメッセージをコピーしました",
       "copyError": "エラーメッセージをコピー",
       "dismiss": "通知を閉じる",
+      "done": "完了",
       "undo": "元に戻す"
     },
     "untitledThread": "無題のスレッド"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "新しいグループ",
         "pickTitle": "このグループに入れるエージェントを選択",
+        "pickBody": "全員が 1 つのチャットを共有し、作業を引き継げます。",
+        "nameBody": "グループ一覧に表示される名前です。",
         "nameTitle": "グループに名前を付ける",
         "namePlaceholder": "グループ名",
         "next": "次へ",
@@ -2736,7 +2739,15 @@
         "needOne": "設定済みのエージェントを少なくとも1つ選んでください。"
       },
       "chat": {
-        "placeholder": "グループにメッセージ — @ でエージェントを呼ぶ、または @all",
+        "placeholder": "グループにメッセージ。@ でエージェントを選べます",
+        "startTitle": "会話を始めましょう",
+        "startBody": "このグループの全員が同じチャットを読みます。@ で 1 人に、@all で全員に聞けます。",
+        "starterMeet": "グループに挨拶する",
+        "starterMeetPrompt": "@all 自己紹介と得意なことを教えてください",
+        "starterOne": "1 人に聞く",
+        "starterOnePrompt": "@{{name}} 何を手伝ってもらえますか？",
+        "starterReview": "別の意見をもらう",
+        "starterReviewPrompt": "@{{first}} 私のアイデアの計画を提案して、その後 @{{second}} に確認を頼んでください",
         "send": "送信",
         "stopAll": "すべて停止",
         "stopMember": "停止",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "コマンド"
       },
       "composer": {
-        "attach": "ファイルを添付",
-        "skill": "スキルを使う",
-        "noSkills": "有効なスキルがありません。",
-        "removeAttachment": "{{name}} を削除"
+        "mention": "エージェントをメンション",
+        "sendsTo": "{{names}} に送信",
+        "sendsToAll": "全員に送信",
+        "skill": "スキルを使う"
       },
       "members": {
+        "close": "グループ設定を閉じる",
         "title": "グループ設定",
         "add": "メンバーを追加",
         "remove": "削除",

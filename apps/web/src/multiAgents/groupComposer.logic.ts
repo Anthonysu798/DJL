@@ -49,6 +49,65 @@ export function insertMention(
   };
 }
 
+/** Replaces the `$query` the user typed with the chosen skill's `$name` token. */
+export function insertSkillToken(
+  text: string,
+  range: { rangeStart: number; rangeEnd: number },
+  name: string,
+): { text: string; cursor: number } {
+  const inserted = `$${name} `;
+  return {
+    text: text.slice(0, range.rangeStart) + inserted + text.slice(range.rangeEnd),
+    cursor: range.rangeStart + inserted.length,
+  };
+}
+
+/** The chosen skills whose `$name` token is still in the text (the user may have deleted one). */
+export function referencedSkills<T extends { name: string }>(
+  text: string,
+  chosen: readonly T[],
+): T[] {
+  return chosen.filter((skill) => {
+    let index = text.indexOf(`$${skill.name}`);
+    while (index !== -1) {
+      const next = text[index + skill.name.length + 1];
+      if (next === undefined || !HANDLE_CHAR.test(next)) return true;
+      index = text.indexOf(`$${skill.name}`, index + 1);
+    }
+    return false;
+  });
+}
+
+export type ComposerToken = { kind: "text" | "mention" | "skill"; text: string };
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Splits composer text into plain runs, `@member` / `@all` mentions and chosen `$skill` tokens. */
+export function composerTokens(
+  text: string,
+  input: { handles: readonly string[]; skillNames: readonly string[] },
+): ComposerToken[] {
+  const longestFirst = (values: readonly string[]) =>
+    values
+      .toSorted((left, right) => right.length - left.length)
+      .map(escapeRegExp)
+      .join("|");
+  const mention = `(?<![\\p{L}\\p{N}_.@/\\\\-])@(?:${longestFirst([GROUP_ALL_HANDLE, ...input.handles])})(?![A-Za-z0-9_-])`;
+  const skill =
+    input.skillNames.length > 0
+      ? `|\\$(?:${longestFirst(input.skillNames)})(?![\\p{L}\\p{N}_-])`
+      : "";
+  const tokens: ComposerToken[] = [];
+  let last = 0;
+  for (const match of text.matchAll(new RegExp(mention + skill, "giu"))) {
+    if (match.index > last) tokens.push({ kind: "text", text: text.slice(last, match.index) });
+    tokens.push({ kind: match[0].startsWith("@") ? "mention" : "skill", text: match[0] });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) tokens.push({ kind: "text", text: text.slice(last) });
+  return tokens;
+}
+
 const quote = (text: string) =>
   text
     .slice(0, QUOTE_LIMIT)

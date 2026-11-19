@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { ThreadId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
@@ -164,6 +168,77 @@ describe("group child session", () => {
     expect((await child.ask("go", accept)).work).toEqual({
       files: ["/g/a.txt", "/g/b.txt"],
       commands: ["bun test"],
+    });
+  });
+
+  it("shows an image Codex generated in the reply", async () => {
+    const child = await open(
+      fake((sink) => {
+        sink.emit({
+          type: "item.completed",
+          itemId: "ig_1",
+          payload: {
+            itemType: "unknown",
+            status: "completed",
+            data: { type: "imageGeneration", id: "ig_1", savedPath: "/tmp/codex/ig_1.png" },
+          },
+        });
+        sink.emit(text("a1", "Created a sunset."));
+      }),
+      "codex",
+    );
+    expect(await child.ask("draw", accept)).toMatchObject({
+      status: "ok",
+      text: "Created a sunset.\n\n![ig_1.png](/tmp/codex/ig_1.png)",
+    });
+  });
+
+  it("an image with no words still counts as a reply", async () => {
+    const child = await open(
+      fake((sink) => {
+        sink.emit({
+          type: "item.completed",
+          itemId: "ig_1",
+          payload: {
+            itemType: "unknown",
+            status: "completed",
+            data: { type: "imageGeneration", id: "ig_1", savedPath: "/tmp/codex/ig_1.png" },
+          },
+        });
+      }),
+      "codex",
+    );
+    expect(await child.ask("draw", accept)).toMatchObject({
+      status: "ok",
+      text: "![ig_1.png](/tmp/codex/ig_1.png)",
+    });
+  });
+
+  it("links documents and images the member created in the group folder", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "group-outputs-"));
+    writeFileSync(join(cwd, "old.pdf"), "old");
+    utimesSync(join(cwd, "old.pdf"), new Date(0), new Date(0));
+    const child = await openChildSession({
+      provider: "claudeAgent",
+      start: { ...start, cwd },
+      factory: fake((sink) => {
+        mkdirSync(join(cwd, "out"));
+        mkdirSync(join(cwd, "node_modules"));
+        writeFileSync(join(cwd, "out", "deck.pptx"), "deck");
+        writeFileSync(join(cwd, "chart.png"), "png");
+        writeFileSync(join(cwd, "notes.ts"), "code");
+        writeFileSync(join(cwd, "node_modules", "dep.pdf"), "dep");
+        writeFileSync(join(cwd, "logo.png"), "png");
+        sink.emit(text("a1", `Saved the deck. ![Chart](${join(cwd, "chart.png")})`));
+      }),
+    });
+    const reply = await child.ask("make a deck", accept);
+    rmSync(cwd, { recursive: true, force: true });
+    // The chart is already shown in the answer, so it is not repeated; code files,
+    // dependencies and files that were there before are left out.
+    expect(reply).toMatchObject({
+      status: "ok",
+      text: `Saved the deck. ![Chart](${join(cwd, "chart.png")})\n\n![logo.png](${join(cwd, "logo.png")})\n\n[deck.pptx](${join(cwd, "out", "deck.pptx")})`,
     });
   });
 

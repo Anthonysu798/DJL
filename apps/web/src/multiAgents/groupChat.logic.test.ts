@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveGroupChatRows,
+  replyImages,
   isLargeGroup,
   shouldConfirmAll,
   workChipCounts,
@@ -91,6 +92,35 @@ const memberRow = (work: { files: string[]; commands: string[] }): GroupChatRow 
   ...work,
 });
 
+describe("replyImages", () => {
+  it("gathers several images into a gallery and takes them out of the text", () => {
+    const text = [
+      "Generated **10 logos**. Use concept 1.",
+      "",
+      "1. [Interlocking monogram](/g/logos/01.png)",
+      "2. [Editorial serif](</g/logos/02 serif.png>)",
+      "3. See the [brief](/g/brief.pdf) and [orbit](/g/logos/03.webp) too",
+      "",
+      "![01.png](/g/logos/01.png)",
+    ].join("\n");
+    expect(replyImages(text)).toEqual({
+      text: "Generated **10 logos**. Use concept 1.\n\n3. See the [brief](/g/brief.pdf) and [orbit](/g/logos/03.webp) too",
+      images: [
+        { src: "/g/logos/01.png", label: "Interlocking monogram" },
+        { src: "</g/logos/02 serif.png>", label: "Editorial serif" },
+        { src: "/g/logos/03.webp", label: "orbit" },
+      ],
+    });
+  });
+
+  it("leaves a reply with a single image, or only web images, as it is", () => {
+    const single = "Here it is.\n\n![sunset.png](/g/sunset.png)";
+    expect(replyImages(single)).toEqual({ text: single, images: [] });
+    const web = "![a](https://example.test/a.png) ![b](https://example.test/b.png)";
+    expect(replyImages(web)).toEqual({ text: web, images: [] });
+  });
+});
+
 describe("deriveGroupChatRows", () => {
   it("labels each reply with its member and keeps every reply visible", () => {
     const rows = deriveGroupChatRows(
@@ -105,6 +135,32 @@ describe("deriveGroupChatRows", () => {
     expect(rows.map((row) => row.kind)).toEqual(["user", "member", "member"]);
     expect(rows[1]).toMatchObject({ handle: "Claude", provider: "claudeAgent" });
     expect(rows[2]).toMatchObject({ handle: "Codex" });
+  });
+
+  it("keeps sent images viewable and lists other files by name", () => {
+    const rows = deriveGroupChatRows(
+      [
+        {
+          ...user("u1", "look at this"),
+          attachments: [
+            {
+              type: "image",
+              id: "img-1",
+              name: "screen.png",
+              previewUrl: "/attachments/img-1",
+            },
+            { type: "file", id: "f-1", name: "notes.md" },
+          ],
+        },
+      ],
+      group,
+      {},
+    );
+    expect(rows[0]).toMatchObject({
+      kind: "user",
+      images: [{ id: "img-1", name: "screen.png", previewUrl: "/attachments/img-1" }],
+      fileNames: ["notes.md"],
+    });
   });
 
   it("marks failed and empty replies from the reply record", () => {

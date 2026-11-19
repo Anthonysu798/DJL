@@ -8,16 +8,26 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type Group,
   type GroupMember,
-  type GroupMemberProvider,
 } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ProviderIcon } from "~/components/ProviderIcon";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
+import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { PlusIcon, Trash2, XIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
+
+import { GroupAgentAvatar } from "./GroupAgentAvatar";
 
 import { isLargeGroup } from "./groupChat.logic";
 import { isPresetRole } from "./groupLabels";
@@ -25,6 +35,10 @@ import { useGroupStore } from "./groupStore";
 import { memberChoices } from "./GroupSetupDialog.logic";
 
 const CUSTOM = "__custom";
+const NO_ROLE = "__none";
+const FIELD_CLASS = "flex flex-col gap-1.5 text-xs text-muted-foreground";
+const ICON_BUTTON_CLASS =
+  "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-[color,background-color,opacity,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.94]";
 
 function MemberRow(props: { group: Group; member: GroupMember; onError: () => void }) {
   const { t } = useTranslation("shell");
@@ -34,44 +48,90 @@ function MemberRow(props: { group: Group; member: GroupMember; onError: () => vo
   const [customRole, setCustomRole] = useState(custom ? (member.role ?? "") : "");
   const [editingCustom, setEditingCustom] = useState(custom);
   const [model, setModel] = useState(member.model ?? "");
+  const roleOptions = [
+    { value: NO_ROLE, label: t("multiAgents.members.roleNone") },
+    ...GROUP_ROLE_PRESETS.map((role) => ({
+      value: role as string,
+      label: t(`multiAgents.roles.${role}`),
+    })),
+    { value: CUSTOM, label: t("multiAgents.members.roleCustom") },
+  ];
+  const roleValue = editingCustom ? CUSTOM : (member.role ?? NO_ROLE);
   const update = (patch: { role?: string | null; model?: string | null }) =>
     ensureNativeApi()
       .groups.updateMember({ groupId: group.id, memberId: member.id, ...patch })
       .catch(props.onError);
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-border p-3">
-      <div className="flex items-center gap-2">
-        <ProviderIcon provider={member.provider} className="size-5" />
-        <span className="flex-1 truncate text-sm font-medium">{member.handle}</span>
-        <span className="text-xs text-muted-foreground">
+    <li className="group/member flex flex-col gap-3 py-4 first:pt-0">
+      <div className="flex items-center gap-2.5">
+        <GroupAgentAvatar provider={member.provider} size="sm" />
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{member.handle}</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
+          <span
+            aria-hidden
+            className={cn(
+              "size-1.5 rounded-full",
+              state === "working"
+                ? "animate-pulse bg-emerald-500"
+                : state === "waiting"
+                  ? "bg-amber-500"
+                  : state === "failed"
+                    ? "bg-destructive"
+                    : "bg-muted-foreground/30",
+            )}
+          />
           {t(`multiAgents.members.state.${state}`)}
         </span>
+        <button
+          type="button"
+          aria-label={`${t("multiAgents.members.remove")} ${member.handle}`}
+          title={t("multiAgents.members.remove")}
+          className={cn(
+            ICON_BUTTON_CLASS,
+            "opacity-0 group-hover/member:opacity-100 hover:text-destructive",
+          )}
+          onClick={() =>
+            void ensureNativeApi()
+              .groups.removeMember({ groupId: group.id, memberId: member.id })
+              .catch(props.onError)
+          }
+        >
+          <Trash2 className="size-3.5" />
+        </button>
       </div>
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <div className={FIELD_CLASS}>
         {t("multiAgents.members.role")}
-        <select
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
-          value={editingCustom ? CUSTOM : (member.role ?? "")}
-          onChange={(event) => {
-            const value = event.target.value;
+        <Select
+          value={roleValue}
+          onValueChange={(value) => {
+            if (value === null) return;
             if (value === CUSTOM) {
               setEditingCustom(true);
               return;
             }
             setEditingCustom(false);
-            void update({ role: value || null });
+            void update({ role: value === NO_ROLE ? null : value });
           }}
         >
-          <option value="">{t("multiAgents.members.roleNone")}</option>
-          {GROUP_ROLE_PRESETS.map((role) => (
-            <option key={role} value={role}>
-              {t(`multiAgents.roles.${role}`)}
-            </option>
-          ))}
-          <option value={CUSTOM}>{t("multiAgents.members.roleCustom")}</option>
-        </select>
-      </label>
+          <SelectTrigger
+            size="sm"
+            className="w-full rounded-lg"
+            aria-label={`${t("multiAgents.members.role")}: ${member.handle}`}
+          >
+            <SelectValue>
+              {roleOptions.find((option) => option.value === roleValue)?.label}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectPopup>
+            {roleOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectPopup>
+        </Select>
+      </div>
       {editingCustom ? (
         <Input
           value={customRole}
@@ -80,7 +140,7 @@ function MemberRow(props: { group: Group; member: GroupMember; onError: () => vo
           onBlur={() => void update({ role: customRole.trim() || null })}
         />
       ) : null}
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <label className={FIELD_CLASS}>
         {t("multiAgents.members.model")}
         <Input
           value={model}
@@ -89,23 +149,15 @@ function MemberRow(props: { group: Group; member: GroupMember; onError: () => vo
           onBlur={() => void update({ model: model.trim() || null })}
         />
       </label>
-      <Button
-        size="xs"
-        variant="ghost"
-        className="self-end"
-        onClick={() =>
-          void ensureNativeApi()
-            .groups.removeMember({ groupId: group.id, memberId: member.id })
-            .catch(props.onError)
-        }
-      >
-        {t("multiAgents.members.remove")}
-      </Button>
     </li>
   );
 }
 
-export function GroupMembersPanel(props: { group: Group; onDeleted: (folder: string) => void }) {
+export function GroupMembersPanel(props: {
+  group: Group;
+  onClose: () => void;
+  onDeleted: (folder: string) => void;
+}) {
   const { t } = useTranslation("shell");
   const { group } = props;
   const [error, setError] = useState<string | null>(null);
@@ -135,79 +187,103 @@ export function GroupMembersPanel(props: { group: Group; onDeleted: (folder: str
   };
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4">
-      <h3 className="text-sm font-semibold">{t("multiAgents.members.title")}</h3>
-      {isLargeGroup(group) ? (
-        <p className="rounded-md bg-muted px-3 py-2 text-xs">
-          {t("multiAgents.members.largeGroup")}
-        </p>
-      ) : null}
-      <ul className="flex flex-col gap-2">
-        {group.members.map((member) => (
-          <MemberRow key={member.id} group={group} member={member} onError={onError} />
-        ))}
-      </ul>
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-        {t("multiAgents.members.add")}
-        <select
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
-          value=""
-          onChange={(event) => {
-            const provider = event.target.value as GroupMemberProvider;
-            if (provider)
-              void api().groups.addMember({ groupId: group.id, provider }).catch(onError);
-          }}
+    <aside className="flex w-80 shrink-0 animate-in flex-col overflow-y-auto border-l border-[color:var(--color-border-light)] duration-200 fade-in slide-in-from-right-2 motion-reduce:animate-none">
+      <div className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
+        <h3 className="text-[13px] font-medium">{t("multiAgents.members.title")}</h3>
+        <button
+          type="button"
+          aria-label={t("multiAgents.members.close")}
+          className={cn(ICON_BUTTON_CLASS, "size-7")}
+          onClick={props.onClose}
         >
-          <option value="">{t("multiAgents.members.add")}</option>
-          {addable.map((choice) => (
-            <option key={choice.provider} value={choice.provider}>
-              {PROVIDER_DISPLAY_NAMES[choice.provider]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-        {t("multiAgents.members.hopLimit")}
-        <Input
-          type="number"
-          min={1}
-          max={100}
-          value={hopLimit}
-          onChange={(event) => setHopLimit(event.target.value)}
-          onBlur={() => {
-            const value = Number(hopLimit);
-            if (Number.isInteger(value) && value >= 1 && value <= 100)
-              void api().groups.update({ groupId: group.id, hopLimit: value }).catch(onError);
-            else setHopLimit(String(group.hopLimit));
-          }}
-        />
-      </label>
-      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-        {t("multiAgents.members.folder")}
-        <p className="break-all text-foreground">{group.folder}</p>
-        <p>
-          {group.folderIsAuto
-            ? t("multiAgents.members.folderAuto")
-            : t("multiAgents.members.folderWarning")}
-        </p>
-        <Button
-          size="xs"
-          variant="outline"
-          className="self-start"
-          onClick={() => void chooseFolder()}
-        >
-          {t("multiAgents.members.chooseFolder")}
-        </Button>
+          <XIcon className="size-4" />
+        </button>
       </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      <Button
-        size="sm"
-        variant="destructive-outline"
-        className="mt-auto"
-        onClick={() => void remove()}
-      >
-        {t("multiAgents.members.deleteGroup")}
-      </Button>
+      <div className="flex flex-1 flex-col gap-5 px-4 pb-4">
+        {isLargeGroup(group) ? (
+          <p className="rounded-lg bg-[var(--color-background-elevated-secondary)] px-3 py-2 text-xs leading-relaxed text-[var(--color-text-foreground-secondary)]">
+            {t("multiAgents.members.largeGroup")}
+          </p>
+        ) : null}
+        <ul className="flex flex-col divide-y divide-[color:var(--color-border-light)]">
+          {group.members.map((member) => (
+            <MemberRow key={member.id} group={group} member={member} onError={onError} />
+          ))}
+        </ul>
+        <Menu>
+          <MenuTrigger
+            render={
+              <button
+                type="button"
+                disabled={addable.length === 0}
+                className="-mt-2 flex h-8 items-center gap-2 self-start rounded-lg px-2 text-[13px] text-[var(--color-text-foreground-secondary)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+              />
+            }
+          >
+            <PlusIcon className="size-3.5" />
+            {t("multiAgents.members.add")}
+          </MenuTrigger>
+          <MenuPopup align="start">
+            {addable.map((choice) => (
+              <MenuItem
+                key={choice.provider}
+                onClick={() =>
+                  void api()
+                    .groups.addMember({ groupId: group.id, provider: choice.provider })
+                    .catch(onError)
+                }
+              >
+                <GroupAgentAvatar provider={choice.provider} size="xs" />
+                {PROVIDER_DISPLAY_NAMES[choice.provider]}
+              </MenuItem>
+            ))}
+          </MenuPopup>
+        </Menu>
+        <label className={FIELD_CLASS}>
+          {t("multiAgents.members.hopLimit")}
+          <Input
+            type="number"
+            min={1}
+            max={100}
+            value={hopLimit}
+            onChange={(event) => setHopLimit(event.target.value)}
+            onBlur={() => {
+              const value = Number(hopLimit);
+              if (Number.isInteger(value) && value >= 1 && value <= 100)
+                void api().groups.update({ groupId: group.id, hopLimit: value }).catch(onError);
+              else setHopLimit(String(group.hopLimit));
+            }}
+          />
+        </label>
+        <div className={FIELD_CLASS}>
+          {t("multiAgents.members.folder")}
+          <p className="font-mono text-[11px] leading-relaxed break-all text-foreground">
+            {group.folder}
+          </p>
+          <p className="leading-relaxed">
+            {group.folderIsAuto
+              ? t("multiAgents.members.folderAuto")
+              : t("multiAgents.members.folderWarning")}
+          </p>
+          <Button
+            size="xs"
+            variant="outline"
+            className="self-start"
+            onClick={() => void chooseFolder()}
+          >
+            {t("multiAgents.members.chooseFolder")}
+          </Button>
+        </div>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        <button
+          type="button"
+          className="mt-auto flex h-8 items-center gap-2 self-start rounded-lg px-2 text-[13px] text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97]"
+          onClick={() => void remove()}
+        >
+          <Trash2 className="size-3.5" />
+          {t("multiAgents.members.deleteGroup")}
+        </button>
+      </div>
     </aside>
   );
 }

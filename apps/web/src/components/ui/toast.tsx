@@ -47,6 +47,14 @@ type ThreadToastData = {
     onUndo: () => boolean | Promise<boolean>;
     onViewArchived: () => void | Promise<void>;
   };
+  /** A chat or terminal that finished or needs attention; the whole card opens it. */
+  threadNotice?: {
+    label: string;
+    status: string;
+    preview: string | null;
+    tone: "done" | "attention";
+    onOpen: () => void;
+  };
 };
 
 const toastManager = Toast.createToastManager<ThreadToastData>();
@@ -65,6 +73,7 @@ const TOAST_ICONS = {
 function shouldUseCompactToast(toast: ToastObject<ThreadToastData>): boolean {
   return (
     !toast.data?.providerUpdate &&
+    !toast.data?.threadNotice &&
     !toast.data?.copyText &&
     !toast.actionProps &&
     !toast.data?.secondaryActionProps
@@ -416,6 +425,64 @@ function ArchiveUndoToastSurface({
   );
 }
 
+function ThreadNoticeToastSurface({
+  notice,
+  hideCollapsedContent,
+  onDismiss,
+}: {
+  notice: NonNullable<ThreadToastData["threadNotice"]>;
+  hideCollapsedContent: boolean;
+  onDismiss: () => void;
+}) {
+  return (
+    <Toast.Content
+      className={cn(
+        "pointer-events-auto relative overflow-hidden rounded-[inherit] transition-opacity duration-250 data-expanded:opacity-100",
+        hideCollapsedContent && "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
+      )}
+      data-slot="toast-thread-notice"
+    >
+      <button
+        type="button"
+        className="flex w-full items-start gap-2.5 py-2.5 pr-10 pl-3.5 text-left transition-colors duration-150 ease-out hover:bg-[var(--notification-fg)]/[0.04] focus-visible:bg-[var(--notification-fg)]/[0.06] focus-visible:outline-none"
+        data-slot="toast-open"
+        onClick={() => {
+          notice.onOpen();
+          onDismiss();
+        }}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "mt-[7px] size-1.5 shrink-0 rounded-full",
+            notice.tone === "done" ? "bg-emerald-500" : "bg-amber-500",
+          )}
+        />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="flex min-w-0 items-baseline gap-2 text-[13px] leading-5">
+            <Toast.Title className="truncate font-medium" data-slot="toast-title" render={<span />}>
+              {notice.label}
+            </Toast.Title>
+            <span className="shrink-0 text-xs text-[var(--notification-fg)]/55">
+              {notice.status}
+            </span>
+          </span>
+          {notice.preview ? (
+            <Toast.Description
+              className="line-clamp-2 text-xs leading-[18px] text-[var(--notification-fg)]/68"
+              data-slot="toast-description"
+              render={<span />}
+            >
+              {notice.preview}
+            </Toast.Description>
+          ) : null}
+        </span>
+      </button>
+      <ToastCloseButton onDismiss={onDismiss} />
+    </Toast.Content>
+  );
+}
+
 function ToastSurface({
   toast,
   compact,
@@ -428,6 +495,16 @@ function ToastSurface({
   onDismiss: () => void;
 }) {
   const Icon = toast.type ? TOAST_ICONS[toast.type as keyof typeof TOAST_ICONS] : null;
+
+  if (toast.data?.threadNotice) {
+    return (
+      <ThreadNoticeToastSurface
+        notice={toast.data.threadNotice}
+        hideCollapsedContent={hideCollapsedContent}
+        onDismiss={onDismiss}
+      />
+    );
+  }
 
   if (toast.data?.providerUpdate) {
     return (

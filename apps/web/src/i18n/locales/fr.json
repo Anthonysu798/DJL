@@ -1115,6 +1115,7 @@
       "copiedError": "Message d’erreur copié",
       "copyError": "Copier le message d’erreur",
       "dismiss": "Fermer la notification",
+      "done": "Terminé",
       "undo": "Annuler"
     },
     "untitledThread": "Discussion sans titre"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "Nouveau groupe",
         "pickTitle": "Choisissez les agents de ce groupe",
+        "pickBody": "Ils partagent un seul chat et peuvent se passer le travail.",
+        "nameBody": "C'est le nom affiché dans votre liste de groupes.",
         "nameTitle": "Nommez le groupe",
         "namePlaceholder": "Nom du groupe",
         "next": "Suivant",
@@ -2736,7 +2739,15 @@
         "needOne": "Choisissez au moins un agent déjà configuré."
       },
       "chat": {
-        "placeholder": "Écrivez au groupe — tapez @ pour appeler un agent, ou @all",
+        "placeholder": "Écrivez au groupe, ou tapez @ pour choisir un agent",
+        "startTitle": "Lancez la conversation",
+        "startBody": "Tous les membres du groupe lisent le même chat. Tapez @ pour interroger un agent, ou @all pour les interroger ensemble.",
+        "starterMeet": "Rencontrer le groupe",
+        "starterMeetPrompt": "@all présentez-vous et dites ce que vous faites le mieux",
+        "starterOne": "Interroger un agent",
+        "starterOnePrompt": "@{{name}} en quoi peux-tu m'aider ?",
+        "starterReview": "Demander un second avis",
+        "starterReviewPrompt": "@{{first}} propose un plan pour mon idée, puis demande à @{{second}} de le vérifier",
         "send": "Envoyer",
         "stopAll": "Tout arrêter",
         "stopMember": "Arrêter",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "Commandes"
       },
       "composer": {
-        "attach": "Joindre des fichiers",
-        "skill": "Utiliser une compétence",
-        "noSkills": "Aucune compétence n'est activée.",
-        "removeAttachment": "Retirer {{name}}"
+        "mention": "Mentionner un agent",
+        "sendsTo": "Envoyé à {{names}}",
+        "sendsToAll": "Envoyé à tout le monde",
+        "skill": "Utiliser une compétence"
       },
       "members": {
+        "close": "Fermer les paramètres du groupe",
         "title": "Réglages du groupe",
         "add": "Ajouter un membre",
         "remove": "Retirer",

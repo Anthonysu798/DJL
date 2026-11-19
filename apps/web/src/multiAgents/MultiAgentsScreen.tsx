@@ -7,11 +7,12 @@ import { type Group, type GroupId } from "@synara/contracts";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ProviderIcon } from "~/components/ProviderIcon";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
+import { AdjustmentsIcon, PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
+import { GroupAvatarStack } from "./GroupAgentAvatar";
 import { GroupChatView } from "./GroupChatView";
 import { GroupMembersPanel } from "./GroupMembersPanel";
 import { GroupSetupDialog } from "./GroupSetupDialog";
@@ -36,48 +37,87 @@ export function MultiAgentsScreen(props: {
   const [notice, setNotice] = useState<string | null>(null);
   const showSetup = setupOpen || (loaded && groups.length === 0 && notice === null);
 
+  const iconButtonClass =
+    "flex size-7 items-center justify-center rounded-md text-[var(--color-text-foreground-secondary)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.94]";
   const headerActions = (
-    <Button size="xs" variant="outline" onClick={() => setMembersOpen((open) => !open)}>
-      {t("multiAgents.chat.members")}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label={t("multiAgents.chat.members")}
+            aria-pressed={membersOpen}
+            className={cn(
+              iconButtonClass,
+              membersOpen && "bg-[var(--color-background-button-secondary-hover)] text-foreground",
+            )}
+            onClick={() => setMembersOpen((open) => !open)}
+          />
+        }
+      >
+        <AdjustmentsIcon className="size-4" />
+      </TooltipTrigger>
+      <TooltipPopup side="bottom">{t("multiAgents.members.title")}</TooltipPopup>
+    </Tooltip>
   );
 
   return (
     <div className="flex h-full min-h-0 w-full bg-background" data-testid="multi-agents-screen">
-      <nav className="flex w-64 shrink-0 flex-col border-r border-border">
-        <div className="flex h-12 items-center justify-between px-3">
-          <h1 className="flex items-center gap-2 text-sm font-semibold">
+      <nav className="flex w-60 shrink-0 flex-col border-r border-[color:var(--color-border-light)]">
+        <div className="flex h-12 items-center justify-between pr-2 pl-4">
+          <h1 className="flex items-center gap-2 text-[13px] font-medium">
             {t("multiAgents.title")}
-            <Badge variant="outline">{t("multiAgents.beta")}</Badge>
+            <span className="rounded-[5px] border border-[color:var(--color-border-light)] px-1 py-px text-[10px] leading-3.5 font-normal text-muted-foreground">
+              {t("multiAgents.beta")}
+            </span>
           </h1>
-          <Button size="xs" variant="ghost" onClick={() => setSetupOpen(true)}>
-            {t("multiAgents.newGroup")}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={t("multiAgents.newGroup")}
+                  className={iconButtonClass}
+                  onClick={() => setSetupOpen(true)}
+                />
+              }
+            >
+              <PlusIcon className="size-4" />
+            </TooltipTrigger>
+            <TooltipPopup side="bottom">{t("multiAgents.newGroup")}</TooltipPopup>
+          </Tooltip>
         </div>
-        <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-          {groups.map((group) => (
-            <li key={group.id}>
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted",
-                  selected?.id === group.id && "bg-muted",
-                )}
-                onClick={() => {
-                  setNotice(null);
-                  props.onSelectGroup(group.id);
-                }}
-              >
-                <span className="flex -space-x-1">
-                  {group.members.slice(0, 3).map((member) => (
-                    <ProviderIcon key={member.id} provider={member.provider} className="size-4" />
-                  ))}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{group.name}</span>
-                <span className="text-xs text-muted-foreground">{group.members.length}</span>
-              </button>
-            </li>
-          ))}
+        <ul className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2 pb-2">
+          {groups.map((group) => {
+            const active = selected?.id === group.id;
+            return (
+              <li key={group.id}>
+                <button
+                  type="button"
+                  aria-current={active ? "true" : undefined}
+                  className={cn(
+                    "group/item flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] text-[var(--color-text-foreground-secondary)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.99]",
+                    active && "bg-[var(--color-background-button-secondary-hover)] text-foreground",
+                  )}
+                  onClick={() => {
+                    setNotice(null);
+                    props.onSelectGroup(group.id);
+                  }}
+                >
+                  <GroupAvatarStack members={group.members} />
+                  <span className="min-w-0 flex-1 truncate">{group.name}</span>
+                  <span
+                    className={cn(
+                      "text-[11px] text-muted-foreground/60 tabular-nums transition-opacity duration-150 group-hover/item:opacity-100",
+                      !active && "opacity-0",
+                    )}
+                  >
+                    {group.members.length}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
       <main className="flex min-h-0 min-w-0 flex-1">
@@ -91,6 +131,7 @@ export function MultiAgentsScreen(props: {
             {membersOpen ? (
               <GroupMembersPanel
                 group={selected}
+                onClose={() => setMembersOpen(false)}
                 onDeleted={(folder) => {
                   setMembersOpen(false);
                   setNotice(t("multiAgents.members.deleted", { folder }));
@@ -100,10 +141,13 @@ export function MultiAgentsScreen(props: {
             ) : null}
           </>
         ) : (
-          <div className="m-auto flex max-w-sm flex-col items-center gap-3 p-6 text-center">
-            <h2 className="text-base font-semibold">{t("multiAgents.emptyTitle")}</h2>
-            <p className="text-sm text-muted-foreground">{notice ?? t("multiAgents.emptyBody")}</p>
-            <Button size="sm" onClick={() => setSetupOpen(true)}>
+          <div className="m-auto flex max-w-xs flex-col items-start gap-1 p-6">
+            <h2 className="text-[15px] font-medium">{t("multiAgents.emptyTitle")}</h2>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              {notice ?? t("multiAgents.emptyBody")}
+            </p>
+            <Button size="sm" className="mt-3" onClick={() => setSetupOpen(true)}>
+              <PlusIcon className="size-3.5" />
               {t("multiAgents.newGroup")}
             </Button>
           </div>

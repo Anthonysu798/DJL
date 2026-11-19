@@ -1115,6 +1115,7 @@
       "copiedError": "오류 메시지 복사됨",
       "copyError": "오류 메시지 복사",
       "dismiss": "알림 닫기",
+      "done": "완료",
       "undo": "실행 취소"
     },
     "untitledThread": "제목 없는 스레드"
@@ -2724,6 +2725,8 @@
       "setup": {
         "title": "새 그룹",
         "pickTitle": "이 그룹에 넣을 에이전트를 고르세요",
+        "pickBody": "모두 하나의 채팅을 공유하고 서로 작업을 넘길 수 있습니다.",
+        "nameBody": "그룹 목록에 표시되는 이름입니다.",
         "nameTitle": "그룹 이름 정하기",
         "namePlaceholder": "그룹 이름",
         "next": "다음",
@@ -2736,7 +2739,15 @@
         "needOne": "설정된 에이전트를 하나 이상 고르세요."
       },
       "chat": {
-        "placeholder": "그룹에 메시지 보내기 — @로 에이전트 호출, 또는 @all",
+        "placeholder": "그룹에 메시지를 보내거나 @로 에이전트를 고르세요",
+        "startTitle": "대화를 시작하세요",
+        "startBody": "이 그룹의 모두가 같은 채팅을 읽습니다. @로 한 에이전트에게, @all로 모두에게 물어보세요.",
+        "starterMeet": "그룹과 인사하기",
+        "starterMeetPrompt": "@all 각자 소개하고 가장 잘하는 일을 알려 주세요",
+        "starterOne": "한 에이전트에게 묻기",
+        "starterOnePrompt": "@{{name}} 무엇을 도와줄 수 있나요?",
+        "starterReview": "다른 의견 받기",
+        "starterReviewPrompt": "@{{first}} 제 아이디어에 대한 계획을 제안하고 @{{second}}에게 검토를 요청해 주세요",
         "send": "보내기",
         "stopAll": "모두 중지",
         "stopMember": "중지",
@@ -2778,12 +2789,13 @@
         "commandsHeading": "명령"
       },
       "composer": {
-        "attach": "파일 첨부",
-        "skill": "스킬 사용",
-        "noSkills": "켜진 스킬이 없습니다.",
-        "removeAttachment": "{{name}} 제거"
+        "mention": "에이전트 멘션",
+        "sendsTo": "{{names}}에게 전송",
+        "sendsToAll": "모두에게 전송",
+        "skill": "스킬 사용"
       },
       "members": {
+        "close": "그룹 설정 닫기",
         "title": "그룹 설정",
         "add": "멤버 추가",
         "remove": "제거",

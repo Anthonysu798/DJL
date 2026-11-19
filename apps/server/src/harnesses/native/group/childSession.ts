@@ -11,8 +11,10 @@ import type {
   ProviderUserInputAnswers,
 } from "@synara/contracts";
 
+import { extractCodexGeneratedImageReference } from "../../../codexGeneratedImages";
 import { nativeApprovalDetail } from "../requests";
 import type { NativeDriver, NativeDriverFactory, NativeSink } from "../types";
+import { findNewOutputs, withOutputs } from "./groupOutputs";
 
 export type ChildWork = { files: string[]; commands: string[] };
 export type ChildReply =
@@ -63,6 +65,9 @@ interface Turn {
   readonly texts: Map<string, string>;
   lastItem: string | null;
   readonly work: ChildWork;
+  /** Images the member generated outside the folder (Codex keeps them in its own home). */
+  readonly images: string[];
+  readonly startedAt: number;
   onRequest: ChildRequestHandler;
   settled: boolean;
   resolve: (reply: ChildReply) => void;
@@ -107,6 +112,11 @@ export async function openChildSession(input: {
         const work = codexItemWork(payload);
         if (payload.itemType === "file_change") current.work.files.push(...work);
         if (payload.itemType === "command_execution") current.work.commands.push(...work);
+        const image = extractCodexGeneratedImageReference({
+          value: payload.data,
+          threadId: driver?.id,
+        });
+        if (image) current.images.push(image.path);
       }
     },
     request: async (type, args, signal) => {
@@ -137,15 +147,24 @@ export async function openChildSession(input: {
           texts: new Map(),
           lastItem: null,
           work: { files: [], commands: [] },
+          images: [],
+          // File times can be a little coarser than the clock.
+          startedAt: Date.now() - 1000,
           onRequest,
           settled: false,
           resolve,
         };
         const current = turn;
         active.send({ threadId: input.start.threadId, input: prompt }).then(
-          () => {
+          async () => {
             if (turn !== current) return;
-            const text = current.lastItem ? (current.texts.get(current.lastItem) ?? "").trim() : "";
+            const answer = current.lastItem
+              ? (current.texts.get(current.lastItem) ?? "").trim()
+              : "";
+            const created = input.start.cwd
+              ? await findNewOutputs(input.start.cwd, current.startedAt)
+              : [];
+            const text = withOutputs(answer, [...current.images, ...created]);
             settle((work) => (text ? { status: "ok", text, work } : { status: "empty", work }));
           },
           (error: unknown) =>
