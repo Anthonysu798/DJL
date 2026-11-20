@@ -33,9 +33,6 @@ import '../../activity/domain/desktop_activity.dart';
 import '../../activity/domain/activity_reducer.dart';
 import '../../subagents/domain/subagent_action.dart';
 import '../../host/presentation/host_controller.dart';
-import '../../host/presentation/paired_login_controller.dart';
-import '../../host/data/paired_login_store.dart';
-import '../../host/domain/paired_login.dart';
 import '../../status/domain/run_status.dart';
 
 typedef _ReasoningConnection = ({
@@ -187,10 +184,6 @@ class DesktopController extends ChangeNotifier {
           ? transport.requestNull('account/rateLimits/read')
           : transport.request('account/rateLimits/read', params),
     );
-    pairedLogin = PairedLoginController(
-      host,
-      PairedLoginStore(pairings.credentials, allowLocal: pairings.allowLocal),
-    );
     host.addListener(_hostChanged);
     usage.addListener(_hostChanged);
     host.connectSaved = (device) async {
@@ -221,7 +214,6 @@ class DesktopController extends ChangeNotifier {
   }
   late final HostController host;
   late final PairedUsageController usage;
-  late final PairedLoginController pairedLogin;
   bool _hostConnecting = false;
   void _hostChanged() {
     if (!_disposed) notifyListeners();
@@ -246,11 +238,6 @@ class DesktopController extends ChangeNotifier {
                 p.macDeviceId == pair.macDeviceId &&
                 p.publicKey == pair.publicKey,
           ),
-    );
-    pairedLogin.bind(
-      host.trusted && pair != null
-          ? LoginIdentity(pair.macDeviceId, pair.publicKey)
-          : null,
     );
     final pin = pair?.data['macIdentityPublicKey'];
     usage.bind(
@@ -7104,17 +7091,12 @@ class DesktopController extends ChangeNotifier {
       }
       return;
     }
-    if ((method == 'account/updated' || method == 'account/login/completed') &&
+    if (method == 'account/updated' &&
         rpc['id'] == null &&
         connected &&
         requestMatchesConnection(rpc) &&
         transport.macDeviceId == active?.macDeviceId) {
       usage.accountChanged();
-      if (method == 'account/login/completed') {
-        unawaited(
-          pairedLogin.handleEvent(method, params, refreshStatus: false),
-        );
-      }
       unawaited(host.refresh());
       return;
     }
@@ -7542,7 +7524,6 @@ class DesktopController extends ChangeNotifier {
       _pairingSubmission = false;
       _hostConnecting = false;
     }
-    pairedLogin.setAllowed(false);
     _clearGuardianAuthority();
     _clearReasoningAuthority();
     _rememberCurrent();
@@ -7607,7 +7588,12 @@ class DesktopController extends ChangeNotifier {
   }
 
   Future<void> forget(Pairing pair) async {
-    await pairedLogin.forget(LoginIdentity(pair.macDeviceId, pair.publicKey));
+    // Older versions could save a ChatGPT sign-in record per Mac; drop it.
+    await pairings.credentials.write(
+      'codex.gpt.pendingLoginState.'
+      '${base64Url.encode(utf8.encode(jsonEncode([pair.macDeviceId, pair.publicKey])))}',
+      null,
+    );
     if (isActiveDevice(pair)) {
       await disconnect();
       active = null;
@@ -7631,7 +7617,6 @@ class DesktopController extends ChangeNotifier {
     host.removeListener(_hostChanged);
     usage.removeListener(_hostChanged);
     usage.dispose();
-    pairedLogin.dispose();
     host.dispose();
     _disposed = true;
     _retry?.cancel();
