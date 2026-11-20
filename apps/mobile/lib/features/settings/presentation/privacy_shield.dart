@@ -23,13 +23,13 @@ class PrivacyShield extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         ExcludeSemantics(
-          excluding: controller.shielded,
+          excluding: controller.covered,
           child: ExcludeFocus(
-            excluding: controller.shielded,
-            child: AbsorbPointer(absorbing: controller.shielded, child: child),
+            excluding: controller.covered,
+            child: AbsorbPointer(absorbing: controller.covered, child: child),
           ),
         ),
-        if (controller.shielded)
+        if (controller.covered)
           Positioned.fill(
             child: Material(
               color: Theme.of(context).colorScheme.surface,
@@ -64,10 +64,8 @@ class PrivacyShield extends StatelessWidget {
                           ),
                           if (controller.ready) ...[
                             const SizedBox(height: 8),
-                            Text(
-                              controller.requiresUnlock
-                                  ? 'Your remote sessions stay private when you step away.'
-                                  : 'Your session is hidden while DJL is inactive.',
+                            const Text(
+                              'Your remote sessions stay private when you step away.',
                               textAlign: TextAlign.center,
                             ),
                           ],

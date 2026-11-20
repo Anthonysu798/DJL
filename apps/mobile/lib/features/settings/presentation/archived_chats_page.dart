@@ -13,6 +13,7 @@ import 'settings_group.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 class SettingsArchivedChatsCard extends StatelessWidget {
   const SettingsArchivedChatsCard({super.key, required this.desktop});
@@ -128,22 +129,11 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
     Offset point,
   ) async {
     if (!_owns(data, mac, id)) return;
-    final overlay =
-        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    final local = overlay.globalToLocal(point), size = overlay.size;
-    final choice = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        local.dx,
-        local.dy,
-        size.width - local.dx,
-        size.height - local.dy,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-      constraints: BoxConstraints(
-        maxWidth: size.width < 282 ? size.width - 32 : 250,
-      ),
-      items: [
+    final choice = await showDjlGlassEntries<String>(
+      context,
+      anchor: Rect.fromLTWH(point.dx, point.dy, 0, 0),
+      label: 'Archived chat actions',
+      entries: [
         PopupMenuItem(
           value: 'unarchive',
           child: Row(

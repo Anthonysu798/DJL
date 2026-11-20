@@ -90,7 +90,7 @@ Future<DesktopController> securePairingEntry(WidgetTester tester) async {
       reason:
           'Native pairing preflight may disconnect only a local desktop QA fixture.',
     );
-    await overviewAction(tester, 'Disconnect desktop');
+    await overviewAction(tester, 'Disconnect');
   }
   await waitFor(tester, () => desktop.canEnterManualPairing);
   await tester.tap(find.byTooltip('More actions'));
@@ -561,7 +561,7 @@ void main() {
             desktop.threadList.data.isArchived(removedId),
       );
       expect(desktop.threadList.data.isPinned(originalId), isTrue);
-      await overviewAction(tester, 'Show archived desktop chats');
+      await overviewAction(tester, 'Archived chats');
       final row = await overviewThread(tester, desktop, removedId);
       await reveal(tester, row);
       await tester.tap(
@@ -577,14 +577,14 @@ void main() {
         tester,
         () => !desktop.threadList.data.isArchived(removedId),
       );
-      await overviewAction(tester, 'Show active desktop chats');
+      await overviewAction(tester, 'Active chats');
       await selectChat(tester, desktop, removedId);
       await tool(tester, 'Archive chat');
       await waitFor(
         tester,
         () => find.byType(PairingPage).evaluate().isNotEmpty,
       );
-      await overviewAction(tester, 'Show archived desktop chats');
+      await overviewAction(tester, 'Archived chats');
       final beforeRemove = await state();
       final archivedRow = await overviewThread(tester, desktop, removedId);
       await reveal(tester, archivedRow);
@@ -603,7 +603,7 @@ void main() {
         () => desktop.threadList.data.deleted.contains(removedId),
       );
       expect((await state())['archiveCount'], beforeRemove['archiveCount']);
-      await overviewAction(tester, 'Show active desktop chats');
+      await overviewAction(tester, 'Active chats');
       await selectChat(tester, desktop, originalId);
       expect(
         tester

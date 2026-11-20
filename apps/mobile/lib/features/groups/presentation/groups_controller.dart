@@ -455,9 +455,11 @@ class GroupsController extends ChangeNotifier {
     return created;
   }
 
-  String _message(Object failure) => failure is RemoteRpcException
+  // The bridge's own errors are plain sentences; its backend timeout is not.
+  String _message(Object failure) =>
+      failure is RemoteRpcException && !failure.message.contains('timed out')
       ? failure.message
-      : failure is TimeoutException
+      : failure is TimeoutException || failure is RemoteRpcException
       ? 'Your Mac did not answer in time. Check that DJL is open on it.'
       : 'Your Mac is not connected right now.';
 

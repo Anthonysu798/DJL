@@ -217,6 +217,23 @@ void main() {
     expect(controller.error, 'Group not found');
   });
 
+  testWidgets('a desktop timeout is explained in plain words', (tester) async {
+    final link = mac();
+    final controller = GroupsController(link);
+    addTearDown(controller.dispose);
+    await tester.pump();
+    link.failures['djl/groups/list'] = const RemoteRpcException(
+      -32000,
+      'DJL Electron request timed out: groups.list',
+      null,
+    );
+    await controller.refresh();
+    expect(
+      controller.error,
+      'Your Mac did not answer in time. Check that DJL is open on it.',
+    );
+  });
+
   testWidgets('reconnecting reloads the list and the open chat', (
     tester,
   ) async {

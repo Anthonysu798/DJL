@@ -18,6 +18,7 @@ import '../../settings/presentation/settings_controller.dart';
 import '../../settings/domain/appearance.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 List<FontVariation>? _systemFontAxes(
   BuildContext context,
@@ -336,11 +337,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               button: true,
               label: 'Model',
               value: chat.selectedModel?['displayName'] as String? ?? 'DJL',
-              child: PopupMenuButton<String>(
+              child: DjlGlassMenuButton<String>(
                 tooltip: '',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
                 enabled:
                     chat.model != null &&
                     chat.models.isNotEmpty &&
@@ -755,8 +753,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      PopupMenuButton<String>(
+                                      DjlGlassMenuButton<String>(
                                         tooltip: 'Attach file or image',
+                                        padding: EdgeInsets.zero,
                                         style: IconButton.styleFrom(
                                           minimumSize: const Size(34, 34),
                                           maximumSize: const Size(34, 34),
@@ -795,7 +794,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                               child: Text('Camera'),
                                             ),
                                         ],
-                                        padding: EdgeInsets.zero,
                                         icon: Container(
                                           width: 34,
                                           height: 34,

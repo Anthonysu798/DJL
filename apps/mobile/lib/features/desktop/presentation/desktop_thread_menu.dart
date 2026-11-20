@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 class DesktopThreadMenu extends StatelessWidget {
   const DesktopThreadMenu({
@@ -33,11 +34,11 @@ class DesktopThreadMenu extends StatelessWidget {
         ancestor: overlay,
       ),
     );
-    final selected = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromRect(rect, Offset.zero & overlay.size),
-      items: secondaryBuilder(context),
-      semanticLabel: 'More thread actions',
+    final selected = await showDjlGlassEntries<String>(
+      context,
+      anchor: rect,
+      entries: secondaryBuilder(context),
+      label: 'More thread actions',
     );
     if (selected != null && context.mounted && isCurrent()) {
       onSelected(selected);
@@ -45,7 +46,7 @@ class DesktopThreadMenu extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => PopupMenuButton<String>(
+  Widget build(BuildContext context) => DjlGlassMenuButton<String>(
     tooltip: 'Thread actions',
     enabled: enabled,
     icon: Icon(

@@ -230,7 +230,7 @@ void main() {
     expect(find.text('Custom Studio'), findsOneWidget);
     expect(find.text('Alpha parent'), findsNothing);
     expect(find.text('Explicit project'), findsNothing);
-    expect(find.text('Paired host status and controls'), findsNothing);
+    expect(find.text('Desktop status'), findsNothing);
     expect(find.bySemanticsLabel('New chat'), findsOneWidget);
     expect(requests(remote, 'thread/start'), isEmpty);
     await finishDraft(tester, desktop);

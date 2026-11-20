@@ -75,6 +75,7 @@ import '../../workspace/domain/workspace_reference.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 String desktopItemText(RemoteJson item) {
   if (item['text'] is String) return item['text'] as String;
@@ -734,7 +735,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
     return Semantics(
       button: true,
       value: desktopConversationPathLabel(draft.cwd!),
-      child: PopupMenuButton<String>(
+      child: DjlGlassMenuButton<String>(
         tooltip: 'Select folder',
         requestFocus: false,
         enabled: current(),

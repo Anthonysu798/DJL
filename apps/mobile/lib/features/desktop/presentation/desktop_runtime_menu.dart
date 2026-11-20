@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../../core/presentation/djl_glass.dart';
 import '../../settings/domain/runtime_defaults.dart';
 import 'desktop_composer_options_menu.dart';
 import 'desktop_controller.dart';
@@ -8,6 +7,7 @@ import 'desktop_model_catalog_sheet.dart';
 import 'desktop_runtime_labels.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_frosted.dart';
 
 typedef _RuntimeChoice = ({String kind, String value, String? model});
 
@@ -397,9 +397,8 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
       return SizedBox(
         key: const Key('composer.runtime.popover'),
         width: 250,
-        child: DjlGlassSurface(
+        child: DjlFrosted(
           radius: 32,
-          useNativeView: false,
           child: Material(
             type: MaterialType.transparency,
             child: Semantics(

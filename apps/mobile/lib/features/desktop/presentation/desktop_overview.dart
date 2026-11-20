@@ -16,6 +16,8 @@ import '../../groups/presentation/groups_page.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_frosted.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 class DesktopOverview extends StatefulWidget {
   const DesktopOverview({
@@ -223,15 +225,22 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     return (scheme.onSurface, scheme.surface);
   }
 
-  // A flat raised fill reads the same in light and dark; a shadow on a
-  // page-coloured pill disappears on black.
-  Widget _surface(Widget child, {Color? fill}) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: fill ?? DjlColors.of(context).surfaceRaised,
-      borderRadius: BorderRadius.circular(DjlRadius.pill),
-    ),
-    child: child,
-  );
+  // Quiet controls are frosted glass; a [fill] marks the selected or primary
+  // one with solid ink.
+  Widget _surface(Widget child, {Color? fill}) => fill == null
+      ? DjlFrosted(
+          radius: DjlRadius.pill,
+          shadow: false,
+          blur: false,
+          child: child,
+        )
+      : DecoratedBox(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(DjlRadius.pill),
+          ),
+          child: child,
+        );
   Widget _button({
     required String label,
     required Widget child,
@@ -273,6 +282,92 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     onTap: onTap,
     child: SizedBox.square(dimension: 40, child: Icon(icon, size: size)),
   );
+
+  Future<void> _openMore(BuildContext anchor) async {
+    final box = anchor.findRenderObject()! as RenderBox;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    final ready = desktop.runtimeReady;
+    final action = await showDjlGlassMenu<String>(
+      context,
+      anchor: rect,
+      label: 'More actions',
+      sections: [
+        [
+          DjlMenuItem('chat', 'New Chat', DjlIcons.compose, enabled: ready),
+          DjlMenuItem(
+            'quick-chat',
+            'Quick Chat',
+            DjlIcons.quick,
+            enabled: ready,
+          ),
+          DjlMenuItem(
+            'project',
+            'New Project',
+            DjlIcons.folderAdd,
+            enabled: ready,
+          ),
+        ],
+        [
+          const DjlMenuItem('connections', 'Connections', DjlIcons.link),
+          DjlMenuItem(
+            'secure',
+            'Secure pairing details',
+            DjlIcons.shieldCheck,
+            enabled: desktop.canEnterManualPairing,
+          ),
+          if (desktop.active != null)
+            const DjlMenuItem('host', 'Desktop status', DjlIcons.desktop),
+        ],
+        [
+          DjlMenuItem(
+            'archive',
+            desktop.threadList.showArchived ? 'Active chats' : 'Archived chats',
+            desktop.threadList.showArchived ? DjlIcons.chats : DjlIcons.archive,
+          ),
+          DjlMenuItem(
+            'refresh',
+            'Refresh',
+            DjlIcons.refresh,
+            enabled: desktop.connected,
+          ),
+        ],
+        if (desktop.connected)
+          const [
+            DjlMenuItem(
+              'disconnect',
+              'Disconnect',
+              DjlIcons.power,
+              destructive: true,
+            ),
+          ],
+      ],
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'connections':
+        widget.onConnections();
+      case 'secure':
+        widget.onSecureDetails();
+      case 'host':
+        widget.onHost();
+      case 'project':
+        widget.onProject();
+      case 'chat':
+        widget.onChat(
+          null,
+          cwd: _defaultProjectPath,
+          source: DesktopDraftSource.generalChat,
+        );
+      case 'quick-chat':
+        widget.onQuickChat();
+      case 'disconnect':
+        desktop.disconnect();
+      case 'archive':
+        desktop.threadList.filter(archived: !desktop.threadList.showArchived);
+      case 'refresh':
+        desktop.refreshThreads();
+    }
+  }
 
   Widget _header() => Padding(
     padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -316,98 +411,9 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           ),
         ),
         const Spacer(),
-        _surface(
-          PopupMenuButton<String>(
-            tooltip: 'More actions',
-            padding: EdgeInsets.zero,
-            style: IconButton.styleFrom(
-              minimumSize: const Size.square(40),
-              maximumSize: const Size.square(40),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            constraints: const BoxConstraints(minWidth: 220),
-            icon: const SizedBox.square(
-              dimension: 40,
-              child: Icon(DjlIcons.more, size: 20),
-            ),
-            onSelected: (action) {
-              switch (action) {
-                case 'connections':
-                  widget.onConnections();
-                case 'secure':
-                  widget.onSecureDetails();
-                case 'host':
-                  widget.onHost();
-                case 'project':
-                  widget.onProject();
-                case 'chat':
-                  widget.onChat(
-                    null,
-                    cwd: _defaultProjectPath,
-                    source: DesktopDraftSource.generalChat,
-                  );
-                case 'quick-chat':
-                  widget.onQuickChat();
-                case 'disconnect':
-                  desktop.disconnect();
-                case 'archive':
-                  desktop.threadList.filter(
-                    archived: !desktop.threadList.showArchived,
-                  );
-                case 'refresh':
-                  desktop.refreshThreads();
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'chat',
-                enabled: desktop.runtimeReady,
-                child: const Text('New Chat'),
-              ),
-              PopupMenuItem(
-                value: 'quick-chat',
-                enabled: desktop.runtimeReady,
-                child: const Text('Quick Chat'),
-              ),
-              PopupMenuItem(
-                value: 'project',
-                enabled: desktop.runtimeReady,
-                child: const Text('New Project'),
-              ),
-              const PopupMenuItem(
-                value: 'connections',
-                child: Text('Connections'),
-              ),
-              PopupMenuItem(
-                value: 'secure',
-                enabled: desktop.canEnterManualPairing,
-                child: const Text('Secure pairing details'),
-              ),
-              if (desktop.active != null)
-                const PopupMenuItem(
-                  value: 'host',
-                  child: Text('Paired host status and controls'),
-                ),
-              PopupMenuItem(
-                value: 'archive',
-                child: Text(
-                  desktop.threadList.showArchived
-                      ? 'Show active desktop chats'
-                      : 'Show archived desktop chats',
-                ),
-              ),
-              PopupMenuItem(
-                value: 'refresh',
-                enabled: desktop.connected,
-                child: const Text('Refresh conversations'),
-              ),
-              if (desktop.connected)
-                const PopupMenuItem(
-                  value: 'disconnect',
-                  child: Text('Disconnect desktop'),
-                ),
-            ],
-          ),
+        Builder(
+          builder: (anchor) =>
+              _icon('More actions', DjlIcons.more, () => _openMore(anchor)),
         ),
         if (widget.onSettings != null) ...[
           const SizedBox(width: 10),
@@ -703,7 +709,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       onPressed: toggleChildren,
                     ),
                   ),
-                PopupMenuButton<String>(
+                DjlGlassMenuButton<String>(
                   tooltip: 'Desktop chat actions',
                   padding: EdgeInsets.zero,
                   icon: Icon(DjlIcons.more, size: 15, color: _secondary),
@@ -940,9 +946,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           alignment: Alignment.centerRight,
           child: _button(
             label: 'New group',
-            fill: ready
-                ? _accent.$1
-                : Theme.of(context).colorScheme.surfaceContainerHigh,
+            fill: ready ? _accent.$1 : null,
             onTap: ready ? () => GroupsList.create(context, groupChats) : null,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -980,9 +984,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         children: [
           _button(
             label: 'New chat',
-            fill: desktop.runtimeReady
-                ? _accent.$1
-                : Theme.of(context).colorScheme.surfaceContainerHigh,
+            fill: desktop.runtimeReady ? _accent.$1 : null,
             onTap: !desktop.runtimeReady
                 ? null
                 : _owned(() {

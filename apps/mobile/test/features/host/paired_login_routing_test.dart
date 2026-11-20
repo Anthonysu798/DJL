@@ -139,7 +139,7 @@ void main() {
       expect(desktop.pairedLogin.pending, isNull);
       await tester.tap(find.byTooltip('More actions'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Paired host status and controls'));
+      await tester.tap(find.text('Desktop status'));
       await tester.pumpAndSettle();
       expect(find.text('Loading secure sign-in recovery…'), findsOneWidget);
       currentRead.complete(jsonEncode(record.toJson()));

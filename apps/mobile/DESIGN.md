@@ -40,7 +40,9 @@ dark mode.
 ## Type
 
 One family: the system face on iOS, bundled Geist on Android (the Font setting can override it).
-Sizes come from the theme's text styles; hierarchy is weight and size, not colour.
+Sizes come from the theme's text styles; hierarchy is weight and size, not colour. Cupertino
+widgets fall back to Roboto on Android unless told the family, so `djlTheme` passes it to the
+Cupertino text theme and `settingsTextStyle` names it explicitly.
 
 ## Icons
 
@@ -50,9 +52,20 @@ name what an icon means (`DjlIcons.send`); the glyph set is chosen in that one f
 
 ## Glass
 
-`DjlGlassSurface` owns the glass effect: native Liquid Glass on iOS 26, a blur elsewhere, and a
-solid surface when the Liquid Glass setting is off. Use it only for things that float over
-scrolling content: a chat header, a composer, menus, sheets. Content itself is flat.
+Two widgets own glass, and both become a solid raised surface when the Liquid Glass setting is off:
+
+- `DjlGlassSurface`: native Liquid Glass on iOS 26, `DjlFrosted` everywhere else.
+- `DjlFrosted` (`lib/core/presentation/djl_frosted.dart`): a blur of what is behind, a translucent
+  fill that is brighter at the top, and a fine edge. Pass `blur: false` for controls on a still
+  background, where a blur shows nothing and costs a pass every frame.
+
+Every menu and picker opens through `showDjlGlassMenu`, `showDjlGlassEntries` or
+`DjlGlassMenuButton` (`djl_glass_menu.dart`): a frosted panel that grows from its button over a
+softly blurred page. Do not use `PopupMenuButton` or `showMenu` directly.
+
+Buttons that float are `DjlGlassIconButton` (round), `DjlGlassBackButton` (top left of a page that
+has no bar) and `DjlGlassPillButton` (text; `prominent` fills it with ink for the one main action).
+Pages scroll edge to edge under the status bar with a fade, not a solid bar.
 
 ## What the phone shows
 

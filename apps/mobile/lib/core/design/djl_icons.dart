@@ -105,6 +105,8 @@ abstract final class DjlIcons {
   static const IconData images = PhosphorIconsRegular.images;
   static const IconData document = PhosphorIconsRegular.fileText;
   static const IconData folder = PhosphorIconsRegular.folder;
+  static const IconData folderAdd = PhosphorIconsRegular.folderPlus;
+  static const IconData quick = PhosphorIconsRegular.lightning;
   static const IconData inbox = PhosphorIconsRegular.tray;
   static const IconData book = PhosphorIconsRegular.bookOpen;
   static const IconData mail = PhosphorIconsFill.envelope;

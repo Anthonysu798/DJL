@@ -11,6 +11,11 @@ class AppLockController extends ChangeNotifier {
   bool _enabled = true, _protected = false, _active = true, _disposed = false;
   bool _authenticating = false;
   bool get authenticating => _authenticating;
+
+  /// Whether the cover is drawn. [shielded] also holds while the app is merely
+  /// inactive so work waits for the foreground, but the app stays visible in
+  /// the switcher; only startup and a required unlock hide it.
+  bool get covered => !ready || requiresUnlock;
   String? error;
   DateTime? _backgroundedAt;
   int _generation = 0;

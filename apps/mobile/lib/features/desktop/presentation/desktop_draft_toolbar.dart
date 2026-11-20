@@ -6,6 +6,7 @@ import '../../git/domain/git_models.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 class DesktopDraftActions extends StatelessWidget {
   const DesktopDraftActions({
@@ -31,7 +32,7 @@ class DesktopDraftActions extends StatelessWidget {
       onGit: onGit,
       gitStatus: gitStatus,
       gitBusy: gitBusy,
-      threadActions: PopupMenuButton<String>(
+      threadActions: DjlGlassMenuButton<String>(
         tooltip: 'Thread actions',
         enabled: onGitTools != null,
         onSelected: (_) => onGitTools?.call(),

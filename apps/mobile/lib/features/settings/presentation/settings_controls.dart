@@ -56,7 +56,6 @@ class _SettingsControlsState extends State<SettingsControls> {
                 SettingsMenuRow<AppFontStyle>(
                   key: const Key('font-setting'),
                   label: 'Font',
-                  nativePickerStyle: true,
                   valueLabel: controller.font.title,
                   value: controller.font,
                   options: {

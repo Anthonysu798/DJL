@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/status_surface.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_frosted.dart';
 
 /// Permission reads never prompt. Only these explicit actions can request access
 /// or retry the local surface; they have no chat/controller mutation dependency.
@@ -124,24 +125,26 @@ class _StatusPermissionControlsState extends State<StatusPermissionControls>
         if (permission != null &&
             permission.state != StatusPermissionState.unsupported)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
             child: Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 if (permission.canRequest)
-                  TextButton(
+                  DjlGlassPillButton(
+                    label: 'Enable task status',
+                    prominent: true,
                     onPressed: _busy ? null : _enable,
-                    child: const Text('Enable task status'),
                   ),
                 if (permission.state == StatusPermissionState.allowed)
-                  TextButton(
+                  DjlGlassPillButton(
+                    label: 'Refresh task status',
                     onPressed: _busy ? null : () => _read(retry: true),
-                    child: const Text('Refresh task status'),
                   ),
                 if (permission.canOpenSettings)
-                  TextButton(
+                  DjlGlassPillButton(
+                    label: 'System settings',
                     onPressed: _busy ? null : _settings,
-                    child: const Text('System settings'),
                   ),
               ],
             ),

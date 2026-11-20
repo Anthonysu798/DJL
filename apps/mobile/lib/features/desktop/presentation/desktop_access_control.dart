@@ -182,7 +182,7 @@ class _AccessPopover extends StatelessWidget {
                     alpha:
                         theme.extension<DjlAppearance>()?.liquidGlass == false
                         ? 1
-                        : .94,
+                        : .72,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 13),

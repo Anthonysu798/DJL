@@ -9,6 +9,7 @@ import 'image_controller.dart';
 import 'image_preview_page.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 class ImageGalleryPage extends StatefulWidget {
   const ImageGalleryPage({
@@ -114,7 +115,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                 ),
               ),
               if (widget.controller.configuration.imageEditing)
-                PopupMenuButton<String>(
+                DjlGlassMenuButton<String>(
                   tooltip: 'Image actions',
                   onSelected: (_) => widget.onOpen(image, true),
                   itemBuilder: (_) => [

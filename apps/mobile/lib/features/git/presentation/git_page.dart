@@ -18,6 +18,7 @@ import 'repository_diff_sheet.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 
 enum _GitCreationDecision { cancel, proceed, commitFirst }
 
@@ -1189,7 +1190,8 @@ class _GitPageState extends State<GitPage> {
               onPressed: c.loading || c.busy ? null : c.refresh,
               icon: const Icon(DjlIcons.refresh),
             ),
-            PopupMenuButton<String>(
+            DjlGlassMenuButton<String>(
+              tooltip: 'Show menu',
               enabled: !c.busy,
               onSelected: (action) {
                 if (_routingActions.contains(action) &&

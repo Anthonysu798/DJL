@@ -95,7 +95,7 @@ Future<({DesktopController desktop, HostTransport transport})> showSettings(
 }
 
 void main() {
-  testWidgets('scrolled Settings Done closes the actual pushed route', (
+  testWidgets('scrolled Settings Back closes the actual pushed route', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(402, 874);
@@ -111,11 +111,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Usage'));
     await tester.pumpAndSettle();
-    expect(find.text('Done').hitTestable(), findsOneWidget);
-    await tester.tap(find.text('Done'));
+    expect(
+      find.byKey(const Key('settings.back')).hitTestable(),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('settings.back')));
     await tester.pumpAndSettle();
     expect(find.text('Open Settings route').hitTestable(), findsOneWidget);
-    expect(find.text('Done'), findsNothing);
+    expect(find.byKey(const Key('settings.back')), findsNothing);
     expect(tester.takeException(), isNull);
   });
   testWidgets('Bridge versions align to the trailing edge of each source row', (

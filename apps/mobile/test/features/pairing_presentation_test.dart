@@ -717,15 +717,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(
-        tester
-            .widget<PopupMenuItem<String>>(
-              find.widgetWithText(
-                PopupMenuItem<String>,
-                'Secure pairing details',
-              ),
-            )
-            .enabled,
-        isFalse,
+        tester.getSemantics(find.bySemanticsLabel('Secure pairing details')),
+        matchesSemantics(
+          label: 'Secure pairing details',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
       );
       await tester.tap(find.text('Connections'));
       await tester.pump();

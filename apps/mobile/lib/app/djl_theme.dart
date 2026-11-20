@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart' show CupertinoThemeData;
+import 'package:flutter/cupertino.dart'
+    show CupertinoTextThemeData, CupertinoThemeData;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../core/design/djl_tokens.dart';
@@ -104,6 +105,7 @@ ThemeData djlTheme(
       primaryColor: colors.ink,
       scaffoldBackgroundColor: colors.surface,
       barBackgroundColor: colors.surface,
+      textTheme: family == null ? null : _cupertinoText(family),
     ),
     scaffoldBackgroundColor: colors.surface,
     iconTheme: IconThemeData(color: colors.ink, size: 22),
@@ -186,5 +188,22 @@ ThemeData djlTheme(
       trackOutlineWidth: const WidgetStatePropertyAll(0),
     ),
     dividerTheme: DividerThemeData(color: colors.hairline, space: 1),
+  );
+}
+
+// Cupertino widgets fall back to Roboto on Android unless told the family.
+CupertinoTextThemeData _cupertinoText(String family) {
+  const base = CupertinoTextThemeData();
+  TextStyle f(TextStyle style) => style.copyWith(fontFamily: family);
+  return CupertinoTextThemeData(
+    textStyle: f(base.textStyle),
+    actionTextStyle: f(base.actionTextStyle),
+    actionSmallTextStyle: f(base.actionSmallTextStyle),
+    tabLabelTextStyle: f(base.tabLabelTextStyle),
+    navTitleTextStyle: f(base.navTitleTextStyle),
+    navLargeTitleTextStyle: f(base.navLargeTitleTextStyle),
+    navActionTextStyle: f(base.navActionTextStyle),
+    pickerTextStyle: f(base.pickerTextStyle),
+    dateTimePickerTextStyle: f(base.dateTimePickerTextStyle),
   );
 }

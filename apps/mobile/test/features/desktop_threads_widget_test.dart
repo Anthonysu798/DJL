@@ -49,13 +49,13 @@ void main() {
       expect(desktop.threadList.data.isArchived('t1'), isTrue);
       await tester.tap(find.byTooltip('More actions'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Show archived desktop chats'));
+      await tester.tap(find.text('Archived chats'));
       await tester.pumpAndSettle();
       expect(find.text('Renamed offline chat'), findsOneWidget);
       await action(tester, 'Unarchive chat');
       await tester.tap(find.byTooltip('More actions'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Show active desktop chats'));
+      await tester.tap(find.text('Active chats'));
       await tester.pumpAndSettle();
       expect(find.text('Renamed offline chat'), findsOneWidget);
       await action(tester, 'Remove from this device');

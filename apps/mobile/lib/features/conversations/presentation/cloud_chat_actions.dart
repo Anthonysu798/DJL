@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/cloud_chrome.dart';
 import '../../../core/presentation/djl_context_menu.dart';
@@ -140,11 +139,7 @@ Widget _cloudMenuSurface(
               ? 'cloud-chat-delete-confirmation'
               : 'cloud-chat-actions',
         ),
-        color:
-            defaultTargetPlatform == TargetPlatform.android &&
-                colors.brightness == Brightness.dark
-            ? colors.surface.withValues(alpha: .9)
-            : Colors.transparent,
+        color: Colors.transparent,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(confirmation ? 28 : 34),
