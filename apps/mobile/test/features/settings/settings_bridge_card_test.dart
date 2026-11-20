@@ -140,7 +140,7 @@ void main() {
     final f = await showSettings(tester, fullPage: true, connected: false);
     await tester.ensureVisible(find.text('Usage'));
     await tester.pumpAndSettle();
-    expect(find.text('Bridge'), findsNothing);
+    expect(find.text('DJL on your Mac'), findsNothing);
     expect(find.text('Composer Defaults'), findsNothing);
     expect(find.text('Usage').hitTestable(), findsOneWidget);
     expect(
@@ -162,10 +162,10 @@ void main() {
       tester,
     ) async {
       await showSettings(tester, installed: row.$1, latest: row.$2);
-      expect(find.text('Bridge'), findsOneWidget);
+      expect(find.text('DJL on your Mac'), findsOneWidget);
       expect(find.text(row.$3), findsWidgets);
       expect(
-        find.text('Reinstall Bridge on Device'),
+        find.text('Check for a DJL update'),
         row.$3 == 'Update available' ? findsNothing : findsOneWidget,
       );
     });
@@ -174,15 +174,13 @@ void main() {
     tester,
   ) async {
     final f = await showSettings(tester, connected: false);
-    expect(find.text('Bridge'), findsOneWidget);
+    expect(find.text('DJL on your Mac'), findsOneWidget);
     expect(
-      find.text(
-        'Connect to your paired device to read the installed bridge version.',
-      ),
+      find.text('Connect to your Mac to see its DJL version.'),
       findsOneWidget,
     );
-    expect(find.text('Update Bridge on Device'), findsNothing);
-    expect(find.text('Reinstall Bridge on Device'), findsNothing);
+    expect(find.text('Update DJL on your Mac'), findsNothing);
+    expect(find.text('Check for a DJL update'), findsNothing);
     expect(f.transport.calls, isEmpty);
   });
   testWidgets(
@@ -190,7 +188,7 @@ void main() {
     (tester) async {
       await showSettings(tester, capable: false);
       expect(find.text('1.9'), findsOneWidget);
-      expect(find.text('Update Bridge on Device'), findsNothing);
+      expect(find.text('Update DJL on your Mac'), findsNothing);
     },
   );
   testWidgets(
@@ -200,15 +198,15 @@ void main() {
       f.transport.handler = (_, _) async => throw TimeoutException('offline');
       await f.desktop.host.refresh();
       await tester.pumpAndSettle();
-      expect(find.textContaining('Last known bridge status'), findsOneWidget);
-      final update = find.widgetWithText(TextButton, 'Update Bridge on Device');
+      expect(find.textContaining('Last known version'), findsOneWidget);
+      final update = find.widgetWithText(TextButton, 'Update DJL on your Mac');
       expect(tester.widget<TextButton>(update).onPressed, isNull);
-      await tester.ensureVisible(find.text('Refresh bridge status'));
+      await tester.ensureVisible(find.text('Try again'));
       await tester.pumpAndSettle();
       f.transport.handler = null;
-      await tester.tap(find.text('Refresh bridge status'));
+      await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Last known bridge status'), findsNothing);
+      expect(find.textContaining('Last known version'), findsNothing);
       expect(tester.widget<TextButton>(update).onPressed, isNotNull);
       expect(
         f.transport.calls.where((c) => c.$1.startsWith('desktop/')),
@@ -221,12 +219,11 @@ void main() {
       tester,
     ) async {
       final f = await showSettings(tester);
-      await tester.ensureVisible(find.text('Update Bridge on Device'));
+      await tester.ensureVisible(find.text('Update DJL on your Mac'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Update Bridge on Device'));
+      await tester.tap(find.text('Update DJL on your Mac'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Current: 1.9'), findsOneWidget);
-      expect(find.textContaining('Latest reported: 1.10'), findsOneWidget);
+      expect(find.textContaining('Your Mac has DJL 1.9.'), findsOneWidget);
       expect(
         f.transport.calls.where((c) => c.$1.startsWith('desktop/')),
         isEmpty,
@@ -240,9 +237,7 @@ void main() {
         );
         await tester.pumpAndSettle();
       }
-      await tester.tap(
-        find.text(outcome == 'cancel' ? 'Cancel' : 'Update and restart'),
-      );
+      await tester.tap(find.text(outcome == 'cancel' ? 'Cancel' : 'Update'));
       await tester.pumpAndSettle();
       expect(
         f.transport.calls
@@ -252,7 +247,7 @@ void main() {
       );
       if (outcome == 'confirm') {
         expect(
-          find.textContaining('Waiting for bridge reconnect'),
+          find.textContaining('DJL is updating on your Mac'),
           findsOneWidget,
         );
         expect(find.text('Up to date'), findsNothing);
@@ -293,9 +288,9 @@ void main() {
         latest: '1.10.12345678901234567890-custom-build',
         scale: 2.2,
       );
-      await tester.ensureVisible(find.text('Update Bridge on Device'));
+      await tester.ensureVisible(find.text('Update DJL on your Mac'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Update Bridge on Device'));
+      await tester.tap(find.text('Update DJL on your Mac'));
       await tester.pumpAndSettle();
       expect(find.text('Cancel').hitTestable(), findsOneWidget);
       await tester.tap(find.text('Cancel'));

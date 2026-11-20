@@ -33,15 +33,15 @@ class HostActionError {
       return HostActionError(
         unsupported ? HostErrorKind.unsupported : HostErrorKind.refused,
         unsupported
-            ? 'This bridge does not support this action.'
-            : 'The paired host refused this action. Check the host and try again.',
+            ? 'DJL on your Mac can\'t do this yet. Update DJL on your Mac.'
+            : 'Your Mac turned this down. Check DJL on your Mac and try again.',
         rpcCode: error.code,
         errorCode: code,
       );
     }
     return const HostActionError(
       HostErrorKind.uncertain,
-      'The result is unknown. Check your host before trying this action again.',
+      'We could not tell whether this worked. Check your Mac before trying again.',
     );
   }
 }
@@ -222,7 +222,7 @@ class HostController extends ChangeNotifier {
       } catch (_) {
         if (_current(epoch)) {
           stale = snapshot != null;
-          statusError = 'Could not refresh paired host status. Try again.';
+          statusError = 'Could not check your Mac. Try again.';
         }
       } finally {
         if (_current(epoch)) {
@@ -260,10 +260,10 @@ class HostController extends ChangeNotifier {
       actionError = HostActionError(
         !live ? HostErrorKind.disconnected : HostErrorKind.unsupported,
         live && !fresh
-            ? 'Refresh host status before this action.'
+            ? 'Checking your Mac first. Try again in a moment.'
             : !live
-            ? 'Connect to your paired host first.'
-            : 'This bridge does not support this action.',
+            ? 'Connect to your Mac first.'
+            : 'DJL on your Mac can\'t do this yet. Update DJL on your Mac.',
       );
       _notify();
       return false;
@@ -281,7 +281,7 @@ class HostController extends ChangeNotifier {
           result['success'] == false
               ? HostErrorKind.refused
               : HostErrorKind.uncertain,
-          'The host did not confirm this action. Check the host before retrying.',
+          'Your Mac did not confirm this. Check it before trying again.',
         );
         return false;
       }
@@ -304,7 +304,7 @@ class HostController extends ChangeNotifier {
       'desktop/continueOnDesktop',
       {'threadId': threadId.trim()},
       supported: capabilities.desktopHandoff,
-      message: 'The host confirmed opening this chat on desktop.',
+      message: 'Opened in DJL on your Mac.',
     );
   }
 
@@ -317,7 +317,7 @@ class HostController extends ChangeNotifier {
           device == null) {
         actionError = const HostActionError(
           HostErrorKind.disconnected,
-          'Reconnect to your saved, verified host first.',
+          'Reconnect to your Mac first.',
         );
         _notify();
         return false;
@@ -333,7 +333,7 @@ class HostController extends ChangeNotifier {
         if (!live || !trusted) {
           actionError = const HostActionError(
             HostErrorKind.disconnected,
-            'Could not reach the saved host bridge. Reconnect and try again.',
+            'Could not reach DJL on your Mac. Check that it is open, then try again.',
           );
           return false;
         }
@@ -360,7 +360,7 @@ class HostController extends ChangeNotifier {
       'desktop/wakeDisplay',
       {},
       supported: capabilities.displayWake,
-      message: 'The bridge confirmed the display wake request.',
+      message: 'Your Mac\'s screen is waking up.',
     );
   }
 
@@ -491,7 +491,7 @@ class HostController extends ChangeNotifier {
       } catch (_) {
         if (_current(epoch)) {
           preferenceError =
-              'Saved on this phone; the host has not confirmed it. Retry sync.';
+              'Saved on this phone, but your Mac has not confirmed it yet.';
         }
       } finally {
         if (_current(epoch)) {

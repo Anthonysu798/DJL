@@ -84,9 +84,9 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
           : 'Different build';
       final stale = installed != null && (!host.live || !host.fresh);
       final guidance = installed == null
-          ? 'Connect to your paired device to read the installed bridge version.'
+          ? 'Connect to your Mac to see its DJL version.'
           : stale
-          ? 'Last known bridge status. Reconnect or refresh to update.'
+          ? 'Last known version. Reconnect to check again.'
           : latest == null
           ? null
           : installed == latest
@@ -151,7 +151,7 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
         ),
       );
       return SettingsGroup(
-        title: 'Bridge',
+        title: 'DJL on your Mac',
         footer: guidance,
         children: [
           value(
@@ -160,12 +160,12 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
             warning: newer && !stale,
           ),
           value(
-            'Installed',
+            'Version',
             installed ?? 'Unknown',
             mono: true,
             warning: newer && !stale,
           ),
-          value('Latest', latest ?? 'Unknown', mono: true),
+          if (latest != null) value('Latest', latest, mono: true),
           if (host.capabilities.bridgeUpdate)
             TextButton(
               onPressed: host.canUpdate
@@ -174,9 +174,7 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 7),
                 child: Text(
-                  newer
-                      ? 'Update Bridge on Device'
-                      : 'Reinstall Bridge on Device',
+                  newer ? 'Update DJL on your Mac' : 'Check for a DJL update',
                   textAlign: TextAlign.center,
                   style: settingsTextStyle(context, 15),
                 ),
@@ -191,22 +189,20 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
             message(host.statusError!, error: true),
             TextButton(
               onPressed: host.live && !host.loading ? host.refresh : null,
-              child: const Text('Refresh bridge status'),
+              child: const Text('Try again'),
             ),
           ],
           if (host.updateState == HostUpdateState.reconnecting)
             message(
-              'Waiting for bridge reconnect. The installed version has not been verified.',
+              'DJL is updating on your Mac. This phone reconnects when it is back.',
             ),
           if (host.updateState == HostUpdateState.checking)
-            message('Checking the installed bridge version after reconnect…'),
+            message('Checking the DJL version on your Mac…'),
           if (host.updateState == HostUpdateState.verified)
-            message(
-              'Fresh host status reports bridge $installed after reconnect.',
-            ),
+            message('DJL on your Mac is now $installed.'),
           if (host.updateState == HostUpdateState.unchanged)
             message(
-              'Reconnected; the host still reports the same bridge version.',
+              'DJL on your Mac is still $installed. It may already be up to date.',
             ),
           if (host.actionError != null)
             message(host.actionError!.message, error: true),

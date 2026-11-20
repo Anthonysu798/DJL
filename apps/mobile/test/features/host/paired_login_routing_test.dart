@@ -137,18 +137,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(desktop.pairedLogin.loaded, isFalse);
       expect(desktop.pairedLogin.pending, isNull);
-      await tester.tap(find.byTooltip('More actions'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Desktop status'));
-      await tester.pumpAndSettle();
-      expect(find.text('Loading secure sign-in recovery…'), findsOneWidget);
       currentRead.complete(jsonEncode(record.toJson()));
       await tester.pumpAndSettle();
       expect(credentials.loginReads, 2);
       expect(desktop.pairedLogin.loaded, isTrue);
       expect(desktop.pairedLogin.pending?.loginId, 'current');
-      expect(find.text('Loading secure sign-in recovery…'), findsNothing);
-      expect(find.text('Reopen sign-in on paired Mac'), findsOneWidget);
       expect(desktop.host.session, isNull);
       expect(calls, isEmpty);
       await tester.pumpWidget(const SizedBox.shrink());

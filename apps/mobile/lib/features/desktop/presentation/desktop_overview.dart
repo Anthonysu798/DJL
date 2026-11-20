@@ -316,7 +316,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             enabled: desktop.canEnterManualPairing,
           ),
           if (desktop.active != null)
-            const DjlMenuItem('host', 'Desktop status', DjlIcons.desktop),
+            const DjlMenuItem('host', 'Your Mac', DjlIcons.laptop),
         ],
         [
           DjlMenuItem(

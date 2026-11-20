@@ -98,7 +98,10 @@ const { handleProjectRequest } = require("./project-handler");
 const { handlePetRequest } = require("./pet-handler");
 const { createNotificationsHandler } = require("./notifications-handler");
 const { createVoiceHandler, resolveVoiceAuth } = require("./voice-handler");
-const { composeSanitizedAuthStatusFromSettledResults } = require("./account-status");
+const {
+  composeDesktopHostStatus,
+  composeSanitizedAuthStatusFromSettledResults,
+} = require("./account-status");
 const { createBridgePackageVersionStatusReader } = require("./package-version-status");
 const { createPushNotificationServiceClient } = require("./push-notification-service-client");
 const { createPushNotificationTracker } = require("./push-notification-tracker");
@@ -779,6 +782,7 @@ function startBridge({
   onBridgeStatus = null,
   onRemoteMutationCommitted = null,
   onDesktopUpdateRequested = null,
+  onOpenThreadRequested = null,
 } = {}) {
   const config = explicitConfig || readBridgeConfig();
   const usesElectronBackend = Boolean(config.electronBackendEndpoint);
@@ -1347,6 +1351,8 @@ function startBridge({
       handleDesktopRequest(rawMessage, sendApplicationResponse, {
         bundleId: config.codexBundleId,
         appPath: config.codexAppPath,
+        // Inside DJL, handoff opens the chat in DJL rather than Codex.app.
+        openThread: onOpenThreadRequested,
         readBridgePreferences,
         updateBridgePreferences,
         updateBridgePackageAndRestart,
@@ -1696,6 +1702,15 @@ function startBridge({
   // Combines account/read + getAuthStatus into one safe snapshot for the phone UI.
   // The two RPCs are settled independently so one transient failure does not hide the other.
   async function readSanitizedAuthStatus() {
+    // Inside DJL there is no ChatGPT/Codex account to read: each agent signs in
+    // on the desktop. Report DJL's version and what this Mac can do.
+    if (usesElectronBackend) {
+      return composeDesktopHostStatus({
+        desktopVersion: config.desktopAppVersion,
+        transportMode: codex.mode,
+        hostPlatform: process.platform,
+      });
+    }
     const [accountReadResult, authStatusResult, bridgeVersionInfoResult] = await Promise.allSettled(
       [
         sendCodexRequest("account/read", {

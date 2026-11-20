@@ -609,6 +609,9 @@ function readBridgeConfig({
         : explicitKeepMacAwakeEnabled,
     codexEndpoint,
     electronBackendEndpoint,
+    // The DJL desktop app's own version, reported to the phone in place of
+    // this package's version when the bridge runs inside DJL.
+    desktopAppVersion: readFirstDefinedEnv(["DJL_DESKTOP_VERSION"], "", env),
     desktopIpcEnabled: explicitDesktopIpcEnabled == null ? true : explicitDesktopIpcEnabled,
     desktopIpcSocketPath: readFirstDefinedEnv(["DJL_DESKTOP_IPC_SOCKET"], "", env),
     desktopIpcLiveSyncEnabled:

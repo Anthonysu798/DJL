@@ -565,10 +565,7 @@ class _PairingPageState extends State<PairingPage> {
   void _openHost(DesktopController desktop) {
     Navigator.push<void>(
       context,
-      MaterialPageRoute(
-        builder: (_) =>
-            HostPage(controller: desktop.host, login: desktop.pairedLogin),
-      ),
+      MaterialPageRoute(builder: (_) => HostPage(controller: desktop.host)),
     );
   }
 

@@ -187,8 +187,27 @@ function deriveHostCapabilities(platform) {
   };
 }
 
+// The host snapshot when the bridge runs inside the DJL desktop app. DJL has no
+// ChatGPT sign-in to offer the phone, so host-browser sign-in is never advertised.
+function composeDesktopHostStatus({
+  desktopVersion = "",
+  transportMode = null,
+  hostPlatform = process.platform,
+} = {}) {
+  const status = composeAccountStatus({
+    bridgeVersionInfo: { bridgeVersion: normalizeString(desktopVersion) || null },
+    transportMode,
+    hostPlatform,
+  });
+  return {
+    ...status,
+    hostCapabilities: { ...status.hostCapabilities, hostBrowserLogin: false },
+  };
+}
+
 module.exports = {
   composeAccountStatus,
+  composeDesktopHostStatus,
   composeSanitizedAuthStatusFromSettledResults,
   redactAuthStatus,
 };
