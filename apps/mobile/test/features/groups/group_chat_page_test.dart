@@ -228,4 +228,42 @@ void main() {
     await tester.pump();
     expect(find.text('Update DJL on your Mac'), findsOneWidget);
   });
+
+  testWidgets('attachments show on messages and open a preview', (
+    tester,
+  ) async {
+    final link = mac();
+    link.stored['att-1'] = 'def main():\n    return 1\n'.codeUnits;
+    link.history['thread-g1'] = [
+      {
+        ...fakeUserItem('user-1', 'check this'),
+        'attachments': [
+          {
+            'type': 'file',
+            'id': 'att-1',
+            'name': 'main.py',
+            'mimeType': 'text/x-python',
+            'sizeBytes': 25,
+          },
+        ],
+      },
+    ];
+    await open(tester, link);
+    await tester.pumpAndSettle();
+    expect(find.text('check this'), findsOneWidget);
+    expect(find.text('main.py'), findsOneWidget);
+    expect(find.text('Python · 25 B'), findsOneWidget);
+    expect(find.byKey(const Key('group-composer-attach')), findsOneWidget);
+    await tester.tap(find.text('main.py'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('def main():'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('check this'), findsOneWidget);
+  });
+
+  testWidgets('the attach button needs a Mac that takes files', (tester) async {
+    await open(tester, mac()..attachments = false);
+    expect(find.byKey(const Key('group-composer-attach')), findsNothing);
+  });
 }

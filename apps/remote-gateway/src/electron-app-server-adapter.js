@@ -13,6 +13,7 @@ const {
   toolItemFromActivity,
   createThreadEventProjection,
   desktopGitProgressNotification,
+  userMessageAttachments,
 } = require("./electron-event-projection");
 const { createDesktopTerminalMirror, TERMINAL_BACKEND_TAGS } = require("./desktop-terminal-mirror");
 const { createElectronGroups } = require("./electron-groups");
@@ -76,6 +77,7 @@ function createElectronAppServerTransport({
   makeId = () => randomUUID(),
   diagnostics = process.env.DJL_ELECTRON_BRIDGE_DIAGNOSTICS === "1",
   onMutationCommitted = null,
+  fetchImpl = (url, init) => fetch(url, init),
 } = {}) {
   const rpc = backend || createElectronBackendRpcClient({ endpoint });
   const listeners = createListenerBag();
@@ -105,6 +107,8 @@ function createElectronAppServerTransport({
     findThread: async (threadId) =>
       readableThreads(await readSnapshot()).find((entry) => entry.id === threadId),
     now,
+    endpoint: typeof endpoint === "string" && endpoint.trim() ? endpoint.trim() : null,
+    fetchImpl,
   });
 
   rpc.onStarted(() => {
@@ -410,11 +414,13 @@ function createElectronAppServerTransport({
 
     for (const message of thread.messages || []) {
       if (message.role === "user" && !previous.messages.has(message.id) && announceExisting) {
+        const attachments = userMessageAttachments(message.attachments);
         emitNotification("codex/event/user_message", {
           threadId: thread.id,
           turnId: message.turnId || activeTurnId,
           itemId: message.id,
           message: message.text || "",
+          ...(attachments ? { attachments } : {}),
         });
         continue;
       }
@@ -632,6 +638,7 @@ function createElectronAppServerTransport({
             experimentalApi: false,
             djlThreadRuntimeModeSync: true,
             djlGroups: true,
+            djlGroupAttachments: true,
           },
           serverInfo: { name: "DJL Electron" },
         };
@@ -1277,13 +1284,17 @@ function appServerTurns(thread) {
   return Array.from(byTurn.values());
 }
 
+// User attachments are a separate field, not content entries, so clients that
+// only read `content` see the message exactly as before.
 function appServerMessageItem(message) {
   const role = message.role === "user" ? "user" : "assistant";
+  const attachments = role === "user" ? userMessageAttachments(message.attachments) : null;
   return {
     id: message.id,
     type: role === "user" ? "userMessage" : "agentMessage",
     role,
     content: [{ type: role === "user" ? "inputText" : "outputText", text: message.text || "" }],
+    ...(attachments ? { attachments } : {}),
     createdAt: message.createdAt,
   };
 }

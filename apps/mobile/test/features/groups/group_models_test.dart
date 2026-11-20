@@ -70,4 +70,46 @@ void main() {
       expect(activeMentionQuery('@Claude ', 8), isNull);
     });
   });
+
+  test('the phone sends only files the desktop stores', () {
+    for (final (name, mime) in [
+      ('photo.jpg', 'image/jpeg'),
+      (
+        'deck.pptx',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ),
+      ('report.pdf', 'application/pdf'),
+      ('main.py', 'text/x-python'),
+      ('app.ts', 'video/mp2t'),
+      ('notes.md', 'text/markdown'),
+    ]) {
+      expect(groupAttachmentSupported(name, mime), isTrue, reason: name);
+    }
+    for (final (name, mime) in [
+      ('archive.zip', 'application/zip'),
+      ('old.doc', 'application/msword'),
+      ('photo.heic', 'image/heic'),
+      ('page.html', 'text/html'),
+    ]) {
+      expect(groupAttachmentSupported(name, mime), isFalse, reason: name);
+    }
+  });
+
+  test('only types the desktop checks exactly are declared', () {
+    expect(groupUploadMimeType('photo.png', 'image/png'), 'image/png');
+    expect(
+      groupUploadMimeType('report.pdf', 'application/pdf'),
+      'application/pdf',
+    );
+    expect(
+      groupUploadMimeType('app.ts', 'video/mp2t'),
+      'application/octet-stream',
+    );
+    expect(
+      groupUploadMimeType('main.py', 'text/x-python'),
+      'application/octet-stream',
+    );
+    expect(attachmentKindLabel('main.py', 'text/x-python'), 'Python');
+    expect(formatByteSize(4404019), '4.2 MB');
+  });
 }

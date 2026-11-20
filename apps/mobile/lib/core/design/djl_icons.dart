@@ -104,6 +104,15 @@ abstract final class DjlIcons {
   static const IconData image = PhosphorIconsRegular.image;
   static const IconData images = PhosphorIconsRegular.images;
   static const IconData document = PhosphorIconsRegular.fileText;
+  static const IconData attach = PhosphorIconsRegular.paperclip;
+  static const IconData camera = PhosphorIconsRegular.camera;
+  static const IconData file = PhosphorIconsRegular.file;
+  static const IconData filePdf = PhosphorIconsRegular.filePdf;
+  static const IconData fileDoc = PhosphorIconsRegular.fileDoc;
+  static const IconData fileSlides = PhosphorIconsRegular.filePpt;
+  static const IconData fileSheet = PhosphorIconsRegular.fileXls;
+  static const IconData fileCode = PhosphorIconsRegular.fileCode;
+  static const IconData fileArchive = PhosphorIconsRegular.fileZip;
   static const IconData folder = PhosphorIconsRegular.folder;
   static const IconData folderAdd = PhosphorIconsRegular.folderPlus;
   static const IconData quick = PhosphorIconsRegular.lightning;

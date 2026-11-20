@@ -1,5 +1,5 @@
 // FILE: electron-groups.test.js
-// Purpose: Verifies the phone's Multi agents group methods, group event forwarding, and that group replies keep their member id on the thread stream.
+// Purpose: Verifies the phone's Multi agents group methods, group event forwarding, group attachments, and that group replies keep their member id on the thread stream.
 // Layer: Unit test
 // Exports: node:test suite
 // Depends on: node:test, node:assert/strict, ../src/electron-app-server-adapter
@@ -56,7 +56,12 @@ const GROUP_THREAD = {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function createGroupBackend({ thread = GROUP_THREAD, handlers = {} } = {}) {
+function createGroupBackend({
+  thread = GROUP_THREAD,
+  handlers = {},
+  endpoint = "ws://electron.test/ws",
+  fetchImpl,
+} = {}) {
   const requests = [];
   const streams = new Map();
   let startedHandler = null;
@@ -88,10 +93,12 @@ function createGroupBackend({ thread = GROUP_THREAD, handlers = {} } = {}) {
   };
   const outbound = [];
   const transport = createElectronAppServerTransport({
-    endpoint: "ws://electron.test/ws",
+    endpoint,
     backend,
     now: () => "2026-11-19T10:02:00.000Z",
+    ...(fetchImpl ? { fetchImpl } : {}),
   });
+  let callSequence = 0;
   transport.onMessage((raw) => outbound.push(JSON.parse(raw)));
   return {
     transport,
@@ -100,10 +107,14 @@ function createGroupBackend({ thread = GROUP_THREAD, handlers = {} } = {}) {
     start: () => startedHandler(),
     backendCalls: (tag) => requests.filter((r) => r.tag === tag).map((r) => r.payload),
     async call(method, params) {
-      const id = `phone-${method}`;
+      const id = `phone-${method}-${++callSequence}`;
       transport.send(JSON.stringify({ id, method, params }));
-      await flush();
-      return outbound.find((m) => m.id === id);
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        await flush();
+        const response = outbound.find((m) => m.id === id);
+        if (response) return response;
+      }
+      return undefined;
     },
   };
 }
@@ -390,5 +401,332 @@ test("a group reply keeps its member id in history and on the live thread stream
       },
     ],
   );
+  fake.transport.shutdown();
+});
+
+// Attachments ---------------------------------------------------------------
+
+const TOKEN_ENDPOINT = "ws://127.0.0.1:4100/ws?token=secret-token";
+const CHUNK = 384 * 1024;
+const HASH = "a".repeat(64);
+const REFERENCE = {
+  type: "file",
+  id: "att-1",
+  name: "Plan.pdf",
+  mimeType: "application/pdf",
+  sizeBytes: CHUNK + 10,
+  contentHash: HASH,
+  uploadMethod: "stream",
+};
+
+function fakeFetch(respond) {
+  const calls = [];
+  const impl = async (url, init) => {
+    calls.push({ url: new URL(url), init });
+    return respond(new URL(url), init);
+  };
+  return { impl, calls };
+}
+
+function fileBytes(size) {
+  return Buffer.from(Array.from({ length: size }, (_, index) => index % 251));
+}
+
+function uploadParams(bytes, offset, end, extra = {}) {
+  return {
+    groupId: "group-1",
+    uploadId: "up_1",
+    name: "Plan.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: bytes.length,
+    offset,
+    data: bytes.subarray(offset, end).toString("base64"),
+    final: end >= bytes.length,
+    ...extra,
+  };
+}
+
+test("initialize advertises group attachment support", async () => {
+  const fake = createGroupBackend();
+  const response = await fake.call("initialize", {});
+  assert.equal(response.result.capabilities.djlGroupAttachments, true);
+});
+
+test("djl/groups/upload assembles chunks and stores the file on the group's thread", async () => {
+  const http = fakeFetch(() => Response.json({ ...REFERENCE, extra: "dropped" }));
+  const fake = createGroupBackend({ endpoint: TOKEN_ENDPOINT, fetchImpl: http.impl });
+  const bytes = fileBytes(CHUNK + 10);
+
+  const first = await fake.call("djl/groups/upload", uploadParams(bytes, 0, CHUNK));
+  assert.deepEqual(first.result, { received: CHUNK });
+  assert.equal(http.calls.length, 0, "nothing is sent before the final chunk");
+
+  const last = await fake.call("djl/groups/upload", uploadParams(bytes, CHUNK, bytes.length));
+  assert.deepEqual(last.result, { attachment: REFERENCE });
+  assert.equal(http.calls.length, 1);
+  const [{ url, init }] = http.calls;
+  assert.equal(url.protocol, "http:");
+  assert.equal(url.host, "127.0.0.1:4100");
+  assert.equal(url.pathname, "/api/attachments/upload");
+  assert.deepEqual(Object.fromEntries(url.searchParams), {
+    token: "secret-token",
+    threadId: "group-thread",
+    name: "Plan.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: String(CHUNK + 10),
+  });
+  assert.equal(init.method, "POST");
+  assert.deepEqual(init.headers, { "Content-Type": "application/octet-stream" });
+  assert.ok(Buffer.from(init.body).equals(bytes), "the backend receives the assembled bytes");
+});
+
+test("djl/groups/upload refuses chunks out of order", async () => {
+  const http = fakeFetch(() => Response.json(REFERENCE));
+  const fake = createGroupBackend({ endpoint: TOKEN_ENDPOINT, fetchImpl: http.impl });
+  const bytes = fileBytes(CHUNK + 10);
+  const unknown = await fake.call("djl/groups/upload", uploadParams(bytes, CHUNK, bytes.length));
+  assert.equal(unknown.error.message, "Upload out of order");
+
+  await fake.call("djl/groups/upload", uploadParams(bytes, 0, CHUNK));
+  const skipped = await fake.call("djl/groups/upload", {
+    ...uploadParams(bytes, CHUNK, bytes.length),
+    offset: CHUNK + 1,
+  });
+  assert.equal(skipped.error.message, "Upload out of order");
+  // The upload survives a wrong offset, so the right chunk still completes it.
+  const last = await fake.call("djl/groups/upload", uploadParams(bytes, CHUNK, bytes.length));
+  assert.deepEqual(last.result, { attachment: REFERENCE });
+});
+
+test("djl/groups/upload refuses oversize, overlong, incomplete and invalid uploads", async () => {
+  const http = fakeFetch(() => Response.json(REFERENCE));
+  const fake = createGroupBackend({ endpoint: TOKEN_ENDPOINT, fetchImpl: http.impl });
+  const bytes = fileBytes(20);
+  const error = async (params) => (await fake.call("djl/groups/upload", params)).error.message;
+
+  assert.equal(
+    await error(uploadParams(bytes, 0, 10, { sizeBytes: 100 * 1024 * 1024 + 1 })),
+    "Attachment is empty or larger than 100 MB.",
+  );
+  assert.equal(
+    await error(uploadParams(bytes, 0, 20, { sizeBytes: 10 })),
+    "Upload is larger than its declared size.",
+  );
+  assert.equal(
+    await error(
+      uploadParams(bytes, 0, 10, { data: Buffer.alloc(512 * 1024 + 3).toString("base64") }),
+    ),
+    "Invalid upload chunk.",
+  );
+  assert.equal(await error(uploadParams(bytes, 0, 10, { final: true })), "Upload is incomplete.");
+  assert.equal(
+    await error(uploadParams(bytes, 0, 10, { uploadId: "bad id" })),
+    "Invalid upload id.",
+  );
+  assert.equal(
+    await error(uploadParams(bytes, 0, 10, { name: "../secret" })),
+    "Invalid attachment name.",
+  );
+  assert.equal(
+    await error(uploadParams(bytes, 0, 10, { mimeType: "x".repeat(101) })),
+    "Invalid attachment MIME type.",
+  );
+  assert.equal(http.calls.length, 0);
+});
+
+test("djl/groups/upload drops an upload idle for ten minutes", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
+  const http = fakeFetch(() => Response.json(REFERENCE));
+  const fake = createGroupBackend({ endpoint: TOKEN_ENDPOINT, fetchImpl: http.impl });
+  const bytes = fileBytes(CHUNK + 10);
+  await fake.call("djl/groups/upload", uploadParams(bytes, 0, CHUNK));
+  t.mock.timers.tick(10 * 60 * 1000 + 1);
+  const late = await fake.call("djl/groups/upload", uploadParams(bytes, CHUNK, bytes.length));
+  assert.equal(late.error.message, "Upload out of order");
+  assert.equal(http.calls.length, 0);
+});
+
+test("attachment methods need the desktop app's endpoint", async () => {
+  const fake = createGroupBackend({ endpoint: null });
+  const bytes = fileBytes(10);
+  const upload = await fake.call("djl/groups/upload", uploadParams(bytes, 0, 10));
+  assert.equal(upload.error.message, "Attachments need the DJL desktop app.");
+  const download = await fake.call("djl/groups/attachment", { attachmentId: "att-1", offset: 0 });
+  assert.equal(download.error.message, "Attachments need the DJL desktop app.");
+});
+
+test("djl/groups/send carries exactly the validated attachment references", async () => {
+  const fake = createGroupBackend();
+  const image = { ...REFERENCE, type: "image", id: "img-1", mimeType: "image/png", name: "a.png" };
+  const response = await fake.call("djl/groups/send", {
+    groupId: "group-1",
+    text: "",
+    attachments: [
+      { ...REFERENCE, extra: "dropped" },
+      { ...image, dataUrl: "data:" },
+    ],
+  });
+  assert.equal(response.result.djlMutation.status, "confirmed");
+  const [command] = fake.backendCalls("orchestration.dispatchCommand");
+  assert.equal(command.message.text, "");
+  assert.deepEqual(command.message.attachments, [REFERENCE, image]);
+});
+
+test("djl/groups/send rejects an invalid attachment reference", async () => {
+  const fake = createGroupBackend();
+  const invalid = [
+    { ...REFERENCE, type: "image" },
+    { ...REFERENCE, contentHash: "abc" },
+    { ...REFERENCE, uploadMethod: "inline" },
+    { ...REFERENCE, id: "../etc" },
+    { ...REFERENCE, sizeBytes: 0 },
+    { ...REFERENCE, name: "a/b.pdf" },
+  ];
+  for (const attachment of invalid) {
+    const response = await fake.call("djl/groups/send", {
+      groupId: "group-1",
+      text: "hi",
+      attachments: [attachment],
+    });
+    assert.equal(response.error.message, "Invalid attachment.", JSON.stringify(attachment));
+  }
+  const tooMany = await fake.call("djl/groups/send", {
+    groupId: "group-1",
+    text: "hi",
+    attachments: Array.from({ length: 21 }, () => REFERENCE),
+  });
+  assert.equal(tooMany.error.message, "Send at most 20 attachments.");
+  const empty = await fake.call("djl/groups/send", {
+    groupId: "group-1",
+    text: "",
+    attachments: [],
+  });
+  assert.equal(empty.error.message, "A message is required.");
+  assert.deepEqual(fake.backendCalls("orchestration.dispatchCommand"), []);
+});
+
+test("djl/groups/attachment pages a stored attachment from one cached download", async () => {
+  const bytes = fileBytes(CHUNK + 10);
+  const http = fakeFetch(
+    () => new Response(bytes, { headers: { "Content-Type": "application/pdf; charset=binary" } }),
+  );
+  const fake = createGroupBackend({
+    endpoint: "wss://desktop.test/ws?token=secret-token",
+    fetchImpl: http.impl,
+  });
+
+  const first = (await fake.call("djl/groups/attachment", { attachmentId: "att-1", offset: 0 }))
+    .result;
+  assert.deepEqual(
+    { ...first, data: undefined },
+    { data: undefined, offset: 0, sizeBytes: CHUNK + 10, mimeType: "application/pdf", done: false },
+  );
+  const second = (
+    await fake.call("djl/groups/attachment", { attachmentId: "att-1", offset: CHUNK })
+  ).result;
+  assert.equal(second.done, true);
+  assert.equal(second.offset, CHUNK);
+  const joined = Buffer.concat([
+    Buffer.from(first.data, "base64"),
+    Buffer.from(second.data, "base64"),
+  ]);
+  assert.ok(joined.equals(bytes), "the two chunks rebuild the file");
+
+  assert.equal(http.calls.length, 1, "the file is fetched once for both chunks");
+  const [{ url, init }] = http.calls;
+  assert.equal(url.protocol, "https:");
+  assert.equal(url.pathname, "/attachments/att-1");
+  assert.equal(url.searchParams.get("token"), "secret-token");
+  assert.equal(init.method, "GET");
+
+  const invalid = await fake.call("djl/groups/attachment", { attachmentId: "../x", offset: 0 });
+  assert.equal(invalid.error.message, "Invalid attachment id.");
+});
+
+test("djl/groups/attachment reports a missing attachment", async () => {
+  const http = fakeFetch(() => new Response("Not Found", { status: 404 }));
+  const fake = createGroupBackend({ endpoint: TOKEN_ENDPOINT, fetchImpl: http.impl });
+  const response = await fake.call("djl/groups/attachment", { attachmentId: "gone", offset: 0 });
+  assert.equal(response.error.message, "Attachment not found.");
+});
+
+test("user messages carry their file metadata in history and on the live stream", async () => {
+  const stored = [
+    { ...REFERENCE },
+    { type: "assistant-selection", id: "sel-1", assistantMessageId: "m", text: "quote" },
+  ];
+  const summary = [
+    {
+      type: "file",
+      id: "att-1",
+      name: "Plan.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: CHUNK + 10,
+    },
+  ];
+  const withFiles = {
+    ...GROUP_THREAD,
+    messages: [{ ...GROUP_THREAD.messages[0], attachments: stored }, GROUP_THREAD.messages[1]],
+  };
+  const fake = createGroupBackend({ thread: withFiles });
+  fake.start();
+  await flush();
+
+  const history = (await fake.call("thread/read", { threadId: "group-thread" })).result.thread;
+  const [userItem] = history.turns[0].items;
+  assert.deepEqual(userItem.attachments, summary);
+  assert.deepEqual(userItem.content, [{ type: "inputText", text: "@Claude hello" }]);
+  assert.equal("attachments" in history.turns[1].items[0], false, "replies have none");
+
+  const stream = fake.streams.get("orchestration.subscribeThread:group-thread");
+  // A new user message in a detail snapshot.
+  const fromSnapshot = {
+    id: "user-2",
+    role: "user",
+    text: "",
+    turnId: null,
+    createdAt: "2026-11-19T10:04:00.000Z",
+    attachments: stored,
+  };
+  stream.onChunk([
+    {
+      kind: "snapshot",
+      snapshot: {
+        snapshotSequence: 6,
+        thread: { ...withFiles, messages: [...withFiles.messages, fromSnapshot] },
+      },
+    },
+  ]);
+  // A new user message as a live event.
+  stream.onChunk([
+    {
+      kind: "event",
+      event: {
+        sequence: 7,
+        aggregateKind: "thread",
+        aggregateId: "group-thread",
+        occurredAt: "2026-11-19T10:05:00.000Z",
+        type: "thread.message-sent",
+        payload: {
+          threadId: "group-thread",
+          messageId: "user-3",
+          role: "user",
+          text: "see file",
+          attachments: stored,
+          turnId: null,
+          streaming: false,
+          createdAt: "2026-11-19T10:05:00.000Z",
+        },
+      },
+    },
+  ]);
+  const userMessages = fake.outbound
+    .filter((m) => m.method === "codex/event/user_message")
+    .map((m) => m.params);
+  const byId = Object.fromEntries(userMessages.map((params) => [params.itemId, params]));
+  assert.deepEqual(byId["user-2"].attachments, summary);
+  assert.equal(byId["user-2"].message, "");
+  assert.deepEqual(byId["user-3"].attachments, summary);
+  assert.equal(byId["user-3"].message, "see file");
   fake.transport.shutdown();
 });

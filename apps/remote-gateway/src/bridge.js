@@ -4496,7 +4496,10 @@ function sanitizeLiveUserNotification(parsed) {
     return parsed;
   }
   const visible = visibleUserPromptText(parsed.params[key]);
-  if (!visible) {
+  // A DJL group message may be only files.
+  const hasAttachments =
+    Array.isArray(parsed.params.attachments) && parsed.params.attachments.length > 0;
+  if (!visible && !hasAttachments) {
     return null;
   }
   return visible === parsed.params[key]

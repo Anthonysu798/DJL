@@ -6,9 +6,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/design/djl_icons.dart';
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_glass.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
+import '../../attachments/data/attachment_picker.dart';
 import '../../settings/domain/appearance.dart';
 import '../domain/group_models.dart';
 import 'agent_avatar.dart';
+import 'group_attachments.dart';
 import 'groups_controller.dart';
 
 /// One group chat: everyone's messages, each agent's reply as it is written,
@@ -29,6 +32,9 @@ class GroupChatPage extends StatefulWidget {
 class _GroupChatPageState extends State<GroupChatPage> {
   final _input = TextEditingController();
   final _focus = FocusNode();
+  final _picker = AttachmentPicker();
+  final _drafts = <DraftAttachment>[];
+  int _draftSerial = 0;
   Group? _opened;
 
   GroupsController get _groups => widget.controller;
@@ -56,9 +62,83 @@ class _GroupChatPageState extends State<GroupChatPage> {
     super.dispose();
   }
 
+  Future<void> _attach(BuildContext anchor) async {
+    final box = anchor.findRenderObject()! as RenderBox;
+    final kind = await showDjlGlassMenu<String>(
+      context,
+      anchor: box.localToGlobal(Offset.zero) & box.size,
+      label: 'Attach',
+      sections: const [
+        [
+          DjlMenuItem('photos', 'Photos', DjlIcons.images),
+          DjlMenuItem('camera', 'Camera', DjlIcons.camera),
+          DjlMenuItem('files', 'Files', DjlIcons.document),
+        ],
+      ],
+    );
+    if (kind == null || !mounted) return;
+    try {
+      final picked = switch (kind) {
+        'photos' => await _picker.images(),
+        'camera' => [?await _picker.image(camera: true)],
+        _ => await _picker.files(),
+      };
+      if (!mounted || picked.isEmpty) return;
+      final tooBig = picked.where(
+        (file) => file.bytes.length > groupAttachmentMaxBytes,
+      );
+      final unsupported = picked.where(
+        (file) => !groupAttachmentSupported(file.name, file.mime),
+      );
+      final room = groupAttachmentMaxCount - _drafts.length;
+      setState(() {
+        for (final file
+            in picked
+                .where(
+                  (file) =>
+                      file.bytes.length <= groupAttachmentMaxBytes &&
+                      groupAttachmentSupported(file.name, file.mime),
+                )
+                .take(room)) {
+          _drafts.add(
+            DraftAttachment(
+              'draft-${++_draftSerial}',
+              file.name,
+              file.mime,
+              file.bytes,
+            ),
+          );
+        }
+      });
+      final note = unsupported.isNotEmpty
+          ? "${unsupported.first.name} can't be sent. Photos, PDFs, Word, "
+                'Excel, PowerPoint, text and code files work.'
+          : tooBig.isNotEmpty
+          ? '${tooBig.first.name} is larger than '
+                '${formatByteSize(groupAttachmentMaxBytes)}.'
+          : picked.length > room
+          ? 'A message can carry $groupAttachmentMaxCount files.'
+          : null;
+      if (note != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(note)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Couldn't open that. Please try again."),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _send(Group group) async {
     final text = _input.text.trim();
-    if (text.isEmpty) return;
+    final files = List.of(_drafts);
+    if (text.isEmpty && files.isEmpty) return;
     final mentions = parseGroupMentions(text, [
       for (final member in group.members) member.handle,
     ]);
@@ -70,9 +150,19 @@ class _GroupChatPageState extends State<GroupChatPage> {
       if (choice == _Everyone.always) unawaited(_groups.skipAllWarning(group));
     }
     _input.clear();
-    if (!await _groups.send(group, text) && mounted && _input.text.isEmpty) {
-      // Nothing was sent; give the words back.
+    setState(_drafts.clear);
+    final sent = await _groups.send(
+      group,
+      text,
+      files: [
+        for (final file in files)
+          (name: file.name, mimeType: file.mimeType, bytes: file.bytes),
+      ],
+    );
+    if (!sent && mounted && _input.text.isEmpty && _drafts.isEmpty) {
+      // Nothing was sent; give the words and files back.
       _input.text = text;
+      setState(() => _drafts.addAll(files));
     }
   }
 
@@ -224,6 +314,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
                                       (index - writing.length)];
                               return _MessageRow(
                                 key: ValueKey(message.id),
+                                controller: _groups,
                                 message: message,
                                 member: message.memberId == null
                                     ? null
@@ -269,6 +360,10 @@ class _GroupChatPageState extends State<GroupChatPage> {
                             focus: _focus,
                             enabled: _groups.available,
                             running: running,
+                            drafts: _drafts,
+                            onAttach: _groups.canAttach ? _attach : null,
+                            onRemoveDraft: (draft) =>
+                                setState(() => _drafts.remove(draft)),
                             onMention: () => _mention(''),
                             onSend: () => _send(group),
                             onStop: () => _groups.stop(group),
@@ -410,10 +505,12 @@ class _Header extends StatelessWidget {
 class _MessageRow extends StatelessWidget {
   const _MessageRow({
     super.key,
+    required this.controller,
     required this.message,
     required this.member,
     required this.reply,
   });
+  final GroupsController controller;
   final GroupMessage message;
   final GroupMember? member;
   final GroupReply? reply;
@@ -431,24 +528,35 @@ class _MessageRow extends StatelessWidget {
             child: AnimatedOpacity(
               duration: DjlMotion.of(context, DjlMotion.fast),
               opacity: message.sending ? .55 : 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.ink,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  child: Text(
-                    message.text,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.onInk,
-                      height: 1.3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (message.attachments.isNotEmpty)
+                    MessageAttachments(
+                      attachments: message.attachments,
+                      controller: controller,
+                      progress: controller.progress(message.id),
                     ),
-                  ),
-                ),
+                  if (message.text.isNotEmpty)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.ink,
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Text(
+                          message.text,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: colors.onInk, height: 1.3),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -685,6 +793,9 @@ class _Composer extends StatelessWidget {
     required this.focus,
     required this.enabled,
     required this.running,
+    required this.drafts,
+    required this.onAttach,
+    required this.onRemoveDraft,
     required this.onMention,
     required this.onSend,
     required this.onStop,
@@ -692,78 +803,100 @@ class _Composer extends StatelessWidget {
   final TextEditingController input;
   final FocusNode focus;
   final bool enabled, running;
+  final List<DraftAttachment> drafts;
+
+  /// Null when the Mac cannot take files.
+  final void Function(BuildContext anchor)? onAttach;
+  final ValueChanged<DraftAttachment> onRemoveDraft;
   final VoidCallback onMention, onSend, onStop;
 
   @override
   Widget build(BuildContext context) {
     final colors = DjlColors.of(context);
-    final hasText = input.text.trim().isNotEmpty;
+    final hasText = input.text.trim().isNotEmpty || drafts.isNotEmpty;
     final stops = running && !hasText;
     final active = enabled && (hasText || stops);
     return DjlGlassSurface(
       radius: 26,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            IconButton(
-              tooltip: 'Mention an agent',
-              onPressed: enabled ? onMention : null,
-              icon: const Icon(DjlIcons.mention, size: 22),
-            ),
-            Expanded(
-              child: TextField(
-                key: const Key('group-composer-input'),
-                controller: input,
-                focusNode: focus,
-                enabled: enabled,
-                minLines: 1,
-                maxLines: 5,
-                textCapitalization: TextCapitalization.sentences,
-                style: Theme.of(context).textTheme.bodyLarge,
-                decoration: const InputDecoration(
-                  hintText: 'Message',
-                  filled: false,
-                  isDense: true,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            const SizedBox(width: DjlSpace.xs),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Semantics(
-                button: true,
-                enabled: active,
-                label: stops ? 'Stop the agents' : 'Send message',
-                child: GestureDetector(
-                  key: const Key('group-composer-action'),
-                  onTap: !active
-                      ? null
-                      : stops
-                      ? onStop
-                      : onSend,
-                  child: AnimatedContainer(
-                    duration: DjlMotion.of(context, DjlMotion.fast),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: active ? colors.ink : colors.surfaceSunken,
-                      shape: BoxShape.circle,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (drafts.isNotEmpty)
+            AttachmentDraftStrip(drafts: drafts, onRemove: onRemoveDraft),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (onAttach != null)
+                  Builder(
+                    builder: (anchor) => IconButton(
+                      key: const Key('group-composer-attach'),
+                      tooltip: 'Attach files or photos',
+                      onPressed: enabled ? () => onAttach!(anchor) : null,
+                      icon: const Icon(DjlIcons.attach, size: 22),
                     ),
-                    child: Icon(
-                      stops ? DjlIcons.stop : DjlIcons.send,
-                      size: stops ? 14 : 18,
-                      color: active ? colors.onInk : colors.inkFaint,
+                  ),
+                IconButton(
+                  tooltip: 'Mention an agent',
+                  onPressed: enabled ? onMention : null,
+                  icon: const Icon(DjlIcons.mention, size: 22),
+                ),
+                Expanded(
+                  child: TextField(
+                    key: const Key('group-composer-input'),
+                    controller: input,
+                    focusNode: focus,
+                    enabled: enabled,
+                    minLines: 1,
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    decoration: const InputDecoration(
+                      hintText: 'Message',
+                      filled: false,
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: DjlSpace.xs),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Semantics(
+                    button: true,
+                    enabled: active,
+                    label: stops ? 'Stop the agents' : 'Send message',
+                    child: GestureDetector(
+                      key: const Key('group-composer-action'),
+                      onTap: !active
+                          ? null
+                          : stops
+                          ? onStop
+                          : onSend,
+                      child: AnimatedContainer(
+                        duration: DjlMotion.of(context, DjlMotion.fast),
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: active ? colors.ink : colors.surfaceSunken,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          stops ? DjlIcons.stop : DjlIcons.send,
+                          size: stops ? 14 : 18,
+                          color: active ? colors.onInk : colors.inkFaint,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

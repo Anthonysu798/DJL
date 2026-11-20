@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import '../../desktop/data/remote_transport.dart';
@@ -18,6 +20,9 @@ abstract interface class GroupsLink implements Listenable {
 
   /// Threads owned by group chats; the single-agent chat ignores their events.
   Set<String> get groupThreads;
+
+  /// The Mac takes files and images in group chats.
+  bool get attachments;
 }
 
 class DesktopGroupsLink implements GroupsLink {
@@ -34,6 +39,8 @@ class DesktopGroupsLink implements GroupsLink {
       desktop.transport.request(method, params);
   @override
   Set<String> get groupThreads => desktop.groupThreads;
+  @override
+  bool get attachments => desktop.supportsGroupAttachments;
   @override
   void addListener(VoidCallback listener) => desktop.addListener(listener);
   @override
@@ -71,11 +78,26 @@ class GroupsController extends ChangeNotifier {
   bool _flushScheduled = false, _online = false, _disposed = false;
   int _local = 0;
 
+  // Bytes of attachments seen this session, by key and by desktop id, so a
+  // sent file previews without downloading it again. Oldest go first.
+  final _bytes = <String, Uint8List>{};
+  int _cachedBytes = 0;
+  final _progress = <String, ValueNotifier<double>>{};
+
+  static const _chunkBytes = 384 * 1024;
+  static const _cacheLimit = 160 * 1024 * 1024;
+
   /// The paired Mac is connected and new enough to serve groups.
   bool get available => _online;
 
   /// The Mac is connected but its DJL is older than group chat.
   bool get needsDesktopUpdate => link.outdated;
+
+  /// Files and images can be sent to this Mac's groups.
+  bool get canAttach => _online && link.attachments;
+
+  /// Upload progress of a message still sending files, from 0 to 1.
+  ValueListenable<double>? progress(String messageId) => _progress[messageId];
 
   Group? group(String id) => groups.where((g) => g.id == id).firstOrNull;
   GroupMemberState state(String memberId) =>
@@ -208,7 +230,11 @@ class GroupsController extends ChangeNotifier {
         if (part is Map && part['text'] is String) part['text'] as String,
     ].join();
     if (item['type'] == 'userMessage') {
-      return GroupMessage(id: id, text: text);
+      return GroupMessage(
+        id: id,
+        text: text,
+        attachments: GroupAttachment.listFrom(item['attachments']),
+      );
     }
     final speaker = parseGroupMessageId(id);
     if (item['type'] != 'agentMessage' || speaker == null) return null;
@@ -239,7 +265,11 @@ class GroupsController extends ChangeNotifier {
         if (id is! String || !link.groupThreads.contains(threadId)) return;
         _upsert(
           threadId as String,
-          GroupMessage(id: id, text: params['message'] as String? ?? ''),
+          GroupMessage(
+            id: id,
+            text: params['message'] as String? ?? '',
+            attachments: GroupAttachment.listFrom(params['attachments']),
+          ),
         );
       case 'item/agentMessage/delta':
         final threadId = params['threadId'];
@@ -321,7 +351,12 @@ class GroupsController extends ChangeNotifier {
     } else {
       // The desktop's echo replaces the copy shown while sending.
       final sent = message.fromUser
-          ? list.indexWhere((m) => m.sending && m.text == message.text)
+          ? list.indexWhere(
+              (m) =>
+                  m.sending &&
+                  m.text == message.text &&
+                  m.attachments.length == message.attachments.length,
+            )
           : -1;
       if (sent >= 0) {
         list[sent] = message;
@@ -372,23 +407,56 @@ class GroupsController extends ChangeNotifier {
     }
   }
 
-  /// Sends [text] to the group. The message shows at once; the desktop's echo
-  /// confirms it.
-  Future<bool> send(Group group, String text) async {
+  /// Sends [text] and any [files] to the group. The message shows at once
+  /// with its files; they upload in pieces, and the desktop's echo confirms it.
+  Future<bool> send(
+    Group group,
+    String text, {
+    List<({String name, String mimeType, Uint8List bytes})> files = const [],
+  }) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return false;
+    if (trimmed.isEmpty && files.isEmpty) return false;
+    final id = 'local-${++_local}';
+    final attachments = [
+      for (final (index, file) in files.indexed)
+        GroupAttachment(
+          key: '$id-$index',
+          name: file.name,
+          mimeType: file.mimeType,
+          sizeBytes: file.bytes.length,
+        ),
+    ];
+    for (final (index, file) in files.indexed) {
+      _remember(attachments[index].key, file.bytes);
+    }
     final local = GroupMessage(
-      id: 'local-${++_local}',
+      id: id,
       text: trimmed,
       sending: true,
+      attachments: attachments,
     );
     _messages.putIfAbsent(group.threadId, () => []).add(local);
+    if (files.isNotEmpty) _progress[id] = ValueNotifier(0);
     error = null;
     _change();
     try {
+      final references = <RemoteJson>[];
+      final total = files.fold<int>(0, (sum, file) => sum + file.bytes.length);
+      var sent = 0;
+      for (final (index, file) in files.indexed) {
+        final reference = await _upload(group, id, index, file, (bytes) {
+          _progress[id]?.value = total == 0 ? 1 : (sent + bytes) / total;
+        });
+        sent += file.bytes.length;
+        if (reference['id'] case final String stored) {
+          _remember(stored, file.bytes);
+        }
+        references.add(reference);
+      }
       await link.request('djl/groups/send', {
         'groupId': group.id,
         'text': trimmed,
+        if (references.isNotEmpty) 'attachments': references,
       });
       return true;
     } catch (failure) {
@@ -396,7 +464,78 @@ class GroupsController extends ChangeNotifier {
       error = _message(failure);
       _change();
       return false;
+    } finally {
+      _progress.remove(id)?.dispose();
     }
+  }
+
+  Future<RemoteJson> _upload(
+    Group group,
+    String messageId,
+    int index,
+    ({String name, String mimeType, Uint8List bytes}) file,
+    void Function(int bytes) onProgress,
+  ) async {
+    final uploadId =
+        '${messageId}_${index}_${DateTime.now().microsecondsSinceEpoch}';
+    var offset = 0;
+    while (true) {
+      final end = (offset + _chunkBytes).clamp(0, file.bytes.length);
+      final last = end >= file.bytes.length;
+      final result = await link.request('djl/groups/upload', {
+        'groupId': group.id,
+        'uploadId': uploadId,
+        'name': file.name,
+        'mimeType': groupUploadMimeType(file.name, file.mimeType),
+        'sizeBytes': file.bytes.length,
+        'offset': offset,
+        'data': base64Encode(Uint8List.sublistView(file.bytes, offset, end)),
+        'final': last,
+      });
+      offset = end;
+      onProgress(offset);
+      if (last) {
+        final reference = result['attachment'];
+        if (reference is! Map) {
+          throw StateError('Your Mac did not keep the file.');
+        }
+        return Map<String, dynamic>.from(reference);
+      }
+    }
+  }
+
+  void _remember(String key, Uint8List bytes) {
+    final previous = _bytes.remove(key);
+    if (previous != null) _cachedBytes -= previous.length;
+    _bytes[key] = bytes;
+    _cachedBytes += bytes.length;
+    while (_cachedBytes > _cacheLimit && _bytes.length > 1) {
+      final oldest = _bytes.keys.first;
+      _cachedBytes -= _bytes.remove(oldest)!.length;
+    }
+  }
+
+  /// The attachment's bytes, from this session or downloaded from the Mac.
+  Future<Uint8List> attachmentBytes(GroupAttachment attachment) async {
+    final known = _bytes[attachment.key] ?? _bytes[attachment.id];
+    if (known != null) return known;
+    final id = attachment.id;
+    if (id == null) throw StateError('This file is still sending.');
+    final builder = BytesBuilder(copy: false);
+    var offset = 0;
+    while (true) {
+      final page = await link.request('djl/groups/attachment', {
+        'attachmentId': id,
+        'offset': offset,
+      });
+      final data = base64Decode(page['data'] as String? ?? '');
+      builder.add(data);
+      offset += data.length;
+      if (page['done'] == true || data.isEmpty) break;
+    }
+    final bytes = builder.takeBytes();
+    _remember(id, bytes);
+    return bytes;
   }
 
   Future<void> stop(Group group) =>
@@ -475,6 +614,10 @@ class GroupsController extends ChangeNotifier {
     for (final draft in _drafts.values) {
       draft.dispose();
     }
+    for (final progress in _progress.values) {
+      progress.dispose();
+    }
+    _progress.clear();
     super.dispose();
   }
 }

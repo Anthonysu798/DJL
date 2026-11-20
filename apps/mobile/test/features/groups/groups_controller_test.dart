@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/desktop/data/remote_transport.dart';
 import 'package:djl_mobile/features/groups/domain/group_models.dart';
@@ -278,5 +280,167 @@ void main() {
     expect(created.members.map((m) => m.provider), ['codex', 'gemini']);
     expect(controller.groups.first.name, 'Trip');
     expect(link.groupThreads, contains(created.threadId));
+  });
+
+  testWidgets('files upload in pieces and go with the message', (tester) async {
+    final link = mac();
+    final controller = GroupsController(link);
+    addTearDown(controller.dispose);
+    await tester.pump();
+    final group = controller.groups.single;
+    await controller.open(group);
+    // Large enough to need three pieces of 384 KiB.
+    final big = Uint8List.fromList(List.generate(900 * 1024, (i) => i % 251));
+    final note = Uint8List.fromList(utf8.encode('print("hi")'));
+    final sending = controller.send(
+      group,
+      '@Claude read these',
+      files: [
+        (
+          name: 'deck.pptx',
+          mimeType: 'application/vnd.ms-powerpoint',
+          bytes: big,
+        ),
+        (name: 'main.py', mimeType: 'text/x-python', bytes: note),
+      ],
+    );
+    final local = controller.messages(group).single;
+    expect(local.sending, isTrue);
+    expect(local.attachments.map((a) => a.name), ['deck.pptx', 'main.py']);
+    expect(await sending, isTrue);
+
+    final uploads = link.requests.where((r) => r.$1 == 'djl/groups/upload');
+    expect(uploads.length, 4);
+    expect(uploads.map((r) => r.$2['offset']), [0, 393216, 786432, 0]);
+    expect(uploads.map((r) => r.$2['final']), [false, false, true, true]);
+    expect(link.stored['att-1'], big);
+    final send = link.requests.lastWhere((r) => r.$1 == 'djl/groups/send').$2;
+    expect(send['text'], '@Claude read these');
+    expect((send['attachments'] as List).map((a) => (a as Map)['id']), [
+      'att-1',
+      'att-2',
+    ]);
+    expect(controller.progress(local.id), isNull);
+
+    // The echo carries the desktop's ids and replaces the local copy, and a
+    // sent file previews from memory without another download.
+    link.emit('codex/event/user_message', {
+      'threadId': group.threadId,
+      'itemId': 'user-1',
+      'message': '@Claude read these',
+      'attachments': [
+        {
+          'type': 'file',
+          'id': 'att-2',
+          'name': 'main.py',
+          'mimeType': 'text/x-python',
+          'sizeBytes': note.length,
+        },
+        {
+          'type': 'file',
+          'id': 'att-1',
+          'name': 'deck.pptx',
+          'mimeType': 'application/vnd.ms-powerpoint',
+          'sizeBytes': big.length,
+        },
+      ],
+    });
+    final echoed = controller.messages(group).single;
+    expect(echoed.sending, isFalse);
+    expect(echoed.attachments.first.id, 'att-2');
+    expect(await controller.attachmentBytes(echoed.attachments.first), note);
+    expect(
+      link.requests.where((r) => r.$1 == 'djl/groups/attachment'),
+      isEmpty,
+    );
+  });
+
+  testWidgets('files alone can be sent, and a failed upload takes them back', (
+    tester,
+  ) async {
+    final link = mac();
+    final controller = GroupsController(link);
+    addTearDown(controller.dispose);
+    await tester.pump();
+    final group = controller.groups.single;
+    await controller.open(group);
+    final photo = Uint8List.fromList([1, 2, 3]);
+    link.failures['djl/groups/upload'] = const RemoteRpcException(
+      -32000,
+      'Upload out of order',
+      null,
+    );
+    expect(
+      await controller.send(
+        group,
+        '',
+        files: [(name: 'a.png', mimeType: 'image/png', bytes: photo)],
+      ),
+      isFalse,
+    );
+    expect(controller.messages(group), isEmpty);
+    expect(controller.error, 'Upload out of order');
+    expect(link.requests.where((r) => r.$1 == 'djl/groups/send'), isEmpty);
+
+    expect(
+      await controller.send(
+        group,
+        '',
+        files: [(name: 'a.png', mimeType: 'image/png', bytes: photo)],
+      ),
+      isTrue,
+    );
+    final send = link.requests.lastWhere((r) => r.$1 == 'djl/groups/send').$2;
+    expect(send['text'], '');
+    expect((send['attachments'] as List).single, containsPair('type', 'image'));
+  });
+
+  testWidgets('history files download in pages for preview', (tester) async {
+    final link = mac();
+    link.stored['att-9'] = List.generate(10, (i) => i);
+    link.history['thread-g1'] = [
+      {
+        ...fakeUserItem('user-9', 'see attached'),
+        'attachments': [
+          {
+            'type': 'file',
+            'id': 'att-9',
+            'name': 'report.pdf',
+            'mimeType': 'application/pdf',
+            'sizeBytes': 10,
+          },
+        ],
+      },
+    ];
+    final controller = GroupsController(link);
+    addTearDown(controller.dispose);
+    await tester.pump();
+    final group = controller.groups.single;
+    await controller.open(group);
+    final attachment = controller.messages(group).single.attachments.single;
+    expect(attachment.name, 'report.pdf');
+    expect(
+      await controller.attachmentBytes(attachment),
+      List.generate(10, (i) => i),
+    );
+    // The fake serves four bytes a page.
+    expect(
+      link.requests.where((r) => r.$1 == 'djl/groups/attachment').length,
+      3,
+    );
+    await controller.attachmentBytes(attachment);
+    expect(
+      link.requests.where((r) => r.$1 == 'djl/groups/attachment').length,
+      3,
+    );
+  });
+
+  testWidgets('attaching waits for a Mac that takes files', (tester) async {
+    final link = mac()..attachments = false;
+    final controller = GroupsController(link);
+    addTearDown(controller.dispose);
+    await tester.pump();
+    expect(controller.available, isTrue);
+    expect(controller.canAttach, isFalse);
   });
 }

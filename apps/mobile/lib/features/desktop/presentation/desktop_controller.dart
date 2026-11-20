@@ -1836,6 +1836,9 @@ class DesktopController extends ChangeNotifier {
   /// The paired desktop can serve Multi agents groups to this phone.
   bool supportsGroups = false;
 
+  /// The Mac's bridge takes files and images in group chats.
+  bool supportsGroupAttachments = false;
+
   /// Threads that belong to group chats. The groups feature reads their events
   /// straight from the transport, so this controller leaves them alone.
   final groupThreads = <String>{};
@@ -3350,6 +3353,10 @@ class DesktopController extends ChangeNotifier {
             true;
         supportsGroups =
             (initialized['capabilities'] as RemoteJson?)?['djlGroups'] == true;
+        supportsGroupAttachments =
+            (initialized['capabilities']
+                as RemoteJson?)?['djlGroupAttachments'] ==
+            true;
       } on RemoteRpcException catch (e) {
         if (generation != _connectGeneration) return;
         if (e.code != -32602 ||

@@ -118,6 +118,48 @@ class GroupAgent {
   final bool ready;
 }
 
+/// A file or image sent with a message.
+///
+/// [id] is the desktop's attachment id once it is stored there; a file still
+/// on its way has none. Its bytes are looked up by [key].
+class GroupAttachment {
+  const GroupAttachment({
+    required this.key,
+    required this.name,
+    required this.mimeType,
+    required this.sizeBytes,
+    this.id,
+  });
+
+  final String key, name, mimeType;
+  final int sizeBytes;
+  final String? id;
+
+  bool get image => mimeType.toLowerCase().startsWith('image/');
+
+  /// The bridge's attachment details on a user message.
+  static List<GroupAttachment> listFrom(Object? raw) => [
+    for (final entry in raw is List ? raw : const [])
+      if (entry is Map &&
+          entry['id'] is String &&
+          entry['name'] is String &&
+          entry['mimeType'] is String)
+        GroupAttachment(
+          key: entry['id'] as String,
+          id: entry['id'] as String,
+          name: entry['name'] as String,
+          mimeType: entry['mimeType'] as String,
+          sizeBytes: (entry['sizeBytes'] as num?)?.toInt() ?? 0,
+        ),
+  ];
+}
+
+/// The largest file the phone sends (the desktop accepts up to 100 MB).
+const groupAttachmentMaxBytes = 50 * 1024 * 1024;
+
+/// How many files one message may carry (the desktop's limit).
+const groupAttachmentMaxCount = 20;
+
 class GroupMessage {
   const GroupMessage({
     required this.id,
@@ -125,6 +167,7 @@ class GroupMessage {
     this.memberId,
     this.replyId,
     this.sending = false,
+    this.attachments = const [],
   });
 
   final String id, text;
@@ -135,7 +178,220 @@ class GroupMessage {
   /// Shown at once, before the desktop has confirmed it.
   final bool sending;
 
+  final List<GroupAttachment> attachments;
+
   bool get fromUser => memberId == null;
+}
+
+/// A short size such as "820 KB" or "4.2 MB".
+String formatByteSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+  final mb = bytes / (1024 * 1024);
+  return '${mb < 10 ? mb.toStringAsFixed(1) : mb.round()} MB';
+}
+
+/// The label under a file's name, e.g. "PDF" or "Python".
+String attachmentKindLabel(String name, String mimeType) {
+  final dot = name.lastIndexOf('.');
+  final extension = dot < 0 ? '' : name.substring(dot + 1).toLowerCase();
+  const named = {
+    'pdf': 'PDF',
+    'doc': 'Word',
+    'docx': 'Word',
+    'ppt': 'PowerPoint',
+    'pptx': 'PowerPoint',
+    'key': 'Keynote',
+    'xls': 'Excel',
+    'xlsx': 'Excel',
+    'csv': 'Spreadsheet',
+    'py': 'Python',
+    'js': 'JavaScript',
+    'ts': 'TypeScript',
+    'dart': 'Dart',
+    'md': 'Markdown',
+    'txt': 'Text',
+    'json': 'JSON',
+    'zip': 'Archive',
+  };
+  if (named[extension] case final label?) return label;
+  if (mimeType.startsWith('image/')) return 'Image';
+  if (mimeType.startsWith('video/')) return 'Video';
+  if (mimeType.startsWith('audio/')) return 'Audio';
+  return extension.isEmpty ? 'File' : extension.toUpperCase();
+}
+
+const _textExtensions = {
+  'txt',
+  'md',
+  'markdown',
+  'csv',
+  'tsv',
+  'json',
+  'yaml',
+  'yml',
+  'toml',
+  'xml',
+  'html',
+  'htm',
+  'css',
+  'scss',
+  'js',
+  'jsx',
+  'ts',
+  'tsx',
+  'mjs',
+  'cjs',
+  'py',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'kts',
+  'swift',
+  'm',
+  'mm',
+  'c',
+  'h',
+  'cc',
+  'cpp',
+  'hpp',
+  'cs',
+  'php',
+  'sh',
+  'bash',
+  'zsh',
+  'sql',
+  'dart',
+  'lua',
+  'r',
+  'ini',
+  'cfg',
+  'conf',
+  'env',
+  'log',
+  'gradle',
+  'vue',
+  'svelte',
+  'graphql',
+};
+
+// What the desktop stores (apps/server/src/streamingAttachmentUpload.ts).
+const _desktopCodeExtensions = {
+  'py',
+  'js',
+  'mjs',
+  'cjs',
+  'jsx',
+  'ts',
+  'tsx',
+  'java',
+  'kt',
+  'kts',
+  'swift',
+  'go',
+  'rs',
+  'rb',
+  'php',
+  'c',
+  'h',
+  'cc',
+  'cpp',
+  'hpp',
+  'cs',
+  'm',
+  'mm',
+  'sh',
+  'bash',
+  'zsh',
+  'sql',
+  'yaml',
+  'yml',
+  'toml',
+  'ini',
+  'cfg',
+  'conf',
+  'css',
+  'scss',
+  'dart',
+  'lua',
+  'r',
+  'log',
+  'tsv',
+  'gradle',
+  'vue',
+  'svelte',
+  'graphql',
+  'proto',
+  'tex',
+};
+const _desktopImageTypes = {
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/tiff',
+  'image/bmp',
+};
+const _desktopOtherExtensions = {
+  'pdf',
+  'docx',
+  'xlsx',
+  'pptx',
+  'csv',
+  'json',
+  'txt',
+  'md',
+  'markdown',
+  'mp4',
+  'm4v',
+  'mov',
+  'webm',
+};
+
+String _extension(String name) {
+  final dot = name.lastIndexOf('.');
+  return dot < 0 ? '' : name.substring(dot + 1).toLowerCase();
+}
+
+/// Whether the desktop takes this file: images, PDFs, Word, Excel and
+/// PowerPoint, video, and text or code.
+bool groupAttachmentSupported(String name, String mimeType) {
+  if (_desktopImageTypes.contains(mimeType.toLowerCase())) return true;
+  final extension = _extension(name);
+  return _desktopOtherExtensions.contains(extension) ||
+      _desktopCodeExtensions.contains(extension);
+}
+
+/// The type to declare when uploading. The desktop checks images, PDFs and
+/// Office files against their bytes; anything else it detects itself, and a
+/// guessed type (".ts" reads as video) would only get in the way.
+String groupUploadMimeType(String name, String mimeType) {
+  final type = mimeType.toLowerCase();
+  if (_desktopImageTypes.contains(type) || type == 'application/pdf') {
+    return type;
+  }
+  if (const {'docx', 'xlsx', 'pptx'}.contains(_extension(name))) return type;
+  return 'application/octet-stream';
+}
+
+/// Whether a file reads as plain text, so the phone can show it itself.
+bool attachmentIsText(String name, String mimeType) {
+  final type = mimeType.toLowerCase();
+  if (type.startsWith('text/')) return true;
+  if (const {
+    'application/json',
+    'application/xml',
+    'application/javascript',
+    'application/x-yaml',
+    'application/x-sh',
+  }.contains(type)) {
+    return true;
+  }
+  final dot = name.lastIndexOf('.');
+  return dot >= 0 &&
+      _textExtensions.contains(name.substring(dot + 1).toLowerCase());
 }
 
 final _groupMessageId = RegExp(r'(?:^|:)gm\.([^.:]+)\.([^.:]+)$');

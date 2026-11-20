@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:djl_mobile/features/groups/presentation/groups_controller.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart'
@@ -6,12 +7,22 @@ import 'package:djl_mobile/features/pairing/data/pairing_repository.dart'
 
 /// A paired Mac that answers from memory. Tests and preview scenes script it.
 class FakeGroupsLink extends ChangeNotifier implements GroupsLink {
-  FakeGroupsLink({this.online = true, this.outdated = false});
+  FakeGroupsLink({
+    this.online = true,
+    this.outdated = false,
+    this.attachments = true,
+  });
 
   @override
   bool online;
   @override
   bool outdated;
+  @override
+  bool attachments;
+
+  /// Files the fake Mac has stored, by attachment id.
+  final stored = <String, List<int>>{};
+  final _uploads = <String, List<int>>{};
   @override
   final groupThreads = <String>{};
 
@@ -64,6 +75,37 @@ class FakeGroupsLink extends ChangeNotifier implements GroupsLink {
         );
         groups.add(group);
         return group;
+      case 'djl/groups/upload':
+        final id = params['uploadId'] as String;
+        final bytes = _uploads.putIfAbsent(id, () => [])
+          ..addAll(base64Decode(params['data'] as String));
+        if (params['final'] != true) return {'received': bytes.length};
+        _uploads.remove(id);
+        final storedId = 'att-${stored.length + 1}';
+        stored[storedId] = bytes;
+        final mime = params['mimeType'] as String;
+        return {
+          'attachment': {
+            'type': mime.startsWith('image/') ? 'image' : 'file',
+            'id': storedId,
+            'name': params['name'],
+            'mimeType': mime,
+            'sizeBytes': bytes.length,
+            'contentHash': 'a' * 64,
+            'uploadMethod': 'stream',
+          },
+        };
+      case 'djl/groups/attachment':
+        final bytes = stored[params['attachmentId']] ?? const <int>[];
+        final offset = params['offset'] as int;
+        final end = (offset + 4).clamp(0, bytes.length);
+        return {
+          'data': base64Encode(bytes.sublist(offset, end)),
+          'offset': offset,
+          'sizeBytes': bytes.length,
+          'mimeType': 'application/octet-stream',
+          'done': end >= bytes.length,
+        };
       case 'thread/read':
         return {
           'thread': {
