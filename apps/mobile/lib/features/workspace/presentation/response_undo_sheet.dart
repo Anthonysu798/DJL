@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'response_undo_controller.dart';
+import '../../../l10n/l10n.dart';
 
 class ResponseUndoSheet extends StatefulWidget {
   const ResponseUndoSheet({
@@ -40,27 +41,21 @@ class _ResponseUndoSheetState extends State<ResponseUndoSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Undo this response',
+                context.l10n.workspaceUndoTitle,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
-              Text('Workspace: ${c.repository.cwd}'),
-              const Text(
-                'Review the exact changes from this response. Later edits stay in place where the reverse patch can apply. The desktop checks conflicts again when you confirm.',
-              ),
+              Text(context.l10n.workspaceUndoWorkspace(c.repository.cwd)),
+              Text(context.l10n.workspaceUndoIntro),
               if (widget.overlap)
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: Text(
-                    'Other responses touch these files. Review carefully: undo may overlap changes in this or another chat.',
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(context.l10n.workspaceUndoOverlap),
                 ),
               if (c.entry.uncertain)
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: Text(
-                    'A previous undo result is unknown. Refresh this review and inspect the current files before confirming another attempt.',
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(context.l10n.workspaceUndoUncertain),
                 ),
               if (c.loading || c.applying)
                 const Padding(
@@ -68,10 +63,8 @@ class _ResponseUndoSheetState extends State<ResponseUndoSheet> {
                   child: CircularProgressIndicator(),
                 ),
               if (!c.current && !c.entry.reverted)
-                const Text(
-                  'This review is no longer current. Close it and reopen the response.',
-                ),
-              if (c.entry.reverted) const Text('This response was undone.'),
+                Text(context.l10n.workspaceUndoStale),
+              if (c.entry.reverted) Text(context.l10n.workspaceUndoDone),
               for (final file in p?.files ?? c.entry.files)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -79,14 +72,17 @@ class _ResponseUndoSheetState extends State<ResponseUndoSheet> {
                 ),
               if (p != null) ...[
                 if (p.staged.isNotEmpty)
-                  Text('Staged files block undo: ${p.staged.join(', ')}'),
-                for (final conflict in p.conflicts) Text('Conflict: $conflict'),
+                  Text(
+                    context.l10n.workspaceUndoStagedBlock(p.staged.join(', ')),
+                  ),
+                for (final conflict in p.conflicts)
+                  Text(context.l10n.workspaceUndoConflict(conflict)),
                 for (final reason in p.reasons) Text(reason),
                 if (!p.canRevert &&
                     p.staged.isEmpty &&
                     p.conflicts.isEmpty &&
                     p.reasons.isEmpty)
-                  const Text('The desktop cannot safely reverse this patch.'),
+                  Text(context.l10n.workspaceUndoCannotReverse),
               ],
               if (c.error != null)
                 Padding(
@@ -100,17 +96,17 @@ class _ResponseUndoSheetState extends State<ResponseUndoSheet> {
                 children: [
                   TextButton(
                     onPressed: c.applying ? null : () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text(context.l10n.workspaceClose),
                   ),
                   TextButton(
                     onPressed: c.loading || c.applying || !c.current
                         ? null
                         : c.refresh,
-                    child: const Text('Refresh review'),
+                    child: Text(context.l10n.workspaceRefreshReview),
                   ),
                   FilledButton(
                     onPressed: c.canApply ? c.apply : null,
-                    child: const Text('Undo response'),
+                    child: Text(context.l10n.workspaceUndoResponse),
                   ),
                 ],
               ),

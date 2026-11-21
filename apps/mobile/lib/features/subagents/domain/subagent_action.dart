@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../../pairing/data/pairing_repository.dart';
 import '../../activity/domain/desktop_activity.dart'
     show activityObject, normalizedActivityType;
+import '../../../l10n/l10n.dart';
 
 String? subagentString(Object? value) =>
     value is String && value.trim().isNotEmpty ? value.trim() : null;
@@ -113,7 +114,7 @@ class SubagentChild {
   String? agentId, nickname, role, model, prompt, message;
   String status;
   bool requestedModel;
-  String get label => nickname ?? role ?? 'Subagent';
+  String get label => nickname ?? role ?? appStrings.subagentsSubagent;
   bool get hasIdentity => nickname != null || role != null;
   factory SubagentChild.decode(
     String thread,
@@ -196,12 +197,12 @@ class SubagentAction {
   final List<SubagentChild> children;
   String get id => 'subagent:${jsonEncode([mac, thread, turn, item])}';
   String get title => switch (tool) {
-    'spawnagent' => 'Spawn agent',
-    'wait' => 'Wait for agents',
-    'sendinput' => 'Update agent',
-    'resumeagent' => 'Resume agent',
-    'closeagent' => 'Close agent',
-    _ => 'Subagent activity',
+    'spawnagent' => appStrings.subagentsSpawnAgent,
+    'wait' => appStrings.subagentsWaitForAgents,
+    'sendinput' => appStrings.subagentsUpdateAgent,
+    'resumeagent' => appStrings.subagentsResumeAgent,
+    'closeagent' => appStrings.subagentsCloseAgent,
+    _ => appStrings.subagentsActivity,
   };
   static SubagentAction? decode(
     RemoteJson raw, {
@@ -436,7 +437,7 @@ RemoteJson sanitizedSubagentRow(
         'id': row['id'],
         'type': 'subagentAction',
         'threadId': thread,
-        'text': 'Subagent metadata unavailable',
+        'text': appStrings.subagentsMetadataUnavailable,
       };
 }
 

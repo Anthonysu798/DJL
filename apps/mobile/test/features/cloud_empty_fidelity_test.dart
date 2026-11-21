@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/core/presentation/djl_glass.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_controller.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_page.dart';
@@ -73,7 +74,7 @@ Future<Color> pixelAt(
 
 void main() {
   testWidgets(
-    'Navigation shadow continues below the compact toolbar as in the native reference',
+    'Navigation button is a flat raised disc with no shadow below the compact toolbar',
     (tester) async {
       final previous = debugDisableShadows;
       debugDisableShadows = false;
@@ -81,12 +82,18 @@ void main() {
         final page = await showEmpty(tester);
         final toolbar = tester.getRect(find.byType(AppBar));
         final navigation = tester.getRect(find.byTooltip('Open navigation'));
-        final color = await pixelAt(
+        final below = await pixelAt(
           tester,
           page.boundary,
           Offset(navigation.center.dx, toolbar.bottom + 6),
         );
-        expect(color.r, lessThan(254 / 255));
+        expect(below.toARGB32(), DjlColors.light.surface.toARGB32());
+        final disc = await pixelAt(
+          tester,
+          page.boundary,
+          Offset(navigation.left + 4, navigation.center.dy),
+        );
+        expect(disc.toARGB32(), DjlColors.light.surfaceRaised.toARGB32());
         expect(page.fixture.posts, 0);
         expect(tester.takeException(), isNull);
       } finally {
@@ -225,7 +232,7 @@ void main() {
 
   for (final brightness in Brightness.values) {
     testWidgets(
-      'Active Task is visibly blue with white content in $brightness',
+      'Active Task is ink-filled with onInk content in $brightness',
       (tester) async {
         final page = await showEmpty(tester, brightness: brightness);
         await tester.tap(find.byTooltip('Task mode'));
@@ -236,11 +243,13 @@ void main() {
           page.boundary,
           Offset(button.left + 6, button.center.dy),
         );
-        expect(color.b - color.r, greaterThan(.3));
-        expect(color.g - color.r, greaterThan(.2));
+        final colors = brightness == Brightness.dark
+            ? DjlColors.dark
+            : DjlColors.light;
+        expect(color.toARGB32(), colors.ink.toARGB32());
         expect(
           tester.widget<Text>(find.text('Task')).style!.color,
-          Colors.white,
+          colors.onInk,
         );
         expect(page.fixture.posts, 0);
         expect(tester.takeException(), isNull);

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../l10n/l10n.dart';
 import '../security/credential_store.dart';
 
 class CloudFailure implements Exception {
@@ -35,8 +36,8 @@ class CloudFailure implements Exception {
       error['code'] as String? ?? 'http_$status',
       error['message'] as String? ??
           (status == 401
-              ? 'Your session has ended. Please sign in again.'
-              : 'DJL Cloud request failed ($status).'),
+              ? appStrings.coreSessionEnded
+              : appStrings.coreCloudRequestFailed(status)),
       unauthorized: status == 401 && !auth,
       traceId: error['traceId'] as String?,
       resetsAt: error['resetsAt'] as String?,
@@ -89,10 +90,10 @@ class CloudClient {
 
   void _requireRevision(int version) {
     if (_revision != version) {
-      throw const CloudFailure(
+      throw CloudFailure(
         401,
         'session_changed',
-        'The account changed.',
+        appStrings.coreAccountChanged,
         unauthorized: true,
       );
     }
@@ -105,10 +106,10 @@ class CloudClient {
     final session = await credentials.read('cloud.session');
     _requireRevision(version);
     if (session == null) {
-      throw const CloudFailure(
+      throw CloudFailure(
         401,
         'no_session',
-        'Please sign in.',
+        appStrings.corePleaseSignIn,
         unauthorized: true,
       );
     }
@@ -147,11 +148,7 @@ class CloudClient {
     final body = _object(response.body);
     final token = body['token'] as String?;
     if (token == null || token.isEmpty) {
-      throw const CloudFailure(
-        0,
-        'invalid_response',
-        'DJL Cloud returned no access token.',
-      );
+      throw CloudFailure(0, 'invalid_response', appStrings.coreNoAccessToken);
     }
     _jwt = token;
     _expiresAt =
@@ -230,17 +227,9 @@ class CloudClient {
     try {
       return await _client.send(request).timeout(const Duration(seconds: 30));
     } on TimeoutException {
-      throw const CloudFailure(
-        0,
-        'timeout',
-        'DJL Cloud took too long to respond.',
-      );
+      throw CloudFailure(0, 'timeout', appStrings.coreCloudTimeout);
     } on http.ClientException {
-      throw const CloudFailure(
-        0,
-        'network',
-        'Could not reach DJL Cloud. Check your connection.',
-      );
+      throw CloudFailure(0, 'network', appStrings.coreCloudUnreachable);
     }
   }
 
@@ -258,7 +247,11 @@ class CloudClient {
       final request = authenticated
           ? await authorizedRequest(method, path, body: body, query: query)
           : (http.Request(method, url(path, query))
-              ..headers['Accept'] = 'application/json');
+              ..headers['Accept'] = 'application/json'
+              ..headers.addAll(
+                body == null ? {} : {'Content-Type': 'application/json'},
+              )
+              ..body = body == null ? '' : jsonEncode(body));
       if (authenticated) _requireRevision(version);
       final response = await _send(request);
       if (authenticated) _requireRevision(version);
@@ -275,10 +268,10 @@ class CloudClient {
       _check(response);
       return response.body.isEmpty ? {} : _object(response.body);
     }
-    throw const CloudFailure(
+    throw CloudFailure(
       401,
       'session_expired',
-      'Please sign in again.',
+      appStrings.corePleaseSignInAgain,
       unauthorized: true,
     );
   }
@@ -310,10 +303,10 @@ class CloudClient {
               RegExp(r'^[0-9a-fA-F]{32,200}$').hasMatch(token) &&
               {'sandbox', 'production'}.contains(environment);
     if (!valid) {
-      throw const CloudFailure(
+      throw CloudFailure(
         0,
         'invalid_push',
-        'Invalid notification registration.',
+        appStrings.coreInvalidPushRegistration,
       );
     }
     for (var attempt = 0; attempt < 2; attempt++) {
@@ -342,10 +335,10 @@ class CloudClient {
       }
       _check(response);
       if (response.statusCode != 204) {
-        throw const CloudFailure(
+        throw CloudFailure(
           0,
           'invalid_response',
-          'Registration was not acknowledged.',
+          appStrings.corePushNotAcknowledged,
         );
       }
       return;
@@ -367,10 +360,10 @@ class CloudClient {
     try {
       return jsonDecode(body) as Map<String, dynamic>;
     } catch (_) {
-      throw const CloudFailure(
+      throw CloudFailure(
         0,
         'invalid_response',
-        'This version could not read the DJL Cloud response.',
+        appStrings.coreCloudResponseUnreadable,
       );
     }
   }

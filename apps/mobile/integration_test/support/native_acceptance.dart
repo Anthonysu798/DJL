@@ -62,12 +62,10 @@ class ConversationRequestRecorder extends http.BaseClient {
 const nativeSettingsBaseline = <String, Object>{
   'djl.appearance.mode': 'light',
   'codex.appFontStyle': 'system',
-  'codex.userBubbleColor': 'default',
 };
 const nativeSettingsTarget = <String, Object>{
   'djl.appearance.mode': 'dark',
   'codex.appFontStyle': 'geistMono',
-  'codex.userBubbleColor': 'pink',
 };
 
 Future<void> establishNativeSettingsBaseline(SettingsStore store) async {

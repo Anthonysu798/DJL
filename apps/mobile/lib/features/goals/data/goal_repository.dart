@@ -1,6 +1,7 @@
 import '../../desktop/data/remote_transport.dart';
 import '../../pairing/data/pairing_repository.dart';
 import '../domain/thread_goal.dart';
+import '../../../l10n/l10n.dart';
 
 Object goalError(Object error) {
   if (error is! RemoteRpcException) {
@@ -29,7 +30,7 @@ class GoalRepository {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     if (transport.macDeviceId != macDeviceId) {
-      throw StateError('Connected desktop changed. Reopen this goal.');
+      throw StateError(appStrings.goalsDesktopChanged);
     }
     try {
       final result = await transport.request(method, {
@@ -37,7 +38,7 @@ class GoalRepository {
         ...params,
       }, timeout: timeout);
       if (transport.macDeviceId != macDeviceId) {
-        throw StateError('Connected desktop changed. Reopen this goal.');
+        throw StateError(appStrings.goalsDesktopChanged);
       }
       return result;
     } catch (error) {
@@ -58,7 +59,7 @@ class GoalRepository {
     }
     final goal = ThreadGoal.fromJson(Map<String, dynamic>.from(value));
     if (goal.threadId != threadId) {
-      throw StateError('The runtime returned another chat’s goal.');
+      throw StateError(appStrings.goalsOtherChatGoal);
     }
     return goal;
   }
@@ -69,9 +70,7 @@ class GoalRepository {
     GoalBudgetUpdate budget = const GoalBudgetUpdate.keep(),
   }) async {
     if (budget.tokens != null && budget.tokens! <= 0) {
-      throw const FormatException(
-        'Token budget must be a positive whole number.',
-      );
+      throw FormatException(appStrings.goalsBudgetInvalid);
     }
     final value = (await _call('thread/goal/set', {
       'objective': ?objective,
@@ -79,11 +78,11 @@ class GoalRepository {
       if (budget.changed) 'tokenBudget': budget.tokens,
     }))['goal'];
     if (value is! Map) {
-      throw StateError('The runtime returned an unexpected goal response.');
+      throw StateError(appStrings.goalsUnexpectedResponse);
     }
     final goal = ThreadGoal.fromJson(Map<String, dynamic>.from(value));
     if (goal.threadId != threadId) {
-      throw StateError('The runtime returned another chat’s goal.');
+      throw StateError(appStrings.goalsOtherChatGoal);
     }
     return goal;
   }

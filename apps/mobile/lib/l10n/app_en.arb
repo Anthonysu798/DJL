@@ -1,0 +1,2624 @@
+{
+  "@@locale": "en",
+  "appName": "DJL",
+  "@appName": {
+    "description": "The product name. Never translated."
+  },
+  "commonCancel": "Cancel",
+  "commonTryAgain": "Try again",
+  "chatUiAccessAskTitle": "Ask for approval",
+  "chatUiAccessAskDetail": "Always ask to edit external files and use the internet",
+  "chatUiAccessAutoTitle": "Approve for me",
+  "chatUiAccessAutoDetail": "Only ask for actions detected as potentially unsafe",
+  "chatUiAccessFullTitle": "Full access",
+  "chatUiAccessFullDetail": "Full computer access (elevated risk)",
+  "chatUiAccessHint": "Changes how Codex requests permission",
+  "chatUiAccessFullConfirmTitle": "Allow full desktop access?",
+  "chatUiAccessFullConfirmBody": "The agent can change files and run commands outside the workspace without asking for approval.",
+  "chatUiAccessFullConfirm": "Allow full access",
+  "chatUiAttentionNoMatches": "No matching attention items",
+  "chatUiAttentionAllCaughtUp": "You're all caught up",
+  "chatUiAttentionNoMatchesHint": "Try a different project, chat, or status.",
+  "chatUiAttentionEmptyHint": "Approvals, agent questions, failed runs, and completed work will appear here.",
+  "chatUiAttentionNeedsYou": "NEEDS YOU",
+  "chatUiAttentionReadyToReview": "READY TO REVIEW",
+  "chatUiAgoNow": "now",
+  "chatUiAgoMinutes": "{minutes}m ago",
+  "@chatUiAgoMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiAgoHours": "{hours}h ago",
+  "@chatUiAgoHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiAgoDays": "{days}d ago",
+  "@chatUiAgoDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiAttentionTitle": "Attention",
+  "chatUiAttentionConnectionChanged": "Connection changed. Go back to reopen Attention.",
+  "chatUiAttentionSearch": "Search attention",
+  "appSavedConnectionsUnreadable": "Saved desktop connection details could not be read. Your saved connections have been kept.",
+  "appRestoreMacsFailed": "Could not restore saved Macs. Unlock your device and retry.",
+  "appLinkedConversationFailed": "Could not open the linked conversation. Check your connection and retry.",
+  "appLinkedAccountUnavailable": "Account details are still unavailable. Retry the linked conversation when they load.",
+  "appAccountStillLoading": "Account details are still loading. Please try again.",
+  "appRenameChat": "Rename chat",
+  "appRenameChatPlaceholder": "Title",
+  "appSave": "Save",
+  "appOpenNavigation": "Open navigation",
+  "appAccountUnavailable": "Account details are unavailable.",
+  "appRetryAccount": "Retry account",
+  "appImages": "Images",
+  "appNotifications": "Notifications",
+  "appRetryLinkedConversation": "Retry linked conversation",
+  "coreBack": "Back",
+  "coreMenu": "Menu",
+  "coreChatActions": "Chat actions",
+  "coreSessionEnded": "Your session has ended. Please sign in again.",
+  "coreCloudRequestFailed": "DJL Cloud request failed ({status}).",
+  "@coreCloudRequestFailed": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "coreAccountChanged": "The account changed.",
+  "corePleaseSignIn": "Please sign in.",
+  "coreNoAccessToken": "DJL Cloud returned no access token.",
+  "coreCloudTimeout": "DJL Cloud took too long to respond.",
+  "coreCloudUnreachable": "Could not reach DJL Cloud. Check your connection.",
+  "corePleaseSignInAgain": "Please sign in again.",
+  "coreInvalidPushRegistration": "Invalid notification registration.",
+  "corePushNotAcknowledged": "Registration was not acknowledged.",
+  "coreCloudResponseUnreadable": "This version could not read the DJL Cloud response.",
+  "coreInvalidDesktopEnvelope": "Invalid or replayed desktop envelope.",
+  "coreDesktopMessageUnauthenticated": "Could not authenticate the desktop message.",
+  "gitThreadChangedReopenAction": "Thread activity changed. Reopen this branch or worktree action.",
+  "gitWaitForThread": "Wait until this thread finishes before changing branches or worktrees.",
+  "gitWaitForOperation": "Wait for the current Git operation to finish before changing branches or worktrees.",
+  "gitNotRepositorySentence": "This folder is not a Git repository.",
+  "gitNotRepository": "This folder is not a Git repository",
+  "gitNoLongerRepository": "This folder is no longer a Git repository. Refresh before creating a branch or worktree.",
+  "gitContinue": "Continue",
+  "gitOk": "OK",
+  "gitCreate": "Create",
+  "gitClose": "Close",
+  "gitDone": "Done",
+  "gitGenerating": "Generating…",
+  "gitGenerateMessage": "Generate message",
+  "gitCommitAllTitle": "Commit all current changes",
+  "gitCommitPublishTitle": "Commit and publish changes",
+  "gitCommitMessageLabel": "Commit message",
+  "gitPublishBranchTitle": "Publish this branch?",
+  "gitPublishCommitPushBody": "Commit all current changes and push this branch to its remote.",
+  "gitPublishFeatureBranchPrBody": "Prepare a feature branch, commit all changes, push the branch, and create a pull request on GitHub.",
+  "gitPublishCommitPrBody": "Commit all changes, push the branch, and create a pull request on GitHub.",
+  "gitCommitCreateSwitch": "Commit, Create & Switch",
+  "gitCreateManagedWorktree": "Create managed worktree",
+  "gitCreateWorktree": "Create worktree",
+  "gitBranchName": "Branch name",
+  "gitBaseBranch": "Base branch",
+  "gitMoveCurrentChanges": "Move current changes",
+  "gitCopyCurrentChanges": "Copy current changes",
+  "gitLeaveChangesHere": "Leave changes here",
+  "gitInitializeTitle": "Initialize Git?",
+  "gitInitializeBody": "Create a Git repository in this workspace.",
+  "gitPushTitle": "Push branch?",
+  "gitPushBody": "Push the committed changes to the configured remote.",
+  "gitLocalChangesNeedAttention": "Local changes need attention",
+  "gitUpdateRepositoryTitle": "Update repository?",
+  "gitDirtyAndBehindBody": "You have local changes and the remote branch moved ahead. Pull with rebase only if you're ready to reconcile those changes.",
+  "gitPullBody": "Pull remote commits into this branch.",
+  "gitPullAndRebase": "Pull & Rebase",
+  "gitUpdate": "Update",
+  "gitTransferChangesTitle": "Transfer changes",
+  "gitTargetWorkspacePath": "Target workspace path",
+  "gitRemoveWorktreeTitle": "Remove this worktree?",
+  "gitRemoveWorktreeBody": "Remove the managed worktree for this branch. The desktop will refuse to remove the main checkout.",
+  "gitDiscardTitle": "Discard local changes?",
+  "gitDiscardBody": "Discard local file changes and reset this branch to its remote.",
+  "gitPrDraftTitle": "Pull request draft",
+  "gitCopyDraft": "Copy draft",
+  "gitCreatePrTitle": "Create pull request?",
+  "gitCreatePrBody": "The desktop will push this branch if needed, generate a title and description from the committed changes, and create the pull request on GitHub.",
+  "gitNoChangesToShow": "There are no repository changes to show.",
+  "gitBranchSwitchFailed": "Branch Switch Failed",
+  "gitBranchOpenElsewhere": "Cannot switch branches: this branch is already open in another worktree.",
+  "gitErrorTitle": "Git Error",
+  "gitOpenPr": "Open PR",
+  "gitLoadingChanges": "Loading changes",
+  "gitLoadingChangesEllipsis": "Loading changes…",
+  "gitChangesUnavailable": "Changes unavailable",
+  "gitNoChanges": "No changes",
+  "gitDesktopChanged": "Connected desktop changed. Reopen Git from its workspace.",
+  "gitChooseWorkspace": "Choose a desktop workspace before using Git.",
+  "gitWorking": "Working…",
+  "gitRetryStatus": "Retry Git status",
+  "gitWorktreeUnavailable": "Worktree unavailable",
+  "gitActionsLabel": "Git actions",
+  "gitRefreshStatus": "Refresh Git status",
+  "gitShowMenu": "Show menu",
+  "gitInitializeRepository": "Initialize repository",
+  "gitCreateBranch": "Create branch",
+  "gitTransferToWorkspace": "Transfer changes to workspace",
+  "gitRemoveManagedWorktree": "Remove managed worktree",
+  "gitGeneratePrDraft": "Generate PR draft",
+  "gitCreatePullRequest": "Create pull request",
+  "gitCommitAndPushMenu": "Commit and push",
+  "gitCommitPushCreatePrMenu": "Commit, push and create PR",
+  "gitDiscardAndReset": "Discard and reset to remote",
+  "gitWorktreeReady": "Worktree ready",
+  "gitOpenChat": "Open chat",
+  "gitOpenPullRequest": "Open pull request",
+  "gitDetachedHead": "Detached HEAD",
+  "gitNoUpstream": "No upstream branch",
+  "gitAheadBehind": "{ahead} ahead · {behind} behind",
+  "@gitAheadBehind": {
+    "placeholders": {
+      "ahead": {
+        "type": "int"
+      },
+      "behind": {
+        "type": "int"
+      }
+    }
+  },
+  "gitCommitChanges": "Commit changes",
+  "gitPush": "Push",
+  "gitPullTitle": "Pull changes?",
+  "gitPull": "Pull",
+  "gitViewDiff": "View diff",
+  "gitCurrentBranch": "Current Branch",
+  "gitBranchFallback": "Branch",
+  "gitWriterModel": "Git writer model",
+  "gitConnectCodexModel": "Connect a Codex model on your Mac to generate commit messages and PR drafts.",
+  "gitChangedFilesCount": "{count} changed files",
+  "@gitChangedFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gitActionInitialize": "Initialize Git",
+  "gitActionChanges": "Changes",
+  "gitActionCommit": "Commit",
+  "gitActionCommitAndPush": "Commit & Push",
+  "gitActionCommitPushPr": "Commit, Push & PR",
+  "gitActionCreatePr": "Create PR",
+  "gitSectionSetup": "Setup",
+  "gitSectionWrite": "Write",
+  "gitStatusNotInitialized": "Git is not initialized",
+  "gitStatusUpToDate": "Repository up to date",
+  "gitStatusAheadOnly": "Local branch ahead of remote",
+  "gitStatusBehindOnly": "Remote branch ahead of local branch",
+  "gitStatusDiverged": "Local and remote branches diverged",
+  "gitStatusDirty": "Local repository has uncommitted changes",
+  "gitStatusDirtyAndBehind": "Local changes exist and remote branch moved ahead",
+  "gitStatusNoUpstream": "Branch not published yet",
+  "gitStatusDetachedHead": "Current branch unavailable",
+  "gitStatusUnavailable": "Repository status unavailable",
+  "gitReviewLocalCommits": "{count, plural, =1{1 local commit} other{{count} local commits}}",
+  "@gitReviewLocalCommits": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gitReviewTheCurrentBranch": "the current branch",
+  "gitReviewCreatingFrom": "You're creating '{name}' from {source}. Carry your local changes onto the new branch, or commit first and then create + switch.",
+  "@gitReviewCreatingFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewCommitsStayPrefix": "{base} already has {commits} that are not on the remote. Those commits stay on {base}'s history. {message}",
+  "@gitReviewCommitsStayPrefix": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "commits": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewFilesWithChanges": "Files with local changes:",
+  "gitReviewMoreFiles": "+{count} more files",
+  "@gitReviewMoreFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gitReviewBringChangesTitle": "Bring local changes to '{name}'?",
+  "@gitReviewBringChangesTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewCarryToNewBranch": "Carry to New Branch",
+  "gitReviewCommitsStayTitle": "Local commits stay on {base}",
+  "@gitReviewCommitsStayTitle": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewBranchCommitsStay": "{base} already has {commits} that are not on the remote. Creating '{name}' now starts the new branch from the current HEAD, but those commits stay in {base}'s history.",
+  "@gitReviewBranchCommitsStay": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "commits": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewCreateAnyway": "Create Anyway",
+  "gitReviewManagedWorktreeNoun": "a managed worktree",
+  "gitReviewQuotedName": "'{name}'",
+  "@gitReviewQuotedName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewCopyTitle": "Copy local changes from the current branch",
+  "gitReviewMoveTitle": "Move local changes from the current branch",
+  "gitReviewVerbCopy": "copy",
+  "gitReviewVerbMove": "move",
+  "gitReviewOnlyCurrentBranch": "Creating {target} can {verb} local changes only from the current branch. Switch the base branch to '{current}' or clean up local changes before creating the worktree.",
+  "@gitReviewOnlyCurrentBranch": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "verb": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewCopiedInto": " Local changes will also be copied into {worktree}; ignored files stay here.",
+  "@gitReviewCopiedInto": {
+    "placeholders": {
+      "worktree": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewMovedInto": " Local changes will move into {worktree}; ignored files stay here.",
+  "@gitReviewMovedInto": {
+    "placeholders": {
+      "worktree": {
+        "type": "String"
+      }
+    }
+  },
+  "gitReviewTheManagedWorktree": "the managed worktree",
+  "gitReviewTheNewWorktree": "the new worktree",
+  "gitReviewWorktreeCommitsStay": "{base} already has {commits} that are not on the remote. Creating {target} from {from} starts from the current HEAD, but those commits stay in {base}'s history too.{suffix}",
+  "@gitReviewWorktreeCommitsStay": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "commits": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "gitBadgeOpenWorktree": "Open worktree",
+  "gitBadgeOpenElsewhere": "Open elsewhere",
+  "gitActionCompleted": "Git action completed.",
+  "gitActionFailed": "{error} Refresh before retrying an action whose result is unknown.",
+  "@gitActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "gitDismissMenu": "Dismiss menu",
+  "gitDiffPatch": "Patch",
+  "gitDiffLine": "Line {line}",
+  "@gitDiffLine": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      }
+    }
+  },
+  "gitDiffLines": "Lines {first}-{last}",
+  "@gitDiffLines": {
+    "placeholders": {
+      "first": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      }
+    }
+  },
+  "gitDismissBranchPicker": "Dismiss branch picker",
+  "gitBadgeCurrent": "Current",
+  "gitBadgeDefault": "Default",
+  "gitCloseBranchPicker": "Close branch picker",
+  "gitBranchPickerStale": "Thread or desktop changed. Close and reopen the branch picker.",
+  "gitSearchBranches": "Search branches",
+  "gitClearBranchSearch": "Clear branch search",
+  "gitBranches": "Branches",
+  "gitNoBranchesFound": "No branches found",
+  "gitNoBranchesHint": "Try a different search or refresh the branch list.",
+  "gitCreateAndCheckout": "Create and checkout '{name}'",
+  "@gitCreateAndCheckout": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gitNewBranchEllipsis": "New branch...",
+  "gitSwitching": "Switching...",
+  "gitRefreshing": "Refreshing...",
+  "gitReloadBranchList": "Reload branch list",
+  "gitCloseWorktreeReview": "Close worktree review",
+  "gitHandoffTitle": "Hand off thread to worktree",
+  "gitForkTitle": "Fork thread into new worktree",
+  "gitHandoff": "Hand off",
+  "gitFork": "Fork",
+  "gitHandoffMessage": "Create and check out a branch in a new worktree to continue in parallel. The branch is normalized with the djl/ prefix.",
+  "gitForkMessage": "Create and check out a branch in a new worktree, then fork this conversation into that checkout as a new chat.",
+  "gitStartsFromBase": "Starts from this base branch.",
+  "gitLoadingWorktreeBranches": "Loading worktree branches",
+  "gitPreparingWorktree": "Preparing worktree",
+  "gitNewBranch": "New branch",
+  "gitNewBranchBody": "Branch will be created locally and checked out. Uncommitted changes stay with this working copy.",
+  "gitThreadChangedReopenGit": "Thread activity changed. Close and reopen this Git action.",
+  "gitRepositoryChanges": "Repository Changes",
+  "gitFilesChanged": "{count, plural, =1{1 file changed} other{{count} files changed}}",
+  "@gitFilesChanged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gitExpandAll": "Expand All",
+  "gitCollapseAll": "Collapse All",
+  "gitPatchIndex": "Patch {index} of {total}",
+  "@gitPatchIndex": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiComposerOptions": "Composer options",
+  "chatUiStopDictation": "Stop dictation",
+  "chatUiStartDictation": "Start dictation",
+  "chatUiResumeQueued": "Resume queued messages",
+  "chatUiStopTurn": "Stop turn",
+  "chatUiSendToDesktop": "Send to desktop",
+  "chatUiStartingRun": "Starting run",
+  "chatUiRemoveImage": "Remove image",
+  "chatUiAttachedImage": "Attached image",
+  "chatUiDesktopImage": "Desktop image: {source}",
+  "@chatUiDesktopImage": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiImagePreviewUnavailable": "Image preview unavailable",
+  "chatUiContextSkills": "Skills",
+  "chatUiContextPlugins": "Plugins",
+  "chatUiContextFiles": "Files",
+  "chatUiContextUnsupported": "{kind} are not supported by this desktop runtime.",
+  "@chatUiContextUnsupported": {
+    "description": "kind is the Skills/Plugins/Files label",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiContextStale": "The conversation changed. Reopen the context picker.",
+  "chatUiContextRetry": "Retry discovery",
+  "chatUiContextSearchFilesIn": "Search files in {path}",
+  "@chatUiContextSearchFilesIn": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiContextSelectFolder": "Select a project folder to search desktop files.",
+  "chatUiContextNoneFound": "No {kind} found.",
+  "@chatUiContextNoneFound": {
+    "description": "kind is the lowercased Skills/Plugins/Files label",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiAddDesktopContext": "Add desktop context",
+  "chatUiContextSearchFiles": "Search files on your desktop",
+  "chatUiContextSearchKind": "Search {kind}",
+  "@chatUiContextSearchKind": {
+    "description": "kind is the lowercased Skills/Plugins label",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiContextDisabled": "Disabled on desktop",
+  "chatUiContextOnDesktop": "On paired desktop",
+  "chatUiEmptyGeneralTitle": "What should we work on?",
+  "chatUiEmptyFolderPrefix": "What should we do in ",
+  "@chatUiEmptyFolderPrefix": {
+    "description": "Text before the folder name in 'What should we do in <folder>?'"
+  },
+  "chatUiEmptyFolderSuffix": "?",
+  "@chatUiEmptyFolderSuffix": {
+    "description": "Text after the folder name in 'What should we do in <folder>?'"
+  },
+  "chatUiEmptyGreeting": "Hi! How can I help you?",
+  "chatUiEncryptedCaption": "Chats are End-to-end encrypted",
+  "chatUiUserMessage": "User message",
+  "chatUiAssistantMessage": "Assistant message",
+  "chatUiThreadActions": "Thread actions",
+  "chatUiBranchesAndWorktrees": "Branches & worktrees",
+  "chatUiGitActions": "Git actions",
+  "chatUiWorking": "Working…",
+  "chatUiScrollToLatest": "Scroll to latest message",
+  "chatUiSavedToPhotos": "Saved to Photos.",
+  "chatUiShareImageFailed": "Could not share this image. Please try again.",
+  "chatUiSaveImageFailed": "Could not save this image. Please try again.",
+  "chatUiLoadImageFailed": "Could not load this image.",
+  "chatUiRetry": "Retry",
+  "chatUiImageReopenWorkspace": "Reconnect or reopen this image from its workspace.",
+  "chatUiImageReopenChat": "Reopen this image from its paired chat.",
+  "chatUiOpenImage": "Open image {name}",
+  "@chatUiOpenImage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiClose": "Close",
+  "chatUiShare": "Share",
+  "chatUiSaveToPhotos": "Save to Photos",
+  "chatUiModelsGroup": "Models",
+  "@chatUiModelsGroup": {
+    "description": "Group heading for models with no provider"
+  },
+  "chatUiRefreshModels": "Refresh models",
+  "chatUiProviderAndModel": "Provider & model",
+  "chatUiDone": "Done",
+  "chatUiAllProviders": "All providers",
+  "chatUiModelsConnectionChanged": "Connection changed. Reopen model selection.",
+  "chatUiLoadingModels": "Loading models",
+  "chatUiNoModels": "No models available",
+  "chatUiNoModelsHint": "Connect a provider in DJL on your computer, then refresh the model list.",
+  "chatUiNoMatchingModels": "No matching models",
+  "chatUiSearchModels": "Search providers or models",
+  "chatUiClearModelSearch": "Clear model search",
+  "chatUiNavCloudChat": "Cloud chat",
+  "chatUiNavRemote": "Remote",
+  "chatUiNavSearchFailed": "Could not search chats.",
+  "chatUiNavRetrySearch": "Retry search",
+  "chatUiNavSearching": "Searching chats…",
+  "chatUiNavPinned": "Pinned",
+  "chatUiNavPinnedEmpty": "Keep favorite chats close.\nTouch and hold a chat to pin it.",
+  "chatUiNavRecent": "Recent chats",
+  "chatUiNavRecentEmpty": "Your chats will appear here.",
+  "chatUiNoMatchingChats": "No matching chats",
+  "chatUiCloseSearch": "Close search",
+  "chatUiSearchChats": "Search chats",
+  "chatUiChatButton": "Chat",
+  "@chatUiChatButton": {
+    "description": "Short label on the new-chat button"
+  },
+  "chatUiNewChat": "New chat",
+  "chatUiSettings": "Settings",
+  "chatUiMoreActions": "More actions",
+  "chatUiMenuNewChat": "New Chat",
+  "chatUiMenuQuickChat": "Quick Chat",
+  "chatUiMenuNewProject": "New Project",
+  "chatUiMenuConnections": "Connections",
+  "chatUiMenuSecurePairing": "Secure pairing details",
+  "chatUiMenuYourMac": "Your Mac",
+  "chatUiMenuActiveChats": "Active chats",
+  "chatUiArchivedChats": "Archived chats",
+  "chatUiMenuRefresh": "Refresh",
+  "chatUiMenuDisconnect": "Disconnect",
+  "chatUiOpenNavigation": "Open navigation",
+  "chatUiSearchConversations": "Search conversations",
+  "chatUiDismissSearch": "Dismiss search",
+  "chatUiStatusConnecting": "Connecting",
+  "chatUiStatusDeviceOffline": "Device offline",
+  "chatUiStatusOffline": "Offline",
+  "chatUiConnectionStatus": "Connection status: {status}",
+  "@chatUiConnectionStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiGroups": "Groups",
+  "chatUiExpandAll": "Expand all",
+  "chatUiCollapseAll": "Collapse all",
+  "chatUiCollapseChildChats": "Collapse child chats for {title}",
+  "@chatUiCollapseChildChats": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiExpandChildChats": "Expand child chats for {title}",
+  "@chatUiExpandChildChats": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiDesktopChatActions": "Desktop chat actions",
+  "chatUiArchiveProject": "Archive Project",
+  "chatUiRemoveFromPhone": "Remove from Phone",
+  "chatUiArchiveProjectTitle": "Archive \"{name}\"?",
+  "@chatUiArchiveProjectTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiArchiveProjectBody": "All active chats in this project will be archived.",
+  "chatUiRemoveProjectTitle": "Remove \"{name}\" from this phone?",
+  "@chatUiRemoveProjectTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiRemoveProjectBody": "Chats for this project will be deleted only from DJL on this phone. Nothing is removed from your device or Codex observer.",
+  "chatUiExpandProject": "Expand project {name}",
+  "@chatUiExpandProject": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiCollapseProject": "Collapse project {name}",
+  "@chatUiCollapseProject": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiNewChatIn": "New chat in {name}",
+  "@chatUiNewChatIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiNewGroup": "New group",
+  "chatUiGroupButton": "Group",
+  "@chatUiGroupButton": {
+    "description": "Short label on the new-group button"
+  },
+  "chatUiOfflineSavedChats": "Offline · showing saved chats",
+  "chatUiReconnect": "Reconnect",
+  "chatUiNoMatchingChatsPeriod": "No matching chats.",
+  "chatUiNoStudioThreads": "No Studio threads",
+  "chatUiNoProjectChats": "No project chats",
+  "desktopAttentionApproval": "Approval needed",
+  "desktopAttentionQuestion": "Agent has a question",
+  "desktopAttentionFailedRun": "Run failed",
+  "desktopAttentionBlockedGoal": "Goal needs attention",
+  "desktopAttentionCompletedRun": "Ready to review",
+  "desktopFailurePermission": "Review the requested access or change this chat's access mode, then retry the run.",
+  "desktopFailureSignIn": "Sign in again on your Mac, then retry the run.",
+  "desktopFailureTimeout": "Check the Mac connection, then retry the run.",
+  "desktopFailureNetwork": "Check that the Mac and relay are online, then retry the run.",
+  "desktopFailureCheck": "Open the chat to inspect the failing check, fix it, and retry.",
+  "desktopFailureGeneric": "Open the chat to review the last step, correct the issue, and retry.",
+  "desktopAttentionAllowCommand": "Allow Codex to run “{command}”?",
+  "@desktopAttentionAllowCommand": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopAttentionAwaitingPermission": "Codex is waiting for permission to continue.",
+  "desktopAttentionAnswerAgent": "Open the chat to answer the agent.",
+  "desktopGoalBlocked": "The goal is blocked. Open the chat to review what the agent needs.",
+  "desktopGoalUsageLimited": "Usage limits paused this goal. Review the chat before resuming it.",
+  "desktopGoalBudgetLimited": "The goal reached its budget. Review the result before deciding what to do next.",
+  "desktopRunFinishedReview": "The run finished. Review the result and any file changes before continuing.",
+  "desktopScopeStudio": "Studio",
+  "desktopScopeProjects": "Projects",
+  "desktopNoProject": "No Project",
+  "desktopGroupPinned": "Pinned",
+  "desktopUntitledChat": "Untitled chat",
+  "desktopComposerTooManyImages": "Choose at most four images.",
+  "desktopContextIncomplete": "A selected context is incomplete. Remove it and select it again.",
+  "desktopApproveForMeUnsupported": "Approve for me is not supported by this runtime. Update Codex on your Mac and retry.",
+  "desktopEnterChatName": "Enter a chat name.",
+  "desktopContextPickerStale": "Connected desktop changed. Reopen the context picker.",
+  "desktopNoSkillList": "The desktop returned no skill list.",
+  "desktopNoPluginList": "The desktop returned no plugin list.",
+  "desktopNoFileMatches": "The desktop returned no file matches.",
+  "desktopPairedDisconnectedOrChanged": "The paired desktop is disconnected or changed.",
+  "desktopPairedChangedRefreshOverview": "The paired desktop changed. Refresh its overview.",
+  "desktopPairedChangedRefreshChats": "The paired desktop changed. Refresh its chats.",
+  "desktopIdentityMismatch": "The desktop identity or secure protocol does not match the pairing.",
+  "desktopHandshakeUnverified": "The desktop handshake signature could not be verified.",
+  "desktopHandshakeTimedOut": "Desktop secure handshake timed out.",
+  "desktopSecureConnectionRefused": "Desktop refused the secure connection.",
+  "desktopHandshakeInterrupted": "Desktop connection interrupted during secure handshake.",
+  "desktopSecureConnectionRejected": "Secure desktop connection refused.",
+  "desktopInvalidFrame": "Invalid desktop frame.",
+  "desktopSecureTransportFailed": "Desktop secure transport failed.",
+  "desktopUnencryptedRejected": "Unencrypted desktop application traffic was rejected.",
+  "desktopPayloadDecodeFailed": "Unable to decode part of the desktop payload.",
+  "desktopRequestFailed": "Desktop request failed.",
+  "desktopIsDisconnected": "Desktop is disconnected.",
+  "desktopConnectionChanged": "Desktop connection changed.",
+  "desktopRequestTimedOut": "Desktop request timed out. Its result is unknown; refresh before retrying.",
+  "desktopDisconnectedRefresh": "Desktop disconnected; refresh before retrying an action.",
+  "desktopVerifiedHostRequired": "A saved verified host is required.",
+  "desktopResponseFailed": "The desktop could not complete this response. Check its provider settings and retry.",
+  "desktopWaitBeforeMovingProject": "Wait for the current chat operation before moving its project.",
+  "desktopProviderUnavailable": "The provider for this conversation is unavailable. Connect it on your desktop or choose another provider.",
+  "desktopReopenBeforeRestore": "Reopen this chat to verify the turn before restoring changes.",
+  "desktopSwitchCancelled": "Switch cancelled. Choose a device to reconnect.",
+  "desktopSelectionClearUnconfirmed": "Could not confirm the saved selection was cleared. Unlock your device and choose a saved Mac to recover.",
+  "desktopLinkIdentityUnavailable": "The saved Mac identity for this link is unavailable. Open the chat from a verified Mac.",
+  "desktopChooseMatchingMac": "Choose the saved Mac matching this link. Its verified identity must match.",
+  "desktopWaitingForMac": "Waiting for the selected Mac. Retry when it is available.",
+  "desktopLinkedConversationUnavailable": "The linked desktop conversation is unavailable.",
+  "desktopLinkedConversationLoadFailed": "Could not load the linked conversation. Retry on the selected Mac.",
+  "desktopDevicePreferencesLoadFailed": "Could not load local device preferences. Unlock your device and retry.",
+  "desktopSavedDesktopsOpenFailed": "Could not open saved desktops. Unlock your device and try again.",
+  "desktopModelUnavailable": "The selected desktop model is unavailable. Choose an available model.",
+  "desktopStopRunsUnconfirmed": "Stopping runs could not be confirmed; they may still be running on the other Mac.",
+  "desktopPairingIdentityReadFailed": "Could not read your secure pairing identity. Unlock your device, then choose Reconnect.",
+  "desktopRuntimeOtherHistory": "The runtime returned another chat’s history.",
+  "desktopLinkedHistoryUnverified": "Could not verify the linked conversation history.",
+  "desktopIdleChatAndProjectRequired": "The current idle chat and a valid project are required.",
+  "desktopProjectChangeUnverified": "The runtime did not verify this chat’s project change.",
+  "desktopForkUnidentified": "The runtime did not identify the created fork. Refresh before trying again.",
+  "desktopForkNotSeparate": "The runtime did not create a separate conversation.",
+  "desktopForkUnsupported": "This runtime does not support conversation forks. Update DJL on your desktop and retry.",
+  "desktopReadSettingsFirst": "Read saved settings before creating a new chat.",
+  "desktopConnectMacWithModels": "Connect a Mac with available models before creating a new chat.",
+  "desktopChatCreatedElsewhere": "The desktop created the chat in another project folder. Your local draft was retained.",
+  "desktopDraftContextOtherFolder": "The draft context belongs to another project folder. Remove it and select context again.",
+  "desktopQueuedPlanModelRequired": "Choose an available model that supports Plan mode before sending this queued draft.",
+  "desktopChooseModelFirst": "Choose an available desktop model first.",
+  "desktopRunChangedBeforeQueue": "The active run changed before queued delivery. Refresh before resuming.",
+  "desktopRunChangedBeforeSteer": "The active run changed. Refresh before steering again.",
+  "desktopModelBeforeLeavingPlan": "Choose an available model before leaving Plan mode.",
+  "desktopPlanModeUnsupported": "Plan mode is not supported by this runtime. Sent as a normal turn instead.",
+  "desktopRunIdPending": "The active run has not published its ID yet. Try again in a moment.",
+  "desktopRuntimeOtherTurnPage": "The runtime returned another chat’s turn page.",
+  "desktopRuntimeNoTurnState": "The runtime did not return this chat’s turn state.",
+  "desktopRuntimeInvalidTurnState": "The runtime returned an invalid turn state.",
+  "desktopRetryApprovalUnacknowledged": "Desktop did not acknowledge retry approval.",
+  "desktopDeviceFallbackName": "Device",
+  "desktopDeviceChangeUnconfirmed": "Could not confirm the change. Review the saved name and retry. If this device was forgotten or replaced, close and reopen the editor.",
+  "desktopPreferencesReloadFailed": "Could not confirm or reload local preferences. Unlock your device and retry before saving again.",
+  "desktopRunChangedBeforePlan": "The active run changed. Refresh before implementing this plan.",
+  "desktopQueueMessageArrived": "The message arrived. Review its result before resuming queued messages.",
+  "desktopQueueDeliveryUnconfirmed": "Queued delivery was not confirmed. Reopen this chat before retrying.",
+  "desktopRequestFromEarlierSession": "This request belongs to an earlier desktop session. Refresh the chat.",
+  "desktopUndoReconnect": "Reconnect to your desktop before reviewing undo.",
+  "desktopUndoReopen": "Reopen this chat to verify the response before undoing changes.",
+  "desktopUndoRepoBusy": "A chat in this repository is running. Wait before undoing a response.",
+  "desktopUndoWaitResponse": "Wait for the active response before undoing changes.",
+  "desktopUndoPersistFailed": "Could not persist the undo result.",
+  "desktopUndoRepoUnverified": "Could not verify the response repository. Reconnect and review it again.",
+  "desktopReconnectToRefreshModels": "Reconnect the desktop to refresh models.",
+  "desktopAccessModeNotApplied": "Desktop did not apply the requested access mode.",
+  "desktopSubagentOfflineCached": "Offline · cached details",
+  "desktopSubagentLoading": "Loading agent details",
+  "desktopSubagentLoaded": "Details loaded",
+  "desktopSubagentIdentityUnknown": "Agent identity unknown",
+  "desktopSubagentLoadFailed": "Could not load agent details",
+  "desktopSavedDeviceChanged": "This saved device changed. Choose it again.",
+  "desktopMacIdentityMismatch": "The selected Mac identity did not match.",
+  "desktopOfflineChatsOpenFailed": "Could not open offline chats. Unlock your device or reconnect to load them.",
+  "desktopOfflineChatsSaveFailed": "Could not save offline chats. Unlock your device and try again.",
+  "desktopChoosePairedDesktop": "Choose a paired desktop.",
+  "desktopSavedLocallyUnconfirmed": "Saved on this device. The change on your desktop could not be confirmed; refresh before retrying.",
+  "desktopImageEmptyOrTooLarge": "The selected image is empty or too large. Choose a smaller image.",
+  "desktopImageUnsupported": "The selected file is not a supported image.",
+  "desktopImageResizeFailed": "This device could not resize the image. Choose an image no larger than 1600 pixels.",
+  "desktopImageTooLarge": "The selected image is too large. Choose a smaller image.",
+  "desktopContextFolderChanged": "The project folder changed. Remove existing context or return to its original folder.",
+  "desktopPickerOpenFailed": "Could not open the picker. Please try again.",
+  "desktopWorktreeStale": "The connected desktop or chat changed. Reopen this worktree action.",
+  "desktopNotGitRepository": "This folder is no longer a Git repository.",
+  "desktopBranchAlreadyExists": "Branch Already Exists",
+  "desktopWorktreeUnidentified": "The desktop did not identify a new worktree. Refresh before trying again.",
+  "desktopForkUnverified": "The fork result could not be verified.",
+  "desktopHandoffUnverified": "The desktop did not verify the handoff destination. Check both folders before retrying.",
+  "desktopWorktreePathUnavailable": "The worktree path is unavailable.",
+  "desktopLocalCheckoutUnresolved": "Could not resolve the paired Local checkout for this worktree.",
+  "desktopWorktreeHandoffFailed": "Worktree Handoff Failed",
+  "desktopWorktreeForkFailed": "Worktree Fork Failed",
+  "desktopAccessModeNotAppliedBy": "{method} did not apply the selected access mode.",
+  "@desktopAccessModeNotAppliedBy": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopApprovalReviewerNotApplied": "{method} did not apply the selected approval reviewer.",
+  "@desktopApprovalReviewerNotApplied": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopApprovalPolicyNotApplied": "{method} did not apply the selected approval policy.",
+  "@desktopApprovalPolicyNotApplied": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopSandboxNotApplied": "{method} did not apply the selected sandbox permissions.",
+  "@desktopSandboxNotApplied": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopForkResultUnknown": "{error} The fork result may be unknown. Refresh before trying again.",
+  "@desktopForkResultUnknown": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopSendResultUnknown": "{error} The send result may be unknown. Refresh the conversation before trying again.",
+  "@desktopSendResultUnknown": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopQueuePaused": "Queue paused: {reason}",
+  "@desktopQueuePaused": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorktreeExists": "A worktree for '{branch}' already exists. Choose a different name.",
+  "@desktopWorktreeExists": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopRollbackFailed": "Tracked changes could not be moved back automatically: {reason}. Check both folders before retrying.",
+  "@desktopRollbackFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorktreeKeptAt": "The new worktree was kept at {path}. Check it before trying again.",
+  "@desktopWorktreeKeptAt": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorktreeMayExist": "A worktree may have been created. It was kept; refresh and inspect it before trying again.",
+  "pairingEnterTenCharCode": "Enter the ten-character code shown in desktop Remote settings.",
+  "pairingSecureRelayRequired": "Pairing requires a secure relay URL.",
+  "pairingPairedMac": "Paired Mac",
+  "pairingNotAPairingCode": "This is not a DJL pairing QR or pasteable code.",
+  "pairingUpdateDesktop": "Update DJL on your desktop: this pairing uses a different protocol.",
+  "pairingInvalidIdentifier": "Invalid device/session identifier.",
+  "pairingInvalidIdentityKey": "Invalid desktop identity key.",
+  "pairingCodeExpired": "This pairing code has expired. Generate a new code on your Mac.",
+  "pairingPrefsUnavailable": "Saved device preferences are unavailable.",
+  "pairingDeviceChangedReopen": "This saved device changed. Close and reopen the editor.",
+  "pairingRecoverSelectionFailed": "Could not recover the saved selection. Unlock your device and retry before choosing a Mac.",
+  "pairingDeviceChangedChooseAgain": "The saved device changed. Choose it again.",
+  "pairingConfirmSavedFailed": "Could not confirm the selected Mac was saved. Unlock your device and choose a saved Mac to recover.",
+  "pairingRelayDifferentIdentity": "The trusted relay returned a different desktop identity. Pair again.",
+  "pairingRelayTemporarilyUnavailable": "The desktop relay is temporarily unavailable.",
+  "pairingRelayInvalidResponse": "The desktop relay returned an invalid response.",
+  "pairingTrustedComputerOffline": "The trusted computer is offline.",
+  "pairingServiceUnavailable": "The desktop pairing service is unavailable.",
+  "pairingRelayUnreachable": "Could not reach the desktop relay.",
+  "pairingRelayUnsupportedMethod": "The relay does not support this pairing method.",
+  "pairingRelayRequired": "A relay URL is required.",
+  "pairingEnterOneTimeCode": "Enter one-time code",
+  "pairingFindCodeHint": "Find your code in DJL Desktop under Settings → Remote.",
+  "pairingCodeLabel": "Pairing code",
+  "pairingRelayConfigured": "Relay configured",
+  "pairingRelaySettings": "Relay settings",
+  "pairingInProgress": "Pairing…",
+  "pairingPair": "Pair",
+  "pairingSecureDetailsTitle": "Secure pairing details",
+  "pairingSecureDetailsBody": "Open DJL desktop → Settings → Remote. Paste its pairing payload, or configure the relay used by your one-time code.",
+  "pairingPasteCode": "Paste pairing code",
+  "pairingPayloadHint": "RMX1:… or QR JSON",
+  "pairingPairSecurely": "Pair securely",
+  "pairingRelayUrlLabel": "Desktop relay URL",
+  "pairingSwitchDeviceTitle": "Switch device?",
+  "pairingSwitchDeviceBody": "DJL will try to stop in-progress runs on this Mac and reload chats for the other device.",
+  "pairingSwitch": "Switch",
+  "pairingCancellingSwitch": "Cancelling switch…",
+  "pairingSwitchingDevice": "Switching device…",
+  "pairingCancelSwitch": "Cancel switch",
+  "pairingChooseMatchingMac": "Choose the saved Mac matching this link’s verified identity.",
+  "pairingChooseMacForLink": "Choose a saved Mac to open the linked conversation.",
+  "pairingOpeningLinkedConversation": "Opening linked desktop conversation…",
+  "pairingRetryDesktopLink": "Retry desktop link",
+  "pairingCancelDesktopLink": "Cancel desktop link",
+  "pairingMatchesLinkIdentity": "Matches this link’s verified identity",
+  "pairingDifferentIdentity": "Different desktop identity",
+  "pairingSavedVerifiedIdentity": "Saved, verified desktop identity",
+  "pairingReconnect": "Reconnect",
+  "pairingConnections": "Connections",
+  "pairingScanQrCode": "Scan QR Code",
+  "pairingPairWithCode": "Pair with Code",
+  "pairingConnectToDesktop": "Connect to DJL Desktop",
+  "pairingChooseSavedMac": "Choose a saved Mac",
+  "pairingFirstPairingHint": "Open DJL on your Mac or Windows PC, then go to Settings → Remote.",
+  "pairingGetDesktop": "Get DJL for your Mac or PC",
+  "pairingScanTitle": "Scan DJL desktop QR",
+  "pairingCameraDenied": "Camera access is denied. You can paste the pairing code instead.",
+  "pairingScanUnsupported": "QR scanning is not available on this device. You can paste the pairing code instead.",
+  "pairingCameraUnavailable": "The camera is unavailable. You can paste the pairing code instead.",
+  "pairingSwitchDevice": "Switch device",
+  "pairingSwitchTo": "Switch to",
+  "pairingStatusSwitching": "Switching…",
+  "pairingStatusConnected": "Connected",
+  "pairingStatusSelected": "Selected",
+  "pairingStatusPrevious": "Previous",
+  "pairingStatusSaved": "Saved",
+  "pairingForget": "Forget",
+  "pairingForgetDeviceTitle": "Forget this device?",
+  "pairingForgetDeviceBody": "{name} will be removed from this phone. Scan its QR code again to reconnect.",
+  "@pairingForgetDeviceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pairingActiveBadge": "Active",
+  "pairingShowInMenu": "Show {name} in device menu",
+  "@pairingShowInMenu": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pairingMenuVisibilityUnavailable": "Menu visibility unavailable",
+  "pairingClose": "Close",
+  "pairingActiveDevice": "Active device",
+  "pairingActiveDeviceNamed": "Active device, {name}",
+  "@pairingActiveDeviceNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pairingDevicesInMenu": "{count} devices in menu",
+  "@pairingDevicesInMenu": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pairingDevices": "Devices",
+  "pairingNoDevices": "No paired devices yet.",
+  "pairingScanQr": "Scan QR",
+  "pairingForgetDesktop": "Forget desktop",
+  "pairingRecencyNow": "now",
+  "pairingRecencyMinutes": "{count}m",
+  "@pairingRecencyMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pairingRecencyHours": "{count}h",
+  "@pairingRecencyHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pairingRecencyDays": "{count}d",
+  "@pairingRecencyDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pairingRecencyAgo": "{age} ago",
+  "@pairingRecencyAgo": {
+    "placeholders": {
+      "age": {
+        "type": "String"
+      }
+    }
+  },
+  "pairingRecencyIn": "in {age}",
+  "@pairingRecencyIn": {
+    "placeholders": {
+      "age": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiCloseNavigation": "Close navigation",
+  "chatUiRuntime": "Runtime",
+  "chatUiContinueIn": "Continue in",
+  "chatUiLocal": "Local",
+  "chatUiWorktree": "Worktree",
+  "chatUiCurrentBranch": "Current Branch",
+  "chatUiCollapseProjectControls": "Collapse project controls",
+  "chatUiExpandProjectControls": "Expand project controls",
+  "chatUiQueuedMessages": "Queued messages",
+  "chatUiQueuedHint": "Shows the queued follow-ups in a sheet",
+  "chatUiQueued": "Queued",
+  "chatUiQueuedNeedsPlanModel": "Choose a model that supports Plan mode before moving this draft into the input.",
+  "chatUiImageCount": "{count, plural, =1{1 image} other{{count} images}}",
+  "@chatUiImageCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiAttachedContext": "Attached context",
+  "chatUiMoveDraftToInput": "Move draft into input",
+  "chatUiSteerQueued": "Steer queued message",
+  "chatUiSteer": "Steer",
+  "chatUiDeleteQueued": "Delete queued message",
+  "chatUiCopyResponse": "Copy response",
+  "chatUiCopied": "Copied",
+  "chatUiEffortLow": "Low",
+  "chatUiEffortMedium": "Medium",
+  "chatUiEffortHigh": "High",
+  "chatUiEffortExtraHigh": "Extra High",
+  "chatUiLoading": "Loading…",
+  "chatUiSelectModel": "Select model",
+  "chatUiModel": "Model",
+  "chatUiSpeed": "Speed",
+  "chatUiSpeedFast": "Fast",
+  "chatUiSpeedNormal": "Normal",
+  "chatUiChatControls": "Chat controls",
+  "chatUiControlsConnectionChanged": "Connection changed. Reopen chat controls.",
+  "chatUiLoadingModelsEllipsis": "Loading models…",
+  "chatUiOtherModels": "Other models…",
+  "chatUiIntelligence": "Intelligence",
+  "chatUiCopySessionId": "Copy session ID",
+  "chatUiRenameChat": "Rename chat",
+  "chatUiUnpinChat": "Unpin chat",
+  "chatUiPinChat": "Pin chat",
+  "chatUiUnarchiveChat": "Unarchive chat",
+  "chatUiArchiveChat": "Archive chat",
+  "chatUiRemoveFromDevice": "Remove from this device",
+  "chatUiSessionIdCopied": "Session ID copied.",
+  "chatUiRemoveChatTitle": "Remove this chat from this device?",
+  "chatUiRemoveChatBodyArchived": "The chat stays on your desktop. Subagent chats are archived locally.",
+  "chatUiRemoveChatBody": "The chat stays on your desktop. It will also be archived there. Subagent chats are archived locally.",
+  "chatUiRemoveChat": "Remove chat",
+  "chatUiChatName": "Chat name",
+  "chatUiSaveName": "Save name",
+  "chatUiCopyPathFailed": "Could not copy the path. Try again.",
+  "chatUiConversationChanged": "Conversation changed",
+  "chatUiCloseLocation": "Close location",
+  "chatUiThreadLabel": "Thread",
+  "chatUiRenameConversation": "Rename conversation",
+  "chatUiPathLabel": "Path",
+  "chatUiPathCopied": "Path copied",
+  "chatUiCopyPath": "Copy path",
+  "chatUiLocationStale": "Close this sheet and reopen the conversation location.",
+  "chatUiMoreThreadActions": "More thread actions",
+  "chatUiPreviousMessages": "{count, plural, =1{1 previous message} other{{count} previous messages}}",
+  "@chatUiPreviousMessages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiMoreToolCalls": "+{count} tool calls",
+  "@chatUiMoreToolCalls": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiRanCommands": "{count, plural, =1{Ran 1 command} other{Ran {count} commands}}",
+  "@chatUiRanCommands": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiCommandsFailed": "{count} failed",
+  "@chatUiCommandsFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiCommandsStopped": "{count} stopped",
+  "@chatUiCommandsStopped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiCollapsePreviousMessages": "Collapse previous messages",
+  "chatUiExpandPreviousMessages": "Expand previous messages",
+  "chatUiCollapseCommands": "Collapse commands",
+  "chatUiExpandCommands": "Expand commands",
+  "chatUiCollapseToolCalls": "Collapse tool calls",
+  "chatUiExpandToolCalls": "Expand tool calls",
+  "chatUiQuestions": "Questions",
+  "chatUiQuestionPage": "{page} of {total}",
+  "@chatUiQuestionPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiQuestionResponseUnknown": "A previous response may have been sent. Check the desktop state before replying again.",
+  "chatUiBack": "Back",
+  "chatUiQuestionClosing": "Closing...",
+  "chatUiQuestionEsc": "ESC",
+  "@chatUiQuestionEsc": {
+    "description": "Dismisses the agent's question"
+  },
+  "chatUiNext": "Next",
+  "chatUiResponseSent": "Response sent",
+  "chatUiSendingDots": "Sending...",
+  "chatUiSend": "Send",
+  "chatUiSelectUpTo": "Select up to {limit}",
+  "@chatUiSelectUpTo": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "chatUiOtherAnswer": "Other answer",
+  "chatUiYourAnswer": "Your answer",
+  "settingsFontSystem": "System",
+  "@settingsFontSystem": {
+    "description": "Font option that uses the system font."
+  },
+  "settingsUnlockReason": "Unlock DJL and your remote coding sessions.",
+  "settingsUsageWeekly": "Weekly",
+  "settingsUsageWeeks": "{count}w",
+  "@settingsUsageWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsUsageDays": "{count}d",
+  "@settingsUsageDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsUsageHours": "{count}h",
+  "@settingsUsageHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsUsageMinutes": "{count}m",
+  "@settingsUsageMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsThemeSystem": "System",
+  "@settingsThemeSystem": {
+    "description": "Theme option that follows the system."
+  },
+  "settingsThemeLight": "Light",
+  "settingsThemeDark": "Dark",
+  "settingsAppearance": "Appearance",
+  "settingsFont": "Font",
+  "settingsLiquidGlass": "Liquid Glass",
+  "settingsTheme": "Theme",
+  "settingsNotifications": "Notifications",
+  "settingsInAppAlertsFooter": "Show a banner when another conversation’s task finishes.",
+  "settingsInAppAlerts": "In-app alerts",
+  "settingsVoice": "Voice",
+  "settingsVoiceFooter": "Review dictation before sending. Replies use your device’s voice.",
+  "settingsSpeakReplies": "Speak new replies",
+  "settingsRetryReading": "Retry reading settings",
+  "settingsErrorPartialSave": "Some defaults may have been saved in part. Review the reloaded choices and retry.",
+  "settingsErrorPartialReload": "Defaults may have been saved in part. Could not reload preferences. Retry reading settings first.",
+  "settingsErrorRead": "Could not read saved settings. Retry to keep your preferences.",
+  "settingsErrorSave": "Could not save this setting. Your previous choice is unchanged. Try again.",
+  "settingsUsageResets": "resets {when}",
+  "@settingsUsageResets": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsUsage": "Usage",
+  "settingsUsageFooter": "Account-wide rate limits from your paired device.",
+  "settingsUsageLoading": "Loading current limits...",
+  "settingsUsageConnect": "Connect your paired device to load current limits.",
+  "settingsUsageUnavailable": "Rate limits are unavailable for this account.",
+  "settingsUsageLeft": "{percent}% left",
+  "@settingsUsageLeft": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsUsageStale": "Last known limits. Reconnect or refresh to update.",
+  "settingsUsageRefreshTooltip": "Refresh usage",
+  "settingsUsageRefreshing": "Refreshing...",
+  "settingsUsageRefresh": "Refresh",
+  "settingsUsageRuntimeUnavailable": "Rate limits are unavailable for this runtime.",
+  "settingsUsageLoadFailed": "Could not load current limits. Try again.",
+  "settingsTitle": "Settings",
+  "settingsOpenCloudChat": "Open DJL Cloud chat",
+  "settingsSignInCloud": "Sign in to DJL Cloud",
+  "settingsCloudSubtitle": "Chat, images, and background tasks without your Mac",
+  "settingsDevicePermissions": "Device permissions",
+  "settingsDevice": "Device",
+  "settingsMyMacs": "My Macs",
+  "settingsLocked": "DJL is locked",
+  "settingsPreparing": "Preparing DJL",
+  "settingsStartFailed": "Could not start DJL",
+  "settingsPrivateNote": "Your remote sessions stay private when you step away.",
+  "settingsRetryStartup": "Retry startup",
+  "settingsUnlockHint": "Authenticates with Face ID, Touch ID, or your device passcode",
+  "settingsUnlocking": "Unlocking…",
+  "settingsUnlock": "Unlock DJL",
+  "settingsLockSetup": "Set up Face ID, Touch ID, or a device passcode to unlock DJL.",
+  "settingsLockStillLocked": "DJL is still locked. Unlock DJL to continue.",
+  "settingsLockCancelled": "Authentication was cancelled or unavailable. Unlock DJL to continue.",
+  "settingsBridgeUnknown": "Unknown",
+  "settingsBridgeInstalled": "Installed",
+  "settingsBridgeUpToDate": "Up to date",
+  "settingsBridgeUpdateAvailable": "Update available",
+  "settingsBridgeDifferentBuild": "Different build",
+  "settingsBridgeConnectHint": "Connect to your Mac to see its DJL version.",
+  "settingsBridgeStaleHint": "Last known version. Reconnect to check again.",
+  "settingsBridgeMatches": "DJL on your Mac matches the latest release.",
+  "settingsBridgeNewer": "A newer DJL release is available. Update DJL on your Mac.",
+  "settingsBridgeDifferent": "Your Mac is running a different build than the latest release.",
+  "settingsBridgeStatus": "Status",
+  "settingsBridgeLastKnown": "Last known · {status}",
+  "@settingsBridgeLastKnown": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsVersion": "Version",
+  "settingsBridgeLatest": "Latest",
+  "settingsBridgeUpdate": "Update DJL on your Mac",
+  "settingsBridgeCheck": "Check for a DJL update",
+  "settingsElapsedDays": "{days, plural, =1{1 day} other{{days} days}}",
+  "@settingsElapsedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsElapsedHours": "{hours, plural, =1{1 hr} other{{hours} hrs}}, {minutes} mins",
+  "@settingsElapsedHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsElapsedMinutes": "{minutes} mins, {seconds} secs",
+  "@settingsElapsedMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsElapsedSeconds": "{seconds} secs",
+  "@settingsElapsedSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsArchived": "Archived",
+  "settingsArchivedChats": "Archived Chats",
+  "settingsArchivedSaved": "{count} saved locally",
+  "@settingsArchivedSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsArchivedActions": "Archived chat actions",
+  "settingsUnarchive": "Unarchive",
+  "settingsRemoveFromPhone": "Remove from Phone",
+  "settingsRemove": "Remove",
+  "settingsNoArchived": "No archived chats",
+  "settingsRemoveTitle": "Remove \"{title}\" from this phone?",
+  "@settingsRemoveTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRemoveBody": "This only removes the chat from DJL on this phone. Nothing is removed from your paired desktop.",
+  "settingsCloudRefreshFailed": "Could not refresh account and Cloud settings.",
+  "settingsLinkFailed": "Could not open this link. Try again.",
+  "settingsOpenNotificationsFailed": "Could not open notification settings. Try again.",
+  "settingsAlertsUnavailable": "Unavailable",
+  "settingsAlertsOff": "Off",
+  "settingsAlertsEnabled": "Enabled",
+  "settingsAlertsNotEnabled": "Not enabled",
+  "settingsBack": "Back",
+  "settingsOpenNavigation": "Open navigation",
+  "settingsRetry": "Retry",
+  "settingsAccount": "Account",
+  "settingsDjlAccount": "DJL account",
+  "settingsAvailableCredits": "Available credits",
+  "settingsConversations": "Conversations",
+  "settingsArchivedChatsRow": "Archived chats",
+  "settingsRemoteAccess": "Remote access",
+  "settingsBackgroundAlerts": "Background alerts",
+  "settingsEnableBackgroundAlerts": "Enable background alerts",
+  "settingsOpenNotificationSettings": "Open notification settings",
+  "settingsVoiceIos": "Dictation stays on your iPhone. Review the text before sending. Replies use the iPhone voice.",
+  "settingsVoiceDevice": "Dictation stays on your device. Review the text before sending. Replies use your device’s voice.",
+  "settingsAbout": "About",
+  "settingsTerms": "Terms",
+  "settingsPrivacy": "Privacy",
+  "settingsRetryLocalPrefs": "Retry local preferences",
+  "settingsDeviceNameOnPhone": "Device name on this phone",
+  "settingsEditDeviceNameTooltip": "Edit device name",
+  "settingsClose": "Close",
+  "settingsEditDeviceNameTitle": "Edit Device Name",
+  "settingsDeviceName": "Device name",
+  "settingsNicknameNote": "This nickname stays on this phone and appears anywhere this device is shown.",
+  "settingsDeviceChanged": "This saved device changed. Close and reopen the editor.",
+  "settingsUseDefault": "Use Default",
+  "settingsSave": "Save",
+  "settingsAboutFooter": "Chats are end-to-end encrypted between your phone and paired device.",
+  "settingsHowDjlWorks": "How DJL Works",
+  "settingsChatSupport": "Chat & Support",
+  "settingsPrivacyPolicy": "Privacy Policy",
+  "settingsTermsOfUse": "Terms of Use",
+  "settingsAboutRouteBridgeDevice": "Bridge on your paired device",
+  "settingsAboutRouteBridge": "Bridge",
+  "settingsAboutRouteLabel": "{from} to {to} via {via}",
+  "@settingsAboutRouteLabel": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "via": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAboutIntro": "Control **Codex** from your phone.",
+  "settingsAboutIntroNote": "The Codex runtime stays on your paired device. Your phone is a secure remote control connected through a relay.",
+  "settingsAboutHowItWorks": "How It Works",
+  "settingsAboutBridge": "Your paired device runs a lightweight **bridge** that connects to a **relay server** over WebSocket.",
+  "settingsAboutStep1": "You send a prompt from your phone.",
+  "settingsAboutStep2": "It travels through the relay to the bridge on your paired device.",
+  "settingsAboutStep3": "The bridge forwards it to `codex app-server` via JSON-RPC.",
+  "settingsAboutStep4": "Responses stream back along the same path in real time.",
+  "settingsAboutWorkspaceNote": "Workspace tools and file edits run on your paired device. The relay routes encrypted traffic; it does not run your workspace.",
+  "settingsAboutArchitecture": "Architecture",
+  "settingsAboutRelay": "The Relay",
+  "settingsAboutRelayIntro": "A lightweight WebSocket server routes messages between your phone and paired device.",
+  "settingsAboutRelayDiscovery": "Handles session discovery so your phone finds the device's live session.",
+  "settingsAboutRelayPrivate": "Never sees decrypted message contents after the handshake.",
+  "settingsAboutRelayMetadata": "Observes connection metadata such as session IDs, device IDs, and timing.",
+  "settingsAboutRelaySelfHost": "You can **self-host** the relay or use the hosted endpoint configured by your bridge.",
+  "settingsAboutAppServerIntro": "For the Codex runtime, the bridge connects to **`codex app-server`**, the JSON-RPC interface used by Codex clients.",
+  "settingsAboutAppServerSessions": "Phone conversations are first-class Codex sessions.",
+  "settingsAboutAppServerRollout": "Codex produces JSONL rollout files under `~/.codex/sessions/`.",
+  "settingsAboutAppServerHandoff": "Use DJL's desktop handoff action to continue a phone thread on the paired device.",
+  "settingsAboutPairing": "Pairing & Security",
+  "settingsAboutPairingQr": "On first connection, scan the bridge's **QR code**. It identifies the relay, session, paired device, and bridge identity public key.",
+  "settingsAboutPairingAfter": "After the secure handshake:",
+  "settingsAboutPairingTrusted": "Your phone saves the bridge as a **trusted device** in platform-backed secure storage.",
+  "settingsAboutPairingIdentity": "The bridge persists your phone's identity locally.",
+  "settingsAboutPairingReconnect": "Saved trusted devices can reconnect without scanning again.",
+  "settingsAboutPairingRecovery": "The QR remains a recovery path if trust changes or the current session cannot be resolved. A one-time code is another pairing option when the same relay is configured.",
+  "settingsAboutEncryption": "End-to-End Encryption",
+  "settingsAboutEncryptionIntro": "After pairing, messages use encrypted envelopes.",
+  "settingsAboutCipher": "Cipher",
+  "settingsAboutKeyDerivation": "Key derivation",
+  "settingsAboutKeyDerivationValue": "HKDF-SHA256, per-direction keys",
+  "settingsAboutKeyExchange": "Key exchange",
+  "settingsAboutKeyExchangeValue": "X25519 ephemeral keys",
+  "settingsAboutIdentity": "Identity",
+  "settingsAboutIdentityValue": "Ed25519 signatures",
+  "settingsAboutReplayProtection": "Replay protection",
+  "settingsAboutReplayProtectionValue": "Monotonic counters",
+  "settingsAboutCacheKey": "Phone cache key",
+  "settingsAboutCacheKeyValue": "Protected by platform-backed secure storage",
+  "settingsAboutEncryptionNote": "This describes **paired-device mode**. DJL Cloud is a separate service and account workflow.",
+  "settingsAboutGit": "Git & Workspace",
+  "settingsAboutGitIntro": "The bridge handles Git commands locally on the paired device:",
+  "settingsAboutGitRevert": "DJL also supports **workspace revert**: preview and apply reverse patches when you want to undo assistant changes. Review the confirmation before applying changes.",
+  "settingsAboutResilience": "Connection Resilience",
+  "settingsAboutReconnect": "Automatic reconnect uses bounded backoff.",
+  "settingsAboutReplay": "Encrypted replay cursors help recover missed events. Uncertain actions are not silently resent after a disconnect.",
+  "settingsAboutRuntimeDrop": "The runtime can keep working through a transient phone connection drop.",
+  "settingsAboutShutdown": "The bridge handles clean shutdown on `SIGINT` and `SIGTERM`.",
+  "settingsAboutDesktop": "Desktop App Integration",
+  "settingsAboutDesktopRollout": "Codex persists phone threads as session rollout files on the paired device.",
+  "settingsAboutDesktopHandoff": "The desktop app may not live-reload external writes. Use **Continue on desktop** in DJL to hand off the current thread.",
+  "settingsAboutDjl": "About DJL",
+  "settingsOpenSource": "Open source",
+  "settingsMitLicense": "MIT License",
+  "hostYourMac": "Your Mac",
+  "hostUpdating": "DJL is updating on your Mac. This phone reconnects when it is back.",
+  "hostCheckingVersion": "Checking the DJL version on your Mac…",
+  "hostNowVersion": "DJL on your Mac is now {version}.",
+  "@hostNowVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "hostStillVersion": "DJL on your Mac is still {version}. It may already be up to date.",
+  "@hostStillVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "hostConnectedFooter": "Your chats go straight to DJL on your Mac, encrypted end to end.",
+  "hostReconnectFooter": "Open DJL on your Mac to reconnect.",
+  "hostDjlVersion": "DJL version",
+  "hostCheckFailedNow": "Couldn't check your Mac just now.",
+  "hostReconnecting": "Reconnecting…",
+  "hostWakeScreen": "Wake the screen",
+  "hostWakeScreenDetail": "Turns your Mac's display on while DJL is running.",
+  "hostKeepAwake": "Keep Mac awake",
+  "hostKeepAwakeDetail": "Stops your Mac from sleeping while DJL is open. Best while it is charging.",
+  "hostUpdates": "Updates",
+  "hostUpdateDjl": "Update DJL",
+  "hostUpdateDjlDetail": "Installs the newest DJL on your Mac, then reconnects.",
+  "hostNotConnected": "Not connected",
+  "hostConnectedChecking": "Connected · checking",
+  "hostConnected": "Connected",
+  "hostStatusLabel": "DJL on your Mac, {status}",
+  "@hostStatusLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "hostDjlOnYourMac": "DJL on your Mac",
+  "hostUpdateTitle": "Update DJL on your Mac?",
+  "hostUpdateCurrent": "Your Mac has DJL {version}.",
+  "@hostUpdateCurrent": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "hostUpdateBody": "DJL restarts on your Mac to install the newest version. This phone disconnects for a moment and reconnects by itself.",
+  "hostUpdate": "Update",
+  "hostContinueOnDesktop": "Continue on desktop",
+  "hostContinueTitle": "Continue on desktop?",
+  "hostContinueBody": "Open this chat in DJL on your Mac.",
+  "hostContinue": "Continue",
+  "hostActionFinished": "Host action finished.",
+  "hostErrorUnsupported": "DJL on your Mac can't do this yet. Update DJL on your Mac.",
+  "hostErrorRefused": "Your Mac turned this down. Check DJL on your Mac and try again.",
+  "hostErrorUncertain": "We could not tell whether this worked. Check your Mac before trying again.",
+  "hostCheckFailed": "Could not check your Mac. Try again.",
+  "hostCheckingFirst": "Checking your Mac first. Try again in a moment.",
+  "hostConnectFirst": "Connect to your Mac first.",
+  "hostNotConfirmed": "Your Mac did not confirm this. Check it before trying again.",
+  "hostOpenedOnMac": "Opened in DJL on your Mac.",
+  "hostReconnectFirst": "Reconnect to your Mac first.",
+  "hostReachFailed": "Could not reach DJL on your Mac. Check that it is open, then try again.",
+  "hostWaking": "Your Mac's screen is waking up.",
+  "hostPrefReadFailed": "Could not read the saved preference. Retry.",
+  "hostPrefSaveFailed": "Could not save this preference. Your previous choice is unchanged. Try again.",
+  "hostPrefUnconfirmed": "Saved on this phone, but your Mac has not confirmed it yet.",
+  "pushTitle": "Push notifications",
+  "pushUnsupported": "This phone can't get push notifications from DJL yet. Open DJL to see when an agent is done.",
+  "pushDenied": "Notifications are off for DJL in your phone's Settings.",
+  "pushReady": "Get a notification when an agent finishes or needs your answer.",
+  "pushSimulator": "This simulator can't receive push notifications.",
+  "pushUnavailableVersion": "Push notifications aren't available in this version.",
+  "pushFailed": "Couldn't turn on notifications. Try again when you're online.",
+  "pushUnavailableNow": "Push notifications aren't available right now.",
+  "pushReadFailed": "Could not read notification preference. Retry.",
+  "pushUpdateFailed": "Could not update notification preference. Retry.",
+  "whatsNewTitle": "What's New",
+  "whatsNewIntro": "Here's what's new in DJL.",
+  "whatsNewOnce": "We'll only show this once for each app version.",
+  "whatsNewGotIt": "Got It",
+  "whatsNewDismiss": "Dismiss release notes",
+  "whatsNew100Design": "A calmer black and white design.",
+  "whatsNew100Groups": "Group chats: talk to several agents at once and watch them reply live.",
+  "whatsNew100Files": "Send files and photos in a group chat.",
+  "whatsNew100Mac": "Chats go straight to DJL on your Mac.",
+  "accountSomethingWrong": "Something went wrong",
+  "accountTypeDeleteToConfirm": "Type DELETE to confirm.",
+  "@accountTypeDeleteToConfirm": {
+    "description": "DELETE is the literal word the person must type; keep it in English."
+  },
+  "accountOk": "OK",
+  "accountDone": "Done",
+  "accountEmail": "Email",
+  "accountPlan": "Plan",
+  "accountCredits": "Credits",
+  "accountUsageFooter": "A banked reset starts both limits over and restarts your week. Banks expire 90 days after they're granted.",
+  "accountFiveHourLimit": "5-hour limit",
+  "accountWeeklyLimit": "Weekly limit",
+  "accountBankedResets": "Banked resets",
+  "accountNextExpires": "Next expires {date}, {year}",
+  "@accountNextExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "accountNone": "None",
+  "accountUseOne": "Use 1 of {count}",
+  "@accountUseOne": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountDeleteFooter": "Deleting your account removes your chats, files, and credits. You have 30 days to change your mind by contacting support.",
+  "accountSignOut": "Sign out",
+  "accountDelete": "Delete account",
+  "accountUsedPercent": "{percent}% used",
+  "@accountUsedPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "accountResetsNow": "Resets now",
+  "accountResetsTomorrow": "Resets tomorrow",
+  "accountResetsYesterday": "Resets yesterday",
+  "accountResetsNextWeek": "Resets next week",
+  "accountResetsLastWeek": "Resets last week",
+  "accountResetsIn": "Resets in {quantity}",
+  "@accountResetsIn": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "accountResetsAgo": "Resets {quantity} ago",
+  "@accountResetsAgo": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "accountSeconds": "{count, plural, =1{1 second} other{{count} seconds}}",
+  "@accountSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountMinutes": "{count, plural, =1{1 minute} other{{count} minutes}}",
+  "@accountMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountHours": "{count, plural, =1{1 hour} other{{count} hours}}",
+  "@accountHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@accountDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountWeeks": "{count, plural, =1{1 week} other{{count} weeks}}",
+  "@accountWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountDeleteTitle": "Delete your account?",
+  "accountDeleteBody": "This can't be undone after 30 days. Type DELETE to confirm.",
+  "accountTypeDelete": "Type DELETE",
+  "accountSignOutTitle": "Sign out of DJL Cloud?",
+  "notificationsTitle": "Notifications",
+  "notificationsMarkAllRead": "Mark all read",
+  "notificationsCaughtUp": "You’re all caught up",
+  "notificationsEmptyHint": "Completed tasks will appear here.",
+  "notificationsTaskComplete": "Task complete",
+  "notificationsLoadMore": "Load more",
+  "notificationsStatus": "{status, select, succeeded{succeeded} failed{failed} other{{status}}}",
+  "@notificationsStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsTaskStopped": "Task stopped",
+  "notificationsTaskFinished": "Task finished",
+  "notificationsOpenResult": "Open DJL to see the result",
+  "notificationsDismiss": "Dismiss notification",
+  "reportOffensive": "Offensive or hateful",
+  "reportHarmful": "Harmful or dangerous",
+  "reportWrong": "Wrong or misleading",
+  "reportOther": "Something else",
+  "reportThanks": "Thanks. We'll review this answer.",
+  "reportTitle": "Report this answer",
+  "reportRateLimited": "Too many reports right now. Try again later.",
+  "reportFailed": "Couldn't send the report. Try again.",
+  "reportIntro": "DJL reviews reports to keep answers safe. What is wrong with it?",
+  "reportDetailsHint": "Add details (optional)",
+  "reportSending": "Sending…",
+  "reportSend": "Send report",
+  "attachmentsNoApp": "No app here opens this file. Pick one to send it to.",
+  "attachmentsOpenFailed": "Couldn't open this file",
+  "attachmentsCheckMac": "Check that your Mac is connected, then try again.",
+  "attachmentsImageUnshowable": "This image can't be shown here",
+  "attachmentsOpenElsewhere": "Open in another app",
+  "attachmentsOpen": "Open",
+  "attachmentsShare": "Share",
+  "imagesSquare": "Square",
+  "imagesLandscape": "Landscape",
+  "imagesPortrait": "Portrait",
+  "imagesOnePerRequest": "One image per request. You can leave the chat while DJL works.",
+  "imagesCreate": "Create image",
+  "imagesMakeYours": "Make something yours.",
+  "imagesDescribe": "Describe the subject, style, and details you have in mind.",
+  "imagesPromptHint": "A quiet studio in morning light…",
+  "imagesShape": "Shape",
+  "imagesNotConfigured": "Image generation isn't configured on this server yet. Your saved images are still available.",
+  "imagesStarting": "Starting…",
+  "imagesOpenImage": "Open image",
+  "imagesGenerated": "Generated image",
+  "imagesOpenChat": "Open chat",
+  "imagesActions": "Image actions",
+  "imagesEditInChat": "Edit in chat",
+  "imagesTitle": "Images",
+  "imagesYourImages": "Your images",
+  "imagesEmpty": "Create an image and find it here, ready to save or share.",
+  "imagesEmptyNotConfigured": "Image creation is not configured yet. Saved images will appear here.",
+  "imagesLoadMore": "Load more",
+  "imagesYourImage": "Your image",
+  "imagesShare": "Share",
+  "imagesSaveToPhotos": "Save to Photos",
+  "imagesSaved": "Saved to Photos.",
+  "authSocialNotConfigured": "Sign-in is not configured for this app. Continue with email.",
+  "authSocialOpenFailed": "Could not open sign-in. Try again.",
+  "authSignInOptionsFailed": "Could not load sign-in options.",
+  "authCloudSignInFailed": "Could not sign in to DJL Cloud. Try again.",
+  "authSecureStorageFailed": "Could not open secure storage. Unlock your device and try again.",
+  "authCheckEmailForCode": "Check your email for a verification code.",
+  "authRequestSent": "Request sent. Check your email.",
+  "authCloudDataNotCleared": "Some saved Cloud data could not be cleared.",
+  "authLinkOpenFailed": "Could not open this link. Try again.",
+  "authWelcomeTitle": "Welcome to DJL",
+  "authWelcomeSubtitle": "Your ideas, conversations, and Mac.\nTogether in DJL.",
+  "authRetrySignInOptions": "Retry sign-in options",
+  "authLoadingSignInOptions": "Loading sign-in options",
+  "authContinueWithApple": "Continue with Apple",
+  "authContinueWithGoogle": "Continue with Google",
+  "authContinueWithEmail": "Continue with email",
+  "authPairWithMac": "Pair with a Mac",
+  "authNoMacHint": "No Mac? Sign in to chat with DJL Cloud.",
+  "authTerms": "Terms",
+  "authPrivacy": "Privacy",
+  "authVerifyAndContinue": "Verify and continue",
+  "authSignIn": "Sign in",
+  "authEmailMeCode": "Email me a code",
+  "authCreateAccount": "Create account",
+  "authSignInIncomplete": "Could not complete sign-in. Try again.",
+  "authPassword": "Password",
+  "authEmailCode": "Email code",
+  "authName": "Name",
+  "authEmail": "Email",
+  "authSixDigitCode": "6-digit code",
+  "authCodeSent": "We sent a code to {email}. It expires in 10 minutes.",
+  "@authCodeSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authCreateAccountHint": "Use at least 10 characters. We'll email you a code to confirm your address.",
+  "authResendCode": "Resend code",
+  "authResendIn": "Resend in {seconds}s",
+  "@authResendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "authUseAnotherEmail": "Use another email",
+  "authForgotPassword": "Forgot password?",
+  "authResetPassword": "Reset password",
+  "authPasswordUpdated": "Password updated",
+  "authSignInWithNewPassword": "Sign in with your new password.",
+  "authBackToSignIn": "Back to sign in",
+  "authNewPassword": "New password",
+  "authRecoveryHint": "We'll send a recovery code if an account exists for this email.",
+  "authRecoveryCodeHint": "Enter your recovery code and a password with 10–256 characters.",
+  "authSendRecoveryCode": "Send recovery code",
+  "chatUiWorktreeHandoffFailed": "Worktree Handoff Failed",
+  "chatUiOk": "OK",
+  "chatUiSelectFolder": "Select folder",
+  "chatUiBrowseFolders": "Browse local folders…",
+  "chatUiBranchOpenElsewhere": "Branch already open elsewhere",
+  "chatUiBranchOpenElsewhereChat": "'{branch}' is already checked out in another worktree. Open that chat to continue there.",
+  "@chatUiBranchOpenElsewhereChat": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiBranchOpenElsewhereSidebar": "'{branch}' is already checked out in another worktree. Open that chat from the sidebar to continue there.",
+  "@chatUiBranchOpenElsewhereSidebar": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiOpenChat": "Open Chat",
+  "chatUiWorktreeChatGone": "The worktree chat is no longer available. Open it from the sidebar.",
+  "chatUiPhotoLibrary": "Photo library",
+  "chatUiTakePhoto": "Take a photo",
+  "chatUiPlanMode": "Plan mode",
+  "chatUiFastMode": "Fast mode",
+  "chatUiImage": "Image",
+  "chatUiOpensThreadLocation": "Opens thread location",
+  "chatUiDesktopChat": "Desktop chat",
+  "chatUiNewThread": "New thread",
+  "chatUiHandOffToDesktop": "Hand off to Desktop",
+  "chatUiHandOffToLocal": "Hand off to Local",
+  "chatUiHandOffToWorktree": "Hand off to Worktree",
+  "chatUiGoal": "Goal",
+  "chatUiForkChat": "Fork this chat",
+  "chatUiForkIntoFolder": "Fork into another folder",
+  "chatUiForkIntoWorktree": "Fork into new worktree",
+  "chatUiWorkspaceFiles": "Workspace files",
+  "chatUiTurnChanges": "Turn changes and restore",
+  "chatUiRefreshFromDesktop": "Refresh from desktop",
+  "chatUiDesktopDisconnected": "Desktop disconnected. Your message has not been resent.",
+  "chatUiLinkedPositionUnavailable": "Linked position is not available in the loaded history.",
+  "chatUiReviewResponseChanges": "Review exact response changes",
+  "chatUiResponseUndone": "Response undone",
+  "chatUiUndoResponse": "Undo this response",
+  "chatUiApprovalRequired": "Approval required",
+  "chatUiApprovalSent": "Response sent. Waiting for the desktop.",
+  "chatUiDecline": "Decline",
+  "chatUiApproveOnce": "Approve once",
+  "chatUiBranch": "Branch",
+  "chatUiPreparingWorktree": "Preparing worktree...",
+  "chatUiNewWorktree": "New worktree",
+  "chatUiGoalChip": "Goal {status} · {elapsed}",
+  "@chatUiGoalChip": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "elapsed": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiReturnToParent": "Return to parent chat",
+  "chatUiReturnTo": "Return to {title}",
+  "@chatUiReturnTo": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUiAskDjl": "Ask DJL",
+  "chatUiFollowUp": "Follow up",
+  "workspaceRestoreFailed": "The desktop did not confirm the restore. Refresh before retrying.",
+  "workspaceRestoredFiles": "Restored {count} files.",
+  "@workspaceRestoredFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceBackupSaved": " A backup checkpoint was saved on your Mac.",
+  "workspaceNoLocalFolders": "No local folders are available from this device.",
+  "workspaceUndoReviewChanged": "The response or connection changed. Reopen this review.",
+  "workspaceUndoPreviewFailed": "Could not preview the exact patch. Refresh the review before trying again.",
+  "workspaceUndoRepositoryChanged": "The response or repository changed. Reopen this review.",
+  "workspaceUndoResultUnknownChanged": "The connection or response changed. The undo result is unknown; refresh and review it.",
+  "workspaceUndoRefused": "The desktop did not undo the response. Review the current conflicts and staged files.",
+  "workspaceUndoResultUnknown": "The undo result is unknown. Refresh and review the exact patch before another attempt.",
+  "workspaceUndoSaveAfterSuccessFailed": "Undo succeeded, but saving or refreshing its local result failed. Reconnect to verify the files.",
+  "workspaceUndoSaveFailed": "Could not save the undo result. Reconnect and review the current files.",
+  "workspaceUndoTitle": "Undo this response",
+  "workspaceUndoWorkspace": "Workspace: {path}",
+  "@workspaceUndoWorkspace": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceUndoIntro": "Review the exact changes from this response. Later edits stay in place where the reverse patch can apply. The desktop checks conflicts again when you confirm.",
+  "workspaceUndoOverlap": "Other responses touch these files. Review carefully: undo may overlap changes in this or another chat.",
+  "workspaceUndoUncertain": "A previous undo result is unknown. Refresh this review and inspect the current files before confirming another attempt.",
+  "workspaceUndoStale": "This review is no longer current. Close it and reopen the response.",
+  "workspaceUndoDone": "This response was undone.",
+  "workspaceUndoStagedBlock": "Staged files block undo: {files}",
+  "@workspaceUndoStagedBlock": {
+    "placeholders": {
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceUndoConflict": "Conflict: {conflict}",
+  "@workspaceUndoConflict": {
+    "placeholders": {
+      "conflict": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceUndoCannotReverse": "The desktop cannot safely reverse this patch.",
+  "workspaceClose": "Close",
+  "workspaceRefreshReview": "Refresh review",
+  "workspaceUndoResponse": "Undo response",
+  "workspaceConflictFallback": "Conflict",
+  "workspaceAlreadyUndone": "This response was already undone.",
+  "workspaceStillRunning": "This response is still running.",
+  "workspaceNoDesktopWorkspace": "The response has no desktop workspace.",
+  "workspaceNoPatchCaptured": "No supported exact response patch was captured.",
+  "workspaceRestoreTitle": "Restore workspace before this turn?",
+  "workspaceRestoreBody": "This replaces current workspace files and removes untracked files. Review the affected files before restoring. The Mac saves a backup checkpoint first.",
+  "workspaceNoAffectedFiles": "No affected files reported.",
+  "workspaceStagedFiles": "Staged files",
+  "workspaceUntrackedFiles": "Untracked files",
+  "workspaceRestoreFiles": "Restore files",
+  "workspaceTurnChanges": "Turn changes",
+  "workspaceReloadTurnChanges": "Reload turn changes",
+  "workspaceConversationTurn": "Conversation turn",
+  "workspaceTurnNumber": "Turn {number}",
+  "@workspaceTurnNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceNoSavedChanges": "No saved changes for this turn.",
+  "workspaceNoCompletedTurns": "No completed turns yet.",
+  "workspaceChooseTurn": "Choose a turn to view its saved workspace changes.",
+  "workspaceStopBeforeRestore": "Stop the running turn before restoring files.",
+  "workspacePreviewRestore": "Preview restore before this turn",
+  "workspaceFileFallbackTitle": "Workspace file",
+  "workspaceCopyFileContents": "Copy file contents",
+  "workspaceFileContentsCopied": "File contents copied.",
+  "workspaceReloadFile": "Reload file",
+  "workspaceFilePathOnMac": "File path on your Mac",
+  "workspaceSegmentText": "Text",
+  "workspaceSegmentImage": "Image",
+  "workspaceOpen": "Open",
+  "workspaceSvgRenderFailed": "This SVG could not be rendered.",
+  "workspaceImageRenderFailed": "This image format could not be rendered on this device.",
+  "workspaceOpenFileToPreview": "Open a workspace file to preview it.",
+  "workspaceSavedToPhotos": "Saved to Photos.",
+  "workspaceImageTitle": "Image",
+  "workspaceOk": "OK",
+  "workspaceLoadingFile": "Loading file",
+  "workspaceUnableToLoadFile": "Unable to load file.",
+  "workspaceRetry": "Retry",
+  "workspaceCloseFilePreview": "Close file preview",
+  "workspaceDone": "Done",
+  "workspaceFindInFile": "Find in file",
+  "workspaceLineCount": "{count, plural, =1{1 line} other{{count} lines}}",
+  "@workspaceLineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceByteCount": "{count, plural, =1{1 byte} other{{count} bytes}}",
+  "@workspaceByteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceCloseSvgPreview": "Close SVG preview",
+  "workspaceReloadSvgPreview": "Reload SVG preview",
+  "workspaceShare": "Share",
+  "workspaceSaveToPhotos": "Save to Photos",
+  "workspaceUnableToDisplayImage": "Unable to display image.",
+  "workspaceFileContents": "File contents",
+  "workspaceSearching": "Searching…",
+  "workspaceMatchPosition": "{index} of {total}",
+  "@workspaceMatchPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "workspacePreviousMatch": "Previous match",
+  "workspaceNextMatch": "Next match",
+  "workspaceCloseFind": "Close find",
+  "workspaceAddLocalFolder": "Add Local Folder",
+  "workspaceCreateFolderOnMac": "Create folder on Mac",
+  "workspaceUse": "Use",
+  "workspaceParentFolder": "Parent Folder",
+  "workspaceSearchingFolders": "Searching folders...",
+  "workspaceLoading": "Loading",
+  "workspaceNoMatchingFolders": "No matching folders under this folder.",
+  "workspaceNoChildFolders": "No child folders here.",
+  "workspaceSearchFolders": "Search folders",
+  "workspaceClearFolderSearch": "Clear folder search",
+  "workspaceLocations": "Locations",
+  "workspaceCurrentFolder": "Current Folder",
+  "workspaceLoadingFolders": "Loading folders...",
+  "workspaceNoFolderSelected": "No folder selected.",
+  "workspaceMatchingFolders": "Matching Folders",
+  "workspaceFolders": "Folders",
+  "workspaceNewFolder": "New Folder",
+  "workspaceNewFolderBody": "Create this folder on your device and start a chat there.",
+  "workspaceFolderName": "Folder name",
+  "workspaceCreate": "Create",
+  "workspaceDesktopChangedPicker": "Connected desktop changed. Reopen the project picker.",
+  "workspaceDesktopChanged": "Connected desktop changed. Reopen this workspace.",
+  "workspaceChooseWorkspaceFirst": "Choose a workspace on your desktop first.",
+  "workspaceNoTextInPreview": "The file preview did not include text. Reload it from the workspace.",
+  "workspaceNoImageInPreview": "The image preview did not include image data. Reload it from the workspace.",
+  "workspaceRestorePreviewOtherWorkspace": "This restore preview belongs to another workspace. Preview it again.",
+  "cloudChatNewChat": "New chat",
+  "cloudChatLostConnection": "Lost connection. Tap Reconnect to resume this response.",
+  "cloudChatImageToEdit": "Image to edit",
+  "cloudChatNoContent": "No response content.",
+  "cloudChatThinking": "Thinking…",
+  "cloudChatResponseStopped": "Response stopped.",
+  "cloudChatResponseFailed": "Response failed.",
+  "cloudChatWaitingForUsageReset": "Waiting for usage reset.",
+  "cloudChatModelChoiceLoadFailed": "Could not load your saved model choice. Retry.",
+  "cloudChatModelChoiceSaveFailed": "Could not save your model choice. Retry.",
+  "cloudChatDraftSaveFailed": "Could not save your draft. Keep the text here and retry.",
+  "cloudChatDraftLoadFailed": "Could not load your saved draft. Retry before editing.",
+  "cloudChatInterruptedImage": "An interrupted image request is saved securely. Retry to check its result.",
+  "cloudChatInterruptedMessage": "An interrupted message is saved securely. Retry to check its result.",
+  "cloudChatModelCannotViewImages": "Choose a model that can view images before sending this attachment.",
+  "cloudChatImageGenerationUnavailable": "Image generation is not configured for this service.",
+  "cloudChatUseBankedResetTitle": "Use a banked reset?",
+  "cloudChatUseBankedResetBody": "Both your 5-hour and weekly limits start over now, and your week restarts today.",
+  "cloudChatUseReset": "Use reset",
+  "cloudChatLimitFreesSoon": "Your limit frees up again soon.",
+  "cloudChatResetsNow": "It resets now.",
+  "cloudChatResetsTomorrow": "It resets tomorrow.",
+  "cloudChatResetsInDays": "It resets in {days} days.",
+  "@cloudChatResetsInDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "cloudChatResetsOn": "It resets {date}.",
+  "@cloudChatResetsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudChatResetsInAMoment": "It resets in a moment.",
+  "cloudChatResetsInMinutes": "{minutes, plural, =1{It resets in 1 minute.} other{It resets in {minutes} minutes.}}",
+  "@cloudChatResetsInMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "cloudChatResetsInHours": "{hours, plural, =1{It resets in 1 hour.} other{It resets in {hours} hours.}}",
+  "@cloudChatResetsInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "cloudChatUsageLimitReached": "You've reached your usage limit",
+  "cloudChatRetryUsage": "Retry usage",
+  "cloudChatUseBankedReset": "Use a banked reset ({count} left)",
+  "@cloudChatUseBankedReset": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cloudChatPickerFailed": "Could not open the picker. Please try again.",
+  "cloudChatModel": "Model",
+  "cloudChatShareLink": "Share link",
+  "cloudChatTaskPrompt": "What should DJL work on?",
+  "cloudChatHowCanIHelp": "How can I help?",
+  "cloudChatTaskHint": "Start a task and return to the result when it's ready.",
+  "cloudChatStepProgress": "Step {step} of {total}",
+  "@cloudChatStepProgress": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudChatRetry": "Retry",
+  "cloudChatRetryDraft": "Retry draft",
+  "cloudChatRetryModelChoice": "Retry model choice",
+  "cloudChatMessageHint": "Message DJL",
+  "cloudChatAttachTooltip": "Attach file or image",
+  "cloudChatCreateImage": "Create image",
+  "cloudChatChooseFile": "Choose file",
+  "cloudChatPhotoLibrary": "Photo library",
+  "cloudChatCamera": "Camera",
+  "cloudChatTaskMode": "Task mode",
+  "cloudChatTask": "Task",
+  "cloudChatStopDictation": "Stop dictation",
+  "cloudChatStartDictation": "Start dictation",
+  "cloudChatStopResponse": "Stop response",
+  "cloudChatSendMessage": "Send message",
+  "cloudChatEditMessage": "Edit message",
+  "cloudChatSend": "Send",
+  "cloudChatDisableWordWrap": "Disable word wrap",
+  "cloudChatEnableWordWrap": "Enable word wrap",
+  "cloudChatCopied": "Copied",
+  "cloudChatCopyCode": "Copy code",
+  "cloudChatCodeLabel": "Code",
+  "cloudChatEdit": "Edit",
+  "cloudChatPreviousBranch": "Previous branch",
+  "cloudChatNextBranch": "Next branch",
+  "cloudChatCopyMessage": "Copy message",
+  "cloudChatRegenerateReply": "Regenerate reply",
+  "cloudChatStopReading": "Stop reading",
+  "cloudChatReadAloud": "Read aloud",
+  "cloudChatReportAnswer": "Report this answer",
+  "cloudChatToolResult": "{name} · {status}",
+  "@cloudChatToolResult": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudChatToolFailed": "Failed",
+  "cloudChatToolDone": "Done",
+  "cloudChatNeedsNewerVersion": "This message contains content requiring a newer version.",
+  "cloudChatImageUnavailableRetry": "Image unavailable · Retry",
+  "cloudChatConversationImage": "Conversation image",
+  "cloudChatImageDisplayFailed": "Could not display this image.",
+  "cloudChatShareFailed": "Could not open sharing. Try again.",
+  "cloudChatShareLinkCreated": "Share link created",
+  "cloudChatShareLinkBody": "Anyone with the link can read this chat as it is now. Messages you send later aren't shared.",
+  "cloudChatCopyLink": "Copy link",
+  "cloudChatShare": "Share",
+  "conversationsPinned": "Pinned",
+  "conversationsPinnedEmpty": "Touch and hold a chat to pin it.",
+  "conversationsRecentEmpty": "Your conversations appear here.",
+  "conversationsCloudConversationHint": "Cloud conversation",
+  "conversationsChat": "Chat",
+  "conversationsSearchChats": "Search chats",
+  "conversationsRemote": "Remote",
+  "conversationsRecentChats": "Recent chats",
+  "conversationsLoadMore": "Load more",
+  "conversationsSettings": "Settings",
+  "conversationsArchivedChats": "Archived chats",
+  "conversationsRestore": "Restore",
+  "conversationsNoArchivedChats": "No archived chats",
+  "conversationsPin": "Pin",
+  "conversationsUnpin": "Unpin",
+  "conversationsRename": "Rename",
+  "conversationsArchive": "Archive",
+  "conversationsDelete": "Delete",
+  "conversationsDeleteChatQuestion": "Delete this chat?",
+  "plansCompleted": "Completed",
+  "plansInProgress": "In progress",
+  "plansPending": "Pending",
+  "plansOpenActivePlan": "Open active plan",
+  "plansPlan": "Plan",
+  "plansStepOf": "Step {current} of {total}",
+  "@plansStepOf": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "plansStepFraction": "Step {current} / {total}",
+  "@plansStepFraction": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "plansStatusValue": "{status}, {position}",
+  "@plansStatusValue": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "plansImage": "Image",
+  "plansActivePlan": "Active plan",
+  "plansDone": "Done",
+  "plansNoLongerAvailable": "This plan is no longer available.",
+  "plansProposedPlan": "Proposed plan",
+  "plansCollapsePlan": "Collapse plan",
+  "plansExpandPlan": "Expand plan",
+  "plansCollapse": "Collapse",
+  "plansExpand": "Expand",
+  "plansStarting": "Starting...",
+  "plansImplement": "Implement",
+  "plansNextStepQuestion": "What should Codex produce next?",
+  "plansNextStepHeader": "Next step",
+  "voiceAllowMicrophone": "Allow microphone and speech access in device settings to dictate.",
+  "voiceDictationUnavailable": "On-device dictation is unavailable for this language or device. You can still type your message.",
+  "voiceSpeechAccessRequired": "Allow microphone and speech access in device settings. On-device speech must be available for your language.",
+  "voiceInputUnavailable": "Voice input is unavailable. You can still type your message.",
+  "voiceStopFailed": "Could not stop voice input.",
+  "voicePlaybackUnavailable": "Speech playback is unavailable on this device.",
+  "voiceStopUnclean": "Voice could not stop cleanly. Close this screen before continuing.",
+  "goalsStatusActive": "Active",
+  "goalsStatusPaused": "Paused",
+  "goalsStatusBlocked": "Blocked",
+  "goalsStatusUsageLimited": "Usage limited",
+  "goalsStatusBudgetLimited": "Budget limited",
+  "goalsStatusComplete": "Complete",
+  "goalsTokenUsage": "{used} / {budget} tokens",
+  "@goalsTokenUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
+  },
+  "goalsUnsupported": "Goals are unavailable on this runtime. Update Codex on your Mac and enable goals.",
+  "goalsEphemeral": "Goals need a saved chat. This chat is temporary.",
+  "goalsDesktopChanged": "Connected desktop changed. Reopen this goal.",
+  "goalsOtherChatGoal": "The runtime returned another chat’s goal.",
+  "goalsBudgetInvalid": "Token budget must be a positive whole number.",
+  "goalsUnexpectedResponse": "The runtime returned an unexpected goal response.",
+  "goalsReconnect": "Reconnect to your desktop to manage this goal.",
+  "goalsDescribeFirst": "Describe the goal first.",
+  "goalsReplaceTitle": "Replace the current goal?",
+  "goalsReplaceBody": "This objective is not complete. Replacing it starts a new goal and resets its usage accounting.",
+  "goalsReplaceAction": "Replace goal",
+  "goalsClearTitle": "Clear this goal?",
+  "goalsClearBody": "The desktop stops pursuing this objective and clears its progress accounting.",
+  "goalsClearAction": "Clear goal",
+  "goalsTitle": "Goal",
+  "goalsReload": "Reload goal",
+  "goalsShowingLastKnown": "Showing the last known goal. Reconnect to manage it.",
+  "goalsNewGoal": "New goal",
+  "goalsEditGoal": "Edit goal",
+  "goalsDescribeHint": "Describe the outcome, how to verify it, and what must not regress.",
+  "goalsObjective": "Objective",
+  "goalsBudgetLabel": "Token budget (optional)",
+  "goalsBudgetHelper": "Leave empty for no token budget.",
+  "goalsStart": "Start goal",
+  "goalsSave": "Save goal",
+  "goalsCancelEditing": "Cancel editing",
+  "goalsTokensRemaining": "{tokens} tokens remaining",
+  "@goalsTokensRemaining": {
+    "placeholders": {
+      "tokens": {
+        "type": "String"
+      }
+    }
+  },
+  "goalsActiveExplainer": "The desktop keeps working toward this goal when the chat is idle, until it completes, pauses, or reaches a limit.",
+  "goalsPause": "Pause goal",
+  "goalsResume": "Resume goal",
+  "goalsEditObjective": "Edit objective",
+  "groupsKindSpreadsheet": "Spreadsheet",
+  "groupsKindText": "Text",
+  "groupsKindArchive": "Archive",
+  "groupsKindImage": "Image",
+  "groupsKindVideo": "Video",
+  "groupsKindAudio": "Audio",
+  "groupsKindFile": "File",
+  "groupsMacUnreachable": "Couldn't reach your Mac. Try again.",
+  "groupsCreateFailed": "Couldn't create the group. Try again.",
+  "groupsNewGroup": "New group",
+  "groupsChooseMembers": "Choose who is in the chat.",
+  "groupsNameOptional": "Name (optional)",
+  "groupsCreateGroup": "Create group",
+  "groupsCreateGroupWith": "{count, plural, =1{Create group with 1 agent} other{Create group with {count} agents}}",
+  "@groupsCreateGroupWith": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsSignInOnMac": "Sign in on your Mac to use it",
+  "groupsUpdateMacTitle": "Update DJL on your Mac",
+  "groupsUpdateMacBody": "Group chats need the latest DJL on your Mac. Update it there, then come back.",
+  "groupsConnectMacTitle": "Connect to your Mac",
+  "groupsConnectMacBody": "Group chats live on your Mac. They appear here once it is connected.",
+  "groupsLoadFailed": "Couldn't load your groups",
+  "groupsEmptyTitle": "Put your agents in one chat",
+  "groupsEmptyBody": "Ask a question once and let Claude, Codex and the others answer together.",
+  "groupsMemberWriting": "{name} is writing",
+  "@groupsMemberWriting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsAgentsWriting": "{count} agents are writing",
+  "@groupsAgentsWriting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsPausedWaiting": "Paused, waiting for you",
+  "groupsAgentCount": "{count} agents",
+  "@groupsAgentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsMacDidNotKeepFile": "Your Mac did not keep the file.",
+  "groupsFileStillSending": "This file is still sending.",
+  "groupsMacTimeout": "Your Mac did not answer in time. Check that DJL is open on it.",
+  "groupsMacNotConnected": "Your Mac is not connected right now.",
+  "groupsRemoveAttachment": "Remove {name}",
+  "@groupsRemoveAttachment": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsSendingFiles": "Sending files",
+  "groupsImageNamed": "Image {name}",
+  "@groupsImageNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsAttach": "Attach",
+  "groupsPhotos": "Photos",
+  "groupsFiles": "Files",
+  "groupsFileUnsupported": "{name} can't be sent. Photos, PDFs, Word, Excel, PowerPoint, text and code files work.",
+  "@groupsFileUnsupported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsFileTooLarge": "{name} is larger than {size}.",
+  "@groupsFileTooLarge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsTooManyFiles": "A message can carry {count} files.",
+  "@groupsTooManyFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsOpenFailed": "Couldn't open that. Please try again.",
+  "groupsAskEveryoneTitle": "Ask everyone?",
+  "groupsAskEveryoneBody": "All {count} agents will answer this message.",
+  "@groupsAskEveryoneBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsDontAskAgain": "Don't ask again",
+  "groupsAskEveryone": "Ask everyone",
+  "groupsGroupGone": "This group is no longer on your Mac.",
+  "groupsSayHelloPrompt": "{everyone} Say hello in one line.",
+  "@groupsSayHelloPrompt": {
+    "placeholders": {
+      "everyone": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsReconnectingToMac": "Reconnecting to your Mac…",
+  "groupsHeaderLabel": "{name}, {count} agents",
+  "@groupsHeaderLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsMembers": "Members",
+  "groupsYou": "You",
+  "groupsCouldNotReply": "Couldn't reply",
+  "groupsNothingToAdd": "Nothing to add",
+  "groupsImageOnMac": "Image on your Mac",
+  "groupsRemovedAgent": "Removed agent",
+  "groupsWaitingTurn": "Waiting for its turn",
+  "groupsWriting": "Writing",
+  "groupsAttachTooltip": "Attach files or photos",
+  "groupsMentionAgent": "Mention an agent",
+  "groupsMessageHint": "Message",
+  "groupsStopAgents": "Stop the agents",
+  "groupsEveryone": "Everyone",
+  "groupsPausedTitle": "The agents paused",
+  "groupsPausedBody": "They have been talking to each other for a while and have more to say.",
+  "groupsEndItHere": "End it here",
+  "groupsLetThemContinue": "Let them continue",
+  "groupsOfflineHint": "Messages appear here once your Mac is connected.",
+  "groupsLoadingMessages": "Loading messages",
+  "groupsEveryoneIsHere": "Everyone is here",
+  "groupsEmptyChatHint": "Type @ to choose who answers. Your first message goes to everyone.",
+  "groupsAskEveryoneToSayHello": "Ask everyone to say hello",
+  "groupsManageOnMac": "Add or remove agents in DJL on your Mac.",
+  "groupsReady": "Ready",
+  "groupsStop": "Stop",
+  "guardianLiveReason": "Retry approvals are available only during the live session.",
+  "guardianExpiredReason": "This retry is no longer available. Wait for Codex to request the action again.",
+  "guardianDesktopReason": "Approve this retry in Codex Desktop.",
+  "guardianUnsafeReason": "This action cannot be retried safely here. Approve it in Codex.",
+  "guardianSubmittedReason": "Retry approval submitted. Check Codex before trying again.",
+  "guardianUncertainReason": "Retry approval may not have reached Codex. Check Codex before trying again.",
+  "guardianRequestedAction": "Requested action",
+  "guardianRunCommand": "Run command",
+  "guardianApplyFileChanges": "Apply file changes",
+  "guardianEditFile": "Edit {file}",
+  "@guardianEditFile": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianEditFiles": "Edit {count} files: {files}",
+  "@guardianEditFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianAccessNetwork": "Access the network",
+  "guardianAccessHost": "Access {host}",
+  "@guardianAccessHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianRequestPermissions": "Request additional permissions",
+  "guardianRequestNetwork": "Request network",
+  "guardianRequestFileAccess": "Request file access",
+  "guardianRequestNetworkAndFileAccess": "Request network and file access",
+  "guardianReviewing": "Reviewing",
+  "guardianApproved": "Approved",
+  "guardianDenied": "Denied",
+  "guardianTimedOut": "Timed out",
+  "guardianStopped": "Stopped",
+  "guardianUpdatedStatus": "Updated ({status})",
+  "@guardianUpdatedStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianDetailsUnavailable": "Review details unavailable.",
+  "guardianAutoReviewTitle": "Auto-review · {status}",
+  "@guardianAutoReviewTitle": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianRiskLow": "Low risk",
+  "guardianRiskMedium": "Medium risk",
+  "guardianRiskHigh": "High risk",
+  "guardianRiskOther": "{level} risk",
+  "@guardianRiskOther": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianAuthorization": "Authorization: {value}",
+  "@guardianAuthorization": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "guardianApprovalRecorded": "Approval recorded; the retry will still be reviewed",
+  "guardianSubmittingApproval": "Submitting retry approval…",
+  "guardianApproveOneRetry": "Approve one retry",
+  "subagentsSubagent": "Subagent",
+  "subagentsSpawnAgent": "Spawn agent",
+  "subagentsWaitForAgents": "Wait for agents",
+  "subagentsUpdateAgent": "Update agent",
+  "subagentsResumeAgent": "Resume agent",
+  "subagentsCloseAgent": "Close agent",
+  "subagentsActivity": "Subagent activity",
+  "subagentsMetadataUnavailable": "Subagent metadata unavailable",
+  "activityCommand": "Command",
+  "activityFileChanges": "File changes",
+  "activityFilesChanged": "{count, plural, =1{1 file changed} other{{count} files changed}}",
+  "@activityFilesChanged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activityToolActivity": "Tool activity",
+  "activityReadFile": "Read file",
+  "activityReadValue": "Read {value}",
+  "@activityReadValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "activitySearchFiles": "Search files",
+  "activitySearchValue": "Search {value}",
+  "@activitySearchValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "activityListFiles": "List files",
+  "activityListFilesValue": "List files {value}",
+  "@activityListFilesValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "statusTaskStatus": "Task status",
+  "statusAllowed": "Task status is allowed on this device.",
+  "statusDenied": "Allow local task status in your device settings. Chat works without it.",
+  "statusUnsupported": "Task status is unavailable on this device.",
+  "statusChecking": "Checking device permission…",
+  "statusEnable": "Enable task status",
+  "statusRefresh": "Refresh task status",
+  "statusSystemSettings": "System settings",
+  "pairingStateLabel": "{state, select, disconnected{disconnected} resolving{resolving} connecting{connecting} connected{connected} offline{desktop offline} suspended{suspended} other{{state}}}",
+  "@pairingStateLabel": {
+    "description": "The connection state shown under the Mac's name. The English values are shown unchanged.",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  }
+}

@@ -7,8 +7,8 @@ import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_navigation_menu.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/desktop/domain/thread_local_state.dart';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_phone_drawer_root_test.dart' show PhoneMemoryStore;
 import 'desktop_root_routing_test.dart' show savedPair;
@@ -114,7 +114,7 @@ void main() {
             tester.getSize(find.byKey(const Key('navigation.pin-menu'))),
             const Size(250, 62),
           );
-          expect(find.byIcon(CupertinoIcons.pin), findsOneWidget);
+          expect(find.byIcon(DjlIcons.pin), findsOneWidget);
           await tester.tap(find.text('Pin chat'));
           await tester.pumpAndSettle();
           expect(f.desktop.threadList.data.isPinned('pin-owned'), isTrue);
@@ -127,7 +127,7 @@ void main() {
           );
           await tester.longPress(row);
           await tester.pumpAndSettle();
-          expect(find.byIcon(CupertinoIcons.pin_slash), findsOneWidget);
+          expect(find.byIcon(DjlIcons.unpin), findsOneWidget);
           await tester.tap(find.text('Unpin chat'));
           await tester.pumpAndSettle();
           expect(f.desktop.threadList.data.isPinned('pin-owned'), isFalse);

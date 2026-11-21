@@ -16,7 +16,9 @@ import {
   ThreadId,
   type Group,
   type GroupEvent,
+  type GroupLive,
   type GroupMember,
+  type GroupMemberState,
   type OrchestrationCommand,
 } from "@synara/contracts";
 import { nextGroupHandle } from "@synara/shared/groupChat";
@@ -44,6 +46,9 @@ import {
   type GroupServiceShape,
 } from "../Services/GroupService";
 
+// A runaway reply must not grow memory without bound; late joiners see its tail.
+const LIVE_DRAFT_LIMIT = 24_000;
+
 const fail = (message: string) => (cause: unknown) => new GroupServiceError({ message, cause });
 const newId = () => randomUUID().replaceAll("-", "");
 
@@ -65,6 +70,8 @@ const makeGroupService = Effect.gen(function* () {
   const config = yield* ServerConfig;
   const events = yield* PubSub.unbounded<GroupEvent>();
   const live = new Map<string, GroupLiveControls>();
+  const liveStates = new Map<GroupMemberId, GroupMemberState>();
+  const liveDrafts = new Map<GroupMemberId, string>();
   const settingsService = yield* ServerSettingsService;
   const bridge = yield* GroupDriverBridge;
 
@@ -104,6 +111,15 @@ const makeGroupService = Effect.gen(function* () {
 
   const listReplies: GroupServiceShape["listReplies"] = () =>
     repository.listReplies().pipe(Effect.mapError(fail("Failed to list group replies")));
+
+  const liveNow = (): GroupLive => ({
+    memberStates: Object.fromEntries(liveStates),
+    drafts: Object.fromEntries(liveDrafts),
+  });
+  const forgetLive = (memberId: GroupMemberId) => {
+    liveStates.delete(memberId);
+    liveDrafts.delete(memberId);
+  };
 
   const create: GroupServiceShape["create"] = (input) =>
     Effect.gen(function* () {
@@ -249,6 +265,7 @@ const makeGroupService = Effect.gen(function* () {
       );
       yield* repository.deleteGroup(groupId).pipe(Effect.mapError(fail("Failed to delete group")));
       live.delete(group.threadId);
+      for (const member of group.members) forgetLive(member.id);
       yield* publish({ type: "group.deleted", groupId, folder: group.folder });
       return { folder: group.folder };
     });
@@ -291,6 +308,7 @@ const makeGroupService = Effect.gen(function* () {
       yield* repository
         .deleteMember(memberId)
         .pipe(Effect.mapError(fail("Failed to remove the member")));
+      forgetLive(memberId);
       return yield* changed(groupId);
     });
 
@@ -403,13 +421,20 @@ const makeGroupService = Effect.gen(function* () {
           .pipe(Effect.andThen(publish({ type: "reply.recorded", reply }))),
       ),
     setMemberState: (groupId, memberId, state) => {
+      const id = memberIdOf(memberId);
+      if (state === "idle") liveStates.delete(id);
+      else liveStates.set(id, state);
+      if (state === "idle" || state === "failed") liveDrafts.delete(id);
       Effect.runFork(
-        publish({
-          type: "member.state",
-          groupId: groupIdOf(groupId),
-          memberId: memberIdOf(memberId),
-          state,
-        }),
+        publish({ type: "member.state", groupId: groupIdOf(groupId), memberId: id, state }),
+      );
+    },
+    publishDraft: (groupId, memberId, delta, restart) => {
+      const id = memberIdOf(memberId);
+      const draft = restart ? delta : (liveDrafts.get(id) ?? "") + delta;
+      liveDrafts.set(id, draft.slice(-LIVE_DRAFT_LIMIT));
+      Effect.runFork(
+        publish({ type: "reply.draft", groupId: groupIdOf(groupId), memberId: id, delta, restart }),
       );
     },
     skills: async () => {
@@ -440,6 +465,7 @@ const makeGroupService = Effect.gen(function* () {
   return {
     list,
     listReplies,
+    live: liveNow,
     create,
     update,
     delete: remove,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../../l10n/l10n.dart';
 import '../data/voice_driver.dart';
 
 String appendTranscript(String draft, String transcript) {
@@ -48,8 +49,7 @@ class VoiceController extends ChangeNotifier {
       final ready = await driver.initialize();
       if (_disposed || generation != _dictationGeneration) return;
       if (!ready) {
-        error =
-            'Allow microphone and speech access in device settings. On-device speech must be available for your language.';
+        error = appStrings.voiceSpeechAccessRequired;
         return;
       }
       if (!_foreground) {
@@ -81,7 +81,7 @@ class VoiceController extends ChangeNotifier {
       );
     } catch (_) {
       if (generation == _dictationGeneration) {
-        error = 'Voice input is unavailable. You can still type your message.';
+        error = appStrings.voiceInputUnavailable;
         listening = false;
       }
     } finally {
@@ -96,7 +96,7 @@ class VoiceController extends ChangeNotifier {
     try {
       await driver.stopListening();
     } catch (_) {
-      error = 'Could not stop voice input.';
+      error = appStrings.voiceStopFailed;
     }
     listening = false;
     _notify();
@@ -119,7 +119,7 @@ class VoiceController extends ChangeNotifier {
       await driver.speak(text);
     } catch (_) {
       if (generation == _speechGeneration) {
-        error = 'Speech playback is unavailable on this device.';
+        error = appStrings.voicePlaybackUnavailable;
       }
     } finally {
       if (generation == _speechGeneration) {
@@ -164,8 +164,7 @@ class VoiceController extends ChangeNotifier {
       ]);
     } catch (_) {
       if (!_disposed) {
-        error =
-            'Voice could not stop cleanly. Close this screen before continuing.';
+        error = appStrings.voiceStopUnclean;
         _notify();
       }
     }

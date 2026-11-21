@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/desktop_deep_link.dart';
 import 'package:djl_mobile/features/activity/domain/activity_reducer.dart';
 import 'package:djl_mobile/features/activity/domain/desktop_activity.dart';
-import 'package:djl_mobile/features/activity/presentation/activity_card.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'desktop_subagents_test.dart' show SubagentTransport, subagentDesktop;
@@ -162,7 +161,7 @@ console.log(JSON.stringify({completion,history,childHistory:messages.at(-1).resu
   );
 
   testWidgets(
-    'actual MCP history opens real Tool details in a short viewport',
+    'actual MCP history keeps the Tool row off the phone in a short viewport',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 460));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -183,19 +182,15 @@ console.log(JSON.stringify({completion,history,childHistory:messages.at(-1).resu
         ),
       );
       await tester.pumpAndSettle();
-      final card = find.byWidgetPredicate(
-        (widget) =>
-            widget is ActivityCard &&
-            widget.activity.kind == 'tool' &&
-            widget.activity.item == item['id'],
+      expect(
+        desktop.timeline
+            .map(DesktopActivity.fromRow)
+            .whereType<DesktopActivity>()
+            .where((activity) => activity.item == item['id']),
+        hasLength(1),
       );
-      expect(card.hitTestable(), findsOneWidget);
-      await tester.tap(card);
-      await tester.pumpAndSettle();
-      expect(find.text('Tool details'), findsOneWidget);
-      expect(find.text('inspect_fixture'), findsWidgets);
-      expect(find.text('Status: Completed'), findsOneWidget);
-      expect(find.text('Structured QA tool output'), findsOneWidget);
+      expect(find.text('inspect_fixture'), findsNothing);
+      expect(find.text('Structured QA tool output'), findsNothing);
       expect(find.textContaining('server:'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

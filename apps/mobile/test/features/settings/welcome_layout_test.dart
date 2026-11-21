@@ -20,10 +20,7 @@ Future<AppLockController> mountWelcome(
   final credentials = TestCredentials();
   if (shielded) credentials.values['desktop.trusted'] = savedPair();
   final store = MemorySettingsStore()
-    ..values.addAll({
-      SettingsController.fontKey: 'geistMono',
-      SettingsController.bubbleKey: 'pink',
-    });
+    ..values.addAll({SettingsController.fontKey: 'geistMono'});
   final settings = SettingsController(store);
   final owner = FakeOwnerAuth();
   if (shielded) owner.pending = Completer<bool>();
@@ -48,7 +45,6 @@ Future<AppLockController> mountWelcome(
   await tester.pumpAndSettle();
   await openCloudFromDesktop(tester);
   expect(settings.font, AppFontStyle.geistMono);
-  expect(settings.bubble, UserBubbleColor.pink);
   return lock;
 }
 
@@ -135,7 +131,9 @@ void main() {
     final secondGap = email.top - body.bottom;
     expect(topGap, greaterThan(0));
     expect(secondGap, closeTo(topGap, .1));
-    expect(pair.bottom, closeTo(876, .1));
+    final noMac = tester.getRect(find.byKey(const Key('welcome.noMac')));
+    expect(noMac.bottom, closeTo(876, .1));
+    expect(pair.bottom, lessThanOrEqualTo(noMac.top));
     expect(welcomeAction('Continue with email').hitTestable(), findsOneWidget);
     expect(welcomeAction('Pair with a Mac').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);

@@ -167,8 +167,7 @@ class GuardianReviews {
     if (token == null) return null;
     _submittedEvents[key] = jsonEncode(token.event);
     review.submitting = true;
-    review.retryUnavailableReason =
-        'Retry approval submitted. Check Codex before trying again.';
+    review.retryUnavailableReason = guardianSubmittedReason;
     return token.event;
   }
 
@@ -190,7 +189,7 @@ class GuardianReviews {
     review.retryApproved = acknowledged;
     review.retryUnavailableReason = acknowledged
         ? null
-        : 'Retry approval may not have reached Codex. Check Codex before trying again.';
+        : guardianUncertainReason;
     return true;
   }
 }

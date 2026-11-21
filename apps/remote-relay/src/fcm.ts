@@ -27,7 +27,7 @@ export function createRelayFcmSender(config: FcmConfiguration) {
     return sender.send({
       installationId: input.deviceToken,
       data: {
-        source: "codex.runCompletion",
+        source: input.result === "attention" ? "codex.structuredUserInput" : "codex.runCompletion",
         threadId: input.threadId,
         result: input.result,
         ...(input.turnId ? { turnId: input.turnId } : {}),

@@ -5,6 +5,7 @@ import 'package:djl_mobile/features/desktop/domain/desktop_response_footer.dart'
 import 'package:djl_mobile/features/desktop/domain/thread_local_state.dart';
 import 'package:djl_mobile/features/desktop/domain/desktop_composer.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_stop_recovery_test.dart'
     show StopRecoveryTransport, stopDesktop, stopStart, stopPage;
 

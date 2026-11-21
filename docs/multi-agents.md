@@ -6,7 +6,8 @@ You open it from **Multi agents** in the left rail. Design: `docs/superpowers/sp
 ## What a group is
 
 - One group is one ordinary DJL thread whose provider is `group`, inside a project of kind
-  `group`. Group threads never appear in the normal chat list or in the phone app.
+  `group`. Group threads never appear in the normal chat list. The phone app lists them
+  separately, under **Groups** (see "On the phone" below).
 - Members are the native subscription agents: Codex, Claude, Cursor, Gemini, Grok, Kimi, iFlow,
   Qwen, CodeBuddy and Pi. The same agent can join twice with different roles.
 - Each member keeps its own CLI session. When it is woken it receives only the messages it has
@@ -60,6 +61,36 @@ You open it from **Multi agents** in the left rail. Design: `docs/superpowers/sp
   `~/.djl/userdata/groups/<group id>`), with `git init` run in it. The members panel can point the
   group at another folder at any time; the conversation is kept.
 - Deleting a group removes its chat and keeps its folder; DJL shows where the files are.
+
+## On the phone
+
+The Flutter app (`apps/mobile`) shows groups under **Groups** on the paired Mac's home screen. From
+the phone you can read a group, send a message (with `@Name` or `@all`), stop the round or one
+member, continue or end a paused round, and create a group from the agents that are signed in on
+the Mac. Renaming, roles, models, the folder and the hand-off limit stay on the desktop.
+
+- A reply is shown while it is written. Each member's text so far is published on the
+  `groups.event` stream as `reply.draft` events (`restart` means the member began a new message,
+  so the draft is replaced). Drafts are never stored: the transcript still receives only the
+  finished answer. The snapshot carries `live` (busy members and their text so far) so a client
+  that joins or reconnects mid-round is caught up. The desktop group view shows the same live text.
+- The phone bridge (`apps/remote-gateway/src/electron-groups.js`) serves `djl/groups/list`,
+  `agents`, `create`, `send`, `stop`, `stopMember`, `resolvePause` and `setSkipAllWarning`, forwards
+  group events as `djl/groups/event` and drafts as `djl/groups/draft`, and merges a burst of draft
+  deltas into one relay frame. It advertises the `djlGroups` capability; against an older desktop
+  the phone asks the person to update DJL on the Mac.
+- Messages from the phone can carry up to 20 files of up to 50 MB each: photos, PDFs, Word, Excel
+  and PowerPoint (`.docx`, `.xlsx`, `.pptx`), video, and text or code files. The relay caps a
+  message at 1 MiB, so the phone sends each file in 384 KiB pieces with `djl/groups/upload`; the
+  bridge assembles it, posts it to the desktop's `/api/attachments/upload` on the group's thread,
+  and returns the reference that `djl/groups/send` then carries in `attachments`. User messages
+  carry their attachment details (`attachments` beside `content`), and `djl/groups/attachment`
+  pages a stored file back for preview. The bridge advertises this as `djlGroupAttachments`.
+- On the phone, images and text or code files preview in the app; PDFs and Office files open in
+  Quick Look on iOS and in the app that views them on Android.
+- The desktop stores text and source files (`.py`, `.ts`, `.go`, `.sql` and similar) as plain text
+  under their own extension. Archives, macro-enabled Office files, legacy `.doc`/`.ppt`/`.xls`, HEIC
+  and markup a browser would render (`.html`, `.svg`) are refused with a readable error.
 
 ## Code map
 

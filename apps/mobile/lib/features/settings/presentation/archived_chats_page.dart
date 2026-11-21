@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/presentation/djl_glass.dart';
@@ -11,6 +10,12 @@ import 'archived_chat_row.dart';
 import 'archived_remove_confirmation.dart';
 import 'settings_group.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
+
 class SettingsArchivedChatsCard extends StatelessWidget {
   const SettingsArchivedChatsCard({super.key, required this.desktop});
   final DesktopController desktop;
@@ -20,12 +25,14 @@ class SettingsArchivedChatsCard extends StatelessWidget {
     builder: (context, _) {
       final count = desktop.threadList.data.visible(archived: true).length;
       return SettingsGroup(
-        title: 'Archived',
+        title: context.l10n.settingsArchived,
         children: [
           SettingsLinkRow(
-            title: 'Archived Chats',
-            subtitle: count == 0 ? null : '$count saved locally',
-            leading: const Icon(CupertinoIcons.archivebox),
+            title: context.l10n.settingsArchivedChats,
+            subtitle: count == 0
+                ? null
+                : context.l10n.settingsArchivedSaved(count),
+            leading: const Icon(DjlIcons.archive),
             onTap: () => Navigator.push<void>(
               context,
               MaterialPageRoute(
@@ -125,30 +132,22 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
     Offset point,
   ) async {
     if (!_owns(data, mac, id)) return;
-    final overlay =
-        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    final local = overlay.globalToLocal(point), size = overlay.size;
-    final choice = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        local.dx,
-        local.dy,
-        size.width - local.dx,
-        size.height - local.dy,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-      constraints: BoxConstraints(
-        maxWidth: size.width < 282 ? size.width - 32 : 250,
-      ),
-      items: [
+    final choice = await showDjlGlassEntries<String>(
+      context,
+      anchor: Rect.fromLTWH(point.dx, point.dy, 0, 0),
+      label: context.l10n.settingsArchivedActions,
+      entries: [
         PopupMenuItem(
           value: 'unarchive',
           child: Row(
             children: [
-              const Icon(CupertinoIcons.tray_arrow_up, size: 20),
+              const Icon(DjlIcons.upload, size: 20),
               const SizedBox(width: 12),
               Expanded(
-                child: Text('Unarchive', style: settingsTextStyle(context, 17)),
+                child: Text(
+                  context.l10n.settingsUnarchive,
+                  style: settingsTextStyle(context, 17),
+                ),
               ),
             ],
           ),
@@ -157,19 +156,19 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
           value: 'remove',
           child: Row(
             children: [
-              const Icon(
-                CupertinoIcons.trash,
+              Icon(
+                DjlIcons.delete,
                 size: 20,
-                color: CupertinoColors.systemRed,
+                color: DjlColors.of(context).danger,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Remove from Phone',
+                  context.l10n.settingsRemoveFromPhone,
                   style: settingsTextStyle(
                     context,
                     17,
-                    color: CupertinoColors.systemRed,
+                    color: DjlColors.of(context).danger,
                   ),
                 ),
               ),
@@ -236,7 +235,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
                       shape: const CircleBorder(),
                     ),
                     icon: Icon(
-                      CupertinoIcons.chevron_back,
+                      DjlIcons.back,
                       size: 22,
                       color: colors.onSurface,
                     ),
@@ -246,7 +245,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
             ),
           ),
           title: Text(
-            'Archived Chats',
+            context.l10n.settingsArchivedChats,
             style: settingsTextStyle(
               context,
               17,
@@ -287,15 +286,13 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            CupertinoIcons.archivebox,
+                            DjlIcons.archive,
                             size: 36,
-                            color: CupertinoColors.tertiaryLabel.resolveFrom(
-                              context,
-                            ),
+                            color: DjlColors.of(context).inkFaint,
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'No archived chats',
+                            context.l10n.settingsNoArchived,
                             style: settingsTextStyle(
                               context,
                               14,
@@ -435,12 +432,14 @@ String _elapsedFallback(DateTime date, DateTime reference) {
   final seconds = reference.difference(date).inSeconds.abs();
   if (seconds >= 86400) {
     final days = seconds ~/ 86400;
-    return '$days ${days == 1 ? 'day' : 'days'}';
+    return appStrings.settingsElapsedDays(days);
   }
   if (seconds >= 3600) {
     final hours = seconds ~/ 3600;
-    return '$hours ${hours == 1 ? 'hr' : 'hrs'}, ${(seconds % 3600) ~/ 60} mins';
+    return appStrings.settingsElapsedHours(hours, (seconds % 3600) ~/ 60);
   }
-  if (seconds >= 60) return '${seconds ~/ 60} mins, ${seconds % 60} secs';
-  return '$seconds secs';
+  if (seconds >= 60) {
+    return appStrings.settingsElapsedMinutes(seconds ~/ 60, seconds % 60);
+  }
+  return appStrings.settingsElapsedSeconds(seconds);
 }

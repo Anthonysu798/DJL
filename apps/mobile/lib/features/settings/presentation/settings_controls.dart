@@ -4,6 +4,7 @@ import '../../../core/presentation/djl_glass.dart';
 import '../domain/appearance.dart';
 import 'settings_controller.dart';
 import 'settings_group.dart';
+import '../../../l10n/l10n.dart';
 
 class SettingsControls extends StatefulWidget {
   const SettingsControls({
@@ -40,18 +41,11 @@ class _SettingsControlsState extends State<SettingsControls> {
     builder: (context, _) {
       final enabled = controller.ready && !controller.saving;
       final scheme = Theme.of(context).colorScheme;
-      Widget swatch(UserBubbleColor value) => Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(
-          color: value.swatch(scheme),
-          shape: BoxShape.circle,
-        ),
-      );
+      final l10n = context.l10n;
       String themeTitle(ThemeMode value) => switch (value) {
-        ThemeMode.system => 'System',
-        ThemeMode.light => 'Light',
-        ThemeMode.dark => 'Dark',
+        ThemeMode.system => l10n.settingsThemeSystem,
+        ThemeMode.light => l10n.settingsThemeLight,
+        ThemeMode.dark => l10n.settingsThemeDark,
       };
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -59,51 +53,25 @@ class _SettingsControlsState extends State<SettingsControls> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SettingsGroup(
-              title: 'Appearance',
+              title: l10n.settingsAppearance,
               children: [
                 SettingsMenuRow<AppFontStyle>(
                   key: const Key('font-setting'),
-                  label: 'Font',
-                  nativePickerStyle: true,
-                  valueLabel: controller.font.title,
+                  label: l10n.settingsFont,
+                  valueLabel: controller.font.label(l10n),
                   value: controller.font,
                   options: {
-                    for (final value in AppFontStyle.values) value: value.title,
+                    for (final value in AppFontStyle.values)
+                      value: value.label(l10n),
                   },
                   onChanged: enabled ? controller.setFont : null,
-                ),
-                SettingsMenuRow<UserBubbleColor>(
-                  key: const Key('bubble-setting'),
-                  label: 'Message Bubble',
-                  valueLabel: controller.bubble.title,
-                  value: controller.bubble,
-                  valueIcon: swatch(controller.bubble),
-                  options: {
-                    for (final value in UserBubbleColor.values)
-                      value: value.title,
-                  },
-                  optionIcon: (value) => Container(
-                    width: 20,
-                    height: 20,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: value == controller.bubble
-                          ? Border.all(color: scheme.onSurface)
-                          : null,
-                    ),
-                    child: swatch(value),
-                  ),
-                  optionKey: (value) => Key('bubble-${value.storedValue}'),
-                  optionLabel: (value) => '${value.title} bubble color',
-                  onChanged: enabled ? controller.setBubble : null,
                 ),
                 if (_glassSupported)
                   SwitchListTile.adaptive(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    title: const Text(
-                      'Liquid Glass',
-                      style: TextStyle(fontSize: 15),
+                    title: Text(
+                      l10n.settingsLiquidGlass,
+                      style: const TextStyle(fontSize: 15),
                     ),
                     activeTrackColor: scheme.primary,
                     activeThumbColor: scheme.onPrimary,
@@ -112,7 +80,7 @@ class _SettingsControlsState extends State<SettingsControls> {
                   ),
                 SettingsMenuRow<ThemeMode>(
                   key: const Key('theme-setting'),
-                  label: 'Theme',
+                  label: l10n.settingsTheme,
                   valueLabel: themeTitle(controller.theme),
                   value: controller.theme,
                   options: {
@@ -126,14 +94,13 @@ class _SettingsControlsState extends State<SettingsControls> {
             ?widget.taskStatus,
             if (widget.cloudPreferences) ...[
               SettingsGroup(
-                title: 'Notifications',
-                footer:
-                    'Show a banner when another conversation’s task finishes.',
+                title: l10n.settingsNotifications,
+                footer: l10n.settingsInAppAlertsFooter,
                 children: [
                   SwitchListTile.adaptive(
-                    title: const Text(
-                      'In-app alerts',
-                      style: TextStyle(fontSize: 15),
+                    title: Text(
+                      l10n.settingsInAppAlerts,
+                      style: const TextStyle(fontSize: 15),
                     ),
                     activeTrackColor: scheme.primary,
                     activeThumbColor: scheme.onPrimary,
@@ -143,14 +110,13 @@ class _SettingsControlsState extends State<SettingsControls> {
                 ],
               ),
               SettingsGroup(
-                title: 'Voice',
-                footer:
-                    'Review dictation before sending. Replies use your device’s voice.',
+                title: l10n.settingsVoice,
+                footer: l10n.settingsVoiceFooter,
                 children: [
                   SwitchListTile.adaptive(
-                    title: const Text(
-                      'Speak new replies',
-                      style: TextStyle(fontSize: 15),
+                    title: Text(
+                      l10n.settingsSpeakReplies,
+                      style: const TextStyle(fontSize: 15),
                     ),
                     activeTrackColor: scheme.primary,
                     activeThumbColor: scheme.onPrimary,
@@ -177,7 +143,7 @@ class _SettingsControlsState extends State<SettingsControls> {
             if (!controller.ready && controller.error != null)
               TextButton(
                 onPressed: controller.saving ? null : controller.load,
-                child: const Text('Retry reading settings'),
+                child: Text(l10n.settingsRetryReading),
               ),
             if (controller.saving) const LinearProgressIndicator(),
           ],

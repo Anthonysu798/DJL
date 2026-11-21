@@ -27,6 +27,12 @@ void main() {
                       'command': 'echo focused command',
                       'status': 'completed',
                     }
+                  : index == 949
+                  ? {
+                      'id': 'wire-949',
+                      'type': 'agentMessage',
+                      'text': 'Projected raw row 949',
+                    }
                   : {
                       'id': 'wire-$index',
                       'type': 'userMessage',
@@ -40,8 +46,10 @@ void main() {
       };
       await projected.openThread({'id': 'focused'});
       final source = family == 'activity' ? 'wire-command' : 'wire-951',
+          // A command row stays on the desktop; its link lands on the reply
+          // before it.
           label = family == 'activity'
-              ? 'Ran echo focused command'
+              ? 'Projected raw row 949'
               : 'Projected raw row 951';
       expect(projected.timeline[950]['sourceItemId'], 'wire-command');
       expect(projected.timeline[951]['id'], 'wire-951');
@@ -62,6 +70,7 @@ void main() {
         isTrue,
       );
       expect(find.text('Projected raw row 0'), findsNothing);
+      expect(find.textContaining('echo focused command'), findsNothing);
       expect(
         find.text('Linked position is not available in the loaded history.'),
         findsNothing,

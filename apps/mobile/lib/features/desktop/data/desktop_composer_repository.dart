@@ -1,5 +1,6 @@
 import 'remote_transport.dart';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 /// Composer discovery is read-only and bound to the Mac that opened the picker.
 class DesktopComposerRepository {
@@ -10,11 +11,11 @@ class DesktopComposerRepository {
   String? get _cwd => cwd?.trim().isNotEmpty == true ? cwd!.trim() : null;
   Future<RemoteJson> _call(String method, RemoteJson params) async {
     if (transport.macDeviceId != _mac) {
-      throw StateError('Connected desktop changed. Reopen the context picker.');
+      throw StateError(appStrings.desktopContextPickerStale);
     }
     final result = await transport.request(method, params);
     if (transport.macDeviceId != _mac) {
-      throw StateError('Connected desktop changed. Reopen the context picker.');
+      throw StateError(appStrings.desktopContextPickerStale);
     }
     return result;
   }
@@ -22,7 +23,7 @@ class DesktopComposerRepository {
   List<RemoteJson> _skills(RemoteJson value) {
     final data = value['data'], direct = value['skills'];
     if (data is! List && direct is! List) {
-      throw const FormatException('The desktop returned no skill list.');
+      throw FormatException(appStrings.desktopNoSkillList);
     }
     final collected = <RemoteJson>[];
     if (data is List) {
@@ -108,7 +109,7 @@ class DesktopComposerRepository {
       if (forceReload) 'forceReload': true,
     });
     if (result['marketplaces'] is! List) {
-      throw const FormatException('The desktop returned no plugin list.');
+      throw FormatException(appStrings.desktopNoPluginList);
     }
     final byPath = <String, RemoteJson>{};
     for (final market in (result['marketplaces'] as List).whereType<Map>()) {
@@ -158,7 +159,7 @@ class DesktopComposerRepository {
           : null,
     });
     if (result['files'] is! List) {
-      throw const FormatException('The desktop returned no file matches.');
+      throw FormatException(appStrings.desktopNoFileMatches);
     }
     return (result['files'] as List).whereType<Map>().map((item) {
       final directory = (item['root'] as String? ?? root).trim().replaceFirst(

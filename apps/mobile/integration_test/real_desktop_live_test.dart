@@ -7,6 +7,7 @@ import 'package:djl_mobile/core/security/credential_store.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_overview.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 // Retained QA devices: manually install a verified same-signer update, then use
 // flutter drive --use-existing-app=<VM URI> --keep-app-running. Driver cleanup

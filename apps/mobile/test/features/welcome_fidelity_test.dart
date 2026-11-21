@@ -167,7 +167,8 @@ void main() {
             );
             expect(
               Theme.of(context).textTheme.bodyMedium?.fontFamily,
-              mono ? 'GeistMono' : ThemeData().textTheme.bodyMedium?.fontFamily,
+              // System means the bundled Geist on Android, the test platform.
+              mono ? 'GeistMono' : 'Geist',
             );
             expect(
               settings.font,

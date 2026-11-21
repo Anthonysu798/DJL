@@ -1,4 +1,5 @@
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class GitFile {
   const GitFile(this.path, this.status);
@@ -85,14 +86,14 @@ enum GitToolbarAction {
   update;
 
   String get title => switch (this) {
-    initialize => 'Initialize Git',
-    changes => 'Changes',
-    commit => 'Commit',
-    push => 'Push',
-    commitAndPush => 'Commit & Push',
-    commitPushPr => 'Commit, Push & PR',
-    createPr => 'Create PR',
-    update => 'Update',
+    initialize => appStrings.gitActionInitialize,
+    changes => appStrings.gitActionChanges,
+    commit => appStrings.gitActionCommit,
+    push => appStrings.gitPush,
+    commitAndPush => appStrings.gitActionCommitAndPush,
+    commitPushPr => appStrings.gitActionCommitPushPr,
+    createPr => appStrings.gitActionCreatePr,
+    update => appStrings.gitUpdate,
   };
   String? get stackedIdentifier => switch (this) {
     commit => 'commit',
@@ -107,28 +108,34 @@ enum GitToolbarAction {
 typedef GitToolbarSection = ({String title, List<GitToolbarAction> actions});
 
 String gitToolbarStatusLabel(GitStatus? status) => switch (status?.state) {
-  'not_initialized' => 'Git is not initialized',
-  'up_to_date' => 'Repository up to date',
-  'ahead_only' => 'Local branch ahead of remote',
-  'behind_only' => 'Remote branch ahead of local branch',
-  'diverged' => 'Local and remote branches diverged',
-  'dirty' => 'Local repository has uncommitted changes',
-  'dirty_and_behind' => 'Local changes exist and remote branch moved ahead',
-  'no_upstream' => 'Branch not published yet',
-  'detached_head' => 'Current branch unavailable',
-  _ => 'Repository status unavailable',
+  'not_initialized' => appStrings.gitStatusNotInitialized,
+  'up_to_date' => appStrings.gitStatusUpToDate,
+  'ahead_only' => appStrings.gitStatusAheadOnly,
+  'behind_only' => appStrings.gitStatusBehindOnly,
+  'diverged' => appStrings.gitStatusDiverged,
+  'dirty' => appStrings.gitStatusDirty,
+  'dirty_and_behind' => appStrings.gitStatusDirtyAndBehind,
+  'no_upstream' => appStrings.gitStatusNoUpstream,
+  'detached_head' => appStrings.gitStatusDetachedHead,
+  _ => appStrings.gitStatusUnavailable,
 };
 
 List<GitToolbarSection> gitToolbarSections(GitStatus? status) =>
     status?.state == 'not_initialized'
-    ? const [
-        (title: 'Setup', actions: [GitToolbarAction.initialize]),
-      ]
-    : const [
-        (title: 'Changes', actions: [GitToolbarAction.changes]),
+    ? [
         (
-          title: 'Write',
-          actions: [
+          title: appStrings.gitSectionSetup,
+          actions: const [GitToolbarAction.initialize],
+        ),
+      ]
+    : [
+        (
+          title: appStrings.gitActionChanges,
+          actions: const [GitToolbarAction.changes],
+        ),
+        (
+          title: appStrings.gitSectionWrite,
+          actions: const [
             GitToolbarAction.commit,
             GitToolbarAction.push,
             GitToolbarAction.commitAndPush,
@@ -136,7 +143,7 @@ List<GitToolbarSection> gitToolbarSections(GitStatus? status) =>
             GitToolbarAction.createPr,
           ],
         ),
-        (title: 'Update', actions: [GitToolbarAction.update]),
+        (title: appStrings.gitUpdate, actions: const [GitToolbarAction.update]),
       ];
 
 bool gitToolbarActionEnabled(

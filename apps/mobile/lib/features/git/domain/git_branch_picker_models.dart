@@ -1,5 +1,6 @@
 import '../../pairing/data/pairing_repository.dart';
 import 'git_creation_review.dart';
+import '../../../l10n/l10n.dart';
 
 typedef GitBranchChoice = ({String branch, bool create});
 
@@ -60,8 +61,8 @@ class GitBranchSnapshot {
   String? badge(String branch) => !elsewhere.contains(branch)
       ? null
       : worktreePaths.containsKey(branch)
-      ? 'Open worktree'
-      : 'Open elsewhere';
+      ? appStrings.gitBadgeOpenWorktree
+      : appStrings.gitBadgeOpenElsewhere;
 }
 
 String? _text(Object? value) =>

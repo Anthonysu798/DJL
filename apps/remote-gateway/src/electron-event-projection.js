@@ -1,7 +1,7 @@
 // FILE: electron-event-projection.js
 // Purpose: Projects DJL Electron orchestration thread/shell events into phone app-server notifications.
 // Layer: CLI helper
-// Exports: createThreadEventProjection
+// Exports: createThreadEventProjection plus item helpers, including userMessageAttachments
 // Depends on: crypto
 
 const { createHash } = require("crypto");
@@ -135,12 +135,14 @@ function projectMessageSent(threadId, state, event) {
       turnId,
       createdAt: stringValue(payload.createdAt),
     });
+    const attachments = userMessageAttachments(payload.attachments);
     return [
       notification("codex/event/user_message", {
         threadId,
         turnId,
         itemId: messageId,
         message: payload.text || "",
+        ...(attachments ? { attachments } : {}),
       }),
     ];
   }
@@ -410,6 +412,16 @@ function projectMeta(threadId, state, event) {
   ];
 }
 
+// The image and file attachments of a user message, as the phone previews
+// them; null when there are none.
+function userMessageAttachments(attachments) {
+  if (!Array.isArray(attachments)) return null;
+  const files = attachments
+    .filter((entry) => entry && (entry.type === "image" || entry.type === "file"))
+    .map(({ type, id, name, mimeType, sizeBytes }) => ({ type, id, name, mimeType, sizeBytes }));
+  return files.length > 0 ? files : null;
+}
+
 function notification(method, params) {
   return { kind: "notification", method, params };
 }
@@ -445,4 +457,5 @@ module.exports = {
   toolItemFromActivity,
   createThreadEventProjection,
   desktopGitProgressNotification,
+  userMessageAttachments,
 };

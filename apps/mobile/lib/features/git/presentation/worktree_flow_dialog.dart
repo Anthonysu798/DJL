@@ -1,9 +1,11 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../desktop/presentation/worktree_flow_controller.dart';
 import '../domain/git_creation_review.dart';
+import '../../../l10n/l10n.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 Future<bool?> showWorktreeFlowDialog({
   required BuildContext context,
@@ -12,7 +14,7 @@ Future<bool?> showWorktreeFlowDialog({
   context: context,
   useRootNavigator: false,
   barrierDismissible: true,
-  barrierLabel: 'Close worktree review',
+  barrierLabel: context.l10n.gitCloseWorktreeReview,
   barrierColor: Colors.black.withValues(alpha: .45),
   transitionDuration: const Duration(milliseconds: 180),
   transitionBuilder: (_, animation, _, child) =>
@@ -61,13 +63,14 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
   WorktreeFlowController get _flow => widget.controller;
   bool get _top => mounted && ModalRoute.of(context)?.isCurrent == true;
   String get _title => _flow.mode == WorktreeFlowMode.handoff
-      ? 'Hand off thread to worktree'
-      : 'Fork thread into new worktree';
-  String get _submitLabel =>
-      _flow.mode == WorktreeFlowMode.handoff ? 'Hand off' : 'Fork';
+      ? context.l10n.gitHandoffTitle
+      : context.l10n.gitForkTitle;
+  String get _submitLabel => _flow.mode == WorktreeFlowMode.handoff
+      ? context.l10n.gitHandoff
+      : context.l10n.gitFork;
   String get _message => _flow.mode == WorktreeFlowMode.handoff
-      ? 'Create and check out a branch in a new worktree to continue in parallel. The branch is normalized with the djl/ prefix.'
-      : 'Create and check out a branch in a new worktree, then fork this conversation into that checkout as a new chat.';
+      ? context.l10n.gitHandoffMessage
+      : context.l10n.gitForkMessage;
 
   @override
   void initState() {
@@ -124,7 +127,11 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                     Navigator.pop(dialog, false);
                   }
                 },
-                child: Text(review.acceptLabel == null ? 'OK' : 'Cancel'),
+                child: Text(
+                  review.acceptLabel == null
+                      ? context.l10n.gitOk
+                      : context.l10n.commonCancel,
+                ),
               ),
               if (review.acceptLabel != null)
                 TextButton(
@@ -167,7 +174,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                   Navigator.pop(dialog);
                 }
               },
-              child: const Text('OK'),
+              child: Text(context.l10n.gitOk),
             ),
           ],
         ),
@@ -234,7 +241,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
   Widget build(BuildContext context) {
     _dismissInvalid();
     final primary = Theme.of(context).colorScheme.onSurface;
-    final secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final secondary = DjlColors.of(context).inkMuted;
     final normalized = normalizedGitCreatedBranchName(_branch.text);
     final enabled =
         _flow.isCurrent &&
@@ -253,9 +260,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: CupertinoColors.secondarySystemBackground.resolveFrom(
-              context,
-            ),
+            color: DjlColors.of(context).surfaceRaised,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
@@ -296,7 +301,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                       ),
                       const Spacer(),
                       IconButton(
-                        tooltip: 'Close worktree review',
+                        tooltip: context.l10n.gitCloseWorktreeReview,
                         onPressed: () => _close(),
                         constraints: const BoxConstraints.tightFor(
                           width: 28,
@@ -333,7 +338,7 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                   ),
                   const SizedBox(height: 14),
                   _input(
-                    label: 'Branch name',
+                    label: context.l10n.gitBranchName,
                     hint: 'feature-name',
                     controller: _branch,
                     fieldKey: const Key('worktree.branch'),
@@ -353,21 +358,21 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                     ),
                   const SizedBox(height: 14),
                   _input(
-                    label: 'Base branch',
+                    label: context.l10n.gitBaseBranch,
                     hint: 'main',
                     controller: _base,
                     fieldKey: const Key('worktree.base'),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Starts from this base branch.',
+                    context.l10n.gitStartsFromBase,
                     style: TextStyle(fontSize: 12, color: secondary),
                   ),
                   if (_flow.loading)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
                       child: LinearProgressIndicator(
-                        semanticsLabel: 'Loading worktree branches',
+                        semanticsLabel: context.l10n.gitLoadingWorktreeBranches,
                       ),
                     ),
                   if (_flow.error != null && !_flow.submitting)
@@ -389,25 +394,26 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                       style: FilledButton.styleFrom(
                         minimumSize: Size.zero,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        disabledBackgroundColor: Colors.white.withValues(
-                          alpha: .6,
-                        ),
-                        disabledForegroundColor: Colors.black.withValues(
-                          alpha: .6,
-                        ),
+                        backgroundColor: DjlColors.of(context).ink,
+                        foregroundColor: DjlColors.of(context).onInk,
+                        disabledBackgroundColor: DjlColors.of(
+                          context,
+                        ).ink.withValues(alpha: .6),
+                        disabledForegroundColor: DjlColors.of(
+                          context,
+                        ).onInk.withValues(alpha: .6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       child: _flow.submitting
-                          ? const SizedBox.square(
+                          ? SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(
-                                color: Colors.black,
+                                color: DjlColors.of(context).onInk,
                                 strokeWidth: 2,
-                                semanticsLabel: 'Preparing worktree',
+                                semanticsLabel:
+                                    context.l10n.gitPreparingWorktree,
                               ),
                             )
                           : Text(

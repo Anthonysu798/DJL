@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
 import '../domain/appearance.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 TextStyle settingsTextStyle(
   BuildContext context,
@@ -16,7 +21,8 @@ TextStyle settingsTextStyle(
   return TextStyle(
     fontFamily: iosSystem
         ? (size >= 20 ? 'CupertinoSystemDisplay' : 'CupertinoSystemText')
-        : font.family,
+        // Cupertino buttons default to Roboto off iOS; name the app's face.
+        : font.family ?? Theme.of(context).textTheme.bodyMedium?.fontFamily,
     fontVariations: iosSystem
         ? [FontVariation.opticalSize(scaled < 17 ? 17 : scaled)]
         : null,
@@ -92,9 +98,9 @@ class SettingsLinkRow extends StatelessWidget {
           // The source spacer includes its minimum eight points and two HStack gaps.
           const SizedBox(width: 32),
           Icon(
-            CupertinoIcons.chevron_right,
+            DjlIcons.chevronRight,
             size: 11,
-            color: CupertinoColors.tertiaryLabel.resolveFrom(context),
+            color: DjlColors.of(context).inkFaint,
           ),
         ],
       ),
@@ -213,9 +219,6 @@ class SettingsMenuRow<T> extends StatefulWidget {
     required this.value,
     required this.options,
     required this.onChanged,
-    this.optionIcon,
-    this.optionKey,
-    this.optionLabel,
     this.valueIcon,
     this.nativePickerStyle = false,
   });
@@ -223,9 +226,6 @@ class SettingsMenuRow<T> extends StatefulWidget {
   final T? value;
   final Map<T, String> options;
   final ValueChanged<T>? onChanged;
-  final Widget Function(T)? optionIcon;
-  final Key Function(T)? optionKey;
-  final String Function(T)? optionLabel;
   final Widget? valueIcon;
   final bool nativePickerStyle;
 
@@ -235,68 +235,22 @@ class SettingsMenuRow<T> extends StatefulWidget {
 
 class _SettingsMenuRowState<T> extends State<SettingsMenuRow<T>> {
   Future<void> _open() async {
-    final overlay =
-        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    final box = context.findRenderObject() as RenderBox;
-    final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
-    final width = overlay.size.width < 282 ? overlay.size.width - 32 : 250.0;
-    final selected = await showMenu<T>(
-      context: context,
-      requestFocus: true,
-      initialValue: widget.value,
-      semanticLabel: widget.label,
-      position: RelativeRect.fromLTRB(
-        origin.dx + box.size.width - width - 16,
-        origin.dy + 8,
-        overlay.size.width - origin.dx - box.size.width + 16,
-        0,
-      ),
-      constraints: BoxConstraints(minWidth: width, maxWidth: width),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surfaceContainerHigh
-          : Theme.of(context).colorScheme.surfaceContainerLowest,
-      surfaceTintColor: Colors.transparent,
-      popUpAnimationStyle: MediaQuery.disableAnimationsOf(context)
-          ? AnimationStyle.noAnimation
-          : null,
-      items: [
-        for (final option in widget.options.entries)
-          PopupMenuItem<T>(
-            value: option.key,
-            height: 42,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Semantics(
-              container: true,
-              key: widget.optionKey?.call(option.key),
-              label: widget.optionLabel?.call(option.key) ?? option.value,
+    final box = context.findRenderObject()! as RenderBox;
+    final row = box.localToGlobal(Offset.zero) & box.size;
+    final selected = await showDjlGlassMenu<T>(
+      context,
+      anchor: row.deflate(8),
+      label: widget.label,
+      sections: [
+        [
+          for (final option in widget.options.entries)
+            DjlMenuItem(
+              option.key,
+              option.value,
+              null,
               selected: option.key == widget.value,
-              enabled: true,
-              button: true,
-              excludeSemantics: true,
-              onTap: () => Navigator.pop(context, option.key),
-              child: Row(
-                children: [
-                  if (widget.optionIcon != null)
-                    widget.optionIcon!(option.key)
-                  else
-                    SizedBox(
-                      width: 20,
-                      child: option.key == widget.value
-                          ? const Icon(Icons.check, size: 20)
-                          : null,
-                    ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      option.value,
-                      style: const TextStyle(fontSize: 17),
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ),
+        ],
       ],
     );
     if (mounted && selected != null) widget.onChanged?.call(selected);
@@ -386,7 +340,7 @@ class _SettingsMenuRowState<T> extends State<SettingsMenuRow<T>> {
                 if (widget.valueIcon == null) ...[
                   const SizedBox(width: 4),
                   Icon(
-                    CupertinoIcons.chevron_up_chevron_down,
+                    DjlIcons.expandVertical,
                     size: widget.nativePickerStyle ? 14 : 10,
                     color: widget.nativePickerStyle
                         ? scheme.onSurface

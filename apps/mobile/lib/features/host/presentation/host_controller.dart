@@ -4,6 +4,7 @@ import '../../desktop/data/remote_transport.dart';
 import '../../pairing/data/pairing_repository.dart';
 import '../../settings/data/settings_store.dart';
 import '../domain/host_snapshot.dart';
+import '../../../l10n/l10n.dart';
 
 enum HostErrorKind { unsupported, disconnected, refused, uncertain }
 
@@ -33,15 +34,15 @@ class HostActionError {
       return HostActionError(
         unsupported ? HostErrorKind.unsupported : HostErrorKind.refused,
         unsupported
-            ? 'This bridge does not support this action.'
-            : 'The paired host refused this action. Check the host and try again.',
+            ? appStrings.hostErrorUnsupported
+            : appStrings.hostErrorRefused,
         rpcCode: error.code,
         errorCode: code,
       );
     }
-    return const HostActionError(
+    return HostActionError(
       HostErrorKind.uncertain,
-      'The result is unknown. Check your host before trying this action again.',
+      appStrings.hostErrorUncertain,
     );
   }
 }
@@ -222,7 +223,7 @@ class HostController extends ChangeNotifier {
       } catch (_) {
         if (_current(epoch)) {
           stale = snapshot != null;
-          statusError = 'Could not refresh paired host status. Try again.';
+          statusError = appStrings.hostCheckFailed;
         }
       } finally {
         if (_current(epoch)) {
@@ -260,10 +261,10 @@ class HostController extends ChangeNotifier {
       actionError = HostActionError(
         !live ? HostErrorKind.disconnected : HostErrorKind.unsupported,
         live && !fresh
-            ? 'Refresh host status before this action.'
+            ? appStrings.hostCheckingFirst
             : !live
-            ? 'Connect to your paired host first.'
-            : 'This bridge does not support this action.',
+            ? appStrings.hostConnectFirst
+            : appStrings.hostErrorUnsupported,
       );
       _notify();
       return false;
@@ -281,7 +282,7 @@ class HostController extends ChangeNotifier {
           result['success'] == false
               ? HostErrorKind.refused
               : HostErrorKind.uncertain,
-          'The host did not confirm this action. Check the host before retrying.',
+          appStrings.hostNotConfirmed,
         );
         return false;
       }
@@ -304,7 +305,7 @@ class HostController extends ChangeNotifier {
       'desktop/continueOnDesktop',
       {'threadId': threadId.trim()},
       supported: capabilities.desktopHandoff,
-      message: 'The host confirmed opening this chat on desktop.',
+      message: appStrings.hostOpenedOnMac,
     );
   }
 
@@ -315,9 +316,9 @@ class HostController extends ChangeNotifier {
           !capabilities.displayWake ||
           connectSaved == null ||
           device == null) {
-        actionError = const HostActionError(
+        actionError = HostActionError(
           HostErrorKind.disconnected,
-          'Reconnect to your saved, verified host first.',
+          appStrings.hostReconnectFirst,
         );
         _notify();
         return false;
@@ -331,9 +332,9 @@ class HostController extends ChangeNotifier {
           return false;
         }
         if (!live || !trusted) {
-          actionError = const HostActionError(
+          actionError = HostActionError(
             HostErrorKind.disconnected,
-            'Could not reach the saved host bridge. Reconnect and try again.',
+            appStrings.hostReachFailed,
           );
           return false;
         }
@@ -360,7 +361,7 @@ class HostController extends ChangeNotifier {
       'desktop/wakeDisplay',
       {},
       supported: capabilities.displayWake,
-      message: 'The bridge confirmed the display wake request.',
+      message: appStrings.hostWaking,
     );
   }
 
@@ -402,7 +403,7 @@ class HostController extends ChangeNotifier {
       preferenceError = null;
     } catch (_) {
       if (!_disposed) {
-        preferenceError = 'Could not read the saved preference. Retry.';
+        preferenceError = appStrings.hostPrefReadFailed;
       }
     }
     _notify();
@@ -445,8 +446,7 @@ class HostController extends ChangeNotifier {
         if (!_disposed && revision == _preferenceRevision) {
           keepAwake = _persistedChoice;
           _preferenceRetry = value;
-          preferenceError =
-              'Could not save this preference. Your previous choice is unchanged. Try again.';
+          preferenceError = appStrings.hostPrefSaveFailed;
           preferenceSaving = false;
         }
         result.complete(false);
@@ -490,8 +490,7 @@ class HostController extends ChangeNotifier {
         }
       } catch (_) {
         if (_current(epoch)) {
-          preferenceError =
-              'Saved on this phone; the host has not confirmed it. Retry sync.';
+          preferenceError = appStrings.hostPrefUnconfirmed;
         }
       } finally {
         if (_current(epoch)) {

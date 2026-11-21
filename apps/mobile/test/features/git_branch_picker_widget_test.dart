@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:ui' show SemanticsAction;
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/git/data/git_repository.dart';
 import 'package:djl_mobile/features/git/domain/git_branch_picker_models.dart';
@@ -11,6 +11,7 @@ import 'package:djl_mobile/features/git/presentation/git_controller.dart';
 import 'package:djl_mobile/features/git/presentation/git_page.dart';
 import 'package:djl_mobile/features/git/presentation/git_new_branch_dialog.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_requests_test.dart' show TestTransport;
 
@@ -146,7 +147,7 @@ Future<void> exposePicker(
 void main() {
   for (final brightness in Brightness.values) {
     testWidgets(
-      'source branch badges retain visible system fill in $brightness',
+      'source branch badges retain visible raised fill in $brightness',
       (tester) async {
         final remote = PickerTransport(PairingRepository(TestCredentials()));
         final current = ValueNotifier(true), results = <GitBranchChoice?>[];
@@ -165,7 +166,7 @@ void main() {
           final decoration =
               tester.widget<DecoratedBox>(capsule).decoration as BoxDecoration;
           final context = tester.element(text);
-          final fill = CupertinoColors.secondarySystemFill.resolveFrom(context);
+          final fill = DjlColors.of(context).surfaceRaised;
           expect(decoration.color, fill);
           final row = Theme.of(context).colorScheme.surface;
           expect(Color.alphaBlend(decoration.color!, row), isNot(row));
@@ -326,7 +327,7 @@ void main() {
         tester.getTopLeft(find.text('feature')).dy,
         lessThan(tester.getTopLeft(find.text('other')).dy),
       );
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      expect(find.byIcon(DjlIcons.check), findsOneWidget);
       await exposePicker(tester, find.text('New branch...'));
       expect(find.text('New branch...'), findsOneWidget);
       expect(find.text('Reload branch list'), findsOneWidget);

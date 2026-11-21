@@ -9,6 +9,7 @@ import 'desktop_queued_delivery_test.dart'
         finishQueueRun,
         queueMutations;
 import 'desktop_reasoning_controller_test.dart' show reasoningEvent;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 class CheckpointQueueTransport extends QueueDeliveryTransport {
   final captureStarted = Completer<void>();

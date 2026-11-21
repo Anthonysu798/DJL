@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../data/status_surface.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_frosted.dart';
+import '../../../l10n/l10n.dart';
+
 /// Permission reads never prompt. Only these explicit actions can request access
 /// or retry the local surface; they have no chat/controller mutation dependency.
 class StatusPermissionControls extends StatefulWidget {
@@ -107,39 +111,38 @@ class _StatusPermissionControlsState extends State<StatusPermissionControls>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
-          leading: const Icon(Icons.timelapse_outlined),
-          title: const Text('Task status'),
+          leading: const Icon(DjlIcons.timer),
+          title: Text(context.l10n.statusTaskStatus),
           subtitle: Text(switch (permission?.state) {
-            StatusPermissionState.allowed =>
-              'Task status is allowed on this device.',
-            StatusPermissionState.denied =>
-              'Allow local task status in your device settings. Chat works without it.',
-            StatusPermissionState.unsupported =>
-              'Task status is unavailable on this device.',
-            null => 'Checking device permission…',
+            StatusPermissionState.allowed => context.l10n.statusAllowed,
+            StatusPermissionState.denied => context.l10n.statusDenied,
+            StatusPermissionState.unsupported => context.l10n.statusUnsupported,
+            null => context.l10n.statusChecking,
           }),
         ),
         if (permission != null &&
             permission.state != StatusPermissionState.unsupported)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
             child: Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 if (permission.canRequest)
-                  TextButton(
+                  DjlGlassPillButton(
+                    label: context.l10n.statusEnable,
+                    prominent: true,
                     onPressed: _busy ? null : _enable,
-                    child: const Text('Enable task status'),
                   ),
                 if (permission.state == StatusPermissionState.allowed)
-                  TextButton(
+                  DjlGlassPillButton(
+                    label: context.l10n.statusRefresh,
                     onPressed: _busy ? null : () => _read(retry: true),
-                    child: const Text('Refresh task status'),
                   ),
                 if (permission.canOpenSettings)
-                  TextButton(
+                  DjlGlassPillButton(
+                    label: context.l10n.statusSystemSettings,
                     onPressed: _busy ? null : _settings,
-                    child: const Text('System settings'),
                   ),
               ],
             ),

@@ -1,8 +1,10 @@
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
 import 'settings_group.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 Future<bool> showArchivedRemoveConfirmation(
   BuildContext context, {
@@ -27,9 +29,7 @@ Future<bool> showArchivedRemoveConfirmation(
     pageBuilder: (context, _, _) => Builder(
       builder: (context) {
         final colors = Theme.of(context).colorScheme;
-        final fill = colors.brightness == Brightness.dark
-            ? const Color(0xff161618)
-            : Colors.white.withValues(alpha: .97);
+        final fill = colors.surfaceContainerLow;
         final outline = colors.onSurface.withValues(alpha: .14);
         final layout = _RemovalLayout(point, MediaQuery.paddingOf(context));
         return CustomSingleChildLayout(
@@ -65,7 +65,7 @@ Future<bool> showArchivedRemoveConfirmation(
                                   namesRoute: true,
                                   header: true,
                                   child: Text(
-                                    'Remove "$title" from this phone?',
+                                    context.l10n.settingsRemoveTitle(title),
                                     style: settingsTextStyle(
                                       context,
                                       17,
@@ -76,7 +76,7 @@ Future<bool> showArchivedRemoveConfirmation(
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'This only removes the chat from DJL on this phone. Nothing is removed from your paired desktop.',
+                                  context.l10n.settingsRemoveBody,
                                   style: settingsTextStyle(
                                     context,
                                     15,
@@ -101,15 +101,13 @@ Future<bool> showArchivedRemoveConfirmation(
                             ),
                           ),
                           child: Text(
-                            'Remove from Phone',
+                            context.l10n.settingsRemoveFromPhone,
                             textAlign: TextAlign.center,
                             style: settingsTextStyle(
                               context,
                               17,
                               weight: FontWeight.w600,
-                              color: CupertinoColors.systemRed.resolveFrom(
-                                context,
-                              ),
+                              color: DjlColors.of(context).danger,
                             ),
                           ),
                         ),

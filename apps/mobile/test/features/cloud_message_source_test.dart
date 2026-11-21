@@ -7,7 +7,8 @@ import 'package:djl_mobile/features/chat/domain/cloud_models.dart';
 import 'package:djl_mobile/features/chat/presentation/message_view.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_controller.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_page.dart';
-import 'package:djl_mobile/features/settings/domain/appearance.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'cloud_composer_draft_page_test.dart' show DraftPageFixture;
 import 'cloud_composer_draft_store_test.dart' show DraftCredentials;
 import 'voice_controller_test.dart' show TestVoice;
@@ -33,16 +34,13 @@ ChatMessage message(
 void main() {
   for (final dark in [false, true]) {
     testWidgets(
-      'Cloud user text is literal, compact and uses source system bubble dark=$dark',
+      'Cloud user text is literal, compact and uses the ink bubble dark=$dark',
       (tester) async {
         final f = DraftPageFixture(DraftCredentials());
         try {
           await tester.pumpWidget(
             MaterialApp(
-              theme: djlTheme(
-                dark ? Brightness.dark : Brightness.light,
-                bubble: UserBubbleColor.blue,
-              ),
+              theme: djlTheme(dark ? Brightness.dark : Brightness.light),
               home: Scaffold(
                 body: SizedBox(
                   width: 320,
@@ -71,7 +69,7 @@ void main() {
                 w is Container &&
                 w.decoration is BoxDecoration &&
                 (w.decoration as BoxDecoration).borderRadius ==
-                    BorderRadius.circular(20),
+                    BorderRadius.circular(DjlRadius.lg),
           );
           expect(bubble, findsOneWidget);
           expect(tester.getSize(bubble).height, closeTo(38, 1));
@@ -79,7 +77,7 @@ void main() {
           expect(
             (tester.widget<Container>(bubble).decoration as BoxDecoration)
                 .color,
-            dark ? const Color(0xff1c1c1e) : const Color(0xfff2f2f7),
+            (dark ? DjlColors.dark : DjlColors.light).ink,
           );
           expect(tester.getRect(bubble).left, greaterThanOrEqualTo(48));
           expect(f.posts, 0);
@@ -220,7 +218,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('1 / 2'), findsOneWidget);
         final previous = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.chevron_left),
+          find.widgetWithIcon(IconButton, DjlIcons.chevronLeft),
         );
         expect(previous.onPressed, isNull);
         await tester.tap(find.byTooltip('Next branch'));
@@ -242,7 +240,7 @@ void main() {
         expect(
           tester
               .widget<IconButton>(
-                find.widgetWithIcon(IconButton, Icons.chevron_right),
+                find.widgetWithIcon(IconButton, DjlIcons.chevronRight),
               )
               .onPressed,
           isNull,

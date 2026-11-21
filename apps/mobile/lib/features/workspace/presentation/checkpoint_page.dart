@@ -4,6 +4,9 @@ import '../../desktop/presentation/desktop_controller.dart';
 import '../data/workspace_repository.dart';
 import 'checkpoint_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class CheckpointPage extends StatefulWidget {
   const CheckpointPage({
     super.key,
@@ -54,7 +57,7 @@ class _CheckpointPageState extends State<CheckpointPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore workspace before this turn?'),
+        title: Text(context.l10n.workspaceRestoreTitle),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
@@ -62,12 +65,10 @@ class _CheckpointPageState extends State<CheckpointPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'This replaces current workspace files and removes untracked files. Review the affected files before restoring. The Mac saves a backup checkpoint first.',
-                ),
+                Text(context.l10n.workspaceRestoreBody),
                 const SizedBox(height: 16),
                 if (preview.affectedFiles.isEmpty)
-                  const Text('No affected files reported.'),
+                  Text(context.l10n.workspaceNoAffectedFiles),
                 for (final path in preview.affectedFiles)
                   Text(
                     path,
@@ -78,12 +79,12 @@ class _CheckpointPageState extends State<CheckpointPage> {
                   ),
                 if (preview.stagedFiles.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Text('Staged files'),
+                  Text(context.l10n.workspaceStagedFiles),
                   for (final path in preview.stagedFiles) Text(path),
                 ],
                 if (preview.untrackedFiles.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Text('Untracked files'),
+                  Text(context.l10n.workspaceUntrackedFiles),
                   for (final path in preview.untrackedFiles) Text(path),
                 ],
               ],
@@ -93,13 +94,13 @@ class _CheckpointPageState extends State<CheckpointPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: preview.canRestore
                 ? () => Navigator.pop(context, true)
                 : null,
-            child: const Text('Restore files'),
+            child: Text(context.l10n.workspaceRestoreFiles),
           ),
         ],
       ),
@@ -120,14 +121,14 @@ class _CheckpointPageState extends State<CheckpointPage> {
       final c = _controller;
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Turn changes'),
+          title: Text(context.l10n.workspaceTurnChanges),
           actions: [
             IconButton(
-              tooltip: 'Reload turn changes',
+              tooltip: context.l10n.workspaceReloadTurnChanges,
               onPressed: _turn == null || c.loading
                   ? null
                   : () => _loadDiff(_turn!),
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(DjlIcons.refresh),
             ),
           ],
         ),
@@ -139,14 +140,14 @@ class _CheckpointPageState extends State<CheckpointPage> {
                 padding: const EdgeInsets.all(16),
                 child: DropdownButtonFormField<String>(
                   initialValue: _turn,
-                  decoration: const InputDecoration(
-                    labelText: 'Conversation turn',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.workspaceConversationTurn,
                   ),
                   items: [
                     for (var i = 0; i < widget.turns.length; i++)
                       DropdownMenuItem(
                         value: widget.turns[i],
-                        child: Text('Turn ${i + 1}'),
+                        child: Text(context.l10n.workspaceTurnNumber(i + 1)),
                       ),
                   ],
                   onChanged: c.loading
@@ -180,11 +181,11 @@ class _CheckpointPageState extends State<CheckpointPage> {
                   padding: const EdgeInsets.all(16),
                   child: SelectableText(
                     (c.diff?.trim().isEmpty == true
-                            ? 'No saved changes for this turn.'
+                            ? context.l10n.workspaceNoSavedChanges
                             : c.diff) ??
                         (widget.turns.isEmpty
-                            ? 'No completed turns yet.'
-                            : 'Choose a turn to view its saved workspace changes.'),
+                            ? context.l10n.workspaceNoCompletedTurns
+                            : context.l10n.workspaceChooseTurn),
                     style: const TextStyle(
                       fontFamily: 'GeistMono',
                       fontSize: 12,
@@ -193,9 +194,9 @@ class _CheckpointPageState extends State<CheckpointPage> {
                 ),
               ),
               if (widget.desktop.turnId != null)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Stop the running turn before restoring files.'),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(context.l10n.workspaceStopBeforeRestore),
                 ),
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -207,8 +208,8 @@ class _CheckpointPageState extends State<CheckpointPage> {
                           widget.desktop.turnId != null
                       ? null
                       : _restore,
-                  icon: const Icon(Icons.restore),
-                  label: const Text('Preview restore before this turn'),
+                  icon: const Icon(DjlIcons.restore),
+                  label: Text(context.l10n.workspacePreviewRestore),
                 ),
               ),
             ],

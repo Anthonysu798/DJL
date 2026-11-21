@@ -18,12 +18,14 @@ import {
   type LoginClient,
 } from "./AdminAuth.ts";
 import type { AdminService } from "./AdminService.ts";
+import type { ContentReportService } from "../reports/ContentReportService.ts";
 import type { UsageAdminService } from "../usage/UsageAdminService.ts";
 
 export interface AdminRouteDeps {
   readonly adminAuth: AdminAuth;
   readonly admin: AdminService;
   readonly usageAdmin: UsageAdminService;
+  readonly contentReports: ContentReportService;
   readonly secureCookies: boolean;
   readonly gatewayStatus: () => {
     readonly inFlight: number;
@@ -525,6 +527,22 @@ export function makeAdminRoutes(deps: AdminRouteDeps) {
       "POST",
       "/admin/v1/trials/:id/approve",
       opWithParam("id", (p, id) => deps.admin.approveTrial(p, id), false),
+    ),
+    HttpRouter.add(
+      "GET",
+      "/admin/v1/content-reports",
+      opWithQuery((p, q) =>
+        deps.contentReports.list(p, {
+          ...(q.get("status") ? { status: q.get("status")! } : {}),
+          ...(q.get("limit") ? { limit: Number(q.get("limit")) } : {}),
+          ...(q.get("cursor") ? { cursor: q.get("cursor")! } : {}),
+        }),
+      ),
+    ),
+    HttpRouter.add(
+      "POST",
+      "/admin/v1/content-reports/:id/resolve",
+      opWithParam("id", (p, id, b) => deps.contentReports.resolve(p, id, str(b.reason))),
     ),
     HttpRouter.add(
       "GET",

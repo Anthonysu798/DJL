@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import '../../images/data/native_image_actions.dart';
 import '../../workspace/domain/workspace_models.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopMarkdownImage extends StatefulWidget {
   const DesktopMarkdownImage({
@@ -127,13 +129,15 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       } else {
         await actions.save(image.bytes, image.name);
       }
-      if (current() && !share) setState(() => _notice = 'Saved to Photos.');
+      if (current() && !share) {
+        setState(() => _notice = context.l10n.chatUiSavedToPhotos);
+      }
     } catch (_) {
       if (current()) {
         setState(
           () => _notice = share
-              ? 'Could not share this image. Please try again.'
-              : 'Could not save this image. Please try again.',
+              ? context.l10n.chatUiShareImageFailed
+              : context.l10n.chatUiSaveImageFailed,
         );
       }
     } finally {
@@ -221,8 +225,8 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
                                 if (_ready && !_loading)
                                   Semantics(
                                     liveRegion: true,
-                                    child: const Text(
-                                      'Could not load this image.',
+                                    child: Text(
+                                      context.l10n.chatUiLoadImageFailed,
                                     ),
                                   ),
                                 if (_ready)
@@ -233,13 +237,15 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
                                             setState(() => _notice = null);
                                             unawaited(_load());
                                           },
-                                    child: const Text('Retry'),
+                                    child: Text(context.l10n.chatUiRetry),
                                   )
                                 else
                                   Text(
                                     widget.isCurrent()
-                                        ? 'Reconnect or reopen this image from its workspace.'
-                                        : 'Reopen this image from its paired chat.',
+                                        ? context
+                                              .l10n
+                                              .chatUiImageReopenWorkspace
+                                        : context.l10n.chatUiImageReopenChat,
                                   ),
                               ],
                             )
@@ -273,8 +279,9 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       button: true,
       enabled: widget.isCurrent(),
       onTap: widget.isCurrent() ? _open : null,
-      label:
-          'Open image ${widget.alt.isEmpty ? widget.path.split('/').last : widget.alt}',
+      label: context.l10n.chatUiOpenImage(
+        widget.alt.isEmpty ? widget.path.split('/').last : widget.alt,
+      ),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -287,8 +294,8 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
   Widget _previewControls(ThemeData theme, bool available) => Row(
     children: [
       _previewButton(
-        label: 'Close',
-        icon: CupertinoIcons.xmark,
+        label: context.l10n.chatUiClose,
+        icon: DjlIcons.close,
         onPressed: () => Navigator.pop(context),
       ),
       const SizedBox(width: 8),
@@ -319,8 +326,8 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       ),
       Builder(
         builder: (buttonContext) => _previewButton(
-          label: 'Share',
-          icon: CupertinoIcons.share,
+          label: context.l10n.chatUiShare,
+          icon: DjlIcons.share,
           onPressed: available
               ? () {
                   final box = buttonContext.findRenderObject()! as RenderBox;
@@ -336,8 +343,8 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       ),
       const SizedBox(width: 4),
       _previewButton(
-        label: 'Save to Photos',
-        icon: CupertinoIcons.square_arrow_down,
+        label: context.l10n.chatUiSaveToPhotos,
+        icon: DjlIcons.download,
         onPressed: available ? () => unawaited(_export()) : null,
       ),
     ],
@@ -393,10 +400,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
     ),
     child: Row(
       children: [
-        Icon(
-          _loading ? Icons.downloading_outlined : Icons.photo_outlined,
-          size: 32,
-        ),
+        Icon(_loading ? DjlIcons.download : DjlIcons.image, size: 32),
         const SizedBox(width: 12),
         Expanded(
           child: Column(

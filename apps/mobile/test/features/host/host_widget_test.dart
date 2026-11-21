@@ -8,7 +8,7 @@ import 'host_controller_test.dart' show HostStore, HostTransport;
 
 void main() {
   testWidgets(
-    'status, explicit confirmation and reconnect expectation are visible at large text',
+    'status, explicit update confirmation and reconnect expectation are visible at large text',
     (tester) async {
       final transport = HostTransport(), store = HostStore();
       final host = HostController(transport, store: store);
@@ -29,26 +29,22 @@ void main() {
           home: HostPage(controller: host),
         ),
       );
-      expect(find.textContaining('Paired ChatGPT'), findsOneWidget);
-      expect(find.textContaining('1.0'), findsWidgets);
-      for (
-        var i = 0;
-        i < 15 && find.text('Update bridge').hitTestable().evaluate().isEmpty;
-        i++
-      ) {
-        await tester.drag(find.byType(ListView), const Offset(0, -280));
-        await tester.pumpAndSettle();
-      }
-      await tester.tap(find.text('Update bridge'));
+      expect(find.text('Your Mac'), findsOneWidget);
+      expect(find.textContaining('ChatGPT'), findsNothing);
+      expect(find.text('DJL version'), findsOneWidget);
+      expect(find.text('1.0'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Update DJL'), 120);
+      await tester.ensureVisible(find.text('Update DJL'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('reconnect'), findsWidgets);
-      expect(find.textContaining('Current: 1.0'), findsOneWidget);
-      expect(find.textContaining('Latest reported: 2.0'), findsOneWidget);
+      await tester.tap(find.text('Update DJL'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Your Mac has DJL 1.0.'), findsOneWidget);
+      expect(find.textContaining('reconnects by itself'), findsOneWidget);
       expect(
         transport.calls.where((c) => c.$1 == 'desktop/bridge/updateAndRestart'),
         isEmpty,
       );
-      await tester.tap(find.text('Update and restart'));
+      await tester.tap(find.text('Update'));
       await tester.pumpAndSettle();
       expect(
         transport.calls
@@ -56,8 +52,12 @@ void main() {
             .length,
         1,
       );
+      await tester.scrollUntilVisible(
+        find.textContaining('DJL is updating on your Mac'),
+        120,
+      );
       expect(
-        find.textContaining('Waiting for bridge reconnect'),
+        find.textContaining('DJL is updating on your Mac'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -102,8 +102,9 @@ void main() {
       host.bind(device: 'a', session: null, connected: false, trusted: true);
       await host.setKeepAwake(true);
       await tester.pumpWidget(MaterialApp(home: HostPage(controller: host)));
-      expect(find.textContaining('Offline'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Retry preference'), 200);
+      expect(find.text('Not connected'), findsOneWidget);
+      expect(find.textContaining('Open DJL on your Mac'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Try again'), 200);
       expect(find.textContaining('Could not save'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -134,42 +135,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SnackBar), findsNothing);
   });
-  testWidgets(
-    'status loading is shown and unsupported controls send no mutations',
-    (tester) async {
-      final transport = HostTransport();
-      final host = HostController(transport, store: HostStore());
-      addTearDown(host.dispose);
-      host.bind(device: 'a', session: 's1', connected: true, trusted: true);
-      final pending = Completer<Map<String, dynamic>>();
-      transport.handler = (m, p) => pending.future;
-      final refresh = host.refresh();
-      await tester.pumpWidget(MaterialApp(home: HostPage(controller: host)));
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      pending.complete({
-        'status': 'not_logged_in',
-        'hostPlatform': 'linux',
-        'hostCapabilities': {
-          'desktopHandoff': false,
-          'displayWake': false,
-          'keepAwake': false,
-          'bridgeUpdate': false,
-        },
-      });
-      await refresh;
-      await tester.pumpAndSettle();
-      expect(find.byType(LinearProgressIndicator), findsNothing);
-      final wake = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Wake display'),
-      );
-      expect(wake.onPressed, isNull);
-      expect(
-        transport.calls.where((c) => c.$1.startsWith('desktop/')),
-        isEmpty,
-      );
-    },
-  );
-  testWidgets('stale host status disables preference sync until a fresh read', (
+  testWidgets('status loading is shown and unsupported controls are hidden', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final host = HostController(transport, store: HostStore());
+    addTearDown(host.dispose);
+    host.bind(device: 'a', session: 's1', connected: true, trusted: true);
+    final pending = Completer<Map<String, dynamic>>();
+    transport.handler = (m, p) => pending.future;
+    final refresh = host.refresh();
+    await tester.pumpWidget(MaterialApp(home: HostPage(controller: host)));
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    pending.complete({
+      'status': 'not_logged_in',
+      'hostPlatform': 'linux',
+      'hostCapabilities': {
+        'desktopHandoff': false,
+        'displayWake': false,
+        'keepAwake': false,
+        'bridgeUpdate': false,
+      },
+    });
+    await refresh;
+    await tester.pumpAndSettle();
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.text('Wake the screen'), findsNothing);
+    expect(find.text('Keep Mac awake'), findsNothing);
+    expect(find.text('Update DJL'), findsNothing);
+    expect(transport.calls.where((c) => c.$1.startsWith('desktop/')), isEmpty);
+  });
+  testWidgets('stale host status shows checking and offers a fresh read', (
     tester,
   ) async {
     final transport = HostTransport();
@@ -181,10 +177,9 @@ void main() {
     transport.handler = (m, p) async => throw TimeoutException('offline');
     await host.refresh();
     await tester.pumpWidget(MaterialApp(home: HostPage(controller: host)));
-    final sync = tester.widget<TextButton>(
-      find.widgetWithText(TextButton, 'Sync preference'),
-    );
-    expect(sync.onPressed, isNull);
+    expect(host.canSyncPreference, isFalse);
+    expect(find.text('Connected · checking'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
   });
   for (final rejection in <(String, Object)>[
     (
@@ -215,31 +210,22 @@ void main() {
         };
         await tester.pumpWidget(MaterialApp(home: HostPage(controller: host)));
         Future<void> openConfirmation() async {
-          for (
-            var i = 0;
-            i < 12 &&
-                find.text('Update bridge').hitTestable().evaluate().isEmpty;
-            i++
-          ) {
-            await tester.drag(find.byType(ListView), const Offset(0, -260));
-            await tester.pumpAndSettle();
-          }
-          await tester.tap(find.text('Update bridge'));
+          await tester.scrollUntilVisible(find.text('Update DJL'), 120);
+          await tester.ensureVisible(find.text('Update DJL'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Update DJL'));
           await tester.pumpAndSettle();
         }
 
         await openConfirmation();
-        await tester.tap(find.text('Update and restart'));
+        await tester.tap(find.text('Update'));
         await tester.pumpAndSettle();
         expect(find.text(host.actionError!.message), findsOneWidget);
         expect(
-          find.textContaining('Waiting for bridge reconnect'),
+          find.textContaining('DJL is updating on your Mac'),
           findsNothing,
         );
-        final retry = tester.widget<OutlinedButton>(
-          find.widgetWithText(OutlinedButton, 'Update bridge'),
-        );
-        expect(retry.onPressed, isNotNull);
+        expect(host.canUpdate, isTrue);
         expect(
           transport.calls
               .where((c) => c.$1 == 'desktop/bridge/updateAndRestart')
@@ -254,7 +240,7 @@ void main() {
               .length,
           1,
         );
-        await tester.tap(find.text('Update and restart'));
+        await tester.tap(find.text('Update'));
         await tester.pumpAndSettle();
         expect(
           transport.calls
@@ -263,7 +249,7 @@ void main() {
           2,
         );
         expect(
-          find.textContaining('Waiting for bridge reconnect'),
+          find.textContaining('DJL is updating on your Mac'),
           findsOneWidget,
         );
       },

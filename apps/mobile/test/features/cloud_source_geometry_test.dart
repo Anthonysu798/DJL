@@ -1,10 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/core/presentation/djl_glass.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_controller.dart';
 import 'package:djl_mobile/features/chat/presentation/chat_page.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import 'cloud_composer_draft_page_test.dart' show DraftPageFixture;
 import 'cloud_composer_draft_store_test.dart' show DraftCredentials;
 import 'voice_controller_test.dart' show TestVoice;
@@ -71,7 +71,7 @@ void main() {
         } finally {
           semantics.dispose();
         }
-        expect(find.byIcon(CupertinoIcons.chevron_down), findsOneWidget);
+        expect(find.byIcon(DjlIcons.chevronDown), findsOneWidget);
         final composer = find.byType(DjlGlassSurface);
         expect(composer, findsOneWidget);
         expect(tester.widget<DjlGlassSurface>(composer).radius, 26);

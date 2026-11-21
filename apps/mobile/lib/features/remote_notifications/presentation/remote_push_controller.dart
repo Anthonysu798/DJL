@@ -4,6 +4,7 @@ import '../../../core/network/cloud_client.dart';
 import '../data/remote_push_native.dart';
 import '../data/remote_push_store.dart';
 import '../domain/remote_notification.dart';
+import '../../../l10n/l10n.dart';
 
 typedef PairedPushRequest =
     Future<Object?> Function(String method, Map<String, dynamic> params);
@@ -56,7 +57,7 @@ class RemotePushController extends ChangeNotifier {
       if (_disposed) return;
       enabled = value;
     } catch (_) {
-      error = 'Could not read notification preference. Retry.';
+      error = appStrings.pushReadFailed;
     }
     if (_disposed) return;
     loaded = true;
@@ -165,7 +166,7 @@ class RemotePushController extends ChangeNotifier {
         _sync();
       }
     } catch (_) {
-      error = 'Could not update notification preference. Retry.';
+      error = appStrings.pushUpdateFailed;
     } finally {
       busy = false;
       _notify();

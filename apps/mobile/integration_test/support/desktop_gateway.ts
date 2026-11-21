@@ -16,6 +16,7 @@ import {layer as PtyLayer} from '../../../server/src/terminal/Layers/BunPTY.ts';
 import {verifyTrustedResolveRequest} from '../../../remote-relay/src/registryAuth.ts';
 import {createRuntimeFixture} from './desktop_runtime_fixture.ts';
 import {createPairingCodeFixture} from './pairing_code_fixture.ts';
+import {createGroupsFixture} from './groups_fixture.ts';
 import {fixtureGitScope} from './fixture_git_scope.ts';
 import {loadFixtureDeviceState} from './fixture_resume.ts';
 
@@ -32,7 +33,8 @@ const deviceState=persistentIdentity?loadFixtureDeviceState(root):{macDeviceId:`
 let wire:any;
 function trace(stage:string,value:any){fs.appendFileSync(path.join(root,'trace.jsonl'),JSON.stringify({stage,method:value?.method,type:value?.type??value?.params?.type,threadId:value?.threadId??value?.params?.threadId,terminalId:value?.terminalId??value?.params?.terminalId,at:value?.createdAt??value?.params?.createdAt,hasMarker:String(value?.data??value?.params?.data??'').includes('DJL_REAL_PTY_OK')})+'\n');}
 const send=(rpc:unknown)=>{trace('wire',rpc);wire.queueOutboundApplicationMessage(JSON.stringify(rpc));};
-const runtime=process.env.DJL_QA_RUNTIME==='1'?createRuntimeFixture(cwd,send,{presentationScreenshotPath:process.env.DJL_QA_PRESENTATION_SCREENSHOT,legacyTurnRecovery:process.env.DJL_QA_LEGACY_TURN_RECOVERY==='1',rejectCollaborationMode:process.env.DJL_QA_REJECT_COLLABORATION==='1',workingDirectoryScope:process.env.DJL_QA_CONTAINER_GIT==='1'?scoped:undefined}):null;
+const runtime=process.env.DJL_QA_RUNTIME==='1'?createRuntimeFixture(cwd,send,{presentationScreenshotPath:process.env.DJL_QA_PRESENTATION_SCREENSHOT,legacyTurnRecovery:process.env.DJL_QA_LEGACY_TURN_RECOVERY==='1',groups:process.env.DJL_QA_GROUPS==='1',rejectCollaborationMode:process.env.DJL_QA_REJECT_COLLABORATION==='1',workingDirectoryScope:process.env.DJL_QA_CONTAINER_GIT==='1'?scoped:undefined}):null;
+const groupChats=process.env.DJL_QA_GROUPS==='1'?createGroupsFixture(send):null;
 let pairingCodes:ReturnType<typeof createPairingCodeFixture>|null=null;
 const savedPhone=Object.entries(deviceState.trustedPhones??{})[0];
 let trustedPhone:{phoneDeviceId:string,phoneIdentityPublicKey:string}|null=savedPhone?{phoneDeviceId:savedPhone[0],phoneIdentityPublicKey:String(savedPhone[1])}:null;
@@ -51,6 +53,7 @@ terminals.on('event',(event)=>{trace('manager',event);mirror.handleEvent(event);
 async function handle(rpc:any){
   applicationMessageCount++;
   try{
+    if(groupChats?.handle(rpc))return;
     if(runtime?.handle(rpc))return;
     if(rpc.id==null)return;
     const p=rpc.params??{};
@@ -71,6 +74,7 @@ const server=Bun.serve({hostname:'127.0.0.1',port:Number(process.env.DJL_QA_BRID
   if(runtime&&url.pathname==='/qa/pairing')return Response.json(wire.createPairingPayload());
   if(runtime&&request.method==='POST'&&url.pathname==='/qa/drop'){setTimeout(()=>activeSocket?.close(1012,'QA reconnect'),50);return Response.json({ok:true});}
   if(runtime&&url.pathname==='/qa/state')return Response.json({...runtime.state(),applicationMessageCount});
+  if(groupChats&&url.pathname==='/qa/groups')return Response.json(groupChats.state());
   if(runtime&&['/qa/thread-start/arm','/qa/thread-start/release'].includes(url.pathname)){
     if(request.method!=='POST')return new Response('POST required',{status:405});
     try{if(url.pathname.endsWith('/arm'))runtime.armThreadStartReply();else runtime.releaseThreadStartReply();return Response.json({ok:true});}catch{return Response.json({ok:false},{status:409});}

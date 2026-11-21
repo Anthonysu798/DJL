@@ -51,7 +51,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(SwitchListTile), findsNothing);
         expect(find.byType(TextButton), findsNothing);
-        expect(find.textContaining('Cloud inbox'), findsOneWidget);
+        expect(
+          find.textContaining("can't get push notifications"),
+          findsOneWidget,
+        );
         expect(find.text('DJL Cloud push'), findsNothing);
         expect(find.text('Current Mac push'), findsNothing);
         await tester.scrollUntilVisible(
@@ -117,7 +120,7 @@ void main() {
       find.text('Could not read notification preference. Retry.'),
       findsOneWidget,
     );
-    expect(find.text('Retry remote notifications'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
     expect(native.prompts, 0);
     await tester.pumpWidget(const SizedBox());
   });

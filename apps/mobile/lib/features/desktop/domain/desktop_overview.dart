@@ -1,3 +1,4 @@
+import '../../../l10n/l10n.dart';
 import '../../pairing/data/pairing_repository.dart';
 import 'thread_local_state.dart';
 
@@ -63,11 +64,13 @@ String desktopConversationPathLabel(String path) =>
     path.split('/').where((p) => p.isNotEmpty).lastOrNull ?? path;
 
 enum DesktopOverviewScope {
-  studio('Studio'),
-  projects('Projects');
+  studio,
+  projects;
 
-  const DesktopOverviewScope(this.title);
-  final String title;
+  String get title => switch (this) {
+    DesktopOverviewScope.studio => appStrings.desktopScopeStudio,
+    DesktopOverviewScope.projects => appStrings.desktopScopeProjects,
+  };
 }
 
 enum DesktopOverviewGroupKind { studio, project, pinned }
@@ -157,7 +160,7 @@ List<DesktopOverviewGroup> projectDesktopOverview(
               threadTitle(thread),
               thread['preview'],
               thread['cwd'],
-              folder ?? (!studio ? 'No Project' : null),
+              folder ?? (!studio ? appStrings.desktopNoProject : null),
             ].whereType<String>().any(
               (value) => value.toLowerCase().contains(search),
             ));
@@ -180,7 +183,7 @@ List<DesktopOverviewGroup> projectDesktopOverview(
     if (pinnedRows.isNotEmpty)
       DesktopOverviewGroup(
         id: 'pinned',
-        label: 'Pinned',
+        label: appStrings.desktopGroupPinned,
         threads: pinnedRows,
         kind: DesktopOverviewGroupKind.pinned,
       ),
@@ -191,7 +194,7 @@ List<DesktopOverviewGroup> projectDesktopOverview(
       groups.add(
         DesktopOverviewGroup(
           id: 'studio',
-          label: 'Studio',
+          label: appStrings.desktopScopeStudio,
           threads: remaining,
           kind: DesktopOverviewGroupKind.studio,
         ),
@@ -209,7 +212,7 @@ List<DesktopOverviewGroup> projectDesktopOverview(
             (entry) => DesktopOverviewGroup(
               id: 'project:${entry.key ?? ''}',
               label: entry.key == null
-                  ? 'No Project'
+                  ? appStrings.desktopNoProject
                   : desktopConversationPathLabel(entry.key!),
               kind: DesktopOverviewGroupKind.project,
               path: entry.key,

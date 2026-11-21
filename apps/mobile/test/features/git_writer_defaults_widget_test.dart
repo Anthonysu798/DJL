@@ -1,3 +1,4 @@
+import 'package:djl_mobile/core/presentation/djl_glass_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/git/presentation/git_page.dart';
@@ -57,7 +58,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.tap(find.byType(DjlGlassMenuButton<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Create branch'));
     await tester.pumpAndSettle();
@@ -118,7 +119,7 @@ void main() {
       await tester.pumpAndSettle();
       final picker = find.byKey(const Key('git-operation-writer'));
       expect(tester.widget<DropdownButton<String>>(picker).value, 'gpt-5.5');
-      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.tap(find.byType(DjlGlassMenuButton<String>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Generate PR draft'));
       await tester.pumpAndSettle();
@@ -182,7 +183,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.byType(PopupMenuButton<String>));
+        await tester.tap(find.byType(DjlGlassMenuButton<String>));
         await tester.pumpAndSettle();
         for (final label in [
           'Generate PR draft',

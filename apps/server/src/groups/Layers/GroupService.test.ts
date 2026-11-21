@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { GroupMemberId, OrchestrationCommand } from "@synara/contracts";
-import { Effect, Layer } from "effect";
+import { Effect, Fiber, Layer, Stream } from "effect";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -164,6 +164,71 @@ describe.skipIf(isWindows)("GroupService", () => {
     expect(outcome.roots.length).toBeGreaterThan(0);
     // Attachments from other chats must not become readable: only a turn's own files are.
     expect(outcome.roots.some((root) => root.endsWith("attachments"))).toBe(false);
+  });
+
+  it("publishes drafts and keeps what each busy member has written until it settles", async () => {
+    const outcome = await run(
+      Effect.gen(function* () {
+        const service = yield* GroupService;
+        const bridge = yield* GroupDriverBridge;
+        const group = yield* service.create(threeMembers);
+        const { runtime } = bridge.current()!;
+        const [claude, , codex] = group.members;
+        const events = yield* Stream.runCollect(Stream.take(service.streamEvents, 4)).pipe(
+          Effect.forkChild,
+        );
+        yield* Effect.sleep("10 millis");
+        runtime.setMemberState(group.id, claude!.id, "working");
+        runtime.publishDraft(group.id, claude!.id, "Hel", true);
+        runtime.publishDraft(group.id, claude!.id, "lo", false);
+        runtime.setMemberState(group.id, codex!.id, "waiting");
+        const writing = service.live();
+        runtime.publishDraft(group.id, claude!.id, "Again", true);
+        const restarted = service.live();
+        runtime.publishDraft(group.id, claude!.id, "x".repeat(30_000), false);
+        const capped = service.live().drafts[claude!.id]?.length;
+        runtime.setMemberState(group.id, claude!.id, "idle");
+        runtime.publishDraft(group.id, codex!.id, "Oops", true);
+        runtime.setMemberState(group.id, codex!.id, "failed");
+        const settled = service.live();
+        yield* service.delete({ groupId: group.id });
+        return {
+          claude: claude!.id,
+          codex: codex!.id,
+          events: [...(yield* Fiber.join(events))],
+          writing,
+          restarted,
+          capped,
+          settled,
+          deleted: service.live(),
+        };
+      }),
+    );
+    const { claude, codex } = outcome;
+    expect(outcome.events.slice(1, 3)).toEqual([
+      {
+        type: "reply.draft",
+        groupId: expect.any(String),
+        memberId: claude,
+        delta: "Hel",
+        restart: true,
+      },
+      {
+        type: "reply.draft",
+        groupId: expect.any(String),
+        memberId: claude,
+        delta: "lo",
+        restart: false,
+      },
+    ]);
+    expect(outcome.writing).toEqual({
+      memberStates: { [claude]: "working", [codex]: "waiting" },
+      drafts: { [claude]: "Hello" },
+    });
+    expect(outcome.restarted.drafts).toEqual({ [claude]: "Again" });
+    expect(outcome.capped).toBe(24_000);
+    expect(outcome.settled).toEqual({ memberStates: { [codex]: "failed" }, drafts: {} });
+    expect(outcome.deleted).toEqual({ memberStates: {}, drafts: {} });
   });
 
   it("rejects a folder that does not exist", async () => {
