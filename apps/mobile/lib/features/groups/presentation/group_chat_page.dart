@@ -15,6 +15,7 @@ import '../../reports/presentation/report_sheet.dart';
 import 'agent_avatar.dart';
 import 'group_attachments.dart';
 import 'groups_controller.dart';
+import '../../../l10n/l10n.dart';
 
 /// One group chat: everyone's messages, each agent's reply as it is written,
 /// and a composer that picks who answers.
@@ -69,12 +70,12 @@ class _GroupChatPageState extends State<GroupChatPage> {
     final kind = await showDjlGlassMenu<String>(
       context,
       anchor: box.localToGlobal(Offset.zero) & box.size,
-      label: 'Attach',
-      sections: const [
+      label: context.l10n.groupsAttach,
+      sections: [
         [
-          DjlMenuItem('photos', 'Photos', DjlIcons.images),
-          DjlMenuItem('camera', 'Camera', DjlIcons.camera),
-          DjlMenuItem('files', 'Files', DjlIcons.document),
+          DjlMenuItem('photos', context.l10n.groupsPhotos, DjlIcons.images),
+          DjlMenuItem('camera', context.l10n.cloudChatCamera, DjlIcons.camera),
+          DjlMenuItem('files', context.l10n.groupsFiles, DjlIcons.document),
         ],
       ],
     );
@@ -113,13 +114,14 @@ class _GroupChatPageState extends State<GroupChatPage> {
         }
       });
       final note = unsupported.isNotEmpty
-          ? "${unsupported.first.name} can't be sent. Photos, PDFs, Word, "
-                'Excel, PowerPoint, text and code files work.'
+          ? context.l10n.groupsFileUnsupported(unsupported.first.name)
           : tooBig.isNotEmpty
-          ? '${tooBig.first.name} is larger than '
-                '${formatByteSize(groupAttachmentMaxBytes)}.'
+          ? context.l10n.groupsFileTooLarge(
+              tooBig.first.name,
+              formatByteSize(groupAttachmentMaxBytes),
+            )
           : picked.length > room
-          ? 'A message can carry $groupAttachmentMaxCount files.'
+          ? context.l10n.groupsTooManyFiles(groupAttachmentMaxCount)
           : null;
       if (note != null) {
         ScaffoldMessenger.of(
@@ -128,11 +130,9 @@ class _GroupChatPageState extends State<GroupChatPage> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Couldn't open that. Please try again."),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.groupsOpenFailed)));
       }
     }
   }
@@ -171,27 +171,25 @@ class _GroupChatPageState extends State<GroupChatPage> {
   Future<_Everyone?> _confirmEveryone(Group group) => showDialog<_Everyone>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Ask everyone?'),
-      content: Text(
-        'All ${group.members.length} agents will answer this message.',
-      ),
+      title: Text(context.l10n.groupsAskEveryoneTitle),
+      content: Text(context.l10n.groupsAskEveryoneBody(group.members.length)),
       actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, _Everyone.always),
-          child: const Text("Don't ask again"),
+          child: Text(context.l10n.groupsDontAskAgain),
         ),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
               onPressed: () => Navigator.pop(context, _Everyone.once),
-              child: const Text('Ask everyone'),
+              child: Text(context.l10n.groupsAskEveryone),
             ),
           ],
         ),
@@ -243,9 +241,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
       if (group == null) {
         return Scaffold(
           appBar: AppBar(),
-          body: const Center(
-            child: Text('This group is no longer on your Mac.'),
-          ),
+          body: Center(child: Text(context.l10n.groupsGroupGone)),
         );
       }
       final running = _groups.running(group);
@@ -279,8 +275,9 @@ class _GroupChatPageState extends State<GroupChatPage> {
                             group: group,
                             topInset: top,
                             onSuggestion: () {
-                              _input.text =
-                                  '@$groupAllHandle Say hello in one line.';
+                              _input.text = context.l10n.groupsSayHelloPrompt(
+                                '@$groupAllHandle',
+                              );
                               _focus.requestFocus();
                             },
                           )
@@ -340,8 +337,8 @@ class _GroupChatPageState extends State<GroupChatPage> {
                           if (_groups.error != null)
                             _Notice(text: _groups.error!)
                           else if (!_groups.available)
-                            const _Notice(
-                              text: 'Reconnecting to your Mac…',
+                            _Notice(
+                              text: context.l10n.groupsReconnectingToMac,
                               quiet: true,
                             ),
                           if (group.pendingHandoffs > 0 && !running)
@@ -446,14 +443,17 @@ class _Header extends StatelessWidget {
             child: Row(
               children: [
                 IconButton(
-                  tooltip: 'Back',
+                  tooltip: context.l10n.coreBack,
                   onPressed: () => Navigator.maybePop(context),
                   icon: const Icon(DjlIcons.back, size: 22),
                 ),
                 Expanded(
                   child: Semantics(
                     button: true,
-                    label: '${group.name}, ${group.members.length} agents',
+                    label: context.l10n.groupsHeaderLabel(
+                      group.name,
+                      group.members.length,
+                    ),
                     child: InkWell(
                       onTap: onMembers,
                       customBorder: const StadiumBorder(),
@@ -484,7 +484,7 @@ class _Header extends StatelessWidget {
                   padding: const EdgeInsets.only(right: DjlSpace.sm),
                   child: Semantics(
                     button: true,
-                    label: 'Members',
+                    label: context.l10n.groupsMembers,
                     child: InkWell(
                       onTap: onMembers,
                       customBorder: const StadiumBorder(),
@@ -526,7 +526,7 @@ class _MessageRow extends StatelessWidget {
         child: Align(
           alignment: Alignment.centerRight,
           child: Semantics(
-            label: 'You',
+            label: context.l10n.groupsYou,
             child: AnimatedOpacity(
               duration: DjlMotion.of(context, DjlMotion.fast),
               opacity: message.sending ? .55 : 1,
@@ -578,7 +578,7 @@ class _MessageRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Couldn't reply",
+                  context.l10n.groupsCouldNotReply,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 2),
@@ -595,7 +595,7 @@ class _MessageRow extends StatelessWidget {
       );
     } else if (reply?.empty ?? false) {
       body = Text(
-        'Nothing to add',
+        context.l10n.groupsNothingToAdd,
         style: Theme.of(
           context,
         ).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
@@ -645,7 +645,9 @@ class _ReplyText extends StatelessWidget {
     // Files an agent made stay on the Mac; a broken remote image would only
     // add noise.
     sizedImageBuilder: (config) => Text(
-      config.alt?.isNotEmpty == true ? config.alt! : 'Image on your Mac',
+      config.alt?.isNotEmpty == true
+          ? config.alt!
+          : context.l10n.groupsImageOnMac,
     ),
     onTapLink: (_, url, _) {
       final uri = url == null ? null : Uri.tryParse(url);
@@ -669,7 +671,7 @@ class _AgentRow extends StatelessWidget {
       padding: const EdgeInsets.only(right: 28, bottom: DjlSpace.lg),
       child: Semantics(
         container: true,
-        label: member?.handle ?? 'Removed agent',
+        label: member?.handle ?? context.l10n.groupsRemovedAgent,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -682,7 +684,7 @@ class _AgentRow extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 2, bottom: 5),
                     child: Text(
-                      member?.handle ?? 'Removed agent',
+                      member?.handle ?? context.l10n.groupsRemovedAgent,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         fontSize: 13,
                         color: colors.inkMuted,
@@ -732,7 +734,9 @@ class _WritingRow extends StatelessWidget {
         valueListenable: draft,
         builder: (context, text, _) => text.isEmpty
             ? Semantics(
-                label: waiting ? 'Waiting for its turn' : 'Writing',
+                label: waiting
+                    ? context.l10n.groupsWaitingTurn
+                    : context.l10n.groupsWriting,
                 child: const _TypingDots(),
               )
             : _ReplyText(text),
@@ -851,13 +855,13 @@ class _Composer extends StatelessWidget {
                   Builder(
                     builder: (anchor) => IconButton(
                       key: const Key('group-composer-attach'),
-                      tooltip: 'Attach files or photos',
+                      tooltip: context.l10n.groupsAttachTooltip,
                       onPressed: enabled ? () => onAttach!(anchor) : null,
                       icon: const Icon(DjlIcons.attach, size: 22),
                     ),
                   ),
                 IconButton(
-                  tooltip: 'Mention an agent',
+                  tooltip: context.l10n.groupsMentionAgent,
                   onPressed: enabled ? onMention : null,
                   icon: const Icon(DjlIcons.mention, size: 22),
                 ),
@@ -871,12 +875,12 @@ class _Composer extends StatelessWidget {
                     maxLines: 5,
                     textCapitalization: TextCapitalization.sentences,
                     style: Theme.of(context).textTheme.bodyLarge,
-                    decoration: const InputDecoration(
-                      hintText: 'Message',
+                    decoration: InputDecoration(
+                      hintText: context.l10n.groupsMessageHint,
                       filled: false,
                       isDense: true,
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
@@ -886,7 +890,9 @@ class _Composer extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     enabled: active,
-                    label: stops ? 'Stop the agents' : 'Send message',
+                    label: stops
+                        ? context.l10n.groupsStopAgents
+                        : context.l10n.cloudChatSendMessage,
                     child: GestureDetector(
                       key: const Key('group-composer-action'),
                       onTap: !active
@@ -973,7 +979,7 @@ class _MentionStrip extends StatelessWidget {
           children: [
             if (everyone)
               chip(
-                'Everyone',
+                context.l10n.groupsEveryone,
                 Container(
                   width: 32,
                   height: 32,
@@ -1016,13 +1022,12 @@ class _PauseCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'The agents paused',
+            context.l10n.groupsPausedTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: DjlSpace.xs),
           Text(
-            'They have been talking to each other for a while and have more '
-            'to say.',
+            context.l10n.groupsPausedBody,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
@@ -1038,7 +1043,7 @@ class _PauseCard extends StatelessWidget {
                     shape: const StadiumBorder(),
                   ),
                   onPressed: onStop,
-                  child: const Text('End it here'),
+                  child: Text(context.l10n.groupsEndItHere),
                 ),
               ),
               const SizedBox(width: DjlSpace.sm),
@@ -1046,7 +1051,7 @@ class _PauseCard extends StatelessWidget {
                 child: FilledButton(
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
                   onPressed: onContinue,
-                  child: const Text('Let them continue'),
+                  child: Text(context.l10n.groupsLetThemContinue),
                 ),
               ),
             ],
@@ -1100,7 +1105,7 @@ class _Offline extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.all(DjlSpace.xxxl),
       child: Text(
-        'Messages appear here once your Mac is connected.',
+        context.l10n.groupsOfflineHint,
         textAlign: TextAlign.center,
         style: Theme.of(
           context,
@@ -1115,7 +1120,7 @@ class _Loading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Semantics(
-      label: 'Loading messages',
+      label: context.l10n.groupsLoadingMessages,
       child: const SizedBox.square(
         dimension: 20,
         child: CircularProgressIndicator(strokeWidth: 2),
@@ -1152,14 +1157,13 @@ class _EmptyChat extends StatelessWidget {
             AgentAvatarStack(members: group.members, size: 52),
             const SizedBox(height: DjlSpace.xl),
             Text(
-              'Everyone is here',
+              context.l10n.groupsEveryoneIsHere,
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineMedium,
             ),
             const SizedBox(height: DjlSpace.sm),
             Text(
-              'Type @ to choose who answers. Your first message goes to '
-              'everyone.',
+              context.l10n.groupsEmptyChatHint,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colors.inkMuted,
@@ -1177,7 +1181,7 @@ class _EmptyChat extends StatelessWidget {
                 ),
               ),
               onPressed: onSuggestion,
-              child: const Text('Ask everyone to say hello'),
+              child: Text(context.l10n.groupsAskEveryoneToSayHello),
             ),
           ],
         ),
@@ -1212,7 +1216,7 @@ class _MembersSheet extends StatelessWidget {
             Text(group.name, style: theme.textTheme.headlineMedium),
             const SizedBox(height: DjlSpace.xs),
             Text(
-              'Add or remove agents in DJL on your Mac.',
+              context.l10n.groupsManageOnMac,
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: DjlSpace.lg),
@@ -1233,15 +1237,17 @@ class _MembersSheet extends StatelessWidget {
                           ),
                           Text(
                             switch (controller.state(member.id)) {
-                              GroupMemberState.working => 'Writing',
+                              GroupMemberState.working =>
+                                context.l10n.groupsWriting,
                               GroupMemberState.waiting =>
-                                'Waiting for its turn',
-                              GroupMemberState.failed => "Couldn't reply",
+                                context.l10n.groupsWaitingTurn,
+                              GroupMemberState.failed =>
+                                context.l10n.groupsCouldNotReply,
                               GroupMemberState.idle =>
                                 member.role?.isNotEmpty == true
                                     ? '${member.role![0].toUpperCase()}'
                                           '${member.role!.substring(1)}'
-                                    : 'Ready',
+                                    : context.l10n.groupsReady,
                             },
                             style: theme.textTheme.bodySmall?.copyWith(
                               color:
@@ -1263,7 +1269,7 @@ class _MembersSheet extends StatelessWidget {
                         ),
                         onPressed: () =>
                             controller.stopMember(group, member.id),
-                        child: const Text('Stop'),
+                        child: Text(context.l10n.groupsStop),
                       ),
                   ],
                 ),

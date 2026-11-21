@@ -137,7 +137,7 @@ extension DesktopActivityRows on DesktopController {
       );
       if (!current()) return false;
       if (result['success'] == false) {
-        throw StateError('Desktop did not acknowledge retry approval.');
+        throw StateError(appStrings.desktopRetryApprovalUnacknowledged);
       }
       final applied = guardian.finish(
         threadId,

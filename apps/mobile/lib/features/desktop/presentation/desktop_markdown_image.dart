@@ -5,6 +5,7 @@ import '../../images/data/native_image_actions.dart';
 import '../../workspace/domain/workspace_models.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopMarkdownImage extends StatefulWidget {
   const DesktopMarkdownImage({
@@ -128,13 +129,15 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       } else {
         await actions.save(image.bytes, image.name);
       }
-      if (current() && !share) setState(() => _notice = 'Saved to Photos.');
+      if (current() && !share) {
+        setState(() => _notice = context.l10n.chatUiSavedToPhotos);
+      }
     } catch (_) {
       if (current()) {
         setState(
           () => _notice = share
-              ? 'Could not share this image. Please try again.'
-              : 'Could not save this image. Please try again.',
+              ? context.l10n.chatUiShareImageFailed
+              : context.l10n.chatUiSaveImageFailed,
         );
       }
     } finally {
@@ -222,8 +225,8 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
                                 if (_ready && !_loading)
                                   Semantics(
                                     liveRegion: true,
-                                    child: const Text(
-                                      'Could not load this image.',
+                                    child: Text(
+                                      context.l10n.chatUiLoadImageFailed,
                                     ),
                                   ),
                                 if (_ready)
@@ -234,13 +237,15 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
                                             setState(() => _notice = null);
                                             unawaited(_load());
                                           },
-                                    child: const Text('Retry'),
+                                    child: Text(context.l10n.chatUiRetry),
                                   )
                                 else
                                   Text(
                                     widget.isCurrent()
-                                        ? 'Reconnect or reopen this image from its workspace.'
-                                        : 'Reopen this image from its paired chat.',
+                                        ? context
+                                              .l10n
+                                              .chatUiImageReopenWorkspace
+                                        : context.l10n.chatUiImageReopenChat,
                                   ),
                               ],
                             )
@@ -274,8 +279,9 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       button: true,
       enabled: widget.isCurrent(),
       onTap: widget.isCurrent() ? _open : null,
-      label:
-          'Open image ${widget.alt.isEmpty ? widget.path.split('/').last : widget.alt}',
+      label: context.l10n.chatUiOpenImage(
+        widget.alt.isEmpty ? widget.path.split('/').last : widget.alt,
+      ),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -288,7 +294,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
   Widget _previewControls(ThemeData theme, bool available) => Row(
     children: [
       _previewButton(
-        label: 'Close',
+        label: context.l10n.chatUiClose,
         icon: DjlIcons.close,
         onPressed: () => Navigator.pop(context),
       ),
@@ -320,7 +326,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       ),
       Builder(
         builder: (buttonContext) => _previewButton(
-          label: 'Share',
+          label: context.l10n.chatUiShare,
           icon: DjlIcons.share,
           onPressed: available
               ? () {
@@ -337,7 +343,7 @@ class _DesktopMarkdownImageState extends State<DesktopMarkdownImage> {
       ),
       const SizedBox(width: 4),
       _previewButton(
-        label: 'Save to Photos',
+        label: context.l10n.chatUiSaveToPhotos,
         icon: DjlIcons.download,
         onPressed: available ? () => unawaited(_export()) : null,
       ),

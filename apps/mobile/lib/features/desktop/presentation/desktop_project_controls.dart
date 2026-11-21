@@ -5,6 +5,7 @@ import '../../../core/presentation/djl_glass.dart';
 import 'desktop_composer_options_menu.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopProjectControls extends StatefulWidget {
   const DesktopProjectControls({
@@ -129,7 +130,7 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
 
   Widget _runtime() => Builder(
     builder: (anchor) => Tooltip(
-      message: 'Runtime',
+      message: context.l10n.chatUiRuntime,
       child: Semantics(
         button: true,
         child: Material(
@@ -141,10 +142,13 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
                 context: anchor,
                 allowBelow: true,
                 items: [
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     enabled: false,
                     height: 32,
-                    child: Text('Continue in', style: TextStyle(fontSize: 12)),
+                    child: Text(
+                      anchor.l10n.chatUiContinueIn,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                   PopupMenuItem<String>(
                     value: 'worktree',
@@ -173,7 +177,10 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
                       children: [
                         _icon('central-macbook-air', enabled: false),
                         const SizedBox(width: 12),
-                        const Text('Local', style: TextStyle(fontSize: 17)),
+                        Text(
+                          anchor.l10n.chatUiLocal,
+                          style: const TextStyle(fontSize: 17),
+                        ),
                       ],
                     ),
                   ),
@@ -184,7 +191,9 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
               }
             },
             child: _pill(
-              widget.worktree ? 'Worktree' : 'Local',
+              widget.worktree
+                  ? anchor.l10n.chatUiWorktree
+                  : anchor.l10n.chatUiLocal,
               widget.worktree
                   ? 'central-arrow-split-right'
                   : 'central-macbook-air',
@@ -242,7 +251,7 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
                           if (widget.branchLabel case final branch?) ...[
                             Builder(
                               builder: (anchor) => Tooltip(
-                                message: 'Current Branch',
+                                message: anchor.l10n.chatUiCurrentBranch,
                                 child: Semantics(
                                   button: true,
                                   enabled: widget.branchEnabled,
@@ -292,8 +301,8 @@ class _DesktopProjectControlsState extends State<DesktopProjectControls>
           dimension: 34,
           child: IconButton(
             tooltip: _expanded
-                ? 'Collapse project controls'
-                : 'Expand project controls',
+                ? context.l10n.chatUiCollapseProjectControls
+                : context.l10n.chatUiExpandProjectControls,
             onPressed: _toggle,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 34, height: 34),

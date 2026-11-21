@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 enum GitDiffLineKind { context, addition, deletion }
 
 class GitDiffLine {
@@ -16,15 +18,15 @@ class GitDiffHunk {
   int get deletions =>
       lines.where((line) => line.kind == GitDiffLineKind.deletion).length;
   String get label {
-    if (synthetic) return 'Patch';
+    if (synthetic) return appStrings.gitDiffPatch;
     var numbers = lines.map((line) => line.newNumber).whereType<int>().toList();
     if (numbers.isEmpty) {
       numbers = lines.map((line) => line.oldNumber).whereType<int>().toList();
     }
-    if (numbers.isEmpty) return 'Patch';
+    if (numbers.isEmpty) return appStrings.gitDiffPatch;
     return numbers.first == numbers.last
-        ? 'Line ${numbers.first}'
-        : 'Lines ${numbers.first}-${numbers.last}';
+        ? appStrings.gitDiffLine(numbers.first)
+        : appStrings.gitDiffLines(numbers.first, numbers.last);
   }
 }
 

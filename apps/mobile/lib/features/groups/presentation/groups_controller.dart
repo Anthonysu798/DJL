@@ -7,6 +7,7 @@ import '../../desktop/data/remote_transport.dart';
 import '../../desktop/presentation/desktop_controller.dart';
 import '../../pairing/data/pairing_repository.dart' show RemoteJson;
 import '../domain/group_models.dart';
+import '../../../l10n/l10n.dart';
 
 /// What group chat needs from the connection to the paired Mac.
 abstract interface class GroupsLink implements Listenable {
@@ -497,7 +498,7 @@ class GroupsController extends ChangeNotifier {
       if (last) {
         final reference = result['attachment'];
         if (reference is! Map) {
-          throw StateError('Your Mac did not keep the file.');
+          throw StateError(appStrings.groupsMacDidNotKeepFile);
         }
         return Map<String, dynamic>.from(reference);
       }
@@ -520,7 +521,7 @@ class GroupsController extends ChangeNotifier {
     final known = _bytes[attachment.key] ?? _bytes[attachment.id];
     if (known != null) return known;
     final id = attachment.id;
-    if (id == null) throw StateError('This file is still sending.');
+    if (id == null) throw StateError(appStrings.groupsFileStillSending);
     final builder = BytesBuilder(copy: false);
     var offset = 0;
     while (true) {
@@ -599,8 +600,8 @@ class GroupsController extends ChangeNotifier {
       failure is RemoteRpcException && !failure.message.contains('timed out')
       ? failure.message
       : failure is TimeoutException || failure is RemoteRpcException
-      ? 'Your Mac did not answer in time. Check that DJL is open on it.'
-      : 'Your Mac is not connected right now.';
+      ? appStrings.groupsMacTimeout
+      : appStrings.groupsMacNotConnected;
 
   @override
   void dispose() {

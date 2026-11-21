@@ -7,6 +7,7 @@ import '../../chat/presentation/assistant_code_block.dart';
 import '../../settings/domain/appearance.dart';
 import '../domain/desktop_composer.dart';
 import 'desktop_composer_widgets.dart';
+import '../../../l10n/l10n.dart';
 export '../domain/desktop_overview.dart'
     show
         desktopConversationPath,
@@ -152,19 +153,19 @@ class DesktopConversationHero extends StatelessWidget {
       style: titleStyle,
       children: [
         if (generalDraft)
-          const TextSpan(text: 'What should we work on?')
+          TextSpan(text: context.l10n.chatUiEmptyGeneralTitle)
         else if (folder != null) ...[
-          const TextSpan(text: 'What should we do in '),
+          TextSpan(text: context.l10n.chatUiEmptyFolderPrefix),
           TextSpan(
             text: folder,
             style: TextStyle(color: secondary),
           ),
-          const TextSpan(text: '?'),
+          TextSpan(text: context.l10n.chatUiEmptyFolderSuffix),
         ] else
-          const TextSpan(text: 'Hi! How can I help you?'),
+          TextSpan(text: context.l10n.chatUiEmptyGreeting),
       ],
     );
-    const caption = 'Chats are End-to-end encrypted';
+    final caption = context.l10n.chatUiEncryptedCaption;
     final size = draft ? 50.0 : 56.0;
     final gap = generalDraft ? 8.0 : 12.0;
     return LayoutBuilder(
@@ -407,7 +408,9 @@ class DesktopConversationMessage extends StatelessWidget {
     );
     return Semantics(
       container: true,
-      label: user ? 'User message' : 'Assistant message',
+      label: user
+          ? context.l10n.chatUiUserMessage
+          : context.l10n.chatUiAssistantMessage,
       child: Padding(
         padding: EdgeInsets.only(left: user ? 60 : 0),
         child: Column(

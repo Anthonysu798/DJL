@@ -14,6 +14,7 @@ import 'git_controller.dart';
 import 'git_new_branch_dialog.dart';
 import 'git_branch_picker.dart';
 import 'repository_diff_sheet.dart';
+import '../../../l10n/l10n.dart';
 
 import '../../../core/design/djl_icons.dart';
 
@@ -93,10 +94,10 @@ class _GitPageState extends State<GitPage> {
     if (mounted && _ownsAction) {
       setState(
         () => _git.error = _branchReady
-            ? 'Thread activity changed. Reopen this branch or worktree action.'
+            ? context.l10n.gitThreadChangedReopenAction
             : widget.canChangeBranch?.call() == false
-            ? 'Wait until this thread finishes before changing branches or worktrees.'
-            : 'Wait for the current Git operation to finish before changing branches or worktrees.',
+            ? context.l10n.gitWaitForThread
+            : context.l10n.gitWaitForOperation,
       );
     }
     return false;
@@ -127,7 +128,7 @@ class _GitPageState extends State<GitPage> {
       _closeToolbar();
     } else if (_git.error == null) {
       if (_git.status?.isRepo != true) {
-        setState(() => _git.error = 'This folder is not a Git repository.');
+        setState(() => _git.error = context.l10n.gitNotRepositorySentence);
       } else {
         await _runComposer(() async {
           await _worktree(false);
@@ -212,11 +213,7 @@ class _GitPageState extends State<GitPage> {
     }
   }
 
-  Future<bool> _confirm(
-    String title,
-    String text, {
-    String accept = 'Continue',
-  }) async =>
+  Future<bool> _confirm(String title, String text, {String? accept}) async =>
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -225,11 +222,11 @@ class _GitPageState extends State<GitPage> {
           actions: [
             TextButton(
               onPressed: () => _finishDialog(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => _finishDialog(context, _ownsAction),
-              child: Text(accept),
+              child: Text(accept ?? context.l10n.gitContinue),
             ),
           ],
         ),
@@ -291,11 +288,15 @@ class _GitPageState extends State<GitPage> {
                           update(() => generating = false);
                         }
                       },
-                child: Text(generating ? 'Generating…' : 'Generate message'),
+                child: Text(
+                  generating
+                      ? context.l10n.gitGenerating
+                      : context.l10n.gitGenerateMessage,
+                ),
               ),
             TextButton(
               onPressed: () => _finishDialog(context, null),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: generating
@@ -304,7 +305,7 @@ class _GitPageState extends State<GitPage> {
                       context,
                       _ownsAction ? field.text.trim() : null,
                     ),
-              child: const Text('Continue'),
+              child: Text(context.l10n.gitContinue),
             ),
           ],
         ),
@@ -316,11 +317,10 @@ class _GitPageState extends State<GitPage> {
   }
 
   Future<void> _commit({String action = 'commit'}) async {
+    final l10n = context.l10n;
     final message = await _text(
-      action == 'commit'
-          ? 'Commit all current changes'
-          : 'Commit and publish changes',
-      'Commit message',
+      action == 'commit' ? l10n.gitCommitAllTitle : l10n.gitCommitPublishTitle,
+      l10n.gitCommitMessageLabel,
       multiline: true,
       generate: true,
     );
@@ -338,10 +338,12 @@ class _GitPageState extends State<GitPage> {
         _git.status?.branch?.trim() == base;
     if (action != 'commit' &&
         !await _confirm(
-          'Publish this branch?',
+          l10n.gitPublishBranchTitle,
           action == 'commit_push'
-              ? 'Commit all current changes and push this branch to its remote.'
-              : '${featureBranch ? 'Prepare a feature branch, commit' : 'Commit'} all changes, push the branch, and create a pull request on GitHub.',
+              ? l10n.gitPublishCommitPushBody
+              : featureBranch
+              ? l10n.gitPublishFeatureBranchPrBody
+              : l10n.gitPublishCommitPrBody,
         )) {
       return;
     }
@@ -365,10 +367,7 @@ class _GitPageState extends State<GitPage> {
     await _git.refresh();
     if (!_allowRouting(epoch) || _git.error != null) return false;
     if (_git.status?.isRepo != true) {
-      setState(
-        () => _git.error =
-            'This folder is no longer a Git repository. Refresh before creating a branch or worktree.',
-      );
+      setState(() => _git.error = context.l10n.gitNoLongerRepository);
       return false;
     }
     return true;
@@ -393,7 +392,11 @@ class _GitPageState extends State<GitPage> {
               TextButton(
                 onPressed: () =>
                     _finishDialog(dialog, _GitCreationDecision.cancel),
-                child: Text(review.acceptLabel == null ? 'OK' : 'Cancel'),
+                child: Text(
+                  review.acceptLabel == null
+                      ? context.l10n.gitOk
+                      : context.l10n.commonCancel,
+                ),
               ),
               if (review.acceptLabel != null)
                 TextButton(
@@ -405,7 +408,7 @@ class _GitPageState extends State<GitPage> {
                 FilledButton(
                   onPressed: () =>
                       _finishDialog(dialog, _GitCreationDecision.commitFirst),
-                  child: const Text('Commit, Create & Switch'),
+                  child: Text(context.l10n.gitCommitCreateSwitch),
                 ),
             ],
           ),
@@ -477,7 +480,9 @@ class _GitPageState extends State<GitPage> {
         return StatefulBuilder(
           builder: (context, update) => AlertDialog(
             title: Text(
-              managed ? 'Create managed worktree' : 'Create worktree',
+              managed
+                  ? context.l10n.gitCreateManagedWorktree
+                  : context.l10n.gitCreateWorktree,
             ),
             content: SingleChildScrollView(
               child: Column(
@@ -491,8 +496,8 @@ class _GitPageState extends State<GitPage> {
                       enableSuggestions: false,
                       textCapitalization: TextCapitalization.none,
                       onChanged: (_) => update(() {}),
-                      decoration: const InputDecoration(
-                        labelText: 'Branch name',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.gitBranchName,
                         hintText: 'feature-name',
                       ),
                     ),
@@ -506,7 +511,7 @@ class _GitPageState extends State<GitPage> {
                   DropdownButton<String>(
                     isExpanded: true,
                     value: names.contains(base) ? base : null,
-                    hint: const Text('Base branch'),
+                    hint: Text(context.l10n.gitBaseBranch),
                     items: names
                         .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                         .toList(),
@@ -517,18 +522,18 @@ class _GitPageState extends State<GitPage> {
                   DropdownButton<String>(
                     isExpanded: true,
                     value: transfer,
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: 'move',
-                        child: Text('Move current changes'),
+                        child: Text(context.l10n.gitMoveCurrentChanges),
                       ),
                       DropdownMenuItem(
                         value: 'copy',
-                        child: Text('Copy current changes'),
+                        child: Text(context.l10n.gitCopyCurrentChanges),
                       ),
                       DropdownMenuItem(
                         value: 'none',
-                        child: Text('Leave changes here'),
+                        child: Text(context.l10n.gitLeaveChangesHere),
                       ),
                     ],
                     onChanged: (v) {
@@ -541,7 +546,7 @@ class _GitPageState extends State<GitPage> {
             actions: [
               TextButton(
                 onPressed: () => _finishDialog(context, false),
-                child: const Text('Cancel'),
+                child: Text(context.l10n.commonCancel),
               ),
               FilledButton(
                 onPressed:
@@ -554,7 +559,7 @@ class _GitPageState extends State<GitPage> {
                                     'djl/')
                     ? null
                     : () => _finishDialog(context, _ownsAction),
-                child: const Text('Create'),
+                child: Text(context.l10n.gitCreate),
               ),
             ],
           ),
@@ -593,6 +598,7 @@ class _GitPageState extends State<GitPage> {
   }
 
   Future<void> _action(String action) async {
+    final l10n = context.l10n;
     if (!_ownsAction) return;
     final epoch = _branchReviewEpoch;
     if (_routingActions.contains(action) && !_allowRouting(epoch)) {
@@ -600,18 +606,12 @@ class _GitPageState extends State<GitPage> {
     }
     switch (action) {
       case 'init':
-        if (await _confirm(
-          'Initialize Git?',
-          'Create a Git repository in this workspace.',
-        )) {
+        if (await _confirm(l10n.gitInitializeTitle, l10n.gitInitializeBody)) {
           _toolbarOperationAttempted = true;
           await _git.perform(widget.repository.initialize);
         }
       case 'push':
-        if (await _confirm(
-          'Push branch?',
-          'Push the committed changes to the configured remote.',
-        )) {
+        if (await _confirm(l10n.gitPushTitle, l10n.gitPushBody)) {
           _toolbarOperationAttempted = true;
           await _git.perform(widget.repository.push);
         }
@@ -623,11 +623,11 @@ class _GitPageState extends State<GitPage> {
         if (sync == 'behind_only' || sync == 'dirty_and_behind') {
           final dirty = sync == 'dirty_and_behind';
           if (await _confirm(
-            dirty ? 'Local changes need attention' : 'Update repository?',
             dirty
-                ? "You have local changes and the remote branch moved ahead. Pull with rebase only if you're ready to reconcile those changes."
-                : 'Pull remote commits into this branch.',
-            accept: dirty ? 'Pull & Rebase' : 'Update',
+                ? l10n.gitLocalChangesNeedAttention
+                : l10n.gitUpdateRepositoryTitle,
+            dirty ? l10n.gitDirtyAndBehindBody : l10n.gitPullBody,
+            accept: dirty ? l10n.gitPullAndRebase : l10n.gitUpdate,
           )) {
             await _git.perform(widget.repository.pull);
           }
@@ -639,14 +639,17 @@ class _GitPageState extends State<GitPage> {
       case 'managed':
         await _worktree(true);
       case 'transfer':
-        final path = await _text('Transfer changes', 'Target workspace path');
+        final path = await _text(
+          l10n.gitTransferChangesTitle,
+          l10n.gitTargetWorkspacePath,
+        );
         if (path?.isNotEmpty == true && _allowRouting(epoch)) {
           await _git.perform(() => widget.repository.transfer(path!));
         }
       case 'remove':
         if (await _confirm(
-              'Remove this worktree?',
-              'Remove the managed worktree for this branch. The desktop will refuse to remove the main checkout.',
+              l10n.gitRemoveWorktreeTitle,
+              l10n.gitRemoveWorktreeBody,
             ) &&
             _allowRouting(epoch)) {
           await _git.perform(
@@ -654,10 +657,7 @@ class _GitPageState extends State<GitPage> {
           );
         }
       case 'reset':
-        if (await _confirm(
-          'Discard local changes?',
-          'Discard local file changes and reset this branch to its remote.',
-        )) {
+        if (await _confirm(l10n.gitDiscardTitle, l10n.gitDiscardBody)) {
           await _git.perform(widget.repository.resetToRemote);
         }
       case 'draft':
@@ -671,7 +671,7 @@ class _GitPageState extends State<GitPage> {
           await showDialog<void>(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text(result['title'] as String? ?? 'Pull request draft'),
+              title: Text(result['title'] as String? ?? l10n.gitPrDraftTitle),
               content: SingleChildScrollView(
                 child: SelectableText(result['body'] as String? ?? ''),
               ),
@@ -690,21 +690,18 @@ class _GitPageState extends State<GitPage> {
                       );
                     }
                   },
-                  child: const Text('Copy draft'),
+                  child: Text(l10n.gitCopyDraft),
                 ),
                 TextButton(
                   onPressed: () => _finishDialog(context, null),
-                  child: const Text('Done'),
+                  child: Text(l10n.gitDone),
                 ),
               ],
             ),
           );
         }
       case 'pr':
-        if (await _confirm(
-          'Create pull request?',
-          'The desktop will push this branch if needed, generate a title and description from the committed changes, and create the pull request on GitHub.',
-        )) {
+        if (await _confirm(l10n.gitCreatePrTitle, l10n.gitCreatePrBody)) {
           _toolbarOperationAttempted = true;
           await _git.stacked(
             'create_pr',
@@ -726,7 +723,7 @@ class _GitPageState extends State<GitPage> {
     }
     final patch = _git.patch!;
     if (patch.trim().isEmpty) {
-      setState(() => _git.error = 'There are no repository changes to show.');
+      setState(() => _git.error = context.l10n.gitNoChangesToShow);
       return;
     }
     await showModalBottomSheet<void>(
@@ -760,14 +757,12 @@ class _GitPageState extends State<GitPage> {
         await showDialog<void>(
           context: context,
           builder: (dialog) => AlertDialog(
-            title: const Text('Branch Switch Failed'),
-            content: const Text(
-              'Cannot switch branches: this branch is already open in another worktree.',
-            ),
+            title: Text(context.l10n.gitBranchSwitchFailed),
+            content: Text(context.l10n.gitBranchOpenElsewhere),
             actions: [
               TextButton(
                 onPressed: () => _finishDialog(dialog, null),
-                child: const Text('OK'),
+                child: Text(context.l10n.gitOk),
               ),
             ],
           ),
@@ -849,12 +844,12 @@ class _GitPageState extends State<GitPage> {
         await showDialog<void>(
           context: context,
           builder: (dialog) => AlertDialog(
-            title: const Text('Git Error'),
+            title: Text(context.l10n.gitErrorTitle),
             content: Text(_git.error!.replaceFirst('Bad state: ', '')),
             actions: [
               TextButton(
                 onPressed: () => _finishDialog(dialog, null),
-                child: const Text('OK'),
+                child: Text(context.l10n.gitOk),
               ),
             ],
           ),
@@ -870,7 +865,7 @@ class _GitPageState extends State<GitPage> {
             content: Text(_git.notice!),
             action: uri != null && ['https', 'http'].contains(uri.scheme)
                 ? SnackBarAction(
-                    label: 'Open PR',
+                    label: context.l10n.gitOpenPr,
                     onPressed: () {
                       if (repository.isCurrent) {
                         unawaited(
@@ -930,14 +925,14 @@ class _GitPageState extends State<GitPage> {
     if (action == GitToolbarAction.changes) {
       final totals = status?.diffTotals;
       if (_git.loading && status == null) {
-        label = 'Loading changes';
-        title = const Text('Loading changes…');
+        label = context.l10n.gitLoadingChanges;
+        title = Text(context.l10n.gitLoadingChangesEllipsis);
         icon = const CupertinoActivityIndicator(
           key: Key('git.menu.changes.loading'),
           radius: 8,
         );
       } else if (totals == null) {
-        label = 'Changes unavailable';
+        label = context.l10n.gitChangesUnavailable;
         title = Text(label);
         icon = SvgPicture.asset(
           'assets/icons/command/central-exclamation-circle.svg',
@@ -946,7 +941,7 @@ class _GitPageState extends State<GitPage> {
           colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
         );
       } else if (!totals.hasChanges) {
-        label = 'No changes';
+        label = context.l10n.gitNoChanges;
         title = Text(label);
         icon = Icon(DjlIcons.checkCircle, size: 20, color: color);
       } else {
@@ -1020,10 +1015,11 @@ class _GitPageState extends State<GitPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Connected desktop changed. Reopen Git from its workspace.',
+            Text(context.l10n.gitDesktopChanged),
+            TextButton(
+              onPressed: _closeToolbar,
+              child: Text(context.l10n.gitClose),
             ),
-            TextButton(onPressed: _closeToolbar, child: const Text('Close')),
           ],
         ),
       );
@@ -1036,7 +1032,7 @@ class _GitPageState extends State<GitPage> {
                 children: [
                   const CupertinoActivityIndicator(),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(_git.phase ?? 'Working…')),
+                  Expanded(child: Text(_git.phase ?? context.l10n.gitWorking)),
                 ],
               ),
             )
@@ -1056,7 +1052,7 @@ class _GitPageState extends State<GitPage> {
                 Text(_git.error!.replaceFirst('Bad state: ', '')),
                 TextButton(
                   onPressed: _git.loading ? null : _git.refresh,
-                  child: const Text('Retry Git status'),
+                  child: Text(context.l10n.gitRetryStatus),
                 ),
               ],
             ),
@@ -1106,10 +1102,13 @@ class _GitPageState extends State<GitPage> {
           );
         } else if (c.error != null) {
           child = AlertDialog(
-            title: const Text('Worktree unavailable'),
+            title: Text(context.l10n.gitWorktreeUnavailable),
             content: Text(c.error!),
             actions: [
-              TextButton(onPressed: _closeToolbar, child: const Text('Close')),
+              TextButton(
+                onPressed: _closeToolbar,
+                child: Text(context.l10n.gitClose),
+              ),
             ],
           );
         } else {
@@ -1136,7 +1135,7 @@ class _GitPageState extends State<GitPage> {
               scopesRoute: true,
               namesRoute: true,
               explicitChildNodes: true,
-              label: 'Git actions',
+              label: context.l10n.gitActionsLabel,
               child: Material(
                 type: MaterialType.card,
                 color: Theme.of(
@@ -1159,13 +1158,11 @@ class _GitPageState extends State<GitPage> {
       if (!_ownsAction) {
         return Scaffold(
           appBar: AppBar(title: const Text('Git')),
-          body: const SafeArea(
+          body: SafeArea(
             child: Center(
               child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'Connected desktop changed. Reopen Git from its workspace.',
-                ),
+                padding: const EdgeInsets.all(20),
+                child: Text(context.l10n.gitDesktopChanged),
               ),
             ),
           ),
@@ -1186,12 +1183,12 @@ class _GitPageState extends State<GitPage> {
           title: const Text('Git'),
           actions: [
             IconButton(
-              tooltip: 'Refresh Git status',
+              tooltip: context.l10n.gitRefreshStatus,
               onPressed: c.loading || c.busy ? null : c.refresh,
               icon: const Icon(DjlIcons.refresh),
             ),
             DjlGlassMenuButton<String>(
-              tooltip: 'Show menu',
+              tooltip: context.l10n.gitShowMenu,
               enabled: !c.busy,
               onSelected: (action) {
                 if (_routingActions.contains(action) &&
@@ -1202,58 +1199,58 @@ class _GitPageState extends State<GitPage> {
               },
               itemBuilder: (_) => [
                 if (s?.isRepo != true)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'init',
-                    child: Text('Initialize repository'),
+                    child: Text(context.l10n.gitInitializeRepository),
                   ),
                 if (s?.isRepo == true) ...[
                   PopupMenuItem(
                     enabled: _branchReady,
                     value: 'branch',
-                    child: const Text('Create branch'),
+                    child: Text(context.l10n.gitCreateBranch),
                   ),
                   PopupMenuItem(
                     enabled: _branchReady,
                     value: 'worktree',
-                    child: const Text('Create worktree'),
+                    child: Text(context.l10n.gitCreateWorktree),
                   ),
                   PopupMenuItem(
                     enabled: _branchReady,
                     value: 'managed',
-                    child: const Text('Create managed worktree'),
+                    child: Text(context.l10n.gitCreateManagedWorktree),
                   ),
                   PopupMenuItem(
                     enabled: _branchReady,
                     value: 'transfer',
-                    child: const Text('Transfer changes to workspace'),
+                    child: Text(context.l10n.gitTransferToWorkspace),
                   ),
                   PopupMenuItem(
                     enabled: _branchReady,
                     value: 'remove',
-                    child: const Text('Remove managed worktree'),
+                    child: Text(context.l10n.gitRemoveManagedWorktree),
                   ),
                   PopupMenuItem(
                     enabled: _writerModel != null,
                     value: 'draft',
-                    child: Text('Generate PR draft'),
+                    child: Text(context.l10n.gitGeneratePrDraft),
                   ),
                   PopupMenuItem(
                     enabled: _writerModel != null,
                     value: 'pr',
-                    child: Text('Create pull request'),
+                    child: Text(context.l10n.gitCreatePullRequest),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'commit_push',
-                    child: Text('Commit and push'),
+                    child: Text(context.l10n.gitCommitAndPushMenu),
                   ),
                   PopupMenuItem(
                     enabled: _writerModel != null,
                     value: 'commit_push_pr',
-                    child: Text('Commit, push and create PR'),
+                    child: Text(context.l10n.gitCommitPushCreatePrMenu),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'reset',
-                    child: Text('Discard and reset to remote'),
+                    child: Text(context.l10n.gitDiscardAndReset),
                   ),
                 ],
               ],
@@ -1290,7 +1287,7 @@ class _GitPageState extends State<GitPage> {
                   ),
                 if (resultPath != null)
                   ListTile(
-                    title: const Text('Worktree ready'),
+                    title: Text(context.l10n.gitWorktreeReady),
                     subtitle: SelectableText(resultPath),
                     trailing: TextButton(
                       onPressed: !_branchReady
@@ -1300,7 +1297,7 @@ class _GitPageState extends State<GitPage> {
                                 widget.onOpenWorktree(resultPath);
                               }
                             },
-                      child: const Text('Open chat'),
+                      child: Text(context.l10n.gitOpenChat),
                     ),
                   ),
                 if (url != null)
@@ -1309,18 +1306,18 @@ class _GitPageState extends State<GitPage> {
                       Uri.parse(url),
                       mode: LaunchMode.externalApplication,
                     ),
-                    child: const Text('Open pull request'),
+                    child: Text(context.l10n.gitOpenPullRequest),
                   ),
                 if (s != null) ...[
                   Text(
                     s.isRepo
-                        ? s.branch ?? 'Detached HEAD'
-                        : 'This folder is not a Git repository',
+                        ? s.branch ?? context.l10n.gitDetachedHead
+                        : context.l10n.gitNotRepository,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
-                  Text(s.tracking ?? 'No upstream branch'),
-                  Text('${s.ahead} ahead · ${s.behind} behind'),
+                  Text(s.tracking ?? context.l10n.gitNoUpstream),
+                  Text(context.l10n.gitAheadBehind(s.ahead, s.behind)),
                   const SizedBox(height: 20),
                   if (s.isRepo)
                     Wrap(
@@ -1329,37 +1326,37 @@ class _GitPageState extends State<GitPage> {
                       children: [
                         FilledButton(
                           onPressed: c.busy || !s.dirty ? null : _commit,
-                          child: const Text('Commit changes'),
+                          child: Text(context.l10n.gitCommitChanges),
                         ),
                         OutlinedButton(
                           onPressed: c.busy || !s.canPush
                               ? null
                               : () async {
                                   if (await _confirm(
-                                    'Push branch?',
-                                    'Push the committed changes to the configured remote.',
+                                    context.l10n.gitPushTitle,
+                                    context.l10n.gitPushBody,
                                   )) {
                                     await c.perform(widget.repository.push);
                                   }
                                 },
-                          child: const Text('Push'),
+                          child: Text(context.l10n.gitPush),
                         ),
                         OutlinedButton(
                           onPressed: c.busy || !s.hasRemote
                               ? null
                               : () async {
                                   if (await _confirm(
-                                    'Pull changes?',
-                                    'Pull remote commits into this branch.',
+                                    context.l10n.gitPullTitle,
+                                    context.l10n.gitPullBody,
                                   )) {
                                     await c.perform(widget.repository.pull);
                                   }
                                 },
-                          child: const Text('Pull'),
+                          child: Text(context.l10n.gitPull),
                         ),
                         TextButton(
                           onPressed: c.busy ? null : _diff,
-                          child: const Text('View diff'),
+                          child: Text(context.l10n.gitViewDiff),
                         ),
                       ],
                     ),
@@ -1368,7 +1365,7 @@ class _GitPageState extends State<GitPage> {
                       alignment: AlignmentDirectional.centerStart,
                       child: Builder(
                         builder: (buttonContext) => Semantics(
-                          label: 'Current Branch',
+                          label: context.l10n.gitCurrentBranch,
                           child: TextButton.icon(
                             key: const Key('git.current-branch'),
                             onPressed: !_branchReady
@@ -1391,7 +1388,8 @@ class _GitPageState extends State<GitPage> {
                             label: Text(
                               branchSnapshot.currentBranch.isNotEmpty
                                   ? branchSnapshot.currentBranch
-                                  : branchSnapshot.defaultBranch ?? 'Branch',
+                                  : branchSnapshot.defaultBranch ??
+                                        context.l10n.gitBranchFallback,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -1404,13 +1402,11 @@ class _GitPageState extends State<GitPage> {
                       ),
                     ),
                   Text(
-                    'Git writer model',
+                    context.l10n.gitWriterModel,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   if (widget.writerModels.isEmpty)
-                    const Text(
-                      'Connect a Codex model on your Mac to generate commit messages and PR drafts.',
-                    )
+                    Text(context.l10n.gitConnectCodexModel)
                   else
                     DropdownButton<String>(
                       key: const Key('git-operation-writer'),
@@ -1437,7 +1433,7 @@ class _GitPageState extends State<GitPage> {
                     ),
                   const Divider(height: 32),
                   Text(
-                    '${s.files.length} changed files',
+                    context.l10n.gitChangedFilesCount(s.files.length),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   for (final file in s.files)

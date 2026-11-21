@@ -5,6 +5,7 @@ import '../domain/appearance.dart';
 import '../domain/runtime_defaults.dart';
 import '../../desktop/domain/desktop_contract.dart';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class SettingsController extends ChangeNotifier {
   SettingsController(this.store);
@@ -69,8 +70,8 @@ class SettingsController extends ChangeNotifier {
       await load();
       if (!_disposed) {
         error = ready
-            ? 'Some defaults may have been saved in part. Review the reloaded choices and retry.'
-            : 'Defaults may have been saved in part. Could not reload preferences. Retry reading settings first.';
+            ? appStrings.settingsErrorPartialSave
+            : appStrings.settingsErrorPartialReload;
       }
       return false;
     } finally {
@@ -160,7 +161,7 @@ class SettingsController extends ChangeNotifier {
     } catch (_) {
       if (_disposed) return;
       ready = false;
-      error = 'Could not read saved settings. Retry to keep your preferences.';
+      error = appStrings.settingsErrorRead;
     }
     notifyListeners();
   }
@@ -179,8 +180,7 @@ class SettingsController extends ChangeNotifier {
       }
     } catch (_) {
       if (!_disposed) {
-        error =
-            'Could not save this setting. Your previous choice is unchanged. Try again.';
+        error = appStrings.settingsErrorSave;
       }
     } finally {
       if (!_disposed) {

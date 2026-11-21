@@ -92,8 +92,9 @@ extension DesktopSubagents on DesktopController {
     threadList.scheduleSave();
   }
 
-  String? subagentMetadataState(String id) =>
-      !connected ? 'Offline · cached details' : _subagentLoadStates[id];
+  String? subagentMetadataState(String id) => !connected
+      ? appStrings.desktopSubagentOfflineCached
+      : _subagentLoadStates[id];
 
   SubagentChild resolvedSubagent(SubagentChild child) {
     final metadata = threadList.data.find(child.thread);
@@ -155,7 +156,7 @@ extension DesktopSubagents on DesktopController {
         transport.sessionId == session &&
         identical(data, threadList.data) &&
         !data.deleted.contains(id);
-    _subagentLoadStates[id] = 'Loading agent details';
+    _subagentLoadStates[id] = appStrings.desktopSubagentLoading;
     final future = () async {
       final timelineWatermark = _timelineRevision;
       try {
@@ -208,11 +209,13 @@ extension DesktopSubagents on DesktopController {
         _syncReasoningRows();
         _subagentLoadStates[id] =
             SubagentChild.fromThread(id, metadata).hasIdentity
-            ? 'Details loaded'
-            : 'Agent identity unknown';
+            ? appStrings.desktopSubagentLoaded
+            : appStrings.desktopSubagentIdentityUnknown;
         threadList.scheduleSave();
       } catch (_) {
-        if (current()) _subagentLoadStates[id] = 'Could not load agent details';
+        if (current()) {
+          _subagentLoadStates[id] = appStrings.desktopSubagentLoadFailed;
+        }
       } finally {
         if (current()) {
           _subagentLoads.remove(id);

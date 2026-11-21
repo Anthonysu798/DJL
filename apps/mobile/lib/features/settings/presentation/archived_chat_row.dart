@@ -5,6 +5,7 @@ import 'settings_group.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class ArchivedChatRow extends StatefulWidget {
   const ArchivedChatRow({
@@ -96,9 +97,11 @@ class _ArchivedChatRowState extends State<ArchivedChatRow> {
       );
       return Semantics(
         customSemanticsActions: {
-          const CustomSemanticsAction(label: 'Unarchive'): () =>
+          CustomSemanticsAction(label: context.l10n.settingsUnarchive): () =>
               _act(widget.onUnarchive),
-          const CustomSemanticsAction(label: 'Remove from Phone'): () =>
+          CustomSemanticsAction(
+            label: context.l10n.settingsRemoveFromPhone,
+          ): () =>
               _act(() => widget.onRemove(_anchor())),
         },
         child: ClipRect(
@@ -119,13 +122,13 @@ class _ArchivedChatRowState extends State<ArchivedChatRow> {
                         children: [
                           _offset > 0
                               ? action(
-                                  'Unarchive',
+                                  context.l10n.settingsUnarchive,
                                   DjlIcons.upload,
                                   DjlColors.of(context).ink,
                                   widget.onUnarchive,
                                 )
                               : action(
-                                  'Remove',
+                                  context.l10n.settingsRemove,
                                   DjlIcons.delete,
                                   DjlColors.of(context).danger,
                                   () => widget.onRemove(_anchor()),

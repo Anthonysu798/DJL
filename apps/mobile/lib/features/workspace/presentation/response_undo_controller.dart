@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../data/workspace_repository.dart';
 import '../domain/response_change_set.dart';
+import '../../../l10n/l10n.dart';
 
 /// A sheet owns one frozen patch and one connection. No mutation is retried here.
 class ResponseUndoController extends ChangeNotifier {
@@ -53,9 +54,7 @@ class ResponseUndoController extends ChangeNotifier {
     preview = null;
     error = null;
     if (!current || blocked() != null) {
-      error =
-          blocked() ??
-          'The response or connection changed. Reopen this review.';
+      error = blocked() ?? appStrings.workspaceUndoReviewChanged;
       _notify();
       return;
     }
@@ -68,12 +67,11 @@ class ResponseUndoController extends ChangeNotifier {
       if (current && blocked() == null) {
         preview = result;
       } else {
-        error = 'The response or connection changed. Reopen this review.';
+        error = appStrings.workspaceUndoReviewChanged;
       }
     } catch (_) {
       if (!_disposed) {
-        error =
-            'Could not preview the exact patch. Refresh the review before trying again.';
+        error = appStrings.workspaceUndoPreviewFailed;
       }
     } finally {
       loading = false;
@@ -95,11 +93,11 @@ class ResponseUndoController extends ChangeNotifier {
       if (!current ||
           blocked() != null ||
           verifyRepository != null && !await verifyRepository!()) {
-        error = 'The response or repository changed. Reopen this review.';
+        error = appStrings.workspaceUndoRepositoryChanged;
         return;
       }
       if (!current || blocked() != null) {
-        error = 'The response or connection changed. Reopen this review.';
+        error = appStrings.workspaceUndoReviewChanged;
         return;
       }
 
@@ -107,8 +105,7 @@ class ResponseUndoController extends ChangeNotifier {
           ? await repository.revertPatchBatchApply(_patches)
           : await repository.revertPatchApply(_patches.single.forwardPatch);
       if (!current || blocked() != null) {
-        error =
-            'The connection or response changed. The undo result is unknown; refresh and review it.';
+        error = appStrings.workspaceUndoResultUnknownChanged;
         return;
       }
       if (result.success) {
@@ -120,8 +117,8 @@ class ResponseUndoController extends ChangeNotifier {
       } else {
         entry.uncertain = !result.definite;
         error = result.definite
-            ? 'The desktop did not undo the response. Review the current conflicts and staged files.'
-            : 'The undo result is unknown. Refresh and review the exact patch before another attempt.';
+            ? appStrings.workspaceUndoRefused
+            : appStrings.workspaceUndoResultUnknown;
         final details = result.details;
         if (details.staged.isNotEmpty ||
             details.conflicts.isNotEmpty ||
@@ -132,8 +129,8 @@ class ResponseUndoController extends ChangeNotifier {
       }
     } catch (_) {
       error = entry.reverted
-          ? 'Undo succeeded, but saving or refreshing its local result failed. Reconnect to verify the files.'
-          : 'The undo result is unknown. Refresh and review the exact patch before another attempt.';
+          ? appStrings.workspaceUndoSaveAfterSuccessFailed
+          : appStrings.workspaceUndoResultUnknown;
     } finally {
       preview = null;
       applying = false;
@@ -143,8 +140,7 @@ class ResponseUndoController extends ChangeNotifier {
         try {
           await onChanged();
         } catch (_) {
-          error =
-              'Could not save the undo result. Reconnect and review the current files.';
+          error = appStrings.workspaceUndoSaveFailed;
         }
       }
       _notify();

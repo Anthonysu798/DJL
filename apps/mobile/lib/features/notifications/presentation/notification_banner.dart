@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../domain/cloud_notification.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class CloudNotificationBanner extends StatelessWidget {
   const CloudNotificationBanner({
@@ -44,7 +45,9 @@ class CloudNotificationBanner extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              failed ? 'Task stopped' : 'Task finished',
+                              failed
+                                  ? context.l10n.notificationsTaskStopped
+                                  : context.l10n.notificationsTaskFinished,
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -52,7 +55,8 @@ class CloudNotificationBanner extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              item.title ?? 'Open DJL to see the result',
+                              item.title ??
+                                  context.l10n.notificationsOpenResult,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -69,7 +73,7 @@ class CloudNotificationBanner extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Dismiss notification',
+              tooltip: context.l10n.notificationsDismiss,
               onPressed: onDismiss,
               icon: const Icon(DjlIcons.close, size: 18),
             ),

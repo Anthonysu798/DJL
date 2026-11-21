@@ -12,6 +12,7 @@ import 'workspace_linked_file_controller.dart';
 
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class WorkspaceLinkedFilePage extends StatefulWidget {
   const WorkspaceLinkedFilePage({
@@ -62,11 +63,12 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
   Future<void> _export(WorkspaceImage image, {Rect? origin}) async {
     if (_exporting) return;
     setState(() => _exporting = true);
+    final saved = context.l10n.workspaceSavedToPhotos;
     String? message;
     try {
       if (origin == null) {
         await _imageActions.save(image.bytes, image.name);
-        message = 'Saved to Photos.';
+        message = saved;
       } else {
         await _imageActions.share(image.bytes, image.mimeType, origin);
       }
@@ -79,12 +81,12 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Image'),
+          title: Text(context.l10n.workspaceImageTitle),
           content: Text(message!),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: Text(context.l10n.workspaceOk),
             ),
           ],
         ),
@@ -112,7 +114,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                       ? [
                           const CircularProgressIndicator.adaptive(),
                           const SizedBox(height: 16),
-                          const Text('Loading file'),
+                          Text(context.l10n.workspaceLoadingFile),
                         ]
                       : [
                           const Icon(DjlIcons.document, size: 38),
@@ -126,7 +128,8 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            _controller.error ?? 'Unable to load file.',
+                            _controller.error ??
+                                context.l10n.workspaceUnableToLoadFile,
                             maxLines: 5,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
@@ -134,7 +137,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                           const SizedBox(height: 16),
                           TextButton(
                             onPressed: () => _controller.load(widget.path),
-                            child: const Text('Retry'),
+                            child: Text(context.l10n.workspaceRetry),
                           ),
                         ],
                 ),
@@ -142,7 +145,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
             ),
             _previewChrome(
               title: widget.path.split('/').last,
-              closeLabel: 'Close file preview',
+              closeLabel: context.l10n.workspaceCloseFilePreview,
             ),
           ],
         ),
@@ -194,7 +197,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
         titleSpacing: 0,
         leading: TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Done'),
+          child: Text(context.l10n.workspaceDone),
         ),
         title: Column(
           mainAxisSize: MainAxisSize.min,
@@ -216,17 +219,17 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Find in file',
+            tooltip: context.l10n.workspaceFindInFile,
             onPressed: () => setState(() => _findRevision++),
             icon: const Icon(DjlIcons.search, size: 19),
           ),
           IconButton(
-            tooltip: 'Reload file',
+            tooltip: context.l10n.workspaceReloadFile,
             onPressed: () => _controller.load(widget.path),
             icon: const Icon(DjlIcons.refresh, size: 19),
           ),
           IconButton(
-            tooltip: 'Copy file contents',
+            tooltip: context.l10n.workspaceCopyFileContents,
             onPressed: () => _copy(file),
             icon: Icon(_copied ? DjlIcons.check : DjlIcons.copy, size: 19),
           ),
@@ -295,7 +298,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                           chip(_byteSize(file.byteLength)),
                           if (file.lineCount != null)
                             chip(
-                              '${file.lineCount} line${file.lineCount == 1 ? '' : 's'}',
+                              context.l10n.workspaceLineCount(file.lineCount!),
                             ),
                           chip(file.encoding.toUpperCase()),
                         ],
@@ -316,7 +319,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
   }
 
   String _byteSize(int bytes) => bytes < 1000
-      ? '$bytes ${bytes == 1 ? 'byte' : 'bytes'}'
+      ? context.l10n.workspaceByteCount(bytes)
       : bytes < 1000000
       ? '${(bytes / 1000).toStringAsFixed(bytes < 10000 ? 1 : 0)} KB'
       : '${(bytes / 1000000).toStringAsFixed(1)} MB';
@@ -373,11 +376,13 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
           ),
           _previewChrome(
             title: image.name,
-            closeLabel: svg ? 'Close SVG preview' : 'Close',
+            closeLabel: svg
+                ? context.l10n.workspaceCloseSvgPreview
+                : context.l10n.workspaceClose,
             actions: svg
                 ? [
                     _circle(
-                      'Reload SVG preview',
+                      context.l10n.workspaceReloadSvgPreview,
                       DjlIcons.refresh,
                       () => _controller.load(widget.path),
                     ),
@@ -385,7 +390,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                 : [
                     Builder(
                       builder: (buttonContext) => _circle(
-                        'Share',
+                        context.l10n.workspaceShare,
                         DjlIcons.share,
                         _exporting
                             ? null
@@ -405,7 +410,7 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
                       ),
                     ),
                     _circle(
-                      'Save to Photos',
+                      context.l10n.workspaceSaveToPhotos,
                       DjlIcons.download,
                       _exporting ? null : () => unawaited(_export(image)),
                     ),
@@ -420,10 +425,10 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Unable to display image.'),
+        Text(context.l10n.workspaceUnableToDisplayImage),
         TextButton(
           onPressed: () => _controller.load(widget.path),
-          child: const Text('Retry'),
+          child: Text(context.l10n.workspaceRetry),
         ),
       ],
     ),

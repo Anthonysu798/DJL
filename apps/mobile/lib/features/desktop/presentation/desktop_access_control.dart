@@ -7,24 +7,25 @@ import 'desktop_composer_options_menu.dart';
 import 'desktop_controller.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
-const _modes = [
+List<(String, String, String, String)> _modes(AppLocalizations l10n) => [
   (
     'on-request',
-    'Ask for approval',
-    'Always ask to edit external files and use the internet',
+    l10n.chatUiAccessAskTitle,
+    l10n.chatUiAccessAskDetail,
     'raising-hand-5-finger',
   ),
   (
     'auto-review',
-    'Approve for me',
-    'Only ask for actions detected as potentially unsafe',
+    l10n.chatUiAccessAutoTitle,
+    l10n.chatUiAccessAutoDetail,
     'shield-check-3',
   ),
   (
     'full-access',
-    'Full access',
-    'Full computer access (elevated risk)',
+    l10n.chatUiAccessFullTitle,
+    l10n.chatUiAccessFullDetail,
     'shield-access',
   ),
 ];
@@ -40,16 +41,17 @@ class DesktopAccessControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mode = _modes.firstWhere(
+    final modes = _modes(context.l10n);
+    final mode = modes.firstWhere(
       (m) => m.$1 == controller.access,
-      orElse: () => _modes.first,
+      orElse: () => modes.first,
     );
     final color = mode.$1 == 'full-access'
         ? Theme.of(context).colorScheme.onSurface
         : Theme.of(context).colorScheme.onSurfaceVariant;
     return Builder(
       builder: (buttonContext) => Semantics(
-        hint: 'Changes how Codex requests permission',
+        hint: context.l10n.chatUiAccessHint,
         child: IconButton(
           key: const Key('composer.access'),
           tooltip: mode.$2,
@@ -96,10 +98,8 @@ class DesktopAccessControl extends StatelessWidget {
               final yes = await showDialog<bool>(
                 context: buttonContext,
                 builder: (dialogContext) => AlertDialog(
-                  title: const Text('Allow full desktop access?'),
-                  content: const Text(
-                    'The agent can change files and run commands outside the workspace without asking for approval.',
-                  ),
+                  title: Text(dialogContext.l10n.chatUiAccessFullConfirmTitle),
+                  content: Text(dialogContext.l10n.chatUiAccessFullConfirmBody),
                   actions: [
                     TextButton(
                       onPressed: () {
@@ -108,7 +108,7 @@ class DesktopAccessControl extends StatelessWidget {
                           Navigator.pop(dialogContext, false);
                         }
                       },
-                      child: const Text('Cancel'),
+                      child: Text(dialogContext.l10n.commonCancel),
                     ),
                     FilledButton(
                       onPressed: () {
@@ -117,7 +117,7 @@ class DesktopAccessControl extends StatelessWidget {
                           Navigator.pop(dialogContext, true);
                         }
                       },
-                      child: const Text('Allow full access'),
+                      child: Text(dialogContext.l10n.chatUiAccessFullConfirm),
                     ),
                   ],
                 ),
@@ -191,7 +191,7 @@ class _AccessPopover extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          for (final mode in _modes)
+                          for (final mode in _modes(context.l10n))
                             Semantics(
                               selected: mode.$1 == selected,
                               child: TextButton(

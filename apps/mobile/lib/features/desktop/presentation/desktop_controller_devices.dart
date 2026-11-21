@@ -12,7 +12,7 @@ extension DesktopDevicePreferences on DesktopController {
         ? nickname
         : system.isNotEmpty
         ? system
-        : 'Device';
+        : appStrings.desktopDeviceFallbackName;
   }
 
   String? get selectedDeviceName => active == null ? null : deviceName(active!);
@@ -92,8 +92,8 @@ extension DesktopDevicePreferences on DesktopController {
       }
       if (_disposed) return false;
       devicePreferencesError = devicePreferencesReady
-          ? 'Could not confirm the change. Review the saved name and retry. If this device was forgotten or replaced, close and reopen the editor.'
-          : 'Could not confirm or reload local preferences. Unlock your device and retry before saving again.';
+          ? appStrings.desktopDeviceChangeUnconfirmed
+          : appStrings.desktopPreferencesReloadFailed;
       return false;
     } finally {
       if (!_disposed) {

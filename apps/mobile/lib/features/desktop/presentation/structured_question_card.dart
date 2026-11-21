@@ -9,6 +9,7 @@ import '../../pairing/data/pairing_repository.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class StructuredQuestionCard extends StatefulWidget {
   const StructuredQuestionCard({
@@ -242,7 +243,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                   runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('Questions', style: _style(11, secondary)),
+                    Text(
+                      context.l10n.chatUiQuestions,
+                      style: _style(11, secondary),
+                    ),
                     if (questions.length > 1) ...[
                       Container(
                         width: 3,
@@ -253,7 +257,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                         ),
                       ),
                       Text(
-                        '${_page + 1} of ${questions.length}',
+                        context.l10n.chatUiQuestionPage(
+                          _page + 1,
+                          questions.length,
+                        ),
                         style: _style(10, secondary),
                       ),
                       Wrap(
@@ -297,7 +304,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                 if (widget.responseUnknown) ...[
                   const SizedBox(height: 14),
                   Text(
-                    'A previous response may have been sent. Check the desktop state before replying again.',
+                    context.l10n.chatUiQuestionResponseUnknown,
                     style: _style(12, secondary),
                   ),
                 ],
@@ -312,7 +319,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                   children: [
                     if (_page > 0)
                       _action(
-                        'Back',
+                        context.l10n.chatUiBack,
                         _busy ? null : () => _move(_page - 1),
                         before: DjlIcons.chevronLeft,
                       ),
@@ -324,7 +331,9 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                       children: [
                         if (widget.onCancel != null)
                           _action(
-                            widget.cancelling ? 'Closing...' : 'ESC',
+                            widget.cancelling
+                                ? context.l10n.chatUiQuestionClosing
+                                : context.l10n.chatUiQuestionEsc,
                             _locked
                                 ? null
                                 : () {
@@ -333,7 +342,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                           ),
                         if (_page < questions.length - 1)
                           _action(
-                            'Next',
+                            context.l10n.chatUiNext,
                             _busy || !canNext ? null : () => _move(_page + 1),
                             primary: true,
                             after: DjlIcons.chevronRight,
@@ -341,10 +350,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                         else
                           _action(
                             widget.submitted
-                                ? 'Response sent'
+                                ? context.l10n.chatUiResponseSent
                                 : _sending
-                                ? 'Sending...'
-                                : 'Send',
+                                ? context.l10n.chatUiSendingDots
+                                : context.l10n.chatUiSend,
                             canSend ? _send : null,
                             primary: true,
                           ),
@@ -389,7 +398,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
         Text((q['question'] as String).trim(), style: _style(15, foreground)),
         if (limit > 1) ...[
           const SizedBox(height: 10),
-          Text('Select up to $limit', style: _style(11, secondary)),
+          Text(
+            context.l10n.chatUiSelectUpTo(limit),
+            style: _style(11, secondary),
+          ),
         ],
         if (options.isNotEmpty) const SizedBox(height: 10),
         for (final option in options.indexed) ...[
@@ -518,7 +530,9 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
               maxLines: q['isSecret'] == true ? 1 : null,
               style: _style(15, foreground),
               decoration: InputDecoration.collapsed(
-                hintText: q['isOther'] == true ? 'Other answer' : 'Your answer',
+                hintText: q['isOther'] == true
+                    ? context.l10n.chatUiOtherAnswer
+                    : context.l10n.chatUiYourAnswer,
               ),
               onChanged: (_) => setState(() {}),
             ),

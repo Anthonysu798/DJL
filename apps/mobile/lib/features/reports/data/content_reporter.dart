@@ -1,16 +1,22 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../core/network/cloud_client.dart';
+import '../../../l10n/l10n.dart';
 
 /// Why someone reports an AI answer. Values match DJL Cloud's `reason`.
 enum ReportReason {
-  offensive('Offensive or hateful'),
-  harmful('Harmful or dangerous'),
-  wrong('Wrong or misleading'),
-  other('Something else');
+  offensive,
+  harmful,
+  wrong,
+  other;
 
-  const ReportReason(this.label);
-  final String label;
+  /// What the reader sees. The wire value stays [name].
+  String label(AppLocalizations l10n) => switch (this) {
+    offensive => l10n.reportOffensive,
+    harmful => l10n.reportHarmful,
+    wrong => l10n.reportWrong,
+    other => l10n.reportOther,
+  };
 }
 
 /// Sends reports of AI answers to DJL Cloud (`POST v1/reports`).

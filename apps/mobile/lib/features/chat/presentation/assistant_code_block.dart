@@ -9,6 +9,7 @@ import '../../settings/domain/appearance.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 /// Compared privately, never embedded in widget keys or diagnostic strings.
 @immutable
@@ -178,7 +179,9 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
                   ),
                   const SizedBox(width: 8),
                   _control(
-                    label: _wrap ? 'Disable word wrap' : 'Enable word wrap',
+                    label: _wrap
+                        ? context.l10n.cloudChatDisableWordWrap
+                        : context.l10n.cloudChatEnableWordWrap,
                     onTap: () => setState(() => _wrap = !_wrap),
                     child: Icon(
                       _wrap ? DjlIcons.swap : DjlIcons.textAlign,
@@ -188,7 +191,9 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
                   ),
                   const SizedBox(width: 4),
                   _control(
-                    label: _copied ? 'Copied' : 'Copy code',
+                    label: _copied
+                        ? context.l10n.cloudChatCopied
+                        : context.l10n.cloudChatCopyCode,
                     onTap: _copy,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -208,7 +213,7 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
                         if (_copied) ...[
                           const SizedBox(width: 4),
                           Text(
-                            'Copied',
+                            context.l10n.cloudChatCopied,
                             style: theme.textTheme.bodyMedium!.copyWith(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
@@ -272,7 +277,7 @@ class _AssistantCodeBlockState extends State<AssistantCodeBlock> {
 
 String _displayName(String hint) {
   final language = hint.trim();
-  if (language.isEmpty) return 'Code';
+  if (language.isEmpty) return appStrings.cloudChatCodeLabel;
   const names = {
     'bash': 'Shell',
     'c': 'C',

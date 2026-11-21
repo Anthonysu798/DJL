@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 const activityOutputLines = 30;
 RemoteJson? activityObject(Object? value) =>
@@ -349,13 +350,13 @@ class DesktopActivity {
   bool get terminal => status != 'running';
   String get id => 'activity:${jsonEncode([mac, thread, turn, item])}';
   String get title => kind == 'command'
-      ? (command.isEmpty ? 'Command' : command)
+      ? (command.isEmpty ? appStrings.activityCommand : command)
       : kind == 'fileChange'
       ? (files.isEmpty
-            ? 'File changes'
-            : '${files.length} ${files.length == 1 ? 'file' : 'files'} changed')
+            ? appStrings.activityFileChanges
+            : appStrings.activityFilesChanged(files.length))
       : name.isEmpty
-      ? 'Tool activity'
+      ? appStrings.activityToolActivity
       : name;
   RemoteJson toRow() => {
     'id': id,

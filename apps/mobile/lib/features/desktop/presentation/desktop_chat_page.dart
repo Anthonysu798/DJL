@@ -77,6 +77,7 @@ import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 String desktopItemText(RemoteJson item) {
   if (item['text'] is String) return item['text'] as String;
@@ -550,7 +551,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
         await showDialog<void>(
           context: context,
           builder: (dialog) => AlertDialog(
-            title: Text(flow.errorTitle ?? 'Worktree Handoff Failed'),
+            title: Text(
+              flow.errorTitle ?? dialog.l10n.chatUiWorktreeHandoffFailed,
+            ),
             content: Text(flow.error!),
             scrollable: true,
             actions: [
@@ -561,7 +564,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                     Navigator.pop(dialog);
                   }
                 },
-                child: const Text('OK'),
+                child: Text(dialog.l10n.chatUiOk),
               ),
             ],
           ),
@@ -737,7 +740,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
       button: true,
       value: desktopConversationPathLabel(draft.cwd!),
       child: DjlGlassMenuButton<String>(
-        tooltip: 'Select folder',
+        tooltip: context.l10n.chatUiSelectFolder,
         requestFocus: false,
         enabled: current(),
         onSelected: (path) {
@@ -748,10 +751,10 @@ class _DesktopChatPageState extends State<DesktopChatPage>
             desktop.updateNewChatDraftCwd(draft, path);
           }
         },
-        itemBuilder: (_) => [
-          const PopupMenuItem(
+        itemBuilder: (menuContext) => [
+          PopupMenuItem(
             value: 'browse',
-            child: Text('Browse local folders…'),
+            child: Text(menuContext.l10n.chatUiBrowseFolders),
           ),
           for (final choice in choices)
             CheckedPopupMenuItem(
@@ -892,11 +895,11 @@ class _DesktopChatPageState extends State<DesktopChatPage>
         await showDialog<bool>(
           context: gitContext,
           builder: (dialog) => AlertDialog(
-            title: const Text('Branch already open elsewhere'),
+            title: Text(dialog.l10n.chatUiBranchOpenElsewhere),
             content: Text(
               id != null
-                  ? "'$branch' is already checked out in another worktree. Open that chat to continue there."
-                  : "'$branch' is already checked out in another worktree. Open that chat from the sidebar to continue there.",
+                  ? dialog.l10n.chatUiBranchOpenElsewhereChat(branch)
+                  : dialog.l10n.chatUiBranchOpenElsewhereSidebar(branch),
             ),
             actions: [
               TextButton(
@@ -906,7 +909,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                     Navigator.pop(dialog, false);
                   }
                 },
-                child: const Text('Close'),
+                child: Text(dialog.l10n.chatUiClose),
               ),
               if (id != null)
                 TextButton(
@@ -916,7 +919,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                       Navigator.pop(dialog, true);
                     }
                   },
-                  child: const Text('Open Chat'),
+                  child: Text(dialog.l10n.chatUiOpenChat),
                 ),
             ],
           ),
@@ -935,11 +938,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
     ).where((thread) => thread['id'] == id).firstOrNull;
     if (latest == null) {
       ScaffoldMessenger.of(gitContext).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'The worktree chat is no longer available. Open it from the sidebar.',
-          ),
-        ),
+        SnackBar(content: Text(gitContext.l10n.chatUiWorktreeChatGone)),
       );
       return;
     }
@@ -1345,35 +1344,35 @@ class _DesktopChatPageState extends State<DesktopChatPage>
             }
         }
       },
-      itemBuilder: (_) => [
+      itemBuilder: (menuContext) => [
         PopupMenuItem(
           value: 'photo',
           enabled: desktop.connected && _composer.canPick,
-          child: const Text('Photo library'),
+          child: Text(menuContext.l10n.chatUiPhotoLibrary),
         ),
         PopupMenuItem(
           value: 'camera',
           enabled: desktop.connected && _composer.canPick,
-          child: const Text('Take a photo'),
+          child: Text(menuContext.l10n.chatUiTakePhoto),
         ),
         PopupMenuItem(
           value: 'context',
           enabled: desktop.connected && !desktop.busy,
-          child: const Text('Add desktop context'),
+          child: Text(menuContext.l10n.chatUiAddDesktopContext),
         ),
         const PopupMenuDivider(),
         CheckedPopupMenuItem(
           value: 'plan',
           checked: desktop.plan,
           enabled: desktop.supportsPlan && desktop.turnId == null,
-          child: const Text('Plan mode'),
+          child: Text(menuContext.l10n.chatUiPlanMode),
         ),
         if (desktop.supportsFastMode)
           CheckedPopupMenuItem(
             value: 'fast',
             checked: desktop.serviceTier == 'fast',
             enabled: desktop.turnId == null,
-            child: const Text('Fast mode'),
+            child: Text(menuContext.l10n.chatUiFastMode),
           ),
       ],
     );
@@ -1551,7 +1550,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
           final cwd = toolbarCwd is String ? toolbarCwd : null;
           final path = desktopMarkdownImagePath(uri.toString(), cwd: cwd);
           if (path == null || cwd == null || toolbarId is! String) {
-            return Text(alt ?? title ?? 'Image');
+            return Text(alt ?? title ?? context.l10n.chatUiImage);
           }
           bool current() =>
               ownsToolbarContext() &&
@@ -1801,7 +1800,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
               child: DjlGlassSurface(
                 radius: 22,
                 child: IconButton(
-                  tooltip: 'Open navigation',
+                  tooltip: context.l10n.chatUiOpenNavigation,
                   onPressed: () => _drawer.currentState?.toggle(),
                   constraints: const BoxConstraints.tightFor(
                     width: 44,
@@ -1856,7 +1855,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                 ? _chooseDraftProject
                 : null,
             accessibilityHint: toolbarThread != null && savedPath != null
-                ? 'Opens thread location'
+                ? context.l10n.chatUiOpensThreadLocation
                 : null,
             subtitle: desktop.thread != null
                 ? desktopConversationFolder(desktop.thread)
@@ -1866,7 +1865,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                 ? null
                 : desktop.selectedDeviceName,
             title: desktop.thread == null
-                ? (widget.draft == null ? 'Desktop chat' : 'New thread')
+                ? (widget.draft == null
+                      ? context.l10n.chatUiDesktopChat
+                      : context.l10n.chatUiNewThread)
                 : desktop.titleOf(desktop.thread!),
           ),
           actions: [
@@ -2014,12 +2015,12 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                       );
                     }
                   },
-                  primaryBuilder: (_) => [
+                  primaryBuilder: (menuContext) => [
                     PopupMenuItem(
                       value: 'handoff',
                       enabled: ownsToolbar() && desktop.host.canHandoff,
-                      child: const DesktopThreadMenuLabel(
-                        title: 'Hand off to Desktop',
+                      child: DesktopThreadMenuLabel(
+                        title: menuContext.l10n.chatUiHandOffToDesktop,
                         icon: DjlIcons.swap,
                       ),
                     ),
@@ -2035,30 +2036,33 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                           _worktreeFlow == null,
                       child: WorktreeMenuLabel(
                         title: isManagedWorktreePath(toolbarCwd)
-                            ? 'Hand off to Local'
-                            : 'Hand off to Worktree',
+                            ? menuContext.l10n.chatUiHandOffToLocal
+                            : menuContext.l10n.chatUiHandOffToWorktree,
                       ),
                     ),
                     PopupMenuItem(
                       value: 'new-chat',
                       enabled: ownsToolbar() && desktop.runtimeReady,
-                      child: const DesktopThreadMenuLabel(
-                        title: 'New chat',
+                      child: DesktopThreadMenuLabel(
+                        title: menuContext.l10n.chatUiNewChat,
                         icon: DjlIcons.compose,
                       ),
                     ),
                   ],
-                  secondaryBuilder: (_) => [
-                    PopupMenuItem(value: 'goal', child: const Text('Goal')),
+                  secondaryBuilder: (menuContext) => [
+                    PopupMenuItem(
+                      value: 'goal',
+                      child: Text(menuContext.l10n.chatUiGoal),
+                    ),
                     PopupMenuItem(
                       value: 'fork-current',
                       enabled: desktop.runtimeReady && desktop.supportsFork,
-                      child: const Text('Fork this chat'),
+                      child: Text(menuContext.l10n.chatUiForkChat),
                     ),
                     PopupMenuItem(
                       value: 'fork-folder',
                       enabled: desktop.runtimeReady && desktop.supportsFork,
-                      child: const Text('Fork into another folder'),
+                      child: Text(menuContext.l10n.chatUiForkIntoFolder),
                     ),
                     PopupMenuItem(
                       value: 'worktree-fork',
@@ -2071,8 +2075,8 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                           desktop.turnId == null &&
                           !_sending &&
                           _worktreeFlow == null,
-                      child: const WorktreeMenuLabel(
-                        title: 'Fork into new worktree',
+                      child: WorktreeMenuLabel(
+                        title: menuContext.l10n.chatUiForkIntoWorktree,
                         fork: true,
                       ),
                     ),
@@ -2083,28 +2087,32 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                           ownsToolbar() &&
                           _gitContextReady &&
                           savedPath != null,
-                      child: const Text('Branches & worktrees'),
+                      child: Text(menuContext.l10n.chatUiBranchesAndWorktrees),
                     ),
                     PopupMenuItem(
                       value: 'files',
                       enabled:
                           desktop.connected && desktop.thread?['cwd'] is String,
-                      child: const Text('Workspace files'),
+                      child: Text(menuContext.l10n.chatUiWorkspaceFiles),
                     ),
                     PopupMenuItem(
                       value: 'checkpoints',
                       enabled:
                           desktop.connected && desktop.thread?['cwd'] is String,
-                      child: const Text('Turn changes and restore'),
+                      child: Text(menuContext.l10n.chatUiTurnChanges),
                     ),
                     PopupMenuItem(
                       value: 'refresh',
                       enabled: ownsToolbar() && desktop.connected,
-                      child: const Text('Refresh from desktop'),
+                      child: Text(menuContext.l10n.chatUiRefreshFromDesktop),
                     ),
                     const PopupMenuDivider(),
                     if (toolbarThread != null)
-                      ...desktopThreadActions(desktop, toolbarThread),
+                      ...desktopThreadActions(
+                        menuContext,
+                        desktop,
+                        toolbarThread,
+                      ),
                   ],
                 ),
               ),
@@ -2128,13 +2136,12 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                 if (!desktop.connected)
                   MaterialBanner(
                     content: Text(
-                      desktop.error ??
-                          'Desktop disconnected. Your message has not been resent.',
+                      desktop.error ?? context.l10n.chatUiDesktopDisconnected,
                     ),
                     actions: [
                       TextButton(
                         onPressed: desktop.reconnect,
-                        child: const Text('Reconnect'),
+                        child: Text(context.l10n.chatUiReconnect),
                       ),
                     ],
                   ),
@@ -2142,11 +2149,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                     widget.focusTarget?.thread == desktop.thread?['id'] &&
                     timeline.renderIndexFor(rawFocus) == null &&
                     focusedRequest == null)
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      'Linked position is not available in the loaded history.',
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(context.l10n.chatUiLinkedPositionUnavailable),
                   ),
                 Expanded(
                   child: idleEmpty
@@ -2293,7 +2298,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                   cwd: imageScope.cwd,
                                 );
                                 if (path == null) {
-                                  return Text(alt ?? title ?? 'Image');
+                                  return Text(
+                                    alt ?? title ?? context.l10n.chatUiImage,
+                                  );
                                 }
                                 return DesktopMarkdownImage(
                                   path: path,
@@ -2472,7 +2479,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                         return Tooltip(
                                           message:
                                               reason ??
-                                              'Review exact response changes',
+                                              context
+                                                  .l10n
+                                                  .chatUiReviewResponseChanges,
                                           child: TextButton.icon(
                                             icon: const Icon(
                                               DjlIcons.undo,
@@ -2480,8 +2489,12 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                             ),
                                             label: Text(
                                               changes.reverted
-                                                  ? 'Response undone'
-                                                  : 'Undo this response',
+                                                  ? context
+                                                        .l10n
+                                                        .chatUiResponseUndone
+                                                  : context
+                                                        .l10n
+                                                        .chatUiUndoResponse,
                                             ),
                                             onPressed: reason != null
                                                 ? null
@@ -2634,9 +2647,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        'Approval required',
-                                        style: TextStyle(
+                                      Text(
+                                        context.l10n.chatUiApprovalRequired,
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -2671,9 +2684,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                         ),
                                       },
                                       if (request['_submitted'] == true)
-                                        const Text(
-                                          'Response sent. Waiting for the desktop.',
-                                        ),
+                                        Text(context.l10n.chatUiApprovalSent),
                                       Wrap(
                                         spacing: 12,
                                         children: [
@@ -2685,7 +2696,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                                     request,
                                                     'decline',
                                                   ),
-                                            child: const Text('Decline'),
+                                            child: Text(
+                                              context.l10n.chatUiDecline,
+                                            ),
                                           ),
                                           FilledButton(
                                             onPressed:
@@ -2695,7 +2708,9 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                                     request,
                                                     'accept',
                                                   ),
-                                            child: const Text('Approve once'),
+                                            child: Text(
+                                              context.l10n.chatUiApproveOnce,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -2748,7 +2763,8 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                         _navigationOpen,
                                       )),
                                       branchLabel: projectStatus?.isRepo == true
-                                          ? projectStatus?.branch ?? 'Branch'
+                                          ? projectStatus?.branch ??
+                                                context.l10n.chatUiBranch
                                           : null,
                                       worktree:
                                           !isDraft &&
@@ -2756,15 +2772,17 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                       branchEnabled: projectRoutingReady,
                                       handoffEnabled: projectRoutingReady,
                                       handoffLabel: _worktreeFlow != null
-                                          ? 'Preparing worktree...'
+                                          ? context.l10n.chatUiPreparingWorktree
                                           : !isDraft &&
                                                 isManagedWorktreePath(
                                                   projectPath,
                                                 )
-                                          ? 'Hand off to Local'
+                                          ? context.l10n.chatUiHandOffToLocal
                                           : isDraft
-                                          ? 'New worktree'
-                                          : 'Hand off to Worktree',
+                                          ? context.l10n.chatUiNewWorktree
+                                          : context
+                                                .l10n
+                                                .chatUiHandOffToWorktree,
                                       onExpand: () {
                                         if (_gitOwner == toolbarGitOwner &&
                                             ownsToolbar()) {
@@ -2828,7 +2846,13 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                             size: 18,
                                           ),
                                           label: Text(
-                                            'Goal ${_goal!.goal!.status.label.toLowerCase()} · ${_goal!.elapsed(running: desktop.turnId != null)}',
+                                            context.l10n.chatUiGoalChip(
+                                              _goal!.goal!.status.label
+                                                  .toLowerCase(),
+                                              _goal!.elapsed(
+                                                running: desktop.turnId != null,
+                                              ),
+                                            ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -2843,12 +2867,14 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                             ),
                           if (desktop.subagentParent case final parent?)
                             Tooltip(
-                              message: 'Return to parent chat',
+                              message: context.l10n.chatUiReturnToParent,
                               child: TextButton.icon(
                                 onPressed: desktop.returnToSubagentParent,
                                 icon: const Icon(DjlIcons.arrowBendLeft),
                                 label: Text(
-                                  'Return to ${desktop.titleOf(parent)}',
+                                  context.l10n.chatUiReturnTo(
+                                    desktop.titleOf(parent),
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -2871,8 +2897,8 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                     : null,
                                 autofocus: widget.draft != null,
                                 placeholder: desktop.timeline.isEmpty
-                                    ? 'Ask DJL'
-                                    : 'Follow up',
+                                    ? context.l10n.chatUiAskDjl
+                                    : context.l10n.chatUiFollowUp,
                                 hasAccessories:
                                     _composer.slots.isNotEmpty ||
                                     _composer.contexts.isNotEmpty ||
@@ -2893,13 +2919,17 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                         spacing: 6,
                                         children: [
                                           if (desktop.plan)
-                                            const Chip(
-                                              label: Text('Plan mode'),
+                                            Chip(
+                                              label: Text(
+                                                context.l10n.chatUiPlanMode,
+                                              ),
                                             ),
                                           if (desktop.supportsFastMode &&
                                               desktop.serviceTier == 'fast')
-                                            const Chip(
-                                              label: Text('Fast mode'),
+                                            Chip(
+                                              label: Text(
+                                                context.l10n.chatUiFastMode,
+                                              ),
                                             ),
                                         ],
                                       ),

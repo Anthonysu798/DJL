@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../../../l10n/l10n.dart';
 
 enum AppFontStyle {
   system('System', null),
@@ -11,6 +12,8 @@ enum AppFontStyle {
   final String title;
   final String? family;
   String get codeFamily => this == geistMono ? 'GeistMono' : 'JetBrainsMono';
+  String label(AppLocalizations l10n) =>
+      this == system ? l10n.settingsFontSystem : title;
 }
 
 @immutable

@@ -7,6 +7,7 @@ import '../../chat/presentation/message_view.dart' show CloudImage;
 import 'image_export_controller.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class ImagePreviewPage extends StatefulWidget {
   const ImagePreviewPage({
@@ -113,7 +114,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                     child: Row(
                       children: [
                         _button(
-                          'Close',
+                          context.l10n.settingsClose,
                           DjlIcons.close,
                           () => Navigator.pop(context),
                         ),
@@ -129,7 +130,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                                   vertical: 10,
                                 ),
                                 child: Text(
-                                  'Your image',
+                                  context.l10n.imagesYourImage,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -144,7 +145,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                         ),
                         Builder(
                           builder: (buttonContext) => _button(
-                            'Share',
+                            context.l10n.imagesShare,
                             DjlIcons.share,
                             _export.busy
                                 ? null
@@ -162,7 +163,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                         ),
                         const SizedBox(width: 4),
                         _button(
-                          'Save to Photos',
+                          context.l10n.imagesSaveToPhotos,
                           DjlIcons.download,
                           _export.busy
                               ? null

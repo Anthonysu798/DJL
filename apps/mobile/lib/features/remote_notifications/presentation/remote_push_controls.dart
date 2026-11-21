@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'remote_push_controller.dart';
+import '../../../l10n/l10n.dart';
 
 class RemotePushControls extends StatelessWidget {
   const RemotePushControls({
@@ -20,24 +21,19 @@ class RemotePushControls extends StatelessWidget {
                   {'unconfigured', 'disabled'}.contains(state.availability)) &&
           !controller.enabled &&
           controller.error == null) {
-        return const ListTile(
-          title: Text('Push notifications'),
-          subtitle: Text(
-            "This phone can't get push notifications from DJL yet. Open DJL to see when an agent is done.",
-          ),
+        return ListTile(
+          title: Text(context.l10n.pushTitle),
+          subtitle: Text(context.l10n.pushUnsupported),
         );
       }
+      final l10n = context.l10n;
       final availability = switch (state.availability) {
-        'ready' when state.permission == 'denied' =>
-          "Notifications are off for DJL in your phone's Settings.",
-        'ready' =>
-          'Get a notification when an agent finishes or needs your answer.',
-        'simulator' => "This simulator can't receive push notifications.",
-        'disabled' || 'unconfigured' =>
-          "Push notifications aren't available in this version.",
-        'failed' =>
-          "Couldn't turn on notifications. Try again when you're online.",
-        _ => "Push notifications aren't available right now.",
+        'ready' when state.permission == 'denied' => l10n.pushDenied,
+        'ready' => l10n.pushReady,
+        'simulator' => l10n.pushSimulator,
+        'disabled' || 'unconfigured' => l10n.pushUnavailableVersion,
+        'failed' => l10n.pushFailed,
+        _ => l10n.pushUnavailableNow,
       };
       final failed =
           controller.enabled &&
@@ -48,7 +44,7 @@ class RemotePushControls extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SwitchListTile(
-            title: const Text('Push notifications'),
+            title: Text(l10n.pushTitle),
             subtitle: Text(availability),
             value: controller.enabled,
             onChanged:
@@ -71,7 +67,7 @@ class RemotePushControls extends StatelessWidget {
                       onCloudEntry?.call();
                       controller.retry();
                     },
-              child: const Text('Try again'),
+              child: Text(l10n.commonTryAgain),
             ),
         ],
       );

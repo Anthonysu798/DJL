@@ -6,6 +6,7 @@ import 'desktop_focus_timeline.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopTimelineGroup extends StatefulWidget {
   const DesktopTimelineGroup({
@@ -58,18 +59,18 @@ class _DesktopTimelineGroupState extends State<DesktopTimelineGroup> {
   String get _title {
     final item = widget.item;
     if (item.kind == DesktopTimelineKind.previous) {
-      return item.indices.length == 1
-          ? '1 previous message'
-          : '${item.indices.length} previous messages';
+      return context.l10n.chatUiPreviousMessages(item.indices.length);
     }
     if (item.kind == DesktopTimelineKind.toolBurst) {
-      return '+${item.indices.length - 1} tool calls';
+      return context.l10n.chatUiMoreToolCalls(item.indices.length - 1);
     }
     final count = item.commandIndices.length;
     return [
-      count == 1 ? 'Ran 1 command' : 'Ran $count commands',
-      if (item.failedCommandCount > 0) '${item.failedCommandCount} failed',
-      if (item.stoppedCommandCount > 0) '${item.stoppedCommandCount} stopped',
+      context.l10n.chatUiRanCommands(count),
+      if (item.failedCommandCount > 0)
+        context.l10n.chatUiCommandsFailed(item.failedCommandCount),
+      if (item.stoppedCommandCount > 0)
+        context.l10n.chatUiCommandsStopped(item.stoppedCommandCount),
     ].join(' · ');
   }
 
@@ -105,12 +106,17 @@ class _DesktopTimelineGroupState extends State<DesktopTimelineGroup> {
       button: true,
       expanded: _expanded,
       label: _title,
-      hint:
-          '${_expanded ? 'Collapse' : 'Expand'} ${previous
-              ? 'previous messages'
-              : commands
-              ? 'commands'
-              : 'tool calls'}',
+      hint: previous
+          ? _expanded
+                ? context.l10n.chatUiCollapsePreviousMessages
+                : context.l10n.chatUiExpandPreviousMessages
+          : commands
+          ? _expanded
+                ? context.l10n.chatUiCollapseCommands
+                : context.l10n.chatUiExpandCommands
+          : _expanded
+          ? context.l10n.chatUiCollapseToolCalls
+          : context.l10n.chatUiExpandToolCalls,
       onTap: _toggle,
       excludeSemantics: true,
       child: GestureDetector(

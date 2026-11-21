@@ -159,9 +159,7 @@ extension DesktopPlans on DesktopController {
         );
         if (!lookupCurrent()) return false;
         if (active.pending) {
-          throw StateError(
-            'The active run has not published its ID yet. Try again in a moment.',
-          );
+          throw StateError(appStrings.desktopRunIdPending);
         }
         if (active.activeTurnId case final target?) {
           _adoptTurnTarget(scope.thread, null, target);
@@ -169,7 +167,7 @@ extension DesktopPlans on DesktopController {
       }
       if (!current()) return false;
       if (selectedModel == null) {
-        throw StateError('Choose an available desktop model first.');
+        throw StateError(appStrings.desktopChooseModelFirst);
       }
       final snapshot = DesktopRuntime(
         model: selectedModel,
@@ -299,15 +297,11 @@ extension DesktopPlans on DesktopController {
         );
         if (!current()) return false;
         if (snapshot.pending) {
-          throw StateError(
-            'The active run has not published its ID yet. Try again in a moment.',
-          );
+          throw StateError(appStrings.desktopRunIdPending);
         }
         if (snapshot.activeTurnId case final target?) {
           if (_finishedTurns.contains((scope.thread, target))) {
-            throw StateError(
-              'The active run changed. Refresh before implementing this plan.',
-            );
+            throw StateError(appStrings.desktopRunChangedBeforePlan);
           }
           _adoptTurnTarget(scope.thread, null, target);
         }

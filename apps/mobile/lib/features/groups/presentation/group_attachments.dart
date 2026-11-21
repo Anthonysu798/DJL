@@ -5,6 +5,7 @@ import '../../../core/design/djl_tokens.dart';
 import '../../attachments/presentation/attachment_preview_page.dart';
 import '../domain/group_models.dart';
 import 'groups_controller.dart';
+import '../../../l10n/l10n.dart';
 
 /// A file picked in the composer, not sent yet.
 class DraftAttachment {
@@ -59,7 +60,7 @@ class AttachmentDraftStrip extends StatelessWidget {
               right: -6,
               child: Semantics(
                 button: true,
-                label: 'Remove ${draft.name}',
+                label: context.l10n.groupsRemoveAttachment(draft.name),
                 child: GestureDetector(
                   onTap: () => onRemove(draft),
                   child: Container(
@@ -150,7 +151,7 @@ class MessageAttachments extends StatelessWidget {
               child: SizedBox(
                 width: 140,
                 child: Semantics(
-                  label: 'Sending files',
+                  label: context.l10n.groupsSendingFiles,
                   value: '${(value * 100).round()}%',
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(2),
@@ -207,7 +208,7 @@ class _ImageThumbState extends State<_ImageThumb> {
     );
     return Semantics(
       button: true,
-      label: 'Image ${widget.attachment.name}',
+      label: context.l10n.groupsImageNamed(widget.attachment.name),
       child: GestureDetector(
         onTap: widget.onTap,
         child: ClipRRect(

@@ -4,6 +4,7 @@ import '../../settings/domain/appearance.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 const whatsNewNotes = <String, List<String>>{
   '1.0.0': [
@@ -19,6 +20,19 @@ const whatsNewNotes = <String, List<String>>{
     'Browse Studio and project chats from your phone.',
   ],
 };
+
+/// The notes for [version] in the reader's language. Only the current
+/// release is translated; older notes stay in English.
+List<String> whatsNewItems(AppLocalizations l10n, String version) =>
+    switch (version) {
+      '1.0.0' => [
+        l10n.whatsNew100Design,
+        l10n.whatsNew100Groups,
+        l10n.whatsNew100Files,
+        l10n.whatsNew100Mac,
+      ],
+      _ => whatsNewNotes[version]!,
+    };
 
 class WhatsNewSheet extends StatelessWidget {
   const WhatsNewSheet({
@@ -51,7 +65,7 @@ class WhatsNewSheet extends StatelessWidget {
               Semantics(
                 header: true,
                 child: Text(
-                  "What's New",
+                  context.l10n.whatsNewTitle,
                   style: theme.textTheme.headlineMedium!.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -71,11 +85,11 @@ class WhatsNewSheet extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                "Here's what's new in DJL.",
+                context.l10n.whatsNewIntro,
                 style: body.copyWith(color: secondary),
               ),
               const SizedBox(height: 24),
-              for (final item in whatsNewNotes[version]!) ...[
+              for (final item in whatsNewItems(context.l10n, version)) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -95,7 +109,7 @@ class WhatsNewSheet extends StatelessWidget {
               ],
               const SizedBox(height: 12),
               Text(
-                "We'll only show this once for each app version.",
+                context.l10n.whatsNewOnce,
                 style: theme.textTheme.bodySmall!.copyWith(
                   fontSize: 11,
                   color: secondary,
@@ -144,7 +158,7 @@ class WhatsNewSheet extends StatelessWidget {
                             ),
                           ),
                           onPressed: onDismiss,
-                          child: const Text('Got It'),
+                          child: Text(context.l10n.whatsNewGotIt),
                         ),
                       ),
                     ),
@@ -161,7 +175,7 @@ class WhatsNewSheet extends StatelessWidget {
               child: Semantics(
                 container: true,
                 excludeSemantics: true,
-                label: 'Dismiss release notes',
+                label: context.l10n.whatsNewDismiss,
                 button: true,
                 onTap: onDismiss,
                 child: GestureDetector(

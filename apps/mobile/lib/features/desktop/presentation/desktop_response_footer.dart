@@ -8,6 +8,7 @@ import '../../reports/presentation/report_sheet.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopResponseFooter extends StatefulWidget {
   const DesktopResponseFooter({
@@ -88,12 +89,12 @@ class _DesktopResponseFooterState extends State<DesktopResponseFooter> {
       alignment: Alignment.centerLeft,
       child: Semantics(
         container: true,
-        label: 'Copy response',
+        label: context.l10n.chatUiCopyResponse,
         button: true,
         onTap: _copy,
         excludeSemantics: true,
         child: Tooltip(
-          message: 'Copy response',
+          message: context.l10n.chatUiCopyResponse,
           excludeFromSemantics: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -126,7 +127,7 @@ class _DesktopResponseFooterState extends State<DesktopResponseFooter> {
                       if (_copied) ...[
                         const SizedBox(width: 4),
                         Text(
-                          'Copied',
+                          context.l10n.chatUiCopied,
                           style: Theme.of(context).textTheme.bodyMedium!
                               .copyWith(
                                 fontSize: 11,

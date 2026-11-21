@@ -4,6 +4,7 @@ import '../../../core/design/djl_icons.dart';
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/network/cloud_client.dart';
 import '../data/content_reporter.dart';
+import '../../../l10n/l10n.dart';
 
 typedef SendReport = Future<void> Function(ReportReason reason, String? note);
 
@@ -16,9 +17,9 @@ Future<void> showReportSheet(BuildContext context, SendReport send) async {
     builder: (_) => ReportSheet(send: send),
   );
   if (sent == true && context.mounted) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text("Thanks. We'll review this answer.")),
-    );
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(context.l10n.reportThanks)));
   }
 }
 
@@ -32,7 +33,7 @@ class ReportAnswerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     key: const Key('report.answer'),
-    tooltip: 'Report this answer',
+    tooltip: context.l10n.reportTitle,
     visualDensity: VisualDensity.compact,
     icon: Icon(
       DjlIcons.flag,
@@ -77,16 +78,16 @@ class _ReportSheetState extends State<ReportSheet> {
       setState(() {
         _sending = false;
         _error = switch (failure.code) {
-          'rate_limited' => 'Too many reports right now. Try again later.',
+          'rate_limited' => context.l10n.reportRateLimited,
           'network' || 'timeout' => failure.message,
-          _ => "Couldn't send the report. Try again.",
+          _ => context.l10n.reportFailed,
         };
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _sending = false;
-        _error = "Couldn't send the report. Try again.";
+        _error = context.l10n.reportFailed;
       });
     }
   }
@@ -105,7 +106,7 @@ class _ReportSheetState extends State<ReportSheet> {
             Semantics(
               header: true,
               child: Text(
-                'Report this answer',
+                context.l10n.reportTitle,
                 style: theme.textTheme.titleLarge!.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -113,7 +114,7 @@ class _ReportSheetState extends State<ReportSheet> {
             ),
             const SizedBox(height: 6),
             Text(
-              'DJL reviews reports to keep answers safe. What is wrong with it?',
+              context.l10n.reportIntro,
               style: theme.textTheme.bodyMedium!.copyWith(
                 color: colors.inkMuted,
               ),
@@ -123,7 +124,7 @@ class _ReportSheetState extends State<ReportSheet> {
               ListTile(
                 key: Key('report.reason.${reason.name}'),
                 contentPadding: EdgeInsets.zero,
-                title: Text(reason.label),
+                title: Text(reason.label(context.l10n)),
                 trailing: _reason == reason
                     ? Icon(DjlIcons.check, color: colors.ink)
                     : null,
@@ -138,8 +139,8 @@ class _ReportSheetState extends State<ReportSheet> {
               maxLength: 1000,
               minLines: 2,
               maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'Add details (optional)',
+              decoration: InputDecoration(
+                hintText: context.l10n.reportDetailsHint,
               ),
             ),
             if (_error != null) ...[
@@ -150,7 +151,9 @@ class _ReportSheetState extends State<ReportSheet> {
             FilledButton(
               key: const Key('report.send'),
               onPressed: _reason == null || _sending ? null : _submit,
-              child: Text(_sending ? 'Sending…' : 'Send report'),
+              child: Text(
+                _sending ? context.l10n.reportSending : context.l10n.reportSend,
+              ),
             ),
           ],
         ),

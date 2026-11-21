@@ -10,6 +10,7 @@ import '../domain/cloud_models.dart';
 import '../../images/presentation/image_preview_page.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class MessageView extends StatelessWidget {
   const MessageView({
@@ -24,14 +25,14 @@ class MessageView extends StatelessWidget {
     this.onSpeak,
     this.speaking = false,
     this.isStreaming = false,
-    this.emptyText = 'No response content.',
+    this.emptyText,
   });
   final ChatMessage message;
   final CloudRepository repository;
   final VoidCallback? onRegenerate, onEdit, onSpeak;
   final SendReport? onReport;
   final bool speaking, isStreaming;
-  final String emptyText;
+  final String? emptyText;
   final List<ChatMessage> siblings;
   final ValueChanged<ChatMessage>? onSibling;
   int get _branchIndex => siblings.indexWhere((m) => m.id == message.id);
@@ -90,7 +91,7 @@ class MessageView extends StatelessWidget {
                             ),
                             if (onEdit != null)
                               ContextMenuButtonItem(
-                                label: 'Edit',
+                                label: context.l10n.cloudChatEdit,
                                 onPressed: () {
                                   editable.hideToolbar();
                                   onEdit!();
@@ -123,7 +124,7 @@ class MessageView extends StatelessWidget {
           if (message.parts.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Text(emptyText),
+              child: Text(emptyText ?? context.l10n.cloudChatNoContent),
             ),
           if (!isStreaming) _assistantActions(context),
         ],
@@ -164,7 +165,7 @@ class MessageView extends StatelessWidget {
     children: [
       _action(
         context,
-        'Previous branch',
+        context.l10n.cloudChatPreviousBranch,
         DjlIcons.chevronLeft,
         _branchIndex > 0 && onSibling != null
             ? () => onSibling!(siblings[_branchIndex - 1])
@@ -184,7 +185,7 @@ class MessageView extends StatelessWidget {
       const SizedBox(width: 6),
       _action(
         context,
-        'Next branch',
+        context.l10n.cloudChatNextBranch,
         DjlIcons.chevronRight,
         _branchIndex < siblings.length - 1 && onSibling != null
             ? () => onSibling!(siblings[_branchIndex + 1])
@@ -198,23 +199,30 @@ class MessageView extends StatelessWidget {
     final actions = <Widget>[
       _action(
         context,
-        'Copy message',
+        context.l10n.cloudChatCopyMessage,
         DjlIcons.copy,
         () => Clipboard.setData(ClipboardData(text: message.text)),
       ),
       if (onRegenerate != null)
-        _action(context, 'Regenerate reply', DjlIcons.refresh, onRegenerate),
+        _action(
+          context,
+          context.l10n.cloudChatRegenerateReply,
+          DjlIcons.refresh,
+          onRegenerate,
+        ),
       if (onSpeak != null)
         _action(
           context,
-          speaking ? 'Stop reading' : 'Read aloud',
+          speaking
+              ? context.l10n.cloudChatStopReading
+              : context.l10n.cloudChatReadAloud,
           speaking ? DjlIcons.stopCircle : DjlIcons.speaker,
           onSpeak,
         ),
       if (onReport case final send?)
         _action(
           context,
-          'Report this answer',
+          context.l10n.cloudChatReportAnswer,
           DjlIcons.flag,
           () => showReportSheet(context, send),
         ),
@@ -335,7 +343,12 @@ class MessageView extends StatelessWidget {
     'tool_result' => ExpansionTile(
       tilePadding: EdgeInsets.zero,
       title: Text(
-        '${part['name']} · ${part['isError'] == true ? 'Failed' : 'Done'}',
+        context.l10n.cloudChatToolResult(
+          '${part['name']}',
+          part['isError'] == true
+              ? context.l10n.cloudChatToolFailed
+              : context.l10n.cloudChatToolDone,
+        ),
       ),
       children: [SelectableText(part['content'] as String)],
     ),
@@ -372,7 +385,7 @@ class MessageView extends StatelessWidget {
       icon: const Icon(DjlIcons.document),
       label: Text(part['name'] as String),
     ),
-    _ => const Text('This message contains content requiring a newer version.'),
+    _ => Text(context.l10n.cloudChatNeedsNewerVersion),
   };
 }
 
@@ -403,7 +416,7 @@ class _CloudImageState extends State<CloudImage> {
             // A failed retry can finish before FutureBuilder's next frame.
             _url.ignore();
           }),
-          child: const Text('Image unavailable · Retry'),
+          child: Text(context.l10n.cloudChatImageUnavailableRetry),
         );
       }
       if (!snapshot.hasData) {
@@ -416,10 +429,10 @@ class _CloudImageState extends State<CloudImage> {
         borderRadius: BorderRadius.circular(16),
         child: Image.network(
           snapshot.data!,
-          semanticLabel: 'Conversation image',
+          semanticLabel: context.l10n.cloudChatConversationImage,
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) =>
-              const Text('Could not display this image.'),
+              Text(context.l10n.cloudChatImageDisplayFailed),
         ),
       );
     },

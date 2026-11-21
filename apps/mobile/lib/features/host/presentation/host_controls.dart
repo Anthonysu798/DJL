@@ -4,6 +4,7 @@ import '../../../core/design/djl_icons.dart';
 import '../../../core/presentation/djl_frosted.dart';
 import '../../settings/presentation/settings_group.dart';
 import 'host_controller.dart';
+import '../../../l10n/l10n.dart';
 
 /// The paired Mac: whether DJL on it is reachable, and the few things the
 /// phone can ask it to do. Chats always travel through DJL on the Mac.
@@ -37,7 +38,7 @@ class HostPage extends StatelessWidget {
                   child: Semantics(
                     header: true,
                     child: Text(
-                      'Your Mac',
+                      context.l10n.hostYourMac,
                       style: settingsTextStyle(
                         context,
                         34,
@@ -82,6 +83,7 @@ class HostPage extends StatelessWidget {
 
 List<Widget> _sections(BuildContext context, HostController host) {
   final scheme = Theme.of(context).colorScheme;
+  final l10n = context.l10n;
   final caps = host.capabilities, version = host.snapshot?.bridgeVersion;
   final busy =
       host.loading || host.actionBusy || host.waking || host.preferenceSyncing;
@@ -97,22 +99,21 @@ List<Widget> _sections(BuildContext context, HostController host) {
     ),
   );
   final update = switch (host.updateState) {
-    HostUpdateState.reconnecting =>
-      'DJL is updating on your Mac. This phone reconnects when it is back.',
-    HostUpdateState.checking => 'Checking the DJL version on your Mac…',
-    HostUpdateState.verified => 'DJL on your Mac is now $version.',
-    HostUpdateState.unchanged =>
-      'DJL on your Mac is still $version. It may already be up to date.',
+    HostUpdateState.reconnecting => l10n.hostUpdating,
+    HostUpdateState.checking => l10n.hostCheckingVersion,
+    HostUpdateState.verified => l10n.hostNowVersion('$version'),
+    HostUpdateState.unchanged => l10n.hostStillVersion('$version'),
     HostUpdateState.idle => null,
   };
   return [
     SettingsGroup(
       footer: host.connected
-          ? 'Your chats go straight to DJL on your Mac, encrypted end to end.'
-          : 'Open DJL on your Mac to reconnect.',
+          ? l10n.hostConnectedFooter
+          : l10n.hostReconnectFooter,
       children: [
         _StatusRow(host: host),
-        if (version != null) _ValueRow(title: 'DJL version', value: version),
+        if (version != null)
+          _ValueRow(title: l10n.hostDjlVersion, value: version),
         if (busy)
           const Padding(
             padding: EdgeInsets.all(16),
@@ -121,8 +122,8 @@ List<Widget> _sections(BuildContext context, HostController host) {
         if (host.statusError != null)
           _ActionRow(
             icon: DjlIcons.refresh,
-            title: 'Try again',
-            subtitle: "Couldn't check your Mac just now.",
+            title: l10n.commonTryAgain,
+            subtitle: l10n.hostCheckFailedNow,
             onTap: host.live && !host.loading ? host.refresh : null,
           ),
       ],
@@ -134,18 +135,16 @@ List<Widget> _sections(BuildContext context, HostController host) {
           if (caps.displayWake)
             _ActionRow(
               icon: DjlIcons.sun,
-              title: host.waking ? 'Reconnecting…' : 'Wake the screen',
-              subtitle: "Turns your Mac's display on while DJL is running.",
+              title: host.waking ? l10n.hostReconnecting : l10n.hostWakeScreen,
+              subtitle: l10n.hostWakeScreenDetail,
               onTap: host.canWake ? host.wakeDisplay : null,
             ),
           if (caps.keepAwake)
             SwitchListTile.adaptive(
               key: const Key('host.keepAwake'),
               contentPadding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
-              title: const Text('Keep Mac awake'),
-              subtitle: const Text(
-                'Stops your Mac from sleeping while DJL is open. Best while it is charging.',
-              ),
+              title: Text(l10n.hostKeepAwake),
+              subtitle: Text(l10n.hostKeepAwakeDetail),
               value: host.keepAwake,
               onChanged: host.preferenceLoaded ? host.setKeepAwake : null,
             ),
@@ -158,7 +157,7 @@ List<Widget> _sections(BuildContext context, HostController host) {
         child: Padding(
           padding: const EdgeInsets.only(left: 8, bottom: 12),
           child: DjlGlassPillButton(
-            label: 'Try again',
+            label: l10n.commonTryAgain,
             onPressed: host.canRetryPreference ? host.retryPreference : null,
           ),
         ),
@@ -166,12 +165,12 @@ List<Widget> _sections(BuildContext context, HostController host) {
     ],
     if (caps.bridgeUpdate)
       SettingsGroup(
-        title: 'Updates',
+        title: l10n.hostUpdates,
         children: [
           _ActionRow(
             icon: DjlIcons.update,
-            title: 'Update DJL',
-            subtitle: 'Installs the newest DJL on your Mac, then reconnects.',
+            title: l10n.hostUpdateDjl,
+            subtitle: l10n.hostUpdateDjlDetail,
             onTap: host.canUpdate
                 ? () => confirmHostBridgeUpdate(context, host)
                 : null,
@@ -191,13 +190,14 @@ class _StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final title = !host.connected
-        ? 'Not connected'
+        ? l10n.hostNotConnected
         : host.stale
-        ? 'Connected · checking'
-        : 'Connected';
+        ? l10n.hostConnectedChecking
+        : l10n.hostConnected;
     return Semantics(
-      label: 'DJL on your Mac, $title',
+      label: l10n.hostStatusLabel(title),
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
@@ -211,7 +211,7 @@ class _StatusRow extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'DJL on your Mac',
+                    l10n.hostDjlOnYourMac,
                     style: settingsTextStyle(
                       context,
                       15,
@@ -350,20 +350,19 @@ Future<void> confirmHostBridgeUpdate(
     context: context,
     builder: (context) => AlertDialog(
       scrollable: true,
-      title: const Text('Update DJL on your Mac?'),
+      title: Text(context.l10n.hostUpdateTitle),
       content: Text(
-        '${version == null ? '' : 'Your Mac has DJL $version.\n\n'}'
-        'DJL restarts on your Mac to install the newest version. '
-        'This phone disconnects for a moment and reconnects by itself.',
+        '${version == null ? '' : '${context.l10n.hostUpdateCurrent(version)}\n\n'}'
+        '${context.l10n.hostUpdateBody}',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Update'),
+          child: Text(context.l10n.hostUpdate),
         ),
       ],
     ),
@@ -388,7 +387,7 @@ class HostContinueAction extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) => IconButton(
-      tooltip: 'Continue on desktop',
+      tooltip: context.l10n.hostContinueOnDesktop,
       icon: const Icon(DjlIcons.openExternal),
       onPressed: controller.canHandoff && threadId?.trim().isNotEmpty == true
           ? () => confirmHostContinue(context, controller, threadId!)
@@ -417,16 +416,16 @@ Future<void> confirmHostContinue(
     context: context,
     builder: (context) => AlertDialog(
       scrollable: true,
-      title: const Text('Continue on desktop?'),
-      content: const Text('Open this chat in DJL on your Mac.'),
+      title: Text(context.l10n.hostContinueTitle),
+      content: Text(context.l10n.hostContinueBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Continue'),
+          child: Text(context.l10n.hostContinue),
         ),
       ],
     ),
@@ -449,7 +448,7 @@ Future<void> confirmHostContinue(
         content: Text(
           controller.actionError?.message ??
               controller.actionMessage ??
-              'Host action finished.',
+              context.l10n.hostActionFinished,
         ),
       ),
     );

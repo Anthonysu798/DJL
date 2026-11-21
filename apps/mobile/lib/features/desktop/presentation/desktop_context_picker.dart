@@ -6,6 +6,7 @@ import '../data/remote_transport.dart';
 import '../domain/desktop_composer.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopContextPicker extends StatefulWidget {
   const DesktopContextPicker({
@@ -30,9 +31,9 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
   int _generation = 0;
   Timer? _debounce;
   String get _label => switch (_kind) {
-    DesktopContextKind.skill => 'Skills',
-    DesktopContextKind.plugin => 'Plugins',
-    DesktopContextKind.file => 'Files',
+    DesktopContextKind.skill => context.l10n.chatUiContextSkills,
+    DesktopContextKind.plugin => context.l10n.chatUiContextPlugins,
+    DesktopContextKind.file => context.l10n.chatUiContextFiles,
   };
   @override
   void initState() {
@@ -91,7 +92,7 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
       if (!mounted || generation != _generation || !widget.isCurrent()) return;
       setState(() {
         _error = e is RemoteRpcException && e.code == -32601
-            ? '$_label are not supported by this desktop runtime.'
+            ? context.l10n.chatUiContextUnsupported(_label)
             : e.toString();
       });
     } finally {
@@ -181,7 +182,7 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
       double.infinity,
     );
     final Widget? status = _stale
-        ? const Text('The conversation changed. Reopen the context picker.')
+        ? Text(context.l10n.chatUiContextStale)
         : _loading
         ? const CircularProgressIndicator()
         : _error != null
@@ -191,7 +192,7 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
               Text(_error!),
               TextButton(
                 onPressed: _load,
-                child: const Text('Retry discovery'),
+                child: Text(context.l10n.chatUiContextRetry),
               ),
             ],
           )
@@ -199,9 +200,11 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
         ? Text(
             _kind == DesktopContextKind.file && query.isEmpty
                 ? widget.repository.cwd?.trim().isNotEmpty == true
-                      ? 'Search files in ${widget.repository.cwd}'
-                      : 'Select a project folder to search desktop files.'
-                : 'No ${_label.toLowerCase()} found.',
+                      ? context.l10n.chatUiContextSearchFilesIn(
+                          widget.repository.cwd!,
+                        )
+                      : context.l10n.chatUiContextSelectFolder
+                : context.l10n.chatUiContextNoneFound(_label.toLowerCase()),
           )
         : null;
     return SafeArea(
@@ -218,23 +221,23 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Add desktop context',
+                        context.l10n.chatUiAddDesktopContext,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 12),
                       SegmentedButton<DesktopContextKind>(
-                        segments: const [
+                        segments: [
                           ButtonSegment(
                             value: DesktopContextKind.skill,
-                            label: Text('Skills'),
+                            label: Text(context.l10n.chatUiContextSkills),
                           ),
                           ButtonSegment(
                             value: DesktopContextKind.plugin,
-                            label: Text('Plugins'),
+                            label: Text(context.l10n.chatUiContextPlugins),
                           ),
                           ButtonSegment(
                             value: DesktopContextKind.file,
-                            label: Text('Files'),
+                            label: Text(context.l10n.chatUiContextFiles),
                           ),
                         ],
                         selected: {_kind},
@@ -256,8 +259,10 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
                         decoration: InputDecoration(
                           prefixIcon: const Icon(DjlIcons.search),
                           hintText: _kind == DesktopContextKind.file
-                              ? 'Search files on your desktop'
-                              : 'Search ${_label.toLowerCase()}',
+                              ? context.l10n.chatUiContextSearchFiles
+                              : context.l10n.chatUiContextSearchKind(
+                                  _label.toLowerCase(),
+                                ),
                         ),
                       ),
                     ],
@@ -290,9 +295,9 @@ class _DesktopContextPickerState extends State<DesktopContextPicker> {
                       title: Text(title),
                       subtitle: Text(
                         disabled
-                            ? 'Disabled on desktop'
+                            ? context.l10n.chatUiContextDisabled
                             : (_kind == DesktopContextKind.file
-                                      ? 'On paired desktop'
+                                      ? context.l10n.chatUiContextOnDesktop
                                       : item['description'] ??
                                             item['path'] ??
                                             '')

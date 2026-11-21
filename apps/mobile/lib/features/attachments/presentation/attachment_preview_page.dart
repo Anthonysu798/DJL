@@ -7,6 +7,7 @@ import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_frosted.dart';
 import '../../groups/domain/group_models.dart';
 import '../data/file_opener.dart';
+import '../../../l10n/l10n.dart';
 
 /// Shows one attachment full screen. Images and text files are drawn here;
 /// PDFs, Office files and everything else open in the system viewer.
@@ -58,11 +59,9 @@ class _AttachmentPreviewPageState extends State<AttachmentPreviewPage> {
       origin: _origin(),
     );
     if (!shown && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No app here opens this file. Pick one to send it to.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.attachmentsNoApp)));
     }
   }
 
@@ -80,10 +79,10 @@ class _AttachmentPreviewPageState extends State<AttachmentPreviewPage> {
           if (snapshot.hasError) {
             body = _Message(
               icon: DjlIcons.error,
-              title: "Couldn't open this file",
-              detail: 'Check that your Mac is connected, then try again.',
+              title: context.l10n.attachmentsOpenFailed,
+              detail: context.l10n.attachmentsCheckMac,
               action: DjlGlassPillButton(
-                label: 'Try again',
+                label: context.l10n.commonTryAgain,
                 onPressed: () => setState(() => _bytes = widget.load()),
               ),
             );
@@ -98,10 +97,10 @@ class _AttachmentPreviewPageState extends State<AttachmentPreviewPage> {
                   fit: BoxFit.contain,
                   errorBuilder: (_, _, _) => _Message(
                     icon: DjlIcons.image,
-                    title: "This image can't be shown here",
+                    title: context.l10n.attachmentsImageUnshowable,
                     detail: widget.name,
                     action: DjlGlassPillButton(
-                      label: 'Open in another app',
+                      label: context.l10n.attachmentsOpenElsewhere,
                       onPressed: () => _openExternally(bytes),
                     ),
                   ),
@@ -121,7 +120,7 @@ class _AttachmentPreviewPageState extends State<AttachmentPreviewPage> {
                   '${attachmentKindLabel(widget.name, widget.mimeType)} · '
                   '${formatByteSize(bytes.length)}',
               action: DjlGlassPillButton(
-                label: 'Open',
+                label: context.l10n.attachmentsOpen,
                 prominent: true,
                 onPressed: () => _openExternally(bytes),
               ),
@@ -151,7 +150,7 @@ class _AttachmentPreviewPageState extends State<AttachmentPreviewPage> {
                     DjlGlassIconButton(
                       key: _shareButton,
                       icon: DjlIcons.share,
-                      label: 'Share',
+                      label: context.l10n.attachmentsShare,
                       onPressed: bytes == null
                           ? null
                           : () => unawaited(

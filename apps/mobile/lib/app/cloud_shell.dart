@@ -10,6 +10,7 @@ import '../features/desktop/presentation/desktop_phone_drawer.dart';
 import '../features/images/data/image_repository.dart';
 import '../features/images/domain/gallery_image.dart';
 import '../features/images/presentation/image_controller.dart';
+import '../l10n/l10n.dart';
 import '../features/images/presentation/image_gallery_page.dart';
 import '../features/images/presentation/cloud_image_creation_sheet.dart';
 import '../features/notifications/presentation/notification_controller.dart';
@@ -111,7 +112,7 @@ class _CloudShellState extends State<CloudShell> {
         padding: const EdgeInsets.only(left: 16),
         child: CloudNavigationButton(
           icon: DjlIcons.menu,
-          label: 'Open navigation',
+          label: context.l10n.appOpenNavigation,
           onPressed: _toggle,
         ),
       ),
@@ -124,13 +125,13 @@ class _CloudShellState extends State<CloudShell> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Account details are unavailable.',
+              Text(
+                context.l10n.appAccountUnavailable,
                 textAlign: TextAlign.center,
               ),
               TextButton(
                 onPressed: widget.onRefreshProfile,
-                child: const Text('Retry account'),
+                child: Text(context.l10n.appRetryAccount),
               ),
             ],
           ),
@@ -162,7 +163,7 @@ class _CloudShellState extends State<CloudShell> {
         CloudDestination.settings => widget.settingsPage(context, _toggle),
         CloudDestination.images =>
           widget.accountScope == null || nav.owner == null
-              ? _profilePending('Images')
+              ? _profilePending(context.l10n.appImages)
               : _CloudImagesDestination(
                   key: ValueKey(nav.owner),
                   repository: widget.repository,
@@ -176,7 +177,7 @@ class _CloudShellState extends State<CloudShell> {
                 ),
         CloudDestination.notifications =>
           widget.inbox == null
-              ? _profilePending('Notifications')
+              ? _profilePending(context.l10n.appNotifications)
               : NotificationPage(
                   key: ObjectKey(widget.inbox),
                   controller: widget.inbox!,
@@ -227,7 +228,7 @@ class _CloudShellState extends State<CloudShell> {
                     actions: [
                       TextButton(
                         onPressed: widget.onRetryLink,
-                        child: const Text('Retry linked conversation'),
+                        child: Text(context.l10n.appRetryLinkedConversation),
                       ),
                     ],
                   ),

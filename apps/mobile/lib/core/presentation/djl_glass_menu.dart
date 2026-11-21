@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design/djl_icons.dart';
 import '../design/djl_tokens.dart';
+import '../../l10n/l10n.dart';
 import 'djl_frosted.dart';
 import 'djl_glass.dart';
 
@@ -34,7 +35,7 @@ Future<T?> showDjlGlassMenu<T>(
   BuildContext context, {
   required Rect anchor,
   required List<List<DjlMenuItem<T>>> sections,
-  String label = 'Menu',
+  String? label,
 }) {
   final visible = [
     for (final section in sections)
@@ -43,7 +44,7 @@ Future<T?> showDjlGlassMenu<T>(
   return _showGlass<T>(
     context,
     anchor: anchor,
-    label: label,
+    label: label ?? context.l10n.coreMenu,
     body: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,12 +64,12 @@ Future<T?> showDjlGlassEntries<T>(
   BuildContext context, {
   required Rect anchor,
   required List<PopupMenuEntry<T>> entries,
-  String label = 'Menu',
+  String? label,
   bool requestFocus = true,
 }) => _showGlass<T>(
   context,
   anchor: anchor,
-  label: label,
+  label: label ?? context.l10n.coreMenu,
   menu: true,
   requestFocus: requestFocus,
   body: ListBody(children: entries),
@@ -259,7 +260,7 @@ class DjlGlassMenuButton<T> extends StatelessWidget {
       context,
       anchor: box.localToGlobal(Offset.zero) & box.size,
       entries: itemBuilder(context),
-      label: tooltip?.isNotEmpty == true ? tooltip! : 'Menu',
+      label: tooltip?.isNotEmpty == true ? tooltip! : context.l10n.coreMenu,
       requestFocus: requestFocus,
     );
     if (value != null && context.mounted) onSelected?.call(value);

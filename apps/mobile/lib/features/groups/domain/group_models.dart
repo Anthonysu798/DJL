@@ -1,6 +1,8 @@
 // Mirrors the desktop's Multi agents contract (packages/contracts/src/groups.ts)
 // as the phone bridge sends it.
 
+import '../../../l10n/l10n.dart';
+
 typedef GroupJson = Map<String, dynamic>;
 
 /// The handle that addresses every member, and its localized spellings.
@@ -195,7 +197,8 @@ String formatByteSize(int bytes) {
 String attachmentKindLabel(String name, String mimeType) {
   final dot = name.lastIndexOf('.');
   final extension = dot < 0 ? '' : name.substring(dot + 1).toLowerCase();
-  const named = {
+  final strings = appStrings;
+  final named = {
     'pdf': 'PDF',
     'doc': 'Word',
     'docx': 'Word',
@@ -204,21 +207,21 @@ String attachmentKindLabel(String name, String mimeType) {
     'key': 'Keynote',
     'xls': 'Excel',
     'xlsx': 'Excel',
-    'csv': 'Spreadsheet',
+    'csv': strings.groupsKindSpreadsheet,
     'py': 'Python',
     'js': 'JavaScript',
     'ts': 'TypeScript',
     'dart': 'Dart',
     'md': 'Markdown',
-    'txt': 'Text',
+    'txt': strings.groupsKindText,
     'json': 'JSON',
-    'zip': 'Archive',
+    'zip': strings.groupsKindArchive,
   };
   if (named[extension] case final label?) return label;
-  if (mimeType.startsWith('image/')) return 'Image';
-  if (mimeType.startsWith('video/')) return 'Video';
-  if (mimeType.startsWith('audio/')) return 'Audio';
-  return extension.isEmpty ? 'File' : extension.toUpperCase();
+  if (mimeType.startsWith('image/')) return strings.groupsKindImage;
+  if (mimeType.startsWith('video/')) return strings.groupsKindVideo;
+  if (mimeType.startsWith('audio/')) return strings.groupsKindAudio;
+  return extension.isEmpty ? strings.groupsKindFile : extension.toUpperCase();
 }
 
 const _textExtensions = {

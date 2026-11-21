@@ -73,7 +73,9 @@ extension DesktopQueuedDrafts on DesktopController {
     }
     if (!_queuePausedByThread.containsKey(id) || !connected) {
       _queuePausedByThread.remove(id);
-      if (error?.startsWith('Queue paused:') == true) error = null;
+      if (error?.startsWith(appStrings.desktopQueuePaused('')) == true) {
+        error = null;
+      }
       await flushQueuedDrafts();
       _notify();
       return;
@@ -116,7 +118,7 @@ extension DesktopQueuedDrafts on DesktopController {
           (value.containsKey('cwd') && value['cwd'] != cwd) ||
           value['turns'] is! List ||
           (value['turns'] as List).any((row) => row is! Map)) {
-        throw StateError('The runtime did not return this chat’s turn state.');
+        throw StateError(appStrings.desktopRuntimeNoTurnState);
       }
       final turns = (value['turns'] as List).cast<Map>().where(
         (row) => !('${row['id'] ?? row['turnId'] ?? row['turn_id'] ?? ''}')
@@ -156,12 +158,14 @@ extension DesktopQueuedDrafts on DesktopController {
       }
       if (waitForIdle && _selectedRunBusy) return;
       _queuePausedByThread.remove(id);
-      if (error?.startsWith('Queue paused:') == true) error = null;
+      if (error?.startsWith(appStrings.desktopQueuePaused('')) == true) {
+        error = null;
+      }
       refreshed = true;
     } catch (e) {
       if (current()) {
         _queuePausedByThread[id] = e.toString();
-        error = 'Queue paused: $e';
+        error = appStrings.desktopQueuePaused(e.toString());
       }
     } finally {
       if (identical(_queuedDelivery, token)) _queuedDelivery = null;
@@ -262,12 +266,14 @@ extension DesktopQueuedDrafts on DesktopController {
           }
           if (!steer || !token.explicitlyRejected || token.received) {
             final message = token.received
-                ? 'The message arrived. Review its result before resuming queued messages.'
+                ? appStrings.desktopQueueMessageArrived
                 : ownsSelection() && error != null
                 ? error!
-                : 'Queued delivery was not confirmed. Reopen this chat before retrying.';
+                : appStrings.desktopQueueDeliveryUnconfirmed;
             _queuePausedByThread[id] = message;
-            if (thread?['id'] == id) error = 'Queue paused: $message';
+            if (thread?['id'] == id) {
+              error = appStrings.desktopQueuePaused(message);
+            }
           }
         }
       }

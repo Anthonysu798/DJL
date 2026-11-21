@@ -4,6 +4,7 @@ import '../../../core/presentation/djl_glass.dart';
 import 'settings_group.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 Future<bool> showArchivedRemoveConfirmation(
   BuildContext context, {
@@ -64,7 +65,7 @@ Future<bool> showArchivedRemoveConfirmation(
                                   namesRoute: true,
                                   header: true,
                                   child: Text(
-                                    'Remove "$title" from this phone?',
+                                    context.l10n.settingsRemoveTitle(title),
                                     style: settingsTextStyle(
                                       context,
                                       17,
@@ -75,7 +76,7 @@ Future<bool> showArchivedRemoveConfirmation(
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'This only removes the chat from DJL on this phone. Nothing is removed from your paired desktop.',
+                                  context.l10n.settingsRemoveBody,
                                   style: settingsTextStyle(
                                     context,
                                     15,
@@ -100,7 +101,7 @@ Future<bool> showArchivedRemoveConfirmation(
                             ),
                           ),
                           child: Text(
-                            'Remove from Phone',
+                            context.l10n.settingsRemoveFromPhone,
                             textAlign: TextAlign.center,
                             style: settingsTextStyle(
                               context,

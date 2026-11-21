@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import '../../../l10n/l10n.dart';
 
 class PairedUsageWindow {
   const PairedUsageWindow({
@@ -70,11 +71,13 @@ class PairedUsageBucket {
 String? _label(int? minutes) {
   if (minutes == null || minutes <= 0) return null;
   if (minutes % 10080 == 0) {
-    return minutes == 10080 ? 'Weekly' : '${minutes ~/ 10080}w';
+    return minutes == 10080
+        ? appStrings.settingsUsageWeekly
+        : appStrings.settingsUsageWeeks(minutes ~/ 10080);
   }
-  if (minutes % 1440 == 0) return '${minutes ~/ 1440}d';
-  if (minutes % 60 == 0) return '${minutes ~/ 60}h';
-  return '${minutes}m';
+  if (minutes % 1440 == 0) return appStrings.settingsUsageDays(minutes ~/ 1440);
+  if (minutes % 60 == 0) return appStrings.settingsUsageHours(minutes ~/ 60);
+  return appStrings.settingsUsageMinutes(minutes);
 }
 
 int _compareMinutes(int? a, int? b) => a == null

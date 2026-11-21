@@ -7,6 +7,7 @@ import '../domain/appearance.dart';
 import 'settings_group.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 final _support = Uri.parse('https://www.slcor.com/');
 final _source = Uri.parse('https://github.com/Anthonysu798/DJL');
@@ -21,9 +22,9 @@ Future<void> _open(BuildContext context, Uri uri) async {
     /* Keep link failure recoverable in Settings. */
   }
   if (!opened && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not open this link. Try again.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.settingsLinkFailed)));
   }
 }
 
@@ -33,21 +34,33 @@ class LocalAboutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget row(String title, IconData icon, VoidCallback action) =>
         SettingsLinkRow(title: title, leading: Icon(icon), onTap: action);
+    final l10n = context.l10n;
     return SettingsGroup(
-      title: 'About',
-      footer:
-          'Chats are end-to-end encrypted between your phone and paired device.',
+      title: l10n.settingsAbout,
+      footer: l10n.settingsAboutFooter,
       children: [
         row(
-          'How DJL Works',
+          l10n.settingsHowDjlWorks,
           DjlIcons.info,
           () => Navigator.of(
             context,
           ).push(MaterialPageRoute<void>(builder: (_) => const AboutDjlPage())),
         ),
-        row('Chat & Support', DjlIcons.globe, () => _open(context, _support)),
-        row('Privacy Policy', DjlIcons.hand, () => _open(context, _privacy)),
-        row('Terms of Use', DjlIcons.document, () => _open(context, _terms)),
+        row(
+          l10n.settingsChatSupport,
+          DjlIcons.globe,
+          () => _open(context, _support),
+        ),
+        row(
+          l10n.settingsPrivacyPolicy,
+          DjlIcons.hand,
+          () => _open(context, _privacy),
+        ),
+        row(
+          l10n.settingsTermsOfUse,
+          DjlIcons.document,
+          () => _open(context, _terms),
+        ),
       ],
     );
   }
@@ -60,6 +73,7 @@ class AboutDjlPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context), colors = theme.colorScheme;
     final appearance = DjlAppearance.of(context);
+    final l10n = context.l10n;
     final fill = colors.surfaceContainerLow;
     final secondary = colors.onSurfaceVariant;
     final tertiary = colors.onSurface.withValues(alpha: .3);
@@ -215,9 +229,9 @@ class AboutDjlPage extends StatelessWidget {
         ),
       ],
     );
-    const routes = [
-      ('DJL Mobile', 'WebSocket', 'Bridge on your paired device'),
-      ('Bridge', 'JSON-RPC', 'codex app-server'),
+    final routes = [
+      ('DJL Mobile', 'WebSocket', l10n.settingsAboutRouteBridgeDevice),
+      (l10n.settingsAboutRouteBridge, 'JSON-RPC', 'codex app-server'),
       ('Codex', 'JSONL rollout', '~/.codex/sessions'),
     ];
 
@@ -232,7 +246,11 @@ class AboutDjlPage extends StatelessWidget {
           for (var i = 0; i < routes.length; i++) ...[
             Semantics(
               container: true,
-              label: '${routes[i].$1} to ${routes[i].$3} via ${routes[i].$2}',
+              label: l10n.settingsAboutRouteLabel(
+                routes[i].$1,
+                routes[i].$3,
+                routes[i].$2,
+              ),
               excludeSemantics: true,
               child: largeText
                   ? stack([
@@ -323,87 +341,64 @@ class AboutDjlPage extends StatelessWidget {
     final sections = <Widget>[
       stack([
         heading('DJL', weight: FontWeight.bold),
-        prose('Control **Codex** from your phone.'),
-        callout(
-          'central-imac',
-          'The Codex runtime stays on your paired device. Your phone is a secure remote control connected through a relay.',
-        ),
+        prose(l10n.settingsAboutIntro),
+        callout('central-imac', l10n.settingsAboutIntroNote),
       ]),
-      section('How It Works', [
-        prose(
-          'Your paired device runs a lightweight **bridge** that connects to a **relay server** over WebSocket.',
-        ),
+      section(l10n.settingsAboutHowItWorks, [
+        prose(l10n.settingsAboutBridge),
         bullets([
-          'You send a prompt from your phone.',
-          'It travels through the relay to the bridge on your paired device.',
-          'The bridge forwards it to `codex app-server` via JSON-RPC.',
-          'Responses stream back along the same path in real time.',
+          l10n.settingsAboutStep1,
+          l10n.settingsAboutStep2,
+          l10n.settingsAboutStep3,
+          l10n.settingsAboutStep4,
         ]),
-        callout(
-          'central-shield-check',
-          'Workspace tools and file edits run on your paired device. The relay routes encrypted traffic; it does not run your workspace.',
-        ),
+        callout('central-shield-check', l10n.settingsAboutWorkspaceNote),
       ]),
-      section('Architecture', [architecture()]),
-      section('The Relay', [
-        prose(
-          'A lightweight WebSocket server routes messages between your phone and paired device.',
-        ),
-        iconRow(
-          DjlIcons.sync,
-          "Handles session discovery so your phone finds the device's live session.",
-        ),
-        iconRow(
-          DjlIcons.hiddenFill,
-          'Never sees decrypted message contents after the handshake.',
-        ),
-        iconRow(
-          DjlIcons.tag,
-          'Observes connection metadata such as session IDs, device IDs, and timing.',
-        ),
+      section(l10n.settingsAboutArchitecture, [architecture()]),
+      section(l10n.settingsAboutRelay, [
+        prose(l10n.settingsAboutRelayIntro),
+        iconRow(DjlIcons.sync, l10n.settingsAboutRelayDiscovery),
+        iconRow(DjlIcons.hiddenFill, l10n.settingsAboutRelayPrivate),
+        iconRow(DjlIcons.tag, l10n.settingsAboutRelayMetadata),
         const SizedBox(height: 4),
-        prose(
-          'You can **self-host** the relay or use the hosted endpoint configured by your bridge.',
-        ),
+        prose(l10n.settingsAboutRelaySelfHost),
       ]),
       section('Codex App-Server', [
-        prose(
-          'For the Codex runtime, the bridge connects to **`codex app-server`**, the JSON-RPC interface used by Codex clients.',
-        ),
+        prose(l10n.settingsAboutAppServerIntro),
         bullets([
-          'Phone conversations are first-class Codex sessions.',
-          'Codex produces JSONL rollout files under `~/.codex/sessions/`.',
-          "Use DJL's desktop handoff action to continue a phone thread on the paired device.",
+          l10n.settingsAboutAppServerSessions,
+          l10n.settingsAboutAppServerRollout,
+          l10n.settingsAboutAppServerHandoff,
         ]),
       ]),
-      section('Pairing & Security', [
-        prose(
-          "On first connection, scan the bridge's **QR code**. It identifies the relay, session, paired device, and bridge identity public key.",
-        ),
-        prose('After the secure handshake:'),
+      section(l10n.settingsAboutPairing, [
+        prose(l10n.settingsAboutPairingQr),
+        prose(l10n.settingsAboutPairingAfter),
         bullets([
-          'Your phone saves the bridge as a **trusted device** in platform-backed secure storage.',
-          "The bridge persists your phone's identity locally.",
-          'Saved trusted devices can reconnect without scanning again.',
+          l10n.settingsAboutPairingTrusted,
+          l10n.settingsAboutPairingIdentity,
+          l10n.settingsAboutPairingReconnect,
         ]),
-        prose(
-          'The QR remains a recovery path if trust changes or the current session cannot be resolved. A one-time code is another pairing option when the same relay is configured.',
-        ),
+        prose(l10n.settingsAboutPairingRecovery),
       ]),
-      section('End-to-End Encryption', [
-        prose('After pairing, messages use encrypted envelopes.'),
-        spec('Cipher', 'AES-256-GCM'),
-        spec('Key derivation', 'HKDF-SHA256, per-direction keys'),
-        spec('Key exchange', 'X25519 ephemeral keys'),
-        spec('Identity', 'Ed25519 signatures'),
-        spec('Replay protection', 'Monotonic counters'),
-        spec('Phone cache key', 'Protected by platform-backed secure storage'),
-        prose(
-          'This describes **paired-device mode**. DJL Cloud is a separate service and account workflow.',
+      section(l10n.settingsAboutEncryption, [
+        prose(l10n.settingsAboutEncryptionIntro),
+        spec(l10n.settingsAboutCipher, 'AES-256-GCM'),
+        spec(
+          l10n.settingsAboutKeyDerivation,
+          l10n.settingsAboutKeyDerivationValue,
         ),
+        spec(l10n.settingsAboutKeyExchange, l10n.settingsAboutKeyExchangeValue),
+        spec(l10n.settingsAboutIdentity, l10n.settingsAboutIdentityValue),
+        spec(
+          l10n.settingsAboutReplayProtection,
+          l10n.settingsAboutReplayProtectionValue,
+        ),
+        spec(l10n.settingsAboutCacheKey, l10n.settingsAboutCacheKeyValue),
+        prose(l10n.settingsAboutEncryptionNote),
       ]),
-      section('Git & Workspace', [
-        prose('The bridge handles Git commands locally on the paired device:'),
+      section(l10n.settingsAboutGit, [
+        prose(l10n.settingsAboutGitIntro),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -413,34 +408,17 @@ class AboutDjlPage extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        prose(
-          'DJL also supports **workspace revert**: preview and apply reverse patches when you want to undo assistant changes. Review the confirmation before applying changes.',
-        ),
+        prose(l10n.settingsAboutGitRevert),
       ]),
-      section('Connection Resilience', [
-        iconRow(DjlIcons.refresh, 'Automatic reconnect uses bounded backoff.'),
-        iconRow(
-          DjlIcons.mailCode,
-          'Encrypted replay cursors help recover missed events. '
-          'Uncertain actions are not silently resent after a disconnect.',
-        ),
-        iconRow(
-          DjlIcons.chip,
-          'The runtime can keep working through a transient phone connection drop.',
-        ),
-        iconRow(
-          DjlIcons.power,
-          'The bridge handles clean shutdown on `SIGINT` and `SIGTERM`.',
-        ),
+      section(l10n.settingsAboutResilience, [
+        iconRow(DjlIcons.refresh, l10n.settingsAboutReconnect),
+        iconRow(DjlIcons.mailCode, l10n.settingsAboutReplay),
+        iconRow(DjlIcons.chip, l10n.settingsAboutRuntimeDrop),
+        iconRow(DjlIcons.power, l10n.settingsAboutShutdown),
       ]),
-      section('Desktop App Integration', [
-        prose(
-          'Codex persists phone threads as session rollout files on the paired device.',
-        ),
-        callout(
-          'central-devices-2',
-          'The desktop app may not live-reload external writes. Use **Continue on desktop** in DJL to hand off the current thread.',
-        ),
+      section(l10n.settingsAboutDesktop, [
+        prose(l10n.settingsAboutDesktopRollout),
+        callout('central-devices-2', l10n.settingsAboutDesktopHandoff),
       ]),
     ];
 
@@ -478,8 +456,8 @@ class AboutDjlPage extends StatelessWidget {
             ),
           ),
         ),
-        title: const Text(
-          'About DJL',
+        title: Text(
+          l10n.settingsAboutDjl,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -529,15 +507,15 @@ class AboutDjlPage extends StatelessWidget {
                   height: 14,
                   colorFilter: ColorFilter.mode(secondary, BlendMode.srcIn),
                 ),
-                label: const Text(
-                  'Open source',
-                  style: TextStyle(fontSize: 11),
+                label: Text(
+                  l10n.settingsOpenSource,
+                  style: const TextStyle(fontSize: 11),
                 ),
               ),
             ),
             const SizedBox(height: 10),
             Text(
-              'MIT License',
+              l10n.settingsMitLicense,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: secondary),
             ),

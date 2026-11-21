@@ -14,6 +14,7 @@ import 'desktop_controller.dart';
 import 'desktop_thread_pin_menu.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 // Match the wire parser used by CodexThread: seconds, ms, us, ns or ISO-8601.
 double? _timestamp(Object? value) {
@@ -488,7 +489,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         children: [
                           _destination(
-                            'Cloud chat',
+                            context.l10n.chatUiNavCloudChat,
                             DjlIcons.cloud,
                             widget.onCloud == null
                                 ? null
@@ -497,7 +498,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                                   },
                           ),
                           _destination(
-                            'Remote',
+                            context.l10n.chatUiNavRemote,
                             DjlIcons.laptop,
                             () {
                               if (current()) widget.onRemote();
@@ -506,34 +507,32 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                             trailing: DjlIcons.arrowUpRight,
                           ),
                           _destination(
-                            'Attention',
+                            context.l10n.chatUiAttentionTitle,
                             DjlIcons.inbox,
                             () => unawaited(openAttention()),
                             count: attention.length,
                           ),
                           if (_search.text.isNotEmpty && snapshot.hasError) ...[
-                            empty('Could not search chats.'),
+                            empty(context.l10n.chatUiNavSearchFailed),
                             TextButton(
                               onPressed: () =>
                                   setState(() => _matchQuery = null),
-                              child: const Text('Retry search'),
+                              child: Text(context.l10n.chatUiNavRetrySearch),
                             ),
                           ] else if (_search.text.isNotEmpty &&
                               snapshot.connectionState != ConnectionState.done)
-                            empty('Searching chats…')
+                            empty(context.l10n.chatUiNavSearching)
                           else ...[
-                            section('Pinned'),
+                            section(context.l10n.chatUiNavPinned),
                             if (pinned.isEmpty)
-                              empty(
-                                'Keep favorite chats close.\nTouch and hold a chat to pin it.',
-                              ),
+                              empty(context.l10n.chatUiNavPinnedEmpty),
                             for (final thread in pinned) row(thread, true),
-                            section('Recent chats'),
+                            section(context.l10n.chatUiNavRecent),
                             if (recent.isEmpty)
                               empty(
                                 _search.text.isEmpty
-                                    ? 'Your chats will appear here.'
-                                    : 'No matching chats',
+                                    ? context.l10n.chatUiNavRecentEmpty
+                                    : context.l10n.chatUiNoMatchingChats,
                               ),
                             for (final thread in recent) row(thread, false),
                           ],
@@ -610,8 +609,8 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                                 height: 44,
                               ),
                               tooltip: _showsSearch
-                                  ? 'Close search'
-                                  : 'Search chats',
+                                  ? context.l10n.chatUiCloseSearch
+                                  : context.l10n.chatUiSearchChats,
                               onPressed: () => setState(() {
                                 _showsSearch = !_showsSearch;
                                 if (!_showsSearch) _search.clear();
@@ -637,7 +636,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                           style: const TextStyle(fontSize: 17),
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                            hintText: 'Search chats',
+                            hintText: context.l10n.chatUiSearchChats,
                             contentPadding: const EdgeInsets.all(12),
                             filled: true,
                             fillColor: scheme.surfaceContainerLow,
@@ -690,9 +689,9 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                                 }
                               : null,
                           icon: const Icon(DjlIcons.compose, size: 20),
-                          label: const Text(
-                            'Chat',
-                            semanticsLabel: 'New chat',
+                          label: Text(
+                            context.l10n.chatUiChatButton,
+                            semanticsLabel: context.l10n.chatUiNewChat,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -702,7 +701,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                         radius: 25,
                         child: IconButton(
                           style: neutralControlStyle,
-                          tooltip: 'Settings',
+                          tooltip: context.l10n.chatUiSettings,
                           constraints: const BoxConstraints.tightFor(
                             width: 50,
                             height: 50,

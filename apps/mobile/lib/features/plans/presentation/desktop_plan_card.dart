@@ -14,6 +14,7 @@ import '../../desktop/presentation/desktop_conversation_view.dart'
     show desktopAssistantHeadings;
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 Color _planTint(BuildContext context) =>
     Theme.of(context).colorScheme.onSurface;
@@ -32,18 +33,22 @@ class DesktopPlanAccessory extends StatelessWidget {
     final complete =
         steps.isNotEmpty && steps.every((s) => s['status'] == 'completed');
     final status = complete
-        ? 'Completed'
+        ? context.l10n.plansCompleted
         : steps.any((s) => s['status'] == 'in_progress')
-        ? 'In progress'
-        : 'Pending';
+        ? context.l10n.plansInProgress
+        : context.l10n.plansPending;
     final tint = complete ? DjlColors.of(context).ink : _planTint(context);
     return Tooltip(
-      message: 'Open active plan',
+      message: context.l10n.plansOpenActivePlan,
       child: Semantics(
         button: true,
-        label: 'Open active plan',
-        value:
-            '$status, ${steps.isEmpty ? 'Plan' : 'Step ${plan.currentStep} of ${steps.length}'}',
+        label: context.l10n.plansOpenActivePlan,
+        value: context.l10n.plansStatusValue(
+          status,
+          steps.isEmpty
+              ? context.l10n.plansPlan
+              : context.l10n.plansStepOf(plan.currentStep, steps.length),
+        ),
         child: DjlGlassSurface(
           radius: 999,
           child: TextButton(
@@ -74,8 +79,11 @@ class DesktopPlanAccessory extends StatelessWidget {
                 Flexible(
                   child: Text(
                     steps.isEmpty
-                        ? 'Plan'
-                        : 'Step ${plan.currentStep} / ${steps.length}',
+                        ? context.l10n.plansPlan
+                        : context.l10n.plansStepFraction(
+                            plan.currentStep,
+                            steps.length,
+                          ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -139,7 +147,7 @@ Widget _markdown(
   selectable: true,
   sizedImageBuilder: (image) =>
       imageBuilder?.call(image.uri, image.title, image.alt) ??
-      Text(image.alt ?? image.title ?? 'Image'),
+      Text(image.alt ?? image.title ?? context.l10n.plansImage),
   styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
     listIndent: 14,
     listBulletPadding: const EdgeInsets.only(right: 3.75),
@@ -221,7 +229,7 @@ class DesktopPlanDetailsCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Plan',
+                  context.l10n.plansPlan,
                   style: TextStyle(
                     fontFamily: DjlAppearance.of(context).font.codeFamily,
                     fontSize: 11,
@@ -304,10 +312,10 @@ class _PlanStep extends StatelessWidget {
         ? DjlColors.of(context).ink
         : DjlColors.of(context).inkMuted;
     final label = status == 'completed'
-        ? 'Completed'
+        ? context.l10n.plansCompleted
         : status == 'in_progress'
-        ? 'In progress'
-        : 'Pending';
+        ? context.l10n.plansInProgress
+        : context.l10n.plansPending;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -464,7 +472,7 @@ Future<void> showDesktopPlanDetails(
                                               child: NavigationToolbar(
                                                 centerMiddle: true,
                                                 middle: Text(
-                                                  'Active plan',
+                                                  context.l10n.plansActivePlan,
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -517,7 +525,7 @@ Future<void> showDesktopPlanDetails(
                                                             const StadiumBorder(),
                                                       ),
                                                       child: Text(
-                                                        'Done',
+                                                        context.l10n.plansDone,
                                                         style: _planDetailStyle(
                                                           context,
                                                           17,
@@ -542,8 +550,10 @@ Future<void> showDesktopPlanDetails(
                                     ),
                                     sliver: SliverToBoxAdapter(
                                       child: plan == null
-                                          ? const Text(
-                                              'This plan is no longer available.',
+                                          ? Text(
+                                              context
+                                                  .l10n
+                                                  .plansNoLongerAvailable,
                                             )
                                           : DesktopPlanDetailsCard(
                                               plan: plan,
@@ -635,7 +645,9 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
             children: [
               Expanded(
                 child: Text(
-                  widget.proposed ? 'Proposed plan' : 'Plan',
+                  widget.proposed
+                      ? context.l10n.plansProposedPlan
+                      : context.l10n.plansPlan,
                   style: TextStyle(
                     fontFamily: DjlAppearance.of(context).font.family,
                     fontSize: 14,
@@ -644,7 +656,9 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
                 ),
               ),
               Tooltip(
-                message: _expanded ? 'Collapse plan' : 'Expand plan',
+                message: _expanded
+                    ? context.l10n.plansCollapsePlan
+                    : context.l10n.plansExpandPlan,
                 child: DjlGlassSurface(
                   radius: 999,
                   useNativeView: false,
@@ -672,7 +686,11 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_expanded ? 'Collapse' : 'Expand'),
+                        Text(
+                          _expanded
+                              ? context.l10n.plansCollapse
+                              : context.l10n.plansExpand,
+                        ),
                         const SizedBox(width: 5),
                         Icon(
                           _expanded ? DjlIcons.chevronUp : DjlIcons.chevronDown,
@@ -744,7 +762,9 @@ class _DesktopPlanResultCardState extends State<DesktopPlanResultCard> {
                         : const Icon(DjlIcons.arrowCircleRight, size: 13),
                   ),
                   label: Text(
-                    locked ? 'Starting...' : 'Implement',
+                    locked
+                        ? context.l10n.plansStarting
+                        : context.l10n.plansImplement,
                     maxLines: 1,
                   ),
                 ),

@@ -5,6 +5,7 @@ import '../../pairing/data/pairing_repository.dart';
 import 'desktop_composer_controller.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopComposerAttachments extends StatelessWidget {
   const DesktopComposerAttachments({super.key, required this.controller});
@@ -69,7 +70,7 @@ class DesktopComposerAttachments extends StatelessWidget {
                             top: 5,
                             right: 5,
                             child: IconButton(
-                              tooltip: 'Remove image',
+                              tooltip: context.l10n.chatUiRemoveImage,
                               onPressed: () => controller.removeImage(slot.id),
                               constraints: const BoxConstraints.tightFor(
                                 width: 18,
@@ -129,24 +130,25 @@ class DesktopImagePreview extends StatelessWidget {
   const DesktopImagePreview({
     super.key,
     required this.source,
-    this.label = 'Attached image',
+    this.label,
     this.size = 100,
   });
   final String? source;
-  final String label;
+  final String? label;
   final double size;
   @override
   Widget build(BuildContext context) {
     Widget fallback() => Center(
       child: Text(
         source?.startsWith('data:') == false
-            ? 'Desktop image: $source'
-            : 'Image preview unavailable',
+            ? context.l10n.chatUiDesktopImage(source!)
+            : context.l10n.chatUiImagePreviewUnavailable,
         maxLines: 3,
         overflow: TextOverflow.ellipsis,
       ),
     );
     final value = source;
+    final label = this.label ?? context.l10n.chatUiAttachedImage;
     Widget child = fallback();
     if (value != null &&
         value.startsWith('data:image') &&

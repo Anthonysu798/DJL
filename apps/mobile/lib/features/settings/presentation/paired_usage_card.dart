@@ -5,6 +5,7 @@ import 'paired_usage_controller.dart';
 import 'settings_group.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class PairedUsageCard extends StatefulWidget {
   const PairedUsageCard({super.key, required this.controller});
@@ -74,7 +75,9 @@ class _PairedUsageCardState extends State<PairedUsageCard>
         value.year == now.year &&
         value.month == now.month &&
         value.day == now.day;
-    return 'resets ${today ? time : '${localizations.formatShortDate(value)} $time'}';
+    return context.l10n.settingsUsageResets(
+      today ? time : '${localizations.formatShortDate(value)} $time',
+    );
   }
 
   @override
@@ -83,13 +86,14 @@ class _PairedUsageCardState extends State<PairedUsageCard>
     builder: (context, _) {
       final c = widget.controller, colors = Theme.of(context).colorScheme;
       final rows = c.rows;
+      final l10n = context.l10n;
       final mono = TextStyle(
         fontFamily: DjlAppearance.of(context).font.codeFamily,
         fontSize: 14,
       );
       return SettingsGroup(
-        title: 'Usage',
-        footer: 'Account-wide rate limits from your paired device.',
+        title: l10n.settingsUsage,
+        footer: l10n.settingsUsageFooter,
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
@@ -100,10 +104,10 @@ class _PairedUsageCardState extends State<PairedUsageCard>
                   Text(
                     c.error ??
                         (c.loading
-                            ? 'Loading current limits...'
+                            ? l10n.settingsUsageLoading
                             : !c.canRead
-                            ? 'Connect your paired device to load current limits.'
-                            : 'Rate limits are unavailable for this account.'),
+                            ? l10n.settingsUsageConnect
+                            : l10n.settingsUsageUnavailable),
                     style: TextStyle(
                       fontSize: 13,
                       color: colors.onSurfaceVariant,
@@ -121,7 +125,7 @@ class _PairedUsageCardState extends State<PairedUsageCard>
                         style: mono.copyWith(color: colors.onSurfaceVariant),
                       ),
                       Text(
-                        '${rows[i].window.remainingPercent}% left',
+                        l10n.settingsUsageLeft(rows[i].window.remainingPercent),
                         style: mono.copyWith(color: colors.onSurface),
                       ),
                       if (rows[i].window.resetsAt case final reset?)
@@ -148,7 +152,7 @@ class _PairedUsageCardState extends State<PairedUsageCard>
                 if (c.stale) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'Last known limits. Reconnect or refresh to update.',
+                    l10n.settingsUsageStale,
                     style: TextStyle(
                       fontSize: 13,
                       color: colors.onSurfaceVariant,
@@ -159,7 +163,7 @@ class _PairedUsageCardState extends State<PairedUsageCard>
                   alignment: Alignment.centerRight,
                   heightFactor: 1,
                   child: Tooltip(
-                    message: 'Refresh usage',
+                    message: l10n.settingsUsageRefreshTooltip,
                     child: TextButton.icon(
                       onPressed: c.canRead && !c.loading
                           ? () => unawaited(c.refresh())
@@ -172,7 +176,11 @@ class _PairedUsageCardState extends State<PairedUsageCard>
                               ),
                             )
                           : const Icon(DjlIcons.refresh, size: 15),
-                      label: Text(c.loading ? 'Refreshing...' : 'Refresh'),
+                      label: Text(
+                        c.loading
+                            ? l10n.settingsUsageRefreshing
+                            : l10n.settingsUsageRefresh,
+                      ),
                     ),
                   ),
                 ),

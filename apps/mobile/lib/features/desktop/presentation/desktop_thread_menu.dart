@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/djl_icons.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopThreadMenu extends StatelessWidget {
   const DesktopThreadMenu({
@@ -38,7 +39,7 @@ class DesktopThreadMenu extends StatelessWidget {
       context,
       anchor: rect,
       entries: secondaryBuilder(context),
-      label: 'More thread actions',
+      label: context.l10n.chatUiMoreThreadActions,
     );
     if (selected != null && context.mounted && isCurrent()) {
       onSelected(selected);
@@ -47,7 +48,7 @@ class DesktopThreadMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DjlGlassMenuButton<String>(
-    tooltip: 'Thread actions',
+    tooltip: context.l10n.chatUiThreadActions,
     enabled: enabled,
     icon: Icon(
       DjlIcons.more,
@@ -60,10 +61,10 @@ class DesktopThreadMenu extends StatelessWidget {
     itemBuilder: (context) => [
       ...primaryBuilder(context),
       const PopupMenuDivider(height: 8),
-      const PopupMenuItem(
+      PopupMenuItem(
         value: 'more-actions',
         child: DesktopThreadMenuLabel(
-          title: 'More actions',
+          title: context.l10n.chatUiMoreActions,
           icon: DjlIcons.more,
         ),
       ),

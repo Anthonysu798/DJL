@@ -7,6 +7,7 @@ import 'cloud_usage_reset_confirmation.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class CloudUsageBanner extends StatefulWidget {
   const CloudUsageBanner({
@@ -47,27 +48,30 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
     final date = DateTime.tryParse(
       widget.controller.usageBlockedUntil ?? '',
     )?.toLocal();
-    if (date == null) return 'Your limit frees up again soon.';
+    final l10n = context.l10n;
+    if (date == null) return l10n.cloudChatLimitFreesSoon;
     final now = DateTime.now();
     final difference = date.difference(now);
-    if (difference <= Duration.zero) return 'It resets now.';
+    if (difference <= Duration.zero) return l10n.cloudChatResetsNow;
     final days = DateTime.utc(
       date.year,
       date.month,
       date.day,
     ).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
-    if (days == 1) return 'It resets tomorrow.';
-    if (days > 1 && days < 7) return 'It resets in $days days.';
+    if (days == 1) return l10n.cloudChatResetsTomorrow;
+    if (days > 1 && days < 7) return l10n.cloudChatResetsInDays(days);
     if (days >= 7) {
-      return 'It resets ${MaterialLocalizations.of(context).formatMediumDate(date)}.';
+      return l10n.cloudChatResetsOn(
+        MaterialLocalizations.of(context).formatMediumDate(date),
+      );
     }
     final minutes = (difference.inSeconds / 60).ceil();
-    if (minutes < 1) return 'It resets in a moment.';
+    if (minutes < 1) return l10n.cloudChatResetsInAMoment;
     if (minutes < 60) {
-      return 'It resets in $minutes ${minutes == 1 ? 'minute' : 'minutes'}.';
+      return l10n.cloudChatResetsInMinutes(minutes);
     }
     final hours = (minutes / 60).ceil();
-    return 'It resets in $hours ${hours == 1 ? 'hour' : 'hours'}.';
+    return l10n.cloudChatResetsInHours(hours);
   }
 
   @override
@@ -95,7 +99,7 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "You've reached your usage limit",
+                      context.l10n.cloudChatUsageLimitReached,
                       style: cloudBodyStyle.copyWith(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -127,7 +131,7 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
             ),
             TextButton(
               onPressed: busy || !widget.canAct() ? null : chat.refreshUsage,
-              child: const Text('Retry usage'),
+              child: Text(context.l10n.cloudChatRetryUsage),
             ),
           ],
           if ((chat.usage?.bankedResets ?? 0) > 0) ...[
@@ -159,7 +163,9 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
                   ],
                   Flexible(
                     child: Text(
-                      'Use a banked reset (${chat.usage!.bankedResets} left)',
+                      context.l10n.cloudChatUseBankedReset(
+                        chat.usage!.bankedResets,
+                      ),
                       textAlign: TextAlign.center,
                       style: cloudBodyStyle.copyWith(
                         fontSize: 14,

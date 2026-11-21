@@ -6,6 +6,7 @@ import 'desktop_composer_controller.dart';
 import 'desktop_controller.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopQueuedStatus extends StatelessWidget {
   const DesktopQueuedStatus({
@@ -18,13 +19,13 @@ class DesktopQueuedStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Queued messages',
+    message: context.l10n.chatUiQueuedMessages,
     excludeFromSemantics: true,
     child: Semantics(
       button: true,
-      label: 'Queued messages',
+      label: context.l10n.chatUiQueuedMessages,
       value: '$count',
-      hint: 'Shows the queued follow-ups in a sheet',
+      hint: context.l10n.chatUiQueuedHint,
       child: DjlGlassSurface(
         radius: 999,
         child: InkWell(
@@ -38,7 +39,7 @@ class DesktopQueuedStatus extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      'Queued',
+                      context.l10n.chatUiQueued,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -114,10 +115,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
     widget.controller.restoreQueuedDraft(draft.id, (row) {
       if (!_canAct || !widget.composer.canRestoreDraft) return false;
       if (row.plan && !widget.controller.supportsPlan) {
-        setState(
-          () => _notice =
-              'Choose a model that supports Plan mode before moving this draft into the input.',
-        );
+        setState(() => _notice = context.l10n.chatUiQueuedNeedsPlanModel);
         return false;
       }
       if (!widget.composer.restoreDraft(row.draft)) return false;
@@ -163,8 +161,8 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
                 draft.draft.text.trim().isNotEmpty
                     ? draft.draft.text
                     : draft.draft.images.isNotEmpty
-                    ? '${draft.draft.images.length} image${draft.draft.images.length == 1 ? '' : 's'}'
-                    : 'Attached context',
+                    ? context.l10n.chatUiImageCount(draft.draft.images.length)
+                    : context.l10n.chatUiAttachedContext,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -176,7 +174,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
             ),
             const SizedBox(width: 4),
             IconButton(
-              tooltip: 'Move draft into input',
+              tooltip: context.l10n.chatUiMoveDraftToInput,
               onPressed: restore ? () => _restore(draft) : null,
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               padding: EdgeInsets.zero,
@@ -196,7 +194,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
             ),
             if (desktop.turnId != null)
               Tooltip(
-                message: 'Steer queued message',
+                message: context.l10n.chatUiSteerQueued,
                 excludeFromSemantics: true,
                 child: TextButton(
                   onPressed: _canAct && desktop.canSteerQueuedDrafts
@@ -216,9 +214,9 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
                       borderRadius: BorderRadius.circular(999),
                       color: colors.onSurface.withValues(alpha: .06),
                     ),
-                    child: const Text(
-                      'Steer',
-                      style: TextStyle(
+                    child: Text(
+                      context.l10n.chatUiSteer,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -227,7 +225,7 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
                 ),
               ),
             IconButton(
-              tooltip: 'Delete queued message',
+              tooltip: context.l10n.chatUiDeleteQueued,
               onPressed: _canAct && desktop.steeringQueuedDraftId != draft.id
                   ? () => desktop.removeQueuedDraft(draft.id)
                   : null,
@@ -301,18 +299,24 @@ class _DesktopQueuedDraftsSheetState extends State<DesktopQueuedDraftsSheet> {
                   centerTitle: true,
                   leading: const SizedBox(width: 48),
                   leadingWidth: 48,
-                  title: const Text(
-                    'Queued',
+                  title: Text(
+                    context.l10n.chatUiQueued,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: _canAct
                           ? () => Navigator.of(context).pop()
                           : null,
-                      child: const Text('Done', style: TextStyle(fontSize: 17)),
+                      child: Text(
+                        context.l10n.chatUiDone,
+                        style: const TextStyle(fontSize: 17),
+                      ),
                     ),
                   ],
                 ),

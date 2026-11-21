@@ -3,6 +3,7 @@ import '../data/status_surface.dart';
 
 import '../../../core/design/djl_icons.dart';
 import '../../../core/presentation/djl_frosted.dart';
+import '../../../l10n/l10n.dart';
 
 /// Permission reads never prompt. Only these explicit actions can request access
 /// or retry the local surface; they have no chat/controller mutation dependency.
@@ -111,15 +112,12 @@ class _StatusPermissionControlsState extends State<StatusPermissionControls>
       children: [
         ListTile(
           leading: const Icon(DjlIcons.timer),
-          title: const Text('Task status'),
+          title: Text(context.l10n.statusTaskStatus),
           subtitle: Text(switch (permission?.state) {
-            StatusPermissionState.allowed =>
-              'Task status is allowed on this device.',
-            StatusPermissionState.denied =>
-              'Allow local task status in your device settings. Chat works without it.',
-            StatusPermissionState.unsupported =>
-              'Task status is unavailable on this device.',
-            null => 'Checking device permission…',
+            StatusPermissionState.allowed => context.l10n.statusAllowed,
+            StatusPermissionState.denied => context.l10n.statusDenied,
+            StatusPermissionState.unsupported => context.l10n.statusUnsupported,
+            null => context.l10n.statusChecking,
           }),
         ),
         if (permission != null &&
@@ -132,18 +130,18 @@ class _StatusPermissionControlsState extends State<StatusPermissionControls>
               children: [
                 if (permission.canRequest)
                   DjlGlassPillButton(
-                    label: 'Enable task status',
+                    label: context.l10n.statusEnable,
                     prominent: true,
                     onPressed: _busy ? null : _enable,
                   ),
                 if (permission.state == StatusPermissionState.allowed)
                   DjlGlassPillButton(
-                    label: 'Refresh task status',
+                    label: context.l10n.statusRefresh,
                     onPressed: _busy ? null : () => _read(retry: true),
                   ),
                 if (permission.canOpenSettings)
                   DjlGlassPillButton(
-                    label: 'System settings',
+                    label: context.l10n.statusSystemSettings,
                     onPressed: _busy ? null : _settings,
                   ),
               ],

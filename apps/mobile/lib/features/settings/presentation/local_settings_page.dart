@@ -10,6 +10,7 @@ import 'archived_chats_page.dart';
 import 'about_djl_page.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class LocalSettingsPage extends StatelessWidget {
   const LocalSettingsPage({
@@ -38,6 +39,7 @@ class LocalSettingsPage extends StatelessWidget {
         ? Colors.black
         : scheme.surfaceContainerLow;
     final top = MediaQuery.paddingOf(context).top;
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: background,
       body: Stack(
@@ -50,7 +52,7 @@ class LocalSettingsPage extends StatelessWidget {
                   child: Semantics(
                     header: true,
                     child: Text(
-                      'Settings',
+                      l10n.settingsTitle,
                       style: settingsTextStyle(
                         context,
                         34,
@@ -75,11 +77,9 @@ class LocalSettingsPage extends StatelessWidget {
                           children: [
                             SettingsLinkRow(
                               title: signedIn
-                                  ? 'Open DJL Cloud chat'
-                                  : 'Sign in to DJL Cloud',
-                              subtitle:
-                                  email ??
-                                  'Chat, images, and background tasks without your Mac',
+                                  ? l10n.settingsOpenCloudChat
+                                  : l10n.settingsSignInCloud,
+                              subtitle: email ?? l10n.settingsCloudSubtitle,
                               leading: const Icon(DjlIcons.cloud),
                               onTap: onCloud,
                             ),
@@ -89,7 +89,7 @@ class LocalSettingsPage extends StatelessWidget {
                       SettingsControls(
                         controller: controller,
                         taskStatus: SettingsGroup(
-                          title: 'Device permissions',
+                          title: l10n.settingsDevicePermissions,
                           children: [taskStatus, ?remoteNotifications],
                         ),
                       ),
@@ -108,12 +108,12 @@ class LocalSettingsPage extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: SettingsGroup(
-                          title: 'Device',
+                          title: l10n.settingsDevice,
                           children: [
                             DeviceNameTile(desktop: desktop),
                             ListTile(
                               leading: const Icon(DjlIcons.laptop),
-                              title: const Text('My Macs'),
+                              title: Text(l10n.settingsMyMacs),
                               trailing: const Icon(DjlIcons.chevronRight),
                               onTap: onMyMacs,
                             ),

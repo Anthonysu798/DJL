@@ -5,6 +5,7 @@ import '../../../core/presentation/djl_glass.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 /// A single input stays in the same element slot while its chrome morphs.
 class DesktopComposerPanel extends StatefulWidget {
@@ -84,7 +85,9 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
   }
 
   Widget _voice() => IconButton(
-    tooltip: widget.listening ? 'Stop dictation' : 'Start dictation',
+    tooltip: widget.listening
+        ? context.l10n.chatUiStopDictation
+        : context.l10n.chatUiStartDictation,
     onPressed: widget.voiceInitializing ? null : widget.onVoice,
     constraints: const BoxConstraints.tightFor(width: 34, height: 34),
     padding: EdgeInsets.zero,
@@ -96,7 +99,7 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
   );
 
   Widget _resume() => IconButton(
-    tooltip: 'Resume queued messages',
+    tooltip: context.l10n.chatUiResumeQueued,
     onPressed: widget.onResumeQueued,
     constraints: const BoxConstraints.tightFor(width: 34, height: 34),
     padding: EdgeInsets.zero,
@@ -120,7 +123,7 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
         widget.onSend == null &&
         widget.controller.text.trim().isEmpty) {
       return IconButton(
-        tooltip: 'Stop turn',
+        tooltip: context.l10n.chatUiStopTurn,
         onPressed: widget.stoppingTurn ? null : widget.onStop,
         constraints: const BoxConstraints.tightFor(width: 34, height: 34),
         padding: EdgeInsets.zero,
@@ -132,7 +135,7 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
     }
     if (!expanded && !widget.starting) return const SizedBox.shrink();
     return IconButton.filled(
-      tooltip: 'Send to desktop',
+      tooltip: context.l10n.chatUiSendToDesktop,
       onPressed: widget.onSend,
       constraints: const BoxConstraints.tightFor(width: 34, height: 34),
       padding: EdgeInsets.zero,
@@ -140,11 +143,11 @@ class _DesktopComposerPanelState extends State<DesktopComposerPanel> {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: widget.starting
-          ? const SizedBox.square(
+          ? SizedBox.square(
               dimension: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                semanticsLabel: 'Starting run',
+                semanticsLabel: context.l10n.chatUiStartingRun,
               ),
             )
           : const Icon(DjlIcons.arrowUp, size: 20),

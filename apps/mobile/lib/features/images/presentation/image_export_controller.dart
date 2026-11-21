@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
 import '../../chat/data/cloud_repository.dart';
 import '../data/native_image_actions.dart';
+import '../../../l10n/l10n.dart';
 
 class ImageExportController extends ChangeNotifier {
   ImageExportController(this.repository, {NativeImageActions? actions})
@@ -24,7 +25,7 @@ class ImageExportController extends ChangeNotifier {
       final bytes = await repository.fileData(fileId);
       if (!_current) return;
       await _actions.save(bytes, 'djl-image-$fileId');
-      if (_current) notice = 'Saved to Photos.';
+      if (_current) notice = appStrings.imagesSaved;
     } catch (e) {
       if (_current) error = e is GalException ? e.type.message : e.toString();
     } finally {

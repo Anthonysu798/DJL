@@ -7,6 +7,7 @@ import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopDraftActions extends StatelessWidget {
   const DesktopDraftActions({
@@ -33,18 +34,18 @@ class DesktopDraftActions extends StatelessWidget {
       gitStatus: gitStatus,
       gitBusy: gitBusy,
       threadActions: DjlGlassMenuButton<String>(
-        tooltip: 'Thread actions',
+        tooltip: context.l10n.chatUiThreadActions,
         enabled: onGitTools != null,
         onSelected: (_) => onGitTools?.call(),
         itemBuilder: (_) => [
           PopupMenuItem(
             value: 'git-tools',
             enabled: onGitTools != null,
-            child: const Row(
+            child: Row(
               children: [
-                Icon(DjlIcons.branch, size: 24),
-                SizedBox(width: 12),
-                Flexible(child: Text('Branches & worktrees')),
+                const Icon(DjlIcons.branch, size: 24),
+                const SizedBox(width: 12),
+                Flexible(child: Text(context.l10n.chatUiBranchesAndWorktrees)),
               ],
             ),
           ),
@@ -113,14 +114,14 @@ class DesktopToolbarActions extends StatelessWidget {
                       clipBehavior: Clip.none,
                       children: [
                         IconButton(
-                          tooltip: 'Git actions',
+                          tooltip: context.l10n.chatUiGitActions,
                           onPressed: enabled
                               ? () => onGit!(buttonContext)
                               : null,
                           icon: Semantics(
-                            label: 'Git actions',
+                            label: context.l10n.chatUiGitActions,
                             value: gitBusy
-                                ? 'Working…'
+                                ? context.l10n.chatUiWorking
                                 : gitToolbarStatusLabel(gitStatus),
                             child: SvgPicture.asset(
                               'assets/icons/command/${gitStatus?.state == 'not_initialized' ? 'central-circle-plus' : 'git-commit'}.svg',

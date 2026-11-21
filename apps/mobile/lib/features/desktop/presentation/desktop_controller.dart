@@ -34,6 +34,7 @@ import '../../activity/domain/activity_reducer.dart';
 import '../../subagents/domain/subagent_action.dart';
 import '../../host/presentation/host_controller.dart';
 import '../../status/domain/run_status.dart';
+import '../../../l10n/l10n.dart';
 
 part 'desktop_controller_reasoning.dart';
 part 'desktop_controller_subagents.dart';
@@ -206,9 +207,7 @@ class DesktopController extends ChangeNotifier {
           )
           .firstOrNull;
       if (saved == null || active?.macDeviceId != device) {
-        throw const RemoteSecurityException(
-          'A saved verified host is required.',
-        );
+        throw RemoteSecurityException(appStrings.desktopVerifiedHostRequired);
       }
       await connect(saved);
     };
@@ -520,7 +519,7 @@ class DesktopController extends ChangeNotifier {
               DesktopResponseOutcome.failed) {
         error =
             activityString(activityObject(failed['error'])?['message']) ??
-            'The desktop could not complete this response. Check its provider settings and retry.';
+            appStrings.desktopResponseFailed;
       }
     }
     for (final entry in after.outcomes.entries) {
@@ -665,9 +664,7 @@ class DesktopController extends ChangeNotifier {
       owner != null && identical(owner, _projectMoveOwner) && projectMoveBusy;
   Object reserveProjectMove() {
     if (!runtimeReady || turnId != null) {
-      throw StateError(
-        'Wait for the current chat operation before moving its project.',
-      );
+      throw StateError(appStrings.desktopWaitBeforeMovingProject);
     }
     final owner = Object();
     _projectMoveOwner = owner;
@@ -858,8 +855,7 @@ class DesktopController extends ChangeNotifier {
       setModel(selected['id'] as String, remember: false);
     } else if (provider != null && connected && models.isNotEmpty) {
       model = null;
-      error =
-          'The provider for this conversation is unavailable. Connect it on your desktop or choose another provider.';
+      error = appStrings.desktopProviderUnavailable;
     } else if (!connected && saved?['model'] is String) {
       model = saved!['model'] as String;
     }
@@ -941,9 +937,7 @@ class DesktopController extends ChangeNotifier {
     final key = _checkpointKey(owner, turn);
     return (_checkpointEnds[key] ?? Future<void>.value()).then((_) {
       if (owner.isCurrent && _unverifiedCheckpointOwners.contains(key)) {
-        throw StateError(
-          'Reopen this chat to verify the turn before restoring changes.',
-        );
+        throw StateError(appStrings.desktopReopenBeforeRestore);
       }
     });
   }
@@ -1037,7 +1031,7 @@ class DesktopController extends ChangeNotifier {
     active = null;
     state = 'disconnected';
     error = null;
-    switchNotice = 'Switch cancelled. Choose a device to reconnect.';
+    switchNotice = appStrings.desktopSwitchCancelled;
     final closing = transport.disconnect();
     _notify();
     try {
@@ -1046,8 +1040,7 @@ class DesktopController extends ChangeNotifier {
       await pairings.clearActive();
     } catch (_) {
       if (!_disposed && generation == _connectGeneration) {
-        error =
-            'Could not confirm the saved selection was cleared. Unlock your device and choose a saved Mac to recover.';
+        error = appStrings.desktopSelectionClearUnconfirmed;
       }
     } finally {
       if (!_disposed && generation == _connectGeneration) {
@@ -1197,8 +1190,7 @@ class DesktopController extends ChangeNotifier {
         : (mac: pair.macDeviceId, pin: pair.publicKey);
     if (target.qualified &&
         !trusted.any((p) => target.matchesHost(p.macDeviceId, p.publicKey))) {
-      navigationError =
-          'The saved Mac identity for this link is unavailable. Open the chat from a verified Mac.';
+      navigationError = appStrings.desktopLinkIdentityUnavailable;
     }
     _notify();
   }
@@ -1224,8 +1216,7 @@ class DesktopController extends ChangeNotifier {
                   p.macDeviceId == pair.macDeviceId &&
                   p.publicKey == pair.publicKey,
             ))) {
-      navigationError =
-          'Choose the saved Mac matching this link. Its verified identity must match.';
+      navigationError = appStrings.desktopChooseMatchingMac;
       _notify();
       return;
     }
@@ -1296,8 +1287,7 @@ class DesktopController extends ChangeNotifier {
         navigationTarget = null;
         navigationError = null;
       } else {
-        navigationError =
-            'Waiting for the selected Mac. Retry when it is available.';
+        navigationError = appStrings.desktopWaitingForMac;
       }
     } on RemoteRpcException catch (failure) {
       if (!current()) return;
@@ -1307,15 +1297,13 @@ class DesktopController extends ChangeNotifier {
           (message.contains('thread not found') ||
               message.contains('unknown thread'))) {
         navigationTarget = null;
-        navigationError = 'The linked desktop conversation is unavailable.';
+        navigationError = appStrings.desktopLinkedConversationUnavailable;
       } else {
-        navigationError =
-            'Could not load the linked conversation. Retry on the selected Mac.';
+        navigationError = appStrings.desktopLinkedConversationLoadFailed;
       }
     } catch (_) {
       if (current()) {
-        navigationError =
-            'Could not load the linked conversation. Retry on the selected Mac.';
+        navigationError = appStrings.desktopLinkedConversationLoadFailed;
       }
     } finally {
       _navigationReading = false;
@@ -1348,8 +1336,7 @@ class DesktopController extends ChangeNotifier {
     } catch (_) {
       if (_disposed || revision != _devicePreferencesRevision) return;
       devicePreferencesReady = false;
-      devicePreferencesError =
-          'Could not load local device preferences. Unlock your device and retry.';
+      devicePreferencesError = appStrings.desktopDevicePreferencesLoadFailed;
     } finally {
       if (!_disposed && revision == _devicePreferencesRevision) {
         devicePreferencesLoading = false;
@@ -1397,8 +1384,7 @@ class DesktopController extends ChangeNotifier {
         }
       }
     } catch (_) {
-      error =
-          'Could not open saved desktops. Unlock your device and try again.';
+      error = appStrings.desktopSavedDesktopsOpenFailed;
     }
     await loadDevicePreferences();
     _notify();
@@ -1606,8 +1592,7 @@ class DesktopController extends ChangeNotifier {
           !(newChatDraft != null && isCurrentNewChatDraft(newChatDraft!))) {
         _applyRuntime(newChatRuntime);
       } else if (thread == null && selectedModel == null) {
-        error =
-            'The selected desktop model is unavailable. Choose an available model.';
+        error = appStrings.desktopModelUnavailable;
       }
       if (thread != null && navigationTarget == null) {
         await openThread(thread!, userSelection: false);
@@ -1616,8 +1601,7 @@ class DesktopController extends ChangeNotifier {
       _failures = 0;
       if (switchTarget == null) {
         previousDevice = null;
-        if (switchNotice !=
-            'Stopping runs could not be confirmed; they may still be running on the other Mac.') {
+        if (switchNotice != appStrings.desktopStopRunsUnconfirmed) {
           switchNotice = null;
         }
       }
@@ -1631,8 +1615,7 @@ class DesktopController extends ChangeNotifier {
       if (generation != _connectGeneration) return;
       if (bootstrap && !authenticated) _intent = false;
       if (pairings.isIdentityReadFailure(e, after: identityFailureRevision)) {
-        error =
-            'Could not read your secure pairing identity. Unlock your device, then choose Reconnect.';
+        error = appStrings.desktopPairingIdentityReadFailed;
         _scheduleRecovery(
           const RemoteSecurityException(
             'Secure pairing identity is unavailable.',
@@ -1724,7 +1707,7 @@ class DesktopController extends ChangeNotifier {
       ...(history['thread'] as RemoteJson? ?? {}),
     });
     if (resolved['id'] != value['id']) {
-      throw StateError('The runtime returned another chat’s history.');
+      throw StateError(appStrings.desktopRuntimeOtherHistory);
     }
     if (generation == _connectGeneration && mac == transport.macDeviceId) {
       _observeSwitchHistory(resolved);
@@ -1804,7 +1787,7 @@ class DesktopController extends ChangeNotifier {
         });
         final remote = response['thread'];
         if (remote is! Map || remote['id'] != value['id']) {
-          throw StateError('Could not verify the linked conversation history.');
+          throw StateError(appStrings.desktopLinkedHistoryUnverified);
         }
         resolved = normalizeThread({
           ...thread!,
@@ -1814,7 +1797,7 @@ class DesktopController extends ChangeNotifier {
         resolved = await _readRemoteThread(thread!);
       }
       if (resolved['id'] != value['id']) {
-        throw StateError('The runtime returned another chat’s history.');
+        throw StateError(appStrings.desktopRuntimeOtherHistory);
       }
       if (isCurrent?.call() == false ||
           generation != _connectGeneration ||
@@ -1876,9 +1859,7 @@ class DesktopController extends ChangeNotifier {
               p.macDeviceId == pair.macDeviceId &&
               p.publicKey == pair.publicKey,
         )) {
-      throw StateError(
-        'The current idle chat and a valid project are required.',
-      );
+      throw StateError(appStrings.desktopIdleChatAndProjectRequired);
     }
     final id = source!['id'] as String;
     final mac = pair.macDeviceId, pin = pair.publicKey;
@@ -1943,9 +1924,7 @@ class DesktopController extends ChangeNotifier {
         );
         final value = response['thread'];
         if (value is! Map || value['id'] != id) {
-          throw StateError(
-            'The runtime did not verify this chat’s project change.',
-          );
+          throw StateError(appStrings.desktopProjectChangeUnverified);
         }
         resumed = Map<String, dynamic>.from(value);
       } on RemoteRpcException catch (e) {
@@ -2042,9 +2021,7 @@ class DesktopController extends ChangeNotifier {
       }
       if (response['thread'] is! Map ||
           (response['thread'] as Map)['id'] is! String) {
-        throw StateError(
-          'The runtime did not identify the created fork. Refresh before trying again.',
-        );
+        throw StateError(appStrings.desktopForkUnidentified);
       }
       final seed = normalizeThread({
         ...Map<String, dynamic>.from(response['thread'] as Map),
@@ -2060,7 +2037,7 @@ class DesktopController extends ChangeNotifier {
       if (!(response['thread'] as Map).containsKey('turns')) seed['turns'] = [];
       final id = seed['id'] as String;
       if (id == source['id']) {
-        throw StateError('The runtime did not create a separate conversation.');
+        throw StateError(appStrings.desktopForkNotSeparate);
       }
       _acceptResponseHistory(seed, responseHistory, selected: false);
       final target = cwd?.trim().isNotEmpty == true
@@ -2181,8 +2158,8 @@ class DesktopController extends ChangeNotifier {
               ).hasMatch(e.message));
       if (unsupported) supportsFork = false;
       error = unsupported
-          ? 'This runtime does not support conversation forks. Update DJL on your desktop and retry.'
-          : '$e The fork result may be unknown. Refresh before trying again.';
+          ? appStrings.desktopForkUnsupported
+          : appStrings.desktopForkResultUnknown(e.toString());
       return false;
     } finally {
       if (sameConnection()) {
@@ -2265,12 +2242,10 @@ class DesktopController extends ChangeNotifier {
     _notify();
     try {
       if (settings != null && !settings!.ready) {
-        throw StateError('Read saved settings before creating a new chat.');
+        throw StateError(appStrings.desktopReadSettingsFirst);
       }
       if (settings != null && requested.model == null) {
-        throw StateError(
-          'Connect a Mac with available models before creating a new chat.',
-        );
+        throw StateError(appStrings.desktopConnectMacWithModels);
       }
       final result = await _runtimeRequest(
         'thread/start',
@@ -2310,9 +2285,7 @@ class DesktopController extends ChangeNotifier {
       }
       if (draft != null && cwd != null && created['cwd'] != cwd) {
         threadList.scheduleSave();
-        throw StateError(
-          'The desktop created the chat in another project folder. Your local draft was retained.',
-        );
+        throw StateError(appStrings.desktopChatCreatedElsewhere);
       }
       _rememberCurrent();
       thread = created;
@@ -2377,9 +2350,7 @@ class DesktopController extends ChangeNotifier {
       if (draft.contexts.isNotEmpty &&
           draft.cwd != null &&
           draft.cwd != thread?['cwd']) {
-        throw StateError(
-          'The draft context belongs to another project folder. Remove it and select context again.',
-        );
+        throw StateError(appStrings.desktopDraftContextOtherFolder);
       }
       draft.input();
       _bindQueuedOwner();
@@ -2437,8 +2408,7 @@ class DesktopController extends ChangeNotifier {
     final draftOwner = newChatDraft;
     if (draftOwner != null && !isCurrentNewChatDraft(draftOwner)) return false;
     if (draftOwner != null && selectedModel == null) {
-      error =
-          'The selected desktop model is unavailable. Choose an available model.';
+      error = appStrings.desktopModelUnavailable;
       _notify();
       return false;
     }
@@ -2555,20 +2525,16 @@ class DesktopController extends ChangeNotifier {
       if (fromQueue &&
           expectedRuntime.plan &&
           (!supportsPlan || expectedRuntime.modelName == null)) {
-        throw StateError(
-          'Choose an available model that supports Plan mode before sending this queued draft.',
-        );
+        throw StateError(appStrings.desktopQueuedPlanModelRequired);
       }
       if (draft.contexts.isNotEmpty &&
           draft.cwd != null &&
           draft.cwd != selectedCwd) {
-        throw StateError(
-          'The draft context belongs to another project folder. Remove it and select context again.',
-        );
+        throw StateError(appStrings.desktopDraftContextOtherFolder);
       }
       final input = draft.input();
       if (model == null) {
-        throw StateError('Choose an available desktop model first.');
+        throw StateError(appStrings.desktopChooseModelFirst);
       }
       timeline.add({
         'id': messageId,
@@ -2598,8 +2564,7 @@ class DesktopController extends ChangeNotifier {
           selectedResponseFooter.pending &&
           _responseLifecycle!.pendingRevisionFor(selectedThread!) !=
               queuedPendingRevision) {
-        error =
-            'The active run changed before queued delivery. Refresh before resuming.';
+        error = appStrings.desktopRunChangedBeforeQueue;
         return false;
       }
       _passiveSelection = null;
@@ -2611,9 +2576,7 @@ class DesktopController extends ChangeNotifier {
         if (!ownsRun() ||
             resolved == null ||
             requireDifferent && resolved == expected) {
-          throw StateError(
-            'The active run changed. Refresh before steering again.',
-          );
+          throw StateError(appStrings.desktopRunChangedBeforeSteer);
         }
         sendingTurn = resolved;
         _adoptTurnTarget(selectedThread!, expected, resolved);
@@ -2640,9 +2603,7 @@ class DesktopController extends ChangeNotifier {
                   }
                 : null);
         if (mode != null && expectedRuntime.modelName == null) {
-          throw StateError(
-            'Choose an available model before leaving Plan mode.',
-          );
+          throw StateError(appStrings.desktopModelBeforeLeavingPlan);
         }
         exitsPlanSession =
             mode?['mode'] == 'default' ||
@@ -2837,8 +2798,7 @@ class DesktopController extends ChangeNotifier {
           'threadId': sentThreadId,
           'turnId': responseTurnId,
           'type': 'systemMessage',
-          'text':
-              'Plan mode is not supported by this runtime. Sent as a normal turn instead.',
+          'text': appStrings.desktopPlanModeUnsupported,
         });
         _noteTimelineLive(sentThreadId, timeline.last);
       }
@@ -2855,7 +2815,7 @@ class DesktopController extends ChangeNotifier {
         return false;
       }
       error = requestDispatched
-          ? '$e The send result may be unknown. Refresh the conversation before trying again.'
+          ? appStrings.desktopSendResultUnknown(e.toString())
           : e.toString();
       return false;
     } finally {
@@ -2894,9 +2854,7 @@ class DesktopController extends ChangeNotifier {
   ) async {
     final snapshot = await _resolveActiveTurnSnapshot(threadId, current);
     if (snapshot.pending) {
-      throw StateError(
-        'The active run has not published its ID yet. Try again in a moment.',
-      );
+      throw StateError(appStrings.desktopRunIdPending);
     }
     final id = snapshot.activeTurnId;
     return id != null && !_finishedTurns.contains((threadId, id)) ? id : null;
@@ -2937,7 +2895,7 @@ class DesktopController extends ChangeNotifier {
             ) ||
             (response.containsKey('cwd') &&
                 response['cwd'] != thread?['cwd'])) {
-          throw StateError('The runtime returned another chat’s turn page.');
+          throw StateError(appStrings.desktopRuntimeOtherTurnPage);
         }
         for (final field in ['data', 'items', 'turns']) {
           final values = response[field];
@@ -2986,11 +2944,11 @@ class DesktopController extends ChangeNotifier {
     if (value is! Map ||
         value['id'] != threadId ||
         value.containsKey('cwd') && value['cwd'] != thread?['cwd']) {
-      throw StateError('The runtime returned another chat’s history.');
+      throw StateError(appStrings.desktopRuntimeOtherHistory);
     }
     final turns = value['turns'];
     if (turns is! List) {
-      throw StateError('The runtime did not return this chat’s turn state.');
+      throw StateError(appStrings.desktopRuntimeNoTurnState);
     }
     final snapshot = _activeTurnSnapshot(turns, newestFirst: false);
     return snapshot.activeTurnId == null && _runningStatus(value['status'])
@@ -3051,7 +3009,7 @@ class DesktopController extends ChangeNotifier {
     required bool newestFirst,
   }) {
     if (values.any((row) => row is! Map)) {
-      throw StateError('The runtime returned an invalid turn state.');
+      throw StateError(appStrings.desktopRuntimeInvalidTurnState);
     }
     final ordered = newestFirst
         ? values.cast<Map>()
@@ -3308,9 +3266,7 @@ class DesktopController extends ChangeNotifier {
       if (!current()) throw StateError('The active run changed.');
       unpublished = snapshot.pending;
       if (unpublished) {
-        throw StateError(
-          'The active run has not published its ID yet. Try again in a moment.',
-        );
+        throw StateError(appStrings.desktopRunIdPending);
       }
       final target = snapshot.activeTurnId;
       return target != null && !_finishedTurns.contains((scope.thread, target))
@@ -3361,9 +3317,7 @@ class DesktopController extends ChangeNotifier {
         if (!current()) return;
       }
       if (target == null) {
-        throw StateError(
-          'The active run has not published its ID yet. Try again in a moment.',
-        );
+        throw StateError(appStrings.desktopRunIdPending);
       }
       final previous = expected;
       expected = target;
@@ -3931,7 +3885,7 @@ class DesktopController extends ChangeNotifier {
               activityString(
                 activityObject(turn?['error'] ?? params['error'])?['message'],
               ) ??
-              'The desktop could not complete this response. Check its provider settings and retry.';
+              appStrings.desktopResponseFailed;
         }
         if (id != null) {
           _finishedTurns.add((thread?['id'] as String?, id));
@@ -4001,7 +3955,7 @@ class DesktopController extends ChangeNotifier {
         error =
             (params['error'] as RemoteJson?)?['message'] as String? ??
             params['message'] as String? ??
-            'Desktop request failed.';
+            appStrings.desktopRequestFailed;
       case 'djl/hostPresence':
         if (rpc['id'] == null &&
             connected &&

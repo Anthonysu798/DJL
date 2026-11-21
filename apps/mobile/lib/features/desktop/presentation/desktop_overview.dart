@@ -18,6 +18,7 @@ import '../../../core/design/djl_icons.dart';
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_frosted.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopOverview extends StatefulWidget {
   const DesktopOverview({
@@ -290,52 +291,67 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     final action = await showDjlGlassMenu<String>(
       context,
       anchor: rect,
-      label: 'More actions',
+      label: context.l10n.chatUiMoreActions,
       sections: [
         [
-          DjlMenuItem('chat', 'New Chat', DjlIcons.compose, enabled: ready),
+          DjlMenuItem(
+            'chat',
+            context.l10n.chatUiMenuNewChat,
+            DjlIcons.compose,
+            enabled: ready,
+          ),
           DjlMenuItem(
             'quick-chat',
-            'Quick Chat',
+            context.l10n.chatUiMenuQuickChat,
             DjlIcons.quick,
             enabled: ready,
           ),
           DjlMenuItem(
             'project',
-            'New Project',
+            context.l10n.chatUiMenuNewProject,
             DjlIcons.folderAdd,
             enabled: ready,
           ),
         ],
         [
-          const DjlMenuItem('connections', 'Connections', DjlIcons.link),
+          DjlMenuItem(
+            'connections',
+            context.l10n.chatUiMenuConnections,
+            DjlIcons.link,
+          ),
           DjlMenuItem(
             'secure',
-            'Secure pairing details',
+            context.l10n.chatUiMenuSecurePairing,
             DjlIcons.shieldCheck,
             enabled: desktop.canEnterManualPairing,
           ),
           if (desktop.active != null)
-            const DjlMenuItem('host', 'Your Mac', DjlIcons.laptop),
+            DjlMenuItem(
+              'host',
+              context.l10n.chatUiMenuYourMac,
+              DjlIcons.laptop,
+            ),
         ],
         [
           DjlMenuItem(
             'archive',
-            desktop.threadList.showArchived ? 'Active chats' : 'Archived chats',
+            desktop.threadList.showArchived
+                ? context.l10n.chatUiMenuActiveChats
+                : context.l10n.chatUiArchivedChats,
             desktop.threadList.showArchived ? DjlIcons.chats : DjlIcons.archive,
           ),
           DjlMenuItem(
             'refresh',
-            'Refresh',
+            context.l10n.chatUiMenuRefresh,
             DjlIcons.refresh,
             enabled: desktop.connected,
           ),
         ],
         if (desktop.connected)
-          const [
+          [
             DjlMenuItem(
               'disconnect',
-              'Disconnect',
+              context.l10n.chatUiMenuDisconnect,
               DjlIcons.power,
               destructive: true,
             ),
@@ -374,7 +390,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     child: Row(
       children: [
         _button(
-          label: 'Open navigation',
+          label: context.l10n.chatUiOpenNavigation,
           onTap: widget.onNavigation,
           child: SizedBox.square(
             dimension: 40,
@@ -412,12 +428,19 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         ),
         const Spacer(),
         Builder(
-          builder: (anchor) =>
-              _icon('More actions', DjlIcons.more, () => _openMore(anchor)),
+          builder: (anchor) => _icon(
+            context.l10n.chatUiMoreActions,
+            DjlIcons.more,
+            () => _openMore(anchor),
+          ),
         ),
         if (widget.onSettings != null) ...[
           const SizedBox(width: 10),
-          _icon('Settings', DjlIcons.settings, widget.onSettings),
+          _icon(
+            context.l10n.chatUiSettings,
+            DjlIcons.settings,
+            widget.onSettings,
+          ),
         ],
       ],
     ),
@@ -456,8 +479,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                           textInputAction: TextInputAction.search,
                           autocorrect: false,
                           style: Theme.of(context).textTheme.bodyMedium,
-                          decoration: const InputDecoration(
-                            hintText: 'Search conversations',
+                          decoration: InputDecoration(
+                            hintText: context.l10n.chatUiSearchConversations,
                             filled: false,
                             isDense: true,
                             border: InputBorder.none,
@@ -475,7 +498,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           ),
           if (_searchFocus.hasFocus || _search.text.isNotEmpty) ...[
             const SizedBox(width: 8),
-            _icon('Dismiss search', DjlIcons.close, () {
+            _icon(context.l10n.chatUiDismissSearch, DjlIcons.close, () {
               _search.clear();
               _searchFocus.unfocus();
               desktop.threadList.filter(search: '');
@@ -490,16 +513,16 @@ class _DesktopOverviewState extends State<DesktopOverview> {
   Widget _connectionStatus() {
     final busy = desktop.state == 'connecting' || desktop.state == 'resolving';
     final label = busy
-        ? 'Connecting'
+        ? context.l10n.chatUiStatusConnecting
         : desktop.state == 'desktop offline'
-        ? 'Device offline'
-        : 'Offline';
+        ? context.l10n.chatUiStatusDeviceOffline
+        : context.l10n.chatUiStatusOffline;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Semantics(
-          label: 'Connection status: $label',
+          label: context.l10n.chatUiConnectionStatus(label),
           excludeSemantics: true,
           child: _surface(
             Padding(
@@ -572,7 +595,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 if (widget.groups != null) ...[
                   const SizedBox(width: 8),
                   _button(
-                    label: 'Groups',
+                    label: context.l10n.chatUiGroups,
                     selected: _groupsScope,
                     fill: _groupsScope ? _accent.$1 : null,
                     onTap: () => setState(() => _groupsScope = true),
@@ -581,7 +604,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       vertical: 8,
                     ),
                     child: Text(
-                      'Groups',
+                      context.l10n.chatUiGroups,
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                         fontSize: 14,
                         height: 1.2,
@@ -606,8 +629,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       (g) => desktop.threadList.data.overviewCollapsedProjects
                           .contains(g.id),
                     )
-                ? 'Expand all'
-                : 'Collapse all',
+                ? context.l10n.chatUiExpandAll
+                : context.l10n.chatUiCollapseAll,
             DjlIcons.expand,
             _owned(() => _toggleAll(groups)),
             size: 15,
@@ -692,13 +715,13 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     excludeSemantics: true,
                     button: true,
                     label: _expandedChildren.contains(id)
-                        ? 'Collapse child chats for $title'
-                        : 'Expand child chats for $title',
+                        ? context.l10n.chatUiCollapseChildChats(title)
+                        : context.l10n.chatUiExpandChildChats(title),
                     onTap: toggleChildren,
                     child: IconButton(
                       tooltip: _expandedChildren.contains(id)
-                          ? 'Collapse child chats for $title'
-                          : 'Expand child chats for $title',
+                          ? context.l10n.chatUiCollapseChildChats(title)
+                          : context.l10n.chatUiExpandChildChats(title),
                       iconSize: 12,
                       visualDensity: VisualDensity.compact,
                       icon: Icon(
@@ -710,10 +733,11 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     ),
                   ),
                 DjlGlassMenuButton<String>(
-                  tooltip: 'Desktop chat actions',
+                  tooltip: context.l10n.chatUiDesktopChatActions,
                   padding: EdgeInsets.zero,
                   icon: Icon(DjlIcons.more, size: 15, color: _secondary),
-                  itemBuilder: (_) => desktopThreadActions(desktop, thread),
+                  itemBuilder: (menuContext) =>
+                      desktopThreadActions(menuContext, desktop, thread),
                   onSelected: (action) {
                     if (_currentBinding == owner) {
                       performDesktopThreadAction(
@@ -754,10 +778,10 @@ class _DesktopOverviewState extends State<DesktopOverview> {
       context: anchor,
       allowBelow: true,
       items: [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'archive',
           child: DesktopThreadMenuLabel(
-            title: 'Archive Project',
+            title: anchor.l10n.chatUiArchiveProject,
             icon: DjlIcons.archive,
           ),
         ),
@@ -765,8 +789,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           value: 'remove',
           child: DefaultTextStyle.merge(
             style: TextStyle(color: DjlColors.of(anchor).danger),
-            child: const DesktopThreadMenuLabel(
-              title: 'Remove from Phone',
+            child: DesktopThreadMenuLabel(
+              title: anchor.l10n.chatUiRemoveFromPhone,
               icon: DjlIcons.delete,
             ),
           ),
@@ -775,7 +799,9 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     );
     if (action == null || !pageContext.mounted || !current()) return;
     final archive = action == 'archive';
-    final title = archive ? 'Archive Project' : 'Remove from Phone';
+    final title = archive
+        ? pageContext.l10n.chatUiArchiveProject
+        : pageContext.l10n.chatUiRemoveFromPhone;
     if (!pageContext.mounted) return;
     final review = archive
         ? showCupertinoModalPopup<bool>(
@@ -783,10 +809,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             builder: (dialog) => Padding(
               padding: MediaQuery.viewInsetsOf(dialog),
               child: CupertinoActionSheet(
-                title: Text('Archive "${group.label}"?'),
-                message: const Text(
-                  'All active chats in this project will be archived.',
-                ),
+                title: Text(dialog.l10n.chatUiArchiveProjectTitle(group.label)),
+                message: Text(dialog.l10n.chatUiArchiveProjectBody),
                 actions: [
                   CupertinoActionSheetAction(
                     onPressed: () => Navigator.pop(dialog, true),
@@ -795,7 +819,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 ],
                 cancelButton: CupertinoActionSheetAction(
                   onPressed: () => Navigator.pop(dialog, false),
-                  child: const Text('Cancel'),
+                  child: Text(dialog.l10n.commonCancel),
                 ),
               ),
             ),
@@ -803,14 +827,12 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         : showCupertinoDialog<bool>(
             context: pageContext,
             builder: (dialog) => CupertinoAlertDialog(
-              title: Text('Remove "${group.label}" from this phone?'),
-              content: const Text(
-                'Chats for this project will be deleted only from DJL on this phone. Nothing is removed from your device or Codex observer.',
-              ),
+              title: Text(dialog.l10n.chatUiRemoveProjectTitle(group.label)),
+              content: Text(dialog.l10n.chatUiRemoveProjectBody),
               actions: [
                 CupertinoDialogAction(
                   onPressed: () => Navigator.pop(dialog, false),
-                  child: const Text('Cancel'),
+                  child: Text(dialog.l10n.commonCancel),
                 ),
                 CupertinoDialogAction(
                   isDestructiveAction: true,
@@ -868,8 +890,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       label: !group.project
                           ? label
                           : collapsed
-                          ? 'Expand project $label'
-                          : 'Collapse project $label',
+                          ? context.l10n.chatUiExpandProject(label)
+                          : context.l10n.chatUiCollapseProject(label),
                       child: InkWell(
                         onTap: toggle,
                         onLongPress: group.project
@@ -915,7 +937,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 ),
                 if (group.project)
                   IconButton(
-                    tooltip: 'New chat in $label',
+                    tooltip: context.l10n.chatUiNewChatIn(label),
                     iconSize: 18,
                     icon: const Icon(DjlIcons.compose),
                     onPressed: desktop.runtimeReady
@@ -945,7 +967,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         child: Align(
           alignment: Alignment.centerRight,
           child: _button(
-            label: 'New group',
+            label: context.l10n.chatUiNewGroup,
             fill: ready ? _accent.$1 : null,
             onTap: ready ? () => GroupsList.create(context, groupChats) : null,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -959,7 +981,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Group',
+                  context.l10n.chatUiGroupButton,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -983,7 +1005,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         runSpacing: 8,
         children: [
           _button(
-            label: 'New chat',
+            label: context.l10n.chatUiNewChat,
             fill: desktop.runtimeReady ? _accent.$1 : null,
             onTap: !desktop.runtimeReady
                 ? null
@@ -1007,7 +1029,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Chat',
+                  context.l10n.chatUiChatButton,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -1058,13 +1080,13 @@ class _DesktopOverviewState extends State<DesktopOverview> {
               spacing: 8,
               children: [
                 Text(
-                  'Offline · showing saved chats',
+                  context.l10n.chatUiOfflineSavedChats,
                   style: TextStyle(color: _secondary),
                 ),
                 if (desktop.hasReconnectCandidate)
                   TextButton(
                     onPressed: desktop.busy ? null : desktop.reconnect,
-                    child: const Text('Reconnect'),
+                    child: Text(context.l10n.chatUiReconnect),
                   ),
               ],
             ),
@@ -1072,15 +1094,16 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             Text(desktop.threadList.localError!),
           if (desktop.threadList.syncWarning != null)
             Text(desktop.threadList.syncWarning!),
-          if (desktop.threadList.showArchived) const Text('Archived chats'),
+          if (desktop.threadList.showArchived)
+            Text(context.l10n.chatUiArchivedChats),
           if (desktop.threadList.loading) const LinearProgressIndicator(),
           if (groups.isEmpty && !desktop.threadList.loading)
             Text(
               _search.text.isNotEmpty
-                  ? 'No matching chats.'
+                  ? context.l10n.chatUiNoMatchingChatsPeriod
                   : _scope == DesktopOverviewScope.studio
-                  ? 'No Studio threads'
-                  : 'No project chats',
+                  ? context.l10n.chatUiNoStudioThreads
+                  : context.l10n.chatUiNoProjectChats,
               style: TextStyle(fontSize: 13, color: _secondary),
             ),
           for (final group in groups) _group(group),

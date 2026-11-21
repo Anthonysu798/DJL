@@ -9,6 +9,7 @@ import 'settings_controller.dart';
 import 'settings_group.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class CloudSettingsPage extends StatefulWidget {
   const CloudSettingsPage({
@@ -95,9 +96,7 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
       });
     } catch (_) {
       if (_current(generation)) {
-        setState(
-          () => _error = 'Could not refresh account and Cloud settings.',
-        );
+        setState(() => _error = context.l10n.settingsCloudRefreshFailed);
       }
     } finally {
       if (_current(generation)) setState(() => _loading = false);
@@ -124,9 +123,9 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
       /* Keep the source destination available for retry. */
     }
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open this link. Try again.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.settingsLinkFailed)));
     }
   }
 
@@ -143,9 +142,7 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
     }
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not open notification settings. Try again.'),
-        ),
+        SnackBar(content: Text(context.l10n.settingsOpenNotificationsFailed)),
       );
     }
   }
@@ -170,6 +167,7 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
       final enabled = settings.ready && !settings.saving;
       final colors = Theme.of(context).colorScheme;
       final permission = widget.push.state;
+      final l10n = context.l10n;
       final backgroundAlerts = !_pushConfigured || !permission.available
           ? 'Unavailable'
           : permission.permission == 'denied'
@@ -177,6 +175,12 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
           : permission.alerts && widget.push.enabled
           ? 'Enabled'
           : 'Not enabled';
+      final backgroundAlertsLabel = switch (backgroundAlerts) {
+        'Unavailable' => l10n.settingsAlertsUnavailable,
+        'Off' => l10n.settingsAlertsOff,
+        'Enabled' => l10n.settingsAlertsEnabled,
+        _ => l10n.settingsAlertsNotEnabled,
+      };
       Widget action(
         String label,
         IconData? icon,
@@ -209,21 +213,25 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
       );
       Widget value(String label, String text) =>
           CloudValueRow(label: label, value: text);
-      Widget toggle(String label, bool selected, ValueChanged<bool> change) =>
-          MergeSemantics(
-            key: Key('cloud.settings.$label'),
-            child: ListTile(
-              minTileHeight: 52,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              enabled: enabled,
-              title: Text(label, style: cloudBodyStyle),
-              onTap: enabled ? () => change(!selected) : null,
-              trailing: CloudSwitch(
-                value: selected,
-                onChanged: enabled ? change : null,
-              ),
-            ),
-          );
+      Widget toggle(
+        String id,
+        String label,
+        bool selected,
+        ValueChanged<bool> change,
+      ) => MergeSemantics(
+        key: Key('cloud.settings.$id'),
+        child: ListTile(
+          minTileHeight: 52,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          enabled: enabled,
+          title: Text(label, style: cloudBodyStyle),
+          onTap: enabled ? () => change(!selected) : null,
+          trailing: CloudSwitch(
+            value: selected,
+            onChanged: enabled ? change : null,
+          ),
+        ),
+      );
       return Scaffold(
         backgroundColor: colors.brightness == Brightness.dark
             ? Colors.black
@@ -231,14 +239,14 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
         body: CustomScrollView(
           slivers: [
             CloudLargeNavigationBar(
-              title: 'Settings',
+              title: l10n.settingsTitle,
               leading: CloudNavigationButton(
                 icon: widget.onOpenNavigation == null
                     ? DjlIcons.back
                     : DjlIcons.menu,
                 label: widget.onOpenNavigation == null
-                    ? 'Back'
-                    : 'Open navigation',
+                    ? l10n.settingsBack
+                    : l10n.settingsOpenNavigation,
                 onPressed:
                     widget.onOpenNavigation ??
                     () => Navigator.maybePop(context),
@@ -254,57 +262,57 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
                       title: Text(_error!),
                       trailing: TextButton(
                         onPressed: _load,
-                        child: const Text('Retry'),
+                        child: Text(l10n.settingsRetry),
                       ),
                     ),
                   SettingsGroup(
-                    title: 'Account',
+                    title: l10n.settingsAccount,
                     dividerIndent: 56,
                     children: [
                       action(
-                        widget.email ?? 'DJL account',
+                        widget.email ?? l10n.settingsDjlAccount,
                         DjlIcons.account,
                         widget.onAccount,
                         key: const Key('cloud.settings.account'),
                         tinted: true,
                       ),
                       if (_credits != null)
-                        value('Available credits', _credits!),
+                        value(l10n.settingsAvailableCredits, _credits!),
                     ],
                   ),
                   SettingsGroup(
-                    title: 'Appearance',
+                    title: l10n.settingsAppearance,
                     children: [
                       SettingsMenuRow<ThemeMode>(
                         key: const Key('theme-setting'),
-                        label: 'Theme',
+                        label: l10n.settingsTheme,
                         valueLabel: switch (settings.theme) {
-                          ThemeMode.system => 'System',
-                          ThemeMode.light => 'Light',
-                          ThemeMode.dark => 'Dark',
+                          ThemeMode.system => l10n.settingsThemeSystem,
+                          ThemeMode.light => l10n.settingsThemeLight,
+                          ThemeMode.dark => l10n.settingsThemeDark,
                         },
                         value: settings.theme,
-                        options: const {
-                          ThemeMode.system: 'System',
-                          ThemeMode.light: 'Light',
-                          ThemeMode.dark: 'Dark',
+                        options: {
+                          ThemeMode.system: l10n.settingsThemeSystem,
+                          ThemeMode.light: l10n.settingsThemeLight,
+                          ThemeMode.dark: l10n.settingsThemeDark,
                         },
                         onChanged: enabled ? settings.setTheme : null,
                       ),
                     ],
                   ),
                   SettingsGroup(
-                    title: 'Conversations',
+                    title: l10n.settingsConversations,
                     dividerIndent: 56,
                     children: [
                       action(
-                        'Archived chats',
+                        l10n.settingsArchivedChatsRow,
                         DjlIcons.archive,
                         widget.onArchived,
                         disclosure: true,
                       ),
                       action(
-                        'Remote access',
+                        l10n.settingsRemoteAccess,
                         DjlIcons.laptop,
                         widget.onRemote,
                         tinted: true,
@@ -312,33 +320,38 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
                     ],
                   ),
                   SettingsGroup(
-                    title: 'Notifications',
+                    title: l10n.settingsNotifications,
                     children: [
                       toggle(
                         'In-app alerts',
+                        l10n.settingsInAppAlerts,
                         settings.inAppAlerts,
                         settings.setInAppAlerts,
                       ),
-                      value('Background alerts', backgroundAlerts),
+                      value(
+                        l10n.settingsBackgroundAlerts,
+                        backgroundAlertsLabel,
+                      ),
                       if (backgroundAlerts == 'Not enabled')
                         TextButton(
                           onPressed: widget.push.busy
                               ? null
                               : widget.onEnableBackgroundAlerts,
-                          child: const Text('Enable background alerts'),
+                          child: Text(l10n.settingsEnableBackgroundAlerts),
                         ),
                       if (backgroundAlerts == 'Off')
                         TextButton(
                           onPressed: _openNotificationSettings,
-                          child: const Text('Open notification settings'),
+                          child: Text(l10n.settingsOpenNotificationSettings),
                         ),
                     ],
                   ),
                   SettingsGroup(
-                    title: 'Voice',
+                    title: l10n.settingsVoice,
                     children: [
                       toggle(
                         'Speak new replies',
+                        l10n.settingsSpeakReplies,
                         settings.spokenReplies,
                         settings.setSpokenReplies,
                       ),
@@ -349,8 +362,8 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
                         ),
                         child: Text(
                           Theme.of(context).platform == TargetPlatform.iOS
-                              ? 'Dictation stays on your iPhone. Review the text before sending. Replies use the iPhone voice.'
-                              : 'Dictation stays on your device. Review the text before sending. Replies use your device’s voice.',
+                              ? l10n.settingsVoiceIos
+                              : l10n.settingsVoiceDevice,
                           style: cloudBodyStyle.copyWith(
                             fontSize: 13,
                             color: colors.onSurfaceVariant,
@@ -360,19 +373,19 @@ class _CloudSettingsPageState extends State<CloudSettingsPage>
                     ],
                   ),
                   SettingsGroup(
-                    title: 'About',
+                    title: l10n.settingsAbout,
                     children: [
-                      value('Version', _version ?? '—'),
+                      value(l10n.settingsVersion, _version ?? '—'),
                       if (_policies['terms'] case final Uri uri)
                         action(
-                          'Terms',
+                          l10n.settingsTerms,
                           null,
                           () => _openPolicy(uri),
                           tinted: true,
                         ),
                       if (_policies['privacy'] case final Uri uri)
                         action(
-                          'Privacy',
+                          l10n.settingsPrivacy,
                           null,
                           () => _openPolicy(uri),
                           tinted: true,

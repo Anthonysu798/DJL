@@ -4,6 +4,7 @@ import '../../../core/design/djl_tokens.dart';
 import '../domain/group_models.dart';
 import 'agent_avatar.dart';
 import 'groups_controller.dart';
+import '../../../l10n/l10n.dart';
 
 /// Pick agents, optionally name the group, create it. Pops with the new
 /// [Group].
@@ -35,7 +36,7 @@ class _GroupCreateSheetState extends State<GroupCreateSheet> {
       if (mounted) setState(() => _agents = agents);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = "Couldn't reach your Mac. Try again.");
+        setState(() => _error = context.l10n.groupsMacUnreachable);
       }
     }
   }
@@ -66,7 +67,7 @@ class _GroupCreateSheetState extends State<GroupCreateSheet> {
       if (mounted) {
         setState(() {
           _creating = false;
-          _error = "Couldn't create the group. Try again.";
+          _error = context.l10n.groupsCreateFailed;
         });
       }
     }
@@ -95,10 +96,13 @@ class _GroupCreateSheetState extends State<GroupCreateSheet> {
             DjlSpace.lg,
           ),
           children: [
-            Text('New group', style: theme.textTheme.headlineMedium),
+            Text(
+              context.l10n.groupsNewGroup,
+              style: theme.textTheme.headlineMedium,
+            ),
             const SizedBox(height: DjlSpace.xs),
             Text(
-              'Choose who is in the chat.',
+              context.l10n.groupsChooseMembers,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colors.inkMuted,
               ),
@@ -136,7 +140,7 @@ class _GroupCreateSheetState extends State<GroupCreateSheet> {
                 textCapitalization: TextCapitalization.sentences,
                 maxLength: 80,
                 decoration: InputDecoration(
-                  labelText: 'Name (optional)',
+                  labelText: context.l10n.groupsNameOptional,
                   hintText: _picked.isEmpty ? null : _suggested,
                   counterText: '',
                 ),
@@ -155,7 +159,7 @@ class _GroupCreateSheetState extends State<GroupCreateSheet> {
                   alignment: Alignment.centerLeft,
                   child: TextButton(
                     onPressed: _load,
-                    child: const Text('Try again'),
+                    child: Text(context.l10n.commonTryAgain),
                   ),
                 ),
             ],
@@ -173,10 +177,8 @@ class _GroupCreateSheetState extends State<GroupCreateSheet> {
                     )
                   : Text(
                       _picked.isEmpty
-                          ? 'Create group'
-                          : _picked.length == 1
-                          ? 'Create group with 1 agent'
-                          : 'Create group with ${_picked.length} agents',
+                          ? context.l10n.groupsCreateGroup
+                          : context.l10n.groupsCreateGroupWith(_picked.length),
                     ),
             ),
           ],
@@ -221,7 +223,7 @@ class _AgentTile extends StatelessWidget {
                       Text(agent.name, style: theme.textTheme.titleMedium),
                       if (!agent.ready)
                         Text(
-                          'Sign in on your Mac to use it',
+                          context.l10n.groupsSignInOnMac,
                           style: theme.textTheme.bodySmall,
                         ),
                     ],

@@ -10,6 +10,7 @@ import 'image_preview_page.dart';
 
 import '../../../core/design/djl_icons.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 class ImageGalleryPage extends StatefulWidget {
   const ImageGalleryPage({
@@ -72,7 +73,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
           Semantics(
             container: true,
             button: true,
-            label: 'Open image',
+            label: context.l10n.imagesOpenImage,
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () => _preview(image),
@@ -89,7 +90,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            image.prompt.isEmpty ? 'Generated image' : image.prompt,
+            image.prompt.isEmpty ? context.l10n.imagesGenerated : image.prompt,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 13, height: 1.2),
@@ -110,18 +111,18 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                       ),
                     ),
                     onPressed: () => widget.onOpen(image, false),
-                    child: const Text('Open chat'),
+                    child: Text(context.l10n.imagesOpenChat),
                   ),
                 ),
               ),
               if (widget.controller.configuration.imageEditing)
                 DjlGlassMenuButton<String>(
-                  tooltip: 'Image actions',
+                  tooltip: context.l10n.imagesActions,
                   onSelected: (_) => widget.onOpen(image, true),
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'edit',
-                      child: Text('Edit in chat'),
+                      child: Text(context.l10n.imagesEditInChat),
                     ),
                   ],
                   icon: const Icon(DjlIcons.more, size: 18),
@@ -145,17 +146,17 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               CloudLargeNavigationBar(
-                title: 'Images',
+                title: context.l10n.imagesTitle,
                 leading: widget.onOpenNavigation == null
                     ? const SizedBox.shrink()
                     : CloudNavigationButton(
                         icon: DjlIcons.menu,
-                        label: 'Open navigation',
+                        label: context.l10n.settingsOpenNavigation,
                         onPressed: widget.onOpenNavigation!,
                       ),
                 trailing: c.configuration.imageGeneration
                     ? IconButton(
-                        tooltip: 'Create image',
+                        tooltip: context.l10n.imagesCreate,
                         onPressed: widget.onCreate,
                         icon: const Icon(DjlIcons.add),
                       )
@@ -180,9 +181,9 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                                   ).colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Your images',
-                                  style: TextStyle(
+                                Text(
+                                  context.l10n.imagesYourImages,
+                                  style: const TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -191,8 +192,10 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                                 Text(
                                   c.error ??
                                       (c.configuration.imageGeneration
-                                          ? 'Create an image and find it here, ready to save or share.'
-                                          : 'Image creation is not configured yet. Saved images will appear here.'),
+                                          ? context.l10n.imagesEmpty
+                                          : context
+                                                .l10n
+                                                .imagesEmptyNotConfigured),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 17,
@@ -204,7 +207,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                                 if (c.error != null)
                                   TextButton(
                                     onPressed: c.refresh,
-                                    child: const Text('Retry'),
+                                    child: Text(context.l10n.settingsRetry),
                                   ),
                               ],
                             ),
@@ -220,7 +223,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                       title: Text(c.error!),
                       trailing: TextButton(
                         onPressed: c.refresh,
-                        child: const Text('Retry'),
+                        child: Text(context.l10n.settingsRetry),
                       ),
                     ),
                   ),
@@ -272,7 +275,7 @@ class _ImageGalleryPageState extends State<ImageGalleryPage> {
                         onPressed: c.loading
                             ? null
                             : () => c.refresh(more: true),
-                        child: const Text('Load more'),
+                        child: Text(context.l10n.imagesLoadMore),
                       ),
                     ),
                   ),

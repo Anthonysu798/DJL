@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../domain/repository_diff.dart';
+import '../../../l10n/l10n.dart';
 
 import '../../../core/design/djl_icons.dart';
 import '../../../core/design/djl_tokens.dart';
@@ -62,7 +63,7 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
                     ),
                     child: Center(
                       child: Text(
-                        'Repository Changes',
+                        context.l10n.gitRepositoryChanges,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontSize: 17,
@@ -78,7 +79,7 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
                     child: Center(
                       child: TextButton(
                         onPressed: _done,
-                        child: const Text('Done'),
+                        child: Text(context.l10n.gitDone),
                       ),
                     ),
                   ),
@@ -89,11 +90,7 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
                   controller: scroll,
                   padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
                   children: !current
-                      ? [
-                          const Text(
-                            'Connected desktop changed. Reopen Git from its workspace.',
-                          ),
-                        ]
+                      ? [Text(context.l10n.gitDesktopChanged)]
                       : widget.diff.files.isEmpty
                       ? [
                           SelectableText(
@@ -112,7 +109,9 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${widget.diff.files.length} ${widget.diff.files.length == 1 ? 'file' : 'files'} changed',
+                                    context.l10n.gitFilesChanged(
+                                      widget.diff.files.length,
+                                    ),
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -132,8 +131,8 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
                                   onPressed: _toggleAll,
                                   child: Text(
                                     _allCollapsed
-                                        ? 'Expand All'
-                                        : 'Collapse All',
+                                        ? context.l10n.gitExpandAll
+                                        : context.l10n.gitCollapseAll,
                                     style: _mono(context),
                                   ),
                                 ),
@@ -232,7 +231,10 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
     final hunk = hunks[hunkIndex];
     final syntheticCount = hunks.where((hunk) => hunk.synthetic).length;
     final label = hunk.synthetic && syntheticCount > 1
-        ? 'Patch ${hunks.take(hunkIndex + 1).where((hunk) => hunk.synthetic).length} of $syntheticCount'
+        ? context.l10n.gitPatchIndex(
+            hunks.take(hunkIndex + 1).where((hunk) => hunk.synthetic).length,
+            syntheticCount,
+          )
         : hunk.label;
     var digits = 2;
     for (final line in hunk.lines) {

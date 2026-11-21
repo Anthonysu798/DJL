@@ -6,6 +6,7 @@ import 'agent_avatar.dart';
 import 'group_chat_page.dart';
 import 'group_create_sheet.dart';
 import 'groups_controller.dart';
+import '../../../l10n/l10n.dart';
 
 /// The list of group chats on the paired Mac. Meant to sit inside a page that
 /// already provides the app bar.
@@ -43,21 +44,17 @@ class GroupsList extends StatelessWidget {
     listenable: controller,
     builder: (context, _) {
       if (controller.needsDesktopUpdate) {
-        return const _Empty(
+        return _Empty(
           icon: DjlIcons.update,
-          title: 'Update DJL on your Mac',
-          body:
-              'Group chats need the latest DJL on your Mac. Update it there, '
-              'then come back.',
+          title: context.l10n.groupsUpdateMacTitle,
+          body: context.l10n.groupsUpdateMacBody,
         );
       }
       if (!controller.available && !controller.loaded) {
-        return const _Empty(
+        return _Empty(
           icon: DjlIcons.laptop,
-          title: 'Connect to your Mac',
-          body:
-              'Group chats live on your Mac. They appear here once it is '
-              'connected.',
+          title: context.l10n.groupsConnectMacTitle,
+          body: context.l10n.groupsConnectMacBody,
         );
       }
       if (!controller.loaded) {
@@ -70,20 +67,18 @@ class GroupsList extends StatelessWidget {
               )
             : _Empty(
                 icon: DjlIcons.error,
-                title: "Couldn't load your groups",
+                title: context.l10n.groupsLoadFailed,
                 body: controller.error!,
-                action: 'Try again',
+                action: context.l10n.commonTryAgain,
                 onAction: controller.refresh,
               );
       }
       if (controller.groups.isEmpty) {
         return _Empty(
           icon: DjlIcons.group,
-          title: 'Put your agents in one chat',
-          body:
-              'Ask a question once and let Claude, Codex and the others '
-              'answer together.',
-          action: 'New group',
+          title: context.l10n.groupsEmptyTitle,
+          body: context.l10n.groupsEmptyBody,
+          action: context.l10n.groupsNewGroup,
           onAction: () => create(context, controller),
         );
       }
@@ -95,7 +90,7 @@ class GroupsList extends StatelessWidget {
           return _GroupRow(
             key: ValueKey(group.id),
             group: group,
-            preview: _preview(group),
+            preview: _preview(context, group),
             live: controller.running(group),
             onTap: () => open(context, controller, group),
           );
@@ -104,17 +99,25 @@ class GroupsList extends StatelessWidget {
     },
   );
 
-  String _preview(Group group) {
+  String _preview(BuildContext context, Group group) {
     final writing = [
       for (final member in group.members)
         if (controller.state(member.id).busy) member.handle,
     ];
-    if (writing.length == 1) return '${writing.single} is writing';
-    if (writing.length > 1) return '${writing.length} agents are writing';
-    if (group.pendingHandoffs > 0) return 'Paused, waiting for you';
+    if (writing.length == 1) {
+      return context.l10n.groupsMemberWriting(writing.single);
+    }
+    if (writing.length > 1) {
+      return context.l10n.groupsAgentsWriting(writing.length);
+    }
+    if (group.pendingHandoffs > 0) {
+      return context.l10n.groupsPausedWaiting;
+    }
     final names = group.members.map((member) => member.handle).join(', ');
     // A group left with its suggested name would show the same line twice.
-    return names == group.name ? '${group.members.length} agents' : names;
+    return names == group.name
+        ? context.l10n.groupsAgentCount(group.members.length)
+        : names;
   }
 }
 

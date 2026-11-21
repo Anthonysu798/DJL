@@ -14,6 +14,7 @@ import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 class SettingsArchivedChatsCard extends StatelessWidget {
   const SettingsArchivedChatsCard({super.key, required this.desktop});
@@ -24,11 +25,13 @@ class SettingsArchivedChatsCard extends StatelessWidget {
     builder: (context, _) {
       final count = desktop.threadList.data.visible(archived: true).length;
       return SettingsGroup(
-        title: 'Archived',
+        title: context.l10n.settingsArchived,
         children: [
           SettingsLinkRow(
-            title: 'Archived Chats',
-            subtitle: count == 0 ? null : '$count saved locally',
+            title: context.l10n.settingsArchivedChats,
+            subtitle: count == 0
+                ? null
+                : context.l10n.settingsArchivedSaved(count),
             leading: const Icon(DjlIcons.archive),
             onTap: () => Navigator.push<void>(
               context,
@@ -132,7 +135,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
     final choice = await showDjlGlassEntries<String>(
       context,
       anchor: Rect.fromLTWH(point.dx, point.dy, 0, 0),
-      label: 'Archived chat actions',
+      label: context.l10n.settingsArchivedActions,
       entries: [
         PopupMenuItem(
           value: 'unarchive',
@@ -141,7 +144,10 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
               const Icon(DjlIcons.upload, size: 20),
               const SizedBox(width: 12),
               Expanded(
-                child: Text('Unarchive', style: settingsTextStyle(context, 17)),
+                child: Text(
+                  context.l10n.settingsUnarchive,
+                  style: settingsTextStyle(context, 17),
+                ),
               ),
             ],
           ),
@@ -158,7 +164,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Remove from Phone',
+                  context.l10n.settingsRemoveFromPhone,
                   style: settingsTextStyle(
                     context,
                     17,
@@ -239,7 +245,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
             ),
           ),
           title: Text(
-            'Archived Chats',
+            context.l10n.settingsArchivedChats,
             style: settingsTextStyle(
               context,
               17,
@@ -286,7 +292,7 @@ class _ArchivedChatsPageState extends State<ArchivedChatsPage>
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'No archived chats',
+                            context.l10n.settingsNoArchived,
                             style: settingsTextStyle(
                               context,
                               14,
@@ -426,12 +432,14 @@ String _elapsedFallback(DateTime date, DateTime reference) {
   final seconds = reference.difference(date).inSeconds.abs();
   if (seconds >= 86400) {
     final days = seconds ~/ 86400;
-    return '$days ${days == 1 ? 'day' : 'days'}';
+    return appStrings.settingsElapsedDays(days);
   }
   if (seconds >= 3600) {
     final hours = seconds ~/ 3600;
-    return '$hours ${hours == 1 ? 'hr' : 'hrs'}, ${(seconds % 3600) ~/ 60} mins';
+    return appStrings.settingsElapsedHours(hours, (seconds % 3600) ~/ 60);
   }
-  if (seconds >= 60) return '${seconds ~/ 60} mins, ${seconds % 60} secs';
-  return '$seconds secs';
+  if (seconds >= 60) {
+    return appStrings.settingsElapsedMinutes(seconds ~/ 60, seconds % 60);
+  }
+  return appStrings.settingsElapsedSeconds(seconds);
 }

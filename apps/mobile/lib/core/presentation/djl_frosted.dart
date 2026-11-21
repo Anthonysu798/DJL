@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../features/settings/domain/appearance.dart';
 import '../design/djl_icons.dart';
 import '../design/djl_tokens.dart';
+import '../../l10n/l10n.dart';
 
 /// Frosted glass drawn in Flutter: a blur of what is behind, a translucent
 /// fill that is brighter at the top, and a fine light edge. With the Liquid
@@ -131,7 +132,7 @@ class DjlGlassBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DjlGlassIconButton(
     icon: DjlIcons.back,
-    label: 'Back',
+    label: context.l10n.coreBack,
     onPressed: onPressed ?? () => Navigator.maybePop(context),
   );
 }

@@ -4,6 +4,7 @@ import '../../host/presentation/host_controller.dart';
 import '../../host/presentation/host_controls.dart';
 import '../domain/appearance.dart';
 import 'settings_group.dart';
+import '../../../l10n/l10n.dart';
 
 class SettingsBridgeCard extends StatefulWidget {
   const SettingsBridgeCard({super.key, required this.controller});
@@ -67,6 +68,7 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
     listenable: widget.controller,
     builder: (context, _) {
       final host = widget.controller;
+      final l10n = context.l10n;
       final installed = host.snapshot?.bridgeVersion;
       final latest = host.snapshot?.bridgeLatestVersion;
       final newer =
@@ -74,26 +76,26 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
           latest != null &&
           _numericCompare(installed, latest) < 0;
       final status = installed == null
-          ? 'Unknown'
+          ? l10n.settingsBridgeUnknown
           : latest == null
-          ? 'Installed'
+          ? l10n.settingsBridgeInstalled
           : installed == latest
-          ? 'Up to date'
+          ? l10n.settingsBridgeUpToDate
           : newer
-          ? 'Update available'
-          : 'Different build';
+          ? l10n.settingsBridgeUpdateAvailable
+          : l10n.settingsBridgeDifferentBuild;
       final stale = installed != null && (!host.live || !host.fresh);
       final guidance = installed == null
-          ? 'Connect to your Mac to see its DJL version.'
+          ? l10n.settingsBridgeConnectHint
           : stale
-          ? 'Last known version. Reconnect to check again.'
+          ? l10n.settingsBridgeStaleHint
           : latest == null
           ? null
           : installed == latest
-          ? 'DJL on your Mac matches the latest release.'
+          ? l10n.settingsBridgeMatches
           : newer
-          ? 'A newer DJL release is available. Update DJL on your Mac.'
-          : 'Your Mac is running a different build than the latest release.';
+          ? l10n.settingsBridgeNewer
+          : l10n.settingsBridgeDifferent;
       final colors = Theme.of(context).colorScheme;
       Widget value(
         String title,
@@ -151,21 +153,22 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
         ),
       );
       return SettingsGroup(
-        title: 'DJL on your Mac',
+        title: l10n.hostDjlOnYourMac,
         footer: guidance,
         children: [
           value(
-            'Status',
-            stale ? 'Last known · $status' : status,
+            l10n.settingsBridgeStatus,
+            stale ? l10n.settingsBridgeLastKnown(status) : status,
             warning: newer && !stale,
           ),
           value(
-            'Version',
-            installed ?? 'Unknown',
+            l10n.settingsVersion,
+            installed ?? l10n.settingsBridgeUnknown,
             mono: true,
             warning: newer && !stale,
           ),
-          if (latest != null) value('Latest', latest, mono: true),
+          if (latest != null)
+            value(l10n.settingsBridgeLatest, latest, mono: true),
           if (host.capabilities.bridgeUpdate)
             TextButton(
               onPressed: host.canUpdate
@@ -174,7 +177,7 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 7),
                 child: Text(
-                  newer ? 'Update DJL on your Mac' : 'Check for a DJL update',
+                  newer ? l10n.settingsBridgeUpdate : l10n.settingsBridgeCheck,
                   textAlign: TextAlign.center,
                   style: settingsTextStyle(context, 15),
                 ),
@@ -189,21 +192,17 @@ class _SettingsBridgeCardState extends State<SettingsBridgeCard>
             message(host.statusError!, error: true),
             TextButton(
               onPressed: host.live && !host.loading ? host.refresh : null,
-              child: const Text('Try again'),
+              child: Text(l10n.commonTryAgain),
             ),
           ],
           if (host.updateState == HostUpdateState.reconnecting)
-            message(
-              'DJL is updating on your Mac. This phone reconnects when it is back.',
-            ),
+            message(l10n.hostUpdating),
           if (host.updateState == HostUpdateState.checking)
-            message('Checking the DJL version on your Mac…'),
+            message(l10n.hostCheckingVersion),
           if (host.updateState == HostUpdateState.verified)
-            message('DJL on your Mac is now $installed.'),
+            message(l10n.hostNowVersion('$installed')),
           if (host.updateState == HostUpdateState.unchanged)
-            message(
-              'DJL on your Mac is still $installed. It may already be up to date.',
-            ),
+            message(l10n.hostStillVersion('$installed')),
           if (host.actionError != null)
             message(host.actionError!.message, error: true),
         ],

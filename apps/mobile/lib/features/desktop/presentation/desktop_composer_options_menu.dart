@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/djl_icons.dart';
 import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 enum DesktopComposerMenuAlignment { leading, center, trailing }
 
@@ -67,7 +68,7 @@ class DesktopComposerOptionsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Composer options',
+    tooltip: context.l10n.chatUiComposerOptions,
     padding: EdgeInsets.zero,
     icon: const Icon(DjlIcons.add, size: 20),
     style: IconButton.styleFrom(

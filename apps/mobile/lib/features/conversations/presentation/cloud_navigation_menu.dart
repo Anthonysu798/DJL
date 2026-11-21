@@ -7,6 +7,7 @@ import 'conversation_controller.dart';
 import 'cloud_chat_actions.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 // AppFont.body in the Swift reference is 15pt; native Form rows use 17pt.
 const _menuBodyStyle = TextStyle(fontSize: 15, height: 1.2);
@@ -230,9 +231,9 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Text(
-              title == 'Pinned'
-                  ? 'Touch and hold a chat to pin it.'
-                  : 'Your conversations appear here.',
+              title == context.l10n.conversationsPinned
+                  ? context.l10n.conversationsPinnedEmpty
+                  : context.l10n.conversationsRecentEmpty,
               style: _menuBodyStyle.copyWith(
                 fontSize: 14,
                 color: colors.onSurfaceVariant,
@@ -247,7 +248,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
               container: true,
               button: true,
               selected: widget.navigation.conversationId == item.id,
-              hint: 'Cloud conversation',
+              hint: context.l10n.conversationsCloudConversationHint,
               child: Material(
                 color: widget.navigation.conversationId == item.id
                     ? colors.onSurface.withValues(alpha: .06)
@@ -290,7 +291,8 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
             return result;
           }
 
-          final brand = labelSize('DJL', 18), chat = labelSize('Chat', 15);
+          final brand = labelSize('DJL', 18),
+              chat = labelSize(context.l10n.conversationsChat, 15);
           final headerHeight = labelSize(
             'DJL',
             18,
@@ -298,7 +300,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
           ).height.clamp(48.0, double.infinity);
           final footerHeight =
               (labelSize(
-                        'Chat',
+                        context.l10n.conversationsChat,
                         15,
                         (constraints.maxWidth - 106).clamp(
                           1.0,
@@ -343,7 +345,9 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                       textCapitalization:
                                           TextCapitalization.none,
                                       decoration: InputDecoration(
-                                        hintText: 'Search chats',
+                                        hintText: context
+                                            .l10n
+                                            .conversationsSearchChats,
                                         filled: true,
                                         fillColor: colors.onSurface.withValues(
                                           alpha: .05,
@@ -362,26 +366,26 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                     ),
                                   ),
                                 action(
-                                  'Chat',
+                                  context.l10n.conversationsChat,
                                   DjlIcons.chats,
                                   () => widget.onDestination(
                                     CloudDestination.chat,
                                   ),
                                 ),
                                 action(
-                                  'Images',
+                                  context.l10n.appImages,
                                   DjlIcons.images,
                                   () => widget.onDestination(
                                     CloudDestination.images,
                                   ),
                                 ),
                                 action(
-                                  'Remote',
+                                  context.l10n.conversationsRemote,
                                   DjlIcons.laptop,
                                   widget.onRemote,
                                 ),
                                 action(
-                                  'Notifications',
+                                  context.l10n.appNotifications,
                                   DjlIcons.bell,
                                   () => widget.onDestination(
                                     CloudDestination.notifications,
@@ -389,13 +393,13 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                   badge: widget.unreadCount,
                                 ),
                                 ...section(
-                                  'Pinned',
+                                  context.l10n.conversationsPinned,
                                   widget.history.items
                                       .where((c) => c.pinned)
                                       .toList(),
                                 ),
                                 ...section(
-                                  'Recent chats',
+                                  context.l10n.conversationsRecentChats,
                                   widget.history.items
                                       .where((c) => !c.pinned)
                                       .toList(),
@@ -413,7 +417,9 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                         : () => widget.history.refresh(
                                             more: true,
                                           ),
-                                    child: const Text('Load more'),
+                                    child: Text(
+                                      context.l10n.conversationsLoadMore,
+                                    ),
                                   ),
                                 if (widget.history.error != null)
                                   Padding(
@@ -431,7 +437,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                     onPressed: widget.history.loading
                                         ? null
                                         : () => widget.history.refresh(),
-                                    child: const Text('Retry'),
+                                    child: Text(context.l10n.cloudChatRetry),
                                   ),
                               ]
                               .expand((row) => [row, const SizedBox(height: 4)])
@@ -478,10 +484,10 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                         ),
                         surface(
                           Tooltip(
-                            message: 'Search chats',
+                            message: context.l10n.conversationsSearchChats,
                             excludeFromSemantics: true,
                             child: Semantics(
-                              label: 'Search chats',
+                              label: context.l10n.conversationsSearchChats,
                               button: true,
                               excludeSemantics: true,
                               onTap: _toggleSearch,
@@ -516,10 +522,10 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                       children: [
                         surface(
                           Tooltip(
-                            message: 'New chat',
+                            message: context.l10n.cloudChatNewChat,
                             excludeFromSemantics: true,
                             child: Semantics(
-                              label: 'New chat',
+                              label: context.l10n.cloudChatNewChat,
                               button: true,
                               excludeSemantics: true,
                               onTap: widget.onNewChat,
@@ -541,7 +547,7 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        'Chat',
+                                        context.l10n.conversationsChat,
                                         style: _menuBodyStyle.copyWith(
                                           fontWeight: FontWeight.w600,
                                           color: colors.surface,
@@ -557,10 +563,10 @@ class _CloudNavigationMenuState extends State<CloudNavigationMenu> {
                         ),
                         surface(
                           Tooltip(
-                            message: 'Settings',
+                            message: context.l10n.conversationsSettings,
                             excludeFromSemantics: true,
                             child: Semantics(
-                              label: 'Settings',
+                              label: context.l10n.conversationsSettings,
                               button: true,
                               excludeSemantics: true,
                               onTap: () => widget.onDestination(

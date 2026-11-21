@@ -34,6 +34,7 @@ import '../features/settings/presentation/local_settings_page.dart';
 import '../features/settings/presentation/app_lock_controller.dart';
 import '../features/settings/presentation/privacy_shield.dart';
 import 'cloud_deep_link.dart';
+import '../l10n/l10n.dart';
 import '../features/reports/data/content_reporter.dart';
 import '../features/account/data/account_repository.dart';
 import '../features/account/presentation/account_controller.dart';
@@ -216,8 +217,8 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       if (mounted) {
         setState(
           () => _startupError = error is FormatException
-              ? 'Saved desktop connection details could not be read. Your saved connections have been kept.'
-              : 'Could not restore saved Macs. Unlock your device and retry.',
+              ? context.l10n.appSavedConnectionsUnreadable
+              : context.l10n.appRestoreMacsFailed,
         );
       }
     } finally {
@@ -665,10 +666,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
         return;
       }
       if (_auth.account == null) {
-        setState(
-          () => _linkError =
-              'Could not open the linked conversation. Check your connection and retry.',
-        );
+        setState(() => _linkError = context.l10n.appLinkedConversationFailed);
         return;
       }
       navigator.popUntil((route) => route.isFirst);
@@ -682,10 +680,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
         _notificationReceivedAt = null;
       }
       if (!opened && mounted && revision == _linkRevision) {
-        setState(
-          () => _linkError =
-              'Account details are still unavailable. Retry the linked conversation when they load.',
-        );
+        setState(() => _linkError = context.l10n.appLinkedAccountUnavailable);
       }
     } finally {
       _routingLink = false;
@@ -800,9 +795,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
         orgId = _auth.account?['activeOrgId'] as String?;
     if (userId == null || orgId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account details are still loading. Please try again.'),
-        ),
+        SnackBar(content: Text(context.l10n.appAccountStillLoading)),
       );
       return false;
     }
@@ -818,6 +811,8 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: _navigator,
     title: 'DJL',
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     debugShowCheckedModeBanner: false,
     theme: djlTheme(
       Brightness.light,
@@ -1143,24 +1138,24 @@ class _RenameCloudChatDialogState extends State<_RenameCloudChatDialog> {
 
   @override
   Widget build(BuildContext context) => CupertinoAlertDialog(
-    title: const Text('Rename chat'),
+    title: Text(context.l10n.appRenameChat),
     content: Padding(
       padding: const EdgeInsets.only(top: 12),
       child: CupertinoTextField(
         controller: _text,
         autofocus: true,
         maxLength: 200,
-        placeholder: 'Title',
+        placeholder: context.l10n.appRenameChatPlaceholder,
       ),
     ),
     actions: [
       CupertinoDialogAction(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.l10n.commonCancel),
       ),
       CupertinoDialogAction(
         onPressed: () => Navigator.pop(context, _text.text.trim()),
-        child: const Text('Save'),
+        child: Text(context.l10n.appSave),
       ),
     ],
   );

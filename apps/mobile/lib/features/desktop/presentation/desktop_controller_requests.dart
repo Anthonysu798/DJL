@@ -13,8 +13,7 @@ extension DesktopRequests on DesktopController {
     if (_closingQuestions.containsKey(request)) return;
     if (request['_submitted'] == true || request['_submitting'] == true) return;
     if (!requestMatchesConnection(request)) {
-      error =
-          'This request belongs to an earlier desktop session. Refresh the chat.';
+      error = appStrings.desktopRequestFromEarlierSession;
       _notify();
       return;
     }

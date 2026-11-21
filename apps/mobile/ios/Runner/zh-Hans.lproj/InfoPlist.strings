@@ -1,0 +1,8 @@
+/* Permission prompts shown by iOS, in Simplified Chinese. */
+"NSPhotoLibraryUsageDescription" = "选择要添加到消息中的图片。";
+"NSCameraUsageDescription" = "扫描电脑端的配对码，或拍照添加到消息中。";
+"NSPhotoLibraryAddUsageDescription" = "将你在 DJL 中选择的图片保存到相册。";
+"NSSpeechRecognitionUsageDescription" = "把语音转换成可编辑的消息文字。";
+"NSMicrophoneUsageDescription" = "点按麦克风时使用语音输入。";
+"NSFaceIDUsageDescription" = "回到 App 时保护你的 DJL 会话。";
+"NSLocalNetworkUsageDescription" = "安全地连接到已配对的电脑端 DJL。";

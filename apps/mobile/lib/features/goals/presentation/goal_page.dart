@@ -4,6 +4,7 @@ import '../domain/thread_goal.dart';
 import 'goal_controller.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class GoalPage extends StatefulWidget {
   const GoalPage({
@@ -66,7 +67,7 @@ class _GoalPageState extends State<GoalPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
@@ -83,17 +84,17 @@ class _GoalPageState extends State<GoalPage> {
     if (text.isEmpty || raw.isNotEmpty && (number == null || number <= 0)) {
       setState(
         () => _validation = text.isEmpty
-            ? 'Describe the goal first.'
-            : 'Token budget must be a positive whole number.',
+            ? context.l10n.goalsDescribeFirst
+            : context.l10n.goalsBudgetInvalid,
       );
       return;
     }
     final fresh = _newGoal || existing == null;
     if (fresh && existing != null && existing.status != GoalStatus.complete) {
       if (!await _confirm(
-            'Replace the current goal?',
-            'This objective is not complete. Replacing it starts a new goal and resets its usage accounting.',
-            'Replace goal',
+            context.l10n.goalsReplaceTitle,
+            context.l10n.goalsReplaceBody,
+            context.l10n.goalsReplaceAction,
           ) ||
           !mounted) {
         return;
@@ -117,9 +118,9 @@ class _GoalPageState extends State<GoalPage> {
 
   Future<void> _clear() async {
     if (await _confirm(
-          'Clear this goal?',
-          'The desktop stops pursuing this objective and clears its progress accounting.',
-          'Clear goal',
+          context.l10n.goalsClearTitle,
+          context.l10n.goalsClearBody,
+          context.l10n.goalsClearAction,
         ) &&
         mounted) {
       await widget.controller.clear();
@@ -134,10 +135,10 @@ class _GoalPageState extends State<GoalPage> {
       final editing = _editing || goal == null;
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Goal'),
+          title: Text(context.l10n.goalsTitle),
           actions: [
             IconButton(
-              tooltip: 'Reload goal',
+              tooltip: context.l10n.goalsReload,
               onPressed: c.busy || !c.connected ? null : c.refresh,
               icon: const Icon(DjlIcons.refresh),
             ),
@@ -164,37 +165,37 @@ class _GoalPageState extends State<GoalPage> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               if (!c.connected)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'Showing the last known goal. Reconnect to manage it.',
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(context.l10n.goalsShowingLastKnown),
                 ),
               if (editing) ...[
                 Text(
-                  _newGoal || goal == null ? 'New goal' : 'Edit goal',
+                  _newGoal || goal == null
+                      ? context.l10n.goalsNewGoal
+                      : context.l10n.goalsEditGoal,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Describe the outcome, how to verify it, and what must not regress.',
-                ),
+                Text(context.l10n.goalsDescribeHint),
                 const SizedBox(height: 16),
                 TextField(
                   key: const Key('goal_objective'),
                   controller: _objective,
                   minLines: 3,
                   maxLines: 8,
-                  decoration: const InputDecoration(labelText: 'Objective'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.goalsObjective,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   key: const Key('goal_budget'),
                   controller: _budget,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Token budget (optional)',
-                    helperText: 'Leave empty for no token budget.',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.goalsBudgetLabel,
+                    helperText: context.l10n.goalsBudgetHelper,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -203,7 +204,9 @@ class _GoalPageState extends State<GoalPage> {
                       ? null
                       : _save,
                   child: Text(
-                    _newGoal || goal == null ? 'Start goal' : 'Save goal',
+                    _newGoal || goal == null
+                        ? context.l10n.goalsStart
+                        : context.l10n.goalsSave,
                   ),
                 ),
                 if (goal != null)
@@ -211,7 +214,7 @@ class _GoalPageState extends State<GoalPage> {
                     onPressed: c.busy
                         ? null
                         : () => setState(() => _editing = false),
-                    child: const Text('Cancel editing'),
+                    child: Text(context.l10n.goalsCancelEditing),
                   ),
               ] else ...[
                 Row(
@@ -239,27 +242,27 @@ class _GoalPageState extends State<GoalPage> {
                 ),
                 if (goal.tokenBudget != null)
                   Text(
-                    '${ThreadGoal.formatTokens(goal.remainingTokens ?? 0)} tokens remaining',
+                    context.l10n.goalsTokensRemaining(
+                      ThreadGoal.formatTokens(goal.remainingTokens ?? 0),
+                    ),
                   ),
                 if (goal.status == GoalStatus.active)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      'The desktop keeps working toward this goal when the chat is idle, until it completes, pauses, or reaches a limit.',
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(context.l10n.goalsActiveExplainer),
                   ),
                 const SizedBox(height: 16),
                 if (goal.status == GoalStatus.active)
                   OutlinedButton.icon(
                     onPressed: c.busy || !c.connected ? null : c.pause,
                     icon: const Icon(DjlIcons.pause),
-                    label: const Text('Pause goal'),
+                    label: Text(context.l10n.goalsPause),
                   ),
                 if (goal.status.isResumable)
                   OutlinedButton.icon(
                     onPressed: c.busy || !c.connected ? null : c.resume,
                     icon: const Icon(DjlIcons.play),
-                    label: const Text('Resume goal'),
+                    label: Text(context.l10n.goalsResume),
                   ),
                 OutlinedButton.icon(
                   onPressed: c.busy || !c.connected || !c.supported
@@ -268,14 +271,14 @@ class _GoalPageState extends State<GoalPage> {
                   icon: const Icon(DjlIcons.edit),
                   label: Text(
                     goal.status == GoalStatus.complete
-                        ? 'New goal'
-                        : 'Edit objective',
+                        ? context.l10n.goalsNewGoal
+                        : context.l10n.goalsEditObjective,
                   ),
                 ),
                 TextButton.icon(
                   onPressed: c.busy || !c.connected ? null : _clear,
                   icon: const Icon(DjlIcons.delete),
-                  label: const Text('Clear goal'),
+                  label: Text(context.l10n.goalsClearAction),
                 ),
               ],
             ],

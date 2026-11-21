@@ -7,6 +7,7 @@ import 'auth_controller.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class AuthWelcomePage extends StatefulWidget {
   const AuthWelcomePage({
@@ -40,9 +41,9 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
       /* A policy link failure stays recoverable on this screen. */
     }
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open this link. Try again.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.authLinkOpenFailed)));
     }
   }
 
@@ -163,7 +164,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                           ),
                           const SizedBox(height: 18),
                           Text(
-                            'Welcome to DJL',
+                            context.l10n.authWelcomeTitle,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.headlineLarge
                                 ?.copyWith(
@@ -175,7 +176,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Your ideas, conversations, and Mac.\nTogether in DJL.',
+                            context.l10n.authWelcomeSubtitle,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 15,
@@ -212,13 +213,13 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                               onPressed: auth.socialLoading || auth.busy
                                   ? null
                                   : auth.loadSocialProviders,
-                              child: const Text('Retry sign-in options'),
+                              child: Text(context.l10n.authRetrySignInOptions),
                             ),
                             const SizedBox(height: 12),
                           ],
                           if (auth.socialLoading) ...[
                             Semantics(
-                              label: 'Loading sign-in options',
+                              label: context.l10n.authLoadingSignInOptions,
                               child: const Center(
                                 child: SizedBox(
                                   width: 16,
@@ -235,8 +236,8 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                             if (auth.socialProviders.contains(provider)) ...[
                               _action(
                                 title: provider == SocialProvider.apple
-                                    ? 'Continue with Apple'
-                                    : 'Continue with Google',
+                                    ? context.l10n.authContinueWithApple
+                                    : context.l10n.authContinueWithGoogle,
                                 icon: provider == SocialProvider.apple
                                     ? DjlIcons.apple
                                     : DjlIcons.google,
@@ -249,7 +250,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                               const SizedBox(height: 12),
                             ],
                           _action(
-                            title: 'Continue with email',
+                            title: context.l10n.authContinueWithEmail,
                             icon: DjlIcons.mail,
                             onPressed: auth.busy ? null : widget.onEmail,
                           ),
@@ -281,7 +282,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
-                                      'Pair with a Mac',
+                                      context.l10n.authPairWithMac,
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
@@ -292,7 +293,7 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
-                              'No Mac? Sign in to chat with DJL Cloud.',
+                              context.l10n.authNoMacHint,
                               key: const Key('welcome.noMac'),
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 12, color: secondary),
@@ -321,7 +322,9 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                                         ?.copyWith(fontSize: 11),
                                   ),
                                   child: Text(
-                                    policy.key == 'terms' ? 'Terms' : 'Privacy',
+                                    policy.key == 'terms'
+                                        ? context.l10n.authTerms
+                                        : context.l10n.authPrivacy,
                                   ),
                                 ),
                             ],

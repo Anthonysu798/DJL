@@ -17,6 +17,7 @@ what is still open. It is a checklist, not a guarantee of approval.
 | Widgets signing | `DJLWidgets` is signed by the same team as Runner |
 | Version | `1.0.0+1` |
 | Reporting AI answers | "Report this answer" (flag button) under every AI answer in DJL Cloud chats, paired-Mac chats and group chats. Reports go to DJL Cloud (`POST /v1/reports`) and are reviewed in the admin console under Reports. Paired-Mac reports work without a DJL Cloud account. The DJL Cloud change ships with the next `cloud-v*` deploy; until then the phone shows "Couldn't send the report" |
+| Languages | English and Simplified Chinese, following the phone's language (Flutter gen-l10n, `apps/mobile/lib/l10n`); iOS permission prompts in Chinese via `zh-Hans.lproj/InfoPlist.strings`. Add Chinese store listing text and screenshots if you list in Chinese-speaking regions |
 | Android signing | A release build requires `android/key.properties`; without it the build stops instead of signing with the debug key |
 | Android icon | Adaptive icon with a monochrome layer for themed icons |
 | Android splash | DJL mark on the page colour, light and dark, including the Android 12 splash |
@@ -60,7 +61,6 @@ what is still open. It is a checklist, not a guarantee of approval.
 
 - **Android push.** Firebase Messaging is a dependency but `google-services.json` is absent, so
   it is inactive. Add the file from the Firebase project to enable it.
-- **Languages.** The app is English only.
 - **Group chat needs the matching desktop.** Groups on the phone work with a DJL desktop that has
   the `djlGroups` bridge capability. Against an older desktop the Groups tab asks the person to
   update DJL on the Mac. Ship the desktop update before, or together with, the phone build.

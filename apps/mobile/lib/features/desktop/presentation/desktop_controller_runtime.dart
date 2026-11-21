@@ -23,7 +23,7 @@ extension DesktopRuntimeSettings on DesktopController {
   Future<void> refreshModels() {
     if (_disposed || !connected || state != 'connected') {
       return Future.error(
-        StateError('Reconnect the desktop to refresh models.'),
+        StateError(appStrings.desktopReconnectToRefreshModels),
       );
     }
     final owner = _modelCatalogOwner;
@@ -119,7 +119,7 @@ extension DesktopRuntimeSettings on DesktopController {
         return;
       }
       if (result['runtimeMode'] != mode) {
-        throw StateError('Desktop did not apply the requested access mode.');
+        throw StateError(appStrings.desktopAccessModeNotApplied);
       }
       _rememberRuntime();
     } catch (e) {

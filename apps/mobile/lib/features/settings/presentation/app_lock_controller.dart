@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import '../domain/device_owner_auth.dart';
+import '../../../l10n/l10n.dart';
 
 class AppLockController extends ChangeNotifier {
   AppLockController(this.auth, {DateTime Function()? now})
@@ -98,7 +99,7 @@ class AppLockController extends ChangeNotifier {
       final supported = await auth.isSupported();
       if (_disposed || generation != _generation) return;
       if (!supported) {
-        error = 'Set up Face ID, Touch ID, or a device passcode to unlock DJL.';
+        error = appStrings.settingsLockSetup;
       } else {
         final success = await auth.authenticate();
         if (_disposed || generation != _generation) return;
@@ -107,13 +108,12 @@ class AppLockController extends ChangeNotifier {
           shielded = !_active;
           error = null;
         } else {
-          error = 'DJL is still locked. Unlock DJL to continue.';
+          error = appStrings.settingsLockStillLocked;
         }
       }
     } catch (_) {
       if (!_disposed && generation == _generation) {
-        error =
-            'Authentication was cancelled or unavailable. Unlock DJL to continue.';
+        error = appStrings.settingsLockCancelled;
       }
     } finally {
       if (!_disposed) {

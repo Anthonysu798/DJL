@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_lock_controller.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class PrivacyShield extends StatelessWidget {
   const PrivacyShield({
@@ -54,18 +55,18 @@ class PrivacyShield extends StatelessWidget {
                           Text(
                             controller.ready
                                 ? controller.requiresUnlock
-                                      ? 'DJL is locked'
+                                      ? context.l10n.settingsLocked
                                       : 'DJL'
                                 : startupError == null
-                                ? 'Preparing DJL'
-                                : 'Could not start DJL',
+                                ? context.l10n.settingsPreparing
+                                : context.l10n.settingsStartFailed,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           if (controller.ready) ...[
                             const SizedBox(height: 8),
-                            const Text(
-                              'Your remote sessions stay private when you step away.',
+                            Text(
+                              context.l10n.settingsPrivateNote,
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -82,22 +83,21 @@ class PrivacyShield extends StatelessWidget {
                             const SizedBox(height: 18),
                             FilledButton(
                               onPressed: onRetry,
-                              child: const Text('Retry startup'),
+                              child: Text(context.l10n.settingsRetryStartup),
                             ),
                           ],
                           if (controller.requiresUnlock) ...[
                             const SizedBox(height: 18),
                             Semantics(
-                              hint:
-                                  'Authenticates with Face ID, Touch ID, or your device passcode',
+                              hint: context.l10n.settingsUnlockHint,
                               child: FilledButton(
                                 onPressed: controller.authenticating
                                     ? null
                                     : controller.authenticate,
                                 child: Text(
                                   controller.authenticating
-                                      ? 'Unlocking…'
-                                      : 'Unlock DJL',
+                                      ? context.l10n.settingsUnlocking
+                                      : context.l10n.settingsUnlock,
                                 ),
                               ),
                             ),

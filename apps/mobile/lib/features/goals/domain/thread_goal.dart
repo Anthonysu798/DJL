@@ -1,4 +1,5 @@
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 enum GoalStatus {
   active,
@@ -11,9 +12,12 @@ enum GoalStatus {
   bool get isResumable => {paused, blocked, usageLimited}.contains(this);
   bool get isTerminal => this == budgetLimited || this == complete;
   String get label => switch (this) {
-    usageLimited => 'Usage limited',
-    budgetLimited => 'Budget limited',
-    _ => '${name[0].toUpperCase()}${name.substring(1)}',
+    active => appStrings.goalsStatusActive,
+    paused => appStrings.goalsStatusPaused,
+    blocked => appStrings.goalsStatusBlocked,
+    usageLimited => appStrings.goalsStatusUsageLimited,
+    budgetLimited => appStrings.goalsStatusBudgetLimited,
+    complete => appStrings.goalsStatusComplete,
   };
 }
 
@@ -54,7 +58,10 @@ class ThreadGoal {
       : (tokenBudget! - tokensUsed).clamp(0, tokenBudget!);
   String get usage => tokenBudget == null
       ? formatElapsed(timeUsedSeconds)
-      : '${formatTokens(tokensUsed)} / ${formatTokens(tokenBudget!)} tokens';
+      : appStrings.goalsTokenUsage(
+          formatTokens(tokensUsed),
+          formatTokens(tokenBudget!),
+        );
   static String formatTokens(int count) {
     if (count >= 1000000) {
       return '${(count / 1000000).toStringAsFixed(1)}M';
@@ -78,12 +85,11 @@ class ThreadGoal {
 class GoalsUnsupported implements Exception {
   const GoalsUnsupported();
   @override
-  String toString() =>
-      'Goals are unavailable on this runtime. Update Codex on your Mac and enable goals.';
+  String toString() => appStrings.goalsUnsupported;
 }
 
 class EphemeralGoal implements Exception {
   const EphemeralGoal();
   @override
-  String toString() => 'Goals need a saved chat. This chat is temporary.';
+  String toString() => appStrings.goalsEphemeral;
 }

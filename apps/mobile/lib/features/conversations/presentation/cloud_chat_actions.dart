@@ -8,6 +8,7 @@ import '../../chat/domain/cloud_models.dart';
 import '../../../core/design/djl_icons.dart';
 
 import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 Future<String?> showCloudChatActions(
   BuildContext context,
@@ -33,10 +34,16 @@ Future<String?> showCloudChatActions(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final action in [
-              ('pin', item.pinned ? 'Unpin' : 'Pin', DjlIcons.pin),
-              ('rename', 'Rename', DjlIcons.edit),
-              ('archive', 'Archive', DjlIcons.archive),
-              ('delete', 'Delete', DjlIcons.delete),
+              (
+                'pin',
+                item.pinned
+                    ? context.l10n.conversationsUnpin
+                    : context.l10n.conversationsPin,
+                DjlIcons.pin,
+              ),
+              ('rename', context.l10n.conversationsRename, DjlIcons.edit),
+              ('archive', context.l10n.conversationsArchive, DjlIcons.archive),
+              ('delete', context.l10n.conversationsDelete, DjlIcons.delete),
             ])
               TextButton(
                 onPressed: () => Navigator.pop(context, action.$1),
@@ -86,7 +93,7 @@ Future<bool> showCloudChatDeleteConfirmation(
             shape: const StadiumBorder(),
           ),
           child: Text(
-            'Delete',
+            context.l10n.conversationsDelete,
             textAlign: TextAlign.center,
             style: cloudBodyStyle.copyWith(
               letterSpacing: 0,
@@ -114,7 +121,7 @@ Future<T?> _show<T>(BuildContext context, Rect anchor, WidgetBuilder builder) =>
           child: Semantics(
             scopesRoute: true,
             explicitChildNodes: true,
-            label: 'Delete this chat?',
+            label: context.l10n.conversationsDeleteChatQuestion,
             child: _cloudMenuSurface(context, true, builder(context)),
           ),
         );

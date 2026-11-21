@@ -148,8 +148,7 @@ extension DesktopMacSwitch on DesktopController {
     if (navigationNeedsHost &&
         navigationTarget?.qualified == true &&
         !navigationTarget!.matchesHost(pair.macDeviceId, pair.publicKey)) {
-      navigationError =
-          'Choose the saved Mac matching this link. Its verified identity must match.';
+      navigationError = appStrings.desktopChooseMatchingMac;
       _notify();
       return null;
     }
@@ -203,9 +202,7 @@ extension DesktopMacSwitch on DesktopController {
       (entry) =>
           entry.matches(target.pairing) && entry.trustId == target.trustId,
     )) {
-      throw const RemoteSecurityException(
-        'This saved device changed. Choose it again.',
-      );
+      throw RemoteSecurityException(appStrings.desktopSavedDeviceChanged);
     }
   }
 
@@ -308,17 +305,14 @@ extension DesktopMacSwitch on DesktopController {
       final resolved = await pairings.resolveTrusted(target.pairing);
       if (!sourceCurrent()) return;
       if (!target.matches(resolved)) {
-        throw const RemoteSecurityException(
-          'The selected Mac identity did not match.',
-        );
+        throw RemoteSecurityException(appStrings.desktopMacIdentityMismatch);
       }
       await _verifySwitchTarget(target);
       if (!sourceCurrent()) return;
       final certain = await _interruptSwitchRuns(sourceCurrent);
       if (!sourceCurrent()) return;
       if (!certain) {
-        switchNotice =
-            'Stopping runs could not be confirmed; they may still be running on the other Mac.';
+        switchNotice = appStrings.desktopStopRunsUnconfirmed;
       }
       _rememberCurrent();
       await threadList.saveNow();

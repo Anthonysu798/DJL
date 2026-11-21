@@ -22,10 +22,10 @@ extension DesktopResponseUndo on DesktopController {
     if (!connected ||
         active?.macDeviceId != transport.macDeviceId ||
         _requestsSuspended) {
-      return 'Reconnect to your desktop before reviewing undo.';
+      return appStrings.desktopUndoReconnect;
     }
     if (!identical(threadList.data.responseChanges.entries[entry.id], entry)) {
-      return 'Reopen this chat to verify the response before undoing changes.';
+      return appStrings.desktopUndoReopen;
     }
     if (entry.unavailable != null) return entry.unavailable;
     final root = repoRoot ?? entry.repoRoot ?? entry.cwd;
@@ -39,11 +39,11 @@ extension DesktopResponseUndo on DesktopController {
           row['subagentStatus'] == 'running';
       if (running &&
           (cwd == null || _insideRepo(cwd, root) || _insideRepo(root, cwd))) {
-        return 'A chat in this repository is running. Wait before undoing a response.';
+        return appStrings.desktopUndoRepoBusy;
       }
     }
     if ((turnId != null || busy) && thread?['id'] == entry.thread) {
-      return 'Wait for the active response before undoing changes.';
+      return appStrings.desktopUndoWaitResponse;
     }
     return null;
   }
@@ -103,7 +103,7 @@ extension DesktopResponseUndo on DesktopController {
           await threadList.saveNow();
           _notify();
           if (threadList.localError != null) {
-            throw StateError('Could not persist the undo result.');
+            throw StateError(appStrings.desktopUndoPersistFailed);
           }
         }
       }
@@ -148,8 +148,7 @@ extension DesktopResponseUndo on DesktopController {
       );
     } catch (_) {
       if (current()) {
-        error =
-            'Could not verify the response repository. Reconnect and review it again.';
+        error = appStrings.desktopUndoRepoUnverified;
         _notify();
       }
       return null;

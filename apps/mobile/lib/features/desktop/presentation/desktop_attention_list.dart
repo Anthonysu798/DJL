@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../domain/desktop_attention.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopAttentionList extends StatelessWidget {
   const DesktopAttentionList({
@@ -32,8 +33,8 @@ class DesktopAttentionList extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               isFiltering
-                  ? 'No matching attention items'
-                  : "You're all caught up",
+                  ? context.l10n.chatUiAttentionNoMatches
+                  : context.l10n.chatUiAttentionAllCaughtUp,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w600,
@@ -42,8 +43,8 @@ class DesktopAttentionList extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               isFiltering
-                  ? 'Try a different project, chat, or status.'
-                  : 'Approvals, agent questions, failed runs, and completed work will appear here.',
+                  ? context.l10n.chatUiAttentionNoMatchesHint
+                  : context.l10n.chatUiAttentionEmptyHint,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
@@ -69,8 +70,8 @@ class DesktopAttentionList extends StatelessWidget {
                 header: true,
                 child: Text(
                   section == DesktopAttentionSection.needsYou
-                      ? 'NEEDS YOU'
-                      : 'READY TO REVIEW',
+                      ? context.l10n.chatUiAttentionNeedsYou
+                      : context.l10n.chatUiAttentionReadyToReview,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -113,12 +114,12 @@ class _AttentionRow extends StatelessWidget {
     final relative = !item.date.isFinite
         ? null
         : elapsed < 60
-        ? 'now'
+        ? context.l10n.chatUiAgoNow
         : elapsed < 3600
-        ? '${elapsed ~/ 60}m ago'
+        ? context.l10n.chatUiAgoMinutes(elapsed ~/ 60)
         : elapsed < 86400
-        ? '${elapsed ~/ 3600}h ago'
-        : '${elapsed ~/ 86400}d ago';
+        ? context.l10n.chatUiAgoHours(elapsed ~/ 3600)
+        : context.l10n.chatUiAgoDays(elapsed ~/ 86400);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: TextButton(

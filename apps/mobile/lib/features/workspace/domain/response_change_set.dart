@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 String? _text(Object? v) =>
     v is String && v.trim().isNotEmpty ? v.trim() : null;
@@ -151,13 +152,13 @@ class ResponseChangeSet {
     }),
   );
   String? get unavailable => reverted
-      ? 'This response was already undone.'
+      ? appStrings.workspaceAlreadyUndone
       : !terminal
-      ? 'This response is still running.'
+      ? appStrings.workspaceStillRunning
       : cwd.isEmpty
-      ? 'The response has no desktop workspace.'
+      ? appStrings.workspaceNoDesktopWorkspace
       : !ready
-      ? 'No supported exact response patch was captured.'
+      ? appStrings.workspaceNoPatchCaptured
       : null;
   RemoteJson toJson() => {
     'thread': thread,
@@ -560,7 +561,10 @@ class ResponseUndoPreview {
       reasons = List<String>.from(v['unsupportedReasons'] as List? ?? []),
       conflicts = (v['conflicts'] as List? ?? [])
           .whereType<Map>()
-          .map((m) => '${m['path'] ?? ''}: ${m['message'] ?? 'Conflict'}')
+          .map(
+            (m) =>
+                '${m['path'] ?? ''}: ${m['message'] ?? appStrings.workspaceConflictFallback}',
+          )
           .toList();
   final bool canRevert;
   final List<String> files, staged, reasons, conflicts;

@@ -3,6 +3,7 @@ import '../../../core/presentation/djl_context_menu.dart';
 import '../../../core/presentation/djl_glass.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 Future<bool?> showDesktopThreadPinMenu(
   BuildContext context,
@@ -56,7 +57,13 @@ Future<bool?> showDesktopThreadPinMenu(
                 children: [
                   Icon(pinned ? DjlIcons.unpin : DjlIcons.pin, size: 20),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(pinned ? 'Unpin chat' : 'Pin chat')),
+                  Expanded(
+                    child: Text(
+                      pinned
+                          ? context.l10n.chatUiUnpinChat
+                          : context.l10n.chatUiPinChat,
+                    ),
+                  ),
                 ],
               ),
             ),
