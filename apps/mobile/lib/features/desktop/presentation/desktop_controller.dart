@@ -3851,6 +3851,7 @@ class DesktopController extends ChangeNotifier {
       }
       return;
     }
+    var textOnly = false;
     switch (method) {
       case 'turn/started':
         final id =
@@ -3940,6 +3941,12 @@ class DesktopController extends ChangeNotifier {
       case 'item/agentMessage/delta':
       case 'item/started':
       case 'item/completed':
+        bool streaming(RemoteJson row) =>
+            row['type'] == 'agentMessage' &&
+            row['isStreaming'] == true &&
+            desktopHistorySourceId(row) == params['itemId'];
+        final appends =
+            method == 'item/agentMessage/delta' && timeline.any(streaming);
         timeline = _applyOrdinaryTimelineEvent(
           thread!['id'] as String,
           timeline,
@@ -3947,6 +3954,7 @@ class DesktopController extends ChangeNotifier {
           params,
           rpc,
         );
+        textOnly = appends && timeline.any(streaming);
       case 'serverRequest/resolved':
         approvals.removeWhere((a) => a['id'] == params['requestId']);
         userInputs.removeWhere((a) => a['id'] == params['requestId']);
@@ -3970,8 +3978,25 @@ class DesktopController extends ChangeNotifier {
     // A streaming reply is cached when it completes. Caching every delta
     // re-encrypted the whole chat cache several times a second.
     if (method != 'item/agentMessage/delta') _rememberCurrent();
+    if (textOnly) {
+      // More words for an answer already on screen: only that answer
+      // redraws now; everything else catches up a few times a second.
+      liveText.value++;
+      _textCatchUp ??= Timer(const Duration(milliseconds: 250), () {
+        _textCatchUp = null;
+        _notify();
+      });
+      return;
+    }
+    _textCatchUp?.cancel();
+    _textCatchUp = null;
     _notify();
   }
+
+  /// Bumped for each streamed word of an answer already on screen. Only the
+  /// streaming answer listens, so the rest of the chat does not rebuild.
+  final liveText = ValueNotifier<int>(0);
+  Timer? _textCatchUp;
 
   void _disconnected(Object? failure, int? code) {
     _statusTransportLost = true;
@@ -4110,6 +4135,8 @@ class DesktopController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _textCatchUp?.cancel();
+    liveText.dispose();
     if (switchingDevice != null) unawaited(cancelSavedSwitch());
     _connectGeneration++;
     _clearGuardianAuthority();

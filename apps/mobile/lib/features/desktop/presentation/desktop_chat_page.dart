@@ -2567,6 +2567,18 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                       return projectResponseCopies()[index];
                                     },
                                   );
+                            // A streaming answer redraws on its own as
+                            // words arrive (see DesktopController.liveText).
+                            Widget liveRow(int index) =>
+                                desktop.timeline[index]['isStreaming'] == true
+                                ? ListenableBuilder(
+                                    listenable: desktop.liveText,
+                                    builder: (_, _) =>
+                                        index < desktop.timeline.length
+                                        ? buildRow(index)
+                                        : const SizedBox.shrink(),
+                                  )
+                                : buildRow(index);
                             if (entry.kind != DesktopTimelineKind.message) {
                               final first =
                                   entry.kind == DesktopTimelineKind.previous
@@ -2580,8 +2592,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                   desktop.timeline[first]['id'] ?? first,
                                 )),
                                 item: entry,
-                                itemBuilder: (_, rawIndex) =>
-                                    buildRow(rawIndex),
+                                itemBuilder: (_, rawIndex) => liveRow(rawIndex),
                                 focusedRawIndex:
                                     timeline.renderIndexFor(rawFocus) ==
                                         renderIndex
@@ -2600,7 +2611,7 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                                 desktop.timeline[index]['id'] ?? index,
                               )),
                               crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [buildRow(index), ?footer],
+                              children: [liveRow(index), ?footer],
                             );
                           },
                         ),
