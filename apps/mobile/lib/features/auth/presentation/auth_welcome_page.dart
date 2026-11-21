@@ -289,6 +289,15 @@ class _AuthWelcomePageState extends State<AuthWelcomePage> {
                               ),
                             ),
                           ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              'No Mac? Sign in to chat with DJL Cloud.',
+                              key: const Key('welcome.noMac'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12, color: secondary),
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           Wrap(
                             alignment: WrapAlignment.center,

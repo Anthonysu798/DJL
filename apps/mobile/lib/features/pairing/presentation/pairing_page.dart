@@ -5,6 +5,7 @@ import '../../../core/presentation/djl_glass.dart';
 import '../../settings/presentation/settings_group.dart';
 import 'package:flutter/cupertino.dart'
     show CupertinoActivityIndicator, CupertinoButton;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
@@ -780,6 +781,15 @@ class _PairingPageState extends State<PairingPage> {
                 TextButton(
                   onPressed: widget.onCloud,
                   child: const Text('DJL Cloud'),
+                ),
+              if (firstPairing)
+                TextButton(
+                  key: const Key('pairing.getDesktop'),
+                  onPressed: () => launchUrl(
+                    Uri.parse('https://www.slcor.com/'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: const Text('Get DJL for your Mac or PC'),
                 ),
             ],
           ),
