@@ -21,32 +21,35 @@ class RemotePushControls extends StatelessWidget {
           !controller.enabled &&
           controller.error == null) {
         return const ListTile(
-          title: Text('Remote notifications'),
+          title: Text('Push notifications'),
           subtitle: Text(
-            'Remote notifications aren’t available on this device yet. You can still use the Cloud inbox and local task status.',
+            "This phone can't get push notifications from DJL yet. Open DJL to see when an agent is done.",
           ),
         );
       }
       final availability = switch (state.availability) {
+        'ready' when state.permission == 'denied' =>
+          "Notifications are off for DJL in your phone's Settings.",
         'ready' =>
-          'Permission: ${state.permission}. Receive an alert when a task finishes.',
-        'simulator' =>
-          'APNs token registration is unsupported on Simulator. Notification taps remain supported.',
-        'disabled' => 'Remote push is disabled in this build.',
-        'unconfigured' =>
-          'Remote notifications aren’t available in this build.',
-        'failed' => 'Notification registration failed. Retry when connected.',
-        _ =>
-          'Remote notifications are unavailable. Cloud inbox and local task status remain available.',
+          'Get a notification when an agent finishes or needs your answer.',
+        'simulator' => "This simulator can't receive push notifications.",
+        'disabled' || 'unconfigured' =>
+          "Push notifications aren't available in this version.",
+        'failed' =>
+          "Couldn't turn on notifications. Try again when you're online.",
+        _ => "Push notifications aren't available right now.",
       };
+      final failed =
+          controller.enabled &&
+          (state.availability == 'failed' ||
+              controller.cloudStatus.endsWith('Retry.') ||
+              controller.pairedStatus.endsWith('Retry.'));
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SwitchListTile(
-            title: const Text('Remote notifications'),
-            subtitle: Text(
-              '$availability\nEnable enrolls the current signed-in DJL Cloud account and connected trusted Mac, plus future eligible current sessions on this device. Turning off stops local sync; it cannot revoke Cloud registrations on the server.',
-            ),
+            title: const Text('Push notifications'),
+            subtitle: Text(availability),
             value: controller.enabled,
             onChanged:
                 !controller.loaded ||
@@ -58,40 +61,18 @@ class RemotePushControls extends StatelessWidget {
                     controller.setEnabled(enabled);
                   },
           ),
-          ListTile(
-            title: const Text('DJL Cloud push'),
-            subtitle: Text(controller.cloudStatus),
-            trailing: TextButton(
-              onPressed: controller.enabled && !controller.busy
-                  ? () {
-                      onCloudEntry?.call();
-                      controller.retryCloud();
-                    }
-                  : null,
-              child: const Text("Retry Cloud"),
-            ),
-          ),
-          ListTile(
-            title: const Text('Current Mac push'),
-            subtitle: Text(controller.pairedStatus),
-            trailing: TextButton(
-              onPressed: controller.enabled && !controller.busy
-                  ? controller.retryPaired
-                  : null,
-              child: const Text("Retry Mac"),
-            ),
-          ),
           if (controller.error != null)
             ListTile(title: Text(controller.error!)),
-          TextButton(
-            onPressed: controller.busy
-                ? null
-                : () {
-                    onCloudEntry?.call();
-                    controller.retry();
-                  },
-            child: const Text('Retry remote notifications'),
-          ),
+          if (controller.error != null || failed)
+            TextButton(
+              onPressed: controller.busy
+                  ? null
+                  : () {
+                      onCloudEntry?.call();
+                      controller.retry();
+                    },
+              child: const Text('Try again'),
+            ),
         ],
       );
     },
