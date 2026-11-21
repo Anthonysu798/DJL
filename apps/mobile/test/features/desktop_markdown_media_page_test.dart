@@ -8,6 +8,7 @@ import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'desktop_conversation_fidelity_test.dart' show showConversation;
 import 'desktop_new_chat_draft_test.dart' show finishDraft;
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_reasoning_controller_test.dart'
     show ReasoningTransport, reasoningDesktop;
 

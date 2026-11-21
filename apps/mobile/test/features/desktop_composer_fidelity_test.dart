@@ -10,6 +10,7 @@ import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_new_chat_draft_test.dart'
     show DraftTransport, draftDesktop, finishDraft;
 import 'desktop_composer_picker_test.dart' show PendingImagePicker;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 class AccessTransport extends DraftTransport {
   AccessTransport(super.pairings);

@@ -8,6 +8,7 @@ import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'desktop_connected_switch_test.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import '../core/trusted_device_preferences_test.dart'
     show ActiveWriteCredentials;
 

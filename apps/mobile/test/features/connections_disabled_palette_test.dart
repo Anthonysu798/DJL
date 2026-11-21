@@ -10,6 +10,7 @@ import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'desktop_connected_switch_test.dart';
 import 'desktop_connected_switch_widget_test.dart' show openConnectionSwitcher;
 import 'pairing_presentation_test.dart' show paintedColors;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 void closeColor(Color actual, Color expected) {
   for (final channel in [

@@ -14,6 +14,7 @@ import 'threads_test.dart'
     show securePairingEntry, macs, reveal, state, type, projectDraftPicker;
 import 'support/native_advanced_acceptance.dart';
 import 'support/native_app_ready.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 Future<void> sendComposer(WidgetTester tester, String text) async {
   final field = find.byKey(const Key('desktop_composer'));
