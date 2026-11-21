@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../domain/repository_diff.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/design/djl_tokens.dart';
 
 class RepositoryDiffSheet extends StatefulWidget {
   const RepositoryDiffSheet({
@@ -242,7 +243,9 @@ class _RepositoryDiffSheetState extends State<RepositoryDiffSheet> {
       }
     }
     final gutterWidth =
-        (digits * 7 + 10) * MediaQuery.textScalerOf(context).scale(11) / 11;
+        ((digits + 2) * 7 + 10) *
+        MediaQuery.textScalerOf(context).scale(11) /
+        11;
     final key = (fileIndex, hunkIndex);
     final collapsed = _collapsed.contains(key);
     final colors = Theme.of(context).colorScheme;
@@ -299,26 +302,26 @@ TextStyle _mono(BuildContext context) => Theme.of(
   context,
 ).textTheme.bodySmall!.copyWith(fontFamily: 'GeistMono', fontSize: 12);
 
-Color _changeColor(bool dark, bool added) => added
-    ? (dark ? const Color(0xff57d464) : const Color(0xff1a8038))
-    : (dark ? const Color(0xfff7524a) : const Color(0xffcf212e));
+// Monochrome diff: added lines are full ink on a light wash, removed lines are
+// muted; the +/- sign in the gutter carries the meaning, not a colour.
+Color _changeColor(BuildContext context, bool added) =>
+    added ? DjlColors.of(context).ink : DjlColors.of(context).inkMuted;
 
 class _Counts extends StatelessWidget {
   const _Counts(this.additions, this.deletions);
   final int additions, deletions;
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Wrap(
       spacing: 6,
       children: [
         Text(
           '+$additions',
-          style: _mono(context).copyWith(color: _changeColor(dark, true)),
+          style: _mono(context).copyWith(color: _changeColor(context, true)),
         ),
         Text(
           '-$deletions',
-          style: _mono(context).copyWith(color: _changeColor(dark, false)),
+          style: _mono(context).copyWith(color: _changeColor(context, false)),
         ),
       ],
     );
@@ -332,27 +335,23 @@ class _DiffRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ink = DjlColors.of(context).ink;
     final added = line.kind == GitDiffLineKind.addition;
     final changed = line.kind != GitDiffLineKind.context;
-    final tint = added ? const Color(0xff2ea142) : const Color(0xfff7524a);
     final row = !changed
         ? colors.surface
-        : dark
-        ? tint.withValues(alpha: .18)
-        : added
-        ? const Color(0xffe6ffed)
-        : const Color(0xffffebe8);
+        : ink.withValues(alpha: added ? .08 : .03);
     final gutter = !changed
         ? colors.surfaceContainerLow
-        : dark
-        ? tint.withValues(alpha: .30)
-        : added
-        ? const Color(0xffd1f5d4)
-        : const Color(0xffffd6d6);
+        : ink.withValues(alpha: added ? .14 : .07);
     final number = line.kind == GitDiffLineKind.deletion
         ? line.oldNumber
         : line.newNumber;
+    final sign = !changed
+        ? ' '
+        : added
+        ? '+'
+        : '−';
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -363,11 +362,12 @@ class _DiffRow extends StatelessWidget {
             alignment: Alignment.topRight,
             padding: const EdgeInsets.fromLTRB(4, 3, 6, 3),
             child: Text(
-              number?.toString() ?? '',
+              '${number?.toString() ?? ''} $sign',
               style: _mono(context).copyWith(
                 fontSize: 11,
+                fontWeight: added ? FontWeight.w600 : null,
                 color: changed
-                    ? _changeColor(dark, added)
+                    ? _changeColor(context, added)
                     : colors.onSurfaceVariant,
               ),
             ),
@@ -379,7 +379,11 @@ class _DiffRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 child: SelectableText(
                   line.text.isEmpty ? ' ' : line.text,
-                  style: _mono(context),
+                  style: _mono(context).copyWith(
+                    color: line.kind == GitDiffLineKind.deletion
+                        ? DjlColors.of(context).inkMuted
+                        : null,
+                  ),
                 ),
               ),
             ),

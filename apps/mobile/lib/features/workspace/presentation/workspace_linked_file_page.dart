@@ -10,6 +10,7 @@ import '../domain/workspace_models.dart';
 import 'workspace_code_view.dart';
 import 'workspace_linked_file_controller.dart';
 
+import '../../../core/design/djl_tokens.dart';
 import '../../../core/design/djl_icons.dart';
 
 class WorkspaceLinkedFilePage extends StatefulWidget {
@@ -155,20 +156,8 @@ class _WorkspaceLinkedFilePageState extends State<WorkspaceLinkedFilePage> {
     final parent = segments.length > 1 ? segments[segments.length - 2] : null;
     final language = workspaceLanguageLabel(file.name);
     final codeLanguage = workspaceCodeLanguage(file.name);
-    final tint = switch (codeLanguage) {
-      'swift' || 'rust' || 'html' => Colors.orange,
-      'javascript' => Colors.amber,
-      'jsx' || 'go' => Colors.cyan,
-      'typescript' || 'python' || 'css' => Colors.blue,
-      'tsx' || 'c' || 'markdown' => Colors.indigo,
-      'cpp' => Colors.purple,
-      'ruby' => Colors.red,
-      'json' || 'csharp' || 'bash' => Colors.green,
-      'java' => Colors.brown,
-      'sql' => Colors.teal,
-      'yaml' || 'toml' => Colors.grey,
-      _ => colors.primary,
-    };
+    // Monochrome: the glyph says what kind of file it is, not a colour.
+    final tint = DjlColors.of(context).ink;
     final glyph = switch (codeLanguage) {
       'bash' => DjlIcons.terminal,
       'markdown' => DjlIcons.book,

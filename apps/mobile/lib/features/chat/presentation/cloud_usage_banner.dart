@@ -138,7 +138,7 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
                   : _review,
               style: FilledButton.styleFrom(
                 backgroundColor: cloudActionColor(context),
-                foregroundColor: Colors.white,
+                foregroundColor: DjlColors.of(context).onInk,
                 minimumSize: const Size(0, 30),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -148,10 +148,12 @@ class _CloudUsageBannerState extends State<CloudUsageBanner> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (chat.redeemingUsage) ...[
-                    const SizedBox(
+                    SizedBox(
                       width: 14,
                       height: 14,
-                      child: CupertinoActivityIndicator(color: Colors.white),
+                      child: CupertinoActivityIndicator(
+                        color: DjlColors.of(context).onInk,
+                      ),
                     ),
                     const SizedBox(width: 8),
                   ],

@@ -166,7 +166,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
         ),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: const StadiumBorder(),
-        foregroundColor: primary ? Colors.white : secondary,
+        foregroundColor: primary ? DjlColors.of(context).onInk : secondary,
         disabledForegroundColor: DjlColors.of(context).inkFaint,
         backgroundColor: primary && onPressed != null
             ? _questionTint(context)

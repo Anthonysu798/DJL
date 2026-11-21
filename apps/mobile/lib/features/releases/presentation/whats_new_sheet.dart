@@ -136,8 +136,8 @@ class WhatsNewSheet extends StatelessWidget {
                         child: TextButton(
                           style: TextButton.styleFrom(
                             minimumSize: const Size(48, 56),
-                            foregroundColor: Colors.black,
-                            backgroundColor: Colors.white,
+                            foregroundColor: DjlColors.of(context).onInk,
+                            backgroundColor: DjlColors.of(context).ink,
                             shape: const StadiumBorder(),
                             textStyle: body.copyWith(
                               fontWeight: FontWeight.w600,

@@ -388,23 +388,23 @@ class _WorktreeFlowDialogState extends State<WorktreeFlowDialog> {
                       style: FilledButton.styleFrom(
                         minimumSize: Size.zero,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        disabledBackgroundColor: Colors.white.withValues(
-                          alpha: .6,
-                        ),
-                        disabledForegroundColor: Colors.black.withValues(
-                          alpha: .6,
-                        ),
+                        backgroundColor: DjlColors.of(context).ink,
+                        foregroundColor: DjlColors.of(context).onInk,
+                        disabledBackgroundColor: DjlColors.of(
+                          context,
+                        ).ink.withValues(alpha: .6),
+                        disabledForegroundColor: DjlColors.of(
+                          context,
+                        ).onInk.withValues(alpha: .6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       child: _flow.submitting
-                          ? const SizedBox.square(
+                          ? SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(
-                                color: Colors.black,
+                                color: DjlColors.of(context).onInk,
                                 strokeWidth: 2,
                                 semanticsLabel: 'Preparing worktree',
                               ),
