@@ -13,6 +13,10 @@ what is still open. It is a checklist, not a guarantee of approval.
 | iOS permission strings | Camera, Face ID, local network, microphone, photo library (read and add), speech recognition are all explained in `Info.plist` |
 | iOS launch screen | DJL mark on the page colour, light and dark (`LaunchImage`, `LaunchBackground`) |
 | iOS transport security | Only `NSAllowsLocalNetworking`; no arbitrary loads |
+| iOS push | `RemotePush.entitlements` is attached to Runner; Debug uses the `development` APNs environment, Profile and Release use `production` |
+| Widgets signing | `DJLWidgets` is signed by the same team as Runner |
+| Version | `1.0.0+1` |
+| Reporting AI answers | "Report this answer" (flag button) under every AI answer in DJL Cloud chats, paired-Mac chats and group chats. Reports go to DJL Cloud (`POST /v1/reports`) and are reviewed in the admin console under Reports. Paired-Mac reports work without a DJL Cloud account. The DJL Cloud change ships with the next `cloud-v*` deploy; until then the phone shows "Couldn't send the report" |
 | Android signing | A release build requires `android/key.properties`; without it the build stops instead of signing with the debug key |
 | Android icon | Adaptive icon with a monochrome layer for themed icons |
 | Android splash | DJL mark on the page colour, light and dark, including the Android 12 splash |
@@ -33,7 +37,9 @@ what is still open. It is a checklist, not a guarantee of approval.
    ```
 
    `storeFile` is resolved from `apps/mobile/android`. Then `flutter build appbundle --release`.
-2. **Version.** `pubspec.yaml` is still `0.1.0+1`. Set the first store version and build number.
+2. **Push capability on the App ID.** Turn on Push Notifications for `app.djl.mobile` in the
+   Apple Developer account so the provisioning profile carries `aps-environment`. Raise the build
+   number in `pubspec.yaml` (`1.0.0+N`) for every upload.
 3. **A demo account for review.** A reviewer cannot pair a Mac. Give App Review and Play review a
    DJL Cloud account that can chat, and say in the review notes that pairing with a desktop is
    optional. Attach a short screen recording of pairing and a group chat so the paired features can
@@ -52,19 +58,8 @@ what is still open. It is a checklist, not a guarantee of approval.
 
 ## Still open
 
-- **Reporting AI-generated content (Play requirement).** Google Play requires an in-app way to
-  report or flag offensive AI-generated content without leaving the app. The app has none, and
-  DJL Cloud has no endpoint to receive such a report. This needs a small backend route in `cloud/`
-  (its own change and deploy) and a "Report this answer" action in the message menu. Until it
-  exists, expect a Play rejection for the DJL Cloud chat.
-- **Push notifications on iOS.** `ios/Runner/RemotePush.entitlements` exists but is not attached
-  to the target (`CODE_SIGN_ENTITLEMENTS` is unset) and `DJL_APNS_ENVIRONMENT` is undefined.
-  Attaching it requires the push capability on the App ID and a matching provisioning profile.
-  The app works without it; notifications from a paired Mac will not arrive in the background.
 - **Android push.** Firebase Messaging is a dependency but `google-services.json` is absent, so
   it is inactive. Add the file from the Firebase project to enable it.
-- **Widgets extension signing.** The `DJLWidgets` target has no `DEVELOPMENT_TEAM`; set it to the
-  same team as Runner before archiving.
 - **Languages.** The app is English only.
 - **Group chat needs the matching desktop.** Groups on the phone work with a DJL desktop that has
   the `djlGroups` bridge capability. Against an older desktop the Groups tab asks the person to

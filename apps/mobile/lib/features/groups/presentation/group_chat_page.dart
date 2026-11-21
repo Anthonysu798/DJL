@@ -10,6 +10,8 @@ import '../../../core/presentation/djl_glass_menu.dart';
 import '../../attachments/data/attachment_picker.dart';
 import '../../settings/domain/appearance.dart';
 import '../domain/group_models.dart';
+import '../../reports/data/content_reporter.dart';
+import '../../reports/presentation/report_sheet.dart';
 import 'agent_avatar.dart';
 import 'group_attachments.dart';
 import 'groups_controller.dart';
@@ -599,7 +601,23 @@ class _MessageRow extends StatelessWidget {
         ).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
       );
     } else {
-      body = _ReplyText(message.text);
+      final reporter = ContentReportScope.maybeOf(context);
+      body = reporter == null || message.text.trim().isEmpty
+          ? _ReplyText(message.text)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ReplyText(message.text),
+                ReportAnswerButton(
+                  send: (reason, note) => reporter.reportDesktop(
+                    text: message.text,
+                    agent: member?.handle,
+                    reason: reason,
+                    note: note,
+                  ),
+                ),
+              ],
+            );
     }
     return _AgentRow(member: member, child: body);
   }

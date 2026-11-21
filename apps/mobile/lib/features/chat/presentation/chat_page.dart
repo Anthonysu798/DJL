@@ -1,3 +1,5 @@
+import '../../reports/data/content_reporter.dart';
+import '../../reports/presentation/report_sheet.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
@@ -258,6 +260,25 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         );
       }
     }
+  }
+
+  /// Only finished DJL Cloud answers in a saved conversation can be reported.
+  SendReport? _reportFor(BuildContext context, ChatMessage message) {
+    final reporter = ContentReportScope.maybeOf(context);
+    final conversation = widget.controller.conversation;
+    if (reporter == null ||
+        conversation == null ||
+        message.role != 'assistant' ||
+        message.runId == widget.controller.reducer?.runId &&
+            widget.controller.streaming) {
+      return null;
+    }
+    return (reason, note) => reporter.reportCloud(
+      conversationId: conversation.id,
+      messageId: message.id,
+      reason: reason,
+      note: note,
+    );
   }
 
   Future<void> _edit(ChatMessage original) async {
@@ -559,6 +580,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   ? () => _voice.read(message.id, message.text)
                                   : null,
                               speaking: _voice.speakingMessageId == message.id,
+                              onReport: _reportFor(context, message),
                             );
                           },
                         ),

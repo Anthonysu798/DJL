@@ -159,6 +159,23 @@ export function requirePrincipal(resolver: PrincipalResolver) {
   });
 }
 
+const SESSION_COOKIE = /(?:^|;\s*)(?:__Secure-)?djl\.session_token=/;
+
+/**
+ * For routes that also serve signed-out callers: null when the request carries
+ * no credential at all; otherwise exactly `requirePrincipal`, so a bad or
+ * expired credential is still a 401 rather than a silent sign-out.
+ */
+export function optionalPrincipal(resolver: PrincipalResolver) {
+  return Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const signedIn =
+      request.headers["authorization"] !== undefined ||
+      SESSION_COOKIE.test(request.headers["cookie"] ?? "");
+    return signedIn ? yield* requirePrincipal(resolver) : null;
+  });
+}
+
 export function requireRole(principal: Principal, roles: readonly OrgRole[]): void {
   if (!roles.includes(principal.role))
     throw new ApiError(403, "forbidden", "Your role cannot do that.");

@@ -258,7 +258,11 @@ class CloudClient {
       final request = authenticated
           ? await authorizedRequest(method, path, body: body, query: query)
           : (http.Request(method, url(path, query))
-              ..headers['Accept'] = 'application/json');
+              ..headers['Accept'] = 'application/json'
+              ..headers.addAll(
+                body == null ? {} : {'Content-Type': 'application/json'},
+              )
+              ..body = body == null ? '' : jsonEncode(body));
       if (authenticated) _requireRevision(version);
       final response = await _send(request);
       if (authenticated) _requireRevision(version);

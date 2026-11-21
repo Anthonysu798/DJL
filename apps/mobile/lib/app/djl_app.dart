@@ -34,6 +34,7 @@ import '../features/settings/presentation/local_settings_page.dart';
 import '../features/settings/presentation/app_lock_controller.dart';
 import '../features/settings/presentation/privacy_shield.dart';
 import 'cloud_deep_link.dart';
+import '../features/reports/data/content_reporter.dart';
 import '../features/account/data/account_repository.dart';
 import '../features/account/presentation/account_controller.dart';
 import '../features/account/presentation/account_page.dart';
@@ -90,6 +91,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
   late final DesktopController _desktop;
   late final ConversationController _history;
   late final CloudRepository _repository;
+  late final ContentReporter _reporter = ContentReporter(widget.client);
   final _navigator = GlobalKey<NavigatorState>();
   late final SettingsController _settingsController;
   late final AppLockController _appLock;
@@ -837,34 +839,37 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                 .disableAnimations)
         ? Duration.zero
         : kThemeAnimationDuration,
-    builder: (context, child) => PrivacyShield(
-      controller: _appLock,
-      startupError: _startupError,
-      onRetry: _prepareStartup,
-      child: Overlay.wrap(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            child!,
-            if (_cloudInbox case final inbox?)
-              if (inbox.banner case final item?)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: CloudNotificationBanner(
-                        item: item,
-                        onOpen: () => unawaited(_openCloudAlert(inbox, item)),
-                        onDismiss: inbox.dismissBanner,
+    builder: (context, child) => ContentReportScope(
+      reporter: _reporter,
+      child: PrivacyShield(
+        controller: _appLock,
+        startupError: _startupError,
+        onRetry: _prepareStartup,
+        child: Overlay.wrap(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              child!,
+              if (_cloudInbox case final inbox?)
+                if (inbox.banner case final item?)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: CloudNotificationBanner(
+                          item: item,
+                          onOpen: () => unawaited(_openCloudAlert(inbox, item)),
+                          onDismiss: inbox.dismissBanner,
+                        ),
                       ),
                     ),
                   ),
-                ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

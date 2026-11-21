@@ -1,3 +1,4 @@
+import '../../reports/presentation/report_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/design/djl_tokens.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ class MessageView extends StatelessWidget {
     super.key,
     required this.message,
     required this.repository,
+    this.onReport,
     this.onRegenerate,
     this.onEdit,
     this.siblings = const [],
@@ -27,6 +29,7 @@ class MessageView extends StatelessWidget {
   final ChatMessage message;
   final CloudRepository repository;
   final VoidCallback? onRegenerate, onEdit, onSpeak;
+  final SendReport? onReport;
   final bool speaking, isStreaming;
   final String emptyText;
   final List<ChatMessage> siblings;
@@ -207,6 +210,13 @@ class MessageView extends StatelessWidget {
           speaking ? 'Stop reading' : 'Read aloud',
           speaking ? DjlIcons.stopCircle : DjlIcons.speaker,
           onSpeak,
+        ),
+      if (onReport case final send?)
+        _action(
+          context,
+          'Report this answer',
+          DjlIcons.flag,
+          () => showReportSheet(context, send),
         ),
     ];
     final model = message.model;

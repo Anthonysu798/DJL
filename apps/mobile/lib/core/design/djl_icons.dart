@@ -39,6 +39,7 @@ abstract final class DjlIcons {
   static const IconData edit = PhosphorIconsRegular.pencilSimple;
   static const IconData compose = PhosphorIconsRegular.notePencil;
   static const IconData copy = PhosphorIconsRegular.copy;
+  static const IconData flag = PhosphorIconsRegular.flag;
   static const IconData delete = PhosphorIconsRegular.trash;
   static const IconData archive = PhosphorIconsRegular.archive;
   static const IconData pin = PhosphorIconsRegular.pushPin;

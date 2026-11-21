@@ -1,3 +1,4 @@
+import '../../reports/data/content_reporter.dart';
 import '../../reasoning/domain/desktop_reasoning.dart';
 import '../../../app/desktop_deep_link.dart';
 import 'desktop_focus_timeline.dart';
@@ -2527,11 +2528,22 @@ class _DesktopChatPageState extends State<DesktopChatPage>
                               );
                             }
 
+                            final reporter = ContentReportScope.maybeOf(
+                              context,
+                            );
                             final footer = copy == null
                                 ? null
                                 : DesktopResponseFooter(
                                     scope: scope!,
                                     text: copy,
+                                    report: reporter == null
+                                        ? null
+                                        : (reason, note) =>
+                                              reporter.reportDesktop(
+                                                text: copy,
+                                                reason: reason,
+                                                note: note,
+                                              ),
                                     readText: () {
                                       if (!mounted ||
                                           !_ownsPage ||
