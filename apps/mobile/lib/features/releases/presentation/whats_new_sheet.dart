@@ -6,6 +6,12 @@ import '../../../core/design/djl_icons.dart';
 import '../../../core/design/djl_tokens.dart';
 
 const whatsNewNotes = <String, List<String>>{
+  '1.0.0': [
+    'A calmer black and white design.',
+    'Group chats: talk to several agents at once and watch them reply live.',
+    'Send files and photos in a group chat.',
+    'Chats go straight to DJL on your Mac.',
+  ],
   '0.1.0': [
     'DJL on iOS and Android.',
     'Switch between DJL Cloud and a paired Mac.',
