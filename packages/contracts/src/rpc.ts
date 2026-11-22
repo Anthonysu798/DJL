@@ -1821,14 +1821,6 @@ const WsCoreRpcGroup = RpcGroup.make(
   WsLocalModelsRerunCapabilityCheckRpc,
   WsLocalModelsRemoveModelRpc,
   WsSubscribeLocalModelEventsRpc,
-  WsPluginsGetSnapshotRpc,
-  WsPluginsInstallRpc,
-  WsPluginsUninstallRpc,
-  WsPluginsSetEnabledRpc,
-  WsPluginsConnectAppRpc,
-  WsPluginsDisconnectAppRpc,
-  WsPluginsAddCustomServerRpc,
-  WsPluginsCreateSkillRpc,
   WsProjectMemoryListRpc,
   WsProjectMemorySaveRpc,
   WsProjectMemoryRenameRpc,
@@ -1962,8 +1954,16 @@ const WsCoreRpcGroup = RpcGroup.make(
 );
 
 // The core group's inferred type is at the size tsc can still write into a declaration
-// (TS7056), so newer calls go in their own group and the export is annotated by group.
+// (TS7056), so the plugin calls go in their own group and the export is annotated by group.
 const WsPluginSourcesRpcGroup = RpcGroup.make(
+  WsPluginsGetSnapshotRpc,
+  WsPluginsInstallRpc,
+  WsPluginsUninstallRpc,
+  WsPluginsSetEnabledRpc,
+  WsPluginsConnectAppRpc,
+  WsPluginsDisconnectAppRpc,
+  WsPluginsAddCustomServerRpc,
+  WsPluginsCreateSkillRpc,
   WsPluginsSaveAppTokenRpc,
   WsPluginsImportManifestRpc,
   WsPluginsAddMarketplaceRpc,

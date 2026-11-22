@@ -32,8 +32,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      // New chat floats beside the tab bar, inside the screen margins.
       final chat = tester.getRect(find.byTooltip('New chat'));
-      expect(chat.right, closeTo(386, .01));
+      final tabs = tester.getRect(find.byKey(const Key('home.tab.attention')));
+      expect(chat.left, greaterThan(tabs.right));
+      expect(chat.right, lessThanOrEqualTo(386));
+      expect(chat.center.dy, closeTo(tabs.center.dy, 1));
       expect(find.byTooltip('SSH terminals'), findsNothing);
       expect(find.text('Terminal'), findsNothing);
       expect(find.text('Workspaces'), findsNothing);

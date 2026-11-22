@@ -77,6 +77,13 @@ async function handleDesktopMethod(method, params, options = {}) {
   const threadMaterializePollMs =
     options.threadMaterializePollMs ?? DEFAULT_THREAD_MATERIALIZE_POLL_MS;
 
+  if (
+    typeof options.openThread === "function" &&
+    (method === "desktop/continueOnDesktop" || method === "desktop/continueOnMac")
+  ) {
+    return openThreadInDjl(params, options.openThread);
+  }
+
   switch (method) {
     case "desktop/continueOnDesktop":
       if (platform !== "darwin" && platform !== "win32") {
@@ -135,6 +142,19 @@ async function handleDesktopMethod(method, params, options = {}) {
     default:
       throw desktopError("unknown_method", `Unknown desktop method: ${method}`);
   }
+}
+
+// Inside the DJL desktop app, the app itself opens the chat; Codex.app is never involved.
+function openThreadInDjl(params, openThread) {
+  const threadId = resolveThreadId(params);
+  if (!threadId) {
+    throw desktopError("missing_thread_id", "A thread id is required to continue on desktop.");
+  }
+  if (!isValidDesktopThreadId(threadId)) {
+    throw desktopError("invalid_thread_id", "The requested desktop thread id is not valid.");
+  }
+  openThread(threadId);
+  return { success: true, relaunched: false, threadId };
 }
 
 // Waits for fresh phone-authored chats to materialize locally before deep-linking them on desktop.

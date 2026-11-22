@@ -13,7 +13,7 @@ struct RunStatusLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) { Label("DJL", image: "djl_symbol_medium").font(.headline) }
-                DynamicIslandExpandedRegion(.trailing) { Text(context.isStale ? "Open DJL" : "Task status").font(.caption) }
+                DynamicIslandExpandedRegion(.trailing) { Text(LocalizedStringKey(context.isStale ? "Open DJL" : "Task status")).font(.caption) }
                 DynamicIslandExpandedRegion(.bottom) {
                     RunStatusActivityView(state: context.state, stale: context.isStale)
                 }
@@ -38,7 +38,7 @@ private struct RunStatusActivityView: View {
             HStack {
                 Text("DJL").font(.headline)
                 Spacer()
-                Text(stale ? "Open DJL" : "Task status").font(.caption).foregroundStyle(.secondary)
+                Text(LocalizedStringKey(stale ? "Open DJL" : "Task status")).font(.caption).foregroundStyle(.secondary)
             }
             if stale {
                 // ActivityKit marks the whole content stale at the first row

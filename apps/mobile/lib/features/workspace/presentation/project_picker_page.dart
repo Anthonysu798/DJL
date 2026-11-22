@@ -7,6 +7,11 @@ import '../../desktop/domain/desktop_overview.dart';
 import '../data/workspace_repository.dart';
 import 'project_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
+
 Future<String?> showProjectPicker(
   BuildContext context, {
   required ProjectRepository repository,
@@ -17,7 +22,7 @@ Future<String?> showProjectPicker(
   useSafeArea: true,
   showDragHandle: true,
   clipBehavior: Clip.antiAlias,
-  backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(context),
+  backgroundColor: DjlColors.of(context).surface,
   builder: (_) => FractionallySizedBox(
     heightFactor: .96,
     child: ProjectPickerPage(repository: repository, initialPath: initialPath),
@@ -195,9 +200,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
       margin: EdgeInsets.zero,
       backgroundColor: Colors.transparent,
       decoration: BoxDecoration(
-        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
-          context,
-        ),
+        color: DjlColors.of(context).surfaceRaised,
         borderRadius: BorderRadius.circular(26),
       ),
       clipBehavior: Clip.antiAlias,
@@ -223,7 +226,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
   Widget get _title => Semantics(
     header: true,
     child: Text(
-      'Add Local Folder',
+      context.l10n.workspaceAddLocalFolder,
       textAlign: TextAlign.center,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
         fontSize: 17,
@@ -238,7 +241,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
       radius: 999,
       child: TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Close'),
+        child: Text(context.l10n.workspaceClose),
       ),
     );
     final actions = Row(
@@ -247,7 +250,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
         DjlGlassSurface(
           radius: 999,
           child: IconButton(
-            tooltip: 'Create folder on Mac',
+            tooltip: context.l10n.workspaceCreateFolderOnMac,
             onPressed: canUse ? _create : null,
             icon: c.creating
                 ? const CupertinoActivityIndicator()
@@ -264,7 +267,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
             onPressed: canUse
                 ? () => Navigator.pop(context, c.listing!.path)
                 : null,
-            child: const Text('Use'),
+            child: Text(context.l10n.workspaceUse),
           ),
         ),
       ],
@@ -297,9 +300,9 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
       final rows = <Widget>[
         if (!matching && listing?.parentPath != null)
           _row(
-            'Parent Folder',
+            context.l10n.workspaceParentFolder,
             listing!.parentPath!,
-            const Icon(CupertinoIcons.arrow_uturn_left, size: 22),
+            const Icon(DjlIcons.undo, size: 22),
             onTap: busy || c.creating
                 ? null
                 : () => _browse(listing.parentPath!),
@@ -312,7 +315,11 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
                 const CupertinoActivityIndicator(),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(matching ? 'Searching folders...' : 'Loading'),
+                  child: Text(
+                    matching
+                        ? context.l10n.workspaceSearchingFolders
+                        : context.l10n.workspaceLoading,
+                  ),
                 ),
               ],
             ),
@@ -322,8 +329,8 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
         else if (entries.isEmpty)
           _message(
             matching
-                ? 'No matching folders under this folder.'
-                : 'No child folders here.',
+                ? context.l10n.workspaceNoMatchingFolders
+                : context.l10n.workspaceNoChildFolders,
           )
         else
           for (final entry in entries)
@@ -339,9 +346,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
             ),
       ];
       return Scaffold(
-        backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
-          context,
-        ),
+        backgroundColor: DjlColors.of(context).surface,
         body: SafeArea(
           child: Column(
             children: [
@@ -361,10 +366,11 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: CupertinoSearchTextField(
                         controller: _search,
-                        placeholder: 'Search folders',
-                        suffixIcon: const Icon(
-                          CupertinoIcons.xmark_circle_fill,
-                          semanticLabel: 'Clear folder search',
+                        placeholder: context.l10n.workspaceSearchFolders,
+                        suffixIcon: Icon(
+                          DjlIcons.clear,
+                          semanticLabel:
+                              context.l10n.workspaceClearFolderSearch,
                         ),
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontSize: 17,
@@ -376,7 +382,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
                     if (!matching && c.error != null)
                       _section(null, [_message(c.error!, error: true)]),
                     if (c.locations.isNotEmpty)
-                      _section('Locations', [
+                      _section(context.l10n.workspaceLocations, [
                         for (final location in c.locations)
                           _row(
                             location.label,
@@ -387,7 +393,7 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
                                 : () => _browse(location.path),
                           ),
                       ]),
-                    _section('Current Folder', [
+                    _section(context.l10n.workspaceCurrentFolder, [
                       if (listing != null)
                         _row(
                           desktopConversationPathLabel(listing.path),
@@ -397,11 +403,16 @@ class _ProjectPickerPageState extends State<ProjectPickerPage> {
                       else
                         _message(
                           c.loading
-                              ? 'Loading folders...'
-                              : 'No folder selected.',
+                              ? context.l10n.workspaceLoadingFolders
+                              : context.l10n.workspaceNoFolderSelected,
                         ),
                     ]),
-                    _section(matching ? 'Matching Folders' : 'Folders', rows),
+                    _section(
+                      matching
+                          ? context.l10n.workspaceMatchingFolders
+                          : context.l10n.workspaceFolders,
+                      rows,
+                    ),
                   ],
                 ),
               ),
@@ -429,27 +440,27 @@ class _NewFolderDialogState extends State<_NewFolderDialog> {
 
   @override
   Widget build(BuildContext context) => CupertinoAlertDialog(
-    title: const Text('New Folder'),
+    title: Text(context.l10n.workspaceNewFolder),
     content: Column(
       children: [
-        const Text('Create this folder on your device and start a chat there.'),
+        Text(context.l10n.workspaceNewFolderBody),
         const SizedBox(height: 12),
         CupertinoTextField(
           controller: _name,
           autofocus: true,
-          placeholder: 'Folder name',
+          placeholder: context.l10n.workspaceFolderName,
         ),
       ],
     ),
     actions: [
       CupertinoDialogAction(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.l10n.commonCancel),
       ),
       CupertinoDialogAction(
         isDefaultAction: true,
         onPressed: () => Navigator.pop(context, _name.text),
-        child: const Text('Create'),
+        child: Text(context.l10n.workspaceCreate),
       ),
     ],
   );

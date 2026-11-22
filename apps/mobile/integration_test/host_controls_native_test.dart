@@ -97,21 +97,21 @@ void main() {
         await tester.pumpAndSettle();
       }
       await capture('status');
-      await tap('Wake display');
+      await tap('Wake the screen');
       expect(calls('desktop/wakeDisplay'), 1);
-      expect(host.actionMessage, contains('confirmed'));
-      await tap('Keep device reachable');
+      expect(host.actionMessage, contains('waking'));
+      await tap('Keep Mac awake');
       expect(store.values[HostController.keepAwakeKey], true);
       expect(host.preferenceSynced, isTrue);
       await capture('preference');
 
-      await tap('Update bridge');
+      await tap('Update DJL');
       expect(calls('desktop/bridge/updateAndRestart'), 0);
       await capture('update-review');
       await tap('Cancel');
       expect(calls('desktop/bridge/updateAndRestart'), 0);
-      await tap('Update bridge');
-      await tap('Update and restart');
+      await tap('Update DJL');
+      await tap('Update');
       expect(calls('desktop/bridge/updateAndRestart'), 1);
       expect(host.updateState, HostUpdateState.reconnecting);
       await capture('waiting');
@@ -137,25 +137,26 @@ void main() {
       await capture('verified');
 
       rejectRead = true;
-      await tap('Refresh host status');
+      await host.refresh();
+      await tester.pumpAndSettle();
       expect(host.stale, isTrue);
-      expect(find.textContaining('Could not refresh'), findsOneWidget);
+      expect(find.textContaining("Couldn't check your Mac"), findsOneWidget);
       await capture('read-failure');
       rejectRead = false;
-      await tap('Refresh host status');
+      await tap('Try again');
       expect(host.statusError, isNull);
       expect(calls('desktop/wakeDisplay'), 1);
       expect(calls('desktop/bridge/updateAndRestart'), 1);
-      await tap('Keep device reachable');
+      await tap('Keep Mac awake');
       expect(store.values[HostController.keepAwakeKey], false);
       expect(host.preferenceSynced, isTrue);
 
       dark.value = true;
       scale.value = 2.2;
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Update bridge'));
+      await tester.ensureVisible(find.text('Update DJL'));
       await capture('dark-large-text');
-      await tap('Update bridge');
+      await tap('Update DJL');
       await capture('dark-large-review');
       await tap('Cancel');
       expect(calls('desktop/bridge/updateAndRestart'), 1);

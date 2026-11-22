@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import '../../desktop/presentation/desktop_controller.dart';
 import '../../pairing/data/pairing_repository.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class DevicePreferencesStatus extends StatelessWidget {
   const DevicePreferencesStatus({super.key, required this.desktop});
@@ -27,7 +31,7 @@ class DevicePreferencesStatus extends StatelessWidget {
                   desktop.devicePreferencesSaving
               ? null
               : desktop.loadDevicePreferences,
-          child: const Text('Retry local preferences'),
+          child: Text(context.l10n.settingsRetryLocalPrefs),
         ),
       ],
     ],
@@ -75,16 +79,16 @@ class _DeviceNameTileState extends State<DeviceNameTile> {
                     p.publicKey == pair.publicKey,
               ))
             ListTile(
-              leading: const Icon(Icons.computer),
+              leading: const Icon(DjlIcons.desktop),
               title: Text(desktop.deviceName(pair)),
               subtitle: Text(
                 target?.nickname.trim().isNotEmpty == true
                     ? pair.displayName
-                    : 'Device name on this phone',
+                    : context.l10n.settingsDeviceNameOnPhone,
               ),
               trailing: IconButton(
-                tooltip: 'Edit device name',
-                icon: const Icon(Icons.edit_outlined),
+                tooltip: context.l10n.settingsEditDeviceNameTooltip,
+                icon: const Icon(DjlIcons.edit),
                 onPressed: !canEdit
                     ? null
                     : () => showModalBottomSheet<void>(
@@ -152,8 +156,9 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
       return result;
     }
 
-    final closeWidth = width('Close', closeStyle) + 32;
-    final titleWidth = width('Edit Device Name', titleStyle);
+    final l10n = context.l10n;
+    final closeWidth = width(l10n.settingsClose, closeStyle) + 32;
+    final titleWidth = width(l10n.settingsEditDeviceNameTitle, titleStyle);
     final close = SizedBox(
       width: closeWidth,
       child: TextButton(
@@ -163,11 +168,11 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         ),
         onPressed: () => Navigator.pop(context),
-        child: const Text('Close'),
+        child: Text(l10n.settingsClose),
       ),
     );
     final title = Text(
-      'Edit Device Name',
+      l10n.settingsEditDeviceNameTitle,
       textAlign: TextAlign.center,
       style: titleStyle,
     );
@@ -241,7 +246,7 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
                 _header(context),
                 const SizedBox(height: 16),
                 Text(
-                  'Device name',
+                  context.l10n.settingsDeviceName,
                   style: subheadline.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
@@ -261,9 +266,7 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
                     ),
                     isDense: true,
                     filled: true,
-                    fillColor: CupertinoColors.secondarySystemFill.resolveFrom(
-                      context,
-                    ),
+                    fillColor: DjlColors.of(context).surfaceRaised,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 11,
@@ -276,14 +279,8 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  'This nickname stays on this phone and appears anywhere this device is shown.',
-                  style: caption,
-                ),
-                if (!valid)
-                  const Text(
-                    'This saved device changed. Close and reopen the editor.',
-                  ),
+                Text(context.l10n.settingsNicknameNote, style: caption),
+                if (!valid) Text(context.l10n.settingsDeviceChanged),
                 DevicePreferencesStatus(desktop: desktop),
                 const SizedBox(height: 16),
                 Opacity(
@@ -295,7 +292,7 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
                       ),
                     ),
                     onPressed: canReset ? () => _save('') : null,
-                    child: const Text('Use Default'),
+                    child: Text(context.l10n.settingsUseDefault),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -304,7 +301,7 @@ class _DeviceNameSheetState extends State<DeviceNameSheet> {
                   child: FilledButton(
                     style: actionStyle,
                     onPressed: canSave ? () => _save(_draft.text) : null,
-                    child: const Text('Save'),
+                    child: Text(context.l10n.settingsSave),
                   ),
                 ),
               ],

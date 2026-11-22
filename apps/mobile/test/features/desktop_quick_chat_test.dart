@@ -51,11 +51,15 @@ void main() {
     desktop.notifyListeners();
     await tester.pumpAndSettle();
     await quickMenu(tester);
-    final entry = find.ancestor(
-      of: find.text('Quick Chat'),
-      matching: find.byType(PopupMenuItem<String>),
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Quick Chat')),
+      matchesSemantics(
+        label: 'Quick Chat',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: false,
+      ),
     );
-    expect(tester.widget<PopupMenuItem<String>>(entry).enabled, isFalse);
     await tester.tap(find.text('Quick Chat'));
     await tester.pumpAndSettle();
     expect(requests(remote, 'thread/start'), isEmpty);

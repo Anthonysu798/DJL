@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../core/network/cloud_client.dart';
 import '../data/social_identity.dart';
+import '../../../l10n/l10n.dart';
 
 class AuthController extends ChangeNotifier {
   AuthController(
@@ -63,7 +64,7 @@ class AuthController extends ChangeNotifier {
       if (!_disposed) {
         socialProviders = {};
         policyUrls = {};
-        socialConfigurationError = 'Could not load sign-in options.';
+        socialConfigurationError = appStrings.authSignInOptionsFailed;
       }
     } finally {
       socialLoading = false;
@@ -157,7 +158,7 @@ class AuthController extends ChangeNotifier {
               committing && client.revision == revision + 1)) {
         error = failure is SocialIdentityFailure
             ? failure.toString()
-            : 'Could not sign in to DJL Cloud. Try again.';
+            : appStrings.authCloudSignInFailed;
       }
       return false;
     } finally {
@@ -214,8 +215,7 @@ class AuthController extends ChangeNotifier {
       signedIn = await client.signedIn;
     } catch (_) {
       signedIn = false;
-      error =
-          'Could not open secure storage. Unlock your device and try again.';
+      error = appStrings.authSecureStorageFailed;
     } finally {
       ready = true;
       _notify();
@@ -259,9 +259,9 @@ class AuthController extends ChangeNotifier {
           formIsCurrent: formIsCurrent,
         );
       } else if (requiresToken) {
-        notice = 'Check your email for a verification code.';
+        notice = appStrings.authCheckEmailForCode;
       } else {
-        notice = 'Request sent. Check your email.';
+        notice = appStrings.authRequestSent;
       }
       return token != null || !requiresToken;
     } catch (e) {
@@ -309,7 +309,7 @@ class AuthController extends ChangeNotifier {
     _wakeSocial();
     signedIn = false;
     account = null;
-    error = 'Your session has ended. Please sign in again.';
+    error = appStrings.coreSessionEnded;
     unawaited(_resetCloudPreferences(_generation));
     _notify();
   }
@@ -319,7 +319,7 @@ class AuthController extends ChangeNotifier {
       await clearCloudPreferences?.call();
     } catch (_) {
       if (!_disposed && generation == _generation) {
-        notice = 'Some saved Cloud data could not be cleared.';
+        notice = appStrings.authCloudDataNotCleared;
         _notify();
       }
     }

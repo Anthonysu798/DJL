@@ -5,6 +5,7 @@ import 'package:djl_mobile/features/subagents/domain/subagent_action.dart';
 import 'package:djl_mobile/features/guardian/domain/guardian_review.dart';
 import 'guardian_review_test.dart' show guardianParams;
 import 'desktop_reasoning_controller_test.dart' show ReasoningTransport;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_history_reconciliation_test.dart'
     show
         historyDesktop,

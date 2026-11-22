@@ -1,3 +1,4 @@
+import 'package:djl_mobile/core/presentation/djl_glass_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/git/data/git_repository.dart';
@@ -54,7 +55,7 @@ Future<void> idleGitApp(
 }
 
 Future<void> openAction(WidgetTester tester, String label) async {
-  await tester.tap(find.byType(PopupMenuButton<String>));
+  await tester.tap(find.byType(DjlGlassMenuButton<String>));
   await tester.pumpAndSettle();
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();
@@ -167,8 +168,8 @@ void main() {
         final idle = ValueNotifier(true);
         await idleGitApp(tester, transport, idle);
         final menu = tester
-            .widget<PopupMenuButton<String>>(
-              find.byType(PopupMenuButton<String>),
+            .widget<DjlGlassMenuButton<String>>(
+              find.byType(DjlGlassMenuButton<String>),
             )
             .onSelected!;
         final selector = tester

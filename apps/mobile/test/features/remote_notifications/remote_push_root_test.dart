@@ -369,16 +369,16 @@ void main() {
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('Remote notifications'),
+        find.text('Push notifications'),
         350,
         scrollable: find.byType(Scrollable).last,
       );
       expect(find.byType(RemotePushControls), findsOneWidget);
       expect(native.prompts, 0);
       expect(calls, isEmpty);
-      await tester.ensureVisible(find.text('Remote notifications'));
+      await tester.ensureVisible(find.text('Push notifications'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Remote notifications'));
+      await tester.tap(find.text('Push notifications'));
       await tester.pumpAndSettle();
       expect(native.prompts, 1);
       expect(calls, isEmpty);

@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../chat/presentation/chat_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
+
 Future<bool?> showCloudImageCreationSheet(
   BuildContext context, {
   required ChatController controller,
@@ -54,10 +59,10 @@ class _CloudImageCreationSheet extends StatefulWidget {
 class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
   final _prompt = TextEditingController();
   String _ratio = '1:1';
-  static const _shapes = {
-    '1:1': 'Square',
-    '4:3': 'Landscape',
-    '3:4': 'Portrait',
+  Map<String, String> _shapes(AppLocalizations l10n) => {
+    '1:1': l10n.imagesSquare,
+    '4:3': l10n.imagesLandscape,
+    '3:4': l10n.imagesPortrait,
   };
   bool get _current => mounted && ModalRoute.of(context)?.isCurrent == true;
   bool get _canCreate =>
@@ -110,9 +115,10 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
       final theme = Theme.of(context), colors = theme.colorScheme;
       final scaled = MediaQuery.textScalerOf(context).scale(17);
       final large = scaled > 25, busy = widget.starting.value;
+      final l10n = context.l10n;
       final closeMeasure = TextPainter(
         text: TextSpan(
-          text: 'Close',
+          text: l10n.settingsClose,
           style: theme.textTheme.labelLarge?.copyWith(
             fontSize: 17,
             fontWeight: FontWeight.w400,
@@ -129,7 +135,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
         color: colors.onSurfaceVariant,
       );
       final caption = Text(
-        'One image per request. You can leave the chat while DJL works.',
+        l10n.imagesOnePerRequest,
         textAlign: TextAlign.center,
         style: secondary?.copyWith(fontSize: 12),
       );
@@ -160,9 +166,9 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                         vertical: 6,
                       ),
                     ),
-                    child: const Text(
-                      'Close',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.settingsClose,
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w400,
                       ),
@@ -173,9 +179,12 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
             ),
             title: large
                 ? null
-                : const Text(
-                    'Create image',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                : Text(
+                    l10n.imagesCreate,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
             actions: [if (!large) SizedBox(width: leadingWidth)],
           ),
@@ -193,7 +202,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                           child: Semantics(
                             header: true,
                             child: Text(
-                              'Create image',
+                              l10n.imagesCreate,
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w600,
@@ -201,9 +210,9 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                             ),
                           ),
                         ),
-                      const Text(
-                        'Make something yours.',
-                        style: TextStyle(
+                      Text(
+                        l10n.imagesMakeYours,
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
                           height: 1.2,
@@ -211,7 +220,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Describe the subject, style, and details you have in mind.',
+                        l10n.imagesDescribe,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 15,
                           height: 1.2,
@@ -230,11 +239,10 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                           height: 1.2,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'A quiet studio in morning light…',
+                          hintText: l10n.imagesPromptHint,
                           contentPadding: const EdgeInsets.all(16),
                           filled: true,
-                          fillColor: CupertinoColors.secondarySystemBackground
-                              .resolveFrom(context),
+                          fillColor: DjlColors.of(context).surfaceRaised,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
                             borderSide: BorderSide.none,
@@ -243,7 +251,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                       ),
                       const SizedBox(height: 24),
                       Semantics(
-                        label: 'Shape',
+                        label: l10n.imagesShape,
                         container: true,
                         explicitChildNodes: true,
                         child: large
@@ -251,7 +259,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  for (final entry in _shapes.entries)
+                                  for (final entry in _shapes(l10n).entries)
                                     ChoiceChip(
                                       label: Text(entry.value),
                                       selected: _ratio == entry.key,
@@ -263,7 +271,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                                 groupValue: _ratio,
                                 onValueChanged: shape,
                                 children: {
-                                  for (final entry in _shapes.entries)
+                                  for (final entry in _shapes(l10n).entries)
                                     entry.key: Padding(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 4,
@@ -286,7 +294,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                         Padding(
                           padding: const EdgeInsets.only(top: 24),
                           child: Text(
-                            "Image generation isn't configured on this server yet. Your saved images are still available.",
+                            l10n.imagesNotConfigured,
                             style: secondary,
                           ),
                         ),
@@ -332,7 +340,9 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                               ],
                               Flexible(
                                 child: Text(
-                                  busy ? 'Starting…' : 'Create image',
+                                  busy
+                                      ? l10n.imagesStarting
+                                      : l10n.imagesCreate,
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 17,
@@ -342,7 +352,7 @@ class _CloudImageCreationSheetState extends State<_CloudImageCreationSheet> {
                               ),
                               if (!busy) ...[
                                 const SizedBox(width: 8),
-                                const Icon(CupertinoIcons.arrow_up, size: 17),
+                                const Icon(DjlIcons.arrowUp, size: 17),
                               ],
                             ],
                           ),

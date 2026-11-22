@@ -347,24 +347,37 @@ DesktopTimelineProjection projectDesktopTimeline(
   }
   // Rehome only inside the same user/turn block. A stale hidden row must not
   // focus an unrelated message simply because that message precedes it.
+  // A turn usually runs work first and answers last, and the work rows are
+  // hidden. Those rows have no earlier visible row in their block, so they
+  // wait for the block's first visible row instead of dead-ending a link.
   int? visibleHost;
   String? blockTurn;
+  final waiting = <int>[];
   for (var index = 0; index < rows.length; index++) {
     if (rows[index]['type'] == 'userMessage') {
       visibleHost = null;
       blockTurn = null;
+      waiting.clear();
       continue;
     }
     final currentTurn = turn(index);
     if (blockTurn != null && currentTurn != null && blockTurn != currentTurn) {
       visibleHost = null;
+      waiting.clear();
     }
     blockTurn = currentTurn ?? blockTurn;
     if (rawToRender.containsKey(index)) {
       visibleHost = index;
+      for (final hiddenRow in waiting) {
+        rawToRender[hiddenRow] = rawToRender[index]!;
+        focusAliases[hiddenRow] = focusAliases[index] ?? index;
+      }
+      waiting.clear();
     } else if (visibleHost != null) {
       rawToRender[index] = rawToRender[visibleHost]!;
       focusAliases[index] = focusAliases[visibleHost] ?? visibleHost;
+    } else {
+      waiting.add(index);
     }
   }
   return DesktopTimelineProjection._(

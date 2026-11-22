@@ -97,6 +97,57 @@ test("consecutive deltas for the same item merge into one delta", () => {
   assert.equal(batch[0].params.djlEmittedAt, "2026-09-04T10:00:00.000Z");
 });
 
+const draft = (memberId, text, restart = false) =>
+  JSON.stringify({
+    method: "djl/groups/draft",
+    params: { groupId: "g", memberId, delta: text, restart },
+  });
+
+test("consecutive group drafts for one member merge until the member restarts", () => {
+  const timers = createFakeTimers();
+  const flushed = [];
+  const coalescer = createOutboundCoalescer({ ...timers, flush: (text) => flushed.push(text) });
+
+  coalescer.push(draft("m1", "Let me ", true));
+  coalescer.push(draft("m1", "look."));
+  coalescer.push(draft("m1", "The answer ", true));
+  coalescer.push(draft("m1", "is 4."));
+  coalescer.push(draft("m2", "Hi", true));
+  coalescer.push(draft("m1", "!"));
+  timers.fire();
+
+  assert.deepEqual(
+    JSON.parse(flushed[0]).map((m) => m.params),
+    [
+      { groupId: "g", memberId: "m1", delta: "Let me look.", restart: true },
+      { groupId: "g", memberId: "m1", delta: "The answer is 4.", restart: true },
+      { groupId: "g", memberId: "m2", delta: "Hi", restart: true },
+      { groupId: "g", memberId: "m1", delta: "!", restart: false },
+    ],
+  );
+});
+
+test("a group draft never merges with another group's draft or an agent delta", () => {
+  const timers = createFakeTimers();
+  const flushed = [];
+  const coalescer = createOutboundCoalescer({ ...timers, flush: (text) => flushed.push(text) });
+
+  coalescer.push(draft("m1", "a"));
+  coalescer.push(
+    JSON.stringify({
+      method: "djl/groups/draft",
+      params: { groupId: "other", memberId: "m1", delta: "b", restart: false },
+    }),
+  );
+  coalescer.push(delta("m1", "c"));
+  timers.fire();
+
+  assert.deepEqual(
+    JSON.parse(flushed[0]).map((m) => m.params.delta),
+    ["a", "b", "c"],
+  );
+});
+
 test("responses and server requests flush pending notifications first and bypass the window", () => {
   const timers = createFakeTimers();
   const flushed = [];

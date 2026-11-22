@@ -3,19 +3,26 @@ import 'package:flutter/widgets.dart' show StringCharacters;
 import '../../../app/desktop_deep_link.dart';
 import '../../pairing/data/pairing_repository.dart';
 import 'desktop_overview.dart';
+import '../../../l10n/l10n.dart';
 import 'thread_local_state.dart';
 
 enum DesktopAttentionSection { needsYou, readyToReview }
 
 enum DesktopAttentionKind {
-  approval('Approval needed'),
-  question('Agent has a question'),
-  failedRun('Run failed'),
-  blockedGoal('Goal needs attention'),
-  completedRun('Ready to review');
+  approval,
+  question,
+  failedRun,
+  blockedGoal,
+  completedRun;
 
-  const DesktopAttentionKind(this.title);
-  final String title;
+  String get title => switch (this) {
+    DesktopAttentionKind.approval => appStrings.desktopAttentionApproval,
+    DesktopAttentionKind.question => appStrings.desktopAttentionQuestion,
+    DesktopAttentionKind.failedRun => appStrings.desktopAttentionFailedRun,
+    DesktopAttentionKind.blockedGoal => appStrings.desktopAttentionBlockedGoal,
+    DesktopAttentionKind.completedRun =>
+      appStrings.desktopAttentionCompletedRun,
+  };
   DesktopAttentionSection get section => this == completedRun
       ? DesktopAttentionSection.readyToReview
       : DesktopAttentionSection.needsYou;
@@ -111,21 +118,21 @@ String _failureSummary(String? raw) {
   final text = raw?.toLowerCase() ?? '';
   bool has(List<String> values) => values.any(text.contains);
   if (has(['permission denied', 'operation not permitted'])) {
-    return "Review the requested access or change this chat's access mode, then retry the run.";
+    return appStrings.desktopFailurePermission;
   }
   if (has(['authentication', 'unauthorized', 'sign in'])) {
-    return 'Sign in again on your Mac, then retry the run.';
+    return appStrings.desktopFailureSignIn;
   }
   if (has(['timed out', 'timeout'])) {
-    return 'Check the Mac connection, then retry the run.';
+    return appStrings.desktopFailureTimeout;
   }
   if (has(['network', 'connection refused', 'offline'])) {
-    return 'Check that the Mac and relay are online, then retry the run.';
+    return appStrings.desktopFailureNetwork;
   }
   if (has(['test failed', 'tests failed', 'build failed'])) {
-    return 'Open the chat to inspect the failing check, fix it, and retry.';
+    return appStrings.desktopFailureCheck;
   }
-  return 'Open the chat to review the last step, correct the issue, and retry.';
+  return appStrings.desktopFailureGeneric;
 }
 
 /// Review presentation only. The controller supplies host-scoped live authority
@@ -218,12 +225,14 @@ List<DesktopAttentionItem> projectDesktopAttention(
           ? reason != null
                 ? _concise(reason)
                 : command != null
-                ? 'Allow Codex to run “${_concise(command, limit: 96)}”?'
-                : 'Codex is waiting for permission to continue.'
+                ? appStrings.desktopAttentionAllowCommand(
+                    _concise(command, limit: 96),
+                  )
+                : appStrings.desktopAttentionAwaitingPermission
           : _concise(
               _text(question['question']) ??
                   _text(question['header']) ??
-                  'Open the chat to answer the agent.',
+                  appStrings.desktopAttentionAnswerAgent,
             );
       append(
         '${isApproval ? 'approval' : 'question'}:${jsonEncode(id)}',
@@ -256,12 +265,9 @@ List<DesktopAttentionItem> projectDesktopAttention(
       );
     }
     final goalSummary = switch (data.goals[id]?['status']) {
-      'blocked' =>
-        'The goal is blocked. Open the chat to review what the agent needs.',
-      'usageLimited' =>
-        'Usage limits paused this goal. Review the chat before resuming it.',
-      'budgetLimited' =>
-        'The goal reached its budget. Review the result before deciding what to do next.',
+      'blocked' => appStrings.desktopGoalBlocked,
+      'usageLimited' => appStrings.desktopGoalUsageLimited,
+      'budgetLimited' => appStrings.desktopGoalBudgetLimited,
       _ => null,
     };
     if (goalSummary != null) {
@@ -278,7 +284,7 @@ List<DesktopAttentionItem> projectDesktopAttention(
         'completed:$id',
         DesktopAttentionKind.completedRun,
         thread,
-        'The run finished. Review the result and any file changes before continuing.',
+        appStrings.desktopRunFinishedReview,
         row: target,
       );
     }

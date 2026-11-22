@@ -1,7 +1,5 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import '../../../core/presentation/djl_glass.dart';
+import '../../../core/presentation/djl_frosted.dart';
 import '../../desktop/presentation/desktop_controller.dart';
 import 'settings_controller.dart';
 import 'settings_controls.dart';
@@ -10,6 +8,9 @@ import 'device_name_sheet.dart';
 import 'paired_usage_card.dart';
 import 'archived_chats_page.dart';
 import 'about_djl_page.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class LocalSettingsPage extends StatelessWidget {
   const LocalSettingsPage({
@@ -27,7 +28,10 @@ class LocalSettingsPage extends StatelessWidget {
   final DesktopController desktop;
   final bool signedIn;
   final String? email;
-  final VoidCallback onCloud, onMyMacs;
+
+  /// Null hides the DJL Cloud section (builds without Cloud sign-in).
+  final VoidCallback? onCloud;
+  final VoidCallback onMyMacs;
   final Widget taskStatus;
   final Widget? remoteNotifications;
 
@@ -37,191 +41,124 @@ class LocalSettingsPage extends StatelessWidget {
     final background = scheme.brightness == Brightness.dark
         ? Colors.black
         : scheme.surfaceContainerLow;
-    final inlineStyle = settingsTextStyle(
-      context,
-      17,
-      weight: FontWeight.w600,
-      color: scheme.onSurface,
-    );
-    final largeStyle = settingsTextStyle(
-      context,
-      34,
-      weight: FontWeight.w700,
-      color: scheme.onSurface,
-    );
-    final doneStyle = settingsTextStyle(context, 17, color: scheme.onSurface);
-    final width = MediaQuery.sizeOf(context).width;
-    Size measure(
-      String label,
-      TextStyle style, {
-      double maxWidth = double.infinity,
-    }) {
-      final painter = TextPainter(
-        text: TextSpan(text: label, style: style),
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-      )..layout(maxWidth: maxWidth);
-      final size = painter.size;
-      painter.dispose();
-      return size;
-    }
-
-    final doneText = measure('Done', doneStyle);
-    final doneWidth = math.max(64.0, doneText.width + 24);
-    final doneHeight = math.max(36.0, doneText.height + 14);
-    final inlineTitle = measure('Settings', inlineStyle, maxWidth: width - 32);
-    final largeTitle = measure('Settings', largeStyle, maxWidth: width - 32);
-    // Keep the source's centered title when it fits beside the actual scaled
-    // action. At larger sizes, give the complete title a separate header row.
-    final sameRow = inlineTitle.width + 2 * (doneWidth + 28) <= width;
-    final toolbarHeight = sameRow
-        ? math.max(44.0, math.max(doneHeight, inlineTitle.height) + 8)
-        : doneHeight + inlineTitle.height + 24;
-    final doneTop = sameRow ? (toolbarHeight - doneHeight) / 2 : 8.0;
-    final expandedHeight = math.max(
-      106.0,
-      doneTop + doneHeight + largeTitle.height + 20,
-    );
+    final top = MediaQuery.paddingOf(context).top;
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: background,
-            surfaceTintColor: Colors.transparent,
-            expandedHeight: expandedHeight,
-            toolbarHeight: toolbarHeight,
-            flexibleSpace: LayoutBuilder(
-              builder: (context, constraints) {
-                final height =
-                    constraints.maxHeight - MediaQuery.paddingOf(context).top;
-                final large =
-                    height >= doneTop + doneHeight + largeTitle.height + 16;
-                return SafeArea(
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, top + 68, 20, 8),
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      l10n.settingsTitle,
+                      style: settingsTextStyle(
+                        context,
+                        34,
+                        weight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SafeArea(
+                  top: false,
                   bottom: false,
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Positioned(
-                        top: doneTop,
-                        right: 20,
-                        child: SizedBox(
-                          width: doneWidth,
-                          height: doneHeight,
-                          child: DjlGlassSurface(
-                            radius: 999,
-                            useNativeView: false,
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: scheme.onSurface,
-                                backgroundColor:
-                                    scheme.brightness == Brightness.dark
-                                    ? scheme.surfaceContainerLow
-                                    : scheme.surface,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 7,
-                                ),
-                                textStyle: doneStyle,
+                      if (onCloud case final onCloud?)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                          child: SettingsGroup(
+                            title: 'DJL Cloud',
+                            children: [
+                              SettingsLinkRow(
+                                title: signedIn
+                                    ? l10n.settingsOpenCloudChat
+                                    : l10n.settingsSignInCloud,
+                                subtitle: email ?? l10n.settingsCloudSubtitle,
+                                leading: const Icon(DjlIcons.cloud),
+                                onTap: onCloud,
                               ),
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Done'),
-                            ),
+                            ],
                           ),
+                        ),
+                      SettingsControls(
+                        controller: controller,
+                        taskStatus: SettingsGroup(
+                          title: l10n.settingsDevicePermissions,
+                          // Dividers start under the text, past the icon tile.
+                          dividerIndent: 62,
+                          children: [taskStatus, ?remoteNotifications],
                         ),
                       ),
-                      if (large)
-                        Positioned(
-                          left: 16,
-                          right: 16,
-                          bottom: 8,
-                          child: Text('Settings', style: largeStyle),
-                        )
-                      else
-                        Positioned(
-                          left: sameRow ? doneWidth + 28 : 16,
-                          right: sameRow ? doneWidth + 28 : 16,
-                          top: sameRow
-                              ? (toolbarHeight - inlineTitle.height) / 2
-                              : doneTop + doneHeight + 8,
-                          child: Text(
-                            'Settings',
-                            textAlign: TextAlign.center,
-                            style: inlineStyle,
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: PairedUsageCard(controller: desktop.usage),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SettingsArchivedChatsCard(desktop: desktop),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: LocalAboutCard(),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SettingsGroup(
+                          title: l10n.settingsDevice,
+                          children: [
+                            DeviceNameTile(desktop: desktop),
+                            ListTile(
+                              leading: const Icon(DjlIcons.laptop),
+                              title: Text(l10n.settingsMyMacs),
+                              trailing: const Icon(DjlIcons.chevronRight),
+                              onTap: onMyMacs,
+                            ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.paddingOf(context).bottom + 16,
+                ),
+              ),
+            ],
           ),
-          SliverToBoxAdapter(
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                    child: SettingsGroup(
-                      title: 'DJL Cloud',
-                      children: [
-                        SettingsLinkRow(
-                          title: signedIn
-                              ? 'Open DJL Cloud chat'
-                              : 'Sign in to DJL Cloud',
-                          subtitle:
-                              email ??
-                              'Chat, images, and background tasks without your Mac',
-                          leading: const Icon(CupertinoIcons.cloud),
-                          onTap: onCloud,
-                        ),
-                      ],
-                    ),
+          // Content fades out under the status bar instead of a solid bar.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: top + 24,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [background, background.withValues(alpha: 0)],
                   ),
-                  SettingsControls(
-                    controller: controller,
-                    taskStatus: SettingsGroup(
-                      title: 'Device permissions',
-                      children: [taskStatus, ?remoteNotifications],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: PairedUsageCard(controller: desktop.usage),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SettingsArchivedChatsCard(desktop: desktop),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: LocalAboutCard(),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SettingsGroup(
-                      title: 'Device',
-                      children: [
-                        DeviceNameTile(desktop: desktop),
-                        ListTile(
-                          leading: const Icon(Icons.laptop_mac),
-                          title: const Text('My Macs'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: onMyMacs,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: SizedBox(height: MediaQuery.paddingOf(context).bottom + 16),
+          Positioned(
+            top: top + 8,
+            left: 16,
+            child: const DjlGlassBackButton(key: Key('settings.back')),
           ),
         ],
       ),

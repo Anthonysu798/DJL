@@ -5,6 +5,7 @@ import 'package:cryptography/cryptography.dart';
 import '../../../core/security/remote_crypto.dart';
 import '../../pairing/data/pairing_repository.dart';
 import 'rpc_payload.dart';
+import '../../../l10n/l10n.dart';
 
 class RemoteRpcException implements Exception {
   const RemoteRpcException(this.code, this.message, this.data);
@@ -116,9 +117,7 @@ class RemoteTransport {
             server['handshakeMode'] != mode ||
             server['macDeviceId'] != pair.macDeviceId ||
             server['macIdentityPublicKey'] != pair.publicKey) {
-          throw const RemoteSecurityException(
-            'The desktop identity or secure protocol does not match the pairing.',
-          );
+          throw RemoteSecurityException(appStrings.desktopIdentityMismatch);
         }
         transcript = {...hello, ...server, 'clientNonce': clientNonce};
         if (!await verifyMacHello(
@@ -126,9 +125,7 @@ class RemoteTransport {
           server['macSignature'] as String,
         )) {
           if (server['clientNonce'] == null) continue;
-          throw const RemoteSecurityException(
-            'The desktop handshake signature could not be verified.',
-          );
+          throw RemoteSecurityException(appStrings.desktopHandshakeUnverified);
         }
         checkCurrent();
         break;
@@ -200,23 +197,22 @@ class RemoteTransport {
     while (true) {
       final remaining = deadline.difference(DateTime.now());
       if (remaining.isNegative) {
-        throw TimeoutException('Desktop secure handshake timed out.');
+        throw TimeoutException(appStrings.desktopHandshakeTimedOut);
       }
       if (!await iterator.moveNext().timeout(remaining)) {
         if ({4001, 4005, 4009}.contains(_socket?.closeCode)) {
-          throw const RemoteSecurityException(
-            'Desktop refused the secure connection.',
+          throw RemoteSecurityException(
+            appStrings.desktopSecureConnectionRefused,
           );
         }
-        throw const SocketException(
-          'Desktop connection interrupted during secure handshake.',
-        );
+        throw SocketException(appStrings.desktopHandshakeInterrupted);
       }
       if (generation != _generation) throw StateError('Connection cancelled.');
       final frame = _decode(iterator.current);
       if (frame['kind'] == 'secureError') {
         throw RemoteSecurityException(
-          frame['message'] as String? ?? 'Secure desktop connection refused.',
+          frame['message'] as String? ??
+              appStrings.desktopSecureConnectionRejected,
         );
       }
       if (frame['kind'] == kind) return frame;
@@ -226,7 +222,7 @@ class RemoteTransport {
 
   RemoteJson _decode(dynamic value) {
     if (value is! String || value.length > 16000000) {
-      throw const RemoteSecurityException('Invalid desktop frame.');
+      throw RemoteSecurityException(appStrings.desktopInvalidFrame);
     }
     return jsonDecode(value) as RemoteJson;
   }
@@ -240,6 +236,16 @@ class RemoteTransport {
       'epoch': _replayEpoch,
     }),
   );
+  // The cursor only decides how much the desktop replays after a cold start,
+  // and replays are applied idempotently. Writing it to the Keychain after
+  // every frame held up the next frame, so it trails the stream instead.
+  Timer? _cursorSave;
+  void _saveCursorSoon() =>
+      _cursorSave ??= Timer(const Duration(milliseconds: 500), () {
+        _cursorSave = null;
+        if (_pairing != null) unawaited(_saveCursor().catchError((_) {}));
+      });
+
   Future<void> _read(int generation) async {
     Object? failure;
     final iterator = _iterator!;
@@ -254,13 +260,11 @@ class RemoteTransport {
         if (envelope['kind'] == 'secureError') {
           throw RemoteSecurityException(
             envelope['message'] as String? ??
-                'Desktop secure transport failed.',
+                appStrings.desktopSecureTransportFailed,
           );
         }
         if (envelope['kind'] != 'encryptedEnvelope') {
-          throw const RemoteSecurityException(
-            'Unencrypted desktop application traffic was rejected.',
-          );
+          throw RemoteSecurityException(appStrings.desktopUnencryptedRejected);
         }
         final value = await _cipher!.decrypt(envelope);
         if (generation != _generation) return;
@@ -268,9 +272,7 @@ class RemoteTransport {
         if (seq != null && seq <= _seq) continue;
         final payload = decodeRpcPayload(value['payloadText'] as String);
         if (payload.malformed) {
-          onProtocolWarning?.call(
-            'Unable to decode part of the desktop payload.',
-          );
+          onProtocolWarning?.call(appStrings.desktopPayloadDecodeFailed);
         }
         for (final rpc in payload.messages) {
           if (generation != _generation) return;
@@ -279,7 +281,7 @@ class RemoteTransport {
         if (generation != _generation) return;
         if (seq != null) {
           _seq = seq;
-          await _saveCursor();
+          _saveCursorSoon();
         }
       }
     } catch (error) {
@@ -318,7 +320,7 @@ class RemoteTransport {
         waiter.completeError(
           RemoteRpcException(
             error['code'],
-            error['message'] as String? ?? 'Desktop request failed.',
+            error['message'] as String? ?? appStrings.desktopRequestFailed,
             error['data'],
           ),
         );
@@ -336,12 +338,12 @@ class RemoteTransport {
   Future<void> send(RemoteJson message) async {
     final cipher = _cipher;
     if (cipher == null || !connected) {
-      throw StateError('Desktop is disconnected.');
+      throw StateError(appStrings.desktopIsDisconnected);
     }
     final generation = _generation;
     final encrypted = await cipher.encrypt(jsonEncode(message));
     if (generation != _generation) {
-      throw StateError('Desktop connection changed.');
+      throw StateError(appStrings.desktopConnectionChanged);
     }
     _socket!.add(jsonEncode(encrypted));
   }
@@ -362,7 +364,7 @@ class RemoteTransport {
     RemoteJson? params, {
     required Duration timeout,
   }) async {
-    if (!connected) throw StateError('Desktop is disconnected.');
+    if (!connected) throw StateError(appStrings.desktopIsDisconnected);
     final id = 'flutter-$_rpcNamespace-${++_rpc}';
     final waiter = Completer<RemoteJson>();
     _pending[id] = waiter;
@@ -370,9 +372,8 @@ class RemoteTransport {
     // reject the response before send completes.
     final result = waiter.future.timeout(
       timeout,
-      onTimeout: () => throw TimeoutException(
-        'Desktop request timed out. Its result is unknown; refresh before retrying.',
-      ),
+      onTimeout: () =>
+          throw TimeoutException(appStrings.desktopRequestTimedOut),
     );
     try {
       final values = await Future.wait<Object?>([
@@ -394,6 +395,11 @@ class RemoteTransport {
 
   Future<void> disconnect() async {
     _generation++;
+    if (_cursorSave != null) {
+      _cursorSave!.cancel();
+      _cursorSave = null;
+      if (_pairing != null) await _saveCursor().catchError((_) {});
+    }
     _cipher = null;
     final iterator = _iterator;
     _iterator = null;
@@ -401,11 +407,7 @@ class RemoteTransport {
     _socket = null;
     for (final waiter in _pending.values) {
       if (!waiter.isCompleted) {
-        waiter.completeError(
-          StateError(
-            'Desktop disconnected; refresh before retrying an action.',
-          ),
-        );
+        waiter.completeError(StateError(appStrings.desktopDisconnectedRefresh));
       }
     }
     _pending.clear();

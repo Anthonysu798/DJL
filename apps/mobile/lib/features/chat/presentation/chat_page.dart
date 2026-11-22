@@ -1,7 +1,8 @@
+import '../../reports/data/content_reporter.dart';
+import '../../reports/presentation/report_sheet.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import '../../attachments/data/attachment_picker.dart';
 import 'chat_controller.dart';
 import 'cloud_usage_banner.dart';
@@ -17,6 +18,10 @@ import '../../voice/data/native_voice_driver.dart';
 import '../../voice/data/voice_driver.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../../settings/domain/appearance.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 List<FontVariation>? _systemFontAxes(
   BuildContext context,
@@ -249,13 +254,32 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           SnackBar(
             content: Text(
               e is PlatformException
-                  ? e.message ?? 'Could not open the picker. Please try again.'
+                  ? e.message ?? context.l10n.cloudChatPickerFailed
                   : e.toString(),
             ),
           ),
         );
       }
     }
+  }
+
+  /// Only finished DJL Cloud answers in a saved conversation can be reported.
+  SendReport? _reportFor(BuildContext context, ChatMessage message) {
+    final reporter = ContentReportScope.maybeOf(context);
+    final conversation = widget.controller.conversation;
+    if (reporter == null ||
+        conversation == null ||
+        message.role != 'assistant' ||
+        message.runId == widget.controller.reducer?.runId &&
+            widget.controller.streaming) {
+      return null;
+    }
+    return (reason, note) => reporter.reportCloud(
+      conversationId: conversation.id,
+      messageId: message.id,
+      reason: reason,
+      note: note,
+    );
   }
 
   Future<void> _edit(ChatMessage original) async {
@@ -320,26 +344,23 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               : Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: CloudNavigationButton(
-                    icon: CupertinoIcons.line_horizontal_3,
-                    label: 'Open navigation',
+                    icon: DjlIcons.menu,
+                    label: context.l10n.appOpenNavigation,
                     onPressed: widget.onOpenNavigation!,
                   ),
                 ),
           centerTitle: true,
           excludeHeaderSemantics: true,
           title: Tooltip(
-            message: 'Model',
+            message: context.l10n.cloudChatModel,
             excludeFromSemantics: true,
             child: Semantics(
               key: const Key('cloud.model-picker'),
               button: true,
-              label: 'Model',
+              label: context.l10n.cloudChatModel,
               value: chat.selectedModel?['displayName'] as String? ?? 'DJL',
-              child: PopupMenuButton<String>(
+              child: DjlGlassMenuButton<String>(
                 tooltip: '',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
                 enabled:
                     chat.model != null &&
                     chat.models.isNotEmpty &&
@@ -373,7 +394,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                 child: m['id'] == chat.model
                                     ? ExcludeSemantics(
                                         child: Icon(
-                                          Icons.check,
+                                          DjlIcons.check,
                                           size: 20,
                                           color: scheme.onSurfaceVariant,
                                         ),
@@ -432,7 +453,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         ),
                         const SizedBox(width: 4),
                         Icon(
-                          CupertinoIcons.chevron_down,
+                          DjlIcons.chevronDown,
                           size: 18,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -446,14 +467,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           actions: [
             if (chat.conversation != null && visible.isNotEmpty)
               IconButton(
-                tooltip: 'Share link',
+                tooltip: context.l10n.cloudChatShareLink,
                 onPressed: chat.streaming || chat.sharing ? null : _share,
                 icon: chat.sharing
                     ? const SizedBox.square(
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.ios_share),
+                    : const Icon(DjlIcons.share),
               ),
           ],
         ),
@@ -482,8 +503,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                 const SizedBox(height: 10),
                                 Text(
                                   chat.mode == 'task'
-                                      ? 'What should DJL work on?'
-                                      : 'How can I help?',
+                                      ? context.l10n.cloudChatTaskPrompt
+                                      : context.l10n.cloudChatHowCanIHelp,
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context).textTheme.titleLarge
                                       ?.copyWith(
@@ -505,7 +526,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                 if (chat.mode == 'task') ...[
                                   const SizedBox(height: 10),
                                   Text(
-                                    "Start a task and return to the result when it's ready.",
+                                    context.l10n.cloudChatTaskHint,
                                     textAlign: TextAlign.center,
                                     style: Theme.of(context)
                                         .textTheme
@@ -560,6 +581,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   ? () => _voice.read(message.id, message.text)
                                   : null,
                               speaking: _voice.speakingMessageId == message.id,
+                              onReport: _reportFor(context, message),
                             );
                           },
                         ),
@@ -572,10 +594,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.task_alt, size: 16),
+                        const Icon(DjlIcons.checkCircle, size: 16),
                         const SizedBox(width: 8),
                         Text(
-                          'Step ${chat.steps.last['step']} of ${chat.steps.last['maxSteps']}',
+                          context.l10n.cloudChatStepProgress(
+                            '${chat.steps.last['step']}',
+                            '${chat.steps.last['maxSteps']}',
+                          ),
                         ),
                       ],
                     ),
@@ -609,12 +634,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         if (chat.canRetry)
                           TextButton(
                             onPressed: chat.retry,
-                            child: const Text('Retry'),
+                            child: Text(context.l10n.cloudChatRetry),
                           ),
                         if (chat.streaming)
                           TextButton(
                             onPressed: chat.resume,
-                            child: const Text('Reconnect'),
+                            child: Text(context.l10n.pairingReconnect),
                           ),
                       ],
                     ),
@@ -639,7 +664,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           onPressed: chat.composerSaving
                               ? null
                               : chat.retryComposerDraft,
-                          child: const Text('Retry draft'),
+                          child: Text(context.l10n.cloudChatRetryDraft),
                         ),
                       ],
                     ),
@@ -676,7 +701,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                       onPressed: chat.modelSelectionSaving
                                           ? null
                                           : chat.retryModelSelection,
-                                      child: const Text('Retry model choice'),
+                                      child: Text(
+                                        context.l10n.cloudChatRetryModelChoice,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -724,7 +751,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   letterSpacing: _systemTracking(context, -.23),
                                 ),
                                 decoration: InputDecoration(
-                                  hintText: 'Message DJL',
+                                  hintText: context.l10n.cloudChatMessageHint,
                                   hintStyle: TextStyle(
                                     color: scheme.onSurfaceVariant.withValues(
                                       alpha: .55,
@@ -754,8 +781,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      PopupMenuButton<String>(
-                                        tooltip: 'Attach file or image',
+                                      DjlGlassMenuButton<String>(
+                                        tooltip:
+                                            context.l10n.cloudChatAttachTooltip,
+                                        padding: EdgeInsets.zero,
                                         style: IconButton.styleFrom(
                                           minimumSize: const Size(34, 34),
                                           maximumSize: const Size(34, 34),
@@ -775,26 +804,37 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                           if (chat
                                               .configuration
                                               .imageGeneration)
-                                            const PopupMenuItem(
+                                            PopupMenuItem(
                                               value: 'image',
-                                              child: Text('Create image'),
+                                              child: Text(
+                                                context
+                                                    .l10n
+                                                    .cloudChatCreateImage,
+                                              ),
                                             ),
-                                          const PopupMenuItem(
+                                          PopupMenuItem(
                                             value: 'file',
-                                            child: Text('Choose file'),
+                                            child: Text(
+                                              context.l10n.cloudChatChooseFile,
+                                            ),
                                           ),
                                           if (chat.acceptsImages)
-                                            const PopupMenuItem(
+                                            PopupMenuItem(
                                               value: 'photo',
-                                              child: Text('Photo library'),
+                                              child: Text(
+                                                context
+                                                    .l10n
+                                                    .cloudChatPhotoLibrary,
+                                              ),
                                             ),
                                           if (chat.acceptsImages)
-                                            const PopupMenuItem(
+                                            PopupMenuItem(
                                               value: 'camera',
-                                              child: Text('Camera'),
+                                              child: Text(
+                                                context.l10n.cloudChatCamera,
+                                              ),
                                             ),
                                         ],
-                                        padding: EdgeInsets.zero,
                                         icon: Container(
                                           width: 34,
                                           height: 34,
@@ -813,7 +853,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                       ),
                                                 )
                                               : const Icon(
-                                                  CupertinoIcons.plus,
+                                                  DjlIcons.add,
                                                   size: 22,
                                                 ),
                                         ),
@@ -822,7 +862,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                       Semantics(
                                         toggled: chat.mode == 'task',
                                         child: Tooltip(
-                                          message: 'Task mode',
+                                          message:
+                                              context.l10n.cloudChatTaskMode,
                                           child: TextButton(
                                             onPressed:
                                                 chat.sending || chat.streaming
@@ -859,15 +900,15 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Icon(
-                                                    Icons.checklist,
+                                                    DjlIcons.checklist,
                                                     size: 17,
                                                     color: chat.mode == 'task'
-                                                        ? Colors.white
+                                                        ? scheme.onPrimary
                                                         : scheme.onSurface,
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Text(
-                                                    'Task',
+                                                    context.l10n.cloudChatTask,
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       fontWeight:
@@ -879,7 +920,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                             semibold: true,
                                                           ),
                                                       color: chat.mode == 'task'
-                                                          ? Colors.white
+                                                          ? scheme.onPrimary
                                                           : scheme.onSurface,
                                                     ),
                                                   ),
@@ -909,8 +950,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                         padding: EdgeInsets.zero,
                                         color: scheme.onSurface,
                                         tooltip: _voice.listening
-                                            ? 'Stop dictation'
-                                            : 'Start dictation',
+                                            ? context
+                                                  .l10n
+                                                  .cloudChatStopDictation
+                                            : context
+                                                  .l10n
+                                                  .cloudChatStartDictation,
                                         onPressed:
                                             _voice.initializing ||
                                                 !chat.composerReady ||
@@ -926,8 +971,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                               },
                                         icon: Icon(
                                           _voice.listening
-                                              ? CupertinoIcons.stop_circle
-                                              : CupertinoIcons.mic,
+                                              ? DjlIcons.stopCircle
+                                              : DjlIcons.mic,
                                           size: 20,
                                         ),
                                       ),
@@ -945,8 +990,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         tooltip: chat.streaming
-                                            ? 'Stop response'
-                                            : 'Send message',
+                                            ? context.l10n.cloudChatStopResponse
+                                            : context.l10n.cloudChatSendMessage,
                                         onPressed: chat.streaming
                                             ? chat.stop
                                             : canSend
@@ -977,8 +1022,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                 )
                                               : Icon(
                                                   chat.streaming
-                                                      ? Icons.stop
-                                                      : CupertinoIcons.arrow_up,
+                                                      ? DjlIcons.stop
+                                                      : DjlIcons.arrowUp,
                                                   size: 20,
                                                   color: scheme.surface,
                                                 ),

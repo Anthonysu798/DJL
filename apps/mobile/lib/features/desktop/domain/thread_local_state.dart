@@ -4,6 +4,7 @@ import 'desktop_composer.dart';
 import '../../subagents/domain/subagent_action.dart';
 import '../../guardian/domain/guardian_review.dart';
 import '../../activity/domain/desktop_activity.dart';
+import '../../../l10n/l10n.dart';
 
 RemoteJson normalizeThread(RemoteJson value) {
   final result = Map<String, dynamic>.from(value),
@@ -51,7 +52,7 @@ String threadTitle(RemoteJson value) {
       return text.trim();
     }
   }
-  return 'Untitled chat';
+  return appStrings.desktopUntitledChat;
 }
 
 class ThreadLocalState {
@@ -310,7 +311,7 @@ class ThreadLocalState {
   void rename(String id, String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) {
-      throw const FormatException('Enter a chat name.');
+      throw FormatException(appStrings.desktopEnterChatName);
     }
     renames[id] = trimmed;
     final t = find(id);

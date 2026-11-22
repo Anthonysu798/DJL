@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 const desktopImageByteLimit = 12000000;
 
@@ -134,16 +135,14 @@ class DesktopComposerDraft {
     bool plugins = true,
   }) {
     if (images.length > 4) {
-      throw const FormatException('Choose at most four images.');
+      throw FormatException(appStrings.desktopComposerTooManyImages);
     }
     for (final c in contexts) {
       if (c.id.trim().isEmpty ||
           c.name.trim().isEmpty ||
           c.kind != DesktopContextKind.skill &&
               c.path?.trim().isNotEmpty != true) {
-        throw const FormatException(
-          'A selected context is incomplete. Remove it and select it again.',
-        );
+        throw FormatException(appStrings.desktopContextIncomplete);
       }
     }
     final lower = text.toLowerCase();

@@ -133,7 +133,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                 scopesRoute: true,
                 explicitChildNodes: true,
                 namesRoute: true,
-                label: 'Switch device',
+                label: context.l10n.pairingSwitchDevice,
                 child: DjlGlassSurface(
                   radius: 34,
                   useNativeView: nativeGlass,
@@ -174,7 +174,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                             child: Semantics(
                               header: true,
                               child: Text(
-                                'Switch to',
+                                context.l10n.pairingSwitchTo,
                                 style: body.copyWith(
                                   fontSize: 13,
                                   height: 16 / 13,
@@ -214,7 +214,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                                   opacity: 1,
                                                 ),
                                                 child: Icon(
-                                                  Icons.check,
+                                                  DjlIcons.check,
                                                   size: 14,
                                                   color:
                                                       colors.onSurfaceVariant,
@@ -306,26 +306,28 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
     final switching = desktop.switchingDevice?.pairing;
     if (switching?.macDeviceId == pair.macDeviceId &&
         switching?.publicKey == pair.publicKey) {
-      return 'Switching…';
+      return context.l10n.pairingStatusSwitching;
     }
     if (desktop.isActiveDevice(pair)) {
-      return desktop.connected ? 'Connected' : 'Selected';
+      return desktop.connected
+          ? context.l10n.pairingStatusConnected
+          : context.l10n.pairingStatusSelected;
     }
     final previous = desktop.previousDevice;
     return previous?.macDeviceId == pair.macDeviceId &&
             previous?.publicKey == pair.publicKey
-        ? 'Previous'
-        : 'Saved';
+        ? context.l10n.pairingStatusPrevious
+        : context.l10n.pairingStatusSaved;
   }
 
-  DateTime? _activityDate(Pairing pair) => _status(pair) == 'Switching…'
+  DateTime? _activityDate(Pairing pair) =>
+      _status(pair) == context.l10n.pairingStatusSwitching
       ? null
       : widget.desktop.devicePreferences(pair)?.lastActivityAt;
 
+  // Sheets are the page colour, so grouped rows take the raised fill.
   Color _groupColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-      ? Theme.of(context).colorScheme.surfaceContainerHigh
-      : Theme.of(context).colorScheme.surface;
+      Theme.of(context).colorScheme.surfaceContainerLow;
 
   Widget _avatar(Pairing pair) => SizedBox.square(
     dimension: 36,
@@ -358,7 +360,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
               height: 10,
               key: const Key('connected_device_dot'),
               decoration: BoxDecoration(
-                color: CupertinoColors.systemGreen.resolveFrom(context),
+                color: DjlColors.of(context).ink,
                 shape: BoxShape.circle,
                 border: Border.all(color: _groupColor(context), width: 2),
               ),
@@ -410,7 +412,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
           onPressed: () => Navigator.pop(context, value),
           style: TextButton.styleFrom(
             foregroundColor: value
-                ? CupertinoColors.systemRed.resolveFrom(context)
+                ? DjlColors.of(context).danger
                 : colors.onSurface,
             backgroundColor: colors.onSurface.withValues(
               alpha: theme.brightness == Brightness.dark ? .10 : .14,
@@ -424,7 +426,10 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
           child: Text(label),
         );
         final stacked =
-            math.max(actionWidth('Cancel'), actionWidth('Forget')) >
+            math.max(
+              actionWidth(context.l10n.commonCancel),
+              actionWidth(context.l10n.pairingForget),
+            ) >
             (width - 40) / 2;
         final dialog = Dialog(
           semanticsRole: SemanticsRole.alertDialog,
@@ -468,11 +473,16 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                         children: [
                           Semantics(
                             header: true,
-                            child: Text('Forget this device?', style: style),
+                            child: Text(
+                              context.l10n.pairingForgetDeviceTitle,
+                              style: style,
+                            ),
                           ),
                           const SizedBox(height: 7.333),
                           Text(
-                            '${widget.desktop.deviceName(pair)} will be removed from this phone. Scan its QR code again to reconnect.',
+                            context.l10n.pairingForgetDeviceBody(
+                              widget.desktop.deviceName(pair),
+                            ),
                             style: style.copyWith(
                               fontSize: 15,
                               fontWeight: FontWeight.w400,
@@ -492,16 +502,20 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              action('Cancel', false),
+                              action(context.l10n.commonCancel, false),
                               const SizedBox(height: 8),
-                              action('Forget', true),
+                              action(context.l10n.pairingForget, true),
                             ],
                           )
                         : Row(
                             children: [
-                              Expanded(child: action('Cancel', false)),
+                              Expanded(
+                                child: action(context.l10n.commonCancel, false),
+                              ),
                               const SizedBox(width: 8),
-                              Expanded(child: action('Forget', true)),
+                              Expanded(
+                                child: action(context.l10n.pairingForget, true),
+                              ),
                             ],
                           ),
                   ),
@@ -598,7 +612,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                     vertical: 2,
                   ),
                   child: Text(
-                    'Active',
+                    context.l10n.pairingActiveBadge,
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -623,7 +637,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
             ? null
             : desktop.devicePreferencesReady && preferences != null
             ? Semantics(
-                label: 'Show ${_name(pair)} in device menu',
+                label: context.l10n.pairingShowInMenu(_name(pair)),
                 child: KeyedSubtree(
                   key: ValueKey(preferences.trustId),
                   child: Transform.translate(
@@ -642,9 +656,9 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                   ),
                 ),
               )
-            : const Tooltip(
-                message: 'Menu visibility unavailable',
-                child: Icon(Icons.error_outline, size: 18),
+            : Tooltip(
+                message: context.l10n.pairingMenuVisibilityUnavailable,
+                child: Icon(DjlIcons.error, size: 18),
               ),
       ),
     );
@@ -663,7 +677,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
   Widget _header(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final title = Text(
-      'Connections',
+      context.l10n.pairingConnections,
       textAlign: TextAlign.center,
       style: settingsTextStyle(
         context,
@@ -683,16 +697,14 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
             foregroundColor: colors.onSurfaceVariant,
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? colors.surfaceContainerHigh
-                : colors.surface,
+            backgroundColor: colors.surfaceContainerLow,
             minimumSize: const Size(0, 36),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             textStyle: settingsTextStyle(context, 17),
             shape: const StadiumBorder(),
           ),
-          child: const Text('Close'),
+          child: Text(context.l10n.pairingClose),
         ),
       ),
     );
@@ -782,7 +794,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                           child: Text(
-                            'Active device',
+                            context.l10n.pairingActiveDevice,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   fontSize: 11,
@@ -800,8 +812,10 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                             button: true,
                             enabled: canChoose,
                             label: menu.any(desktop.isActiveDevice)
-                                ? 'Active device, ${_name(desktop.active!)}'
-                                : 'Choose a saved Mac',
+                                ? context.l10n.pairingActiveDeviceNamed(
+                                    _name(desktop.active!),
+                                  )
+                                : context.l10n.pairingChooseSavedMac,
                             value: menu.any(desktop.isActiveDevice)
                                 ? _status(desktop.active!)
                                 : null,
@@ -817,7 +831,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                               title: Text(
                                 menu.any(desktop.isActiveDevice)
                                     ? _name(desktop.active!)
-                                    : 'Choose a saved Mac',
+                                    : context.l10n.pairingChooseSavedMac,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -836,8 +850,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                       width: 6,
                                       height: 6,
                                       decoration: BoxDecoration(
-                                        color: CupertinoColors.systemGreen
-                                            .resolveFrom(context),
+                                        color: DjlColors.of(context).ink,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -847,15 +860,16 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                     child: DeviceRecencyText(
                                       status: menu.any(desktop.isActiveDevice)
                                           ? _status(desktop.active!)
-                                          : '${menu.length} devices in menu',
+                                          : context.l10n.pairingDevicesInMenu(
+                                              menu.length,
+                                            ),
                                       date: menu.any(desktop.isActiveDevice)
                                           ? _activityDate(desktop.active!)
                                           : null,
                                       statusColor:
                                           desktop.connected &&
                                               menu.any(desktop.isActiveDevice)
-                                          ? CupertinoColors.systemGreen
-                                                .resolveFrom(context)
+                                          ? DjlColors.of(context).ink
                                           : null,
                                       style: TextStyle(
                                         fontSize: 11,
@@ -867,7 +881,10 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                                   ),
                                 ],
                               ),
-                              trailing: const Icon(Icons.unfold_more, size: 18),
+                              trailing: const Icon(
+                                DjlIcons.expandVertical,
+                                size: 18,
+                              ),
                               onTap: canChoose ? _chooseDevice : null,
                             ),
                           ),
@@ -876,7 +893,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                         child: Text(
-                          'Devices',
+                          context.l10n.pairingDevices,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 fontSize: 11,
@@ -891,7 +908,7 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                           Padding(
                             padding: const EdgeInsets.all(16),
                             child: Text(
-                              'No paired devices yet.',
+                              context.l10n.pairingNoDevices,
                               style: TextStyle(
                                 color: Theme.of(
                                   context,
@@ -939,9 +956,9 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                           iconColor: Theme.of(context).colorScheme.onSurface,
                           leading: const SizedBox(
                             width: 22,
-                            child: Icon(Icons.qr_code_scanner, size: 16),
+                            child: Icon(DjlIcons.scan, size: 16),
                           ),
-                          title: const Text('Scan QR Code'),
+                          title: Text(context.l10n.pairingScanQrCode),
                           onTap: canAdd
                               ? () {
                                   desktop.pauseForManualPairing();
@@ -968,9 +985,9 @@ class _ConnectionsSheetState extends State<_ConnectionsSheet> {
                           iconColor: Theme.of(context).colorScheme.onSurface,
                           leading: const SizedBox(
                             width: 22,
-                            child: Icon(Icons.keyboard_outlined, size: 16),
+                            child: Icon(DjlIcons.keyboard, size: 16),
                           ),
-                          title: const Text('Pair with Code'),
+                          title: Text(context.l10n.pairingPairWithCode),
                           onTap: canAdd
                               ? () {
                                   desktop.pauseForManualPairing();
@@ -1059,8 +1076,8 @@ class _ConnectionSwipeRowState extends State<_ConnectionSwipeRow> {
           child: IconButton(
             tooltip: label,
             onPressed: callback == null ? null : () => _action(callback),
-            color: Colors.white,
-            disabledColor: Colors.white54,
+            color: DjlColors.of(context).onInk,
+            disabledColor: DjlColors.of(context).onInk.withValues(alpha: .54),
             icon: Icon(icon, size: 21),
           ),
         ),
@@ -1069,13 +1086,13 @@ class _ConnectionSwipeRowState extends State<_ConnectionSwipeRow> {
     return Semantics(
       customSemanticsActions: {
         if (widget.enabled && widget.onScan != null)
-          const CustomSemanticsAction(label: 'Scan QR'): () =>
+          CustomSemanticsAction(label: context.l10n.pairingScanQr): () =>
               _action(widget.onScan),
         if (widget.enabled && widget.onCode != null)
-          const CustomSemanticsAction(label: 'Pair with Code'): () =>
+          CustomSemanticsAction(label: context.l10n.pairingPairWithCode): () =>
               _action(widget.onCode),
         if (widget.enabled && widget.onForget != null)
-          const CustomSemanticsAction(label: 'Forget desktop'): () =>
+          CustomSemanticsAction(label: context.l10n.pairingForgetDesktop): () =>
               _action(widget.onForget),
       },
       child: ClipRect(
@@ -1088,21 +1105,21 @@ class _ConnectionSwipeRowState extends State<_ConnectionSwipeRow> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     action(
-                      'Scan QR',
-                      Icons.qr_code_scanner,
-                      const Color(0xff007aff),
+                      context.l10n.pairingScanQr,
+                      DjlIcons.scan,
+                      DjlColors.of(context).ink,
                       widget.onScan,
                     ),
                     action(
-                      'Pair with Code',
-                      Icons.keyboard_outlined,
-                      const Color(0xff8e8e93),
+                      context.l10n.pairingPairWithCode,
+                      DjlIcons.keyboard,
+                      DjlColors.of(context).inkMuted,
                       widget.onCode,
                     ),
                     action(
-                      'Forget desktop',
-                      Icons.delete_outline,
-                      const Color(0xffff3b30),
+                      context.l10n.pairingForgetDesktop,
+                      DjlIcons.delete,
+                      DjlColors.of(context).danger,
                       widget.onForget,
                     ),
                   ],
@@ -1211,7 +1228,7 @@ class _PairingSheetHeader extends StatelessWidget {
         foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
         shape: const StadiumBorder(),
       ),
-      child: const Text('Close'),
+      child: Text(context.l10n.pairingClose),
     );
     // At large text the leading pill and full title take separate lines.
     return Padding(

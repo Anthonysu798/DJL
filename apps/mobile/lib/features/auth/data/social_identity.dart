@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import '../../../l10n/l10n.dart';
 
 enum SocialProvider { apple, google }
 
@@ -20,8 +21,8 @@ class SocialIdentityFailure implements Exception {
   final bool configuration;
   @override
   String toString() => configuration
-      ? 'Sign-in is not configured for this app. Continue with email.'
-      : 'Could not open sign-in. Try again.';
+      ? appStrings.authSocialNotConfigured
+      : appStrings.authSocialOpenFailed;
 }
 
 abstract interface class SocialIdentitySource {

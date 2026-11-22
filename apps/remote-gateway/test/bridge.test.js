@@ -1968,6 +1968,34 @@ test("sanitizeLiveUserNotification filters fallback context and rewrites visible
   ]);
 });
 
+test("sanitizeLiveUserNotification keeps a files-only DJL group message", () => {
+  const attachments = [
+    { type: "image", id: "img-1", name: "a.png", mimeType: "image/png", sizeBytes: 3 },
+  ];
+  const filesOnly = {
+    method: "codex/event/user_message",
+    params: { threadId: "t", itemId: "m", message: "", attachments },
+  };
+  assert.equal(sanitizeLiveUserNotification(filesOnly), filesOnly);
+  const hidden = sanitizeLiveUserNotification({
+    method: "codex/event/user_message",
+    params: {
+      threadId: "t",
+      message: "<environment_context>secret</environment_context>",
+      attachments,
+    },
+  });
+  assert.equal(hidden.params.message, "");
+  assert.deepEqual(hidden.params.attachments, attachments);
+  assert.equal(
+    sanitizeLiveUserNotification({
+      method: "codex/event/user_message",
+      params: { threadId: "t", message: "", attachments: [] },
+    }),
+    null,
+  );
+});
+
 test("sanitizeThreadHistoryImagesForRelay drops injected context user items from history", () => {
   const rawMessage = JSON.stringify({
     id: "req-thread-context",

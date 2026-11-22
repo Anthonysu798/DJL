@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import 'djl_glass.dart';
 
 Future<T?> showDjlContextMenu<T>(
@@ -95,7 +96,7 @@ Future<T?> showDjlContextMenu<T>(
                     role: SemanticsRole.menu,
                     scopesRoute: true,
                     explicitChildNodes: true,
-                    label: 'Chat actions',
+                    label: context.l10n.coreChatActions,
                     child: actions(context),
                   ),
                 ),

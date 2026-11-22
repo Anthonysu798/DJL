@@ -3,6 +3,7 @@ import 'package:djl_mobile/features/desktop/domain/desktop_attention.dart';
 import 'package:djl_mobile/features/desktop/domain/thread_local_state.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'desktop_attention_projection_test.dart' show approval, question;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_reasoning_controller_test.dart'
     show ReasoningTransport, reasoningDesktop, reasoningEvent;
 

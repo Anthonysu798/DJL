@@ -4,6 +4,8 @@ import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/git/domain/repository_diff.dart';
 import 'package:djl_mobile/features/git/presentation/repository_diff_sheet.dart';
 
+import 'package:djl_mobile/core/design/djl_icons.dart';
+
 const patch = '''diff --git a/src/qa.dart b/src/qa.dart
 --- a/src/qa.dart
 +++ b/src/qa.dart
@@ -68,7 +70,7 @@ void main() {
         .first;
     final right = tester.getRect(file).right;
     expect(
-      tester.getRect(find.byIcon(Icons.north_east)).right,
+      tester.getRect(find.byIcon(DjlIcons.arrowUpRight)).right,
       closeTo(right - 12, .5),
     );
   });

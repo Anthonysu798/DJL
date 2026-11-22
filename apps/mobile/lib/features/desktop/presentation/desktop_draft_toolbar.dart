@@ -1,8 +1,13 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../git/domain/git_models.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopDraftActions extends StatelessWidget {
   const DesktopDraftActions({
@@ -28,25 +33,25 @@ class DesktopDraftActions extends StatelessWidget {
       onGit: onGit,
       gitStatus: gitStatus,
       gitBusy: gitBusy,
-      threadActions: PopupMenuButton<String>(
-        tooltip: 'Thread actions',
+      threadActions: DjlGlassMenuButton<String>(
+        tooltip: context.l10n.chatUiThreadActions,
         enabled: onGitTools != null,
         onSelected: (_) => onGitTools?.call(),
         itemBuilder: (_) => [
           PopupMenuItem(
             value: 'git-tools',
             enabled: onGitTools != null,
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.account_tree_outlined, size: 24),
-                SizedBox(width: 12),
-                Flexible(child: Text('Branches & worktrees')),
+                const Icon(DjlIcons.branch, size: 24),
+                const SizedBox(width: 12),
+                Flexible(child: Text(context.l10n.chatUiBranchesAndWorktrees)),
               ],
             ),
           ),
         ],
         icon: Icon(
-          Icons.more_horiz,
+          DjlIcons.more,
           size: 24,
           color: onGitTools == null ? color.withValues(alpha: .45) : color,
         ),
@@ -76,10 +81,10 @@ class DesktopToolbarActions extends StatelessWidget {
     final color = Theme.of(context).colorScheme.onSurface;
     final enabled = onGit != null && !gitBusy;
     final statusColor = switch (gitStatus?.state) {
-      'not_initialized' => CupertinoColors.systemOrange.resolveFrom(context),
+      'not_initialized' => DjlColors.of(context).ink,
       'behind_only' ||
       'diverged' ||
-      'dirty_and_behind' => CupertinoColors.systemGrey2.resolveFrom(context),
+      'dirty_and_behind' => DjlColors.of(context).inkFaint,
       _ => null,
     };
     return Padding(
@@ -109,14 +114,14 @@ class DesktopToolbarActions extends StatelessWidget {
                       clipBehavior: Clip.none,
                       children: [
                         IconButton(
-                          tooltip: 'Git actions',
+                          tooltip: context.l10n.chatUiGitActions,
                           onPressed: enabled
                               ? () => onGit!(buttonContext)
                               : null,
                           icon: Semantics(
-                            label: 'Git actions',
+                            label: context.l10n.chatUiGitActions,
                             value: gitBusy
-                                ? 'Working…'
+                                ? context.l10n.chatUiWorking
                                 : gitToolbarStatusLabel(gitStatus),
                             child: SvgPicture.asset(
                               'assets/icons/command/${gitStatus?.state == 'not_initialized' ? 'central-circle-plus' : 'git-commit'}.svg',

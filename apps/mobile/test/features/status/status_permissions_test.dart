@@ -95,8 +95,8 @@ void main() {
         StatusPermissionState.allowed,
       );
       final nativeBefore = surface.calls.length;
-      await tester.ensureVisible(find.text('Enable task status'));
-      await tester.tap(find.text('Enable task status'));
+      await tester.ensureVisible(find.text('Turn on'));
+      await tester.tap(find.text('Turn on'));
       await tester.pumpAndSettle();
       expect(surface.permissions.requests, 1);
       expect(surface.calls.skip(nativeBefore).first.$1, 'end');
@@ -169,7 +169,7 @@ void main() {
       expect(backend.requests, 0);
       expect(retries, 0);
       backend.value = const StatusPermission(StatusPermissionState.allowed);
-      await tester.tap(find.text('Enable task status'));
+      await tester.tap(find.text('Turn on'));
       await tester.pumpAndSettle();
       expect(backend.requests, 1);
       expect(retries, 1);
@@ -197,11 +197,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Enable task status'));
+      await tester.tap(find.text('Turn on'));
       await tester.pumpAndSettle();
       expect(retries, 0);
       expect(backend.requests, 1);
-      await tester.tap(find.text('System settings'));
+      await tester.tap(find.text('Open Settings'));
       await tester.pumpAndSettle();
       expect(backend.settings, 1);
       backend.value = const StatusPermission(StatusPermissionState.allowed);
@@ -237,7 +237,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('System settings'));
+      await tester.tap(find.text('Open Settings'));
       await tester.pumpAndSettle();
       backend.value = const StatusPermission(
         StatusPermissionState.denied,

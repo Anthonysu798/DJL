@@ -1,4 +1,5 @@
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopPlanQuestionnaire {
   const DesktopPlanQuestionnaire({
@@ -39,9 +40,9 @@ class DesktopPlanQuestionnaire {
             questions: [
               _question(
                 'inferred_plan_next_step',
-                'What should Codex produce next?',
+                appStrings.plansNextStepQuestion,
                 options,
-                header: 'Next step',
+                header: appStrings.plansNextStepHeader,
               ),
             ],
           );

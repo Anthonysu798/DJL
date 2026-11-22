@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import '../../../app/desktop_deep_link.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../../core/platform/native_text_search.dart';
@@ -13,6 +12,9 @@ import '../domain/desktop_attention.dart';
 import 'desktop_attention_page.dart';
 import 'desktop_controller.dart';
 import 'desktop_thread_pin_menu.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 // Match the wire parser used by CodexThread: seconds, ms, us, ns or ISO-8601.
 double? _timestamp(Object? value) {
@@ -284,10 +286,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
               children: [
                 SizedBox(
                   width: 26,
-                  child: Icon(
-                    pinned ? CupertinoIcons.pin : CupertinoIcons.bubble_left,
-                    size: 18,
-                  ),
+                  child: Icon(pinned ? DjlIcons.pin : DjlIcons.chat, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -489,53 +488,50 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         children: [
+                          if (widget.onCloud case final onCloud?)
+                            _destination(
+                              context.l10n.chatUiNavCloudChat,
+                              DjlIcons.cloud,
+                              () {
+                                if (current()) onCloud();
+                              },
+                            ),
                           _destination(
-                            'Cloud chat',
-                            CupertinoIcons.cloud,
-                            widget.onCloud == null
-                                ? null
-                                : () {
-                                    if (current()) widget.onCloud!();
-                                  },
-                          ),
-                          _destination(
-                            'Remote',
-                            CupertinoIcons.device_laptop,
+                            context.l10n.chatUiNavRemote,
+                            DjlIcons.desktop,
                             () {
                               if (current()) widget.onRemote();
                             },
                             selected: widget.remoteSelected,
-                            trailing: CupertinoIcons.arrow_up_right,
+                            trailing: DjlIcons.arrowUpRight,
                           ),
                           _destination(
-                            'Attention',
-                            CupertinoIcons.tray,
+                            context.l10n.chatUiAttentionTitle,
+                            DjlIcons.attention,
                             () => unawaited(openAttention()),
                             count: attention.length,
                           ),
                           if (_search.text.isNotEmpty && snapshot.hasError) ...[
-                            empty('Could not search chats.'),
+                            empty(context.l10n.chatUiNavSearchFailed),
                             TextButton(
                               onPressed: () =>
                                   setState(() => _matchQuery = null),
-                              child: const Text('Retry search'),
+                              child: Text(context.l10n.chatUiNavRetrySearch),
                             ),
                           ] else if (_search.text.isNotEmpty &&
                               snapshot.connectionState != ConnectionState.done)
-                            empty('Searching chats…')
+                            empty(context.l10n.chatUiNavSearching)
                           else ...[
-                            section('Pinned'),
+                            section(context.l10n.chatUiNavPinned),
                             if (pinned.isEmpty)
-                              empty(
-                                'Keep favorite chats close.\nTouch and hold a chat to pin it.',
-                              ),
+                              empty(context.l10n.chatUiNavPinnedEmpty),
                             for (final thread in pinned) row(thread, true),
-                            section('Recent chats'),
+                            section(context.l10n.chatUiNavRecent),
                             if (recent.isEmpty)
                               empty(
                                 _search.text.isEmpty
-                                    ? 'Your chats will appear here.'
-                                    : 'No matching chats',
+                                    ? context.l10n.chatUiNavRecentEmpty
+                                    : context.l10n.chatUiNoMatchingChats,
                               ),
                             for (final thread in recent) row(thread, false),
                           ],
@@ -612,16 +608,14 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                                 height: 44,
                               ),
                               tooltip: _showsSearch
-                                  ? 'Close search'
-                                  : 'Search chats',
+                                  ? context.l10n.chatUiCloseSearch
+                                  : context.l10n.chatUiSearchChats,
                               onPressed: () => setState(() {
                                 _showsSearch = !_showsSearch;
                                 if (!_showsSearch) _search.clear();
                               }),
                               icon: Icon(
-                                _showsSearch
-                                    ? CupertinoIcons.xmark
-                                    : CupertinoIcons.search,
+                                _showsSearch ? DjlIcons.close : DjlIcons.search,
                                 size: 19,
                               ),
                             ),
@@ -641,7 +635,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                           style: const TextStyle(fontSize: 17),
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                            hintText: 'Search chats',
+                            hintText: context.l10n.chatUiSearchChats,
                             contentPadding: const EdgeInsets.all(12),
                             filled: true,
                             fillColor: scheme.surfaceContainerLow,
@@ -693,13 +687,10 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                                   }
                                 }
                               : null,
-                          icon: const Icon(
-                            CupertinoIcons.square_pencil,
-                            size: 20,
-                          ),
-                          label: const Text(
-                            'Chat',
-                            semanticsLabel: 'New chat',
+                          icon: const Icon(DjlIcons.compose, size: 20),
+                          label: Text(
+                            context.l10n.chatUiChatButton,
+                            semanticsLabel: context.l10n.chatUiNewChat,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -709,13 +700,13 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                         radius: 25,
                         child: IconButton(
                           style: neutralControlStyle,
-                          tooltip: 'Settings',
+                          tooltip: context.l10n.chatUiSettings,
                           constraints: const BoxConstraints.tightFor(
                             width: 50,
                             height: 50,
                           ),
                           onPressed: widget.onSettings,
-                          icon: const Icon(CupertinoIcons.gear_alt, size: 22),
+                          icon: const Icon(DjlIcons.settings, size: 22),
                         ),
                       ),
                     ],
@@ -737,7 +728,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
     IconData? trailing,
     int count = 0,
   }) {
-    final cloud = icon == CupertinoIcons.cloud;
+    final cloud = icon == DjlIcons.cloud;
     final scaler = MediaQuery.textScalerOf(context);
     final tracking =
         DjlAppearance.of(context).font == AppFontStyle.system &&
@@ -774,23 +765,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                   children: [
                     SizedBox(
                       width: cloud ? scaler.scale(23) : 26,
-                      child: icon == CupertinoIcons.device_laptop
-                          ? SizedBox(
-                              height: 22,
-                              child: OverflowBox(
-                                minWidth: 32,
-                                maxWidth: 32,
-                                minHeight: 22,
-                                maxHeight: 22,
-                                child: CustomPaint(
-                                  size: const Size(32, 22),
-                                  painter: _DrawerLaptopPainter(
-                                    Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : glyph,
+                      child: glyph,
                     ),
                     SizedBox(width: cloud ? 8 : 14),
                     Expanded(
@@ -823,43 +798,4 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
       ),
     );
   }
-}
-
-class _DrawerLaptopPainter extends CustomPainter {
-  const _DrawerLaptopPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.translate(
-      (size.width - 31) / 2 + 1 / 6,
-      (size.height - 52 / 3) / 2 + 0.5,
-    );
-    final screen = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(11 / 3, 0, 71 / 3, 52 / 3),
-      const Radius.circular(5 / 3),
-    );
-    final window = screen.deflate(5 / 3);
-    canvas.drawRRect(window, Paint()..color = color.withValues(alpha: .25));
-    canvas.drawPath(
-      Path()
-        ..fillType = PathFillType.evenOdd
-        ..addRRect(screen)
-        ..addRRect(window),
-      Paint()..color = color,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(0, 15, 31, 7 / 3),
-        const Radius.circular(7 / 6),
-      ),
-      Paint()..color = color,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_DrawerLaptopPainter oldDelegate) =>
-      oldDelegate.color != color;
 }

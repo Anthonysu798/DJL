@@ -1,9 +1,11 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import '../../../core/presentation/cloud_chrome.dart';
 import 'package:flutter/material.dart';
 import '../domain/cloud_notification.dart';
 import 'notification_controller.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({
@@ -56,16 +58,16 @@ class _NotificationPageState extends State<NotificationPage> {
               : Padding(
                   padding: const EdgeInsets.only(left: 16, top: 6, bottom: 6),
                   child: CloudNavigationButton(
-                    icon: CupertinoIcons.line_horizontal_3,
-                    label: 'Open navigation',
+                    icon: DjlIcons.menu,
+                    label: context.l10n.settingsOpenNavigation,
                     onPressed: widget.onOpenNavigation!,
                   ),
                 ),
-          title: const Text('Notifications'),
+          title: Text(context.l10n.notificationsTitle),
           actions: [
             TextButton(
               onPressed: c.unreadCount == 0 ? null : () => c.markRead(null),
-              child: const Text('Mark all read'),
+              child: Text(context.l10n.notificationsMarkAllRead),
             ),
           ],
         ),
@@ -80,20 +82,20 @@ class _NotificationPageState extends State<NotificationPage> {
                     title: Text(c.error!),
                     trailing: TextButton(
                       onPressed: c.refresh,
-                      child: const Text('Retry'),
+                      child: Text(context.l10n.settingsRetry),
                     ),
                   ),
                 if (c.items.isEmpty && !c.loading)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
+                  Padding(
+                    padding: const EdgeInsets.all(40),
                     child: Column(
                       children: [
-                        Icon(Icons.notifications_none, size: 40),
-                        SizedBox(height: 16),
-                        Text('You’re all caught up'),
-                        SizedBox(height: 8),
+                        const Icon(DjlIcons.bell, size: 40),
+                        const SizedBox(height: 16),
+                        Text(context.l10n.notificationsCaughtUp),
+                        const SizedBox(height: 8),
                         Text(
-                          'Completed tasks will appear here.',
+                          context.l10n.notificationsEmptyHint,
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -102,25 +104,23 @@ class _NotificationPageState extends State<NotificationPage> {
                 for (final item in c.items)
                   ListTile(
                     leading: Icon(
-                      item.unread
-                          ? Icons.notifications_active_outlined
-                          : Icons.task_alt,
+                      item.unread ? DjlIcons.bellRinging : DjlIcons.checkCircle,
                     ),
                     title: Text(
-                      item.title ?? 'Task complete',
+                      item.title ?? context.l10n.notificationsTaskComplete,
                       style: TextStyle(
                         fontWeight: item.unread ? FontWeight.w600 : null,
                       ),
                     ),
                     subtitle: Text(
-                      '${item.status} · ${MaterialLocalizations.of(context).formatMediumDate(item.finishedAt.toLocal())}',
+                      '${context.l10n.notificationsStatus(item.status)} · ${MaterialLocalizations.of(context).formatMediumDate(item.finishedAt.toLocal())}',
                     ),
                     onTap: () => _open(item),
                   ),
                 if (c.cursor != null)
                   TextButton(
                     onPressed: c.loading ? null : () => c.refresh(more: true),
-                    child: const Text('Load more'),
+                    child: Text(context.l10n.notificationsLoadMore),
                   ),
               ],
             ),

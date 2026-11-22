@@ -1,5 +1,6 @@
 import '../../pairing/data/pairing_repository.dart';
 import 'remote_transport.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopOverviewRepository {
   DesktopOverviewRepository(this.transport) : _mac = transport.macDeviceId;
@@ -8,11 +9,11 @@ class DesktopOverviewRepository {
 
   Future<RemoteJson> _read(String method) async {
     if (!transport.connected || transport.macDeviceId != _mac) {
-      throw StateError('The paired desktop is disconnected or changed.');
+      throw StateError(appStrings.desktopPairedDisconnectedOrChanged);
     }
     final response = await transport.request(method, {});
     if (!transport.connected || transport.macDeviceId != _mac) {
-      throw StateError('The paired desktop changed. Refresh its overview.');
+      throw StateError(appStrings.desktopPairedChangedRefreshOverview);
     }
     return response;
   }

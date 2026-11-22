@@ -5,20 +5,21 @@ import '../domain/appearance.dart';
 import '../domain/runtime_defaults.dart';
 import '../../desktop/domain/desktop_contract.dart';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class SettingsController extends ChangeNotifier {
   SettingsController(this.store);
   final SettingsStore store;
   static const themeKey = 'djl.appearance.mode',
       fontKey = 'codex.appFontStyle',
-      bubbleKey = 'codex.userBubbleColor',
+      languageKey = 'djl.appearance.language',
       glassKey = 'codex.useLiquidGlass',
       lockKey = 'djl.security.biometricLockEnabled',
       inAppAlertsKey = 'djl.notifications.inApp',
       spokenRepliesKey = 'djl.voice.spokenReplies';
   ThemeMode theme = ThemeMode.system;
   AppFontStyle font = AppFontStyle.system;
-  UserBubbleColor bubble = UserBubbleColor.defaultColor;
+  AppLanguage get language => AppLanguage.preference;
   bool lockEnabled = true, ready = false, saving = false, _disposed = false;
   bool inAppAlerts = true, spokenReplies = false;
   bool liquidGlass = true;
@@ -71,8 +72,8 @@ class SettingsController extends ChangeNotifier {
       await load();
       if (!_disposed) {
         error = ready
-            ? 'Some defaults may have been saved in part. Review the reloaded choices and retry.'
-            : 'Defaults may have been saved in part. Could not reload preferences. Retry reading settings first.';
+            ? appStrings.settingsErrorPartialSave
+            : appStrings.settingsErrorPartialReload;
       }
       return false;
     } finally {
@@ -148,12 +149,8 @@ class SettingsController extends ChangeNotifier {
           (values.containsKey('codex.useJetBrainsMono')
               ? AppFontStyle.jetBrainsMono
               : AppFontStyle.system);
-      bubble =
-          UserBubbleColor.values
-              .where((v) => v.storedValue == values[bubbleKey])
-              .firstOrNull ??
-          UserBubbleColor.defaultColor;
       liquidGlass = values[glassKey] is bool ? values[glassKey] as bool : true;
+      AppLanguage.preference = AppLanguage.fromValue(values[languageKey]);
       _runtimeDefaults = RuntimeDefaults.fromPreferences(values);
       lockEnabled = values[lockKey] is bool ? values[lockKey] as bool : true;
       inAppAlerts = values[inAppAlertsKey] is bool
@@ -167,7 +164,7 @@ class SettingsController extends ChangeNotifier {
     } catch (_) {
       if (_disposed) return;
       ready = false;
-      error = 'Could not read saved settings. Retry to keep your preferences.';
+      error = appStrings.settingsErrorRead;
     }
     notifyListeners();
   }
@@ -186,8 +183,7 @@ class SettingsController extends ChangeNotifier {
       }
     } catch (_) {
       if (!_disposed) {
-        error =
-            'Could not save this setting. Your previous choice is unchanged. Try again.';
+        error = appStrings.settingsErrorSave;
       }
     } finally {
       if (!_disposed) {
@@ -205,8 +201,8 @@ class SettingsController extends ChangeNotifier {
       _save(themeKey, value.name, () => theme = value);
   Future<bool> setFont(AppFontStyle value) =>
       _save(fontKey, value.name, () => font = value);
-  Future<bool> setBubble(UserBubbleColor value) =>
-      _save(bubbleKey, value.storedValue, () => bubble = value);
+  Future<bool> setLanguage(AppLanguage value) =>
+      _save(languageKey, value.value, () => AppLanguage.preference = value);
   Future<bool> setLiquidGlass(bool value) =>
       _save(glassKey, value, () => liquidGlass = value);
   Future<bool> setLockEnabled(bool value) =>

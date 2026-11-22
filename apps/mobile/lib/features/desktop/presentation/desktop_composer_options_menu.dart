@@ -2,6 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 import 'package:flutter/material.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../l10n/l10n.dart';
+
 enum DesktopComposerMenuAlignment { leading, center, trailing }
 
 Future<String?> showDesktopComposerMenu({
@@ -64,9 +68,9 @@ class DesktopComposerOptionsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Composer options',
+    tooltip: context.l10n.chatUiComposerOptions,
     padding: EdgeInsets.zero,
-    icon: const Icon(Icons.add, size: 20),
+    icon: const Icon(DjlIcons.add, size: 20),
     style: IconButton.styleFrom(
       minimumSize: const Size(34, 34),
       maximumSize: const Size(34, 34),
@@ -119,17 +123,22 @@ class _ComposerOptionsRoute<T> extends PopupRoute<T> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    return _ComposerOptionsViewport(
-      button: button,
-      overlay: overlay,
-      allowBelow: allowBelow,
-      screenMargin: screenMargin,
-      alignment: alignment,
-      coverAnchor: coverAnchor,
-      child: FadeTransition(
-        opacity: animation,
-        child: Builder(builder: builder),
-      ),
+    return Stack(
+      children: [
+        Positioned.fill(child: DjlMenuBackdrop(animation: animation)),
+        _ComposerOptionsViewport(
+          button: button,
+          overlay: overlay,
+          allowBelow: allowBelow,
+          screenMargin: screenMargin,
+          alignment: alignment,
+          coverAnchor: coverAnchor,
+          child: FadeTransition(
+            opacity: animation,
+            child: Builder(builder: builder),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -137,48 +146,20 @@ class _ComposerOptionsRoute<T> extends PopupRoute<T> {
 Widget _composerMenuBody(
   BuildContext context,
   List<PopupMenuEntry<String>> items,
-) {
-  final theme = Theme.of(context);
-  final popup = PopupMenuTheme.of(context);
-  return Material(
-    type: MaterialType.card,
-    elevation: popup.elevation ?? (theme.useMaterial3 ? 3 : 8),
-    shape:
-        popup.shape ??
-        (theme.useMaterial3
-            ? const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(4)),
-              )
-            : null),
-    color:
-        popup.color ??
-        (theme.useMaterial3 ? theme.colorScheme.surfaceContainer : null),
-    shadowColor:
-        popup.shadowColor ??
-        (theme.useMaterial3 ? theme.colorScheme.shadow : null),
-    surfaceTintColor:
-        popup.surfaceTintColor ??
-        (theme.useMaterial3 ? Colors.transparent : null),
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 220, maxWidth: 320),
-      child: IntrinsicWidth(
-        stepWidth: 56,
-        child: Semantics(
-          role: SemanticsRole.menu,
-          scopesRoute: true,
-          namesRoute: true,
-          explicitChildNodes: true,
-          label: MaterialLocalizations.of(context).popupMenuLabel,
-          child: SingleChildScrollView(
-            padding:
-                popup.menuPadding ?? const EdgeInsets.symmetric(vertical: 8),
-            child: ListBody(children: items),
-          ),
-        ),
-      ),
+) => ConstrainedBox(
+  constraints: const BoxConstraints(minWidth: 220, maxWidth: 320),
+  child: IntrinsicWidth(
+    stepWidth: 56,
+    child: Semantics(
+      role: SemanticsRole.menu,
+      scopesRoute: true,
+      namesRoute: true,
+      explicitChildNodes: true,
+      label: MaterialLocalizations.of(context).popupMenuLabel,
+      child: DjlGlassMenuSurface(child: ListBody(children: items)),
     ),
-  );
-}
+  ),
+);
 
 class _ComposerOptionsViewport extends StatefulWidget {
   const _ComposerOptionsViewport({

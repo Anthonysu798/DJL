@@ -27,7 +27,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
   }
 
   String? get _relayError {
-    if (widget.relay.trim().isEmpty) return 'A relay URL is required.';
+    if (widget.relay.trim().isEmpty) return context.l10n.pairingRelayRequired;
     try {
       var uri = Uri.parse(widget.relay.trim());
       if (uri.scheme == 'https' || uri.scheme == 'http') {
@@ -116,7 +116,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                     child: Padding(
                       padding: const EdgeInsets.all(11),
                       child: Icon(
-                        CupertinoIcons.device_laptop,
+                        DjlIcons.laptop,
                         color: scheme.onSurface,
                         size: 22,
                       ),
@@ -127,7 +127,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                 Semantics(
                   header: true,
                   child: Text(
-                    'Enter one-time code',
+                    context.l10n.pairingEnterOneTimeCode,
                     style: theme.textTheme.headlineMedium!.copyWith(
                       fontSize: 23,
                       height: 1.15,
@@ -135,10 +135,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Find your code in DJL Desktop under Settings → Remote.',
-                  style: secondary,
-                ),
+                Text(context.l10n.pairingFindCodeHint, style: secondary),
                 const SizedBox(height: 22),
                 MergeSemantics(
                   child: TextField(
@@ -154,7 +151,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                       letterSpacing: .7,
                     ),
                     decoration: InputDecoration(
-                      label: const Text('Pairing code'),
+                      label: Text(context.l10n.pairingCodeLabel),
                       floatingLabelBehavior: FloatingLabelBehavior.always,
                       hintText: 'ABCD-EF2345',
                       filled: true,
@@ -182,14 +179,14 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      relayError ?? 'Relay configured',
+                      relayError ?? context.l10n.pairingRelayConfigured,
                       style: secondary.copyWith(fontSize: 13),
                     ),
                     TextButton(
                       onPressed: enabled
                           ? () => Navigator.pop(context, 'relay')
                           : null,
-                      child: const Text('Relay settings'),
+                      child: Text(context.l10n.pairingRelaySettings),
                     ),
                   ],
                 ),
@@ -199,7 +196,9 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                     child: Semantics(
                       liveRegion: true,
                       child: Text(
-                        desktop.busy ? 'Pairing…' : pairingError!,
+                        desktop.busy
+                            ? context.l10n.pairingInProgress
+                            : pairingError!,
                         style: secondary.copyWith(
                           color: desktop.busy
                               ? scheme.onSurfaceVariant
@@ -219,7 +218,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(context.l10n.commonCancel),
                     ),
                     FilledButton(
                       style: FilledButton.styleFrom(
@@ -232,7 +231,7 @@ class _PairingCodeDialogState extends State<_PairingCodeDialog> {
                           : null,
                       child: desktop.busy && !reducedMotion
                           ? const CupertinoActivityIndicator()
-                          : const Text('Pair'),
+                          : Text(context.l10n.pairingPair),
                     ),
                   ],
                 ),
@@ -316,14 +315,12 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
         heightFactor: .94,
         child: Column(
           children: [
-            const _PairingSheetHeader(title: 'Secure pairing details'),
+            _PairingSheetHeader(title: context.l10n.pairingSecureDetailsTitle),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
-                  const Text(
-                    'Open DJL desktop → Settings → Remote. Paste its pairing payload, or configure the relay used by your one-time code.',
-                  ),
+                  Text(context.l10n.pairingSecureDetailsBody),
                   const SizedBox(height: 20),
                   TextField(
                     key: const Key('pairing_payload'),
@@ -334,9 +331,8 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
                     maxLines: 5,
                     autocorrect: false,
                     decoration: InputDecoration(
-                      fillColor: Theme.of(context).colorScheme.surface,
-                      label: const Text('Paste pairing code'),
-                      hintText: 'RMX1:… or QR JSON',
+                      label: Text(context.l10n.pairingPasteCode),
+                      hintText: context.l10n.pairingPayloadHint,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -344,11 +340,11 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
                     onPressed: widget.desktop.busy || widget.desktop.connected
                         ? null
                         : _submit,
-                    child: const Text('Pair securely'),
+                    child: Text(context.l10n.pairingPairSecurely),
                   ),
                   if (widget.desktop.busy) ...[
                     const LinearProgressIndicator(),
-                    Text(widget.desktop.state),
+                    Text(connectionStateLabel(context, widget.desktop.state)),
                   ],
                   if (_error != null || widget.desktop.error != null)
                     Padding(
@@ -370,8 +366,7 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
                     onChanged: widget.onRelayChanged,
                     enabled: !widget.desktop.busy && !widget.desktop.connected,
                     decoration: InputDecoration(
-                      fillColor: Theme.of(context).colorScheme.surface,
-                      label: const Text('Desktop relay URL'),
+                      label: Text(context.l10n.pairingRelayUrlLabel),
                       hintText: 'wss://your-relay/relay',
                     ),
                     keyboardType: TextInputType.url,
@@ -388,3 +383,7 @@ class _SecurePairingSheetState extends State<_SecurePairingSheet> {
     ),
   );
 }
+
+/// The controller's connection state in the reader's language.
+String connectionStateLabel(BuildContext context, String state) => context.l10n
+    .pairingStateLabel(state == 'desktop offline' ? 'offline' : state);

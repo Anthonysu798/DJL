@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 type Json=Record<string,any>;
-export function createRuntimeFixture(root:string,send:(rpc:Json)=>void,options:{presentationScreenshotPath?:string,workingDirectoryScope?:(cwd:string)=>void,legacyTurnRecovery?:boolean,rejectCollaborationMode?:boolean}={}){
+export function createRuntimeFixture(root:string,send:(rpc:Json)=>void,options:{presentationScreenshotPath?:string,workingDirectoryScope?:(cwd:string)=>void,legacyTurnRecovery?:boolean,rejectCollaborationMode?:boolean,groups?:boolean}={}){
   const threads=new Map<string,Json>();
   const goals=new Map<string,Json>();
   let renameCount=0,archiveCount=0,forkCount=0,turnStartCount=0,acceptedInterruptCount=0;
@@ -232,7 +232,7 @@ export function createRuntimeFixture(root:string,send:(rpc:Json)=>void,options:{
           const now=Math.floor(Date.now()/1000);
           reply(rpc,{rateLimitsByLimitId:{codex:{limitId:'codex',limitName:'Codex',primary:{usedPercent:25,windowDurationMins:300,resetsAt:now+3600},secondary:{usedPercent:60,windowDurationMins:10080,resetsAt:now+6*86400}}}});return true;
         }
-        case 'initialize':reply(rpc,{capabilities:{djlThreadRuntimeModeSync:true},...(options.legacyTurnRecovery?{userAgent:'codex_cli_rs/0.124.0'}:{})});return true;
+        case 'initialize':reply(rpc,{capabilities:{djlThreadRuntimeModeSync:true,...(options.groups?{djlGroups:true}:{})},...(options.legacyTurnRecovery?{userAgent:'codex_cli_rs/0.124.0'}:{})});return true;
         case 'model/list':reply(rpc,{data:[{id:'codex::qa-model',model:'qa-model',djlProvider:'codex',displayName:'Local test runtime',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'medium'}],defaultReasoningEffort:'medium',supportsFastMode:false},{id:'codex::qa-child-model',model:'qa-child-model',djlProvider:'codex',displayName:'Local child test runtime',supportedReasoningEfforts:[{reasoningEffort:'medium'}],defaultReasoningEffort:'medium',supportsFastMode:false}]});return true;
         case 'skills/list':reply(rpc,{data:[{cwd:root,skills:[{name:'qa-review',path:path.join(root,'QA-SKILL.md'),description:'Disposable native context fixture',enabled:true}]}]});return true;
         case 'plugin/list':reply(rpc,{marketplaces:[{name:'qa-local',plugins:[{name:'qa-tools',installed:true,enabled:true,interface:{displayName:'QA tools',shortDescription:'Disposable native plugin fixture'}}]}]});return true;
