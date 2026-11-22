@@ -245,31 +245,8 @@ jobs:
           OPENCODE_FIXTURE_PACKAGE: ${{ matrix.package }}
           DJL_TEST_OPENCODE_DEPENDENCIES: ${{ runner.temp }}/djl-opencode-config-deps
           OPENCODE_DISABLE_MODELS_FETCH: "true"
-        run: |
-          node --input-type=module <<'NODE'
-          import { spawnSync } from "node:child_process";
-          import { join } from "node:path";
-          import { inspectInstalledOpenCodeProtocol } from "./apps/server/src/provider/openCodeInstalledProtocol.ts";
-          const binary = join(process.env.RUNNER_TEMP, "djl-installed-opencode", "node_modules", process.env.OPENCODE_FIXTURE_PACKAGE, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
-          const protocol = await inspectInstalledOpenCodeProtocol(binary, "1.18.29");
-          if (!protocol.compatible) throw new Error(protocol.compatibilityMessage);
-          for (const [provider, format] of [["ollama", "json"], ["lmstudio", "tagged"], ["deepseek", "dsml"]]) {
-            const result = spawnSync(process.execPath, ["scripts/probe-installed-opencode.ts", binary, "--compatibility", `--provider=${provider}`, `--format=${format}`], { stdio: "inherit" });
-            if (result.error) throw result.error;
-            if (result.status !== 0) process.exit(result.status ?? 1);
-          }
-          for (const flags of [["--native-scope"], ["--no-tools"], ["--native-scope", "--no-tools"]]) {
-            const result = spawnSync(process.execPath, ["scripts/probe-installed-opencode.ts", binary, "--compatibility", ...flags], { stdio: "inherit" });
-            if (result.error) throw result.error;
-            if (result.status !== 0) process.exit(result.status ?? 1);
-          }
-          const integration = spawnSync("bun", ["run", "--cwd", "apps/server", "test", "--", "src/provider/openCodeInstalledAdapter.integration.test.ts", "src/provider/openCodeInstalledMigration.test.ts", "src/harnesses/openCodeCredentialTransfer.test.ts"], {
-            stdio: "inherit",
-            env: { ...process.env, DJL_TEST_OPENCODE_BINARY: binary },
-          });
-          if (integration.error) throw integration.error;
-          if (integration.status !== 0) process.exit(integration.status ?? 1);
-          NODE
+        # Shared with the weekly newest-CLI workflow (agent-cli-compat.yml).
+        run: node apps/server/scripts/check-installed-opencode.ts "$RUNNER_TEMP/djl-installed-opencode" "$OPENCODE_FIXTURE_PACKAGE" 1.18.29
 
   multipost-native:
     name: MultiPost native (${{ matrix.runner }})

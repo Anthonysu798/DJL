@@ -41,6 +41,8 @@ const workflows = readdirSync(workflowDirectory).toSorted();
 if (
   JSON.stringify(workflows) !==
   JSON.stringify([
+    // Weekly newest-CLI compatibility; read-only, never publishes or deploys.
+    "agent-cli-compat.yml",
     "cloud-ci.yml",
     "cloud-deploy-prod.yml",
     "cloud-deploy-staging.yml",
