@@ -1,12 +1,14 @@
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../../core/presentation/djl_glass.dart';
 import '../../settings/domain/runtime_defaults.dart';
 import 'desktop_composer_options_menu.dart';
 import 'desktop_controller.dart';
 import 'desktop_model_catalog_sheet.dart';
 import 'desktop_runtime_labels.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../core/presentation/djl_frosted.dart';
+import '../../../l10n/l10n.dart';
 
 typedef _RuntimeChoice = ({String kind, String value, String? model});
 
@@ -25,8 +27,8 @@ class DesktopRuntimeControl extends StatelessWidget {
     final title = selected == null
         ? desktop.model == null
               ? desktop.isLoadingModels
-                    ? 'Loading…'
-                    : 'Select model'
+                    ? context.l10n.chatUiLoading
+                    : context.l10n.chatUiSelectModel
               : desktopModelName(desktop.model!)
         : desktopModelTitle(selected);
     final words = title
@@ -113,9 +115,14 @@ class DesktopRuntimeControl extends StatelessWidget {
         }
 
         return Tooltip(
-          message: 'Chat controls',
+          message: context.l10n.chatUiChatControls,
           child: Semantics(
-            label: [?provider, title, ?effort, if (fast) 'Fast'].join(', '),
+            label: [
+              ?provider,
+              title,
+              ?effort,
+              if (fast) context.l10n.chatUiSpeedFast,
+            ].join(', '),
             button: true,
             onTap: open,
             excludeSemantics: true,
@@ -246,7 +253,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                 width: 15,
                 child: Opacity(
                   opacity: selected ? 1 : 0,
-                  child: const Icon(CupertinoIcons.check_mark, size: 15),
+                  child: const Icon(DjlIcons.check, size: 15),
                 ),
               ),
               const SizedBox(width: 12),
@@ -279,7 +286,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
               ],
               if (other) ...[
                 const SizedBox(width: 8),
-                const Icon(CupertinoIcons.ellipsis, size: 18),
+                const Icon(DjlIcons.more, size: 18),
               ],
             ],
           ),
@@ -349,9 +356,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
           ),
           const SizedBox(width: 8),
           Icon(
-            _branch == branch
-                ? CupertinoIcons.chevron_down
-                : CupertinoIcons.chevron_forward,
+            _branch == branch ? DjlIcons.chevronDown : DjlIcons.chevronRight,
             size: 14,
           ),
         ],
@@ -369,8 +374,8 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
       final title = desktop.selectedModel == null
           ? selected == null
                 ? desktop.isLoadingModels
-                      ? 'Loading…'
-                      : 'Select model'
+                      ? context.l10n.chatUiLoading
+                      : context.l10n.chatUiSelectModel
                 : desktopModelName(selected)
           : desktopModelTitle(desktop.selectedModel!);
       final efforts = orderedDesktopEfforts(desktop.reasoningEfforts);
@@ -392,22 +397,23 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
         (m) => !featured.any((f) => f['id'] == m['id']),
       );
       final providers = models.any((m) => m['djlProvider'] != null);
-      final speed = desktop.serviceTier == 'fast' && desktop.supportsFastMode
-          ? 'Fast'
-          : 'Normal';
+      final fastSpeed =
+          desktop.serviceTier == 'fast' && desktop.supportsFastMode;
+      final speed = fastSpeed
+          ? context.l10n.chatUiSpeedFast
+          : context.l10n.chatUiSpeedNormal;
       return SizedBox(
         key: const Key('composer.runtime.popover'),
         width: 250,
-        child: DjlGlassSurface(
+        child: DjlFrosted(
           radius: 32,
-          useNativeView: false,
           child: Material(
             type: MaterialType.transparency,
             child: Semantics(
               scopesRoute: true,
               namesRoute: true,
               explicitChildNodes: true,
-              label: 'Chat controls',
+              label: context.l10n.chatUiChatControls,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Column(
@@ -415,15 +421,15 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (!widget.isCurrent())
-                      const Padding(
-                        padding: EdgeInsets.all(20),
+                      Padding(
+                        padding: const EdgeInsets.all(20),
                         child: Text(
-                          'Connection changed. Reopen chat controls.',
+                          context.l10n.chatUiControlsConnectionChanged,
                         ),
                       )
                     else if (_branch == 'model') ...[
                       _parent(
-                        'Model',
+                        context.l10n.chatUiModel,
                         title,
                         '3d-box-top',
                         'model',
@@ -432,20 +438,20 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                       const SizedBox(height: 20),
                       if (desktop.isLoadingModels)
                         _action(
-                          title: 'Loading models…',
+                          title: context.l10n.chatUiLoadingModelsEllipsis,
                           enabled: false,
                           onPressed: () {},
                         )
                       else ...[
                         if (models.isEmpty)
                           _action(
-                            title: 'No models available',
+                            title: context.l10n.chatUiNoModels,
                             enabled: false,
                             onPressed: () {},
                           ),
                         if (others || models.isEmpty)
                           _action(
-                            title: 'Other models…',
+                            title: context.l10n.chatUiOtherModels,
                             key: const Key('runtime.other_models'),
                             other: true,
                             onPressed: () => _choose('catalog', ''),
@@ -463,7 +469,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                     ] else if (_branch == 'speed' &&
                         desktop.supportsFastMode) ...[
                       _parent(
-                        'Speed',
+                        context.l10n.chatUiSpeed,
                         speed,
                         'zap',
                         'speed',
@@ -471,17 +477,17 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                       ),
                       const SizedBox(height: 20),
                       _action(
-                        title: 'Fast',
+                        title: context.l10n.chatUiSpeedFast,
                         key: const Key('runtime.speed.fast'),
-                        selected: speed == 'Fast',
+                        selected: fastSpeed,
                         fast: true,
                         onPressed: () =>
                             _choose('speed', 'fast', model: selected),
                       ),
                       _action(
-                        title: 'Normal',
+                        title: context.l10n.chatUiSpeedNormal,
                         key: const Key('runtime.speed.default'),
-                        selected: speed == 'Normal',
+                        selected: !fastSpeed,
                         onPressed: () =>
                             _choose('speed', 'default', model: selected),
                       ),
@@ -494,7 +500,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                             bottom: 10,
                           ),
                           child: Text(
-                            'Intelligence',
+                            context.l10n.chatUiIntelligence,
                             style: TextStyle(
                               fontSize: 13,
                               height: 1.2,
@@ -524,14 +530,14 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                       ],
                       if (providers)
                         _action(
-                          title: 'Provider & model',
+                          title: context.l10n.chatUiProviderAndModel,
                           icon: '3d-box-top',
                           key: const Key('desktop_runtime_model'),
                           onPressed: () => _choose('catalog', ''),
                         )
                       else
                         _parent(
-                          'Model',
+                          context.l10n.chatUiModel,
                           title,
                           '3d-box-top',
                           'model',
@@ -539,7 +545,7 @@ class _RuntimePopoverState extends State<_RuntimePopover> {
                         ),
                       if (desktop.supportsFastMode)
                         _parent(
-                          'Speed',
+                          context.l10n.chatUiSpeed,
                           speed,
                           'zap',
                           'speed',

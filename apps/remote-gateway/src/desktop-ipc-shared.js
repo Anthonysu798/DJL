@@ -281,7 +281,9 @@ function sanitizeUserRoleItem(item) {
   const hasDirectText = ["text", "message"].some(
     (key) => typeof sanitized[key] === "string" && sanitized[key].trim(),
   );
-  if (Array.isArray(sanitized.content) && !hasContent && !hasDirectText) {
+  // A DJL group message may be only files, carried beside `content`.
+  const hasAttachments = Array.isArray(item.attachments) && item.attachments.length > 0;
+  if (Array.isArray(sanitized.content) && !hasContent && !hasDirectText && !hasAttachments) {
     return null;
   }
 

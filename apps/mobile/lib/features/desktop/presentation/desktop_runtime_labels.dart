@@ -1,4 +1,5 @@
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 String desktopModelName(String identifier, {String? fallback}) {
   final name = identifier.trim();
@@ -56,7 +57,16 @@ List<RemoteJson> orderedDesktopModels(List<RemoteJson> models) {
   });
 }
 
-String desktopReasoningTitle(String effort) {
+String desktopReasoningTitle(String effort) =>
+    switch (_reasoningLevel(effort)) {
+      'Low' => appStrings.chatUiEffortLow,
+      'Medium' => appStrings.chatUiEffortMedium,
+      'High' => appStrings.chatUiEffortHigh,
+      'Extra High' => appStrings.chatUiEffortExtraHigh,
+      final other => other,
+    };
+
+String _reasoningLevel(String effort) {
   final normalized = effort.trim().toLowerCase();
   return switch (normalized) {
     'minimal' || 'low' => 'Low',
@@ -82,7 +92,7 @@ String desktopReasoningTitle(String effort) {
 List<String> orderedDesktopEfforts(List<String> efforts) {
   const rank = {'Low': 0, 'Medium': 1, 'High': 2, 'Exceptional': 3};
   return List<String>.of(efforts)..sort((a, b) {
-    final left = desktopReasoningTitle(a), right = desktopReasoningTitle(b);
+    final left = _reasoningLevel(a), right = _reasoningLevel(b);
     final order = (rank[left] ?? 4).compareTo(rank[right] ?? 4);
     return order == 0 ? left.compareTo(right) : order;
   });

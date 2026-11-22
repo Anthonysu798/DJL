@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../settings/domain/appearance.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class CloudShareLinkSheet extends StatefulWidget {
   const CloudShareLinkSheet({super.key, required this.url});
 
@@ -35,7 +38,7 @@ class _CloudShareLinkSheetState extends State<CloudShareLinkSheet> {
       );
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Could not open sharing. Try again.');
+        setState(() => _error = context.l10n.cloudChatShareFailed);
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -57,13 +60,16 @@ class _CloudShareLinkSheetState extends State<CloudShareLinkSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Share link created',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              Text(
+                context.l10n.cloudChatShareLinkCreated,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
-                "Anyone with the link can read this chat as it is now. Messages you send later aren't shared.",
+                context.l10n.cloudChatShareLinkBody,
                 style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 16),
@@ -93,8 +99,15 @@ class _CloudShareLinkSheetState extends State<CloudShareLinkSheet> {
                         minimumSize: const Size(0, 52),
                         shape: shape,
                       ),
-                      icon: Icon(_copied ? Icons.check : Icons.copy, size: 18),
-                      label: Text(_copied ? 'Copied' : 'Copy link'),
+                      icon: Icon(
+                        _copied ? DjlIcons.check : DjlIcons.copy,
+                        size: 18,
+                      ),
+                      label: Text(
+                        _copied
+                            ? context.l10n.cloudChatCopied
+                            : context.l10n.cloudChatCopyLink,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -106,8 +119,8 @@ class _CloudShareLinkSheetState extends State<CloudShareLinkSheet> {
                           minimumSize: const Size(0, 52),
                           shape: shape,
                         ),
-                        icon: const Icon(Icons.ios_share, size: 18),
-                        label: const Text('Share'),
+                        icon: const Icon(DjlIcons.share, size: 18),
+                        label: Text(context.l10n.cloudChatShare),
                       ),
                     ),
                   ),

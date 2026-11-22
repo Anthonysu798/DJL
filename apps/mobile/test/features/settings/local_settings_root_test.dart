@@ -81,7 +81,7 @@ void main() {
           }
           await tester.tap(find.byTooltip('Settings'));
           await tester.pumpAndSettle();
-          expect(find.text('Done'), findsOneWidget);
+          expect(find.byKey(const Key('settings.back')), findsOneWidget);
           expect(find.byType(BottomSheet), findsNothing);
           expect(find.byType(BackButton), findsNothing);
           expect(
@@ -99,17 +99,17 @@ void main() {
             await tester.tap(find.text('How DJL Works'));
             await tester.pumpAndSettle();
             expect(find.text('About DJL'), findsOneWidget);
-            expect(find.text('Done'), findsNothing);
+            expect(find.byKey(const Key('settings.back')), findsNothing);
             expect(desktop.active?.macDeviceId, pair.macDeviceId);
             expect(desktop.selectionRevision, revision);
             expect(calls, before);
             expect(transport.calls, hostCalls);
             await tester.binding.handlePopRoute();
             await tester.pumpAndSettle();
-            expect(find.text('Done'), findsOneWidget);
+            expect(find.byKey(const Key('settings.back')), findsOneWidget);
           }
           if (done) {
-            await tester.tap(find.text('Done'));
+            await tester.tap(find.byKey(const Key('settings.back')));
           } else {
             await tester.binding.handlePopRoute();
           }
@@ -145,7 +145,7 @@ void main() {
           find.text(signedIn ? 'Open DJL Cloud chat' : 'Sign in to DJL Cloud'),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Done'), findsNothing);
+        expect(find.byKey(const Key('settings.back')), findsNothing);
         expect(find.byType(PairingPage), findsNothing);
         expect(desktop.active?.macDeviceId, pair.macDeviceId);
         expect(desktop.selectionRevision, revision);

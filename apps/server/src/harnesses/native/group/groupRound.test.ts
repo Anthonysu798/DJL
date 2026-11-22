@@ -45,6 +45,7 @@ let askedHandles: string[];
 let prompts: Map<string, string[]>;
 let flags: Map<string, boolean[]>;
 let states: Map<string, GroupMemberState>;
+let drafts: { handle: string; delta: string; restart: boolean }[];
 let runtime: GroupRuntime & {
   log: { seq: number; author: string; text: string }[];
   pause: GroupHandoff[];
@@ -114,6 +115,7 @@ beforeEach(() => {
   prompts = new Map(group.members.map((entry) => [entry.handle, []]));
   flags = new Map(group.members.map((entry) => [entry.handle, []]));
   states = new Map();
+  drafts = [];
   const memberRuntime = new Map<string, { nativeSessionId: string | null; readSeq: number }>();
   let roundState = { lastSpeakers: [] as GroupMemberId[], lastRoundAll: false };
   let resumeRequested = false;
@@ -162,6 +164,9 @@ beforeEach(() => {
     },
     setMemberState: (_groupId: string, memberId: string, value: GroupMemberState) => {
       states.set(handleOf(memberId), value);
+    },
+    publishDraft: (_groupId: string, memberId: string, delta: string, restart: boolean) => {
+      drafts.push({ handle: handleOf(memberId), delta, restart });
     },
     skills: async () => [],
   };
@@ -390,6 +395,35 @@ describe("group rounds", () => {
     });
     await startRound(host, group, "@all look", { attachments: ["/attachments/t1/a.png"] }).done;
     expect(decisions.slice(0, 2)).toEqual(["accept", "decline"]);
+  });
+
+  it("publishes a member's draft while it writes, and nothing once it is stopped", async () => {
+    const stopped = Promise.withResolvers<ChildReply>();
+    let write: ((delta: string, restart: boolean) => void) | undefined;
+    host.openChild = async () => ({
+      nativeSessionId: "native",
+      ask(_prompt, _onRequest, onDraft) {
+        write = onDraft;
+        onDraft?.("Hel", true);
+        onDraft?.("lo", false);
+        return stopped.promise;
+      },
+      async stop() {
+        // A CLI can still send text between the stop request and its turn ending.
+        write?.(" there", false);
+        stopped.resolve({ status: "stopped", work: { files: [], commands: [] } });
+      },
+      close() {},
+    });
+    const running = round("@Claude go");
+    await until(() => drafts.length === 2);
+    await running.stopMember(idOf("Claude"));
+    await running.done;
+    expect(drafts).toEqual([
+      { handle: "Claude", delta: "Hel", restart: true },
+      { handle: "Claude", delta: "lo", restart: false },
+    ]);
+    expect(runtime.replies).toEqual([]);
   });
 
   it("records an empty reply without a hand-off", async () => {

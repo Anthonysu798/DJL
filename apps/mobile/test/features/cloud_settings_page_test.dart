@@ -126,6 +126,9 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(const Key('theme-setting')));
           await tester.pumpAndSettle();
+          // At large text sizes the menu scrolls.
+          await tester.ensureVisible(find.text('Dark').last);
+          await tester.pumpAndSettle();
           await tester.tap(find.text('Dark').last);
           await tester.pumpAndSettle();
           expect(settings.theme, ThemeMode.dark);

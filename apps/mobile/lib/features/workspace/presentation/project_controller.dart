@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../data/workspace_repository.dart';
 import '../domain/workspace_models.dart';
+import '../../../l10n/l10n.dart';
 
 class ProjectController extends ChangeNotifier {
   ProjectController(this.repository);
@@ -47,7 +48,7 @@ class ProjectController extends ChangeNotifier {
         locations.firstOrNull?.path;
     if (start == null || start.trim().isEmpty) {
       loading = false;
-      error = 'No local folders are available from this device.';
+      error = appStrings.workspaceNoLocalFolders;
       _notify();
       return;
     }

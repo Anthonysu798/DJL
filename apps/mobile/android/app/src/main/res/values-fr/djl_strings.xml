@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the phone app's native strings. -->
+<resources>
+    <string name="djl_launch_open_chat">Ouvrir la discussion</string>
+    <string name="djl_launch_accessibility">Ouvrir DJL</string>
+    <string name="djl_launch_widget_description">Accès rapide aux discussions DJL.</string>
+    <string name="djl_channel_task_notifications">Notifications des tâches</string>
+    <string name="djl_channel_task_status">État des tâches</string>
+    <string name="djl_channel_task_status_description">État local transmis par votre Mac jumelé</string>
+    <string name="djl_push_finished_title">Tâche DJL terminée</string>
+    <string name="djl_push_finished_text">Ouvrez DJL pour voir le résultat.</string>
+    <string name="djl_push_attention_title">Un agent attend votre réponse</string>
+    <string name="djl_push_attention_text">Ouvrez DJL pour répondre.</string>
+    <string name="djl_status_public_text">État des tâches · Ouvrir DJL</string>
+    <string name="djl_status_title">DJL · État des tâches</string>
+    <string name="djl_status_summary">%1$d actives/en pause · %2$d en échec · %3$d prêtes</string>
+</resources>

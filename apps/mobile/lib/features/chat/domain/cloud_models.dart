@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 typedef Json = Map<String, dynamic>;
 
 class Conversation {
@@ -10,7 +12,8 @@ class Conversation {
   final String id;
   final String? title;
   final bool pinned, archived;
-  String get displayTitle => title?.isNotEmpty == true ? title! : 'New chat';
+  String get displayTitle =>
+      title?.isNotEmpty == true ? title! : appStrings.cloudChatNewChat;
   factory Conversation.fromJson(Json json) => Conversation(
     id: json['id'] as String,
     title: json['title'] as String?,

@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/design/djl_tokens.dart';
+
 /// Auth's capsule picker, with a presentation-only thumb until drag release.
 class AuthMethodSelector<T extends Object> extends StatefulWidget {
   const AuthMethodSelector({
@@ -85,7 +87,7 @@ class _AuthMethodSelectorState<T extends Object>
       child: DecoratedBox(
         decoration: ShapeDecoration(
           shape: const StadiumBorder(),
-          color: CupertinoColors.tertiarySystemFill.resolveFrom(context),
+          color: DjlColors.of(context).surfaceRaised,
         ),
         child: Padding(
           padding: const EdgeInsets.all(2),
@@ -108,13 +110,7 @@ class _AuthMethodSelectorState<T extends Object>
                         key: const Key('auth_method_thumb'),
                         decoration: ShapeDecoration(
                           shape: const StadiumBorder(),
-                          color: CupertinoDynamicColor.resolve(
-                            const CupertinoDynamicColor.withBrightness(
-                              color: Colors.white,
-                              darkColor: Color(0xff636366),
-                            ),
-                            context,
-                          ),
+                          color: DjlColors.of(context).surface,
                           shadows: const [
                             BoxShadow(
                               color: Color(0x0a000000),
@@ -173,8 +169,7 @@ class _AuthMethodSelectorState<T extends Object>
                                   ? () => _activate(item.key)
                                   : null,
                               style: TextButton.styleFrom(
-                                foregroundColor: CupertinoColors.label
-                                    .resolveFrom(context),
+                                foregroundColor: DjlColors.of(context).ink,
                                 disabledForegroundColor: CupertinoColors
                                     .tertiaryLabel
                                     .resolveFrom(context),

@@ -599,7 +599,7 @@ export class AdminAuth {
 
 /**
  * Admin runs everything. Employee is the support desk: users, credits within
- * a cap, limit resets, trial reviews, and read access to usage, stats, and
+ * a cap, limit resets, trial and content-report reviews, and read access to usage, stats, and
  * the audit log. Team, settings, prices, plans, and kill switches are admin only.
  */
 export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
@@ -612,6 +612,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<string>> = {
     "credits.grant",
     "limits.reset",
     "trials.review",
+    "reports.review",
     "usage.read",
     "stats.read",
     "audit.read",

@@ -24,6 +24,41 @@ class AttachmentPicker {
     );
   }
 
+  /// Any number of files of any type.
+  Future<List<PickedAttachment>> files() async {
+    final result = await FilePicker.platform.pickFiles(
+      withData: true,
+      allowMultiple: true,
+    );
+    return [
+      for (final file in result?.files ?? const <PlatformFile>[])
+        if (file.bytes case final bytes?)
+          PickedAttachment(
+            file.name,
+            lookupMimeType(file.name, headerBytes: bytes) ??
+                'application/octet-stream',
+            bytes,
+          ),
+    ];
+  }
+
+  /// Any number of photos from the library.
+  Future<List<PickedAttachment>> images() async {
+    // A quality setting makes iOS hand back JPEG instead of HEIC, which the
+    // desktop cannot read.
+    final result = await ImagePicker().pickMultiImage(imageQuality: 90);
+    return [
+      for (final image in result)
+        await image.readAsBytes().then(
+          (bytes) => PickedAttachment(
+            image.name,
+            lookupMimeType(image.name, headerBytes: bytes) ?? 'image/jpeg',
+            bytes,
+          ),
+        ),
+    ];
+  }
+
   Future<PickedAttachment?> image({bool camera = false}) async {
     final result = await ImagePicker().pickImage(
       source: camera ? ImageSource.camera : ImageSource.gallery,

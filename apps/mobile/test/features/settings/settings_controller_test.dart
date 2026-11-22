@@ -78,22 +78,18 @@ void main() {
       await settings.load();
       expect(settings.theme, ThemeMode.system);
       expect(settings.font, AppFontStyle.system);
-      expect(settings.bubble, UserBubbleColor.defaultColor);
       expect(settings.lockEnabled, true);
       await settings.setTheme(ThemeMode.dark);
       await settings.setFont(AppFontStyle.geistMono);
-      await settings.setBubble(UserBubbleColor.pink);
       await settings.setLockEnabled(false);
       final restored = SettingsController(store);
       await restored.load();
       expect(restored.theme, ThemeMode.dark);
       expect(restored.font, AppFontStyle.geistMono);
-      expect(restored.bubble, UserBubbleColor.pink);
       expect(restored.lockEnabled, false);
       expect(store.values, {
         'djl.appearance.mode': 'dark',
         'codex.appFontStyle': 'geistMono',
-        'codex.userBubbleColor': 'pink',
         'djl.security.biometricLockEnabled': false,
       });
     },
@@ -113,7 +109,6 @@ void main() {
       await settings.load();
       expect(settings.theme, ThemeMode.system);
       expect(settings.font, AppFontStyle.system);
-      expect(settings.bubble, UserBubbleColor.defaultColor);
       expect(settings.lockEnabled, true);
       expect(store.values, original);
       store.values['codex.useJetBrainsMono'] = false;

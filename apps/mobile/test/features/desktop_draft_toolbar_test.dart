@@ -1,9 +1,9 @@
 import 'package:djl_mobile/features/git/presentation/git_page.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_conversation_fidelity_test.dart' show showConversation;
 import 'desktop_draft_git_test.dart' show DraftGitTransport;
@@ -133,7 +133,7 @@ void main() {
       );
       expect(
         (dot.decoration as BoxDecoration).color?.toARGB32(),
-        CupertinoColors.systemOrange.color.toARGB32(),
+        DjlColors.light.ink.toARGB32(),
       );
       desktop.updateNewChatDraftCwd(draft, '/repo/Second folder');
       await tester.pumpAndSettle();

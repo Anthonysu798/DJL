@@ -78,6 +78,7 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
   const thread = useStore(useMemo(() => createThreadSelector(group.threadId), [group.threadId]));
   const replies = useGroupStore((state) => state.replies);
   const memberStates = useGroupStore((state) => state.memberStates);
+  const drafts = useGroupStore((state) => state.drafts);
   const rows = useMemo(
     () => deriveGroupChatRows(thread?.messages ?? [], group, replies),
     [group, replies, thread?.messages],
@@ -172,14 +173,23 @@ export function GroupChatView(props: { group: Group; headerActions?: ReactNode }
           {busyMembers.map((member) => (
             <div
               key={member.id}
-              className="group/busy flex animate-in items-center gap-3 py-2 duration-200 fade-in motion-reduce:animate-none"
+              className={cn(
+                "group/busy flex animate-in gap-3 py-2 duration-200 fade-in motion-reduce:animate-none",
+                drafts[member.id] ? "items-start" : "items-center",
+              )}
             >
               <GroupAgentAvatar provider={member.provider} />
-              <span className="shimmer text-[13px] text-[var(--color-text-foreground-secondary)]">
-                {memberStates[member.id] === "waiting"
-                  ? t("multiAgents.chat.waiting", { name: member.handle })
-                  : t("multiAgents.chat.working", { name: member.handle })}
-              </span>
+              {drafts[member.id] ? (
+                <span className="min-w-0 text-sm leading-relaxed wrap-break-word whitespace-pre-wrap">
+                  {drafts[member.id]}
+                </span>
+              ) : (
+                <span className="shimmer text-[13px] text-[var(--color-text-foreground-secondary)]">
+                  {memberStates[member.id] === "waiting"
+                    ? t("multiAgents.chat.waiting", { name: member.handle })
+                    : t("multiAgents.chat.working", { name: member.handle })}
+                </span>
+              )}
               <button
                 type="button"
                 className="flex h-6 items-center gap-1.5 rounded-md px-1.5 text-xs text-muted-foreground opacity-0 transition-[color,background-color,opacity] duration-150 ease-out group-hover/busy:opacity-100 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

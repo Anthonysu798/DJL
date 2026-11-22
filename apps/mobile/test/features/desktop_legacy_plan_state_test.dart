@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/desktop/domain/thread_local_state.dart';
 import 'desktop_history_reconciliation_test.dart' show historyDesktop;
 import 'desktop_plan_widgets_test.dart' show PlanActionTransport;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 void main() {
   for (final source in <String?>[

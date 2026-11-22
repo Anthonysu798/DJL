@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../pairing/data/pairing_repository.dart';
 import '../data/git_repository.dart';
 import '../domain/git_models.dart';
+import '../../../l10n/l10n.dart';
 
 class GitController extends ChangeNotifier {
   GitController(this.repository) {
@@ -72,12 +73,12 @@ class GitController extends ChangeNotifier {
       notice =
           value['summary'] as String? ??
           value['message'] as String? ??
-          'Git action completed.';
+          appStrings.gitActionCompleted;
       await refresh();
       return value;
     } catch (e) {
       if (!_disposed) {
-        error = '$e Refresh before retrying an action whose result is unknown.';
+        error = appStrings.gitActionFailed('$e');
       }
       return null;
     } finally {

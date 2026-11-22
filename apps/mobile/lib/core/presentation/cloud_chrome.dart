@@ -2,17 +2,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../features/settings/domain/appearance.dart';
 
+import '../design/djl_icons.dart';
+
+import '../design/djl_tokens.dart';
+
 const cloudBodyStyle = TextStyle(fontSize: 17, height: 1.2);
 
-Color cloudActionColor(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xff0091ff)
-    : const Color(0xff0088ff);
+Color cloudActionColor(BuildContext context) => DjlColors.of(context).ink;
 
 Color cloudGroupedBackground(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? Colors.black
-    : const Color(0xfff2f2f7);
+    DjlColors.of(context).surface;
 
 class CloudNavigationButton extends StatelessWidget {
   const CloudNavigationButton({
@@ -26,7 +25,7 @@ class CloudNavigationButton extends StatelessWidget {
   final VoidCallback onPressed;
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final colors = DjlColors.of(context);
     return Tooltip(
       message: label,
       excludeFromSemantics: true,
@@ -39,22 +38,15 @@ class CloudNavigationButton extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: dark ? const Color(0xff202022) : const Color(0xfffdfdfd),
+            color: colors.surfaceRaised,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? .16 : .07),
-                blurRadius: 22,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: CupertinoButton(
             padding: EdgeInsets.zero,
             onPressed: onPressed,
             child: Icon(
               icon,
-              size: icon == CupertinoIcons.line_horizontal_3 ? 26 : 23,
+              size: icon == DjlIcons.menu ? 26 : 23,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -152,11 +144,9 @@ class CloudSwitch extends StatelessWidget {
     child: CupertinoSwitch(
       value: value,
       onChanged: onChanged,
-      activeTrackColor: CupertinoColors.systemGreen.resolveFrom(context),
-      inactiveTrackColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xff58585a)
-          : const Color(0xffc7c7cc),
-      thumbColor: Colors.white,
+      activeTrackColor: DjlColors.of(context).ink,
+      inactiveTrackColor: DjlColors.of(context).inkFaint,
+      thumbColor: DjlColors.of(context).surface,
     ),
   );
 }

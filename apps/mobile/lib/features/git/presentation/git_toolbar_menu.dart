@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/git_repository.dart';
 import '../domain/git_models.dart';
 import 'git_page.dart';
+import '../../../l10n/l10n.dart';
 
 Future<void> showGitToolbarMenu({
   required BuildContext context,
@@ -30,7 +31,7 @@ Future<void> showGitToolbarMenu({
     context: context,
     useRootNavigator: false,
     barrierDismissible: true,
-    barrierLabel: 'Dismiss menu',
+    barrierLabel: context.l10n.gitDismissMenu,
     barrierColor: Colors.transparent,
     requestFocus: true,
     transitionDuration: const Duration(milliseconds: 180),

@@ -9,6 +9,7 @@ import 'desktop_history_reconciliation_test.dart'
 import 'desktop_reasoning_controller_test.dart'
     show reasoningDesktop, ReasoningPairings;
 import 'desktop_activity_test.dart' show ActivityCacheStore;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 final _proposal = {
   'id': 'assistant',

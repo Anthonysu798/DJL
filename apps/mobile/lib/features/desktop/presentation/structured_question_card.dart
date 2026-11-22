@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui' as ui;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../../settings/domain/appearance.dart';
 import 'package:flutter/material.dart';
 import '../../pairing/data/pairing_repository.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 class StructuredQuestionCard extends StatefulWidget {
   const StructuredQuestionCard({
@@ -31,15 +34,7 @@ class StructuredQuestionCard extends StatefulWidget {
 }
 
 Color _questionTint(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xff0096ff)
-    : const Color.from(
-        alpha: 1,
-        red: .430,
-        green: .740,
-        blue: .983,
-        colorSpace: ui.ColorSpace.displayP3,
-      );
+    Theme.of(context).colorScheme.onSurface;
 
 class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
   final _selected = <String, List<String>>{},
@@ -161,7 +156,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
     IconData? before,
     IconData? after,
   }) {
-    final secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final secondary = DjlColors.of(context).inkMuted;
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
@@ -172,15 +167,12 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
         ),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: const StadiumBorder(),
-        foregroundColor: primary ? Colors.white : secondary,
-        disabledForegroundColor: CupertinoColors.tertiaryLabel.resolveFrom(
-          context,
-        ),
+        foregroundColor: primary ? DjlColors.of(context).onInk : secondary,
+        disabledForegroundColor: DjlColors.of(context).inkFaint,
         backgroundColor: primary && onPressed != null
             ? _questionTint(context)
-            : CupertinoColors.quaternarySystemFill.resolveFrom(context),
-        disabledBackgroundColor: CupertinoColors.quaternarySystemFill
-            .resolveFrom(context),
+            : DjlColors.of(context).surfaceRaised,
+        disabledBackgroundColor: DjlColors.of(context).surfaceRaised,
         textStyle: _style(14, secondary, weight: FontWeight.w500),
       ),
       child: Row(
@@ -212,8 +204,8 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
   Widget build(BuildContext context) {
     final questions = _questions;
     final question = questions.isEmpty ? null : questions[_page];
-    final secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
-    final separator = CupertinoColors.separator.resolveFrom(context);
+    final secondary = DjlColors.of(context).inkMuted;
+    final separator = DjlColors.of(context).hairline;
     final tint = _questionTint(context);
     final canNext =
         question != null && (_answers[question['id']] ?? []).isNotEmpty;
@@ -251,7 +243,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                   runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('Questions', style: _style(11, secondary)),
+                    Text(
+                      context.l10n.chatUiQuestions,
+                      style: _style(11, secondary),
+                    ),
                     if (questions.length > 1) ...[
                       Container(
                         width: 3,
@@ -262,7 +257,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                         ),
                       ),
                       Text(
-                        '${_page + 1} of ${questions.length}',
+                        context.l10n.chatUiQuestionPage(
+                          _page + 1,
+                          questions.length,
+                        ),
                         style: _style(10, secondary),
                       ),
                       Wrap(
@@ -276,9 +274,9 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(999),
                                 color: i < _page
-                                    ? CupertinoColors.label
-                                          .resolveFrom(context)
-                                          .withValues(alpha: .72)
+                                    ? DjlColors.of(
+                                        context,
+                                      ).ink.withValues(alpha: .72)
                                     : i == _page
                                     ? tint.withValues(alpha: .72)
                                     : separator.withValues(
@@ -306,7 +304,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                 if (widget.responseUnknown) ...[
                   const SizedBox(height: 14),
                   Text(
-                    'A previous response may have been sent. Check the desktop state before replying again.',
+                    context.l10n.chatUiQuestionResponseUnknown,
                     style: _style(12, secondary),
                   ),
                 ],
@@ -321,9 +319,9 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                   children: [
                     if (_page > 0)
                       _action(
-                        'Back',
+                        context.l10n.chatUiBack,
                         _busy ? null : () => _move(_page - 1),
-                        before: CupertinoIcons.chevron_left,
+                        before: DjlIcons.chevronLeft,
                       ),
                     Wrap(
                       alignment: WrapAlignment.end,
@@ -333,7 +331,9 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                       children: [
                         if (widget.onCancel != null)
                           _action(
-                            widget.cancelling ? 'Closing...' : 'ESC',
+                            widget.cancelling
+                                ? context.l10n.chatUiQuestionClosing
+                                : context.l10n.chatUiQuestionEsc,
                             _locked
                                 ? null
                                 : () {
@@ -342,18 +342,18 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                           ),
                         if (_page < questions.length - 1)
                           _action(
-                            'Next',
+                            context.l10n.chatUiNext,
                             _busy || !canNext ? null : () => _move(_page + 1),
                             primary: true,
-                            after: CupertinoIcons.chevron_right,
+                            after: DjlIcons.chevronRight,
                           )
                         else
                           _action(
                             widget.submitted
-                                ? 'Response sent'
+                                ? context.l10n.chatUiResponseSent
                                 : _sending
-                                ? 'Sending...'
-                                : 'Send',
+                                ? context.l10n.chatUiSendingDots
+                                : context.l10n.chatUiSend,
                             canSend ? _send : null,
                             primary: true,
                           ),
@@ -377,10 +377,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
         ? 1
         : q['selectionLimit'] as int? ?? 1;
     final selected = _selected[id] ??= [];
-    final separator = CupertinoColors.separator.resolveFrom(context);
+    final separator = DjlColors.of(context).hairline;
     final tint = _questionTint(context);
-    final foreground = CupertinoColors.label.resolveFrom(context),
-        secondary = CupertinoColors.secondaryLabel.resolveFrom(context);
+    final foreground = DjlColors.of(context).ink,
+        secondary = DjlColors.of(context).inkMuted;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -398,7 +398,10 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
         Text((q['question'] as String).trim(), style: _style(15, foreground)),
         if (limit > 1) ...[
           const SizedBox(height: 10),
-          Text('Select up to $limit', style: _style(11, secondary)),
+          Text(
+            context.l10n.chatUiSelectUpTo(limit),
+            style: _style(11, secondary),
+          ),
         ],
         if (options.isNotEmpty) const SizedBox(height: 10),
         for (final option in options.indexed) ...[
@@ -448,9 +451,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                       borderRadius: BorderRadius.circular(14),
                       color: checked
                           ? tint.withValues(alpha: .08)
-                          : CupertinoColors.systemBackground
-                                .resolveFrom(context)
-                                .withValues(alpha: .6),
+                          : DjlColors.of(context).surface.withValues(alpha: .6),
                       border: Border.all(
                         color: checked
                             ? tint.withValues(alpha: .3)
@@ -489,7 +490,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
                         if (checked) ...[
                           const SizedBox(width: 10),
                           Icon(
-                            CupertinoIcons.check_mark,
+                            DjlIcons.check,
                             size: MediaQuery.textScalerOf(context).scale(12),
                             color: tint,
                           ),
@@ -509,9 +510,7 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: CupertinoColors.systemBackground
-                  .resolveFrom(context)
-                  .withValues(alpha: .6),
+              color: DjlColors.of(context).surface.withValues(alpha: .6),
               borderRadius: BorderRadius.circular(14),
             ),
             child: TextField(
@@ -531,7 +530,9 @@ class _StructuredQuestionCardState extends State<StructuredQuestionCard> {
               maxLines: q['isSecret'] == true ? 1 : null,
               style: _style(15, foreground),
               decoration: InputDecoration.collapsed(
-                hintText: q['isOther'] == true ? 'Other answer' : 'Your answer',
+                hintText: q['isOther'] == true
+                    ? context.l10n.chatUiOtherAnswer
+                    : context.l10n.chatUiYourAnswer,
               ),
               onChanged: (_) => setState(() {}),
             ),

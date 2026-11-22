@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 String? _text(Object? v) =>
     v is String && v.trim().isNotEmpty ? v.trim() : null;
@@ -79,13 +80,13 @@ class ResponsePatch {
           !chunk.any(
             (l) => RegExp(r'^@@ -\d+(,\d+)? \+\d+(,\d+)? @@').hasMatch(l),
           )) {
-        reasons.add('No complete exact unified patch was captured.');
+        reasons.add(appStrings.workspaceUndoNoExactPatch);
       } else {
         files.add(path);
         final oldPath = responsePath(before.single);
         final newPath = responsePath(after.single);
         if (oldPath != null && newPath != null && oldPath != newPath) {
-          reasons.add('Renames cannot be undone here.');
+          reasons.add(appStrings.workspaceUndoRenames);
         }
       }
       if (chunk.any(
@@ -93,9 +94,7 @@ class ResponsePatch {
           r'^(Binary files |GIT binary patch|rename |copy |old mode |new mode |similarity index |new file mode 120|deleted file mode 120)',
         ).hasMatch(l),
       )) {
-        reasons.add(
-          'Binary, rename, mode or symlink changes cannot be undone here.',
-        );
+        reasons.add(appStrings.workspaceUndoBinary);
       }
     }
   }
@@ -151,13 +150,13 @@ class ResponseChangeSet {
     }),
   );
   String? get unavailable => reverted
-      ? 'This response was already undone.'
+      ? appStrings.workspaceAlreadyUndone
       : !terminal
-      ? 'This response is still running.'
+      ? appStrings.workspaceStillRunning
       : cwd.isEmpty
-      ? 'The response has no desktop workspace.'
+      ? appStrings.workspaceNoDesktopWorkspace
       : !ready
-      ? 'No supported exact response patch was captured.'
+      ? appStrings.workspaceNoPatchCaptured
       : null;
   RemoteJson toJson() => {
     'thread': thread,
@@ -560,7 +559,10 @@ class ResponseUndoPreview {
       reasons = List<String>.from(v['unsupportedReasons'] as List? ?? []),
       conflicts = (v['conflicts'] as List? ?? [])
           .whereType<Map>()
-          .map((m) => '${m['path'] ?? ''}: ${m['message'] ?? 'Conflict'}')
+          .map(
+            (m) =>
+                '${m['path'] ?? ''}: ${m['message'] ?? appStrings.workspaceConflictFallback}',
+          )
           .toList();
   final bool canRevert;
   final List<String> files, staged, reasons, conflicts;

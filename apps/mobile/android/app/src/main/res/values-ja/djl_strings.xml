@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the phone app's native strings. -->
+<resources>
+    <string name="djl_launch_open_chat">チャットを開く</string>
+    <string name="djl_launch_accessibility">DJL を開く</string>
+    <string name="djl_launch_widget_description">DJL のチャットにすばやくアクセスできます。</string>
+    <string name="djl_channel_task_notifications">タスクの通知</string>
+    <string name="djl_channel_task_status">タスクの状態</string>
+    <string name="djl_channel_task_status_description">ペアリング済みの Mac からのローカルの状態</string>
+    <string name="djl_push_finished_title">DJL のタスクが完了しました</string>
+    <string name="djl_push_finished_text">DJL を開いて結果を確認してください。</string>
+    <string name="djl_push_attention_title">エージェントがあなたの回答を待っています</string>
+    <string name="djl_push_attention_text">DJL を開いて返信してください。</string>
+    <string name="djl_status_public_text">タスクの状態 · DJL を開く</string>
+    <string name="djl_status_title">DJL · タスクの状態</string>
+    <string name="djl_status_summary">実行中/一時停止 %1$d · 失敗 %2$d · 完了 %3$d</string>
+</resources>

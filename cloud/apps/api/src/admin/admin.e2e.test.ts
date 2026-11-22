@@ -271,6 +271,34 @@ describe("admin api", () => {
     expect(kill.status).toBe(403);
   });
 
+  it("support lists an open content report and resolves it with an audit row", async () => {
+    const filed = await admin("/v1/reports", {
+      json: { source: "desktop", reason: "offensive", text: "reported answer", agent: "Codex" },
+    });
+    expect(filed.status).toBe(201);
+    const id = filed.body.report.id as string;
+    const open = await admin("/admin/v1/content-reports?status=open&limit=5", {
+      token: supportToken,
+    });
+    expect(open.status).toBe(200);
+    expect(open.body.reports[0]).toMatchObject({ id, source: "desktop", agent: "Codex" });
+    const resolved = await admin(`/admin/v1/content-reports/${id}/resolve`, {
+      token: supportToken,
+      json: { reason: "reviewed" },
+    });
+    expect(resolved.status).toBe(200);
+    expect(resolved.body.status).toBe("resolved");
+    const again = await admin(`/admin/v1/content-reports/${id}/resolve`, {
+      token: supportToken,
+      json: {},
+    });
+    expect(again.status).toBe(409);
+    const audit = await admin(`/admin/v1/audit?targetId=${id}`, { token: ownerToken });
+    expect(audit.body.map((e: { action: string }) => e.action)).toEqual([
+      "admin.content_report.resolve",
+    ]);
+  });
+
   it("owner flips kill switches, edits the catalog, and reads stats", async () => {
     const on = await admin("/admin/v1/kill-switches/billing", {
       method: "PUT",

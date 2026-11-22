@@ -3,6 +3,7 @@ import '../../desktop/data/remote_transport.dart';
 import '../../pairing/data/pairing_repository.dart';
 import '../domain/workspace_models.dart';
 import '../domain/response_change_set.dart';
+import '../../../l10n/l10n.dart';
 
 class ProjectRepository {
   ProjectRepository(this.transport)
@@ -20,7 +21,7 @@ class ProjectRepository {
           transport.sessionId,
           transport.connectionRevision,
         )) {
-      throw StateError('Connected desktop changed. Reopen the project picker.');
+      throw StateError(appStrings.workspaceDesktopChangedPicker);
     }
   }
 
@@ -85,14 +86,14 @@ class WorkspaceRepository {
       );
   Future<RemoteJson> _call(String method, RemoteJson params) async {
     if (!isCurrent) {
-      throw StateError('Connected desktop changed. Reopen this workspace.');
+      throw StateError(appStrings.workspaceDesktopChanged);
     }
     if (cwd.trim().isEmpty) {
-      throw StateError('Choose a workspace on your desktop first.');
+      throw StateError(appStrings.workspaceChooseWorkspaceFirst);
     }
     final result = await transport.request(method, {...params, 'cwd': cwd});
     if (!isCurrent) {
-      throw StateError('Connected desktop changed. Reopen this workspace.');
+      throw StateError(appStrings.workspaceDesktopChanged);
     }
     return result;
   }
@@ -113,9 +114,7 @@ class WorkspaceRepository {
         ? cached?.content
         : value['content'] as String?;
     if (content == null) {
-      throw StateError(
-        'The file preview did not include text. Reload it from the workspace.',
-      );
+      throw StateError(appStrings.workspaceNoTextInPreview);
     }
     return WorkspaceTextFile(
       path: value['path'] as String? ?? path,
@@ -150,9 +149,7 @@ class WorkspaceRepository {
               ? base64Decode(value['dataBase64'] as String)
               : null);
     if (bytes == null) {
-      throw StateError(
-        'The image preview did not include image data. Reload it from the workspace.',
-      );
+      throw StateError(appStrings.workspaceNoImageInPreview);
     }
     return WorkspaceImage(
       path: value['path'] as String? ?? path,
@@ -239,9 +236,7 @@ class WorkspaceRepository {
         preview.cwd != cwd ||
         (preview.macId, preview.sessionId, preview.connectionRevision) !=
             connectionIdentity) {
-      throw StateError(
-        'This restore preview belongs to another workspace. Preview it again.',
-      );
+      throw StateError(appStrings.workspaceRestorePreviewOtherWorkspace);
     }
     return _call('workspace/checkpointRestoreApply', {
       'threadId': threadId,

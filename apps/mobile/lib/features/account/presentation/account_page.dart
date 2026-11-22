@@ -7,6 +7,11 @@ import 'account_controller.dart';
 import 'cloud_signout_confirmation.dart';
 import '../domain/account_snapshot.dart';
 
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
+
 class AccountPage extends StatefulWidget {
   const AccountPage({
     super.key,
@@ -83,12 +88,12 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
         await showCupertinoDialog<void>(
           context: context,
           builder: (context) => CupertinoAlertDialog(
-            title: const Text('Something went wrong'),
-            content: const Text('Type DELETE to confirm.'),
+            title: Text(context.l10n.accountSomethingWrong),
+            content: Text(context.l10n.accountTypeDeleteToConfirm),
             actions: [
               CupertinoDialogAction(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                child: Text(context.l10n.accountOk),
               ),
             ],
           ),
@@ -115,6 +120,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
         color: colors.onSurfaceVariant,
       );
       final bankDate = a?.bankExpiry?.toLocal();
+      final l10n = context.l10n;
       Widget action(
         String text,
         VoidCallback callback, {
@@ -126,7 +132,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
           text,
           style: cloudBodyStyle.copyWith(
             color: destructive
-                ? CupertinoColors.systemRed.resolveFrom(context)
+                ? DjlColors.of(context).danger
                 : cloudActionColor(context),
           ),
         ),
@@ -148,7 +154,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                   middle: Semantics(
                     header: true,
                     child: Text(
-                      'Account',
+                      l10n.settingsAccount,
                       style: cloudBodyStyle.copyWith(
                         fontWeight: FontWeight.w600,
                         color: colors.onSurface,
@@ -157,9 +163,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                   ),
                   trailing: Container(
                     decoration: BoxDecoration(
-                      color: colors.brightness == Brightness.dark
-                          ? const Color(0xff202022)
-                          : const Color(0xfffdfdfd),
+                      color: colors.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: CupertinoButton(
@@ -169,7 +173,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                       ),
                       onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'Done',
+                        l10n.accountDone,
                         style: cloudBodyStyle.copyWith(
                           fontWeight: FontWeight.w600,
                           color: colors.onSurface,
@@ -198,32 +202,38 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                           ),
                           trailing: TextButton(
                             onPressed: enabled && !c.loading ? _refresh : null,
-                            child: const Text('Retry'),
+                            child: Text(l10n.settingsRetry),
                           ),
                         ),
                       SettingsGroup(
                         children: [
-                          CloudValueRow(label: 'Email', value: a?.email ?? '—'),
                           CloudValueRow(
-                            label: 'Plan',
+                            label: l10n.accountEmail,
+                            value: a?.email ?? '—',
+                          ),
+                          CloudValueRow(
+                            label: l10n.accountPlan,
                             value: a == null || a.plan.isEmpty
                                 ? '—'
                                 : '${a.plan[0].toUpperCase()}${a.plan.substring(1)}',
                           ),
                           CloudValueRow(
-                            label: 'Credits',
+                            label: l10n.accountCredits,
                             value: a?.credits ?? '—',
                           ),
                         ],
                       ),
                       if (a != null)
                         SettingsGroup(
-                          title: 'Usage',
-                          footer:
-                              'A banked reset starts both limits over and restarts your week. Banks expire 90 days after they\'re granted.',
+                          title: l10n.settingsUsage,
+                          footer: l10n.accountUsageFooter,
                           children: [
-                            _usage(context, '5-hour limit', a.fiveHour),
-                            _usage(context, 'Weekly limit', a.week),
+                            _usage(
+                              context,
+                              l10n.accountFiveHourLimit,
+                              a.fiveHour,
+                            ),
+                            _usage(context, l10n.accountWeeklyLimit, a.week),
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -244,13 +254,18 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
-                                            'Banked resets',
+                                          Text(
+                                            l10n.accountBankedResets,
                                             style: cloudBodyStyle,
                                           ),
                                           if (bankDate != null)
                                             Text(
-                                              'Next expires ${MaterialLocalizations.of(context).formatShortMonthDay(bankDate)}, ${bankDate.year}',
+                                              l10n.accountNextExpires(
+                                                MaterialLocalizations.of(
+                                                  context,
+                                                ).formatShortMonthDay(bankDate),
+                                                '${bankDate.year}',
+                                              ),
                                               style: secondary,
                                             ),
                                         ],
@@ -258,7 +273,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                                     ),
                                     if (a.bankedResets == 0)
                                       Text(
-                                        'None',
+                                        l10n.accountNone,
                                         style: cloudBodyStyle.copyWith(
                                           color: colors.onSurfaceVariant,
                                         ),
@@ -275,7 +290,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                                         ),
                                         onPressed: enabled ? c.redeem : null,
                                         child: Text(
-                                          'Use 1 of ${a.bankedResets}',
+                                          l10n.accountUseOne(a.bankedResets),
                                         ),
                                       ),
                                   ],
@@ -292,11 +307,14 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                               horizontal: 16,
                             ),
                             leading: Icon(
-                              CupertinoIcons.device_laptop,
+                              DjlIcons.laptop,
                               size: 26,
                               color: colors.onSurface,
                             ),
-                            title: const Text('My Macs', style: cloudBodyStyle),
+                            title: Text(
+                              l10n.settingsMyMacs,
+                              style: cloudBodyStyle,
+                            ),
                             onTap: enabled
                                 ? () {
                                     if (_current) widget.onMyMacs();
@@ -306,11 +324,14 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
                         ],
                       ),
                       SettingsGroup(
-                        footer:
-                            'Deleting your account removes your chats, files, and credits. You have 30 days to change your mind by contacting support.',
+                        footer: l10n.accountDeleteFooter,
                         children: [
-                          action('Sign out', _signOut),
-                          action('Delete account', _delete, destructive: true),
+                          action(l10n.accountSignOut, _signOut),
+                          action(
+                            l10n.accountDelete,
+                            _delete,
+                            destructive: true,
+                          ),
                         ],
                       ),
                       const SafeArea(top: false, child: SizedBox.shrink()),
@@ -328,19 +349,17 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
   Widget _usage(BuildContext context, String label, UsageWindow window) {
     final colors = Theme.of(context).colorScheme;
     final color = window.fraction >= 1
-        ? CupertinoColors.systemRed.resolveFrom(context)
+        ? DjlColors.of(context).danger
         : cloudActionColor(context);
+    final l10n = context.l10n;
+    final used = l10n.accountUsedPercent((window.fraction * 100).round());
     final reset = window.resetsAt == null
         ? null
-        : _resetDescription(window.resetsAt!);
+        : _resetDescription(l10n, window.resetsAt!);
     return Semantics(
       container: true,
       excludeSemantics: true,
-      label: [
-        label,
-        '${(window.fraction * 100).round()}% used',
-        ?reset,
-      ].join('\n'),
+      label: [label, used, ?reset].join('\n'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         child: Column(
@@ -353,7 +372,7 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
               children: [
                 Text(label, style: cloudBodyStyle),
                 Text(
-                  '${(window.fraction * 100).round()}% used',
+                  used,
                   style: cloudBodyStyle.copyWith(
                     color: window.fraction >= 1
                         ? color
@@ -386,36 +405,42 @@ class _AccountPageState extends State<AccountPage> with WidgetsBindingObserver {
     );
   }
 
-  String _resetDescription(DateTime date) {
+  String _resetDescription(AppLocalizations l10n, DateTime date) {
     final seconds = date.difference(DateTime.now()).inSeconds;
     final value = seconds.abs();
-    if (value == 0) return 'Resets now';
+    if (value == 0) return l10n.accountResetsNow;
     var count = value;
-    var unit = 'second';
+    String Function(int) unit = l10n.accountSeconds;
     if (value >= 60) {
       count = (value / 60).round();
-      unit = 'minute';
+      unit = l10n.accountMinutes;
       if (count >= 60) {
         count = (value / 3600).round();
-        unit = 'hour';
+        unit = l10n.accountHours;
         if (count >= 24) {
           count = (value / 86400).round();
-          unit = 'day';
+          unit = l10n.accountDays;
           if (count == 1) {
-            return seconds >= 0 ? 'Resets tomorrow' : 'Resets yesterday';
+            return seconds >= 0
+                ? l10n.accountResetsTomorrow
+                : l10n.accountResetsYesterday;
           }
           if (count >= 7) {
             count = (value / 604800).round();
-            unit = 'week';
+            unit = l10n.accountWeeks;
             if (count == 1) {
-              return seconds >= 0 ? 'Resets next week' : 'Resets last week';
+              return seconds >= 0
+                  ? l10n.accountResetsNextWeek
+                  : l10n.accountResetsLastWeek;
             }
           }
         }
       }
     }
-    final quantity = '$count $unit${count == 1 ? '' : 's'}';
-    return seconds >= 0 ? 'Resets in $quantity' : 'Resets $quantity ago';
+    final quantity = unit(count);
+    return seconds >= 0
+        ? l10n.accountResetsIn(quantity)
+        : l10n.accountResetsAgo(quantity);
   }
 }
 
@@ -435,16 +460,14 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) => CupertinoAlertDialog(
-    title: const Text('Delete your account?'),
+    title: Text(context.l10n.accountDeleteTitle),
     content: Column(
       children: [
-        const Text(
-          'This can\'t be undone after 30 days. Type DELETE to confirm.',
-        ),
+        Text(context.l10n.accountDeleteBody),
         const SizedBox(height: 16),
         CupertinoTextField(
           controller: _input,
-          placeholder: 'Type DELETE',
+          placeholder: context.l10n.accountTypeDelete,
           textCapitalization: TextCapitalization.characters,
           autocorrect: false,
         ),
@@ -453,12 +476,12 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
     actions: [
       CupertinoDialogAction(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.l10n.commonCancel),
       ),
       CupertinoDialogAction(
         isDestructiveAction: true,
         onPressed: () => Navigator.pop(context, _input.text),
-        child: const Text('Delete account'),
+        child: Text(context.l10n.accountDelete),
       ),
     ],
   );

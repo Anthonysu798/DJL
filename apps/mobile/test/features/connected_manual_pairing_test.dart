@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'desktop_connected_switch_test.dart';
 import 'pairing_presentation_test.dart' show more;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 void expectRecordedUseOnly(String before, String after, int startedAt) {
   final oldRows = jsonDecode(before) as List;

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:djl_mobile/features/settings/presentation/local_settings_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
@@ -115,7 +114,6 @@ void main() {
         ..values.addAll({
           'djl.appearance.mode': 'dark',
           'codex.appFontStyle': 'geistMono',
-          'codex.userBubbleColor': 'blue',
         });
       final settings = SettingsController(store);
       await settings.load();
@@ -123,16 +121,8 @@ void main() {
         ListenableBuilder(
           listenable: settings,
           builder: (_, _) => MaterialApp(
-            theme: djlTheme(
-              Brightness.light,
-              font: settings.font,
-              bubble: settings.bubble,
-            ),
-            darkTheme: djlTheme(
-              Brightness.dark,
-              font: settings.font,
-              bubble: settings.bubble,
-            ),
+            theme: djlTheme(Brightness.light, font: settings.font),
+            darkTheme: djlTheme(Brightness.dark, font: settings.font),
             themeMode: settings.theme,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
@@ -155,28 +145,7 @@ void main() {
       expect(Theme.of(context).textTheme.bodyMedium?.fontFamily, 'GeistMono');
       expect(MediaQuery.textScalerOf(context).scale(10), 20);
       expect(MediaQuery.disableAnimationsOf(context), true);
-      final bubble = find.byKey(const Key('bubble-setting'));
-      await tester.ensureVisible(bubble);
-      await tester.tap(bubble);
-      await tester.pumpAndSettle();
-      final blue = find.byKey(const Key('bubble-blue'));
-      await tester.ensureVisible(blue);
-      final semantics = tester.ensureSemantics();
-      await tester.pump();
-      expect(
-        tester.getSemantics(blue).getSemanticsData().flagsCollection.isSelected,
-        Tristate.isTrue,
-      );
-      expect(
-        tester.getSemantics(blue).getSemanticsData().label,
-        'Blue bubble color',
-      );
-      final pink = find.byKey(const Key('bubble-pink'));
-      await tester.ensureVisible(pink);
-      await tester.tap(pink);
-      await tester.pumpAndSettle();
-      expect(store.values['codex.userBubbleColor'], 'pink');
-      expect(DjlAppearance.of(context).bubble, UserBubbleColor.pink);
+      expect(find.byKey(const Key('bubble-setting')), findsNothing);
       final font = find.byKey(const Key('font-setting'));
       await tester.ensureVisible(font);
       await tester.tap(font);
@@ -195,7 +164,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(Theme.of(context).brightness, Brightness.light);
       expect(tester.takeException(), isNull);
-      semantics.dispose();
     },
   );
   testWidgets(
@@ -219,7 +187,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(store.values, isEmpty);
-      expect(find.byKey(const Key('bubble-blue')), findsNothing);
+      expect(find.text('JetBrains Mono'), findsNothing);
       store.failWrite = true;
       await tester.tap(find.byKey(const Key('font-setting')));
       await tester.pumpAndSettle();
@@ -343,49 +311,16 @@ void main() {
         await tester.tap(find.text('My Macs'));
         expect(macs, 1);
         expect(find.text('SSH terminals'), findsNothing);
-        expect(tester.widget<Text>(find.text('Settings')).style?.fontSize, 17);
-        expect(find.text('Done').hitTestable(), findsOneWidget);
-        Rect glyphBounds(String label) {
-          final paragraph = tester.renderObject<RenderParagraph>(
-            find.text(label),
-          );
-          expect(paragraph.text.toPlainText(), label);
-          expect(paragraph.didExceedMaxLines, isFalse);
-          final bounds = paragraph
-              .getBoxesForSelection(
-                TextSelection(baseOffset: 0, extentOffset: label.length),
-              )
-              .map((box) => box.toRect())
-              .reduce((a, b) => a.expandToInclude(b));
-          return bounds.shift(paragraph.localToGlobal(Offset.zero));
-        }
-
-        final titleBounds = glyphBounds('Settings'),
-            doneBounds = glyphBounds('Done');
-        final header = tester.getRect(
-          find.descendant(
-            of: find.byType(SliverAppBar),
-            matching: find.byType(AppBar),
-          ),
-        );
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, 4000));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Text>(find.text('Settings')).style?.fontSize, 34);
+        final back = find.byKey(const Key('settings.back'));
+        expect(back.hitTestable(), findsOneWidget);
         expect(
-          titleBounds.overlaps(doneBounds),
+          tester.getRect(find.text('Settings')).overlaps(tester.getRect(back)),
           isFalse,
-          reason:
-              'Fully scaled Settings and Done must occupy separate painted areas.',
+          reason: 'The scaled title must sit below the back button.',
         );
-        for (final bounds in [titleBounds, doneBounds]) {
-          expect(
-            header.contains(bounds.topLeft),
-            isTrue,
-            reason: 'Header text must remain inside its painted header.',
-          );
-          expect(
-            header.contains(bounds.bottomRight),
-            isTrue,
-            reason: 'Header text must remain inside its painted header.',
-          );
-        }
         expect(
           MediaQuery.textScalerOf(
             tester.element(find.text('Settings')),
@@ -397,13 +332,6 @@ void main() {
             tester.widget<Text>(find.text('Settings')).style?.fontFamily,
             'Geist',
           );
-          expect(
-            tester.widget<Text>(find.text('Done')).style?.fontFamily ??
-                DefaultTextStyle.of(
-                  tester.element(find.text('Done')),
-                ).style.fontFamily,
-            'Geist',
-          );
         }
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
@@ -412,40 +340,11 @@ void main() {
       },
     );
   }
-  testWidgets('opening a long bubble menu reveals its saved final selection', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 320);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final store = MemorySettingsStore()
-      ..values['codex.userBubbleColor'] = 'black';
-    final settings = SettingsController(store);
-    await settings.load();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: SettingsControls(controller: settings),
-          ),
-        ),
-      ),
-    );
-    await tester.ensureVisible(find.byKey(const Key('bubble-setting')));
-    await tester.tap(find.byKey(const Key('bubble-setting')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('bubble-black')).hitTestable(), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(store.values, {'codex.userBubbleColor': 'black'});
-    settings.dispose();
-  });
   testWidgets(
-    'privacy shield covers pushed routes and modal hit tests and semantics',
+    'the app stays visible when inactive; a required unlock covers routes, modals, hit tests and semantics',
     (tester) async {
       final lock = AppLockController(FakeOwnerAuth());
-      lock.initialize(enabled: false, hasProtectedContent: false);
+      lock.initialize(enabled: true, hasProtectedContent: false);
       final navigator = GlobalKey<NavigatorState>();
       var taps = 0;
       await tester.pumpWidget(
@@ -486,10 +385,16 @@ void main() {
       );
       lock.lifecycle(AppLifecycleState.inactive);
       await tester.pumpAndSettle();
+      expect(find.text('Private modal action'), findsOneWidget);
       expect(
-        find.text('Your session is hidden while DJL is inactive.'),
-        findsOneWidget,
+        tester.getSemantics(find.byType(PrivacyShield)).toStringDeep(),
+        contains('Private modal action'),
       );
+      lock.lifecycle(AppLifecycleState.resumed);
+      lock.setProtectedContent(true);
+      lock.lock();
+      await tester.pumpAndSettle();
+      expect(find.text('DJL is locked'), findsOneWidget);
       expect(
         tester.getSemantics(find.byType(PrivacyShield)).toStringDeep(),
         isNot(contains('Private modal action')),
@@ -500,7 +405,7 @@ void main() {
       );
       await tester.tapAt(target);
       expect(taps, 0);
-      lock.lifecycle(AppLifecycleState.resumed);
+      await lock.authenticate();
       await tester.pumpAndSettle();
       await tester.tap(find.text('Private modal action'));
       expect(taps, 1);

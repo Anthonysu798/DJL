@@ -5,6 +5,7 @@ import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart'
 import 'package:djl_mobile/features/desktop/presentation/desktop_conversation_view.dart';
 import 'desktop_history_reconciliation_test.dart' show historyDesktop;
 import 'desktop_plan_widgets_test.dart' show PlanActionTransport;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));

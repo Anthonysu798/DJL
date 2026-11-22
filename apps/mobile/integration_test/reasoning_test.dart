@@ -12,7 +12,6 @@ import 'package:djl_mobile/core/security/credential_store.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/reasoning/domain/desktop_reasoning.dart';
-import 'package:djl_mobile/features/reasoning/presentation/thinking_timeline_row.dart';
 import 'threads_test.dart' show macs, securePairingEntry, reveal, type;
 import 'composer_test.dart' show hostFrame;
 import 'support/native_acceptance.dart';
@@ -20,6 +19,7 @@ import 'support/native_app_ready.dart';
 
 const _run = String.fromEnvironment('DJL_QA_REASONING_RUN_ID');
 const _input = '[reasoning] native disclosure';
+const _answer = 'Reasoning native fixture complete.';
 const _version = 'reasoning-native-v1';
 const _summary = [
   {
@@ -132,42 +132,18 @@ List<Map<String, dynamic>> _rows(DesktopController desktop) =>
 Map<String, dynamic> _detail(DesktopController desktop, String itemId) => _rows(
   desktop,
 ).singleWhere((r) => (r[reasoningMetadataKey] as Map)['item'] == itemId);
-Finder _heading(String title) => find.byWidgetPredicate(
-  (w) =>
-      w is Semantics &&
-      w.properties.label == title &&
-      w.properties.button == true,
-);
-bool _expanded(WidgetTester tester, String title) =>
-    tester.widget<Semantics>(_heading(title)).properties.expanded == true;
-String _visibleDetail(WidgetTester tester) => tester
-    .widgetList<SelectableText>(
-      find.descendant(
-        of: find.byType(ThinkingTimelineRow),
-        matching: find.byType(SelectableText),
-      ),
-    )
-    .map((w) => w.textSpan?.toPlainText() ?? w.data ?? '')
-    .join('\n');
-void _semanticDisclosure(WidgetTester tester, String title, bool expanded) {
-  expect(
-    tester.getSemantics(_heading(title)),
-    matchesSemantics(
-      label: title,
-      isButton: true,
-      hasTapAction: true,
-      hasExpandedState: true,
-      isExpanded: expanded,
-    ),
-  );
-}
 
-Future<void> _tap(WidgetTester tester, Finder target) async {
-  await tester.ensureVisible(target);
-  await tester.pump(const Duration(milliseconds: 200));
-  expect(target.hitTestable(), findsOneWidget);
-  await tester.tap(target);
-  await tester.pump(const Duration(milliseconds: 200));
+// Reasoning stays on the desktop: the phone keeps the rows as data and never
+// draws their titles or details.
+void _reasoningHidden() {
+  for (final text in [
+    'Checking request',
+    'Reading files',
+    'Verifying response',
+    'detail.',
+  ]) {
+    expect(find.textContaining(text), findsNothing);
+  }
 }
 
 Future<void> _panel(WidgetTester tester) async {
@@ -242,11 +218,7 @@ void _canonical(DesktopController desktop, Map expected) {
   );
   expect(
     desktop.timeline
-        .where(
-          (r) =>
-              r['type'] == 'agentMessage' &&
-              r['text'] == 'Reasoning native fixture complete.',
-        )
+        .where((r) => r['type'] == 'agentMessage' && r['text'] == _answer)
         .length,
     1,
   );
@@ -257,19 +229,9 @@ void _canonical(DesktopController desktop, Map expected) {
   expect(types, ['userMessage', 'reasoning', 'reasoning', 'agentMessage']);
 }
 
-Future<void> _canonicalDisclosure(WidgetTester tester) async {
-  await _until(
-    tester,
-    () =>
-        _heading('Reading files').evaluate().length == 1 &&
-        _heading('Verifying response').evaluate().length == 1,
-  );
-  for (final title in ['Reading files', 'Verifying response']) {
-    if (!_expanded(tester, title)) await _tap(tester, _heading(title));
-  }
-  expect(_visibleDetail(tester), contains('Canonical completion detail.'));
-  expect(_visibleDetail(tester), contains('Canonical verification detail.'));
-  expect(_visibleDetail(tester), contains('Canonical content detail.'));
+Future<void> _canonicalAnswer(WidgetTester tester) async {
+  await _until(tester, () => find.text(_answer).evaluate().length == 1);
+  _reasoningHidden();
   expect(find.byType(ExpansionTile), findsNothing);
 }
 
@@ -350,14 +312,9 @@ void main() {
         final cloudBefore = recorder.totalRequestAttempts;
         await _open(tester, desktop, saved['threadId'] as String);
         _canonical(desktop, saved);
-        expect(_expanded(tester, 'Reading files'), isFalse);
-        expect(_expanded(tester, 'Verifying response'), isFalse);
-        expect(_visibleDetail(tester), isEmpty);
-        await tester.ensureVisible(_heading('Reading files'));
-        await tester.pump(const Duration(milliseconds: 200));
-        _semanticDisclosure(tester, 'Reading files', false);
+        await _canonicalAnswer(tester);
+        // The host harness still expects both cold phases in this order.
         await _capture(tester, 'COLD_COLLAPSED');
-        await _canonicalDisclosure(tester);
         await _capture(tester, 'COLD_EXPANDED');
         expect(desktop.connected, isFalse);
         _canonical(desktop, saved);
@@ -489,12 +446,7 @@ void main() {
         isEmpty,
       );
       expect((state['lastTurn'] as Map)['threadId'], first['threadId']);
-      await _until(
-        tester,
-        () =>
-            _rows(desktop).length == 2 &&
-            _heading('Reading files').evaluate().length == 1,
-      );
+      await _until(tester, () => _rows(desktop).length == 2);
       expect(desktop.thread?['id'], first['threadId']);
       expect(desktop.turnId, first['turnId']);
       expect(first['pending'], isTrue);
@@ -504,24 +456,11 @@ void main() {
       final stableId = row['id'];
       expect(row['text'], '**Reading files**\nLive summary detail.');
       expect((row[reasoningMetadataKey] as Map)['terminal'], isFalse);
-      final widgetFinder = find.byWidgetPredicate(
-        (w) => w is ThinkingTimelineRow && w.messageId == stableId,
-      );
-      expect(widgetFinder, findsOneWidget);
-      final originalWidgetState = tester.state(widgetFinder);
-      expect(find.text('Checking request'), findsOneWidget);
-      expect(_heading('Checking request'), findsNothing);
-      expect(_expanded(tester, 'Reading files'), isFalse);
-      expect(_visibleDetail(tester), isEmpty);
-      expect(find.text('Reasoning native fixture complete.'), findsNothing);
-      await tester.ensureVisible(_heading('Reading files'));
-      await tester.pump(const Duration(milliseconds: 200));
-      _semanticDisclosure(tester, 'Reading files', false);
+      _reasoningHidden();
+      expect(find.text(_input), findsOneWidget);
+      expect(find.text(_answer), findsNothing);
+      // The host harness still expects both stream phases in this order.
       await _capture(tester, 'STREAM_COLLAPSED');
-      await _tap(tester, _heading('Reading files'));
-      expect(_expanded(tester, 'Reading files'), isTrue);
-      expect(_visibleDetail(tester), 'Live summary detail.');
-      _semanticDisclosure(tester, 'Reading files', true);
       await _capture(tester, 'STREAM_EXPANDED');
       // Recheck stream provenance after both captures, before the real producer release.
       state = await _state();
@@ -542,16 +481,18 @@ void main() {
       final second = Map<String, dynamic>.from(state['reasoning'] as Map);
       await _until(
         tester,
-        () => _heading('Verifying response').evaluate().length == 1,
+        () =>
+            ((_detail(desktop, first['itemId'] as String)[reasoningMetadataKey]
+                        as Map)['summaryParts']
+                    as Map?)
+                ?.length ==
+            2,
       );
       expect(_rows(desktop).length, 2);
       expect(
         _detail(desktop, first['itemId'] as String)['id'] == stableId,
         isTrue,
       );
-      expect(tester.state(widgetFinder), same(originalWidgetState));
-      expect(_expanded(tester, 'Reading files'), isTrue);
-      expect(_expanded(tester, 'Verifying response'), isFalse);
       final meta =
           _detail(desktop, first['itemId'] as String)[reasoningMetadataKey]
               as Map;
@@ -567,9 +508,17 @@ void main() {
       expect(second['detailCompletedCount'], 0);
       expect(second['turnCompletedCount'], 0);
       expect(desktop.turnId, first['turnId']);
-      await _tap(tester, _heading('Verifying response'));
-      expect(_visibleDetail(tester), contains('Second summary detail.'));
-      expect(_visibleDetail(tester), contains('Content stream detail.'));
+      expect(
+        DesktopReasoning.fromRow(
+          _detail(desktop, first['itemId'] as String),
+        )!.text,
+        allOf(
+          contains('Second summary detail.'),
+          contains('Content stream detail.'),
+        ),
+      );
+      _reasoningHidden();
+      expect(find.text(_answer), findsNothing);
       await _capture(tester, 'STREAM_UPDATED');
       state = await _state();
       expect(state['reasoning'], second);
@@ -641,13 +590,7 @@ void main() {
       expect(resumeIndex, greaterThanOrEqualTo(0));
       expect(reopenTrace[resumeIndex + 1]['method'], 'thread/read');
       expect(reopenTrace[resumeIndex + 1]['threadId'], first['threadId']);
-      await _canonicalDisclosure(tester);
-      final quiet = _quiet(await _state());
-      await _tap(tester, _heading('Reading files'));
-      expect(_expanded(tester, 'Reading files'), isFalse);
-      await _tap(tester, _heading('Reading files'));
-      expect(_expanded(tester, 'Reading files'), isTrue);
-      expect(_quiet(await _state()), quiet);
+      await _canonicalAnswer(tester);
       _canonical(desktop, expected);
       await _capture(tester, 'HISTORY');
       expect(recorder.totalRequestAttempts, cloudBefore);

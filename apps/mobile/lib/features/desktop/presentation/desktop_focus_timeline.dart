@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../../../core/presentation/djl_glass.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 /// A stable center keeps old rows lazy and stationary while the tail grows.
 class DesktopFocusTimeline extends StatefulWidget {
   const DesktopFocusTimeline({
@@ -330,9 +333,9 @@ class _DesktopFocusTimelineState extends State<DesktopFocusTimeline> {
                 child: DjlGlassSurface(
                   radius: 24,
                   child: IconButton(
-                    tooltip: 'Scroll to latest message',
+                    tooltip: context.l10n.chatUiScrollToLatest,
                     onPressed: _latest,
-                    icon: const Icon(Icons.arrow_downward, size: 17),
+                    icon: const Icon(DjlIcons.arrowDown, size: 17),
                   ),
                 ),
               ),

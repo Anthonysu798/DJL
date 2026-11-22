@@ -5,6 +5,7 @@ import 'package:djl_mobile/app/desktop_deep_link.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
 import 'package:djl_mobile/features/desktop/data/remote_transport.dart';
 import 'desktop_subagents_test.dart' show SubagentTransport, subagentDesktop;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 class PassiveReconnectTransport extends SubagentTransport {
   @override

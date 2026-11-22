@@ -5,6 +5,7 @@ import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart'
 import 'package:djl_mobile/features/desktop/presentation/structured_question_card.dart';
 import 'desktop_history_reconciliation_test.dart' show historyDesktop;
 import 'desktop_plan_runtime_fallback_test.dart' show PlanFallbackTransport;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 const legacyQuestionText = '''A few quick questions:
 

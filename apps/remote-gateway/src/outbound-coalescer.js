@@ -11,6 +11,7 @@ const DEFAULT_MAX_BATCH_MESSAGES = 64;
 // approaches the relay frame limit.
 const DEFAULT_MAX_BATCH_BYTES = 262_144;
 const DELTA_METHOD = "item/agentMessage/delta";
+const GROUP_DRAFT_METHOD = "djl/groups/draft";
 
 // Streaming produces dozens of tiny notifications a second. The relay budgets
 // frames, not bytes, so a 40ms window turns a burst into one encrypted frame
@@ -88,6 +89,16 @@ function createOutboundCoalescer({
 }
 
 function canMergeDeltas(previous, next) {
+  // A draft that restarts replaces the member's text, so it starts a new run.
+  if (previous.method === GROUP_DRAFT_METHOD && next.method === GROUP_DRAFT_METHOD) {
+    return (
+      typeof previous.params?.delta === "string" &&
+      typeof next.params?.delta === "string" &&
+      next.params.restart !== true &&
+      previous.params.groupId === next.params.groupId &&
+      previous.params.memberId === next.params.memberId
+    );
+  }
   return (
     previous.method === DELTA_METHOD &&
     next.method === DELTA_METHOD &&

@@ -6,12 +6,12 @@ import 'package:djl_mobile/features/settings/presentation/device_name_sheet.dart
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_conversation_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart' show FontLoader, rootBundle;
 import 'package:djl_mobile/features/settings/domain/appearance.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
@@ -807,10 +807,7 @@ void main() {
           scheme.onSurface.withValues(alpha: .08),
           parent,
         );
-        final inputFill = Color.alphaBlend(
-          CupertinoColors.secondarySystemFill.resolveFrom(context),
-          parent,
-        );
+        final inputFill = DjlColors.of(context).surfaceRaised;
         // Raster captures are 8-bit; compare the composited colors in that same space.
         expect(
           colors.map((color) => color.toARGB32()),

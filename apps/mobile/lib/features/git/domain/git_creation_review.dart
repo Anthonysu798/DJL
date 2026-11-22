@@ -1,3 +1,4 @@
+import '../../../l10n/l10n.dart';
 import 'git_models.dart';
 
 String normalizedGitCreatedBranchName(String raw) {
@@ -17,8 +18,7 @@ class GitCreationReview {
   final bool canCommitFirst;
 }
 
-String _commits(int count) =>
-    count == 1 ? '1 local commit' : '$count local commits';
+String _commits(int count) => appStrings.gitReviewLocalCommits(count);
 
 GitCreationReview? gitBranchCreationReview(
   GitStatus status, {
@@ -29,12 +29,16 @@ GitCreationReview? gitBranchCreationReview(
   final onDefault = current.isNotEmpty && current == base;
   final local = status.localOnlyCommitCount;
   if (status.dirty) {
-    final source = current.isEmpty ? 'the current branch' : current;
-    var message =
-        "You're creating '$name' from $source. Carry your local changes onto the new branch, or commit first and then create + switch.";
+    final source = current.isEmpty
+        ? appStrings.gitReviewTheCurrentBranch
+        : current;
+    var message = appStrings.gitReviewCreatingFrom(name, source);
     if (onDefault && local > 0) {
-      message =
-          "$base already has ${_commits(local)} that are not on the remote. Those commits stay on $base's history. $message";
+      message = appStrings.gitReviewCommitsStayPrefix(
+        base,
+        _commits(local),
+        message,
+      );
     }
     if (status.files.isNotEmpty) {
       final preview = status.files
@@ -43,21 +47,24 @@ GitCreationReview? gitBranchCreationReview(
           .join('\n');
       final remaining = status.files.length - 3;
       message +=
-          '\n\nFiles with local changes:\n$preview${remaining > 0 ? '\n• +$remaining more files' : ''}';
+          '\n\n${appStrings.gitReviewFilesWithChanges}\n$preview${remaining > 0 ? '\n• ${appStrings.gitReviewMoreFiles(remaining)}' : ''}';
     }
     return GitCreationReview(
-      title: "Bring local changes to '$name'?",
+      title: appStrings.gitReviewBringChangesTitle(name),
       message: message,
-      acceptLabel: 'Carry to New Branch',
+      acceptLabel: appStrings.gitReviewCarryToNewBranch,
       canCommitFirst: true,
     );
   }
   if (onDefault && local > 0) {
     return GitCreationReview(
-      title: 'Local commits stay on $base',
-      message:
-          "$base already has ${_commits(local)} that are not on the remote. Creating '$name' now starts the new branch from the current HEAD, but those commits stay in $base's history.",
-      acceptLabel: 'Create Anyway',
+      title: appStrings.gitReviewCommitsStayTitle(base),
+      message: appStrings.gitReviewBranchCommitsStay(
+        base,
+        _commits(local),
+        name,
+      ),
+      acceptLabel: appStrings.gitReviewCreateAnyway,
     );
   }
   return null;
@@ -74,15 +81,23 @@ GitCreationReview? gitWorktreeCreationReview(
   final current = status.branch?.trim() ?? '';
   final defaultName = defaultBranch.trim();
   final baseName = base.trim();
-  final titleNoun = managed ? 'a managed worktree' : "'$name'";
-  final worktreeNoun = managed ? 'the managed worktree' : 'the new worktree';
+  final titleNoun = managed
+      ? appStrings.gitReviewManagedWorktreeNoun
+      : appStrings.gitReviewQuotedName(name);
+  final worktreeNoun = managed
+      ? appStrings.gitReviewTheManagedWorktree
+      : appStrings.gitReviewTheNewWorktree;
   if (status.dirty && transfer != 'none' && current != baseName) {
-    final verb = transfer == 'copy' ? 'copy' : 'move';
+    final copy = transfer == 'copy';
     return GitCreationReview(
-      title:
-          '${verb == 'copy' ? 'Copy' : 'Move'} local changes from the current branch',
-      message:
-          "Creating $titleNoun can $verb local changes only from the current branch. Switch the base branch to '$current' or clean up local changes before creating the worktree.",
+      title: copy
+          ? appStrings.gitReviewCopyTitle
+          : appStrings.gitReviewMoveTitle,
+      message: appStrings.gitReviewOnlyCurrentBranch(
+        titleNoun,
+        copy ? appStrings.gitReviewVerbCopy : appStrings.gitReviewVerbMove,
+        current,
+      ),
     );
   }
   if (current.isNotEmpty &&
@@ -92,13 +107,18 @@ GitCreationReview? gitWorktreeCreationReview(
     final suffix = !status.dirty || transfer == 'none'
         ? ''
         : transfer == 'copy'
-        ? ' Local changes will also be copied into $worktreeNoun; ignored files stay here.'
-        : ' Local changes will move into $worktreeNoun; ignored files stay here.';
+        ? appStrings.gitReviewCopiedInto(worktreeNoun)
+        : appStrings.gitReviewMovedInto(worktreeNoun);
     return GitCreationReview(
-      title: 'Local commits stay on $defaultName',
-      message:
-          "$defaultName already has ${_commits(status.localOnlyCommitCount)} that are not on the remote. Creating $titleNoun from $baseName starts from the current HEAD, but those commits stay in $defaultName's history too.$suffix",
-      acceptLabel: 'Create Anyway',
+      title: appStrings.gitReviewCommitsStayTitle(defaultName),
+      message: appStrings.gitReviewWorktreeCommitsStay(
+        defaultName,
+        _commits(status.localOnlyCommitCount),
+        titleNoun,
+        baseName,
+        suffix,
+      ),
+      acceptLabel: appStrings.gitReviewCreateAnyway,
     );
   }
   return null;

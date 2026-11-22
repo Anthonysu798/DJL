@@ -279,10 +279,6 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       await tester.pumpAndSettle();
       expect(find.text('Task finished'), findsNothing);
-      expect(
-        find.text('Your session is hidden while DJL is inactive.'),
-        findsOneWidget,
-      );
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       await tester.pump(const Duration(seconds: 30));

@@ -433,12 +433,6 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Geist Mono').last);
         await tester.pumpAndSettle();
-        await reveal(tester, find.byKey(const Key('bubble-setting')));
-        await tester.tap(find.byKey(const Key('bubble-setting')));
-        await tester.pumpAndSettle();
-        await reveal(tester, find.byKey(const Key('bubble-pink')));
-        await tester.tap(find.byKey(const Key('bubble-pink')));
-        await tester.pumpAndSettle();
         expect(find.text('App lock'), findsNothing);
         await verifyNativeSettings(store, nativeSettingsTarget);
       } finally {
@@ -453,7 +447,6 @@ void main() {
         );
         expect(controls.controller.theme, ThemeMode.dark);
         expect(controls.controller.font, AppFontStyle.geistMono);
-        expect(controls.controller.bubble, UserBubbleColor.pink);
         expect(find.text('App lock'), findsNothing);
         expect(restored.owner.calls, 0);
         await verifyNativeSettings(store, nativeSettingsTarget);

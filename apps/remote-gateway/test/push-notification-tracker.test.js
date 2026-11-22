@@ -532,3 +532,71 @@ test("notifications handler forwards device registration to the push service cli
   ]);
   assert.equal(responses[0]?.result?.ok, true);
 });
+
+test("push tracker wakes the phone once when an agent asks for an answer", async () => {
+  const notifications = [];
+  const tracker = createPushNotificationTracker({
+    sessionId: "session-1",
+    pushServiceClient: {
+      hasConfiguredBaseUrl: true,
+      async notifyCompletion(payload) {
+        notifications.push(payload);
+        return { ok: true };
+      },
+    },
+  });
+
+  tracker.handleOutbound(
+    JSON.stringify({
+      method: "thread/started",
+      params: { thread: { id: "thread-1", title: "Plan the trip" } },
+    }),
+  );
+  const approval = {
+    id: 7,
+    method: "item/commandExecution/requestApproval",
+    params: { threadId: "thread-1", turnId: "turn-1", itemId: "item-1" },
+  };
+  tracker.handleOutbound(JSON.stringify(approval));
+  tracker.handleOutbound(
+    JSON.stringify({
+      id: "q-1",
+      method: "item/tool/requestUserInput",
+      params: { threadId: "thread-1", turnId: "turn-1" },
+    }),
+  );
+  // A notification with the same method name but no request id is not a question.
+  tracker.handleOutbound(
+    JSON.stringify({
+      method: "item/commandExecution/requestApproval",
+      params: { threadId: "thread-1", turnId: "turn-1" },
+    }),
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(
+    notifications.map(({ threadId, turnId, result, title, dedupeKey }) => ({
+      threadId,
+      turnId,
+      result,
+      title,
+      dedupeKey,
+    })),
+    [
+      {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        result: "attention",
+        title: "Plan the trip",
+        dedupeKey: "session-1|thread-1|attention|turn-1|7",
+      },
+      {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        result: "attention",
+        title: "Plan the trip",
+        dedupeKey: "session-1|thread-1|attention|turn-1|q-1",
+      },
+    ],
+  );
+});

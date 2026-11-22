@@ -9,6 +9,7 @@ import '../domain/cloud_models.dart';
 import '../../account/domain/account_snapshot.dart';
 import 'cloud_composer_draft_store.dart';
 import 'cloud_model_selection_store.dart';
+import '../../../l10n/l10n.dart';
 
 class RunStream {
   RunStream(this.stream, this.cancel);
@@ -274,10 +275,10 @@ class CloudRepository {
         }
         if (cancelled.isCompleted) return;
         if (++failures > 8) {
-          throw const CloudFailure(
+          throw CloudFailure(
             0,
             'disconnected',
-            'Lost connection. Tap Reconnect to resume this response.',
+            appStrings.cloudChatLostConnection,
           );
         }
         await Future.any([

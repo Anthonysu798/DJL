@@ -8,6 +8,7 @@ import '../data/remote_transport.dart';
 import '../domain/desktop_overview.dart';
 import '../domain/desktop_worktree_routing.dart';
 import 'desktop_controller.dart';
+import '../../../l10n/l10n.dart';
 
 enum WorktreeFlowMode { handoff, fork }
 
@@ -117,9 +118,7 @@ class WorktreeFlowController extends ChangeNotifier {
 
   void _check() {
     if (!isCurrent) {
-      throw StateError(
-        'The connected desktop or chat changed. Reopen this worktree action.',
-      );
+      throw StateError(appStrings.desktopWorktreeStale);
     }
   }
 
@@ -150,7 +149,7 @@ class WorktreeFlowController extends ChangeNotifier {
     _check();
     final fresh = await _repository.status();
     if (!fresh.isRepo) {
-      throw StateError('This folder is no longer a Git repository.');
+      throw StateError(appStrings.desktopNotGitRepository);
     }
     final targets = await _repository.branches();
     _check();
@@ -204,17 +203,15 @@ class WorktreeFlowController extends ChangeNotifier {
       _check();
       if (result['alreadyExisted'] == true) {
         _mayHaveCreatedWorktree = false;
-        errorTitle = 'Branch Already Exists';
+        errorTitle = appStrings.desktopBranchAlreadyExists;
         throw StateError(
-          "A worktree for '${result['branch'] ?? branch}' already exists. Choose a different name.",
+          appStrings.desktopWorktreeExists('${result['branch'] ?? branch}'),
         );
       }
       if (target == null ||
           comparableWorktreePath(target) ==
               comparableWorktreePath(_sourcePath)) {
-        throw StateError(
-          'The desktop did not identify a new worktree. Refresh before trying again.',
-        );
+        throw StateError(appStrings.desktopWorktreeUnidentified);
       }
       _target = target;
       if (mode == WorktreeFlowMode.handoff) {
@@ -226,9 +223,7 @@ class WorktreeFlowController extends ChangeNotifier {
           operationOwner: _operationOwner,
           isCurrent: () => isCurrent,
         )) {
-          throw StateError(
-            desktop.error ?? 'The fork result could not be verified.',
-          );
+          throw StateError(desktop.error ?? appStrings.desktopForkUnverified);
         }
         _check();
       }
@@ -251,9 +246,7 @@ class WorktreeFlowController extends ChangeNotifier {
         transfer['targetPath'] != null &&
             comparableWorktreePath(transfer['targetPath']) !=
                 comparableWorktreePath(target)) {
-      throw StateError(
-        'The desktop did not verify the handoff destination. Check both folders before retrying.',
-      );
+      throw StateError(appStrings.desktopHandoffUnverified);
     }
     final transferred = transfer['transferredChanges'] == true;
     _resuming = true;
@@ -277,7 +270,7 @@ class WorktreeFlowController extends ChangeNotifier {
           ).transfer(_sourcePath);
         } catch (rollback) {
           throw StateError(
-            '$e\n\nTracked changes could not be moved back automatically: $rollback. Check both folders before retrying.',
+            '$e\n\n${appStrings.desktopRollbackFailed(rollback.toString())}',
           );
         }
       }
@@ -291,7 +284,9 @@ class WorktreeFlowController extends ChangeNotifier {
     try {
       _check();
       final target = desktopConversationPath(path);
-      if (target == null) throw StateError('The worktree path is unavailable.');
+      if (target == null) {
+        throw StateError(appStrings.desktopWorktreePathUnavailable);
+      }
       await _handoff(target);
       completed = true;
       return true;
@@ -322,9 +317,7 @@ class WorktreeFlowController extends ChangeNotifier {
       await _metadata();
       final local = desktopConversationPath(branches['localCheckoutPath']);
       if (local == null) {
-        throw StateError(
-          'Could not resolve the paired Local checkout for this worktree.',
-        );
+        throw StateError(appStrings.desktopLocalCheckoutUnresolved);
       }
       await _handoff(local);
       completed = true;
@@ -339,12 +332,12 @@ class WorktreeFlowController extends ChangeNotifier {
 
   void _recordFailure(Object failure) {
     errorTitle ??= mode == WorktreeFlowMode.handoff
-        ? 'Worktree Handoff Failed'
-        : 'Worktree Fork Failed';
+        ? appStrings.desktopWorktreeHandoffFailed
+        : appStrings.desktopWorktreeForkFailed;
     final detail = createdPath != null
-        ? '\n\nThe new worktree was kept at $createdPath. Check it before trying again.'
+        ? '\n\n${appStrings.desktopWorktreeKeptAt(createdPath!)}'
         : _mayHaveCreatedWorktree
-        ? '\n\nA worktree may have been created. It was kept; refresh and inspect it before trying again.'
+        ? '\n\n${appStrings.desktopWorktreeMayExist}'
         : '';
     error = '$failure$detail';
   }

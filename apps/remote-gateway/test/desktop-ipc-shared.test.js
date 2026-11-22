@@ -289,3 +289,18 @@ test("drops fully contextual user items but preserves attachment-only items", ()
     { type: "input_image", image_url: "data:image/png;base64,AAAA" },
   ]);
 });
+
+test("keeps a DJL group user item whose only content is its attachments field", () => {
+  const filesOnly = {
+    id: "files",
+    type: "userMessage",
+    role: "user",
+    content: [{ type: "inputText", text: "" }],
+    attachments: [
+      { type: "file", id: "att-1", name: "a.pdf", mimeType: "application/pdf", sizeBytes: 3 },
+    ],
+  };
+  const sanitized = sanitizeUserRoleItem(filesOnly);
+  assert.deepEqual(sanitized?.attachments, filesOnly.attachments);
+  assert.equal(sanitizeUserRoleItem({ ...filesOnly, attachments: [] }), null);
+});

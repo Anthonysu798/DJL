@@ -1,8 +1,10 @@
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/cloud_chrome.dart';
 import '../../../core/presentation/djl_glass.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 
 Future<bool> showCloudSignOutConfirmation(BuildContext context) async {
   final result = await showGeneralDialog<bool>(
@@ -16,9 +18,7 @@ Future<bool> showCloudSignOutConfirmation(BuildContext context) async {
     pageBuilder: (context, _, _) {
       final media = MediaQuery.of(context);
       final colors = Theme.of(context).colorScheme;
-      final fill = colors.brightness == Brightness.dark
-          ? const Color(0xff161618)
-          : const Color(0xfff2f2f7).withValues(alpha: .97);
+      final fill = colors.surfaceContainerLow;
       final outline = colors.onSurface.withValues(alpha: .14);
       return Padding(
         padding: EdgeInsets.fromLTRB(
@@ -59,7 +59,7 @@ Future<bool> showCloudSignOutConfirmation(BuildContext context) async {
                                 namesRoute: true,
                                 header: true,
                                 child: Text(
-                                  'Sign out of DJL Cloud?',
+                                  context.l10n.accountSignOutTitle,
                                   textAlign: TextAlign.center,
                                   style: cloudBodyStyle.copyWith(
                                     letterSpacing: 0,
@@ -83,14 +83,12 @@ Future<bool> showCloudSignOutConfirmation(BuildContext context) async {
                               ),
                             ),
                             child: Text(
-                              'Sign out',
+                              context.l10n.accountSignOut,
                               textAlign: TextAlign.center,
                               style: cloudBodyStyle.copyWith(
                                 letterSpacing: 0,
                                 fontWeight: FontWeight.w600,
-                                color: CupertinoColors.systemRed.resolveFrom(
-                                  context,
-                                ),
+                                color: DjlColors.of(context).danger,
                               ),
                             ),
                           ),
