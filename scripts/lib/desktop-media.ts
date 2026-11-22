@@ -14,8 +14,8 @@ import {
 
 const exec = promisify(execFile);
 const hash = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
-const command = (file: string, args: string[]) =>
-  exec(file, args, { timeout: 60000, maxBuffer: 128 * 1024 * 1024, encoding: "buffer" });
+const command = (file: string, args: string[], cwd?: string) =>
+  exec(file, args, { cwd, timeout: 60000, maxBuffer: 128 * 1024 * 1024, encoding: "buffer" });
 export function resolveDesktopMediaTargets(platform: string, arch: string): DesktopMediaTarget[] {
   if (platform === "linux") return [];
   if (platform === "mac" && arch === "universal") return ["darwin-arm64", "darwin-x64"];
@@ -279,7 +279,14 @@ export async function stageDesktopMedia(input: {
       );
       if (asset.archiveEntry) {
         // Extract one known entry to stdout; vendor archives cannot write paths or symlinks into the stage.
-        const bytes = (await command("tar", ["-xOf", cached, asset.archiveEntry])).stdout;
+        // Pass the archive by name from its folder: GNU tar reads "D:\..." as a remote host.
+        const bytes = (
+          await command(
+            "tar",
+            ["-xOf", path.basename(cached), asset.archiveEntry],
+            path.dirname(cached),
+          )
+        ).stdout;
         verifyMediaDigest(bytes, asset.payloadSha256!, asset.archiveEntry);
         await writeFile(output, bytes);
       } else await copyFile(cached, output);
