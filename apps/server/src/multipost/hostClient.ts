@@ -5,6 +5,7 @@ import type {
   MultiPostRuntimeContext,
   MultiPostEvidence,
   MultiPostIdentity,
+  MultiPostNotice,
 } from "@djl/contracts";
 export class MultiPostHostClient implements MultiPostBrowserRuntime {
   constructor(
@@ -65,5 +66,11 @@ export class MultiPostHostClient implements MultiPostBrowserRuntime {
   }
   disconnect(scope: MultiPostScope, account: MultiPostAccount) {
     return this.call<void>("disconnect", { scope, account });
+  }
+  notify(notice: MultiPostNotice) {
+    return this.call<void>("notify", { notice }, AbortSignal.timeout(3000));
+  }
+  postLink(context: MultiPostRuntimeContext) {
+    return this.call<string | null>("postLink", { context }, AbortSignal.timeout(30_000));
   }
 }

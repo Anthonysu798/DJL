@@ -9,8 +9,10 @@ import path from "node:path";
 import type {
   Campaign,
   MediaAsset,
+  MultiPostAccount,
   MultiPostCommand,
   MultiPostContentData,
+  MultiPostQuickPostResult,
   MultiPostScope,
   MultiPostState,
 } from "@djl/contracts";
@@ -18,6 +20,10 @@ import type { ServerConfigShape } from "../config";
 import { assertAgentCampaignAccess, assertAgentMediaAccess } from "../marketing/agentScope";
 import { readDocument, MarketingError } from "../marketing/store";
 import { getMultiPost } from "./live";
+/** A preview names a few platforms differently from the accounts list. */
+const platformOf = (account: MultiPostAccount) =>
+  (({ rednote: "red", weixinchannel: "wechat" }) as Record<string, string>)[account.platformKey] ??
+  account.platformKey;
 export function importLegacyCampaign(
   config: Pick<ServerConfigShape, "stateDir" | "secretsDir">,
   scope: MultiPostScope,
@@ -61,6 +67,7 @@ export function importLegacyCampaign(
                 ] ?? x.platformKey,
               ),
         );
+        if (input.post && !accounts.length) throw new Error("Pick at least one account.");
         const kind = assets.some((x) => x.mime.startsWith("video/"))
           ? "video"
           : assets.some((x) => x.mime.startsWith("audio/"))
@@ -84,7 +91,7 @@ export function importLegacyCampaign(
               ]
             : [];
         });
-        if (!targets.length)
+        if (!input.post && !targets.length)
           throw new Error(
             "Connect and choose MultiPost account profiles before importing. Cloud OAuth identities are not copied.",
           );
@@ -116,6 +123,41 @@ export function importLegacyCampaign(
             );
             files.push({ name, type, url: `Media/${id}`, size });
           }
+        }
+        if (input.post) {
+          // One post per distinct caption, so each platform gets the words written for it.
+          const fallback = Object.values(campaign.captions)[0] ?? campaign.brief;
+          const groups = new Map<string, string[]>();
+          for (const account of accounts) {
+            const text = campaign.captions[platformOf(account)] || fallback;
+            groups.set(text, [...(groups.get(text) ?? []), account.id]);
+          }
+          const results: MultiPostQuickPostResult[] = [];
+          for (const [text, accountIds] of groups)
+            results.push(
+              (await service.command(
+                scope,
+                {
+                  action: "quick-post",
+                  post: {
+                    text,
+                    media: files,
+                    accountIds,
+                    ...(input.scheduledAt ? { scheduledAt: input.scheduledAt } : {}),
+                    ...(input.timezone ? { timezone: input.timezone } : {}),
+                  },
+                },
+                "ui",
+              )) as MultiPostQuickPostResult,
+            );
+          return {
+            drafts: results.flatMap((x) => x.drafts),
+            jobs: results.flatMap((x) => x.jobs),
+            posted: results.some((x) => x.posted),
+            needsApproval: false,
+            skipped: results.flatMap((x) => x.skipped),
+            message: results.map((x) => x.message).join(" "),
+          } satisfies MultiPostQuickPostResult;
         }
         const data: MultiPostContentData = {
           title: campaign.name,

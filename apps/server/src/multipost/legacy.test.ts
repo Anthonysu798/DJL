@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import sharp from "sharp";
-import type { MultiPostAccount, MultiPostDraft } from "@djl/contracts";
+import type { MultiPostAccount, MultiPostDraft, MultiPostQuickPostResult } from "@djl/contracts";
 import { layerMemory } from "../persistence/NodeSqliteClient";
 import { saveDocument, readDocument } from "../marketing/store";
 import { importLegacyCampaign } from "./legacy";
@@ -145,4 +145,97 @@ it("imports owned campaign media and recipes with fresh approval while retaining
       }),
     ),
   ).rejects.toThrow(/another social workspace/);
+});
+
+it("posts a saved preview through the user's own accounts in one step, with no cloud session", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "djl-multipost-preview-post-"));
+  const db = ManagedRuntime.make(layerMemory());
+  cleanup.push(async () => {
+    await db.dispose();
+    await rm(dir, { recursive: true, force: true });
+  });
+  const config = { stateDir: dir, secretsDir: path.join(dir, "secrets") };
+  await mkdir(config.secretsDir);
+  await mkdir(path.join(dir, "marketing/originals"), { recursive: true });
+  const sql = await db.runPromise(Effect.service(SqlClient.SqlClient));
+  await db.runPromise(
+    sql`CREATE TABLE marketing_documents (kind TEXT, id TEXT, body TEXT, version INTEGER, updated_at TEXT, PRIMARY KEY (kind, id))`,
+  );
+  const scope = await multiPostScope(dir, "chat", dir);
+  const { service } = await getMultiPost(sql);
+  const create = (platformKey: string) =>
+    service.command(
+      scope,
+      { action: "create-account", platformKey, label: platformKey },
+      "ui",
+    ) as Promise<MultiPostAccount>;
+  const x = await create("x");
+  const instagram = await create("instagram");
+  const bytes = await sharp({ create: { width: 8, height: 6, channels: 3, background: "red" } })
+    .jpeg()
+    .toBuffer();
+  await writeFile(path.join(dir, "marketing/originals", "asset"), bytes);
+  await db.runPromise(
+    saveDocument(
+      "asset",
+      "asset",
+      { id: "asset", name: "photo.jpg", mime: "image/jpeg", bytes: bytes.length },
+      null,
+    ),
+  );
+  await db.runPromise(
+    saveDocument(
+      "campaign",
+      "campaign",
+      {
+        id: "campaign",
+        threadId: "chat",
+        name: "Preview name",
+        assetIds: ["asset"],
+        platforms: ["x", "instagram"],
+        captions: { x: "Short for X", instagram: "Longer for Instagram" },
+        brief: "brief",
+      },
+      null,
+    ),
+  );
+  const scheduledAt = new Date(Date.now() + 86_400_000).toISOString();
+  const result = (await db.runPromise(
+    importLegacyCampaign(config, scope, {
+      action: "import-campaign",
+      campaignId: "campaign",
+      version: 1,
+      accountIds: [x.id, instagram.id],
+      post: true,
+      scheduledAt,
+      timezone: "America/Toronto",
+    }),
+  )) as MultiPostQuickPostResult;
+  expect(result.posted).toBe(true);
+  const sent = Object.fromEntries(result.jobs.map((job) => [job.accountId, job]));
+  expect(Object.keys(sent).toSorted()).toEqual([x.id, instagram.id].toSorted());
+  for (const [id, content] of [
+    [x.id, "Short for X"],
+    [instagram.id, "Longer for Instagram"],
+  ] as const) {
+    expect(sent[id]).toMatchObject({ state: "queued", dueAt: scheduledAt });
+    // No invented title: most platforms print it above the caption.
+    expect(sent[id]!.snapshot.data).toMatchObject({
+      title: "",
+      content,
+      images: [{ name: "photo.jpg", type: "image/jpeg" }],
+    });
+  }
+  expect(result.drafts.every((draft) => draft.approvedRevision === draft.revision)).toBe(true);
+  await expect(
+    db.runPromise(
+      importLegacyCampaign(config, scope, {
+        action: "import-campaign",
+        campaignId: "campaign",
+        version: 1,
+        accountIds: ["not-an-account"],
+        post: true,
+      }),
+    ),
+  ).rejects.toThrow(/Pick at least one account/);
 });

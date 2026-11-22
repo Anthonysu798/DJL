@@ -5,6 +5,7 @@ import type {
   MultiPostRuntimeContext,
   MultiPostScope,
   MultiPostAccount,
+  MultiPostNotice,
 } from "@djl/contracts";
 export async function startMultiPostHost(runtime: MultiPostBrowserRuntime) {
   const token = randomBytes(32).toString("hex");
@@ -40,6 +41,7 @@ export async function startMultiPostHost(runtime: MultiPostBrowserRuntime) {
         scope: MultiPostScope;
         account: MultiPostAccount;
         context: MultiPostRuntimeContext;
+        notice: MultiPostNotice;
       };
       let result: unknown;
       switch (input.action) {
@@ -72,6 +74,12 @@ export async function startMultiPostHost(runtime: MultiPostBrowserRuntime) {
           break;
         case "cancel":
           result = await runtime.cancel(input.context);
+          break;
+        case "notify":
+          result = await runtime.notify?.(input.notice);
+          break;
+        case "postLink":
+          result = await runtime.postLink?.(input.context);
           break;
         default:
           throw new Error("Unknown MultiPost host operation");

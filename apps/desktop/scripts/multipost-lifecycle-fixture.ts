@@ -165,7 +165,7 @@ app
         const resumed = await runtime.prepare({
           scope,
           account,
-          job: { ...published, dueAt: new Date(Date.now() - 1).toISOString() },
+          job: { ...published, dueAt: new Date(Date.now() - 60_000).toISOString() },
         });
         assert.equal(resumed.state, "missed");
         report.resumeSignalStopsMissedTask = true;

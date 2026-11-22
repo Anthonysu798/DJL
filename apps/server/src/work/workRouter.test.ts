@@ -152,6 +152,17 @@ describe("decideWorkTurnPolicy", () => {
 });
 
 describe("marketing conversation routing", () => {
+  it("has the agent post in one call and answer in one short sentence, with no cloud sign-in", () => {
+    const prompt = buildGroundedWorkPrompt(
+      "Post this to Instagram",
+      decideWorkTurnPolicy({ prompt: "Post this to Instagram" }),
+      "native",
+    );
+    expect(prompt).toContain("call djl_multipost_post once");
+    expect(prompt).toContain("do not also call djl_prepare_marketing");
+    expect(prompt).toContain("one short sentence");
+    expect(prompt).toContain("never ask the user to sign in to DJL Cloud");
+  });
   it("routes beginner requests to marketing tools without intercepting coding requests", () => {
     for (const prompt of [
       "帮我把这些照片做成小红书宣传，一键发布",

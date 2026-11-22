@@ -1,7 +1,13 @@
-import { deriveChromeUserAgent } from "@djl/shared/browserSession";
+import {
+  BROWSER_BLANK_URL,
+  buildAcceptLanguageHeader,
+  buildChromeClientHints,
+  classifyBrowserWindowOpen,
+  deriveChromeUserAgent,
+} from "@djl/shared/browserSession";
 import { app } from "electron";
 import { createHash } from "node:crypto";
-import { BrowserWindow, session, net, powerMonitor } from "electron";
+import { BrowserWindow, Notification, session, net, powerMonitor } from "electron";
 import { realpath, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type {
@@ -12,7 +18,15 @@ import type {
   MultiPostRuntimeContext,
   MultiPostEvidence,
   MultiPostContentData,
+  MultiPostNotice,
 } from "@djl/contracts";
+import { noticeText } from "./notice";
+import {
+  INSTAGRAM_GRID_SCRIPT,
+  INSTAGRAM_POST_TIME_SCRIPT,
+  gridCodes,
+  madeByThisShare,
+} from "./postLink";
 import {
   adapters,
   getAdapter,
@@ -29,6 +43,20 @@ import {
   buildCancelScript,
 } from "@djl/multipost/browser";
 import { multipostPartition } from "./identity";
+
+/** Query strings carry sign-in tokens, so logs keep only where a page is. */
+const withoutSecrets = (text: string) => text.replace(/[?#][^\s"')]*/g, "");
+/** What a page with no signed-in person on it is showing, for the log. Reads nothing personal. */
+const NOT_SIGNED_IN_SCRIPT = `document.querySelector('input[type="password"]') ? "a sign-in form" : "no account menu on " + location.pathname + (document.querySelector('[role="dialog"]') ? ", with a message open" : "")`;
+/** True when a finished page shows nothing a person could read or press. */
+const BLANK_PAGE_SCRIPT = `(() => {
+  if (!document.body) return true;
+  if (document.body.innerText.trim()) return false;
+  return ![...document.querySelectorAll("img,video,canvas,iframe,input,button")].some((element) => {
+    const box = element.getBoundingClientRect();
+    return box.width > 40 && box.height > 40;
+  });
+})()`;
 
 /** Social sessions are separate from both normal browsing and each other. */
 export class DesktopMultiPostRuntime implements MultiPostBrowserRuntime {
@@ -53,34 +81,108 @@ export class DesktopMultiPostRuntime implements MultiPostBrowserRuntime {
     const existing = this.windows.get(key);
     if (existing && !existing.isDestroyed()) return existing;
     const partitionSession = session.fromPartition(partition);
-    partitionSession.setUserAgent(deriveChromeUserAgent(app.userAgentFallback, [app.getName()]));
+    const userAgent = deriveChromeUserAgent(app.userAgentFallback, [app.getName()]);
+    partitionSession.setUserAgent(userAgent);
+    // `setUserAgent` leaves the client hints saying "Electron"; sign-in pages read both, and a
+    // mismatch is treated as an automated browser.
+    const identity = {
+      "User-Agent": userAgent,
+      ...buildChromeClientHints(userAgent, process.platform),
+      ...((language) => (language ? { "Accept-Language": language } : {}))(
+        buildAcceptLanguageHeader(app.getPreferredSystemLanguages()),
+      ),
+    };
+    const replaced = new Set(Object.keys(identity).map((name) => name.toLowerCase()));
+    partitionSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      const requestHeaders = Object.fromEntries(
+        Object.entries(details.requestHeaders).filter(
+          ([name]) => !replaced.has(name.toLowerCase()),
+        ),
+      );
+      callback({ requestHeaders: { ...requestHeaders, ...identity } });
+    });
     partitionSession.setPermissionRequestHandler((_contents, _permission, callback) =>
       callback(false),
     );
     partitionSession.setPermissionCheckHandler(() => false);
+    const webPreferences = {
+      partition,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+      // These windows have no passkey prompt, so a page that starts one waits forever.
+      // Without the API, sites fall back to a password or an emailed code.
+      disableBlinkFeatures: "WebAuth",
+    };
     const window = new BrowserWindow({
       width: 1100,
       height: 800,
       show: false,
       title: `DJL MultiPost — ${account.label}`,
-      webPreferences: {
-        partition,
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-        backgroundThrottling: false,
-      },
+      webPreferences,
     });
-    window.webContents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith("https://")) void window.loadURL(url);
+    window.webContents.setWindowOpenHandler((details) => {
+      const { url } = details;
+      if (!url.startsWith("https://") && url !== BROWSER_BLANK_URL) return { action: "deny" };
+      // A verification or "continue with" popup talks back to the page that opened it, so it
+      // has to be a real child window; replacing the page would leave both sides waiting.
+      if (classifyBrowserWindowOpen(details) === "popup")
+        return {
+          action: "allow",
+          overrideBrowserWindowOptions: { width: 520, height: 720, parent: window, webPreferences },
+        };
+      void window.loadURL(url);
       return { action: "deny" };
     });
+    this.watch(window, account.platformKey, !jobId);
     window.on("closed", () => {
       this.windows.delete(key);
       for (const [id, owner] of this.prepared) if (owner === window) this.prepared.delete(id);
     });
     this.windows.set(key, window);
     return window;
+  }
+  /** Writes what a platform page did to the desktop log, so a failed sign-in can be explained. */
+  private watch(window: BrowserWindow, platform: string, signIn: boolean) {
+    const contents = window.webContents;
+    const log = (...parts: unknown[]) =>
+      console.warn(
+        "[multipost-page]",
+        platform,
+        ...parts.map((part) => withoutSecrets(String(part))),
+      );
+    contents.on("did-navigate", (_event, url, status) => log("opened", status, url));
+    contents.on("did-fail-load", (_event, code, description, url, isMainFrame) => {
+      // -3 is a navigation the page itself replaced, not a failure.
+      if (code !== -3)
+        log(isMainFrame ? "failed to load" : "frame failed to load", code, description, url);
+    });
+    contents.on("render-process-gone", (_event, details) => log("crashed", details.reason));
+    contents.on("console-message", (event) => {
+      if (event.level === "error") log("page error", event.message.slice(0, 300));
+    });
+    contents.on("did-create-window", (child) => this.watch(child, platform, false));
+    if (!signIn) return;
+    // A sign-in step that renders nothing leaves a person stuck with no reload button.
+    const reloaded = new Set<string>();
+    contents.on("did-stop-loading", () => {
+      setTimeout(() => {
+        if (window.isDestroyed()) return;
+        const page = withoutSecrets(contents.getURL());
+        if (!page.startsWith("https://")) return;
+        void contents
+          .executeJavaScript(BLANK_PAGE_SCRIPT)
+          .then((blank) => {
+            if (!blank) return;
+            if (reloaded.has(page)) return log("still blank after reload", page);
+            reloaded.add(page);
+            log("blank page, reloading", page);
+            contents.reload();
+          })
+          .catch(() => {});
+      }, 4000);
+    });
   }
   async connect(scope: MultiPostScope, account: MultiPostAccount) {
     const window = this.window(scope, account);
@@ -111,7 +213,8 @@ export class DesktopMultiPostRuntime implements MultiPostBrowserRuntime {
       };
     }
     const window = this.window(scope, account);
-    if (!window.webContents.getURL()) {
+    const opened = !window.webContents.getURL();
+    if (opened) {
       const adapter = adapters.find((x) => x.platformKey === account.platformKey);
       if (adapter) await window.loadURL(account.homeUrl ?? adapter.homeUrl);
     }
@@ -120,7 +223,26 @@ export class DesktopMultiPostRuntime implements MultiPostBrowserRuntime {
       const url = window.webContents.getURL();
       if (url) await window.loadURL(url);
     }
-    return window.webContents.executeJavaScript(buildIdentityScript(account.platformKey));
+    const script = buildIdentityScript(account.platformKey);
+    let identity = (await window.webContents.executeJavaScript(script)) as MultiPostIdentity | null;
+    // A page that has only just opened may not have drawn its menu yet.
+    for (let attempt = opened ? 0 : 6; !identity && attempt < 6; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      if (window.isDestroyed()) return null;
+      identity = (await window.webContents.executeJavaScript(script)) as MultiPostIdentity | null;
+    }
+    if (!identity)
+      console.warn(
+        "[multipost-page]",
+        account.platformKey,
+        "not signed in:",
+        withoutSecrets(
+          String(
+            await window.webContents.executeJavaScript(NOT_SIGNED_IN_SCRIPT).catch(() => "unknown"),
+          ),
+        ),
+      );
+    return identity;
   }
   private async content(context: MultiPostRuntimeContext): Promise<MultiPostContentData> {
     const data = structuredClone({ ...context.job.snapshot.data, ...context.job.target.overrides });
@@ -241,12 +363,21 @@ export class DesktopMultiPostRuntime implements MultiPostBrowserRuntime {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       if (signal?.aborted) throw new Error("Publishing cancelled");
-      if (!window.webContents.debugger.isAttached()) window.webContents.debugger.attach("1.3");
-      await window.webContents.debugger.sendCommand("Page.addScriptToEvaluateOnNewDocument", {
-        source: helperSource,
-      });
       const result = (await Promise.race([
         (async () => {
+          // A window that has never loaded anything has no page for the debugger to answer
+          // from, and the helper registration below would wait forever.
+          if (!window.webContents.getURL()) await window.loadURL(BROWSER_BLANK_URL);
+          if (cancelled) throw new Error("Publishing cancelled");
+          if (!window.webContents.debugger.isAttached()) window.webContents.debugger.attach("1.3");
+          await window.webContents.debugger.sendCommand("Page.addScriptToEvaluateOnNewDocument", {
+            source: helperSource,
+          });
+          // A hidden window never has focus, so its pages get no focus or blur events, and
+          // Instagram only keeps a caption when its box loses focus: posts went out blank.
+          await window.webContents.debugger.sendCommand("Emulation.setFocusEmulationEnabled", {
+            enabled: true,
+          });
           await window.loadURL(url);
           if (cancelled) throw new Error("Publishing cancelled");
           const data = await this.content(context);
@@ -407,6 +538,48 @@ export class DesktopMultiPostRuntime implements MultiPostBrowserRuntime {
         };
     }
     return evidence;
+  }
+  /** Where a shared post ended up, read from the person's own profile once the share is confirmed. */
+  async postLink(context: MultiPostRuntimeContext): Promise<string | null> {
+    const { account, job, scope } = context;
+    const username = account.identity?.username;
+    if (account.platformKey !== "instagram" || !job.submittedAt || !username) return null;
+    const home = "https://www.instagram.com/";
+    const window = this.window(scope, account);
+    const read = (script: string) =>
+      window.webContents.executeJavaScript(script) as Promise<unknown>;
+    let seen = "the profile did not open";
+    // With no connection a page can load forever; the link is not worth waiting for.
+    const open = (url: string) =>
+      Promise.race([
+        window.loadURL(url),
+        new Promise<never>((_resolve, reject) =>
+          setTimeout(() => reject(new Error("took too long")), 20_000),
+        ),
+      ]);
+    try {
+      await open(home + encodeURIComponent(username) + "/");
+      const codes = gridCodes(await read(INSTAGRAM_GRID_SCRIPT));
+      seen = `${codes.length} posts on the profile, none from this share`;
+      for (const code of codes) {
+        const url = `${home}p/${code}/`;
+        await open(url);
+        const postedAt = await read(INSTAGRAM_POST_TIME_SCRIPT);
+        if (madeByThisShare(postedAt, job.submittedAt)) return url;
+        // How far off each one was explains a miss without naming any post.
+        seen += `, ${typeof postedAt === "string" ? Math.round((Date.parse(postedAt) - Date.parse(job.submittedAt)) / 1000) + "s" : "no time"}`;
+      }
+    } catch (error) {
+      seen += ` (${withoutSecrets(error instanceof Error ? error.message : String(error))})`;
+    } finally {
+      if (!window.isDestroyed()) void window.loadURL(home).catch(() => {});
+    }
+    console.warn("[multipost-page]", "instagram", `post link not found: ${seen}`);
+    return null;
+  }
+  async notify(notice: MultiPostNotice) {
+    if (!Notification.isSupported()) return;
+    new Notification(noticeText(notice, app.getLocale())).show();
   }
   async cancel(context: MultiPostRuntimeContext): Promise<MultiPostEvidence> {
     const window = this.prepared.get(context.job.id);

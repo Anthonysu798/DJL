@@ -447,17 +447,19 @@ export default function Composer({
           <input value={tz} onChange={(event) => setTz(event.target.value)} />
         </label>
       </div>
-      <label className="mp-field">
-        <span>{l("workflow", "Workflow")}</span>
-        <select value={workflow} onChange={(event) => setWorkflow(event.target.value)}>
-          <option value="">{l("none", "None")}</option>
-          {state.workflows.map((value) => (
-            <option key={value.id} value={value.id}>
-              {value.name} · {value.revision}
-            </option>
-          ))}
-        </select>
-      </label>
+      {state.workflows.length > 0 && (
+        <label className="mp-field">
+          <span>{l("workflow", "Workflow")}</span>
+          <select value={workflow} onChange={(event) => setWorkflow(event.target.value)}>
+            <option value="">{l("none", "None")}</option>
+            {state.workflows.map((value) => (
+              <option key={value.id} value={value.id}>
+                {value.name} · {value.revision}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <Button disabled={busy || uploading || !targets.length} onClick={() => void save()}>
         {uploading ? l("uploading", "Uploading…") : l("saveReview", "Save for review")}
       </Button>

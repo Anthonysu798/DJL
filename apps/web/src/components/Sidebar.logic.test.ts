@@ -45,6 +45,7 @@ import {
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
   sortThreadsForSidebar,
+  resolveSocialThreadId,
 } from "./Sidebar.logic";
 import { collectGroupProjectIds, excludeGroupThreads } from "./Sidebar.logic";
 import { ProjectId, ThreadId } from "@djl/contracts";
@@ -2057,5 +2058,38 @@ describe("sortProjectsForSidebar", () => {
     );
 
     expect(timestamp).toBe(Date.parse("2026-03-09T10:10:00.000Z"));
+  });
+});
+
+const socialThread = (id: string, at: string, extra: object = {}) => ({
+  id,
+  createdAt: at,
+  latestUserMessageAt: at,
+  ...extra,
+});
+describe("resolveSocialThreadId", () => {
+  const threads = {
+    old: socialThread("old", "2026-11-01T00:00:00Z"),
+    recent: socialThread("recent", "2026-11-18T00:00:00Z"),
+    archived: socialThread("archived", "2026-11-19T00:00:00Z", {
+      archivedAt: "2026-11-19T01:00:00Z",
+    }),
+    helper: socialThread("helper", "2026-11-19T02:00:00Z", { parentThreadId: "recent" }),
+  };
+
+  it("opens Social for the chat the person is in", () => {
+    expect(resolveSocialThreadId({ activeThreadId: "old", threads })).toBe("old");
+  });
+
+  it("falls back to the most recently used chat when none is open", () => {
+    expect(resolveSocialThreadId({ activeThreadId: null, threads })).toBe("recent");
+  });
+
+  it("ignores a brand-new chat that has not been saved yet", () => {
+    expect(resolveSocialThreadId({ activeThreadId: "unsaved-draft", threads })).toBe("recent");
+  });
+
+  it("has nowhere to go before the first chat exists", () => {
+    expect(resolveSocialThreadId({ activeThreadId: null, threads: {} })).toBeNull();
   });
 });

@@ -58,3 +58,50 @@ it("requires its private token and propagates cancelled preparation to the deskt
     await host.close();
   }
 });
+
+it("passes a finished-post notice on to the desktop", async () => {
+  const seen: unknown[] = [];
+  const runtime = {
+    available: async () => true,
+    notify: async (notice: unknown) => {
+      seen.push(notice);
+    },
+  } as unknown as MultiPostBrowserRuntime;
+  const host = await startMultiPostHost(runtime);
+  try {
+    const notice = { kind: "posted", platformKey: "instagram", label: "@djl.app" };
+    const response = await fetch(host.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${host.token}` },
+      body: JSON.stringify({ action: "notify", notice }),
+    });
+    expect(response.status).toBe(200);
+    expect(seen).toEqual([notice]);
+  } finally {
+    await host.close();
+  }
+});
+
+it("asks the desktop for a post's link", async () => {
+  const seen: unknown[] = [];
+  const runtime = {
+    available: async () => true,
+    postLink: async (context: unknown) => {
+      seen.push(context);
+      return "https://www.instagram.com/p/DCabc_123-x/";
+    },
+  } as unknown as MultiPostBrowserRuntime;
+  const host = await startMultiPostHost(runtime);
+  try {
+    const context = { job: { id: "job" } };
+    const response = await fetch(host.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${host.token}` },
+      body: JSON.stringify({ action: "postLink", context }),
+    });
+    expect(await response.json()).toEqual({ result: "https://www.instagram.com/p/DCabc_123-x/" });
+    expect(seen).toEqual([context]);
+  } finally {
+    await host.close();
+  }
+});

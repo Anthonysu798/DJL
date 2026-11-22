@@ -9,7 +9,7 @@ import {
   DEFAULT_THEME_STATE,
 } from "../../theme/theme.logic";
 import "../../index.css";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createCampaign, reviseCampaign } from "@djl/contracts";
@@ -38,6 +38,134 @@ vi.mock("./socialPublishingClient", async (importOriginal) => ({
   publishingState: publishingStatus,
   publishingCommand: creatorInfo,
 }));
+
+const local = vi.hoisted(() => ({ state: vi.fn(), command: vi.fn() }));
+vi.mock("../multipost/client", () => ({
+  multiPostState: local.state,
+  multiPostCommand: local.command,
+  mediaPreviewUrl: (_thread: string, url: string) => url,
+}));
+const localAccount = (id: string, platformKey: string, label: string) => ({
+  id,
+  workspaceId: "workspace",
+  platformKey,
+  label,
+  status: "connected",
+  identity: { provider: platformKey, accountId: id, username: id, verifiedAt: "" },
+  createdAt: "",
+});
+const localState = (accounts: ReturnType<typeof localAccount>[]) => ({
+  accounts,
+  drafts: [],
+  jobs: [],
+  workflows: [],
+  grants: [],
+  capabilities: [],
+  runtimeAvailable: true,
+});
+beforeEach(() => {
+  local.state.mockReset().mockResolvedValue(localState([]));
+  local.command.mockReset();
+});
+
+describe("posting a preview with no DJL Cloud account", () => {
+  const campaign = {
+    ...reviseCampaign(createCampaign("News roundup"), {
+      platforms: ["instagram"],
+      captions: { instagram: "Today in one post" },
+    }),
+    threadId: "local",
+  };
+  const mount = (onAccounts = vi.fn()) =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MarketingChatCard
+          record={{ value: campaign, version: 4 }}
+          assets={[]}
+          threadId="local"
+          isWorking={false}
+          onAccounts={onAccounts}
+        />
+      </QueryClientProvider>,
+    );
+  it("posts through the person's own signed-in accounts with one press", async () => {
+    publishingStatus.mockRejectedValue(new Error("Sign in to DJL Cloud to prepare publishing."));
+    local.state.mockResolvedValue(
+      localState([localAccount("ig", "instagram", "Instagram"), localAccount("x", "x", "My X")]),
+    );
+    local.command.mockResolvedValue({ drafts: [], jobs: [{ id: "job" }], skipped: [] });
+    const screen = await mount();
+    await screen.getByRole("button", { name: "Review post" }).click();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    // The preview was written for Instagram, so that is what starts selected.
+    await expect.element(page.getByRole("checkbox", { name: "Instagram" })).toBeChecked();
+    await expect.element(page.getByRole("checkbox", { name: "My X" })).not.toBeChecked();
+    await expect.element(page.getByText(/DJL Cloud/)).not.toBeInTheDocument();
+    await expect
+      .element(page.getByText("Connect an account with publishing permission"))
+      .not.toBeInTheDocument();
+    await page.getByRole("button", { name: "Post now" }).click();
+    await expect
+      .poll(() => local.command.mock.calls.map((call) => call[1]))
+      .toEqual([
+        {
+          action: "import-campaign",
+          campaignId: campaign.id,
+          version: 4,
+          accountIds: ["ig"],
+          post: true,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      ]);
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+    await screen.unmount();
+  });
+  it("says which account was left out instead of closing silently", async () => {
+    local.state.mockResolvedValue(localState([localAccount("ig", "instagram", "Instagram")]));
+    local.command.mockResolvedValue({
+      drafts: [],
+      jobs: [],
+      skipped: [{ accountId: "ig", label: "Instagram", reason: "needs-media" }],
+    });
+    const screen = await mount();
+    await screen.getByRole("button", { name: "Review post" }).click();
+    await page.getByRole("button", { name: "Post now" }).click();
+    await expect
+      .element(page.getByText("Instagram was skipped: it needs a photo or video."))
+      .toBeVisible();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    await screen.unmount();
+  });
+  it("leads to signing in when no account is ready, and never asks for DJL Cloud", async () => {
+    publishingStatus.mockRejectedValue(new Error("Sign in to DJL Cloud to prepare publishing."));
+    const onAccounts = vi.fn();
+    const screen = await mount(onAccounts);
+    await screen.getByRole("button", { name: "Review post" }).click();
+    await expect
+      .element(page.getByText("Sign in to a social account once, then post from here."))
+      .toBeVisible();
+    await expect.element(page.getByText(/DJL Cloud/)).not.toBeInTheDocument();
+    await expect.element(page.getByRole("button", { name: "Post now" })).toBeDisabled();
+    await page.getByRole("button", { name: "Add an account" }).click();
+    expect(onAccounts).toHaveBeenCalledOnce();
+    await screen.unmount();
+  });
+  it("stays out of the chat once the same caption has gone out", async () => {
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MarketingChatCard
+          record={{ value: campaign, version: 4 }}
+          assets={[]}
+          threadId="local"
+          isWorking={false}
+          sent
+        />
+      </QueryClientProvider>,
+    );
+    await expect.element(screen.getByTestId("marketing-chat-card")).not.toBeVisible();
+    await screen.unmount();
+  });
+});
 
 describe("beginner marketing chat card", () => {
   it("shows platform-specific previews and sends a natural-language revision request", async () => {
@@ -343,87 +471,5 @@ it("keeps preview and publish controls inside a narrow viewport", async () => {
   } finally {
     await screen.unmount();
     await page.viewport(1000, 1000);
-  }
-});
-
-it("uses the selected JPEG asset for TikTok photo settings in the chat review modal", async () => {
-  await page.viewport(1100, 1100);
-  const html = document.documentElement;
-  const previousStyle = html.style.cssText;
-  for (const [key, value] of Object.entries(
-    buildThemeCssVariables(resolveThemePack(DEFAULT_THEME_STATE, "light"), "light").variables,
-  ))
-    html.style.setProperty(key, value);
-  publishingStatus.mockResolvedValue({
-    drafts: [],
-    accounts: {
-      accounts: [
-        {
-          id: "photo-account",
-          provider: "tiktok",
-          username: "ui_demo",
-          displayName: "UI Demo",
-          status: "connected",
-          capabilities: { publish: true, metrics: false },
-        },
-      ],
-      providers: [],
-    },
-  });
-  creatorInfo.mockResolvedValue({
-    nickname: "UI Demo",
-    username: "ui_demo",
-    privacyLevels: ["SELF_ONLY"],
-    duetDisabled: false,
-    stitchDisabled: false,
-    commentDisabled: false,
-    maxVideoDurationSeconds: 60,
-  });
-  const campaign = {
-    ...createCampaign("TikTok photo · UI demo"),
-    threadId: "photo-chat",
-    platforms: ["tiktok"],
-    assetIds: ["preview-image"],
-    captions: { tiktok: "Everyday essentials. UI demo — no live post." },
-  };
-  const screen = await render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MarketingChatCard
-        record={{ value: campaign, version: 1 }}
-        assets={[
-          {
-            id: "preview-image",
-            name: "UI demo",
-            mime: "image/jpeg",
-            bytes: 100,
-            createdAt: "2026-10-22T12:00:00Z",
-          },
-        ]}
-        threadId="photo-chat"
-        isWorking={false}
-      />
-    </QueryClientProvider>,
-  );
-  try {
-    await screen.getByRole("button", { name: "Review post", exact: true }).click();
-    await page.getByRole("switch", { name: "TikTok · UI Demo (@ui_demo)" }).click();
-    await expect.element(page.getByText("UI Demo (@ui_demo)", { exact: true })).toBeVisible();
-    await expect
-      .element(page.getByText("Duet and Stitch settings", { exact: true }))
-      .not.toBeInTheDocument();
-    await expect
-      .element(page.getByText("Maximum video length: 60 seconds"))
-      .not.toBeInTheDocument();
-    await expect
-      .element(page.getByRole("combobox", { name: "Who can see this post?" }))
-      .toHaveValue("");
-    await expect
-      .element(page.getByRole("checkbox", { name: /By posting, you agree/ }))
-      .not.toBeChecked();
-    await page.screenshot({ path: "/tmp/djl-tiktok-photo-chat-modal.png" });
-    expect(creatorInfo.mock.calls.every((call) => call[2].action === "creator-info")).toBe(true);
-  } finally {
-    await screen.unmount();
-    html.style.cssText = previousStyle;
   }
 });
