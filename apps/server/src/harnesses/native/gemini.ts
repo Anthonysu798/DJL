@@ -30,9 +30,9 @@ const acpDriver = createNativeAcpDriver({
 // An older CLI rejects `--acp` and exits before answering the handshake.
 const EARLY_EXIT = /^Native runtime (exited|input closed)/;
 
-export const createGeminiDriver: NativeDriverFactory = async (input, sink, workTools) => {
+export const createGeminiDriver: NativeDriverFactory = async (input, sink, workTools, plugins) => {
   try {
-    return await acpDriver(input, sink, workTools);
+    return await acpDriver(input, sink, workTools, plugins);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (EARLY_EXIT.test(message))

@@ -814,4 +814,71 @@ describe("Codex conversation-scoped marketing MCP", () => {
     expect(driver.id).toBe("scoped-thread");
     driver.close();
   });
+
+  const plugins = {
+    bearerToken: "plugin-session-token",
+    servers: [{ name: "djl_linear", url: "http://127.0.0.1:23456/mcp/linear" }],
+  };
+
+  it("hands connected plugins to Codex and asks the user before a plugin tool runs", async () => {
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{});
+      if(m.method==='thread/start'){
+        const server=m.params.config?.mcp_servers?.djl_linear;
+        if(server?.url!=='http://127.0.0.1:23456/mcp/linear'||server?.bearer_token_env_var!=='DJL_PLUGIN_MCP_TOKEN'||process.env.DJL_PLUGIN_MCP_TOKEN!=='plugin-session-token')throw Error('Plugin server missing');
+        if(JSON.stringify(m.params).includes('plugin-session-token'))throw Error('Plugin bearer leaked into config');
+        reply(m,{thread:{id:'plugin-thread'}});
+      }
+      if(m.method==='turn/start'){
+        global.start=m;
+        note('turn/started',{threadId:'plugin-thread',turn:{id:'plugin-turn'}});
+        send({id:81,method:'mcpServer/elicitation/request',params:{threadId:'plugin-thread',turnId:'plugin-turn',serverName:'djl_linear',mode:'form',_meta:{codex_approval_kind:'mcp_tool_call'}}});
+      }
+      if(m.id===81&&!m.method){
+        if(m.result?.action!=='accept')throw Error('Approved plugin call was not accepted');
+        send({id:82,method:'mcpServer/elicitation/request',params:{threadId:'plugin-thread',turnId:'plugin-turn',serverName:'someone_elses',mode:'form',_meta:{codex_approval_kind:'mcp_tool_call'}}});
+      }
+      if(m.id===82&&!m.method){
+        if(m.result?.action!=='decline')throw Error('Foreign server was accepted');
+        reply(global.start,{turn:{id:'plugin-turn'}});
+        note('turn/completed',{threadId:'plugin-thread',turn:{id:'plugin-turn',status:'completed'}});
+      }
+    `);
+    const request = vi.fn(async () => "accept" as const);
+    const driver = await createCodexDriver(
+      { ...input, providerOptions: { codex: { binaryPath: binary } } },
+      sink([], request),
+      undefined,
+      plugins,
+    );
+    try {
+      await driver.send({ threadId: input.threadId, input: "List my issues" });
+      expect(request).toHaveBeenCalledOnce();
+      expect(request).toHaveBeenCalledWith(
+        "command_execution_approval",
+        expect.objectContaining({ serverName: "djl_linear", tool: "djl_linear" }),
+      );
+    } finally {
+      driver.close();
+    }
+  });
+
+  it("keeps plugins out of the Computer QA profile", async () => {
+    vi.stubEnv("DJL_COMPUTER_QA_PROFILE", "1");
+    const binary = fixture(`
+      if(m.method==='initialize')reply(m,{});
+      if(m.method==='thread/start'){
+        if(m.params.config?.mcp_servers?.djl_linear||process.env.DJL_PLUGIN_MCP_TOKEN)throw Error('Plugin reached the QA profile');
+        reply(m,{thread:{id:'qa-plugins'},modelProvider:'openai',approvalPolicy:'untrusted',sandbox:{type:'readOnly'}});
+      }
+    `);
+    const driver = await createCodexDriver(
+      { ...input, runtimeMode: "full-access", providerOptions: { codex: { binaryPath: binary } } },
+      sink([]),
+      undefined,
+      plugins,
+    );
+    expect(driver.id).toBe("qa-plugins");
+    driver.close();
+  });
 });

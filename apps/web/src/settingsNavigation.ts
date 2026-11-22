@@ -19,6 +19,7 @@ export const SETTINGS_SECTION_IDS = [
   "local-models",
   "servers",
   "providers",
+  "plugins",
   "skills",
   "usage",
   "advanced",
@@ -182,6 +183,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     icon: "server",
     eyebrowKey: "navigation.items.servers.eyebrow",
     desktopOnly: true,
+  },
+  {
+    id: "plugins",
+    group: "synara",
+    labelKey: "navigation.items.plugins.label",
+    descriptionKey: "navigation.items.plugins.description",
+    icon: "puzzle",
+    eyebrowKey: "navigation.items.plugins.eyebrow",
   },
   {
     id: "skills",

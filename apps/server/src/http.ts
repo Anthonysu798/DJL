@@ -66,7 +66,6 @@ import { SHIM_EXEC_ROUTE_PATH, ShimRuntime } from "./servers/shimRuntime";
 
 const PROJECT_FAVICON_CACHE_CONTROL = "public, max-age=3600";
 const SITE_FAVICON_CACHE_CONTROL_SUCCESS = "public, max-age=86400"; // 24 h
-const SITE_FAVICON_CACHE_CONTROL_FALLBACK = "public, max-age=3600"; // 1 h (negative result)
 const EDITOR_ICON_CACHE_CONTROL_SUCCESS = "public, max-age=86400"; // 24 h
 const decodeBootstrapInput = Schema.decodeUnknownEffect(AuthBootstrapInput);
 const decodeCreatePairingCredentialInput = Schema.decodeUnknownEffect(
@@ -788,10 +787,12 @@ const siteFaviconEffectRouteLayer = HttpRouter.add(
 
     const favicon = yield* Effect.promise(() => resolveFavicon(host));
     if (!favicon.bytes) {
+      // The placeholder is only good for as long as the server will go without retrying.
+      const seconds = Math.max(0, Math.floor((favicon.expiresAtMs - Date.now()) / 1000));
       return HttpServerResponse.text(FALLBACK_SITE_FAVICON_SVG, {
         status: 200,
         contentType: "image/svg+xml",
-        headers: { "Cache-Control": SITE_FAVICON_CACHE_CONTROL_FALLBACK },
+        headers: { "Cache-Control": `public, max-age=${seconds}` },
       });
     }
     return HttpServerResponse.uint8Array(favicon.bytes, {

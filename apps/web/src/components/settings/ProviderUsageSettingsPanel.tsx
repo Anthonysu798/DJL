@@ -38,14 +38,15 @@ import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
 import { CLOUD_ACCOUNT_QUERY_KEY, DjlCloudAccountCard } from "./DjlCloudAccountCard";
 
-const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none";
+export const PILL_CLASS_NAME =
+  "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none";
 
 interface StatusPill {
   label: string;
   className: string;
 }
 
-function statusPill(
+export function statusPill(
   status: ServerProviderUsageSnapshot["status"],
   t: TFunction,
 ): StatusPill | null {

@@ -12,6 +12,7 @@ import {
 export type ThemeMode = "light" | "dark" | "system";
 export type ThemeVariant = "light" | "dark";
 export type WindowMaterial = "opaque" | "translucent";
+export type GlassMode = "blur" | "tint";
 
 export interface ThemeFonts {
   ui: string | null;
@@ -657,6 +658,29 @@ export function resolveThemeVariant(mode: ThemeMode, systemDark: boolean): Theme
     return systemDark ? "dark" : "light";
   }
   return mode;
+}
+
+/**
+ * Picks how floating surfaces render (the `data-glass` attribute read by index.css):
+ * `blur` is the translucent backdrop-blur glass, `tint` a near-solid fill with no
+ * filter. Blur is macOS-only: off macOS a backdrop-filter layer rasterizes at the
+ * wrong scale on fractional DPI. The user's accessibility settings win over the
+ * theme, and the debug override wins over everything.
+ */
+export function resolveGlassMode(input: {
+  isMac: boolean;
+  opaqueWindows: boolean;
+  reducedTransparency: boolean;
+  highContrast: boolean;
+  override?: string | null;
+}): GlassMode {
+  if (input.override === "blur" || input.override === "tint") {
+    return input.override;
+  }
+  if (input.reducedTransparency || input.highContrast) {
+    return "tint";
+  }
+  return input.isMac && !input.opaqueWindows ? "blur" : "tint";
 }
 
 export function buildThemeCssVariables(

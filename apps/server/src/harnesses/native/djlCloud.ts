@@ -2,7 +2,7 @@ import { MULTIPOST_TOOLS } from "../../multipost/mcp";
 import { computerToolInstructions } from "../../agentGateway/computerGuidance";
 import { MARKETING_TOOLS } from "../../marketing/chatTools";
 import { COMPUTER_TOOLS } from "../../work/computerTools";
-import { BUILT_IN_PLUGINS } from "@synara/contracts";
+import { BUILT_IN_PLUGINS, pluginServerName } from "@synara/contracts";
 import { runMarketingConversation } from "../../marketing/cloudConversation";
 /**
  * DJL Cloud native driver: streams OpenAI-compatible chat completions from
@@ -14,6 +14,7 @@ import { randomUUID } from "node:crypto";
 
 import { CloudApiError, createCloudClient, type FetchLike } from "../../cloud/api";
 import { readCloudSession, type CloudSession } from "../../cloud/session";
+import { callPluginGatewayTool, listPluginGatewayTools } from "./pluginGatewayTools";
 import type { NativeDriver, NativeDriverFactory, NativeSink } from "./types";
 
 interface CloudModel {
@@ -60,7 +61,7 @@ async function requireSession(secretsDir: string): Promise<CloudSession> {
 
 export const createDjlCloudDriverFactory =
   (deps: DjlCloudDriverDeps): NativeDriverFactory =>
-  async (input, sink: NativeSink, workTools): Promise<NativeDriver> => {
+  async (input, sink: NativeSink, workTools, plugins): Promise<NativeDriver> => {
     const session = await requireSession(deps.secretsDir);
     const client = createCloudClient(session.apiBaseUrl, deps.fetchImpl);
     const history: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
@@ -75,6 +76,10 @@ export const createDjlCloudDriverFactory =
     let controller: AbortController | null = null;
     let computerToolsActive = false;
     let computerHistory: Record<string, unknown>[] | null = null;
+    // Plugin tools act on the user's real accounts, so outside full access each call waits for
+    // the user, unless they approved that tool for the rest of this chat.
+    const askBeforePluginTools = input.runtimeMode !== "full-access";
+    const pluginToolsApprovedForSession = new Set<string>();
 
     return {
       id: randomUUID(),
@@ -107,6 +112,50 @@ export const createDjlCloudDriverFactory =
           computerToolsActive ||= request.input?.includes("djl_computer_status") === true;
           computerRequest = computerToolsActive;
         }
+        // Plugin tools only on a turn that @-mentions a plugin, and only that plugin's: every
+        // other turn keeps plain streaming and does not pay for tool definitions.
+        // Matched by plugin id: a name prefix would also take in another plugin whose id merely
+        // starts with this one's. A server that does not say its plugin matches only by exact name.
+        const mentioned = new Set(request.djlPluginIds ?? []);
+        const pluginServers = (plugins?.servers ?? []).filter((server) =>
+          server.pluginId !== undefined
+            ? mentioned.has(server.pluginId)
+            : [...mentioned].some((id) => server.name === pluginServerName(id)),
+        );
+        const pluginTools =
+          plugins && pluginServers.length > 0
+            ? await listPluginGatewayTools(
+                { ...plugins, servers: pluginServers },
+                AbortSignal.timeout(10_000),
+              )
+            : [];
+        const runPluginTool = async (name: string, args: unknown, signal: AbortSignal) => {
+          const tool = pluginTools.find((entry) => entry.name === name)!;
+          if (askBeforePluginTools && !pluginToolsApprovedForSession.has(name)) {
+            const decision = await sink.request(
+              "command_execution_approval",
+              { tool: name, input: args },
+              signal,
+            );
+            if (decision === "acceptForSession") pluginToolsApprovedForSession.add(name);
+            else if (decision !== "accept")
+              throw new Error("The user declined this plugin action. Do not retry it.");
+          }
+          return callPluginGatewayTool(plugins!, tool, args, signal);
+        };
+        const isPluginTool = (name: string) => pluginTools.some((entry) => entry.name === name);
+        const emitToolResult = (name: string, id: string, result: unknown) =>
+          sink.emit({
+            type: "item.completed",
+            itemId: id,
+            payload: {
+              itemType: "dynamic_tool_call",
+              status:
+                result && typeof result === "object" && "error" in result ? "failed" : "completed",
+              title: name,
+              data: { tool: name, output: result },
+            },
+          });
         if (workTools && (request.workTurnPolicy?.route === "marketing" || computerRequest)) {
           controller = new AbortController();
           const marketingHistory: Record<string, unknown>[] =
@@ -141,20 +190,24 @@ export const createDjlCloudDriverFactory =
                         : computerTools,
                   }
                 : {}),
-              tools: computerRequest
-                ? request.workTurnPolicy?.route === "marketing"
-                  ? [
-                      ...computerTools,
-                      ...MARKETING_TOOLS,
-                      ...(workTools.multipost ? MULTIPOST_TOOLS : []),
-                    ]
-                  : computerTools
-                : [...MARKETING_TOOLS, ...(workTools.multipost ? MULTIPOST_TOOLS : [])],
+              tools: [
+                ...(computerRequest
+                  ? request.workTurnPolicy?.route === "marketing"
+                    ? [
+                        ...computerTools,
+                        ...MARKETING_TOOLS,
+                        ...(workTools.multipost ? MULTIPOST_TOOLS : []),
+                      ]
+                    : computerTools
+                  : [...MARKETING_TOOLS, ...(workTools.multipost ? MULTIPOST_TOOLS : [])]),
+                ...pluginTools,
+              ],
               model,
               signal: controller.signal,
               stream: (body, signal) =>
                 client.stream("/v1/chat/completions", body, session.token, signal),
               execute: async (name, args) => {
+                if (isPluginTool(name)) return runPluginTool(name, args, controller!.signal);
                 const endpoint =
                   name.startsWith("djl_multipost_") && workTools.multipost
                     ? workTools.multipost
@@ -202,20 +255,7 @@ export const createDjlCloudDriverFactory =
                     }
                   : rpc.result?.structuredContent;
               },
-              onTool: (name, id, result) =>
-                sink.emit({
-                  type: "item.completed",
-                  itemId: id,
-                  payload: {
-                    itemType: "dynamic_tool_call",
-                    status:
-                      result && typeof result === "object" && "error" in result
-                        ? "failed"
-                        : "completed",
-                    title: name,
-                    data: { tool: name, output: result },
-                  },
-                }),
+              onTool: emitToolResult,
             });
             if (computerRequest) computerHistory = marketingHistory;
             sink.emit({
@@ -229,6 +269,41 @@ export const createDjlCloudDriverFactory =
             );
           } finally {
             controller = null;
+          }
+          return;
+        }
+        // An ordinary chat with plugins connected runs DJL's tool loop over the plugin tools.
+        if (pluginTools.length > 0) {
+          const pluginController = new AbortController();
+          controller = pluginController;
+          try {
+            const reply = await runMarketingConversation({
+              messages: [
+                ...history.map((message) => ({ role: message.role, content: message.content })),
+                { role: "user", content: request.input! },
+              ],
+              tools: pluginTools,
+              model,
+              signal: pluginController.signal,
+              stream: (body, signal) =>
+                client.stream("/v1/chat/completions", body, session.token, signal),
+              execute: (name, args) => runPluginTool(name, args, pluginController.signal),
+              onTool: emitToolResult,
+            });
+            sink.emit({
+              type: "content.delta",
+              itemId: `assistant-${randomUUID()}`,
+              payload: { streamKind: "assistant_text", delta: reply },
+            });
+            history.push(
+              { role: "user", content: request.input! },
+              { role: "assistant", content: reply },
+            );
+          } catch (error) {
+            if (!pluginController.signal.aborted) throw error;
+            sink.emit({ type: "turn.completed", payload: { state: "interrupted" } });
+          } finally {
+            if (controller === pluginController) controller = null;
           }
           return;
         }

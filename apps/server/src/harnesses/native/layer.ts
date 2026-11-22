@@ -1,4 +1,5 @@
 import { WorkMcpServer } from "../../work/Services/WorkMcpServer";
+import { PluginsService } from "../../plugins/PluginsService";
 import { Effect, Layer, ServiceMap, Option } from "effect";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
@@ -75,14 +76,62 @@ export class NativePiAdapter extends ServiceMap.Service<
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/PiAdapter") {}
 
+/** Harnesses that are handed the user's connected plugins. */
+// Pi reaches them through a DJL extension and DJL Cloud through its own tool loop.
+const PLUGIN_PROVIDERS: ReadonlyArray<NativeProvider> = [
+  "codex",
+  "claudeAgent",
+  "cursor",
+  "gemini",
+  "grok",
+  "kimi",
+  "iflow",
+  "qwen",
+  "codebuddy",
+  "pi",
+  "djlCloud",
+  "group",
+];
+
 export const makeConfiguredNativeAdapter = (
   provider: NativeProvider,
-  factory: NativeDriverFactory,
+  baseFactory: NativeDriverFactory,
 ) =>
   Effect.gen(function* () {
     const settings = yield* ServerSettingsService;
     const workTools = yield* Effect.serviceOption(WorkMcpServer);
+    const plugins = yield* Effect.serviceOption(PluginsService);
     const config = yield* Effect.serviceOption(ServerConfig);
+    const factory: NativeDriverFactory = async (input, sink, registration) => {
+      if (Option.isNone(plugins) || !PLUGIN_PROVIDERS.includes(provider))
+        return baseFactory(input, sink, registration);
+      const service = plugins.value;
+      // A chat must still start when plugins cannot be loaded; it just runs without them.
+      const session = await Effect.runPromise(
+        service.registerSession.pipe(
+          Effect.tapError((cause) => Effect.logWarning("plugins unavailable for session", cause)),
+          Effect.orElseSucceed(() => undefined),
+        ),
+      );
+      if (!session) return baseFactory(input, sink, registration);
+      const release = () => void Effect.runPromise(service.unregisterSession(session.bearerToken));
+      try {
+        const driver = await baseFactory(input, sink, registration, session);
+        return {
+          ...driver,
+          close: () => {
+            try {
+              driver.close();
+            } finally {
+              release();
+            }
+          },
+        };
+      } catch (error) {
+        release();
+        throw error;
+      }
+    };
     const scopedFactory: NativeDriverFactory = async (input, sink) => {
       if (
         !["codex", "claudeAgent", "djlCloud"].includes(provider) ||

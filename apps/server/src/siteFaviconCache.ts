@@ -10,6 +10,8 @@
 const FAVICON_CACHE_MAX = 500;
 const FAVICON_SUCCESS_TTL_MS = 24 * 60 * 60 * 1000; // 24 h
 const FAVICON_FAILURE_TTL_MS = 60 * 60 * 1000; // 1 h (negative cache)
+// A lookup that could not reach a source says nothing about the site, so it is retried soon.
+const FAVICON_UNREACHABLE_TTL_MS = 15_000;
 const REMOTE_FETCH_TIMEOUT_MS = 5_000;
 const DIRECT_FETCH_TIMEOUT_MS = 3_000;
 const MAX_FAVICON_BYTES = 512 * 1024; // 512 KB — favicons are tiny; cap rogue responses.
@@ -73,51 +75,50 @@ function isPublicHttpHost(host: string): boolean {
   return true;
 }
 
-async function fetchImage(
-  url: string,
-  timeoutMs: number,
-): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+type FaviconImage = { bytes: Uint8Array; contentType: string };
+/** "missing": the source answered without an icon. "unreachable": it could not be asked. */
+type FaviconMiss = "missing" | "unreachable";
+
+async function fetchImage(url: string, timeoutMs: number): Promise<FaviconImage | FaviconMiss> {
   try {
     const response = await globalThis.fetch(url, {
       redirect: "follow",
       signal: AbortSignal.timeout(timeoutMs),
       headers: { Accept: "image/*" },
     });
-    if (!response.ok) return null;
+    if (!response.ok) return "missing";
     const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().startsWith("image/")) return null;
+    if (!contentType.toLowerCase().startsWith("image/")) return "missing";
     const buffer = await response.arrayBuffer();
-    if (buffer.byteLength === 0 || buffer.byteLength > MAX_FAVICON_BYTES) return null;
+    if (buffer.byteLength === 0 || buffer.byteLength > MAX_FAVICON_BYTES) return "missing";
     return { bytes: new Uint8Array(buffer), contentType };
   } catch {
-    return null;
+    return "unreachable";
   }
 }
 
-async function fetchFaviconForHost(
-  host: string,
-): Promise<{ bytes: Uint8Array; contentType: string } | null> {
-  // 1) Google S2 — best coverage, returns a clean PNG (a generic globe for unknown sites).
-  const google = await fetchImage(
-    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`,
-    REMOTE_FETCH_TIMEOUT_MS,
-  );
-  if (google) return google;
-
-  // 2) DuckDuckGo — no API key, good coverage.
-  const duckDuckGo = await fetchImage(
-    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`,
-    REMOTE_FETCH_TIMEOUT_MS,
-  );
-  if (duckDuckGo) return duckDuckGo;
-
+async function fetchFaviconForHost(host: string): Promise<FaviconImage | FaviconMiss> {
+  const sources: Array<[url: string, timeoutMs: number]> = [
+    // 1) Google S2 — best coverage, returns a clean PNG (a generic globe for unknown sites).
+    [
+      `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`,
+      REMOTE_FETCH_TIMEOUT_MS,
+    ],
+    // 2) DuckDuckGo — no API key, good coverage.
+    [`https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`, REMOTE_FETCH_TIMEOUT_MS],
+  ];
   // 3) Direct /favicon.ico — last resort, only for publicly routable hosts.
   if (isPublicHttpHost(host)) {
-    const direct = await fetchImage(`https://${host}/favicon.ico`, DIRECT_FETCH_TIMEOUT_MS);
-    if (direct) return direct;
+    sources.push([`https://${host}/favicon.ico`, DIRECT_FETCH_TIMEOUT_MS]);
   }
 
-  return null;
+  let miss: FaviconMiss = "missing";
+  for (const [url, timeoutMs] of sources) {
+    const result = await fetchImage(url, timeoutMs);
+    if (typeof result !== "string") return result;
+    if (result === "unreachable") miss = "unreachable";
+  }
+  return miss;
 }
 
 function storeEntry(host: string, entry: CachedFavicon): void {
@@ -145,13 +146,20 @@ export async function resolveFavicon(host: string): Promise<CachedFavicon> {
 
   const promise = (async (): Promise<CachedFavicon> => {
     const result = await fetchFaviconForHost(host);
-    const entry: CachedFavicon = result
-      ? {
-          bytes: result.bytes,
-          contentType: result.contentType,
-          expiresAtMs: Date.now() + FAVICON_SUCCESS_TTL_MS,
-        }
-      : { bytes: null, contentType: null, expiresAtMs: Date.now() + FAVICON_FAILURE_TTL_MS };
+    const entry: CachedFavicon =
+      typeof result !== "string"
+        ? {
+            bytes: result.bytes,
+            contentType: result.contentType,
+            expiresAtMs: Date.now() + FAVICON_SUCCESS_TTL_MS,
+          }
+        : {
+            bytes: null,
+            contentType: null,
+            expiresAtMs:
+              Date.now() +
+              (result === "unreachable" ? FAVICON_UNREACHABLE_TTL_MS : FAVICON_FAILURE_TTL_MS),
+          };
     storeEntry(host, entry);
     return entry;
   })().finally(() => {

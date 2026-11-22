@@ -16,6 +16,7 @@ import {
   parseStoredThemeState,
   parseThemeShareString,
   parseThemeShareStringForVariant,
+  resolveGlassMode,
   resolveThemePack,
   setThemeCodeThemeId,
   updateThemePackFromShareString,
@@ -430,5 +431,38 @@ describe("buildThemeCssVariables", () => {
     expect(cssVariables.variables["--app-chat-code-surface"]).toBe(
       cssVariables.variables["--app-user-message-background"],
     );
+  });
+});
+
+describe("resolveGlassMode", () => {
+  const macTranslucent = {
+    highContrast: false,
+    isMac: true,
+    opaqueWindows: false,
+    reducedTransparency: false,
+  };
+
+  it("blurs on macOS with a translucent theme", () => {
+    expect(resolveGlassMode(macTranslucent)).toBe("blur");
+  });
+
+  it("tints off macOS and for theme packs with opaque windows", () => {
+    expect(resolveGlassMode({ ...macTranslucent, isMac: false })).toBe("tint");
+    expect(resolveGlassMode({ ...macTranslucent, opaqueWindows: true })).toBe("tint");
+  });
+
+  it("tints when the system asks for less transparency or more contrast", () => {
+    expect(resolveGlassMode({ ...macTranslucent, reducedTransparency: true })).toBe("tint");
+    expect(resolveGlassMode({ ...macTranslucent, highContrast: true })).toBe("tint");
+  });
+
+  it("lets the debug override force either mode and ignores unknown values", () => {
+    expect(resolveGlassMode({ ...macTranslucent, override: "tint" })).toBe("tint");
+    expect(resolveGlassMode({ ...macTranslucent, isMac: false, override: "blur" })).toBe("blur");
+    expect(
+      resolveGlassMode({ ...macTranslucent, reducedTransparency: true, override: "blur" }),
+    ).toBe("blur");
+    expect(resolveGlassMode({ ...macTranslucent, override: "frosted" })).toBe("blur");
+    expect(resolveGlassMode({ ...macTranslucent, isMac: false, override: null })).toBe("tint");
   });
 });

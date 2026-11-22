@@ -15,7 +15,6 @@ import {
   COMPOSER_PICKER_MENU_POPUP_VIEWPORT_CLASS_NAME,
   COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME,
   COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME,
-  COMPOSER_SURFACE_SHADOW_CLASS_NAME,
 } from "../chat/composerPickerStyles";
 
 const Select = SelectPrimitive.Root;
@@ -38,7 +37,7 @@ const selectTriggerVariants = cva(
     variants: {
       variant: {
         default:
-          "w-full min-w-36 border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] text-[var(--color-text-foreground)] ring-[color:var(--color-border-focus)]/16 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 focus-visible:border-[color:var(--color-border-focus)] focus-visible:ring-2 aria-invalid:border-destructive/30 focus-visible:aria-invalid:border-destructive/50 focus-visible:aria-invalid:ring-destructive/12 dark:aria-invalid:ring-destructive/20 [&_svg:not([class*='opacity-'])]:opacity-80",
+          "glass-control w-full min-w-36 text-[var(--color-text-foreground)] ring-[color:var(--color-border-focus)]/16 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 focus-visible:border-[color:var(--color-border-focus)] focus-visible:ring-2 aria-invalid:border-destructive/30 focus-visible:aria-invalid:border-destructive/50 focus-visible:aria-invalid:ring-destructive/12 dark:aria-invalid:ring-destructive/20 [&_svg:not([class*='opacity-'])]:opacity-80",
         ghost:
           "border-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-1 focus-visible:ring-[color:var(--color-border-focus)]/60 data-pressed:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)]",
       },
@@ -148,11 +147,7 @@ function SelectPopup({
     ? cn(
         COMPOSER_PICKER_MENU_POPUP_VIEWPORT_CLASS_NAME,
         surface === "settings"
-          ? cn(
-              APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME,
-              "rounded-lg",
-              COMPOSER_SURFACE_SHADOW_CLASS_NAME,
-            )
+          ? cn(APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME, "rounded-lg")
           : COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME,
         shellClassName,
       )

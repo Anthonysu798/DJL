@@ -293,6 +293,22 @@ import type {
   LocalModelsSnapshot,
 } from "./localModels";
 import type {
+  PluginAppInput,
+  PluginAppTokenInput,
+  PluginCreateSkillInput,
+  PluginCreateSkillResult,
+  PluginCustomServerInput,
+  PluginConnectResult,
+  PluginIdInput,
+  PluginImportInput,
+  PluginImportResult,
+  PluginMarketplaceInput,
+  PluginMarketplaceResult,
+  PluginSetEnabledInput,
+  PluginSourceInput,
+  PluginsSnapshot,
+} from "./plugins";
+import type {
   AiDetectorCancelInstallInput,
   AiDetectorEvent,
   AiDetectorInstallModelInput,
@@ -730,6 +746,21 @@ export interface NativeApi {
     rerunCapabilityCheck: (input: LocalModelCapabilityCheckInput) => Promise<LocalModelsSnapshot>;
     removeModel: (input: LocalModelRemoveInput) => Promise<LocalModelsSnapshot>;
     onEvent: (callback: (event: LocalModelEvent) => void) => () => void;
+  };
+  plugins: {
+    getSnapshot: () => Promise<PluginsSnapshot>;
+    install: (input: PluginIdInput) => Promise<PluginsSnapshot>;
+    uninstall: (input: PluginIdInput) => Promise<PluginsSnapshot>;
+    setEnabled: (input: PluginSetEnabledInput) => Promise<PluginsSnapshot>;
+    connectApp: (input: PluginAppInput) => Promise<PluginConnectResult>;
+    disconnectApp: (input: PluginAppInput) => Promise<PluginsSnapshot>;
+    addCustomServer: (input: PluginCustomServerInput) => Promise<PluginsSnapshot>;
+    createSkill: (input: PluginCreateSkillInput) => Promise<PluginCreateSkillResult>;
+    saveAppToken: (input: PluginAppTokenInput) => Promise<PluginsSnapshot>;
+    importManifest: (input: PluginImportInput) => Promise<PluginImportResult>;
+    addMarketplace: (input: PluginMarketplaceInput) => Promise<PluginMarketplaceResult>;
+    refreshMarketplace: (input: PluginSourceInput) => Promise<PluginMarketplaceResult>;
+    removeMarketplace: (input: PluginSourceInput) => Promise<PluginsSnapshot>;
   };
   projectMemory: {
     list: (input: ProjectMemoryListInput) => Promise<ProjectMemoryListResult>;

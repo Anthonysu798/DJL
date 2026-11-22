@@ -156,12 +156,14 @@ export const COMPOSER_INPUT_SURFACE_CLASS_NAME = `chat-composer-surface border $
 export const SIDEBAR_SEGMENTED_PICKER_ACTIVE_CLASS_NAME =
   "relative z-[1] text-[var(--color-text-foreground)]";
 
-/** Shadcn default-translucent shell for floating menus, pickers, and popovers. */
+/** Liquid-glass shell for floating menus, pickers, and popovers. The fill, hairline
+ *  border, highlight, shadow and backdrop blur all come from `.glass-surface`
+ *  (index.css), which also drops the blur under `data-glass="tint"`. */
 export const APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME =
-  "relative overflow-hidden border border-border bg-popover/70 text-popover-foreground before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:rounded-[inherit] before:backdrop-blur-2xl before:backdrop-saturate-150";
+  "glass-surface overflow-hidden text-popover-foreground";
 
 /** Default floating popup shell (dropdown menus, selects, popovers). */
-export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-2xl shadow-xl`;
+export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-2xl`;
 
 /**
  * Frosted surface chrome shared by every plain tooltip (default TooltipPopup) and
@@ -172,16 +174,14 @@ export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP
  * picker tooltips deliberately stay on the picker chrome instead (see
  * COMPOSER_PICKER_TOOLTIP_SURFACE_CLASS_NAME) so they match the menus they open.
  */
-export const APP_TOOLTIP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-lg shadow-xl`;
+export const APP_TOOLTIP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-lg`;
 
 /** Frosted backdrop layer inside composer picker dropdown panels. @deprecated Use APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME instead. */
 export const COMPOSER_PICKER_MENU_BACKDROP_CLASS_NAME = "composer-picker-menu-surface";
 
-/** Shared border, radius, and shadow for composer-attached popup panels. */
-export const COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME = `border border-border ${COMPOSER_PICKER_RADIUS_CLASS_NAME} ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
-
-/** Visual shell for composer picker dropdown panels (menus attached to the composer). */
-export const COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} ${COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME}`;
+/** Visual shell for composer picker dropdown panels (menus attached to the composer):
+ *  the shared glass shell at the tighter picker radius. */
+export const COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} ${COMPOSER_PICKER_RADIUS_CLASS_NAME}`;
 
 /** Frosted backdrop layer inside open picker panels (composer menus + settings selects). */
 export const COMPOSER_PICKER_MENU_POPUP_BACKDROP_LAYER_CLASS_NAME = `${COMPOSER_PICKER_MENU_BACKDROP_CLASS_NAME} pointer-events-none absolute inset-0 rounded-[inherit]`;
