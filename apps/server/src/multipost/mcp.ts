@@ -28,6 +28,31 @@ const definitions = [
     },
   ],
   [
+    "post",
+    "Publish one post in a single call: the fastest path for 'post this for me'. Pass the caption, optional photo/video paths (files you created in the workspace, chat Attachments/ or Media/ references) and optional accountIds; omit accountIds to use every signed-in account. DJL picks the right format per platform. If the user switched on Autopilot for those accounts it is queued immediately; otherwise it is saved and the user taps Post on the preview card. Read the returned message, then djl_multipost_jobs for the real result.",
+    {
+      text: { type: "string", description: "The caption, exactly as it should appear." },
+      title: {
+        type: "string",
+        maxLength: 500,
+        description: "Optional. Only for platforms with a separate title, such as video sites.",
+      },
+      media: {
+        type: "array",
+        items: { type: "string" },
+        maxItems: 20,
+        description:
+          "Photo or video paths inside the workspace, Attachments/ aliases, or Media/ references.",
+      },
+      accountIds: { type: "array", items: { type: "string" } },
+      scheduledAt: {
+        type: ["string", "null"],
+        description: "Omit to post now; otherwise a future ISO time with Z or an offset.",
+      },
+      timezone: { type: "string", description: "IANA timezone for a scheduled post." },
+    },
+  ],
+  [
     "inspect_media",
     "Inspect actual authorized images/video frames before describing their content.",
     { paths: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 4 } },
@@ -91,7 +116,12 @@ const definitions = [
 export const MULTIPOST_TOOLS = definitions.map(([suffix, description, properties]) => ({
   name: `djl_multipost_${suffix}`,
   description,
-  inputSchema: { type: "object", properties, additionalProperties: false },
+  inputSchema: {
+    type: "object",
+    properties,
+    ...(suffix === "post" ? { required: ["text"] } : {}),
+    additionalProperties: false,
+  },
   annotations: {
     readOnlyHint: ["capabilities", "jobs", "review", "inspect_media"].includes(suffix),
     openWorldHint: true,
@@ -204,6 +234,7 @@ export class MultiPostMcpServer {
                   break;
                 }
                 const actions: Record<string, string> = {
+                  post: "quick-post",
                   import_media: "import-media",
                   draft: "save-draft",
                   review: "review-draft",
@@ -234,7 +265,9 @@ export class MultiPostMcpServer {
                 const { action: _action, ...fields } = args;
                 let value = await this.service.command(
                   scope,
-                  { ...fields, action } as MultiPostCommand,
+                  (suffix === "post"
+                    ? { action, post: fields }
+                    : { ...fields, action }) as MultiPostCommand,
                   "agent",
                 );
                 if (action === "state" && value && typeof value === "object") {

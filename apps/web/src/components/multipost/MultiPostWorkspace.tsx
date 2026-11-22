@@ -1,12 +1,13 @@
 import Composer from "./Composer";
+import QuickComposer from "./QuickComposer";
+import QuickActions from "./QuickActions";
 import Accounts from "./Accounts";
-import Authorizations from "./Authorizations";
-import { errorMessage, type MultiPostView } from "./shared";
-import { MultiPostCalendar } from "./MultiPostCalendar";
-import { useState, type ReactNode } from "react";
+import { Activity, needsAttention } from "./Activity";
+import { errorMessage, useMultiPostText, type MultiPostView } from "./shared";
+import { movable, MultiPostCalendar } from "./MultiPostCalendar";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { IconArrowLeft, IconPlus, IconArrowUpRight } from "@tabler/icons-react";
+import { IconArrowLeft, IconSparkles } from "@tabler/icons-react";
 import type { MultiPostCommand, MultiPostDraft, MultiPostState } from "@synara/contracts";
 import { Button } from "~/components/ui/button";
 
@@ -22,6 +23,7 @@ const empty: MultiPostState = {
   capabilities: [],
   runtimeAvailable: false,
 };
+type Tab = "compose" | "accounts" | "queue" | "resources";
 export default function MultiPostWorkspace({
   threadId,
   onBack,
@@ -29,9 +31,9 @@ export default function MultiPostWorkspace({
   resources,
   legacyCampaign,
   initialView,
-  initialWorkflowId,
 }: {
   initialView?: MultiPostView;
+  /** Older agent links still carry this; permissions now live on each account. */
   initialWorkflowId?: string;
   legacyCampaign?: { id: string; version: number };
   threadId: string;
@@ -39,14 +41,16 @@ export default function MultiPostWorkspace({
   onPrompt?: (text: string) => Promise<boolean>;
   resources?: ReactNode;
 }) {
-  const { t } = useTranslation("chat");
-  const l = (key: string, fallback: string) => t(`multipost.${key}`, { defaultValue: fallback });
+  const l = useMultiPostText();
   const cache = useQueryClient();
-  const [tab, setTab] = useState<MultiPostView>(initialView ?? "compose");
+  const [tab, setTab] = useState<Tab>(
+    initialView === "authorizations" ? "accounts" : (initialView ?? "compose"),
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
   const [editing, setEditing] = useState<MultiPostDraft | null>(null);
-  const [fresh, setFresh] = useState(0);
+  const [ask, setAsk] = useState("");
   const query = useQuery({
     queryKey: ["multipost", threadId],
     queryFn: () => multiPostState(threadId),
@@ -54,10 +58,23 @@ export default function MultiPostWorkspace({
     refetchInterval: 3000,
   });
   const state = query.data ?? empty;
+  // Once per visit DJL makes sure every account is still signed in; the server skips recent checks.
+  useEffect(() => {
+    void multiPostCommand(threadId, { action: "check-accounts" }).then(
+      () => cache.invalidateQueries({ queryKey: ["multipost"] }),
+      () => {},
+    );
+  }, [threadId, cache]);
+  const lapsed = state.accounts.filter(
+    (account) => account.status === "needs-login" && account.identity,
+  );
   const updated = () => {
     void cache.invalidateQueries({ queryKey: ["multipost"] });
   };
-  const command = async <T,>(input: MultiPostCommand): Promise<T | undefined> => {
+  const command = async <T,>(
+    input: MultiPostCommand,
+    friendly?: string,
+  ): Promise<T | undefined> => {
     setBusy(true);
     setError("");
     try {
@@ -65,50 +82,44 @@ export default function MultiPostWorkspace({
       updated();
       return result;
     } catch (e) {
-      setError(errorMessage(e));
+      setError(friendly ?? errorMessage(e));
       return undefined;
     } finally {
       setBusy(false);
     }
   };
-  const tabs: [MultiPostView, string][] = [
-    ["compose", l("compose", "Compose")],
+  const waiting = state.drafts.filter(
+    (draft) =>
+      draft.threadId === threadId &&
+      !state.jobs.some((job) => job.draftId === draft.id && job.revision === draft.revision),
+  );
+  const attention = state.jobs.filter(needsAttention).length;
+  const tabs: [Tab, string][] = [
+    ["compose", l("create", "Create")],
+    ...(onPrompt ? ([["resources", l("oneClick", "One-click")]] as [Tab, string][]) : []),
     ["accounts", l("accounts", "Accounts")],
-    ["queue", l("queue", "Queue & history")],
-    ["authorizations", l("authorizations", "Workflows & authorizations")],
-    ["resources", l("resources", "Brand & media tools")],
+    ["queue", l("activity", "Activity")],
   ];
   return (
     <main className="mp-workspace">
       <header className="mp-header">
-        <div>
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <IconArrowLeft size={16} />
-            {l("back", "Back to chat")}
-          </Button>
-          <h1>DJL MultiPost</h1>
-          <p>{l("intro", "One place for every post, account, and publishing task.")}</p>
-        </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setFresh((x) => x + 1);
-            setTab("compose");
-          }}
-        >
-          <IconPlus size={16} />
-          {l("newPost", "New post")}
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <IconArrowLeft size={16} />
+          {l("back", "Back to chat")}
         </Button>
+        <h1>DJL MultiPost</h1>
+        <p>{l("intro", "Write once. Post everywhere.")}</p>
       </header>
       <nav className="mp-tabs" role="tablist" aria-label="MultiPost">
         {tabs.map(([id, title]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id!)}>
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
             {title}
+            {id === "queue" && attention > 0 && <span className="mp-badge">{attention}</span>}
           </button>
         ))}
       </nav>
       {(error || query.isError) && (
-        <div className="mp-error" role="alert">
+        <div className="mp-error mp-banner" role="alert">
           {error || errorMessage(query.error)}{" "}
           <Button
             variant="ghost"
@@ -123,217 +134,249 @@ export default function MultiPostWorkspace({
         </div>
       )}
       {query.isPending ? (
-        <p role="status">{l("loading", "Loading your workspace…")}</p>
+        <div className="mp-card mp-skeleton" role="status">
+          <span className="sr-only">{l("loading", "Loading your workspace…")}</span>
+        </div>
       ) : (
         <>
-          {!state.runtimeAvailable && tab !== "resources" && (
+          {lapsed.length > 0 && tab !== "accounts" && (
+            <p className="mp-notice mp-notice-action" role="status">
+              {l(
+                "signedOutBanner",
+                "{{names}} signed you out. Sign in again so your posts keep going out.",
+                { names: lapsed.map((account) => account.label).join(", ") },
+              )}
+              <Button size="sm" onClick={() => setTab("accounts")}>
+                {l("signInAgain", "Sign in again")}
+              </Button>
+            </p>
+          )}
+          {!state.runtimeAvailable && (
             <p className="mp-notice">
               {l(
                 "desktopRequired",
-                "Open DJL desktop to connect accounts and execute publishing. Drafts remain editable here.",
+                "Open the DJL desktop app to sign in to accounts and post. You can still write here.",
               )}
             </p>
           )}
-          {tab === "compose" && (
-            <div className="mp-compose-layout">
-              <div>
-                <Composer
-                  key={`${editing?.id ?? "new"}-${editing?.revision ?? fresh}`}
-                  threadId={threadId}
-                  state={state}
-                  initial={editing}
-                  busy={busy}
-                  onSave={(draft) =>
-                    command<MultiPostDraft>({ action: "save-draft", draft }).then((value) => {
-                      if (value) setEditing(value);
-                    })
-                  }
-                  onError={setError}
-                />
-                {onPrompt && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      void onPrompt(
-                        "$multipost-compose Help me prepare platform-specific content in this conversation. Inspect my real media first and save a draft with DJL multipost mcp; do not authorize publication.",
-                      ).then((started) => {
-                        if (started) onBack();
-                      });
-                    }}
-                  >
-                    {l("askAgent", "Ask the agent to help")}
-                    <IconArrowUpRight size={14} />
-                  </Button>
-                )}
-              </div>
-              <aside className="mp-drafts">
-                <div className="mp-section-heading">
-                  <h2>{l("drafts", "Saved drafts")}</h2>
-                  {legacyCampaign && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        void command<MultiPostDraft>({
-                          action: "import-campaign",
-                          campaignId: legacyCampaign.id,
-                          version: legacyCampaign.version,
-                        }).then((value) => {
-                          if (value) setEditing(value);
-                        })
-                      }
-                    >
-                      {l("importCampaign", "Import existing campaign")}
-                    </Button>
-                  )}
-                  <span>{state.drafts.filter((d) => d.threadId === threadId).length}</span>
-                </div>
-                {state.drafts
-                  .filter((d) => d.threadId === threadId)
-                  .map((draft) => (
-                    <section key={`${draft.id}-${draft.revision}`}>
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(draft)}>
-                        {l("edit", "Edit")} · {draft.data.title}
-                      </Button>
-                      {state.jobs.some(
-                        (job) => job.draftId === draft.id && job.revision === draft.revision,
-                      ) ? (
-                        <Button variant="outline" size="sm" onClick={() => setTab("queue")}>
-                          {l("queue", "Queue & history")}
+          {/* Stays mounted so a half-written post survives a visit to another tab. */}
+          <div className="mp-view" hidden={tab !== "compose"}>
+            {!state.accounts.length && (
+              <section className="mp-card mp-welcome">
+                <h2>{l("welcome", "Post everywhere in three steps")}</h2>
+                <ol className="mp-steps">
+                  <li>
+                    <strong>{l("stepConnect", "Connect an account")}</strong>
+                    <span>
+                      {l("stepConnectHint", "Sign in to Instagram, TikTok or any other.")}
+                    </span>
+                  </li>
+                  <li>
+                    <strong>{l("stepWrite", "Write your post")}</strong>
+                    <span>{l("stepWriteHint", "Add words, photos or a video.")}</span>
+                  </li>
+                  <li>
+                    <strong>{l("stepPost", "Press Post")}</strong>
+                    <span>{l("stepPostHint", "Or just ask the agent to do it all.")}</span>
+                  </li>
+                </ol>
+                <Button size="lg" onClick={() => setTab("accounts")}>
+                  {l("stepConnect", "Connect an account")}
+                </Button>
+              </section>
+            )}
+            {state.accounts.length > 0 && (
+              <div className="mp-create">
+                <div>
+                  {advanced ? (
+                    <>
+                      <Composer
+                        key={`${editing?.id ?? "new"}-${editing?.revision ?? 0}`}
+                        threadId={threadId}
+                        state={state}
+                        initial={editing}
+                        busy={busy}
+                        onSave={(draft) =>
+                          command<MultiPostDraft>({ action: "save-draft", draft }).then((value) => {
+                            if (value) setEditing(value);
+                          })
+                        }
+                        onError={setError}
+                      />
+                      <div className="mp-actions">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setAdvanced(false);
+                            setEditing(null);
+                          }}
+                        >
+                          {l("backToSimple", "Back to the simple editor")}
                         </Button>
-                      ) : (
+                        {legacyCampaign && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              void command<MultiPostDraft>({
+                                action: "import-campaign",
+                                campaignId: legacyCampaign.id,
+                                version: legacyCampaign.version,
+                              }).then((value) => {
+                                if (value) setEditing(value);
+                              })
+                            }
+                          >
+                            {l("importCampaign", "Import existing campaign")}
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <QuickComposer
+                        threadId={threadId}
+                        state={state}
+                        onPosted={updated}
+                        onSeeProgress={() => setTab("queue")}
+                        onAccounts={() => setTab("accounts")}
+                      />
+                      <Button variant="ghost" size="sm" onClick={() => setAdvanced(true)}>
+                        {l("advancedEditor", "Advanced editor")}
+                      </Button>
+                      <span className="mp-muted mp-advanced-hint">
+                        {l("advancedHint", "Articles, podcasts and per-platform options")}
+                      </span>
+                    </>
+                  )}
+                </div>
+                <aside>
+                  {onPrompt && (
+                    <form
+                      className="mp-card mp-agent"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void onPrompt(
+                          `$multipost-publish ${ask.trim() || "Help me write a post and publish it to my connected accounts."}`,
+                        ).then((started) => {
+                          if (started) onBack();
+                        });
+                      }}
+                    >
+                      <h2>
+                        <IconSparkles size={16} aria-hidden="true" />
+                        {l("letAgent", "Or let the agent do it")}
+                      </h2>
+                      <p className="mp-muted">
+                        {l(
+                          "letAgentHint",
+                          "Say what you want. The agent writes it, makes the image and posts it. With Autopilot on it posts without asking; otherwise you get a preview first.",
+                        )}
+                      </p>
+                      <textarea
+                        rows={3}
+                        aria-label={l("tellAgent", "Tell the agent what to post")}
+                        placeholder={l(
+                          "tellAgentPlaceholder",
+                          "Make an image for our weekend sale and post it everywhere",
+                        )}
+                        value={ask}
+                        onChange={(event) => setAsk(event.target.value)}
+                      />
+                      <Button type="submit" variant="outline">
+                        {l("askAgent", "Ask the agent")}
+                      </Button>
+                    </form>
+                  )}
+                  {waiting.length > 0 && (
+                    <section className="mp-waiting">
+                      <h2>{l("waitingForOk", "Waiting for your OK")}</h2>
+                      {waiting.map((draft) => (
                         <MultiPostReview
+                          key={`${draft.id}-${draft.revision}`}
                           threadId={threadId}
                           draft={draft}
                           accounts={state.accounts}
                           onUpdated={updated}
+                          onEdit={() => {
+                            setEditing(draft);
+                            setAdvanced(true);
+                          }}
                         />
-                      )}
+                      ))}
                     </section>
-                  ))}
-                {!state.drafts.some((d) => d.threadId === threadId) && (
-                  <div className="mp-empty">
-                    <h3>{l("draftEmpty", "Your next post starts here.")}</h3>
-                    <p>
-                      {l(
-                        "draftHint",
-                        "Choose a format and accounts, add your content, then save a draft for review.",
-                      )}
-                    </p>
-                    <Button variant="outline" onClick={() => setTab("accounts")}>
-                      {l("connectAccounts", "Connect accounts")}
-                    </Button>
-                  </div>
-                )}
-              </aside>
+                  )}
+                </aside>
+              </div>
+            )}
+          </div>
+          {tab === "accounts" && (
+            <div className="mp-view">
+              <Accounts state={state} command={command} busy={busy} />
             </div>
           )}
-          {tab === "accounts" && <Accounts state={state} command={command} busy={busy} />}
           {tab === "queue" && (
-            <section className="mp-panel">
-              <h2>{l("queue", "Queue & history")}</h2>
-              <MultiPostCalendar
-                jobs={state.jobs}
-                timezone={Intl.DateTimeFormat().resolvedOptions().timeZone}
-              />
-              <p className="mp-muted">
-                {l(
-                  "backgroundHint",
-                  "Keep DJL running in the tray for scheduled tasks. Missed tasks wait for your review.",
-                )}
-              </p>
-              {!state.jobs.length && (
-                <div className="mp-empty">{l("queueEmpty", "No publishing tasks yet.")}</div>
+            <section className="mp-card mp-view">
+              <h2>{l("activity", "Activity")}</h2>
+              {state.jobs.length ? (
+                <>
+                  <Activity
+                    jobs={state.jobs}
+                    accounts={state.accounts}
+                    busy={busy}
+                    onCommand={(input) => void command(input)}
+                    onAccounts={() => setTab("accounts")}
+                  />
+                  <details
+                    className="mp-week"
+                    open={state.jobs.some((job) => movable(job)) || undefined}
+                  >
+                    <summary>{l("calendar", "Publishing calendar")}</summary>
+                    <MultiPostCalendar
+                      jobs={state.jobs}
+                      accounts={state.accounts}
+                      busy={busy}
+                      timezone={Intl.DateTimeFormat().resolvedOptions().timeZone}
+                      onMove={(jobId, scheduledAt) =>
+                        void command({ action: "reschedule-job", jobId, scheduledAt })
+                      }
+                    />
+                  </details>
+                  <p className="mp-muted">
+                    {l(
+                      "backgroundHint",
+                      "Keep DJL running for scheduled posts. Closing the window is fine; quitting the app is not.",
+                    )}
+                  </p>
+                </>
+              ) : (
+                <div className="mp-empty">
+                  <h3>{l("queueEmpty", "Nothing here yet")}</h3>
+                  <p>{l("queueEmptyHint", "Posts you send or schedule show up here.")}</p>
+                  <Button onClick={() => setTab("compose")}>
+                    {l("createPost", "Create a post")}
+                  </Button>
+                </div>
               )}
-              {state.jobs.map((job) => (
-                <article className="mp-job" id={`mp-job-${job.id}`} key={job.id}>
-                  <div>
-                    <span className={`mp-status mp-status-${job.state}`}>
-                      {l(job.state, job.state.replaceAll("-", " "))}
-                    </span>
-                    <h3>{job.snapshot.data.title}</h3>
-                    <p>
-                      {state.accounts.find((a) => a.id === job.accountId)?.label} ·{" "}
-                      {new Intl.DateTimeFormat(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                        timeZone: job.snapshot.timezone,
-                      }).format(new Date(job.dueAt))}{" "}
-                      · {job.snapshot.timezone}
-                    </p>
-                    {job.error && <p className="mp-error">{job.error}</p>}
-                    {job.evidence?.message && <p>{job.evidence.message}</p>}
-                    {job.evidence?.postUrl && (
-                      <a href={job.evidence.postUrl} target="_blank" rel="noopener noreferrer">
-                        {l("viewPost", "View post")} ↗
-                      </a>
-                    )}
-                  </div>
-                  <div className="mp-actions">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void command({ action: "open-job", jobId: job.id })}
-                    >
-                      {l("openPlatform", "Open platform")}
-                    </Button>
-                    {["prepared", "scheduled-on-platform", "uncertain"].includes(job.state) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void command({ action: "verify-job", jobId: job.id })}
-                      >
-                        {l("verifyResult", "Verify result")}
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void command({ action: "close-job", jobId: job.id })}
-                    >
-                      {l("closePage", "Close page")}
-                    </Button>
-                    {[
-                      "queued",
-                      "preparing",
-                      "prepared",
-                      "scheduled-on-platform",
-                      "uncertain",
-                    ].includes(job.state) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={busy}
-                        onClick={() => void command({ action: "cancel-job", jobId: job.id })}
-                      >
-                        {l("cancel", "Cancel")}
-                      </Button>
-                    )}
-                    {!job.submittedAt &&
-                      ["missed", "failed", "needs-login"].includes(job.state) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() => void command({ action: "retry-job", jobId: job.id })}
-                        >
-                          {l("reviewRetry", "Review and retry")}
-                        </Button>
-                      )}
-                  </div>
-                </article>
-              ))}
             </section>
           )}
-          {tab === "authorizations" && (
-            <Authorizations
-              state={state}
-              command={command}
-              busy={busy}
-              {...(initialWorkflowId ? { initialWorkflowId } : {})}
-            />
+          {tab === "resources" && onPrompt && (
+            <div className="mp-view">
+              <QuickActions
+                threadId={threadId}
+                state={state}
+                onAccounts={() => setTab("accounts")}
+                onPrompt={(text) =>
+                  onPrompt(text).then((started) => {
+                    if (started) onBack();
+                    return started;
+                  })
+                }
+                {...(resources ? { resources } : {})}
+              />
+            </div>
           )}
-          {tab === "resources" && resources}
         </>
       )}
     </main>
