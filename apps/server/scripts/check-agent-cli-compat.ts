@@ -161,5 +161,8 @@ try {
   await checkClaude(option("--claude"), root);
   await checkCodex(option("--codex"), root);
 } finally {
-  await rm(root, { recursive: true, force: true });
+  // On Windows a just-closed CLI can hold a file handle briefly; the checks above already passed.
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }).catch(
+    (error: unknown) => console.warn(`Could not remove ${root}: ${String(error)}`),
+  );
 }
