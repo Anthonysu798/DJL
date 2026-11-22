@@ -38,6 +38,11 @@ const child = spawn(electronBin, buildSmokeLaunchArguments(mainJs, userDataDirec
 let output = "";
 child.stdout.on("data", (chunk) => {
   output += chunk.toString();
+  if (!readyObserved && output.includes("[desktop-smoke] renderer ready")) {
+    readyObserved = true;
+    // Keep the app running a little after readiness to catch crashes right after startup.
+    scheduleStop(POST_READY_OBSERVATION_MS);
+  }
 });
 child.stderr.on("data", (chunk) => {
   output += chunk.toString();
@@ -63,13 +68,23 @@ async function cleanupSmokeRoot() {
   throw lastError;
 }
 
-const timeout = setTimeout(() => {
-  observationCompleted = true;
-  terminateSmokeProcessTree(child);
-  forceKillTimeout = setTimeout(() => {
-    terminateSmokeProcessTree(child, "SIGKILL");
-  }, 2_000);
-}, 8_000);
+// A fixed 8s window failed on slow CI runners: startup sometimes took longer, and the planned kill
+// then surfaced as "GPU process isn't usable". Wait up to the startup limit for readiness instead.
+const STARTUP_LIMIT_MS = 60_000;
+const POST_READY_OBSERVATION_MS = 5_000;
+let readyObserved = false;
+let timeout;
+function scheduleStop(delay) {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    observationCompleted = true;
+    terminateSmokeProcessTree(child);
+    forceKillTimeout = setTimeout(() => {
+      terminateSmokeProcessTree(child, "SIGKILL");
+    }, 2_000);
+  }, delay);
+}
+scheduleStop(STARTUP_LIMIT_MS);
 
 child.on("error", (error) => {
   output += `\nElectron launch failed: ${error.message}`;

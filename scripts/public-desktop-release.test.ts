@@ -451,6 +451,20 @@ describe("public desktop release preparation", () => {
     );
     assert.match(ciWorkflow, /probe-installed-opencode\.ts/);
     assert.match(ciWorkflow, /--compatibility/);
+    // PRs may skip the native OpenCode and MultiPost lanes, but main must always run all of them.
+    assert.match(ciWorkflow, /else\n            opencode=true\n            multipost=true\n/);
+    assert.match(
+      ciWorkflow,
+      /include: \$\{\{ fromJSON\(needs\.changes\.outputs\.opencode-matrix\) \}\}/,
+    );
+    assert.match(
+      ciWorkflow,
+      /MULTIPOST_WANTED" == "false" && "\$MULTIPOST_NATIVE_RESULT" == "skipped"/,
+    );
+    for (const shard of ["1/3", "2/3", "3/3"]) {
+      assert.match(ciWorkflow, new RegExp(`ci:desktop:test:server --shard=${shard}`));
+    }
+    assert.match(ciWorkflow, /ci:desktop:test:rest/);
     for (const secret of ["AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"]) {
       assert.match(ciWorkflow, new RegExp(`secrets\\.${secret}`));
       assert.match(releaseWorkflow, new RegExp(`secrets\\.${secret}`));
