@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { MultiPostRuntimeContext } from "@synara/contracts";
 import { DesktopMultiPostRuntime } from "./runtime";
@@ -330,7 +331,8 @@ it("makes the hidden posting page act focused before filling it, so typed captio
     order.push("adapter");
     return { pending: 1, done: true };
   });
-  await runtime.prepare(context);
+  // The shared context's /private/tmp exists only on macOS; this test needs the whole prepare to run.
+  await runtime.prepare({ ...context, scope: { ...context.scope, authorizedRoot: tmpdir() } });
   const focus = order.indexOf('Emulation.setFocusEmulationEnabled {"enabled":true}');
   expect(focus).toBeGreaterThan(-1);
   expect(focus).toBeLessThan(order.indexOf("adapter"));
