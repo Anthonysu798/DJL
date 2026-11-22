@@ -8,6 +8,7 @@ import '../data/desktop_local_store.dart';
 import '../data/remote_transport.dart';
 import '../data/thread_repository.dart';
 import '../domain/thread_local_state.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopThreadsController extends ChangeNotifier {
   DesktopThreadsController(this.transport, this.store) {
@@ -125,8 +126,7 @@ class DesktopThreadsController extends ChangeNotifier {
       }
     } catch (_) {
       if (generation == _generation) {
-        localError =
-            'Could not open offline chats. Unlock your device or reconnect to load them.';
+        localError = appStrings.desktopOfflineChatsOpenFailed;
       }
     }
     _notify();
@@ -147,8 +147,7 @@ class DesktopThreadsController extends ChangeNotifier {
       }
     } catch (_) {
       if (macDeviceId == mac) {
-        localError =
-            'Could not save offline chats. Unlock your device and try again.';
+        localError = appStrings.desktopOfflineChatsSaveFailed;
         _notify();
       }
     }
@@ -186,7 +185,7 @@ class DesktopThreadsController extends ChangeNotifier {
     if (isCurrent?.call() == false) return;
     final repo = _repository;
     if (repo == null) {
-      throw StateError('Choose a paired desktop.');
+      throw StateError(appStrings.desktopChoosePairedDesktop);
     }
     final generation = _generation;
     loading = true;
@@ -233,8 +232,7 @@ class DesktopThreadsController extends ChangeNotifier {
       }
     } catch (_) {
       if (generation == _generation) {
-        syncWarning =
-            'Saved on this device. The change on your desktop could not be confirmed; refresh before retrying.';
+        syncWarning = appStrings.desktopSavedLocallyUnconfirmed;
       }
     }
     if (generation == _generation) {
@@ -299,7 +297,7 @@ class DesktopThreadsController extends ChangeNotifier {
     if (current()) {
       syncWarning = confirmed == roots.length
           ? null
-          : 'Saved on this device. The change on your desktop could not be confirmed; refresh before retrying.';
+          : appStrings.desktopSavedLocallyUnconfirmed;
       _notify();
     }
     return affected;

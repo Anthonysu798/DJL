@@ -65,18 +65,16 @@ void main() {
       if (restore) {
         expect(settings.theme, ThemeMode.dark);
         expect(settings.font, AppFontStyle.geistMono);
-        expect(settings.bubble, UserBubbleColor.pink);
         expect(find.text('App lock'), findsNothing);
       } else {
         // Establish opposite persisted values before exercising real controls.
-        // Write only these three appearance keys, never runtime defaults.
+        // Write only these two appearance keys, never runtime defaults.
         await establishNativeSettingsBaseline(SharedSettingsStore());
         await settings.load();
         expect(settings.ready, isTrue);
         expect(settings.error, isNull);
         expect(settings.theme, ThemeMode.light);
         expect(settings.font, AppFontStyle.system);
-        expect(settings.bubble, UserBubbleColor.defaultColor);
         expect(find.text('App lock'), findsNothing);
         await reveal(tester, find.byKey(const Key('theme-setting')));
         await tester.tap(find.byKey(const Key('theme-setting')));
@@ -87,12 +85,6 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Geist Mono').last);
         await saved(() => settings.font == AppFontStyle.geistMono);
-        await reveal(tester, find.byKey(const Key('bubble-setting')));
-        await tester.tap(find.byKey(const Key('bubble-setting')));
-        await tester.pumpAndSettle();
-        await reveal(tester, find.byKey(const Key('bubble-pink')));
-        await tester.tap(find.byKey(const Key('bubble-pink')));
-        await saved(() => settings.bubble == UserBubbleColor.pink);
         expect(find.text('App lock'), findsNothing);
       }
       expect(settings.ready, isTrue);

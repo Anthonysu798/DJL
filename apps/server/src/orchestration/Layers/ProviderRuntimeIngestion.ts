@@ -1512,9 +1512,28 @@ function runtimeEventToActivities(
       if (Object.keys(rl).length === 0) {
         return [];
       }
-      const status = rl.status;
+      // A Claude SDK rate_limit_event nests its status under `rate_limit_info`; a Codex
+      // update nests its snapshot under `rateLimits` and names a reached limit instead.
+      const claudeInfo = asObject(rl.rate_limit_info);
+      const codexSnapshot = asObject(rl.rateLimits);
+      const exhaustedCodexResets = [codexSnapshot?.primary, codexSnapshot?.secondary].flatMap(
+        (window) => {
+          const entry = asObject(window);
+          return entry && Number(entry.usedPercent) >= 100 && typeof entry.resetsAt === "number"
+            ? [entry.resetsAt]
+            : [];
+        },
+      );
+      const status =
+        claudeInfo?.status ??
+        rl.status ??
+        (codexSnapshot?.rateLimitReachedType ? "rejected" : undefined);
+      const utilization = claudeInfo?.utilization ?? rl.utilization;
       // Normalize resetsAt: Claude SDK sends Unix seconds (number), Codex may send ISO string
-      const resetsAtRaw = rl.resetsAt;
+      const resetsAtRaw =
+        claudeInfo?.resetsAt ??
+        rl.resetsAt ??
+        (exhaustedCodexResets.length > 0 ? Math.max(...exhaustedCodexResets) : undefined);
       const resetsAt =
         typeof resetsAtRaw === "number"
           ? new Date(resetsAtRaw * 1000).toISOString()
@@ -1557,7 +1576,7 @@ function runtimeEventToActivities(
         provider: event.provider,
         ...rl,
         ...(resetsAt ? { resetsAt } : {}),
-        ...(typeof rl.utilization === "number" ? { utilization: rl.utilization } : {}),
+        ...(typeof utilization === "number" ? { utilization } : {}),
         ...(limits && limits.length > 0 ? { limits } : {}),
       };
       const activities: OrchestrationThreadActivity[] = [

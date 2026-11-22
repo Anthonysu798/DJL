@@ -3,6 +3,9 @@ import '../domain/desktop_attention.dart';
 import 'desktop_attention_list.dart';
 import 'desktop_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class DesktopAttentionPage extends StatefulWidget {
   const DesktopAttentionPage({
     super.key,
@@ -29,7 +32,7 @@ class _DesktopAttentionPageState extends State<DesktopAttentionPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       leading: const BackButton(key: Key('attention.back')),
-      title: const Text('Attention'),
+      title: Text(context.l10n.chatUiAttentionTitle),
     ),
     body: SafeArea(
       top: false,
@@ -37,11 +40,11 @@ class _DesktopAttentionPageState extends State<DesktopAttentionPage> {
         listenable: widget.controller,
         builder: (context, _) {
           if (!widget.isCurrent()) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Connection changed. Go back to reopen Attention.',
+                  context.l10n.chatUiAttentionConnectionChanged,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -57,9 +60,9 @@ class _DesktopAttentionPageState extends State<DesktopAttentionPage> {
                   autocorrect: false,
                   textCapitalization: TextCapitalization.none,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    hintText: 'Search attention',
-                    prefixIcon: Icon(Icons.search),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.chatUiAttentionSearch,
+                    prefixIcon: const Icon(DjlIcons.search),
                   ),
                 ),
               ),

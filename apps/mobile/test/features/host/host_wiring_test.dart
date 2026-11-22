@@ -49,13 +49,6 @@ void main() {
       });
       await Future<void>.delayed(Duration.zero);
       expect(desktop.host.snapshot?.bridgeVersion, '2.0');
-      transport.status['bridgeVersion'] = '3.0';
-      transport.events.add({
-        'method': 'account/login/completed',
-        'params': {'threadId': 'other', 'success': true},
-      });
-      await Future<void>.delayed(Duration.zero);
-      expect(desktop.host.snapshot?.bridgeVersion, '3.0');
       transport.status['bridgeVersion'] = '4.0';
       desktop.resume();
       await Future<void>.delayed(Duration.zero);
@@ -155,7 +148,7 @@ void main() {
       expect(writes(), 1);
       expect(store.values['codex.keepMacAwakeWhileBridgeRuns'], true);
       expect(desktop.host.preferenceError, isNotNull);
-      for (final event in ['account/updated', 'account/login/completed']) {
+      for (final event in ['account/updated']) {
         transport.status['bridgeVersion'] = event;
         transport.events.add({
           'method': event,
@@ -171,7 +164,7 @@ void main() {
       expect(desktop.host.snapshot?.bridgeVersion, 'foreground');
       expect(
         transport.calls.where((c) => c.$1 == 'account/status/read').length,
-        4,
+        3,
       );
       expect(writes(), 1);
       failPreference = false;

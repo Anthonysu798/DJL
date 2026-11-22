@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_composer_panel.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_stop_recovery_test.dart'
     show StopRecoveryTransport, stopDesktop, stopPage;
 

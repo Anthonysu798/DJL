@@ -12,6 +12,8 @@ import { getAgentMentionAutocompleteAliases, serverReference } from "@synara/con
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { composerPluginSuggestions } from "~/lib/composerPluginSuggestions";
+import { pluginsSnapshotQueryOptions } from "~/lib/pluginsReactQuery";
 import { serversQueryOptions } from "~/lib/serversReactQuery";
 import {
   buildCommandSearchFields,
@@ -80,6 +82,12 @@ export function useComposerCommandMenuItems(input: {
   // Registered servers join the `@` picker; the query only runs while it is open.
   const serversQuery = useQuery({ ...serversQueryOptions(), enabled: isMentionTrigger });
   const servers = serversQuery.data?.servers ?? EMPTY_SERVERS;
+  // So do the DJL plugins that are ready to use in this chat.
+  const pluginsQuery = useQuery({ ...pluginsSnapshotQueryOptions(), enabled: isMentionTrigger });
+  const djlPlugins = useMemo(
+    () => (pluginsQuery.data ? composerPluginSuggestions(pluginsQuery.data) : []),
+    [pluginsQuery.data],
+  );
   const {
     composerTrigger,
     provider,
@@ -165,7 +173,7 @@ export function useComposerCommandMenuItems(input: {
       })();
 
       const pluginItems = rankProviderDiscoveryItems(
-        [...BUILT_IN_PLUGINS, ...providerPlugins].filter(({ plugin }) =>
+        [...BUILT_IN_PLUGINS, ...djlPlugins, ...providerPlugins].filter(({ plugin }) =>
           isInstalledProviderPlugin(plugin),
         ),
         query,
@@ -335,6 +343,7 @@ export function useComposerCommandMenuItems(input: {
     canOfferSideCommand,
     canOfferExportCommand,
     composerTrigger,
+    djlPlugins,
     dynamicAgents,
     provider,
     providerPlugins,

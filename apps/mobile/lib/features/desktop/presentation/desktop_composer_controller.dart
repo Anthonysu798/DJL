@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:uuid/uuid.dart';
 import '../domain/desktop_composer.dart';
+import '../../../l10n/l10n.dart';
 
 typedef DesktopComposerScope = ({String? mac, String? thread, String? cwd});
 
@@ -25,24 +26,18 @@ class DesktopComposerImagePicker {
     if (result == null) return null;
     final bytes = await result.readAsBytes();
     if (bytes.isEmpty || bytes.length > desktopImageByteLimit * 3 ~/ 4) {
-      throw const FormatException(
-        'The selected image is empty or too large. Choose a smaller image.',
-      );
+      throw FormatException(appStrings.desktopImageEmptyOrTooLarge);
     }
     final mime = lookupMimeType(result.name, headerBytes: bytes);
     if (mime == null || !mime.startsWith('image/')) {
-      throw const FormatException(
-        'The selected file is not a supported image.',
-      );
+      throw FormatException(appStrings.desktopImageUnsupported);
     }
     final codec = await ui.instantiateImageCodec(bytes);
     try {
       final frame = await codec.getNextFrame();
       try {
         if (frame.image.width > 1600 || frame.image.height > 1600) {
-          throw const FormatException(
-            'This device could not resize the image. Choose an image no larger than 1600 pixels.',
-          );
+          throw FormatException(appStrings.desktopImageResizeFailed);
         }
       } finally {
         frame.image.dispose();
@@ -52,9 +47,7 @@ class DesktopComposerImagePicker {
     }
     final url = 'data:$mime;base64,${base64Encode(bytes)}';
     if (utf8.encode(url).length > desktopImageByteLimit) {
-      throw const FormatException(
-        'The selected image is too large. Choose a smaller image.',
-      );
+      throw FormatException(appStrings.desktopImageTooLarge);
     }
     return DesktopComposerImage(
       id: const Uuid().v4(),
@@ -82,7 +75,7 @@ class DesktopComposerController extends ChangeNotifier {
   String? _contextCwd;
   String? get contextScopeError =>
       _contexts.isNotEmpty && _contextCwd != scope?.cwd
-      ? 'The project folder changed. Remove existing context or return to its original folder.'
+      ? appStrings.desktopContextFolderChanged
       : null;
   final _slots = <DesktopComposerImageSlot>[];
   final _contexts = <DesktopComposerContext>[];
@@ -224,7 +217,7 @@ class DesktopComposerController extends ChangeNotifier {
         _slots[index] = DesktopComposerImageSlot(
           id,
           error: e is PlatformException
-              ? e.message ?? 'Could not open the picker. Please try again.'
+              ? e.message ?? appStrings.desktopPickerOpenFailed
               : e.toString(),
         );
       }

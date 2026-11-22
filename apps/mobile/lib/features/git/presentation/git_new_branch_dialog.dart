@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../domain/git_creation_review.dart';
+import '../../../l10n/l10n.dart';
 
 class GitNewBranchDialog extends StatefulWidget {
   const GitNewBranchDialog({
@@ -44,7 +45,7 @@ class _GitNewBranchDialogState extends State<GitNewBranchDialog> {
       final current = widget.isCurrent();
       final valid = current && name.isNotEmpty && name != 'djl/';
       return AlertDialog(
-        title: const Text('New branch'),
+        title: Text(context.l10n.gitNewBranch),
         scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -60,22 +61,18 @@ class _GitNewBranchDialogState extends State<GitNewBranchDialog> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Branch will be created locally and checked out. Uncommitted changes stay with this working copy.',
-            ),
+            Text(context.l10n.gitNewBranchBody),
             if (!current)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Text(
-                  'Thread activity changed. Close and reopen this Git action.',
-                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(context.l10n.gitThreadChangedReopenGit),
               ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => _finish(null),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: !valid
@@ -91,7 +88,7 @@ class _GitNewBranchDialogState extends State<GitNewBranchDialog> {
                       _finish(value);
                     }
                   },
-            child: const Text('Create'),
+            child: Text(context.l10n.gitCreate),
           ),
         ],
       );

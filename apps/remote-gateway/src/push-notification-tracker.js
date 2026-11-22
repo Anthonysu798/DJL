@@ -65,6 +65,11 @@ function createPushNotificationTracker({
     rememberMessageContext(message);
     clearFallbackSuppressionForNewRun(message);
 
+    if (isAttentionRequest(message)) {
+      void notifyAttention(message);
+      return;
+    }
+
     if (isAssistantDeltaMethod(message.method)) {
       recordAssistantDelta(message.threadId, message.turnId, message.params, message.eventObject);
       return;
@@ -199,6 +204,30 @@ function createPushNotificationTracker({
 
     if (method === "turn/started" || isActiveThreadStatus(method, params, eventObject)) {
       completionDedupe.clearForNewRun(threadId);
+    }
+  }
+
+  // An agent stopped to ask a question or for approval: wake the phone so the
+  // person can answer. Content-free like completions; one push per request.
+  async function notifyAttention({ threadId, turnId, requestId }) {
+    const resolvedThreadId = threadId || (turnId ? threadIdByTurnId.get(turnId) : null);
+    if (!pushServiceClient?.hasConfiguredBaseUrl || !resolvedThreadId) {
+      return;
+    }
+    const title = normalizePreviewText(threadTitleById.get(resolvedThreadId)) || "New Thread";
+    try {
+      await pushServiceClient.notifyCompletion({
+        threadId: resolvedThreadId,
+        turnId,
+        result: "attention",
+        title,
+        body: "Needs your answer",
+        dedupeKey: [sessionId || "", resolvedThreadId, "attention", turnId || "", requestId].join(
+          "|",
+        ),
+      });
+    } catch (error) {
+      console.error(`${logPrefix} push notify failed: ${error.message}`);
     }
   }
 
@@ -445,9 +474,21 @@ function parseOutboundMessage(rawMessage, parsedMessage = null) {
     method,
     params,
     eventObject,
+    requestId:
+      typeof parsed.id === "string" || typeof parsed.id === "number" ? String(parsed.id) : null,
     threadId: resolveThreadId(method, params, eventObject),
     turnId: resolveTurnId(method, params, eventObject),
   };
+}
+
+// Server requests the agent cannot continue without: approvals and questions.
+function isAttentionRequest({ method, requestId }) {
+  return (
+    requestId != null &&
+    (method === "item/tool/requestUserInput" ||
+      method === "tool/requestUserInput" ||
+      method.endsWith("requestApproval"))
+  );
 }
 
 function envelopeEventObject(params) {

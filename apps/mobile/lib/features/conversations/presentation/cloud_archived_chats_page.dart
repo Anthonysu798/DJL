@@ -6,6 +6,9 @@ import '../../chat/data/cloud_repository.dart';
 import '../../chat/domain/cloud_models.dart';
 import '../../settings/presentation/settings_group.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class CloudArchivedChatsPage extends StatefulWidget {
   const CloudArchivedChatsPage({
     super.key,
@@ -90,10 +93,10 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
     body: CustomScrollView(
       slivers: [
         CloudLargeNavigationBar(
-          title: 'Archived chats',
+          title: context.l10n.conversationsArchivedChats,
           leading: CloudNavigationButton(
-            icon: CupertinoIcons.back,
-            label: 'Back',
+            icon: DjlIcons.back,
+            label: context.l10n.coreBack,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
@@ -122,7 +125,10 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
                               ).style.fontFamily,
                             );
                             final measure = TextPainter(
-                              text: TextSpan(text: 'Restore', style: style),
+                              text: TextSpan(
+                                text: context.l10n.conversationsRestore,
+                                style: style,
+                              ),
                               textDirection: Directionality.of(context),
                               textScaler: MediaQuery.textScalerOf(context),
                             )..layout();
@@ -159,7 +165,7 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
                                     : () => _restore(item),
                                 child: _restoring == item.id
                                     ? const CupertinoActivityIndicator()
-                                    : const Text('Restore'),
+                                    : Text(context.l10n.conversationsRestore),
                               ),
                             );
                             return constraints.maxWidth - buttonWidth - 16 >= 72
@@ -202,7 +208,7 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
           SliverToBoxAdapter(
             child: TextButton(
               onPressed: _restoring == null ? () => _load(more: true) : null,
-              child: const Text('Load more'),
+              child: Text(context.l10n.conversationsLoadMore),
             ),
           ),
         if (_error != null)
@@ -219,7 +225,7 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
                   ),
                   TextButton(
                     onPressed: _loading || _restoring != null ? null : _load,
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.cloudChatRetry),
                   ),
                 ],
               ),
@@ -232,14 +238,14 @@ class _CloudArchivedChatsPageState extends State<CloudArchivedChatsPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  CupertinoIcons.archivebox,
+                  DjlIcons.archive,
                   size: 48,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'No archived chats',
-                  style: TextStyle(
+                Text(
+                  context.l10n.conversationsNoArchivedChats,
+                  style: const TextStyle(
                     fontSize: 22,
                     height: 1.2,
                     fontWeight: FontWeight.w600,

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../data/workspace_repository.dart';
 import '../domain/workspace_models.dart';
+import '../../../l10n/l10n.dart';
 
 class CheckpointController extends ChangeNotifier {
   CheckpointController(this.repository);
@@ -62,13 +63,11 @@ class CheckpointController extends ChangeNotifier {
     try {
       final result = await repository.restore(confirmation);
       if (result['success'] != true) {
-        throw StateError(
-          'The desktop did not confirm the restore. Refresh before retrying.',
-        );
+        throw StateError(appStrings.workspaceRestoreFailed);
       }
       final count = (result['restoredFiles'] as List? ?? []).length;
       status =
-          'Restored $count files.${result['backupCheckpointRef'] != null ? ' A backup checkpoint was saved on your Mac.' : ''}';
+          '${appStrings.workspaceRestoredFiles(count)}${result['backupCheckpointRef'] != null ? appStrings.workspaceBackupSaved : ''}';
     } catch (e) {
       error = e.toString();
     } finally {

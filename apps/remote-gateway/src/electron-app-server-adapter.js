@@ -2,7 +2,7 @@
 // Purpose: Adapts DJL Electron orchestration state to the paired iOS app's app-server RPC contract.
 // Layer: CLI helper
 // Exports: createElectronAppServerTransport plus pure projection helpers.
-// Depends on: crypto, ./electron-backend-rpc
+// Depends on: crypto, ./electron-backend-rpc, ./electron-groups
 
 const { createRemoteProviderCatalog, effortKeyFor } = require("./remote-provider-catalog");
 const { createHash, randomUUID } = require("crypto");
@@ -13,8 +13,10 @@ const {
   toolItemFromActivity,
   createThreadEventProjection,
   desktopGitProgressNotification,
+  userMessageAttachments,
 } = require("./electron-event-projection");
 const { createDesktopTerminalMirror, TERMINAL_BACKEND_TAGS } = require("./desktop-terminal-mirror");
+const { createElectronGroups } = require("./electron-groups");
 
 const ORCHESTRATION = {
   dispatchCommand: "orchestration.dispatchCommand",
@@ -63,6 +65,9 @@ const MUTATION_METHODS = new Set([
   "thread/archive",
   "thread/unarchive",
   "thread/name/set",
+  // These two dispatch orchestration commands, which need stable command ids.
+  "djl/groups/send",
+  "djl/groups/stop",
 ]);
 
 function createElectronAppServerTransport({
@@ -72,6 +77,7 @@ function createElectronAppServerTransport({
   makeId = () => randomUUID(),
   diagnostics = process.env.DJL_ELECTRON_BRIDGE_DIAGNOSTICS === "1",
   onMutationCommitted = null,
+  fetchImpl = (url, init) => fetch(url, init),
 } = {}) {
   const rpc = backend || createElectronBackendRpcClient({ endpoint });
   const listeners = createListenerBag();
@@ -92,6 +98,17 @@ function createElectronAppServerTransport({
     request: (tag, payload) => rpc.request(tag, payload),
     emit: (method, params) => emitNotification(method, params),
     resolveCwd: (threadId) => threadCwdById.get(threadId) ?? "",
+  });
+  const groups = createElectronGroups({
+    request: (tag, payload) => rpc.request(tag, payload),
+    subscribe: (tag, payload, handlers) => rpc.subscribe(tag, payload, handlers),
+    emit: (method, params) => emitNotification(method, params),
+    dispatchCommand: (command, mutation) => dispatchCommand(command, mutation),
+    findThread: async (threadId) =>
+      readableThreads(await readSnapshot()).find((entry) => entry.id === threadId),
+    now,
+    endpoint: typeof endpoint === "string" && endpoint.trim() ? endpoint.trim() : null,
+    fetchImpl,
   });
 
   rpc.onStarted(() => {
@@ -163,6 +180,7 @@ function createElectronAppServerTransport({
         },
       );
     }
+    groups.start();
     if (!shellUnsubscribe) {
       shellUnsubscribe = rpc.subscribe(
         ORCHESTRATION.subscribeShell,
@@ -396,11 +414,13 @@ function createElectronAppServerTransport({
 
     for (const message of thread.messages || []) {
       if (message.role === "user" && !previous.messages.has(message.id) && announceExisting) {
+        const attachments = userMessageAttachments(message.attachments);
         emitNotification("codex/event/user_message", {
           threadId: thread.id,
           turnId: message.turnId || activeTurnId,
           itemId: message.id,
           message: message.text || "",
+          ...(attachments ? { attachments } : {}),
         });
         continue;
       }
@@ -617,6 +637,8 @@ function createElectronAppServerTransport({
           capabilities: {
             experimentalApi: false,
             djlThreadRuntimeModeSync: true,
+            djlGroups: true,
+            djlGroupAttachments: true,
           },
           serverInfo: { name: "DJL Electron" },
         };
@@ -668,8 +690,11 @@ function createElectronAppServerTransport({
         return terminalMirror.ack(params);
       case "djl/terminal/close":
         return terminalMirror.close(params);
-      default:
+      default: {
+        const groupResult = groups.handleRequest(method, params, mutation);
+        if (groupResult) return groupResult;
         throw new Error(`DJL Electron does not support remote method: ${method}`);
+      }
     }
   }
 
@@ -1050,6 +1075,7 @@ function createElectronAppServerTransport({
       terminalEventsUnsubscribe?.();
       terminalEventsUnsubscribe = null;
       terminalMirror.reset();
+      groups.stop();
       for (const unsubscribe of activeThreadSubscriptions.values()) unsubscribe?.();
       activeThreadSubscriptions.clear();
       for (const timer of turnReconcileTimers.values()) clearTimeout(timer);
@@ -1092,7 +1118,7 @@ function listThreads(snapshot, params = {}) {
     ? Math.max(0, Number(params.limit))
     : undefined;
   const data = readableThreads(snapshot)
-    // Multi agents group chats have no phone view yet.
+    // Multi agents group chats are listed by djl/groups/list, not as chats.
     .filter((thread) => thread?.modelSelection?.provider !== "group")
     .toSorted((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
     .slice(0, limit)
@@ -1258,13 +1284,17 @@ function appServerTurns(thread) {
   return Array.from(byTurn.values());
 }
 
+// User attachments are a separate field, not content entries, so clients that
+// only read `content` see the message exactly as before.
 function appServerMessageItem(message) {
   const role = message.role === "user" ? "user" : "assistant";
+  const attachments = role === "user" ? userMessageAttachments(message.attachments) : null;
   return {
     id: message.id,
     type: role === "user" ? "userMessage" : "agentMessage",
     role,
     content: [{ type: role === "user" ? "inputText" : "outputText", text: message.text || "" }],
+    ...(attachments ? { attachments } : {}),
     createdAt: message.createdAt,
   };
 }

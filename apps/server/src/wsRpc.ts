@@ -122,6 +122,7 @@ import { previewWorkDocument, toDocumentArtifactPreview } from "./work/workDocum
 import { shouldRejectUntrustedRequestOrigin } from "./trustedOrigins";
 import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
 import { LocalModelsService } from "./localModels/LocalModelsService";
+import { PluginsService } from "./plugins/PluginsService";
 import { AiDetectorService } from "./aiDetector/Services/AiDetectorService";
 import { ProjectMemory } from "./memory/Services/ProjectMemory";
 
@@ -409,6 +410,7 @@ export const makeWsRpcLayer = () =>
       const gitStatusBroadcaster = yield* GitStatusBroadcaster;
       const keybindings = yield* Keybindings;
       const localModels = yield* LocalModelsService;
+      const plugins = yield* PluginsService;
       const projectMemory = yield* ProjectMemory;
       const aiDetector = yield* AiDetectorService;
       const open = yield* Open;
@@ -1334,6 +1336,32 @@ export const makeWsRpcLayer = () =>
             ),
             bufferLiveUiStream(localModels.events, { label: "localModels.events" }),
           ),
+        [WS_METHODS.pluginsGetSnapshot]: () =>
+          rpcEffect(plugins.getSnapshot, "Failed to load plugins"),
+        [WS_METHODS.pluginsInstall]: (input) =>
+          rpcEffect(plugins.install(input), "Failed to add plugin"),
+        [WS_METHODS.pluginsUninstall]: (input) =>
+          rpcEffect(plugins.uninstall(input), "Failed to uninstall plugin"),
+        [WS_METHODS.pluginsSetEnabled]: (input) =>
+          rpcEffect(plugins.setEnabled(input), "Failed to update plugin"),
+        [WS_METHODS.pluginsConnectApp]: (input) =>
+          rpcEffect(plugins.connectApp(input), "Failed to start plugin sign-in"),
+        [WS_METHODS.pluginsDisconnectApp]: (input) =>
+          rpcEffect(plugins.disconnectApp(input), "Failed to disconnect plugin"),
+        [WS_METHODS.pluginsAddCustomServer]: (input) =>
+          rpcEffect(plugins.addCustomServer(input), "Failed to add the server"),
+        [WS_METHODS.pluginsCreateSkill]: (input) =>
+          rpcEffect(plugins.createSkill(input), "Failed to create the skill"),
+        [WS_METHODS.pluginsSaveAppToken]: (input) =>
+          rpcEffect(plugins.saveAppToken(input), "Failed to save the access token"),
+        [WS_METHODS.pluginsImportManifest]: (input) =>
+          rpcEffect(plugins.importManifest(input), "Failed to add the plugin"),
+        [WS_METHODS.pluginsAddMarketplace]: (input) =>
+          rpcEffect(plugins.addMarketplace(input), "Failed to add the marketplace"),
+        [WS_METHODS.pluginsRefreshMarketplace]: (input) =>
+          rpcEffect(plugins.refreshMarketplace(input), "Failed to refresh the marketplace"),
+        [WS_METHODS.pluginsRemoveMarketplace]: (input) =>
+          rpcEffect(plugins.removeMarketplace(input), "Failed to remove the marketplace"),
         [WS_METHODS.projectMemoryList]: (input) =>
           rpcEffect(
             projectMemory
@@ -2038,7 +2066,11 @@ export const makeWsRpcLayer = () =>
           ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server event stream failed"))),
         [WS_METHODS.groupsList]: () =>
           rpcEffect(
-            Effect.all({ groups: groupService.list(), replies: groupService.listReplies() }),
+            Effect.all({
+              groups: groupService.list(),
+              replies: groupService.listReplies(),
+              live: Effect.sync(groupService.live),
+            }),
             "Failed to list groups",
           ),
         [WS_METHODS.groupsCreate]: (input) =>
@@ -2060,11 +2092,16 @@ export const makeWsRpcLayer = () =>
         [WS_METHODS.subscribeGroupEvents]: () =>
           Stream.merge(
             Stream.fromEffect(
-              Effect.all({ groups: groupService.list(), replies: groupService.listReplies() }).pipe(
-                Effect.map(({ groups, replies }) => ({
+              Effect.all({
+                groups: groupService.list(),
+                replies: groupService.listReplies(),
+                live: Effect.sync(groupService.live),
+              }).pipe(
+                Effect.map(({ groups, replies, live }) => ({
                   type: "snapshot" as const,
                   groups,
                   replies,
+                  live,
                 })),
               ),
             ),

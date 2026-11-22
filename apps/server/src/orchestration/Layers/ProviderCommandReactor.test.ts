@@ -3713,6 +3713,37 @@ describe("ProviderCommandReactor", () => {
     });
   });
 
+  it("hands the turn the DJL plugins the user mentioned", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const fileMention = { name: "README.md", path: "/tmp/project/README.md" };
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-djl-plugin-mention"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-djl-plugin-mention"),
+          role: "user",
+          text: "file a bug",
+          attachments: [],
+          mentions: [fileMention, { name: "linear", path: "plugin://djl-plugin/linear" }],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      input: expect.stringContaining("DJL selected plugin instructions"),
+      mentions: [fileMention],
+      djlPluginIds: ["linear"],
+    });
+  });
+
   it("replaces server mentions with a selected_servers block on queued turns", async () => {
     const harness = await createHarness({ servers: [registeredServer] });
     const now = new Date().toISOString();

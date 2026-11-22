@@ -3216,6 +3216,7 @@ function startRemoteGateway(): void {
       // loopback backend. It never attaches to Codex Desktop's global IPC bus
       // or starts a separate app-server with unrelated chat history.
       DJL_ELECTRON_BACKEND_ENDPOINT: backendWsUrl,
+      DJL_DESKTOP_VERSION: app.getVersion(),
       // Development diagnostics contain only transport stage/method metadata;
       // keep them enabled locally so remote projection issues are observable
       // without logging chat content, pairing codes, or encryption material.
@@ -3247,6 +3248,15 @@ function startRemoteGateway(): void {
       const record = message as Record<string, unknown>;
       if (record.type === "desktop-update-request" && typeof record.requestId === "string") {
         sendRemoteUpdateResult(child, record.requestId);
+        return;
+      }
+      if (record.type === "open-thread" && typeof record.threadId === "string") {
+        // "Continue on desktop" from the phone opens the chat here, in DJL.
+        focusMainWindow();
+        mainWindow?.webContents.send(
+          MENU_ACTION_CHANNEL,
+          `notification-open-thread:${record.threadId}`,
+        );
         return;
       }
       if (record.type === "remote-mutation") {

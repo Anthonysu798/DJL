@@ -14,12 +14,23 @@ import {
   DialogPanel,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
-import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "./ui/menu";
+import {
+  Menu,
+  MenuGroup,
+  MenuTrigger,
+  MenuPopup,
+  MenuItem,
+  MenuSeparator,
+  MenuShortcut,
+} from "./ui/menu";
+import { UserAvatar } from "./UserAvatar";
 import { requestFirstRunTourReplay } from "~/onboarding/firstRunTour";
 import { SettingsIcon, CircleQuestionIcon } from "~/lib/icons";
 import type { SettingsSectionId } from "~/settingsNavigation";
+import { formatShortcutLabel } from "~/keybindings";
 import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
+import { isLinuxPlatform } from "~/lib/utils";
 import { toastManager } from "./ui/toast";
 import {
   CLOUD_ACCOUNT_QUERY_KEY,
@@ -27,6 +38,15 @@ import {
 } from "~/components/settings/DjlCloudAccountCard";
 
 const WELCOME_DISMISSED = "djl.account.welcome.dismissed";
+// The desktop app menu opens Settings with CmdOrCtrl+, everywhere but Linux.
+const SETTINGS_SHORTCUT = {
+  key: ",",
+  metaKey: false,
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: false,
+  modKey: true,
+};
 
 export function DjlAccountEntry(
   props: {
@@ -65,9 +85,7 @@ export function DjlAccountEntry(
   const identity = signedIn
     ? (status.data?.email ?? t("cloud.accountTitle"))
     : t("cloud.signInToDjl");
-  const initials = signedIn
-    ? (status.data?.email?.split("@")[0] ?? "DJL").slice(0, 2).toUpperCase()
-    : "";
+  const email = signedIn ? status.data?.email : undefined;
 
   useEffect(() => {
     if (signedIn && !previouslySignedIn.current) changeOpen(false);
@@ -91,48 +109,66 @@ export function DjlAccountEntry(
             className="djl-desktop-rail-button djl-desktop-account-trigger"
             aria-label={identity}
           >
-            <span className="djl-desktop-avatar">
-              {initials || <CentralIcon name="user" className="size-4" />}
-            </span>
+            <UserAvatar email={email} size={30} />
           </MenuTrigger>
-          <MenuPopup side="right" align="end" sideOffset={10} className="djl-desktop-account-menu">
-            <MenuItem onClick={() => setOpen(true)} className="gap-3 px-3 py-3">
-              <span className="djl-desktop-avatar shrink-0">
-                {initials || <CentralIcon name="user" className="size-4" />}
-              </span>
-              <div className="min-w-0">
-                <div className="truncate font-medium">{identity}</div>
-                <div className="text-sm text-muted-foreground">{t("cloud.name")}</div>
+          <MenuPopup
+            surface="liquid"
+            side="right"
+            align="end"
+            sideOffset={10}
+            className="djl-desktop-account-menu"
+          >
+            <MenuItem
+              onClick={() => setOpen(true)}
+              className="djl-account-menu-header"
+              data-testid="djl-account-menu-header"
+            >
+              <UserAvatar email={email} size={38} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-foreground">{identity}</div>
+                <div className="truncate text-[13px] text-foreground/65 capitalize">
+                  {(signedIn && status.data?.usage?.planId) || t("cloud.name")}
+                </div>
               </div>
             </MenuItem>
             <MenuSeparator />
-            <MenuItem onClick={() => props.onSettings?.("usage")}>
-              <CentralIcon name="gauge" className="size-5" />
-              {t("navigation.items.usage.label")}
-              {signedIn && status.data?.credits && (
-                <span className="ml-auto text-muted-foreground">
-                  {status.data.credits.display.total}
-                </span>
-              )}
-            </MenuItem>
-            <MenuItem onClick={() => setOpen(true)}>
-              <CentralIcon name="user" className="size-5" />
-              {t("cloud.accountTitle")}
-            </MenuItem>
-            <MenuItem data-onboarding-target="settings" onClick={() => props.onSettings?.()}>
-              <SettingsIcon className="size-5" />
-              {t("sidebar.settings", { ns: "shell" })}
-            </MenuItem>
+            <MenuGroup>
+              <MenuItem onClick={() => props.onSettings?.("usage")}>
+                <CentralIcon name="gauge" className="size-4" />
+                {t("navigation.items.usage.label")}
+                {signedIn && status.data?.credits && (
+                  <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                    {status.data.credits.display.total}
+                  </span>
+                )}
+              </MenuItem>
+              <MenuItem onClick={() => setOpen(true)}>
+                <CentralIcon name="user" className="size-4" />
+                {t("cloud.accountTitle")}
+              </MenuItem>
+              <MenuItem data-onboarding-target="settings" onClick={() => props.onSettings?.()}>
+                <SettingsIcon className="size-4" />
+                {t("sidebar.settings", { ns: "shell" })}
+                {isElectron && !isLinuxPlatform(navigator.platform) && (
+                  <MenuShortcut aria-hidden className="text-xs">
+                    {formatShortcutLabel(SETTINGS_SHORTCUT)}
+                  </MenuShortcut>
+                )}
+              </MenuItem>
+            </MenuGroup>
             <MenuSeparator />
             <MenuItem onClick={requestFirstRunTourReplay}>
-              <CircleQuestionIcon className="size-5" />
-              {t("sidebar.tutorial.title", { ns: "shell", defaultValue: "New user tutorial" })}
+              <CircleQuestionIcon className="size-4" />
+              {t("onboarding.settings.title", { ns: "shell" })}
             </MenuItem>
             {signedIn && (
-              <MenuItem disabled={signOut.isPending} onClick={() => signOut.mutate()}>
-                <CentralIcon name="door" className="size-5" />
-                {t("cloud.signOut")}
-              </MenuItem>
+              <>
+                <MenuSeparator />
+                <MenuItem disabled={signOut.isPending} onClick={() => signOut.mutate()}>
+                  <CentralIcon name="door" className="size-4" />
+                  {t("cloud.signOut")}
+                </MenuItem>
+              </>
             )}
           </MenuPopup>
         </Menu>

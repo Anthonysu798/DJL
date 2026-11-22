@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the phone app's native strings. -->
+<resources>
+    <string name="djl_launch_open_chat">채팅 열기</string>
+    <string name="djl_launch_accessibility">DJL 열기</string>
+    <string name="djl_launch_widget_description">DJL 채팅을 바로 열어요.</string>
+    <string name="djl_channel_task_notifications">작업 알림</string>
+    <string name="djl_channel_task_status">작업 상태</string>
+    <string name="djl_channel_task_status_description">페어링된 Mac의 로컬 상태</string>
+    <string name="djl_push_finished_title">DJL 작업 완료</string>
+    <string name="djl_push_finished_text">DJL을 열어 결과를 확인하세요.</string>
+    <string name="djl_push_attention_title">에이전트가 답을 기다리고 있어요</string>
+    <string name="djl_push_attention_text">DJL을 열어 답하세요.</string>
+    <string name="djl_status_public_text">작업 상태 · DJL 열기</string>
+    <string name="djl_status_title">DJL · 작업 상태</string>
+    <string name="djl_status_summary">진행/일시 중지 %1$d · 실패 %2$d · 준비됨 %3$d</string>
+</resources>

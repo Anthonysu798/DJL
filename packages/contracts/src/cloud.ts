@@ -8,6 +8,7 @@ export * from "./cloud/usage";
 export * from "./cloud/chat";
 export * from "./cloud/files";
 export * from "./cloud/shares";
+export * from "./cloud/reports";
 export * from "./cloud/runs";
 export * from "./cloud/nativeAuth";
 export * from "./cloud/clientConfig";

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the phone app's native strings. -->
+<resources>
+    <string name="djl_launch_open_chat">開啟對話</string>
+    <string name="djl_launch_accessibility">開啟 DJL</string>
+    <string name="djl_launch_widget_description">快速開啟 DJL 對話。</string>
+    <string name="djl_channel_task_notifications">任務通知</string>
+    <string name="djl_channel_task_status">任務狀態</string>
+    <string name="djl_channel_task_status_description">來自已配對 Mac 的本機狀態</string>
+    <string name="djl_push_finished_title">DJL 任務已完成</string>
+    <string name="djl_push_finished_text">開啟 DJL 查看結果。</string>
+    <string name="djl_push_attention_title">有智慧體需要你回覆</string>
+    <string name="djl_push_attention_text">開啟 DJL 回覆。</string>
+    <string name="djl_status_public_text">任務狀態 · 開啟 DJL</string>
+    <string name="djl_status_title">DJL · 任務狀態</string>
+    <string name="djl_status_summary">%1$d 個進行中/已暫停 · %2$d 個失敗 · %3$d 個就緒</string>
+</resources>

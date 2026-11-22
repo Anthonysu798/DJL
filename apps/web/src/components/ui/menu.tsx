@@ -27,6 +27,8 @@ function MenuTrigger({ className, children, ...props }: MenuPrimitive.Trigger.Pr
   );
 }
 
+const LIQUID_POPUP_SURFACE_CLASS_NAME = "liquid-glass rounded-[22px] text-popover-foreground";
+
 function MenuPopup({
   children,
   className,
@@ -44,13 +46,16 @@ function MenuPopup({
   alignOffset?: MenuPrimitive.Positioner.Props["alignOffset"];
   side?: MenuPrimitive.Positioner.Props["side"];
   anchor?: MenuPrimitive.Positioner.Props["anchor"];
-  surface?: "default" | "composer";
+  /** "liquid": the premium see-through glass panel (`.liquid-glass` in index.css). */
+  surface?: "default" | "composer" | "liquid";
   pickerSize?: "small" | "normal" | undefined;
 }) {
   const popupSurfaceClassName =
     surface === "composer"
       ? COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME
-      : APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME;
+      : surface === "liquid"
+        ? LIQUID_POPUP_SURFACE_CLASS_NAME
+        : APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME;
 
   const isComposerSurface = surface === "composer";
 
@@ -112,7 +117,7 @@ function MenuItem({
     <MenuPrimitive.Item
       className={cn(
         COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
-        "data-inset:ps-8 data-[variant=destructive]:text-destructive-foreground",
+        "data-inset:ps-8 data-[variant=destructive]:text-destructive",
         className,
       )}
       data-inset={inset}

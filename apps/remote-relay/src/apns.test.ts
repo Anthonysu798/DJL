@@ -26,6 +26,25 @@ describe("generic DJL push payload", () => {
     expect(JSON.stringify(payload)).not.toMatch(/prompt|response|preview|message/i);
   });
 
+  it("asks the person to answer when an agent is waiting on them", () => {
+    const payload = buildGenericPushPayload({
+      threadId: "thread-123",
+      turnId: "turn-456",
+      result: "attention",
+    });
+
+    expect(payload).toEqual({
+      aps: {
+        alert: { title: "An agent needs your answer", body: "Open DJL to reply." },
+        sound: "default",
+      },
+      source: "codex.structuredUserInput",
+      threadId: "thread-123",
+      turnId: "turn-456",
+    });
+    expect(JSON.stringify(payload)).not.toMatch(/prompt|response|preview|message/i);
+  });
+
   it("accepts only canonical APNs tokens", () => {
     expect(normalizeDeviceToken("AA bb-01")).toBe("aabb01");
     expect(normalizeDeviceToken("xyz")).toBeNull();

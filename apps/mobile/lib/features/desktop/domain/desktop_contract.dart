@@ -1,4 +1,5 @@
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 enum ServerRequestKind { approval, permissions, userInput, unsupported }
 
@@ -85,7 +86,7 @@ class DesktopRuntime {
     }[access];
     if ({'approval-required', 'auto-approval', 'full-access'}.contains(mode)) {
       if (mode != expectedMode) {
-        throw StateError('$context did not apply the selected access mode.');
+        throw StateError(appStrings.desktopAccessModeNotAppliedBy(context));
       }
       return;
     }
@@ -93,9 +94,7 @@ class DesktopRuntime {
     final reviewer = result['approvalsReviewer'];
     if (reviewer == null) {
       if (access == 'auto-review') {
-        throw StateError(
-          'Approve for me is not supported by this runtime. Update Codex on your Mac and retry.',
-        );
+        throw StateError(appStrings.desktopApproveForMeUnsupported);
       }
       return;
     }
@@ -103,24 +102,20 @@ class DesktopRuntime {
         ? {'auto_review', 'guardian_subagent'}
         : {'user'};
     if (!reviewers.contains(reviewer)) {
-      throw StateError(
-        '$context did not apply the selected approval reviewer.',
-      );
+      throw StateError(appStrings.desktopApprovalReviewerNotApplied(context));
     }
     final policy = result['approvalPolicy'];
     if (policy is String &&
         policy.toLowerCase().replaceAll(RegExp('[^a-z]'), '') !=
             (access == 'full-access' ? 'never' : 'onrequest')) {
-      throw StateError('$context did not apply the selected approval policy.');
+      throw StateError(appStrings.desktopApprovalPolicyNotApplied(context));
     }
     final sandbox = result['sandbox'];
     if (sandbox is Map &&
         (sandbox['type'] != sandboxPolicy['type'] ||
             (sandboxPolicy['networkAccess'] != null &&
                 sandbox['networkAccess'] != sandboxPolicy['networkAccess']))) {
-      throw StateError(
-        '$context did not apply the selected sandbox permissions.',
-      );
+      throw StateError(appStrings.desktopSandboxNotApplied(context));
     }
   }
 

@@ -1,5 +1,6 @@
 import '../../pairing/data/pairing_repository.dart';
 import 'remote_transport.dart';
+import '../../../l10n/l10n.dart';
 
 class ThreadRepository {
   ThreadRepository(this.transport, {required this.macDeviceId});
@@ -7,11 +8,11 @@ class ThreadRepository {
   final String macDeviceId;
   Future<RemoteJson> _call(String method, RemoteJson params) async {
     if (!transport.connected || transport.macDeviceId != macDeviceId) {
-      throw StateError('The paired desktop is disconnected or changed.');
+      throw StateError(appStrings.desktopPairedDisconnectedOrChanged);
     }
     final result = await transport.request(method, params);
     if (transport.macDeviceId != macDeviceId) {
-      throw StateError('The paired desktop changed. Refresh its chats.');
+      throw StateError(appStrings.desktopPairedChangedRefreshChats);
     }
     return result;
   }

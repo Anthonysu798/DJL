@@ -5,6 +5,7 @@ import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'trusted_device_preferences_widget_test.dart' show fixture;
 import 'pairing_presentation_test.dart' show more;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));

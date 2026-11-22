@@ -5,6 +5,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../data/workspace_repository.dart';
 import 'workspace_file_controller.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class WorkspaceFilePage extends StatefulWidget {
   const WorkspaceFilePage({
     super.key,
@@ -56,24 +59,32 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
       final c = _controller;
       return Scaffold(
         appBar: AppBar(
-          title: Text(c.text?.name ?? c.image?.name ?? 'Workspace file'),
+          title: Text(
+            c.text?.name ??
+                c.image?.name ??
+                context.l10n.workspaceFileFallbackTitle,
+          ),
           actions: [
             IconButton(
-              tooltip: 'Copy file contents',
+              tooltip: context.l10n.workspaceCopyFileContents,
               onPressed: c.text == null
                   ? null
                   : () {
                       Clipboard.setData(ClipboardData(text: c.text!.content));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('File contents copied.')),
+                        SnackBar(
+                          content: Text(
+                            context.l10n.workspaceFileContentsCopied,
+                          ),
+                        ),
                       );
                     },
-              icon: const Icon(Icons.copy),
+              icon: const Icon(DjlIcons.copy),
             ),
             IconButton(
-              tooltip: 'Reload file',
+              tooltip: context.l10n.workspaceReloadFile,
               onPressed: c.loading ? null : _load,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(DjlIcons.refresh),
             ),
           ],
         ),
@@ -89,7 +100,7 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
                       controller: _path,
                       autocorrect: false,
                       decoration: InputDecoration(
-                        labelText: 'File path on your Mac',
+                        labelText: context.l10n.workspaceFilePathOnMac,
                         helperText: widget.repository.cwd,
                       ),
                       onSubmitted: (_) => _load(),
@@ -99,9 +110,15 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
                       children: [
                         Expanded(
                           child: SegmentedButton<bool>(
-                            segments: const [
-                              ButtonSegment(value: false, label: Text('Text')),
-                              ButtonSegment(value: true, label: Text('Image')),
+                            segments: [
+                              ButtonSegment(
+                                value: false,
+                                label: Text(context.l10n.workspaceSegmentText),
+                              ),
+                              ButtonSegment(
+                                value: true,
+                                label: Text(context.l10n.workspaceSegmentImage),
+                              ),
                             ],
                             selected: {_image},
                             onSelectionChanged: (value) =>
@@ -111,7 +128,7 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
                         const SizedBox(width: 12),
                         FilledButton(
                           onPressed: c.loading ? null : _load,
-                          child: const Text('Open'),
+                          child: Text(context.l10n.workspaceOpen),
                         ),
                       ],
                     ),
@@ -139,14 +156,14 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
                               ? SvgPicture.memory(
                                   c.image!.bytes,
                                   semanticsLabel: c.image!.name,
-                                  errorBuilder: (_, error, stack) => const Text(
-                                    'This SVG could not be rendered.',
+                                  errorBuilder: (_, error, stack) => Text(
+                                    context.l10n.workspaceSvgRenderFailed,
                                   ),
                                 )
                               : Image.memory(
                                   c.image!.bytes,
-                                  errorBuilder: (_, error, stack) => const Text(
-                                    'This image format could not be rendered on this device.',
+                                  errorBuilder: (_, error, stack) => Text(
+                                    context.l10n.workspaceImageRenderFailed,
                                   ),
                                 ),
                         ),
@@ -165,8 +182,8 @@ class _WorkspaceFilePageState extends State<WorkspaceFilePage> {
                           ),
                         ),
                       )
-                    : const Center(
-                        child: Text('Open a workspace file to preview it.'),
+                    : Center(
+                        child: Text(context.l10n.workspaceOpenFileToPreview),
                       ),
               ),
             ],

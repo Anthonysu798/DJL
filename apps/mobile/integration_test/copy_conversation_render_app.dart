@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../test/features/desktop_reasoning_controller_test.dart'
     show ReasoningTransport, ReasoningPairings;
 import '../test/features/desktop_activity_test.dart' show ActivityCacheStore;
@@ -89,7 +90,7 @@ class _PublicCopyConversationRenderState
           IconButton(
             tooltip: 'Refresh public view',
             onPressed: () => setState(() => _refresh++),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(DjlIcons.refresh),
           ),
           IconButton(
             tooltip: 'Dismiss public keyboard',

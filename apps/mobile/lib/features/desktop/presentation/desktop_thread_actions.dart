@@ -2,31 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../pairing/data/pairing_repository.dart';
 import 'desktop_controller.dart';
+import '../../../l10n/l10n.dart';
 
 List<PopupMenuEntry<String>> desktopThreadActions(
+  BuildContext context,
   DesktopController desktop,
   RemoteJson value,
 ) {
+  final l10n = context.l10n;
   final id = value['id'] as String,
       archived = desktop.threadList.data.isArchived(value['id'] as String);
   return [
-    const PopupMenuItem(value: 'copy-session', child: Text('Copy session ID')),
+    PopupMenuItem(value: 'copy-session', child: Text(l10n.chatUiCopySessionId)),
     if (!archived)
-      const PopupMenuItem(value: 'rename-chat', child: Text('Rename chat')),
+      PopupMenuItem(value: 'rename-chat', child: Text(l10n.chatUiRenameChat)),
     if (!archived && value['parentThreadId'] == null)
       PopupMenuItem(
         value: 'pin-chat',
         child: Text(
-          desktop.threadList.data.isPinned(id) ? 'Unpin chat' : 'Pin chat',
+          desktop.threadList.data.isPinned(id)
+              ? l10n.chatUiUnpinChat
+              : l10n.chatUiPinChat,
         ),
       ),
     PopupMenuItem(
       value: 'archive-chat',
-      child: Text(archived ? 'Unarchive chat' : 'Archive chat'),
+      child: Text(archived ? l10n.chatUiUnarchiveChat : l10n.chatUiArchiveChat),
     ),
-    const PopupMenuItem(
+    PopupMenuItem(
       value: 'remove-chat',
-      child: Text('Remove from this device'),
+      child: Text(l10n.chatUiRemoveFromDevice),
     ),
   ];
 }
@@ -52,9 +57,9 @@ Future<void> performDesktopThreadAction(
     if (action == 'copy-session') {
       await Clipboard.setData(ClipboardData(text: id));
       if (context.mounted && isCurrent?.call() != false) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Session ID copied.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.chatUiSessionIdCopied)),
+        );
       }
       return;
     }
@@ -90,18 +95,20 @@ Future<void> performDesktopThreadAction(
       final yes = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Remove this chat from this device?'),
+          title: Text(context.l10n.chatUiRemoveChatTitle),
           content: Text(
-            'The chat stays on your desktop.${archived ? '' : ' It will also be archived there.'} Subagent chats are archived locally.',
+            archived
+                ? context.l10n.chatUiRemoveChatBodyArchived
+                : context.l10n.chatUiRemoveChatBody,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove chat'),
+              child: Text(context.l10n.chatUiRemoveChat),
             ),
           ],
         ),
@@ -148,23 +155,23 @@ class _RenameDialogState extends State<_RenameDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Rename chat'),
+    title: Text(context.l10n.chatUiRenameChat),
     content: TextField(
       key: const Key('desktop_chat_name'),
       controller: _name,
       autofocus: true,
-      decoration: const InputDecoration(labelText: 'Chat name'),
+      decoration: InputDecoration(labelText: context.l10n.chatUiChatName),
       onChanged: (_) => setState(() {}),
       onSubmitted: (_) => _save(),
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.l10n.commonCancel),
       ),
       FilledButton(
         onPressed: _name.text.trim().isEmpty ? null : _save,
-        child: const Text('Save name'),
+        child: Text(context.l10n.chatUiSaveName),
       ),
     ],
   );

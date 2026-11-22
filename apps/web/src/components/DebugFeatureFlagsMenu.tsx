@@ -63,11 +63,7 @@ export function DebugFeatureFlagsMenu() {
         <FlagIcon className="size-[15px]" />
         <span>Feature flags</span>
       </MenuTrigger>
-      <MenuPopup
-        align="start"
-        side="top"
-        className="min-w-72 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
-      >
+      <MenuPopup align="start" side="top" className="min-w-72">
         <MenuGroup>
           <MenuGroupLabel>Local feature flags</MenuGroupLabel>
           {FEATURE_FLAGS.map((flag) => {

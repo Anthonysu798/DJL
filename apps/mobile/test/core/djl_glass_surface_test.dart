@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
 import 'package:djl_mobile/core/presentation/djl_glass.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_thread_pin_menu.dart';
@@ -157,11 +156,15 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        final blur = find.descendant(
+          of: find.byType(DjlGlassSurface),
+          matching: find.byType(BackdropFilter),
+        );
         expect(
-          find.byType(FakeGlass),
+          blur,
           findsOneWidget,
           reason:
-              'Android must use the proven compositor path rather than the GLES-crashing runtime shader filter.',
+              'Android uses a plain compositor blur, never a runtime shader filter.',
         );
         final editor = tester.state(find.byType(EditableText));
         await tester.tap(find.byType(TextField));
@@ -171,11 +174,11 @@ void main() {
         );
         update(() => glass = false);
         await tester.pumpAndSettle();
-        expect(find.byType(FakeGlass), findsNothing);
+        expect(blur, findsNothing);
         expect(tester.state(find.byType(EditableText)), same(editor));
         update(() => glass = true);
         await tester.pumpAndSettle();
-        expect(find.byType(FakeGlass), findsOneWidget);
+        expect(blur, findsOneWidget);
         expect(tester.state(find.byType(EditableText)), same(editor));
         expect(input.text, 'Still owned after glass change');
         expect(tester.takeException(), isNull);

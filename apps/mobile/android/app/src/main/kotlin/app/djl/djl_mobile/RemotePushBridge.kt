@@ -213,7 +213,7 @@ internal class RemotePushBridge(private val activity: MainActivity, messenger: B
             val route = RemotePushEnvelope.decode(data) ?: return
             val manager = context.getSystemService(NotificationManager::class.java)
             if (!manager.areNotificationsEnabled() || Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
-            if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(NotificationChannel(CHANNEL, "Task notifications", NotificationManager.IMPORTANCE_DEFAULT))
+            if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(NotificationChannel(CHANNEL, context.getString(R.string.djl_channel_task_notifications), NotificationManager.IMPORTANCE_DEFAULT))
             val nonce = UUID.randomUUID().toString()
             val dedupe = MessageDigest.getInstance("SHA-256").digest((messageId ?: nonce).toByteArray()).joinToString("") { "%02x".format(it) }
             synchronized(lock) {
@@ -231,8 +231,11 @@ internal class RemotePushBridge(private val activity: MainActivity, messenger: B
                 val tap = Intent(context, MainActivity::class.java).setAction(TAP_ACTION).putExtra("djl.push.nonce", nonce)
                 val pending = PendingIntent.getActivity(context, nonce.hashCode(), tap, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL) else Notification.Builder(context)
-                builder.setSmallIcon(R.drawable.djl_launch_logo).setContentTitle("DJL task finished")
-                    .setContentText("Open DJL to review the result.").setContentIntent(pending).setAutoCancel(true)
+                // An approval or question waits on the person; anything else finished.
+                val attention = route["source"] == "codex.structuredUserInput"
+                builder.setSmallIcon(R.drawable.djl_launch_logo)
+                    .setContentTitle(context.getString(if (attention) R.string.djl_push_attention_title else R.string.djl_push_finished_title))
+                    .setContentText(context.getString(if (attention) R.string.djl_push_attention_text else R.string.djl_push_finished_text)).setContentIntent(pending).setAutoCancel(true)
                     .setVisibility(Notification.VISIBILITY_PRIVATE)
                 if (Build.VERSION.SDK_INT >= 26) builder.setTimeoutAfter(300_000)
                 manager.notify(CHANNEL, nonce.hashCode(), builder.build())

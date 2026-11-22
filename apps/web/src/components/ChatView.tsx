@@ -530,11 +530,8 @@ import { ProjectPicker } from "./chat/ProjectPicker";
 import { FolderClosed } from "./FolderClosed";
 import { ProviderHealthBanner } from "./chat/ProviderHealthBanner";
 import { ThreadErrorBanner } from "./chat/ThreadErrorBanner";
-import {
-  RateLimitBanner,
-  deriveLatestRateLimitStatus,
-  type RateLimitStatus,
-} from "./chat/RateLimitBanner";
+import { deriveLatestRateLimitStatus, type RateLimitStatus } from "./chat/RateLimitBanner";
+import { LimitSwitchBanner } from "./chat/LimitSwitchBanner";
 import {
   ACTIVE_TURN_LAYOUT_SETTLE_DELAY_MS,
   appendVoiceTranscriptToPrompt,
@@ -12036,7 +12033,9 @@ export default function ChatView({
         onDismiss={dismissActiveProviderHealthBanner}
       />
       <ThreadErrorBanner error={activeThread.error} onDismiss={dismissActiveThreadError} />
-      <RateLimitBanner
+      <LimitSwitchBanner
+        thread={activeThread}
+        handoffDisabled={handoffDisabled}
         rateLimitStatus={visibleActiveRateLimitStatus}
         onDismiss={dismissActiveRateLimitBanner}
       />

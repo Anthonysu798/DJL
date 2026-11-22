@@ -4,7 +4,7 @@
 export interface GenericPushInput {
   readonly threadId: string;
   readonly turnId?: string;
-  readonly result: "completed" | "failed";
+  readonly result: "completed" | "failed" | "attention";
 }
 
 export interface ApnsConfiguration {
@@ -19,19 +19,30 @@ export interface SendGenericPushInput extends GenericPushInput {
   readonly environment: "development" | "production";
 }
 
-export const buildGenericPushPayload = ({ threadId, turnId, result }: GenericPushInput) => ({
-  aps: {
-    alert: {
-      title: "DJL task finished",
-      body: "Open DJL to review the result.",
-    },
-    sound: "default",
-  },
-  source: "djl.runCompletion",
-  threadId,
-  turnId: turnId ?? "",
-  result,
-});
+export const buildGenericPushPayload = ({ threadId, turnId, result }: GenericPushInput) =>
+  result === "attention"
+    ? {
+        aps: {
+          alert: { title: "An agent needs your answer", body: "Open DJL to reply." },
+          sound: "default",
+        },
+        source: "codex.structuredUserInput",
+        threadId,
+        ...(turnId ? { turnId } : {}),
+      }
+    : {
+        aps: {
+          alert: {
+            title: "DJL task finished",
+            body: "Open DJL to review the result.",
+          },
+          sound: "default",
+        },
+        source: "djl.runCompletion",
+        threadId,
+        turnId: turnId ?? "",
+        result,
+      };
 
 export const normalizeDeviceToken = (value: unknown): string | null => {
   if (typeof value !== "string") return null;

@@ -12,6 +12,7 @@ import type {
 } from "@synara/contracts";
 
 import { extractCodexGeneratedImageReference } from "../../../codexGeneratedImages";
+import type { PluginGatewaySession } from "../../../plugins/PluginGateway";
 import { nativeApprovalDetail } from "../requests";
 import type { NativeDriver, NativeDriverFactory, NativeSink } from "../types";
 import { findNewOutputs, withOutputs } from "./groupOutputs";
@@ -28,9 +29,16 @@ export type ChildRequestHandler = (
   signal?: AbortSignal,
 ) => Promise<ProviderApprovalDecision | ProviderUserInputAnswers>;
 
+/** `restart` is true when the member begins a new message, which replaces what it wrote before. */
+export type ChildDraftHandler = (delta: string, restart: boolean) => void;
+
 export interface ChildSession {
   readonly nativeSessionId: string;
-  ask(prompt: string, onRequest: ChildRequestHandler): Promise<ChildReply>;
+  ask(
+    prompt: string,
+    onRequest: ChildRequestHandler,
+    onDraft?: ChildDraftHandler,
+  ): Promise<ChildReply>;
   stop(): Promise<void>;
   close(): void;
 }
@@ -69,6 +77,7 @@ interface Turn {
   readonly images: string[];
   readonly startedAt: number;
   onRequest: ChildRequestHandler;
+  onDraft: ChildDraftHandler | undefined;
   settled: boolean;
   resolve: (reply: ChildReply) => void;
 }
@@ -77,6 +86,7 @@ export async function openChildSession(input: {
   provider: GroupMemberProvider;
   factory: NativeDriverFactory;
   start: ProviderSessionStartInput;
+  plugins?: PluginGatewaySession;
 }): Promise<ChildSession> {
   const countsCodexItems = input.provider === "codex";
   let turn: Turn | null = null;
@@ -100,10 +110,9 @@ export async function openChildSession(input: {
         payload.streamKind === "assistant_text" &&
         typeof event.itemId === "string"
       ) {
-        current.texts.set(
-          event.itemId,
-          (current.texts.get(event.itemId) ?? "") + String(payload.delta ?? ""),
-        );
+        const delta = String(payload.delta ?? "");
+        current.texts.set(event.itemId, (current.texts.get(event.itemId) ?? "") + delta);
+        if (delta) current.onDraft?.(delta, event.itemId !== current.lastItem);
         current.lastItem = event.itemId;
         return;
       }
@@ -136,12 +145,17 @@ export async function openChildSession(input: {
   };
 
   const { sandboxMode: _sandbox, approvalPolicy: _approval, ...start } = input.start;
-  driver = await input.factory({ ...start, runtimeMode: "approval-required" }, sink);
+  driver = await input.factory(
+    { ...start, runtimeMode: "approval-required" },
+    sink,
+    undefined,
+    input.plugins,
+  );
   const active = driver;
 
   return {
     nativeSessionId: active.id,
-    ask: (prompt, onRequest) =>
+    ask: (prompt, onRequest, onDraft) =>
       new Promise<ChildReply>((resolve) => {
         turn = {
           texts: new Map(),
@@ -151,6 +165,7 @@ export async function openChildSession(input: {
           // File times can be a little coarser than the clock.
           startedAt: Date.now() - 1000,
           onRequest,
+          onDraft,
           settled: false,
           resolve,
         };

@@ -7,6 +7,9 @@ import 'desktop_controller.dart';
 import 'desktop_conversation_view.dart';
 import 'desktop_thread_actions.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class DesktopThreadLocationSheet extends StatefulWidget {
   const DesktopThreadLocationSheet({
     super.key,
@@ -60,7 +63,7 @@ class _DesktopThreadLocationSheetState
       });
     } catch (_) {
       if (_current) {
-        setState(() => _error = 'Could not copy the path. Try again.');
+        setState(() => _error = context.l10n.chatUiCopyPathFailed);
       }
     } finally {
       if (mounted) setState(() => _copying = false);
@@ -113,16 +116,16 @@ class _DesktopThreadLocationSheetState
                       child: Text(
                         valid
                             ? desktopConversationPathLabel(widget.path)
-                            : 'Conversation changed',
+                            : context.l10n.chatUiConversationChanged,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium,
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Close location',
+                      tooltip: context.l10n.chatUiCloseLocation,
                       onPressed: _close,
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(DjlIcons.close),
                     ),
                   ],
                 ),
@@ -133,7 +136,7 @@ class _DesktopThreadLocationSheetState
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   children: valid
                       ? [
-                          Text('Thread', style: label),
+                          Text(context.l10n.chatUiThreadLabel, style: label),
                           const SizedBox(height: 10),
                           Row(
                             children: [
@@ -151,12 +154,10 @@ class _DesktopThreadLocationSheetState
                                 widget.thread['id'] as String,
                               ))
                                 IconButton(
-                                  tooltip: 'Rename conversation',
+                                  tooltip:
+                                      context.l10n.chatUiRenameConversation,
                                   onPressed: _rename,
-                                  icon: const Icon(
-                                    Icons.edit_outlined,
-                                    size: 20,
-                                  ),
+                                  icon: const Icon(DjlIcons.edit, size: 20),
                                 ),
                             ],
                           ),
@@ -171,13 +172,15 @@ class _DesktopThreadLocationSheetState
                           const SizedBox(height: 20),
                           Row(
                             children: [
-                              Text('Path', style: label),
+                              Text(context.l10n.chatUiPathLabel, style: label),
                               const SizedBox(width: 8),
                               IconButton(
-                                tooltip: _copied ? 'Path copied' : 'Copy path',
+                                tooltip: _copied
+                                    ? context.l10n.chatUiPathCopied
+                                    : context.l10n.chatUiCopyPath,
                                 onPressed: _copying ? null : _copy,
                                 icon: Icon(
-                                  _copied ? Icons.check : Icons.copy_outlined,
+                                  _copied ? DjlIcons.check : DjlIcons.copy,
                                   size: 18,
                                 ),
                               ),
@@ -198,11 +201,7 @@ class _DesktopThreadLocationSheetState
                               child: Text(_error!),
                             ),
                         ]
-                      : [
-                          const Text(
-                            'Close this sheet and reopen the conversation location.',
-                          ),
-                        ],
+                      : [Text(context.l10n.chatUiLocationStale)],
                 ),
               ),
             ],

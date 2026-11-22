@@ -2,7 +2,8 @@ import { computerToolInstructions } from "../../agentGateway/computerGuidance";
 import { computerApprovalGate } from "../../computer/ComputerApprovalGate";
 import { beginComputerUseTurn } from "../../work/computerTurnLifecycle";
 import { executeComputerTool } from "../../work/computerTools";
-import { resolveBuiltInPluginReferences } from "@synara/contracts";
+import { DJL_PLUGIN_MENTION_PREFIX, resolveBuiltInPluginReferences } from "@synara/contracts";
+import { resolveDjlPluginMentions } from "../../plugins/pluginMentions";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { listThreadCampaigns } from "../../marketing/chatTools";
 // FILE: ProviderCommandReactor.ts
@@ -1167,6 +1168,13 @@ const make = Effect.gen(function* () {
         ? { computerInstructions: computerToolInstructions() }
         : {},
     );
+    // Kept apart before the mentions become text: DJL Cloud offers only these plugins' tools.
+    const djlPluginIds = (input.mentions ?? []).flatMap((mention) =>
+      mention.path.startsWith(DJL_PLUGIN_MENTION_PREFIX)
+        ? [mention.path.slice(DJL_PLUGIN_MENTION_PREFIX.length)]
+        : [],
+    );
+    input = resolveDjlPluginMentions(input);
     yield* Effect.promise(() => beginComputerUseTurn(input.threadId, { allowActivityHistory }));
     const thread = yield* resolveThread(input.threadId);
     if (!thread) {
@@ -1397,6 +1405,7 @@ const make = Effect.gen(function* () {
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
         ...(providerMentions !== undefined ? { mentions: providerMentions } : {}),
+        ...(djlPluginIds.length > 0 ? { djlPluginIds } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
         ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
         ...(input.workTurnPolicy !== undefined ? { workTurnPolicy: input.workTurnPolicy } : {}),

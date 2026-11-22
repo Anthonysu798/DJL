@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/desktop/data/remote_transport.dart';
 import 'package:djl_mobile/features/desktop/domain/desktop_composer.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_active_turn_snapshot_test.dart'
     show ActiveSnapshotTransport, connectedSnapshot;
 

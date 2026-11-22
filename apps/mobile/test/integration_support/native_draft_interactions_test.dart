@@ -292,7 +292,7 @@ void main() {
       final query = tester.widget<TextField>(search).controller;
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Done'));
+      await tester.tap(find.byKey(const Key('settings.back')));
       await tester.pumpAndSettle();
       expect(search.hitTestable(), findsOneWidget);
       expect(tester.widget<TextField>(search).controller, same(query));

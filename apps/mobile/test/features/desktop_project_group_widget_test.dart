@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/desktop/domain/thread_local_state.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
@@ -83,7 +84,7 @@ Future<void> openProjectAction(WidgetTester tester, String action) async {
   final removal = tester.element(find.text('Remove from Phone'));
   expect(
     DefaultTextStyle.of(removal).style.color,
-    CupertinoColors.destructiveRed.resolveFrom(removal),
+    DjlColors.of(removal).danger,
   );
   await tester.tap(find.text(action));
   await tester.pumpAndSettle();

@@ -1,5 +1,3 @@
-import 'package:flutter/cupertino.dart'
-    show CupertinoIcons, CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/presentation/djl_glass.dart';
@@ -7,6 +5,9 @@ import '../../pairing/data/pairing_repository.dart';
 import '../../settings/domain/runtime_defaults.dart';
 import 'desktop_controller.dart';
 import 'desktop_runtime_labels.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopModelCatalogSheet extends StatefulWidget {
   const DesktopModelCatalogSheet({
@@ -86,12 +87,9 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
             if (_current) setState(() => _provider = provider);
           },
           style: TextButton.styleFrom(
-            foregroundColor: selected ? Colors.white : colors.onSurface,
+            foregroundColor: selected ? colors.onPrimary : colors.onSurface,
             backgroundColor: selected
-                ? CupertinoDynamicColor.resolve(
-                    CupertinoColors.activeBlue,
-                    context,
-                  )
+                ? colors.primary
                 : colors.onSurface.withValues(alpha: .05),
             textStyle: const TextStyle(
               fontSize: 16,
@@ -131,15 +129,10 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(
-                  selected
-                      ? CupertinoIcons.check_mark_circled_solid
-                      : CupertinoIcons.circle,
+                  selected ? DjlIcons.checkCircleFill : DjlIcons.circle,
                   size: 18,
                   color: selected
-                      ? CupertinoDynamicColor.resolve(
-                          CupertinoColors.activeBlue,
-                          context,
-                        )
+                      ? colors.primary
                       : colors.onSurface.withValues(alpha: .25),
                 ),
               ),
@@ -234,9 +227,10 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                   final desktop = widget.controller,
                       colors = Theme.of(context).colorScheme;
                   final models = orderedDesktopModels(desktop.models);
+                  final otherModels = context.l10n.chatUiModelsGroup;
                   final providers =
                       models
-                          .map((m) => desktopModelProvider(m) ?? 'Models')
+                          .map((m) => desktopModelProvider(m) ?? otherModels)
                           .toSet()
                           .toList()
                         ..sort();
@@ -245,7 +239,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                       .where(
                         (m) =>
                             (_provider == null ||
-                                (desktopModelProvider(m) ?? 'Models') ==
+                                (desktopModelProvider(m) ?? otherModels) ==
                                     _provider) &&
                             (query.isEmpty ||
                                 '${m['displayName'] ?? m['display_name'] ?? ''} ${desktopModelProvider(m) ?? ''} ${m['model'] ?? ''}'
@@ -277,7 +271,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                               radius: 22,
                               useNativeView: false,
                               child: IconButton(
-                                tooltip: 'Refresh models',
+                                tooltip: context.l10n.chatUiRefreshModels,
                                 onPressed:
                                     _current &&
                                         desktop.connected &&
@@ -291,20 +285,17 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(
-                                        CupertinoIcons.refresh,
-                                        size: 28,
-                                      ),
+                                    : const Icon(DjlIcons.refresh, size: 28),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                'Provider & model',
+                                context.l10n.chatUiProviderAndModel,
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -333,7 +324,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
-                                child: const Text('Done'),
+                                child: Text(context.l10n.chatUiDone),
                               ),
                             ),
                           ],
@@ -349,7 +340,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                           child: Row(
                             spacing: 8,
                             children: [
-                              _chip('All providers', null),
+                              _chip(context.l10n.chatUiAllProviders, null),
                               for (final name in providers) _chip(name, name),
                             ],
                           ),
@@ -376,18 +367,19 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                             children: [
                               if (!widget.isCurrent())
-                                const Padding(
-                                  padding: EdgeInsets.all(24),
+                                Padding(
+                                  padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    'Connection changed. Reopen model selection.',
+                                    context.l10n.chatUiModelsConnectionChanged,
                                   ),
                                 )
                               else if (desktop.isLoadingModels)
-                                const Padding(
-                                  padding: EdgeInsets.all(40),
+                                Padding(
+                                  padding: const EdgeInsets.all(40),
                                   child: Center(
                                     child: CircularProgressIndicator(
-                                      semanticsLabel: 'Loading models',
+                                      semanticsLabel:
+                                          context.l10n.chatUiLoadingModels,
                                     ),
                                   ),
                                 )
@@ -407,23 +399,23 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                         ),
                                       ),
                                       const SizedBox(height: 12),
-                                      const Text(
-                                        'No models available',
+                                      Text(
+                                        context.l10n.chatUiNoModels,
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 8),
-                                      const Text(
-                                        'Connect a provider in DJL on your computer, then refresh the model list.',
+                                      Text(
+                                        context.l10n.chatUiNoModelsHint,
                                         textAlign: TextAlign.center,
                                       ),
                                     ],
                                   ),
                                 )
                               else if (visible.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.all(24),
+                                Padding(
+                                  padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    'No matching models',
+                                    context.l10n.chatUiNoMatchingModels,
                                     textAlign: TextAlign.center,
                                   ),
                                 )
@@ -431,7 +423,8 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                 for (final provider in providers) ...[
                                   if (visible.any(
                                     (m) =>
-                                        (desktopModelProvider(m) ?? 'Models') ==
+                                        (desktopModelProvider(m) ??
+                                            otherModels) ==
                                         provider,
                                   )) ...[
                                     Padding(
@@ -465,7 +458,7 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                                           (desktopModelProvider(
                                                                 m,
                                                               ) ??
-                                                              'Models') ==
+                                                              otherModels) ==
                                                           provider,
                                                     )
                                                     .indexed) ...[
@@ -516,20 +509,21 @@ class _DesktopModelCatalogSheetState extends State<DesktopModelCatalogSheet> {
                                 if (_current) _focus.unfocus();
                               },
                               decoration: InputDecoration(
-                                hintText: 'Search providers or models',
+                                hintText: context.l10n.chatUiSearchModels,
                                 prefixIcon: const Icon(
-                                  CupertinoIcons.search,
+                                  DjlIcons.search,
                                   size: 24,
                                 ),
                                 suffixIcon: _search.text.isEmpty
                                     ? null
                                     : IconButton(
-                                        tooltip: 'Clear model search',
+                                        tooltip:
+                                            context.l10n.chatUiClearModelSearch,
                                         onPressed: () {
                                           if (_current) setState(_search.clear);
                                         },
                                         icon: const Icon(
-                                          CupertinoIcons.clear_circled_solid,
+                                          DjlIcons.clear,
                                           size: 18,
                                         ),
                                       ),

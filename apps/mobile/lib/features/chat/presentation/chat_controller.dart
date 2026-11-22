@@ -7,6 +7,7 @@ import '../../../core/network/client_configuration.dart';
 import '../../../core/network/cloud_client.dart';
 import '../../account/domain/account_snapshot.dart';
 import '../domain/cloud_models.dart';
+import '../../../l10n/l10n.dart';
 
 /// Owns one account-scoped conversation and resumable run; UI never sends raw HTTP.
 class ChatController extends ChangeNotifier {
@@ -20,7 +21,10 @@ class ChatController extends ChangeNotifier {
        _modelGeneration = repository.modelSelection.generation,
        _composerConversation = conversation?.id ?? 'new' {
     if (initialImage != null) {
-      attachments.add({...initialImage, '_displayName': 'Image to edit'});
+      attachments.add({
+        ...initialImage,
+        '_displayName': appStrings.cloudChatImageToEdit,
+      });
     }
     repository.modelSelection.addListener(_syncModelSelection);
   }
@@ -73,13 +77,13 @@ class ChatController extends ChangeNotifier {
       visibleBranch(messages, branchSelections);
   List<Json> get steps => reducer?.steps ?? [];
   String emptyMessageText(ChatMessage message) {
-    if (message.runId != reducer?.runId) return 'No response content.';
+    if (message.runId != reducer?.runId) return appStrings.cloudChatNoContent;
     return switch (reducer?.status) {
-      'queued' || 'running' => 'Thinking…',
-      'cancelled' => 'Response stopped.',
-      'failed' => 'Response failed.',
-      'blocked_on_usage' => 'Waiting for usage reset.',
-      _ => 'No response content.',
+      'queued' || 'running' => appStrings.cloudChatThinking,
+      'cancelled' => appStrings.cloudChatResponseStopped,
+      'failed' => appStrings.cloudChatResponseFailed,
+      'blocked_on_usage' => appStrings.cloudChatWaitingForUsageReset,
+      _ => appStrings.cloudChatNoContent,
     };
   }
 
@@ -212,7 +216,7 @@ class ChatController extends ChangeNotifier {
     } catch (_) {
       if (_current && revision == _modelChoiceRevision) {
         model ??= models.firstOrNull?['id'] as String?;
-        modelSelectionError = 'Could not load your saved model choice. Retry.';
+        modelSelectionError = appStrings.cloudChatModelChoiceLoadFailed;
       }
       return;
     } finally {
@@ -242,7 +246,7 @@ class ChatController extends ChangeNotifier {
       await repository.modelSelection.save(model, generation: _modelGeneration);
     } catch (_) {
       if (_current && revision == _modelChoiceRevision) {
-        modelSelectionError = 'Could not save your model choice. Retry.';
+        modelSelectionError = appStrings.cloudChatModelChoiceSaveFailed;
       }
     } finally {
       if (_current && revision == _modelChoiceRevision) {
@@ -277,8 +281,7 @@ class ChatController extends ChangeNotifier {
       await repository.composerDrafts.flush(generation: _composerGeneration);
     } catch (_) {
       if (_current && revision == _composerRevision) {
-        composerError =
-            'Could not save your draft. Keep the text here and retry.';
+        composerError = appStrings.cloudChatDraftSaveFailed;
       }
     } finally {
       if (_current && revision == _composerRevision) {
@@ -302,13 +305,11 @@ class ChatController extends ChangeNotifier {
       composerDraft = text;
       _composerReady = true;
       if (repository.composerDrafts.dirty) {
-        composerError =
-            'Could not save your draft. Keep the text here and retry.';
+        composerError = appStrings.cloudChatDraftSaveFailed;
       }
     } catch (_) {
       if (_current) {
-        composerError =
-            'Could not load your saved draft. Retry before editing.';
+        composerError = appStrings.cloudChatDraftLoadFailed;
       }
     } finally {
       if (_current) {
@@ -339,8 +340,7 @@ class ChatController extends ChangeNotifier {
       await write;
     } catch (_) {
       if (_current && revision == _composerRevision) {
-        composerError =
-            'Could not save your draft. Keep the text here and retry.';
+        composerError = appStrings.cloudChatDraftSaveFailed;
       }
     } finally {
       if (_current && revision == _composerRevision) {
@@ -371,8 +371,7 @@ class ChatController extends ChangeNotifier {
       }
     } catch (_) {
       if (_current && revision == _composerRevision) {
-        composerError =
-            'Could not save your draft. Keep the text here and retry.';
+        composerError = appStrings.cloudChatDraftSaveFailed;
       }
     } finally {
       if (_current && revision == _composerRevision) {
@@ -427,8 +426,7 @@ class ChatController extends ChangeNotifier {
     _creationId = draft['creationId'] as String;
     _pendingImage = draft['image'] as Json?;
     if (_pendingImage != null) {
-      notice =
-          'An interrupted image request is saved securely. Retry to check its result.';
+      notice = appStrings.cloudChatInterruptedImage;
     }
     final input = draft['input'] as Json?;
     if (input != null) {
@@ -440,8 +438,7 @@ class ChatController extends ChangeNotifier {
         model: input['model'] as String,
         mode: input['mode'] as String,
       );
-      notice =
-          'An interrupted message is saved securely. Retry to check its result.';
+      notice = appStrings.cloudChatInterruptedMessage;
     }
   }
 
@@ -499,8 +496,7 @@ class ChatController extends ChangeNotifier {
   Future<void> attach(String name, String mime, Uint8List bytes) async {
     if (redeemingUsage || uploading || sending || !_current) return;
     if (mime.startsWith('image/') && !acceptsImages) {
-      error =
-          'Choose a model that can view images before sending this attachment.';
+      error = appStrings.cloudChatModelCannotViewImages;
       _notify();
       return;
     }
@@ -537,8 +533,7 @@ class ChatController extends ChangeNotifier {
     if (text.trim().isEmpty && attachments.isEmpty) return false;
     if (attachments.any((part) => part['type'] == 'image_ref') &&
         !acceptsImages) {
-      error =
-          'Choose a model that can view images before sending this attachment.';
+      error = appStrings.cloudChatModelCannotViewImages;
       _notify();
       return false;
     }
@@ -573,8 +568,7 @@ class ChatController extends ChangeNotifier {
     }
     final kept = original.parts.where((part) => part['type'] != 'text');
     if (kept.any((part) => part['type'] == 'image_ref') && !acceptsImages) {
-      error =
-          'Choose a model that can view images before sending this attachment.';
+      error = appStrings.cloudChatModelCannotViewImages;
       _notify();
       return false;
     }
@@ -597,7 +591,7 @@ class ChatController extends ChangeNotifier {
 
   void useImage(Json part) {
     if (part['type'] != 'image_ref' || sending || streaming) return;
-    attachments.add({...part, '_displayName': 'Image to edit'});
+    attachments.add({...part, '_displayName': appStrings.cloudChatImageToEdit});
     _notify();
   }
 
@@ -613,7 +607,7 @@ class ChatController extends ChangeNotifier {
       return false;
     }
     if (!configuration.imageGeneration) {
-      error = 'Image generation is not configured for this service.';
+      error = appStrings.cloudChatImageGenerationUnavailable;
       _notify();
       return false;
     }

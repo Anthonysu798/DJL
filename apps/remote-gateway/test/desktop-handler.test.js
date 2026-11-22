@@ -552,3 +552,54 @@ test("desktop/bridge/updateAndRestart reports unsupported bridges", async () => 
 
   assert.equal(responses[0].error?.data?.errorCode, "unsupported_bridge_update");
 });
+
+test("desktop/continueOnDesktop opens the chat in DJL when the bridge runs inside it", async () => {
+  const opened = [];
+  const executorCalls = [];
+  const responses = [];
+
+  for (const method of ["desktop/continueOnDesktop", "desktop/continueOnMac"]) {
+    handleDesktopRequest(
+      JSON.stringify({ id: method, method, params: { threadId: "thread-123" } }),
+      (response) => responses.push(JSON.parse(response)),
+      {
+        platform: "darwin",
+        openThread: (threadId) => opened.push(threadId),
+        executor: async (...args) => {
+          executorCalls.push(args);
+          return { stdout: "", stderr: "" };
+        },
+      },
+    );
+  }
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(opened, ["thread-123", "thread-123"]);
+  assert.deepEqual(executorCalls, []);
+  assert.deepEqual(
+    responses.map((response) => response.result),
+    [
+      { success: true, relaunched: false, threadId: "thread-123" },
+      { success: true, relaunched: false, threadId: "thread-123" },
+    ],
+  );
+});
+
+test("desktop/continueOnDesktop inside DJL rejects an invalid thread id", async () => {
+  const opened = [];
+  const responses = [];
+
+  handleDesktopRequest(
+    JSON.stringify({
+      id: "bad",
+      method: "desktop/continueOnDesktop",
+      params: { threadId: "../etc" },
+    }),
+    (response) => responses.push(JSON.parse(response)),
+    { platform: "darwin", openThread: (threadId) => opened.push(threadId) },
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(opened, []);
+  assert.equal(responses[0].error.data.errorCode, "invalid_thread_id");
+});

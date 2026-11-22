@@ -66,6 +66,10 @@ export interface AcpSessionRuntimeOptions {
     initializeResult: EffectAcpSchema.InitializeResponse,
   ) => Effect.Effect<string, EffectAcpErrors.AcpError>;
   readonly authenticateMeta?: Record<string, unknown>;
+  /** Tool servers for the session, chosen once the agent has said what it can reach. */
+  readonly mcpServers?: (
+    initializeResult: EffectAcpSchema.InitializeResponse,
+  ) => ReadonlyArray<EffectAcpSchema.McpServer>;
   readonly requestLogger?: (event: AcpSessionRequestLogEvent) => Effect.Effect<void, never>;
   readonly protocolLogging?: {
     readonly logIncoming?: boolean;
@@ -576,6 +580,7 @@ const makeAcpSessionRuntime = (
         acp.agent.authenticate(authenticatePayload),
       );
 
+      const mcpServers = options.mcpServers?.(initializeResult) ?? [];
       let sessionId: string;
       let sessionSetupResult:
         | EffectAcpSchema.LoadSessionResponse
@@ -587,7 +592,7 @@ const makeAcpSessionRuntime = (
         const resumePayload = {
           sessionId: options.resumeSessionId,
           cwd: options.cwd,
-          mcpServers: [],
+          mcpServers,
         } satisfies EffectAcpSchema.ResumeSessionRequest;
         const supportsResume =
           initializeResult.agentCapabilities?.sessionCapabilities?.resume != null;
@@ -602,7 +607,7 @@ const makeAcpSessionRuntime = (
                 const loadPayload = {
                   sessionId: options.resumeSessionId,
                   cwd: options.cwd,
-                  mcpServers: [],
+                  mcpServers,
                 } satisfies EffectAcpSchema.LoadSessionRequest;
                 return runLoggedRequest(
                   "session/load",
@@ -626,7 +631,7 @@ const makeAcpSessionRuntime = (
           acceptingSessionUpdates = true;
           const createPayload = {
             cwd: options.cwd,
-            mcpServers: [],
+            mcpServers,
           } satisfies EffectAcpSchema.NewSessionRequest;
           const created = yield* runLoggedRequest(
             "session/new",
@@ -643,7 +648,7 @@ const makeAcpSessionRuntime = (
         acceptingSessionUpdates = true;
         const createPayload = {
           cwd: options.cwd,
-          mcpServers: [],
+          mcpServers,
         } satisfies EffectAcpSchema.NewSessionRequest;
         const created = yield* runLoggedRequest(
           "session/new",

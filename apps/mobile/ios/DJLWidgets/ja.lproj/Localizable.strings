@@ -1,0 +1,7 @@
+/* Lock Screen widget, Control and Live Activity text (ja). */
+"Open Codex chat" = "Codex のチャットを開く";
+"Open DJL" = "DJL を開く";
+"Quick access to DJL from your Lock Screen." = "ロック画面から DJL にすばやくアクセスできます。";
+"Launch DJL from Control Center." = "コントロールセンターから DJL を起動します。";
+"Task status" = "タスクの状態";
+"%lld active/paused · %lld failed · %lld ready" = "実行中/一時停止 %lld · 失敗 %lld · 完了 %lld";

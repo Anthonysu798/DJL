@@ -5,8 +5,27 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../../../core/security/credential_store.dart';
 import '../../../core/security/remote_crypto.dart';
+import '../../../l10n/l10n.dart';
 
 typedef RemoteJson = Map<String, dynamic>;
+
+/// The relay a pairing code is resolved against. A build can name one;
+/// otherwise it is DJL Cloud's own relay, the same fallback the desktop uses,
+/// so nobody has to type a relay address to pair.
+String defaultRelayUrl({
+  String configured = const String.fromEnvironment('DJL_REMOTE_RELAY_URL'),
+  String cloud = const String.fromEnvironment(
+    'DJL_CLOUD_API_URL',
+    defaultValue: 'https://api.slcor.com',
+  ),
+}) {
+  if (configured.isNotEmpty) return configured;
+  final api = Uri.tryParse(cloud);
+  if (api == null || !api.hasScheme || api.host.isEmpty) return '';
+  return api
+      .replace(scheme: api.scheme == 'https' ? 'wss' : 'ws', path: '/relay')
+      .toString();
+}
 
 class RemoteRelayUnavailable implements Exception {
   const RemoteRelayUnavailable(this.message);
@@ -18,9 +37,7 @@ class RemoteRelayUnavailable implements Exception {
 String normalizePairingCode(String value) {
   final code = value.toUpperCase().replaceAll(RegExp(r'[\s-]'), '');
   if (!RegExp(r'^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$').hasMatch(code)) {
-    throw const FormatException(
-      'Enter the ten-character code shown in desktop Remote settings.',
-    );
+    throw FormatException(appStrings.pairingEnterTenCharCode);
   }
   return code;
 }
@@ -38,7 +55,7 @@ Uri validateRelay(String value, {bool allowLocal = false}) {
       uri.userInfo.isNotEmpty ||
       uri.hasQuery ||
       uri.hasFragment) {
-    throw const FormatException('Pairing requires a secure relay URL.');
+    throw FormatException(appStrings.pairingSecureRelayRequired);
   }
   return uri;
 }
@@ -50,7 +67,8 @@ class Pairing {
   String get macDeviceId => data['macDeviceId'] as String;
   String get publicKey => data['macIdentityPublicKey'] as String;
   Uri get relay => Uri.parse(data['relay'] as String);
-  String get displayName => data['displayName'] as String? ?? 'Paired Mac';
+  String get displayName =>
+      data['displayName'] as String? ?? appStrings.pairingPairedMac;
   factory Pairing.parse(
     String text, {
     bool allowLocal = false,
@@ -67,14 +85,10 @@ class Pairing {
       try {
         value = jsonDecode(raw) as RemoteJson;
       } catch (_) {
-        throw const FormatException(
-          'This is not a DJL pairing QR or pasteable code.',
-        );
+        throw FormatException(appStrings.pairingNotAPairingCode);
       }
       if (value['v'] != 2) {
-        throw const FormatException(
-          'Update DJL on your desktop: this pairing uses a different protocol.',
-        );
+        throw FormatException(appStrings.pairingUpdateDesktop);
       }
       for (final key in ['sessionId', 'macDeviceId']) {
         final id = value[key];
@@ -83,28 +97,24 @@ class Pairing {
             id.length > 256 ||
             id.contains('/') ||
             id.contains('..')) {
-          throw const FormatException('Invalid device/session identifier.');
+          throw FormatException(appStrings.pairingInvalidIdentifier);
         }
       }
       validateRelay(value['relay'] as String, allowLocal: allowLocal);
       if (base64Decode(value['macIdentityPublicKey'] as String).length != 32) {
-        throw const FormatException('Invalid desktop identity key.');
+        throw FormatException(appStrings.pairingInvalidIdentityKey);
       }
       final expires = value['expiresAt'];
       if (expires is! int ||
           (checkExpiry &&
               expires < DateTime.now().millisecondsSinceEpoch - 60000)) {
-        throw const FormatException(
-          'This pairing code has expired. Generate a new code on your Mac.',
-        );
+        throw FormatException(appStrings.pairingCodeExpired);
       }
       return Pairing(value);
     } on FormatException {
       rethrow;
     } catch (_) {
-      throw const FormatException(
-        'This is not a DJL pairing QR or pasteable code.',
-      );
+      throw FormatException(appStrings.pairingNotAPairingCode);
     }
   }
 }
@@ -289,9 +299,7 @@ class PairingRepository {
           prefs is! Map ||
           prefs['nickname'] is! String ||
           prefs['visibleInMenu'] is! bool) {
-        throw const FormatException(
-          'Saved device preferences are unavailable.',
-        );
+        throw FormatException(appStrings.pairingPrefsUnavailable);
       }
       final activity = row['activity'];
       entries.add(
@@ -339,9 +347,7 @@ class PairingRepository {
       (e) => e.matches(target.pairing) && e.trustId == target.trustId,
     );
     if (index < 0) {
-      throw StateError(
-        'This saved device changed. Close and reopen the editor.',
-      );
+      throw StateError(appStrings.pairingDeviceChangedReopen);
     }
     final current = entries[index];
     entries[index] = TrustedDeviceEntry(
@@ -366,9 +372,7 @@ class PairingRepository {
       await credentials.read('desktop.active');
       _activeRecoveryRequired = false;
     } catch (_) {
-      throw const RemoteSecurityException(
-        'Could not recover the saved selection. Unlock your device and retry before choosing a Mac.',
-      );
+      throw RemoteSecurityException(appStrings.pairingRecoverSelectionFailed);
     }
   }
 
@@ -383,18 +387,14 @@ class PairingRepository {
       (entry) =>
           entry.matches(target.pairing) && entry.trustId == target.trustId,
     )) {
-      throw const RemoteSecurityException(
-        'The saved device changed. Choose it again.',
-      );
+      throw RemoteSecurityException(appStrings.pairingDeviceChangedChooseAgain);
     }
     if (!isCurrent()) return;
     try {
       await credentials.write('desktop.active', target.pairing.macDeviceId);
     } catch (_) {
       _activeRecoveryRequired = true;
-      throw const RemoteSecurityException(
-        'Could not confirm the selected Mac was saved. Unlock your device and choose a saved Mac to recover.',
-      );
+      throw RemoteSecurityException(appStrings.pairingConfirmSavedFailed);
     }
   });
 
@@ -422,8 +422,8 @@ class PairingRepository {
       if (!entries.any(
         (entry) => entry.matches(pair) && entry.trustId == expected.trustId,
       )) {
-        throw const RemoteSecurityException(
-          'The saved device changed. Choose it again.',
+        throw RemoteSecurityException(
+          appStrings.pairingDeviceChangedChooseAgain,
         );
       }
     }
@@ -533,9 +533,7 @@ class PairingRepository {
     );
     if (response['macDeviceId'] != pair.macDeviceId ||
         response['macIdentityPublicKey'] != pair.publicKey) {
-      throw const RemoteSecurityException(
-        'The trusted relay returned a different desktop identity. Pair again.',
-      );
+      throw RemoteSecurityException(appStrings.pairingRelayDifferentIdentity);
     }
     // A trusted resolution supplies live session metadata, not a new QR expiry.
     return Pairing.parse(
@@ -574,8 +572,8 @@ class PairingRepository {
             .timeout(const Duration(seconds: 8));
         if ({408, 429}.contains(response.statusCode) ||
             response.statusCode >= 500) {
-          throw const RemoteRelayUnavailable(
-            'The desktop relay is temporarily unavailable.',
+          throw RemoteRelayUnavailable(
+            appStrings.pairingRelayTemporarilyUnavailable,
           );
         }
         RemoteJson value;
@@ -583,9 +581,7 @@ class PairingRepository {
           value = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
         } catch (_) {
           if (response.statusCode == 404 && i < candidates.length - 1) continue;
-          throw const RemoteSecurityException(
-            'The desktop relay returned an invalid response.',
-          );
+          throw RemoteSecurityException(appStrings.pairingRelayInvalidResponse);
         }
         if (!{401, 403}.contains(response.statusCode) &&
             {
@@ -596,7 +592,7 @@ class PairingRepository {
           throw RemoteRelayUnavailable(
             value['error'] is String
                 ? value['error'] as String
-                : 'The trusted computer is offline.',
+                : appStrings.pairingTrustedComputerOffline,
           );
         }
         if (response.statusCode == 404 && i < candidates.length - 1) continue;
@@ -606,20 +602,16 @@ class PairingRepository {
           throw RemoteSecurityException(
             value['error'] is String
                 ? value['error'] as String
-                : 'The desktop pairing service is unavailable.',
+                : appStrings.pairingServiceUnavailable,
           );
         }
         return value;
       } on http.ClientException {
         // A failed connection is not an identity rejection. The controller may
         // resolve again with a fresh signed nonce; do not disable recovery.
-        throw const RemoteRelayUnavailable(
-          'Could not reach the desktop relay.',
-        );
+        throw RemoteRelayUnavailable(appStrings.pairingRelayUnreachable);
       }
     }
-    throw const RemoteSecurityException(
-      'The relay does not support this pairing method.',
-    );
+    throw RemoteSecurityException(appStrings.pairingRelayUnsupportedMethod);
   }
 }

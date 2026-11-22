@@ -139,18 +139,18 @@ final class SettingsVisualParityTests: XCTestCase {
       app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", title, value)).firstMatch
     }
     XCTAssertTrue(row("Status", "Update available").waitForExistence(timeout: 5))
-    XCTAssertTrue(row("Installed", "1.9").exists)
+    XCTAssertTrue(row("Version", "1.9").exists)
     XCTAssertTrue(row("Latest", "1.10").exists)
     attach("bridge84-flutter-light")
-    guard tapWhenReady(app.buttons["Update Bridge on Device"].firstMatch) else { return }
-    XCTAssertTrue(app.staticTexts["Update paired bridge?"].waitForExistence(timeout: 5))
+    guard tapWhenReady(app.buttons["Update DJL on your Mac"].firstMatch) else { return }
+    XCTAssertTrue(app.staticTexts["Update DJL on your Mac?"].waitForExistence(timeout: 5))
     attach("bridge84-flutter-confirmation")
     guard tapWhenReady(app.buttons["Cancel"].firstMatch) else { return }
     guard tapWhenReady(app.buttons["Fixture theme"].firstMatch) else { return }
     attach("bridge84-flutter-dark")
     guard tapWhenReady(app.buttons["Go offline"].firstMatch) else { return }
     XCTAssertTrue(row("Status", "Last known · Update available").waitForExistence(timeout: 5))
-    XCTAssertFalse(app.buttons["Update Bridge on Device"].firstMatch.isEnabled)
+    XCTAssertFalse(app.buttons["Update DJL on your Mac"].firstMatch.isEnabled)
     attach("bridge84-flutter-offline")
     guard tapWhenReady(app.buttons["Go online"].firstMatch) else { return }
     XCTAssertTrue(row("Status", "Update available").waitForExistence(timeout: 5))

@@ -1,3 +1,4 @@
+import 'package:djl_mobile/core/presentation/djl_glass_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/desktop_deep_link.dart';
@@ -734,10 +735,11 @@ void main() {
     desktop.thread = {'id': 'saved', 'cwd': '/repo/Saved folder/'};
     await showConversation(tester, desktop);
     final callback = tester
-        .widget<PopupMenuButton<String>>(
+        .widget<DjlGlassMenuButton<String>>(
           find.byWidgetPredicate(
             (w) =>
-                w is PopupMenuButton<String> && w.tooltip == 'Thread actions',
+                w is DjlGlassMenuButton<String> &&
+                w.tooltip == 'Thread actions',
           ),
         )
         .onSelected!;

@@ -1,0 +1,7 @@
+/* Lock Screen widget, Control and Live Activity text (ko). */
+"Open Codex chat" = "Codex 채팅 열기";
+"Open DJL" = "DJL 열기";
+"Quick access to DJL from your Lock Screen." = "잠금 화면에서 DJL을 바로 열어요.";
+"Launch DJL from Control Center." = "제어 센터에서 DJL을 실행해요.";
+"Task status" = "작업 상태";
+"%lld active/paused · %lld failed · %lld ready" = "진행/일시 중지 %lld · 실패 %lld · 준비됨 %lld";

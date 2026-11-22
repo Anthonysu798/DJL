@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../desktop/data/remote_transport.dart' show RemoteRpcException;
 import '../domain/paired_usage.dart';
+import '../../../l10n/l10n.dart';
 
 class PairedUsageController extends ChangeNotifier {
   PairedUsageController(this._read);
@@ -109,8 +110,8 @@ class PairedUsageController extends ChangeNotifier {
           resolved = false;
           stale = false;
           error = e is RemoteRpcException && e.code == -32601
-              ? 'Rate limits are unavailable for this runtime.'
-              : 'Could not load current limits. Try again.';
+              ? appStrings.settingsUsageRuntimeUnavailable
+              : appStrings.settingsUsageLoadFailed;
         }
       } finally {
         if (_current(revision)) {

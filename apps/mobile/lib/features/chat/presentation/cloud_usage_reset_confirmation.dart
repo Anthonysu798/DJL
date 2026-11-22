@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/presentation/cloud_chrome.dart';
 import '../../../core/presentation/djl_glass.dart';
+import '../../../l10n/l10n.dart';
 
 Future<bool> showCloudUsageResetConfirmation(
   BuildContext context,
@@ -17,9 +18,7 @@ Future<bool> showCloudUsageResetConfirmation(
         : const Duration(milliseconds: 150),
     pageBuilder: (context, _, _) {
       final colors = Theme.of(context).colorScheme;
-      final fill = colors.brightness == Brightness.dark
-          ? const Color(0xff161618)
-          : const Color(0xfff2f2f7).withValues(alpha: .97);
+      final fill = colors.surfaceContainerLow;
       final outline = colors.onSurface.withValues(alpha: .14);
       return CustomSingleChildLayout(
         delegate: _UsageReviewLayout(banner, MediaQuery.of(context)),
@@ -57,7 +56,7 @@ Future<bool> showCloudUsageResetConfirmation(
                                   namesRoute: true,
                                   header: true,
                                   child: Text(
-                                    'Use a banked reset?',
+                                    context.l10n.cloudChatUseBankedResetTitle,
                                     textAlign: TextAlign.center,
                                     style: cloudBodyStyle.copyWith(
                                       letterSpacing: 0,
@@ -68,7 +67,7 @@ Future<bool> showCloudUsageResetConfirmation(
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Both your 5-hour and weekly limits start over now, and your week restarts today.',
+                                  context.l10n.cloudChatUseBankedResetBody,
                                   style: cloudBodyStyle.copyWith(
                                     fontSize: 15,
                                     height: 1.3,
@@ -96,7 +95,7 @@ Future<bool> showCloudUsageResetConfirmation(
                           ),
                         ),
                         child: Text(
-                          'Use reset',
+                          context.l10n.cloudChatUseReset,
                           textAlign: TextAlign.center,
                           style: cloudBodyStyle.copyWith(
                             letterSpacing: 0,

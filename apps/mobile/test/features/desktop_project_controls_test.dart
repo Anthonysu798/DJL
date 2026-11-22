@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_project_controls.dart';
+
+import 'package:djl_mobile/core/design/djl_icons.dart';
 
 Future<void> controlsApp(
   WidgetTester tester,
@@ -119,7 +120,7 @@ Future<void> _expectNativeFrames(
       expect(opacity, closeTo(progress.clamp(0, 1), .0001));
     }
     final icon = tester.renderObject<RenderBox>(
-      find.byIcon(CupertinoIcons.chevron_right),
+      find.byIcon(DjlIcons.chevronRight),
     );
     final vector =
         icon.localToGlobal(const Offset(1, 0)) -

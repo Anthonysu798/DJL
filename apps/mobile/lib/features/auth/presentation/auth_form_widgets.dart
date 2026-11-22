@@ -1,6 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 class AuthFormScaffold extends StatelessWidget {
   const AuthFormScaffold({
@@ -12,12 +15,8 @@ class AuthFormScaffold extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) {
-    final background = CupertinoColors.systemGroupedBackground.resolveFrom(
-      context,
-    );
-    final row = CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
-      context,
-    );
+    final background = DjlColors.of(context).surface;
+    final row = DjlColors.of(context).surfaceRaised;
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
@@ -45,7 +44,7 @@ class AuthFormScaffold extends StatelessWidget {
               backgroundColor: row,
               foregroundColor: Theme.of(context).colorScheme.onSurface,
             ),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+            icon: const Icon(DjlIcons.back, size: 20),
           ),
         ),
       ),
@@ -68,9 +67,7 @@ class AuthFieldGroup extends StatelessWidget {
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(26),
     child: ColoredBox(
-      color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
-        context,
-      ),
+      color: DjlColors.of(context).surfaceRaised,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -80,7 +77,7 @@ class AuthFieldGroup extends StatelessWidget {
                 height: .5,
                 thickness: .5,
                 indent: 16,
-                color: CupertinoColors.separator.resolveFrom(context),
+                color: DjlColors.of(context).hairline,
               ),
             children[i],
           ],
@@ -117,13 +114,11 @@ Widget authTextField({
       textInputAction: TextInputAction.newline,
       autofillHints: autofillHints,
       inputFormatters: inputFormatters,
-      cursorColor: CupertinoColors.activeBlue.resolveFrom(context),
+      cursorColor: DjlColors.of(context).ink,
       style: const TextStyle(fontSize: 17, height: 1.2),
       decoration: InputDecoration(
         hintText: placeholder,
-        hintStyle: TextStyle(
-          color: CupertinoColors.placeholderText.resolveFrom(context),
-        ),
+        hintStyle: TextStyle(color: DjlColors.of(context).inkFaint),
         isDense: true,
         filled: false,
         contentPadding: const EdgeInsets.symmetric(
@@ -163,9 +158,7 @@ class AuthFormButton extends StatelessWidget {
             ? Duration.zero
             : kThemeChangeDuration,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
-        disabledForegroundColor: CupertinoColors.tertiaryLabel.resolveFrom(
-          context,
-        ),
+        disabledForegroundColor: DjlColors.of(context).inkFaint,
         minimumSize: const Size(double.infinity, 52),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -198,8 +191,8 @@ class AuthFormFooter extends StatelessWidget {
       style: TextStyle(
         fontSize: 12,
         color: error
-            ? CupertinoColors.systemRed.resolveFrom(context)
-            : CupertinoColors.secondaryLabel.resolveFrom(context),
+            ? DjlColors.of(context).danger
+            : DjlColors.of(context).inkMuted,
       ),
     ),
   );

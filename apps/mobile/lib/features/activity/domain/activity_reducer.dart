@@ -1,5 +1,6 @@
 import '../../pairing/data/pairing_repository.dart';
 import 'desktop_activity.dart';
+import '../../../l10n/l10n.dart';
 
 class ActivityReducer {
   ActivityReducer({DateTime Function()? now}) : _now = now ?? DateTime.now;
@@ -417,9 +418,18 @@ class ActivityReducer {
               '',
       };
       final line = switch (legacyType) {
-        'read' => value.isEmpty ? 'Read file' : 'Read $value',
-        'search' => value.isEmpty ? 'Search files' : 'Search $value',
-        'list_files' => value.isEmpty ? 'List files' : 'List files $value',
+        'read' =>
+          value.isEmpty
+              ? appStrings.activityReadFile
+              : appStrings.activityReadValue(value),
+        'search' =>
+          value.isEmpty
+              ? appStrings.activitySearchFiles
+              : appStrings.activitySearchValue(value),
+        'list_files' =>
+          value.isEmpty
+              ? appStrings.activityListFiles
+              : appStrings.activityListFilesValue(value),
         _ => value.trim(),
       };
       if (line.isEmpty ||
@@ -434,7 +444,7 @@ class ActivityReducer {
       }
       _recentEssential[(thread, turn)] = (line: line, time: _now());
       delta = '$line\n';
-      payload = {'type': 'toolCall', 'name': 'Tool activity'};
+      payload = {'type': 'toolCall', 'name': appStrings.activityToolActivity};
     }
     payload = {
       ...payload,

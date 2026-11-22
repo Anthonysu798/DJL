@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/chat/data/cloud_repository.dart';
 import 'package:djl_mobile/features/chat/domain/cloud_models.dart';
 import 'package:djl_mobile/features/chat/presentation/message_view.dart';
@@ -16,17 +17,13 @@ import '../desktop_recovery_test.dart' show RecoveryMemoryStore;
 
 void main() {
   testWidgets(
-    'Cloud source user text keeps prose font and native neutral bubble',
+    'Cloud source user text keeps prose font and the single ink bubble',
     (tester) async {
       final cloud = client(TestCredentials(), []);
       try {
         await tester.pumpWidget(
           MaterialApp(
-            theme: djlTheme(
-              Brightness.light,
-              font: AppFontStyle.jetBrainsMono,
-              bubble: UserBubbleColor.blue,
-            ),
+            theme: djlTheme(Brightness.light, font: AppFontStyle.jetBrainsMono),
             home: Scaffold(
               body: MessageView(
                 message: ChatMessage(
@@ -47,7 +44,7 @@ void main() {
         );
         expect(plain.data, 'Hello \u0060code\u0060');
         expect(plain.style?.fontFamily, 'JetBrainsMono');
-        expect(plain.style?.color, Colors.black);
+        expect(plain.style?.color, DjlColors.light.onInk);
         expect(find.byType(MarkdownBody), findsNothing);
         final bubble = tester.widget<Container>(
           find.byWidgetPredicate(
@@ -55,13 +52,10 @@ void main() {
                 w is Container &&
                 w.decoration is BoxDecoration &&
                 (w.decoration as BoxDecoration).borderRadius ==
-                    BorderRadius.circular(20),
+                    BorderRadius.circular(DjlRadius.lg),
           ),
         );
-        expect(
-          (bubble.decoration as BoxDecoration).color,
-          const Color(0xfff2f2f7),
-        );
+        expect((bubble.decoration as BoxDecoration).color, DjlColors.light.ink);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -70,7 +64,7 @@ void main() {
     },
   );
   testWidgets(
-    'desktop source tint uses selected appearance without changing composer state',
+    'desktop source bubble stays ink when appearance changes without changing composer state',
     (tester) async {
       final desktop =
           DesktopController(
@@ -91,9 +85,6 @@ void main() {
             theme: djlTheme(
               Brightness.light,
               font: value ? AppFontStyle.jetBrainsMono : AppFontStyle.system,
-              bubble: value
-                  ? UserBubbleColor.blue
-                  : UserBubbleColor.defaultColor,
             ),
             home: DesktopChatPage(controller: desktop),
           ),
@@ -109,15 +100,12 @@ void main() {
       final bubble = tester.widget<Container>(
         find.byKey(const ValueKey('desktop-user-bubble')),
       );
-      expect(
-        (bubble.decoration as BoxDecoration).color,
-        const Color(0xff007aff).withValues(alpha: .1),
-      );
+      expect((bubble.decoration as BoxDecoration).color, DjlColors.light.ink);
       final markdown = tester.widget<MarkdownBody>(
         find.byType(MarkdownBody).first,
       );
       expect(markdown.styleSheet?.code?.fontFamily, 'JetBrainsMono');
-      expect(markdown.styleSheet?.p?.color, const Color(0xff007aff));
+      expect(markdown.styleSheet?.p?.color, DjlColors.light.onInk);
       expect(
         tester
             .widget<TextField>(find.byKey(const Key('desktop_composer')))

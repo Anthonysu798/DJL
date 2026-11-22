@@ -1,4 +1,6 @@
+import '../../reports/presentation/report_sheet.dart';
 import 'package:flutter/material.dart';
+import '../../../core/design/djl_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,11 +9,15 @@ import '../../settings/domain/appearance.dart';
 import '../domain/cloud_models.dart';
 import '../../images/presentation/image_preview_page.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 class MessageView extends StatelessWidget {
   const MessageView({
     super.key,
     required this.message,
     required this.repository,
+    this.onReport,
     this.onRegenerate,
     this.onEdit,
     this.siblings = const [],
@@ -19,13 +25,14 @@ class MessageView extends StatelessWidget {
     this.onSpeak,
     this.speaking = false,
     this.isStreaming = false,
-    this.emptyText = 'No response content.',
+    this.emptyText,
   });
   final ChatMessage message;
   final CloudRepository repository;
   final VoidCallback? onRegenerate, onEdit, onSpeak;
+  final SendReport? onReport;
   final bool speaking, isStreaming;
-  final String emptyText;
+  final String? emptyText;
   final List<ChatMessage> siblings;
   final ValueChanged<ChatMessage>? onSibling;
   int get _branchIndex => siblings.indexWhere((m) => m.id == message.id);
@@ -58,10 +65,8 @@ class MessageView extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: scheme.brightness == Brightness.dark
-                        ? const Color(0xff1c1c1e)
-                        : const Color(0xfff2f2f7),
-                    borderRadius: BorderRadius.circular(20),
+                    color: scheme.primary,
+                    borderRadius: BorderRadius.circular(DjlRadius.lg),
                   ),
                   child: SelectableText(
                     message.text,
@@ -69,7 +74,7 @@ class MessageView extends StatelessWidget {
                       fontFamily: appearance.font.family,
                       fontSize: 15,
                       height: 1.2,
-                      color: scheme.onSurface,
+                      color: scheme.onPrimary,
                     ),
                     contextMenuBuilder: (context, editable) =>
                         AdaptiveTextSelectionToolbar.buttonItems(
@@ -86,7 +91,7 @@ class MessageView extends StatelessWidget {
                             ),
                             if (onEdit != null)
                               ContextMenuButtonItem(
-                                label: 'Edit',
+                                label: context.l10n.cloudChatEdit,
                                 onPressed: () {
                                   editable.hideToolbar();
                                   onEdit!();
@@ -119,7 +124,7 @@ class MessageView extends StatelessWidget {
           if (message.parts.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Text(emptyText),
+              child: Text(emptyText ?? context.l10n.cloudChatNoContent),
             ),
           if (!isStreaming) _assistantActions(context),
         ],
@@ -160,8 +165,8 @@ class MessageView extends StatelessWidget {
     children: [
       _action(
         context,
-        'Previous branch',
-        Icons.chevron_left,
+        context.l10n.cloudChatPreviousBranch,
+        DjlIcons.chevronLeft,
         _branchIndex > 0 && onSibling != null
             ? () => onSibling!(siblings[_branchIndex - 1])
             : null,
@@ -180,8 +185,8 @@ class MessageView extends StatelessWidget {
       const SizedBox(width: 6),
       _action(
         context,
-        'Next branch',
-        Icons.chevron_right,
+        context.l10n.cloudChatNextBranch,
+        DjlIcons.chevronRight,
         _branchIndex < siblings.length - 1 && onSibling != null
             ? () => onSibling!(siblings[_branchIndex + 1])
             : null,
@@ -194,18 +199,32 @@ class MessageView extends StatelessWidget {
     final actions = <Widget>[
       _action(
         context,
-        'Copy message',
-        Icons.copy_outlined,
+        context.l10n.cloudChatCopyMessage,
+        DjlIcons.copy,
         () => Clipboard.setData(ClipboardData(text: message.text)),
       ),
       if (onRegenerate != null)
-        _action(context, 'Regenerate reply', Icons.refresh, onRegenerate),
+        _action(
+          context,
+          context.l10n.cloudChatRegenerateReply,
+          DjlIcons.refresh,
+          onRegenerate,
+        ),
       if (onSpeak != null)
         _action(
           context,
-          speaking ? 'Stop reading' : 'Read aloud',
-          speaking ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
+          speaking
+              ? context.l10n.cloudChatStopReading
+              : context.l10n.cloudChatReadAloud,
+          speaking ? DjlIcons.stopCircle : DjlIcons.speaker,
           onSpeak,
+        ),
+      if (onReport case final send?)
+        _action(
+          context,
+          context.l10n.cloudChatReportAnswer,
+          DjlIcons.flag,
+          () => showReportSheet(context, send),
         ),
     ];
     final model = message.model;
@@ -298,9 +317,7 @@ class MessageView extends StatelessWidget {
       styleSheet: DjlAppearance.of(context).markdown(
         context,
         foreground: message.role == 'user'
-            ? DjlAppearance.of(
-                context,
-              ).bubble.foreground(Theme.of(context).colorScheme)
+            ? Theme.of(context).colorScheme.onPrimary
             : null,
       ),
       onTapLink: (_, url, _) {
@@ -312,7 +329,7 @@ class MessageView extends StatelessWidget {
     'tool_call' => ExpansionTile(
       tilePadding: EdgeInsets.zero,
       title: Text(part['name'] as String),
-      leading: const Icon(Icons.build_outlined, size: 18),
+      leading: const Icon(DjlIcons.tool, size: 18),
       children: [
         SelectableText(
           part['arguments'] as String,
@@ -326,7 +343,12 @@ class MessageView extends StatelessWidget {
     'tool_result' => ExpansionTile(
       tilePadding: EdgeInsets.zero,
       title: Text(
-        '${part['name']} · ${part['isError'] == true ? 'Failed' : 'Done'}',
+        context.l10n.cloudChatToolResult(
+          '${part['name']}',
+          part['isError'] == true
+              ? context.l10n.cloudChatToolFailed
+              : context.l10n.cloudChatToolDone,
+        ),
       ),
       children: [SelectableText(part['content'] as String)],
     ),
@@ -335,7 +357,7 @@ class MessageView extends StatelessWidget {
         Uri.parse(part['url'] as String),
         mode: LaunchMode.externalApplication,
       ),
-      icon: const Icon(Icons.link, size: 16),
+      icon: const Icon(DjlIcons.link, size: 16),
       label: Text(part['title'] as String? ?? part['url'] as String),
     ),
     'image_ref' => InkWell(
@@ -360,10 +382,10 @@ class MessageView extends StatelessWidget {
         final url = await repository.fileUrl(part['fileId'] as String);
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       },
-      icon: const Icon(Icons.description_outlined),
+      icon: const Icon(DjlIcons.document),
       label: Text(part['name'] as String),
     ),
-    _ => const Text('This message contains content requiring a newer version.'),
+    _ => Text(context.l10n.cloudChatNeedsNewerVersion),
   };
 }
 
@@ -394,7 +416,7 @@ class _CloudImageState extends State<CloudImage> {
             // A failed retry can finish before FutureBuilder's next frame.
             _url.ignore();
           }),
-          child: const Text('Image unavailable · Retry'),
+          child: Text(context.l10n.cloudChatImageUnavailableRetry),
         );
       }
       if (!snapshot.hasData) {
@@ -407,10 +429,10 @@ class _CloudImageState extends State<CloudImage> {
         borderRadius: BorderRadius.circular(16),
         child: Image.network(
           snapshot.data!,
-          semanticLabel: 'Conversation image',
+          semanticLabel: context.l10n.cloudChatConversationImage,
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) =>
-              const Text('Could not display this image.'),
+              Text(context.l10n.cloudChatImageDisplayFailed),
         ),
       );
     },

@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../l10n/l10n.dart';
 
 /// The drawer owns the leading edge on these routes; ordinary route Back is
 /// still handled by the Navigator and the page's draft/subagent PopScope.
@@ -160,7 +161,7 @@ class DesktopPhoneDrawerState extends State<DesktopPhoneDrawer>
                               if (progress > 0)
                                 Positioned.fill(
                                   child: Semantics(
-                                    label: 'Close navigation',
+                                    label: context.l10n.chatUiCloseNavigation,
                                     button: true,
                                     onTap: close,
                                     child: GestureDetector(

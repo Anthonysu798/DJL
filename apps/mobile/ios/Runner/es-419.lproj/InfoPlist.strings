@@ -1,0 +1,8 @@
+/* Permission prompts shown by iOS (es-419). */
+"NSCameraUsageDescription" = "Escanea códigos de vinculación de la computadora y adjunta fotos a los mensajes.";
+"NSFaceIDUsageDescription" = "Protege tus sesiones de DJL cuando vuelves a la app.";
+"NSLocalNetworkUsageDescription" = "Conéctate de forma segura a la computadora con DJL vinculada.";
+"NSMicrophoneUsageDescription" = "Usa la entrada de voz cuando tocas el micrófono.";
+"NSPhotoLibraryAddUsageDescription" = "Guarda en tu fototeca las imágenes que elijas de DJL.";
+"NSPhotoLibraryUsageDescription" = "Elige imágenes para adjuntar a los mensajes.";
+"NSSpeechRecognitionUsageDescription" = "Convierte tu voz en texto que puedes editar antes de enviar.";

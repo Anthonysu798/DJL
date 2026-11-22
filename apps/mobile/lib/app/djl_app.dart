@@ -34,8 +34,8 @@ import '../features/settings/presentation/local_settings_page.dart';
 import '../features/settings/presentation/app_lock_controller.dart';
 import '../features/settings/presentation/privacy_shield.dart';
 import 'cloud_deep_link.dart';
-import 'paired_login_callback.dart';
-import '../features/host/domain/paired_login.dart';
+import '../l10n/l10n.dart';
+import '../features/reports/data/content_reporter.dart';
 import '../features/account/data/account_repository.dart';
 import '../features/account/presentation/account_controller.dart';
 import '../features/account/presentation/account_page.dart';
@@ -67,8 +67,15 @@ class DjlApp extends StatefulWidget {
     this.socialIdentity,
     this.remotePushNative,
     this.remotePushStore,
+    this.cloudAccounts = true,
   });
   final CloudClient client;
+
+  /// Whether DJL Cloud sign-in, sign-up and Cloud chat are offered. When
+  /// false, nothing links to them and Cloud links are ignored; pairing, the
+  /// relay and paired-Mac notifications need no account. `main.dart` passes
+  /// the build flag.
+  final bool cloudAccounts;
   final RemotePushNative? remotePushNative;
   final RemotePushStore? remotePushStore;
   final SettingsController? settings;
@@ -92,6 +99,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
   late final DesktopController _desktop;
   late final ConversationController _history;
   late final CloudRepository _repository;
+  late final ContentReporter _reporter = ContentReporter(widget.client);
   final _navigator = GlobalKey<NavigatorState>();
   late final SettingsController _settingsController;
   late final AppLockController _appLock;
@@ -115,16 +123,12 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
   int? _receivedSelectionRevision;
   int? _receivedNavigationRevision;
   int _desktopLinkRevision = 0, _displayedDesktopRevision = -1;
-  bool _startupRestored = false, _routingPairedLink = false;
+  bool _startupRestored = false;
   bool _foreground = true;
   bool _welcomeOptionsRequested = false;
   bool _desktopHistoryRestored = false;
   RootRoute get _currentRootRoute =>
       resolveRootRoute(_section, signedIn: _auth.signedIn);
-  Uri? _pendingPairedLink;
-  DateTime? _pairedLinkReceivedAt;
-  Future<LoginIdentity?>? _pairedLinkIdentity;
-  bool _pairedIdentityReadFailed = false;
   @override
   void initState() {
     super.initState();
@@ -148,7 +152,6 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       widget.statusSurface ?? const MethodChannelStatusSurface(),
     );
     _desktop.attachRunStatus(_runStatus);
-    _desktop.pairedLogin.setAllowed(false);
     _desktop.setRoutingAllowed(false);
     _settingsController.addListener(_settingsChanged);
     _appLock.addListener(_lockChanged);
@@ -176,7 +179,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       onError: (Object _) {},
     );
     unawaited(_initialLink(widget.initialLink ?? links.getInitialLink()));
-    unawaited(_auth.restore());
+    if (widget.cloudAccounts) unawaited(_auth.restore());
     unawaited(_prepareStartup());
   }
 
@@ -184,9 +187,6 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
     if (_preparingStartup) return;
     _preparingStartup = true;
     if (mounted) setState(() => _startupError = null);
-    if (_pendingPairedLink != null && _pairedIdentityReadFailed) {
-      _pairedLinkIdentity = _savedPairedLoginIdentity();
-    }
     try {
       final restored = await Future.wait<Object?>([
         _settingsController.load().then((_) => null),
@@ -197,13 +197,6 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       if (!_settingsController.ready) {
         setState(() => _startupError = _settingsController.error);
         return;
-      }
-      if (_pendingPairedLink != null && _pairedLinkIdentity != null) {
-        await _pairedLinkIdentity;
-        if (!mounted) return;
-        if (_pairedIdentityReadFailed) {
-          throw StateError('Secure pair recovery unavailable.');
-        }
       }
       final trusted = restored[1] as List<Pairing>;
       _desktop.restoreSelection(trusted, restored[2] as String?);
@@ -225,16 +218,14 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       _syncRemoteContext();
       _syncSocialAllowance();
       _desktop.setRoutingAllowed(!_appLock.shielded);
-      _desktop.pairedLogin.setAllowed(!_appLock.shielded);
-      _schedulePairedLink();
       _scheduleDesktopLink();
       if (_pendingCloudLink != null) _scheduleCloudLink();
     } catch (error) {
       if (mounted) {
         setState(
           () => _startupError = error is FormatException
-              ? 'Saved desktop connection details could not be read. Your saved connections have been kept.'
-              : 'Could not restore saved Macs. Unlock your device and retry.',
+              ? context.l10n.appSavedConnectionsUnreadable
+              : context.l10n.appRestoreMacsFailed,
         );
       }
     } finally {
@@ -256,7 +247,6 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
   void _desktopChanged() {
     _syncRemoteContext();
     _scheduleDesktopLink();
-    if (_pendingPairedLink != null) _schedulePairedLink();
     if (_appLock.ready) {
       _appLock.setProtectedContent(
         _desktop.trusted.isNotEmpty || _desktop.active != null,
@@ -269,9 +259,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
     setState(() {});
     _syncSocialAllowance();
     _syncRemoteContext();
-    _desktop.pairedLogin.setAllowed(!_appLock.shielded);
     _desktop.setRoutingAllowed(_startupRestored && !_appLock.shielded);
-    if (_pendingPairedLink != null) _schedulePairedLink();
     if (!_appLock.shielded && _startupRestored) {
       _desktop.resume();
       _scheduleDesktopLink();
@@ -478,25 +466,10 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
 
   void _receiveLink(Uri uri, {bool notification = false}) {
     if (!notification &&
-        (pairedLoginCallback(uri) != null ||
-            DesktopLinkTarget.parse(uri) != null ||
+        (DesktopLinkTarget.parse(uri) != null ||
             cloudConversationId(uri) != null)) {
       _lastOrdinaryLink = DateTime.now();
       _cancelNotificationIntent();
-    }
-    if (pairedLoginCallback(uri) != null) {
-      if (!mounted || _pendingPairedLink != null) return;
-      _linkRevision++;
-      _pendingPairedLink = uri;
-      _pairedLinkReceivedAt = DateTime.now();
-      final pair = _desktop.active;
-      // Capture the original active trusted identity at receipt. A later device
-      // selection must never redirect a cold callback to that new device.
-      _pairedLinkIdentity = pair == null
-          ? _savedPairedLoginIdentity()
-          : Future.value(LoginIdentity(pair.macDeviceId, pair.publicKey));
-      _schedulePairedLink();
-      return;
     }
     final desktopTarget = DesktopLinkTarget.parse(uri);
     if (mounted && desktopTarget != null) {
@@ -517,6 +490,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       _scheduleDesktopLink();
       return;
     }
+    if (!widget.cloudAccounts) return;
     final id = cloudConversationId(uri);
     if (!mounted || id == null) return;
     setState(() => _section = AppSection.cloud);
@@ -648,7 +622,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                   controller: _desktop,
                   focusTarget: target,
                   onSettings: _desktopSettings,
-                  onCloud: _desktopCloud,
+                  onCloud: widget.cloudAccounts ? _desktopCloud : null,
                   runStatus: _runStatus,
                 ),
               ),
@@ -665,60 +639,6 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                   _desktop.navigationNeedsAttempt))) {
         _scheduleDesktopLink();
       }
-    }
-  }
-
-  Future<LoginIdentity?> _savedPairedLoginIdentity() async {
-    _pairedIdentityReadFailed = false;
-    try {
-      final device = await _desktop.pairings.credentials.read('desktop.active');
-      final trusted = await _desktop.pairings.trusted();
-      final pair = trusted.where((p) => p.macDeviceId == device).firstOrNull;
-      return pair == null
-          ? null
-          : LoginIdentity(pair.macDeviceId, pair.publicKey);
-    } catch (_) {
-      _pairedIdentityReadFailed = true;
-      return null;
-    }
-  }
-
-  void _schedulePairedLink() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_routePairedLink());
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
-  Future<void> _routePairedLink() async {
-    final uri = _pendingPairedLink, captured = _pairedLinkIdentity;
-    if (!_startupRestored ||
-        _routingPairedLink ||
-        uri == null ||
-        captured == null) {
-      return;
-    }
-    _routingPairedLink = true;
-    try {
-      final target = await captured;
-      if (!mounted || _pendingPairedLink != uri || _pairedIdentityReadFailed) {
-        return;
-      }
-      if (target != null && _desktop.active == null) return;
-      if (target != null && _desktop.pairedLogin.identity == target) {
-        // While shielded this persists only. Completion waits for root unlock.
-        await _desktop.pairedLogin.receiveCallback(
-          uri,
-          identity: target,
-          receivedAt: _pairedLinkReceivedAt,
-        );
-        if (_desktop.pairedLogin.storageError != null) return;
-      }
-      _pendingPairedLink = null;
-      _pairedLinkIdentity = null;
-      _pairedLinkReceivedAt = null;
-    } finally {
-      _routingPairedLink = false;
     }
   }
 
@@ -754,10 +674,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
         return;
       }
       if (_auth.account == null) {
-        setState(
-          () => _linkError =
-              'Could not open the linked conversation. Check your connection and retry.',
-        );
+        setState(() => _linkError = context.l10n.appLinkedConversationFailed);
         return;
       }
       navigator.popUntil((route) => route.isFirst);
@@ -771,10 +688,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
         _notificationReceivedAt = null;
       }
       if (!opened && mounted && revision == _linkRevision) {
-        setState(
-          () => _linkError =
-              'Account details are still unavailable. Retry the linked conversation when they load.',
-        );
+        setState(() => _linkError = context.l10n.appLinkedAccountUnavailable);
       }
     } finally {
       _routingLink = false;
@@ -889,9 +803,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
         orgId = _auth.account?['activeOrgId'] as String?;
     if (userId == null || orgId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account details are still loading. Please try again.'),
-        ),
+        SnackBar(content: Text(context.l10n.appAccountStillLoading)),
       );
       return false;
     }
@@ -907,17 +819,20 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: _navigator,
     title: 'DJL',
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: _settingsController.language.locale,
+    localeListResolutionCallback: (locales, _) =>
+        resolveAppLocale(locales ?? const []),
     debugShowCheckedModeBanner: false,
     theme: djlTheme(
       Brightness.light,
       font: _settingsController.font,
-      bubble: _settingsController.bubble,
       liquidGlass: _settingsController.liquidGlass,
     ),
     darkTheme: djlTheme(
       Brightness.dark,
       font: _settingsController.font,
-      bubble: _settingsController.bubble,
       liquidGlass: _settingsController.liquidGlass,
     ),
     themeMode: _settingsController.theme,
@@ -930,34 +845,37 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                 .disableAnimations)
         ? Duration.zero
         : kThemeAnimationDuration,
-    builder: (context, child) => PrivacyShield(
-      controller: _appLock,
-      startupError: _startupError,
-      onRetry: _prepareStartup,
-      child: Overlay.wrap(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            child!,
-            if (_cloudInbox case final inbox?)
-              if (inbox.banner case final item?)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: CloudNotificationBanner(
-                        item: item,
-                        onOpen: () => unawaited(_openCloudAlert(inbox, item)),
-                        onDismiss: inbox.dismissBanner,
+    builder: (context, child) => ContentReportScope(
+      reporter: _reporter,
+      child: PrivacyShield(
+        controller: _appLock,
+        startupError: _startupError,
+        onRetry: _prepareStartup,
+        child: Overlay.wrap(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              child!,
+              if (_cloudInbox case final inbox?)
+                if (inbox.banner case final item?)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: CloudNotificationBanner(
+                          item: item,
+                          onOpen: () => unawaited(_openCloudAlert(inbox, item)),
+                          onDismiss: inbox.dismissBanner,
+                        ),
                       ),
                     ),
                   ),
-                ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -985,7 +903,6 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                 _currentRootRoute == RootRoute.myMacs &&
                 !_routingDesktop &&
                 !_routingLink &&
-                !_routingPairedLink &&
                 _desktop.navigationTarget == null &&
                 !_desktop.busy &&
                 _desktop.error == null &&
@@ -995,7 +912,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
             child: PairingPage(
               controller: _desktop,
               onSettings: _desktopSettings,
-              onCloud: _desktopCloud,
+              onCloud: widget.cloudAccounts ? _desktopCloud : null,
               runStatus: _runStatus,
             ),
           ),
@@ -1138,13 +1055,15 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                     : null,
                 onRetry: _statusCoordinator.retryAvailability,
               ),
-              onCloud: () {
-                if (!coverContext.mounted ||
-                    ModalRoute.of(coverContext)?.isCurrent != true) {
-                  return;
-                }
-                _desktopCloud();
-              },
+              onCloud: widget.cloudAccounts
+                  ? () {
+                      if (!coverContext.mounted ||
+                          ModalRoute.of(coverContext)?.isCurrent != true) {
+                        return;
+                      }
+                      _desktopCloud();
+                    }
+                  : null,
               onMyMacs: () {
                 if (!coverContext.mounted ||
                     ModalRoute.of(coverContext)?.isCurrent != true) {
@@ -1232,24 +1151,24 @@ class _RenameCloudChatDialogState extends State<_RenameCloudChatDialog> {
 
   @override
   Widget build(BuildContext context) => CupertinoAlertDialog(
-    title: const Text('Rename chat'),
+    title: Text(context.l10n.appRenameChat),
     content: Padding(
       padding: const EdgeInsets.only(top: 12),
       child: CupertinoTextField(
         controller: _text,
         autofocus: true,
         maxLength: 200,
-        placeholder: 'Title',
+        placeholder: context.l10n.appRenameChatPlaceholder,
       ),
     ),
     actions: [
       CupertinoDialogAction(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.l10n.commonCancel),
       ),
       CupertinoDialogAction(
         onPressed: () => Navigator.pop(context, _text.text.trim()),
-        child: const Text('Save'),
+        child: Text(context.l10n.appSave),
       ),
     ],
   );

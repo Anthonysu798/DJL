@@ -1,0 +1,8 @@
+/* Permission prompts shown by iOS (zh-Hant). */
+"NSCameraUsageDescription" = "掃描電腦端的配對碼，或拍照加入訊息中。";
+"NSFaceIDUsageDescription" = "回到 App 時保護你的 DJL 工作階段。";
+"NSLocalNetworkUsageDescription" = "安全地連線到已配對的電腦版 DJL。";
+"NSMicrophoneUsageDescription" = "點一下麥克風時使用語音輸入。";
+"NSPhotoLibraryAddUsageDescription" = "將你在 DJL 中選擇的圖片儲存到相片圖庫。";
+"NSPhotoLibraryUsageDescription" = "選擇要附加到訊息中的圖片。";
+"NSSpeechRecognitionUsageDescription" = "把語音轉換成可以編輯的訊息文字。";

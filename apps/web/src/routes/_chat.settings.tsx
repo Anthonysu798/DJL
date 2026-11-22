@@ -73,6 +73,7 @@ import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsage
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { RemoteSettingsPanel } from "../components/settings/RemoteSettingsPanel";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
+import { PluginsSettingsPanel } from "../components/plugins/PluginsSettingsPanel";
 import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel";
 import { OpenCodeModelsSettingsPanel } from "../components/settings/OpenCodeModelsSettingsPanel";
 import { HarnessAccountsPanel } from "../components/settings/HarnessAccountsPanel";
@@ -2479,6 +2480,8 @@ function SettingsRouteView() {
         );
       case "profile":
         return <ProfileSettingsPanel />;
+      case "plugins":
+        return <PluginsSettingsPanel />;
       case "skills":
         return <SkillsSettingsPanel />;
       case "usage":

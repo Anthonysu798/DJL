@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
+import '../../l10n/l10n.dart';
 
 const remoteProtocolVersion = 2;
 const remoteHandshakeTag = 'djl-e2ee-v1';
@@ -166,9 +167,7 @@ class RemoteCipher {
         counter is! int ||
         counter <= lastInboundCounter ||
         counter > maxSafeCounter) {
-      throw const RemoteSecurityException(
-        'Invalid or replayed desktop envelope.',
-      );
+      throw RemoteSecurityException(appStrings.coreInvalidDesktopEnvelope);
     }
     try {
       final plaintext = await _aes.decrypt(
@@ -184,8 +183,8 @@ class RemoteCipher {
       lastInboundCounter = counter;
       return payload;
     } catch (_) {
-      throw const RemoteSecurityException(
-        'Could not authenticate the desktop message.',
+      throw RemoteSecurityException(
+        appStrings.coreDesktopMessageUnauthenticated,
       );
     }
   }

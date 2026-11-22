@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/pairing/presentation/device_visibility_switch.dart';
 import 'pairing_presentation_test.dart' show paintedColors;
 
@@ -94,7 +95,7 @@ void main() {
       }
     });
   }
-  testWidgets('dark selected switch uses a white track and black thumb', (
+  testWidgets('dark selected switch uses an ink track and onInk thumb', (
     tester,
   ) async {
     final value = ValueNotifier(true);
@@ -106,7 +107,7 @@ void main() {
         rect.topLeft + const Offset(12, 24),
         rect.topLeft + const Offset(40, 24),
       ]),
-      [Colors.white, Colors.black],
+      [DjlColors.dark.ink, DjlColors.dark.onInk],
     );
   });
 

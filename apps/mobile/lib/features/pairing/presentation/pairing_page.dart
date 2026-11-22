@@ -4,11 +4,8 @@ import 'dart:math' as math;
 import '../../../core/presentation/djl_glass.dart';
 import '../../settings/presentation/settings_group.dart';
 import 'package:flutter/cupertino.dart'
-    show
-        CupertinoActivityIndicator,
-        CupertinoButton,
-        CupertinoColors,
-        CupertinoIcons;
+    show CupertinoActivityIndicator, CupertinoButton;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
@@ -29,6 +26,10 @@ import '../data/pairing_repository.dart';
 import 'device_recency_text.dart';
 import 'device_visibility_switch.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../groups/presentation/groups_controller.dart';
+import '../../../core/design/djl_tokens.dart';
+import '../../../l10n/l10n.dart';
 part 'pairing_entries.dart';
 part 'connections_sheet.dart';
 
@@ -97,11 +98,14 @@ Future<void> _selectSavedDevice(
                             children: [
                               Semantics(
                                 header: true,
-                                child: Text('Switch device?', style: style),
+                                child: Text(
+                                  context.l10n.pairingSwitchDeviceTitle,
+                                  style: style,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'DJL will try to stop in-progress runs on this Mac and reload chats for the other device.',
+                                context.l10n.pairingSwitchDeviceBody,
                                 style: style.copyWith(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w400,
@@ -121,8 +125,7 @@ Future<void> _selectSavedDevice(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context, true),
                             style: TextButton.styleFrom(
-                              foregroundColor: CupertinoColors.systemRed
-                                  .resolveFrom(context),
+                              foregroundColor: DjlColors.of(context).danger,
                               backgroundColor: colors.onSurface.withValues(
                                 alpha: colors.brightness == Brightness.dark
                                     ? .10
@@ -137,7 +140,7 @@ Future<void> _selectSavedDevice(
                               shape: const StadiumBorder(),
                               textStyle: style,
                             ),
-                            child: const Text('Switch'),
+                            child: Text(context.l10n.pairingSwitch),
                           ),
                         ),
                       ),
@@ -174,11 +177,7 @@ class _DeviceSwitchOverlay extends StatelessWidget {
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: ColoredBox(
                   key: const Key('device_switch_progress'),
-                  color: Color(
-                    colors.brightness == Brightness.dark
-                        ? 0xff2c2c2e
-                        : 0xfff2f2f2,
-                  ).withValues(alpha: .9),
+                  color: colors.surfaceContainerLow.withValues(alpha: .9),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
@@ -200,8 +199,8 @@ class _DeviceSwitchOverlay extends StatelessWidget {
                           liveRegion: true,
                           child: Text(
                             desktop.cancellingSwitch
-                                ? 'Cancelling switch…'
-                                : 'Switching device…',
+                                ? context.l10n.pairingCancellingSwitch
+                                : context.l10n.pairingSwitchingDevice,
                             textAlign: TextAlign.center,
                             style: settingsTextStyle(
                               context,
@@ -225,7 +224,7 @@ class _DeviceSwitchOverlay extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         Semantics(
-                          label: 'Cancel switch',
+                          label: context.l10n.pairingCancelSwitch,
                           excludeSemantics: true,
                           button: true,
                           enabled: cancel != null,
@@ -235,7 +234,7 @@ class _DeviceSwitchOverlay extends StatelessWidget {
                             minimumSize: const Size(44, 44),
                             onPressed: cancel,
                             child: Text(
-                              'Cancel',
+                              context.l10n.commonCancel,
                               style: settingsTextStyle(
                                 context,
                                 15,
@@ -275,7 +274,15 @@ class PairingPage extends StatefulWidget {
 
 class _PairingPageState extends State<PairingPage> {
   String _payload = '', _code = '';
-  String _relay = const String.fromEnvironment('DJL_REMOTE_RELAY_URL');
+  late final _groups = GroupsController(DesktopGroupsLink(widget.controller));
+
+  @override
+  void dispose() {
+    _groups.dispose();
+    super.dispose();
+  }
+
+  String _relay = defaultRelayUrl();
 
   bool get _canAdd => widget.controller.canEnterManualPairing;
 
@@ -517,20 +524,20 @@ class _PairingPageState extends State<PairingPage> {
         desktop.navigationError ??
             (desktop.navigationNeedsHost
                 ? desktop.navigationTarget?.qualified == true
-                      ? 'Choose the saved Mac matching this link’s verified identity.'
-                      : 'Choose a saved Mac to open the linked conversation.'
-                : 'Opening linked desktop conversation…'),
+                      ? context.l10n.pairingChooseMatchingMac
+                      : context.l10n.pairingChooseMacForLink
+                : context.l10n.pairingOpeningLinkedConversation),
       ),
       Wrap(
         children: [
           if (!desktop.navigationNeedsHost && desktop.navigationTarget != null)
             TextButton(
               onPressed: () => desktop.routeNavigation(retry: true),
-              child: const Text('Retry desktop link'),
+              child: Text(context.l10n.pairingRetryDesktopLink),
             ),
           TextButton(
             onPressed: desktop.cancelNavigation,
-            child: const Text('Cancel desktop link'),
+            child: Text(context.l10n.pairingCancelDesktopLink),
           ),
         ],
       ),
@@ -541,7 +548,7 @@ class _PairingPageState extends State<PairingPage> {
           ListTile(
             enabled: !desktop.busy,
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.verified_user_outlined),
+            leading: const Icon(DjlIcons.shieldCheck),
             title: Text(desktop.deviceName(pair)),
             subtitle: Text(
               desktop.navigationTarget?.qualified == true
@@ -549,9 +556,9 @@ class _PairingPageState extends State<PairingPage> {
                           pair.macDeviceId,
                           pair.publicKey,
                         )
-                        ? 'Matches this link’s verified identity'
-                        : 'Different desktop identity'
-                  : 'Saved, verified desktop identity',
+                        ? context.l10n.pairingMatchesLinkIdentity
+                        : context.l10n.pairingDifferentIdentity
+                  : context.l10n.pairingSavedVerifiedIdentity,
             ),
             onTap: desktop.busy
                 ? null
@@ -563,10 +570,7 @@ class _PairingPageState extends State<PairingPage> {
   void _openHost(DesktopController desktop) {
     Navigator.push<void>(
       context,
-      MaterialPageRoute(
-        builder: (_) =>
-            HostPage(controller: desktop.host, login: desktop.pairedLogin),
-      ),
+      MaterialPageRoute(builder: (_) => HostPage(controller: desktop.host)),
     );
   }
 
@@ -614,7 +618,10 @@ class _PairingPageState extends State<PairingPage> {
               FilledButton(
                 style: style,
                 onPressed: desktop.busy ? null : desktop.reconnect,
-                child: const Text('Reconnect', textAlign: TextAlign.center),
+                child: Text(
+                  context.l10n.pairingReconnect,
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 20),
             ] else if (desktop.active == null &&
@@ -622,7 +629,7 @@ class _PairingPageState extends State<PairingPage> {
               FilledButton(
                 onPressed: _connections,
                 style: style,
-                child: const Text('Connections'),
+                child: Text(context.l10n.pairingConnections),
               ),
               const SizedBox(height: 20),
             ],
@@ -630,20 +637,29 @@ class _PairingPageState extends State<PairingPage> {
               OutlinedButton(
                 style: secondaryStyle,
                 onPressed: _canAdd ? _scan : null,
-                child: const Text('Scan QR Code', textAlign: TextAlign.center),
+                child: Text(
+                  context.l10n.pairingScanQrCode,
+                  textAlign: TextAlign.center,
+                ),
               )
             else
               FilledButton(
                 style: style,
                 onPressed: _canAdd ? _scan : null,
-                child: const Text('Scan QR Code', textAlign: TextAlign.center),
+                child: Text(
+                  context.l10n.pairingScanQrCode,
+                  textAlign: TextAlign.center,
+                ),
               ),
             const SizedBox(height: 20),
             OutlinedButton.icon(
               style: secondaryStyle,
               onPressed: _canAdd ? _pairWithCode : null,
-              icon: const Icon(CupertinoIcons.keyboard, size: 14),
-              label: const Text('Pair with Code', textAlign: TextAlign.center),
+              icon: const Icon(DjlIcons.keyboard, size: 14),
+              label: Text(
+                context.l10n.pairingPairWithCode,
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -669,16 +685,16 @@ class _PairingPageState extends State<PairingPage> {
 
   Widget _emptyPanel(DesktopController desktop) {
     final theme = Theme.of(context);
-    final tertiary = CupertinoColors.tertiaryLabel.resolveFrom(context);
+    final tertiary = DjlColors.of(context).inkFaint;
     final firstPairing = desktop.active == null && desktop.trusted.isEmpty;
     final title =
         desktop.selectedDeviceName ??
         (desktop.trusted.isEmpty
-            ? 'Connect to DJL Desktop'
-            : 'Choose a saved Mac');
+            ? context.l10n.pairingConnectToDesktop
+            : context.l10n.pairingChooseSavedMac);
     final detail = firstPairing && !desktop.busy
-        ? 'Open DJL on your Mac or Windows PC, then go to Settings → Remote.'
-        : desktop.state;
+        ? context.l10n.pairingFirstPairingHint
+        : connectionStateLabel(context, desktop.state);
     final warning =
         detail.toLowerCase().contains('not paired') ||
         detail.toLowerCase().contains('re-pair required') ||
@@ -745,11 +761,9 @@ class _PairingPageState extends State<PairingPage> {
                         children: [
                           if (warning) ...[
                             Icon(
-                              CupertinoIcons.exclamationmark_triangle_fill,
+                              DjlIcons.warningFill,
                               size: 10,
-                              color: CupertinoColors.systemOrange.resolveFrom(
-                                context,
-                              ),
+                              color: DjlColors.of(context).ink,
                             ),
                             const SizedBox(width: 6),
                           ],
@@ -783,6 +797,15 @@ class _PairingPageState extends State<PairingPage> {
                 TextButton(
                   onPressed: widget.onCloud,
                   child: const Text('DJL Cloud'),
+                ),
+              if (firstPairing)
+                TextButton(
+                  key: const Key('pairing.getDesktop'),
+                  onPressed: () => launchUrl(
+                    Uri.parse('https://www.slcor.com/'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Text(context.l10n.pairingGetDesktop),
                 ),
             ],
           ),
@@ -830,6 +853,7 @@ class _PairingPageState extends State<PairingPage> {
           onQuickChat: _startChat,
           onChat: _chat,
           onSettings: widget.onSettings,
+          groups: _groups,
           emptyPanel: _emptyPanel(desktop),
           feedback: _feedback(desktop),
           navigationNotice:
@@ -869,7 +893,7 @@ class _ScannerPageState extends State<_ScannerPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Scan DJL desktop QR')),
+    appBar: AppBar(title: Text(context.l10n.pairingScanTitle)),
     body: MobileScanner(
       controller: _scanner,
       onDetect: (capture) {
@@ -887,16 +911,15 @@ class _ScannerPageState extends State<_ScannerPage> {
             children: [
               Text(switch (error.errorCode) {
                 MobileScannerErrorCode.permissionDenied =>
-                  'Camera access is denied. You can paste the pairing code instead.',
+                  context.l10n.pairingCameraDenied,
                 MobileScannerErrorCode.unsupported =>
-                  'QR scanning is not available on this device. You can paste the pairing code instead.',
-                _ =>
-                  'The camera is unavailable. You can paste the pairing code instead.',
+                  context.l10n.pairingScanUnsupported,
+                _ => context.l10n.pairingCameraUnavailable,
               }),
               TextButton(
                 onPressed: () =>
                     Navigator.pop(context, _ScannerPage.pasteFallback),
-                child: const Text('Paste pairing code'),
+                child: Text(context.l10n.pairingPasteCode),
               ),
             ],
           ),

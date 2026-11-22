@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { readAcpModels } from "./acp";
+import { acpPluginServers, readAcpModels } from "./acp";
+
+describe("ACP plugin servers", () => {
+  const plugins = {
+    bearerToken: "session-token",
+    servers: [{ name: "djl_linear", url: "http://127.0.0.1:5000/mcp/linear" }],
+  };
+  it("offers plugins over HTTP to an agent that supports it", () => {
+    expect(
+      acpPluginServers({ agentCapabilities: { mcpCapabilities: { http: true } } }, plugins),
+    ).toEqual([
+      {
+        type: "http",
+        name: "djl_linear",
+        url: "http://127.0.0.1:5000/mcp/linear",
+        headers: [{ name: "Authorization", value: "Bearer session-token" }],
+      },
+    ]);
+  });
+  it("offers nothing to an agent without HTTP tool servers, or when no plugin is connected", () => {
+    expect(acpPluginServers({ agentCapabilities: {} }, plugins)).toEqual([]);
+    expect(acpPluginServers({}, plugins)).toEqual([]);
+    expect(
+      acpPluginServers({ agentCapabilities: { mcpCapabilities: { http: true } } }, undefined),
+    ).toEqual([]);
+  });
+});
 
 describe("ACP model discovery", () => {
   it("reads grouped model configuration choices without confusing thinking controls for models", () => {

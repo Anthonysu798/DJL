@@ -10,6 +10,7 @@ const { version: bridgePackageVersion } = require("../package.json");
 
 const {
   composeAccountStatus,
+  composeDesktopHostStatus,
   composeSanitizedAuthStatusFromSettledResults,
   redactAuthStatus,
 } = require("../src/account-status");
@@ -422,4 +423,24 @@ test("composeSanitizedAuthStatusFromSettledResults fails when both auth reads fa
       }),
     (error) => error?.errorCode === "auth_status_unavailable",
   );
+});
+
+test("composeDesktopHostStatus reports the DJL app version and no ChatGPT sign-in", () => {
+  const status = composeDesktopHostStatus({
+    desktopVersion: "0.5.12",
+    transportMode: "djl-electron",
+    hostPlatform: "darwin",
+  });
+
+  assert.equal(status.bridgeVersion, "0.5.12");
+  assert.equal(status.bridgeLatestVersion, null);
+  assert.equal(status.status, "not_logged_in");
+  assert.equal(status.tokenReady, false);
+  assert.deepEqual(status.hostCapabilities, {
+    desktopHandoff: true,
+    displayWake: true,
+    keepAwake: true,
+    hostBrowserLogin: false,
+    bridgeUpdate: true,
+  });
 });

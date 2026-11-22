@@ -7,6 +7,7 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import type { OrchestrationThreadActivity } from "@synara/contracts";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
+import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { CircleAlertIcon, XIcon } from "~/lib/icons";
 import type { AppTranslate } from "~/i18n/AppTranslate";
@@ -57,43 +58,63 @@ function formatResetsAt(resetsAt: string, t: AppTranslate): string {
 }
 
 export const RateLimitBanner = memo(function RateLimitBanner({
+  notice,
   onDismiss,
   rateLimitStatus,
+  switchAction,
 }: {
+  /** Shown when the provider reports no status, e.g. a limit read from usage data. */
+  notice?: string | null;
   onDismiss?: () => void;
   rateLimitStatus: RateLimitStatus | null;
+  /** Offers to continue the chat with another agent. */
+  switchAction?: { label: string; onClick: () => void; disabled?: boolean } | null;
 }) {
   const { t } = useTranslation("chat");
-  if (!rateLimitStatus) return null;
+  if (!rateLimitStatus && !notice) return null;
 
-  const { status, resetsAt, utilization } = rateLimitStatus;
-  const isRejected = status === "rejected";
-
-  const reset = resetsAt ? formatResetsAt(resetsAt, t) : "";
-  const message = isRejected
-    ? t("health.rateLimit.reached", { reset })
-    : t("health.rateLimit.approaching", {
-        reset,
-        utilization:
-          utilization === undefined
-            ? ""
-            : t("health.rateLimit.utilization", { percent: Math.round(utilization * 100) }),
-      });
+  const isRejected = rateLimitStatus?.status === "rejected";
+  let message = notice ?? "";
+  if (rateLimitStatus) {
+    const { resetsAt, utilization } = rateLimitStatus;
+    const reset = resetsAt ? formatResetsAt(resetsAt, t) : "";
+    message = isRejected
+      ? t("health.rateLimit.reached", { reset })
+      : t("health.rateLimit.approaching", {
+          reset,
+          utilization:
+            utilization === undefined
+              ? ""
+              : t("health.rateLimit.utilization", { percent: Math.round(utilization * 100) }),
+        });
+  }
 
   return (
     <ChatColumnBannerFrame>
       <Alert variant={isRejected ? "error" : "warning"}>
         <CircleAlertIcon />
         <AlertDescription>{message}</AlertDescription>
-        {onDismiss ? (
+        {onDismiss || switchAction ? (
           <AlertAction>
-            <IconButton
-              label={t("health.dismissRateLimit")}
-              title={t("health.dismissRateLimit")}
-              onClick={onDismiss}
-            >
-              <XIcon className="size-3.5" />
-            </IconButton>
+            {switchAction ? (
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={switchAction.disabled}
+                onClick={switchAction.onClick}
+              >
+                {switchAction.label}
+              </Button>
+            ) : null}
+            {onDismiss ? (
+              <IconButton
+                label={t("health.dismissRateLimit")}
+                title={t("health.dismissRateLimit")}
+                onClick={onDismiss}
+              >
+                <XIcon className="size-3.5" />
+              </IconButton>
+            ) : null}
           </AlertAction>
         ) : null}
       </Alert>

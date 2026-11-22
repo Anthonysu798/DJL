@@ -7,6 +7,7 @@ import 'package:djl_mobile/features/desktop/presentation/desktop_composer_panel.
 import 'desktop_question_cancellation_test.dart'
     show QuestionCancelTransport, questionPrompt;
 import 'desktop_history_reconciliation_test.dart' show historyDesktop;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 bool composerFocused(WidgetTester tester) {
   final finder = find.descendant(

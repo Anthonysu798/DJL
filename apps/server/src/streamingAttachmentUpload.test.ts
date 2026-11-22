@@ -86,6 +86,68 @@ describe("streaming attachment uploads", () => {
     }
   });
 
+  it("accepts source files as plain text under their own extension", () => {
+    const header = new TextEncoder().encode('def greet(name):\n    return f"Hi {name}"\n');
+    for (const declaredMimeType of ["text/x-python", "application/octet-stream", ""]) {
+      expect(detectUploadedMediaType({ name: "greet.py", declaredMimeType, header })).toEqual({
+        type: "file",
+        mediaType: "text/plain",
+        extension: ".py",
+      });
+    }
+    expect(
+      detectUploadedMediaType({
+        name: "notes.md",
+        declaredMimeType: "text/markdown",
+        header: new TextEncoder().encode("# Notes"),
+      }),
+    ).toMatchObject({ mediaType: "text/plain", extension: ".md" });
+    expect(() =>
+      detectUploadedMediaType({
+        name: "tool.py",
+        declaredMimeType: "text/x-python",
+        header: new Uint8Array([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01]),
+      }),
+    ).toThrow(/Unsupported document format/);
+    expect(() =>
+      detectUploadedMediaType({
+        name: "page.html",
+        declaredMimeType: "text/html",
+        header: new TextEncoder().encode("<script>alert(1)</script>"),
+      }),
+    ).toThrow(/Unsupported document format/);
+    expect(() =>
+      detectUploadedMediaType({
+        name: "main.ts",
+        declaredMimeType: "video/mp2t",
+        header: new TextEncoder().encode("export const a = 1;"),
+      }),
+    ).toThrow(/does not match/);
+  });
+
+  it("reports an unsupported upload as a failure and keeps no partial file", async () => {
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-stream-upload-type-"));
+    try {
+      const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x01]);
+      // `flip` succeeds with a failure's error; a defect would still reject.
+      const error = await Effect.runPromise(
+        persistStreamingAttachment({
+          attachmentsDir,
+          threadId: "thread-1",
+          name: "bundle.bin",
+          declaredMimeType: "application/octet-stream",
+          expectedSizeBytes: bytes.byteLength,
+          stream: Stream.make(bytes),
+        }).pipe(Effect.flip, Effect.provide(NodeServices.layer)),
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(/ZIP-based document format/);
+      expect(fs.readdirSync(attachmentsDir)).toEqual([]);
+    } finally {
+      fs.rmSync(attachmentsDir, { recursive: true, force: true });
+    }
+  });
+
   it("removes the partial upload when the streamed limit is exceeded", async () => {
     const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-stream-upload-limit-"));
     try {

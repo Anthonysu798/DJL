@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,6 +5,11 @@ import '../domain/git_branch_picker_models.dart';
 import '../domain/git_creation_review.dart';
 import 'git_controller.dart';
 import 'git_new_branch_dialog.dart';
+import '../../../l10n/l10n.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
 
 Future<GitBranchChoice?> showGitBranchPicker({
   required BuildContext context,
@@ -44,7 +48,7 @@ Future<T?> showGitBranchSurface<T>({
     context: context,
     useRootNavigator: false,
     barrierDismissible: true,
-    barrierLabel: 'Dismiss branch picker',
+    barrierLabel: context.l10n.gitDismissBranchPicker,
     barrierColor: Colors.transparent,
     requestFocus: true,
     transitionDuration: const Duration(milliseconds: 180),
@@ -181,7 +185,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
 
   Widget _badge(String title) => DecoratedBox(
     decoration: BoxDecoration(
-      color: CupertinoColors.secondarySystemFill.resolveFrom(context),
+      color: DjlColors.of(context).surfaceRaised,
       borderRadius: BorderRadius.circular(99),
     ),
     child: Padding(
@@ -206,8 +210,8 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
     final selected = branch == snapshot.currentBranch;
     final badge = snapshot.badge(branch);
     final labels = [
-      if (selected) 'Current',
-      if (branch == snapshot.defaultBranch) 'Default',
+      if (selected) context.l10n.gitBadgeCurrent,
+      if (branch == snapshot.defaultBranch) context.l10n.gitBadgeDefault,
       ?badge,
     ];
     final enabled = _ready && snapshot.selectable(branch);
@@ -269,7 +273,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                   const SizedBox(width: 8),
                   if (selected)
                     Icon(
-                      Icons.check,
+                      DjlIcons.check,
                       size: 18,
                       color: enabled
                           ? colors.onSurface
@@ -345,7 +349,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
             scopesRoute: true,
             namesRoute: true,
             explicitChildNodes: true,
-            label: 'Current Branch',
+            label: context.l10n.gitCurrentBranch,
             child: Material(
               color: colors.surfaceContainerLow,
               elevation: 12,
@@ -363,7 +367,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Current Branch',
+                            context.l10n.gitCurrentBranch,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   fontSize: 17,
@@ -372,9 +376,9 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Close branch picker',
+                          tooltip: context.l10n.gitCloseBranchPicker,
                           onPressed: _close,
-                          icon: const Icon(Icons.close, size: 18),
+                          icon: const Icon(DjlIcons.close, size: 18),
                         ),
                       ],
                     ),
@@ -383,34 +387,32 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                       children: !_current
-                          ? [
-                              const Text(
-                                'Thread or desktop changed. Close and reopen the branch picker.',
-                              ),
-                            ]
+                          ? [Text(context.l10n.gitBranchPickerStale)]
                           : [
                               Semantics(
-                                label: 'Search branches',
+                                label: context.l10n.gitSearchBranches,
                                 child: TextField(
                                   controller: _search,
                                   autocorrect: false,
                                   textCapitalization: TextCapitalization.none,
                                   onChanged: (_) => setState(() {}),
                                   decoration: InputDecoration(
-                                    hintText: 'Search branches',
+                                    hintText: context.l10n.gitSearchBranches,
                                     isDense: true,
                                     prefixIcon: const Icon(
-                                      Icons.search,
+                                      DjlIcons.search,
                                       size: 18,
                                     ),
                                     suffixIcon: _search.text.isEmpty
                                         ? null
                                         : IconButton(
-                                            tooltip: 'Clear branch search',
+                                            tooltip: context
+                                                .l10n
+                                                .gitClearBranchSearch,
                                             onPressed: () =>
                                                 setState(_search.clear),
                                             icon: const Icon(
-                                              Icons.close,
+                                              DjlIcons.close,
                                               size: 18,
                                             ),
                                           ),
@@ -423,7 +425,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                   bottom: 6,
                                 ),
                                 child: Text(
-                                  'Branches',
+                                  context.l10n.gitBranches,
                                   style: Theme.of(context).textTheme.labelMedium
                                       ?.copyWith(
                                         color: colors.onSurfaceVariant,
@@ -455,13 +457,13 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      const Text(
-                                        'No branches found',
+                                      Text(
+                                        context.l10n.gitNoBranchesFound,
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Try a different search or refresh the branch list.',
+                                        context.l10n.gitNoBranchesHint,
                                         textAlign: TextAlign.center,
                                         style: Theme.of(context)
                                             .textTheme
@@ -475,7 +477,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                 ),
                               if (suggestion != null)
                                 _action(
-                                  "Create and checkout '$suggestion'",
+                                  context.l10n.gitCreateAndCheckout(suggestion),
                                   !_ready
                                       ? null
                                       : () {
@@ -488,16 +490,16 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                             ));
                                           }
                                         },
-                                  icon: Icons.add,
+                                  icon: DjlIcons.add,
                                 ),
                               _action(
-                                'New branch...',
+                                context.l10n.gitNewBranchEllipsis,
                                 _ready
                                     ? () {
                                         _newBranch();
                                       }
                                     : null,
-                                icon: Icons.add,
+                                icon: DjlIcons.add,
                               ),
                               if (c.error != null)
                                 Padding(
@@ -509,10 +511,10 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                                 ),
                               _action(
                                 c.busy
-                                    ? 'Switching...'
+                                    ? context.l10n.gitSwitching
                                     : c.loading
-                                    ? 'Refreshing...'
-                                    : 'Reload branch list',
+                                    ? context.l10n.gitRefreshing
+                                    : context.l10n.gitReloadBranchList,
                                 _current && !c.loading && !c.busy
                                     ? () {
                                         _reload();
