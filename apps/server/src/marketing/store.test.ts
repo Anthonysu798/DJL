@@ -1,7 +1,7 @@
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { readDocument, saveDocument } from "./store";
 
 it.layer(SqlitePersistenceMemory)("marketing persistence", (it) => {

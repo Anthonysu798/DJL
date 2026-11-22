@@ -1,5 +1,5 @@
 "use client";
-import type { CloudImageRefPart } from "@synara/contracts/cloud";
+import type { CloudImageRefPart } from "@djl/contracts/cloud";
 import { Download, ImageOff, Link2, Minus, Pencil, Plus, X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useRef, useState, type PointerEvent, type WheelEvent } from "react";

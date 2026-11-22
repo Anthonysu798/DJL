@@ -3,7 +3,7 @@
 // Layer: Route
 // Exports: Route
 
-import { GroupId } from "@synara/contracts";
+import { GroupId } from "@djl/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { MultiAgentsScreen } from "~/multiAgents/MultiAgentsScreen";

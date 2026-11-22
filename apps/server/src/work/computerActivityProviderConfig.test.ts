@@ -103,7 +103,7 @@ describe("isolated activity Codex configuration", () => {
     "PATH",
     "HOME",
     "BASH_ENV",
-    "SYNARA_BROWSER_USE_PIPE_PATH",
+    "DJL_BROWSER_USE_PIPE_PATH",
     "CODEX_LOG_DIR",
     "OPENCODE_SERVER_PASSWORD",
     "RUST_LOG",

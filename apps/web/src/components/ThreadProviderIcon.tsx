@@ -1,4 +1,4 @@
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind, type ThreadId } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, type ProviderKind, type ThreadId } from "@djl/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { ProviderIcon } from "./ProviderIcon";
 

@@ -5,7 +5,7 @@
 // Layer: Web chat composer tests
 // Depends on: shouldShowComputerControlEffortHint, getComposerTraitSelection
 
-import { type ClaudeModelOptions } from "@synara/contracts";
+import { type ClaudeModelOptions } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { buildNextProviderOptions, type ProviderOptions } from "../../providerModelOptions";

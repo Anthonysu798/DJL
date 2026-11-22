@@ -7,7 +7,7 @@ import type {
   WorkTaskPhase,
   WorkTaskProgress,
   WorkTaskStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export interface WorkTaskTransition {
   readonly action: WorkTaskAction;

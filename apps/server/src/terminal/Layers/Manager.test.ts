@@ -7,7 +7,7 @@ import {
   type TerminalEvent,
   type TerminalOpenInput,
   type TerminalRestartInput,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -234,7 +234,7 @@ describe("TerminalManager", () => {
       ptyAdapter?: FakePtyAdapter;
     } = {},
   ) {
-    const logsDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-terminal-"));
+    const logsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-terminal-"));
     tempDirs.push(logsDir);
     const ptyAdapter = options.ptyAdapter ?? new FakePtyAdapter();
     const manager = new TerminalManagerRuntime({
@@ -455,7 +455,7 @@ describe("TerminalManager", () => {
     const { manager } = makeManager();
     const events: TerminalEvent[] = [];
     manager.on("event", (event) => events.push(event));
-    await manager.open(openInput({ env: { SYNARA_TERMINAL_CLI_KIND: "kimi" } }));
+    await manager.open(openInput({ env: { DJL_TERMINAL_CLI_KIND: "kimi" } }));
     await manager.write({ threadId: "thread-1", data: "Reply with exactly OK\r" });
     expect(events.findLast((event) => event.type === "activity")?.cliKind).toBe("kimi");
     manager.dispose();
@@ -469,7 +469,7 @@ describe("TerminalManager", () => {
     if (!process) return;
 
     const snapshot = await manager.open(
-      openInput({ cwd: logsDir, env: { SYNARA_TERMINAL_TEST: "changed" } }),
+      openInput({ cwd: logsDir, env: { DJL_TERMINAL_TEST: "changed" } }),
     );
 
     expect(snapshot.cwd).toBe(globalThis.process.cwd());
@@ -493,7 +493,7 @@ describe("TerminalManager", () => {
     const snapshot = await manager.open(
       openInput({
         cwd: path.join(logsDir, "deleted-project"),
-        env: { SYNARA_TERMINAL_TEST: "changed" },
+        env: { DJL_TERMINAL_TEST: "changed" },
       }),
     );
 
@@ -881,7 +881,7 @@ describe("TerminalManager", () => {
     const events: TerminalEvent[] = [];
     manager.on("event", (event) => events.push(event));
     try {
-      await manager.open(openInput({ env: { SYNARA_TERMINAL_CLI_KIND: "kimi" } }));
+      await manager.open(openInput({ env: { DJL_TERMINAL_CLI_KIND: "kimi" } }));
       await waitFor(
         () => events.some((event) => event.type === "activity" && event.cliKind === null),
         1200,
@@ -1339,7 +1339,7 @@ describe("TerminalManager", () => {
     };
 
     setEnv("PORT", "5173");
-    setEnv("SYNARA_PORT", "3773");
+    setEnv("DJL_PORT", "3773");
     setEnv("VITE_DEV_SERVER_URL", "http://localhost:5173");
     setEnv("TEST_TERMINAL_KEEP", "keep-me");
 
@@ -1351,7 +1351,7 @@ describe("TerminalManager", () => {
       if (!spawnInput) return;
 
       expect(spawnInput.env.PORT).toBeUndefined();
-      expect(spawnInput.env.SYNARA_PORT).toBeUndefined();
+      expect(spawnInput.env.DJL_PORT).toBeUndefined();
       expect(spawnInput.env.VITE_DEV_SERVER_URL).toBeUndefined();
       expect(spawnInput.env.TEST_TERMINAL_KEEP).toBe("keep-me");
 
@@ -1448,8 +1448,8 @@ describe("TerminalManager", () => {
     await manager.open(
       openInput({
         env: {
-          SYNARA_PROJECT_ROOT: "/repo",
-          SYNARA_WORKTREE_PATH: "/repo/worktree-a",
+          DJL_PROJECT_ROOT: "/repo",
+          DJL_WORKTREE_PATH: "/repo/worktree-a",
           CUSTOM_FLAG: "1",
         },
       }),
@@ -1458,8 +1458,8 @@ describe("TerminalManager", () => {
     expect(spawnInput).toBeDefined();
     if (!spawnInput) return;
 
-    expect(spawnInput.env.SYNARA_PROJECT_ROOT).toBe("/repo");
-    expect(spawnInput.env.SYNARA_WORKTREE_PATH).toBe("/repo/worktree-a");
+    expect(spawnInput.env.DJL_PROJECT_ROOT).toBe("/repo");
+    expect(spawnInput.env.DJL_WORKTREE_PATH).toBe("/repo/worktree-a");
     expect(spawnInput.env.CUSTOM_FLAG).toBe("1");
 
     manager.dispose();

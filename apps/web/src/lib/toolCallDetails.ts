@@ -4,7 +4,7 @@
 // Exports: deriveWorkLogToolDetails, mergeWorkLogToolDetails
 // Depends on: provider runtime item metadata already truncated by server ingestion
 
-import type { ProviderRequestKind, ToolLifecycleItemType } from "@synara/contracts";
+import type { ProviderRequestKind, ToolLifecycleItemType } from "@djl/contracts";
 
 type WorkLogRequestKind = ProviderRequestKind;
 
@@ -205,7 +205,7 @@ function extractToolOutputDetails(input: {
     result?.exitCode,
     outputExitCode(input.detail),
   );
-  const truncated = rawOutput?.truncated === true || data?.__synaraTruncated === true;
+  const truncated = rawOutput?.truncated === true || data?.__djlTruncated === true;
   if (!stdout && !stderr && !output && exitCode === undefined && !truncated) {
     return undefined;
   }

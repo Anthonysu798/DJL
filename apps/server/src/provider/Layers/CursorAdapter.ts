@@ -21,8 +21,8 @@ import {
   type RuntimeMode,
   type ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@djl/contracts";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import {
   DateTime,
   Deferred,
@@ -109,9 +109,9 @@ const CURSOR_RESUME_VERSION = 1 as const;
 const CURSOR_MODEL_DISCOVERY_TIMEOUT_MS = 15_000;
 // Backstop for an alive-but-silent cursor-agent child: if a turn produces no
 // ACP activity for this long, force-fail it instead of showing "Working"
-// forever. Generous by design; override with SYNARA_CURSOR_TURN_IDLE_TIMEOUT_MS.
+// forever. Generous by design; override with DJL_CURSOR_TURN_IDLE_TIMEOUT_MS.
 const CURSOR_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
-  envVar: "SYNARA_CURSOR_TURN_IDLE_TIMEOUT_MS",
+  envVar: "DJL_CURSOR_TURN_IDLE_TIMEOUT_MS",
   defaultMs: 600_000,
 });
 const CURSOR_TURN_WATCHDOG_INTERVAL_MS = 15_000;

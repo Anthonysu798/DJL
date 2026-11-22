@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { annotationBootstrapSource } from "@synara/shared/browserAnnotationBootstrap";
+import { annotationBootstrapSource } from "@djl/shared/browserAnnotationBootstrap";
 
 describe("browser annotation iframe fallback DOM isolation", () => {
   afterEach(() => {
     const runtime = (
       globalThis as typeof globalThis & {
-        __synaraBrowserAnnotations?: { dispose: () => void };
+        __djlBrowserAnnotations?: { dispose: () => void };
       }
-    ).__synaraBrowserAnnotations;
+    ).__djlBrowserAnnotations;
     runtime?.dispose();
     document.body.replaceChildren();
   });
@@ -32,17 +32,17 @@ describe("browser annotation iframe fallback DOM isolation", () => {
     Function(annotationBootstrapSource(bindingName))();
     const runtime = (
       globalThis as typeof globalThis & {
-        __synaraBrowserAnnotations: {
+        __djlBrowserAnnotations: {
           command: (command: { type: "enable" }) => void;
         };
       }
-    ).__synaraBrowserAnnotations;
+    ).__djlBrowserAnnotations;
     runtime.command({ type: "enable" });
 
     const x = 80;
     const y = 80;
     const hitTarget = document.elementFromPoint(x, y);
-    expect(hitTarget?.getAttribute("data-synara-annotation-overlay")).toBe("true");
+    expect(hitTarget?.getAttribute("data-djl-annotation-overlay")).toBe("true");
     hitTarget?.dispatchEvent(
       new PointerEvent("pointerup", {
         bubbles: true,
@@ -67,7 +67,7 @@ describe("browser annotation iframe fallback DOM isolation", () => {
     document.body.append(pageFrame);
 
     const overlay = document.createElement("div");
-    overlay.dataset.synaraAnnotationOverlay = "true";
+    overlay.dataset.djlAnnotationOverlay = "true";
     const overlayRoot = overlay.attachShadow({ mode: "closed" });
     const iframeLayer = document.createElement("div");
     overlayRoot.append(iframeLayer);
@@ -80,7 +80,7 @@ describe("browser annotation iframe fallback DOM isolation", () => {
       iframeLayer.replaceChildren();
       for (const iframe of document.querySelectorAll("iframe")) {
         const shield = document.createElement("div");
-        shield.dataset.synaraAnnotationIframeShield = iframe.tagName;
+        shield.dataset.djlAnnotationIframeShield = iframe.tagName;
         iframeLayer.append(shield);
       }
     };
@@ -100,7 +100,7 @@ describe("browser annotation iframe fallback DOM isolation", () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(observerCallbacks).toBe(1);
     expect(reconciliations).toBe(2);
-    expect(iframeLayer.querySelectorAll("[data-synara-annotation-iframe-shield]")).toHaveLength(2);
+    expect(iframeLayer.querySelectorAll("[data-djl-annotation-iframe-shield]")).toHaveLength(2);
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(observerCallbacks).toBe(1);

@@ -1,5 +1,5 @@
 import type { schema } from "@djl/db";
-import type { CloudRun } from "@synara/contracts/cloud";
+import type { CloudRun } from "@djl/contracts/cloud";
 
 export type RunRow = typeof schema.runs.$inferSelect;
 

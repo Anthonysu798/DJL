@@ -54,7 +54,7 @@ import {
   type ProviderListAgentsResult,
   type ProviderListModelsResult,
   getAgentMentionAliases,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   applyClaudePromptEffortPrefix,
   getDefaultAutoCompactWindow,
@@ -65,8 +65,8 @@ import {
   hasEffortLevel,
   resolveApiModelId,
   trimOrNull,
-} from "@synara/shared/model";
-import { buildClaudeSubagentPrompt } from "@synara/shared/agentMentions";
+} from "@djl/shared/model";
+import { buildClaudeSubagentPrompt } from "@djl/shared/agentMentions";
 import {
   Cause,
   DateTime,
@@ -3636,7 +3636,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           (input.runtimeMode === "full-access" ? "bypassPermissions" : undefined);
         const settings = {
           // Native 1M models otherwise compact near their full model limit. Keep
-          // Synara's safer 200k budget explicit unless the thread opts into 1M.
+          // DJL's safer 200k budget explicit unless the thread opts into 1M.
           autoCompactEnabled: true,
           ...(requestedAutoCompactWindowTokens !== undefined
             ? { autoCompactWindow: requestedAutoCompactWindowTokens }

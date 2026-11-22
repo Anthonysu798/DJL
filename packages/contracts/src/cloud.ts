@@ -1,6 +1,6 @@
 /**
  * DJL Cloud public API contract, one module per area under `./cloud/`.
- * Imported as `@synara/contracts/cloud` (or through the package root).
+ * Imported as `@djl/contracts/cloud` (or through the package root).
  */
 export * from "./cloud/base";
 export * from "./cloud/account";

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { verifyPackagedCua } from "../apps/desktop/scripts/cua-packaged-provenance.mjs";
 import cuaRelease from "../packages/shared/src/cuaDriverRelease.json" with { type: "json" };
-import { COMPUTER_QA_BUILD } from "@synara/shared/desktopComputerBuild";
+import { COMPUTER_QA_BUILD } from "@djl/shared/desktopComputerBuild";
 // FILE: build-desktop-artifact.ts
 // Purpose: Stages and builds packaged desktop artifacts plus updater metadata for GitHub releases.
 // Layer: Release/build script
@@ -41,7 +41,7 @@ import {
   createDesktopPlatformBuildConfig,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
-import { SYNARA_PRODUCTION_BUNDLE_ID } from "@synara/shared/desktopIdentity";
+import { DJL_PRODUCTION_BUNDLE_ID } from "@djl/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeMacDmgUpdateMetadata } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
@@ -229,7 +229,7 @@ interface StagePackageJson {
   readonly name: string;
   readonly version: string;
   readonly buildVersion: string;
-  readonly synaraCommitHash: string;
+  readonly djlCommitHash: string;
   readonly private: true;
   readonly description: string;
   readonly author: string;
@@ -257,17 +257,17 @@ const AzureTrustedSigningOptionsConfig = Config.all({
 });
 
 const BuildEnvConfig = Config.all({
-  platform: Config.schema(BuildPlatform, "SYNARA_DESKTOP_PLATFORM").pipe(Config.option),
-  target: Config.string("SYNARA_DESKTOP_TARGET").pipe(Config.option),
-  arch: Config.schema(BuildArch, "SYNARA_DESKTOP_ARCH").pipe(Config.option),
-  version: Config.string("SYNARA_DESKTOP_VERSION").pipe(Config.option),
-  outputDir: Config.string("SYNARA_DESKTOP_OUTPUT_DIR").pipe(Config.option),
-  skipBuild: Config.string("SYNARA_DESKTOP_SKIP_BUILD").pipe(Config.option),
-  keepStage: Config.string("SYNARA_DESKTOP_KEEP_STAGE").pipe(Config.option),
-  signed: Config.string("SYNARA_DESKTOP_SIGNED").pipe(Config.option),
-  verbose: Config.string("SYNARA_DESKTOP_VERBOSE").pipe(Config.option),
-  mockUpdates: Config.string("SYNARA_DESKTOP_MOCK_UPDATES").pipe(Config.option),
-  mockUpdateServerPort: Config.string("SYNARA_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(Config.option),
+  platform: Config.schema(BuildPlatform, "DJL_DESKTOP_PLATFORM").pipe(Config.option),
+  target: Config.string("DJL_DESKTOP_TARGET").pipe(Config.option),
+  arch: Config.schema(BuildArch, "DJL_DESKTOP_ARCH").pipe(Config.option),
+  version: Config.string("DJL_DESKTOP_VERSION").pipe(Config.option),
+  outputDir: Config.string("DJL_DESKTOP_OUTPUT_DIR").pipe(Config.option),
+  skipBuild: Config.string("DJL_DESKTOP_SKIP_BUILD").pipe(Config.option),
+  keepStage: Config.string("DJL_DESKTOP_KEEP_STAGE").pipe(Config.option),
+  signed: Config.string("DJL_DESKTOP_SIGNED").pipe(Config.option),
+  verbose: Config.string("DJL_DESKTOP_VERBOSE").pipe(Config.option),
+  mockUpdates: Config.string("DJL_DESKTOP_MOCK_UPDATES").pipe(Config.option),
+  mockUpdateServerPort: Config.string("DJL_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(Config.option),
 });
 
 const resolveBooleanFlag = (flag: Option.Option<boolean>, envValue: boolean) =>
@@ -310,11 +310,11 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const target = mergeOptions(input.target, env.target, PLATFORM_CONFIG[platform].defaultTarget);
   const arch = mergeOptions(input.arch, env.arch, getDefaultArch(platform));
   const version = mergeOptions(input.buildVersion, env.version, undefined);
-  const envSkipBuild = yield* resolveBooleanEnv("SYNARA_DESKTOP_SKIP_BUILD", env.skipBuild);
-  const envKeepStage = yield* resolveBooleanEnv("SYNARA_DESKTOP_KEEP_STAGE", env.keepStage);
-  const envSigned = yield* resolveBooleanEnv("SYNARA_DESKTOP_SIGNED", env.signed);
-  const envVerbose = yield* resolveBooleanEnv("SYNARA_DESKTOP_VERBOSE", env.verbose);
-  const envMockUpdates = yield* resolveBooleanEnv("SYNARA_DESKTOP_MOCK_UPDATES", env.mockUpdates);
+  const envSkipBuild = yield* resolveBooleanEnv("DJL_DESKTOP_SKIP_BUILD", env.skipBuild);
+  const envKeepStage = yield* resolveBooleanEnv("DJL_DESKTOP_KEEP_STAGE", env.keepStage);
+  const envSigned = yield* resolveBooleanEnv("DJL_DESKTOP_SIGNED", env.signed);
+  const envVerbose = yield* resolveBooleanEnv("DJL_DESKTOP_VERBOSE", env.verbose);
+  const envMockUpdates = yield* resolveBooleanEnv("DJL_DESKTOP_MOCK_UPDATES", env.mockUpdates);
   const releaseDir = resolveBooleanFlag(input.mockUpdates, envMockUpdates)
     ? "release-mock"
     : "release";
@@ -421,7 +421,7 @@ function stageMacIcons(stageResourcesDir: string, verbose: boolean) {
     }
 
     const tmpRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "synara-icon-build-",
+      prefix: "djl-icon-build-",
     });
 
     const iconPngPath = path.join(stageResourcesDir, "icon.png");
@@ -525,7 +525,7 @@ const verifyStagedNodePty = Effect.fn("verifyStagedNodePty")(function* (
       cwd: stageAppDir,
       env: {
         ...process.env,
-        SYNARA_NODE_PTY_SMOKE_REQUIRE_ROOT: stageAppDir,
+        DJL_NODE_PTY_SMOKE_REQUIRE_ROOT: stageAppDir,
       },
       ...commandOutputOptions(verbose),
       shell: process.platform === "win32",
@@ -578,7 +578,7 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   };
 
   const buildConfig: Record<string, unknown> = {
-    appId: SYNARA_PRODUCTION_BUNDLE_ID,
+    appId: DJL_PRODUCTION_BUNDLE_ID,
     productName,
     artifactName: "DJL-${version}-${arch}.${ext}",
     // Runtime dependencies ship compatible N-API/prebuilt binaries. Rebuilding
@@ -593,7 +593,7 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   const publishConfig = resolveDesktopPublishConfig({
     configuredUpdateBaseUrl:
       process.env.DJL_DESKTOP_UPDATE_BASE_URL ?? process.env.DJL_DESKTOP_UPDATE_URL,
-    configuredRepository: process.env.SYNARA_DESKTOP_UPDATE_REPOSITORY,
+    configuredRepository: process.env.DJL_DESKTOP_UPDATE_REPOSITORY,
     githubRepository: process.env.GITHUB_REPOSITORY,
     packageRepository: serverPackageJson.repository,
   });
@@ -731,7 +731,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const commitHash = resolveGitCommitHash(repoRoot);
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
   const stageRoot = yield* mkdir({
-    prefix: `synara-desktop-${options.platform}-stage-`,
+    prefix: `djl-desktop-${options.platform}-stage-`,
   });
 
   const stageAppDir = path.join(stageRoot, "app");
@@ -796,7 +796,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       })`node ${provisioner} --destination ${destination} --platform darwin --arch ${options.arch}`,
     );
     const helperBuilder = path.join(repoRoot, "apps/desktop/scripts/build-appsnap-helper.mjs");
-    const helper = path.join(stageRoot, "appsnap/synara-appsnap-helper");
+    const helper = path.join(stageRoot, "appsnap/djl-appsnap-helper");
     yield* fs.makeDirectory(path.dirname(helper), { recursive: true });
     yield* runCommand(
       ChildProcess.make({
@@ -831,6 +831,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   desktopBuildConfig.extraResources = [
     ...(Array.isArray(desktopBuildConfig.extraResources) ? desktopBuildConfig.extraResources : []),
     ...multiPostExtraResources(repoRoot),
+    // The MIT and upstream licences must travel with every copy of the app.
+    { from: path.join(repoRoot, "LICENSE"), to: "legal/LICENSE" },
+    { from: path.join(repoRoot, "THIRD_PARTY_NOTICES.md"), to: "legal/THIRD_PARTY_NOTICES.md" },
+    { from: path.join(repoRoot, "docs/licenses"), to: "legal/licenses", filter: ["**/*"] },
   ];
   if (options.platform === "mac") {
     desktopBuildConfig.extraResources = [
@@ -841,8 +845,8 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     ];
     desktopBuildConfig.extraFiles = [
       {
-        from: path.join(stageRoot, "appsnap/synara-appsnap-helper"),
-        to: "Helpers/synara-appsnap-helper",
+        from: path.join(stageRoot, "appsnap/djl-appsnap-helper"),
+        to: "Helpers/djl-appsnap-helper",
       },
     ];
   }
@@ -884,14 +888,14 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     ];
   }
   const stagePackageJson: StagePackageJson = {
-    name: "synara-desktop",
+    name: "djl-desktop",
     version: appVersion,
     buildVersion: appVersion,
-    synaraCommitHash: commitHash,
+    djlCommitHash: commitHash,
     ...(computerQaBuild ? { djlComputerBuild: COMPUTER_QA_BUILD.marker } : {}),
     private: true,
     description: "DJL desktop build",
-    author: "Emanuele Di Pietro",
+    author: "Anthony Su",
     main: "apps/desktop/dist-electron/main.js",
     build: desktopBuildConfig,
     dependencies: {
@@ -1227,53 +1231,53 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
 const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   platform: Flag.choice("platform", BuildPlatform.literals).pipe(
-    Flag.withDescription("Build platform (env: SYNARA_DESKTOP_PLATFORM)."),
+    Flag.withDescription("Build platform (env: DJL_DESKTOP_PLATFORM)."),
     Flag.optional,
   ),
   target: Flag.string("target").pipe(
     Flag.withDescription(
-      "Artifact target, for example dmg/AppImage/nsis (env: SYNARA_DESKTOP_TARGET).",
+      "Artifact target, for example dmg/AppImage/nsis (env: DJL_DESKTOP_TARGET).",
     ),
     Flag.optional,
   ),
   arch: Flag.choice("arch", BuildArch.literals).pipe(
-    Flag.withDescription("Build arch, for example arm64/x64/universal (env: SYNARA_DESKTOP_ARCH)."),
+    Flag.withDescription("Build arch, for example arm64/x64/universal (env: DJL_DESKTOP_ARCH)."),
     Flag.optional,
   ),
   buildVersion: Flag.string("build-version").pipe(
-    Flag.withDescription("Artifact version metadata (env: SYNARA_DESKTOP_VERSION)."),
+    Flag.withDescription("Artifact version metadata (env: DJL_DESKTOP_VERSION)."),
     Flag.optional,
   ),
   outputDir: Flag.string("output-dir").pipe(
-    Flag.withDescription("Output directory for artifacts (env: SYNARA_DESKTOP_OUTPUT_DIR)."),
+    Flag.withDescription("Output directory for artifacts (env: DJL_DESKTOP_OUTPUT_DIR)."),
     Flag.optional,
   ),
   skipBuild: Flag.boolean("skip-build").pipe(
     Flag.withDescription(
-      "Skip `bun run build:desktop` and use existing dist artifacts (env: SYNARA_DESKTOP_SKIP_BUILD).",
+      "Skip `bun run build:desktop` and use existing dist artifacts (env: DJL_DESKTOP_SKIP_BUILD).",
     ),
     Flag.optional,
   ),
   keepStage: Flag.boolean("keep-stage").pipe(
-    Flag.withDescription("Keep temporary staging files (env: SYNARA_DESKTOP_KEEP_STAGE)."),
+    Flag.withDescription("Keep temporary staging files (env: DJL_DESKTOP_KEEP_STAGE)."),
     Flag.optional,
   ),
   signed: Flag.boolean("signed").pipe(
     Flag.withDescription(
-      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: SYNARA_DESKTOP_SIGNED).",
+      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: DJL_DESKTOP_SIGNED).",
     ),
     Flag.optional,
   ),
   verbose: Flag.boolean("verbose").pipe(
-    Flag.withDescription("Stream subprocess stdout (env: SYNARA_DESKTOP_VERBOSE)."),
+    Flag.withDescription("Stream subprocess stdout (env: DJL_DESKTOP_VERBOSE)."),
     Flag.optional,
   ),
   mockUpdates: Flag.boolean("mock-updates").pipe(
-    Flag.withDescription("Enable mock updates (env: SYNARA_DESKTOP_MOCK_UPDATES)."),
+    Flag.withDescription("Enable mock updates (env: DJL_DESKTOP_MOCK_UPDATES)."),
     Flag.optional,
   ),
   mockUpdateServerPort: Flag.string("mock-update-server-port").pipe(
-    Flag.withDescription("Mock update server port (env: SYNARA_DESKTOP_MOCK_UPDATE_SERVER_PORT)."),
+    Flag.withDescription("Mock update server port (env: DJL_DESKTOP_MOCK_UPDATE_SERVER_PORT)."),
     Flag.optional,
   ),
 }).pipe(

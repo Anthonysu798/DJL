@@ -21,9 +21,9 @@ import {
 } from "./config";
 
 const tempDirs = new Set<string>();
-const originalSynaraStaticDir = process.env.SYNARA_STATIC_DIR;
+const originalDjlStaticDir = process.env.DJL_STATIC_DIR;
 
-function makeTempDir(prefix = "synara-config-test-"): string {
+function makeTempDir(prefix = "djl-config-test-"): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tempDirs.add(directory);
   return directory;
@@ -34,18 +34,18 @@ afterEach(() => {
     fs.rmSync(directory, { recursive: true, force: true });
   }
   tempDirs.clear();
-  if (originalSynaraStaticDir === undefined) {
-    delete process.env.SYNARA_STATIC_DIR;
+  if (originalDjlStaticDir === undefined) {
+    delete process.env.DJL_STATIC_DIR;
   } else {
-    process.env.SYNARA_STATIC_DIR = originalSynaraStaticDir;
+    process.env.DJL_STATIC_DIR = originalDjlStaticDir;
   }
 });
 
 describe("resolveStaticDir", () => {
-  it("uses the desktop static snapshot exposed through the Synara environment", async () => {
-    const snapshotDir = makeTempDir("synara-static-snapshot-test-");
-    fs.writeFileSync(path.join(snapshotDir, "index.html"), "<main>Synara</main>");
-    process.env.SYNARA_STATIC_DIR = snapshotDir;
+  it("uses the desktop static snapshot exposed through the DJL environment", async () => {
+    const snapshotDir = makeTempDir("djl-static-snapshot-test-");
+    fs.writeFileSync(path.join(snapshotDir, "index.html"), "<main>DJL</main>");
+    process.env.DJL_STATIC_DIR = snapshotDir;
 
     const resolved = await Effect.runPromise(
       resolveStaticDir().pipe(Effect.provide(NodeServices.layer)),
@@ -196,7 +196,7 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     fs.mkdirSync(homeDir, { recursive: true });
     // Symlink ~/Documents to a real directory elsewhere, matching the bug
     // report scenario (e.g. iCloud-managed Documents on macOS). Neither
-    // Synara/ nor Synara/Studio exist yet underneath it.
+    // DJL/ nor DJL/Studio exist yet underneath it.
     const symlinkedDocuments = path.join(homeDir, "Documents");
     fs.symlinkSync(realDocuments, symlinkedDocuments, "dir");
 

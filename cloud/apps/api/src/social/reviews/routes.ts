@@ -1,9 +1,6 @@
 import { Effect, Layer } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import {
-  CloudSocialReviewLinkInput,
-  CloudSocialReviewFeedbackInput,
-} from "@synara/contracts/cloud";
+import { CloudSocialReviewLinkInput, CloudSocialReviewFeedbackInput } from "@djl/contracts/cloud";
 import { requirePrincipal, type PrincipalResolver } from "../../auth/guard.ts";
 import { decodeBody, idParam } from "../../http/decode.ts";
 import { attempt as rawAttempt, handle } from "../../http/handle.ts";

@@ -16,7 +16,7 @@ import { ComposerImageAttachmentChip } from "./ComposerImageAttachmentChip";
 import { FileAttachmentChip } from "./FileAttachmentChip";
 import { ComposerPastedTextCard } from "./PastedTextChip";
 import { FileCommentsSummaryChip } from "./FileCommentsSummaryChip";
-import type { BrowserFindingDraft } from "@synara/contracts";
+import type { BrowserFindingDraft } from "@djl/contracts";
 import { BrowserFindingsSummaryChip } from "./BrowserFindingsSummaryChip";
 
 interface ComposerReferenceAttachmentsProps {

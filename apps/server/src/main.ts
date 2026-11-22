@@ -1,4 +1,4 @@
-import { resolveDjlMigrationSources } from "@synara/shared/djlStoragePaths";
+import { resolveDjlMigrationSources } from "@djl/shared/djlStoragePaths";
 import { ComputerServiceLive } from "./computer/Layers/ComputerService";
 /**
  * CliConfig - CLI/runtime bootstrap service definitions.
@@ -13,9 +13,8 @@ import OS from "node:os";
 import nodePath from "node:path";
 import { Config, Data, Effect, FileSystem, Layer, Option, Path, Schema, ServiceMap } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
-import { NetService } from "@synara/shared/Net";
-import { acquireSharedStateLock } from "@synara/shared/sharedStateLock";
-import { LEGACY_DJL_HOME_DIR_NAME, resolveDjlHome } from "@synara/shared/djlStoragePaths";
+import { NetService } from "@djl/shared/Net";
+import { acquireSharedStateLock } from "@djl/shared/sharedStateLock";
 import {
   DEFAULT_PORT,
   deriveServerPaths,
@@ -57,7 +56,7 @@ interface CliInput {
   readonly mode: Option.Option<RuntimeMode>;
   readonly port: Option.Option<number>;
   readonly host: Option.Option<string>;
-  readonly synaraHome: Option.Option<string>;
+  readonly djlHome: Option.Option<string>;
   readonly devUrl: Option.Option<URL>;
   readonly noBrowser: Option.Option<boolean>;
   readonly authToken: Option.Option<string>;
@@ -90,7 +89,7 @@ export interface CliConfigShape {
  * CliConfig - Service tag for startup CLI/runtime helpers.
  */
 export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
-  "synara/main/CliConfig",
+  "djl/main/CliConfig",
 ) {
   static readonly layer = Layer.effect(
     CliConfig,
@@ -110,7 +109,7 @@ export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
 }
 
 const CliEnvConfig = Config.all({
-  mode: Config.string("SYNARA_MODE").pipe(
+  mode: Config.string("DJL_MODE").pipe(
     Config.option,
     Config.map(
       Option.match<RuntimeMode, string>({
@@ -119,28 +118,24 @@ const CliEnvConfig = Config.all({
       }),
     ),
   ),
-  port: Config.port("SYNARA_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  host: Config.string("SYNARA_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  port: Config.port("DJL_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  host: Config.string("DJL_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
   djlHome: Config.string("DJL_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  synaraHome: Config.string("SYNARA_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   devUrl: Config.url("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  noBrowser: Config.boolean("SYNARA_NO_BROWSER").pipe(
+  noBrowser: Config.boolean("DJL_NO_BROWSER").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  authToken: Config.string("SYNARA_AUTH_TOKEN").pipe(
+  authToken: Config.string("DJL_AUTH_TOKEN").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  autoBootstrapProjectFromCwd: Config.boolean("DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  autoBootstrapProjectFromCwd: Config.boolean("SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
+  logProviderEvents: Config.boolean("DJL_LOG_PROVIDER_EVENTS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  logProviderEvents: Config.boolean("SYNARA_LOG_PROVIDER_EVENTS").pipe(
-    Config.option,
-    Config.map(Option.getOrUndefined),
-  ),
-  logWebSocketEvents: Config.boolean("SYNARA_LOG_WS_EVENTS").pipe(
+  logWebSocketEvents: Config.boolean("DJL_LOG_WS_EVENTS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
@@ -193,11 +188,9 @@ const ServerConfigLive = (input: CliInput) =>
       });
 
       const devUrl = Option.getOrElse(input.devUrl, () => env.devUrl);
-      const configuredHome =
-        Option.getOrUndefined(input.synaraHome) ?? env.djlHome ?? env.synaraHome;
+      const configuredHome = Option.getOrUndefined(input.djlHome) ?? env.djlHome;
       const baseDir = yield* resolveBaseDir(configuredHome);
       const userHomeDir = OS.homedir();
-      const defaultDjlHome = resolveDjlHome({}, userHomeDir);
       const sharedState = env.sharedState ?? false;
       if (sharedState && env.skipStateLock !== true) {
         yield* Effect.acquireRelease(
@@ -223,14 +216,12 @@ const ServerConfigLive = (input: CliInput) =>
       const storageMigrations = yield* Effect.tryPromise({
         try: async () => {
           const results = [];
-          for (const [index, legacyBaseDir] of migrationSources.entries()) {
+          for (const legacyBaseDir of migrationSources) {
             results.push(
               await migrateLegacyDjlStorage({
                 canonicalBaseDir: baseDir,
                 legacyBaseDir,
-                importLegacyDefault:
-                  sharedState ||
-                  (baseDir === defaultDjlHome && index === migrationSources.length - 1),
+                importLegacyDefault: sharedState,
                 mergeDevelopmentIntoUserdata: sharedState,
               }),
             );
@@ -399,7 +390,7 @@ const makeServerProgram = (input: CliInput) =>
     yield* Effect.forkChild(recordStartupHeartbeat);
     // Optional Claude OAuth keepalive. Disabled by default because it touches
     // Claude Code auth data in the background; users can opt in with
-    // SYNARA_CLAUDE_KEEPALIVE=1.
+    // DJL_CLAUDE_KEEPALIVE=1.
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
@@ -459,7 +450,7 @@ const hostFlag = Flag.string("host").pipe(
   Flag.withDescription("Host/interface to bind (for example 127.0.0.1, 0.0.0.0, or a Tailnet IP)."),
   Flag.optional,
 );
-const synaraHomeFlag = Flag.string("home-dir").pipe(
+const djlHomeFlag = Flag.string("home-dir").pipe(
   Flag.withDescription("Base directory for all DJL data (equivalent to DJL_HOME)."),
   Flag.optional,
 );
@@ -485,23 +476,23 @@ const autoBootstrapProjectFromCwdFlag = Flag.boolean("auto-bootstrap-project-fro
 );
 const logProviderEventsFlag = Flag.boolean("log-provider-events").pipe(
   Flag.withDescription(
-    "Emit native/canonical provider NDJSON logs for debugging (equivalent to SYNARA_LOG_PROVIDER_EVENTS).",
+    "Emit native/canonical provider NDJSON logs for debugging (equivalent to DJL_LOG_PROVIDER_EVENTS).",
   ),
   Flag.optional,
 );
 const logWebSocketEventsFlag = Flag.boolean("log-websocket-events").pipe(
   Flag.withDescription(
-    "Emit server-side logs for outbound WebSocket push traffic (equivalent to SYNARA_LOG_WS_EVENTS).",
+    "Emit server-side logs for outbound WebSocket push traffic (equivalent to DJL_LOG_WS_EVENTS).",
   ),
   Flag.withAlias("log-ws-events"),
   Flag.optional,
 );
 
-export const synaraCli = Command.make("synara", {
+export const djlCli = Command.make("djl", {
   mode: modeFlag,
   port: portFlag,
   host: hostFlag,
-  synaraHome: synaraHomeFlag,
+  djlHome: djlHomeFlag,
   devUrl: devUrlFlag,
   noBrowser: noBrowserFlag,
   authToken: authTokenFlag,

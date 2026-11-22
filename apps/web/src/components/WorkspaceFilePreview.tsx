@@ -9,14 +9,14 @@ import {
   isSupportedLocalImagePath,
   isSupportedLocalPdfPath,
   lowerCaseExtensionOf,
-} from "@synara/shared/localPreviewFiles";
+} from "@djl/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   joinWorkspaceRelativePath,
-} from "@synara/shared/path";
-import { isScratchWorkspacePath } from "@synara/shared/threadWorkspace";
-import type { ThreadId } from "@synara/contracts";
+} from "@djl/shared/path";
+import { isScratchWorkspacePath } from "@djl/shared/threadWorkspace";
+import type { ThreadId } from "@djl/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Component,

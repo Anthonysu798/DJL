@@ -5,8 +5,8 @@ import {
   type ChatAttachment,
   type OrchestrationCommand,
   type StreamingAttachmentReference,
-} from "@synara/contracts";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+} from "@djl/contracts";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@djl/shared/threadWorkspace";
 import type { FileSystem, Path } from "effect";
 import { Effect, Schedule } from "effect";
 

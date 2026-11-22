@@ -1,6 +1,6 @@
-import { COMPUTER_WS_METHODS, COMPUTER_WS_CHANNELS, type ComputerEvent } from "@synara/contracts";
+import { COMPUTER_WS_METHODS, COMPUTER_WS_CHANNELS, type ComputerEvent } from "@djl/contracts";
 // FILE: wsTransport.ts
-// Purpose: Browser-side Effect RPC transport over the Synara WebSocket endpoint.
+// Purpose: Browser-side Effect RPC transport over the DJL WebSocket endpoint.
 // Layer: Web transport
 // Exports: WsTransport plus stream-selection helpers used by tests.
 
@@ -30,7 +30,7 @@ import {
   type WsPush,
   type WsPushChannel,
   type WsPushMessage,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Cause, Data, Effect, Exit, Layer, ManagedRuntime, Option, Scope, Stream } from "effect";
 import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
 import * as Socket from "effect/unstable/socket/Socket";

@@ -2,7 +2,7 @@
 // Purpose: What the guided sign-in dialog shows, worked out from what the agent's own
 //          sign-in command printed, whether it has finished, and the account check.
 
-import type { HarnessAccount, HarnessId } from "@synara/contracts";
+import type { HarnessAccount, HarnessId } from "@djl/contracts";
 
 import { providerSignInUrl } from "../agent-workspaces/profileLoginSession";
 

@@ -3,10 +3,11 @@
 DJL is distributed under the root [MIT License](LICENSE), with copyright notices retained for
 Emanuele Di Pietro and Anthony Su.
 
-- **Synara** — DJL is derived from the Synara codebase by Emanuele Di Pietro. The retained upstream
-  attribution is covered by the root MIT license and the original copyright notice.
+- **Upstream codebase** — DJL is derived from an MIT-licensed codebase by Emanuele Di Pietro. The
+  retained attribution is covered by the root MIT license and the original copyright notice; the
+  computer-use portions also retain [docs/licenses/COMPUTER_USE_LICENSE](docs/licenses/COMPUTER_USE_LICENSE).
 - **Remodex** — portions of the iOS app and local remote gateway began as a source import from
-  [Remodex](https://github.com/Emanuele-web04/remodex). Provenance and the retained Apache License
+  Remodex by Emanuele Di Pietro. Provenance and the retained Apache License
   2.0 are in [apps/ios/UPSTREAM.md](apps/ios/UPSTREAM.md),
   [apps/ios/UPSTREAM_LICENSE](apps/ios/UPSTREAM_LICENSE),
   [apps/remote-gateway/UPSTREAM.md](apps/remote-gateway/UPSTREAM.md), and

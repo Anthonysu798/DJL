@@ -5,7 +5,7 @@ import {
   type ComputerActivitySemanticSummary,
   type ComputerUseRequest,
   type ComputerUseResponse,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReviewSuggestionResult } from "../../lib/historySuggestionDraft";

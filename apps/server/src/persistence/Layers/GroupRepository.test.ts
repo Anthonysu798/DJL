@@ -6,7 +6,7 @@ import {
   ThreadId,
   type Group,
   type GroupMember,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer } from "effect";
 
 import { runMigrations } from "../Migrations.ts";

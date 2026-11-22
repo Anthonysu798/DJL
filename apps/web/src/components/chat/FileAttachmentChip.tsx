@@ -3,7 +3,7 @@
 // Layer: Chat attachment presentation
 // Depends on: shared byte formatting, chat attachment types, and compact chip styles.
 
-import { formatBytes } from "@synara/shared/formatBytes";
+import { formatBytes } from "@djl/shared/formatBytes";
 import { useTranslation } from "react-i18next";
 
 import { basenameOfPath } from "~/file-icons";

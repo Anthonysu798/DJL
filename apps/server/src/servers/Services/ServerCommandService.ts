@@ -8,7 +8,7 @@ import type {
   ServerListCommandsInput,
   ServerListCommandsResult,
   ServerResolveCommandInput,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Data, ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 
@@ -64,4 +64,4 @@ export interface ServerCommandServiceShape {
 export class ServerCommandService extends ServiceMap.Service<
   ServerCommandService,
   ServerCommandServiceShape
->()("synara/servers/Services/ServerCommandService") {}
+>()("djl/servers/Services/ServerCommandService") {}

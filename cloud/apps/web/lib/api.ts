@@ -1,4 +1,4 @@
-import type { CloudCreditsResponse, CloudMeResponse } from "@synara/contracts/cloud";
+import type { CloudCreditsResponse, CloudMeResponse } from "@djl/contracts/cloud";
 
 import { API_URL } from "./config";
 

@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   BrowserUsePipeServer,
-  SYNARA_BROWSER_USE_PIPE_ENV,
+  DJL_BROWSER_USE_PIPE_ENV,
   resolveConfiguredBrowserUsePipePath,
   resolveDefaultBrowserUsePipePath,
 } from "./browserUsePipeServer";
@@ -19,8 +19,8 @@ import {
 function testPipePath(label: string): string {
   const suffix = `${label}-${process.pid}-${Date.now()}`;
   return process.platform === "win32"
-    ? String.raw`\\.\pipe\codex-browser-use-synara-iab-${suffix}`
-    : `/tmp/codex-browser-use/synara-iab-${suffix}.sock`;
+    ? String.raw`\\.\pipe\codex-browser-use-djl-iab-${suffix}`
+    : `/tmp/codex-browser-use/djl-iab-${suffix}.sock`;
 }
 
 async function connectToPipe(pipePath: string): Promise<void> {
@@ -39,7 +39,7 @@ describe("browser-use pipe path resolution", () => {
     const pipePath = resolveDefaultBrowserUsePipePath("darwin");
 
     expect(dirname(pipePath)).toBe("/tmp/codex-browser-use");
-    expect(basename(pipePath)).toMatch(/^synara-iab-\d+\.sock$/);
+    expect(basename(pipePath)).toMatch(/^djl-iab-\d+\.sock$/);
   });
 
   it("uses the same discoverable directory on Linux", () => {
@@ -48,26 +48,26 @@ describe("browser-use pipe path resolution", () => {
 
   it("uses the Codex browser-use named-pipe prefix on Windows", () => {
     expect(resolveDefaultBrowserUsePipePath("win32")).toMatch(
-      /^\\\\\.\\pipe\\codex-browser-use-synara-iab-\d+$/,
+      /^\\\\\.\\pipe\\codex-browser-use-djl-iab-\d+$/,
     );
   });
 
-  it("prefers an explicit Synara pipe path from the environment", () => {
+  it("prefers an explicit DJL pipe path from the environment", () => {
     expect(
       resolveConfiguredBrowserUsePipePath(
         {
-          [SYNARA_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/synara.sock",
+          [DJL_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/djl.sock",
         },
         "darwin",
       ),
-    ).toBe("/tmp/codex-browser-use/synara.sock");
+    ).toBe("/tmp/codex-browser-use/djl.sock");
   });
 
   it("prefers a discoverable Windows named-pipe override", () => {
-    const pipePath = String.raw`\\.\pipe\codex-browser-use-synara-custom`;
+    const pipePath = String.raw`\\.\pipe\codex-browser-use-djl-custom`;
 
     expect(
-      resolveConfiguredBrowserUsePipePath({ [SYNARA_BROWSER_USE_PIPE_ENV]: pipePath }, "win32"),
+      resolveConfiguredBrowserUsePipePath({ [DJL_BROWSER_USE_PIPE_ENV]: pipePath }, "win32"),
     ).toBe(pipePath);
   });
 
@@ -80,22 +80,22 @@ describe("browser-use pipe path resolution", () => {
   it("ignores a Unix override outside the directory Codex scans", () => {
     const resolved = resolveConfiguredBrowserUsePipePath(
       {
-        [SYNARA_BROWSER_USE_PIPE_ENV]: "/var/folders/user/T/codex-browser-use/synara.sock",
+        [DJL_BROWSER_USE_PIPE_ENV]: "/var/folders/user/T/codex-browser-use/djl.sock",
       },
       "darwin",
     );
 
     expect(dirname(resolved)).toBe("/tmp/codex-browser-use");
-    expect(basename(resolved)).toMatch(/^synara-iab-\d+\.sock$/);
+    expect(basename(resolved)).toMatch(/^djl-iab-\d+\.sock$/);
   });
 
   it("ignores a Windows override without the Codex browser-use prefix", () => {
     expect(
       resolveConfiguredBrowserUsePipePath(
-        { [SYNARA_BROWSER_USE_PIPE_ENV]: String.raw`\\.\pipe\synara-iab-custom` },
+        { [DJL_BROWSER_USE_PIPE_ENV]: String.raw`\\.\pipe\djl-iab-custom` },
         "win32",
       ),
-    ).toMatch(/^\\\\\.\\pipe\\codex-browser-use-synara-iab-\d+$/);
+    ).toMatch(/^\\\\\.\\pipe\\codex-browser-use-djl-iab-\d+$/);
   });
 
   it("closes its native IPC endpoint when disposed", async () => {

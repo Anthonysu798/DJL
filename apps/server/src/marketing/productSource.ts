@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import http from "node:http";
 import https from "node:https";
-import type { AgentProductSource } from "@synara/contracts";
+import type { AgentProductSource } from "@djl/contracts";
 
 /** Only public unicast addresses may be contacted, including after a redirect. */
 export function assertPublicAddress(address: string): void {

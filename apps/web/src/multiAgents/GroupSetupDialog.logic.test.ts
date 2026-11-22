@@ -1,4 +1,4 @@
-import type { HarnessAccount } from "@synara/contracts";
+import type { HarnessAccount } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { canCreate, defaultGroupName, memberChoices } from "./GroupSetupDialog.logic";

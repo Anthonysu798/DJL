@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { OrchestrationShellSnapshot, ThreadId } from "@synara/contracts";
-import { resolveWorktreeHandoffIntent } from "@synara/shared/worktreeHandoff";
+import type { OrchestrationShellSnapshot, ThreadId } from "@djl/contracts";
+import { resolveWorktreeHandoffIntent } from "@djl/shared/worktreeHandoff";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { gitHandoffThreadMutationOptions } from "~/lib/gitReactQuery";

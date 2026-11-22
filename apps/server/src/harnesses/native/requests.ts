@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { UserInputQuestion, type UserInputQuestion as Question } from "@synara/contracts";
+import { UserInputQuestion, type UserInputQuestion as Question } from "@djl/contracts";
 import { object, string } from "./protocol";
 
 /** Claude keys answers by question text; Codex provides an explicit question id. */

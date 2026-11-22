@@ -1,7 +1,7 @@
 // FILE: modelDocumentRouting.ts
 // Purpose: Server-owned cache and conservative routing for model document capabilities.
 
-import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@synara/contracts";
+import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@djl/contracts";
 
 export interface WorkModelDocumentRouting {
   readonly capabilitiesKnown: boolean;

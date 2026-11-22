@@ -1,5 +1,5 @@
 "use client";
-import type { CloudCheckoutInput, CloudSubscriptionResponse } from "@synara/contracts/cloud";
+import type { CloudCheckoutInput, CloudSubscriptionResponse } from "@djl/contracts/cloud";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";

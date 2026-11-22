@@ -1,4 +1,4 @@
-import { EventId, TurnId, isToolLifecycleItemType } from "@synara/contracts";
+import { EventId, TurnId, isToolLifecycleItemType } from "@djl/contracts";
 import { expect, it } from "vitest";
 import { deriveWorkLogEntries } from "../session-logic";
 

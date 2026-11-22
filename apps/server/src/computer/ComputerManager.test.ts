@@ -5,8 +5,8 @@ import type {
   ComputerUiNode,
   ComputerWindow,
   ThreadComputerState,
-} from "@synara/contracts";
-import { decodeComputerFrame } from "@synara/shared/computerFrame";
+} from "@djl/contracts";
+import { decodeComputerFrame } from "@djl/shared/computerFrame";
 
 import {
   COMPUTER_ACTION_OBSERVATION_MAX_DIMENSION,
@@ -22,7 +22,7 @@ import {
 } from "./computerCallContext.ts";
 import { withComputerTask } from "./computerTaskContext.ts";
 import { FakeComputerBackend } from "./FakeComputerBackend.ts";
-import type { FrameSink } from "@synara/shared/frameTransport";
+import type { FrameSink } from "@djl/shared/frameTransport";
 
 class RecordingSink implements FrameSink {
   readonly received: Uint8Array[] = [];
@@ -1082,7 +1082,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
   });
 
   describe("the post-action settle", () => {
-    const ENV = ["SYNARA_CUA_CONDITIONAL_SETTLE", "SYNARA_CUA_ACTION_SETTLE_MS"] as const;
+    const ENV = ["DJL_CUA_CONDITIONAL_SETTLE", "DJL_CUA_ACTION_SETTLE_MS"] as const;
     const savedEnv = new Map<string, string | undefined>();
 
     afterEach(() => {
@@ -1130,8 +1130,8 @@ describe("ComputerManager and FakeComputerBackend", () => {
         })
         .then((observation) => ({ observation, spy }));
 
-    it("SYNARA_CUA_CONDITIONAL_SETTLE=0 restores the fixed wait even on a verified effect", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "0");
+    it("DJL_CUA_CONDITIONAL_SETTLE=0 restores the fixed wait even on a verified effect", async () => {
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "0");
       const backend = new ProvenBackend();
       backend.proof = { effect: "verified", verified: "confirmed" };
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1141,7 +1141,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("skips the wait on a verified effect by default — no flag needed", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       const backend = new ProvenBackend();
       backend.proof = { effect: "verified", verified: "confirmed" };
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1151,23 +1151,23 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("still waits the compiled 300 ms when nothing overrides it", async () => {
-      setEnv("SYNARA_CUA_ACTION_SETTLE_MS", undefined);
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_ACTION_SETTLE_MS", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       const manager = new ComputerManager({ backend: new FakeComputerBackend() });
       const { spy } = await pressThenObserve(manager);
       expect(settleWaitedFor(spy, 300)).toBe(true);
       await manager.dispose();
     });
 
-    it("SYNARA_CUA_ACTION_SETTLE_MS overrides the wait, and an explicit 0 removes it", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
-      setEnv("SYNARA_CUA_ACTION_SETTLE_MS", "45");
+    it("DJL_CUA_ACTION_SETTLE_MS overrides the wait, and an explicit 0 removes it", async () => {
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_ACTION_SETTLE_MS", "45");
       const manager = new ComputerManager({ backend: new FakeComputerBackend() });
       const { spy } = await pressThenObserve(manager);
       expect(settleWaitedFor(spy, 45)).toBe(true);
       await manager.dispose();
 
-      setEnv("SYNARA_CUA_ACTION_SETTLE_MS", "0");
+      setEnv("DJL_CUA_ACTION_SETTLE_MS", "0");
       const zeroed = new ComputerManager({ backend: new FakeComputerBackend() });
       const zero = await pressThenObserve(zeroed);
       // 0 means no settle leg at all — no timer is even scheduled.
@@ -1175,9 +1175,9 @@ describe("ComputerManager and FakeComputerBackend", () => {
       await zeroed.dispose();
     });
 
-    it("a constructor override wins over SYNARA_CUA_ACTION_SETTLE_MS", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
-      setEnv("SYNARA_CUA_ACTION_SETTLE_MS", "45");
+    it("a constructor override wins over DJL_CUA_ACTION_SETTLE_MS", async () => {
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_ACTION_SETTLE_MS", "45");
       const manager = new ComputerManager({
         backend: new FakeComputerBackend(),
         actionSettleMs: 60,
@@ -1188,8 +1188,8 @@ describe("ComputerManager and FakeComputerBackend", () => {
       await manager.dispose();
     });
 
-    it("SYNARA_CUA_CONDITIONAL_SETTLE skips the wait on a confirmed read-back", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+    it("DJL_CUA_CONDITIONAL_SETTLE skips the wait on a confirmed read-back", async () => {
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const backend = new ProvenBackend();
       backend.proof = { verified: "confirmed" };
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1201,8 +1201,8 @@ describe("ComputerManager and FakeComputerBackend", () => {
     it.each([
       ["an unconfirmed read-back", { verified: "unconfirmed" }],
       ["an unknown dispatch", { effect: "dispatched-unknown" }],
-    ] as const)("SYNARA_CUA_CONDITIONAL_SETTLE keeps the wait after %s", async (_label, proof) => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+    ] as const)("DJL_CUA_CONDITIONAL_SETTLE keeps the wait after %s", async (_label, proof) => {
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const backend = new ProvenBackend();
       backend.proof = proof;
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1212,7 +1212,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("consumes the proof once: a second observation in the same call settles again", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const backend = new ProvenBackend();
       backend.proof = { effect: "verified" };
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1228,7 +1228,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("a second action's verdict replaces the first inside one call", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const backend = new ProvenBackend();
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
       const spy = vi.spyOn(globalThis, "setTimeout");
@@ -1246,7 +1246,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("a verdict never waives a later call's settle", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const backend = new ProvenBackend();
       backend.proof = { effect: "verified" };
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1280,7 +1280,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
         .then((observation) => ({ observation, spy }));
 
     it("prefers the driver's observed settle when the backend offers it and a window is known", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       const backend = new ProvenBackend({ waitForSettle: true });
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
       const { spy } = await pressThenObserveWindow(manager);
@@ -1297,7 +1297,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("a busy verdict from the observer still ends the wait — the timeout already covered the bound", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       const backend = new ProvenBackend({
         waitForSettle: () => ({ settled: false, waitedMs: 5_000, eventsSeen: 14 }),
       });
@@ -1309,7 +1309,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("falls back to the fixed wait without a window hint, even when the observer exists", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       const backend = new ProvenBackend({ waitForSettle: true });
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
       const { spy } = await pressThenObserve(manager);
@@ -1324,7 +1324,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     ] as const)(
       "a backend that cannot name the tool falls back once and is never probed again — %s",
       async (refusalMessage) => {
-        setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+        setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
         let probes = 0;
         const backend = new ProvenBackend({
           waitForSettle: () => {
@@ -1349,7 +1349,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     );
 
     it("a transient observer failure falls back for that call but does not poison the probe", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       let fail = true;
       const backend = new ProvenBackend({
         waitForSettle: () => {
@@ -1376,7 +1376,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("a proven effect still skips the wait entirely, observer included", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const backend = new ProvenBackend({ waitForSettle: true });
       backend.proof = { effect: "verified" };
       const manager = new ComputerManager({ backend, actionSettleMs: 60 });
@@ -1387,7 +1387,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("an observer refusal mid-observation never replays the action", async () => {
-      setEnv("SYNARA_CUA_CONDITIONAL_SETTLE", undefined);
+      setEnv("DJL_CUA_CONDITIONAL_SETTLE", undefined);
       const backend = new ProvenBackend({
         waitForSettle: () => {
           throw new Error("Unknown tool: wait_for_settle");
@@ -3323,7 +3323,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     };
 
     it("waives the leg settle when measured travel already proves arrival", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const { backend, manager } = settleScrollFixture([336, 64, 400]);
       await teachGearing(manager);
       const capturesBefore = backend.callsFor("captureScreenshot").length;
@@ -3346,7 +3346,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("keeps the settle when the correlation refuses the early capture", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const { backend, manager } = settleScrollFixture([336, 64, undefined, undefined]);
       await teachGearing(manager);
       const capturesBefore = backend.callsFor("captureScreenshot").length;
@@ -3368,7 +3368,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("keeps the settle when early travel misses the prediction, and never learns it", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const { backend, manager } = settleScrollFixture([336, 64, 250, 400]);
       await teachGearing(manager);
       const capturesBefore = backend.callsFor("captureScreenshot").length;
@@ -3391,7 +3391,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("keeps the probe leg's settle — an unmeasured route has no prediction to prove", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       const { backend, manager } = settleScrollFixture([336, 64]);
       const spy = vi.spyOn(globalThis, "setTimeout");
 
@@ -3412,7 +3412,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("keeps every settle and takes no early capture under the kill switch", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "0");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "0");
       const { backend, manager } = settleScrollFixture([336, 64, 400]);
       await teachGearing(manager);
       const capturesBefore = backend.callsFor("captureScreenshot").length;
@@ -3432,7 +3432,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("keeps the settle on an unchanged scroll and still reports traveledY 0", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       // Exactly three queued screenshots cover the teaching scroll's captures;
       // everything after returns the one fixture image, which is what the end
       // of a page looks like — byte-identical, so measurement answers 0.
@@ -3456,7 +3456,7 @@ describe("ComputerManager and FakeComputerBackend", () => {
     });
 
     it("does not let a waived settle upgrade a dispatched-unknown verdict", async () => {
-      vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+      vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
       class UnknownScrollBackend extends FakeComputerBackend {
         override async scroll(...args: Parameters<FakeComputerBackend["scroll"]>) {
           await super.scroll(...args);
@@ -4258,8 +4258,8 @@ describe("ComputerManager masked activation", () => {
 
   /** The canary's two flags, both required before any shield may arm. */
   function armMaskedActivation(apps = "org.kde.kcalc"): void {
-    vi.stubEnv("SYNARA_CUA_MASKED_ACTIVATION", "1");
-    vi.stubEnv("SYNARA_CUA_MASKED_APPS", apps);
+    vi.stubEnv("DJL_CUA_MASKED_ACTIVATION", "1");
+    vi.stubEnv("DJL_CUA_MASKED_APPS", apps);
   }
 
   /** A macOS-dialect fake with the shield surface present — the CUA shape. */
@@ -4303,7 +4303,7 @@ describe("ComputerManager masked activation", () => {
       expect(engage.args[0]).toMatchObject({
         windowId: "fake-calculator",
         frame: { x: 1_050, y: 120, width: 420, height: 620 },
-        label: "Synara is activating Calculator",
+        label: "DJL is activating Calculator",
       });
       const shieldId = (engage.args[0] as { shieldId: string }).shieldId;
       expect(shieldId).toMatch(/^shield-[0-9a-f]{8}$/);

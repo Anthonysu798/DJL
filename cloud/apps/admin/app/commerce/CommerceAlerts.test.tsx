@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { CommerceAlertIncident, CommerceAlertsResponse } from "@synara/contracts/cloud";
+import type { CommerceAlertIncident, CommerceAlertsResponse } from "@djl/contracts/cloud";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { admin, getToken } = vi.hoisted(() => ({ admin: vi.fn(), getToken: vi.fn() }));
 vi.mock("@/lib/api", async (original) => ({

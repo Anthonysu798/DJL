@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMPUTER_PROVISION_SUMMARY_MAX_LENGTH } from "@synara/contracts";
+import { COMPUTER_PROVISION_SUMMARY_MAX_LENGTH } from "@djl/contracts";
 
 import { ComputerManager } from "./ComputerManager.ts";
 import { FakeComputerBackend } from "./FakeComputerBackend.ts";

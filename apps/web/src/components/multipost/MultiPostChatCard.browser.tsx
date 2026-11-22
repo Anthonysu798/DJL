@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { MultiPostJob, MultiPostState } from "@synara/contracts";
+import type { MultiPostJob, MultiPostState } from "@djl/contracts";
 import { MultiPostChatCard } from "./MultiPostChatCard";
 
 const api = vi.hoisted(() => ({ state: vi.fn(), command: vi.fn() }));

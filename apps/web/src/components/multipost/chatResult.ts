@@ -1,4 +1,4 @@
-import type { MultiPostAccount, MultiPostJob } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostJob } from "@djl/contracts";
 
 const profiles: Record<string, (username: string) => string> = {
   instagram: (name) => `https://www.instagram.com/${name}/`,

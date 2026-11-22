@@ -3,7 +3,7 @@
 // Layer: Provider ACP adapter support
 // Exports: pending-request cleanup, USD cost parsing, and turn-local item scoping helpers.
 
-import type { ProviderApprovalDecision, ProviderUserInputAnswers, TurnId } from "@synara/contracts";
+import type { ProviderApprovalDecision, ProviderUserInputAnswers, TurnId } from "@djl/contracts";
 import { Deferred, Effect, Option, Semaphore, SynchronizedRef } from "effect";
 import type * as EffectAcpSchema from "effect-acp/schema";
 

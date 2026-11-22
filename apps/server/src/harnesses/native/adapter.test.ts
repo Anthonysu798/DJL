@@ -1,5 +1,5 @@
 import { Effect, Stream } from "effect";
-import { ApprovalRequestId, ThreadId, type ProviderRuntimeEvent } from "@synara/contracts";
+import { ApprovalRequestId, ThreadId, type ProviderRuntimeEvent } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import { makeNativeAdapter } from "./adapter";
 import { codexPermissions } from "./codex";

@@ -1,11 +1,7 @@
 // FILE: PluginDirectory.tsx
 // Purpose: The plugin directory: every plugin DJL offers, grouped by category, with one-click add.
 
-import {
-  isPluginInstalled,
-  type PluginCatalogEntry,
-  type PluginsSnapshot,
-} from "@synara/contracts";
+import { isPluginInstalled, type PluginCatalogEntry, type PluginsSnapshot } from "@djl/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DjlDatabase } from "@djl/db";
 import type { ChatRequest, ProviderAdapter } from "@djl/providers";
-import type { CommerceProduct } from "@synara/contracts/cloud";
+import type { CommerceProduct } from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import { createMemoryRateLimiter } from "../gateway/RateLimiter.ts";

@@ -19,7 +19,7 @@ import type {
   GroupUpdateInput,
   GroupUpdateMemberInput,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Data, ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

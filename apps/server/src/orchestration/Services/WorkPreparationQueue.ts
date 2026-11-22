@@ -6,7 +6,7 @@ import type {
   OrchestrationEvent,
   OrchestrationMessage,
   ProjectId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 
@@ -42,6 +42,6 @@ export interface WorkPreparationQueueShape {
 export class WorkPreparationQueue extends ServiceMap.Service<
   WorkPreparationQueue,
   WorkPreparationQueueShape
->()("synara/orchestration/Services/WorkPreparationQueue") {}
+>()("djl/orchestration/Services/WorkPreparationQueue") {}
 
 export type WorkPreparationAttachment = Extract<ChatAttachment, { type: "file" | "image" }>;

@@ -6,7 +6,7 @@ import type {
   PluginAppInput,
   PluginCatalogEntry,
   PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { ChevronRightIcon } from "~/lib/icons";

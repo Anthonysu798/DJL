@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render, cleanup } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { defaultBrand } from "@synara/contracts";
+import { defaultBrand } from "@djl/contracts";
 import SocialAgentWorkspace from "./SocialAgentWorkspace";
 import { SOCIAL_ACCOUNT_CHANGED } from "./accountCache";
 import { buildThemeCssVariables, resolveThemePack, DEFAULT_THEME_STATE } from "~/theme/theme.logic";

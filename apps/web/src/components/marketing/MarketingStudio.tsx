@@ -24,7 +24,7 @@ import {
   IconActivity,
   IconX,
 } from "@tabler/icons-react";
-import { type Campaign, type CampaignPatch, type MediaAsset } from "@synara/contracts";
+import { type Campaign, type CampaignPatch, type MediaAsset } from "@djl/contracts";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import { Button } from "~/components/ui/button";

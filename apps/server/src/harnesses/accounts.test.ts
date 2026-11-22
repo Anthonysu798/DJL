@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { execFile, spawnSync } from "node:child_process";
-import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@djl/contracts";
 import { buildHarnessInvocation, parseHarnessAccountStatus, probe } from "./accounts";
 
 vi.mock("node:child_process", async (importOriginal) => ({

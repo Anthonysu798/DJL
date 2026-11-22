@@ -3,7 +3,7 @@
 //          overlapping stack of tiles that stands for a group.
 // Layer: UI component
 
-import type { GroupMember } from "@synara/contracts";
+import type { GroupMember } from "@djl/contracts";
 import type { CSSProperties } from "react";
 
 import { ProviderIcon } from "~/components/ProviderIcon";

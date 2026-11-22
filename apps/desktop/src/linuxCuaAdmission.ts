@@ -1,8 +1,4 @@
-import {
-  CUA_ACTION_TOOLS,
-  CUA_BROWSER_TOOLS,
-  type CuaReply,
-} from "@synara/shared/cuaDriverProtocol";
+import { CUA_ACTION_TOOLS, CUA_BROWSER_TOOLS, type CuaReply } from "@djl/shared/cuaDriverProtocol";
 
 const UNSUPPORTED_NATIVE_TOOLS = new Set([
   "select_text",
@@ -58,7 +54,7 @@ export function linuxCuaAdmissionRefusal(
     )
       return undefined;
     if (name === "browser_prepare") {
-      // Headless/windowed is a Synara patch extension. The current Linux
+      // Headless/windowed is a DJL patch extension. The current Linux
       // artifact ignores windowed:false and would open a visible Chromium.
       if (!browserInputControlVerified && args.allow_launch === true && args.windowed !== true)
         return refusal(

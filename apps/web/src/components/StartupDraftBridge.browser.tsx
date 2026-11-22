@@ -1,4 +1,4 @@
-import { ThreadId, type ModelSelection } from "@synara/contracts";
+import { ThreadId, type ModelSelection } from "@djl/contracts";
 import { StrictMode, useRef, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -105,7 +105,7 @@ afterEach(async () => {
   setStartupSession(null);
   useComposerDraftStore.setState(initialDrafts, true);
   for (const key of Object.keys(localStorage))
-    if (key.startsWith("synara:startup:v1:browser-test:")) localStorage.removeItem(key);
+    if (key.startsWith("djl:startup:v1:browser-test:")) localStorage.removeItem(key);
   sends.length = 0;
 });
 

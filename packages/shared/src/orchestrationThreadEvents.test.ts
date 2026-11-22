@@ -1,4 +1,4 @@
-import { CommandId, EventId, ThreadId, type OrchestrationEvent } from "@synara/contracts";
+import { CommandId, EventId, ThreadId, type OrchestrationEvent } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { isThreadDetailEvent, isThreadDetailEventForThread } from "./orchestrationThreadEvents";

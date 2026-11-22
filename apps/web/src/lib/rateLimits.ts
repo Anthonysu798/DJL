@@ -2,9 +2,9 @@
 // Purpose: Centralizes rate-limit parsing, normalization, formatting, and row derivation
 // for provider runtime events so UI components can stay presentation-only.
 
-import type { OrchestrationThread, OrchestrationThreadActivity } from "@synara/contracts";
+import type { OrchestrationThread, OrchestrationThreadActivity } from "@djl/contracts";
 import type { TFunction } from "i18next";
-import { providerUsageLearnMoreHref } from "@synara/shared/providerUsage";
+import { providerUsageLearnMoreHref } from "@djl/shared/providerUsage";
 import englishCatalog from "~/i18n/locales/en.json";
 import type { TimestampFormat } from "~/appSettings";
 import { formatLocaleDateTime, formatLocaleNumber } from "~/i18n/intl";

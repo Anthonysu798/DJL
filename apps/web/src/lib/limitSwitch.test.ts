@@ -1,4 +1,4 @@
-import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@synara/contracts";
+import type { ServerProviderStatus, ServerProviderUsageSnapshot } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

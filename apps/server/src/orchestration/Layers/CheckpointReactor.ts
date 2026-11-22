@@ -10,9 +10,9 @@ import {
   type OrchestrationProjectShell,
   type OrchestrationThread,
   type ProviderRuntimeEvent,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
-import { makeDrainableWorker } from "@synara/shared/DrainableWorker";
+import { makeDrainableWorker } from "@djl/shared/DrainableWorker";
 
 import { parseCheckpointFilesFromUnifiedDiff } from "../../checkpointing/Diffs.ts";
 import {

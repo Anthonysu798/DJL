@@ -1,7 +1,7 @@
 import "../../index.css";
 import { afterEach, expect, it, vi } from "vitest";
 import { render, cleanup } from "vitest-browser-react";
-import type { TerminalEvent, TerminalOpenInput } from "@synara/contracts";
+import type { TerminalEvent, TerminalOpenInput } from "@djl/contracts";
 import { TerminalPane } from "./AgentWorkspacesView";
 import { workspaceTerminalSessions } from "./workspaceTerminalSessions";
 import {

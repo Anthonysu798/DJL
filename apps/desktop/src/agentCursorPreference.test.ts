@@ -58,7 +58,7 @@ describe("parseAgentCursorPreference", () => {
 
 describe("agent cursor preference filesystem", () => {
   it("round-trips custom colors and restores stock by deleting the file", () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-agent-cursor-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-agent-cursor-"));
     temporaryDirectories.push(directory);
     const filePath = Path.join(directory, "nested", "agent-cursor-colors.json");
 
@@ -78,7 +78,7 @@ describe("agent cursor preference filesystem", () => {
   });
 
   it("reads stock from malformed or arbitrary JSON", () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-agent-cursor-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-agent-cursor-"));
     temporaryDirectories.push(directory);
     const filePath = Path.join(directory, "agent-cursor-colors.json");
 

@@ -8,7 +8,7 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type Group,
   type GroupMember,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

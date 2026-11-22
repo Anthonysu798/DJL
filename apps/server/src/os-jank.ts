@@ -9,8 +9,8 @@ import {
   mergePathEntries,
   readPathFromLaunchctl,
   readPathFromLoginShell,
-} from "@synara/shared/shell";
-import { DJL_HOME_DIR_NAME } from "@synara/shared/djlStoragePaths";
+} from "@djl/shared/shell";
+import { DJL_HOME_DIR_NAME } from "@djl/shared/djlStoragePaths";
 
 function logPathHydrationWarning(message: string, error?: unknown): void {
   console.warn(`[server] ${message}`, error instanceof Error ? error.message : (error ?? ""));

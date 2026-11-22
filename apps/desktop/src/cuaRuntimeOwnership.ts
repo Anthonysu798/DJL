@@ -12,8 +12,8 @@ import {
 import { writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 
-const MARKER_NAME = ".synara-cua-runtime.json";
-const RUNTIME_DIRECTORY = /^synara-cua-[a-zA-Z0-9]{6}$/;
+const MARKER_NAME = ".djl-cua-runtime.json";
+const RUNTIME_DIRECTORY = /^djl-cua-[a-zA-Z0-9]{6}$/;
 const STALE_AFTER_MS = 30_000;
 
 export function cuaHostProcessIsAlive(pid: number): boolean {
@@ -30,7 +30,7 @@ export async function markCuaRuntimeDirectory(directory: string): Promise<void> 
   await writeFile(
     join(directory, MARKER_NAME),
     JSON.stringify({
-      schema: "synara-cua-runtime",
+      schema: "djl-cua-runtime",
       version: 1,
       directory: basename(directory),
       hostPid: process.pid,
@@ -104,7 +104,7 @@ export function sweepOwnedCuaRuntimeDirectories(options: {
       if (!marker || typeof marker !== "object" || Array.isArray(marker)) continue;
       const data = marker as Record<string, unknown>;
       if (
-        data.schema !== "synara-cua-runtime" ||
+        data.schema !== "djl-cua-runtime" ||
         data.version !== 1 ||
         data.directory !== entry ||
         data.ownerUid !== uid ||

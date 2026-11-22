@@ -82,6 +82,6 @@ it("restricts privileged computer IPC to the app entry URL", () => {
     isTrustedComputerUseUrl("http://localhost:6733/other.html", "http://localhost:6733/"),
   ).toBe(false);
   expect(
-    isTrustedComputerUseUrl("synara://app/index.html#/settings", "synara://app/index.html"),
+    isTrustedComputerUseUrl("djl-app://app/index.html#/settings", "djl-app://app/index.html"),
   ).toBe(true);
 });

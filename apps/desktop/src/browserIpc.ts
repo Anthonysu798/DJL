@@ -19,14 +19,14 @@ import type {
   BrowserTabInput,
   BrowserThreadInput,
   ThreadBrowserState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   BrowserAnnotationCaptureInput as BrowserAnnotationCaptureInputSchema,
   BrowserAnnotationCommandInput as BrowserAnnotationCommandInputSchema,
   type BrowserAnnotationCaptureInput,
   type BrowserAnnotationCommandInput,
   type BrowserAnnotationEvent,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 import type { DesktopBrowserManager } from "./browserManager";

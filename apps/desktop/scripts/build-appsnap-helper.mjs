@@ -17,7 +17,7 @@ export const defaultAppSnapHelperPath = join(
   desktopDirectory,
   ".electron-runtime",
   "appsnap",
-  "synara-appsnap-helper",
+  "djl-appsnap-helper",
 );
 
 const frameworkArguments = [
@@ -59,7 +59,7 @@ export function swiftTargetsForArch(arch) {
 
 function buildFingerprint({ arch, release, sources, targets }) {
   const hash = createHash("sha256");
-  hash.update("synara-appsnap-helper-build-v1\0");
+  hash.update("djl-appsnap-helper-build-v1\0");
   hash.update(arch);
   hash.update("\0");
   hash.update(release ? "release" : "debug");
@@ -107,7 +107,7 @@ export function buildAppSnapHelper({
     return resolvedOutputPath;
   }
 
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "synara-appsnap-helper-"));
+  const temporaryDirectory = mkdtempSync(join(tmpdir(), "djl-appsnap-helper-"));
   const moduleCacheDirectory = join(temporaryDirectory, "module-cache");
   const buildEnvironment = {
     ...process.env,
@@ -118,7 +118,7 @@ export function buildAppSnapHelper({
   try {
     const thinBinaries = [];
     for (const target of targets) {
-      const thinBinary = join(temporaryDirectory, `synara-appsnap-helper-${target.arch}`);
+      const thinBinary = join(temporaryDirectory, `djl-appsnap-helper-${target.arch}`);
       const optimizationArguments = release
         ? ["-O", "-whole-module-optimization"]
         : ["-Onone", "-g"];
@@ -128,7 +128,7 @@ export function buildAppSnapHelper({
           "swiftc",
           ...optimizationArguments,
           "-module-name",
-          "SynaraAppSnapHelper",
+          "DjlAppSnapHelper",
           "-target",
           target.target,
           ...frameworkArguments,
@@ -141,7 +141,7 @@ export function buildAppSnapHelper({
       thinBinaries.push(thinBinary);
     }
 
-    const unsignedBinary = join(temporaryDirectory, "synara-appsnap-helper");
+    const unsignedBinary = join(temporaryDirectory, "djl-appsnap-helper");
     if (thinBinaries.length === 1) {
       copyFileSync(thinBinaries[0], unsignedBinary);
     } else {

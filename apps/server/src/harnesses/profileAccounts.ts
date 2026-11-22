@@ -5,7 +5,7 @@ import type {
   HarnessProfileAccount,
   HarnessProfileAccountInput,
   ServerSettings,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { buildProfileTerminalLaunch } from "./terminalProfiles";
 import { resolveCodexTerminalBinary } from "./codexTerminalBinary";
 import { probe, type ProbeOutput, parseHarnessAccountStatus } from "./accounts";

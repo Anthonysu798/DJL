@@ -9,7 +9,7 @@ import type {
   ServerImportPreviewResult,
   ServerListResult,
   ServerRecord,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

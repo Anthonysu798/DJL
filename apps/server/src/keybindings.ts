@@ -16,7 +16,7 @@ import {
   ResolvedKeybindingRule,
   ResolvedKeybindingsConfig,
   type ServerConfigIssue,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Mutable } from "effect/Types";
 import {
   Array,
@@ -760,7 +760,7 @@ export interface KeybindingsShape {
  * Keybindings - Service tag for keybinding configuration operations.
  */
 export class Keybindings extends ServiceMap.Service<Keybindings, KeybindingsShape>()(
-  "synara/keybindings",
+  "djl/keybindings",
 ) {}
 
 const makeKeybindings = Effect.gen(function* () {

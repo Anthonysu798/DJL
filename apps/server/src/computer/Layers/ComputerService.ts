@@ -1,10 +1,10 @@
-import { readComputerQaWindows } from "@synara/shared/computerQaScope";
+import { readComputerQaWindows } from "@djl/shared/computerQaScope";
 import { join } from "node:path";
 import { ServerConfig } from "../../config.ts";
 import { Effect, Layer, Option } from "effect";
-import type { ComputerAvailability } from "@synara/contracts";
+import type { ComputerAvailability } from "@djl/contracts";
 
-import { CUA_HOST_SOCKET_ENV } from "@synara/shared/cuaDriverProtocol";
+import { CUA_HOST_SOCKET_ENV } from "@djl/shared/cuaDriverProtocol";
 import { ComputerManager } from "../ComputerManager.ts";
 import { CuaComputerBackend } from "../CuaComputerBackend.ts";
 import { FakeComputerBackend } from "../FakeComputerBackend.ts";
@@ -29,7 +29,7 @@ export function makeComputerServiceLayer(options: ComputerServiceLiveOptions = {
     ComputerService,
     Effect.gen(function* () {
       const platform = options.platform ?? process.platform;
-      const requestedBackend = process.env.SYNARA_COMPUTER_BACKEND?.trim().toLowerCase();
+      const requestedBackend = process.env.DJL_COMPUTER_BACKEND?.trim().toLowerCase();
       const unavailableAvailability: ComputerAvailability =
         platform === "linux"
           ? {

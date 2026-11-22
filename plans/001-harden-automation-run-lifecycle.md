@@ -15,7 +15,7 @@
 
 ## Why this matters
 
-Synara already has scheduled automations, but the run lifecycle is not strong enough for short timers, retry/backoff, or unattended Codex-like workflows. Before adding one-shot timers and richer schedules, make run dispatch, cancellation, recovery, and heartbeat locking durable. This prevents duplicate turns, orphaned work, stale waiting states, and provider work continuing after the user cancels or deletes an automation.
+DJL already has scheduled automations, but the run lifecycle is not strong enough for short timers, retry/backoff, or unattended Codex-like workflows. Before adding one-shot timers and richer schedules, make run dispatch, cancellation, recovery, and heartbeat locking durable. This prevents duplicate turns, orphaned work, stale waiting states, and provider work continuing after the user cancels or deletes an automation.
 
 ## Current state
 

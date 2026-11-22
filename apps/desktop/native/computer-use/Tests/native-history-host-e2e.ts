@@ -15,7 +15,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { StringDecoder } from "node:string_decoder";
 import type { Readable } from "node:stream";
 import { ComputerUseManager } from "../../../src/computerUseManager";
-import type { ComputerUseRequest, ComputerActivityPage } from "@synara/contracts";
+import type { ComputerUseRequest, ComputerActivityPage } from "@djl/contracts";
 
 const directory = mkdtempSync("/private/tmp/djl-history-host-e2e-");
 const fixtureDirectory = "/private/tmp/djl-cua-history-fixture";

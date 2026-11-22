@@ -1,7 +1,7 @@
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
-import { createCampaign, reviseCampaign } from "@synara/contracts";
+import { createCampaign, reviseCampaign } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { saveDocument } from "./store";
 import { agentOwnerFromSession } from "./agentScope";

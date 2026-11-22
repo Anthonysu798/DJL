@@ -1,4 +1,4 @@
-import type { WorkCapabilityFlags } from "@synara/contracts";
+import type { WorkCapabilityFlags } from "@djl/contracts";
 
 export function resolveWorkReleaseStage(value: string | undefined): number {
   const normalized = value?.trim().toLowerCase();

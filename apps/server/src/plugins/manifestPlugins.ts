@@ -7,7 +7,7 @@ import {
   PluginManifest,
   type PluginApp,
   type PluginCatalogEntry,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 export const PERSONAL_SOURCE_ID = "personal";

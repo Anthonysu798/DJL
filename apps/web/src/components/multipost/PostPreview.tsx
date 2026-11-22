@@ -4,7 +4,7 @@ import {
   type MultiPostAccount,
   type MultiPostCapability,
   type MultiPostFile,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { mediaPreviewUrl } from "./client";
 import { PlatformMark } from "./PlatformMark";
 import { foldCaption, postLook } from "./postLook";

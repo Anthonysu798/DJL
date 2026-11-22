@@ -11,7 +11,7 @@ import {
 
 /**
  * The macOS cua-driver tool inventory at the pinned release (driver 0.28.2,
- * Synara native patch, embedded serve). `platform-macos` `tools::register_all`
+ * DJL native patch, embedded serve). `platform-macos` `tools::register_all`
  * registers the platform and core tools; the cua-driver binary adds
  * `check_for_update` and — only under the upstream preview admission the
  * embedded host never grants — `history_status`/`history_query`.
@@ -278,7 +278,7 @@ describe("parseCuaShieldArgs", () => {
     frame: { x: 1050.5, y: 120, width: 420, height: 620 },
     window_id: 4242,
     pid: 777,
-    label: "Synara activating Calculator",
+    label: "DJL activating Calculator",
   };
 
   it("parses an engage with its full target shape", () => {
@@ -288,7 +288,7 @@ describe("parseCuaShieldArgs", () => {
       frame: { x: 1050.5, y: 120, width: 420, height: 620 },
       windowId: 4242,
       pid: 777,
-      label: "Synara activating Calculator",
+      label: "DJL activating Calculator",
     });
   });
 

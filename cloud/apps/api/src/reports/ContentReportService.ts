@@ -11,7 +11,7 @@ import { CONTENT_REPORT_LIMITS, contentReportFieldError } from "@djl/domain";
 import type {
   CloudCreateContentReportInput,
   CloudCreateContentReportResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import { requirePermission, type AdminPrincipal } from "../admin/AdminAuth.ts";
 import { writeAudit } from "../audit/AuditLog.ts";

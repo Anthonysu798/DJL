@@ -5,7 +5,7 @@
 
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type ProjectDirectoryEntry, type ProjectId } from "@synara/contracts";
+import { type ProjectDirectoryEntry, type ProjectId } from "@djl/contracts";
 import { readNativeApi } from "../../nativeApi";
 import { useStore } from "../../store";
 import { createSidebarDisplayThreadsSelector } from "../../storeSelectors";

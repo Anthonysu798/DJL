@@ -1,9 +1,9 @@
 // FILE: AcpElicitationSupport.ts
-// Purpose: Bridges ACP form elicitation schemas to Synara's provider-neutral question UI.
+// Purpose: Bridges ACP form elicitation schemas to DJL's provider-neutral question UI.
 // Layer: Provider ACP protocol mapping
 // Exports: question extraction and typed ACP response construction.
 
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@synara/contracts";
+import type { ProviderUserInputAnswers, UserInputQuestion } from "@djl/contracts";
 import type * as EffectAcpSchema from "effect-acp/schema";
 
 type FormElicitationRequest = Extract<
@@ -42,7 +42,7 @@ function propertyOptions(property: ElicitationProperty): ReadonlyArray<{
   return [];
 }
 
-// Converts primitive ACP form fields into the question shape consumed by Synara's composer.
+// Converts primitive ACP form fields into the question shape consumed by DJL's composer.
 export function elicitationQuestionsFromRequest(
   request: FormElicitationRequest,
 ): ReadonlyArray<UserInputQuestion> {

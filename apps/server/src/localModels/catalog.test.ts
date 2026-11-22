@@ -880,7 +880,7 @@ describe("curated model membership", () => {
 describe("OpenCode local provider config", () => {
   it("preserves unrelated config and projects installed models by runtime", () => {
     const config = buildOpenCodeLocalProviderConfig(
-      { theme: "synara", provider: { openai: { name: "OpenAI" } } },
+      { theme: "djl", provider: { openai: { name: "OpenAI" } } },
       [
         {
           runtime: "ollama",
@@ -893,7 +893,7 @@ describe("OpenCode local provider config", () => {
       ],
     );
 
-    expect(config.theme).toBe("synara");
+    expect(config.theme).toBe("djl");
     expect(config.provider.openai).toEqual({ name: "OpenAI" });
     const ollama = config.provider.ollama as {
       options: { baseURL: string };

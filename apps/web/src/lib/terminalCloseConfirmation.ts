@@ -3,7 +3,7 @@
 // Layer: UI logic helper
 // Depends on: Native dialog contract from the app shell.
 
-import type { NativeApi } from "@synara/contracts";
+import type { NativeApi } from "@djl/contracts";
 import type { TFunction } from "i18next";
 
 // Prefer title overrides, then persisted labels, so confirmation copy matches visible tab names.

@@ -1,4 +1,4 @@
-import type { HarnessTool, ServerSettings } from "@synara/contracts";
+import type { HarnessTool, ServerSettings } from "@djl/contracts";
 import { buildCursorAgentCommand } from "../provider/acp/CursorAcpCommand";
 import { probe } from "./accounts";
 import {

@@ -3,7 +3,7 @@ import type { DjlDatabase } from "@djl/db";
 import {
   COMMERCE_RECONCILIATION_CSV_HEADER as header,
   COMMERCE_RECONCILIATION_MAX_BYTES,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import {
   CommerceReconciliationService,
   parseCommerceReconciliationCsv,

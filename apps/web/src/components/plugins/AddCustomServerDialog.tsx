@@ -1,7 +1,7 @@
 // FILE: AddCustomServerDialog.tsx
 // Purpose: The form for adding a tool server that is not in the directory, by its address.
 
-import type { PluginCustomServerInput } from "@synara/contracts";
+import type { PluginCustomServerInput } from "@djl/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

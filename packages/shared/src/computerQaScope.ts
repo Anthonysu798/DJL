@@ -1,6 +1,6 @@
 import { lstatSync, readFileSync } from "node:fs";
 import { Schema } from "effect";
-import { ComputerWindow } from "@synara/contracts";
+import { ComputerWindow } from "@djl/contracts";
 
 const QaWindow = Schema.Struct({ ...ComputerWindow.fields, bundleId: Schema.String });
 const Scope = Schema.Struct({ version: Schema.Literal(1), windows: Schema.Array(QaWindow) });

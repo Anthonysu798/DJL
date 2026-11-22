@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { commerceTestCheckoutUrl } from "@synara/contracts/cloud";
+import { commerceTestCheckoutUrl } from "@djl/contracts/cloud";
 import { openVerifiedShopCheckout, readCheckoutStatus } from "./shopCheckout";
 
 const orderId = "00000000-0000-4000-8000-000000000001";

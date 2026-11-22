@@ -9,7 +9,7 @@ describe("desktop locale IPC validation", () => {
   it("keeps the sandboxed preload off the runtime contracts schema barrel", () => {
     const source = readFileSync(new URL("./desktopLocaleIpc.ts", import.meta.url), "utf8");
 
-    expect(source).not.toMatch(/from ["']@synara\/contracts["']/);
+    expect(source).not.toMatch(/from ["']@djl\/contracts["']/);
   });
 
   it("accepts only exact app locale preferences", () => {

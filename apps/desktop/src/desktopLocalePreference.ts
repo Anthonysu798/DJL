@@ -1,8 +1,8 @@
 import * as Crypto from "node:crypto";
 import * as FS from "node:fs";
 import * as Path from "node:path";
-import type { AppLocalePreference } from "@synara/contracts";
-import { normalizeAppLocalePreference } from "@synara/shared/locale";
+import type { AppLocalePreference } from "@djl/contracts";
+import { normalizeAppLocalePreference } from "@djl/shared/locale";
 
 const CACHE_FILE_NAME = "djl-locale-preference-v1.json";
 

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect } from "effect";
-import { DEFAULT_SERVER_SETTINGS, type HarnessToolId } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS, type HarnessToolId } from "@djl/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { createHarnessToolsController, inspectHarnessTool, maintainHarnessTool } from "./tools";
 import { inspectInstalledOpenCodeProtocol } from "../provider/openCodeInstalledProtocol";

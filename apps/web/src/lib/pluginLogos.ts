@@ -3,7 +3,7 @@
 //          logo: the site whose icon stands for it in DJL's plugin catalog.
 // Layer: Web data helper
 
-import type { PluginsSnapshot } from "@synara/contracts";
+import type { PluginsSnapshot } from "@djl/contracts";
 
 import { ensureNativeApi } from "~/nativeApi";
 

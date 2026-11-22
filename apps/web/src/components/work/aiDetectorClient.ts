@@ -6,8 +6,8 @@ import {
   type AiDetectorLanguagePreference,
   type AiDetectorRegionLabel,
   type AiDetectorReport,
-} from "@synara/contracts";
-import { isLoopbackUrl } from "@synara/shared/loopback";
+} from "@djl/contracts";
+import { isLoopbackUrl } from "@djl/shared/loopback";
 import { Schema } from "effect";
 
 import { resolveWsHttpUrl } from "~/lib/wsHttpUrl";

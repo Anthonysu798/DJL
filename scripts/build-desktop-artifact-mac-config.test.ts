@@ -95,7 +95,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     const win = createDesktopPlatformBuildConfig({
       platform: "win",
       target: "nsis",
-      windowsAzureSignOptions: { publisherName: "Synara" },
+      windowsAzureSignOptions: { publisherName: "DJL" },
     });
 
     assert.equal(linux.mac, undefined);
@@ -105,12 +105,12 @@ describe("createDesktopPlatformBuildConfig", () => {
     ]);
     assert.deepStrictEqual(linux.linux, {
       target: ["AppImage"],
-      executableName: "synara",
+      executableName: "djl",
       icon: "icon.png",
       category: "Development",
       desktop: {
         entry: {
-          StartupWMClass: "synara",
+          StartupWMClass: "djl",
         },
       },
     });
@@ -128,7 +128,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(win.win, {
       target: ["nsis"],
       icon: "icon.ico",
-      azureSignOptions: { publisherName: "Synara" },
+      azureSignOptions: { publisherName: "DJL" },
     });
   });
 

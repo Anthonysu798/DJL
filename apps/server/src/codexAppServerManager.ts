@@ -36,9 +36,9 @@ import {
   ProviderInteractionMode,
   type ServerVoiceTranscriptionInput,
   type ServerVoiceTranscriptionResult,
-} from "@synara/contracts";
-import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@synara/shared/model";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@djl/contracts";
+import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@djl/shared/model";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import { Effect, ServiceMap } from "effect";
 
 import {
@@ -479,7 +479,7 @@ The \`request_user_input\` tool is unavailable in Default mode. If you call it w
 In Default mode, strongly prefer making reasonable assumptions and executing the user's request rather than stopping to ask questions. If you absolutely must ask a question because the answer cannot be discovered from local context and a reasonable assumption would be risky, ask the user directly with a concise plain-text question. Never write a multiple choice question as a textual assistant message.
 </collaboration_mode>${CODEX_BROWSER_TOOL_ROUTING_INSTRUCTIONS}`;
 
-// Maps Synara's simple runtime toggle to Codex thread-level permission overrides.
+// Maps DJL's simple runtime toggle to Codex thread-level permission overrides.
 function mapCodexRuntimeMode(runtimeMode: RuntimeMode): {
   readonly approvalPolicy: CodexApprovalPolicy;
   readonly sandbox: CodexSandboxMode;
@@ -524,7 +524,7 @@ const CODEX_ALWAYS_ALLOW_SESSION_TURN_OVERRIDES: CodexSessionApprovalOverride = 
   sandboxPolicy: { type: "dangerFullAccess" },
 };
 
-// Synara re-sends turn-level Codex permission overrides, so keep "always allow"
+// DJL re-sends turn-level Codex permission overrides, so keep "always allow"
 // as live session state instead of relying on one native approval reply.
 function resolveCodexTurnOverrides(context: CodexSessionContext): {
   readonly approvalPolicy: CodexApprovalPolicy;
@@ -601,7 +601,7 @@ export function normalizeCodexModelSlug(
 export function buildCodexInitializeParams() {
   return {
     clientInfo: {
-      name: "synara_desktop",
+      name: "djl_desktop",
       title: "DJL Desktop",
       version: "0.1.0",
     },
@@ -748,30 +748,30 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly modelCache = new Map<string, ProviderListModelsResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  private readonly synaraSkillsDir: string | undefined;
+  private readonly djlSkillsDir: string | undefined;
   constructor(
     services?: ServiceMap.ServiceMap<never>,
-    options?: { readonly synaraSkillsDir?: string },
+    options?: { readonly djlSkillsDir?: string },
   ) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
-    this.synaraSkillsDir = options?.synaraSkillsDir;
+    this.djlSkillsDir = options?.djlSkillsDir;
   }
 
-  // Registers `~/.synara/skills` as a codex skill root so portable skills are
+  // Registers `~/.djl/skills` as a codex skill root so portable skills are
   // first-class: skills/list returns them and turn/start `skill` items inject
   // their instructions. Verified live: skill items with paths outside known
   // roots are silently ignored by codex app-server, so this call is required.
-  private async registerSynaraSkillsRoot(context: CodexSessionContext): Promise<void> {
-    if (!this.synaraSkillsDir) {
+  private async registerDjlSkillsRoot(context: CodexSessionContext): Promise<void> {
+    if (!this.djlSkillsDir) {
       return;
     }
     try {
       await this.sendRequest(context, "skills/extraRoots/set", {
-        extraRoots: [this.synaraSkillsDir],
+        extraRoots: [this.djlSkillsDir],
       });
     } catch (error) {
-      // Older codex builds (< extra-roots support) keep working; Synara-only
+      // Older codex builds (< extra-roots support) keep working; DJL-only
       // skills simply stay invisible to codex on those versions.
       log.warn("skills/extraRoots/set unavailable", { error });
     }
@@ -846,7 +846,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
 
       this.writeMessage(context, { method: "initialized" });
-      await this.registerSynaraSkillsRoot(context);
+      await this.registerDjlSkillsRoot(context);
       try {
         const modelListResponse = await this.sendRequest(context, "model/list", {});
         log.info("model/list response", { modelListResponse });
@@ -1468,7 +1468,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
       this.writeMessage(context, { method: "initialized" });
-      await this.registerSynaraSkillsRoot(context);
+      await this.registerDjlSkillsRoot(context);
       try {
         const accountReadResponse = await this.sendRequest(context, "account/read", {});
         context.account = readCodexAccountSnapshot(accountReadResponse);
@@ -2058,7 +2058,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     try {
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
       this.writeMessage(context, { method: "initialized" });
-      await this.registerSynaraSkillsRoot(context);
+      await this.registerDjlSkillsRoot(context);
       try {
         const accountReadResponse = await this.sendRequest(context, "account/read", {});
         context.account = readCodexAccountSnapshot(accountReadResponse);
@@ -3271,7 +3271,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         return [];
       }
 
-      // Accept both Synara's legacy string array and Remodex-style reasoning objects.
+      // Accept both DJL's legacy string array and Remodex-style reasoning objects.
       const supportedReasoningEfforts = Array.from(
         new Map(
           (

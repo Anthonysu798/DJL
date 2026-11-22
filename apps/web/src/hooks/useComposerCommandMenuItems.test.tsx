@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useComposerCommandMenuItems } from "./useComposerCommandMenuItems";
 import { groupCommandItems } from "../components/chat/ComposerCommandMenu";

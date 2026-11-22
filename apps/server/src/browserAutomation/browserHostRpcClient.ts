@@ -2,7 +2,7 @@ import * as FS from "node:fs";
 import * as Net from "node:net";
 import * as OS from "node:os";
 
-import type { BrowserToolName, ProviderKind, ThreadId } from "@synara/contracts";
+import type { BrowserToolName, ProviderKind, ThreadId } from "@djl/contracts";
 
 const FRAME_HEADER_BYTES = 4;
 // A bounded 8 MiB PNG expands to roughly 10.7 MiB as base64 inside the
@@ -275,7 +275,7 @@ function assertCompatibleHostInfo(value: unknown, expectedSessionId: string): vo
   const methods = metadata?.methods;
   if (
     protocolVersion !== 1 ||
-    (info?.type !== undefined && info.type !== "synara-browser-host") ||
+    (info?.type !== undefined && info.type !== "djl-browser-host") ||
     (sessionId !== undefined && sessionId !== expectedSessionId) ||
     (methods !== undefined && (!Array.isArray(methods) || !methods.includes("executeTool")))
   ) {
@@ -328,17 +328,17 @@ export async function callBrowserHostTool(input: BrowserHostToolCall): Promise<u
 
 export function resolveBrowserHostPipePath(env: NodeJS.ProcessEnv = process.env): string | null {
   const configured =
-    env.SYNARA_BROWSER_HOST_PIPE_PATH?.trim() || env.SYNARA_BROWSER_USE_PIPE_PATH?.trim();
+    env.DJL_BROWSER_HOST_PIPE_PATH?.trim() || env.DJL_BROWSER_USE_PIPE_PATH?.trim();
   return configured || null;
 }
 
 let inheritedCapabilityFromFd: string | null | undefined;
 
 export function resolveBrowserHostCapability(env: NodeJS.ProcessEnv = process.env): string | null {
-  const direct = env.SYNARA_BROWSER_HOST_CAPABILITY?.trim();
+  const direct = env.DJL_BROWSER_HOST_CAPABILITY?.trim();
   if (direct && Buffer.byteLength(direct, "utf8") >= 32) return direct;
 
-  const rawFd = env.SYNARA_BROWSER_HOST_CAPABILITY_FD?.trim();
+  const rawFd = env.DJL_BROWSER_HOST_CAPABILITY_FD?.trim();
   if (!rawFd || !/^\d+$/.test(rawFd)) return null;
   const fd = Number(rawFd);
   if (!Number.isSafeInteger(fd) || fd < 3 || fd > 255) return null;

@@ -4,7 +4,7 @@
 // Exports: AcpSessionRuntime and its typed runtime factory contracts.
 
 import { randomUUID } from "node:crypto";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import {
   Cause,
   Deferred,
@@ -178,7 +178,7 @@ interface EnsureActiveAssistantSegmentResult {
 export class AcpSessionRuntime extends ServiceMap.Service<
   AcpSessionRuntime,
   AcpSessionRuntimeShape
->()("synara/provider/acp/AcpSessionRuntime") {
+>()("djl/provider/acp/AcpSessionRuntime") {
   static layer(
     options: AcpSessionRuntimeOptions,
   ): Layer.Layer<

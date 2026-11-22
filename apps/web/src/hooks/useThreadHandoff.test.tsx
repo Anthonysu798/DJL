@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@djl/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";
 import type { Thread } from "../types";
 import { useThreadHandoff } from "./useThreadHandoff";

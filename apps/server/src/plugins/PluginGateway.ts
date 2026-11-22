@@ -8,7 +8,7 @@ import { createHash, randomBytes } from "node:crypto";
 import http from "node:http";
 import { Readable } from "node:stream";
 
-import { pluginServerName } from "@synara/contracts";
+import { pluginServerName } from "@djl/contracts";
 
 export interface GatewayApp {
   /** URL-safe key, unique across plugins. */

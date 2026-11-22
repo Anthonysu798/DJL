@@ -3,11 +3,7 @@
 //          (GitHub) shows its code until the user has approved DJL, and an app that takes an
 //          access token asks for it first.
 
-import {
-  findPluginCatalogEntry,
-  type PluginAppInput,
-  type PluginsSnapshot,
-} from "@synara/contracts";
+import { findPluginCatalogEntry, type PluginAppInput, type PluginsSnapshot } from "@djl/contracts";
 import { useState } from "react";
 
 import type { usePluginActions } from "~/lib/pluginsReactQuery";

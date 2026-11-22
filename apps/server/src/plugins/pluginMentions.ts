@@ -3,7 +3,7 @@
 //          plugin's own instructions if it has them, otherwise which tool server to use.
 //          Harnesses only understand their own mention paths, so DJL's must not reach them.
 
-import { DJL_PLUGIN_MENTION_PREFIX, type ProviderMentionReference } from "@synara/contracts";
+import { DJL_PLUGIN_MENTION_PREFIX, type ProviderMentionReference } from "@djl/contracts";
 
 import { DOCUMENT_PLUGIN_INSTRUCTIONS } from "./documentPlugins";
 import { gatewayServerName } from "./PluginGateway";

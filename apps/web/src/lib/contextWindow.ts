@@ -1,4 +1,4 @@
-import type { OrchestrationThreadActivity, ThreadTokenUsageSnapshot } from "@synara/contracts";
+import type { OrchestrationThreadActivity, ThreadTokenUsageSnapshot } from "@djl/contracts";
 import { translateRendererCopy } from "../i18n";
 
 function asRecord(value: unknown): Record<string, unknown> | null {

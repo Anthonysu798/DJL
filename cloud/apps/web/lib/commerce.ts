@@ -13,7 +13,7 @@ export type {
   CommerceSupplierStatement,
   CommerceProfile as CommerceMe,
   CommerceSupplierOrder as SupplierItem,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import type {
   CommerceReferralSummary,
   CommerceReferralSummaryResponse,
@@ -39,7 +39,7 @@ import type {
   CommerceSupplierStatement,
   CommerceProfile as CommerceMe,
   CommerceSupplierOrder as SupplierItem,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 export type SupplierProduct = CommerceProduct & { readonly reserved: number };
 
 const base = "/v1/commerce";

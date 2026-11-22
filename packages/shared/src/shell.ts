@@ -8,8 +8,8 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-const PATH_CAPTURE_START = "__SYNARA_PATH_START__";
-const PATH_CAPTURE_END = "__SYNARA_PATH_END__";
+const PATH_CAPTURE_START = "__DJL_PATH_START__";
+const PATH_CAPTURE_END = "__DJL_PATH_END__";
 const SHELL_ENV_NAME_PATTERN = /^[A-Z0-9_]+$/;
 
 type ExecFileSyncLike = (
@@ -131,11 +131,11 @@ export function mergePathEntries(
 }
 
 function envCaptureStart(name: string): string {
-  return `__SYNARA_ENV_${name}_START__`;
+  return `__DJL_ENV_${name}_START__`;
 }
 
 function envCaptureEnd(name: string): string {
-  return `__SYNARA_ENV_${name}_END__`;
+  return `__DJL_ENV_${name}_END__`;
 }
 
 function buildEnvironmentCaptureCommand(names: ReadonlyArray<string>): string {

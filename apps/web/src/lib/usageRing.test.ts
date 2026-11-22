@@ -2,7 +2,7 @@ import type {
   CloudAccountStatus,
   ServerProviderStatus,
   ServerProviderUsageSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

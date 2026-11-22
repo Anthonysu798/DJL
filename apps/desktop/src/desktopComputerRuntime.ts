@@ -1,6 +1,6 @@
 import type { ComputerStopPresentation } from "./computerStopPresentation";
-import type { CuaComputerTask } from "@synara/shared/cuaDriverProtocol";
-/** DJL's desktop wiring for the pinned Synara Cua engine. No driver starts on boot. */
+import type { CuaComputerTask } from "@djl/shared/cuaDriverProtocol";
+/** DJL's desktop wiring for the pinned DJL Cua engine. No driver starts on boot. */
 import { join } from "node:path";
 import { CuaDriverHost, sweepOrphanedCuaDrivers } from "./cuaDriverHost";
 import { DesktopAppSnapManager } from "./appSnapManager";
@@ -13,7 +13,7 @@ import {
   writeAgentCursorPreference,
   normalizeAgentCursorStylePreference,
 } from "./agentCursorPreference";
-import { COMPUTER_PERMISSION_KINDS } from "@synara/shared/computerGrants";
+import { COMPUTER_PERMISSION_KINDS } from "@djl/shared/computerGrants";
 import type { DesktopAppSnapManagerOptions } from "./appSnapManager";
 
 export interface DesktopComputerRuntimeOptions {

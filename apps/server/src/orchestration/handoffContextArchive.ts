@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationThread } from "@djl/contracts";
 import { resolveAttachmentPathById } from "../attachmentStore";
 
 type PriorHandoffArchive = {

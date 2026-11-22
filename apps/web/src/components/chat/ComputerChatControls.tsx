@@ -1,5 +1,5 @@
-import type { ProviderMentionReference, ProviderSkillReference, ThreadId } from "@synara/contracts";
-import { parseComputerInvocation } from "@synara/shared/computerInvocation";
+import type { ProviderMentionReference, ProviderSkillReference, ThreadId } from "@djl/contracts";
+import { parseComputerInvocation } from "@djl/shared/computerInvocation";
 import { useTranslation } from "~/i18n";
 import { MonitorIcon } from "~/lib/icons";
 import { useThreadComputerStateSeed } from "~/hooks/useThreadComputerStateSeed";

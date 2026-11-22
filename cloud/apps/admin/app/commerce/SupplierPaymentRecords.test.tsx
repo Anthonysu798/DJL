@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CommerceSupplierPaymentDocument,
   CommerceSupplierPaymentDocumentInput,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 const { admin, getToken } = vi.hoisted(() => ({ admin: vi.fn(), getToken: vi.fn() }));
 vi.mock("@/lib/api", async (original) => ({
   ...(await original<typeof import("@/lib/api")>()),

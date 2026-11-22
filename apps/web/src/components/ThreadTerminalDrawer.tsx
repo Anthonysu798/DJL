@@ -6,8 +6,8 @@
 import "@xterm/xterm/css/xterm.css";
 import { SearchAddon } from "@xterm/addon-search";
 import { Plus, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "~/lib/icons";
-import { type HarnessId, type ThreadId } from "@synara/contracts";
-import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared/terminalThreads";
+import { type HarnessId, type ThreadId } from "@djl/contracts";
+import { type TerminalActivityState, type TerminalCliKind } from "@djl/shared/terminalThreads";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

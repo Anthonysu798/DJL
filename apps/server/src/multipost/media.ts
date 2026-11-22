@@ -4,7 +4,7 @@ import { pipeline } from "node:stream/promises";
 import { mkdir, stat, copyFile, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import type { MultiPostFile, MultiPostScope } from "@synara/contracts";
+import type { MultiPostFile, MultiPostScope } from "@djl/contracts";
 import { scopedAttachmentInputFiles } from "../work/scopedAttachments";
 import { resolveAuthorizedInputPath } from "../work/documentTools";
 export const multiPostMediaTypes: Record<string, string> = {

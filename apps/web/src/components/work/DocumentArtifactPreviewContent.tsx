@@ -1,7 +1,7 @@
 // FILE: DocumentArtifactPreviewContent.tsx
 // Purpose: Shared bounded rendering for normalized Work document previews.
 
-import type { DocumentArtifactPreview, DocumentLocator } from "@synara/contracts";
+import type { DocumentArtifactPreview, DocumentLocator } from "@djl/contracts";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 

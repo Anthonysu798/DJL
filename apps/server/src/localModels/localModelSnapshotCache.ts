@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import {
   LocalModelsSnapshot,
   type LocalModelsSnapshot as LocalModelsSnapshotValue,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 export class LocalModelSnapshotCache {

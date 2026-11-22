@@ -11,8 +11,8 @@ import {
   ThreadId,
   type ThreadMarker,
   type TurnId,
-} from "@synara/contracts";
-import { resolveLatestTailUserMessageEditTarget } from "@synara/shared/conversationEdit";
+} from "@djl/contracts";
+import { resolveLatestTailUserMessageEditTarget } from "@djl/shared/conversationEdit";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,

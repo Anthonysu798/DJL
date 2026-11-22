@@ -10,7 +10,7 @@
  *   2. A **successful** result whose availability is `permission-required` — a
  *      perception read that completed and reported the desktop cannot be driven.
  *      This is the shape the user hit: the agent received a well-formed answer
- *      saying "Synara needs Accessibility", no card appeared, and the model was
+ *      saying "DJL needs Accessibility", no card appeared, and the model was
  *      left to explain TCC in prose.
  *   3. A grant the backend knows is missing while nothing has failed yet —
  *      Screen Recording, which leaves the desktop driveable but unseeable, so
@@ -28,9 +28,9 @@ import type {
   ComputerAvailability,
   ComputerBuildSignature,
   ComputerPermission,
-} from "@synara/contracts";
-import { computerGrantsBlockControl, listComputerPermissions } from "@synara/shared/computerGrants";
-import { SYNARA_DESKTOP_BUNDLE_ID_ENV } from "@synara/shared/desktopIdentity";
+} from "@djl/contracts";
+import { computerGrantsBlockControl, listComputerPermissions } from "@djl/shared/computerGrants";
+import { DJL_DESKTOP_BUNDLE_ID_ENV } from "@djl/shared/desktopIdentity";
 
 import { ComputerBackendError } from "./ComputerBackend.ts";
 
@@ -44,12 +44,12 @@ import { ComputerBackendError } from "./ComputerBackend.ts";
  * a bare `bun run`, a remote host — genuinely has no responsible app. Its
  * absence is the meaningful case, and it is why the card's recovery advice is
  * withheld rather than printed against a guessed identifier that would reset a
- * different Synara's grants.
+ * different DJL's grants.
  */
 export function responsibleDesktopBundleId(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string | undefined {
-  const value = env[SYNARA_DESKTOP_BUNDLE_ID_ENV]?.trim();
+  const value = env[DJL_DESKTOP_BUNDLE_ID_ENV]?.trim();
   return value ? value : undefined;
 }
 
@@ -83,7 +83,7 @@ export interface ComputerSetupSignal {
   /**
    * The app the missing grant is filed against, when this server has one behind
    * it. Carried with the signal rather than resolved by the card because only
-   * the server knows which flavor of Synara is running, and the card's advice
+   * the server knows which flavor of DJL is running, and the card's advice
    * has to name that one or none at all.
    */
   readonly bundleId?: string;
@@ -168,7 +168,7 @@ export function computerSetupSignal(input: {
 export function computerSetupToolNote(signal: ComputerSetupSignal): string {
   const labels = listComputerPermissions(signal.missing);
   const needed = labels.length > 0 ? labels : "a macOS privacy permission";
-  const asked = `Synara needs ${needed} and has shown the user a setup card with a guided flow.`;
+  const asked = `DJL needs ${needed} and has shown the user a setup card with a guided flow.`;
   if (signal.blocking) {
     return (
       `${asked} Nothing on the desktop can be driven without it. ` +

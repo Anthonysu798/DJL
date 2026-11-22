@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ComputerActivitySnapshot, ComputerUseHistorySettings } from "@synara/contracts";
+import type { ComputerActivitySnapshot, ComputerUseHistorySettings } from "@djl/contracts";
 import { ComputerActivityRecorder } from "./computerActivityRecorder";
 import { ComputerActivitySummaries } from "./computerActivitySummaries";
 

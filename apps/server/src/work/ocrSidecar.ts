@@ -17,7 +17,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
-import type { DocumentBlock } from "@synara/contracts";
+import type { DocumentBlock } from "@djl/contracts";
 
 const MAX_COMPONENT_BYTES = 1024 * 1024 * 1024;
 const MAX_OCR_STDOUT_BYTES = 64 * 1024 * 1024;

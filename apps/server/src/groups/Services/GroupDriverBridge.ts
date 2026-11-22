@@ -4,7 +4,7 @@
 //          when it starts; the group driver reads it when a turn runs.
 // Layer: Service
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 import { Layer, ServiceMap } from "effect";
 
 import type { GroupRuntime } from "../../harnesses/native/group/groupRound";

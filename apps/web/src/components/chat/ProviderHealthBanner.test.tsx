@@ -1,4 +1,4 @@
-import type { ServerProviderStatus } from "@synara/contracts";
+import type { ServerProviderStatus } from "@djl/contracts";
 import { createInstance } from "i18next";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nextProvider, initReactI18next } from "react-i18next";

@@ -15,7 +15,7 @@ import type {
   ComputerPermission,
   DesktopAppSnapPermissionKind,
   DesktopAppSnapState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 /**
  * Fixed setup order, shared with the native permission guide.
@@ -117,7 +117,7 @@ export function listComputerPermissions(permissions: readonly ComputerPermission
 }
 
 /**
- * What to tell a user whose System Settings already shows Synara switched on
+ * What to tell a user whose System Settings already shows DJL switched on
  * while the helper still reports the grant missing — or null when that cannot be
  * what happened.
  *
@@ -132,14 +132,14 @@ export function listComputerPermissions(permissions: readonly ComputerPermission
  * and re-add this specific build in System Settings, or reset its own bundle
  * explicitly when the responsible identity is known.
  *
- * `bundleId` is the *responsible* app's identifier — the Synara the grant is
+ * `bundleId` is the *responsible* app's identifier — the DJL the grant is
  * actually filed against, which `.dev` and `.canary` builds do not share with a
  * released one. It is optional because nothing can derive it: a server started
  * outside the desktop shell has no app behind it, and the desktop tells the
  * backend which flavor it is through
- * `SYNARA_DESKTOP_BUNDLE_ID_ENV`. When it is unknown the whole `tccutil`
+ * `DJL_DESKTOP_BUNDLE_ID_ENV`. When it is unknown the whole `tccutil`
  * sentence is withheld rather than printed with a guess, because the guess a
- * user would paste into Terminal resets a *different* Synara's grants — the one
+ * user would paste into Terminal resets a *different* DJL's grants — the one
  * they have installed — and leaves this one exactly as broken as before.
  */
 export function computerStaleGrantAdvice(

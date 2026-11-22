@@ -1,4 +1,4 @@
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { resolveProjectMemoryScope } from "./projectMemoryScope.ts";

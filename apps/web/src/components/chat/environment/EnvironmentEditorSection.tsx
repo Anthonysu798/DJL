@@ -5,7 +5,7 @@
 //          editor (same entries as the header OpenInPicker).
 // Layer: Environment panel section
 
-import type { EditorId, ResolvedKeybindingsConfig } from "@synara/contracts";
+import type { EditorId, ResolvedKeybindingsConfig } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useEditorLaunchers } from "~/hooks/useEditorLaunchers";

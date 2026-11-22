@@ -120,7 +120,7 @@ export const COMPUTER_SELECT_TEXT_RANGE_MAX = 4 * 1024 * 1024;
 
 /**
  * Thread-activity kind appended by the agent gateway when a computer tool call
- * failed because the OS has not granted Synara the privacy permissions the
+ * failed because the OS has not granted DJL the privacy permissions the
  * desktop backend needs. The web app keys its actionable "set up computer
  * control" chat card off this kind, so the user can grant them from the chat
  * instead of hunting through Settings.
@@ -181,9 +181,9 @@ export const COMPUTER_MAC_BACKEND = "mac";
  * latches until it is pressed again, which hands control back.
  *
  * Must match `releaseShortcut()` in the KWin plugin
- * (`apps/server/native/computer-use-kwin/synaracomputeruseplugin.cpp`), which
+ * (`apps/server/native/computer-use-kwin/djlcomputeruseplugin.cpp`), which
  * registers it with KGlobalAccel, and the same chord the Hyprland plugin
- * (`apps/server/native/computer-use-hyprland/synarahyprlandplugin.cpp`) binds
+ * (`apps/server/native/computer-use-hyprland/djlhyprlandplugin.cpp`) binds
  * through its keybind hook. It is a compositor shortcut and exists only where
  * a plugin binds it: no surface may advertise it unless
  * `ComputerAvailability.backend` is a backend in
@@ -213,7 +213,7 @@ export type ComputerWindowId = typeof ComputerWindowId.Type;
  * Named rather than described so every surface says the same words: the chat's
  * setup card, the settings panel, and the tool result the agent reads all key
  * off these identifiers, and their user-facing labels live in one place
- * (`@synara/shared/computerGrants`). There is no fourth surface — the
+ * (`@djl/shared/computerGrants`). There is no fourth surface — the
  * Electron-side permission preflight that used to be one was deleted, because
  * the prompt has to come from the process that actually needs the grant.
  *
@@ -233,7 +233,7 @@ export type ComputerPermission = typeof ComputerPermission.Type;
  *
  * macOS pins an ad-hoc signature's TCC grant to the binary's cdhash, so every
  * local rebuild silently invalidates it while System Settings keeps showing the
- * app switched on — the user sees "Synara: on" and the helper still reports the
+ * app switched on — the user sees "DJL: on" and the helper still reports the
  * permission missing. A Developer ID signature keys on identifier plus team and
  * survives rebuilds, so that advice must never be shown for one.
  */
@@ -246,15 +246,15 @@ export type ComputerBuildSignature = typeof ComputerBuildSignature.Type;
  *
  * `buildSignature` is optional because only a backend with a permission model
  * reports one: it is what lets the card explain the case where System Settings
- * already shows Synara switched on (an ad-hoc build's grant is pinned to a
+ * already shows DJL switched on (an ad-hoc build's grant is pinned to a
  * cdhash a rebuild replaced) instead of leaving the user staring at a switch
  * that looks correct.
  *
  * `bundleId` is the identifier of the app the grant is *filed against* — the
  * desktop shell that started this server, which on a `.dev` or `.canary` build
- * is not the released Synara. It rides along because the card's recovery advice
+ * is not the released DJL. It rides along because the card's recovery advice
  * names it in a `tccutil reset` command, and a command naming the wrong app
- * revokes a different Synara's grants while fixing nothing. Optional for the
+ * revokes a different DJL's grants while fixing nothing. Optional for the
  * same reason it cannot be guessed: a server started outside the desktop shell
  * has no responsible app, and the card must then omit the command entirely.
  */
@@ -808,7 +808,7 @@ export type ComputerAccessibilityTreeApp = typeof ComputerAccessibilityTreeApp.T
  * learn.
  */
 export const ComputerAccessibilityTreeWindow = Schema.Struct({
-  /** The Synara id (`cua:<pid>:<wid>`) the other computer tools take. */
+  /** The DJL id (`cua:<pid>:<wid>`) the other computer tools take. */
   id: ComputerWindowId,
   pid: Schema.Int.check(Schema.isGreaterThan(0)),
   appName: Schema.optional(Schema.String.check(Schema.isMaxLength(COMPUTER_LABEL_MAX_LENGTH))),
@@ -826,7 +826,7 @@ export type ComputerAccessibilityTreeWindow = typeof ComputerAccessibilityTreeWi
  * The driver read is desktop-wide and takes no arguments, so the bounding the
  * result promises lives in the row caps rather than in driver parameters.
  * `windowId`, when given, scopes the answer to the app that owns that exact
- * window — Synara-side filtering on top of the same desktop snapshot.
+ * window — DJL-side filtering on top of the same desktop snapshot.
  */
 export const ComputerAccessibilityTreeResult = Schema.Struct({
   computerId: ComputerId,

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { setTimeout } from "node:timers/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CommerceImageSearchResult } from "@synara/contracts/cloud";
+import type { CommerceImageSearchResult } from "@djl/contracts/cloud";
 import type { Principal } from "../auth/guard.ts";
 import { PERSONAL_ORG_METADATA } from "../auth/auth.ts";
 import { bytesMatchType } from "../files/fileTypes.ts";

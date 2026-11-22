@@ -3,7 +3,7 @@
 //          already copied; the user pastes it, approves DJL, and this dialog turns connected
 //          on its own.
 
-import type { PluginAppConnection } from "@synara/contracts";
+import type { PluginAppConnection } from "@djl/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

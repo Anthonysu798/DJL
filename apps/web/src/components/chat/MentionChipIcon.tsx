@@ -16,7 +16,7 @@ import { cn } from "~/lib/utils";
 import { SiteFavicon } from "../SiteFavicon";
 import { COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME } from "../composerInlineChip";
 import { FolderClosed } from "../FolderClosed";
-import type { ProviderMentionReference } from "@synara/contracts";
+import type { ProviderMentionReference } from "@djl/contracts";
 
 export type { MentionChipKind };
 

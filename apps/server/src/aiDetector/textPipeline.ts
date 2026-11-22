@@ -7,7 +7,7 @@ import type {
   AiDetectorRegion,
   AiDetectorRegionLabel,
   AiDetectorScoreSummary,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { getCalibrationBand, getModelManifest, type DetectorModelLanguage } from "./modelManifest";
 

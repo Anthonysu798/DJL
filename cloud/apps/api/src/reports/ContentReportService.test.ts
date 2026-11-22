@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { schema } from "@djl/db";
-import type { CloudCreateContentReportInput, CloudSendMessageInput } from "@synara/contracts/cloud";
+import type { CloudCreateContentReportInput, CloudSendMessageInput } from "@djl/contracts/cloud";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { AdminPrincipal } from "../admin/AdminAuth.ts";

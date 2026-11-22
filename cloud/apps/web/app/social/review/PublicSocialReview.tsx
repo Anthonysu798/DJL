@@ -1,10 +1,7 @@
 "use client";
 /* oxlint-disable react/no-array-index-key -- Frozen snapshot targets have no public account identifiers. */
 import { useEffect, useState, type FormEvent } from "react";
-import type {
-  CloudSocialPublicReview,
-  CloudSocialReviewFeedbackInput,
-} from "@synara/contracts/cloud";
+import type { CloudSocialPublicReview, CloudSocialReviewFeedbackInput } from "@djl/contracts/cloud";
 import SpotlightCard from "@/components/react-bits/SpotlightCard";
 import FadeContent from "@/components/react-bits/FadeContent";
 import { API_URL } from "@/lib/config";

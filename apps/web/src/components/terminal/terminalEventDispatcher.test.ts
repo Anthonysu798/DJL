@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TerminalEvent } from "@synara/contracts";
+import type { TerminalEvent } from "@djl/contracts";
 const api = vi.hoisted(() => ({
   listener: null as ((e: TerminalEvent) => void) | null,
   ack: vi.fn(async () => {}),

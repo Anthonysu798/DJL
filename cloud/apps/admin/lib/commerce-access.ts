@@ -1,4 +1,4 @@
-import type { CommerceAdminPermission, CommerceStaffRole } from "@synara/contracts/cloud";
+import type { CommerceAdminPermission, CommerceStaffRole } from "@djl/contracts/cloud";
 
 export interface AdminIdentity {
   id: string;

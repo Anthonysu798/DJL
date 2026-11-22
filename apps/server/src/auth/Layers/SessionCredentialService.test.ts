@@ -18,7 +18,7 @@ const testLayer = SessionCredentialServiceLive.pipe(
   Layer.provide(ServerSecretStoreLive),
   Layer.provide(
     ServerConfig.layerTest(process.cwd(), {
-      prefix: "synara-auth-session-test-",
+      prefix: "djl-auth-session-test-",
     }),
   ),
   Layer.provide(NodeServices.layer),

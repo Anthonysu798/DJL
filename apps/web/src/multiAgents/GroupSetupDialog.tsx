@@ -2,7 +2,7 @@
 // Purpose: Two-step setup for a new group: pick agents (not-ready ones offer Set up), then name it.
 // Layer: UI component
 
-import { PROVIDER_DISPLAY_NAMES, type Group, type GroupMemberProvider } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, type Group, type GroupMemberProvider } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";

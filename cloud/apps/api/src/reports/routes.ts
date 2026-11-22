@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
-import { CloudCreateContentReportInput } from "@synara/contracts/cloud";
+import { CloudCreateContentReportInput } from "@djl/contracts/cloud";
 
 import { hashIp } from "../audit/AuditLog.ts";
 import { optionalPrincipal, type PrincipalResolver } from "../auth/guard.ts";

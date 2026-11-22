@@ -1,4 +1,4 @@
-import type { HarnessTool, ServerSettings } from "@synara/contracts";
+import type { HarnessTool, ServerSettings } from "@djl/contracts";
 import {
   createProviderVersionAdvisory,
   parseGenericCliVersion,

@@ -15,7 +15,7 @@
 
 ## Why this matters
 
-The requested Codex-like behavior includes timers such as "wake this thread in 15 seconds" and recurring checks. Synara currently supports recurring/manual schedules but not one-shot timers, local timezone semantics, or reliable sub-minute execution. This plan adds the smallest complete timer model first: one-shot `once` schedules plus seconds parsing and efficient imminent wake-ups.
+The requested Codex-like behavior includes timers such as "wake this thread in 15 seconds" and recurring checks. DJL currently supports recurring/manual schedules but not one-shot timers, local timezone semantics, or reliable sub-minute execution. This plan adds the smallest complete timer model first: one-shot `once` schedules plus seconds parsing and efficient imminent wake-ups.
 
 ## Current state
 

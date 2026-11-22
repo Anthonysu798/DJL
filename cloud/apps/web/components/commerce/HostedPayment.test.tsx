@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommerceOrder, CommercePaymentStatus } from "@synara/contracts/cloud";
+import type { CommerceOrder, CommercePaymentStatus } from "@djl/contracts/cloud";
 
 const { commerce, openCommerceCheckout } = vi.hoisted(() => ({
   commerce: { checkout: vi.fn(), payment: vi.fn(), cancelCheckout: vi.fn() },

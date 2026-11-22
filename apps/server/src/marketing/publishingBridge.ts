@@ -7,7 +7,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { Effect, Schema } from "effect";
 
 import { readFile } from "node:fs/promises";
-import { type Campaign, type MediaAsset } from "@synara/contracts";
+import { type Campaign, type MediaAsset } from "@djl/contracts";
 import {
   CloudSocialDraftInput,
   type CloudSocialDraft,
@@ -17,7 +17,7 @@ import {
   CloudSocialReportScheduleInput,
   type CloudSocialTrackingLink,
   type CloudSocialTrackingLinkCreated,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { DJL_CLOUD_HOSTS, resolveCloudWebUrl } from "../cloud/api";
 import type { ServerConfigShape } from "../config";
 import { createSocialCloudClient } from "./socialCloudClient";

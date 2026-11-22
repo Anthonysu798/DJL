@@ -1,6 +1,6 @@
-import { type ThreadId } from "@synara/contracts";
-import type { BrowserFindingPromptEntry } from "@synara/contracts";
-import { parseBrowserFindingsBlock } from "@synara/shared/browserFindings";
+import { type ThreadId } from "@djl/contracts";
+import type { BrowserFindingPromptEntry } from "@djl/contracts";
+import { parseBrowserFindingsBlock } from "@djl/shared/browserFindings";
 import {
   extractTrailingAssistantSelections,
   type ParsedAssistantSelectionEntry,

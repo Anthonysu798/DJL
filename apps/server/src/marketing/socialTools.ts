@@ -2,7 +2,7 @@ import { multiPostScope } from "../multipost/live";
 import { importLegacyCampaign } from "../multipost/legacy";
 import { Effect, Schema } from "effect";
 import path from "node:path";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import { publishingBridge } from "./publishingBridge";
 import { socialBridge } from "./socialBridge";
 import { readDocument, MarketingError } from "./store";

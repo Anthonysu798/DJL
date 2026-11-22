@@ -122,7 +122,6 @@ if [[ "$release_platform" == "mac" ]]; then
     "$workspace/latest-mac-x64.yml" \
     "$prepared_dir/latest-mac.yml"
   cp "$prepared_dir/latest-mac.yml" "$prepared_dir/djl-mac.yml"
-  cp "$prepared_dir/latest-mac.yml" "$prepared_dir/synara-mac.yml"
   write_sha256sums
 
   for arch in arm64 x64; do
@@ -159,7 +158,6 @@ else
   cp "$output/DJL-$version-x64.exe.blockmap" "$prepared_dir/"
   cp "$output/latest.yml" "$prepared_dir/"
   cp "$prepared_dir/latest.yml" "$prepared_dir/djl.yml"
-  cp "$prepared_dir/latest.yml" "$prepared_dir/synara.yml"
   write_sha256sums
 fi
 

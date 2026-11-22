@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { MultiPostJob, MultiPostState } from "@synara/contracts";
+import type { MultiPostJob, MultiPostState } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { multiPostCommand, multiPostState } from "./client";
 import { latestPost, postViewUrl } from "./chatResult";

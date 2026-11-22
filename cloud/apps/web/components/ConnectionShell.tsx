@@ -3,7 +3,7 @@
 import { ArrowUpRight, CircleAlert, LoaderCircle, LockKeyhole, Monitor, X } from "lucide-react";
 import { IconBrandInstagram, IconBrandTiktok } from "@tabler/icons-react";
 import Image from "next/image";
-import { DJL_NATIVE_OPEN_URI } from "@synara/contracts/cloud";
+import { DJL_NATIVE_OPEN_URI } from "@djl/contracts/cloud";
 import type { ReactNode } from "react";
 
 import FadeContent from "@/components/react-bits/FadeContent";

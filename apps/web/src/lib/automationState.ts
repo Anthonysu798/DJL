@@ -6,7 +6,7 @@ import type {
   AutomationRun,
   AutomationRunResult,
   AutomationStreamEvent,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export const automationQueryKey = ["automations"] as const;
 export const EMPTY_AUTOMATION_LIST: AutomationListResult = { definitions: [], runs: [] };

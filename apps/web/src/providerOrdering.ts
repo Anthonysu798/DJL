@@ -3,7 +3,7 @@
 // Layer: Web settings utility
 // Exports: default order, normalization, and order comparison helpers.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 
 export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = [
   "djlCloud",

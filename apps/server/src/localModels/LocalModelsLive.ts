@@ -1,4 +1,4 @@
-import type { LocalModelEvent, LocalModelsSnapshot } from "@synara/contracts";
+import type { LocalModelEvent, LocalModelsSnapshot } from "@djl/contracts";
 import { Duration, Effect, Layer, PubSub, Schedule, Stream } from "effect";
 
 import { ServerConfig } from "../config";

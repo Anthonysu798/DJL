@@ -2,7 +2,7 @@ import { desktopComputerRoutes } from "./computer/desktopRoutes";
 import http from "node:http";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
-import type { ServerSettingsError } from "@synara/contracts";
+import type { ServerSettingsError } from "@djl/contracts";
 import { Effect, Exit, FileSystem, Layer, Path, Schema, Scope, ServiceMap } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
@@ -61,9 +61,7 @@ export interface ServerShape {
   readonly stopSignal: Effect.Effect<void, never>;
 }
 
-export class Server extends ServiceMap.Service<Server, ServerShape>()(
-  "synara/effectServer/Server",
-) {}
+export class Server extends ServiceMap.Service<Server, ServerShape>()("djl/effectServer/Server") {}
 
 export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycleError>()(
   "ServerLifecycleError",

@@ -1,8 +1,8 @@
 import { DESKTOP_IPC_CHANNELS as IPC } from "./ipcChannels";
-import type { DesktopComputerPreviewFrame } from "@synara/contracts";
+import type { DesktopComputerPreviewFrame } from "@djl/contracts";
 import { COMPUTER_USE_IPC_CHANNELS } from "./computerUseIpcChannels";
 import { contextBridge, ipcRenderer } from "electron";
-import type { DesktopBridge, DesktopBuildInfo } from "@synara/contracts";
+import type { DesktopBridge, DesktopBuildInfo } from "@djl/contracts";
 import { RENDERER_READY_CHANNEL } from "./windowReveal";
 import { BROWSER_IPC_CHANNELS } from "./browserIpcChannels";
 import { DESKTOP_BUILD_INFO_CHANNEL } from "./desktopBuildInfo";

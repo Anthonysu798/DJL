@@ -9,13 +9,13 @@
 //          resolveDockFileOpenTarget,
 //          openWorkspaceFileReference, prefetchWorkspaceFile
 
-import { isSupportedLocalPreviewFilePath } from "@synara/shared/localPreviewFiles";
+import { isSupportedLocalPreviewFilePath } from "@djl/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   workspaceRelativePathOf,
-} from "@synara/shared/path";
-import { isScratchWorkspacePath } from "@synara/shared/threadWorkspace";
+} from "@djl/shared/path";
+import { isScratchWorkspacePath } from "@djl/shared/threadWorkspace";
 import type { QueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 
@@ -43,21 +43,21 @@ export function useWorkspaceFileOpener(): WorkspaceFileOpener | null {
 // Trailing `:line` / `:line:col` suffix carried by resolved markdown file links.
 // The in-app viewer previews whole files, so the position is dropped.
 const FILE_POSITION_SUFFIX_PATTERN = /:\d+(?::\d+)?$/;
-const SYNARA_PUBLIC_ASSET_PATH_PREFIXES = [
+const DJL_PUBLIC_ASSET_PATH_PREFIXES = [
   "/central-icons-reversed/",
   "/central-icons-fill/",
 ] as const;
-const SYNARA_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
+const DJL_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
 
-function resolveSynaraPublicAssetOpenTarget(path: string, workspaceRoot: string | null) {
+function resolveDjlPublicAssetOpenTarget(path: string, workspaceRoot: string | null) {
   if (!workspaceRoot) {
     return null;
   }
   const normalizedPath = path.replace(/\\/g, "/");
-  if (!SYNARA_PUBLIC_ASSET_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))) {
+  if (!DJL_PUBLIC_ASSET_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))) {
     return null;
   }
-  const relativePath = `${SYNARA_WEB_PUBLIC_WORKSPACE_DIR}${normalizedPath}`;
+  const relativePath = `${DJL_WEB_PUBLIC_WORKSPACE_DIR}${normalizedPath}`;
   return isWorkspaceRelativePathSafe(relativePath) ? relativePath : null;
 }
 
@@ -87,7 +87,7 @@ export function resolveWorkspaceFileOpenTarget(
   }
   // CentralIcon assets are linked in chat as Vite root URLs
   // (`/central-icons-...`) but the file viewer needs the repo path.
-  return resolveSynaraPublicAssetOpenTarget(withoutPosition, workspaceRoot);
+  return resolveDjlPublicAssetOpenTarget(withoutPosition, workspaceRoot);
 }
 
 /**

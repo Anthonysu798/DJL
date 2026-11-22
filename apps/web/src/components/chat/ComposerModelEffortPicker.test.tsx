@@ -1,4 +1,4 @@
-import type { ModelSlug, ProviderKind, ThreadId } from "@synara/contracts";
+import type { ModelSlug, ProviderKind, ThreadId } from "@djl/contracts";
 import { createInstance, type i18n } from "i18next";
 import { type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

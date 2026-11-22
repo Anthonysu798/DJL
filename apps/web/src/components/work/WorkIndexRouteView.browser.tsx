@@ -69,8 +69,8 @@ describe("WorkIndexRouteView", () => {
   beforeEach(() => {
     mocks.getConfig.mockResolvedValue({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
-      studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/DJL",
+      studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
     });
     mocks.handleNewStudioChat.mockReset();
     mocks.navigate.mockReset();
@@ -100,7 +100,7 @@ describe("WorkIndexRouteView", () => {
     await expect.poll(() => mocks.getConfig.mock.calls.length, { timeout: 1_000 }).toBe(1);
     await expect.element(page.getByText("Work route ready")).toBeInTheDocument();
     expect(useWorkspaceStore.getState().studioWorkspaceRoot).toBe(
-      "/Users/tester/Documents/Synara/Studio",
+      "/Users/tester/Documents/DJL/Studio",
     );
   });
 });

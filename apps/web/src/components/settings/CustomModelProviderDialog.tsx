@@ -5,7 +5,7 @@ import {
   CustomModelProvider,
   CustomModelBaseUrl,
   type CustomModelApiProtocol,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { ensureNativeApi } from "~/nativeApi";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";

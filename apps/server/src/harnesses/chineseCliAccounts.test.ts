@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@djl/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildHarnessInvocation } from "./accounts";
 import { nativeProfileOptions } from "./native/profile";

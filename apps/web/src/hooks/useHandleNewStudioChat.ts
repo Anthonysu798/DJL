@@ -1,4 +1,4 @@
-import type { ThreadId, ProviderKind } from "@synara/contracts";
+import type { ThreadId, ProviderKind } from "@djl/contracts";
 // FILE: useHandleNewStudioChat.ts
 // Purpose: Starts ordinary AI threads inside the hidden Studio project container.
 // Layer: Web hook

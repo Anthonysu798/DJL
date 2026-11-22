@@ -1,5 +1,5 @@
 {
-  "name": "@synara/scripts",
+  "name": "@djl/scripts",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.77",
+    "@djl/contracts": "workspace:*",
+    "@djl/shared": "workspace:*",
     "@effect/platform-node": "catalog:",
-    "@synara/contracts": "workspace:*",
-    "@synara/shared": "workspace:*",
     "app-builder-bin": "4.2.0",
     "effect": "catalog:"
   },

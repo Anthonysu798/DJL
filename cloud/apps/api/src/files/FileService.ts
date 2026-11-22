@@ -14,7 +14,7 @@ import type {
   CloudFilePresignInput,
   CloudFilePresignResponse,
   CloudUserMessagePart,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import type { Settings } from "../config/settings.ts";

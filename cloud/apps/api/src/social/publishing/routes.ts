@@ -5,7 +5,7 @@ import {
   CloudSocialDraftEdit,
   CloudSocialRevisionInput,
   CloudSocialTaskAction,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { requirePrincipal, type PrincipalResolver } from "../../auth/guard.ts";
 import { decodeBody, idParam } from "../../http/decode.ts";
 import { attempt as rawAttempt, handle } from "../../http/handle.ts";

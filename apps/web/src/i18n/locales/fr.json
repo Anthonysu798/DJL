@@ -3482,23 +3482,23 @@
     "openSettings": "Open {{value0}} settings",
     "ghostCursor": "ghost cursor",
     "granted": "Granted",
-    "letsSynaraDetectEscapeAndPauseWhenYouTake": "Lets DJL detect Escape and pause when you take over during a Computer task. This does not enable the AppSnap shortcut.",
+    "letsDjlDetectEscapeAndPauseWhenYouTake": "Lets DJL detect Escape and pause when you take over during a Computer task. This does not enable the AppSnap shortcut.",
     "showGuide": "Show guide",
     "isReadyFor": "{{value0}} is ready for {{value1}}.",
     "hideGuide": "Hide guide",
     "recheckPermissions": "Recheck permissions",
     "screenRecording": "Screen Recording",
-    "letsSynaraCaptureAnImageOfTheFrontmostWindow": "Lets DJL capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord.",
+    "letsDjlCaptureAnImageOfTheFrontmostWindow": "Lets DJL capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord.",
     "windowListing": "window listing",
     "theAgentCanActOnTheDesktopButCannot2": "The agent can act on the desktop but cannot see it, so screenshots fail. Turn DJL on in System Settings › Privacy & Security › Screen Recording, then press Set up to reconnect.",
     "fill": "Fill",
     "gettingStarted": "Getting started",
     "theServerCouldNotBeReached": "The server could not be reached.",
     "theAgentDrivesItsOwnSeatSoYourCursor": "The agent drives its own seat, so your cursor and focus stay untouched.",
-    "letsSynaraNoticeTheDoubleOptionChordWhileAnother": "Lets DJL notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded.",
+    "letsDjlNoticeTheDoubleOptionChordWhileAnother": "Lets DJL notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded.",
     "screenCapture2": "screen capture",
     "permissionCheckFailed": "Permission check failed.",
-    "letsSynaraCaptureWindowsAndTheDesktopSoThe": "Lets DJL capture windows and the desktop so the agent can see what it is driving.",
+    "letsDjlCaptureWindowsAndTheDesktopSoThe": "Lets DJL capture windows and the desktop so the agent can see what it is driving.",
     "useGrantNextToAPermissionToWalkThrough": "Use Grant next to a permission to walk through setup.",
     "large": "Large",
     "computerEffectBlocked": "Blocked",
@@ -3522,7 +3522,7 @@
     "permissionGuideEnableInstalledApp": "If this copy of {{app}} is already listed, turn it on. Otherwise, drag the app from the floating guide into the list, or use + to choose this installed copy, then turn it on.",
     "showHistory": "Show history",
     "densityOptions_compact": "Compact",
-    "letsSynaraMoveThePointerClickAndTypeOn": "Lets DJL move the pointer, click, and type on your behalf. Nothing is driven unless you authorize a Computer task.",
+    "letsDjlMoveThePointerClickAndTypeOn": "Lets DJL move the pointer, click, and type on your behalf. Nothing is driven unless you authorize a Computer task.",
     "couldNotLoadRecentActionsRefreshToTryAgain": "Could not load recent actions. Refresh to try again.",
     "cursorColors": "Cursor colors",
     "rechecking": "Rechecking…",
@@ -4595,9 +4595,9 @@
           "details": "Le flux de publication vérifie le canal épinglé, écarte les versions propres du canal de compatibilité, répare les métadonnées et renforce le démarrage lorsqu’un échange de app.asar est détecté.",
           "title": "Les mises à jour de bureau sont mieux protégées"
         },
-        "synara-identity": {
+        "djl-identity": {
           "description": "L’application utilise désormais une identité unique partout : installation, ligne de commande, paquets, réglages, diagnostics et artefacts de publication.",
-          "details": "Le paquet de bureau est désormais com.emanueledipietro.synara, la CLI est @synara/cli avec la commande synara, et chaque identifiant d’exécution interne utilise l’espace de noms DJL. Le pont 0.4.2 préserve l’état du moteur de rendu pendant le changement d’origine.",
+          "details": "Le paquet de bureau est désormais app.djl.desktop, la CLI est @djl/cli avec la commande djl, et chaque identifiant d’exécution interne utilise l’espace de noms DJL. Le pont 0.4.2 préserve l’état du moteur de rendu pendant le changement d’origine.",
           "title": "DJL de bout en bout"
         }
       }

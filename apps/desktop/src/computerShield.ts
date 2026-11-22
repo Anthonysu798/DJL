@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface, type Interface } from "node:readline";
-import { cuaComputerTaskKey, type CuaComputerTask } from "@synara/shared/cuaDriverProtocol";
+import { cuaComputerTaskKey, type CuaComputerTask } from "@djl/shared/cuaDriverProtocol";
 import { stopNativeHelper } from "./stopNativeHelper";
 
 /**

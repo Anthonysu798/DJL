@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEventHandler } from "react";
 import { useTranslation } from "react-i18next";
-import { THREAD_NOTES_MAX_CHARS, type ProjectId } from "@synara/contracts";
+import { THREAD_NOTES_MAX_CHARS, type ProjectId } from "@djl/contracts";
 
 import { Textarea } from "~/components/ui/textarea";
 import { Button } from "~/components/ui/button";

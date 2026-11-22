@@ -11,8 +11,42 @@ const retiredCompanyName = `${retiredShortName}${characters(116, 111, 111, 108, 
 const retiredSecondName = characters(100, 112, 99, 111, 100, 101);
 const retiredPredecessorName = characters(99, 111, 100, 101, 116, 104, 105, 110, 103);
 const retiredProductName = characters(83, 121, 110, 97, 114, 97);
-const incorrectBundleDomain = characters(99, 111, 109, 46, 115, 121, 110, 97, 114, 97);
-const agentInstructionPaths = new Set(["AGENTS.md", "CLAUDE.md"]);
+// The upstream author's handle and account. Their copyright notices (written with
+// spaces) stay in the licence files; nothing else may carry these identifiers.
+const retiredOwnerHandle = characters(
+  101,
+  109,
+  97,
+  110,
+  117,
+  101,
+  108,
+  101,
+  100,
+  105,
+  112,
+  105,
+  101,
+  116,
+  114,
+  111,
+);
+const retiredOwnerAccount = characters(
+  69,
+  109,
+  97,
+  110,
+  117,
+  101,
+  108,
+  101,
+  45,
+  119,
+  101,
+  98,
+  48,
+  52,
+);
 const retiredIdentityReferencePaths = new Set([".gitignore"]);
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -41,7 +75,9 @@ const forbiddenPatterns = [
     `(?:^|[\\s"'\\x60./:@_-])${escapeRegExp(retiredShortName)}(?:$|[\\s"'\\x60./:@_-])`,
     "i",
   ),
-  new RegExp(escapeRegExp(incorrectBundleDomain), "i"),
+  new RegExp(escapeRegExp(retiredProductName), "i"),
+  new RegExp(escapeRegExp(retiredOwnerHandle), "i"),
+  new RegExp(escapeRegExp(retiredOwnerAccount), "i"),
 ] as const;
 
 // Raster images cannot be searched for embedded text. Keep the user-facing
@@ -60,7 +96,7 @@ const approvedVisualAssetDigests = new Map<string, string>([
 
 const approvedPinnedThirdPartyAssetDigests = new Map<string, string>([
   [
-    "docs/licenses/SYNARA_COMPUTER_USE_LICENSE",
+    "docs/licenses/COMPUTER_USE_LICENSE",
     "305724dd050ca7ded99c662de813d755bc4ec3887c4543a37159c6662ca36d1b",
   ],
   [
@@ -111,14 +147,8 @@ export function findBrandIdentityViolations(
       violations.push({ path: file.path, line: null, text: file.path });
     }
     if (retiredIdentityReferencePaths.has(file.path)) continue;
-    const isAgentInstructionFile = agentInstructionPaths.has(file.path);
     for (const [index, line] of file.contents.split(/\r?\n/).entries()) {
-      if (
-        !containsForbiddenIdentity(line) &&
-        !(isAgentInstructionFile && line.includes(retiredProductName))
-      ) {
-        continue;
-      }
+      if (!containsForbiddenIdentity(line)) continue;
       violations.push({ path: file.path, line: index + 1, text: line.trim() });
     }
   }

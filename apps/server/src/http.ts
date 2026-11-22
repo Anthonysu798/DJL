@@ -13,10 +13,10 @@ import {
   AuthRevokePairingLinkInput,
   STREAMING_UPLOAD_MAX_FILE_BYTES,
   ThreadId,
-} from "@synara/contracts";
-import { EDITOR_ICON_ROUTE_PATH } from "@synara/shared/editorIcons";
-import { isLoopbackAddress } from "@synara/shared/loopback";
-import { threadExportBlockedReason } from "@synara/shared/threadExport";
+} from "@djl/contracts";
+import { EDITOR_ICON_ROUTE_PATH } from "@djl/shared/editorIcons";
+import { isLoopbackAddress } from "@djl/shared/loopback";
+import { threadExportBlockedReason } from "@djl/shared/threadExport";
 import {
   DateTime,
   Effect,
@@ -821,7 +821,7 @@ const threadExportEffectRouteLayer = HttpRouter.add(
     }
 
     // Error responses need the trusted-origin CORS headers too: the desktop
-    // app fetches cross-origin (synara://app), and without them the browser masks
+    // app fetches cross-origin (djl-app://app), and without them the browser masks
     // a 400/404/409 body as an opaque network failure.
     const corsHeaders = localPreviewCorsHeaders({ config, request, url });
 

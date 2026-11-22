@@ -1,7 +1,7 @@
 /**
  * PiAdapter - Pi direct SDK implementation of the generic provider adapter contract.
  *
- * Pi is intentionally treated as an unopinionated harness: Synara does not add
+ * Pi is intentionally treated as an unopinionated harness: DJL does not add
  * permissions or plan-mode semantics on top of it.
  *
  * @module PiAdapter
@@ -16,5 +16,5 @@ export interface PiAdapterShape extends ProviderAdapterShape<ProviderAdapterErro
 }
 
 export class PiAdapter extends ServiceMap.Service<PiAdapter, PiAdapterShape>()(
-  "synara/provider/Services/PiAdapter",
+  "djl/provider/Services/PiAdapter",
 ) {}

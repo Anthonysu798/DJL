@@ -6,8 +6,8 @@ import {
 } from "@tanstack/react-router";
 import "../../index.css";
 
-import { MessageId, type BrowserFindingDraft } from "@synara/contracts";
-import { appendBrowserFindingsBlock } from "@synara/shared/browserFindings";
+import { MessageId, type BrowserFindingDraft } from "@djl/contracts";
+import { appendBrowserFindingsBlock } from "@djl/shared/browserFindings";
 import { type LegendListRef } from "@legendapp/list/react";
 import { page } from "vitest/browser";
 import { useCallback, useRef, useState, type ComponentProps, type FunctionComponent } from "react";

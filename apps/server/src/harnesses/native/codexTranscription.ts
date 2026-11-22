@@ -2,7 +2,7 @@ import type {
   ProviderStartOptions,
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { transcribeVoiceWithChatGptSession } from "../../voiceTranscription";
 import { NativeRpc, object } from "./protocol";
 

@@ -16,7 +16,7 @@ import type {
   CloudShare,
   CloudShareListResponse,
   CloudSharedMessage,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import type { ChatService } from "../chat/ChatService.ts";

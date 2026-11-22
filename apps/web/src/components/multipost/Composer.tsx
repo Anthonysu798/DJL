@@ -7,7 +7,7 @@ import type {
   MultiPostKind,
   MultiPostState,
   MultiPostTarget,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { calendarTimeToIso, localCalendarTime } from "../marketing/socialCalendar";
 import { uploadMultiPostMedia } from "./client";

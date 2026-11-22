@@ -4,7 +4,7 @@ import {
   ServerCommandStatus,
   ServerId,
   ServerPermissionTier,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";

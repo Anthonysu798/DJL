@@ -29,7 +29,7 @@ export const ComputerSpaceInventory = Schema.Struct({
 });
 export type ComputerSpaceInventory = typeof ComputerSpaceInventory.Type;
 
-/** A Synara task reservation of a user-designated existing Space, not OS ownership. */
+/** A DJL task reservation of a user-designated existing Space, not OS ownership. */
 export interface ComputerSpaceReservation {
   readonly threadId: string;
   readonly turnId: string | null;

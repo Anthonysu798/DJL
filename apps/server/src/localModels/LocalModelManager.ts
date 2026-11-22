@@ -21,7 +21,7 @@ import type {
   LocalModelSetupInput,
   LocalModelSetupJob,
   LocalModelsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   curatedModelDisplayName,
@@ -1670,7 +1670,7 @@ export class LocalModelManager {
               state: "update_required",
               version: null,
               installationKind: await this.#runtimeInstallationKind("lmstudio"),
-              detail: "Update LM Studio to 0.4.0 or newer to install models from Synara.",
+              detail: "Update LM Studio to 0.4.0 or newer to install models from DJL.",
               capabilities: runtimeCapabilities("lmstudio", "update_required"),
             },
             models: this.#parseLegacyLmStudioModels(await responseJson(legacy)),

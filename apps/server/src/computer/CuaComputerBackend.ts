@@ -3,9 +3,9 @@ import { cuaSpaceInventory } from "./cuaSpaceInventory.ts";
 import {
   parseCuaActionDiagnostics,
   type CuaActionDiagnostics,
-} from "@synara/shared/cuaActionDiagnostics";
+} from "@djl/shared/cuaActionDiagnostics";
 import { ComputerSpaceError } from "./ComputerSpaceBroker.ts";
-import { COMPUTER_WINDOW_LIST_MAX_LENGTH } from "@synara/contracts";
+import { COMPUTER_WINDOW_LIST_MAX_LENGTH } from "@djl/contracts";
 import type {
   ComputerAccessibilityTreeApp,
   ComputerAccessibilityTreeWindow,
@@ -28,11 +28,11 @@ import type {
   ComputerInputPause,
   ComputerPermission,
   ComputerLaunchAppResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   computerPermissionSetupMessage,
   listComputerPermissions,
-} from "@synara/shared/computerGrants";
+} from "@djl/shared/computerGrants";
 import {
   cuaRequest,
   CUA_HOST_SOCKET_ENV,
@@ -43,7 +43,7 @@ import {
   type CuaEffect,
   type CuaComputerTask,
   cuaComputerTaskKey,
-} from "@synara/shared/cuaDriverProtocol";
+} from "@djl/shared/cuaDriverProtocol";
 import {
   ComputerBackendError,
   DEFAULT_COMPUTER_ID,
@@ -207,7 +207,7 @@ const RECENT_TREE_TTL_MS = 5_000;
  * Pane preview still cadence when nothing overrides it. Slower than the
  * Tier-1 default: each tick re-observes the exact window or browser tab the
  * task is using, and the pane reads as live at one hertz.
- * `SYNARA_CUA_PREVIEW_STILL_MS` replaces it; the constructor option replaces
+ * `DJL_CUA_PREVIEW_STILL_MS` replaces it; the constructor option replaces
  * it in tests.
  */
 const CUA_STILL_FRAME_INTERVAL_MS = 1_000;
@@ -215,7 +215,7 @@ const CUA_STILL_FRAME_INTERVAL_MS = 1_000;
  * The semantic element actions this integration admits, what the pinned
  * driver's `click` element path performs for each (`action` argument, mapped
  * in `ax_actions::map_action`), and the AX action the element must advertise
- * for Synara to dispatch it.
+ * for DJL to dispatch it.
  *
  * The driver's `map_action` silently defaults any unknown spelling to
  * AXPress, so names are mapped here explicitly: an unlisted request refuses
@@ -248,11 +248,11 @@ function cuaKey(value: string): string {
       "not-dispatched",
       "unsupported_operation",
     );
-  // Synara-side spellings that already resolve to a driver keyname. Only
+  // DJL-side spellings that already resolve to a driver keyname. Only
   // entries whose target the pinned keymap accepts may live here: a name with
   // no driver mapping (keypad keys, f13-f20, menu, help) passes through
   // untouched so the driver's own "Unknown key name" refusal stays the honest
-  // gate and an extended keymap revision lights them up without a Synara
+  // gate and an extended keymap revision lights them up without a DJL
   // change. Left-side modifier spellings resolve to the one physical code the
   // driver posts for that modifier; right-side spellings stay refused until
   // the keymap carries the right-key codes.
@@ -284,10 +284,10 @@ function cuaKey(value: string): string {
   return aliases[key] ?? key;
 }
 
-/** The Cua backend. Cua owns native actions; Synara owns admission,
+/** The Cua backend. Cua owns native actions; DJL owns admission,
  * session authority, explicit delivery policy and the provider result. */
 export class CuaComputerBackend implements ComputerBackend {
-  // Focus-neutral semantic writes are a Synara-patch guarantee. Unknown
+  // Focus-neutral semantic writes are a DJL-patch guarantee. Unknown
   // (pre-handshake) reads as the patched default; `0` is the unpatched
   // upstream driver, where the property is unverified and unclaimed.
   get focusNeutralSemanticText(): boolean {
@@ -313,7 +313,7 @@ export class CuaComputerBackend implements ComputerBackend {
   private permissions: ComputerPermission[] = [];
   private currentAvailability: ComputerAvailability = {
     kind: "backend-unavailable",
-    message: "Computer has not connected to the Synara desktop app.",
+    message: "Computer has not connected to the DJL desktop app.",
   };
   private currentHealth: ComputerHealth = {
     status: "unavailable",
@@ -361,9 +361,9 @@ export class CuaComputerBackend implements ComputerBackend {
    */
   private desktopInterruptions: number | undefined;
   /**
-   * The Synara native revision the live driver reported through host
+   * The DJL native revision the live driver reported through host
    * replies — `undefined` until the first reply carrying it, `0` on an
-   * unpatched upstream driver. Capabilities that exist only in the Synara
+   * unpatched upstream driver. Capabilities that exist only in the DJL
    * patch are advertised only while this is nonzero or unknown.
    */
   private driverNativeRevision: number | undefined;
@@ -400,7 +400,7 @@ export class CuaComputerBackend implements ComputerBackend {
       semanticTextLaneGapMs?: number;
       /**
        * Still-capture cadence for the pane preview; defaults to
-       * `SYNARA_CUA_PREVIEW_STILL_MS`, then 1000 ms. Injectable so tests can
+       * `DJL_CUA_PREVIEW_STILL_MS`, then 1000 ms. Injectable so tests can
        * observe the interval without env manipulation.
        */
       stillIntervalMs?: number;
@@ -420,7 +420,7 @@ export class CuaComputerBackend implements ComputerBackend {
       isCaptureAvailable: () => !this.disposed && !this.permissions.includes("screenRecording"),
       emit: () => undefined,
       now: Date.now,
-      // Still cadence is 1 s unless SYNARA_CUA_PREVIEW_STILL_MS overrides it;
+      // Still cadence is 1 s unless DJL_CUA_PREVIEW_STILL_MS overrides it;
       // the publisher floor keeps an aggressive value from queueing captures
       // faster than one encode can finish.
       intervalMs: resolveStillIntervalMs(
@@ -472,7 +472,7 @@ export class CuaComputerBackend implements ComputerBackend {
   ): Promise<CuaReply> {
     if (this.disposed || !this.endpoint)
       throw new CuaActionError(
-        "Open this session in a supported Synara desktop app to use Computer.",
+        "Open this session in a supported DJL desktop app to use Computer.",
         "not-dispatched",
         "gui_host_required",
       );
@@ -487,7 +487,7 @@ export class CuaComputerBackend implements ComputerBackend {
     const endpoint = this.endpoint;
     try {
       // The socket round trip, counted and timed on the active call's timing
-      // record when SYNARA_CUA_TIMING_LOG is on — durations only, never the
+      // record when DJL_CUA_TIMING_LOG is on — durations only, never the
       // request or reply payloads.
       currentComputerCall()?.timing?.count("host_calls");
       const reply = await timedComputerLeg("host", () =>
@@ -682,7 +682,7 @@ export class CuaComputerBackend implements ComputerBackend {
       return {
         kind: "backend-unavailable",
         message:
-          "Computer requires a connected Synara desktop host, which owns native access on that computer.",
+          "Computer requires a connected DJL desktop host, which owns native access on that computer.",
       };
     try {
       await this.host({ method: "probe" });
@@ -726,7 +726,7 @@ export class CuaComputerBackend implements ComputerBackend {
       clipboard: true,
       focus: nativeInputAvailable,
       raise: nativeInputAvailable,
-      // The compact agent cursor is a Synara-patch rendering path. Unknown
+      // The compact agent cursor is a DJL-patch rendering path. Unknown
       // (no handshake yet) reads as the patched default; `0` is the
       // unpatched upstream driver's honest answer.
       ghostCursor:
@@ -765,7 +765,7 @@ export class CuaComputerBackend implements ComputerBackend {
     // driver's own probe, and the guidance names what the platform uses
     // rather than a settings pane that does not exist there.
     return (this.hostPlatform ?? process.platform) === "darwin"
-      ? `Allow ${missing} for this copy of Synara in System Settings. Return here to check again; if macOS asks you to quit and reopen the app, do so.`
+      ? `Allow ${missing} for this copy of DJL in System Settings. Return here to check again; if macOS asks you to quit and reopen the app, do so.`
       : `The driver host reports missing ${missing} access. Grant it at the OS level the platform uses (display-server access on Linux, integrity/UIAccess on Windows), then check again; no action is retried automatically.`;
   }
   private refresh(force = false, includeKeyboardFocus = false): Promise<void> {
@@ -809,7 +809,7 @@ export class CuaComputerBackend implements ComputerBackend {
         permission.input_monitor_ready === false;
       const monitorMessage =
         "Computer control is paused until the Escape and human-input listener is ready. " +
-        "Synara reconnects it automatically; check Computer settings if it remains unavailable.";
+        "DJL reconnects it automatically; check Computer settings if it remains unavailable.";
       this.setHealth({
         ...this.currentHealth,
         status: this.captureFailed || monitorUnavailable ? "unavailable" : "connected",
@@ -831,7 +831,7 @@ export class CuaComputerBackend implements ComputerBackend {
             ...(bundleId ? { bundleId } : {}),
             message: hostIsDarwin
               ? computerPermissionSetupMessage(this.permissions, signature, bundleId || undefined)
-              : `Synara's driver host reports missing ${listComputerPermissions(
+              : `DJL's driver host reports missing ${listComputerPermissions(
                   this.permissions,
                 )} access. Grant it at the OS level the platform uses — display-server access on Linux, integrity/UIAccess on Windows — then try again.`,
           }
@@ -1102,7 +1102,7 @@ export class CuaComputerBackend implements ComputerBackend {
     const data = result.structuredContent ?? {};
     if (data.screenshot_frame_freshness === "unverified_off_space")
       throw new CuaActionError(
-        "The exact window is on another macOS Space. Cua returned pixels, but their freshness cannot be proven without switching Spaces, so Synara will not present them as a live observation.",
+        "The exact window is on another macOS Space. Cua returned pixels, but their freshness cannot be proven without switching Spaces, so DJL will not present them as a live observation.",
         "not-dispatched",
         "off_space_capture_unverified",
       );
@@ -1594,7 +1594,7 @@ export class CuaComputerBackend implements ComputerBackend {
           "unsupported_linux_operation",
         );
       nativeArgs = { ...args };
-      // These keys select/validate Synara's patched macOS routes and are
+      // These keys select/validate DJL's patched macOS routes and are
       // rejected by Linux's strict native schemas. The visible-use gate above
       // runs first so removing them cannot relax a background-only promise.
       delete nativeArgs.force_synthetic;
@@ -2195,7 +2195,7 @@ export class CuaComputerBackend implements ComputerBackend {
    * writes a CFRange on the fresh element token and verifies by reading the
    * attribute back. Web content is deliberately not special-cased — the
    * driver refuses a marker-range-only target pre-dispatch rather than
-   * approximating it with gestures, and Synara never composes a workaround.
+   * approximating it with gestures, and DJL never composes a workaround.
    */
   async selectText(target: ComputerResolvedTarget, range: ComputerTextRange) {
     const token = this.elementTokens.get(target.node);
@@ -2311,7 +2311,7 @@ export class CuaComputerBackend implements ComputerBackend {
             ? { bundle_id: app }
             : { name: app }),
         ...(args?.length ? { additional_arguments: args } : {}),
-        // hidden is a Synara macOS extension, absent from upstream Linux's
+        // hidden is a DJL macOS extension, absent from upstream Linux's
         // strict schema. Linux visible consent is checked by the tool layer.
         ...(!linux && options?.hidden === true ? { hidden: true } : {}),
       },
@@ -2711,7 +2711,7 @@ export class CuaComputerBackend implements ComputerBackend {
   }> {
     // The driver's snapshot is desktop-wide and takes no arguments at all —
     // the named tool is the fast no-grant inventory, not a per-window AX
-    // walk. `window_id` scoping is therefore a Synara-side filter to the app
+    // walk. `window_id` scoping is therefore a DJL-side filter to the app
     // that owns the exact window, resolved through the same fresh target()
     // every window read uses.
     const scopedPid = windowId === undefined ? undefined : (await this.target(windowId)).pid;
@@ -2740,7 +2740,7 @@ export class CuaComputerBackend implements ComputerBackend {
       const row = record(value);
       const pid = number(row.pid);
       const wid = number(row.window_id);
-      // Without the driver id pair no Synara window id can be formed, so the
+      // Without the driver id pair no DJL window id can be formed, so the
       // row is unresolvable rather than merely thin.
       if (!Number.isSafeInteger(pid) || pid <= 0 || !Number.isSafeInteger(wid) || wid <= 0)
         continue;
@@ -3025,7 +3025,7 @@ export class CuaComputerBackend implements ComputerBackend {
   async engageShield(target: ComputerShieldTarget): Promise<string> {
     if (this.disposed || !this.endpoint)
       throw new CuaActionError(
-        "Open this session in the Synara macOS desktop app to use Computer.",
+        "Open this session in the DJL macOS desktop app to use Computer.",
         "not-dispatched",
         "gui_host_required",
       );
@@ -3136,7 +3136,7 @@ export class CuaComputerBackend implements ComputerBackend {
   private async browserCall(call: ComputerBrowserCall): Promise<ComputerBrowserCallResult> {
     if (this.disposed || !this.endpoint)
       throw new CuaActionError(
-        "Open this session in a supported Synara desktop app to use Computer.",
+        "Open this session in a supported DJL desktop app to use Computer.",
         "not-dispatched",
         "gui_host_required",
       );

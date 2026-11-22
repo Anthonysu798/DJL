@@ -1,8 +1,4 @@
-import type {
-  CloudMessagePart,
-  CloudRunEvent,
-  CloudSendMessageInput,
-} from "@synara/contracts/cloud";
+import type { CloudMessagePart, CloudRunEvent, CloudSendMessageInput } from "@djl/contracts/cloud";
 import { describe, expect, it } from "vitest";
 
 import { createChatClient } from "./client";

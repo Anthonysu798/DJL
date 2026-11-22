@@ -2,7 +2,7 @@
 // Purpose: The "…" menu on an added plugin: the plugin it acts on at the top, then its actions,
 //          with Uninstall set apart at the bottom. Same look as the avatar menu.
 
-import type { PluginCatalogEntry } from "@synara/contracts";
+import type { PluginCatalogEntry } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { EllipsisIcon, InfoIcon, Trash2 } from "~/lib/icons";

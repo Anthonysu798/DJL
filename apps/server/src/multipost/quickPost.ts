@@ -5,7 +5,7 @@ import type {
   MultiPostFile,
   MultiPostQuickPostResult,
   MultiPostTarget,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 type Skipped = MultiPostQuickPostResult["skipped"][number];
 /** Platforms whose regular post cannot be text alone. */

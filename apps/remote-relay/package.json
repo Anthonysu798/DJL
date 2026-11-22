@@ -1,5 +1,5 @@
 {
-  "name": "@synara/remote-relay",
+  "name": "@djl/remote-relay",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,8 +12,8 @@
     "test:vps": "bun run build && DJL_RUN_VPS_TESTS=1 vitest run vps/relay.test.mjs"
   },
   "dependencies": {
-    "@synara/remote-protocol": "workspace:*",
-    "@synara/shared": "workspace:*"
+    "@djl/remote-protocol": "workspace:*",
+    "@djl/shared": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260718.1",

@@ -6,7 +6,7 @@ import { createServer, type Server } from "node:http";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
-import { createOpenCodeCompatibilityPluginSource } from "@synara/shared/openCodeCompatibility";
+import { createOpenCodeCompatibilityPluginSource } from "@djl/shared/openCodeCompatibility";
 import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import { evaluateOpenCodeWorkCompatibility } from "./lib/opencode-compatibility.ts";

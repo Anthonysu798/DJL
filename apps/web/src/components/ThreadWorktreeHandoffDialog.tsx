@@ -87,7 +87,7 @@ export function ThreadWorktreeHandoffDialog({
                     onOpenChange(false);
                   }
                 }}
-                placeholder="synara/feature-name"
+                placeholder="djl/feature-name"
               />
             </label>
           </form>

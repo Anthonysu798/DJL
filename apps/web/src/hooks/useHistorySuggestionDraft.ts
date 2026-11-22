@@ -1,4 +1,4 @@
-import type { ComputerActivitySemanticSummary, ThreadId } from "@synara/contracts";
+import type { ComputerActivitySemanticSummary, ThreadId } from "@djl/contracts";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useCallback, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";

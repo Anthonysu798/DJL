@@ -32,10 +32,10 @@ final class UserBubbleInlineMarkdownRendererTests: XCTestCase {
 
     func testMarkdownLinkUsesLabelText() {
         let rendered = UserBubbleInlineMarkdownRenderer.render(
-            "[Emanuele-web04/djl#133](https://github.com/Emanuele-web04/djl/pull/133)"
+            "[Anthonysu798/DJL#133](https://github.com/Anthonysu798/DJL/pull/133)"
         )
 
-        XCTAssertEqual(rendered.visibleText, "Emanuele-web04/djl#133")
+        XCTAssertEqual(rendered.visibleText, "Anthonysu798/DJL#133")
         XCTAssertTrue(rendered.hasUnderlinedLink)
     }
 

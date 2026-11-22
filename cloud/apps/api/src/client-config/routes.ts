@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 import type { GatewayService } from "../gateway/GatewayService.ts";
 import { json } from "../http/json.ts";
-import type { CloudClientConfig } from "@synara/contracts/cloud";
+import type { CloudClientConfig } from "@djl/contracts/cloud";
 
 export interface ClientConfigDeps {
   readonly auth: { readonly google: boolean; readonly apple: boolean };

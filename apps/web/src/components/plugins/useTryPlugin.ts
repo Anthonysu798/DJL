@@ -3,7 +3,7 @@ import {
   DJL_PLUGIN_MENTION_PREFIX,
   ThreadId,
   type PluginCatalogEntry,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 

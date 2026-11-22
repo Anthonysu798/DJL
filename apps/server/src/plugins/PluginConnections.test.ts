@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { PluginSource } from "@synara/contracts";
+import type { PluginSource } from "@djl/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { DJL_PLUGIN_SOURCE } from "./catalog";

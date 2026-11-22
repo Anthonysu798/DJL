@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { MultiPostQuickPostResult } from "@synara/contracts";
+import type { MultiPostQuickPostResult } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { calendarTimeToIso } from "../marketing/socialCalendar";
 import { multiPostCommand, multiPostState } from "./client";

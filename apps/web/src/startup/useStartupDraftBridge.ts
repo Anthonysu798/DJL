@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from "react";
-import { MessageId, type ThreadId, type ModelSelection } from "@synara/contracts";
+import { MessageId, type ThreadId, type ModelSelection } from "@djl/contracts";
 import type { ComposerPromptEditorHandle } from "../components/ComposerPromptEditor";
 import { flushComposerDraftPersistence, useComposerDraftStore } from "../composerDraftStore";
 import { isProviderKind } from "../providerOrdering";

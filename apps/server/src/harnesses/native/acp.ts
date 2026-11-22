@@ -3,7 +3,7 @@ import { withDjlThreadId } from "./driverEnv";
 import { NativeRpc, object, string, type JsonObject } from "./protocol";
 import type { NativeDriverFactory } from "./types";
 import type { PluginGatewaySession } from "../../plugins/PluginGateway";
-import type { ProviderSendTurnInput, ProviderSessionStartInput } from "@synara/contracts";
+import type { ProviderSendTurnInput, ProviderSessionStartInput } from "@djl/contracts";
 import { nonNegativeInteger, positiveInteger } from "../../provider/tokenUsage";
 
 export function readAcpModels(session: JsonObject): Array<{ slug: string; name: string }> {

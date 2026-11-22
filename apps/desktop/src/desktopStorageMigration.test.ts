@@ -5,20 +5,20 @@ import * as Path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  acknowledgeSynaraStorageSnapshot,
-  readSynaraStorageSnapshot,
+  acknowledgeDjlStorageSnapshot,
+  readDjlStorageSnapshot,
   resolveDjlStorageSnapshotPath,
-  saveSynaraStorageSnapshot,
-  SYNARA_STORAGE_SNAPSHOT_MAX_BYTES,
-  validateSynaraStorageSnapshot,
+  saveDjlStorageSnapshot,
+  DJL_STORAGE_SNAPSHOT_MAX_BYTES,
+  validateDjlStorageSnapshot,
 } from "./desktopStorageMigration";
 
 const snapshot = (exportedAt = "2026-07-09T00:00:00.000Z") => ({
   version: 1 as const,
   exportedAt,
   entries: {
-    "synara:theme": "dark",
-    "synara.openUsage.enabled": "true",
+    "djl:theme": "dark",
+    "djl.openUsage.enabled": "true",
   },
 });
 
@@ -30,42 +30,42 @@ describe("desktopStorageMigration", () => {
     );
   });
 
-  it("accepts both DJL and legacy storage keys", () => {
+  it("accepts DJL storage keys", () => {
     expect(
-      validateSynaraStorageSnapshot({
+      validateDjlStorageSnapshot({
         ...snapshot(),
-        entries: { "djl:theme": "dark", "synara:theme": "legacy" },
+        entries: { "djl:theme": "dark", "djl.editor.fontSize": "14" },
       }),
     ).not.toBeNull();
   });
 
   it("round-trips atomically and acknowledges the snapshot", async () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-storage-migration-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-storage-migration-"));
     const target = Path.join(directory, "snapshot.json");
     try {
-      await expect(saveSynaraStorageSnapshot(target, snapshot())).resolves.toBe(true);
-      expect(readSynaraStorageSnapshot(target)).toEqual(snapshot());
+      await expect(saveDjlStorageSnapshot(target, snapshot())).resolves.toBe(true);
+      expect(readDjlStorageSnapshot(target)).toEqual(snapshot());
       expect(FS.readdirSync(directory)).toEqual(["snapshot.json"]);
 
-      await acknowledgeSynaraStorageSnapshot(target);
-      expect(readSynaraStorageSnapshot(target)).toBeNull();
+      await acknowledgeDjlStorageSnapshot(target);
+      expect(readDjlStorageSnapshot(target)).toBeNull();
     } finally {
       FS.rmSync(directory, { recursive: true, force: true });
     }
   });
 
   it("rejects malformed, disallowed, and oversized snapshots", () => {
-    expect(validateSynaraStorageSnapshot({ version: 1 })).toBeNull();
+    expect(validateDjlStorageSnapshot({ version: 1 })).toBeNull();
     expect(
-      validateSynaraStorageSnapshot({
+      validateDjlStorageSnapshot({
         ...snapshot(),
         entries: { "foreign:theme": "dark" },
       }),
     ).toBeNull();
     expect(
-      validateSynaraStorageSnapshot({
+      validateDjlStorageSnapshot({
         ...snapshot(),
-        entries: { "synara:large": "x".repeat(SYNARA_STORAGE_SNAPSHOT_MAX_BYTES) },
+        entries: { "djl:large": "x".repeat(DJL_STORAGE_SNAPSHOT_MAX_BYTES) },
       }),
     ).toBeNull();
   });
@@ -74,34 +74,34 @@ describe("desktopStorageMigration", () => {
     const largeDraft = "x".repeat(2 * 1024 * 1024);
 
     expect(
-      validateSynaraStorageSnapshot({
+      validateDjlStorageSnapshot({
         ...snapshot(),
-        entries: { "synara:composer-drafts:v1": largeDraft },
-      })?.entries["synara:composer-drafts:v1"],
+        entries: { "djl:composer-drafts:v1": largeDraft },
+      })?.entries["djl:composer-drafts:v1"],
     ).toBe(largeDraft);
   });
 
   it("does not replace a newer snapshot with an older export", async () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-storage-migration-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-storage-migration-"));
     const target = Path.join(directory, "snapshot.json");
     try {
-      await saveSynaraStorageSnapshot(target, snapshot("2026-07-09T01:00:00.000Z"));
+      await saveDjlStorageSnapshot(target, snapshot("2026-07-09T01:00:00.000Z"));
       await expect(
-        saveSynaraStorageSnapshot(target, snapshot("2026-07-09T00:00:00.000Z")),
+        saveDjlStorageSnapshot(target, snapshot("2026-07-09T00:00:00.000Z")),
       ).resolves.toBe(false);
-      expect(readSynaraStorageSnapshot(target)?.exportedAt).toBe("2026-07-09T01:00:00.000Z");
+      expect(readDjlStorageSnapshot(target)?.exportedAt).toBe("2026-07-09T01:00:00.000Z");
     } finally {
       FS.rmSync(directory, { recursive: true, force: true });
     }
   });
 
   it("treats missing and malformed files as absent", () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-storage-migration-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-storage-migration-"));
     const target = Path.join(directory, "snapshot.json");
     try {
-      expect(readSynaraStorageSnapshot(target)).toBeNull();
+      expect(readDjlStorageSnapshot(target)).toBeNull();
       FS.writeFileSync(target, "not json");
-      expect(readSynaraStorageSnapshot(target)).toBeNull();
+      expect(readDjlStorageSnapshot(target)).toBeNull();
     } finally {
       FS.rmSync(directory, { recursive: true, force: true });
     }

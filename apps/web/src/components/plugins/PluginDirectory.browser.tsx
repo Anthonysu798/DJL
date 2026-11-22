@@ -9,7 +9,7 @@ import type {
   PluginAppInput,
   PluginCatalogEntry,
   PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useState } from "react";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";

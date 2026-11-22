@@ -1,7 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
+import type { CommerceDesktopBridge } from "@djl/contracts/cloud";
 
 import { authClient } from "@/lib/auth-client";
 import { fill } from "@/lib/i18n";

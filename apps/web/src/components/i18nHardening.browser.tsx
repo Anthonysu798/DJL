@@ -12,7 +12,7 @@ import {
   ThreadId,
   type OrchestrationThreadActivity,
   type WorkTask,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import englishCatalog from "../i18n/locales/en.json";
 import simplifiedChineseCatalog from "../i18n/locales/zh-Hans.json";

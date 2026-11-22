@@ -1,5 +1,5 @@
-import type { ResolvedThreadWorkspaceState } from "@synara/shared/threadEnvironment";
-import type { ProviderInteractionMode } from "@synara/contracts";
+import type { ResolvedThreadWorkspaceState } from "@djl/shared/threadEnvironment";
+import type { ProviderInteractionMode } from "@djl/contracts";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
 import type { TimestampFormat } from "../../appSettings";
 import { formatLocaleDateTime } from "../../i18n/intl";

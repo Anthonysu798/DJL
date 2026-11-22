@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { IconCheck } from "@tabler/icons-react";
-import type { MultiPostAccount } from "@synara/contracts";
+import type { MultiPostAccount } from "@djl/contracts";
 import { PlatformMark } from "./PlatformMark";
 import { useMultiPostText } from "./shared";
 

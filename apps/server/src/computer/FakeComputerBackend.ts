@@ -20,7 +20,7 @@ import type {
   ComputerVerifyStateResult,
   ComputerWindow,
   ComputerZoomResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   ComputerBackendError,

@@ -7,16 +7,14 @@ export function buildSmokeEnvironment(baseEnvironment, smokeRoot, portOffset) {
     HOME: join(smokeRoot, "home"),
     USERPROFILE: join(smokeRoot, "home"),
     DJL_HOME: join(smokeRoot, "state"),
-    SYNARA_HOME: join(smokeRoot, "state"),
     DJL_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
-    SYNARA_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
     DJL_DESKTOP_SMOKE_TEST: "1",
-    SYNARA_PORT_OFFSET: portOffset,
-    SYNARA_NO_BROWSER: "1",
-    SYNARA_DISABLE_AUTO_UPDATE: "1",
+    DJL_PORT_OFFSET: portOffset,
+    DJL_NO_BROWSER: "1",
+    DJL_DISABLE_AUTO_UPDATE: "1",
     ELECTRON_ENABLE_LOGGING: "1",
   };
-  delete environment.SYNARA_AUTH_TOKEN;
+  delete environment.DJL_AUTH_TOKEN;
   delete environment.ELECTRON_RUN_AS_NODE;
   delete environment.VITE_DEV_SERVER_URL;
   return environment;

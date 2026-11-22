@@ -1,4 +1,4 @@
-import type { SocialInboxItem } from "@synara/contracts";
+import type { SocialInboxItem } from "@djl/contracts";
 
 function parts(instant: Date, timezone: string) {
   const values = new Intl.DateTimeFormat("en-US", {

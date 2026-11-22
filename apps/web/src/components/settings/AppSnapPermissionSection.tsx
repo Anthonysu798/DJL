@@ -10,7 +10,7 @@ import {
   type DesktopAppSnapPermissionKind,
   type DesktopAppSnapSettingsPane,
   type DesktopAppSnapState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useEffect, useRef, useState } from "react";
 
 import { createLatestAppSnapRequestGuard } from "~/appSnap.logic";
@@ -34,35 +34,35 @@ export const APP_SNAP_PERMISSION_PANES: readonly AppSnapPermissionPaneDescriptor
   {
     pane: "input-monitoring",
     title: "settings:inputMonitoring",
-    description: "settings:letsSynaraNoticeTheDoubleOptionChordWhileAnother",
+    description: "settings:letsDjlNoticeTheDoubleOptionChordWhileAnother",
   },
   {
     pane: "screen-recording",
     title: "settings:screenRecording",
-    description: "settings:letsSynaraCaptureAnImageOfTheFrontmostWindow",
+    description: "settings:letsDjlCaptureAnImageOfTheFrontmostWindow",
   },
 ];
 
 /**
  * Computer also needs Input Monitoring for Escape and human takeover. This
  * grant does not enable AppSnap's shortcut. The matching kind list lives in
- * `@synara/shared/computerGrants`.
+ * `@djl/shared/computerGrants`.
  */
 export const COMPUTER_PERMISSION_PANES: readonly AppSnapPermissionPaneDescriptor[] = [
   {
     pane: "accessibility",
     title: "settings:accessibility",
-    description: "settings:letsSynaraMoveThePointerClickAndTypeOn",
+    description: "settings:letsDjlMoveThePointerClickAndTypeOn",
   },
   {
     pane: "screen-recording",
     title: "settings:screenRecording",
-    description: "settings:letsSynaraCaptureWindowsAndTheDesktopSoThe",
+    description: "settings:letsDjlCaptureWindowsAndTheDesktopSoThe",
   },
   {
     pane: "input-monitoring",
     title: "settings:inputMonitoring",
-    description: "settings:letsSynaraDetectEscapeAndPauseWhenYouTake",
+    description: "settings:letsDjlDetectEscapeAndPauseWhenYouTake",
   },
 ];
 

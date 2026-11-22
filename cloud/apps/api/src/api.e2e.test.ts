@@ -7,7 +7,7 @@ import {
   CloudRedeemBankResponse,
   CloudResetBanksResponse,
   CloudUsageWindowsResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { bankExpiresAt } from "@djl/domain";

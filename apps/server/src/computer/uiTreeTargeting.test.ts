@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ComputerUiNode, ComputerWindowId } from "@synara/contracts";
+import type { ComputerUiNode, ComputerWindowId } from "@djl/contracts";
 
 import {
   ComputerTargetError,

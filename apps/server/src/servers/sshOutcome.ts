@@ -1,7 +1,7 @@
 // FILE: sshOutcome.ts
 // Purpose: Maps a raw ssh process result to a ServerTestOutcome and redacts stderr for display.
 // Layer: Servers domain helpers
-import type { ServerTestOutcome } from "@synara/contracts";
+import type { ServerTestOutcome } from "@djl/contracts";
 
 export interface RawSshResult {
   readonly code: number | null;

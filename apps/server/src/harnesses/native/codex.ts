@@ -2,7 +2,7 @@ import type {
   CanonicalItemType,
   ProviderSessionStartInput,
   ProviderModelDescriptor,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { withDjlThreadId } from "./driverEnv";
 import { bounded, NativeRpc, object, string } from "./protocol";
 import type { NativeDriverFactory } from "./types";

@@ -1,4 +1,4 @@
-import type { LocalInstalledModel, LocalModelRuntime } from "@synara/contracts";
+import type { LocalInstalledModel, LocalModelRuntime } from "@djl/contracts";
 
 type JsonObject = Record<string, unknown>;
 

@@ -3,7 +3,7 @@ import "./providerUpdateToast.css";
 
 import { Toast } from "@base-ui/react/toast";
 import { useGSAP } from "@gsap/react";
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@djl/contracts";
 import { gsap } from "gsap";
 import { useId, useRef, type ReactNode } from "react";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";

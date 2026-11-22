@@ -10,7 +10,7 @@ import { CheckpointStoreLive } from "./CheckpointStore.ts";
 import { CheckpointStore } from "../Services/CheckpointStore.ts";
 import { GitCore, type GitCoreShape } from "../../git/Services/GitCore.ts";
 import { GitCommandError } from "../../git/Errors.ts";
-import { CheckpointRef } from "@synara/contracts";
+import { CheckpointRef } from "@djl/contracts";
 
 async function waitFor(predicate: () => boolean, timeoutMs = 1_000): Promise<void> {
   const started = Date.now();
@@ -66,7 +66,7 @@ describe("CheckpointStoreLive", () => {
         const store = yield* CheckpointStore;
         const input = {
           cwd: "/repo",
-          checkpointRef: CheckpointRef.makeUnsafe("refs/synara-checkpoints/thread/message"),
+          checkpointRef: CheckpointRef.makeUnsafe("refs/djl-checkpoints/thread/message"),
         };
 
         const first = yield* store.captureCheckpoint(input).pipe(Effect.forkChild);
@@ -123,7 +123,7 @@ describe("CheckpointStoreLive", () => {
         const store = yield* CheckpointStore;
         const input = {
           cwd: "/repo",
-          checkpointRef: CheckpointRef.makeUnsafe("refs/synara-checkpoints/thread/message"),
+          checkpointRef: CheckpointRef.makeUnsafe("refs/djl-checkpoints/thread/message"),
         };
 
         const first = yield* store.captureCheckpoint(input).pipe(Effect.forkChild);
@@ -151,8 +151,8 @@ describe("CheckpointStoreLive", () => {
   });
 
   it("skips the capture when skipIfExists is set and the ref already exists", async () => {
-    const existingRef = "refs/synara-checkpoints/thread/existing";
-    const missingRef = "refs/synara-checkpoints/thread/missing";
+    const existingRef = "refs/djl-checkpoints/thread/existing";
+    const missingRef = "refs/djl-checkpoints/thread/missing";
     const execute = vi.fn<GitCoreShape["execute"]>((input) => {
       const args = input.args.join(" ");
       if (args === `rev-parse --verify --quiet ${existingRef}^{commit}`) {
@@ -209,8 +209,8 @@ describe("CheckpointStoreLive", () => {
   });
 
   it("restores the worktree patch when resetting the index fails during file undo", async () => {
-    const fromRef = CheckpointRef.makeUnsafe("refs/synara-checkpoints/thread/turn/start");
-    const toRef = CheckpointRef.makeUnsafe("refs/synara-checkpoints/thread/turn/end");
+    const fromRef = CheckpointRef.makeUnsafe("refs/djl-checkpoints/thread/turn/start");
+    const toRef = CheckpointRef.makeUnsafe("refs/djl-checkpoints/thread/turn/end");
     const commands: string[] = [];
     const execute = vi.fn<GitCoreShape["execute"]>((input) => {
       const args = input.args.join(" ");

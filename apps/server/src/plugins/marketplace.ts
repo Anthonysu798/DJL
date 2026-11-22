@@ -3,7 +3,7 @@
 //          Every manifest is checked against the contract; a marketplace's bad entries are
 //          skipped and counted rather than failing the whole list.
 
-import { decodePluginManifest, type PluginManifest } from "@synara/contracts";
+import { decodePluginManifest, type PluginManifest } from "@djl/contracts";
 
 import type { Fetch } from "./pluginOAuth";
 

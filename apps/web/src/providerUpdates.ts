@@ -3,7 +3,7 @@
 // Layer: Web settings/notification utility
 // Exports: update candidate helpers, notification keys, and auto-refresh timing.
 
-import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@synara/contracts";
+import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@djl/contracts";
 
 // Desktop startup restores projections and serves cache-first model/settings
 // views before running CLI-backed provider version probes. Those probes can be

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SpawnOptions } from "node:child_process";
 
-import type { LocalModelsSnapshot } from "@synara/contracts";
+import type { LocalModelsSnapshot } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { usableModelBytes } from "./hardwareProfile";
@@ -12,7 +12,7 @@ import { LocalModelManager } from "./LocalModelManager";
 const roots: string[] = [];
 
 async function temporaryRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "synara-local-models-"));
+  const root = await mkdtemp(join(tmpdir(), "djl-local-models-"));
   roots.push(root);
   return root;
 }

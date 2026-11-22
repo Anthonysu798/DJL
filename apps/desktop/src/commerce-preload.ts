@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
+import type { CommerceDesktopBridge } from "@djl/contracts/cloud";
 
 const bridge: CommerceDesktopBridge = {
   kind: "desktop",

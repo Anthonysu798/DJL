@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NativeApi } from "@synara/contracts";
+import type { NativeApi } from "@djl/contracts";
 import { createProfileLoginSession, providerSignInUrl } from "./profileLoginSession";
 const profile = { id: "personal", provider: "codex" as const, name: "Personal" };
 function mockApi() {

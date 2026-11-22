@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 
 import { ComputerBackendError } from "../computer/ComputerBackend.ts";
 import { ComputerManager } from "../computer/ComputerManager.ts";
@@ -13,9 +13,9 @@ import {
   type AgentGatewayComputerToolsOptions,
 } from "./computerTools.ts";
 import {
-  canonicalSynaraComputerToolName,
-  isSynaraComputerToolFamilyName,
-  SYNARA_COMPUTER_TOOL_NAMES,
+  canonicalDjlComputerToolName,
+  isDjlComputerToolFamilyName,
+  DJL_COMPUTER_TOOL_NAMES,
 } from "./computerToolPermission.ts";
 import type { McpToolCallResult } from "./protocol.ts";
 import type { ToolContext } from "./toolRuntime.ts";
@@ -519,10 +519,10 @@ describe("tool-name registry", () => {
       // denial card cannot route it and the provider permission path treats
       // it as foreign.
       expect(byName.has(name), `gateway serves ${name}`).toBe(true);
-      expect(SYNARA_COMPUTER_TOOL_NAMES).toContain(name);
-      expect(canonicalSynaraComputerToolName(`synara_${name}`)).toBe(name);
-      expect(canonicalSynaraComputerToolName(`mcp__synara__${name}`)).toBe(name);
-      expect(isSynaraComputerToolFamilyName(name)).toBe(true);
+      expect(DJL_COMPUTER_TOOL_NAMES).toContain(name);
+      expect(canonicalDjlComputerToolName(`djl_${name}`)).toBe(name);
+      expect(canonicalDjlComputerToolName(`mcp__djl__${name}`)).toBe(name);
+      expect(isDjlComputerToolFamilyName(name)).toBe(true);
     }
   });
 });

@@ -8,7 +8,7 @@
  * <untrusted source="..."> tags, and the system prompt says to treat it as
  * data, never as instructions.
  */
-import type { CloudMessagePart } from "@synara/contracts/cloud";
+import type { CloudMessagePart } from "@djl/contracts/cloud";
 import type { ToolDefinition } from "@djl/providers";
 
 import type { FileRow } from "../files/FileService.ts";

@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { useMutation } from "@tanstack/react-query";
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 import { ensureNativeApi } from "~/nativeApi";
 import { useComputerStateStore } from "../computerStateStore";
 import { useLocalStorage } from "./useLocalStorage";

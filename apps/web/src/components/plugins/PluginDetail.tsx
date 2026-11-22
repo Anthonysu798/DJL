@@ -8,7 +8,7 @@ import {
   type PluginAppInput,
   type PluginCatalogEntry,
   type PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import {

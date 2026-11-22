@@ -17,7 +17,7 @@ import {
   ComputerUseHistorySettings,
   ComputerUseHistoryState,
   type ComputerUseHistoryPage,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 type StoredEvent = { threadId: string; event: ComputerUseHistoryEvent };
 const MAX_EVENTS = 5_000;

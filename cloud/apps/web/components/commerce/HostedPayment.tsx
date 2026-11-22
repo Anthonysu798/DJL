@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import type { CommerceOrder, CommercePaymentStatus } from "@synara/contracts/cloud";
+import type { CommerceOrder, CommercePaymentStatus } from "@djl/contracts/cloud";
 
 import { commerce, commerceErrorMessage, cad } from "@/lib/commerce";
 import { openCommerceCheckout, stripeTestCheckoutUrl } from "@/lib/commerce-checkout";

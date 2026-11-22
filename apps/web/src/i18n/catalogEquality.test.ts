@@ -1,5 +1,5 @@
 import computerReferenceFallback from "./computerReferenceFallback.json";
-import { APP_LOCALE_REVIEW_STATUS } from "@synara/shared/locale";
+import { APP_LOCALE_REVIEW_STATUS } from "@djl/shared/locale";
 import { describe, expect, it } from "vitest";
 import englishCatalog from "./locales/en.json";
 import simplifiedChineseCatalog from "./locales/zh-Hans.json";

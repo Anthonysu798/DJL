@@ -5,7 +5,7 @@
 //          stays one click away for the agents that ask a question there.
 
 import "@xterm/xterm/css/xterm.css";
-import type { HarnessAccount, HarnessId, HarnessLoginResult } from "@synara/contracts";
+import type { HarnessAccount, HarnessId, HarnessLoginResult } from "@djl/contracts";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 

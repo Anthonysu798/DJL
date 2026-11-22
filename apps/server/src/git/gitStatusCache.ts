@@ -1,8 +1,4 @@
-import type {
-  GitStatusLocalResult,
-  GitStatusRemoteResult,
-  GitStatusResult,
-} from "@synara/contracts";
+import type { GitStatusLocalResult, GitStatusRemoteResult, GitStatusResult } from "@djl/contracts";
 
 import type { GitStatusDetails } from "./Services/GitCore";
 

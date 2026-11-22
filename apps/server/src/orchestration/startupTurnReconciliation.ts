@@ -35,13 +35,13 @@ import type {
   RuntimeMode,
   ThreadId,
   WorkTask,
-} from "@synara/contracts";
-import { CommandId, EventId } from "@synara/contracts";
+} from "@djl/contracts";
+import { CommandId, EventId } from "@djl/contracts";
 import {
   buildStalePendingRequestFailureDetail,
   derivePendingThreadRequestIds,
   type PendingThreadRequestKind,
-} from "@synara/shared/threadSummary";
+} from "@djl/shared/threadSummary";
 import { Effect, Option } from "effect";
 
 import { WorkPreparationRepository } from "../persistence/Services/WorkPreparationRepository.ts";

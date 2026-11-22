@@ -1,6 +1,6 @@
 import { resolveDjlComputerIntent } from "./computer/djlComputerIntent";
 import * as RpcMiddleware from "effect/unstable/rpc/RpcMiddleware";
-import { COMPUTER_WS_METHODS, type ComputerEvent } from "@synara/contracts";
+import { COMPUTER_WS_METHODS, type ComputerEvent } from "@djl/contracts";
 import { ComputerService } from "./computer/Services/ComputerService";
 import { makeWsComputerHandlers } from "./computer/wsComputerHandlers";
 import { ComputerEventInterests } from "./computer/computerEventInterests";
@@ -45,8 +45,8 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
-} from "@synara/contracts";
-import { isThreadDetailEvent } from "@synara/shared/orchestrationThreadEvents";
+} from "@djl/contracts";
+import { isThreadDetailEvent } from "@djl/shared/orchestrationThreadEvents";
 import { clamp } from "effect/Number";
 import {
   Cause,
@@ -99,7 +99,7 @@ import { WorkPreparationQueue } from "./orchestration/Services/WorkPreparationQu
 import { WorkPreparationRepository } from "./persistence/Services/WorkPreparationRepository";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
-import { discoverSkillsCatalog, synaraSkillsDir } from "./provider/skillsCatalog";
+import { discoverSkillsCatalog, djlSkillsDir } from "./provider/skillsCatalog";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
@@ -1859,13 +1859,13 @@ export const makeWsRpcLayer = () =>
               discoverSkillsCatalog({
                 cwd: input.cwd ?? null,
                 homeDir: config.homeDir,
-                synaraBaseDir: config.baseDir,
+                djlBaseDir: config.baseDir,
                 includeDuplicateOrigins: true,
               }),
             ).pipe(
               Effect.map((skills) => ({
                 skills,
-                synaraSkillsDir: synaraSkillsDir(config.baseDir),
+                djlSkillsDir: djlSkillsDir(config.baseDir),
               })),
             ),
             "Failed to list the skills catalog",

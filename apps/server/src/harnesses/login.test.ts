@@ -5,7 +5,7 @@ import {
   type TerminalOpenInput,
   type TerminalSessionSnapshot,
   type TerminalWriteInput,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { TerminalCommand } from "../terminal/Services/Manager";
 import { createHarnessLoginController } from "./login";
 import { probeHarnessAccount } from "./accounts";
@@ -220,7 +220,7 @@ describe("provider-owned sign-in terminals", () => {
   it("passes only provider overrides, preserving inherited terminal sanitization", async () => {
     vi.stubEnv("TERM", "xterm-ghostty");
     vi.stubEnv("ELECTRON_RUN_AS_NODE", "1");
-    vi.stubEnv("SYNARA_PRIVATE", "private");
+    vi.stubEnv("DJL_PRIVATE", "private");
     const { controller, open } = fixture();
     await controller.start({ harness: "claudeAgent" }, DEFAULT_SERVER_SETTINGS);
     expect(open.mock.calls[0]?.[0].env).toEqual({});

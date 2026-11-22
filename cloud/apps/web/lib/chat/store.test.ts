@@ -1,4 +1,4 @@
-import type { CloudUserMessagePart } from "@synara/contracts/cloud";
+import type { CloudUserMessagePart } from "@djl/contracts/cloud";
 import { describe, expect, it, vi } from "vitest";
 
 import { createChatClient } from "./client";

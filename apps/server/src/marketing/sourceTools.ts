@@ -3,12 +3,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { Effect } from "effect";
-import { defaultBrand, type BrandProfile, type Campaign, type MediaAsset } from "@synara/contracts";
-import type {
-  AgentBrandMemoryResult,
-  AgentLibraryItem,
-  AgentProductSource,
-} from "@synara/contracts";
+import { defaultBrand, type BrandProfile, type Campaign, type MediaAsset } from "@djl/contracts";
+import type { AgentBrandMemoryResult, AgentLibraryItem, AgentProductSource } from "@djl/contracts";
 import type { MarketingToolScope } from "./chatTools";
 import { resolveAgentOwner, isAgentCampaignAccessible } from "./agentScope";
 import { inspectImage } from "./media";

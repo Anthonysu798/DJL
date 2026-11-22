@@ -1,4 +1,4 @@
-import type { TerminalEvent } from "@synara/contracts";
+import type { TerminalEvent } from "@djl/contracts";
 import "../../index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

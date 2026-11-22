@@ -1,7 +1,7 @@
 // FILE: OpenCodeModelsSettingsPanel.tsx
 // Purpose: Manage shared OpenCode provider credentials and the authenticated model catalog.
 
-import type { CustomModelProvider, OpenCodeModelProviderConnection } from "@synara/contracts";
+import type { CustomModelProvider, OpenCodeModelProviderConnection } from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

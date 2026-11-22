@@ -3,8 +3,8 @@
 
 import "../../index.css";
 
-import type { OrchestrationThreadActivity, WorkTask } from "@synara/contracts";
-import { EventId } from "@synara/contracts";
+import type { OrchestrationThreadActivity, WorkTask } from "@djl/contracts";
+import { EventId } from "@djl/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";

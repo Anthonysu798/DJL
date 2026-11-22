@@ -21,7 +21,7 @@ import {
   type PluginSource,
   type PluginSourceInput,
   type PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 import { DJL_PLUGIN_SOURCE } from "./catalog";

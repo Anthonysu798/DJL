@@ -18,7 +18,7 @@ const REQUIRED_PUBLIC_LICENSE_MARKERS = new Map<string, readonly string[]>([
       "Permission is hereby granted",
     ],
   ],
-  ["THIRD_PARTY_NOTICES.md", ["Synara", "Remodex", "OpenCode", "Ghostty"]],
+  ["THIRD_PARTY_NOTICES.md", ["DJL", "Remodex", "OpenCode", "Ghostty"]],
   ["apps/ios/UPSTREAM_LICENSE", ["Apache License", "Version 2.0"]],
   ["apps/remote-gateway/UPSTREAM_LICENSE", ["Apache License", "Version 2.0"]],
   ["docs/licenses/OPENCODE_LICENSE", ["MIT License", "Copyright (c) 2025 opencode"]],
@@ -56,7 +56,6 @@ function pathRule(path: string): PublicSourceViolation | undefined {
     segments.some(
       (segment) =>
         segment === ".djl" ||
-        segment === ".synara" ||
         segment.startsWith(legacyRuntimePrefix) ||
         segment === legacyRuntimeDirectory ||
         segment === ".wrangler",

@@ -2,7 +2,7 @@
 // Purpose: Decide when a chat's agent is running out of quota and which signed-in agent
 // the chat could continue with instead. Pure: the banner only renders what this returns.
 
-import type { ProviderKind, ServerProviderStatus } from "@synara/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@djl/contracts";
 
 import {
   selectPrimaryProviderUsageDisplayRow,

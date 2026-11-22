@@ -1,4 +1,4 @@
-import type { TerminalAgentProfile } from "@synara/contracts";
+import type { TerminalAgentProfile } from "@djl/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { randomUUID } from "~/lib/utils";

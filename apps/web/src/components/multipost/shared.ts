@@ -4,7 +4,7 @@ import type {
   MultiPostCapability,
   MultiPostCommand,
   MultiPostKind,
-} from "@synara/contracts";
+} from "@djl/contracts";
 export const kinds: MultiPostKind[] = ["dynamic", "article", "video", "podcast"];
 export function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);

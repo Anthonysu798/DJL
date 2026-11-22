@@ -40,7 +40,7 @@ flowchart LR
 - `apps/remote-relay`: Cloudflare Worker and two Durable Objects. It forwards opaque WebSocket frames, resolves signed trusted reconnects, and sends generic APNs notifications.
 - `packages/remote-protocol`: versioned schemas, canonical signed transcripts, session-resolution messages, nonce construction, and protocol constants shared by TypeScript services.
 
-Compatibility identifiers such as the `@synara/*` package scope remain internal. DJL is the only product name.
+Compatibility identifiers such as the `@djl/*` package scope remain internal. DJL is the only product name.
 
 ## Pairing and key agreement
 

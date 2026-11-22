@@ -14,23 +14,23 @@ import {
   type OrchestrationShellStreamEvent,
   type OrchestrationSessionStatus,
   type TurnId,
-} from "@synara/contracts";
-import { resolveThreadBranchRegressionGuard } from "@synara/shared/git";
+} from "@djl/contracts";
+import { resolveThreadBranchRegressionGuard } from "@djl/shared/git";
 import { translateRendererCopy } from "./i18n";
 import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
   setPinnedMessageLabel,
-} from "@synara/shared/pinnedMessages";
+} from "@djl/shared/pinnedMessages";
 import {
   addThreadMarker,
   removeThreadMarker,
   setThreadMarkerDone,
   setThreadMarkerLabel,
-} from "@synara/shared/threadMarkers";
-import { normalizeModelSlug } from "@synara/shared/model";
-import { normalizeWorkspaceRootForComparison } from "@synara/shared/threadWorkspace";
+} from "@djl/shared/threadMarkers";
+import { normalizeModelSlug } from "@djl/shared/model";
+import { normalizeWorkspaceRootForComparison } from "@djl/shared/threadWorkspace";
 import { create } from "zustand";
 import {
   type ChatAttachment,
@@ -45,7 +45,7 @@ import {
 } from "./types";
 import { Debouncer } from "@tanstack/react-pacer";
 import { hasLiveTurnTailWork, isSessionRunningTurn } from "./session-logic";
-import { deriveThreadSummaryMetadata } from "@synara/shared/threadSummary";
+import { deriveThreadSummaryMetadata } from "@djl/shared/threadSummary";
 import { getThreadFromState, getThreadsFromState } from "./threadDerivation";
 import { toAttachmentPreviewUrl } from "./lib/wsHttpUrl";
 import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
@@ -96,7 +96,7 @@ type ApplyOrchestrationEventOptions = {
   updateSidebarSummary?: boolean;
 };
 
-const PERSISTED_STATE_KEY = "synara:renderer-state:v8";
+const PERSISTED_STATE_KEY = "djl:renderer-state:v8";
 const MAX_THREAD_MESSAGES = 2_000;
 const MAX_THREAD_ACTIVITIES = 500;
 // Stable empty reference for `threadIds` fallbacks. Consumers must read through

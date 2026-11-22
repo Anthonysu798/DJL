@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { ImageRecipe } from "@synara/contracts";
+import type { ImageRecipe } from "@djl/contracts";
 import { resolveMediaBinary } from "./mediaBinary";
 const exec = promisify(execFile);
 const maxPixels = 80_000_000;

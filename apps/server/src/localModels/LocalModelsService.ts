@@ -10,7 +10,7 @@ import type {
   LocalModelSetupJob,
   LocalModelSetupJobInput,
   LocalModelsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema, ServiceMap, type Effect, type Stream } from "effect";
 
 export class LocalModelsServiceError extends Schema.TaggedErrorClass<LocalModelsServiceError>()(

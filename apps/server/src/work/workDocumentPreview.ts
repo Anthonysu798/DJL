@@ -13,7 +13,7 @@ import {
   type ProjectKind,
   type ThreadId,
   type WorkPreviewDocumentResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { normalizeDocument } from "./documentExtraction";
 import { WorkToolValidationError } from "./documentTools";

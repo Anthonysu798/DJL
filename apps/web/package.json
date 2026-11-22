@@ -1,5 +1,5 @@
 {
-  "name": "@synara/web",
+  "name": "@djl/web-app",
   "version": "0.5.0",
   "private": true,
   "type": "module",
@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@djl/contracts": "workspace:*",
+    "@djl/shared": "workspace:*",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
@@ -32,8 +34,6 @@
     "@lexical/react": "^0.41.0",
     "@pierre/diffs": "^1.1.0-beta.16",
     "@remotion/player": "4.0.498",
-    "@synara/contracts": "workspace:*",
-    "@synara/shared": "workspace:*",
     "@tabler/icons-react": "^3.44.0",
     "@tanstack/react-pacer": "^0.19.4",
     "@tanstack/react-query": "^5.90.0",

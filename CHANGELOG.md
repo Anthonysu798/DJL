@@ -10,9 +10,9 @@
 
 ### Changed
 
-- Completed the Synara identity cutover across desktop packaging, the renderer origin, workspace packages, the public CLI, runtime variables, storage, Git metadata, assets, documentation, and release automation.
-- Set the production bundle ID and Windows AUMID to `com.emanueledipietro.synara`, with `.dev` used only for development.
-- Published the CLI identity as `@synara/cli` with the `synara` executable and moved all first-party workspaces to `@synara/*`.
+- Completed the DJL identity cutover across desktop packaging, the renderer origin, workspace packages, the public CLI, runtime variables, storage, Git metadata, assets, documentation, and release automation.
+- Set the production bundle ID and Windows AUMID to `app.djl.desktop`, with `.dev` used only for development.
+- Published the CLI identity as `@djl/cli` with the `djl` executable and moved all first-party workspaces to `@djl/*`.
 - Kept persisted renderer state available through the 0.4.2 origin bridge and retained brand-neutral structural access to existing checkpoint refs and migration lineage.
 - Deferred secondary chat dock panels and added a repeatable LCP measurement script so the main conversation can become interactive sooner.
 - Hardened the staged updater feed, compatibility-channel checks, and desktop startup around bundle swaps.
@@ -30,17 +30,17 @@
 - `bun run typecheck` passed across all 8 packages; only existing TS44 informational JSON/schema-preference messages were reported.
 - `bun run release:smoke` passed with Bun temporary staging available; it reported `@pierre/diffs@1.2.12` as newer than the pinned `1.2.8`.
 - `bun run build` passed with 6 successful tasks and the existing Astro, tsdown/plugin-timing, desktop module-type, and large Vite chunk warnings.
-- Final full `bun run test` passed: 10 Turbo tasks; `@synara/web` passed 200 files / 2,426 tests, and `@synara/cli` passed 152 files / 1,698 tests with 1 skipped file and 6 skipped tests. The initial run was interrupted while waiting on the serial server suite; the final rerun completed cleanly.
+- Final full `bun run test` passed: 10 Turbo tasks; `@djl/web-app` passed 200 files / 2,426 tests, and `@djl/cli` passed 152 files / 1,698 tests with 1 skipped file and 6 skipped tests. The initial run was interrupted while waiting on the serial server suite; the final rerun completed cleanly.
 
 ### Upgrade note
 
-- Launch Synara 0.4.2 once before upgrading so renderer-local UI state is exported before 0.5.0 adopts the canonical `synara://app` origin.
+- Launch DJL 0.4.2 once before upgrading so renderer-local UI state is exported before 0.5.0 adopts the canonical `djl-app://app` origin.
 
 ## 0.4.2 - 2026-07-09
 
 ### Added
 
-- Added the Synara identity bridge that exports canonical renderer storage before the packaged origin changes.
+- Added the DJL identity bridge that exports canonical renderer storage before the packaged origin changes.
 - Added per-thread 1M-token context window tracking for Claude sessions, with automatic compaction handling and context-usage warnings near the window limit.
 - Added fallback model pinning for Claude after a safeguard reroute, cleared when the user explicitly selects a different model.
 - Added a durable desktop update install marker that verifies installs across restarts, plus an install watchdog with recovery and macOS ShipIt/launchctl update diagnostics.
@@ -51,8 +51,8 @@
 
 - Claude model and context-window switches now happen in-session instead of forcing a full session restart, sharply reducing restarts and runaway token usage.
 - Canonicalized migration and checkpoint metadata while keeping existing persisted refs readable.
-- Enforced the staged Synara update feed end to end, with fail-closed preflight checks in the release pipeline.
-- Made Windows code signing optional in the release pipeline and finalized Synara license attribution.
+- Enforced the staged DJL update feed end to end, with fail-closed preflight checks in the release pipeline.
+- Made Windows code signing optional in the release pipeline and finalized DJL license attribution.
 
 ### Fixed
 
@@ -68,7 +68,7 @@
 
 ### Upgrade note
 
-- Launch Synara 0.4.2 at least once before installing the next release. This preserves drafts, pins, theme, browser state, and other local UI state through the identity cutover.
+- Launch DJL 0.4.2 at least once before installing the next release. This preserves drafts, pins, theme, browser state, and other local UI state through the identity cutover.
 - Earlier command and environment aliases are accepted by 0.4.2 only and are removed by the following release.
 
 ## 0.4.1 - 2026-07-09
@@ -85,7 +85,7 @@
 - Refined chat and Studio creation, routing, and restore flows to use canonical containers, wait for hydration when needed, and avoid overlapping fresh-chat creation.
 - Refined session orchestration and transcript rendering so active work, sidebar visibility, and worktree setup remain predictable across streaming, reconnects, and segment switches.
 - Refined Studio scaffolding and project ownership rules to preserve clear workspace boundaries during retries, restores, and partial creation states.
-- Bumped Synara release package versions to `0.4.1` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
+- Bumped DJL release package versions to `0.4.1` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
 
 ### Fixed
 
@@ -114,7 +114,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.4.0` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
+- Bumped DJL release package versions to `0.4.0` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
 - Refined prompt history navigation so stale navigation state resets cleanly and optimistic prompt-history entries do not duplicate after sends.
 - Refined PR snapshot loading to dedupe GitHub field lists, format merge-head details more consistently, and keep long review previews readable.
 - Refined provider usage type handling around Claude summaries and rate-limit responses.
@@ -134,9 +134,9 @@
 - `bun run typecheck` passed across all 8 packages in 18.277s with the existing TS44 informational JSON/schema-preference messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state. It noted an available newer `@pierre/diffs@1.2.12` while keeping the current dependency range unchanged.
 - `bun run build` passed: 6 tasks successful in 16.479s. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, Rolldown/Babel plugin timing, and large Vite chunk warnings.
-- Full `bun run test` passed: 10 tasks successful in 6m35.477s. `@synara/web` passed 194 files / 2352 tests, and `synara` passed 145 files with 1 skipped file, 1593 passed tests, and 6 skipped tests.
+- Full `bun run test` passed: 10 tasks successful in 6m35.477s. `@djl/web-app` passed 194 files / 2352 tests, and `djl` passed 145 files with 1 skipped file, 1593 passed tests, and 6 skipped tests.
 - `bun install` refreshed `bun.lock` after the package-version bump and reported no dependency changes.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.4.0`, and `npm run lint` passed.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.4.0`, and `npm run lint` passed.
 
 ## 0.3.9 - 2026-07-05
 
@@ -151,7 +151,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.9` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
+- Bumped DJL release package versions to `0.3.9` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
 - Refined `/export` to stream archive entries incrementally, deflate large entries without buffering the whole ZIP, and avoid offering export while a turn is running or still streaming.
 - Refined thread purge behavior so archived profile aggregates continue contributing to profile queries after thread rows are removed.
 - Refined terminal shutdown so disposal waits for kill escalation instead of returning while stubborn process trees may still be alive.
@@ -173,9 +173,9 @@
 - `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON/schema-preference messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state. It noted an available newer `@pierre/diffs@1.2.12` while keeping the current dependency range unchanged.
 - `bun run build` passed: 6 tasks successful in 18.768s. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, Rolldown/Babel plugin timing, and large Vite chunk warnings.
-- Full `bun run test` passed: 10 tasks successful in 6m35.955s. `@synara/web` passed 193 files / 2316 tests, and `synara` passed 144 files with 1 skipped file, 1575 passed tests, and 6 skipped tests.
+- Full `bun run test` passed: 10 tasks successful in 6m35.955s. `@djl/web-app` passed 193 files / 2316 tests, and `djl` passed 144 files with 1 skipped file, 1575 passed tests, and 6 skipped tests.
 - `bun install` refreshed `bun.lock` after the package-version bump and reported no dependency changes.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.9`, and `npm run lint` passed.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.9`, and `npm run lint` passed.
 
 ## 0.3.8 - 2026-07-03
 
@@ -189,7 +189,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.8` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
+- Bumped DJL release package versions to `0.3.8` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
 - Refined ACP session runtime and Grok adapter handling around resume replay, compaction, JSON-RPC ordering, provider runtime ingestion, and provider service session state.
 - Refined worktree setup timeline rendering so setup rows expose active/failed/done state more predictably and failed local dispatches clear on the next send.
 - Reworked pending approval UI around the shared `ComposerChoiceRow` structure, trimming duplicate action styling and aligning it with pending input panels.
@@ -209,13 +209,13 @@
 
 - `bun run fmt:check` passed across 1518 files.
 - `bun run lint` passed with 162 warnings, 0 errors.
-- Initial `bun run typecheck` failed in `@synara/web` on `apps/web/src/components/ChatView.tsx` because `beginLocalDispatch` passed an explicit `options: undefined` into an exact-optional helper; after the targeted fix, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON/schema-preference messages.
+- Initial `bun run typecheck` failed in `@djl/web-app` on `apps/web/src/components/ChatView.tsx` because `beginLocalDispatch` passed an explicit `options: undefined` into an exact-optional helper; after the targeted fix, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON/schema-preference messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state. It noted an available newer `@pierre/diffs@1.2.12` while keeping the current dependency range unchanged.
 - `bun run build` passed: 6 tasks successful in 23.921s. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, Rolldown/Babel plugin timing, and large Vite chunk warnings.
-- Initial full `bun run test` failed in `@synara/web` with one timeout: `apps/web/src/components/ChatMarkdown.test.tsx > ChatMarkdown > uses the theme foreground token for markdown text`. No stale duplicate test processes were present; the targeted rerun `bun run test src/components/ChatMarkdown.test.tsx -t "uses the theme foreground token for markdown text"` from `apps/web` passed in 1.01s.
-- Final full `bun run test` passed: 10 tasks successful in 9m28.476s. `@synara/web` passed 193 files / 2308 tests, `synara` passed 140 files with 1 skipped file, 1547 passed tests, and 6 skipped tests.
+- Initial full `bun run test` failed in `@djl/web-app` with one timeout: `apps/web/src/components/ChatMarkdown.test.tsx > ChatMarkdown > uses the theme foreground token for markdown text`. No stale duplicate test processes were present; the targeted rerun `bun run test src/components/ChatMarkdown.test.tsx -t "uses the theme foreground token for markdown text"` from `apps/web` passed in 1.01s.
+- Final full `bun run test` passed: 10 tasks successful in 9m28.476s. `@djl/web-app` passed 193 files / 2308 tests, `djl` passed 140 files with 1 skipped file, 1547 passed tests, and 6 skipped tests.
 - `bun install` refreshed `bun.lock` after the package-version bump and reported no dependency changes.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.8`, and `npm run lint` passed.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.8`, and `npm run lint` passed.
 
 ## 0.3.7 - 2026-07-02
 
@@ -230,7 +230,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.7` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
+- Bumped DJL release package versions to `0.3.7` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
 - Moved the sidebar Chats section into the scrollable sidebar content, added an accessible disclosure state, and reused the shared disclosure chevron.
 - Refined the desktop update action styling to use the info color while active downloads show a compact percent pill.
 - Refined Claude provider health to retry structured `loggedIn:false` false negatives once, read verified local credential metadata, and preserve subscription/auth labels more reliably.
@@ -252,9 +252,9 @@
 - `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON/schema-preference messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state. It noted an available newer `@pierre/diffs@1.2.12` while keeping the current dependency range unchanged.
 - `bun run build` passed: 6 tasks successful in 14.425s. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, Rolldown/Babel plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- `bun run test` passed: 10 tasks successful in 5m23.405s. `@synara/web` passed 191 files / 2274 tests. `effect-acp` passed 3 files / 24 tests. `synara` passed 140 files with 1 skipped file, 1532 passed tests, and 6 skipped tests.
+- `bun run test` passed: 10 tasks successful in 5m23.405s. `@djl/web-app` passed 191 files / 2274 tests. `effect-acp` passed 3 files / 24 tests. `djl` passed 140 files with 1 skipped file, 1532 passed tests, and 6 skipped tests.
 - `bun install` refreshed `bun.lock` after the package-version bump and reported no dependency changes.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.7`, and `npm run lint` passed.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.7`, and `npm run lint` passed.
 
 ## 0.3.6 - 2026-06-30
 
@@ -268,7 +268,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.6` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.3.6` across the server, desktop, web, and contracts packages.
 - Refined Cursor agent command resolution so fallback launchers prefer known-safe agent paths and reject unsafe editor fallbacks.
 - Refined checkpoint and transcript handling around turn completion, live trail rendering, and message timeline integration.
 - Refined Sonnet 5 model variant metadata, sidebar status icons, command-row branding, tool-call labels, chat bubble padding, and model effort picker copy.
@@ -289,8 +289,8 @@
 - `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state.
 - `bun run build` passed. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- `bun run test` passed: 10 tasks successful in 5m38.929s. `@synara/web` passed 191 files / 2273 tests. `synara` passed 138 files with 1 skipped file, 1517 passed tests, and 6 skipped tests.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` and `npm run lint` passed.
+- `bun run test` passed: 10 tasks successful in 5m38.929s. `@djl/web-app` passed 191 files / 2273 tests. `djl` passed 138 files with 1 skipped file, 1517 passed tests, and 6 skipped tests.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` and `npm run lint` passed.
 
 ## 0.3.5 - 2026-06-30
 
@@ -303,7 +303,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.5` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace package versions.
+- Bumped DJL release package versions to `0.3.5` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace package versions.
 - Reworked temporary chat promotion so draft/temporary threads move into durable chat flow more predictably across ChatView, sidebar state, session logic, and route activation.
 - Replaced archive confirmation friction with immediate archive plus undo toast, including sidebar row actions, settings primitives, and shared error messaging polish.
 - Refined pending user-input panels, queued composer state, work rows, tool details, markdown spacing, composer picker styling, model/traits pickers, and chat timeline presentation.
@@ -324,8 +324,8 @@
 - `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state. It reported a slow filesystem warning for the Bun install cache during the final pass.
 - `bun run build` passed. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- `bun run test` passed: 10 tasks successful in 6m9.469s. `@synara/web` passed 190 files / 2229 tests. `synara` passed 137 files with 1 skipped file, 1492 passed tests, and 6 skipped tests.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.5`, and `npm run lint` passed.
+- `bun run test` passed: 10 tasks successful in 6m9.469s. `@djl/web-app` passed 190 files / 2229 tests. `djl` passed 137 files with 1 skipped file, 1492 passed tests, and 6 skipped tests.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.5`, and `npm run lint` passed.
 
 ## 0.3.4 - 2026-06-29
 
@@ -339,7 +339,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.4` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.3.4` across the server, desktop, web, and contracts packages.
 - Refined transcript streaming and session-state handling so live assistant output, tool rows, and bottom-stick behavior stay separated more predictably.
 - Made Claude provider health prefer usable local CLI credentials before inheriting direct credential env keys into subprocesses.
 - Made Cursor provider probing use a safer headless environment for ACP commands.
@@ -357,18 +357,18 @@
 
 - `bun run fmt:check` passed.
 - `bun run lint` passed with 155 warnings, 0 errors.
-- Initial `bun run typecheck` failed in `@synara/web` on `apps/web/src/components/ChatView.browser.tsx` because a browser `scrollTo` test helper produced explicit `undefined` optional fields; after that fix it failed in `synara` on `apps/server/src/provider/Layers/ProviderHealth.ts` and `ProviderHealth.test.ts` for the same exact-optional pattern and an unsupported Effect platform error tag; after targeted fixes, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
+- Initial `bun run typecheck` failed in `@djl/web-app` on `apps/web/src/components/ChatView.browser.tsx` because a browser `scrollTo` test helper produced explicit `undefined` optional fields; after that fix it failed in `djl` on `apps/server/src/provider/Layers/ProviderHealth.ts` and `ProviderHealth.test.ts` for the same exact-optional pattern and an unsupported Effect platform error tag; after targeted fixes, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state.
 - `bun run build` passed. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- Initial `bun run test` failed in `@synara/web` on `apps/web/src/appSettings.test.ts` because the persisted-settings decode-default fixture still expected `enableAssistantStreaming: false`; after updating the fixture to the new default, the targeted app settings test passed.
-- Final `bun run test` passed: 10 tasks successful in 6m5.217s. `synara` passed 137 files with 1 skipped file, 1492 passed tests, and 6 skipped tests.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.4`, and `npm run lint` passed.
+- Initial `bun run test` failed in `@djl/web-app` on `apps/web/src/appSettings.test.ts` because the persisted-settings decode-default fixture still expected `enableAssistantStreaming: false`; after updating the fixture to the new default, the targeted app settings test passed.
+- Final `bun run test` passed: 10 tasks successful in 6m5.217s. `djl` passed 137 files with 1 skipped file, 1492 passed tests, and 6 skipped tests.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.4`, and `npm run lint` passed.
 
 ## 0.3.3 - 2026-06-28
 
 ### Added
 
-- Added Windows packaged-app editor discovery so VS Code and VS Code Insiders installed from the Microsoft Store can be launched from Synara.
+- Added Windows packaged-app editor discovery so VS Code and VS Code Insiders installed from the Microsoft Store can be launched from DJL.
 - Added Windows editor URI fallback handling when the normal editor command is unavailable or unsuitable.
 - Added a provider update-check preference across server settings, web app settings, settings search, provider health, and update notification filtering.
 - Added shared workspace explorer keyboard navigation coverage and a dedicated keyboard shortcuts settings panel.
@@ -376,8 +376,8 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.3` across the server, desktop, web, and contracts packages.
-- Refreshed Synara icon and logo assets across desktop resources, marketing assets, web favicons, app icons, and shared brand assets.
+- Bumped DJL release package versions to `0.3.3` across the server, desktop, web, and contracts packages.
+- Refreshed DJL icon and logo assets across desktop resources, marketing assets, web favicons, app icons, and shared brand assets.
 - Corrected macOS app icon packaging after the Ventura rounded-icon pass and removed the temporary literal Dock icon workaround.
 - Unified workspace explorer presentation, file row styling, diff stat labels, DockExplorerPane behavior, and shortcut settings navigation.
 - Reduced idle local server polling by giving server React Query a calmer idle refresh cadence while preserving active-session refresh behavior.
@@ -395,11 +395,11 @@
 
 - Initial `bun run fmt:check` failed on `apps/server/src/editorAppDiscovery.ts`, `apps/server/src/open.test.ts`, and `scripts/build-desktop-artifact.ts`; after targeted `bunx oxfmt` on those files, `bun run fmt:check` passed.
 - `bun run lint` passed with 155 warnings, 0 errors.
-- Initial `bun run typecheck` failed in `@synara/web` because `wsNativeApi.test.ts` missed the new `enableProviderUpdateChecks` setting; after that fix it failed in `synara` because `apps/server/src/open.ts` used unavailable `Effect.catchAll`; after both fixes, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
+- Initial `bun run typecheck` failed in `@djl/web-app` because `wsNativeApi.test.ts` missed the new `enableProviderUpdateChecks` setting; after that fix it failed in `djl` because `apps/server/src/open.ts` used unavailable `Effect.catchAll`; after both fixes, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state.
 - `bun run build` passed. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- `bun run test` passed: 10 tasks successful in 5m8.962s. `@synara/web` passed 188 files / 2212 tests. `synara` passed 136 files with 1 skipped file, 1475 passed tests, and 6 skipped tests.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.3`, and `npm run lint` passed.
+- `bun run test` passed: 10 tasks successful in 5m8.962s. `@djl/web-app` passed 188 files / 2212 tests. `djl` passed 136 files with 1 skipped file, 1475 passed tests, and 6 skipped tests.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.3`, and `npm run lint` passed.
 
 ## 0.3.2 - 2026-06-27
 
@@ -412,7 +412,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.2` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.3.2` across the server, desktop, web, and contracts packages.
 - Refactored transcript scrolling and session-state handling so ChatView owns less browser-specific behavior directly and live transcript/layout state has clearer boundaries.
 - Refactored composer chrome measurement, right-dock metadata, workspace preview headers, and the workspace explorer into reusable pieces.
 - Made project and home-chat container selection more explicit by sharing project creation/recovery, draft-thread mapping, and chat-container selection helpers across sidebar and toolbar entrypoints.
@@ -431,11 +431,11 @@
 
 - Initial `bun run fmt:check` failed on `apps/web/src/components/RouteInsetSurface.tsx`; after targeted `bunx oxfmt` on that file, `bun run fmt:check` passed.
 - `bun run lint` passed with 154 warnings, 0 errors.
-- Initial `bun run typecheck` failed in `@synara/web` on exact optional property handling in `Sidebar.tsx`, `composerDraftStore.ts`, and `chatProjects.ts`; after targeted fixes, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
+- Initial `bun run typecheck` failed in `@djl/web-app` on exact optional property handling in `Sidebar.tsx`, `composerDraftStore.ts`, and `chatProjects.ts`; after targeted fixes, `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed. It refreshed install/lockfile state during `bun install`, with no remaining `bun.lock` diff.
 - `bun run build` passed. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- `bun run test` passed: 10 tasks successful in 5m44.64s. `@synara/web` passed 187 files / 2205 tests. `synara` passed 136 files with 1 skipped file, 1464 passed tests, and 6 skipped tests.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.2`, and `npm run lint` passed.
+- `bun run test` passed: 10 tasks successful in 5m44.64s. `@djl/web-app` passed 187 files / 2205 tests. `djl` passed 136 files with 1 skipped file, 1464 passed tests, and 6 skipped tests.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.2`, and `npm run lint` passed.
 
 ## 0.3.1 - 2026-06-26
 
@@ -448,7 +448,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.1` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.3.1` across the server, desktop, web, and contracts packages.
 - Refined session orchestration and transcript handling so assistant messages, tool/work rows, collapsed turns, runtime activity, and sidechat state stay separated more predictably.
 - Improved chat header, recent-view, sidebar, split-chat, and hover-card navigation for multi-pane workflows.
 - Tightened keyboard shortcut defaults and persisted keybinding migrations for chat creation, terminal creation, navigation, and duplicate/stale binding rows.
@@ -475,14 +475,14 @@
 - `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and left `bun.lock` unchanged.
 - `bun run build` passed. The build still reports existing Astro `transformWithEsbuild`, tsdown/plugin timing, desktop typeless-module, and large Vite chunk warnings.
-- `bun run test` passed: 10 tasks successful in 5m6s. `@synara/web` passed 182 files / 2164 tests. `synara` passed 135 files with 1 skipped file, 1456 passed tests, and 6 skipped tests.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.1`, and `npm run lint` passed.
+- `bun run test` passed: 10 tasks successful in 5m6s. `@djl/web-app` passed 182 files / 2164 tests. `djl` passed 135 files with 1 skipped file, 1456 passed tests, and 6 skipped tests.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.1`, and `npm run lint` passed.
 
 ## 0.3.0 - 2026-06-24
 
 ### Added
 
-- Added first-class Automations as a real Synara workspace surface, including contracts, persistence, scheduler leases, run tracking, RPC methods, sidebar navigation, list/detail routes, Current/Paused views, inline detail editing, previous-run history, and triage actions.
+- Added first-class Automations as a real DJL workspace surface, including contracts, persistence, scheduler leases, run tracking, RPC methods, sidebar navigation, list/detail routes, Current/Paused views, inline detail editing, previous-run history, and triage actions.
 - Added automation scheduler and composer flows so saved prompts can run manually, once, on intervals, daily, on weekdays, weekly, or from cron-like schedules.
 - Added heartbeat automations that continue an existing target thread on each scheduled wake while preserving the normal provider/session/approval/worktree pipeline.
 - Added AI-evaluated heartbeat stop clauses through completion policies, natural-language stop conditions, completion-evaluation results, and visible stop reasons in run history.
@@ -492,13 +492,13 @@
 - Added DST and long-downtime scheduler coverage for spring-forward gaps, fall-back duplicate hours, and coalesced missed interval runs.
 - Added generic chat file attachments alongside image attachments, with shared contracts, upload storage, composer paste/drop support, provider prompt projection, optimistic timeline rendering, Kanban dispatch, recap/bootstrap support, and reusable file attachment cards/chips.
 - Added automation cards in the chat transcript after automation creation, and added thread automation summaries in the Environment panel.
-- Added blob-based browser download handling for local image/generated markdown image downloads so failed local-image responses stay inside Synara instead of navigating the app window to an API error page.
+- Added blob-based browser download handling for local image/generated markdown image downloads so failed local-image responses stay inside DJL instead of navigating the app window to an API error page.
 - Added OpenCode CLI-only model discovery fallback so the model picker can still discover available models when the managed server or inventory path fails.
 - Added profile skill usage counting coverage for retention-hidden threads and repeated slash/dollar skill invocations.
 
 ### Changed
 
-- Bumped Synara release package versions to `0.3.0` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.3.0` across the server, desktop, web, and contracts packages.
 - Reworked automation UI toward a Codex-style surface, including the sidebar badge, Current/Paused list, centered detail layout, inline rail editing, schedule editing, target-thread display, max-iteration controls, stop-on-error handling, and previous-run actions.
 - Expanded automation composer parsing and review so explicit/generated prompts, schedule phrases, stop clauses, bounded fast loops, restored plan source metadata, queued plan follow-ups, and inline composer editing are handled consistently.
 - Made generated automation intents require confirmation before creation, while preserving deterministic local auto-submit behavior for explicitly parsed bounded fast loops.
@@ -538,8 +538,8 @@
 - `bun run typecheck` passed across all 8 packages with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed install/lockfile state.
 - `bun run build` passed. The build still reports existing large web chunk/plugin timing warnings, the Astro `transformWithEsbuild` deprecation warning, and the desktop `tsdown.config.ts` typeless-module warning.
-- `bun run test` passed: 10 tasks successful in 8m53s. `@synara/web` passed 180 files / 2102 tests. `synara` passed 135 files with 1 skipped file, 1418 passed tests, and 6 skipped tests. The server suite was long-running but completed cleanly without a teardown stall.
-- Website changelog mirror checks passed in `/Users/emanueledipietro/Developer/synara-website`: `npm run build` prerendered `/changelog/v0.3.0`, and `npm run lint` passed.
+- `bun run test` passed: 10 tasks successful in 8m53s. `@djl/web-app` passed 180 files / 2102 tests. `djl` passed 135 files with 1 skipped file, 1418 passed tests, and 6 skipped tests. The server suite was long-running but completed cleanly without a teardown stall.
+- Website changelog mirror checks passed in `/Users/you/Developer/djl-website`: `npm run build` prerendered `/changelog/v0.3.0`, and `npm run lint` passed.
 
 ## 0.2.41 - 2026-06-17
 
@@ -550,7 +550,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.2.41` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.2.41` across the server, desktop, web, and contracts packages.
 - Kept the shared project-action dialog path mounted while hiding the visible inline project script runner from the chat header.
 - Improved header handoff failure handling by checking provider send availability before creating a handoff and showing a toast when the target is unavailable.
 
@@ -566,12 +566,12 @@
 - `bun run typecheck` passed with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and left the worktree unchanged.
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings; desktop build still reports the existing typeless `tsdown.config.ts` module warning.
-- Root `bun run test` did not complete cleanly in two attempts: both runs reached a green `@synara/web` suite (169 files / 1954 tests), then stalled in the `apps/server` Vitest tail. The stale duplicate root/Vitest processes were stopped before continuing verification.
+- Root `bun run test` did not complete cleanly in two attempts: both runs reached a green `@djl/web-app` suite (169 files / 1954 tests), then stalled in the `apps/server` Vitest tail. The stale duplicate root/Vitest processes were stopped before continuing verification.
 - Direct `bun run test` from `apps/server` also stalled before reporting test-file progress, only printing Node SQLite experimental warnings, so it is not counted as passed.
 - Direct package tests passed for the release-relevant and non-server packages: `apps/web` 169 files / 1954 tests, `packages/contracts` 9 files / 90 tests, `packages/shared` 24 files / 228 tests, `packages/effect-acp` 3 files / 24 tests, `apps/desktop` 19 files / 149 tests, and `scripts` 5 files / 36 tests.
 - `apps/marketing` has no `test` script.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.2.41`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.2.41`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.2.4 - 2026-06-17
 
@@ -582,7 +582,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.2.4` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.2.4` across the server, desktop, web, and contracts packages.
 - Improved remembered chat route restore so stale empty startup snapshots do not immediately send users to the empty chat route.
 - Removed the old handoff shortcut from the chat header to keep primary conversation controls quieter.
 
@@ -599,9 +599,9 @@
 - `bun run typecheck` passed with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed release install/lockfile state.
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings; desktop build still reports the existing typeless `tsdown.config.ts` module warning.
-- `bun run test` passed: 10 tasks successful, including `@synara/web` 169 files / 1954 tests and `synara` 129 files passed / 1 skipped with 1255 passed / 6 skipped.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.2.4`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `bun run test` passed: 10 tasks successful, including `@djl/web-app` 169 files / 1954 tests and `djl` 129 files passed / 1 skipped with 1255 passed / 6 skipped.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.2.4`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.2.3 - 2026-06-16
 
@@ -613,7 +613,7 @@
 
 ### Changed
 
-- Bumped Synara release package versions to `0.2.3` across the server, desktop, web, and contracts packages.
+- Bumped DJL release package versions to `0.2.3` across the server, desktop, web, and contracts packages.
 - Improved profile skill usage counting by combining structured skill references, mentions, agent references, and legacy text-token backfill while filtering obvious non-skill slash/dollar tokens.
 - Kept large pasted prompt content out of the visible composer body by storing it as structured prompt context, making long prompts easier to scan and refine.
 
@@ -630,9 +630,9 @@
 - `bun run typecheck` passed with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed and refreshed release install/lockfile state.
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings; desktop build still reports the existing typeless `tsdown.config.ts` module warning.
-- `bun run test` passed: 10 tasks successful, including `@synara/web` 168 files / 1949 tests and `synara` 129 files passed / 1 skipped with 1246 passed / 6 skipped.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.2.3`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `bun run test` passed: 10 tasks successful, including `@djl/web-app` 168 files / 1949 tests and `djl` 129 files passed / 1 skipped with 1246 passed / 6 skipped.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.2.3`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.2.2 - 2026-06-14
 
@@ -663,16 +663,16 @@
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings; desktop build still reports the existing typeless `tsdown.config.ts` module warning.
 - Initial full `bun run test` failed in `packages/effect-acp` on 5000ms child-process fixture timeouts, then repeated with timeouts in `packages/effect-acp/src/client.test.ts` and `packages/effect-acp/src/protocol.test.ts`. Targeted reruns passed after adding explicit fixture timeouts.
 - A subsequent root `bun run test` reached green server test output but did not return because the server Vitest process kept worker forks alive during Turbo teardown. Direct server testing showed the suite exits cleanly with `--maxWorkers=1 --no-file-parallelism`, so the server test script was updated accordingly.
-- Final `bun run test` passed: 10 tasks successful, including `@synara/web` 167 files / 1935 tests, `effect-acp` 3 files / 24 tests, and `synara` 129 files passed / 1 skipped with 1241 passed / 6 skipped.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.2.2`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- Final `bun run test` passed: 10 tasks successful, including `@djl/web-app` 167 files / 1935 tests, `effect-acp` 3 files / 24 tests, and `djl` 129 files passed / 1 skipped with 1241 passed / 6 skipped.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.2.2`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.2.1 - 2026-06-14
 
 ### Added
 
 - Added inline file comments from composer and preview surfaces, including line comment boxes, comment summary chips, draft persistence, reference attachment support, chat timeline rendering, and file-comment parsing helpers.
-- Added startup turn reconciliation for provider restarts so Synara can recover unfinished turns from persisted runtime state instead of leaving stale active work behind.
+- Added startup turn reconciliation for provider restarts so DJL can recover unfinished turns from persisted runtime state instead of leaving stale active work behind.
 - Added an ACP idle watchdog used by ACP-backed providers so quiet turns can complete or fail more predictably when runtime events stop flowing.
 - Added partial workspace reference lookup helpers and tests so shortened file references can resolve to the intended workspace entry.
 
@@ -701,8 +701,8 @@
 - Final `bun run test` from `apps/web` passed: 165 files passed, 1909 tests passed.
 - Final `bun run test` from `packages/effect-acp` passed: 3 files passed, 24 tests passed.
 - Final direct server rerun `bun run test -- --maxWorkers=1` from `apps/server` passed: 128 files passed, 1 skipped; 1238 tests passed, 6 skipped.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.2.1`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.2.1`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.2.0 - 2026-06-13
 
@@ -747,14 +747,14 @@
 - First full `bun run test` before release-note edits did not pass: `apps/server/integration/orchestrationEngine.integration.test.ts` failed `runs a single turn end-to-end and persists checkpoint state in sqlite + git`, and `apps/server/src/orchestration/Layers/CheckpointReactor.test.ts` failed `captures pre-turn baseline on turn.started and post-turn checkpoint on turn.completed`. The run then hung during teardown and was stopped after identifying and killing the stale `bun`/`turbo`/Vitest worker processes.
 - Targeted rerun `bun run test src/orchestration/Layers/CheckpointReactor.test.ts -t "captures pre-turn baseline on turn.started and post-turn checkpoint on turn.completed"` from `apps/server` passed: 1 test passed, 15 skipped.
 - Targeted rerun `bun run test integration/orchestrationEngine.integration.test.ts -t "runs a single turn end-to-end and persists checkpoint state in sqlite + git"` from `apps/server` could not reproduce the live integration test because the file uses `it.live`; the standard targeted Vitest command skipped all 12 tests.
-- Final full `bun run test` after version and release-note edits did not pass: `packages/effect-acp/src/client.test.ts` timed out in `returns formatted invalid params when a typed extension request payload is wrong`, and `packages/effect-acp/src/protocol.test.ts` timed out in `does not emit a second process-exit error after a decode failure`. Turbo reported 7 successful tasks, canceled `synara:test` and `@synara/web:test` with code 130, and exited with `effect-acp#test` failed.
+- Final full `bun run test` after version and release-note edits did not pass: `packages/effect-acp/src/client.test.ts` timed out in `returns formatted invalid params when a typed extension request payload is wrong`, and `packages/effect-acp/src/protocol.test.ts` timed out in `does not emit a second process-exit error after a decode failure`. Turbo reported 7 successful tasks, canceled `djl:test` and `@djl/web-app:test` with code 130, and exited with `effect-acp#test` failed.
 - Targeted rerun `bun run test src/client.test.ts -t "returns formatted invalid params when a typed extension request payload is wrong"` from `packages/effect-acp` passed: 1 test passed, 4 skipped.
 - Targeted rerun `bun run test src/protocol.test.ts -t "does not emit a second process-exit error after a decode failure"` from `packages/effect-acp` passed: 1 test passed, 16 skipped.
 - Full `packages/effect-acp` rerun passed: 3 files passed, 24 tests passed.
 - Full `apps/web` rerun passed: 164 files passed, 1894 tests passed.
 - Direct server rerun `bun run test -- --maxWorkers=1` from `apps/server` passed: 126 files passed, 1 skipped; 1214 tests passed, 6 skipped.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.2.0`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.2.0`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.1.9 - 2026-06-12
 
@@ -790,13 +790,13 @@
 - `bun run release:smoke` passed.
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings; desktop build still reports the existing typeless `tsdown.config.ts` module warning.
 - First `bun run test` attempt visibly completed the long web/server/integration suites without an assertion failure, then hung during final server Vitest teardown with two workers still alive; it was interrupted and is not counted as a full pass.
-- Final full `bun run test` after release-note and version edits failed in `packages/effect-acp/src/client.test.ts` on two 5000ms timeouts: `returns formatted invalid params when a typed extension request payload is wrong` and `replays buffered notifications to handlers registered after they arrive`. Turbo canceled `synara:test` with code 130 after the `effect-acp` failure, so the full run is not counted as passed.
+- Final full `bun run test` after release-note and version edits failed in `packages/effect-acp/src/client.test.ts` on two 5000ms timeouts: `returns formatted invalid params when a typed extension request payload is wrong` and `replays buffered notifications to handlers registered after they arrive`. Turbo canceled `djl:test` with code 130 after the `effect-acp` failure, so the full run is not counted as passed.
 - Targeted rerun `bun run test src/client.test.ts -t "returns formatted invalid params when a typed extension request payload is wrong|replays buffered notifications to handlers registered after they arrive"` from `packages/effect-acp` passed: 2 tests passed, 3 skipped.
 - Full `packages/effect-acp` rerun passed: 3 files passed, 24 tests passed.
 - Full `apps/web` rerun passed: 160 files passed, 1838 tests passed.
 - Direct server rerun `bun run test -- --maxWorkers=1` from `apps/server` passed: 125 files passed, 1 skipped; 1197 tests passed, 6 skipped.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.1.9`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.1.9`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.1.8 - 2026-06-11
 
@@ -812,7 +812,7 @@
 
 - Refined the chat header, chat view, composer controls, model/trait/open-in pickers, inline chips, transcript selection actions, and code-selection flows so references and controls stay easier to scan during active work.
 - Reworked the diff panel toolbar, file list, and patch viewport behavior to make large diffs easier to navigate from both repository and turn contexts.
-- Reworked provider skill discovery so provider-native skill lists can merge with Synara's catalog and fall back cleanly when a provider cannot answer.
+- Reworked provider skill discovery so provider-native skill lists can merge with DJL's catalog and fall back cleanly when a provider cannot answer.
 - Reconciled legacy migration trackers before running migrations and tightened older sidechat/pinned-thread migration paths.
 - Updated desktop stage dependency overrides to keep `@pierre/diffs` pinned to `1.2.8`.
 - Tightened terminal environment propagation, terminal manager behavior, workspace path containment, and provider command/runtime plumbing around recent server contracts.
@@ -833,11 +833,11 @@
 - `bun run typecheck` passed with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed.
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings; desktop build still reports the existing typeless `tsdown.config.ts` module warning.
-- First `bun run test` attempt was interrupted by SIGTERM after partial success; no assertion failure was reported before termination, and `@synara/web:test` had already passed 152 files / 1740 tests.
+- First `bun run test` attempt was interrupted by SIGTERM after partial success; no assertion failure was reported before termination, and `@djl/web-app:test` had already passed 152 files / 1740 tests.
 - Final rerun `bun run test` after version and release-note edits passed: 10 tasks successful; scripts 5 files / 36 tests, desktop 19 files / 149 tests, contracts 9 files / 90 tests, shared 22 files / 188 tests, effect-acp 3 files / 24 tests, web 152 files / 1740 tests, server 123 files passed / 1 skipped with 1187 passed / 6 skipped.
 - The rerun still logged expected test-harness WARN/ERROR lines from failure-path coverage and native binding/provider-binary mocks.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.1.8`.
-- `npm run lint` in `/Users/emanueledipietro/Developer/synara-website` passed.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.1.8`.
+- `npm run lint` in `/Users/you/Developer/djl-website` passed.
 
 ## 0.1.7 - 2026-06-10
 
@@ -875,14 +875,14 @@
 - `bun run typecheck` initially failed in `apps/web/src/components/chat/TraitsPicker.browser.tsx`, `apps/web/src/store.ts`, `apps/server/src/provider/Layers/CursorAdapter.ts`, and `apps/server/src/wsRpc.ts`; after targeted fixes, `bun run typecheck` passed with the existing TS44 informational JSON messages.
 - `bun run release:smoke` passed.
 - `bun run build` passed. Vite still warns about large web chunks and plugin timings.
-- `bun run test` failed in `packages/effect-acp/src/client.test.ts` on `returns formatted invalid params when a typed extension request payload is wrong` and `replays buffered notifications to handlers registered after they arrive`, both with 5000ms timeouts; Turbo then canceled `synara:test` and `@synara/web:test` with code 130.
+- `bun run test` failed in `packages/effect-acp/src/client.test.ts` on `returns formatted invalid params when a typed extension request payload is wrong` and `replays buffered notifications to handlers registered after they arrive`, both with 5000ms timeouts; Turbo then canceled `djl:test` and `@djl/web-app:test` with code 130.
 - `bun run test src/client.test.ts -t "returns formatted invalid params when a typed extension request payload is wrong|replays buffered notifications to handlers registered after they arrive"` from `packages/effect-acp` passed (2 tests passed, 3 skipped).
 - `bun run test` from `packages/effect-acp` passed (3 files passed; 24 tests passed).
 - `bun run test` from `apps/server` passed (118 files passed, 1 skipped; 1136 tests passed, 6 skipped).
 - `bun run test` from `apps/web` passed (147 files passed; 1690 tests passed).
 - Final `bun run fmt:check` passed.
 - Final `bun run lint` passed with 148 warnings, 0 errors.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.1.7`.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.1.7`.
 
 ## 0.1.6 - 2026-06-09
 
@@ -926,7 +926,7 @@
 - `bun run test` from `apps/desktop` passed (18 files passed; 141 tests passed).
 - `bun run test` from `scripts` passed (5 files passed; 36 tests passed).
 - `apps/marketing` has no `test` script.
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website` passed and generated `/changelog/v0.1.6`.
+- `npm run build` in `/Users/you/Developer/djl-website` passed and generated `/changelog/v0.1.6`.
 
 ## 0.1.5 - 2026-06-08
 
@@ -938,7 +938,7 @@
 
 ### Changed
 
-- Refreshed README/release messaging and Synara desktop update flow documentation around the current app positioning.
+- Refreshed README/release messaging and DJL desktop update flow documentation around the current app positioning.
 - Reworked the diff panel around explicit repo-vs-turn state, searchable file filtering, and smaller view components.
 - Unified composer stacked panels above the input so plan activity, queued follow-ups, and live file-change rows share width, border, radius, and dark-mode opacity.
 - Refined chat markdown spacing, composer command menu selection, provider/plugin discovery normalization, and file/plugin icon rendering in sent messages.
@@ -962,7 +962,7 @@
 - `bun run test src/whatsNew/logic.test.ts` from `apps/web`
 - `bun run test src/components/ChatMarkdown.test.tsx` from `apps/web`
 - `bun run test` from `apps/web` (132 test files passed; 1588 tests passed)
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website`
+- `npm run build` in `/Users/you/Developer/djl-website`
 
 ## 0.1.4 - 2026-06-07
 
@@ -1002,7 +1002,7 @@
 - `bun run test` (109 test files passed, 1 skipped; 1068 tests passed, 6 skipped; 6m13s)
 - `bun install` after version bump to update `bun.lock`
 - `bun run test src/whatsNew/logic.test.ts` from `apps/web` after release-note edits (12 tests passed)
-- `npm run build` in `/Users/emanueledipietro/Developer/synara-website`
+- `npm run build` in `/Users/you/Developer/djl-website`
 
 ## 0.1.3 - 2026-06-05
 

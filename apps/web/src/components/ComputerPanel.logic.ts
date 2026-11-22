@@ -8,7 +8,7 @@ import {
   type ComputerStatusResult,
   type ComputerWindow,
   type ThreadComputerState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { t } from "~/i18n";
 import {
   COMPUTER_TOOL_TITLE_KEYS,

@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, isAbsolute, join } from "node:path";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 
 export class OpenCodeProtocolError extends Error {
   readonly code: "incompatible" | "timeout" | "startup";

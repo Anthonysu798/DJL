@@ -1,6 +1,6 @@
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { MarketingError, saveDocument } from "./store";
 import { executeCampaignLinkTool } from "./campaignLinkTools";

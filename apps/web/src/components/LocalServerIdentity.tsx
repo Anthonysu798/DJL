@@ -3,12 +3,12 @@
 // Layer: Web UI primitive (shared between the Environment menu and the in-app browser home).
 // Depends on: shared local-server presentation helpers.
 
-import type { ServerLocalServerProcess } from "@synara/contracts";
+import type { ServerLocalServerProcess } from "@djl/contracts";
 import {
   localServerAddressLabel,
   localServerFolderLabel,
   localServerPrimaryLabel,
-} from "@synara/shared/localServers";
+} from "@djl/shared/localServers";
 
 import { cn } from "~/lib/utils";
 
@@ -50,7 +50,7 @@ const IDENTITY_TONE: Record<LocalServerIdentityTone, LocalServerIdentityToneToke
 /**
  * Name + "address · folder" identity column for a detected local dev server.
  * The folder (cwd basename) disambiguates servers whose live page titles collide
- * — e.g. two apps both titled "Synara" started from different directories.
+ * — e.g. two apps both titled "DJL" started from different directories.
  */
 export function LocalServerIdentity({
   server,

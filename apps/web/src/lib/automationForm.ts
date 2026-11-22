@@ -6,7 +6,7 @@
 import {
   DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS,
   DEFAULT_AUTOMATION_MINIMUM_INTERVAL_SECONDS,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type {
   AutomationCreateInput,
   AutomationDefinition,
@@ -19,7 +19,7 @@ import type {
   ProviderStartOptions,
   RuntimeMode,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { formatLocaleDateTime } from "~/i18n/intl";
 import type { TimestampFormat } from "~/appSettings";
 import { getTimestampFormatOptions } from "~/timestampFormat";

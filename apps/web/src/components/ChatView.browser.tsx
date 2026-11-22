@@ -25,7 +25,7 @@ import {
   type WsWelcomePayload,
   WS_METHODS,
   OrchestrationSessionStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { HttpResponse, http, ws } from "msw";
 import { setupWorker } from "msw/browser";
@@ -198,7 +198,7 @@ function createBaseServerConfig(): ServerConfig {
   return {
     cwd: "/repo/project",
     worktreesDir: "/repo/.codex/worktrees",
-    keybindingsConfigPath: "/repo/project/.synara-keybindings.json",
+    keybindingsConfigPath: "/repo/project/.djl-keybindings.json",
     keybindings: [],
     issues: [],
     providers: [
@@ -679,7 +679,7 @@ function withStudioProject(snapshot: OrchestrationReadModel): OrchestrationReadM
         id: STUDIO_PROJECT_ID,
         kind: "studio",
         title: "Studio",
-        workspaceRoot: "/Users/tester/Documents/Synara/Studio",
+        workspaceRoot: "/Users/tester/Documents/DJL/Studio",
         defaultModelSelection: {
           provider: "opencode",
           model: "openai/gpt-5",
@@ -2730,7 +2730,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/project",
             env: {
-              SYNARA_PROJECT_ROOT: "/repo/project",
+              DJL_PROJECT_ROOT: "/repo/project",
             },
           });
         },
@@ -2809,8 +2809,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/worktrees/feature-draft",
             env: {
-              SYNARA_PROJECT_ROOT: "/repo/project",
-              SYNARA_WORKTREE_PATH: "/repo/worktrees/feature-draft",
+              DJL_PROJECT_ROOT: "/repo/project",
+              DJL_WORKTREE_PATH: "/repo/worktrees/feature-draft",
             },
           });
         },
@@ -3782,7 +3782,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         configureFixture: (next) => {
           next.welcome = {
             ...next.welcome,
-            studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+            studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
           };
           next.serverConfig = {
             ...next.serverConfig,
@@ -3879,7 +3879,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           };
           next.welcome = {
             ...next.welcome,
-            studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+            studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
           };
           next.providerModels = {
             [provider]: [
@@ -3951,7 +3951,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (next) => {
         next.welcome = {
           ...next.welcome,
-          studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+          studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
         };
         next.serverConfig = {
           ...next.serverConfig,
@@ -4225,7 +4225,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             ...next.welcome,
             homeDir: "/Users/tester",
             chatWorkspaceRoot: "/Users/tester",
-            studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+            studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
           };
           if (!providerAvailable)
             next.serverConfig = {
@@ -4517,8 +4517,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
-          studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+          chatWorkspaceRoot: "/Users/tester/Documents/DJL",
+          studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
         };
       },
     });
@@ -4589,7 +4589,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/DJL",
         };
       },
     });
@@ -4654,7 +4654,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/DJL",
         };
         nextFixture.gitBranchByCwd = {
           "/Users/tester": "home-main",
@@ -5009,7 +5009,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               typeof request.newBranch === "string",
           );
           expect(createWorktreeRequest).toBeTruthy();
-          expect(createWorktreeRequest?.newBranch).toMatch(/^synara\/[0-9a-f]{8}$/);
+          expect(createWorktreeRequest?.newBranch).toMatch(/^djl\/[0-9a-f]{8}$/);
 
           const detachedRequest = wsRequests.find(
             (request) => request._tag === WS_METHODS.gitCreateDetachedWorktree,
@@ -5183,8 +5183,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         _tag: WS_METHODS.terminalOpen,
         cwd: worktreePath,
         env: {
-          SYNARA_PROJECT_ROOT: "/repo/project",
-          SYNARA_WORKTREE_PATH: worktreePath,
+          DJL_PROJECT_ROOT: "/repo/project",
+          DJL_WORKTREE_PATH: worktreePath,
         },
       });
 

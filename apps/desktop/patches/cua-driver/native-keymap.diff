@@ -124,8 +124,8 @@ diff --git a/libs/cua-driver/rust/crates/cua-driver/src/serve.rs b/libs/cua-driv
          .expect("daemon metadata is serializable");
      #[cfg(target_os = "macos")]
      {
--        metadata["synara_native_revision"] = serde_json::json!(17);
-+        metadata["synara_native_revision"] = serde_json::json!(18);
+-        metadata["djl_native_revision"] = serde_json::json!(17);
++        metadata["djl_native_revision"] = serde_json::json!(18);
      }
      DaemonResponse::ok(metadata)
  }

@@ -2,11 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLink } from "@tabler/icons-react";
 import { CopyIcon } from "~/lib/icons";
-import type { Campaign } from "@synara/contracts";
-import type {
-  CloudSocialTrackingLink,
-  CloudSocialTrackingLinkCreated,
-} from "@synara/contracts/cloud";
+import type { Campaign } from "@djl/contracts";
+import type { CloudSocialTrackingLink, CloudSocialTrackingLinkCreated } from "@djl/contracts/cloud";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";

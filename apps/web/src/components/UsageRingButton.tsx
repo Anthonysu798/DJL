@@ -2,8 +2,8 @@
 // Purpose: Sidebar ring showing the lowest remaining limit across every connected
 // subscription. Hover names that limit; click lists each subscription's usage.
 
-import type { ProviderKind } from "@synara/contracts";
-import { PROVIDER_USAGE_PROVIDERS } from "@synara/shared/providerUsage";
+import type { ProviderKind } from "@djl/contracts";
+import { PROVIDER_USAGE_PROVIDERS } from "@djl/shared/providerUsage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";

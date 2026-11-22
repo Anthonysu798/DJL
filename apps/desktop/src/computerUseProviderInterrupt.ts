@@ -5,7 +5,7 @@ import {
   ORCHESTRATION_WS_METHODS,
   COMPUTER_WS_METHODS,
   WsRpcGroup,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer } from "effect";
 import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
 import * as Socket from "effect/unstable/socket/Socket";

@@ -9,7 +9,7 @@
 // window can never strand it), the pointer-drag that updates it, and the
 // pop-out handoff that seeds the float from the card's docked rect.
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 import { type PointerEvent, type RefObject, useMemo, useRef } from "react";
 
 import {

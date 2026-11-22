@@ -1,8 +1,4 @@
-import {
-  DEFAULT_SERVER_SETTINGS,
-  ThreadId,
-  type ProviderSessionStartInput,
-} from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS, ThreadId, type ProviderSessionStartInput } from "@djl/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { buildHarnessInvocation } from "../accounts";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CommerceProduct } from "@synara/contracts/cloud";
+import type { CommerceProduct } from "@djl/contracts/cloud";
 import * as commerce from "./commerce";
 
 const product = (id: string, stock = 10): CommerceProduct => ({

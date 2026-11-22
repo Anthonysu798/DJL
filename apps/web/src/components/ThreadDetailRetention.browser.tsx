@@ -1,4 +1,4 @@
-import { ThreadId, MessageId } from "@synara/contracts";
+import { ThreadId, MessageId } from "@djl/contracts";
 import { StrictMode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";

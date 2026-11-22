@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { PluginSource, isPluginInstalled, findPluginCatalogEntry } from "@synara/contracts";
+import { PluginSource, isPluginInstalled, findPluginCatalogEntry } from "@djl/contracts";
 import { Schema } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

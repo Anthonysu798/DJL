@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { IconPhotoPlus, IconX } from "@tabler/icons-react";
-import type { MultiPostFile, MultiPostQuickPostResult, MultiPostState } from "@synara/contracts";
+import type { MultiPostFile, MultiPostQuickPostResult, MultiPostState } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { calendarTimeToIso } from "../marketing/socialCalendar";
 import { mediaPreviewUrl, multiPostCommand, uploadMultiPostMedia } from "./client";

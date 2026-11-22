@@ -3,7 +3,7 @@ import { useState } from "react";
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
-import type { MultiPostAccount, MultiPostFile } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostFile } from "@djl/contracts";
 import { PostPreview } from "./PostPreview";
 
 const account = (platformKey: string) =>

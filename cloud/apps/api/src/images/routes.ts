@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
-import { CloudCreateImageInput, CloudImagesQuery } from "@synara/contracts/cloud";
+import { CloudCreateImageInput, CloudImagesQuery } from "@djl/contracts/cloud";
 import { requirePrincipal, type PrincipalResolver } from "../auth/guard.ts";
 import { decodeBody, decodeQuery, idParam } from "../http/decode.ts";
 import { attempt, handle } from "../http/handle.ts";

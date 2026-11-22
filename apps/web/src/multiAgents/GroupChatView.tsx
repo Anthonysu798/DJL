@@ -8,7 +8,7 @@ import {
   type Group,
   type ProviderSkillReference,
   type UploadChatAttachment,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";

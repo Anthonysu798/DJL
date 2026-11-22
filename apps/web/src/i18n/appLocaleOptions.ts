@@ -1,5 +1,5 @@
-import type { AppLocale, AppLocalePreference } from "@synara/contracts";
-import { APP_LOCALE_REVIEW_STATUS } from "@synara/shared/locale";
+import type { AppLocale, AppLocalePreference } from "@djl/contracts";
+import { APP_LOCALE_REVIEW_STATUS } from "@djl/shared/locale";
 
 export const APP_LANGUAGE_OPTIONS: readonly {
   value: AppLocalePreference;

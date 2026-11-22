@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
-import type { CloudPushTokenInput } from "@synara/contracts/cloud";
+import type { CloudPushTokenInput } from "@djl/contracts/cloud";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { Principal } from "../auth/guard.ts";

@@ -2,14 +2,14 @@ import { MULTIPOST_TOOLS } from "../../multipost/mcp";
 import { computerToolInstructions } from "../../agentGateway/computerGuidance";
 import { MARKETING_TOOLS } from "../../marketing/chatTools";
 import { COMPUTER_TOOLS } from "../../work/computerTools";
-import { BUILT_IN_PLUGINS, pluginServerName } from "@synara/contracts";
+import { BUILT_IN_PLUGINS, pluginServerName } from "@djl/contracts";
 import { runMarketingConversation } from "../../marketing/cloudConversation";
 /**
  * DJL Cloud native driver: streams OpenAI-compatible chat completions from
  * the DJL Cloud gateway using the stored account session. Text prompts only
  * in this cut; tool execution arrives with the cloud runner.
  */
-import type { ProviderListModelsResult, ProviderModelDescriptor } from "@synara/contracts";
+import type { ProviderListModelsResult, ProviderModelDescriptor } from "@djl/contracts";
 import { randomUUID } from "node:crypto";
 
 import { CloudApiError, createCloudClient, type FetchLike } from "../../cloud/api";

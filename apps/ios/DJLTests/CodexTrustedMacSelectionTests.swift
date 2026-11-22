@@ -258,7 +258,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: sharedPublicKey,
             lastPairedAt: Date().addingTimeInterval(-30),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: nil,
             lastResolvedAt: nil,
             lastUsedAt: Date().addingTimeInterval(-10)
@@ -272,7 +272,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
         )
 
         XCTAssertNil(service.trustedMacRegistry.records[staleMacID])
-        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.displayName, "MacBook-Pro-di-Emanuele.local")
+        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.displayName, "MacBook-Pro-Studio.local")
     }
 
     func testTrustMacRecoversSpecificDisplayNameWhenFreshRecordAlreadyExistsAsGeneric() {
@@ -296,7 +296,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: sharedPublicKey,
             lastPairedAt: Date().addingTimeInterval(-30),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: "old-session",
             lastResolvedAt: Date().addingTimeInterval(-20),
             lastUsedAt: Date().addingTimeInterval(-10)
@@ -311,7 +311,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
 
         let trustedMac = service.trustedMacRegistry.records[freshMacID]
         XCTAssertNil(service.trustedMacRegistry.records[staleMacID])
-        XCTAssertEqual(trustedMac?.displayName, "MacBook-Pro-di-Emanuele.local")
+        XCTAssertEqual(trustedMac?.displayName, "MacBook-Pro-Studio.local")
         XCTAssertEqual(trustedMac?.lastResolvedSessionId, "old-session")
     }
 
@@ -324,7 +324,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             deviceId: macID,
             publicKey: publicKey,
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             liveSessionId: "live-session"
         )
 
@@ -344,7 +344,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 10, count: 32).base64EncodedString(),
             lastPairedAt: Date().addingTimeInterval(-14 * 24 * 60 * 60),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: "old-session",
             lastResolvedAt: Date().addingTimeInterval(-14 * 24 * 60 * 60),
             lastUsedAt: Date().addingTimeInterval(-13 * 24 * 60 * 60)
@@ -354,11 +354,11 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             deviceId: freshMacID,
             publicKey: Data(repeating: 11, count: 32).base64EncodedString(),
             relayURL: nil,
-            displayName: "macbook-pro-di-emanuele.local"
+            displayName: "macbook-pro-studio.local"
         )
 
         XCTAssertNil(service.trustedMacRegistry.records[staleMacID])
-        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.displayName, "macbook-pro-di-emanuele.local")
+        XCTAssertEqual(service.trustedMacRegistry.records[freshMacID]?.displayName, "macbook-pro-studio.local")
         XCTAssertNil(service.trustedMacRegistry.records[freshMacID]?.lastResolvedSessionId)
         XCTAssertEqual(service.trustedMacRegistry.records.count, 1)
     }
@@ -395,7 +395,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
         let service = makeService()
         let staleMacID = "mac-stale-\(UUID().uuidString)"
         let liveMacID = "mac-live-\(UUID().uuidString)"
-        let displayName = "MacBook-Pro-di-Emanuele.local"
+        let displayName = "MacBook-Pro-Studio.local"
 
         service.trustedMacRegistry.records[staleMacID] = CodexTrustedMacRecord(
             macDeviceId: staleMacID,
@@ -474,7 +474,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 41, count: 32).base64EncodedString(),
             lastPairedAt: Date().addingTimeInterval(-60),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: "paired-session",
             lastResolvedAt: Date().addingTimeInterval(-60)
         )
@@ -572,7 +572,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 20, count: 32).base64EncodedString(),
             lastPairedAt: Date().addingTimeInterval(-21 * 24 * 60 * 60),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: nil,
             lastResolvedAt: nil,
             lastUsedAt: Date().addingTimeInterval(-20 * 24 * 60 * 60)
@@ -583,7 +583,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 20, count: 32).base64EncodedString(),
             lastPairedAt: Date().addingTimeInterval(-22 * 24 * 60 * 60),
             relayURL: "wss://relay.local/relay",
-            displayName: "macbook-pro-di-emanuele.local",
+            displayName: "macbook-pro-studio.local",
             lastResolvedSessionId: nil,
             lastResolvedAt: nil,
             lastUsedAt: Date().addingTimeInterval(-21 * 24 * 60 * 60)
@@ -593,7 +593,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 22, count: 32).base64EncodedString(),
             lastPairedAt: Date().addingTimeInterval(-100),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: "live-session",
             lastResolvedAt: Date().addingTimeInterval(-90),
             lastUsedAt: Date().addingTimeInterval(-80)
@@ -603,7 +603,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 23, count: 32).base64EncodedString(),
             lastPairedAt: Date(),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: nil,
             lastResolvedAt: nil,
             lastUsedAt: Date()
@@ -628,7 +628,7 @@ final class CodexTrustedMacSelectionTests: XCTestCase {
             macIdentityPublicKey: Data(repeating: 24, count: 32).base64EncodedString(),
             lastPairedAt: Date().addingTimeInterval(-120),
             relayURL: "wss://relay.local/relay",
-            displayName: "MacBook-Pro-di-Emanuele.local",
+            displayName: "MacBook-Pro-Studio.local",
             lastResolvedSessionId: "recent-session",
             lastResolvedAt: Date().addingTimeInterval(-90),
             lastUsedAt: Date().addingTimeInterval(-80)

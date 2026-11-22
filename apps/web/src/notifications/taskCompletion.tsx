@@ -3,7 +3,7 @@
 // Layer: Notification runtime
 // Exports: TaskCompletionNotifications and browser permission helpers
 
-import { ThreadId, type DesktopNotificationInput } from "@synara/contracts";
+import { ThreadId, type DesktopNotificationInput } from "@djl/contracts";
 import type { TFunction } from "i18next";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef } from "react";

@@ -16,7 +16,7 @@ import type {
   ServerRefreshStatsResult,
   ServerTrustHostKeyInput,
   ServerUpdateInput,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Data, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -61,5 +61,5 @@ export interface ServerServiceShape {
 }
 
 export class ServerService extends ServiceMap.Service<ServerService, ServerServiceShape>()(
-  "synara/servers/Services/ServerService",
+  "djl/servers/Services/ServerService",
 ) {}

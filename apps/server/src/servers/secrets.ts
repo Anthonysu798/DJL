@@ -1,7 +1,7 @@
 // FILE: secrets.ts
 // Purpose: Per-server secret names and store/clear/read helpers over ServerSecretStore.
 // Layer: Servers domain helpers
-import type { ServerId, ServerSecretInput, ServerSecretKind } from "@synara/contracts";
+import type { ServerId, ServerSecretInput, ServerSecretKind } from "@djl/contracts";
 import { Effect } from "effect";
 
 import type { SecretStoreError, ServerSecretStoreShape } from "../auth/Services/ServerSecretStore";

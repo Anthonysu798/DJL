@@ -1,5 +1,5 @@
-import { SOCIAL_PLUGIN, SOCIAL_PLUGIN_MENTION, mcpMention } from "@synara/contracts";
-import type { ServerRecord } from "@synara/contracts";
+import { SOCIAL_PLUGIN, SOCIAL_PLUGIN_MENTION, mcpMention } from "@djl/contracts";
+import type { ServerRecord } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 

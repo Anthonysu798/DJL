@@ -6,7 +6,7 @@ import { vi } from "vitest";
 import * as generation from "./generation";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import { createCampaign, defaultBrand } from "@synara/contracts";
+import { createCampaign, defaultBrand } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { writeCloudSession } from "../cloud/session";
 import type { ServerConfigShape } from "../config";

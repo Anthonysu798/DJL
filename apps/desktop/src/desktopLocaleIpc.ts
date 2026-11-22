@@ -1,7 +1,7 @@
 import {
   APP_LOCALE_PREFERENCES,
   type AppLocalePreferenceValue,
-} from "@synara/contracts/locale-values";
+} from "@djl/contracts/locale-values";
 
 export const DESKTOP_LOCALE_IPC_CHANNELS = {
   preferredSystemLanguages: "desktop:locale-preferred-system-languages",

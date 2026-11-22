@@ -12,7 +12,7 @@ final class ComputerFrameTap {
     private let windowID: CGWindowID
     private let ownerPID: pid_t?
     private let socketPath: String
-    private let queue = DispatchQueue(label: "dev.synara.computer-frame-tap")
+    private let queue = DispatchQueue(label: "dev.djl.computer-frame-tap")
     private let context = CIContext(options: [.cacheIntermediates: false])
     private let stateLock = NSLock()
     private var stream: WindowFrameStream?

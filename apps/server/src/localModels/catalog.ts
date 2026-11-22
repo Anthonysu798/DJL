@@ -3,7 +3,7 @@ import type {
   LocalModelRecommendation,
   LocalModelRecommendationsByUseCase,
   LocalModelUseCase,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const GIB = 1024 ** 3;
 const estimatedBytes = (gibibytes: number): number => Math.round(gibibytes * GIB);

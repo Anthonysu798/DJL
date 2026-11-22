@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
+import type { CommerceDesktopBridge } from "@djl/contracts/cloud";
 
 import { ThemeToggle } from "@/components/theme";
 import { useLocale } from "@/lib/locale-context";

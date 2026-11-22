@@ -8,7 +8,7 @@ import {
   type CommerceReconciliationReport,
   type CommerceReconciliationRowType,
   type CommerceReconciliationRowStatus,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { ApiError } from "../http/errors.ts";
 
 export interface CommerceReconciliationInputRow {

@@ -1,7 +1,7 @@
 // FILE: policy.ts
 // Purpose: Pure validation and abuse-control policy for the DJL blind relay.
 
-import { DJL_PAIRING_QR_VERSION, DJL_PAIRING_TTL_MS } from "@synara/remote-protocol";
+import { DJL_PAIRING_QR_VERSION, DJL_PAIRING_TTL_MS } from "@djl/remote-protocol";
 
 export const MAX_RELAY_MESSAGE_BYTES = 1_048_576;
 export const MESSAGE_RATE_WINDOW_MS = 10_000;

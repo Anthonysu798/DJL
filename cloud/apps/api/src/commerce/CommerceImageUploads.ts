@@ -6,7 +6,7 @@ import type {
   CommerceImageUploadInput,
   CommerceImageUploadReceipt,
   CommerceImageUploadResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import { bytesMatchType } from "../files/fileTypes.ts";

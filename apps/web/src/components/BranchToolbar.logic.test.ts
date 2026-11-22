@@ -1,4 +1,4 @@
-import type { GitBranch } from "@synara/contracts";
+import type { GitBranch } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import * as branchToolbarLogic from "./BranchToolbar.logic";
 import {
@@ -35,7 +35,7 @@ describe("resolveDraftEnvModeAfterBranchChange", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
         nextWorktreePath: null,
-        currentWorktreePath: "/repo/.synara/worktrees/feature-a",
+        currentWorktreePath: "/repo/.djl/worktrees/feature-a",
         effectiveEnvMode: "worktree",
       }),
     ).toBe("local");
@@ -54,17 +54,17 @@ describe("resolveDraftEnvModeAfterBranchChange", () => {
   it("uses worktree mode when selecting a branch already attached to a worktree", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
-        nextWorktreePath: "/repo/.synara/worktrees/feature-a",
+        nextWorktreePath: "/repo/.djl/worktrees/feature-a",
         currentWorktreePath: null,
         effectiveEnvMode: "local",
       }),
     ).toBe("worktree");
   });
 
-  it("keeps legacy .synara worktree paths working for migrated threads", () => {
+  it("keeps legacy .djl worktree paths working for migrated threads", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
-        nextWorktreePath: "/repo/.synara/worktrees/feature-a",
+        nextWorktreePath: "/repo/.djl/worktrees/feature-a",
         currentWorktreePath: null,
         effectiveEnvMode: "local",
       }),
@@ -113,7 +113,7 @@ describe("shouldSyncLocalThreadBranch", () => {
       shouldSyncLocalThreadBranch({
         envMode: "local",
         activeWorktreePath: null,
-        activeThreadBranch: "synara/pi",
+        activeThreadBranch: "djl/pi",
         currentGitBranch: "main",
         hasServerThread: true,
         isBranchActionPending: false,
@@ -126,7 +126,7 @@ describe("shouldSyncLocalThreadBranch", () => {
       shouldSyncLocalThreadBranch({
         envMode: "local",
         activeWorktreePath: null,
-        activeThreadBranch: "synara/pi",
+        activeThreadBranch: "djl/pi",
         currentGitBranch: "main",
         hasServerThread: true,
         isBranchActionPending: true,
@@ -180,14 +180,14 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
       resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch: "main",
         worktreePath: null,
-        existingAssociatedWorktreePath: "/repo/.worktrees/synara-pi",
-        existingAssociatedWorktreeBranch: "synara/pi",
-        existingAssociatedWorktreeRef: "synara/pi",
+        existingAssociatedWorktreePath: "/repo/.worktrees/djl-pi",
+        existingAssociatedWorktreeBranch: "djl/pi",
+        existingAssociatedWorktreeRef: "djl/pi",
       }),
     ).toEqual({
-      associatedWorktreePath: "/repo/.worktrees/synara-pi",
-      associatedWorktreeBranch: "synara/pi",
-      associatedWorktreeRef: "synara/pi",
+      associatedWorktreePath: "/repo/.worktrees/djl-pi",
+      associatedWorktreeBranch: "djl/pi",
+      associatedWorktreeRef: "djl/pi",
     });
   });
 
@@ -212,13 +212,13 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
       resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch: "main",
         worktreePath: null,
-        existingAssociatedWorktreePath: "/repo/.worktrees/synara-pi",
-        existingAssociatedWorktreeBranch: "synara/pi",
-        existingAssociatedWorktreeRef: "synara/pi",
+        existingAssociatedWorktreePath: "/repo/.worktrees/djl-pi",
+        existingAssociatedWorktreeBranch: "djl/pi",
+        existingAssociatedWorktreeRef: "djl/pi",
         patchAssociatedWorktreeBranch: "feature/new-pair",
       }),
     ).toEqual({
-      associatedWorktreePath: "/repo/.worktrees/synara-pi",
+      associatedWorktreePath: "/repo/.worktrees/djl-pi",
       associatedWorktreeBranch: "feature/new-pair",
       associatedWorktreeRef: "feature/new-pair",
     });
@@ -353,15 +353,15 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.djl/worktrees/feature-a",
         branch: {
           isDefault: false,
-          worktreePath: "/repo/.synara/worktrees/feature-b",
+          worktreePath: "/repo/.djl/worktrees/feature-b",
         },
       }),
     ).toEqual({
-      checkoutCwd: "/repo/.synara/worktrees/feature-b",
-      nextWorktreePath: "/repo/.synara/worktrees/feature-b",
+      checkoutCwd: "/repo/.djl/worktrees/feature-b",
+      nextWorktreePath: "/repo/.djl/worktrees/feature-b",
       reuseExistingWorktree: true,
     });
   });
@@ -370,7 +370,7 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.djl/worktrees/feature-a",
         branch: {
           isDefault: true,
           worktreePath: "/repo",
@@ -387,7 +387,7 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.djl/worktrees/feature-a",
         branch: {
           isDefault: true,
           worktreePath: null,
@@ -404,15 +404,15 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.djl/worktrees/feature-a",
         branch: {
           isDefault: false,
           worktreePath: null,
         },
       }),
     ).toEqual({
-      checkoutCwd: "/repo/.synara/worktrees/feature-a",
-      nextWorktreePath: "/repo/.synara/worktrees/feature-a",
+      checkoutCwd: "/repo/.djl/worktrees/feature-a",
+      nextWorktreePath: "/repo/.djl/worktrees/feature-a",
       reuseExistingWorktree: false,
     });
   });

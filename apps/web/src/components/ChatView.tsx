@@ -6,8 +6,8 @@ import { usePluginMcpServers } from "~/hooks/usePluginMcpServers";
 import { DesktopHeaderPortal } from "./DesktopHeaderPortal";
 import { useStartupDraftBridge } from "../startup/useStartupDraftBridge";
 import { getStartupSession } from "../startup/session";
-import type { TerminalCliKind } from "@synara/shared/terminalThreads";
-import { effectiveRuntimeMode } from "@synara/contracts";
+import type { TerminalCliKind } from "@djl/shared/terminalThreads";
+import { effectiveRuntimeMode } from "@djl/contracts";
 import {
   type AutomationDefinition,
   type AutomationSchedule,
@@ -51,28 +51,22 @@ import {
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
-} from "@synara/contracts";
-import { getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
+} from "@djl/contracts";
+import { getModelCapabilities, normalizeModelSlug } from "@djl/shared/model";
 import {
   resolveTailReplayTurnId,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
-import { threadExportBlockedReason } from "@synara/shared/threadExport";
-import { buildTemporaryWorktreeBranchName } from "@synara/shared/git";
-import { appendBrowserFindingsBlock } from "@synara/shared/browserFindings";
-import {
-  buildPromptThreadTitleFallback,
-  GENERIC_CHAT_THREAD_TITLE,
-} from "@synara/shared/chatThreads";
+} from "@djl/shared/conversationEdit";
+import { threadExportBlockedReason } from "@djl/shared/threadExport";
+import { buildTemporaryWorktreeBranchName } from "@djl/shared/git";
+import { appendBrowserFindingsBlock } from "@djl/shared/browserFindings";
+import { buildPromptThreadTitleFallback, GENERIC_CHAT_THREAD_TITLE } from "@djl/shared/chatThreads";
 import {
   resolveThreadWorkspaceState,
   resolveThreadBranchSourceCwd,
   resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd,
-} from "@synara/shared/threadEnvironment";
-import {
-  deriveAssociatedWorktreeMetadata,
-  workspaceRootsEqual,
-} from "@synara/shared/threadWorkspace";
+} from "@djl/shared/threadEnvironment";
+import { deriveAssociatedWorktreeMetadata, workspaceRootsEqual } from "@djl/shared/threadWorkspace";
 import {
   lazy,
   Suspense,
@@ -1094,7 +1088,7 @@ function selectZeroConfigGpu(gpus: ReadonlyArray<LocalModelGpu>): LocalModelGpu 
 
 // Builds an ephemeral transcript bubble for the conversational automation-setup
 // exchange. These never reach a provider and are not persisted; they render the
-// back-and-forth (user request, Synara's clarifying questions) inline like Codex.
+// back-and-forth (user request, DJL's clarifying questions) inline like Codex.
 function makeAutomationSetupBubble(role: "user" | "assistant", text: string): ChatMessage {
   return {
     id: newMessageId(),
@@ -1873,7 +1867,7 @@ export default function ChatView({
   const [automationDraftOpen, setAutomationDraftOpen] = useState(false);
   const [isAutomationDraftSubmitting, setIsAutomationDraftSubmitting] = useState(false);
   const automationDraftSubmittingRef = useRef(false);
-  // While set, Synara is mid-conversation gathering an automation's missing details.
+  // While set, DJL is mid-conversation gathering an automation's missing details.
   // `accumulatedMessage` carries everything said so far so the next reply re-resolves
   // against the full request (not the bare answer); `bubbles` is the ephemeral
   // in-thread exchange rendered in the transcript until the automation resolves or

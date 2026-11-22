@@ -8,7 +8,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { type ProfileStats, type ProfileTokenStats } from "@synara/contracts";
+import { type ProfileStats, type ProfileTokenStats } from "@djl/contracts";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,

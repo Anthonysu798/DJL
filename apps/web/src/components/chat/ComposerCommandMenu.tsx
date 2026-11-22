@@ -1,4 +1,4 @@
-import { MCP_MENTION_PREFIX } from "@synara/contracts";
+import { MCP_MENTION_PREFIX } from "@djl/contracts";
 import {
   type ProjectEntry,
   type ModelSlug,
@@ -8,7 +8,7 @@ import {
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
   type ServerRecord,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { memo, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { type ComposerTriggerKind } from "../../composer-logic";

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ComputerActivitySummaryJob } from "@synara/contracts";
+import type { ComputerActivitySummaryJob } from "@djl/contracts";
 import {
   ComputerActivitySummaryWorker,
   ComputerActivityGenerationError,

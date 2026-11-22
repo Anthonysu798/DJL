@@ -3,8 +3,8 @@
 // Layer: Route UI logic helpers.
 // Exports: thread title fallback, deep-link bootstrap replay handling, and panel toggle helpers.
 
-import type { ThreadEnvironmentMode, ThreadId, TurnId } from "@synara/contracts";
-import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+import type { ThreadEnvironmentMode, ThreadId, TurnId } from "@djl/contracts";
+import { resolveThreadWorkspaceCwd } from "@djl/shared/threadEnvironment";
 
 import type { ChatRightPanel, DiffRouteSearch } from "../diffRouteSearch";
 

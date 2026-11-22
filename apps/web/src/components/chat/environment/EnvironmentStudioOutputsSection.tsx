@@ -8,8 +8,8 @@
 // Layer: Environment panel section
 // Depends on: studio.listThreadOutputs WS method + shell.showInFolder.
 
-import type { StudioOutputEntry, ThreadId } from "@synara/contracts";
-import { isSupportedLocalImagePath } from "@synara/shared/localPreviewFiles";
+import type { StudioOutputEntry, ThreadId } from "@djl/contracts";
+import { isSupportedLocalImagePath } from "@djl/shared/localPreviewFiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";

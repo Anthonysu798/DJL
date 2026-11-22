@@ -9,12 +9,12 @@ import {
 import "./publishing-review.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import type {
   CloudSocialDraft,
   CloudSocialMetricsResponse,
   CloudSocialDraftInput,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { calendarTimeToIso, localCalendarTime } from "./socialCalendar";
 import { SocialMediaCarousel } from "./SocialMediaCarousel";
 import { SocialReviewShare } from "./SocialReviewShare";

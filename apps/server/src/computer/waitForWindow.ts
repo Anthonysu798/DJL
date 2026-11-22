@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import type { ComputerLaunchAppResult, ComputerWindow } from "@synara/contracts";
+import type { ComputerLaunchAppResult, ComputerWindow } from "@djl/contracts";
 import { withDesktopOperationSignal } from "./DesktopOperationQueue.ts";
 
 const unavailable = (windowReason: NonNullable<ComputerLaunchAppResult["windowReason"]>) => ({

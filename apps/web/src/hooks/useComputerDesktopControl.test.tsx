@@ -1,4 +1,4 @@
-import { ThreadId, type ThreadComputerState } from "@synara/contracts";
+import { ThreadId, type ThreadComputerState } from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";

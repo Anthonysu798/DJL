@@ -1,4 +1,4 @@
-import { EventId, ThreadId, type ProviderRuntimeEvent } from "@synara/contracts";
+import { EventId, ThreadId, type ProviderRuntimeEvent } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { deriveWorkTaskTransition, workTaskProviderCommandId } from "./workTaskReactor.ts";

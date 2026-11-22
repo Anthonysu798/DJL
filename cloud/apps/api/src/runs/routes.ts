@@ -1,6 +1,6 @@
 import { Effect, Layer, Stream } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import { CloudRunEventsQuery } from "@synara/contracts/cloud";
+import { CloudRunEventsQuery } from "@djl/contracts/cloud";
 
 import { requirePrincipal, type PrincipalResolver } from "../auth/guard.ts";
 import { decodeQuery, idParam } from "../http/decode.ts";

@@ -7,7 +7,7 @@ import {
   type OrchestrationCommand,
   ProjectId,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

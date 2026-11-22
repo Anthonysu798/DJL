@@ -2,7 +2,7 @@ import { realpathSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import type { HarnessTool, ServerSettings } from "@synara/contracts";
+import type { HarnessTool, ServerSettings } from "@djl/contracts";
 import {
   createProviderVersionAdvisory,
   parseGenericCliVersion,

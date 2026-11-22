@@ -1,11 +1,11 @@
-import type { ComputerId } from "@synara/contracts";
+import type { ComputerId } from "@djl/contracts";
 import {
   COMPUTER_FRAME_RESYNC_MESSAGE,
   COMPUTER_FRAME_WS_COMPUTER_ID_PARAM,
   COMPUTER_FRAME_WS_PATH,
   decodeComputerFrame,
   type ComputerFrame,
-} from "@synara/shared/computerFrame";
+} from "@djl/shared/computerFrame";
 
 import {
   createBinaryFrameSource,

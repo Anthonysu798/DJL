@@ -12,7 +12,7 @@ import {
   type ProviderModelOptions,
   type ServerProviderStatus,
   type ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { memo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 

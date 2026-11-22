@@ -9,7 +9,7 @@ import type {
   ProviderReadPluginResult,
   ProviderSkillsCatalogResult,
   OpenCodeListModelProvidersResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 import {

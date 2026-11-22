@@ -1,7 +1,7 @@
 // FILE: stats.ts
 // Purpose: Single remote command for basic host stats plus a tolerant parser.
 // Layer: Servers domain helpers
-import type { ServerStats } from "@synara/contracts";
+import type { ServerStats } from "@djl/contracts";
 
 const section = (name: string, body: string) => `printf '@@${name}\\n'; ${body} 2>/dev/null;`;
 

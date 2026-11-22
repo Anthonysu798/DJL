@@ -1,10 +1,10 @@
 // FILE: importedThreadMessages.ts
-// Purpose: Normalizes provider-native transcript snapshots into Synara import messages.
+// Purpose: Normalizes provider-native transcript snapshots into DJL import messages.
 // Layer: Orchestration import mapping
 // Exports: Codex, Claude, OpenCode, and Factory Droid transcript mappers.
 
 import type { SessionMessage as ClaudeSessionMessage } from "@anthropic-ai/claude-agent-sdk";
-import { MessageId, type ThreadHandoffImportedMessage, type ThreadId } from "@synara/contracts";
+import { MessageId, type ThreadHandoffImportedMessage, type ThreadId } from "@djl/contracts";
 
 function readTranscriptTextParts(value: unknown): ReadonlyArray<string> {
   if (!Array.isArray(value)) return [];

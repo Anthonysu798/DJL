@@ -36,8 +36,8 @@ import type {
   BrowserThreadInput,
   ThreadBrowserState,
   ThreadId,
-} from "@synara/contracts";
-import { isBrowserCopyLinkChord } from "@synara/shared/browserShortcuts";
+} from "@djl/contracts";
+import { isBrowserCopyLinkChord } from "@djl/shared/browserShortcuts";
 import {
   BROWSER_BLANK_URL as ABOUT_BLANK_URL,
   buildAcceptLanguageHeader,
@@ -47,7 +47,7 @@ import {
   isBlankBrowserTabUrl,
   normalizeBrowserUrlInput as normalizeUrlInput,
   resolveCopyableBrowserTabUrl,
-} from "@synara/shared/browserSession";
+} from "@djl/shared/browserSession";
 import { BrowserAnnotationRuntime } from "./browserAnnotationRuntime";
 import { desktopT } from "./desktopI18n";
 import {
@@ -346,7 +346,7 @@ export class DesktopBrowserManager {
 
   // Desktop Chrome UA with the Electron/app product tokens stripped. Computed once from the
   // running build so the Chrome version stays accurate instead of drifting against a hardcoded
-  // string. Centralized here (and in `@synara/shared/browserSession`) so every browser
+  // string. Centralized here (and in `@djl/shared/browserSession`) so every browser
   // surface presents the same identity.
   private resolveSpoofedUserAgent(): string {
     if (this.spoofedUserAgent === null) {

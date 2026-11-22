@@ -1,10 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { DjlDatabase } from "@djl/db";
 import { MockOutbox, createResendSender, type EmailSender } from "@djl/notify";
-import type {
-  CommerceAlertEmailDelivery,
-  CommerceAlertEmailSummary,
-} from "@synara/contracts/cloud";
+import type { CommerceAlertEmailDelivery, CommerceAlertEmailSummary } from "@djl/contracts/cloud";
 import { ApiError } from "../http/errors.ts";
 
 type Tx = Parameters<Parameters<DjlDatabase["transaction"]>[0]>[0];

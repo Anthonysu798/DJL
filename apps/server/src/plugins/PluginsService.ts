@@ -14,12 +14,12 @@ import {
   type PluginSetEnabledInput,
   type PluginSourceInput,
   type PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer, Schema, ServiceMap } from "effect";
 
 import { ServerSecretStore } from "../auth/Services/ServerSecretStore";
 import { ServerConfig } from "../config";
-import { invalidateSkillsCatalogCache, synaraSkillsDir } from "../provider/skillsCatalog";
+import { invalidateSkillsCatalogCache, djlSkillsDir } from "../provider/skillsCatalog";
 import { createSkill } from "./createSkill";
 import { PluginConnections } from "./PluginConnections";
 import { PluginGateway, type PluginGatewaySession } from "./PluginGateway";
@@ -98,7 +98,7 @@ const make = Effect.gen(function* () {
     set: (name, value) => Effect.runPromise(secretStore.set(name, encoder.encode(value))),
     remove: (name) => Effect.runPromise(secretStore.remove(name)),
   });
-  const skillsDir = synaraSkillsDir(config.baseDir);
+  const skillsDir = djlSkillsDir(config.baseDir);
   const store = new PluginStore(config.stateDir, connections, undefined, skillsDir);
   const gateway = new PluginGateway(
     () => store.gatewayApps(),

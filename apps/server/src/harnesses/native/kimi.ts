@@ -1,4 +1,4 @@
-import type { ServerSettings } from "@synara/contracts";
+import type { ServerSettings } from "@djl/contracts";
 import { createNativeAcpDriver } from "./acp";
 import { NativeRpc, object } from "./protocol";
 import { resolveKimiBinaryPath } from "../kimiExecutable";

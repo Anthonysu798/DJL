@@ -1,4 +1,4 @@
-import type { GitStatusResult } from "@synara/contracts";
+import type { GitStatusResult } from "@djl/contracts";
 import { assert, describe, it } from "vitest";
 import {
   buildGitActionProgressStages,
@@ -293,7 +293,7 @@ describe("when: branch is clean, up to date, and has no open PR", () => {
   it("resolveQuickAction keeps disabled commit when the branch tracks the default branch", () => {
     const quick = resolveQuickAction(
       status({
-        branch: "synara/pi-cleanup",
+        branch: "djl/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
         behindCount: 0,
@@ -317,7 +317,7 @@ describe("when: branch is clean, up to date, and has no open PR", () => {
   it("resolveCreatePrActionAvailability blocks stale create-pr calls for default upstream", () => {
     const availability = resolveCreatePrActionAvailability({
       gitStatus: status({
-        branch: "synara/pi-cleanup",
+        branch: "djl/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
         behindCount: 0,
@@ -353,7 +353,7 @@ describe("when: branch is clean, up to date, and has no open PR", () => {
   it("buildMenuItems disables create PR when the branch tracks the default branch", () => {
     const items = buildMenuItems(
       status({
-        branch: "synara/pi-cleanup",
+        branch: "djl/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
         behindCount: 0,
@@ -1340,32 +1340,32 @@ describe("resolveAutoFeatureBranchName", () => {
 });
 
 describe("resolveDefaultCreateBranchName", () => {
-  it("uses Synara as the default namespace", () => {
+  it("uses DJL as the default namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "fix toast copy");
-    assert.equal(branch, "synara/fix-toast-copy");
+    assert.equal(branch, "djl/fix-toast-copy");
   });
 
-  it("normalizes an existing legacy synara namespace", () => {
-    const branch = resolveDefaultCreateBranchName(["main"], "synara/refine-toolbar-actions");
-    assert.equal(branch, "synara/refine-toolbar-actions");
+  it("normalizes an existing legacy djl namespace", () => {
+    const branch = resolveDefaultCreateBranchName(["main"], "djl/refine-toolbar-actions");
+    assert.equal(branch, "djl/refine-toolbar-actions");
   });
 
-  it("preserves nested namespaces under Synara", () => {
+  it("preserves nested namespaces under DJL", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "feature/refine-toolbar-actions");
-    assert.equal(branch, "synara/feature/refine-toolbar-actions");
+    assert.equal(branch, "djl/feature/refine-toolbar-actions");
   });
 
-  it("increments suffix when the Synara branch already exists", () => {
+  it("increments suffix when the DJL branch already exists", () => {
     const branch = resolveDefaultCreateBranchName(
-      ["main", "synara/fix-toast-copy", "synara/fix-toast-copy-2"],
+      ["main", "djl/fix-toast-copy", "djl/fix-toast-copy-2"],
       "fix toast copy",
     );
-    assert.equal(branch, "synara/fix-toast-copy-3");
+    assert.equal(branch, "djl/fix-toast-copy-3");
   });
 
-  it("falls back to synara/update when no preferred name is provided", () => {
+  it("falls back to djl/update when no preferred name is provided", () => {
     const branch = resolveDefaultCreateBranchName(["main"]);
-    assert.equal(branch, "synara/update");
+    assert.equal(branch, "djl/update");
   });
 });
 
@@ -1373,7 +1373,7 @@ describe("resolveLiveThreadBranchUpdate", () => {
   it("does not regress a semantic thread branch back to a temporary worktree branch", () => {
     const update = resolveLiveThreadBranchUpdate({
       threadBranch: "feature/semantic-branch",
-      gitStatus: status({ branch: "synara/deadbeef" }),
+      gitStatus: status({ branch: "djl/deadbeef" }),
     });
 
     assert.equal(update, null);
@@ -1390,7 +1390,7 @@ describe("resolveLiveThreadBranchUpdate", () => {
 });
 
 describe("shouldOfferCreateBranchPrompt", () => {
-  const temporaryBranch = "synara/deadbeef";
+  const temporaryBranch = "djl/deadbeef";
 
   it("shows the create-branch prompt for temporary worktree branches without upstream", () => {
     assert.isTrue(

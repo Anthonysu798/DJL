@@ -7,7 +7,7 @@ import {
   ProviderMentionReference,
   ProviderSkillReference,
   TurnDispatchMode,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { toPersistenceSqlError } from "../Errors.ts";
 import {

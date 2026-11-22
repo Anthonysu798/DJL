@@ -27,7 +27,7 @@ interface PairingPayload {
   displayName: string;
 }
 
-const gateway = require("@synara/remote-gateway") as GatewayModule;
+const gateway = require("@djl/remote-gateway") as GatewayModule;
 const UPDATE_TIMEOUT_MS = 60_000;
 let updateSequence = 0;
 const updateWaiters = new Map<

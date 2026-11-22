@@ -1,14 +1,14 @@
 // FILE: skillPromptInjection.ts
 // Purpose: Inlines portable skill instructions into the outgoing prompt for providers
 //          that cannot natively load the referenced skill files. This is the fallback
-//          that makes Synara catalog skills usable on every provider.
+//          that makes DJL catalog skills usable on every provider.
 // Layer: Server provider helper
 // Exports: shouldInlineSkillForProvider, buildInlineSkillInstructions
 
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { ProviderKind, ProviderSkillReference } from "@synara/contracts";
+import type { ProviderKind, ProviderSkillReference } from "@djl/contracts";
 
 // Per-skill cap keeps a single oversized SKILL.md from eating the turn budget.
 const MAX_INLINE_SKILL_CONTENT_CHARS = 24_000;
@@ -18,14 +18,7 @@ const INLINE_SKILLS_HEADER =
   "skill's instructions. File paths referenced inside a skill are relative to its " +
   '"dir" attribute.';
 
-const CROSS_PROVIDER_SKILL_DIR_NAMES = [
-  ".djl",
-  ".synara",
-  ".codex",
-  ".cursor",
-  ".claude",
-  ".agents",
-] as const;
+const CROSS_PROVIDER_SKILL_DIR_NAMES = [".djl", ".codex", ".cursor", ".claude", ".agents"] as const;
 
 function pathSegments(path: string): Set<string> {
   return new Set(nodePath.normalize(path).split(/[\\/]+/));
@@ -42,8 +35,8 @@ export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: 
       return [".claude", ".cursor", ".agents"].some((dir) => segments.has(dir));
     case "cursor":
       // cursor-agent natively scans .cursor/.agents/.claude/.codex skill roots;
-      // only Synara-owned paths need inlining.
-      return segments.has(".djl") || segments.has(".synara");
+      // only DJL-owned paths need inlining.
+      return segments.has(".djl") || segments.has(".djl");
     case "claudeAgent":
       // Claude Code only loads skills from .claude/skills folders.
       return !segments.has(".claude");

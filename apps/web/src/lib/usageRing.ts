@@ -10,8 +10,8 @@ import {
   type ProviderUsageStatus,
   type ServerProviderStatus,
   type ServerProviderUsageSnapshot,
-} from "@synara/contracts";
-import { PROVIDER_USAGE_PROVIDERS } from "@synara/shared/providerUsage";
+} from "@djl/contracts";
+import { PROVIDER_USAGE_PROVIDERS } from "@djl/shared/providerUsage";
 import type { TFunction } from "i18next";
 
 import type { OpenUsageUsageLine } from "./openUsageRateLimits";

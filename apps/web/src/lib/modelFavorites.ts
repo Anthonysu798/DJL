@@ -2,15 +2,15 @@
 // Purpose: Shared storage keys + readers for per-provider favorite model slugs.
 // Layer: Web local-storage helpers used by the model picker and model cycle shortcuts.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 import { Schema } from "effect";
 
 export const FAVORITE_MODEL_STORAGE_KEYS = {
-  djlCloud: "synara:djlcloud-favourite-models:v1",
-  cursor: "synara:cursor-favourite-models:v1",
-  kilo: "synara:kilo-favourite-models:v1",
-  opencode: "synara:opencode-favourite-models:v1",
-  pi: "synara:pi-favourite-models:v1",
+  djlCloud: "djl:djlcloud-favourite-models:v1",
+  cursor: "djl:cursor-favourite-models:v1",
+  kilo: "djl:kilo-favourite-models:v1",
+  opencode: "djl:opencode-favourite-models:v1",
+  pi: "djl:pi-favourite-models:v1",
 } as const;
 
 export type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;

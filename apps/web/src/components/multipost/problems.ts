@@ -1,4 +1,4 @@
-import type { MultiPostJob } from "@synara/contracts";
+import type { MultiPostJob } from "@djl/contracts";
 
 /** What to tell a person, and the one thing they can do about it. */
 export interface Problem {

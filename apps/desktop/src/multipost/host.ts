@@ -6,7 +6,7 @@ import type {
   MultiPostScope,
   MultiPostAccount,
   MultiPostNotice,
-} from "@synara/contracts";
+} from "@djl/contracts";
 export async function startMultiPostHost(runtime: MultiPostBrowserRuntime) {
   const token = randomBytes(32).toString("hex");
   const server: Server = createServer(async (req, res) => {

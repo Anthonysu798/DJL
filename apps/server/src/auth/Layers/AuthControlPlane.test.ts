@@ -18,7 +18,7 @@ const testLayer = AuthControlPlaneLive.pipe(
   Layer.provide(ServerSecretStoreLive),
   Layer.provide(
     ServerConfig.layerTest(process.cwd(), {
-      prefix: "synara-auth-control-plane-test-",
+      prefix: "djl-auth-control-plane-test-",
     }),
   ),
   Layer.provide(NodeServices.layer),

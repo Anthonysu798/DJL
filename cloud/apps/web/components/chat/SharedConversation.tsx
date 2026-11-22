@@ -1,6 +1,6 @@
 "use client";
 /* oxlint-disable react/no-array-index-key -- a snapshot's messages and parts are fixed and carry no ids */
-import type { CloudImageRefPart, CloudPublicShareResponse } from "@synara/contracts/cloud";
+import type { CloudImageRefPart, CloudPublicShareResponse } from "@djl/contracts/cloud";
 import { FileText, ImageOff } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";

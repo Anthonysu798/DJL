@@ -1,7 +1,7 @@
 // FILE: DocumentIntelligence.ts
 // Purpose: Server-owned local OCR lifecycle and recognition contract.
 
-import type { DocumentIntelligenceStatus } from "@synara/contracts";
+import type { DocumentIntelligenceStatus } from "@djl/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

@@ -153,7 +153,7 @@ describe("Provider authority invariants", () => {
       await manager.dispose();
     }
   });
-  it.each(["pi"] as const)("lets Synara approve or deny %s actions", async (provider) => {
+  it.each(["pi"] as const)("lets DJL approve or deny %s actions", async (provider) => {
     const backend = new FakeComputerBackend();
     const manager = new ComputerManager({ backend, actionSettleMs: 0 });
     let allowed = false;

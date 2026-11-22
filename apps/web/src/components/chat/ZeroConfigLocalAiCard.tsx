@@ -4,7 +4,7 @@
 // Layer: Chat composer UI
 // Exports: ZeroConfigLocalAiCard, ZeroConfigLocalAiCardProps, ZeroConfigLocalAiStatus
 
-import type { LocalModelUseCase } from "@synara/contracts";
+import type { LocalModelUseCase } from "@djl/contracts";
 import { memo, useId } from "react";
 import { useTranslation } from "react-i18next";
 

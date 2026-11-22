@@ -2,7 +2,7 @@
  * A backend that exists only to carry the reason there is no backend.
  *
  * Backend selection can fail in ways that happen before any display server is
- * contacted: an operator override naming a backend Synara does not have. The
+ * contacted: an operator override naming a backend DJL does not have. The
  * service still needs a `ComputerBackend`
  * to hand the manager, and the alternative — leaving it undefined and
  * special-casing every reader — loses the one thing worth keeping, which is the
@@ -30,7 +30,7 @@ import type {
   ComputerVerifyStateResult,
   ComputerWindow,
   ComputerZoomResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   clampComputerMessage,
@@ -41,7 +41,7 @@ import {
   type ComputerBackendEventListener,
 } from "./ComputerBackend.ts";
 
-const FALLBACK_MESSAGE = "The Synara computer backend is unavailable for an unstated reason.";
+const FALLBACK_MESSAGE = "The DJL computer backend is unavailable for an unstated reason.";
 
 export interface UnavailableComputerBackendOptions {
   readonly computerId?: string;

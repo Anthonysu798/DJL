@@ -8,7 +8,7 @@ import {
   type GroupMember,
   type GroupReply,
   type OrchestrationMessage,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

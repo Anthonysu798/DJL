@@ -5,7 +5,7 @@ import type {
   HarnessLoginInput,
   HarnessLoginResult,
   ServerSettings,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { TerminalManagerShape } from "../terminal/Services/Manager";
 import { buildHarnessInvocation, probeHarnessAccount } from "./accounts";
 

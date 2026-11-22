@@ -1,4 +1,4 @@
-import type { PluginCatalogEntry } from "@synara/contracts";
+import type { PluginCatalogEntry } from "@djl/contracts";
 
 import { PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

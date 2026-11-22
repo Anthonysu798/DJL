@@ -339,7 +339,7 @@ flag for the Windows look, and macOS Reduce Transparency on.
 
 - `bun run typecheck`, lint and the affected unit and browser tests after every slice.
 - Run the dev desktop app from this worktree (recipe in memory: build desktop first,
-  `SYNARA_PORT_OFFSET`, separate user-data dir) and exercise each slice's manual check.
+  `DJL_PORT_OFFSET`, separate user-data dir) and exercise each slice's manual check.
 - Before each PR: full Desktop CI green on the branch.
 
 ## Change log: 2026-11-20, limits ring refresh and guided account sign-in

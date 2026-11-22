@@ -3,7 +3,7 @@
 // Layer: Route
 // Exports: Route
 
-import type { PluginMarketplaceResult } from "@synara/contracts";
+import type { PluginMarketplaceResult } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";

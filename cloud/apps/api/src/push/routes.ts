@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
-import { CloudPushTokenInput } from "@synara/contracts/cloud";
+import { CloudPushTokenInput } from "@djl/contracts/cloud";
 
 import { requirePrincipal, type PrincipalResolver } from "../auth/guard.ts";
 import { decodeBody } from "../http/decode.ts";

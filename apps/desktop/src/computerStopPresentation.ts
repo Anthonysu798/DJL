@@ -5,7 +5,7 @@ import type {
   IpcMain,
   IpcMainEvent,
 } from "electron";
-import { cuaComputerTaskKey, type CuaComputerTask } from "@synara/shared/cuaDriverProtocol";
+import { cuaComputerTaskKey, type CuaComputerTask } from "@djl/shared/cuaDriverProtocol";
 import { COMPUTER_STOP_CHANNELS } from "./computerStopChannels";
 
 export function computerStopWindowOptions(

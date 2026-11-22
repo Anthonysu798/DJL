@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderKind, ProviderStartOptions } from "@synara/contracts";
+import type { ModelSelection, ProviderKind, ProviderStartOptions } from "@djl/contracts";
 
 import { canonicalizeDeprecatedDeepSeekModelSelection } from "../provider/deepSeekCompatibility.ts";
 

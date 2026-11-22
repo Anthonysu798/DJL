@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@djl/contracts";
 import { Effect, Exit, ManagedRuntime, Scope, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

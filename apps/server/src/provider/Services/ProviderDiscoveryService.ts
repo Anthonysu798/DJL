@@ -22,7 +22,7 @@ import type {
   RemoveCustomModelProviderInput,
   FetchCustomModelsInput,
   FetchCustomModelsResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -82,4 +82,4 @@ export interface ProviderDiscoveryServiceShape {
 export class ProviderDiscoveryService extends ServiceMap.Service<
   ProviderDiscoveryService,
   ProviderDiscoveryServiceShape
->()("synara/provider/Services/ProviderDiscoveryService") {}
+>()("djl/provider/Services/ProviderDiscoveryService") {}

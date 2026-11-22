@@ -1,4 +1,4 @@
-import type { ThreadTokenUsageSnapshot } from "@synara/contracts";
+import type { ThreadTokenUsageSnapshot } from "@djl/contracts";
 import { nonNegativeInteger, positiveInteger } from "../../provider/tokenUsage";
 
 const record = (value: unknown): Record<string, unknown> =>

@@ -54,7 +54,7 @@ final class DesktopHandoffServiceTests: XCTestCase {
     func testWakeDisplayUsesSavedSessionWhenDisconnected() async throws {
         let service = makeService()
         let macDeviceID = "mac-\(UUID().uuidString)"
-        let relayURL = "ws://macbook-pro-di-emanuele.local:8080/ws"
+        let relayURL = "ws://macbook-pro-studio.local:8080/ws"
         service.trustedMacRegistry.records[macDeviceID] = CodexTrustedMacRecord(
             macDeviceId: macDeviceID,
             macIdentityPublicKey: Data(repeating: 19, count: 32).base64EncodedString(),
@@ -88,7 +88,7 @@ final class DesktopHandoffServiceTests: XCTestCase {
 
         XCTAssertEqual(
             capturedURL,
-            "ws://macbook-pro-di-emanuele.local:8080/ws/session-123"
+            "ws://macbook-pro-studio.local:8080/ws/session-123"
         )
         XCTAssertEqual(capturedMethods, ["desktop/wakeDisplay"])
     }
@@ -96,7 +96,7 @@ final class DesktopHandoffServiceTests: XCTestCase {
     func testWakeDisplayFallsBackToSavedSessionWhenTrustedResolveReportsRePairRequired() async throws {
         let service = makeService()
         let macDeviceID = "mac-\(UUID().uuidString)"
-        let relayURL = "ws://macbook-pro-di-emanuele.local:8080/ws"
+        let relayURL = "ws://macbook-pro-studio.local:8080/ws"
         let macPublicKey = Data(repeating: 21, count: 32).base64EncodedString()
         service.trustedMacRegistry.records[macDeviceID] = CodexTrustedMacRecord(
             macDeviceId: macDeviceID,
@@ -134,7 +134,7 @@ final class DesktopHandoffServiceTests: XCTestCase {
 
         XCTAssertEqual(
             capturedURL,
-            "ws://macbook-pro-di-emanuele.local:8080/ws/session-123"
+            "ws://macbook-pro-studio.local:8080/ws/session-123"
         )
         XCTAssertEqual(service.secureConnectionState, .trustedMac)
         XCTAssertNil(service.lastErrorMessage)
@@ -143,7 +143,7 @@ final class DesktopHandoffServiceTests: XCTestCase {
     func testWakeDisplayCanResolveTrustedSessionWithoutSavedLiveSession() async throws {
         let service = makeService()
         let macDeviceID = "mac-\(UUID().uuidString)"
-        let relayURL = "ws://macbook-pro-di-emanuele.local:8080/ws"
+        let relayURL = "ws://macbook-pro-studio.local:8080/ws"
         let macPublicKey = Data(repeating: 22, count: 32).base64EncodedString()
         service.trustedMacRegistry.records[macDeviceID] = CodexTrustedMacRecord(
             macDeviceId: macDeviceID,

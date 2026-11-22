@@ -3,7 +3,7 @@
 // Layer: Route
 // Exports: Route
 
-import { findPluginCatalogEntry } from "@synara/contracts";
+import { findPluginCatalogEntry } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";

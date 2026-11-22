@@ -35,7 +35,7 @@ type ThemeSnapshot = {
   systemDark: boolean;
 };
 
-const STORAGE_KEY = "synara:theme";
+const STORAGE_KEY = "djl:theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 // Set to "blur" or "tint" to force a glass mode, e.g. to preview the Windows look on macOS.
 const GLASS_DEBUG_STORAGE_KEY = "djl.debug.glass";

@@ -2,7 +2,7 @@ import "../../index.css";
 import { describe, it, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { SocialCampaignLink } from "./SocialCampaignLink";
 import { SOCIAL_ACCOUNT_CHANGED } from "./accountCache";
 const actions = vi.hoisted(() => ({ agent: vi.fn(), cloud: vi.fn() }));

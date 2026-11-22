@@ -12,16 +12,16 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import {
   defaultTerminalTitleForCliKind,
   consumeTerminalIdentityInput,
-} from "@synara/shared/terminalThreads";
+} from "@djl/shared/terminalThreads";
 import { translateRendererCopy } from "../../i18n";
-import { describeErrorMessage } from "@synara/shared/errorMessages";
+import { describeErrorMessage } from "@djl/shared/errorMessages";
 import {
   TERMINAL_MAX_COLS,
   TERMINAL_MAX_ROWS,
   TERMINAL_MIN_COLS,
   TERMINAL_MIN_ROWS,
-} from "@synara/contracts";
-import type { TerminalSessionSnapshot } from "@synara/contracts";
+} from "@djl/contracts";
+import type { TerminalSessionSnapshot } from "@djl/contracts";
 import { Terminal } from "@xterm/xterm";
 
 import { readNativeApi } from "~/nativeApi";
@@ -63,17 +63,17 @@ const WRITE_BATCH_MAX_LATENCY_MS = 50;
 const LINK_MATCH_CACHE_LIMIT = 512;
 const OPEN_SNAPSHOT_RECONCILE_DELAY_MS = 250;
 const TERMINAL_TEXT_ENCODER = new TextEncoder();
-const TERMINAL_PARKING_CONTAINER_ID = "synara-terminal-parking";
+const TERMINAL_PARKING_CONTAINER_ID = "djl-terminal-parking";
 
-type SynaraTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
+type DjlTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
   fontWeight?: string | number;
   fontWeightBold?: string | number;
   scrollbar?: { showScrollbar?: boolean };
   vtExtensions?: { kittyKeyboard?: boolean };
 };
 
-const TERMINAL_CURSOR_STYLE: NonNullable<SynaraTerminalOptions["cursorStyle"]> = "bar";
-const TERMINAL_INACTIVE_CURSOR_STYLE: NonNullable<SynaraTerminalOptions["cursorInactiveStyle"]> =
+const TERMINAL_CURSOR_STYLE: NonNullable<DjlTerminalOptions["cursorStyle"]> = "bar";
+const TERMINAL_INACTIVE_CURSOR_STYLE: NonNullable<DjlTerminalOptions["cursorInactiveStyle"]> =
   "bar";
 const TERMINAL_CURSOR_WIDTH = 1;
 
@@ -535,7 +535,7 @@ function syncTheme(entry: TerminalRuntimeEntry): void {
   const shouldClearTextureAtlas = nextFontKey !== (entry.wrapper.dataset.fontKey ?? "");
   entry.wrapper.dataset.themeKey = nextAppearanceKey;
   entry.wrapper.dataset.fontKey = nextFontKey;
-  const terminalOptions = entry.terminal.options as SynaraTerminalOptions;
+  const terminalOptions = entry.terminal.options as DjlTerminalOptions;
   terminalOptions.theme = nextTheme;
   terminalOptions.fontFamily = nextFontFamily;
   terminalOptions.fontSize = nextFontSize;
@@ -788,7 +788,7 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
   const clipboardAddon = new ClipboardAddon();
   const searchAddon = new SearchAddon();
   const unicode11Addon = new Unicode11Addon();
-  const terminalOptions: SynaraTerminalOptions = {
+  const terminalOptions: DjlTerminalOptions = {
     cursorBlink: !config.lightweight,
     fontSize: getTerminalFontSizePx(),
     fontWeight: getTerminalFontWeight(),

@@ -49,16 +49,16 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
     Effect.gen(function* () {
       const capturedRequests: Array<RecordedBatchRequest> = [];
       const serverConfigLayer = ServerConfig.layerTest(process.cwd(), {
-        prefix: "synara-telemetry-base-",
+        prefix: "djl-telemetry-base-",
       });
 
       const telemetryLayer = AnalyticsServiceLayerLive.pipe(Layer.provideMerge(serverConfigLayer));
       const configLayer = ConfigProvider.layer(
         ConfigProvider.fromUnknown({
-          SYNARA_TELEMETRY_ENABLED: true,
-          SYNARA_POSTHOG_KEY: "phc_test_key",
-          SYNARA_POSTHOG_HOST: "",
-          SYNARA_TELEMETRY_FLUSH_BATCH_SIZE: 20,
+          DJL_TELEMETRY_ENABLED: true,
+          DJL_POSTHOG_KEY: "phc_test_key",
+          DJL_POSTHOG_HOST: "",
+          DJL_TELEMETRY_FLUSH_BATCH_SIZE: 20,
         }),
       );
       const batchServerLayer = HttpServer.serve(
@@ -136,10 +136,10 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
       const telemetryLayer = AnalyticsServiceLayerLive.pipe(Layer.provideMerge(serverConfigLayer));
       const configLayer = ConfigProvider.layer(
         ConfigProvider.fromUnknown({
-          SYNARA_TELEMETRY_ENABLED: true,
-          SYNARA_POSTHOG_KEY: "phc_test_key",
-          SYNARA_POSTHOG_HOST: "",
-          SYNARA_TELEMETRY_FLUSH_BATCH_SIZE: 20,
+          DJL_TELEMETRY_ENABLED: true,
+          DJL_POSTHOG_KEY: "phc_test_key",
+          DJL_POSTHOG_HOST: "",
+          DJL_TELEMETRY_FLUSH_BATCH_SIZE: 20,
         }),
       );
       const batchServerLayer = HttpServer.serve(

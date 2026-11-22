@@ -1,7 +1,7 @@
 // FILE: CreateSkillDialog.tsx
 // Purpose: The form for writing a new skill: a name, when to use it, and the instructions.
 
-import type { PluginCreateSkillInput } from "@synara/contracts";
+import type { PluginCreateSkillInput } from "@djl/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

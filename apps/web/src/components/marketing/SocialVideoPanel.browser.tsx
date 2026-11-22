@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { SocialVideoPanel } from "./SocialVideoPanel";
 import "../../index.css";
 const requests = vi.hoisted(() => ({ agent: vi.fn(), command: vi.fn() }));

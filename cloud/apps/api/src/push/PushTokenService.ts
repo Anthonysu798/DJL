@@ -5,7 +5,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudPushTokenInput } from "@synara/contracts/cloud";
+import type { CloudPushTokenInput } from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import { ApiError } from "../http/errors.ts";

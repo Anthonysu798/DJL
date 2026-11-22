@@ -8,7 +8,7 @@ import {
   IconPhotoPlus,
   IconSpeakerphone,
 } from "@tabler/icons-react";
-import type { MultiPostState } from "@synara/contracts";
+import type { MultiPostState } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import { uploadMultiPostMedia } from "./client";

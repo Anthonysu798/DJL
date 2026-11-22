@@ -3,7 +3,7 @@
 // "Continue with <agent>" handoff to the signed-in agent with the most quota left.
 // Nothing switches until the user clicks.
 
-import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

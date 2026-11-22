@@ -2,7 +2,7 @@
 
 import "../index.css";
 
-import { DocumentArtifactId, ThreadId } from "@synara/contracts";
+import { DocumentArtifactId, ThreadId } from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";

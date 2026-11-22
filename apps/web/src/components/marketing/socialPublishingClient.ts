@@ -1,9 +1,9 @@
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import type {
   CloudSocialAccountsResponse,
   CloudSocialDraft,
   CloudSocialPublishTask,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { resolveWsHttpUrl } from "~/lib/wsHttpUrl";
 
 export function publishingCommand<T>(

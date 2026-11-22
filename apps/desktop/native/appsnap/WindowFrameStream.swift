@@ -13,7 +13,7 @@ final class WindowFrameStream: NSObject, SCStreamOutput, SCStreamDelegate {
     private let monitorsWindow: Bool
     private let onFrame: (CMSampleBuffer) -> Void
     private let onFailure: (AppSnapFailure) -> Void
-    private let queue = DispatchQueue(label: "dev.synara.window-frame-stream")
+    private let queue = DispatchQueue(label: "dev.djl.window-frame-stream")
     private var stream: SCStream?
     private var stopped = false
     private var timer: DispatchSourceTimer?
@@ -46,7 +46,7 @@ final class WindowFrameStream: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.async { [self] in
             guard !stopped else { return }
             guard CGPreflightScreenCaptureAccess() else {
-                fail("screen_recording_required", "Screen Recording is required for the preview. Enable it in Synara’s permission setup.")
+                fail("screen_recording_required", "Screen Recording is required for the preview. Enable it in DJL’s permission setup.")
                 return
             }
             queue.asyncAfter(deadline: .now() + 6) { [weak self] in

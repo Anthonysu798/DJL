@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { createOpenCodeCompatibilityPluginSource } from "@synara/shared/openCodeCompatibility";
+import { createOpenCodeCompatibilityPluginSource } from "@djl/shared/openCodeCompatibility";
 
 const roots: string[] = [];
 afterEach(async () => {

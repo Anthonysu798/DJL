@@ -9,7 +9,7 @@ import type {
   ComputerUseResponse,
   ComputerUseStatus,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";

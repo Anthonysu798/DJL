@@ -1,4 +1,4 @@
-import type { MultiPostCommand, MultiPostState, MultiPostFile } from "@synara/contracts";
+import type { MultiPostCommand, MultiPostState, MultiPostFile } from "@djl/contracts";
 import { resolveWsHttpUrl } from "~/lib/wsHttpUrl";
 export async function multiPostCommand<T = unknown>(
   threadId: string,

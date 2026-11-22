@@ -1,5 +1,5 @@
 import { it, expect } from "vitest";
-import type { MultiPostBrowserRuntime } from "@synara/contracts";
+import type { MultiPostBrowserRuntime } from "@djl/contracts";
 import { startMultiPostHost } from "./host";
 it("requires its private token and propagates cancelled preparation to the desktop", async () => {
   let aborted = false;

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { AiDetectorReport } from "@synara/contracts";
+import type { AiDetectorReport } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { DetectorResultCache } from "./resultCache";

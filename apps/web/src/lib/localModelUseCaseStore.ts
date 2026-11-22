@@ -1,4 +1,4 @@
-import type { LocalModelUseCase } from "@synara/contracts";
+import type { LocalModelUseCase } from "@djl/contracts";
 
 const STORAGE_KEY = "djl.local-model-use-case.v1";
 export const LOCAL_MODEL_USE_CASES = [

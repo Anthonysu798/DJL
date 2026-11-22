@@ -10,7 +10,7 @@
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ResolvedTerminalVisualIdentity } from "@synara/shared/terminalThreads";
+import type { ResolvedTerminalVisualIdentity } from "@djl/shared/terminalThreads";
 
 import { IconButton } from "~/components/ui/icon-button";
 import {

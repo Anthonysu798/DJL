@@ -4,7 +4,7 @@ import type {
   ComputerSpaceInventory,
   ComputerSpaceReservation,
   ComputerWindow,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { ComputerTargetError } from "./uiTreeTargeting.ts";
 
@@ -32,7 +32,7 @@ function sameOwner(reservation: ComputerSpaceReservation, owner: ComputerSpaceOw
 }
 
 /**
- * Reserves an existing user-designated Space for one Synara task. It never
+ * Reserves an existing user-designated Space for one DJL task. It never
  * creates, moves, activates or destroys a native Space/window. Every guarded
  * action rechecks native identity and current-Space membership; a reservation
  * invalidated by user intervention stays invalid until explicitly replaced.
@@ -97,7 +97,7 @@ export class ComputerSpaceBroker {
     if (occupied) {
       throw new ComputerSpaceError(
         "computer_space_reserved",
-        "Another Synara task reserved this Space. Use a different user-designated Space or wait for that task to finish.",
+        "Another DJL task reserved this Space. Use a different user-designated Space or wait for that task to finish.",
       );
     }
     if (!this.#reservations.has(owner.threadId) && this.#reservations.size >= MAX_RESERVATIONS) {
@@ -259,7 +259,7 @@ export class ComputerSpaceBroker {
     ) {
       throw new ComputerSpaceError(
         "computer_space_reserved",
-        "This window belongs to a Space reserved by another Synara task. No input was sent.",
+        "This window belongs to a Space reserved by another DJL task. No input was sent.",
       );
     }
   }
@@ -310,7 +310,7 @@ export class ComputerSpaceBroker {
     if (space.current === true)
       throw new ComputerSpaceError(
         "computer_space_current",
-        "The user is currently on this Space. Synara will not reserve or switch it. Choose an existing noncurrent Space explicitly designated by the user.",
+        "The user is currently on this Space. DJL will not reserve or switch it. Choose an existing noncurrent Space explicitly designated by the user.",
       );
     if (!inventory.complete || space.current === null || !space.uuid || space.kind !== "desktop") {
       throw new ComputerSpaceError(
@@ -337,7 +337,7 @@ export class ComputerSpaceBroker {
     if (window.spaceIds[0] !== spaceId || window.currentSpaceId === spaceId) {
       throw new ComputerSpaceError(
         "computer_space_target_outside_reservation",
-        "This window is outside the reserved Space. Select an existing window in that Space; Synara will not move it there.",
+        "This window is outside the reserved Space. Select an existing window in that Space; DJL will not move it there.",
       );
     }
     return window;
@@ -375,7 +375,7 @@ export class ComputerSpaceBroker {
     if (reservation.invalidReason)
       throw new ComputerSpaceError(
         reservation.invalidReason,
-        "The reserved Space became current or its identity changed. No input was sent. Inspect Spaces and explicitly reserve a safe target again; Synara will not move the user away.",
+        "The reserved Space became current or its identity changed. No input was sent. Inspect Spaces and explicitly reserve a safe target again; DJL will not move the user away.",
       );
     return reservation;
   }

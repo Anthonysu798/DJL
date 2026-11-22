@@ -41,14 +41,7 @@ test("preview isolates every home path and removes inherited cloud/electron mode
     KEEP_ME: "value",
   };
   const env = previewEnvironment(base, profile, "http://127.0.0.1:5733");
-  for (const key of [
-    "HOME",
-    "USERPROFILE",
-    "DJL_HOME",
-    "SYNARA_HOME",
-    "DJL_DESKTOP_USER_DATA_DIR",
-    "SYNARA_DESKTOP_USER_DATA_DIR",
-  ])
+  for (const key of ["HOME", "USERPROFILE", "DJL_HOME", "DJL_DESKTOP_USER_DATA_DIR"])
     assert.ok(env[key].startsWith(profile));
   assert.equal(env.DJL_COMMERCE_MODE, undefined);
   assert.equal(env.DJL_COMMERCE_WEB_URL, undefined);

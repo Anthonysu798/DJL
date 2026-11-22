@@ -8,8 +8,8 @@ import {
   type OrchestrationProjectShell,
   type OrchestrationThread,
   type ThreadId,
-} from "@synara/contracts";
-import { makeDrainableWorker } from "@synara/shared/DrainableWorker";
+} from "@djl/contracts";
+import { makeDrainableWorker } from "@djl/shared/DrainableWorker";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
 
 import { ProjectMemory, type RecordProjectTurnInput } from "../../memory/Services/ProjectMemory.ts";

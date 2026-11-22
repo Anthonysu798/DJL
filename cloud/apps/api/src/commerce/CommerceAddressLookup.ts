@@ -1,7 +1,4 @@
-import type {
-  CommerceAddressLookupResult,
-  CommerceAddressSuggestion,
-} from "@synara/contracts/cloud";
+import type { CommerceAddressLookupResult, CommerceAddressSuggestion } from "@djl/contracts/cloud";
 
 import { ApiError } from "../http/errors.ts";
 

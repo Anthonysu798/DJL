@@ -65,7 +65,7 @@ describe("ComputerAvailability permission-required", () => {
   const PERMISSION_REQUIRED = {
     kind: "permission-required",
     missing: ["accessibility", "screenRecording"],
-    message: "Synara needs Accessibility and Screen Recording to control this Mac.",
+    message: "DJL needs Accessibility and Screen Recording to control this Mac.",
     buildSignature: "adhoc",
   } as const;
 
@@ -82,7 +82,7 @@ describe("ComputerAvailability permission-required", () => {
   });
 
   it("preserves the responsible app in live permission status across the wire", () => {
-    const state = { ...PERMISSION_REQUIRED, bundleId: "com.emanueledipietro.synara.dev" };
+    const state = { ...PERMISSION_REQUIRED, bundleId: "app.djl.desktop.dev" };
     const decoded = Schema.decodeUnknownSync(ComputerAvailability)(state);
     expect(Schema.encodeUnknownSync(ComputerAvailability)(decoded)).toEqual(state);
     expect(decodes({ ...state, bundleId: "" })).toBe(false);
@@ -109,7 +109,7 @@ describe("ComputerSetupRequiredPayload", () => {
       toolName: "computer_list_windows",
       missing: ["accessibility"],
       buildSignature: "adhoc",
-      bundleId: "com.emanueledipietro.synara.dev",
+      bundleId: "app.djl.desktop.dev",
     } as const;
     const decoded = Schema.decodeUnknownSync(ComputerSetupRequiredPayload)(payload);
     expect(decoded).toEqual(payload);

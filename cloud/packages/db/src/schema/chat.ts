@@ -1,7 +1,7 @@
 /**
  * Cloud chat: conversations, message trees, uploaded files, share snapshots,
  * and the runs (assistant turns and background tasks) that write replies.
- * Shapes on the wire are defined in @synara/contracts/cloud.
+ * Shapes on the wire are defined in @djl/contracts/cloud.
  */
 import { sql } from "drizzle-orm";
 import {

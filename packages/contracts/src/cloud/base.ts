@@ -3,7 +3,7 @@
  *
  * These schemas describe the JSON exchanged between the clients (desktop, web,
  * iOS) and the DJL Cloud control plane in `cloud/` at https://api.slcor.com/v1.
- * The cloud apps import them as `@synara/contracts/cloud` from this workspace,
+ * The cloud apps import them as `@djl/contracts/cloud` from this workspace,
  * so a change here is an API change. Authentication routes under /v1/auth/*
  * are served by Better Auth and are not described here; everything else is.
  *

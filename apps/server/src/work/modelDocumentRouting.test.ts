@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderModelDescriptor } from "@synara/contracts";
+import type { ModelSelection, ProviderModelDescriptor } from "@djl/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {

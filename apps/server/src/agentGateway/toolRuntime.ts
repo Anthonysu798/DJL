@@ -1,4 +1,4 @@
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 import type { Effect } from "effect";
 
 import type { AgentGatewayCapability } from "./Services/AgentGatewaySessionRegistry.ts";

@@ -1,4 +1,4 @@
-import type { DesktopBridge } from "@synara/contracts";
+import type { DesktopBridge } from "@djl/contracts";
 import "../../index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";

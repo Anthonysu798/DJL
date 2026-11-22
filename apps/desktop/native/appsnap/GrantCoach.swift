@@ -1,7 +1,7 @@
 import AppKit
 import ApplicationServices
 
-/// Synara permission coach: draggable app chip next to System Settings.
+/// DJL permission coach: draggable app chip next to System Settings.
 /// Drag follows zats/permiso's AppDragSourceView. Panel moves by background;
 /// the chip opts out so dragging it never moves the coach.
 

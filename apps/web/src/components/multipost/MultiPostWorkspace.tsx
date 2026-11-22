@@ -8,7 +8,7 @@ import { movable, MultiPostCalendar } from "./MultiPostCalendar";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconArrowLeft, IconSparkles } from "@tabler/icons-react";
-import type { MultiPostCommand, MultiPostDraft, MultiPostState } from "@synara/contracts";
+import type { MultiPostCommand, MultiPostDraft, MultiPostState } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 
 import { multiPostCommand, multiPostState } from "./client";

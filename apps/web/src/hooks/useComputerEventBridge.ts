@@ -19,7 +19,7 @@ import {
   changedThreadComputerStates,
   removedThreadComputerStateIds,
 } from "~/components/chat/ComputerPreviewPopover.logic";
-import { type DesktopBridge, ThreadId } from "@synara/contracts";
+import { type DesktopBridge, ThreadId } from "@djl/contracts";
 import { readLocalComputerPermissionBridge } from "~/lib/computerProvisioning";
 import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";

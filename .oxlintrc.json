@@ -7,7 +7,7 @@
     "bun.lock",
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
-    ".synara-*",
+    ".djl-*",
     ".next",
     "cloud/packages/db/drizzle"
   ],

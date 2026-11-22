@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
-import {
-  ApprovalRequestId,
-  EventId,
-  MessageId,
-  ProjectId,
-  ThreadId,
-  TurnId,
-} from "@synara/contracts";
+import { ApprovalRequestId, EventId, MessageId, ProjectId, ThreadId, TurnId } from "@djl/contracts";
 import {
   buildInputNeededCopy,
   buildTaskCompletionCopy,

@@ -12,7 +12,7 @@ import {
   type ClientOrchestrationCommand,
   ProjectId,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect } from "effect";
 import type { FileSystem, Path } from "effect";
 import { describe, expect, it } from "vitest";
@@ -31,7 +31,7 @@ function projectCreateCommand(
     projectId: ProjectId.makeUnsafe("project-chat"),
     kind: "chat",
     title: "Chat",
-    workspaceRoot: "/Users/tester/Documents/Synara/2026-06-11/chat",
+    workspaceRoot: "/Users/tester/Documents/DJL/2026-06-11/chat",
     createWorkspaceRootIfMissing: true,
     createdAt: "2026-06-11T21:30:43.000Z",
     ...overrides,
@@ -51,7 +51,7 @@ describe("makeDispatchCommandNormalizer", () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/DJL",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -70,14 +70,14 @@ describe("makeDispatchCommandNormalizer", () => {
     await runPrepareWorkspaceRoot(result);
 
     // Only after the caller explicitly runs the deferred effect does scaffolding happen.
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/Synara/2026-06-11/chat"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/DJL/2026-06-11/chat"]);
   });
 
   it("retries the deferred prepare effect on transient failures before succeeding", async () => {
     let callCount = 0;
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/DJL",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -103,7 +103,7 @@ describe("makeDispatchCommandNormalizer", () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/DJL",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -116,14 +116,14 @@ describe("makeDispatchCommandNormalizer", () => {
     const result = await Effect.runPromise(normalizer({ command: projectCreateCommand() }));
     await runPrepareWorkspaceRoot(result);
 
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/Synara/2026-06-11/chat"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/DJL/2026-06-11/chat"]);
   });
 
   it("does not prepare ordinary projects or the chat workspace root itself", async () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/DJL",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -137,7 +137,7 @@ describe("makeDispatchCommandNormalizer", () => {
       normalizer({
         command: projectCreateCommand({
           kind: "project",
-          workspaceRoot: "/Users/tester/Documents/Synara/2026-06-11/app",
+          workspaceRoot: "/Users/tester/Documents/DJL/2026-06-11/app",
         }),
       }),
     );
@@ -145,7 +145,7 @@ describe("makeDispatchCommandNormalizer", () => {
     const second = await Effect.runPromise(
       normalizer({
         command: projectCreateCommand({
-          workspaceRoot: "/Users/tester/Documents/Synara",
+          workspaceRoot: "/Users/tester/Documents/DJL",
         }),
       }),
     );
@@ -158,8 +158,8 @@ describe("makeDispatchCommandNormalizer", () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
-      studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/DJL",
+      studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -175,20 +175,20 @@ describe("makeDispatchCommandNormalizer", () => {
         command: projectCreateCommand({
           kind: "studio",
           title: "Studio",
-          workspaceRoot: "/Users/tester/Documents/Synara/Studio",
+          workspaceRoot: "/Users/tester/Documents/DJL/Studio",
         }),
       }),
     );
     await runPrepareWorkspaceRoot(result);
 
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/Synara/Studio"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/DJL/Studio"]);
   });
 
   it("prepares nested Studio workspace roots but not ordinary projects under Studio", async () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+      studioWorkspaceRoot: "/Users/tester/Documents/DJL/Studio",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -202,7 +202,7 @@ describe("makeDispatchCommandNormalizer", () => {
       normalizer({
         command: projectCreateCommand({
           kind: "studio",
-          workspaceRoot: "/Users/tester/Documents/Synara/Studio/Outbox",
+          workspaceRoot: "/Users/tester/Documents/DJL/Studio/Outbox",
         }),
       }),
     );
@@ -211,13 +211,13 @@ describe("makeDispatchCommandNormalizer", () => {
       normalizer({
         command: projectCreateCommand({
           kind: "project",
-          workspaceRoot: "/Users/tester/Documents/Synara/Studio/SomeProject",
+          workspaceRoot: "/Users/tester/Documents/DJL/Studio/SomeProject",
         }),
       }),
     );
     await runPrepareWorkspaceRoot(second);
 
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/Synara/Studio/Outbox"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/DJL/Studio/Outbox"]);
   });
 
   it("validates and reuses immutable streaming references without rewriting bytes", async () => {
@@ -370,7 +370,7 @@ describe("makeDispatchCommandNormalizer", () => {
   });
 
   it("rolls back attachment files written before a later upload fails", async () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-dispatch-normalize-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-dispatch-normalize-"));
     const fileSystem = {
       makeDirectory: (dir: string, options?: { readonly recursive?: boolean }) =>
         Effect.sync(() => {

@@ -7,7 +7,7 @@
 // Exports: shouldShowComputerControlEffortHint + hint constants
 // Depends on: resolved composer trait selection (composerTraits)
 
-import { type ProviderKind } from "@synara/contracts";
+import { type ProviderKind } from "@djl/contracts";
 
 import type { ComposerTraitSelection } from "./composerTraits";
 

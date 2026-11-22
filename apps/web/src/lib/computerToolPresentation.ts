@@ -5,16 +5,16 @@
 // Exports: COMPUTER_TOOL_TITLES, isComputerToolName, describeComputerToolCall
 //
 // Every browser tool has a curated presentation and every computer tool had
-// none, so an approval for the most consequential thing Synara can do — moving a
+// none, so an approval for the most consequential thing DJL can do — moving a
 // pointer on the user's own machine — read
-// `mcp__synara__computer_click  x 812  y 344`, which is the raw wire call. The
+// `mcp__djl__computer_click  x 812  y 344`, which is the raw wire call. The
 // decision the user is being asked to make is "click *what*", and the answer is
 // assembled here: verb, where, and which window, resolved from the window list
 // the pane already receives rather than left as an opaque id.
 
-import type { ComputerPermission, ComputerWindow } from "@synara/contracts";
+import type { ComputerPermission, ComputerWindow } from "@djl/contracts";
 import { getFormatLocale, t } from "~/i18n";
-import { listComputerPermissions, sortComputerPermissions } from "@synara/shared/computerGrants";
+import { listComputerPermissions, sortComputerPermissions } from "@djl/shared/computerGrants";
 
 /** Localized OS permission names in the canonical order, with duplicate grants removed. */
 export function localizedComputerPermissions(
@@ -133,7 +133,7 @@ export type ComputerToolName = keyof typeof COMPUTER_TOOL_TITLES;
 /**
  * The bare tool name inside whatever wrapping a provider applied, or null.
  * Providers surface the same gateway tool as `computer_click`,
- * `mcp__synara__computer_click`, and other permutations, so identity is
+ * `mcp__djl__computer_click`, and other permutations, so identity is
  * recovered from the suffix rather than matched exactly.
  */
 export function computerToolName(candidate: string | null | undefined): ComputerToolName | null {

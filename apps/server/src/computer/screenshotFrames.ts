@@ -20,7 +20,7 @@
  */
 import { createHash } from "node:crypto";
 
-import type { ComputerPoint, ComputerRect, ComputerScreenshot } from "@synara/contracts";
+import type { ComputerPoint, ComputerRect, ComputerScreenshot } from "@djl/contracts";
 
 import { ComputerTargetError } from "./uiTreeTargeting.ts";
 

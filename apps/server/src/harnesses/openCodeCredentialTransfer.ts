@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { link, lstat, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
-import type { HarnessLegacyOpenCodeCredentialsResult } from "@synara/contracts";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
+import type { HarnessLegacyOpenCodeCredentialsResult } from "@djl/contracts";
 
 type Credentials = Record<string, unknown>;
 export interface OpenCodeCredentialTransferOptions {

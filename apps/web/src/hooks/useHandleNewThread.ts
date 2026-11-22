@@ -1,5 +1,5 @@
-import { type ProjectId, ThreadId } from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
+import { type ProjectId, ThreadId } from "@djl/contracts";
+import { getDefaultModel } from "@djl/shared/model";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { translateRendererCopy } from "../i18n";

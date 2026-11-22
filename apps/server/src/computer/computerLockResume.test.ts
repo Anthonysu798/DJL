@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { CuaComputerBackend } from "./CuaComputerBackend.ts";
-import type { cuaRequest } from "@synara/shared/cuaDriverProtocol";
+import type { cuaRequest } from "@djl/shared/cuaDriverProtocol";
 
 const PNG_400x200 = (() => {
   const header = Buffer.alloc(24);

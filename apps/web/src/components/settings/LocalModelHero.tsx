@@ -5,7 +5,7 @@ import type {
   LocalModelRuntimeStatus,
   LocalModelSetupJob,
   LocalModelsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 

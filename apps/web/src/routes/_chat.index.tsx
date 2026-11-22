@@ -3,7 +3,7 @@
 // Layer: Routing
 // Depends on: the shared route surface and the home-chat new-chat handler.
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 

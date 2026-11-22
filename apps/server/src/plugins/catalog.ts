@@ -2,7 +2,7 @@
 // Purpose: The plugin catalog bundled with the app. Nothing here is fetched at runtime, so a
 //          release is the only thing that can change which tool servers DJL offers.
 
-import { BUILT_IN_PLUGINS, type PluginCatalogEntry, type PluginSource } from "@synara/contracts";
+import { BUILT_IN_PLUGINS, type PluginCatalogEntry, type PluginSource } from "@djl/contracts";
 
 import { DOCUMENT_PLUGIN_ENTRIES } from "./documentPlugins";
 import { HOSTED_PLUGINS, type HostedPlugin } from "./hostedPlugins";

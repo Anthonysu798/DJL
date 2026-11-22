@@ -4,14 +4,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import type { OrchestrationReadModel } from "@synara/contracts";
+import type { OrchestrationReadModel } from "@djl/contracts";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Command from "effect/unstable/cli/Command";
 import { FetchHttpClient } from "effect/unstable/http";
 import { afterEach, beforeEach, vi } from "vitest";
-import { NetService } from "@synara/shared/Net";
+import { NetService } from "@djl/shared/Net";
 
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { Open, type OpenShape } from "./open";
@@ -26,7 +26,7 @@ vi.mock("./threadRetention", async () => {
   };
 });
 
-import { CliConfig, recordStartupHeartbeat, synaraCli, type CliConfigShape } from "./main";
+import { CliConfig, recordStartupHeartbeat, djlCli, type CliConfigShape } from "./main";
 
 const start = vi.fn(() => undefined);
 const stop = vi.fn(() => undefined);
@@ -40,10 +40,10 @@ const serverStart = Effect.acquireRelease(
   () => Effect.sync(() => stop()),
 );
 const findAvailablePort = vi.fn((preferred: number) => Effect.succeed(preferred));
-let defaultSynaraHome = "";
+let defaultDjlHome = "";
 const tempHomes = new Set<string>();
 
-function makeTempHome(prefix = "synara-main-test-"): string {
+function makeTempHome(prefix = "djl-main-test-"): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tempHomes.add(directory);
   return directory;
@@ -52,7 +52,7 @@ function makeTempHome(prefix = "synara-main-test-"): string {
 // Shared service layer used by this CLI test suite.
 const testLayer = Layer.mergeAll(
   Layer.succeed(CliConfig, {
-    cwd: "/tmp/synara-test-workspace",
+    cwd: "/tmp/djl-test-workspace",
     fixPath: Effect.void,
     resolveStaticDir: Effect.undefined,
   } satisfies CliConfigShape),
@@ -76,13 +76,13 @@ const testLayer = Layer.mergeAll(
 );
 
 const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) => {
-  const program = Command.runWith(synaraCli, { version: "0.0.0-test" })(args).pipe(
+  const program = Command.runWith(djlCli, { version: "0.0.0-test" })(args).pipe(
     Effect.provide(
       ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            SYNARA_HOME: defaultSynaraHome,
-            SYNARA_NO_BROWSER: "true",
+            DJL_HOME: defaultDjlHome,
+            DJL_NO_BROWSER: "true",
             ...env,
           },
         }),
@@ -94,7 +94,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  defaultSynaraHome = makeTempHome();
+  defaultDjlHome = makeTempHome();
   resolvedConfig = null;
   start.mockImplementation(() => undefined);
   stop.mockImplementation(() => undefined);
@@ -111,7 +111,7 @@ afterEach(() => {
 it.layer(testLayer)("server CLI command", (it) => {
   it.effect("parses all CLI flags and wires scoped start/stop", () =>
     Effect.gen(function* () {
-      const flagHome = makeTempHome("synara-main-flag-");
+      const flagHome = makeTempHome("djl-main-flag-");
 
       yield* runCli([
         "--mode",
@@ -156,16 +156,16 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("uses env fallbacks when flags are not provided", () =>
     Effect.gen(function* () {
-      const envHome = makeTempHome("synara-main-env-");
+      const envHome = makeTempHome("djl-main-env-");
 
       yield* runCli([], {
-        SYNARA_MODE: "desktop",
-        SYNARA_PORT: "4999",
-        SYNARA_HOST: "100.88.10.4",
-        SYNARA_HOME: envHome,
+        DJL_MODE: "desktop",
+        DJL_PORT: "4999",
+        DJL_HOST: "100.88.10.4",
+        DJL_HOME: envHome,
         VITE_DEV_SERVER_URL: "http://localhost:5173",
-        SYNARA_NO_BROWSER: "true",
-        SYNARA_AUTH_TOKEN: "env-token",
+        DJL_NO_BROWSER: "true",
+        DJL_AUTH_TOKEN: "env-token",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -184,12 +184,12 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("prefers --mode over SYNARA_MODE", () =>
+  it.effect("prefers --mode over DJL_MODE", () =>
     Effect.gen(function* () {
       findAvailablePort.mockImplementation((_preferred: number) => Effect.succeed(4666));
       yield* runCli(["--mode", "web"], {
-        SYNARA_MODE: "desktop",
-        SYNARA_NO_BROWSER: "true",
+        DJL_MODE: "desktop",
+        DJL_NO_BROWSER: "true",
       });
 
       assert.deepStrictEqual(findAvailablePort.mock.calls, [[3773]]);
@@ -200,10 +200,10 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("prefers --no-browser over SYNARA_NO_BROWSER", () =>
+  it.effect("prefers --no-browser over DJL_NO_BROWSER", () =>
     Effect.gen(function* () {
       yield* runCli(["--no-browser"], {
-        SYNARA_NO_BROWSER: "false",
+        DJL_NO_BROWSER: "false",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -226,8 +226,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("uses fixed localhost defaults in desktop mode", () =>
     Effect.gen(function* () {
       yield* runCli([], {
-        SYNARA_MODE: "desktop",
-        SYNARA_NO_BROWSER: "true",
+        DJL_MODE: "desktop",
+        DJL_NO_BROWSER: "true",
       });
 
       assert.equal(findAvailablePort.mock.calls.length, 0);
@@ -241,8 +241,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("allows overriding desktop host with --host", () =>
     Effect.gen(function* () {
       yield* runCli(["--host", "0.0.0.0"], {
-        SYNARA_MODE: "desktop",
-        SYNARA_NO_BROWSER: "true",
+        DJL_MODE: "desktop",
+        DJL_NO_BROWSER: "true",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -254,11 +254,11 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("supports CLI and env for bootstrap/provider-log/websocket toggles", () =>
     Effect.gen(function* () {
       yield* runCli(["--auto-bootstrap-project-from-cwd"], {
-        SYNARA_MODE: "desktop",
-        SYNARA_LOG_PROVIDER_EVENTS: "true",
-        SYNARA_LOG_WS_EVENTS: "false",
-        SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-        SYNARA_NO_BROWSER: "true",
+        DJL_MODE: "desktop",
+        DJL_LOG_PROVIDER_EVENTS: "true",
+        DJL_LOG_WS_EVENTS: "false",
+        DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+        DJL_NO_BROWSER: "true",
       });
 
       assert.equal(start.mock.calls.length, 1);

@@ -2,7 +2,7 @@
 // Purpose: Add / edit dialog for a registered server: label-left form rows, choice cards, command preview.
 // Layer: Settings UI components (servers)
 
-import type { LocalKeyCandidate, ServerPermissionTier, ServerRecord } from "@synara/contracts";
+import type { LocalKeyCandidate, ServerPermissionTier, ServerRecord } from "@djl/contracts";
 import {
   useEffect,
   useId,

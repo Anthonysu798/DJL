@@ -1,4 +1,4 @@
-import type { ProviderKind, ServerProviderStatus } from "@synara/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

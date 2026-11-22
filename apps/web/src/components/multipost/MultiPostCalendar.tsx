@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { MultiPostAccount, MultiPostJob } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostJob } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { calendarTimeToIso, calendarWeek, localCalendarTime } from "../marketing/socialCalendar";
 import { PlatformMark } from "./PlatformMark";

@@ -12,11 +12,11 @@
  * - Runs are scripted event logs released over time, served as SSE with
  *   `after=<seq>` resume, exactly like the real run endpoints.
  */
-import * as C from "@synara/contracts/cloud";
-import conversationDetailFixture from "@synara/contracts/fixtures/cloud/conversation-detail.json";
-import meFixture from "@synara/contracts/fixtures/cloud/me.json";
-import modelsFixture from "@synara/contracts/fixtures/cloud/models.json";
-import usageWindowsFixture from "@synara/contracts/fixtures/cloud/usage-windows.json";
+import * as C from "@djl/contracts/cloud";
+import conversationDetailFixture from "@djl/contracts/fixtures/cloud/conversation-detail.json";
+import meFixture from "@djl/contracts/fixtures/cloud/me.json";
+import modelsFixture from "@djl/contracts/fixtures/cloud/models.json";
+import usageWindowsFixture from "@djl/contracts/fixtures/cloud/usage-windows.json";
 import { Schema } from "effect";
 
 import type { FetchLike } from "../client";

@@ -11,7 +11,7 @@ import {
   ThreadId,
   TurnId,
   ProviderKind,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, PubSub, Stream } from "effect";
 
 import {

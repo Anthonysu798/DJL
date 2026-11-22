@@ -3,8 +3,8 @@ import {
   type ComputerControlMode,
   type ProviderMentionReference,
   type ProviderSkillReference,
-} from "@synara/contracts";
-import { parseComputerInvocation } from "@synara/shared/computerInvocation";
+} from "@djl/contracts";
+import { parseComputerInvocation } from "@djl/shared/computerInvocation";
 
 /** Resolved only from user-authored text and structured references at trusted ingress. */
 export function resolveDjlComputerIntent(input: {

@@ -13,7 +13,7 @@ import {
   type ProviderSession,
   type ProviderUserInputAnswers,
   type ProviderApprovalDecision,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Queue, Schema, Stream } from "effect";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";

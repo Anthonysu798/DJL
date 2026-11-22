@@ -2,10 +2,7 @@
 
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 
-import type {
-  CommerceAddressLookupResult,
-  CommerceAddressSuggestion,
-} from "@synara/contracts/cloud";
+import type { CommerceAddressLookupResult, CommerceAddressSuggestion } from "@djl/contracts/cloud";
 import { api } from "@/lib/api";
 
 import styles from "./shop.module.css";

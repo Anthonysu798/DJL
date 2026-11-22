@@ -43,7 +43,7 @@ const expected =
         "SHA256SUMS",
         "djl-mac.yml",
         "latest-mac.yml",
-        "synara-mac.yml",
+        "djl-mac.yml",
       ]
     : [
         `DJL-${version}-x64.exe`,
@@ -51,7 +51,7 @@ const expected =
         "SHA256SUMS",
         "djl.yml",
         "latest.yml",
-        "synara.yml",
+        "djl.yml",
       ];
 expected.sort();
 const actual = readdirSync(assetDirectory, { withFileTypes: true })
@@ -103,12 +103,12 @@ NODE
 }
 
 if [[ "$platform" == "mac" ]]; then
-  for manifest in latest-mac.yml djl-mac.yml synara-mac.yml; do
+  for manifest in latest-mac.yml djl-mac.yml djl-mac.yml; do
     grep -Fq "DJL-$version-arm64.zip" "$asset_dir/$manifest"
     grep -Fq "DJL-$version-x64.zip" "$asset_dir/$manifest"
   done
 else
-  for manifest in latest.yml djl.yml synara.yml; do
+  for manifest in latest.yml djl.yml djl.yml; do
     grep -Fq "DJL-$version-x64.exe" "$asset_dir/$manifest"
   done
 fi
@@ -178,7 +178,6 @@ if [[ "$platform" == "mac" ]]; then
     "$channel_dir"/DJL-*-x64.zip \
     "$channel_dir"/latest-mac.yml \
     "$channel_dir"/djl-mac.yml \
-    "$channel_dir"/synara-mac.yml \
     "$channel_dir"/current-mac.dmg \
     "$channel_dir"/current-mac-arm64.dmg \
     "$channel_dir"/current-mac-x64.dmg
@@ -188,7 +187,6 @@ else
     "$channel_dir"/DJL-*-x64.exe.blockmap \
     "$channel_dir"/latest.yml \
     "$channel_dir"/djl.yml \
-    "$channel_dir"/synara.yml \
     "$channel_dir"/current-windows.exe
 fi
 rm -f "$channel_dir/SHA256SUMS"

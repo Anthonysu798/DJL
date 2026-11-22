@@ -7,7 +7,7 @@ import {
   ProjectId,
   ThreadId,
   WorkPreparationJobStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

@@ -3,7 +3,7 @@
  * (same parentId), so a conversation is a tree and the view shows one branch:
  * at every fork, the child the user picked, otherwise the newest one.
  */
-import type { CloudMessage } from "@synara/contracts/cloud";
+import type { CloudMessage } from "@djl/contracts/cloud";
 
 /** Key for the children of `parentId`; the conversation's first messages hang off ROOT. */
 export const ROOT = "__root__";

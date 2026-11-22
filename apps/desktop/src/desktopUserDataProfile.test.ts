@@ -12,7 +12,7 @@ import {
 const tempDirs = new Set<string>();
 
 function makeTempDir(): string {
-  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-profile-test-"));
+  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-profile-test-"));
   tempDirs.add(directory);
   return directory;
 }
@@ -32,32 +32,6 @@ describe("desktopUserDataProfile", () => {
     );
     expect(resolveDesktopUserDataPath({ appDataBase, isDevelopment: false })).toBe(
       Path.join(appDataBase, "djl"),
-    );
-  });
-
-  it("repairs missing browser data from the legacy sibling profile", () => {
-    const appDataBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "djl");
-    const sourcePath = Path.join(appDataBase, "synara");
-    const sourcePartitionPath = Path.join(sourcePath, "Partitions", "synara-browser");
-    const targetPartitionPath = Path.join(targetPath, "Partitions", "djl-browser");
-    FS.mkdirSync(Path.join(sourcePartitionPath, "Local Storage"), { recursive: true });
-    FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies"), "legacy-cookie");
-    FS.writeFileSync(Path.join(sourcePartitionPath, "Local Storage", "state"), "legacy-state");
-    FS.mkdirSync(Path.join(targetPartitionPath, "Local Storage"), { recursive: true });
-    FS.writeFileSync(Path.join(targetPartitionPath, "Local Storage", "state"), "djl-state");
-
-    expect(repairBrowserProfileFromBridgeManifest(targetPath)).toMatchObject({
-      status: "repaired",
-      sourcePath,
-      targetPath,
-      copiedEntries: ["Cookies"],
-    });
-    expect(FS.readFileSync(Path.join(targetPartitionPath, "Cookies"), "utf8")).toBe(
-      "legacy-cookie",
-    );
-    expect(FS.readFileSync(Path.join(targetPartitionPath, "Local Storage", "state"), "utf8")).toBe(
-      "djl-state",
     );
   });
 
@@ -84,7 +58,7 @@ describe("desktopUserDataProfile", () => {
     FS.mkdirSync(Path.join(targetPartitionPath, "Local Storage"), { recursive: true });
     FS.writeFileSync(Path.join(targetPartitionPath, "Local Storage", "state"), "current-state");
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "djl-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -113,7 +87,7 @@ describe("desktopUserDataProfile", () => {
     const targetPath = Path.join(appDataBase, "djl");
     FS.mkdirSync(targetPath, { recursive: true });
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "djl-profile-seed.json"),
       JSON.stringify({ sourcePath: Path.join(unrelatedBase, "previous-profile") }),
     );
 
@@ -136,7 +110,7 @@ describe("desktopUserDataProfile", () => {
     FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies-journal"), "bridge-journal");
     FS.writeFileSync(Path.join(targetPartitionPath, "Cookies"), "current-cookie");
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "djl-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -166,7 +140,7 @@ describe("desktopUserDataProfile", () => {
     FS.writeFileSync(Path.join(targetPartitionPath, "Cookies-wal"), "orphaned-wal");
     FS.writeFileSync(Path.join(targetPartitionPath, "Cookies-shm"), "orphaned-shm");
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "djl-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -206,7 +180,7 @@ describe("desktopUserDataProfile", () => {
     FS.utimesSync(newerPartitionPath, new Date(2_000), new Date(2_000));
     FS.mkdirSync(targetPath, { recursive: true });
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "djl-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -222,7 +196,7 @@ describe("desktopUserDataProfile", () => {
     const appDataBase = makeTempDir();
     const targetPath = Path.join(appDataBase, "djl");
     FS.mkdirSync(targetPath, { recursive: true });
-    FS.writeFileSync(Path.join(targetPath, "synara-profile-seed.json"), "{");
+    FS.writeFileSync(Path.join(targetPath, "djl-profile-seed.json"), "{");
 
     expect(repairBrowserProfileFromBridgeManifest(targetPath)).toMatchObject({
       status: "bridge-unavailable",

@@ -47,7 +47,7 @@ import type {
   ThreadId,
   ProviderTurnStartResult,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { Effect } from "effect";
 import type { Stream } from "effect";
 

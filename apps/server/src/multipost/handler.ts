@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import type { MultiPostCommand } from "@synara/contracts";
+import type { MultiPostCommand } from "@djl/contracts";
 import { ServerConfig } from "../config";
 import { collectBoundedStream } from "../streamingAttachmentUpload";
 import { getMultiPost, multiPostScope } from "./live";

@@ -8,7 +8,7 @@ describe("openShop", () => {
     const open = vi.fn();
     expect(
       await openShop({
-        location: { href: "synara://app/index.html" },
+        location: { href: "djl-app://app/index.html" },
         desktopBridge: { openShop: nativeOpen },
         open,
       }),

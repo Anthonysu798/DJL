@@ -6,7 +6,7 @@ import { vi } from "vitest";
 import * as productSource from "./productSource";
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
-import { defaultBrand, createCampaign } from "@synara/contracts";
+import { defaultBrand, createCampaign } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { writeCloudSession } from "../cloud/session";
 import { executeSourceTool, authorizeLibraryAssets, readAgentBrand } from "./sourceTools";

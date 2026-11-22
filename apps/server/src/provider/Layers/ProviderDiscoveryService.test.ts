@@ -1,6 +1,6 @@
 // FILE: ProviderDiscoveryService.test.ts
 // Purpose: Verifies the discovery service merges provider-native skills with the
-//          unified Synara catalog, filters user-disabled skills, and reports
+//          unified DJL catalog, filters user-disabled skills, and reports
 //          skill support consistently with adapter metadata acceptance.
 // Layer: Server provider tests
 
@@ -13,7 +13,7 @@ import type {
   ProviderComposerCapabilities,
   ProviderKind,
   ProviderListSkillsResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,7 +32,7 @@ import type { ProviderAdapterShape } from "../Services/ProviderAdapter.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import { ProviderDiscoveryService } from "../Services/ProviderDiscoveryService.ts";
 import { makeNativeAdapter } from "../../harnesses/native/adapter";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { clearSkillsCatalogCacheForTests } from "../skillsCatalog.ts";
 import { ProviderDiscoveryServiceLive } from "./ProviderDiscoveryService.ts";
 
@@ -105,7 +105,7 @@ beforeEach(async () => {
   clearSkillsCatalogCacheForTests();
   root = mkdtempSync(path.join(os.tmpdir(), "discovery-service-"));
   homeDir = path.join(root, "home");
-  baseDir = path.join(homeDir, ".synara");
+  baseDir = path.join(homeDir, ".djl");
   cwd = path.join(root, "repo");
   await mkdir(cwd, { recursive: true });
 });

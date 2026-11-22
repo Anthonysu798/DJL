@@ -2,7 +2,7 @@ import { ComputerSettingsPanel } from "../components/settings/ComputerSettingsPa
 import { useHistorySuggestionDraft } from "../hooks/useHistorySuggestionDraft";
 import { rendererI18n } from "../i18n";
 import { ComputerUseSettingsPanel } from "../components/settings/ComputerUseSettingsPanel";
-import type { ComputerUseRequest, ComputerUseResponse } from "@synara/contracts";
+import type { ComputerUseRequest, ComputerUseResponse } from "@djl/contracts";
 // FILE: _chat.settings.tsx
 // Purpose: Render the dedicated settings experience with its own section sidebar and grouped panels.
 // Layer: Route screen
@@ -16,7 +16,7 @@ import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   APP_LOCALE_PREFERENCES,
   type AppLocalePreference,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -922,7 +922,7 @@ function SettingsRouteView() {
       return;
     }
 
-    const notification = new Notification(title, { body, tag: "synara:test-notification" });
+    const notification = new Notification(title, { body, tag: "djl:test-notification" });
     notification.addEventListener("click", () => {
       window.focus();
     });

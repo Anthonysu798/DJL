@@ -12,7 +12,7 @@ import {
   NativePiAdapter,
   NativeDjlCloudAdapter,
 } from "../../harnesses/native/layer";
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 

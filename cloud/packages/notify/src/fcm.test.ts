@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 const send = vi.hoisted(() => vi.fn());
-vi.mock("@synara/shared/fcm", () => ({ createFcmSender: () => ({ send }) }));
+vi.mock("@djl/shared/fcm", () => ({ createFcmSender: () => ({ send }) }));
 
 import { createFcmPushSender } from "./fcm.ts";
 

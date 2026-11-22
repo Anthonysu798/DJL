@@ -3,7 +3,7 @@
 DJL's remote gateway began as a one-time source import of the Remodex
 `phodex-bridge` package.
 
-- Upstream: https://github.com/Emanuele-web04/remodex
+- Upstream: Remodex by Emanuele Di Pietro
 - Revision: `0ed45fb767137a92061ec2efc4a5b52155eb2d4b`
 - Imported: 2026-07-18
 - License: Apache License 2.0; see `UPSTREAM_LICENSE`

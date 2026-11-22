@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MultiPostAccount, MultiPostJob } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostJob } from "@djl/contracts";
 import { alreadySent, latestPost, postViewUrl } from "./chatResult";
 
 const account = (extra: Partial<MultiPostAccount> = {}) =>

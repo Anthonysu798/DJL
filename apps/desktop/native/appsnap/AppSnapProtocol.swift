@@ -27,7 +27,7 @@ enum AppSnapMode {
     /// `escape-monitor-state`, `error`, and `ready`.
     case escapeMonitor
     /// Masked-activation shield host: reads engage/release commands on stdin
-    /// and owns the Synara-side overlay panels for their lease's lifetime.
+    /// and owns the DJL-side overlay panels for their lease's lifetime.
     case shield
     /// Long-running reader of how loud the Mac's audio output and/or the
     /// microphone are. Emits `ready`, `audio-level`, and `error`; the parent
@@ -478,7 +478,7 @@ final class NDJSONEmitter {
     }
 
     private func writeDiagnostic(_ message: String) {
-        guard let data = "[synara-appsnap-helper] \(message)\n".data(using: .utf8) else {
+        guard let data = "[djl-appsnap-helper] \(message)\n".data(using: .utf8) else {
             return
         }
         lock.lock()

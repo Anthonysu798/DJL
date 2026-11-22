@@ -2,7 +2,7 @@ import "../../index.css";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import type { TerminalEvent, TerminalOpenInput } from "@synara/contracts";
+import type { TerminalEvent, TerminalOpenInput } from "@djl/contracts";
 import type { Terminal } from "@xterm/xterm";
 import AgentWorkspacesView from "./AgentWorkspacesView";
 import { workspaceTerminalSessions } from "./workspaceTerminalSessions";

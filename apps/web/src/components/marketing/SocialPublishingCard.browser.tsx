@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { SocialPublishingCard } from "./SocialPublishingCard";
 const actions = vi.hoisted(() => ({ state: vi.fn(), command: vi.fn(), preview: vi.fn() }));
 vi.mock("./socialPublishingClient", async (importOriginal) => ({

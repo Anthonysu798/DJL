@@ -1,4 +1,4 @@
-import { createFcmSender } from "@synara/shared/fcm";
+import { createFcmSender } from "@djl/shared/fcm";
 
 import type { GenericPushInput } from "./apns";
 

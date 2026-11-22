@@ -8,8 +8,8 @@ import {
   BROWSER_BLANK_URL,
   BROWSER_SEARCH_URL_PREFIX,
   normalizeBrowserUrlInput,
-} from "@synara/shared/browserSession";
-import type { BrowserTabState } from "@synara/contracts";
+} from "@djl/shared/browserSession";
+import type { BrowserTabState } from "@djl/contracts";
 import type { BrowserHistoryEntry } from "../browserStateStore";
 import { translateRendererCopy } from "../i18n";
 

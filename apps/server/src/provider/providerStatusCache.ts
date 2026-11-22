@@ -6,7 +6,7 @@
  *
  * @module providerStatusCache
  */
-import { ServerProviderStatus } from "@synara/contracts";
+import { ServerProviderStatus } from "@djl/contracts";
 import { Cause, Effect, FileSystem, Path, Schema } from "effect";
 
 const PROVIDER_STATUS_CACHE_IDS = [

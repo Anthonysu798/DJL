@@ -3,9 +3,9 @@
 - `bun run dev` — Starts contracts, server, and web in `turbo watch` mode.
 - `bun run dev:server` — Starts just the WebSocket server (uses Bun TypeScript execution).
 - `bun run dev:web` — Starts just the Vite dev server for the web app.
-- Dev commands default `SYNARA_HOME` to `~/.synara`, which keeps dev state under `~/.synara/dev`.
+- Dev commands default `DJL_HOME` to `~/.djl`, which keeps dev state under `~/.djl/dev`.
 - Override server CLI-equivalent flags from root dev commands with `--`, for example:
-  `bun run dev -- --home-dir ~/.synara-2`
+  `bun run dev -- --home-dir ~/.djl-2`
 - `bun run start` — Runs the production server (serves built web app as static files).
 - `bun run build` — Builds contracts, web app, and server through Turbo.
 - `bun run typecheck` — Strict TypeScript checks for all packages.
@@ -20,8 +20,8 @@
 
 - Default build is unsigned/not notarized for local sharing.
 - The DMG build uses `assets/macos-icon-1024.png` as the production app icon source.
-- Desktop production windows load the bundled UI from `synara://app/index.html` (not a `127.0.0.1` document URL).
-- Desktop packaging includes `apps/server/dist` (the `synara` backend) and starts it on loopback with an auth token for WebSocket/API traffic.
+- Desktop production windows load the bundled UI from `djl-app://app/index.html` (not a `127.0.0.1` document URL).
+- Desktop packaging includes `apps/server/dist` (the `djl` backend) and starts it on loopback with an auth token for WebSocket/API traffic.
 - Your tester can still open it on macOS by right-clicking the app and choosing **Open** on first launch.
 - To keep staging files for debugging package contents, run: `bun run dist:desktop:dmg -- --keep-stage`
 - To allow code-signing/notarization when configured in CI/secrets, add: `--signed`.
@@ -33,10 +33,10 @@
 
 ## Running multiple dev instances
 
-Set `SYNARA_DEV_INSTANCE` to any value to deterministically shift all dev ports together.
+Set `DJL_DEV_INSTANCE` to any value to deterministically shift all dev ports together.
 
 - Default ports: server `3773`, web `5733`
-- Shifted ports: `base + offset` (offset is hashed from `SYNARA_DEV_INSTANCE`)
-- Example: `SYNARA_DEV_INSTANCE=branch-a bun run dev:desktop`
+- Shifted ports: `base + offset` (offset is hashed from `DJL_DEV_INSTANCE`)
+- Example: `DJL_DEV_INSTANCE=branch-a bun run dev:desktop`
 
-If you want full control instead of hashing, set `SYNARA_PORT_OFFSET` to a numeric offset.
+If you want full control instead of hashing, set `DJL_PORT_OFFSET` to a numeric offset.

@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import type { GroupMemberId, OrchestrationCommand } from "@synara/contracts";
+import type { GroupMemberId, OrchestrationCommand } from "@djl/contracts";
 import { Effect, Fiber, Layer, Stream } from "effect";
 import * as fs from "node:fs";
 import * as os from "node:os";

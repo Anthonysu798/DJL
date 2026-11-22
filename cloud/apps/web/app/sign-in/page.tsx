@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
+import type { CommerceDesktopBridge } from "@djl/contracts/cloud";
 
 import {
   AuthFrame,

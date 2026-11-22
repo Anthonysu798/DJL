@@ -1,7 +1,7 @@
 import "../../index.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { HarnessAccount, HarnessLoginResult, HarnessTool } from "@synara/contracts";
+import type { HarnessAccount, HarnessLoginResult, HarnessTool } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";

@@ -472,13 +472,13 @@ final class TurnMessageCachesTests: XCTestCase {
     }
 
     func testAssistantMarkdownSegmentsKeepTemporaryImagePosition() {
-        let text = "Before\n![mobile](/tmp/emanuele-mobile.png)\nAfter"
+        let text = "Before\n![mobile](/tmp/studio-mobile.png)\nAfter"
         let segments = AssistantMarkdownImageReferenceParser.contentSegmentsPreservingTemporaryImages(from: text)
 
         XCTAssertEqual(segments.count, 3)
         XCTAssertEqual(segments[0], .text(id: 0, value: "Before\n"))
         XCTAssertEqual(segments[1], .image(AssistantMarkdownImageReference(
-            path: "/tmp/emanuele-mobile.png",
+            path: "/tmp/studio-mobile.png",
             altText: "mobile",
             occurrenceIndex: 0
         )))
@@ -627,7 +627,7 @@ final class TurnMessageCachesTests: XCTestCase {
 
     func testPerFileDiffParserMergesMultipleSnapshotsForSameFile() {
         let bodyText = """
-        Path: /Users/emanueledipietro/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift
+        Path: /Users/you/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift
         Kind: update
         Totals: +1 -0
 
@@ -647,7 +647,7 @@ final class TurnMessageCachesTests: XCTestCase {
         """
         let entries = [
             TurnFileChangeSummaryEntry(
-                path: "/Users/emanueledipietro/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift",
+                path: "/Users/you/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift",
                 additions: 1,
                 deletions: 0,
                 action: .edited
@@ -671,7 +671,7 @@ final class TurnMessageCachesTests: XCTestCase {
 
     func testPerFileDiffParserDeduplicatesIdenticalSnapshotsForSameFile() {
         let bodyText = """
-        Path: /Users/emanueledipietro/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift
+        Path: /Users/you/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift
         Kind: update
         Totals: +1 -0
 
@@ -691,7 +691,7 @@ final class TurnMessageCachesTests: XCTestCase {
         """
         let entries = [
             TurnFileChangeSummaryEntry(
-                path: "/Users/emanueledipietro/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift",
+                path: "/Users/you/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift",
                 additions: 1,
                 deletions: 0,
                 action: .edited

@@ -8,13 +8,13 @@ import type {
   GitStackedAction,
   ModelSelection,
   ProviderStartOptions,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   resolveAutoFeatureBranchName,
   sanitizeBranchFragment,
   sanitizeFeatureBranchName,
-} from "@synara/shared/git";
-import { resolveWorktreeHandoffIntent } from "@synara/shared/worktreeHandoff";
+} from "@djl/shared/git";
+import { resolveWorktreeHandoffIntent } from "@djl/shared/worktreeHandoff";
 
 import { GitManagerError } from "../Errors.ts";
 import {
@@ -156,7 +156,7 @@ function resolvePullRequestWorktreeLocalBranchName(
 
   const sanitizedHeadBranch = sanitizeBranchFragment(pullRequest.headBranch).trim();
   const suffix = sanitizedHeadBranch.length > 0 ? sanitizedHeadBranch : "head";
-  return `synara/pr-${pullRequest.number}/${suffix}`;
+  return `djl/pr-${pullRequest.number}/${suffix}`;
 }
 
 function parseGitHubRepositoryNameWithOwnerFromRemoteUrl(url: string | null): string | null {
@@ -1285,7 +1285,7 @@ export const makeGitManager = Effect.gen(function* () {
         ...buildGitTextGenerationCallInput(textGenerationParams ?? {}),
       });
 
-      const bodyFile = path.join(tempDir, `synara-pr-body-${process.pid}-${randomUUID()}.md`);
+      const bodyFile = path.join(tempDir, `djl-pr-body-${process.pid}-${randomUUID()}.md`);
       yield* fileSystem
         .writeFileString(bodyFile, generated.body)
         .pipe(
@@ -2057,11 +2057,11 @@ The local stash entry was kept for recovery.`,
 
       const preservedLocalStash = yield* stashWorkingTree(
         input.cwd,
-        `synara preserve local handoff ${randomUUID()}`,
+        `djl preserve local handoff ${randomUUID()}`,
       );
       const sourceStash = yield* stashWorkingTree(
         input.worktreePath,
-        `synara handoff to local ${randomUUID()}`,
+        `djl handoff to local ${randomUUID()}`,
       );
 
       yield* gitCore
@@ -2224,7 +2224,7 @@ The local stash entry was kept for recovery.`,
 
     const sourceStash = yield* stashWorkingTree(
       input.cwd,
-      `synara handoff to worktree ${randomUUID()}`,
+      `djl handoff to worktree ${randomUUID()}`,
     );
     const sourceBranch = currentLocalStatus.branch ?? input.currentBranch ?? null;
     const sourceHeadRef = yield* readHeadRef(input.cwd);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ComputerSpaceInventory, ComputerWindow } from "@synara/contracts";
+import type { ComputerSpaceInventory, ComputerWindow } from "@djl/contracts";
 
 import { ComputerSpaceBroker, type ComputerSpaceSnapshot } from "./ComputerSpaceBroker.ts";
 

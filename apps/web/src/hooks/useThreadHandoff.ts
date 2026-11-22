@@ -5,11 +5,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import {
-  type ModelSelection,
-  type OrchestrationCommand,
-  type ProviderKind,
-} from "@synara/contracts";
+import { type ModelSelection, type OrchestrationCommand, type ProviderKind } from "@djl/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useProviderStatusesForLocalConfig } from "./useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "./useProviderStatusRefresh";

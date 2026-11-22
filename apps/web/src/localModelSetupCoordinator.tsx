@@ -1,5 +1,5 @@
-import type { LocalModelSetupJob } from "@synara/contracts";
-import { ThreadId } from "@synara/contracts";
+import type { LocalModelSetupJob } from "@djl/contracts";
+import { ThreadId } from "@djl/contracts";
 import type { ComposerDraftStoreState, ComposerThreadDraftState } from "./composerDraftStore";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";

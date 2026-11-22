@@ -1,4 +1,4 @@
-import { createFcmSender, type FcmConfig } from "@synara/shared/fcm";
+import { createFcmSender, type FcmConfig } from "@djl/shared/fcm";
 
 import type { PushSender } from "./apns.ts";
 

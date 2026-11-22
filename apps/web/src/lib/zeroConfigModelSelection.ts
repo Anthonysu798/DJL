@@ -5,7 +5,7 @@ import type {
   OpenCodeModelProviderConnection,
   ProviderKind,
   ServerProviderStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { ProviderModelOption } from "../providerModelOptions";
 import { isProviderUsable } from "./providerAvailability";

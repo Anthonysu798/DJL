@@ -6,7 +6,7 @@
  */
 import { decodeRaster } from "@djl/providers";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudImageRefPart } from "@synara/contracts/cloud";
+import type { CloudImageRefPart } from "@djl/contracts/cloud";
 
 import { bytesMatchType } from "../files/fileTypes.ts";
 import { storageKey } from "../files/FileService.ts";

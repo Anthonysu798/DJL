@@ -1,10 +1,4 @@
-import {
-  CommandId,
-  EventId,
-  ProjectId,
-  ThreadId,
-  type OrchestrationEvent,
-} from "@synara/contracts";
+import { CommandId, EventId, ProjectId, ThreadId, type OrchestrationEvent } from "@djl/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

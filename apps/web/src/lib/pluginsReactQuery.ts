@@ -10,7 +10,7 @@ import {
   type PluginCustomServerInput,
   type PluginSetEnabledInput,
   type PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 

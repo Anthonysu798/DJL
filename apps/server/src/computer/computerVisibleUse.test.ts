@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { OrchestrationMessage } from "@synara/contracts";
+import type { OrchestrationMessage } from "@djl/contracts";
 
 import {
   computerForegroundAuthorizationForMessages,
@@ -27,7 +27,7 @@ describe("messageRequestsVisibleUse", () => {
     // The incident's own task text: use Helium, never show Helium.
     expect(
       messageRequestsVisibleUse(
-        "Go to newegg.com, and pick out parts to build a $3000 gaming pc for 1440p gaming and add them to cart. use only synara computer use and incognito helium browser using computer use",
+        "Go to newegg.com, and pick out parts to build a $3000 gaming pc for 1440p gaming and add them to cart. use only djl computer use and incognito helium browser using computer use",
       ),
     ).toBe(false);
     expect(messageRequestsVisibleUse("open Calculator and add 12 and 34")).toBe(false);

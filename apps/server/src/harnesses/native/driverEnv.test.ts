@@ -21,10 +21,10 @@ it("keeps the desktop computer broker credentials out of provider processes", ()
   const base = {
     PATH: "/bin",
     DJL_COMPUTER_USE_BRIDGE_TOKEN: "private",
-    SYNARA_CUA_HOST_SOCKET: "/private/tmp/fixture.sock",
-    SYNARA_BROWSER_HOST_CAPABILITY: "private-cua-capability",
-    SYNARA_BROWSER_HOST_CAPABILITY_FD: "9",
-    SYNARA_AUTH_TOKEN: "private-backend-token",
+    DJL_CUA_HOST_SOCKET: "/private/tmp/fixture.sock",
+    DJL_BROWSER_HOST_CAPABILITY: "private-cua-capability",
+    DJL_BROWSER_HOST_CAPABILITY_FD: "9",
+    DJL_AUTH_TOKEN: "private-backend-token",
     DJL_COMPUTER_USE_BRIDGE_URL: "http://127.0.0.1:1/computer-use",
   };
   expect(withDjlThreadId(base, "thread-1")).toEqual({ PATH: "/bin", DJL_THREAD_ID: "thread-1" });

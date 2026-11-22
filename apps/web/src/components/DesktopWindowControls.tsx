@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { DesktopWindowState } from "@synara/contracts";
+import type { DesktopWindowState } from "@djl/contracts";
 
 import { isElectron } from "~/env";
 import { cn, isWindowsPlatform } from "~/lib/utils";

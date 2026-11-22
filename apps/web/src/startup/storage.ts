@@ -114,7 +114,7 @@ export class StartupStorage {
   ) {}
 
   private key(name: string): string {
-    return `synara:startup:v1:${encodeURIComponent(this.scope)}:${name}`;
+    return `djl:startup:v1:${encodeURIComponent(this.scope)}:${name}`;
   }
   private read(name: string, limit: number): unknown {
     try {

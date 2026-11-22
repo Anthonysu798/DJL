@@ -369,7 +369,7 @@ describe("liquid glass surfaces", () => {
   );
 
   it("applies the glass mode to the document and honors the debug override", async () => {
-    const storedTheme = localStorage.getItem("synara:theme");
+    const storedTheme = localStorage.getItem("djl:theme");
     document.documentElement.removeAttribute("data-glass");
     const screen = await render(<GlassModeProbe />);
     const apply = screen.getByRole("button", { name: "Apply theme" });
@@ -385,7 +385,7 @@ describe("liquid glass surfaces", () => {
     await apply.click();
     expect(document.documentElement.getAttribute("data-glass")).toBe("blur");
 
-    if (storedTheme === null) localStorage.removeItem("synara:theme");
-    else localStorage.setItem("synara:theme", storedTheme);
+    if (storedTheme === null) localStorage.removeItem("djl:theme");
+    else localStorage.setItem("djl:theme", storedTheme);
   });
 });

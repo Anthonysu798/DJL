@@ -1,10 +1,10 @@
 // FILE: SkillsSettingsPanel.tsx
 // Purpose: Settings → Skills panel. Lists every skill from the unified cross-provider
-// catalog (~/.synara/skills plus each provider's skills folder), shows which provider
+// catalog (~/.djl/skills plus each provider's skills folder), shows which provider
 // a skill comes from, and lets the user enable/disable each one. Disabled skills are
 // hidden from the composer skill picker on every provider.
 
-import type { ProviderKind, ServerSettings } from "@synara/contracts";
+import type { ProviderKind, ServerSettings } from "@djl/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -109,7 +109,7 @@ export function SkillsSettingsPanel() {
 
   const totalSkills = skillGroups.length;
   const enabledSkills = skillGroups.filter((group) => !disabledSkillNames.has(group.key)).length;
-  const synaraSkillsDir = catalogQuery.data?.synaraSkillsDir;
+  const djlSkillsDir = catalogQuery.data?.djlSkillsDir;
 
   return (
     <div className="space-y-8">
@@ -118,8 +118,8 @@ export function SkillsSettingsPanel() {
           title={t("skills.portable.title")}
           description={t("skills.portable.description")}
           status={
-            synaraSkillsDir ? (
-              <code className="break-all text-[11px] text-muted-foreground">{synaraSkillsDir}</code>
+            djlSkillsDir ? (
+              <code className="break-all text-[11px] text-muted-foreground">{djlSkillsDir}</code>
             ) : null
           }
           control={

@@ -11,7 +11,7 @@ import {
   type ComputerPermission,
   type ComputerUiNode,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   COMPUTER_ACTION_OBSERVATION_MAX_DIMENSION,
@@ -1099,7 +1099,7 @@ describe("agent gateway computer tools", () => {
     const { backend, call } = await setup();
     backend.failNext(
       "captureScreenshot",
-      new Error("org.synara.ComputerUse.Error.CaptureFailed: window not visible"),
+      new Error("org.djl.ComputerUse.Error.CaptureFailed: window not visible"),
     );
 
     const result = await call("computer_screenshot", {
@@ -1455,11 +1455,11 @@ describe("agent gateway computer tools", () => {
     expect(backend.callsFor("scroll").length).toBeGreaterThan(3);
   });
 
-  it("still refuses a fourth unchanged scroll with SYNARA_CUA_CONDITIONAL_SETTLE set", async () => {
+  it("still refuses a fourth unchanged scroll with DJL_CUA_CONDITIONAL_SETTLE set", async () => {
     // The conditional-settle flag lets a scroll leg skip its wait only when
     // measured travel proves arrival; an unchanged scroll proves nothing, so
     // the zero-travel signal — and the refusal it feeds — must survive it.
-    vi.stubEnv("SYNARA_CUA_CONDITIONAL_SETTLE", "1");
+    vi.stubEnv("DJL_CUA_CONDITIONAL_SETTLE", "1");
     try {
       const { backend, call, see } = await setup();
       await see();
@@ -3274,14 +3274,14 @@ describe("agent gateway computer setup prompts", () => {
 
   it("prompts for setup when a successful result reports a permission state", async () => {
     // The shape that slipped through before this funnel: the call succeeded, the
-    // payload said "Synara needs Accessibility", and nothing put a card on
+    // payload said "DJL needs Accessibility", and nothing put a card on
     // screen — so the model explained macOS privacy in prose instead.
     const { result, prompts, text } = await readWith({
       availability: () =>
         Promise.resolve({
           kind: "permission-required",
           missing: ["accessibility"],
-          message: "Synara needs Accessibility to control this Mac. Turn Synara on in…",
+          message: "DJL needs Accessibility to control this Mac. Turn DJL on in…",
           buildSignature: "signed",
         }),
       missingPermissions: () => Promise.resolve(["accessibility"]),
@@ -3298,9 +3298,9 @@ describe("agent gateway computer setup prompts", () => {
     // The model is told a setup card is in front of the user — not how macOS
     // privacy works, and not to walk them through System Settings over the top
     // of a card that is already on screen.
-    expect(text).toContain("Synara needs Accessibility and has shown the user a setup card");
+    expect(text).toContain("DJL needs Accessibility and has shown the user a setup card");
     expect(text).toContain("waiting for the user to grant it");
-    expect(text).not.toContain("Turn Synara on in");
+    expect(text).not.toContain("Turn DJL on in");
   });
 
   it("prompts for setup for a grant that only blinds the desktop", async () => {
@@ -3336,7 +3336,7 @@ describe("agent gateway computer setup prompts", () => {
   });
 
   it("carries an ad-hoc build signature to the card, so it can explain a stale grant", async () => {
-    // On a locally built copy System Settings can show Synara switched on while
+    // On a locally built copy System Settings can show DJL switched on while
     // the grant is pinned to a binary a rebuild replaced; without this the card
     // tells the user to flip a switch that is already flipped.
     const { prompts } = await readWith({
@@ -3412,7 +3412,7 @@ describe("agent gateway computer setup prompts", () => {
     const state = await run("computer_get_state", { include_screenshot: true });
     expect(state.content.map((entry) => entry.type)).toEqual(["text", "image"]);
     expect((resultJson(state) as { setupRequired?: string }).setupRequired).toContain(
-      "Synara needs Accessibility and has shown the user a setup card",
+      "DJL needs Accessibility and has shown the user a setup card",
     );
 
     // And a failure, which used to hand back the backend's sentence alone.
@@ -3434,7 +3434,7 @@ describe("agent gateway computer setup prompts", () => {
         Promise.resolve({
           kind: "permission-required" as const,
           missing: ["accessibility" as const],
-          message: "Synara needs Accessibility to control this Mac.",
+          message: "DJL needs Accessibility to control this Mac.",
           buildSignature: "signed" as const,
         }),
     });
@@ -4206,7 +4206,7 @@ describe("computer_inspect", () => {
         { tool: "computer_click", arguments: { x: 2, y: 3 } },
         { tool: "computer_inspect", arguments: { tool: "computer_read_clipboard" } },
         { tool: "computer_future" },
-        { tool: "mcp__synara__computer_read_clipboard" },
+        { tool: "mcp__djl__computer_read_clipboard" },
         { tool: "computer_read_clipboard", arguments: { text: "private" } },
         { tool: "computer_read_clipboard", arguments: [] },
         { tool: "computer_read_clipboard", arguments: null },
@@ -4604,7 +4604,7 @@ describe("computer_run", () => {
 
 describe("computer_paste", () => {
   it("pastes a canonical workspace image and rejects an outside symlink before clipboard access", async () => {
-    const temporary = await mkdtemp(join(tmpdir(), "synara-native-paste-"));
+    const temporary = await mkdtemp(join(tmpdir(), "djl-native-paste-"));
     const root = await realpath(await mkdtemp(join(temporary, "workspace-")));
     const inside = join(root, "image.png");
     const outside = join(temporary, "private.png");
@@ -5418,8 +5418,8 @@ describe("multi-app driving", () => {
     });
   });
 
-  describe("SYNARA_CUA_CAPTURE_REUSE", () => {
-    const FLAG = "SYNARA_CUA_CAPTURE_REUSE";
+  describe("DJL_CUA_CAPTURE_REUSE", () => {
+    const FLAG = "DJL_CUA_CAPTURE_REUSE";
     let savedFlag: string | undefined;
 
     const setFlag = (value: string | undefined) => {

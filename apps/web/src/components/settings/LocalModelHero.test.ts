@@ -2,7 +2,7 @@ import type {
   LocalModelRecommendation,
   LocalModelRuntimeStatus,
   LocalModelsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { hardwareProfileFixture } from "../../test/localModelsFixture";

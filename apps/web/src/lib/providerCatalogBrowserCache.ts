@@ -3,7 +3,7 @@ import {
   ProviderListModelsResult,
   type OpenCodeListModelProvidersResult as OpenCodeListModelProvidersResultValue,
   type ProviderListModelsResult as ProviderListModelsResultValue,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 const PROVIDERS_KEY = "djl.provider-catalog.v2";

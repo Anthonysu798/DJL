@@ -1,5 +1,5 @@
 import { assert, it } from "@effect/vitest";
-import { ServerId, type ServerCreateInput } from "@synara/contracts";
+import { ServerId, type ServerCreateInput } from "@djl/contracts";
 import { Effect, Layer, Option } from "effect";
 
 import { runMigrations } from "../Migrations.ts";

@@ -7,9 +7,9 @@ import {
   defaultTerminalTitleForCliKind,
   type TerminalCliKind,
   type TerminalVisualState,
-} from "@synara/shared/terminalThreads";
+} from "@djl/shared/terminalThreads";
 import type { Thread, ThreadSession } from "../types";
-import type { ProviderRequestKind } from "@synara/contracts";
+import type { ProviderRequestKind } from "@djl/contracts";
 import type { TFunction } from "i18next";
 import { translateRendererCopy } from "../i18n";
 import englishCatalog from "../i18n/locales/en.json";

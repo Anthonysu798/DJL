@@ -9,7 +9,7 @@ import {
   type SshConfigCandidate,
   ServerHost,
   ServerUsername,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import * as Crypto from "node:crypto";
 import * as os from "node:os";
 import { Effect, FileSystem, Layer, Option, Path, Schema } from "effect";

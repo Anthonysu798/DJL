@@ -9,7 +9,7 @@ import {
   type PluginsSnapshot,
   type ProviderMentionReference,
   type ProviderPluginDescriptor,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 // Every agent is handed the user's plugins, so the same plugins are offered in every chat.
 export function composerPluginSuggestions(

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { appendPastedTextsToPrompt } from "../lib/composerPastedText";
 import { appendTerminalContextsToPrompt } from "../lib/terminalContext";
-import { appendBrowserFindingsBlock } from "@synara/shared/browserFindings";
-import type { BrowserFindingDraft } from "@synara/contracts";
+import { appendBrowserFindingsBlock } from "@djl/shared/browserFindings";
+import type { BrowserFindingDraft } from "@djl/contracts";
 import { buildInlineTerminalContextText } from "./chat/userMessageTerminalContexts";
 import {
   estimateChangedFilesSummaryHeight,

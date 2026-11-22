@@ -1,4 +1,4 @@
-import { COMPUTER_WS_METHODS, COMPUTER_WS_CHANNELS, type ComputerEvent } from "@synara/contracts";
+import { COMPUTER_WS_METHODS, COMPUTER_WS_CHANNELS, type ComputerEvent } from "@djl/contracts";
 // FILE: wsNativeApi.ts
 // Purpose: NativeApi implementation backed by the browser WebSocket RPC transport.
 // Layer: Web transport adapter
@@ -41,7 +41,7 @@ import {
   type DocumentRenderEvent,
   type LocalModelEvent,
   type AiDetectorEvent,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { showConfirmDialogFallback } from "./confirmDialogFallback";
 import { showContextMenuFallback } from "./contextMenuFallback";

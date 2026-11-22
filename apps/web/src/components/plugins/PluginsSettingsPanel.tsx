@@ -10,7 +10,7 @@ import {
   type PluginCatalogEntry,
   type PluginSetEnabledInput,
   type PluginsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";

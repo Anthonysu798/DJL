@@ -1,5 +1,5 @@
 import { multiPostViews } from "~/components/multipost/shared";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { createFileRoute } from "@tanstack/react-router";
 import ChatView from "~/components/ChatView";
 

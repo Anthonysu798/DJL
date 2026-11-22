@@ -1,9 +1,5 @@
 "use client";
-import type {
-  CloudImageRefPart,
-  CloudRunMode,
-  CloudUserMessagePart,
-} from "@synara/contracts/cloud";
+import type { CloudImageRefPart, CloudRunMode, CloudUserMessagePart } from "@djl/contracts/cloud";
 import { ArrowUp, FileText, Loader2, Plus, Square, Telescope, X } from "lucide-react";
 import {
   forwardRef,

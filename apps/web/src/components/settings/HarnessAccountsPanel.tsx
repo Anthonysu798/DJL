@@ -5,7 +5,7 @@ import type {
   HarnessId,
   HarnessLoginInput,
   HarnessLoginResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

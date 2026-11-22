@@ -1,5 +1,5 @@
 import { createServer, Socket, type AddressInfo } from "node:net";
-import type { ComputerActivitySummaryCommand, ComputerActivitySummaryJob } from "@synara/contracts";
+import type { ComputerActivitySummaryCommand, ComputerActivitySummaryJob } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ComputerActivitySummaryWorker,

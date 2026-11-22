@@ -1,9 +1,9 @@
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import type {
   CloudSocialAccountsResponse,
   CloudSocialOAuthStatus,
   CloudSocialOAuthStartResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { resolveWsHttpUrl } from "~/lib/wsHttpUrl";
 
 export async function socialCommand<T>(input: Record<string, unknown>): Promise<T> {

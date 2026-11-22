@@ -8,7 +8,7 @@ import type {
   AiDetectorReport,
   AiDetectorStage,
   AiDetectorState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   useCallback,
   useEffect,
@@ -19,7 +19,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { formatBytes } from "@synara/shared/formatBytes";
+import { formatBytes } from "@djl/shared/formatBytes";
 
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,

@@ -4,7 +4,7 @@ import type {
   OrchestrationProposedPlan,
   OrchestrationThreadActivity,
   ProviderRequestKind,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export interface ThreadSummaryMetadata {
   latestUserMessageAt: string | null;

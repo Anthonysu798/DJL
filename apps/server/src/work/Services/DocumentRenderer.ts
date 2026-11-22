@@ -6,7 +6,7 @@ import type {
   WorkCancelDocumentRenderResult,
   WorkGetDocumentRenderResult,
   WorkRequestDocumentRenderResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema, ServiceMap, type Effect, type Stream } from "effect";
 
 export class DocumentRendererServiceError extends Schema.TaggedErrorClass<DocumentRendererServiceError>()(

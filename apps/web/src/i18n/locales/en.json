@@ -3482,23 +3482,23 @@
     "openSettings": "Open {{value0}} settings",
     "ghostCursor": "ghost cursor",
     "granted": "Granted",
-    "letsSynaraDetectEscapeAndPauseWhenYouTake": "Lets DJL detect Escape and pause when you take over during a Computer task. This does not enable the AppSnap shortcut.",
+    "letsDjlDetectEscapeAndPauseWhenYouTake": "Lets DJL detect Escape and pause when you take over during a Computer task. This does not enable the AppSnap shortcut.",
     "showGuide": "Show guide",
     "isReadyFor": "{{value0}} is ready for {{value1}}.",
     "hideGuide": "Hide guide",
     "recheckPermissions": "Recheck permissions",
     "screenRecording": "Screen Recording",
-    "letsSynaraCaptureAnImageOfTheFrontmostWindow": "Lets DJL capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord.",
+    "letsDjlCaptureAnImageOfTheFrontmostWindow": "Lets DJL capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord.",
     "windowListing": "window listing",
     "theAgentCanActOnTheDesktopButCannot2": "The agent can act on the desktop but cannot see it, so screenshots fail. Turn DJL on in System Settings › Privacy & Security › Screen Recording, then press Set up to reconnect.",
     "fill": "Fill",
     "gettingStarted": "Getting started",
     "theServerCouldNotBeReached": "The server could not be reached.",
     "theAgentDrivesItsOwnSeatSoYourCursor": "The agent drives its own seat, so your cursor and focus stay untouched.",
-    "letsSynaraNoticeTheDoubleOptionChordWhileAnother": "Lets DJL notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded.",
+    "letsDjlNoticeTheDoubleOptionChordWhileAnother": "Lets DJL notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded.",
     "screenCapture2": "screen capture",
     "permissionCheckFailed": "Permission check failed.",
-    "letsSynaraCaptureWindowsAndTheDesktopSoThe": "Lets DJL capture windows and the desktop so the agent can see what it is driving.",
+    "letsDjlCaptureWindowsAndTheDesktopSoThe": "Lets DJL capture windows and the desktop so the agent can see what it is driving.",
     "useGrantNextToAPermissionToWalkThrough": "Use Grant next to a permission to walk through setup.",
     "large": "Large",
     "computerEffectBlocked": "Blocked",
@@ -3522,7 +3522,7 @@
     "permissionGuideEnableInstalledApp": "If this copy of {{app}} is already listed, turn it on. Otherwise, drag the app from the floating guide into the list, or use + to choose this installed copy, then turn it on.",
     "showHistory": "Show history",
     "densityOptions_compact": "Compact",
-    "letsSynaraMoveThePointerClickAndTypeOn": "Lets DJL move the pointer, click, and type on your behalf. Nothing is driven unless you authorize a Computer task.",
+    "letsDjlMoveThePointerClickAndTypeOn": "Lets DJL move the pointer, click, and type on your behalf. Nothing is driven unless you authorize a Computer task.",
     "couldNotLoadRecentActionsRefreshToTryAgain": "Could not load recent actions. Refresh to try again.",
     "cursorColors": "Cursor colors",
     "rechecking": "Rechecking…",
@@ -4595,9 +4595,9 @@
           "details": "The release workflow verifies the pinned updater lane, keeps clean releases off the compatibility channel, repairs update-feed metadata, and hardens desktop startup when an app.asar swap is detected.",
           "title": "Desktop updates have stronger guardrails"
         },
-        "synara-identity": {
+        "djl-identity": {
           "description": "The app now uses one identity everywhere, from its desktop installation and command line to packages, settings, diagnostics, and release artifacts.",
-          "details": "The desktop bundle is now com.emanueledipietro.synara, the CLI is @synara/cli with the synara command, and every first-party runtime identifier uses the DJL namespace. The 0.4.2 bridge preserves renderer state during the origin change.",
+          "details": "The desktop bundle is now app.djl.desktop, the CLI is @djl/cli with the djl command, and every first-party runtime identifier uses the DJL namespace. The 0.4.2 bridge preserves renderer state during the origin change.",
           "title": "DJL, all the way through"
         }
       }

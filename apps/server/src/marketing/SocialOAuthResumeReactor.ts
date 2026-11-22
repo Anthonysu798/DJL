@@ -1,5 +1,5 @@
-import { CommandId, MessageId, type Campaign } from "@synara/contracts";
-import type { CloudSocialOAuthStatus, CloudSocialAccountsResponse } from "@synara/contracts/cloud";
+import { CommandId, MessageId, type Campaign } from "@djl/contracts";
+import type { CloudSocialOAuthStatus, CloudSocialAccountsResponse } from "@djl/contracts/cloud";
 import { Effect, Layer, Schedule, Scope, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { ServerConfig } from "../config";
@@ -152,7 +152,7 @@ export function resumeSocialOAuth(
 export class SocialOAuthResumeReactor extends ServiceMap.Service<
   SocialOAuthResumeReactor,
   { readonly start: () => Effect.Effect<void, never, Scope.Scope> }
->()("synara/marketing/SocialOAuthResumeReactor") {}
+>()("djl/marketing/SocialOAuthResumeReactor") {}
 export const SocialOAuthResumeReactorLive = Layer.effect(
   SocialOAuthResumeReactor,
   Effect.gen(function* () {

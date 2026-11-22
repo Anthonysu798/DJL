@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { GroupId, GroupMemberId, ProjectId, ThreadId, type Group } from "@synara/contracts";
+import { GroupId, GroupMemberId, ProjectId, ThreadId, type Group } from "@djl/contracts";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";

@@ -7,4 +7,4 @@ export interface AutomationSchedulerShape {
 export class AutomationScheduler extends ServiceMap.Service<
   AutomationScheduler,
   AutomationSchedulerShape
->()("synara/automation/Services/AutomationScheduler") {}
+>()("djl/automation/Services/AutomationScheduler") {}

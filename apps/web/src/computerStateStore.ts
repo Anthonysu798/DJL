@@ -1,9 +1,4 @@
-import type {
-  ComputerEvent,
-  ComputerWindow,
-  ThreadComputerState,
-  ThreadId,
-} from "@synara/contracts";
+import type { ComputerEvent, ComputerWindow, ThreadComputerState, ThreadId } from "@djl/contracts";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 

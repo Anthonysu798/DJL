@@ -4,7 +4,7 @@ import {
   buildChromeClientHints,
   classifyBrowserWindowOpen,
   deriveChromeUserAgent,
-} from "@synara/shared/browserSession";
+} from "@djl/shared/browserSession";
 import { app } from "electron";
 import { createHash } from "node:crypto";
 import { BrowserWindow, Notification, session, net, powerMonitor } from "electron";
@@ -19,7 +19,7 @@ import type {
   MultiPostEvidence,
   MultiPostContentData,
   MultiPostNotice,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { noticeText } from "./notice";
 import {
   INSTAGRAM_GRID_SCRIPT,
@@ -33,7 +33,7 @@ import {
   helperSource,
   webhookMessage,
   identitySources,
-} from "@synara/multipost";
+} from "@djl/multipost";
 import {
   buildPreparationScript,
   buildSubmissionScript,
@@ -41,7 +41,7 @@ import {
   buildVerificationScript,
   buildNativeScheduleVerificationScript,
   buildCancelScript,
-} from "@synara/multipost/browser";
+} from "@djl/multipost/browser";
 import { multipostPartition } from "./identity";
 
 /** Query strings carry sign-in tokens, so logs keep only where a page is. */

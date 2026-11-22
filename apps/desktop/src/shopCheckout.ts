@@ -1,4 +1,4 @@
-import { commerceTestCheckoutUrl } from "@synara/contracts/cloud";
+import { commerceTestCheckoutUrl } from "@djl/contracts/cloud";
 
 export const SHOP_CHECKOUT_CHANNEL = "desktop:shop-checkout";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

@@ -3,7 +3,7 @@ import type {
   ComputerActivitySemanticSummary,
   ProviderKind,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   flushComposerDraftPersistence,
   resolvePreferredComposerModelSelection,

@@ -1,4 +1,4 @@
-import type { CloudModel } from "@synara/contracts/cloud";
+import type { CloudModel } from "@djl/contracts/cloud";
 import { describe, expect, it } from "vitest";
 
 import { chooseModel } from "./ModelPicker";

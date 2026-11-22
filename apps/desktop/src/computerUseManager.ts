@@ -17,7 +17,7 @@ import {
   type ComputerUseSession,
   type ComputerUseStatus,
   type ComputerUseTarget,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { computerUsePauseDeadline } from "./computerUsePauseDeadline";
 import { ComputerUseHistory } from "./computerUseHistory";
 import { ComputerActivityRecorder } from "./computerActivityRecorder";

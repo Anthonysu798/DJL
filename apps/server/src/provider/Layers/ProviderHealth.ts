@@ -18,11 +18,11 @@ import type {
   ServerProviderStatus,
   ServerProviderStatusState,
   ServerProviderUpdateState,
-} from "@synara/contracts";
-import { ServerProviderUpdateError } from "@synara/contracts";
-import { parseCodexConfigModelProvider } from "@synara/shared/codexConfig";
-import { decodeJsonResult } from "@synara/shared/schemaJson";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@djl/contracts";
+import { ServerProviderUpdateError } from "@djl/contracts";
+import { parseCodexConfigModelProvider } from "@djl/shared/codexConfig";
+import { decodeJsonResult } from "@djl/shared/schemaJson";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   Array,
@@ -1648,7 +1648,7 @@ export const checkPiProviderStatus = (
       Effect.result,
     );
 
-    // Pi itself is SDK-backed in Synara. Keep this CLI probe advisory so health
+    // Pi itself is SDK-backed in DJL. Keep this CLI probe advisory so health
     // refreshes do not import the SDK and initialize its native clipboard module.
     if (Result.isFailure(versionProbe)) {
       const error = versionProbe.failure;

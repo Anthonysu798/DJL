@@ -27,14 +27,14 @@ import {
   type DesktopAppSnapShortcutUpdateResult,
   type DesktopAppSnapState,
   type DesktopAppSnapWindowEntry,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   DEFAULT_APP_SNAP_SHORTCUT,
   appSnapShortcutAccelerator,
   appSnapShortcutSystemConflict,
   isAppSnapShortcut,
   sameAppSnapShortcut,
-} from "@synara/shared/appSnapShortcut";
+} from "@djl/shared/appSnapShortcut";
 
 const MAX_PENDING_CAPTURES = PROVIDER_SEND_TURN_MAX_ATTACHMENTS;
 const MAX_HELPER_STDERR_CHARS = 4_096;
@@ -763,7 +763,7 @@ export class DesktopAppSnapManager {
    * floating guide through each pane still missing a grant, opening System
    * Settings at that pane as each step begins. The guide advances itself —
    * when a fresh check reports a grant, the next missing pane's coach and
-   * settings page take over without the user returning to Synara, and when
+   * settings page take over without the user returning to DJL, and when
    * every grant lands the session closes the Settings it opened.
    *
    * No macOS permission prompt is raised here on purpose: the prompt adds the
@@ -2153,7 +2153,7 @@ export class DesktopAppSnapManager {
         }),
       );
     }
-    // Benign overlap errors surface as a toast without yanking Synara to the
+    // Benign overlap errors surface as a toast without yanking DJL to the
     // foreground while the user is still working in the captured app.
     this.#emitCaptureError(
       message.code,

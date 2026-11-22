@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import { buildHarnessInvocation } from "./accounts";
 import { nativeProfileOptions } from "./native/profile";

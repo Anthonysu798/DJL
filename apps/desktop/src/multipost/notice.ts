@@ -1,4 +1,4 @@
-import type { MultiPostNotice } from "@synara/contracts";
+import type { MultiPostNotice } from "@djl/contracts";
 
 type Words = Record<MultiPostNotice["kind"], [title: string, hint: string]>;
 const words: Record<string, Words> = {

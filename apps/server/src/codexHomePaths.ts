@@ -11,7 +11,6 @@ import { homedir } from "node:os";
 import path from "node:path";
 
 export const DJL_CODEX_HOME_OVERLAY_DIR = "codex-home-overlay";
-export const SYNARA_CODEX_HOME_OVERLAY_DIR = DJL_CODEX_HOME_OVERLAY_DIR;
 
 export interface CodexHomePathsInput {
   readonly env?: NodeJS.ProcessEnv;
@@ -29,12 +28,10 @@ export function resolveDjlCodexHomeOverlayPath(
   env: NodeJS.ProcessEnv,
   sourceHomePath: string,
 ): string {
-  const runtimeHome = env.DJL_HOME?.trim() || env.SYNARA_HOME?.trim();
+  const runtimeHome = env.DJL_HOME?.trim();
   const overlayRoot = runtimeHome || path.join(path.dirname(sourceHomePath), ".djl", "runtime");
   return path.join(overlayRoot, DJL_CODEX_HOME_OVERLAY_DIR);
 }
-
-export const resolveSynaraCodexHomeOverlayPath = resolveDjlCodexHomeOverlayPath;
 
 /**
  * Returns the home directory that the codex app-server child process actually

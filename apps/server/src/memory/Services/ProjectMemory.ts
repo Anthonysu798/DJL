@@ -4,7 +4,7 @@ import type {
   ProjectMemoryItem,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

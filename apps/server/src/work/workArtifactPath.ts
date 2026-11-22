@@ -2,7 +2,7 @@
 // Purpose: Resolve a task-relative Work artifact through the backend-authoritative
 //          thread workspace, including managed task folders and symlink confinement.
 
-import type { ProjectId, ProjectKind, ThreadId } from "@synara/contracts";
+import type { ProjectId, ProjectKind, ThreadId } from "@djl/contracts";
 
 import { resolveThreadWorkspaceCwd } from "../checkpointing/Utils";
 import { resolveAuthorizedInputPath, WorkToolValidationError } from "./documentTools";

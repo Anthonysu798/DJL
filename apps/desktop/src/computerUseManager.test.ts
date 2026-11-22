@@ -20,7 +20,7 @@ import type {
   ComputerUseHistorySettings,
   ComputerUseRequest,
   ComputerUseResponse,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { ComputerUseHistory } from "./computerUseHistory";
 import { ComputerActivitySummaries } from "./computerActivitySummaries";
 import { ComputerActivityRecorder } from "./computerActivityRecorder";

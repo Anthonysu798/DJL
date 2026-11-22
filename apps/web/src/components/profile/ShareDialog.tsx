@@ -8,7 +8,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 import { SiReddit, SiX } from "react-icons/si";
 import { FaLinkedinIn } from "react-icons/fa6";
-import type { ProfileStats, ProfileTokenStats } from "@synara/contracts";
+import type { ProfileStats, ProfileTokenStats } from "@djl/contracts";
 import { Dialog, DialogPopup, DialogTitle } from "~/components/ui/dialog";
 import { CopyIcon, DownloadIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -131,7 +131,7 @@ export function ShareDialog({
     try {
       const blob = await renderNodeToPngBlob(node, CARD_EXPORT_SIZE);
       if (blob) {
-        downloadBlob(blob, `synara-stats-${stats.timezone.today}.png`);
+        downloadBlob(blob, `djl-stats-${stats.timezone.today}.png`);
         setStatus(t("profile.share.status.saved"));
       } else {
         setStatus(t("profile.share.status.renderFailed"));

@@ -3,7 +3,7 @@ import type {
   CloudDeleteAccountResponse,
   CloudDeviceSession,
   CloudDeviceSessionsResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import {

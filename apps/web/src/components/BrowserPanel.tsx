@@ -19,7 +19,7 @@ import {
   type BrowserFindingDraft,
   type ServerLocalServerProcess,
   type ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 import {
   ArrowLeftIcon,
@@ -37,13 +37,13 @@ import {
   XIcon,
 } from "~/lib/icons";
 
-import { localServerPrimaryLabel } from "@synara/shared/localServers";
+import { localServerPrimaryLabel } from "@djl/shared/localServers";
 import {
   BROWSER_BLANK_URL,
   isBlankBrowserTabUrl,
   resolveCopyableBrowserTabUrl,
-} from "@synara/shared/browserSession";
-import { isBrowserCopyLinkChord } from "@synara/shared/browserShortcuts";
+} from "@djl/shared/browserSession";
+import { isBrowserCopyLinkChord } from "@djl/shared/browserShortcuts";
 
 import { isElectron } from "~/env";
 import { readNativeApi } from "~/nativeApi";
@@ -104,7 +104,7 @@ interface BrowserPanelProps {
 
 const BROWSER_BOUNDS_SYNC_BURST_FRAMES = 30;
 const BROWSER_BOUNDS_SYNC_STABLE_FRAME_TARGET = 2;
-const BROWSER_WEBVIEW_PARTITION = "persist:synara-browser";
+const BROWSER_WEBVIEW_PARTITION = "persist:djl-browser";
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 // The address field and tab pills share one chrome-control surface so the whole row reads
 // as a single cohesive control: matching height, radius, border width, and type scale.
@@ -354,7 +354,7 @@ function isBrowserPerfLoggingEnabled(): boolean {
   }
 
   try {
-    return window.localStorage.getItem("synara:browser-perf") === "1";
+    return window.localStorage.getItem("djl:browser-perf") === "1";
   } catch {
     return false;
   }

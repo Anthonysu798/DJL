@@ -8,7 +8,7 @@ import {
   resolveTerminalVisualIdentity,
   type TerminalCliKind,
   type TerminalVisualState,
-} from "@synara/shared/terminalThreads";
+} from "@djl/shared/terminalThreads";
 import { translateRendererCopy } from "./i18n";
 
 export interface RepresentativeTerminalVisualIdentity {

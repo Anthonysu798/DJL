@@ -1,5 +1,5 @@
 import { ApiError, type ApiErrorBody } from "./api";
-import type { CommerceCatalogResponse } from "@synara/contracts/cloud";
+import type { CommerceCatalogResponse } from "@djl/contracts/cloud";
 import { createCommerceClient, uploadCommerceImage, type CommerceRequest } from "./commerce";
 import { safeNext } from "./safeNext";
 

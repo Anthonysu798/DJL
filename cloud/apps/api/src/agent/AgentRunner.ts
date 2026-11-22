@@ -25,7 +25,7 @@ import type {
   CloudRunError,
   CloudRunStatus,
   CloudToolCallPart,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { OrgRole, Principal } from "../auth/guard.ts";
 import { appendSearchText, textOf } from "../chat/ChatService.ts";

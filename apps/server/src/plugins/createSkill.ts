@@ -5,7 +5,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { PluginCreateSkillInput } from "@synara/contracts";
+import type { PluginCreateSkillInput } from "@djl/contracts";
 
 const MAX_INSTRUCTIONS = 24_000;
 

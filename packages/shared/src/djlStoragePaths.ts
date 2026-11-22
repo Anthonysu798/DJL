@@ -1,12 +1,10 @@
 // FILE: djlStoragePaths.ts
-// Purpose: Canonical DJL filesystem layout and legacy home-variable compatibility.
+// Purpose: Canonical DJL filesystem layout.
 
 import path from "node:path";
 
 export const DJL_HOME_ENV = "DJL_HOME";
-export const LEGACY_DJL_HOME_ENV = "SYNARA_HOME";
 export const DJL_HOME_DIR_NAME = ".djl";
-export const LEGACY_DJL_HOME_DIR_NAME = ".synara";
 
 function pathApiFor(...values: ReadonlyArray<string | undefined>): typeof path.posix {
   return values.some((value) => value !== undefined && /^(?:[a-z]:[\\/]|\\\\)/i.test(value))
@@ -15,7 +13,7 @@ function pathApiFor(...values: ReadonlyArray<string | undefined>): typeof path.p
 }
 
 export function resolveDjlHome(env: NodeJS.ProcessEnv, homeDir: string): string {
-  const configured = env[DJL_HOME_ENV]?.trim() || env[LEGACY_DJL_HOME_ENV]?.trim();
+  const configured = env[DJL_HOME_ENV]?.trim();
   const pathApi = pathApiFor(configured, homeDir);
   return pathApi.resolve(configured || pathApi.join(homeDir, DJL_HOME_DIR_NAME));
 }
@@ -26,7 +24,7 @@ export function resolveDesktopDjlHome(
   localAppData: string | undefined,
   platform: NodeJS.Platform = process.platform,
 ): string {
-  if (env[DJL_HOME_ENV]?.trim() || env[LEGACY_DJL_HOME_ENV]?.trim()) {
+  if (env[DJL_HOME_ENV]?.trim()) {
     return resolveDjlHome(env, homeDir);
   }
   if (platform === "win32" && localAppData?.trim()) {
@@ -50,7 +48,7 @@ export function resolveDjlStatePaths(
   };
 }
 
-/** QA profiles must never import the default or legacy user's storage. */
+/** QA profiles must never import the default user's storage. */
 export function resolveDjlMigrationSources(input: {
   readonly baseDir: string;
   readonly userHomeDir: string;
@@ -59,10 +57,7 @@ export function resolveDjlMigrationSources(input: {
 }): string[] {
   if (input.disabled) return [];
   const api = pathApiFor(input.baseDir, input.userHomeDir);
-  return [
-    ...input.requested.filter(
-      (source) => source.trim().length > 0 && api.resolve(source) !== api.resolve(input.baseDir),
-    ),
-    api.join(input.userHomeDir, LEGACY_DJL_HOME_DIR_NAME),
-  ];
+  return input.requested.filter(
+    (source) => source.trim().length > 0 && api.resolve(source) !== api.resolve(input.baseDir),
+  );
 }

@@ -6,7 +6,7 @@ import {
   CustomModelProvider,
   FetchCustomModelsInput,
   type FetchCustomModelsResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export async function readCustomProviders(
   root: string,

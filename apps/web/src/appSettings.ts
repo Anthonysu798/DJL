@@ -18,17 +18,14 @@ import {
   type ProviderStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
-} from "@synara/contracts";
-import {
-  normalizeAppLocalePreference,
-  normalizeReleaseLocalePreference,
-} from "@synara/shared/locale";
+} from "@djl/contracts";
+import { normalizeAppLocalePreference, normalizeReleaseLocalePreference } from "@djl/shared/locale";
 import {
   getDefaultModel,
   getModelOptions,
   normalizeModelSlug,
   resolveSelectableModel,
-} from "@synara/shared/model";
+} from "@djl/shared/model";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { formatProviderModelOptionName, type ProviderModelOption } from "./providerModelOptions";
@@ -47,7 +44,7 @@ import {
 } from "./lib/appDensity";
 import { APP_SETTINGS_STORAGE_KEY } from "./appSettingsStorage";
 
-const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "synara:server-settings-migrated:v1";
+const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "djl:server-settings-migrated:v1";
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 export const MIN_CHAT_FONT_SIZE_PX = 11;

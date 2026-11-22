@@ -18,7 +18,7 @@
 // Per-thread memory arms a session on the owning thread whether or not it is
 // visible, so background agent work never steals the chat the user is reading.
 
-import type { ThreadComputerState, ThreadId } from "@synara/contracts";
+import type { ThreadComputerState, ThreadId } from "@djl/contracts";
 
 export type ComputerPreviewPhase = "armed" | "live" | "hidden-for-task" | "ended";
 

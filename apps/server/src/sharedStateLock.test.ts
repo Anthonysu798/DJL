@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { acquireSharedStateLock, SharedStateInUseError } from "@synara/shared/sharedStateLock";
+import { acquireSharedStateLock, SharedStateInUseError } from "@djl/shared/sharedStateLock";
 
 const roots: string[] = [];
 

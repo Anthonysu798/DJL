@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
-import { defaultBrand } from "@synara/contracts";
+import { defaultBrand } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { writeCloudSession } from "../cloud/session";
 import { executeAgentRequest } from "./agentHandler";

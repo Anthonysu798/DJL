@@ -16,7 +16,7 @@ export const LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL: ManagedAttachmentPrincipal = {
  * persisted orchestration events.
  */
 export const CurrentManagedAttachmentPrincipal = ServiceMap.Reference<ManagedAttachmentPrincipal>(
-  "synara/attachments/CurrentManagedAttachmentPrincipal",
+  "djl/attachments/CurrentManagedAttachmentPrincipal",
   { defaultValue: () => LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL },
 );
 

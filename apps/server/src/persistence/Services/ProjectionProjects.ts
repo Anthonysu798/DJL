@@ -6,13 +6,7 @@
  *
  * @module ProjectionProjectRepository
  */
-import {
-  IsoDateTime,
-  ModelSelection,
-  ProjectId,
-  ProjectKind,
-  ProjectScript,
-} from "@synara/contracts";
+import { IsoDateTime, ModelSelection, ProjectId, ProjectKind, ProjectScript } from "@djl/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -84,4 +78,4 @@ export interface ProjectionProjectRepositoryShape {
 export class ProjectionProjectRepository extends ServiceMap.Service<
   ProjectionProjectRepository,
   ProjectionProjectRepositoryShape
->()("synara/persistence/Services/ProjectionProjects/ProjectionProjectRepository") {}
+>()("djl/persistence/Services/ProjectionProjects/ProjectionProjectRepository") {}

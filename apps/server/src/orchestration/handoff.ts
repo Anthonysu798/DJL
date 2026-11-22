@@ -2,7 +2,7 @@ import {
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   type OrchestrationMessage,
   type OrchestrationThread,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const HANDOFF_BOOTSTRAP_CHAR_BUDGET = Math.floor(PROVIDER_SEND_TURN_MAX_INPUT_CHARS * 0.75);
 

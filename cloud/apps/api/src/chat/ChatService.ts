@@ -26,7 +26,7 @@ import type {
   CloudSendMessageResponse,
   CloudUpdateConversationInput,
   CloudConversation,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import type { FileService } from "../files/FileService.ts";

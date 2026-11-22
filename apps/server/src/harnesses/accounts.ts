@@ -13,7 +13,7 @@ import {
 } from "./native/codebuddy";
 import { parseGenericCliVersion } from "../provider/providerMaintenance";
 // Fresh account probes and official-runtime login invocations. No credential values leave this module.
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import { execFile } from "node:child_process";
 import { stripVTControlCharacters } from "node:util";
 import type {
@@ -21,7 +21,7 @@ import type {
   HarnessId,
   ServerProviderStatus,
   ServerSettings,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { buildCursorAgentCommand } from "../provider/acp/CursorAcpCommand";
 import {
   buildOpenCodeServerProcessEnv,

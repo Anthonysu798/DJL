@@ -3,7 +3,7 @@ import {
   isToolLifecycleItemType,
   type ProviderRuntimeEvent,
   type WorkTaskAction,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export interface DerivedWorkTaskTransition {
   readonly action: WorkTaskAction;

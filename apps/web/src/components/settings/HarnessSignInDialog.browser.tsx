@@ -3,7 +3,7 @@
 
 import "../../index.css";
 
-import type { HarnessLoginResult } from "@synara/contracts";
+import type { HarnessLoginResult } from "@djl/contracts";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";

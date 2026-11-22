@@ -1,4 +1,4 @@
-import type { TerminalEvent } from "@synara/contracts";
+import type { TerminalEvent } from "@djl/contracts";
 import { readNativeApi } from "~/nativeApi";
 
 type TerminalEventListener = (event: TerminalEvent) => void;

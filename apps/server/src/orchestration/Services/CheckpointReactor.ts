@@ -37,4 +37,4 @@ export interface CheckpointReactorShape {
 export class CheckpointReactor extends ServiceMap.Service<
   CheckpointReactor,
   CheckpointReactorShape
->()("synara/orchestration/Services/CheckpointReactor") {}
+>()("djl/orchestration/Services/CheckpointReactor") {}

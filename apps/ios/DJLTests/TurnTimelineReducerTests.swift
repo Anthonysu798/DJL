@@ -5182,7 +5182,7 @@ final class TurnTimelineReducerTests: XCTestCase {
                 text: """
                 Status: completed
 
-                Path: /Users/emanueledipietro/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift
+                Path: /Users/you/Developer/DJL/DJL/DJL/Views/Turn/TurnMessageComponents.swift
                 Kind: update
                 Totals: +1 -0
 

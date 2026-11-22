@@ -1,5 +1,5 @@
 "use client";
-import type { CloudMessageId, CloudShare } from "@synara/contracts/cloud";
+import type { CloudMessageId, CloudShare } from "@djl/contracts/cloud";
 import { Check, Copy, Link2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 

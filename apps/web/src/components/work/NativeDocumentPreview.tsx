@@ -1,6 +1,6 @@
 // High-fidelity Work document preview: local Office->PDF rendering with readable-text recovery.
 
-import type { DocumentArtifactPreview, ThreadId } from "@synara/contracts";
+import type { DocumentArtifactPreview, ThreadId } from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

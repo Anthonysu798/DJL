@@ -1,4 +1,4 @@
-import type { OrchestrationThreadActivity } from "@synara/contracts";
+import type { OrchestrationThreadActivity } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { createAccountRateLimitsSelector } from "./rateLimits";

@@ -1,4 +1,4 @@
-import { type ModelSelection } from "@synara/contracts";
+import { type ModelSelection } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import {
   buildThreadHandoffImportedMessages,

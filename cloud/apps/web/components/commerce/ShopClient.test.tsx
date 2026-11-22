@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommerceOrder, CommerceProfile, CommerceProduct } from "@synara/contracts/cloud";
+import type { CommerceOrder, CommerceProfile, CommerceProduct } from "@djl/contracts/cloud";
 
 const { commerce, uploadCommerceImage, centerCropImage, auth, push } = vi.hoisted(() => ({
   auth: {

@@ -15,7 +15,7 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { isDeepStrictEqual, promisify } from "node:util";
 
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 
 export interface OpenCodeMigrationCommand {
   readonly binaryPath: string;

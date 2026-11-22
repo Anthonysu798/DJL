@@ -24,7 +24,7 @@ import {
   type ComputerActivitySnapshot,
   type ComputerActivitySummaryJob,
   type ComputerActivitySummaryStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { isComputerActivityAllowed, boundedActivityItems } from "./computerActivityRecorder";
 import { redactComputerActivityText as redact } from "./computerActivityRedaction";
 

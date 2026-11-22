@@ -10,7 +10,7 @@ import {
   ORCHESTRATION_WS_METHODS,
   WS_CHANNELS,
   WS_METHODS,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Stream } from "effect";
 
 import { shouldKeepServerLifecycleStream, WsTransport } from "./wsTransport";

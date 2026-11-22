@@ -1,4 +1,4 @@
-import { CommandId, type ThreadId } from "@synara/contracts";
+import { CommandId, type ThreadId } from "@djl/contracts";
 import { ensureNativeApi } from "../nativeApi";
 
 /** Revoke native authority before asking a possibly slow provider to finish. */

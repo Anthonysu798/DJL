@@ -26,7 +26,7 @@ import {
   type ProviderKind,
   type ProviderWithDefaultModel,
   CodexReasoningEffort,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> = {
   claudeAgent: new Set(MODEL_OPTIONS_BY_PROVIDER.claudeAgent.map((option) => option.slug)),
@@ -254,12 +254,12 @@ export function getGeminiThinkingModelAlias(
 
   const base = sanitizeGeminiAliasSegment(model);
   if (kind === "level" && nextOptions.thinkingLevel) {
-    return `synara-gemini-${base}-thinking-level-${nextOptions.thinkingLevel.toLowerCase()}`;
+    return `djl-gemini-${base}-thinking-level-${nextOptions.thinkingLevel.toLowerCase()}`;
   }
   if (kind === "budget" && nextOptions.thinkingBudget !== undefined) {
     const budget =
       nextOptions.thinkingBudget === -1 ? "dynamic" : String(nextOptions.thinkingBudget);
-    return `synara-gemini-${base}-thinking-budget-${budget}`;
+    return `djl-gemini-${base}-thinking-budget-${budget}`;
   }
   return null;
 }

@@ -2,7 +2,7 @@
  * Sanitize an arbitrary string into a valid, lowercase git branch fragment.
  * Strips quotes, collapses separators, limits to 64 chars.
  */
-export const WORKTREE_BRANCH_PREFIX = "synara";
+export const WORKTREE_BRANCH_PREFIX = "djl";
 const TEMP_WORKTREE_BRANCH_PATTERN = /^([a-z0-9][a-z0-9-]*)\/[0-9a-f]{8}$/;
 // Exact 64-bit namespace fingerprints preserve pre-cutover worktrees without
 // retaining retired first-party names in source or matching arbitrary namespaces.
@@ -52,7 +52,7 @@ export function sanitizeFeatureBranchName(raw: string): string {
 }
 
 const AUTO_FEATURE_BRANCH_FALLBACK = "feature/update";
-const SYNARA_BRANCH_FALLBACK = "update";
+const DJL_BRANCH_FALLBACK = "update";
 
 /**
  * Resolve a unique `feature/…` branch name that doesn't collide with
@@ -80,7 +80,7 @@ export function resolveAutoFeatureBranchName(
   return `${resolvedBase}-${suffix}`;
 }
 
-export function buildSynaraBranchName(preferredBranch?: string | null): string {
+export function buildDjlBranchName(preferredBranch?: string | null): string {
   const preferred = preferredBranch?.trim() ?? "";
   const separatorIndex = preferred.indexOf("/");
   const existingNamespace =
@@ -92,15 +92,15 @@ export function buildSynaraBranchName(preferredBranch?: string | null): string {
       ? preferred.slice(separatorIndex + 1)
       : preferred;
   return `${WORKTREE_BRANCH_PREFIX}/${sanitizeBranchFragment(
-    normalizedExisting || SYNARA_BRANCH_FALLBACK,
+    normalizedExisting || DJL_BRANCH_FALLBACK,
   )}`;
 }
 
-export function resolveUniqueSynaraBranchName(
+export function resolveUniqueDjlBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string | null,
 ): string {
-  const resolvedBase = buildSynaraBranchName(preferredBranch);
+  const resolvedBase = buildDjlBranchName(preferredBranch);
   const existingNames = new Set(existingBranchNames.map((branch) => branch.toLowerCase()));
 
   if (!existingNames.has(resolvedBase)) {

@@ -3,7 +3,7 @@
 
 import { createHash } from "node:crypto";
 
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@djl/contracts";
 
 export interface ProjectMemoryScope {
   readonly projectId: ProjectId;

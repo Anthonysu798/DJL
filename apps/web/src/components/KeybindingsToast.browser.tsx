@@ -9,7 +9,7 @@ import {
   type ThreadId,
   type WsWelcomePayload,
   WS_METHODS,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { ws, http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
@@ -50,7 +50,7 @@ function createBaseServerConfig(): ServerConfig {
   return {
     cwd: "/repo/project",
     worktreesDir: "/repo/.codex/worktrees",
-    keybindingsConfigPath: "/repo/project/.synara-keybindings.json",
+    keybindingsConfigPath: "/repo/project/.djl-keybindings.json",
     keybindings: [],
     issues: [],
     providers: [

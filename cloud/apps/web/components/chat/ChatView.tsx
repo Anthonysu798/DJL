@@ -1,9 +1,5 @@
 "use client";
-import type {
-  CloudImageRefPart,
-  CloudMessage,
-  CloudUserMessagePart,
-} from "@synara/contracts/cloud";
+import type { CloudImageRefPart, CloudMessage, CloudUserMessagePart } from "@djl/contracts/cloud";
 import { ArrowDown, Paperclip, Share, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

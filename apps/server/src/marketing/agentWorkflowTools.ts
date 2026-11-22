@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { Effect } from "effect";
 import type * as SqlClient from "effect/unstable/sql/SqlClient";
-import type { Campaign } from "@synara/contracts";
-import type { CloudSocialAccountsResponse, CloudSocialDraft } from "@synara/contracts/cloud";
+import type { Campaign } from "@djl/contracts";
+import type { CloudSocialAccountsResponse, CloudSocialDraft } from "@djl/contracts/cloud";
 import type {
   SocialPreparationTool,
   SocialWorkflow,
@@ -12,7 +12,7 @@ import type {
   SocialInboxResponse,
   SocialCoachPost,
   SocialCoachProvider,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { MarketingToolScope } from "./chatTools";
 import { resolveAgentOwner } from "./agentScope";
 import { publishingBridge } from "./publishingBridge";

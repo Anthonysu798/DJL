@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { CommerceSupplierStatement } from "@synara/contracts/cloud";
+import type { CommerceSupplierStatement } from "@djl/contracts/cloud";
 import { commerce, commerceErrorMessage } from "@/lib/commerce";
 import styles from "./shop.module.css";
 const cad = (cents: number) => `CAD ${(cents / 100).toFixed(2)}`;

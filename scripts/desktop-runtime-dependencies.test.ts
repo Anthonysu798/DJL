@@ -10,7 +10,7 @@ describe("resolveDesktopRuntimeDependencies", () => {
     expect(
       resolveDesktopRuntimeDependencies(
         {
-          "@synara/remote-gateway": "workspace:*",
+          "@djl/remote-gateway": "workspace:*",
           effect: "catalog:",
           electron: "40.6.0",
           ws: "^8.21.0",
@@ -26,7 +26,7 @@ describe("resolveDesktopRuntimeDependencies", () => {
   it("removes bundled workspace packages from server staging dependencies", () => {
     expect(
       omitBundledWorkspaceDependencies({
-        "@synara/shared": "workspace:*",
+        "@djl/shared": "workspace:*",
         effect: "catalog:",
       }),
     ).toEqual({ effect: "catalog:" });

@@ -497,7 +497,7 @@ export interface DesktopWindowState {
   isFullscreen: boolean;
 }
 
-export interface SynaraStorageSnapshot {
+export interface DjlStorageSnapshot {
   readonly version: 1;
   readonly exportedAt: string;
   readonly entries: Readonly<Record<string, string>>;
@@ -634,7 +634,7 @@ export interface DesktopBridge {
     onState: (listener: (state: DesktopRemoteGatewayState) => void) => () => void;
   };
   storageMigration: {
-    readSnapshot: () => SynaraStorageSnapshot | null;
+    readSnapshot: () => DjlStorageSnapshot | null;
     acknowledgeSnapshot: () => Promise<void>;
   };
   server?: {

@@ -66,7 +66,7 @@ final class AudioLevelMeter {
     private let emitter: NDJSONEmitter
     private let sources: Set<AudioLevelSource>
     private let inputDeviceUID: String?
-    private let queue = DispatchQueue(label: "synara.audio-level")
+    private let queue = DispatchQueue(label: "djl.audio-level")
     private var systemTap: SystemAudioLevelTap?
     private var microphone: MicrophoneLevelReader?
     private var timer: DispatchSourceTimer?
@@ -177,13 +177,13 @@ final class SystemAudioLevelTap {
         let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
         description.isPrivate = true
         description.muteBehavior = .unmuted
-        description.name = "Synara audio level"
+        description.name = "DJL audio level"
 
         try check(AudioHardwareCreateProcessTap(description, &tapID), "create the system audio tap")
 
         let aggregateDescription: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Synara audio level",
-            kAudioAggregateDeviceUIDKey: "synara-audio-level-\(UUID().uuidString)",
+            kAudioAggregateDeviceNameKey: "DJL audio level",
+            kAudioAggregateDeviceUIDKey: "djl-audio-level-\(UUID().uuidString)",
             kAudioAggregateDeviceIsPrivateKey: true,
             kAudioAggregateDeviceIsStackedKey: false,
             kAudioAggregateDeviceTapAutoStartKey: true,
@@ -227,14 +227,14 @@ final class SystemAudioLevelTap {
 
 /// The chosen input device (or the default one), via an AVAudioEngine input tap.
 ///
-/// Microphone access belongs to the Synara app that spawned this helper, the
+/// Microphone access belongs to the DJL app that spawned this helper, the
 /// same grant voice notes use. The first opt-in can request access; a denied
 /// grant is reported without prompting again.
 final class MicrophoneLevelReader {
     let accumulator = AudioLevelAccumulator(silenceFloorDecibels: microphoneSilenceFloorDecibels)
     private let engine = AVAudioEngine()
     private let deviceUID: String?
-    private let queue = DispatchQueue(label: "synara.audio-level.microphone")
+    private let queue = DispatchQueue(label: "djl.audio-level.microphone")
     private var deviceID = AudioDeviceID(kAudioObjectUnknown)
     private var ioProcID: AudioDeviceIOProcID?
 
@@ -338,7 +338,7 @@ final class MicrophoneLevelReader {
     }
 
     private func denied() -> AppSnapFailure {
-        AppSnapFailure(code: "microphone_denied", message: "Microphone access is off for Synara.")
+        AppSnapFailure(code: "microphone_denied", message: "Microphone access is off for DJL.")
     }
 }
 

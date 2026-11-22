@@ -3,7 +3,7 @@
 //          and no sign-in: each one is a set of instructions the agent follows with the tools it
 //          already has, so they are always on and work offline.
 
-import type { PluginCatalogEntry } from "@synara/contracts";
+import type { PluginCatalogEntry } from "@djl/contracts";
 
 const CATEGORY = "Documents";
 

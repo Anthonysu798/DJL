@@ -1,5 +1,5 @@
 "use client";
-import type { CommerceStaffRole } from "@synara/contracts/cloud";
+import type { CommerceStaffRole } from "@djl/contracts/cloud";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

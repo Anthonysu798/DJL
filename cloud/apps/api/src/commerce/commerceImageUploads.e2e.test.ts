@@ -2,7 +2,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { schema } from "@djl/db";
 import type { ProviderAdapter } from "@djl/providers";
-import type { CommerceImageUploadResponse, CommerceProduct } from "@synara/contracts/cloud";
+import type { CommerceImageUploadResponse, CommerceProduct } from "@djl/contracts/cloud";
 import { eq } from "drizzle-orm";
 import { Layer, ServiceMap } from "effect";
 import { HttpRouter } from "effect/unstable/http";

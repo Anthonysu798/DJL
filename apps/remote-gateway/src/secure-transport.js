@@ -27,7 +27,7 @@ const {
   DJL_SECURE_PROTOCOL_VERSION,
   buildHandshakeTranscript,
   secureNonce,
-} = require("@synara/remote-protocol");
+} = require("@djl/remote-protocol");
 const { getTrustedPhonePublicKey, rememberTrustedPhone } = require("./secure-device-state");
 const { createOutboundCoalescer } = require("./outbound-coalescer");
 

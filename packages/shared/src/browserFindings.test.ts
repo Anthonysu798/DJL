@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { BrowserFindingDraft } from "@synara/contracts";
+import type { BrowserFindingDraft } from "@djl/contracts";
 import {
   appendBrowserFindingsBlock,
   BROWSER_ADJUSTMENT_STYLE_PROPERTIES,

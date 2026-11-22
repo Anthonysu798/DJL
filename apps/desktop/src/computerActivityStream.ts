@@ -3,7 +3,7 @@ import {
   decodeComputerActivityNativeEvent,
   type ComputerActivityEvent,
   type ComputerActivityObservationStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const MAX_FRAME = 192 * 1024;
 const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });

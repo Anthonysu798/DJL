@@ -9,7 +9,7 @@ import type {
   MultiPostDraft,
   MultiPostJob,
   MultiPostState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { MultiPostView } from "./shared";
 const adapters = (["dynamic", "article", "video", "podcast"] as const).map((kind) => ({
   id: kind === "dynamic" ? "DYNAMIC_X" : `${kind.toUpperCase()}_X`,

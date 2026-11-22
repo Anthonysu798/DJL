@@ -2,7 +2,7 @@
 // Purpose: Checks a tool server the user typed in before it is added, and works out how it
 //          wants to be reached: openly, with an access token, or through a browser sign-in.
 
-import type { PluginAppAuthType } from "@synara/contracts";
+import type { PluginAppAuthType } from "@djl/contracts";
 
 import { discoverEndpoints, type Fetch } from "./pluginOAuth";
 

@@ -2,7 +2,7 @@
 // Purpose: Localized labels for group roles; a custom role is shown as typed.
 // Layer: Web logic
 
-import { GROUP_ROLE_PRESETS } from "@synara/contracts";
+import { GROUP_ROLE_PRESETS } from "@djl/contracts";
 import type { TFunction } from "i18next";
 
 export function isPresetRole(role: string): role is (typeof GROUP_ROLE_PRESETS)[number] {

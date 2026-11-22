@@ -16,7 +16,7 @@ import type {
   ComputerActivitySnapshot,
   ComputerActivitySummaryJob,
   ComputerUseHistorySettings,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { ComputerActivitySummaries } from "./computerActivitySummaries";
 
 const directories: string[] = [];

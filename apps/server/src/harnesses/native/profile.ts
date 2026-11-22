@@ -1,4 +1,4 @@
-import type { ProviderStartOptions, ServerSettings } from "@synara/contracts";
+import type { ProviderStartOptions, ServerSettings } from "@djl/contracts";
 import type { NativeProvider } from "./types";
 
 /** Same server-owned settings used by Accounts; resolve defaults before persisting a session. */

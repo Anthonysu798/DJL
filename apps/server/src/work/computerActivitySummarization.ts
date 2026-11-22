@@ -3,7 +3,7 @@ import {
   decodeComputerActivitySummaryCommand,
   type ComputerActivitySemanticContent,
   type ComputerActivitySummaryCommand,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   createComputerActivitySummaryHostClient,

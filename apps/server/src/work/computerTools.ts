@@ -12,7 +12,7 @@ import {
   type ComputerUseObservation,
   type ComputerUseRequest,
   type ComputerUseResponse,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 const id = ComputerUseSession.fields.sessionId;

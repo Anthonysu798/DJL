@@ -1,7 +1,7 @@
 FROM oven/bun:1.3.13-slim AS build
 WORKDIR /app
 COPY . .
-RUN bun install --frozen-lockfile --ignore-scripts --filter @synara/remote-relay \
+RUN bun install --frozen-lockfile --ignore-scripts --filter @djl/remote-relay \
     && cd apps/remote-relay && bun run build
 
 FROM oven/bun:1.3.13-slim

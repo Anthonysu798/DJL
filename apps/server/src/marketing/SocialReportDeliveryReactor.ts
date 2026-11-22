@@ -1,5 +1,5 @@
-import { CommandId, MessageId, type Campaign } from "@synara/contracts";
-import { CloudSocialReportsResponse, type CloudSocialWeeklyReport } from "@synara/contracts/cloud";
+import { CommandId, MessageId, type Campaign } from "@djl/contracts";
+import { CloudSocialReportsResponse, type CloudSocialWeeklyReport } from "@djl/contracts/cloud";
 import { Effect, Layer, Schedule, Schema, Scope, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { ServerConfig } from "../config";
@@ -140,7 +140,7 @@ export function deliverSocialReports(
 export class SocialReportDeliveryReactor extends ServiceMap.Service<
   SocialReportDeliveryReactor,
   { readonly start: () => Effect.Effect<void, never, Scope.Scope> }
->()("synara/marketing/SocialReportDeliveryReactor") {}
+>()("djl/marketing/SocialReportDeliveryReactor") {}
 
 export const SocialReportDeliveryReactorLive = Layer.effect(
   SocialReportDeliveryReactor,

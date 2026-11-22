@@ -1,4 +1,4 @@
-import { EventId } from "@synara/contracts";
+import { EventId } from "@djl/contracts";
 import { page } from "vitest/browser";
 import { expect, it } from "vitest";
 import { render } from "vitest-browser-react";

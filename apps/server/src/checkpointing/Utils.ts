@@ -9,10 +9,10 @@ import {
   type ProjectKind,
   type ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+} from "@djl/contracts";
+import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@djl/shared/threadEnvironment";
 
-export const CHECKPOINT_REFS_PREFIX = "refs/synara/checkpoints";
+export const CHECKPOINT_REFS_PREFIX = "refs/djl/checkpoints";
 
 const MANAGED_CHECKPOINT_REF_PATTERN =
   /^refs\/([A-Za-z0-9._-]+)\/checkpoints\/([A-Za-z0-9_-]+)\/(turn|message-start|turn-start|turn-live)\/([A-Za-z0-9_-]+)$/;

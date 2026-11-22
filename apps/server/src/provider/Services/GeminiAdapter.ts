@@ -23,5 +23,5 @@ export interface GeminiAdapterShape extends ProviderAdapterShape<ProviderAdapter
  * GeminiAdapter - Service tag for Gemini provider adapter operations.
  */
 export class GeminiAdapter extends ServiceMap.Service<GeminiAdapter, GeminiAdapterShape>()(
-  "synara/provider/Services/GeminiAdapter",
+  "djl/provider/Services/GeminiAdapter",
 ) {}

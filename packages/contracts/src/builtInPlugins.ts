@@ -1,4 +1,4 @@
-import { multipostSkills } from "@synara/multipost/skills";
+import { multipostSkills } from "@djl/multipost/skills";
 import type {
   ProviderPluginDescriptor,
   ProviderSkillDescriptor,

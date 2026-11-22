@@ -13,7 +13,7 @@ import {
   readWindowsPersistentEnvironment,
   type ShellEnvironmentReader,
   type WindowsEnvironmentReader,
-} from "@synara/shared/shell";
+} from "@djl/shared/shell";
 
 const LOGIN_SHELL_ENV_NAMES = [
   "PATH",

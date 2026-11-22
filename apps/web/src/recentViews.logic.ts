@@ -3,11 +3,8 @@
 // Layer: UI state logic
 // Exports: recent view types plus MRU update, pruning, and display derivation helpers
 
-import type { ProjectId, ProviderKind, ThreadId } from "@synara/contracts";
-import type {
-  ResolvedTerminalVisualIdentity,
-  TerminalIconKey,
-} from "@synara/shared/terminalThreads";
+import type { ProjectId, ProviderKind, ThreadId } from "@djl/contracts";
+import type { ResolvedTerminalVisualIdentity, TerminalIconKey } from "@djl/shared/terminalThreads";
 import type { Project, SidebarThreadSummary } from "./types";
 import { translateRendererCopy } from "./i18n";
 

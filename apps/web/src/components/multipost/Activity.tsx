@@ -4,7 +4,7 @@ import type {
   MultiPostCommand,
   MultiPostJob,
   MultiPostJobState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { PlatformMark } from "./PlatformMark";
 import { explainProblem } from "./problems";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { MultiPostAccount, MultiPostCapability, MultiPostState } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostCapability, MultiPostState } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import { PlatformMark } from "./PlatformMark";

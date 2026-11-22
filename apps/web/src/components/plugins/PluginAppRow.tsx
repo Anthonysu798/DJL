@@ -1,7 +1,7 @@
 // FILE: PluginAppRow.tsx
 // Purpose: One app of a plugin with its sign-in state and the single action that state allows.
 
-import type { PluginApp, PluginAppConnection, PluginCatalogEntry } from "@synara/contracts";
+import type { PluginApp, PluginAppConnection, PluginCatalogEntry } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "../ui/button";

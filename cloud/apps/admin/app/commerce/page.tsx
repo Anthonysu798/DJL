@@ -28,7 +28,7 @@ import type {
   CommerceAdminWithdrawal,
   CommerceConfirmWithdrawalPaymentInput,
   CommerceWithdrawal,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { ProviderPaymentAdmin } from "./ProviderPaymentAdmin";
 import { SupplierStatementAdmin } from "./SupplierStatementAdmin";
 import { CommerceAlerts } from "./CommerceAlerts";

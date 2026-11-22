@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { IconArrowLeft, IconArrowRight, IconCalendar } from "@tabler/icons-react";
-import type { SocialInboxItem } from "@synara/contracts";
+import type { SocialInboxItem } from "@djl/contracts";
 import SpotlightCard from "~/components/react-bits/SpotlightCard";
 import FadeContent from "~/components/react-bits/FadeContent";
 import { Button } from "~/components/ui/button";

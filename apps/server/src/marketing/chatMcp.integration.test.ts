@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import JSZip from "jszip";
-import { ThreadId, approveCampaign, type Campaign } from "@synara/contracts";
+import { ThreadId, approveCampaign, type Campaign } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { makeWorkMcpServerLive } from "../work/Layers/WorkMcpServer";
 import { WorkMcpServer } from "../work/Services/WorkMcpServer";

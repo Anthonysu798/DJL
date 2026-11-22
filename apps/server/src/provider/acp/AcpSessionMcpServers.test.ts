@@ -39,7 +39,7 @@ describe("AcpSessionRuntime tool servers", () => {
         AcpSessionRuntime.layer({
           spawn: { command: "bun", args: [mockAgentPath] },
           cwd: process.cwd(),
-          clientInfo: { name: "synara-test", version: "0.0.0" },
+          clientInfo: { name: "djl-test", version: "0.0.0" },
           authMethodId: "test",
           mcpServers: (initializeResult) => {
             seen.push(initializeResult);

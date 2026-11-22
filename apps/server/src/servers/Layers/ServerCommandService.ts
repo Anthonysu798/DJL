@@ -8,7 +8,7 @@ import {
   type ServerCommandRecord,
   type ServerCommandStreamEvent,
   type ServerRecord,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import * as Crypto from "node:crypto";
 import { Deferred, Effect, Layer, Option, PubSub, Stream } from "effect";
 

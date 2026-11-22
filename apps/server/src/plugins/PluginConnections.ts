@@ -4,7 +4,7 @@
 
 import { randomBytes } from "node:crypto";
 
-import type { PluginAppConnection } from "@synara/contracts";
+import type { PluginAppConnection } from "@djl/contracts";
 
 import {
   OAuthGrantRejected,

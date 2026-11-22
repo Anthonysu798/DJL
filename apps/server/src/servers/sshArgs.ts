@@ -1,7 +1,7 @@
 // FILE: sshArgs.ts
 // Purpose: Pure builder for OpenSSH argv/env. No IO, no secrets on argv.
 // Layer: Servers domain helpers
-import type { ServerRecord } from "@synara/contracts";
+import type { ServerRecord } from "@djl/contracts";
 
 export interface SshInvocationPlan {
   /** Everything after `ssh`, ending with the remote command. */

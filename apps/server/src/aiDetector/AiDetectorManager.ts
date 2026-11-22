@@ -12,7 +12,7 @@ import type {
   AiDetectorModelStatus,
   AiDetectorReport,
   AiDetectorState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   DocumentExtractionError,

@@ -18,16 +18,16 @@ The server configuration exposes a canonical managed OpenCode root separately fr
 
 ## Configuration identity
 
-`DJL_HOME` is the primary base-directory environment variable. Existing `SYNARA_HOME` remains a compatibility fallback so scripts and installations do not break immediately. When both are present, `DJL_HOME` wins.
+`DJL_HOME` is the primary base-directory environment variable. Existing `DJL_HOME` remains a compatibility fallback so scripts and installations do not break immediately. When both are present, `DJL_HOME` wins.
 
-The dev runner exports both variables with the same canonical value during the compatibility period, while user-facing descriptions and startup logs say DJL. Additional legacy `SYNARA_*` identifiers remain accepted where changing them is outside persistent-storage scope, but new storage code and public guidance use DJL names.
+The dev runner exports both variables with the same canonical value during the compatibility period, while user-facing descriptions and startup logs say DJL. Additional legacy `DJL_*` identifiers remain accepted where changing them is outside persistent-storage scope, but new storage code and public guidance use DJL names.
 
 ## Migration
 
 Startup performs an idempotent, non-destructive migration before state services or OpenCode start.
 
 1. Resolve the canonical DJL root.
-2. If the default root is being used, inspect the legacy `~/.synara` root.
+2. If the default root is being used, inspect the legacy `~/.djl` root.
 3. Copy missing `userdata` and `dev` entries into `~/.djl`; never overwrite an existing canonical file.
 4. Build the canonical shared OpenCode directory under `~/.djl/userdata/opencode`.
 5. Merge legacy OpenCode `auth.json` records from canonical dev, legacy userdata, and legacy dev stores by provider ID. Existing canonical provider records win; missing providers are copied. Secret values are never logged.
@@ -53,7 +53,7 @@ Electron profile names change to `djl` and `djl-dev`. Existing bridge and browse
 Automated tests cover:
 
 - `~/.djl` default selection and `DJL_HOME` precedence.
-- `SYNARA_HOME` compatibility fallback.
+- `DJL_HOME` compatibility fallback.
 - dev and packaged state isolation.
 - a shared managed OpenCode root for dev and packaged modes.
 - idempotent migration and no-overwrite behavior.

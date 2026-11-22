@@ -37,4 +37,4 @@ export interface ProviderCommandReactorShape {
 export class ProviderCommandReactor extends ServiceMap.Service<
   ProviderCommandReactor,
   ProviderCommandReactorShape
->()("synara/orchestration/Services/ProviderCommandReactor") {}
+>()("djl/orchestration/Services/ProviderCommandReactor") {}

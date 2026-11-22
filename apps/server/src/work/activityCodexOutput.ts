@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ComputerActivitySemanticContent } from "@synara/contracts";
+import { ComputerActivitySemanticContent } from "@djl/contracts";
 import { ComputerActivityGenerationError } from "./computerActivitySummarization";
 
 const invalid = () => new ComputerActivityGenerationError("invalid-output");

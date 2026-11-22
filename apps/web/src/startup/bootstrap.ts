@@ -20,7 +20,7 @@ function normalizeLocale(value: string): string {
 function startupLocale(fallback?: string): string {
   let preference: string | undefined;
   try {
-    const raw = localStorage.getItem("synara:app-settings:v1");
+    const raw = localStorage.getItem("djl:app-settings:v1");
     if (raw && raw.length < 256_000) preference = JSON.parse(raw)?.language;
   } catch {
     /* A damaged preference must not prevent startup. */

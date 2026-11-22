@@ -3,7 +3,7 @@
 // Layer: Chat status presentation
 // Exports: ProviderHealthBanner
 
-import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, type ServerProviderStatus } from "@djl/contracts";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";

@@ -6,10 +6,7 @@
 
 import { Buffer } from "node:buffer";
 
-import type {
-  ServerVoiceTranscriptionInput,
-  ServerVoiceTranscriptionResult,
-} from "@synara/contracts";
+import type { ServerVoiceTranscriptionInput, ServerVoiceTranscriptionResult } from "@djl/contracts";
 
 const CHATGPT_TRANSCRIPTIONS_URL = "https://chatgpt.com/backend-api/transcribe";
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024;

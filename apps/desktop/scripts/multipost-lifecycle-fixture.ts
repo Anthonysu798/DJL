@@ -13,13 +13,13 @@ import { startMultiPostHost } from "../src/multipost/host";
 import { MultiPostTray } from "../src/multipost/tray";
 import { multipostPartition } from "../src/multipost/identity";
 import { initializeDesktopI18n } from "../src/desktopI18n";
-import { adapters } from "@synara/multipost";
+import { adapters } from "@djl/multipost";
 import type {
   MultiPostAccount,
   MultiPostDraft,
   MultiPostJob,
   MultiPostState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const [directory, portArgument, phase, icon] = process.argv.slice(2);
 const port = Number(portArgument);

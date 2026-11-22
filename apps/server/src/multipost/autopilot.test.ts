@@ -17,7 +17,7 @@ import type {
   MultiPostQuickPostResult,
   MultiPostScope,
   MultiPostState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const scope: MultiPostScope = { workspaceId: "a", threadId: "chat-a", authorizedRoot: "/tmp" };
 const adapter = (id: string, platformKey: string, kind: MultiPostCapability["kind"]) => ({

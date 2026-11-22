@@ -1,5 +1,5 @@
 "use client";
-import type { CloudConversation, CloudPlanId } from "@synara/contracts/cloud";
+import type { CloudConversation, CloudPlanId } from "@djl/contracts/cloud";
 import {
   Archive,
   ArchiveRestore,

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { Duration, Effect, Exit, Layer, Scope, Sink, Stream } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
-import type { ChatAttachment } from "@synara/contracts";
+import type { ChatAttachment } from "@djl/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -182,14 +182,14 @@ describe("toOpenCodeFileParts", () => {
     expect(
       toOpenCodeFileParts({
         attachments: [attachment],
-        resolveAttachmentPath: () => "/tmp/synara-attachments/screenshot.png",
+        resolveAttachmentPath: () => "/tmp/djl-attachments/screenshot.png",
       }),
     ).toEqual([
       {
         type: "file",
         mime: "image/png",
         filename: "screenshot.png",
-        url: "file:///tmp/synara-attachments/screenshot.png",
+        url: "file:///tmp/djl-attachments/screenshot.png",
       },
     ]);
   });
@@ -206,7 +206,7 @@ describe("toOpenCodeFileParts", () => {
     expect(
       toOpenCodeFileParts({
         attachments: [attachment],
-        resolveAttachmentPath: () => "/tmp/synara-attachments/notes.docx",
+        resolveAttachmentPath: () => "/tmp/djl-attachments/notes.docx",
       }),
     ).toEqual([]);
   });
@@ -482,7 +482,7 @@ describe("OpenCodeRuntime local server pool", () => {
     "starts a fresh managed server after an atomic %s config revision",
     async (kind) => {
       const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
-      const managedRootDir = await mkdtemp(join(tmpdir(), "synara-opencode-config-"));
+      const managedRootDir = await mkdtemp(join(tmpdir(), "djl-opencode-config-"));
       const configDir = join(managedRootDir, "config", "opencode");
       const configPath =
         kind === "custom"
@@ -533,7 +533,7 @@ describe("OpenCodeRuntime local server pool", () => {
 
   it("starts a fresh server after shared CLI credentials change", async () => {
     const state = { spawnUrls: [] as Array<string>, killUrls: [] as Array<string> };
-    const managedRootDir = await mkdtemp(join(tmpdir(), "synara-opencode-auth-"));
+    const managedRootDir = await mkdtemp(join(tmpdir(), "djl-opencode-auth-"));
     vi.stubEnv("XDG_DATA_HOME", join(managedRootDir, "data"));
     const authDir = join(managedRootDir, "data", "opencode");
     const authPath = join(authDir, "auth.json");

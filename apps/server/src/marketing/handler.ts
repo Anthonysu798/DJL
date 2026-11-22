@@ -25,7 +25,7 @@ import {
   type MediaAsset,
   type ImageRecipe,
   type BrandProfile,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { ServerConfigShape } from "../config";
 import { collectBoundedStream } from "../streamingAttachmentUpload";
 import { listDocuments, readDocument, saveDocument, MarketingError } from "./store";

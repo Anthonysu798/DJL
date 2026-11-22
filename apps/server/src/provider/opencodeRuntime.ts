@@ -12,7 +12,7 @@ import { prepareInstalledOpenCodeEnvironment } from "./openCodeInstalledEnvironm
 import { assertOpenCodeServerCompatibility } from "./openCodeInstalledProtocol";
 import { pathToFileURL } from "node:url";
 
-import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@synara/contracts";
+import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@djl/contracts";
 import {
   type ConsoleState,
   createOpencodeClient,
@@ -43,8 +43,8 @@ import {
 import * as Semaphore from "effect/Semaphore";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
-import { NetService } from "@synara/shared/Net";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { NetService } from "@djl/shared/Net";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import { isWindowsShellCommandMissingResult } from "../shell-command-detection.ts";
 
 const DEFAULT_OPENCODE_SERVER_TIMEOUT_MS = 20_000;
@@ -961,10 +961,10 @@ export function buildOpenCodeServerProcessEnv(input: {
   delete env.DJL_MANAGED_AUTH;
   delete env.DJL_COMPUTER_USE_BRIDGE_TOKEN;
   delete env.DJL_COMPUTER_USE_BRIDGE_URL;
-  delete env.SYNARA_CUA_HOST_SOCKET;
-  delete env.SYNARA_BROWSER_HOST_CAPABILITY;
-  delete env.SYNARA_BROWSER_HOST_CAPABILITY_FD;
-  delete env.SYNARA_AUTH_TOKEN;
+  delete env.DJL_CUA_HOST_SOCKET;
+  delete env.DJL_BROWSER_HOST_CAPABILITY;
+  delete env.DJL_BROWSER_HOST_CAPABILITY_FD;
+  delete env.DJL_AUTH_TOKEN;
 
   return env;
 }
@@ -1671,7 +1671,7 @@ const makeOpenCodeRuntime = Effect.gen(function* () {
 });
 
 export class OpenCodeRuntime extends ServiceMap.Service<OpenCodeRuntime, OpenCodeRuntimeShape>()(
-  "synara/provider/opencodeRuntime",
+  "djl/provider/opencodeRuntime",
 ) {}
 
 export const OpenCodeRuntimeLive = Layer.effect(OpenCodeRuntime, makeOpenCodeRuntime).pipe(

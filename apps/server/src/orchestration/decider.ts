@@ -4,27 +4,27 @@ import type {
   OrchestrationReadModel,
   ProjectKind,
   ThreadMarker,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   MAX_PINNED_PROJECTS,
   MessageId,
   PINNED_MESSAGES_MAX_COUNT,
   THREAD_MARKERS_MAX_COUNT,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   deriveAssociatedWorktreeMetadataPatch,
-} from "@synara/shared/threadWorkspace";
-import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
-import { providerSteersLiveTurn } from "@synara/shared/groupChat";
-import { doThreadMarkerRangesOverlap } from "@synara/shared/threadMarkers";
-import { derivePendingThreadRequestIds } from "@synara/shared/threadSummary";
+} from "@djl/shared/threadWorkspace";
+import { isProviderProtocolOnlyText } from "@djl/shared/chatThreads";
+import { providerSteersLiveTurn } from "@djl/shared/groupChat";
+import { doThreadMarkerRangesOverlap } from "@djl/shared/threadMarkers";
+import { derivePendingThreadRequestIds } from "@djl/shared/threadSummary";
 import {
   collectTailTurnIds,
   resolveTailReplayTurnId,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
+} from "@djl/shared/conversationEdit";
 import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";

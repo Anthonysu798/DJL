@@ -1,4 +1,4 @@
-import type { PluginCatalogEntry, PluginsSnapshot } from "@synara/contracts";
+import type { PluginCatalogEntry, PluginsSnapshot } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { composerPluginSuggestions } from "./composerPluginSuggestions";
