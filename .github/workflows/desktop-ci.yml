@@ -19,6 +19,45 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
+  # PRs run the slow macOS/Windows OpenCode and MultiPost lanes only when they
+  # touch those areas; pushes to main and manual runs always run every lane.
+  changes:
+    name: Changed areas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      opencode-matrix: ${{ steps.areas.outputs.opencode-matrix }}
+      multipost: ${{ steps.areas.outputs.multipost }}
+    steps:
+      - name: Detect changed areas
+        id: areas
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" == "pull_request" ]]; then
+            files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+            shared='^(\.github/workflows/desktop-ci\.yml|\.github/actions/|bun\.lock$|package\.json$)'
+            has() { grep -Eq "$1" <<< "$files" && echo true || echo false; }
+            opencode=$(has "$shared|[Oo]pen[Cc]ode|^apps/server/src/(provider|harnesses)/")
+            multipost=$(has "$shared|[Mm]ulti[Pp]ost|^apps/desktop/package\.json$")
+          else
+            opencode=true
+            multipost=true
+          fi
+          linux='{"runner":"ubuntu-24.04","package":"opencode-linux-x64"}'
+          native='{"runner":"macos-15","package":"opencode-darwin-arm64"},{"runner":"macos-15-intel","package":"opencode-darwin-x64"},{"runner":"windows-2022","package":"opencode-windows-x64"}'
+          if [[ "$opencode" == true ]]; then matrix="[$linux,$native]"; else matrix="[$linux]"; fi
+          echo "opencode-matrix=$matrix" | tee -a "$GITHUB_OUTPUT"
+          echo "multipost=$multipost" | tee -a "$GITHUB_OUTPUT"
+
   quality:
     name: Quality
     runs-on: ubuntu-24.04
@@ -42,9 +81,22 @@ jobs:
         run: bun run ci:desktop:typecheck
 
   desktop-tests:
-    name: Desktop unit and contract tests
+    name: Desktop unit and contract tests (${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The server suite runs one file at a time, so it is split across machines.
+          - shard: server 1/3
+            command: bun run ci:desktop:test:server --shard=1/3
+          - shard: server 2/3
+            command: bun run ci:desktop:test:server --shard=2/3
+          - shard: server 3/3
+            command: bun run ci:desktop:test:server --shard=3/3
+          - shard: other packages
+            command: bun run ci:desktop:test:rest
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -58,12 +110,20 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Run desktop unit and contract tests
-        run: bun run ci:desktop:test
+        run: ${{ matrix.command }}
 
   renderer-tests:
-    name: Chromium renderer tests
+    name: Chromium renderer tests (${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 1/2
+            command: bun run ci:desktop:browser:web --shard=1/2
+          - shard: 2/2
+            command: bun run ci:desktop:browser:web --shard=2/2 && bun run ci:desktop:browser:multipost
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -77,7 +137,7 @@ jobs:
         run: bun run --cwd apps/web test:browser:install
 
       - name: Run Chromium renderer tests
-        run: bun run ci:desktop:browser
+        run: ${{ matrix.command }}
 
   release-audit:
     name: Release, security, and public-source audits
@@ -156,20 +216,13 @@ jobs:
 
   installed-opencode:
     name: Installed OpenCode compatibility (${{ matrix.runner }})
+    needs: changes
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: ubuntu-24.04
-            package: opencode-linux-x64
-          - runner: macos-15
-            package: opencode-darwin-arm64
-          - runner: macos-15-intel
-            package: opencode-darwin-x64
-          - runner: windows-2022
-            package: opencode-windows-x64
+        include: ${{ fromJSON(needs.changes.outputs.opencode-matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -220,6 +273,8 @@ jobs:
 
   multipost-native:
     name: MultiPost native (${{ matrix.runner }})
+    needs: changes
+    if: needs.changes.outputs.multipost == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -240,6 +295,7 @@ jobs:
     name: desktop-ci
     if: always()
     needs:
+      - changes
       - quality
       - desktop-tests
       - renderer-tests
@@ -252,6 +308,8 @@ jobs:
     steps:
       - name: Require every desktop PR lane
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          MULTIPOST_WANTED: ${{ needs.changes.outputs.multipost }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           DESKTOP_TESTS_RESULT: ${{ needs.desktop-tests.result }}
           RENDERER_TESTS_RESULT: ${{ needs.renderer-tests.result }}
@@ -261,7 +319,12 @@ jobs:
           MULTIPOST_NATIVE_RESULT: ${{ needs.multipost-native.result }}
         run: |
           set -euo pipefail
+          # MultiPost may be skipped only when the change detector said it was not needed.
+          if [[ "$MULTIPOST_WANTED" == "false" && "$MULTIPOST_NATIVE_RESULT" == "skipped" ]]; then
+            MULTIPOST_NATIVE_RESULT=success
+          fi
           for result in \
+            "$CHANGES_RESULT" \
             "$QUALITY_RESULT" \
             "$DESKTOP_TESTS_RESULT" \
             "$RENDERER_TESTS_RESULT" \
