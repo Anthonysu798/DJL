@@ -10,6 +10,11 @@ struct FocusRoutingState {
     private var ownSeedDeadlineNs: UInt64?
     private var deactivationIssued = false
     private var ownSeedCleanupVerified = false
+    // Explicit: older Swift makes the memberwise init private because of the private fields above.
+    init(target: Int32, victim: Int32) {
+        self.target = target
+        self.victim = victim
+    }
     var ownSeedIssued: Bool { ownSeedDeadlineNs != nil }
     enum Effect: Equatable { case pass, suppress, release }
     enum KeyboardDisposition: Equatable { case pass, forward, consume, humanTakeover }

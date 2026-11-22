@@ -280,9 +280,14 @@ export async function stageDesktopMedia(input: {
       if (asset.archiveEntry) {
         // Extract one known entry to stdout; vendor archives cannot write paths or symlinks into the stage.
         // Pass the archive by name from its folder: GNU tar reads "D:\..." as a remote host.
+        // On Windows use the system bsdtar: Git's GNU tar on PATH cannot read the zip download.
+        const tar =
+          process.platform === "win32"
+            ? path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe")
+            : "tar";
         const bytes = (
           await command(
-            "tar",
+            tar,
             ["-xOf", path.basename(cached), asset.archiveEntry],
             path.dirname(cached),
           )
