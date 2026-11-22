@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Languages DJL ships; lets Android 13+ list DJL under per-app language. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="zh-Hans" />
+    <locale android:name="zh-Hant" />
+    <locale android:name="ja" />
+    <locale android:name="ko" />
+    <locale android:name="es-419" />
+    <locale android:name="fr" />
+</locale-config>

@@ -71,7 +71,9 @@ abstract final class DjlIcons {
   static const IconData chat = PhosphorIconsRegular.chatCircle;
   static const IconData chatText = PhosphorIconsRegular.chatText;
   static const IconData chats = PhosphorIconsRegular.chats;
+  static const IconData chatsFill = PhosphorIconsFill.chats;
   static const IconData group = PhosphorIconsRegular.usersThree;
+  static const IconData groupFill = PhosphorIconsFill.usersThree;
   static const IconData mention = PhosphorIconsRegular.at;
   static const IconData send = PhosphorIconsBold.arrowUp;
   static const IconData feedback = PhosphorIconsRegular.chatCircleDots;
@@ -117,7 +119,8 @@ abstract final class DjlIcons {
   static const IconData folder = PhosphorIconsRegular.folder;
   static const IconData folderAdd = PhosphorIconsRegular.folderPlus;
   static const IconData quick = PhosphorIconsRegular.lightning;
-  static const IconData inbox = PhosphorIconsRegular.tray;
+  static const IconData attention = PhosphorIconsRegular.bellSimple;
+  static const IconData attentionFill = PhosphorIconsFill.bellSimple;
   static const IconData book = PhosphorIconsRegular.bookOpen;
   static const IconData mail = PhosphorIconsFill.envelope;
   static const IconData mailCode = PhosphorIconsFill.envelopeSimpleOpen;

@@ -2,17 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>DJLRemotePushEnabled</key>
-	<string>$(DJL_REMOTE_PUSH_ENABLED)</string>
-	<key>DJLAPNsEnvironment</key>
-	<string>$(DJL_APNS_ENVIRONMENT)</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>en</string>
-		<string>zh-Hans</string>
-	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -23,6 +14,16 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>es-419</string>
+		<string>fr</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>djl_mobile</string>
 	<key>CFBundlePackageType</key>
@@ -44,6 +45,10 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>DJLAPNsEnvironment</key>
+	<string>$(DJL_APNS_ENVIRONMENT)</string>
+	<key>DJLRemotePushEnabled</key>
+	<string>$(DJL_REMOTE_PUSH_ENABLED)</string>
 	<key>FlutterDeepLinkingEnabled</key>
 	<false/>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -61,8 +66,6 @@
 	<string>Protect your DJL sessions when returning to the app.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect securely to your paired DJL desktop.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Use voice input when you tap the microphone.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -71,7 +74,7 @@
 	<string>Choose images to attach to messages.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Turn speech into editable message text.</string>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
@@ -84,16 +87,18 @@
 				<dict>
 					<key>UISceneClassName</key>
 					<string>UIWindowScene</string>
-					<key>UISceneDelegateClassName</key>
-					<string>FlutterSceneDelegate</string>
 					<key>UISceneConfigurationName</key>
 					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>FlutterSceneDelegate</string>
 					<key>UISceneStoryboardFile</key>
 					<string>Main</string>
 				</dict>
 			</array>
 		</dict>
 	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -109,19 +109,19 @@ internal class RunStatusBridge(private val activity: MainActivity, messenger: Bi
         val deadline = live.nextDeadline(now)
         if (live.rows.isEmpty() || deadline == null) { result.success(mapOf("available" to true)); return }
         try {
-            manager.createNotificationChannel(NotificationChannel(CHANNEL, "Task status", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Local status from your paired Mac"
+            manager.createNotificationChannel(NotificationChannel(CHANNEL, activity.getString(R.string.djl_channel_task_status), NotificationManager.IMPORTANCE_LOW).apply {
+                description = activity.getString(R.string.djl_channel_task_status_description)
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)
             })
             if (capability()["available"] != true) { result.success(capability()); return }
-            val summary = "${live.running.size} active/paused · ${live.failed.size} failed · ${live.ready.size} ready"
+            val summary = activity.getString(R.string.djl_status_summary, live.running.size, live.failed.size, live.ready.size)
             val genericIntent = pending(0)
             val publicVersion = Notification.Builder(activity, CHANNEL).setSmallIcon(R.drawable.djl_launch_logo)
-                .setContentTitle("DJL").setContentText("Task status · Open DJL").setContentIntent(genericIntent)
+                .setContentTitle("DJL").setContentText(activity.getString(R.string.djl_status_public_text)).setContentIntent(genericIntent)
                 .setVisibility(Notification.VISIBILITY_PUBLIC).setTimeoutAfter((deadline - now).coerceAtLeast(1)).build()
             val builder = Notification.Builder(activity, CHANNEL).setSmallIcon(R.drawable.djl_launch_logo)
-                .setContentTitle("DJL · Task status").setContentText(summary).setOnlyAlertOnce(true).setShowWhen(false)
+                .setContentTitle(activity.getString(R.string.djl_status_title)).setContentText(summary).setOnlyAlertOnce(true).setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(publicVersion)
                 .setTimeoutAfter((deadline - now).coerceAtLeast(1)).setAutoCancel(true)
             val style = Notification.InboxStyle().setSummaryText(summary)

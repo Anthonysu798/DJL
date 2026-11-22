@@ -1,0 +1,7 @@
+/* Lock Screen widget, Control and Live Activity text (zh-Hans). */
+"Open Codex chat" = "打开 Codex 对话";
+"Open DJL" = "打开 DJL";
+"Quick access to DJL from your Lock Screen." = "在锁定屏幕上快速打开 DJL。";
+"Launch DJL from Control Center." = "从控制中心打开 DJL。";
+"Task status" = "任务状态";
+"%lld active/paused · %lld failed · %lld ready" = "%lld 个进行中/已暂停 · %lld 个失败 · %lld 个就绪";

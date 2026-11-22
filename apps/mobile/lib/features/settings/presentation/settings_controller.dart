@@ -12,12 +12,14 @@ class SettingsController extends ChangeNotifier {
   final SettingsStore store;
   static const themeKey = 'djl.appearance.mode',
       fontKey = 'codex.appFontStyle',
+      languageKey = 'djl.appearance.language',
       glassKey = 'codex.useLiquidGlass',
       lockKey = 'djl.security.biometricLockEnabled',
       inAppAlertsKey = 'djl.notifications.inApp',
       spokenRepliesKey = 'djl.voice.spokenReplies';
   ThemeMode theme = ThemeMode.system;
   AppFontStyle font = AppFontStyle.system;
+  AppLanguage get language => AppLanguage.preference;
   bool lockEnabled = true, ready = false, saving = false, _disposed = false;
   bool inAppAlerts = true, spokenReplies = false;
   bool liquidGlass = true;
@@ -148,6 +150,7 @@ class SettingsController extends ChangeNotifier {
               ? AppFontStyle.jetBrainsMono
               : AppFontStyle.system);
       liquidGlass = values[glassKey] is bool ? values[glassKey] as bool : true;
+      AppLanguage.preference = AppLanguage.fromValue(values[languageKey]);
       _runtimeDefaults = RuntimeDefaults.fromPreferences(values);
       lockEnabled = values[lockKey] is bool ? values[lockKey] as bool : true;
       inAppAlerts = values[inAppAlertsKey] is bool
@@ -198,6 +201,8 @@ class SettingsController extends ChangeNotifier {
       _save(themeKey, value.name, () => theme = value);
   Future<bool> setFont(AppFontStyle value) =>
       _save(fontKey, value.name, () => font = value);
+  Future<bool> setLanguage(AppLanguage value) =>
+      _save(languageKey, value.value, () => AppLanguage.preference = value);
   Future<bool> setLiquidGlass(bool value) =>
       _save(glassKey, value, () => liquidGlass = value);
   Future<bool> setLockEnabled(bool value) =>

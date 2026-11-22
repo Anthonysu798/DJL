@@ -322,6 +322,7 @@
   "chatUiStatusOffline": "离线",
   "chatUiConnectionStatus": "连接状态：{status}",
   "chatUiGroups": "群聊",
+  "homeTabChats": "聊天",
   "chatUiExpandAll": "全部展开",
   "chatUiCollapseAll": "全部收起",
   "chatUiCollapseChildChats": "收起“{title}”的子对话",
@@ -1475,8 +1476,13 @@
   "statusDenied": "请在设备设置中允许显示本地任务状态。不开启也能正常对话。",
   "statusUnsupported": "这台设备不支持任务状态。",
   "statusChecking": "正在检查设备权限…",
-  "statusEnable": "开启任务状态",
+  "statusEnable": "开启",
   "statusRefresh": "刷新任务状态",
-  "statusSystemSettings": "系统设置",
-  "pairingStateLabel": "{state, select, disconnected{未连接} resolving{正在查找} connecting{正在连接} connected{已连接} offline{电脑离线} suspended{已暂停} other{{state}}}"
+  "statusSystemSettings": "打开设置",
+  "pairingStateLabel": "{state, select, disconnected{未连接} resolving{正在查找} connecting{正在连接} connected{已连接} offline{电脑离线} suspended{已暂停} other{{state}}}",
+  "settingsLanguage": "语言",
+  "settingsLanguageSystem": "跟随系统",
+  "workspaceUndoNoExactPatch": "没有记录到完整、准确的改动，无法撤销。",
+  "workspaceUndoRenames": "重命名无法在这里撤销。",
+  "workspaceUndoBinary": "二进制文件、重命名、权限或符号链接的改动无法在这里撤销。"
 }

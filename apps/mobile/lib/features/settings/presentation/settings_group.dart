@@ -108,6 +108,132 @@ class SettingsLinkRow extends StatelessWidget {
   }
 }
 
+/// One device permission: an icon tile, its name, a short line on what it
+/// does or why it is off, and one compact control on the right. Extra
+/// [actions] sit under the text, aligned with it.
+class SettingsPermissionRow extends StatelessWidget {
+  const SettingsPermissionRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.actions = const [],
+    this.onTap,
+    this.subtitleIsError = false,
+  });
+  final IconData icon;
+  final String title, subtitle;
+  final Widget? trailing;
+  final List<Widget> actions;
+  final VoidCallback? onTap;
+  final bool subtitleIsError;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = DjlColors.of(context);
+    final row = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: colors.surfaceSunken,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: colors.ink),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: settingsTextStyle(
+                        context,
+                        15,
+                        weight: FontWeight.w500,
+                        color: colors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: settingsTextStyle(
+                        context,
+                        12.5,
+                        color: subtitleIsError
+                            ? colors.danger
+                            : colors.inkMuted,
+                      ).copyWith(height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+            ],
+          ),
+          if (actions.isNotEmpty)
+            Padding(
+              // Under the text, past the 34-point icon tile and its gap.
+              padding: const EdgeInsets.only(left: 46, top: 2),
+              child: Wrap(spacing: 16, runSpacing: 4, children: actions),
+            ),
+        ],
+      ),
+    );
+    return onTap == null ? row : InkWell(onTap: onTap, child: row);
+  }
+}
+
+/// A quiet text action for under a [SettingsPermissionRow]'s description.
+class SettingsRowLink extends StatelessWidget {
+  const SettingsRowLink({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = DjlColors.of(context);
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      minimumSize: const Size(0, 32),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: settingsTextStyle(
+              context,
+              13,
+              weight: FontWeight.w600,
+              color: onPressed == null ? colors.inkFaint : colors.ink,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Icon(
+            DjlIcons.chevronRight,
+            size: 11,
+            color: onPressed == null ? colors.inkFaint : colors.inkMuted,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The shared inset-grouped surface used by the real Settings controls.
 class SettingsGroup extends StatelessWidget {
   const SettingsGroup({

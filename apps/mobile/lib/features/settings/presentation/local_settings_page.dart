@@ -28,7 +28,10 @@ class LocalSettingsPage extends StatelessWidget {
   final DesktopController desktop;
   final bool signedIn;
   final String? email;
-  final VoidCallback onCloud, onMyMacs;
+
+  /// Null hides the DJL Cloud section (builds without Cloud sign-in).
+  final VoidCallback? onCloud;
+  final VoidCallback onMyMacs;
   final Widget taskStatus;
   final Widget? remoteNotifications;
 
@@ -70,26 +73,29 @@ class LocalSettingsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                        child: SettingsGroup(
-                          title: 'DJL Cloud',
-                          children: [
-                            SettingsLinkRow(
-                              title: signedIn
-                                  ? l10n.settingsOpenCloudChat
-                                  : l10n.settingsSignInCloud,
-                              subtitle: email ?? l10n.settingsCloudSubtitle,
-                              leading: const Icon(DjlIcons.cloud),
-                              onTap: onCloud,
-                            ),
-                          ],
+                      if (onCloud case final onCloud?)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                          child: SettingsGroup(
+                            title: 'DJL Cloud',
+                            children: [
+                              SettingsLinkRow(
+                                title: signedIn
+                                    ? l10n.settingsOpenCloudChat
+                                    : l10n.settingsSignInCloud,
+                                subtitle: email ?? l10n.settingsCloudSubtitle,
+                                leading: const Icon(DjlIcons.cloud),
+                                onTap: onCloud,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                       SettingsControls(
                         controller: controller,
                         taskStatus: SettingsGroup(
                           title: l10n.settingsDevicePermissions,
+                          // Dividers start under the text, past the icon tile.
+                          dividerIndent: 62,
                           children: [taskStatus, ?remoteNotifications],
                         ),
                       ),

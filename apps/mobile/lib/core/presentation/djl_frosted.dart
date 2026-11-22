@@ -146,11 +146,15 @@ class DjlGlassPillButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.prominent = false,
+    this.compact = false,
   });
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
   final bool prominent;
+
+  /// A smaller pill for controls that sit inside a list row.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +166,9 @@ class DjlGlassPillButton extends StatelessWidget {
         ? colors.onInk
         : colors.ink;
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: compact
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+          : const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -177,6 +183,7 @@ class DjlGlassPillButton extends StatelessWidget {
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: foreground,
                 fontWeight: FontWeight.w600,
+                fontSize: compact ? 13 : null,
               ),
             ),
           ),
@@ -187,7 +194,7 @@ class DjlGlassPillButton extends StatelessWidget {
       label: label,
       onPressed: onPressed,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
+        constraints: BoxConstraints(minHeight: compact ? 34 : 44),
         child: prominent && enabled
             ? DecoratedBox(
                 decoration: BoxDecoration(

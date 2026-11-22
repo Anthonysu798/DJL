@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../data/status_surface.dart';
 
 import '../../../core/design/djl_icons.dart';
+import '../../../core/design/djl_tokens.dart';
 import '../../../core/presentation/djl_frosted.dart';
 import '../../../l10n/l10n.dart';
+import '../../settings/presentation/settings_group.dart';
 
 /// Permission reads never prompt. Only these explicit actions can request access
 /// or retry the local surface; they have no chat/controller mutation dependency.
@@ -106,46 +108,53 @@ class _StatusPermissionControlsState extends State<StatusPermissionControls>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final permission = _permission;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          leading: const Icon(DjlIcons.timer),
-          title: Text(context.l10n.statusTaskStatus),
-          subtitle: Text(switch (permission?.state) {
-            StatusPermissionState.allowed => context.l10n.statusAllowed,
-            StatusPermissionState.denied => context.l10n.statusDenied,
-            StatusPermissionState.unsupported => context.l10n.statusUnsupported,
-            null => context.l10n.statusChecking,
-          }),
-        ),
-        if (permission != null &&
-            permission.state != StatusPermissionState.unsupported)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (permission.canRequest)
-                  DjlGlassPillButton(
-                    label: context.l10n.statusEnable,
-                    prominent: true,
-                    onPressed: _busy ? null : _enable,
-                  ),
-                if (permission.state == StatusPermissionState.allowed)
-                  DjlGlassPillButton(
-                    label: context.l10n.statusRefresh,
-                    onPressed: _busy ? null : () => _read(retry: true),
-                  ),
-                if (permission.canOpenSettings)
-                  DjlGlassPillButton(
-                    label: context.l10n.statusSystemSettings,
-                    onPressed: _busy ? null : _settings,
-                  ),
-              ],
-            ),
+    final usable =
+        permission != null &&
+        permission.state != StatusPermissionState.unsupported;
+    final allowed = permission?.state == StatusPermissionState.allowed;
+    final canRequest = usable && permission.canRequest;
+    final canOpenSettings = usable && permission.canOpenSettings;
+    // One control on the right: turn it on, refresh it once on, or else
+    // send the person to Settings. Settings moves under the text when the
+    // right-hand spot is taken.
+    final Widget? trailing = canRequest
+        ? DjlGlassPillButton(
+            label: l10n.statusEnable,
+            prominent: true,
+            compact: true,
+            onPressed: _busy ? null : _enable,
+          )
+        : allowed
+        ? IconButton(
+            tooltip: l10n.statusRefresh,
+            icon: const Icon(DjlIcons.refresh, size: 18),
+            color: DjlColors.of(context).ink,
+            onPressed: _busy ? null : () => _read(retry: true),
+          )
+        : canOpenSettings
+        ? DjlGlassPillButton(
+            label: l10n.statusSystemSettings,
+            compact: true,
+            onPressed: _busy ? null : _settings,
+          )
+        : null;
+    return SettingsPermissionRow(
+      icon: DjlIcons.timer,
+      title: l10n.statusTaskStatus,
+      subtitle: switch (permission?.state) {
+        StatusPermissionState.allowed => l10n.statusAllowed,
+        StatusPermissionState.denied => l10n.statusDenied,
+        StatusPermissionState.unsupported => l10n.statusUnsupported,
+        null => l10n.statusChecking,
+      },
+      trailing: trailing,
+      actions: [
+        if (canOpenSettings && (canRequest || allowed))
+          SettingsRowLink(
+            label: l10n.statusSystemSettings,
+            onPressed: _busy ? null : _settings,
           ),
       ],
     );

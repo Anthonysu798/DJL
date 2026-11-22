@@ -80,6 +80,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PairingPage), findsOneWidget);
       expect(find.text('Continue with Google'), findsNothing);
+      // On this short test screen the button starts under the floating tab
+      // bar; scroll it above the bar first.
+      await tester.drag(
+        find
+            .ancestor(
+              of: find.text('DJL Cloud'),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('DJL Cloud'));
       await tester.pumpAndSettle();
       expect(find.text('Continue with Google'), findsOneWidget);

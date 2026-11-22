@@ -80,13 +80,13 @@ class ResponsePatch {
           !chunk.any(
             (l) => RegExp(r'^@@ -\d+(,\d+)? \+\d+(,\d+)? @@').hasMatch(l),
           )) {
-        reasons.add('No complete exact unified patch was captured.');
+        reasons.add(appStrings.workspaceUndoNoExactPatch);
       } else {
         files.add(path);
         final oldPath = responsePath(before.single);
         final newPath = responsePath(after.single);
         if (oldPath != null && newPath != null && oldPath != newPath) {
-          reasons.add('Renames cannot be undone here.');
+          reasons.add(appStrings.workspaceUndoRenames);
         }
       }
       if (chunk.any(
@@ -94,9 +94,7 @@ class ResponsePatch {
           r'^(Binary files |GIT binary patch|rename |copy |old mode |new mode |similarity index |new file mode 120|deleted file mode 120)',
         ).hasMatch(l),
       )) {
-        reasons.add(
-          'Binary, rename, mode or symlink changes cannot be undone here.',
-        );
+        reasons.add(appStrings.workspaceUndoBinary);
       }
     }
   }

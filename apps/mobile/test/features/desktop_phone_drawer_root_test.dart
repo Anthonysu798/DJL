@@ -514,7 +514,7 @@ void main() {
           await tester.tap(find.text('Chat').hitTestable());
           await tester.pumpAndSettle();
           final fresh = desktop.newChatDraft!;
-          oldCover.onCloud();
+          oldCover.onCloud!();
           oldCover.onMyMacs();
           await tester.pumpAndSettle();
           expect(desktop.newChatDraft, same(fresh));

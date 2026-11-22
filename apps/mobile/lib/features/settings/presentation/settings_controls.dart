@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_glass.dart';
 import '../domain/appearance.dart';
@@ -47,6 +48,8 @@ class _SettingsControlsState extends State<SettingsControls> {
         ThemeMode.light => l10n.settingsThemeLight,
         ThemeMode.dark => l10n.settingsThemeDark,
       };
+      String languageTitle(AppLanguage value) =>
+          value.nativeName ?? l10n.settingsLanguageSystem;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
@@ -88,6 +91,22 @@ class _SettingsControlsState extends State<SettingsControls> {
                       value: themeTitle(value),
                   },
                   onChanged: enabled ? controller.setTheme : null,
+                ),
+                SettingsMenuRow<AppLanguage>(
+                  key: const Key('language-setting'),
+                  label: l10n.settingsLanguage,
+                  valueLabel: languageTitle(controller.language),
+                  value: controller.language,
+                  options: {
+                    for (final value in AppLanguage.values)
+                      // Like the desktop, release builds offer only reviewed
+                      // translations (and whatever is already chosen).
+                      if (!kReleaseMode ||
+                          value.reviewed ||
+                          value == controller.language)
+                        value: languageTitle(value),
+                  },
+                  onChanged: enabled ? controller.setLanguage : null,
                 ),
               ],
             ),

@@ -6,6 +6,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
+import 'app_localizations_fr.dart';
+import 'app_localizations_ja.dart';
+import 'app_localizations_ko.dart';
 import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
@@ -95,7 +99,12 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
+    Locale('es'),
+    Locale('fr'),
+    Locale('ja'),
+    Locale('ko'),
     Locale('zh'),
+    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
   /// The product name. Never translated.
@@ -2039,6 +2048,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Groups'**
   String get chatUiGroups;
+
+  /// No description provided for @homeTabChats.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get homeTabChats;
 
   /// No description provided for @chatUiExpandAll.
   ///
@@ -8961,7 +8976,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusEnable.
   ///
   /// In en, this message translates to:
-  /// **'Enable task status'**
+  /// **'Turn on'**
   String get statusEnable;
 
   /// No description provided for @statusRefresh.
@@ -8973,7 +8988,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusSystemSettings.
   ///
   /// In en, this message translates to:
-  /// **'System settings'**
+  /// **'Open Settings'**
   String get statusSystemSettings;
 
   /// The connection state shown under the Mac's name. The English values are shown unchanged.
@@ -8981,6 +8996,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{state, select, disconnected{disconnected} resolving{resolving} connecting{connecting} connected{connected} offline{desktop offline} suspended{suspended} other{{state}}}'**
   String pairingStateLabel(String state);
+
+  /// Settings row that picks the app's language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// Language option that follows the phone's language.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get settingsLanguageSystem;
+
+  /// No description provided for @workspaceUndoNoExactPatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No complete exact unified patch was captured.'**
+  String get workspaceUndoNoExactPatch;
+
+  /// No description provided for @workspaceUndoRenames.
+  ///
+  /// In en, this message translates to:
+  /// **'Renames cannot be undone here.'**
+  String get workspaceUndoRenames;
+
+  /// No description provided for @workspaceUndoBinary.
+  ///
+  /// In en, this message translates to:
+  /// **'Binary, rename, mode or symlink changes cannot be undone here.'**
+  String get workspaceUndoBinary;
 }
 
 class _AppLocalizationsDelegate
@@ -8993,18 +9038,44 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'en',
+    'es',
+    'fr',
+    'ja',
+    'ko',
+    'zh',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when language+script codes are specified.
+  switch (locale.languageCode) {
+    case 'zh':
+      {
+        switch (locale.scriptCode) {
+          case 'Hant':
+            return AppLocalizationsZhHant();
+        }
+        break;
+      }
+  }
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
+    case 'fr':
+      return AppLocalizationsFr();
+    case 'ja':
+      return AppLocalizationsJa();
+    case 'ko':
+      return AppLocalizationsKo();
     case 'zh':
       return AppLocalizationsZh();
   }

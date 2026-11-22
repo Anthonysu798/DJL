@@ -49,7 +49,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(SwitchListTile), findsNothing);
+        expect(find.byType(Switch), findsNothing);
         expect(find.byType(TextButton), findsNothing);
         expect(
           find.textContaining("can't get push notifications"),
@@ -89,11 +89,11 @@ void main() {
         home: Scaffold(body: RemotePushControls(controller: controller)),
       ),
     );
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(controller.enabled, isFalse);
     expect(store.value, isFalse);
-    expect(find.byType(SwitchListTile), findsNothing);
+    expect(find.byType(Switch), findsNothing);
     expect(native.prompts, 0);
     await tester.pumpWidget(const SizedBox());
   });

@@ -488,18 +488,17 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         children: [
-                          _destination(
-                            context.l10n.chatUiNavCloudChat,
-                            DjlIcons.cloud,
-                            widget.onCloud == null
-                                ? null
-                                : () {
-                                    if (current()) widget.onCloud!();
-                                  },
-                          ),
+                          if (widget.onCloud case final onCloud?)
+                            _destination(
+                              context.l10n.chatUiNavCloudChat,
+                              DjlIcons.cloud,
+                              () {
+                                if (current()) onCloud();
+                              },
+                            ),
                           _destination(
                             context.l10n.chatUiNavRemote,
-                            DjlIcons.laptop,
+                            DjlIcons.desktop,
                             () {
                               if (current()) widget.onRemote();
                             },
@@ -508,7 +507,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                           ),
                           _destination(
                             context.l10n.chatUiAttentionTitle,
-                            DjlIcons.inbox,
+                            DjlIcons.attention,
                             () => unawaited(openAttention()),
                             count: attention.length,
                           ),
@@ -766,23 +765,7 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
                   children: [
                     SizedBox(
                       width: cloud ? scaler.scale(23) : 26,
-                      child: icon == DjlIcons.laptop
-                          ? SizedBox(
-                              height: 22,
-                              child: OverflowBox(
-                                minWidth: 32,
-                                maxWidth: 32,
-                                minHeight: 22,
-                                maxHeight: 22,
-                                child: CustomPaint(
-                                  size: const Size(32, 22),
-                                  painter: _DrawerLaptopPainter(
-                                    Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : glyph,
+                      child: glyph,
                     ),
                     SizedBox(width: cloud ? 8 : 14),
                     Expanded(
@@ -815,43 +798,4 @@ class _DesktopNavigationMenuState extends State<DesktopNavigationMenu>
       ),
     );
   }
-}
-
-class _DrawerLaptopPainter extends CustomPainter {
-  const _DrawerLaptopPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.translate(
-      (size.width - 31) / 2 + 1 / 6,
-      (size.height - 52 / 3) / 2 + 0.5,
-    );
-    final screen = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(11 / 3, 0, 71 / 3, 52 / 3),
-      const Radius.circular(5 / 3),
-    );
-    final window = screen.deflate(5 / 3);
-    canvas.drawRRect(window, Paint()..color = color.withValues(alpha: .25));
-    canvas.drawPath(
-      Path()
-        ..fillType = PathFillType.evenOdd
-        ..addRRect(screen)
-        ..addRRect(window),
-      Paint()..color = color,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(0, 15, 31, 7 / 3),
-        const Radius.circular(7 / 6),
-      ),
-      Paint()..color = color,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_DrawerLaptopPainter oldDelegate) =>
-      oldDelegate.color != color;
 }

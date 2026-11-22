@@ -1054,6 +1054,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatUiGroups => '群聊';
 
   @override
+  String get homeTabChats => '聊天';
+
+  @override
   String get chatUiExpandAll => '全部展开';
 
   @override
@@ -4791,13 +4794,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusChecking => '正在检查设备权限…';
 
   @override
-  String get statusEnable => '开启任务状态';
+  String get statusEnable => '开启';
 
   @override
   String get statusRefresh => '刷新任务状态';
 
   @override
-  String get statusSystemSettings => '系统设置';
+  String get statusSystemSettings => '打开设置';
 
   @override
   String pairingStateLabel(String state) {
@@ -4812,4 +4815,4851 @@ class AppLocalizationsZh extends AppLocalizations {
     });
     return '$_temp0';
   }
+
+  @override
+  String get settingsLanguage => '语言';
+
+  @override
+  String get settingsLanguageSystem => '跟随系统';
+
+  @override
+  String get workspaceUndoNoExactPatch => '没有记录到完整、准确的改动，无法撤销。';
+
+  @override
+  String get workspaceUndoRenames => '重命名无法在这里撤销。';
+
+  @override
+  String get workspaceUndoBinary => '二进制文件、重命名、权限或符号链接的改动无法在这里撤销。';
+}
+
+/// The translations for Chinese, using the Han script (`zh_Hant`).
+class AppLocalizationsZhHant extends AppLocalizationsZh {
+  AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get appName => 'DJL';
+
+  @override
+  String get commonCancel => '取消';
+
+  @override
+  String get commonTryAgain => '再試一次';
+
+  @override
+  String get chatUiAccessAskTitle => '需要核准';
+
+  @override
+  String get chatUiAccessAskDetail => '編輯外部檔案和連上網路前一律先詢問';
+
+  @override
+  String get chatUiAccessAutoTitle => '替我核准';
+
+  @override
+  String get chatUiAccessAutoDetail => '只在操作可能不安全時詢問';
+
+  @override
+  String get chatUiAccessFullTitle => '完整存取';
+
+  @override
+  String get chatUiAccessFullDetail => '完整存取電腦（風險較高）';
+
+  @override
+  String get chatUiAccessHint => '變更 Codex 要求權限的方式';
+
+  @override
+  String get chatUiAccessFullConfirmTitle => '允許完整存取電腦？';
+
+  @override
+  String get chatUiAccessFullConfirmBody => '智慧體可以在工作區以外修改檔案、執行指令，而且不需要你核准。';
+
+  @override
+  String get chatUiAccessFullConfirm => '允許完整存取';
+
+  @override
+  String get chatUiAttentionNoMatches => '沒有符合的待處理事項';
+
+  @override
+  String get chatUiAttentionAllCaughtUp => '都處理完了';
+
+  @override
+  String get chatUiAttentionNoMatchesHint => '換個專案、對話或狀態試試看。';
+
+  @override
+  String get chatUiAttentionEmptyHint => '待核准的操作、智慧體的提問、失敗的執行和已完成的工作都會顯示在這裡。';
+
+  @override
+  String get chatUiAttentionNeedsYou => '需要你處理';
+
+  @override
+  String get chatUiAttentionReadyToReview => '可以查看';
+
+  @override
+  String get chatUiAgoNow => '剛剛';
+
+  @override
+  String chatUiAgoMinutes(int minutes) {
+    return '$minutes 分鐘前';
+  }
+
+  @override
+  String chatUiAgoHours(int hours) {
+    return '$hours 小時前';
+  }
+
+  @override
+  String chatUiAgoDays(int days) {
+    return '$days 天前';
+  }
+
+  @override
+  String get chatUiAttentionTitle => '待處理';
+
+  @override
+  String get chatUiAttentionConnectionChanged => '連線已變更。請返回後重新開啟「待處理」。';
+
+  @override
+  String get chatUiAttentionSearch => '搜尋待處理事項';
+
+  @override
+  String get appSavedConnectionsUnreadable => '無法讀取已儲存的電腦連線資訊。你已儲存的連線仍會保留。';
+
+  @override
+  String get appRestoreMacsFailed => '無法還原已儲存的 Mac。請將裝置解鎖後重試。';
+
+  @override
+  String get appLinkedConversationFailed => '無法開啟連結中的對話。請檢查網路連線後重試。';
+
+  @override
+  String get appLinkedAccountUnavailable => '仍無法取得帳號資訊。載入完成後，請重新開啟連結中的對話。';
+
+  @override
+  String get appAccountStillLoading => '帳號資訊仍在載入，請稍後再試。';
+
+  @override
+  String get appRenameChat => '重新命名對話';
+
+  @override
+  String get appRenameChatPlaceholder => '標題';
+
+  @override
+  String get appSave => '儲存';
+
+  @override
+  String get appOpenNavigation => '開啟導覽';
+
+  @override
+  String get appAccountUnavailable => '無法取得帳號資訊。';
+
+  @override
+  String get appRetryAccount => '重新載入帳號';
+
+  @override
+  String get appImages => '圖片';
+
+  @override
+  String get appNotifications => '通知';
+
+  @override
+  String get appRetryLinkedConversation => '重新開啟連結中的對話';
+
+  @override
+  String get coreBack => '返回';
+
+  @override
+  String get coreMenu => '選單';
+
+  @override
+  String get coreChatActions => '對話操作';
+
+  @override
+  String get coreSessionEnded => '登入已失效，請重新登入。';
+
+  @override
+  String coreCloudRequestFailed(int status) {
+    return 'DJL Cloud 要求失敗（$status）。';
+  }
+
+  @override
+  String get coreAccountChanged => '帳號已切換。';
+
+  @override
+  String get corePleaseSignIn => '請登入。';
+
+  @override
+  String get coreNoAccessToken => 'DJL Cloud 沒有傳回存取權杖。';
+
+  @override
+  String get coreCloudTimeout => 'DJL Cloud 回應逾時。';
+
+  @override
+  String get coreCloudUnreachable => '無法連線到 DJL Cloud，請檢查網路連線。';
+
+  @override
+  String get corePleaseSignInAgain => '請重新登入。';
+
+  @override
+  String get coreInvalidPushRegistration => '通知註冊資訊無效。';
+
+  @override
+  String get corePushNotAcknowledged => '通知註冊未獲確認。';
+
+  @override
+  String get coreCloudResponseUnreadable => '目前版本無法讀取 DJL Cloud 的回應。';
+
+  @override
+  String get coreInvalidDesktopEnvelope => '來自電腦的訊息無效或已重複傳送。';
+
+  @override
+  String get coreDesktopMessageUnauthenticated => '無法驗證來自電腦的訊息。';
+
+  @override
+  String get gitThreadChangedReopenAction => '對話狀態已變更，請重新開啟這個分支或工作樹操作。';
+
+  @override
+  String get gitWaitForThread => '請等這個對話完成後，再切換分支或工作樹。';
+
+  @override
+  String get gitWaitForOperation => '請等目前的 Git 操作完成後，再切換分支或工作樹。';
+
+  @override
+  String get gitNotRepositorySentence => '這個資料夾不是 Git 儲存庫。';
+
+  @override
+  String get gitNotRepository => '這個資料夾不是 Git 儲存庫';
+
+  @override
+  String get gitNoLongerRepository => '這個資料夾已不再是 Git 儲存庫。請先重新整理，再建立分支或工作樹。';
+
+  @override
+  String get gitContinue => '繼續';
+
+  @override
+  String get gitOk => '好';
+
+  @override
+  String get gitCreate => '建立';
+
+  @override
+  String get gitClose => '關閉';
+
+  @override
+  String get gitDone => '完成';
+
+  @override
+  String get gitGenerating => '正在產生…';
+
+  @override
+  String get gitGenerateMessage => '產生提交訊息';
+
+  @override
+  String get gitCommitAllTitle => '提交目前所有變更';
+
+  @override
+  String get gitCommitPublishTitle => '提交並發布變更';
+
+  @override
+  String get gitCommitMessageLabel => '提交訊息';
+
+  @override
+  String get gitPublishBranchTitle => '要發布這個分支嗎？';
+
+  @override
+  String get gitPublishCommitPushBody => '提交目前所有變更，並將這個分支推送到遠端。';
+
+  @override
+  String get gitPublishFeatureBranchPrBody =>
+      '準備一個功能分支、提交所有變更、推送分支，並在 GitHub 上建立提取要求。';
+
+  @override
+  String get gitPublishCommitPrBody => '提交所有變更、推送分支，並在 GitHub 上建立提取要求。';
+
+  @override
+  String get gitCommitCreateSwitch => '提交、建立並切換';
+
+  @override
+  String get gitCreateManagedWorktree => '建立受管理的工作樹';
+
+  @override
+  String get gitCreateWorktree => '建立工作樹';
+
+  @override
+  String get gitBranchName => '分支名稱';
+
+  @override
+  String get gitBaseBranch => '基礎分支';
+
+  @override
+  String get gitMoveCurrentChanges => '移動目前的變更';
+
+  @override
+  String get gitCopyCurrentChanges => '複製目前的變更';
+
+  @override
+  String get gitLeaveChangesHere => '變更留在這裡';
+
+  @override
+  String get gitInitializeTitle => '要初始化 Git 嗎？';
+
+  @override
+  String get gitInitializeBody => '在這個工作區中建立 Git 儲存庫。';
+
+  @override
+  String get gitPushTitle => '要推送分支嗎？';
+
+  @override
+  String get gitPushBody => '將已提交的變更推送到設定好的遠端。';
+
+  @override
+  String get gitLocalChangesNeedAttention => '本機變更需要處理';
+
+  @override
+  String get gitUpdateRepositoryTitle => '要更新儲存庫嗎？';
+
+  @override
+  String get gitDirtyAndBehindBody =>
+      '你有本機變更，而遠端分支也有新的提交。只有在準備好處理這些變更時，才使用重訂基底提取。';
+
+  @override
+  String get gitPullBody => '將遠端的提交提取到這個分支。';
+
+  @override
+  String get gitPullAndRebase => '提取並重訂基底';
+
+  @override
+  String get gitUpdate => '更新';
+
+  @override
+  String get gitTransferChangesTitle => '轉移變更';
+
+  @override
+  String get gitTargetWorkspacePath => '目標工作區路徑';
+
+  @override
+  String get gitRemoveWorktreeTitle => '要移除這個工作樹嗎？';
+
+  @override
+  String get gitRemoveWorktreeBody => '移除這個分支的受管理工作樹。電腦端不會移除主要簽出目錄。';
+
+  @override
+  String get gitDiscardTitle => '要捨棄本機變更嗎？';
+
+  @override
+  String get gitDiscardBody => '捨棄本機的檔案變更，並將這個分支重設為遠端版本。';
+
+  @override
+  String get gitPrDraftTitle => '提取要求草稿';
+
+  @override
+  String get gitCopyDraft => '複製草稿';
+
+  @override
+  String get gitCreatePrTitle => '要建立提取要求嗎？';
+
+  @override
+  String get gitCreatePrBody =>
+      '電腦端會在需要時推送這個分支，根據已提交的變更產生標題和說明，並在 GitHub 上建立提取要求。';
+
+  @override
+  String get gitNoChangesToShow => '儲存庫沒有可顯示的變更。';
+
+  @override
+  String get gitBranchSwitchFailed => '無法切換分支';
+
+  @override
+  String get gitBranchOpenElsewhere => '無法切換分支：這個分支已在另一個工作樹中開啟。';
+
+  @override
+  String get gitErrorTitle => 'Git 發生錯誤';
+
+  @override
+  String get gitOpenPr => '開啟 PR';
+
+  @override
+  String get gitLoadingChanges => '正在載入變更';
+
+  @override
+  String get gitLoadingChangesEllipsis => '正在載入變更…';
+
+  @override
+  String get gitChangesUnavailable => '無法取得變更';
+
+  @override
+  String get gitNoChanges => '沒有變更';
+
+  @override
+  String get gitDesktopChanged => '已連線的電腦已變更，請從對應的工作區重新開啟 Git。';
+
+  @override
+  String get gitChooseWorkspace => '請先選擇電腦上的工作區，再使用 Git。';
+
+  @override
+  String get gitWorking => '正在處理…';
+
+  @override
+  String get gitRetryStatus => '重新取得 Git 狀態';
+
+  @override
+  String get gitWorktreeUnavailable => '無法使用工作樹';
+
+  @override
+  String get gitActionsLabel => 'Git 操作';
+
+  @override
+  String get gitRefreshStatus => '重新整理 Git 狀態';
+
+  @override
+  String get gitShowMenu => '顯示選單';
+
+  @override
+  String get gitInitializeRepository => '初始化儲存庫';
+
+  @override
+  String get gitCreateBranch => '建立分支';
+
+  @override
+  String get gitTransferToWorkspace => '將變更轉移到工作區';
+
+  @override
+  String get gitRemoveManagedWorktree => '移除受管理的工作樹';
+
+  @override
+  String get gitGeneratePrDraft => '產生 PR 草稿';
+
+  @override
+  String get gitCreatePullRequest => '建立提取要求';
+
+  @override
+  String get gitCommitAndPushMenu => '提交並推送';
+
+  @override
+  String get gitCommitPushCreatePrMenu => '提交、推送並建立 PR';
+
+  @override
+  String get gitDiscardAndReset => '捨棄變更並重設為遠端版本';
+
+  @override
+  String get gitWorktreeReady => '工作樹已就緒';
+
+  @override
+  String get gitOpenChat => '開啟對話';
+
+  @override
+  String get gitOpenPullRequest => '開啟提取要求';
+
+  @override
+  String get gitDetachedHead => '分離的 HEAD';
+
+  @override
+  String get gitNoUpstream => '沒有上游分支';
+
+  @override
+  String gitAheadBehind(int ahead, int behind) {
+    return '領先 $ahead · 落後 $behind';
+  }
+
+  @override
+  String get gitCommitChanges => '提交變更';
+
+  @override
+  String get gitPush => '推送';
+
+  @override
+  String get gitPullTitle => '要提取變更嗎？';
+
+  @override
+  String get gitPull => '提取';
+
+  @override
+  String get gitViewDiff => '查看變更';
+
+  @override
+  String get gitCurrentBranch => '目前分支';
+
+  @override
+  String get gitBranchFallback => '分支';
+
+  @override
+  String get gitWriterModel => 'Git 撰寫模型';
+
+  @override
+  String get gitConnectCodexModel => '在你的 Mac 上連接 Codex 模型，就能產生提交訊息和 PR 草稿。';
+
+  @override
+  String gitChangedFilesCount(int count) {
+    return '共 $count 個檔案有變更';
+  }
+
+  @override
+  String get gitActionInitialize => '初始化 Git';
+
+  @override
+  String get gitActionChanges => '變更';
+
+  @override
+  String get gitActionCommit => '提交';
+
+  @override
+  String get gitActionCommitAndPush => '提交並推送';
+
+  @override
+  String get gitActionCommitPushPr => '提交、推送並建立 PR';
+
+  @override
+  String get gitActionCreatePr => '建立 PR';
+
+  @override
+  String get gitSectionSetup => '準備';
+
+  @override
+  String get gitSectionWrite => '寫入';
+
+  @override
+  String get gitStatusNotInitialized => 'Git 尚未初始化';
+
+  @override
+  String get gitStatusUpToDate => '儲存庫已是最新狀態';
+
+  @override
+  String get gitStatusAheadOnly => '本機分支領先遠端';
+
+  @override
+  String get gitStatusBehindOnly => '遠端分支領先本機分支';
+
+  @override
+  String get gitStatusDiverged => '本機與遠端分支已分歧';
+
+  @override
+  String get gitStatusDirty => '本機儲存庫有未提交的變更';
+
+  @override
+  String get gitStatusDirtyAndBehind => '有本機變更，且遠端分支已有新的提交';
+
+  @override
+  String get gitStatusNoUpstream => '分支尚未發布';
+
+  @override
+  String get gitStatusDetachedHead => '無法取得目前分支';
+
+  @override
+  String get gitStatusUnavailable => '無法取得儲存庫狀態';
+
+  @override
+  String gitReviewLocalCommits(int count) {
+    return '$count 個本機提交';
+  }
+
+  @override
+  String get gitReviewTheCurrentBranch => '目前分支';
+
+  @override
+  String gitReviewCreatingFrom(String name, String source) {
+    return '你正在從 $source 建立「$name」。可以把本機變更帶到新分支，也可以先提交，再建立並切換。';
+  }
+
+  @override
+  String gitReviewCommitsStayPrefix(
+    String base,
+    String commits,
+    String message,
+  ) {
+    return '$base 上有 $commits尚未推送到遠端，這些提交會保留在 $base 的歷史記錄中。$message';
+  }
+
+  @override
+  String get gitReviewFilesWithChanges => '有本機變更的檔案：';
+
+  @override
+  String gitReviewMoreFiles(int count) {
+    return '另有 $count 個檔案';
+  }
+
+  @override
+  String gitReviewBringChangesTitle(String name) {
+    return '要把本機變更帶到「$name」嗎？';
+  }
+
+  @override
+  String get gitReviewCarryToNewBranch => '帶到新分支';
+
+  @override
+  String gitReviewCommitsStayTitle(String base) {
+    return '本機提交會保留在 $base';
+  }
+
+  @override
+  String gitReviewBranchCommitsStay(String base, String commits, String name) {
+    return '$base 上有 $commits尚未推送到遠端。現在建立「$name」會從目前的 HEAD 開始新分支，但這些提交仍會保留在 $base 的歷史記錄中。';
+  }
+
+  @override
+  String get gitReviewCreateAnyway => '仍要建立';
+
+  @override
+  String get gitReviewManagedWorktreeNoun => '受管理的工作樹';
+
+  @override
+  String gitReviewQuotedName(String name) {
+    return '「$name」';
+  }
+
+  @override
+  String get gitReviewCopyTitle => '從目前分支複製本機變更';
+
+  @override
+  String get gitReviewMoveTitle => '從目前分支移動本機變更';
+
+  @override
+  String get gitReviewVerbCopy => '複製';
+
+  @override
+  String get gitReviewVerbMove => '移動';
+
+  @override
+  String gitReviewOnlyCurrentBranch(
+    String target,
+    String verb,
+    String current,
+  ) {
+    return '建立$target時，只能$verb目前分支的本機變更。請把基礎分支切換為「$current」，或先清理本機變更再建立工作樹。';
+  }
+
+  @override
+  String gitReviewCopiedInto(String worktree) {
+    return '本機變更也會複製到$worktree；被忽略的檔案會留在這裡。';
+  }
+
+  @override
+  String gitReviewMovedInto(String worktree) {
+    return '本機變更會移到$worktree；被忽略的檔案會留在這裡。';
+  }
+
+  @override
+  String get gitReviewTheManagedWorktree => '受管理的工作樹';
+
+  @override
+  String get gitReviewTheNewWorktree => '新的工作樹';
+
+  @override
+  String gitReviewWorktreeCommitsStay(
+    String base,
+    String commits,
+    String target,
+    String from,
+    String suffix,
+  ) {
+    return '$base 上有 $commits尚未推送到遠端。從 $from 建立$target會從目前的 HEAD 開始，但這些提交也仍會保留在 $base 的歷史記錄中。$suffix';
+  }
+
+  @override
+  String get gitBadgeOpenWorktree => '已在工作樹中開啟';
+
+  @override
+  String get gitBadgeOpenElsewhere => '已在別處開啟';
+
+  @override
+  String get gitActionCompleted => 'Git 操作已完成。';
+
+  @override
+  String gitActionFailed(String error) {
+    return '$error 操作結果不明，請先重新整理再重試。';
+  }
+
+  @override
+  String get gitDismissMenu => '關閉選單';
+
+  @override
+  String get gitDiffPatch => '修補檔';
+
+  @override
+  String gitDiffLine(int line) {
+    return '第 $line 行';
+  }
+
+  @override
+  String gitDiffLines(int first, int last) {
+    return '第 $first-$last 行';
+  }
+
+  @override
+  String get gitDismissBranchPicker => '關閉分支選擇器';
+
+  @override
+  String get gitBadgeCurrent => '目前';
+
+  @override
+  String get gitBadgeDefault => '預設';
+
+  @override
+  String get gitCloseBranchPicker => '關閉分支選擇器';
+
+  @override
+  String get gitBranchPickerStale => '對話或電腦已變更，請關閉後重新開啟分支選擇器。';
+
+  @override
+  String get gitSearchBranches => '搜尋分支';
+
+  @override
+  String get gitClearBranchSearch => '清除分支搜尋';
+
+  @override
+  String get gitBranches => '分支';
+
+  @override
+  String get gitNoBranchesFound => '找不到分支';
+
+  @override
+  String get gitNoBranchesHint => '換個關鍵字搜尋，或重新整理分支列表。';
+
+  @override
+  String gitCreateAndCheckout(String name) {
+    return '建立並切換到「$name」';
+  }
+
+  @override
+  String get gitNewBranchEllipsis => '新增分支…';
+
+  @override
+  String get gitSwitching => '正在切換…';
+
+  @override
+  String get gitRefreshing => '正在重新整理…';
+
+  @override
+  String get gitReloadBranchList => '重新載入分支列表';
+
+  @override
+  String get gitCloseWorktreeReview => '關閉工作樹確認';
+
+  @override
+  String get gitHandoffTitle => '將對話移交到工作樹';
+
+  @override
+  String get gitForkTitle => '將對話分岔到新的工作樹';
+
+  @override
+  String get gitHandoff => '移交';
+
+  @override
+  String get gitFork => '分岔';
+
+  @override
+  String get gitHandoffMessage =>
+      '在新的工作樹中建立並簽出一個分支，以便同時繼續進行。分支名稱會自動加上 djl/ 前綴。';
+
+  @override
+  String get gitForkMessage => '在新的工作樹中建立並簽出一個分支，然後把這個對話分岔到該簽出目錄，作為新的對話。';
+
+  @override
+  String get gitStartsFromBase => '從這個基礎分支開始。';
+
+  @override
+  String get gitLoadingWorktreeBranches => '正在載入工作樹分支';
+
+  @override
+  String get gitPreparingWorktree => '正在準備工作樹';
+
+  @override
+  String get gitNewBranch => '新增分支';
+
+  @override
+  String get gitNewBranchBody => '將在本機建立並簽出分支。未提交的變更會保留在目前的工作副本中。';
+
+  @override
+  String get gitThreadChangedReopenGit => '對話狀態已變更，請關閉後重新開啟這個 Git 操作。';
+
+  @override
+  String get gitRepositoryChanges => '儲存庫變更';
+
+  @override
+  String gitFilesChanged(int count) {
+    return '$count 個檔案有變更';
+  }
+
+  @override
+  String get gitExpandAll => '全部展開';
+
+  @override
+  String get gitCollapseAll => '全部收合';
+
+  @override
+  String gitPatchIndex(int index, int total) {
+    return '修補檔 $index/$total';
+  }
+
+  @override
+  String get chatUiComposerOptions => '輸入選項';
+
+  @override
+  String get chatUiStopDictation => '停止聽寫';
+
+  @override
+  String get chatUiStartDictation => '開始聽寫';
+
+  @override
+  String get chatUiResumeQueued => '繼續傳送排隊中的訊息';
+
+  @override
+  String get chatUiStopTurn => '停止本輪';
+
+  @override
+  String get chatUiSendToDesktop => '傳送到電腦';
+
+  @override
+  String get chatUiStartingRun => '正在開始執行';
+
+  @override
+  String get chatUiRemoveImage => '移除圖片';
+
+  @override
+  String get chatUiAttachedImage => '已附加的圖片';
+
+  @override
+  String chatUiDesktopImage(String source) {
+    return '電腦上的圖片：$source';
+  }
+
+  @override
+  String get chatUiImagePreviewUnavailable => '無法預覽圖片';
+
+  @override
+  String get chatUiContextSkills => '技能';
+
+  @override
+  String get chatUiContextPlugins => '外掛程式';
+
+  @override
+  String get chatUiContextFiles => '檔案';
+
+  @override
+  String chatUiContextUnsupported(String kind) {
+    return '電腦上的這個執行環境不支援$kind。';
+  }
+
+  @override
+  String get chatUiContextStale => '對話已變更，請重新開啟上下文選擇器。';
+
+  @override
+  String get chatUiContextRetry => '重新搜尋';
+
+  @override
+  String chatUiContextSearchFilesIn(String path) {
+    return '在 $path 中搜尋檔案';
+  }
+
+  @override
+  String get chatUiContextSelectFolder => '選擇一個專案資料夾，就能搜尋電腦上的檔案。';
+
+  @override
+  String chatUiContextNoneFound(String kind) {
+    return '找不到$kind。';
+  }
+
+  @override
+  String get chatUiAddDesktopContext => '加入電腦上的上下文';
+
+  @override
+  String get chatUiContextSearchFiles => '搜尋電腦上的檔案';
+
+  @override
+  String chatUiContextSearchKind(String kind) {
+    return '搜尋$kind';
+  }
+
+  @override
+  String get chatUiContextDisabled => '已在電腦上停用';
+
+  @override
+  String get chatUiContextOnDesktop => '在已配對的電腦上';
+
+  @override
+  String get chatUiEmptyGeneralTitle => '今天想做點什麼？';
+
+  @override
+  String get chatUiEmptyFolderPrefix => '想在 ';
+
+  @override
+  String get chatUiEmptyFolderSuffix => ' 裡做什麼？';
+
+  @override
+  String get chatUiEmptyGreeting => '嗨！有什麼可以幫你？';
+
+  @override
+  String get chatUiEncryptedCaption => '對話已端對端加密';
+
+  @override
+  String get chatUiUserMessage => '你的訊息';
+
+  @override
+  String get chatUiAssistantMessage => '助理的回覆';
+
+  @override
+  String get chatUiThreadActions => '對話操作';
+
+  @override
+  String get chatUiBranchesAndWorktrees => '分支和工作樹';
+
+  @override
+  String get chatUiGitActions => 'Git 操作';
+
+  @override
+  String get chatUiWorking => '正在處理…';
+
+  @override
+  String get chatUiScrollToLatest => '捲動到最新訊息';
+
+  @override
+  String get chatUiSavedToPhotos => '已存到「照片」。';
+
+  @override
+  String get chatUiShareImageFailed => '無法分享這張圖片，請再試一次。';
+
+  @override
+  String get chatUiSaveImageFailed => '無法儲存這張圖片，請再試一次。';
+
+  @override
+  String get chatUiLoadImageFailed => '無法載入這張圖片。';
+
+  @override
+  String get chatUiRetry => '重試';
+
+  @override
+  String get chatUiImageReopenWorkspace => '請重新連線，或從所在的工作區重新開啟這張圖片。';
+
+  @override
+  String get chatUiImageReopenChat => '請從所在的配對對話重新開啟這張圖片。';
+
+  @override
+  String chatUiOpenImage(String name) {
+    return '開啟圖片 $name';
+  }
+
+  @override
+  String get chatUiClose => '關閉';
+
+  @override
+  String get chatUiShare => '分享';
+
+  @override
+  String get chatUiSaveToPhotos => '存到「照片」';
+
+  @override
+  String get chatUiModelsGroup => '模型';
+
+  @override
+  String get chatUiRefreshModels => '重新整理模型';
+
+  @override
+  String get chatUiProviderAndModel => '供應商和模型';
+
+  @override
+  String get chatUiDone => '完成';
+
+  @override
+  String get chatUiAllProviders => '所有供應商';
+
+  @override
+  String get chatUiModelsConnectionChanged => '連線已變更，請重新開啟模型選擇。';
+
+  @override
+  String get chatUiLoadingModels => '正在載入模型';
+
+  @override
+  String get chatUiNoModels => '沒有可用的模型';
+
+  @override
+  String get chatUiNoModelsHint => '請先在電腦上的 DJL 中連接一個供應商，再重新整理模型列表。';
+
+  @override
+  String get chatUiNoMatchingModels => '沒有符合的模型';
+
+  @override
+  String get chatUiSearchModels => '搜尋供應商或模型';
+
+  @override
+  String get chatUiClearModelSearch => '清除模型搜尋';
+
+  @override
+  String get chatUiNavCloudChat => '雲端對話';
+
+  @override
+  String get chatUiNavRemote => '遠端';
+
+  @override
+  String get chatUiNavSearchFailed => '無法搜尋對話。';
+
+  @override
+  String get chatUiNavRetrySearch => '重新搜尋';
+
+  @override
+  String get chatUiNavSearching => '正在搜尋對話…';
+
+  @override
+  String get chatUiNavPinned => '已置頂';
+
+  @override
+  String get chatUiNavPinnedEmpty => '把常用的對話放在手邊。\n長按對話即可置頂。';
+
+  @override
+  String get chatUiNavRecent => '最近的對話';
+
+  @override
+  String get chatUiNavRecentEmpty => '你的對話會顯示在這裡。';
+
+  @override
+  String get chatUiNoMatchingChats => '沒有符合的對話';
+
+  @override
+  String get chatUiCloseSearch => '關閉搜尋';
+
+  @override
+  String get chatUiSearchChats => '搜尋對話';
+
+  @override
+  String get chatUiChatButton => '對話';
+
+  @override
+  String get chatUiNewChat => '新對話';
+
+  @override
+  String get chatUiSettings => '設定';
+
+  @override
+  String get chatUiMoreActions => '更多操作';
+
+  @override
+  String get chatUiMenuNewChat => '新對話';
+
+  @override
+  String get chatUiMenuQuickChat => '快速對話';
+
+  @override
+  String get chatUiMenuNewProject => '新專案';
+
+  @override
+  String get chatUiMenuConnections => '連線';
+
+  @override
+  String get chatUiMenuSecurePairing => '安全配對詳細資料';
+
+  @override
+  String get chatUiMenuYourMac => '你的 Mac';
+
+  @override
+  String get chatUiMenuActiveChats => '進行中的對話';
+
+  @override
+  String get chatUiArchivedChats => '已封存的對話';
+
+  @override
+  String get chatUiMenuRefresh => '重新整理';
+
+  @override
+  String get chatUiMenuDisconnect => '中斷連線';
+
+  @override
+  String get chatUiOpenNavigation => '開啟導覽';
+
+  @override
+  String get chatUiSearchConversations => '搜尋對話';
+
+  @override
+  String get chatUiDismissSearch => '關閉搜尋';
+
+  @override
+  String get chatUiStatusConnecting => '正在連線';
+
+  @override
+  String get chatUiStatusDeviceOffline => '裝置離線';
+
+  @override
+  String get chatUiStatusOffline => '離線';
+
+  @override
+  String chatUiConnectionStatus(String status) {
+    return '連線狀態：$status';
+  }
+
+  @override
+  String get chatUiGroups => '群組';
+
+  @override
+  String get homeTabChats => '聊天';
+
+  @override
+  String get chatUiExpandAll => '全部展開';
+
+  @override
+  String get chatUiCollapseAll => '全部收合';
+
+  @override
+  String chatUiCollapseChildChats(String title) {
+    return '收合「$title」的子對話';
+  }
+
+  @override
+  String chatUiExpandChildChats(String title) {
+    return '展開「$title」的子對話';
+  }
+
+  @override
+  String get chatUiDesktopChatActions => '對話操作';
+
+  @override
+  String get chatUiArchiveProject => '封存專案';
+
+  @override
+  String get chatUiRemoveFromPhone => '從手機移除';
+
+  @override
+  String chatUiArchiveProjectTitle(String name) {
+    return '要封存「$name」嗎？';
+  }
+
+  @override
+  String get chatUiArchiveProjectBody => '這個專案中所有進行中的對話都會被封存。';
+
+  @override
+  String chatUiRemoveProjectTitle(String name) {
+    return '要從這支手機移除「$name」嗎？';
+  }
+
+  @override
+  String get chatUiRemoveProjectBody =>
+      '這個專案的對話只會從這支手機上的 DJL 刪除，你的電腦和 Codex observer 中的內容不受影響。';
+
+  @override
+  String chatUiExpandProject(String name) {
+    return '展開專案 $name';
+  }
+
+  @override
+  String chatUiCollapseProject(String name) {
+    return '收合專案 $name';
+  }
+
+  @override
+  String chatUiNewChatIn(String name) {
+    return '在 $name 中新增對話';
+  }
+
+  @override
+  String get chatUiNewGroup => '新群組';
+
+  @override
+  String get chatUiGroupButton => '群組';
+
+  @override
+  String get chatUiOfflineSavedChats => '離線 · 顯示已儲存的對話';
+
+  @override
+  String get chatUiReconnect => '重新連線';
+
+  @override
+  String get chatUiNoMatchingChatsPeriod => '沒有符合的對話。';
+
+  @override
+  String get chatUiNoStudioThreads => '沒有工作室對話';
+
+  @override
+  String get chatUiNoProjectChats => '沒有專案對話';
+
+  @override
+  String get desktopAttentionApproval => '需要核准';
+
+  @override
+  String get desktopAttentionQuestion => '智慧體有問題要問你';
+
+  @override
+  String get desktopAttentionFailedRun => '執行失敗';
+
+  @override
+  String get desktopAttentionBlockedGoal => '目標需要處理';
+
+  @override
+  String get desktopAttentionCompletedRun => '待查看';
+
+  @override
+  String get desktopFailurePermission => '請查看要求的權限，或變更這個對話的存取模式，然後重新執行。';
+
+  @override
+  String get desktopFailureSignIn => '請在你的 Mac 上重新登入，然後重新執行。';
+
+  @override
+  String get desktopFailureTimeout => '請檢查 Mac 的連線，然後重新執行。';
+
+  @override
+  String get desktopFailureNetwork => '請確認 Mac 和中繼服務都在線上，然後重新執行。';
+
+  @override
+  String get desktopFailureCheck => '開啟對話查看未通過的檢查，修正後再重試。';
+
+  @override
+  String get desktopFailureGeneric => '開啟對話查看最後一步，解決問題後再重試。';
+
+  @override
+  String desktopAttentionAllowCommand(String command) {
+    return '要允許 Codex 執行「$command」嗎？';
+  }
+
+  @override
+  String get desktopAttentionAwaitingPermission => 'Codex 正在等你允許才能繼續。';
+
+  @override
+  String get desktopAttentionAnswerAgent => '開啟對話回覆智慧體。';
+
+  @override
+  String get desktopGoalBlocked => '目標受阻。開啟對話看看智慧體需要什麼。';
+
+  @override
+  String get desktopGoalUsageLimited => '已達用量上限，這個目標已暫停。請先查看對話再繼續。';
+
+  @override
+  String get desktopGoalBudgetLimited => '這個目標已用完預算。請先查看結果，再決定下一步。';
+
+  @override
+  String get desktopRunFinishedReview => '執行已完成。繼續之前，請先查看結果和檔案變更。';
+
+  @override
+  String get desktopScopeStudio => '工作室';
+
+  @override
+  String get desktopScopeProjects => '專案';
+
+  @override
+  String get desktopNoProject => '無專案';
+
+  @override
+  String get desktopGroupPinned => '已置頂';
+
+  @override
+  String get desktopUntitledChat => '未命名對話';
+
+  @override
+  String get desktopComposerTooManyImages => '最多只能選擇 4 張圖片。';
+
+  @override
+  String get desktopContextIncomplete => '所選的上下文不完整。請移除後重新選擇。';
+
+  @override
+  String get desktopApproveForMeUnsupported =>
+      '這個執行環境不支援「替我核准」。請在你的 Mac 上更新 Codex 後重試。';
+
+  @override
+  String get desktopEnterChatName => '請輸入對話名稱。';
+
+  @override
+  String get desktopContextPickerStale => '已連線的電腦已變更。請重新開啟上下文選擇器。';
+
+  @override
+  String get desktopNoSkillList => '電腦沒有傳回技能列表。';
+
+  @override
+  String get desktopNoPluginList => '電腦沒有傳回外掛程式列表。';
+
+  @override
+  String get desktopNoFileMatches => '電腦沒有傳回符合的檔案。';
+
+  @override
+  String get desktopPairedDisconnectedOrChanged => '已配對的電腦已中斷連線或已變更。';
+
+  @override
+  String get desktopPairedChangedRefreshOverview => '已配對的電腦已變更。請重新整理總覽。';
+
+  @override
+  String get desktopPairedChangedRefreshChats => '已配對的電腦已變更。請重新整理對話列表。';
+
+  @override
+  String get desktopIdentityMismatch => '電腦的身分或安全通訊協定與配對資訊不符。';
+
+  @override
+  String get desktopHandshakeUnverified => '無法驗證電腦的交握簽章。';
+
+  @override
+  String get desktopHandshakeTimedOut => '與電腦的安全交握逾時。';
+
+  @override
+  String get desktopSecureConnectionRefused => '電腦拒絕了安全連線。';
+
+  @override
+  String get desktopHandshakeInterrupted => '安全交握期間，與電腦的連線中斷。';
+
+  @override
+  String get desktopSecureConnectionRejected => '與電腦的安全連線遭到拒絕。';
+
+  @override
+  String get desktopInvalidFrame => '電腦傳來的資料無效。';
+
+  @override
+  String get desktopSecureTransportFailed => '與電腦的安全傳輸失敗。';
+
+  @override
+  String get desktopUnencryptedRejected => '已拒絕來自電腦的未加密資料。';
+
+  @override
+  String get desktopPayloadDecodeFailed => '部分來自電腦的資料無法解析。';
+
+  @override
+  String get desktopRequestFailed => '電腦要求失敗。';
+
+  @override
+  String get desktopIsDisconnected => '電腦已中斷連線。';
+
+  @override
+  String get desktopConnectionChanged => '與電腦的連線已變更。';
+
+  @override
+  String get desktopRequestTimedOut => '電腦要求逾時，結果不明。請先重新整理再重試。';
+
+  @override
+  String get desktopDisconnectedRefresh => '電腦已中斷連線。請先重新整理再重試操作。';
+
+  @override
+  String get desktopVerifiedHostRequired => '需要一台已儲存且已驗證的 Mac。';
+
+  @override
+  String get desktopResponseFailed => '電腦未能完成這次回覆。請檢查供應商設定後重試。';
+
+  @override
+  String get desktopWaitBeforeMovingProject => '請等目前對話的操作完成後，再移動它的專案。';
+
+  @override
+  String get desktopProviderUnavailable => '這個對話的供應商無法使用。請在電腦上連接該供應商，或選擇其他供應商。';
+
+  @override
+  String get desktopReopenBeforeRestore => '請重新開啟這個對話，確認這一輪後再還原變更。';
+
+  @override
+  String get desktopSwitchCancelled => '已取消切換。請選擇要重新連線的裝置。';
+
+  @override
+  String get desktopSelectionClearUnconfirmed =>
+      '無法確認已清除儲存的選擇。請解鎖裝置，然後選擇一台已儲存的 Mac 來復原。';
+
+  @override
+  String get desktopLinkIdentityUnavailable =>
+      '找不到這個連結對應的 Mac 身分。請從已驗證的 Mac 開啟對話。';
+
+  @override
+  String get desktopChooseMatchingMac => '請選擇與這個連結相符的已儲存 Mac，其驗證身分必須一致。';
+
+  @override
+  String get desktopWaitingForMac => '正在等待所選的 Mac。等它可以使用時再重試。';
+
+  @override
+  String get desktopLinkedConversationUnavailable => '連結指向的電腦對話無法使用。';
+
+  @override
+  String get desktopLinkedConversationLoadFailed =>
+      '無法載入連結指向的對話。請在所選的 Mac 上重試。';
+
+  @override
+  String get desktopDevicePreferencesLoadFailed => '無法載入本機的裝置偏好設定。請解鎖裝置後重試。';
+
+  @override
+  String get desktopSavedDesktopsOpenFailed => '無法開啟已儲存的電腦。請解鎖裝置後再試一次。';
+
+  @override
+  String get desktopModelUnavailable => '所選模型在電腦上無法使用。請選擇可用的模型。';
+
+  @override
+  String get desktopStopRunsUnconfirmed => '無法確認執行已停止，它們可能仍在另一台 Mac 上執行。';
+
+  @override
+  String get desktopPairingIdentityReadFailed =>
+      '無法讀取你的安全配對身分。請解鎖裝置，然後選擇「重新連線」。';
+
+  @override
+  String get desktopRuntimeOtherHistory => '執行環境傳回了另一個對話的歷史記錄。';
+
+  @override
+  String get desktopLinkedHistoryUnverified => '無法驗證連結對話的歷史記錄。';
+
+  @override
+  String get desktopIdleChatAndProjectRequired => '目前的對話必須處於閒置狀態，並且要有一個有效的專案。';
+
+  @override
+  String get desktopProjectChangeUnverified => '執行環境未確認這個對話的專案變更。';
+
+  @override
+  String get desktopForkUnidentified => '執行環境未識別出新建立的分岔。請先重新整理再重試。';
+
+  @override
+  String get desktopForkNotSeparate => '執行環境未建立獨立的對話。';
+
+  @override
+  String get desktopForkUnsupported => '這個執行環境不支援分岔對話。請在電腦上更新 DJL 後重試。';
+
+  @override
+  String get desktopReadSettingsFirst => '請先讀取已儲存的設定，再新增對話。';
+
+  @override
+  String get desktopConnectMacWithModels => '請先連接一台有可用模型的 Mac，再新增對話。';
+
+  @override
+  String get desktopChatCreatedElsewhere => '電腦在另一個專案資料夾中建立了對話。你的本機草稿已保留。';
+
+  @override
+  String get desktopDraftContextOtherFolder => '草稿中的上下文屬於另一個專案資料夾。請移除後重新選擇。';
+
+  @override
+  String get desktopQueuedPlanModelRequired => '傳送這則排隊中的草稿前，請選擇一個支援計畫模式的可用模型。';
+
+  @override
+  String get desktopChooseModelFirst => '請先選擇一個可用的模型。';
+
+  @override
+  String get desktopRunChangedBeforeQueue => '排隊訊息傳送前，目前的執行已變更。請先重新整理再繼續。';
+
+  @override
+  String get desktopRunChangedBeforeSteer => '目前的執行已變更。請先重新整理再引導。';
+
+  @override
+  String get desktopModelBeforeLeavingPlan => '離開計畫模式前，請選擇一個可用的模型。';
+
+  @override
+  String get desktopPlanModeUnsupported => '這個執行環境不支援計畫模式，已改為一般訊息傳送。';
+
+  @override
+  String get desktopRunIdPending => '目前的執行尚未發布 ID，請稍後再試。';
+
+  @override
+  String get desktopRuntimeOtherTurnPage => '執行環境傳回了另一個對話的輪次。';
+
+  @override
+  String get desktopRuntimeNoTurnState => '執行環境沒有傳回這個對話的輪次狀態。';
+
+  @override
+  String get desktopRuntimeInvalidTurnState => '執行環境傳回的輪次狀態無效。';
+
+  @override
+  String get desktopRetryApprovalUnacknowledged => '電腦未確認重試核准。';
+
+  @override
+  String get desktopDeviceFallbackName => '裝置';
+
+  @override
+  String get desktopDeviceChangeUnconfirmed =>
+      '無法確認變更。請檢查儲存的名稱後重試。如果這個裝置已被移除或更換，請關閉後重新開啟編輯器。';
+
+  @override
+  String get desktopPreferencesReloadFailed =>
+      '無法確認或重新載入本機偏好設定。請解鎖裝置並重試，然後再儲存。';
+
+  @override
+  String get desktopRunChangedBeforePlan => '目前的執行已變更。請先重新整理再執行這個計畫。';
+
+  @override
+  String get desktopQueueMessageArrived => '訊息已送達。請先查看結果，再繼續傳送排隊中的訊息。';
+
+  @override
+  String get desktopQueueDeliveryUnconfirmed => '無法確認排隊訊息已送達。請重新開啟這個對話後再重試。';
+
+  @override
+  String get desktopRequestFromEarlierSession => '這個要求來自先前的電腦工作階段。請重新整理對話。';
+
+  @override
+  String get desktopUndoReconnect => '請先重新連線到電腦，再查看復原。';
+
+  @override
+  String get desktopUndoReopen => '請重新開啟這個對話，確認回覆後再復原變更。';
+
+  @override
+  String get desktopUndoRepoBusy => '這個儲存庫中有對話正在執行。請稍候再復原回覆。';
+
+  @override
+  String get desktopUndoWaitResponse => '請等目前的回覆完成後再復原變更。';
+
+  @override
+  String get desktopUndoPersistFailed => '無法儲存復原結果。';
+
+  @override
+  String get desktopUndoRepoUnverified => '無法驗證這個回覆所在的儲存庫。請重新連線後再查看。';
+
+  @override
+  String get desktopReconnectToRefreshModels => '請重新連線到電腦以重新整理模型。';
+
+  @override
+  String get desktopAccessModeNotApplied => '電腦未套用所要求的存取模式。';
+
+  @override
+  String get desktopSubagentOfflineCached => '離線 · 快取的詳細資料';
+
+  @override
+  String get desktopSubagentLoading => '正在載入智慧體詳細資料';
+
+  @override
+  String get desktopSubagentLoaded => '詳細資料已載入';
+
+  @override
+  String get desktopSubagentIdentityUnknown => '智慧體身分不明';
+
+  @override
+  String get desktopSubagentLoadFailed => '無法載入智慧體詳細資料';
+
+  @override
+  String get desktopSavedDeviceChanged => '這個已儲存的裝置有變更。請重新選擇。';
+
+  @override
+  String get desktopMacIdentityMismatch => '所選 Mac 的身分不符。';
+
+  @override
+  String get desktopOfflineChatsOpenFailed => '無法開啟離線對話。請解鎖裝置或重新連線以載入。';
+
+  @override
+  String get desktopOfflineChatsSaveFailed => '無法儲存離線對話。請解鎖裝置後再試一次。';
+
+  @override
+  String get desktopChoosePairedDesktop => '請選擇一台已配對的電腦。';
+
+  @override
+  String get desktopSavedLocallyUnconfirmed =>
+      '已儲存在這台裝置上。無法確認電腦上的變更，請先重新整理再重試。';
+
+  @override
+  String get desktopImageEmptyOrTooLarge => '所選圖片是空的或太大。請選擇較小的圖片。';
+
+  @override
+  String get desktopImageUnsupported => '所選檔案不是支援的圖片格式。';
+
+  @override
+  String get desktopImageResizeFailed => '這台裝置無法調整圖片大小。請選擇不超過 1600 像素的圖片。';
+
+  @override
+  String get desktopImageTooLarge => '所選圖片太大。請選擇較小的圖片。';
+
+  @override
+  String get desktopContextFolderChanged => '專案資料夾已變更。請移除現有的上下文，或返回原本的資料夾。';
+
+  @override
+  String get desktopPickerOpenFailed => '無法開啟選擇器。請再試一次。';
+
+  @override
+  String get desktopWorktreeStale => '已連線的電腦或對話有變更。請重新開啟這個工作樹操作。';
+
+  @override
+  String get desktopNotGitRepository => '這個資料夾已不再是 Git 儲存庫。';
+
+  @override
+  String get desktopBranchAlreadyExists => '分支已存在';
+
+  @override
+  String get desktopWorktreeUnidentified => '電腦未識別出新的工作樹。請先重新整理再重試。';
+
+  @override
+  String get desktopForkUnverified => '無法驗證分岔結果。';
+
+  @override
+  String get desktopHandoffUnverified => '電腦未確認移交目標。請檢查兩個資料夾後再重試。';
+
+  @override
+  String get desktopWorktreePathUnavailable => '無法取得工作樹路徑。';
+
+  @override
+  String get desktopLocalCheckoutUnresolved => '找不到這個工作樹對應的本機簽出。';
+
+  @override
+  String get desktopWorktreeHandoffFailed => '工作樹移交失敗';
+
+  @override
+  String get desktopWorktreeForkFailed => '工作樹分岔失敗';
+
+  @override
+  String desktopAccessModeNotAppliedBy(String method) {
+    return '$method 未套用所選的存取模式。';
+  }
+
+  @override
+  String desktopApprovalReviewerNotApplied(String method) {
+    return '$method 未套用所選的核准審查者。';
+  }
+
+  @override
+  String desktopApprovalPolicyNotApplied(String method) {
+    return '$method 未套用所選的核准原則。';
+  }
+
+  @override
+  String desktopSandboxNotApplied(String method) {
+    return '$method 未套用所選的沙箱權限。';
+  }
+
+  @override
+  String desktopForkResultUnknown(String error) {
+    return '$error 無法確定分岔是否成功，請先重新整理再重試。';
+  }
+
+  @override
+  String desktopSendResultUnknown(String error) {
+    return '$error 無法確定是否已傳送，請先重新整理對話再重試。';
+  }
+
+  @override
+  String desktopQueuePaused(String reason) {
+    return '排隊已暫停：$reason';
+  }
+
+  @override
+  String desktopWorktreeExists(String branch) {
+    return '「$branch」的工作樹已存在。請換一個名稱。';
+  }
+
+  @override
+  String desktopRollbackFailed(String reason) {
+    return '無法自動移回已追蹤的變更：$reason。請檢查兩個資料夾後再重試。';
+  }
+
+  @override
+  String desktopWorktreeKeptAt(String path) {
+    return '新的工作樹已保留在 $path。請檢查後再重試。';
+  }
+
+  @override
+  String get desktopWorktreeMayExist => '可能已建立一個工作樹，並已保留。請重新整理並檢查後再重試。';
+
+  @override
+  String get pairingEnterTenCharCode => '請輸入電腦端「遠端」設定中顯示的 10 碼配對碼。';
+
+  @override
+  String get pairingSecureRelayRequired => '配對需要使用安全的中繼網址。';
+
+  @override
+  String get pairingPairedMac => '已配對的 Mac';
+
+  @override
+  String get pairingNotAPairingCode => '這不是 DJL 的配對 QR 碼或配對碼。';
+
+  @override
+  String get pairingUpdateDesktop => '請更新電腦上的 DJL：這次配對使用了不同的通訊協定。';
+
+  @override
+  String get pairingInvalidIdentifier => '裝置或工作階段識別碼無效。';
+
+  @override
+  String get pairingInvalidIdentityKey => '電腦身分金鑰無效。';
+
+  @override
+  String get pairingCodeExpired => '這組配對碼已過期，請在 Mac 上產生新的配對碼。';
+
+  @override
+  String get pairingPrefsUnavailable => '無法取得已儲存的裝置偏好設定。';
+
+  @override
+  String get pairingDeviceChangedReopen => '這個裝置的儲存資訊已變更，請關閉後重新開啟編輯頁面。';
+
+  @override
+  String get pairingRecoverSelectionFailed => '無法復原已儲存的選擇。請先解鎖裝置並重試，再選擇 Mac。';
+
+  @override
+  String get pairingDeviceChangedChooseAgain => '已儲存的裝置有變更，請重新選擇。';
+
+  @override
+  String get pairingConfirmSavedFailed =>
+      '無法確認所選的 Mac 已儲存。請解鎖裝置，再選擇一台已儲存的 Mac 來復原。';
+
+  @override
+  String get pairingRelayDifferentIdentity => '受信任的中繼傳回了不同的電腦身分，請重新配對。';
+
+  @override
+  String get pairingRelayTemporarilyUnavailable => '電腦中繼暫時無法使用。';
+
+  @override
+  String get pairingRelayInvalidResponse => '電腦中繼傳回了無效的回應。';
+
+  @override
+  String get pairingTrustedComputerOffline => '受信任的電腦已離線。';
+
+  @override
+  String get pairingServiceUnavailable => '電腦配對服務無法使用。';
+
+  @override
+  String get pairingRelayUnreachable => '無法連線到電腦中繼。';
+
+  @override
+  String get pairingRelayUnsupportedMethod => '這個中繼不支援這種配對方式。';
+
+  @override
+  String get pairingRelayRequired => '請填寫中繼網址。';
+
+  @override
+  String get pairingEnterOneTimeCode => '輸入一次性配對碼';
+
+  @override
+  String get pairingFindCodeHint => '在電腦版 DJL 的「設定 → 遠端」中可以找到配對碼。';
+
+  @override
+  String get pairingCodeLabel => '配對碼';
+
+  @override
+  String get pairingRelayConfigured => '已設定中繼';
+
+  @override
+  String get pairingRelaySettings => '中繼設定';
+
+  @override
+  String get pairingInProgress => '正在配對…';
+
+  @override
+  String get pairingPair => '配對';
+
+  @override
+  String get pairingSecureDetailsTitle => '安全配對詳細資料';
+
+  @override
+  String get pairingSecureDetailsBody =>
+      '開啟電腦版 DJL →「設定 → 遠端」。貼上其中的配對內容，或設定一次性配對碼所用的中繼。';
+
+  @override
+  String get pairingPasteCode => '貼上配對碼';
+
+  @override
+  String get pairingPayloadHint => 'RMX1:… 或 QR 碼 JSON';
+
+  @override
+  String get pairingPairSecurely => '安全配對';
+
+  @override
+  String get pairingRelayUrlLabel => '電腦中繼網址';
+
+  @override
+  String get pairingSwitchDeviceTitle => '要切換裝置嗎？';
+
+  @override
+  String get pairingSwitchDeviceBody =>
+      'DJL 會嘗試停止這台 Mac 上正在執行的任務，並重新載入另一台裝置的對話。';
+
+  @override
+  String get pairingSwitch => '切換';
+
+  @override
+  String get pairingCancellingSwitch => '正在取消切換…';
+
+  @override
+  String get pairingSwitchingDevice => '正在切換裝置…';
+
+  @override
+  String get pairingCancelSwitch => '取消切換';
+
+  @override
+  String get pairingChooseMatchingMac => '請選擇與這個連結已驗證身分相符的 Mac。';
+
+  @override
+  String get pairingChooseMacForLink => '請選擇一台已儲存的 Mac 來開啟連結中的對話。';
+
+  @override
+  String get pairingOpeningLinkedConversation => '正在開啟連結中的電腦對話…';
+
+  @override
+  String get pairingRetryDesktopLink => '重新開啟連結';
+
+  @override
+  String get pairingCancelDesktopLink => '取消開啟連結';
+
+  @override
+  String get pairingMatchesLinkIdentity => '與這個連結的已驗證身分相符';
+
+  @override
+  String get pairingDifferentIdentity => '電腦身分不同';
+
+  @override
+  String get pairingSavedVerifiedIdentity => '已儲存並驗證的電腦身分';
+
+  @override
+  String get pairingReconnect => '重新連線';
+
+  @override
+  String get pairingConnections => '連線';
+
+  @override
+  String get pairingScanQrCode => '掃描 QR 碼';
+
+  @override
+  String get pairingPairWithCode => '用配對碼配對';
+
+  @override
+  String get pairingConnectToDesktop => '連線到電腦版 DJL';
+
+  @override
+  String get pairingChooseSavedMac => '選擇已儲存的 Mac';
+
+  @override
+  String get pairingFirstPairingHint =>
+      '在你的 Mac 或 Windows 電腦上開啟 DJL，然後前往「設定 → 遠端」。';
+
+  @override
+  String get pairingGetDesktop => '下載電腦版 DJL';
+
+  @override
+  String get pairingScanTitle => '掃描電腦版 DJL 的 QR 碼';
+
+  @override
+  String get pairingCameraDenied => '相機權限已被拒絕。你可以改為貼上配對碼。';
+
+  @override
+  String get pairingScanUnsupported => '這台裝置無法掃描 QR 碼。你可以改為貼上配對碼。';
+
+  @override
+  String get pairingCameraUnavailable => '無法使用相機。你可以改為貼上配對碼。';
+
+  @override
+  String get pairingSwitchDevice => '切換裝置';
+
+  @override
+  String get pairingSwitchTo => '切換到';
+
+  @override
+  String get pairingStatusSwitching => '正在切換…';
+
+  @override
+  String get pairingStatusConnected => '已連線';
+
+  @override
+  String get pairingStatusSelected => '已選取';
+
+  @override
+  String get pairingStatusPrevious => '上次使用';
+
+  @override
+  String get pairingStatusSaved => '已儲存';
+
+  @override
+  String get pairingForget => '移除';
+
+  @override
+  String get pairingForgetDeviceTitle => '要移除這台裝置嗎？';
+
+  @override
+  String pairingForgetDeviceBody(String name) {
+    return '「$name」將從這支手機移除。如需重新連線，請再次掃描它的 QR 碼。';
+  }
+
+  @override
+  String get pairingActiveBadge => '目前';
+
+  @override
+  String pairingShowInMenu(String name) {
+    return '在裝置選單中顯示「$name」';
+  }
+
+  @override
+  String get pairingMenuVisibilityUnavailable => '無法設定選單顯示';
+
+  @override
+  String get pairingClose => '關閉';
+
+  @override
+  String get pairingActiveDevice => '目前裝置';
+
+  @override
+  String pairingActiveDeviceNamed(String name) {
+    return '目前裝置：$name';
+  }
+
+  @override
+  String pairingDevicesInMenu(int count) {
+    return '選單中有 $count 台裝置';
+  }
+
+  @override
+  String get pairingDevices => '裝置';
+
+  @override
+  String get pairingNoDevices => '還沒有配對的裝置。';
+
+  @override
+  String get pairingScanQr => '掃描 QR 碼';
+
+  @override
+  String get pairingForgetDesktop => '移除電腦';
+
+  @override
+  String get pairingRecencyNow => '剛剛';
+
+  @override
+  String pairingRecencyMinutes(int count) {
+    return '$count 分鐘';
+  }
+
+  @override
+  String pairingRecencyHours(int count) {
+    return '$count 小時';
+  }
+
+  @override
+  String pairingRecencyDays(int count) {
+    return '$count 天';
+  }
+
+  @override
+  String pairingRecencyAgo(String age) {
+    return '$age前';
+  }
+
+  @override
+  String pairingRecencyIn(String age) {
+    return '$age後';
+  }
+
+  @override
+  String get chatUiCloseNavigation => '關閉導覽';
+
+  @override
+  String get chatUiRuntime => '執行位置';
+
+  @override
+  String get chatUiContinueIn => '繼續於';
+
+  @override
+  String get chatUiLocal => '本機';
+
+  @override
+  String get chatUiWorktree => '工作樹';
+
+  @override
+  String get chatUiCurrentBranch => '目前分支';
+
+  @override
+  String get chatUiCollapseProjectControls => '收合專案控制項';
+
+  @override
+  String get chatUiExpandProjectControls => '展開專案控制項';
+
+  @override
+  String get chatUiQueuedMessages => '排隊中的訊息';
+
+  @override
+  String get chatUiQueuedHint => '查看排隊中的後續訊息';
+
+  @override
+  String get chatUiQueued => '排隊中';
+
+  @override
+  String get chatUiQueuedNeedsPlanModel => '請先選擇支援計畫模式的模型，再把這則草稿移到輸入框。';
+
+  @override
+  String chatUiImageCount(int count) {
+    return '$count 張圖片';
+  }
+
+  @override
+  String get chatUiAttachedContext => '已附加的上下文';
+
+  @override
+  String get chatUiMoveDraftToInput => '移到輸入框';
+
+  @override
+  String get chatUiSteerQueued => '立即插入這則排隊訊息';
+
+  @override
+  String get chatUiSteer => '插入';
+
+  @override
+  String get chatUiDeleteQueued => '刪除排隊中的訊息';
+
+  @override
+  String get chatUiCopyResponse => '複製回覆';
+
+  @override
+  String get chatUiCopied => '已複製';
+
+  @override
+  String get chatUiEffortLow => '低';
+
+  @override
+  String get chatUiEffortMedium => '中';
+
+  @override
+  String get chatUiEffortHigh => '高';
+
+  @override
+  String get chatUiEffortExtraHigh => '極高';
+
+  @override
+  String get chatUiLoading => '正在載入…';
+
+  @override
+  String get chatUiSelectModel => '選擇模型';
+
+  @override
+  String get chatUiModel => '模型';
+
+  @override
+  String get chatUiSpeed => '速度';
+
+  @override
+  String get chatUiSpeedFast => '快速';
+
+  @override
+  String get chatUiSpeedNormal => '標準';
+
+  @override
+  String get chatUiChatControls => '對話設定';
+
+  @override
+  String get chatUiControlsConnectionChanged => '連線已變更，請重新開啟對話設定。';
+
+  @override
+  String get chatUiLoadingModelsEllipsis => '正在載入模型…';
+
+  @override
+  String get chatUiOtherModels => '其他模型…';
+
+  @override
+  String get chatUiIntelligence => '推理強度';
+
+  @override
+  String get chatUiCopySessionId => '複製工作階段 ID';
+
+  @override
+  String get chatUiRenameChat => '重新命名對話';
+
+  @override
+  String get chatUiUnpinChat => '取消置頂';
+
+  @override
+  String get chatUiPinChat => '置頂對話';
+
+  @override
+  String get chatUiUnarchiveChat => '取消封存';
+
+  @override
+  String get chatUiArchiveChat => '封存對話';
+
+  @override
+  String get chatUiRemoveFromDevice => '從這台裝置移除';
+
+  @override
+  String get chatUiSessionIdCopied => '已複製工作階段 ID。';
+
+  @override
+  String get chatUiRemoveChatTitle => '要從這台裝置移除這個對話嗎？';
+
+  @override
+  String get chatUiRemoveChatBodyArchived => '對話仍會保留在你的電腦上。子智慧體的對話會在本機封存。';
+
+  @override
+  String get chatUiRemoveChatBody => '對話仍會保留在你的電腦上，並在電腦上封存。子智慧體的對話會在本機封存。';
+
+  @override
+  String get chatUiRemoveChat => '移除對話';
+
+  @override
+  String get chatUiChatName => '對話名稱';
+
+  @override
+  String get chatUiSaveName => '儲存名稱';
+
+  @override
+  String get chatUiCopyPathFailed => '無法複製路徑，請再試一次。';
+
+  @override
+  String get chatUiConversationChanged => '對話已變更';
+
+  @override
+  String get chatUiCloseLocation => '關閉位置資訊';
+
+  @override
+  String get chatUiThreadLabel => '對話';
+
+  @override
+  String get chatUiRenameConversation => '重新命名對話';
+
+  @override
+  String get chatUiPathLabel => '路徑';
+
+  @override
+  String get chatUiPathCopied => '已複製路徑';
+
+  @override
+  String get chatUiCopyPath => '複製路徑';
+
+  @override
+  String get chatUiLocationStale => '請關閉這個頁面，再重新開啟對話位置。';
+
+  @override
+  String get chatUiMoreThreadActions => '更多對話操作';
+
+  @override
+  String chatUiPreviousMessages(int count) {
+    return '較早的 $count 則訊息';
+  }
+
+  @override
+  String chatUiMoreToolCalls(int count) {
+    return '另有 $count 次工具呼叫';
+  }
+
+  @override
+  String chatUiRanCommands(int count) {
+    return '執行了 $count 個指令';
+  }
+
+  @override
+  String chatUiCommandsFailed(int count) {
+    return '$count 個失敗';
+  }
+
+  @override
+  String chatUiCommandsStopped(int count) {
+    return '$count 個已停止';
+  }
+
+  @override
+  String get chatUiCollapsePreviousMessages => '收合較早的訊息';
+
+  @override
+  String get chatUiExpandPreviousMessages => '展開較早的訊息';
+
+  @override
+  String get chatUiCollapseCommands => '收合指令';
+
+  @override
+  String get chatUiExpandCommands => '展開指令';
+
+  @override
+  String get chatUiCollapseToolCalls => '收合工具呼叫';
+
+  @override
+  String get chatUiExpandToolCalls => '展開工具呼叫';
+
+  @override
+  String get chatUiQuestions => '問題';
+
+  @override
+  String chatUiQuestionPage(int page, int total) {
+    return '第 $page 題，共 $total 題';
+  }
+
+  @override
+  String get chatUiQuestionResponseUnknown => '先前的回覆可能已經送出。請先在電腦上確認，再重新回覆。';
+
+  @override
+  String get chatUiBack => '上一步';
+
+  @override
+  String get chatUiQuestionClosing => '正在關閉…';
+
+  @override
+  String get chatUiQuestionEsc => '關閉';
+
+  @override
+  String get chatUiNext => '下一步';
+
+  @override
+  String get chatUiResponseSent => '回覆已送出';
+
+  @override
+  String get chatUiSendingDots => '正在傳送…';
+
+  @override
+  String get chatUiSend => '傳送';
+
+  @override
+  String chatUiSelectUpTo(int limit) {
+    return '最多選擇 $limit 項';
+  }
+
+  @override
+  String get chatUiOtherAnswer => '其他回答';
+
+  @override
+  String get chatUiYourAnswer => '你的回答';
+
+  @override
+  String get settingsFontSystem => '系統預設';
+
+  @override
+  String get settingsUnlockReason => '解鎖 DJL 和你的遠端程式設計工作階段。';
+
+  @override
+  String get settingsUsageWeekly => '每週';
+
+  @override
+  String settingsUsageWeeks(int count) {
+    return '$count 週';
+  }
+
+  @override
+  String settingsUsageDays(int count) {
+    return '$count 天';
+  }
+
+  @override
+  String settingsUsageHours(int count) {
+    return '$count 小時';
+  }
+
+  @override
+  String settingsUsageMinutes(int count) {
+    return '$count 分鐘';
+  }
+
+  @override
+  String get settingsThemeSystem => '跟隨系統';
+
+  @override
+  String get settingsThemeLight => '淺色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsAppearance => '外觀';
+
+  @override
+  String get settingsFont => '字體';
+
+  @override
+  String get settingsLiquidGlass => '液態玻璃';
+
+  @override
+  String get settingsTheme => '主題';
+
+  @override
+  String get settingsNotifications => '通知';
+
+  @override
+  String get settingsInAppAlertsFooter => '其他對話的任務完成時顯示橫幅提醒。';
+
+  @override
+  String get settingsInAppAlerts => 'App 內提醒';
+
+  @override
+  String get settingsVoice => '語音';
+
+  @override
+  String get settingsVoiceFooter => '傳送前可以檢查聽寫內容。回覆會使用裝置的語音朗讀。';
+
+  @override
+  String get settingsSpeakReplies => '朗讀新回覆';
+
+  @override
+  String get settingsRetryReading => '重新讀取設定';
+
+  @override
+  String get settingsErrorPartialSave => '部分預設設定可能未完整儲存。請檢查重新載入的選項後重試。';
+
+  @override
+  String get settingsErrorPartialReload => '預設設定可能未完整儲存，且無法重新載入偏好設定。請先重新讀取設定。';
+
+  @override
+  String get settingsErrorRead => '無法讀取已儲存的設定。請重試以保留你的偏好。';
+
+  @override
+  String get settingsErrorSave => '無法儲存這項設定，先前的選擇維持不變。請再試一次。';
+
+  @override
+  String settingsUsageResets(String when) {
+    return '$when重設';
+  }
+
+  @override
+  String get settingsUsage => '用量';
+
+  @override
+  String get settingsUsageFooter => '來自已配對裝置的帳號整體速率限制。';
+
+  @override
+  String get settingsUsageLoading => '正在載入目前的限額…';
+
+  @override
+  String get settingsUsageConnect => '連線到已配對的裝置以載入目前的限額。';
+
+  @override
+  String get settingsUsageUnavailable => '這個帳號目前沒有速率限制資訊。';
+
+  @override
+  String settingsUsageLeft(int percent) {
+    return '剩餘 $percent%';
+  }
+
+  @override
+  String get settingsUsageStale => '這是上次取得的限額。重新連線或重新整理即可更新。';
+
+  @override
+  String get settingsUsageRefreshTooltip => '重新整理用量';
+
+  @override
+  String get settingsUsageRefreshing => '正在重新整理…';
+
+  @override
+  String get settingsUsageRefresh => '重新整理';
+
+  @override
+  String get settingsUsageRuntimeUnavailable => '這個執行環境目前沒有速率限制資訊。';
+
+  @override
+  String get settingsUsageLoadFailed => '無法載入目前的限額。請再試一次。';
+
+  @override
+  String get settingsTitle => '設定';
+
+  @override
+  String get settingsOpenCloudChat => '開啟 DJL Cloud 對話';
+
+  @override
+  String get settingsSignInCloud => '登入 DJL Cloud';
+
+  @override
+  String get settingsCloudSubtitle => '不需要 Mac，也能對話、產生圖片和執行背景任務';
+
+  @override
+  String get settingsDevicePermissions => '裝置權限';
+
+  @override
+  String get settingsDevice => '裝置';
+
+  @override
+  String get settingsMyMacs => '我的 Mac';
+
+  @override
+  String get settingsLocked => 'DJL 已鎖定';
+
+  @override
+  String get settingsPreparing => '正在準備 DJL';
+
+  @override
+  String get settingsStartFailed => '無法啟動 DJL';
+
+  @override
+  String get settingsPrivateNote => '你離開時，遠端工作階段會保持私密。';
+
+  @override
+  String get settingsRetryStartup => '重新啟動';
+
+  @override
+  String get settingsUnlockHint => '使用 Face ID、Touch ID 或裝置密碼驗證';
+
+  @override
+  String get settingsUnlocking => '正在解鎖…';
+
+  @override
+  String get settingsUnlock => '解鎖 DJL';
+
+  @override
+  String get settingsLockSetup => '請設定 Face ID、Touch ID 或裝置密碼來解鎖 DJL。';
+
+  @override
+  String get settingsLockStillLocked => 'DJL 仍處於鎖定狀態。請解鎖 DJL 以繼續。';
+
+  @override
+  String get settingsLockCancelled => '驗證已取消或無法使用。請解鎖 DJL 以繼續。';
+
+  @override
+  String get settingsBridgeUnknown => '不明';
+
+  @override
+  String get settingsBridgeInstalled => '已安裝';
+
+  @override
+  String get settingsBridgeUpToDate => '已是最新版本';
+
+  @override
+  String get settingsBridgeUpdateAvailable => '有可用的更新';
+
+  @override
+  String get settingsBridgeDifferentBuild => '版本不同';
+
+  @override
+  String get settingsBridgeConnectHint => '連線到你的 Mac 以查看它的 DJL 版本。';
+
+  @override
+  String get settingsBridgeStaleHint => '這是上次取得的版本。重新連線即可再次檢查。';
+
+  @override
+  String get settingsBridgeMatches => 'Mac 上的 DJL 已是最新版本。';
+
+  @override
+  String get settingsBridgeNewer => 'DJL 有新版本可用。請更新 Mac 上的 DJL。';
+
+  @override
+  String get settingsBridgeDifferent => '你的 Mac 執行的版本與最新發布的版本不同。';
+
+  @override
+  String get settingsBridgeStatus => '狀態';
+
+  @override
+  String settingsBridgeLastKnown(String status) {
+    return '上次取得 · $status';
+  }
+
+  @override
+  String get settingsVersion => '版本';
+
+  @override
+  String get settingsBridgeLatest => '最新版本';
+
+  @override
+  String get settingsBridgeUpdate => '更新 Mac 上的 DJL';
+
+  @override
+  String get settingsBridgeCheck => '檢查 DJL 更新';
+
+  @override
+  String settingsElapsedDays(int days) {
+    return '$days 天';
+  }
+
+  @override
+  String settingsElapsedHours(int hours, int minutes) {
+    return '$hours 小時 $minutes 分鐘';
+  }
+
+  @override
+  String settingsElapsedMinutes(int minutes, int seconds) {
+    return '$minutes 分鐘 $seconds 秒';
+  }
+
+  @override
+  String settingsElapsedSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get settingsArchived => '已封存';
+
+  @override
+  String get settingsArchivedChats => '已封存的對話';
+
+  @override
+  String settingsArchivedSaved(int count) {
+    return '本機已儲存 $count 個';
+  }
+
+  @override
+  String get settingsArchivedActions => '已封存對話的操作';
+
+  @override
+  String get settingsUnarchive => '取消封存';
+
+  @override
+  String get settingsRemoveFromPhone => '從手機移除';
+
+  @override
+  String get settingsRemove => '移除';
+
+  @override
+  String get settingsNoArchived => '沒有已封存的對話';
+
+  @override
+  String settingsRemoveTitle(String title) {
+    return '要從這支手機移除「$title」嗎？';
+  }
+
+  @override
+  String get settingsRemoveBody => '這只會從這支手機上的 DJL 移除這個對話，已配對電腦上的內容不受影響。';
+
+  @override
+  String get settingsCloudRefreshFailed => '無法重新整理帳號和 Cloud 設定。';
+
+  @override
+  String get settingsLinkFailed => '無法開啟這個連結。請再試一次。';
+
+  @override
+  String get settingsOpenNotificationsFailed => '無法開啟通知設定。請再試一次。';
+
+  @override
+  String get settingsAlertsUnavailable => '無法使用';
+
+  @override
+  String get settingsAlertsOff => '已關閉';
+
+  @override
+  String get settingsAlertsEnabled => '已開啟';
+
+  @override
+  String get settingsAlertsNotEnabled => '未開啟';
+
+  @override
+  String get settingsBack => '返回';
+
+  @override
+  String get settingsOpenNavigation => '開啟導覽';
+
+  @override
+  String get settingsRetry => '重試';
+
+  @override
+  String get settingsAccount => '帳號';
+
+  @override
+  String get settingsDjlAccount => 'DJL 帳號';
+
+  @override
+  String get settingsAvailableCredits => '可用點數';
+
+  @override
+  String get settingsConversations => '對話';
+
+  @override
+  String get settingsArchivedChatsRow => '已封存的對話';
+
+  @override
+  String get settingsRemoteAccess => '遠端存取';
+
+  @override
+  String get settingsBackgroundAlerts => '背景提醒';
+
+  @override
+  String get settingsEnableBackgroundAlerts => '開啟背景提醒';
+
+  @override
+  String get settingsOpenNotificationSettings => '開啟通知設定';
+
+  @override
+  String get settingsVoiceIos =>
+      '聽寫內容只會保留在你的 iPhone 上。傳送前可以檢查文字。回覆會使用 iPhone 的語音朗讀。';
+
+  @override
+  String get settingsVoiceDevice => '聽寫內容只會保留在你的裝置上。傳送前可以檢查文字。回覆會使用裝置的語音朗讀。';
+
+  @override
+  String get settingsAbout => '關於';
+
+  @override
+  String get settingsTerms => '條款';
+
+  @override
+  String get settingsPrivacy => '隱私權';
+
+  @override
+  String get settingsRetryLocalPrefs => '重新讀取本機偏好設定';
+
+  @override
+  String get settingsDeviceNameOnPhone => '這支手機上顯示的裝置名稱';
+
+  @override
+  String get settingsEditDeviceNameTooltip => '編輯裝置名稱';
+
+  @override
+  String get settingsClose => '關閉';
+
+  @override
+  String get settingsEditDeviceNameTitle => '編輯裝置名稱';
+
+  @override
+  String get settingsDeviceName => '裝置名稱';
+
+  @override
+  String get settingsNicknameNote => '這個暱稱只會儲存在這支手機上，並顯示在所有出現這台裝置的地方。';
+
+  @override
+  String get settingsDeviceChanged => '這個已儲存的裝置有變更。請關閉後重新開啟編輯器。';
+
+  @override
+  String get settingsUseDefault => '使用預設名稱';
+
+  @override
+  String get settingsSave => '儲存';
+
+  @override
+  String get settingsAboutFooter => '你的手機與已配對裝置之間的對話採用端對端加密。';
+
+  @override
+  String get settingsHowDjlWorks => 'DJL 的運作方式';
+
+  @override
+  String get settingsChatSupport => '交流與支援';
+
+  @override
+  String get settingsPrivacyPolicy => '隱私權政策';
+
+  @override
+  String get settingsTermsOfUse => '使用條款';
+
+  @override
+  String get settingsAboutRouteBridgeDevice => '已配對裝置上的橋接程式';
+
+  @override
+  String get settingsAboutRouteBridge => '橋接程式';
+
+  @override
+  String settingsAboutRouteLabel(String from, String to, String via) {
+    return '$from 透過 $via 連線到 $to';
+  }
+
+  @override
+  String get settingsAboutIntro => '用手機控制 **Codex**。';
+
+  @override
+  String get settingsAboutIntroNote =>
+      'Codex 執行環境始終留在已配對的裝置上。你的手機是透過中繼連線的安全遙控器。';
+
+  @override
+  String get settingsAboutHowItWorks => '運作方式';
+
+  @override
+  String get settingsAboutBridge =>
+      '已配對的裝置上執行著一個輕量的**橋接程式**，它透過 WebSocket 連線到**中繼伺服器**。';
+
+  @override
+  String get settingsAboutStep1 => '你在手機上傳送提示。';
+
+  @override
+  String get settingsAboutStep2 => '提示經由中繼傳到已配對裝置上的橋接程式。';
+
+  @override
+  String get settingsAboutStep3 => '橋接程式透過 JSON-RPC 把它轉送給 `codex app-server`。';
+
+  @override
+  String get settingsAboutStep4 => '回覆沿著同一條路徑即時傳回。';
+
+  @override
+  String get settingsAboutWorkspaceNote =>
+      '工作區工具和檔案編輯都在已配對的裝置上執行。中繼只轉送加密的流量，不會執行你的工作區。';
+
+  @override
+  String get settingsAboutArchitecture => '架構';
+
+  @override
+  String get settingsAboutRelay => '中繼';
+
+  @override
+  String get settingsAboutRelayIntro =>
+      '一個輕量的 WebSocket 伺服器，負責在你的手機和已配對裝置之間轉送訊息。';
+
+  @override
+  String get settingsAboutRelayDiscovery => '負責工作階段探索，讓你的手機找到裝置上正在執行的工作階段。';
+
+  @override
+  String get settingsAboutRelayPrivate => '交握完成後，永遠看不到解密後的訊息內容。';
+
+  @override
+  String get settingsAboutRelayMetadata => '可以看到連線中繼資料，例如工作階段 ID、裝置 ID 和時間資訊。';
+
+  @override
+  String get settingsAboutRelaySelfHost => '你可以**自行架設**中繼，也可以使用橋接程式設定的託管端點。';
+
+  @override
+  String get settingsAboutAppServerIntro =>
+      '對於 Codex 執行環境，橋接程式會連線到 **`codex app-server`**，也就是 Codex 用戶端使用的 JSON-RPC 介面。';
+
+  @override
+  String get settingsAboutAppServerSessions => '手機上的對話就是完整的 Codex 工作階段。';
+
+  @override
+  String get settingsAboutAppServerRollout =>
+      'Codex 會在 `~/.codex/sessions/` 下產生 JSONL rollout 檔案。';
+
+  @override
+  String get settingsAboutAppServerHandoff =>
+      '使用 DJL 的「在電腦上繼續」操作，就能在已配對的裝置上接續手機上的對話。';
+
+  @override
+  String get settingsAboutPairing => '配對與安全性';
+
+  @override
+  String get settingsAboutPairingQr =>
+      '第一次連線時，請掃描橋接程式的 **QR 碼**。它包含中繼、工作階段、已配對裝置，以及橋接程式身分公開金鑰的資訊。';
+
+  @override
+  String get settingsAboutPairingAfter => '安全交握完成後：';
+
+  @override
+  String get settingsAboutPairingTrusted =>
+      '你的手機會把橋接程式當作**受信任的裝置**，儲存在系統的安全儲存空間中。';
+
+  @override
+  String get settingsAboutPairingIdentity => '橋接程式會在本機保存你手機的身分。';
+
+  @override
+  String get settingsAboutPairingReconnect => '已儲存的受信任裝置不必再次掃描即可重新連線。';
+
+  @override
+  String get settingsAboutPairingRecovery =>
+      '如果信任關係有變更或找不到目前的工作階段，仍可掃描 QR 碼來復原連線。設定了同一個中繼時，也可以使用一次性配對碼配對。';
+
+  @override
+  String get settingsAboutEncryption => '端對端加密';
+
+  @override
+  String get settingsAboutEncryptionIntro => '配對後，訊息會透過加密信封傳輸。';
+
+  @override
+  String get settingsAboutCipher => '加密演算法';
+
+  @override
+  String get settingsAboutKeyDerivation => '金鑰衍生';
+
+  @override
+  String get settingsAboutKeyDerivationValue => 'HKDF-SHA256，每個方向使用獨立金鑰';
+
+  @override
+  String get settingsAboutKeyExchange => '金鑰交換';
+
+  @override
+  String get settingsAboutKeyExchangeValue => 'X25519 臨時金鑰';
+
+  @override
+  String get settingsAboutIdentity => '身分';
+
+  @override
+  String get settingsAboutIdentityValue => 'Ed25519 簽章';
+
+  @override
+  String get settingsAboutReplayProtection => '重送保護';
+
+  @override
+  String get settingsAboutReplayProtectionValue => '單調遞增計數器';
+
+  @override
+  String get settingsAboutCacheKey => '手機快取金鑰';
+
+  @override
+  String get settingsAboutCacheKeyValue => '由系統的安全儲存空間保護';
+
+  @override
+  String get settingsAboutEncryptionNote =>
+      '以上說明的是**配對裝置模式**。DJL Cloud 是獨立的服務和帳號流程。';
+
+  @override
+  String get settingsAboutGit => 'Git 與工作區';
+
+  @override
+  String get settingsAboutGitIntro => '橋接程式會在已配對的裝置上於本機處理 Git 指令：';
+
+  @override
+  String get settingsAboutGitRevert =>
+      'DJL 也支援**工作區還原**：想復原助理的變更時，可以預覽並套用反向修補檔。套用變更前請先查看確認資訊。';
+
+  @override
+  String get settingsAboutResilience => '連線穩定性';
+
+  @override
+  String get settingsAboutReconnect => '自動重新連線採用有上限的退避策略。';
+
+  @override
+  String get settingsAboutReplay => '加密的重送游標有助於找回錯過的事件。中斷連線後，無法確認的操作不會被悄悄重新傳送。';
+
+  @override
+  String get settingsAboutRuntimeDrop => '手機連線短暫中斷時，執行環境仍可繼續運作。';
+
+  @override
+  String get settingsAboutShutdown => '橋接程式收到 `SIGINT` 和 `SIGTERM` 時會正常關閉。';
+
+  @override
+  String get settingsAboutDesktop => '電腦版 App 整合';
+
+  @override
+  String get settingsAboutDesktopRollout =>
+      'Codex 會把手機上的對話儲存為已配對裝置上的工作階段 rollout 檔案。';
+
+  @override
+  String get settingsAboutDesktopHandoff =>
+      '電腦版 App 可能不會即時載入外部寫入的內容。請在 DJL 中使用**在電腦上繼續**來接續目前的對話。';
+
+  @override
+  String get settingsAboutDjl => '關於 DJL';
+
+  @override
+  String get settingsOpenSource => '開放原始碼';
+
+  @override
+  String get settingsMitLicense => 'MIT 授權條款';
+
+  @override
+  String get hostYourMac => '你的 Mac';
+
+  @override
+  String get hostUpdating => 'Mac 上的 DJL 正在更新。完成後這支手機會自動重新連線。';
+
+  @override
+  String get hostCheckingVersion => '正在檢查 Mac 上的 DJL 版本…';
+
+  @override
+  String hostNowVersion(String version) {
+    return 'Mac 上的 DJL 現在是 $version。';
+  }
+
+  @override
+  String hostStillVersion(String version) {
+    return 'Mac 上的 DJL 仍是 $version，可能已經是最新版本。';
+  }
+
+  @override
+  String get hostConnectedFooter => '你的對話會直接傳送到 Mac 上的 DJL，全程端對端加密。';
+
+  @override
+  String get hostReconnectFooter => '在你的 Mac 上開啟 DJL 即可重新連線。';
+
+  @override
+  String get hostDjlVersion => 'DJL 版本';
+
+  @override
+  String get hostCheckFailedNow => '剛才無法檢查你的 Mac。';
+
+  @override
+  String get hostReconnecting => '正在重新連線…';
+
+  @override
+  String get hostWakeScreen => '喚醒螢幕';
+
+  @override
+  String get hostWakeScreenDetail => 'DJL 執行時點亮你的 Mac 螢幕。';
+
+  @override
+  String get hostKeepAwake => '讓 Mac 保持喚醒';
+
+  @override
+  String get hostKeepAwakeDetail => 'DJL 開啟期間防止你的 Mac 進入睡眠。建議在充電時使用。';
+
+  @override
+  String get hostUpdates => '更新';
+
+  @override
+  String get hostUpdateDjl => '更新 DJL';
+
+  @override
+  String get hostUpdateDjlDetail => '在你的 Mac 上安裝最新版 DJL，然後重新連線。';
+
+  @override
+  String get hostNotConnected => '未連線';
+
+  @override
+  String get hostConnectedChecking => '已連線 · 正在檢查';
+
+  @override
+  String get hostConnected => '已連線';
+
+  @override
+  String hostStatusLabel(String status) {
+    return 'Mac 上的 DJL，$status';
+  }
+
+  @override
+  String get hostDjlOnYourMac => 'Mac 上的 DJL';
+
+  @override
+  String get hostUpdateTitle => '要更新 Mac 上的 DJL 嗎？';
+
+  @override
+  String hostUpdateCurrent(String version) {
+    return '你的 Mac 上的 DJL 版本為 $version。';
+  }
+
+  @override
+  String get hostUpdateBody =>
+      'DJL 會在你的 Mac 上重新啟動以安裝最新版本。這支手機會短暫中斷連線，然後自動重新連線。';
+
+  @override
+  String get hostUpdate => '更新';
+
+  @override
+  String get hostContinueOnDesktop => '在電腦上繼續';
+
+  @override
+  String get hostContinueTitle => '要在電腦上繼續嗎？';
+
+  @override
+  String get hostContinueBody => '在 Mac 上的 DJL 中開啟這個對話。';
+
+  @override
+  String get hostContinue => '繼續';
+
+  @override
+  String get hostActionFinished => '操作已完成。';
+
+  @override
+  String get hostErrorUnsupported => 'Mac 上的 DJL 還不支援這項操作。請更新 Mac 上的 DJL。';
+
+  @override
+  String get hostErrorRefused => '你的 Mac 拒絕了這項操作。請檢查 Mac 上的 DJL 後再試一次。';
+
+  @override
+  String get hostErrorUncertain => '無法確定操作是否成功。請先檢查你的 Mac 再重試。';
+
+  @override
+  String get hostCheckFailed => '無法檢查你的 Mac。請再試一次。';
+
+  @override
+  String get hostCheckingFirst => '正在檢查你的 Mac，請稍後再試。';
+
+  @override
+  String get hostConnectFirst => '請先連線到你的 Mac。';
+
+  @override
+  String get hostNotConfirmed => '你的 Mac 沒有確認這項操作。請先檢查再重試。';
+
+  @override
+  String get hostOpenedOnMac => '已在 Mac 上的 DJL 中開啟。';
+
+  @override
+  String get hostReconnectFirst => '請先重新連線到你的 Mac。';
+
+  @override
+  String get hostReachFailed => '無法連線到 Mac 上的 DJL。請確認它已開啟，然後再試一次。';
+
+  @override
+  String get hostWaking => '正在喚醒你的 Mac 螢幕。';
+
+  @override
+  String get hostPrefReadFailed => '無法讀取已儲存的偏好設定。請重試。';
+
+  @override
+  String get hostPrefSaveFailed => '無法儲存這項偏好設定，先前的選擇維持不變。請再試一次。';
+
+  @override
+  String get hostPrefUnconfirmed => '已儲存在這支手機上，但你的 Mac 尚未確認。';
+
+  @override
+  String get pushTitle => '推播通知';
+
+  @override
+  String get pushUnsupported => '這支手機目前還無法接收 DJL 的推播通知。請開啟 DJL 查看智慧體是否已完成。';
+
+  @override
+  String get pushDenied => 'DJL 的通知已在手機的「設定」中關閉。';
+
+  @override
+  String get pushReady => '智慧體完成任務或需要你回覆時通知你。';
+
+  @override
+  String get pushSimulator => '這個模擬器無法接收推播通知。';
+
+  @override
+  String get pushUnavailableVersion => '這個版本還不支援推播通知。';
+
+  @override
+  String get pushFailed => '無法開啟通知。請在連上網路後再試一次。';
+
+  @override
+  String get pushUnavailableNow => '推播通知暫時無法使用。';
+
+  @override
+  String get pushReadFailed => '無法讀取通知偏好設定。請重試。';
+
+  @override
+  String get pushUpdateFailed => '無法更新通知偏好設定。請重試。';
+
+  @override
+  String get whatsNewTitle => '新功能';
+
+  @override
+  String get whatsNewIntro => '以下是 DJL 的新變化。';
+
+  @override
+  String get whatsNewOnce => '每個版本只會顯示一次。';
+
+  @override
+  String get whatsNewGotIt => '知道了';
+
+  @override
+  String get whatsNewDismiss => '關閉更新說明';
+
+  @override
+  String get whatsNew100Design => '更沉穩的黑白設計。';
+
+  @override
+  String get whatsNew100Groups => '群組對話：同時和多個智慧體對話，即時查看它們的回覆。';
+
+  @override
+  String get whatsNew100Files => '可以在群組對話中傳送檔案和相片。';
+
+  @override
+  String get whatsNew100Mac => '對話會直接傳送到 Mac 上的 DJL。';
+
+  @override
+  String get accountSomethingWrong => '發生了一點問題';
+
+  @override
+  String get accountTypeDeleteToConfirm => '請輸入 DELETE 以確認。';
+
+  @override
+  String get accountOk => '好';
+
+  @override
+  String get accountDone => '完成';
+
+  @override
+  String get accountEmail => '電子郵件';
+
+  @override
+  String get accountPlan => '方案';
+
+  @override
+  String get accountCredits => '點數';
+
+  @override
+  String get accountUsageFooter =>
+      '使用一次儲備重設後，兩項限額都會重新計算，並重新開始你的一週。儲備重設會在發放 90 天後到期。';
+
+  @override
+  String get accountFiveHourLimit => '5 小時限額';
+
+  @override
+  String get accountWeeklyLimit => '每週限額';
+
+  @override
+  String get accountBankedResets => '儲備重設';
+
+  @override
+  String accountNextExpires(String date, String year) {
+    return '下次到期：$year 年 $date';
+  }
+
+  @override
+  String get accountNone => '無';
+
+  @override
+  String accountUseOne(int count) {
+    return '使用 1 次（共 $count 次）';
+  }
+
+  @override
+  String get accountDeleteFooter => '刪除帳號會移除你的對話、檔案和點數。30 天內可聯絡客服取消刪除。';
+
+  @override
+  String get accountSignOut => '登出';
+
+  @override
+  String get accountDelete => '刪除帳號';
+
+  @override
+  String accountUsedPercent(int percent) {
+    return '已使用 $percent%';
+  }
+
+  @override
+  String get accountResetsNow => '現在重設';
+
+  @override
+  String get accountResetsTomorrow => '明天重設';
+
+  @override
+  String get accountResetsYesterday => '昨天已重設';
+
+  @override
+  String get accountResetsNextWeek => '下週重設';
+
+  @override
+  String get accountResetsLastWeek => '上週已重設';
+
+  @override
+  String accountResetsIn(String quantity) {
+    return '$quantity後重設';
+  }
+
+  @override
+  String accountResetsAgo(String quantity) {
+    return '$quantity前已重設';
+  }
+
+  @override
+  String accountSeconds(int count) {
+    return '$count 秒';
+  }
+
+  @override
+  String accountMinutes(int count) {
+    return '$count 分鐘';
+  }
+
+  @override
+  String accountHours(int count) {
+    return '$count 小時';
+  }
+
+  @override
+  String accountDays(int count) {
+    return '$count 天';
+  }
+
+  @override
+  String accountWeeks(int count) {
+    return '$count 週';
+  }
+
+  @override
+  String get accountDeleteTitle => '要刪除你的帳號嗎？';
+
+  @override
+  String get accountDeleteBody => '30 天後將無法復原。請輸入 DELETE 以確認。';
+
+  @override
+  String get accountTypeDelete => '輸入 DELETE';
+
+  @override
+  String get accountSignOutTitle => '要登出 DJL Cloud 嗎？';
+
+  @override
+  String get notificationsTitle => '通知';
+
+  @override
+  String get notificationsMarkAllRead => '全部標為已讀';
+
+  @override
+  String get notificationsCaughtUp => '沒有新通知';
+
+  @override
+  String get notificationsEmptyHint => '已完成的任務會顯示在這裡。';
+
+  @override
+  String get notificationsTaskComplete => '任務已完成';
+
+  @override
+  String get notificationsLoadMore => '載入更多';
+
+  @override
+  String notificationsStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'succeeded': '已完成',
+      'failed': '失敗',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationsTaskStopped => '任務已停止';
+
+  @override
+  String get notificationsTaskFinished => '任務已完成';
+
+  @override
+  String get notificationsOpenResult => '開啟 DJL 查看結果';
+
+  @override
+  String get notificationsDismiss => '關閉通知';
+
+  @override
+  String get reportOffensive => '冒犯或仇恨內容';
+
+  @override
+  String get reportHarmful => '有害或危險內容';
+
+  @override
+  String get reportWrong => '錯誤或誤導內容';
+
+  @override
+  String get reportOther => '其他問題';
+
+  @override
+  String get reportThanks => '謝謝你的回報，我們會審查這則回答。';
+
+  @override
+  String get reportTitle => '檢舉這則回答';
+
+  @override
+  String get reportRateLimited => '檢舉次數過多，請稍後再試。';
+
+  @override
+  String get reportFailed => '無法送出檢舉。請再試一次。';
+
+  @override
+  String get reportIntro => 'DJL 會審查檢舉內容，確保回答安全。這則回答有什麼問題？';
+
+  @override
+  String get reportDetailsHint => '補充詳細資訊（選填）';
+
+  @override
+  String get reportSending => '正在傳送…';
+
+  @override
+  String get reportSend => '送出檢舉';
+
+  @override
+  String get attachmentsNoApp => '沒有可以開啟這個檔案的 App。請選擇要傳送到哪個 App。';
+
+  @override
+  String get attachmentsOpenFailed => '無法開啟這個檔案';
+
+  @override
+  String get attachmentsCheckMac => '請確認你的 Mac 已連線，然後再試一次。';
+
+  @override
+  String get attachmentsImageUnshowable => '這張圖片無法在這裡顯示';
+
+  @override
+  String get attachmentsOpenElsewhere => '在其他 App 中開啟';
+
+  @override
+  String get attachmentsOpen => '開啟';
+
+  @override
+  String get attachmentsShare => '分享';
+
+  @override
+  String get imagesSquare => '方形';
+
+  @override
+  String get imagesLandscape => '橫向';
+
+  @override
+  String get imagesPortrait => '直向';
+
+  @override
+  String get imagesOnePerRequest => '每次產生一張圖片。DJL 處理期間你可以離開對話。';
+
+  @override
+  String get imagesCreate => '產生圖片';
+
+  @override
+  String get imagesMakeYours => '創作屬於你的作品。';
+
+  @override
+  String get imagesDescribe => '描述你想要的主體、風格和細節。';
+
+  @override
+  String get imagesPromptHint => '晨光中安靜的工作室…';
+
+  @override
+  String get imagesShape => '比例';
+
+  @override
+  String get imagesNotConfigured => '這個伺服器尚未設定圖片產生功能。你已儲存的圖片仍可使用。';
+
+  @override
+  String get imagesStarting => '正在開始…';
+
+  @override
+  String get imagesOpenImage => '開啟圖片';
+
+  @override
+  String get imagesGenerated => '產生的圖片';
+
+  @override
+  String get imagesOpenChat => '開啟對話';
+
+  @override
+  String get imagesActions => '圖片操作';
+
+  @override
+  String get imagesEditInChat => '在對話中編輯';
+
+  @override
+  String get imagesTitle => '圖片';
+
+  @override
+  String get imagesYourImages => '你的圖片';
+
+  @override
+  String get imagesEmpty => '產生的圖片會顯示在這裡，隨時可以儲存或分享。';
+
+  @override
+  String get imagesEmptyNotConfigured => '尚未設定圖片產生功能。已儲存的圖片會顯示在這裡。';
+
+  @override
+  String get imagesLoadMore => '載入更多';
+
+  @override
+  String get imagesYourImage => '你的圖片';
+
+  @override
+  String get imagesShare => '分享';
+
+  @override
+  String get imagesSaveToPhotos => '存到「照片」';
+
+  @override
+  String get imagesSaved => '已存到「照片」。';
+
+  @override
+  String get authSocialNotConfigured => '這個 App 尚未設定這種登入方式，請使用電子郵件繼續。';
+
+  @override
+  String get authSocialOpenFailed => '無法開啟登入頁面，請再試一次。';
+
+  @override
+  String get authSignInOptionsFailed => '無法載入登入方式。';
+
+  @override
+  String get authCloudSignInFailed => '無法登入 DJL Cloud，請再試一次。';
+
+  @override
+  String get authSecureStorageFailed => '無法開啟安全儲存空間。請解鎖裝置後再試一次。';
+
+  @override
+  String get authCheckEmailForCode => '請到電子郵件信箱查看驗證碼。';
+
+  @override
+  String get authRequestSent => '要求已送出，請查看電子郵件信箱。';
+
+  @override
+  String get authCloudDataNotCleared => '部分已儲存的 Cloud 資料無法清除。';
+
+  @override
+  String get authLinkOpenFailed => '無法開啟這個連結，請再試一次。';
+
+  @override
+  String get authWelcomeTitle => '歡迎使用 DJL';
+
+  @override
+  String get authWelcomeSubtitle => '你的想法、對話和 Mac，\n盡在 DJL。';
+
+  @override
+  String get authRetrySignInOptions => '重新載入登入方式';
+
+  @override
+  String get authLoadingSignInOptions => '正在載入登入方式';
+
+  @override
+  String get authContinueWithApple => '透過 Apple 繼續';
+
+  @override
+  String get authContinueWithGoogle => '透過 Google 繼續';
+
+  @override
+  String get authContinueWithEmail => '透過電子郵件繼續';
+
+  @override
+  String get authPairWithMac => '與 Mac 配對';
+
+  @override
+  String get authNoMacHint => '沒有 Mac？登入後就能透過 DJL Cloud 對話。';
+
+  @override
+  String get authTerms => '服務條款';
+
+  @override
+  String get authPrivacy => '隱私權政策';
+
+  @override
+  String get authVerifyAndContinue => '驗證並繼續';
+
+  @override
+  String get authSignIn => '登入';
+
+  @override
+  String get authEmailMeCode => '寄驗證碼到我的信箱';
+
+  @override
+  String get authCreateAccount => '建立帳號';
+
+  @override
+  String get authSignInIncomplete => '無法完成登入，請再試一次。';
+
+  @override
+  String get authPassword => '密碼';
+
+  @override
+  String get authEmailCode => '電子郵件驗證碼';
+
+  @override
+  String get authName => '名稱';
+
+  @override
+  String get authEmail => '電子郵件';
+
+  @override
+  String get authSixDigitCode => '6 位數驗證碼';
+
+  @override
+  String authCodeSent(String email) {
+    return '驗證碼已寄到 $email，10 分鐘內有效。';
+  }
+
+  @override
+  String get authCreateAccountHint => '密碼至少需要 10 個字元。我們會寄驗證碼到你的信箱，以確認電子郵件地址。';
+
+  @override
+  String get authResendCode => '重新寄送驗證碼';
+
+  @override
+  String authResendIn(int seconds) {
+    return '$seconds 秒後可重新寄送';
+  }
+
+  @override
+  String get authUseAnotherEmail => '使用其他電子郵件';
+
+  @override
+  String get authForgotPassword => '忘記密碼？';
+
+  @override
+  String get authResetPassword => '重設密碼';
+
+  @override
+  String get authPasswordUpdated => '密碼已更新';
+
+  @override
+  String get authSignInWithNewPassword => '請使用新密碼登入。';
+
+  @override
+  String get authBackToSignIn => '返回登入';
+
+  @override
+  String get authNewPassword => '新密碼';
+
+  @override
+  String get authRecoveryHint => '如果這個電子郵件已註冊帳號，我們會寄送一組復原碼。';
+
+  @override
+  String get authRecoveryCodeHint => '請輸入復原碼，並設定 10–256 個字元的新密碼。';
+
+  @override
+  String get authSendRecoveryCode => '寄送復原碼';
+
+  @override
+  String get chatUiWorktreeHandoffFailed => '無法移交到工作樹';
+
+  @override
+  String get chatUiOk => '好';
+
+  @override
+  String get chatUiSelectFolder => '選擇資料夾';
+
+  @override
+  String get chatUiBrowseFolders => '瀏覽本機資料夾…';
+
+  @override
+  String get chatUiBranchOpenElsewhere => '分支已在別處開啟';
+
+  @override
+  String chatUiBranchOpenElsewhereChat(String branch) {
+    return '「$branch」已在另一個工作樹中簽出。請開啟那個對話繼續。';
+  }
+
+  @override
+  String chatUiBranchOpenElsewhereSidebar(String branch) {
+    return '「$branch」已在另一個工作樹中簽出。請從側邊欄開啟那個對話繼續。';
+  }
+
+  @override
+  String get chatUiOpenChat => '開啟對話';
+
+  @override
+  String get chatUiWorktreeChatGone => '這個工作樹對話已無法使用，請從側邊欄開啟。';
+
+  @override
+  String get chatUiPhotoLibrary => '照片圖庫';
+
+  @override
+  String get chatUiTakePhoto => '拍照';
+
+  @override
+  String get chatUiPlanMode => '計畫模式';
+
+  @override
+  String get chatUiFastMode => '快速模式';
+
+  @override
+  String get chatUiImage => '圖片';
+
+  @override
+  String get chatUiOpensThreadLocation => '開啟對話位置';
+
+  @override
+  String get chatUiDesktopChat => '電腦對話';
+
+  @override
+  String get chatUiNewThread => '新對話';
+
+  @override
+  String get chatUiHandOffToDesktop => '移交到電腦繼續';
+
+  @override
+  String get chatUiHandOffToLocal => '移交到本機繼續';
+
+  @override
+  String get chatUiHandOffToWorktree => '移交到工作樹繼續';
+
+  @override
+  String get chatUiGoal => '目標';
+
+  @override
+  String get chatUiForkChat => '分岔這個對話';
+
+  @override
+  String get chatUiForkIntoFolder => '分岔到另一個資料夾';
+
+  @override
+  String get chatUiForkIntoWorktree => '分岔到新的工作樹';
+
+  @override
+  String get chatUiWorkspaceFiles => '工作區檔案';
+
+  @override
+  String get chatUiTurnChanges => '每輪變更與還原';
+
+  @override
+  String get chatUiRefreshFromDesktop => '從電腦重新整理';
+
+  @override
+  String get chatUiDesktopDisconnected => '電腦已中斷連線，你的訊息尚未重新傳送。';
+
+  @override
+  String get chatUiLinkedPositionUnavailable => '已載入的歷史記錄中找不到連結的位置。';
+
+  @override
+  String get chatUiReviewResponseChanges => '查看這則回覆的具體變更';
+
+  @override
+  String get chatUiResponseUndone => '已復原這則回覆';
+
+  @override
+  String get chatUiUndoResponse => '復原這則回覆';
+
+  @override
+  String get chatUiApprovalRequired => '需要你核准';
+
+  @override
+  String get chatUiApprovalSent => '已回覆，正在等待電腦。';
+
+  @override
+  String get chatUiDecline => '拒絕';
+
+  @override
+  String get chatUiApproveOnce => '核准一次';
+
+  @override
+  String get chatUiBranch => '分支';
+
+  @override
+  String get chatUiPreparingWorktree => '正在準備工作樹…';
+
+  @override
+  String get chatUiNewWorktree => '新的工作樹';
+
+  @override
+  String chatUiGoalChip(String status, String elapsed) {
+    return '目標$status · $elapsed';
+  }
+
+  @override
+  String get chatUiReturnToParent => '返回上層對話';
+
+  @override
+  String chatUiReturnTo(String title) {
+    return '返回「$title」';
+  }
+
+  @override
+  String get chatUiAskDjl => '問問 DJL';
+
+  @override
+  String get chatUiFollowUp => '繼續追問';
+
+  @override
+  String get workspaceRestoreFailed => '電腦端未確認還原，請先重新整理再重試。';
+
+  @override
+  String workspaceRestoredFiles(int count) {
+    return '已還原 $count 個檔案。';
+  }
+
+  @override
+  String get workspaceBackupSaved => '備份檢查點已儲存在你的 Mac 上。';
+
+  @override
+  String get workspaceNoLocalFolders => '這台裝置上沒有可用的本機資料夾。';
+
+  @override
+  String get workspaceUndoReviewChanged => '回覆或連線已變更，請重新開啟這個確認頁面。';
+
+  @override
+  String get workspaceUndoPreviewFailed => '無法預覽具體的修補檔。請先重新整理確認頁面再重試。';
+
+  @override
+  String get workspaceUndoRepositoryChanged => '回覆或儲存庫已變更，請重新開啟這個確認頁面。';
+
+  @override
+  String get workspaceUndoResultUnknownChanged => '連線或回覆已變更，復原結果不明；請重新整理後查看。';
+
+  @override
+  String get workspaceUndoRefused => '電腦端未復原這則回覆。請查看目前的衝突和已暫存的檔案。';
+
+  @override
+  String get workspaceUndoResultUnknown => '復原結果不明。請先重新整理並查看具體的修補檔，再試一次。';
+
+  @override
+  String get workspaceUndoSaveAfterSuccessFailed =>
+      '復原已成功，但儲存或重新整理本機結果失敗。請重新連線以核對檔案。';
+
+  @override
+  String get workspaceUndoSaveFailed => '無法儲存復原結果。請重新連線並查看目前的檔案。';
+
+  @override
+  String get workspaceUndoTitle => '復原這則回覆';
+
+  @override
+  String workspaceUndoWorkspace(String path) {
+    return '工作區：$path';
+  }
+
+  @override
+  String get workspaceUndoIntro =>
+      '請查看這則回覆做出的具體變更。在反向修補檔可以套用的地方，之後的編輯會保留。確認時，電腦端會再次檢查衝突。';
+
+  @override
+  String get workspaceUndoOverlap => '其他回覆也變更了這些檔案。請仔細查看：復原可能會影響這個對話或其他對話中的變更。';
+
+  @override
+  String get workspaceUndoUncertain => '上一次復原的結果不明。請先重新整理這個確認頁面並檢查目前的檔案，再確認重試。';
+
+  @override
+  String get workspaceUndoStale => '這個確認頁面已過期。請關閉後重新開啟該回覆。';
+
+  @override
+  String get workspaceUndoDone => '這則回覆已復原。';
+
+  @override
+  String workspaceUndoStagedBlock(String files) {
+    return '已暫存的檔案導致無法復原：$files';
+  }
+
+  @override
+  String workspaceUndoConflict(String conflict) {
+    return '衝突：$conflict';
+  }
+
+  @override
+  String get workspaceUndoCannotReverse => '電腦端無法安全地反轉這個修補檔。';
+
+  @override
+  String get workspaceClose => '關閉';
+
+  @override
+  String get workspaceRefreshReview => '重新整理確認頁面';
+
+  @override
+  String get workspaceUndoResponse => '復原回覆';
+
+  @override
+  String get workspaceConflictFallback => '衝突';
+
+  @override
+  String get workspaceAlreadyUndone => '這則回覆已經復原過了。';
+
+  @override
+  String get workspaceStillRunning => '這則回覆仍在進行中。';
+
+  @override
+  String get workspaceNoDesktopWorkspace => '這則回覆沒有對應的電腦工作區。';
+
+  @override
+  String get workspaceNoPatchCaptured => '沒有擷取到支援的回覆修補檔。';
+
+  @override
+  String get workspaceRestoreTitle => '要將工作區還原到這一輪之前嗎？';
+
+  @override
+  String get workspaceRestoreBody =>
+      '這會取代目前的工作區檔案，並刪除未追蹤的檔案。還原前請查看受影響的檔案。Mac 會先儲存一個備份檢查點。';
+
+  @override
+  String get workspaceNoAffectedFiles => '沒有回報受影響的檔案。';
+
+  @override
+  String get workspaceStagedFiles => '已暫存的檔案';
+
+  @override
+  String get workspaceUntrackedFiles => '未追蹤的檔案';
+
+  @override
+  String get workspaceRestoreFiles => '還原檔案';
+
+  @override
+  String get workspaceTurnChanges => '本輪變更';
+
+  @override
+  String get workspaceReloadTurnChanges => '重新載入本輪變更';
+
+  @override
+  String get workspaceConversationTurn => '對話輪次';
+
+  @override
+  String workspaceTurnNumber(int number) {
+    return '第 $number 輪';
+  }
+
+  @override
+  String get workspaceNoSavedChanges => '這一輪沒有儲存的變更。';
+
+  @override
+  String get workspaceNoCompletedTurns => '還沒有已完成的輪次。';
+
+  @override
+  String get workspaceChooseTurn => '選擇一個輪次，查看它儲存的工作區變更。';
+
+  @override
+  String get workspaceStopBeforeRestore => '請先停止正在進行的這一輪，再還原檔案。';
+
+  @override
+  String get workspacePreviewRestore => '預覽還原到這一輪之前';
+
+  @override
+  String get workspaceFileFallbackTitle => '工作區檔案';
+
+  @override
+  String get workspaceCopyFileContents => '複製檔案內容';
+
+  @override
+  String get workspaceFileContentsCopied => '已複製檔案內容。';
+
+  @override
+  String get workspaceReloadFile => '重新載入檔案';
+
+  @override
+  String get workspaceFilePathOnMac => '你的 Mac 上的檔案路徑';
+
+  @override
+  String get workspaceSegmentText => '文字';
+
+  @override
+  String get workspaceSegmentImage => '圖片';
+
+  @override
+  String get workspaceOpen => '開啟';
+
+  @override
+  String get workspaceSvgRenderFailed => '無法顯示這個 SVG。';
+
+  @override
+  String get workspaceImageRenderFailed => '這台裝置無法顯示這種圖片格式。';
+
+  @override
+  String get workspaceOpenFileToPreview => '開啟一個工作區檔案即可預覽。';
+
+  @override
+  String get workspaceSavedToPhotos => '已存到「照片」。';
+
+  @override
+  String get workspaceImageTitle => '圖片';
+
+  @override
+  String get workspaceOk => '好';
+
+  @override
+  String get workspaceLoadingFile => '正在載入檔案';
+
+  @override
+  String get workspaceUnableToLoadFile => '無法載入檔案。';
+
+  @override
+  String get workspaceRetry => '重試';
+
+  @override
+  String get workspaceCloseFilePreview => '關閉檔案預覽';
+
+  @override
+  String get workspaceDone => '完成';
+
+  @override
+  String get workspaceFindInFile => '在檔案中尋找';
+
+  @override
+  String workspaceLineCount(int count) {
+    return '$count 行';
+  }
+
+  @override
+  String workspaceByteCount(int count) {
+    return '$count 位元組';
+  }
+
+  @override
+  String get workspaceCloseSvgPreview => '關閉 SVG 預覽';
+
+  @override
+  String get workspaceReloadSvgPreview => '重新載入 SVG 預覽';
+
+  @override
+  String get workspaceShare => '分享';
+
+  @override
+  String get workspaceSaveToPhotos => '存到「照片」';
+
+  @override
+  String get workspaceUnableToDisplayImage => '無法顯示圖片。';
+
+  @override
+  String get workspaceFileContents => '檔案內容';
+
+  @override
+  String get workspaceSearching => '正在搜尋…';
+
+  @override
+  String workspaceMatchPosition(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get workspacePreviousMatch => '上一個符合項目';
+
+  @override
+  String get workspaceNextMatch => '下一個符合項目';
+
+  @override
+  String get workspaceCloseFind => '關閉尋找';
+
+  @override
+  String get workspaceAddLocalFolder => '新增本機資料夾';
+
+  @override
+  String get workspaceCreateFolderOnMac => '在 Mac 上新增資料夾';
+
+  @override
+  String get workspaceUse => '使用';
+
+  @override
+  String get workspaceParentFolder => '上層資料夾';
+
+  @override
+  String get workspaceSearchingFolders => '正在搜尋資料夾…';
+
+  @override
+  String get workspaceLoading => '正在載入';
+
+  @override
+  String get workspaceNoMatchingFolders => '這個資料夾下沒有符合的資料夾。';
+
+  @override
+  String get workspaceNoChildFolders => '這裡沒有子資料夾。';
+
+  @override
+  String get workspaceSearchFolders => '搜尋資料夾';
+
+  @override
+  String get workspaceClearFolderSearch => '清除資料夾搜尋';
+
+  @override
+  String get workspaceLocations => '位置';
+
+  @override
+  String get workspaceCurrentFolder => '目前資料夾';
+
+  @override
+  String get workspaceLoadingFolders => '正在載入資料夾…';
+
+  @override
+  String get workspaceNoFolderSelected => '未選擇資料夾。';
+
+  @override
+  String get workspaceMatchingFolders => '符合的資料夾';
+
+  @override
+  String get workspaceFolders => '資料夾';
+
+  @override
+  String get workspaceNewFolder => '新增資料夾';
+
+  @override
+  String get workspaceNewFolderBody => '在你的裝置上建立這個資料夾，並在其中開始對話。';
+
+  @override
+  String get workspaceFolderName => '資料夾名稱';
+
+  @override
+  String get workspaceCreate => '建立';
+
+  @override
+  String get workspaceDesktopChangedPicker => '已連線的電腦已變更，請重新開啟專案選擇器。';
+
+  @override
+  String get workspaceDesktopChanged => '已連線的電腦已變更，請重新開啟這個工作區。';
+
+  @override
+  String get workspaceChooseWorkspaceFirst => '請先在電腦上選擇一個工作區。';
+
+  @override
+  String get workspaceNoTextInPreview => '檔案預覽中沒有文字。請從工作區重新載入。';
+
+  @override
+  String get workspaceNoImageInPreview => '圖片預覽中沒有圖片資料。請從工作區重新載入。';
+
+  @override
+  String get workspaceRestorePreviewOtherWorkspace => '這個還原預覽屬於另一個工作區，請重新預覽。';
+
+  @override
+  String get cloudChatNewChat => '新對話';
+
+  @override
+  String get cloudChatLostConnection => '連線已中斷。點一下「重新連線」以繼續接收回覆。';
+
+  @override
+  String get cloudChatImageToEdit => '要編輯的圖片';
+
+  @override
+  String get cloudChatNoContent => '沒有回覆內容。';
+
+  @override
+  String get cloudChatThinking => '正在思考…';
+
+  @override
+  String get cloudChatResponseStopped => '回覆已停止。';
+
+  @override
+  String get cloudChatResponseFailed => '回覆失敗。';
+
+  @override
+  String get cloudChatWaitingForUsageReset => '正在等待用量重設。';
+
+  @override
+  String get cloudChatModelChoiceLoadFailed => '無法載入你儲存的模型選擇，請重試。';
+
+  @override
+  String get cloudChatModelChoiceSaveFailed => '無法儲存你的模型選擇，請重試。';
+
+  @override
+  String get cloudChatDraftSaveFailed => '無法儲存草稿。請保留這裡的文字並重試。';
+
+  @override
+  String get cloudChatDraftLoadFailed => '無法載入已儲存的草稿，請先重試再編輯。';
+
+  @override
+  String get cloudChatInterruptedImage => '中斷的圖片要求已安全保存。重試即可查看結果。';
+
+  @override
+  String get cloudChatInterruptedMessage => '中斷的訊息已安全保存。重試即可查看結果。';
+
+  @override
+  String get cloudChatModelCannotViewImages => '傳送這個附件前，請選擇一個能辨識圖片的模型。';
+
+  @override
+  String get cloudChatImageGenerationUnavailable => '這項服務未設定圖片產生功能。';
+
+  @override
+  String get cloudChatUseBankedResetTitle => '要使用一次儲備重設嗎？';
+
+  @override
+  String get cloudChatUseBankedResetBody =>
+      '你的 5 小時限額和每週限額會立即重新計算，本週也會從今天重新開始。';
+
+  @override
+  String get cloudChatUseReset => '使用重設';
+
+  @override
+  String get cloudChatLimitFreesSoon => '限額很快就會恢復。';
+
+  @override
+  String get cloudChatResetsNow => '限額現在已重設。';
+
+  @override
+  String get cloudChatResetsTomorrow => '限額將在明天重設。';
+
+  @override
+  String cloudChatResetsInDays(int days) {
+    return '限額將在 $days 天後重設。';
+  }
+
+  @override
+  String cloudChatResetsOn(String date) {
+    return '限額將在 $date 重設。';
+  }
+
+  @override
+  String get cloudChatResetsInAMoment => '限額馬上就會重設。';
+
+  @override
+  String cloudChatResetsInMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '限額將在 $minutes 分鐘後重設。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cloudChatResetsInHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '限額將在 $hours 小時後重設。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cloudChatUsageLimitReached => '你已達到用量上限';
+
+  @override
+  String get cloudChatRetryUsage => '重新載入用量';
+
+  @override
+  String cloudChatUseBankedReset(int count) {
+    return '使用儲備重設（剩餘 $count 次）';
+  }
+
+  @override
+  String get cloudChatPickerFailed => '無法開啟選擇器，請再試一次。';
+
+  @override
+  String get cloudChatModel => '模型';
+
+  @override
+  String get cloudChatShareLink => '分享連結';
+
+  @override
+  String get cloudChatTaskPrompt => '想讓 DJL 做什麼？';
+
+  @override
+  String get cloudChatHowCanIHelp => '有什麼可以幫你？';
+
+  @override
+  String get cloudChatTaskHint => '開始一項任務，完成後再回來查看結果。';
+
+  @override
+  String cloudChatStepProgress(String step, String total) {
+    return '第 $step 步，共 $total 步';
+  }
+
+  @override
+  String get cloudChatRetry => '重試';
+
+  @override
+  String get cloudChatRetryDraft => '重試草稿';
+
+  @override
+  String get cloudChatRetryModelChoice => '重新載入模型選擇';
+
+  @override
+  String get cloudChatMessageHint => '傳訊息給 DJL';
+
+  @override
+  String get cloudChatAttachTooltip => '附加檔案或圖片';
+
+  @override
+  String get cloudChatCreateImage => '產生圖片';
+
+  @override
+  String get cloudChatChooseFile => '選擇檔案';
+
+  @override
+  String get cloudChatPhotoLibrary => '照片圖庫';
+
+  @override
+  String get cloudChatCamera => '相機';
+
+  @override
+  String get cloudChatTaskMode => '任務模式';
+
+  @override
+  String get cloudChatTask => '任務';
+
+  @override
+  String get cloudChatStopDictation => '停止聽寫';
+
+  @override
+  String get cloudChatStartDictation => '開始聽寫';
+
+  @override
+  String get cloudChatStopResponse => '停止回覆';
+
+  @override
+  String get cloudChatSendMessage => '傳送訊息';
+
+  @override
+  String get cloudChatEditMessage => '編輯訊息';
+
+  @override
+  String get cloudChatSend => '傳送';
+
+  @override
+  String get cloudChatDisableWordWrap => '關閉自動換行';
+
+  @override
+  String get cloudChatEnableWordWrap => '開啟自動換行';
+
+  @override
+  String get cloudChatCopied => '已複製';
+
+  @override
+  String get cloudChatCopyCode => '複製程式碼';
+
+  @override
+  String get cloudChatCodeLabel => '程式碼';
+
+  @override
+  String get cloudChatEdit => '編輯';
+
+  @override
+  String get cloudChatPreviousBranch => '上一個版本';
+
+  @override
+  String get cloudChatNextBranch => '下一個版本';
+
+  @override
+  String get cloudChatCopyMessage => '複製訊息';
+
+  @override
+  String get cloudChatRegenerateReply => '重新產生回覆';
+
+  @override
+  String get cloudChatStopReading => '停止朗讀';
+
+  @override
+  String get cloudChatReadAloud => '朗讀';
+
+  @override
+  String get cloudChatReportAnswer => '檢舉這則回答';
+
+  @override
+  String cloudChatToolResult(String name, String status) {
+    return '$name · $status';
+  }
+
+  @override
+  String get cloudChatToolFailed => '失敗';
+
+  @override
+  String get cloudChatToolDone => '完成';
+
+  @override
+  String get cloudChatNeedsNewerVersion => '這則訊息包含需要較新版本才能顯示的內容。';
+
+  @override
+  String get cloudChatImageUnavailableRetry => '無法顯示圖片 · 重試';
+
+  @override
+  String get cloudChatConversationImage => '對話圖片';
+
+  @override
+  String get cloudChatImageDisplayFailed => '無法顯示這張圖片。';
+
+  @override
+  String get cloudChatShareFailed => '無法開啟分享，請再試一次。';
+
+  @override
+  String get cloudChatShareLinkCreated => '已建立分享連結';
+
+  @override
+  String get cloudChatShareLinkBody => '任何取得連結的人都能查看這個對話目前的內容。之後傳送的訊息不會被分享。';
+
+  @override
+  String get cloudChatCopyLink => '複製連結';
+
+  @override
+  String get cloudChatShare => '分享';
+
+  @override
+  String get conversationsPinned => '已置頂';
+
+  @override
+  String get conversationsPinnedEmpty => '長按對話即可置頂。';
+
+  @override
+  String get conversationsRecentEmpty => '你的對話會顯示在這裡。';
+
+  @override
+  String get conversationsCloudConversationHint => 'Cloud 對話';
+
+  @override
+  String get conversationsChat => '對話';
+
+  @override
+  String get conversationsSearchChats => '搜尋對話';
+
+  @override
+  String get conversationsRemote => '遠端';
+
+  @override
+  String get conversationsRecentChats => '最近的對話';
+
+  @override
+  String get conversationsLoadMore => '載入更多';
+
+  @override
+  String get conversationsSettings => '設定';
+
+  @override
+  String get conversationsArchivedChats => '已封存的對話';
+
+  @override
+  String get conversationsRestore => '還原';
+
+  @override
+  String get conversationsNoArchivedChats => '沒有已封存的對話';
+
+  @override
+  String get conversationsPin => '置頂';
+
+  @override
+  String get conversationsUnpin => '取消置頂';
+
+  @override
+  String get conversationsRename => '重新命名';
+
+  @override
+  String get conversationsArchive => '封存';
+
+  @override
+  String get conversationsDelete => '刪除';
+
+  @override
+  String get conversationsDeleteChatQuestion => '要刪除這個對話嗎？';
+
+  @override
+  String get plansCompleted => '已完成';
+
+  @override
+  String get plansInProgress => '進行中';
+
+  @override
+  String get plansPending => '待處理';
+
+  @override
+  String get plansOpenActivePlan => '開啟目前的計畫';
+
+  @override
+  String get plansPlan => '計畫';
+
+  @override
+  String plansStepOf(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String plansStepFraction(int current, int total) {
+    return '第 $current/$total 步';
+  }
+
+  @override
+  String plansStatusValue(String status, String position) {
+    return '$status，$position';
+  }
+
+  @override
+  String get plansImage => '圖片';
+
+  @override
+  String get plansActivePlan => '目前的計畫';
+
+  @override
+  String get plansDone => '完成';
+
+  @override
+  String get plansNoLongerAvailable => '這個計畫已無法使用。';
+
+  @override
+  String get plansProposedPlan => '建議的計畫';
+
+  @override
+  String get plansCollapsePlan => '收合計畫';
+
+  @override
+  String get plansExpandPlan => '展開計畫';
+
+  @override
+  String get plansCollapse => '收合';
+
+  @override
+  String get plansExpand => '展開';
+
+  @override
+  String get plansStarting => '正在開始…';
+
+  @override
+  String get plansImplement => '開始執行';
+
+  @override
+  String get plansNextStepQuestion => '接下來要讓 Codex 做什麼？';
+
+  @override
+  String get plansNextStepHeader => '下一步';
+
+  @override
+  String get voiceAllowMicrophone => '請在裝置設定中允許使用麥克風和語音辨識，才能聽寫。';
+
+  @override
+  String get voiceDictationUnavailable => '這個語言或裝置不支援裝置端聽寫。你仍然可以手動輸入訊息。';
+
+  @override
+  String get voiceSpeechAccessRequired =>
+      '請在裝置設定中允許使用麥克風和語音辨識，並確認你的語言支援裝置端語音辨識。';
+
+  @override
+  String get voiceInputUnavailable => '無法使用語音輸入。你仍然可以手動輸入訊息。';
+
+  @override
+  String get voiceStopFailed => '無法停止語音輸入。';
+
+  @override
+  String get voicePlaybackUnavailable => '這台裝置無法朗讀。';
+
+  @override
+  String get voiceStopUnclean => '語音未能正常停止。請先關閉這個畫面再繼續。';
+
+  @override
+  String get goalsStatusActive => '進行中';
+
+  @override
+  String get goalsStatusPaused => '已暫停';
+
+  @override
+  String get goalsStatusBlocked => '受阻';
+
+  @override
+  String get goalsStatusUsageLimited => '已達用量上限';
+
+  @override
+  String get goalsStatusBudgetLimited => '已達預算上限';
+
+  @override
+  String get goalsStatusComplete => '已完成';
+
+  @override
+  String goalsTokenUsage(String used, String budget) {
+    return '$used / $budget Token';
+  }
+
+  @override
+  String get goalsUnsupported => '目前的執行環境不支援目標。請在你的 Mac 上更新 Codex 並開啟目標功能。';
+
+  @override
+  String get goalsEphemeral => '目標需要已儲存的對話，而這是一個臨時對話。';
+
+  @override
+  String get goalsDesktopChanged => '已連線的電腦已變更，請重新開啟這個目標。';
+
+  @override
+  String get goalsOtherChatGoal => '執行環境傳回了另一個對話的目標。';
+
+  @override
+  String get goalsBudgetInvalid => 'Token 預算必須是正整數。';
+
+  @override
+  String get goalsUnexpectedResponse => '執行環境傳回了非預期的目標回應。';
+
+  @override
+  String get goalsReconnect => '請重新連線到電腦，再管理這個目標。';
+
+  @override
+  String get goalsDescribeFirst => '請先描述目標。';
+
+  @override
+  String get goalsReplaceTitle => '要取代目前的目標嗎？';
+
+  @override
+  String get goalsReplaceBody => '這個目標尚未完成。取代後會開始新的目標，並重新計算用量。';
+
+  @override
+  String get goalsReplaceAction => '取代目標';
+
+  @override
+  String get goalsClearTitle => '要清除這個目標嗎？';
+
+  @override
+  String get goalsClearBody => '電腦端會停止推進這個目標，並清除它的進度記錄。';
+
+  @override
+  String get goalsClearAction => '清除目標';
+
+  @override
+  String get goalsTitle => '目標';
+
+  @override
+  String get goalsReload => '重新載入目標';
+
+  @override
+  String get goalsShowingLastKnown => '正在顯示最近一次取得的目標。重新連線後即可管理。';
+
+  @override
+  String get goalsNewGoal => '新目標';
+
+  @override
+  String get goalsEditGoal => '編輯目標';
+
+  @override
+  String get goalsDescribeHint => '描述想要的結果、如何驗證，以及哪些地方不能退步。';
+
+  @override
+  String get goalsObjective => '目標內容';
+
+  @override
+  String get goalsBudgetLabel => 'Token 預算（選填）';
+
+  @override
+  String get goalsBudgetHelper => '留空表示不設定 Token 預算。';
+
+  @override
+  String get goalsStart => '開始目標';
+
+  @override
+  String get goalsSave => '儲存目標';
+
+  @override
+  String get goalsCancelEditing => '取消編輯';
+
+  @override
+  String goalsTokensRemaining(String tokens) {
+    return '剩餘 $tokens Token';
+  }
+
+  @override
+  String get goalsActiveExplainer => '對話閒置時，電腦端會繼續推進這個目標，直到完成、暫停或達到上限。';
+
+  @override
+  String get goalsPause => '暫停目標';
+
+  @override
+  String get goalsResume => '繼續目標';
+
+  @override
+  String get goalsEditObjective => '編輯目標內容';
+
+  @override
+  String get groupsKindSpreadsheet => '試算表';
+
+  @override
+  String get groupsKindText => '文字';
+
+  @override
+  String get groupsKindArchive => '壓縮檔';
+
+  @override
+  String get groupsKindImage => '圖片';
+
+  @override
+  String get groupsKindVideo => '影片';
+
+  @override
+  String get groupsKindAudio => '音訊';
+
+  @override
+  String get groupsKindFile => '檔案';
+
+  @override
+  String get groupsMacUnreachable => '無法連線到你的 Mac，請再試一次。';
+
+  @override
+  String get groupsCreateFailed => '無法建立群組，請再試一次。';
+
+  @override
+  String get groupsNewGroup => '新增群組';
+
+  @override
+  String get groupsChooseMembers => '選擇要加入群組的成員。';
+
+  @override
+  String get groupsNameOptional => '名稱（選填）';
+
+  @override
+  String get groupsCreateGroup => '建立群組';
+
+  @override
+  String groupsCreateGroupWith(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '建立群組（$count 個智慧體）',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get groupsSignInOnMac => '請先在 Mac 上登入再使用';
+
+  @override
+  String get groupsUpdateMacTitle => '請更新 Mac 上的 DJL';
+
+  @override
+  String get groupsUpdateMacBody => '群組對話需要 Mac 上安裝最新版 DJL。請先在 Mac 上更新，然後再回來。';
+
+  @override
+  String get groupsConnectMacTitle => '連線到你的 Mac';
+
+  @override
+  String get groupsConnectMacBody => '群組對話儲存在你的 Mac 上，連線後就會顯示在這裡。';
+
+  @override
+  String get groupsLoadFailed => '無法載入你的群組';
+
+  @override
+  String get groupsEmptyTitle => '把你的智慧體拉進同一個群組';
+
+  @override
+  String get groupsEmptyBody => '只要問一次，Claude、Codex 和其他智慧體就會一起回答。';
+
+  @override
+  String groupsMemberWriting(String name) {
+    return '$name 正在輸入';
+  }
+
+  @override
+  String groupsAgentsWriting(int count) {
+    return '$count 個智慧體正在輸入';
+  }
+
+  @override
+  String get groupsPausedWaiting => '已暫停，等你決定';
+
+  @override
+  String groupsAgentCount(int count) {
+    return '$count 個智慧體';
+  }
+
+  @override
+  String get groupsMacDidNotKeepFile => '你的 Mac 沒有保留這個檔案。';
+
+  @override
+  String get groupsFileStillSending => '這個檔案仍在傳送中。';
+
+  @override
+  String get groupsMacTimeout => '你的 Mac 沒有及時回應。請確認 Mac 上的 DJL 已開啟。';
+
+  @override
+  String get groupsMacNotConnected => '你的 Mac 目前未連線。';
+
+  @override
+  String groupsRemoveAttachment(String name) {
+    return '移除「$name」';
+  }
+
+  @override
+  String get groupsSendingFiles => '正在傳送檔案';
+
+  @override
+  String groupsImageNamed(String name) {
+    return '圖片 $name';
+  }
+
+  @override
+  String get groupsAttach => '附加檔案';
+
+  @override
+  String get groupsPhotos => '相片';
+
+  @override
+  String get groupsFiles => '檔案';
+
+  @override
+  String groupsFileUnsupported(String name) {
+    return '無法傳送「$name」。支援相片、PDF、Word、Excel、PowerPoint、文字和程式碼檔案。';
+  }
+
+  @override
+  String groupsFileTooLarge(String name, String size) {
+    return '「$name」超過 $size。';
+  }
+
+  @override
+  String groupsTooManyFiles(int count) {
+    return '每則訊息最多可附加 $count 個檔案。';
+  }
+
+  @override
+  String get groupsOpenFailed => '無法開啟，請再試一次。';
+
+  @override
+  String get groupsAskEveryoneTitle => '要問所有人嗎？';
+
+  @override
+  String groupsAskEveryoneBody(int count) {
+    return '全部 $count 個智慧體都會回覆這則訊息。';
+  }
+
+  @override
+  String get groupsDontAskAgain => '不再詢問';
+
+  @override
+  String get groupsAskEveryone => '問所有人';
+
+  @override
+  String get groupsGroupGone => '這個群組已不在你的 Mac 上。';
+
+  @override
+  String groupsSayHelloPrompt(String everyone) {
+    return '$everyone 用一句話打個招呼。';
+  }
+
+  @override
+  String get groupsReconnectingToMac => '正在重新連線到你的 Mac…';
+
+  @override
+  String groupsHeaderLabel(String name, int count) {
+    return '$name，$count 個智慧體';
+  }
+
+  @override
+  String get groupsMembers => '成員';
+
+  @override
+  String get groupsYou => '你';
+
+  @override
+  String get groupsCouldNotReply => '無法回覆';
+
+  @override
+  String get groupsNothingToAdd => '沒有要補充的';
+
+  @override
+  String get groupsImageOnMac => '圖片在你的 Mac 上';
+
+  @override
+  String get groupsRemovedAgent => '已移除的智慧體';
+
+  @override
+  String get groupsWaitingTurn => '正在排隊';
+
+  @override
+  String get groupsWriting => '正在輸入';
+
+  @override
+  String get groupsAttachTooltip => '附加檔案或相片';
+
+  @override
+  String get groupsMentionAgent => '提及智慧體';
+
+  @override
+  String get groupsMessageHint => '訊息';
+
+  @override
+  String get groupsStopAgents => '停止智慧體';
+
+  @override
+  String get groupsEveryone => '所有人';
+
+  @override
+  String get groupsPausedTitle => '智慧體已暫停';
+
+  @override
+  String get groupsPausedBody => '它們已經互相討論了一段時間，還有話要說。';
+
+  @override
+  String get groupsEndItHere => '到此為止';
+
+  @override
+  String get groupsLetThemContinue => '讓它們繼續';
+
+  @override
+  String get groupsOfflineHint => '連線到 Mac 後，訊息會顯示在這裡。';
+
+  @override
+  String get groupsLoadingMessages => '正在載入訊息';
+
+  @override
+  String get groupsEveryoneIsHere => '大家都到齊了';
+
+  @override
+  String get groupsEmptyChatHint => '輸入 @ 選擇由誰回答。你的第一則訊息會傳給所有人。';
+
+  @override
+  String get groupsAskEveryoneToSayHello => '請大家打個招呼';
+
+  @override
+  String get groupsManageOnMac => '請在 Mac 上的 DJL 中新增或移除智慧體。';
+
+  @override
+  String get groupsReady => '就緒';
+
+  @override
+  String get groupsStop => '停止';
+
+  @override
+  String get guardianLiveReason => '只有在即時工作階段中才能核准重試。';
+
+  @override
+  String get guardianExpiredReason => '這次重試已無法使用。請等 Codex 再次要求執行這項操作。';
+
+  @override
+  String get guardianDesktopReason => '請在 Codex 電腦版中核准這次重試。';
+
+  @override
+  String get guardianUnsafeReason => '這項操作無法在這裡安全地重試，請在 Codex 中核准。';
+
+  @override
+  String get guardianSubmittedReason => '已送出重試核准。再試一次前，請先在 Codex 中確認。';
+
+  @override
+  String get guardianUncertainReason => '重試核准可能沒有送達 Codex。再試一次前，請先在 Codex 中確認。';
+
+  @override
+  String get guardianRequestedAction => '要求的操作';
+
+  @override
+  String get guardianRunCommand => '執行指令';
+
+  @override
+  String get guardianApplyFileChanges => '套用檔案變更';
+
+  @override
+  String guardianEditFile(String file) {
+    return '編輯 $file';
+  }
+
+  @override
+  String guardianEditFiles(int count, String files) {
+    return '編輯 $count 個檔案：$files';
+  }
+
+  @override
+  String get guardianAccessNetwork => '存取網路';
+
+  @override
+  String guardianAccessHost(String host) {
+    return '存取 $host';
+  }
+
+  @override
+  String get guardianRequestPermissions => '要求更多權限';
+
+  @override
+  String get guardianRequestNetwork => '要求網路權限';
+
+  @override
+  String get guardianRequestFileAccess => '要求檔案存取權限';
+
+  @override
+  String get guardianRequestNetworkAndFileAccess => '要求網路和檔案存取權限';
+
+  @override
+  String get guardianReviewing => '正在審查';
+
+  @override
+  String get guardianApproved => '已核准';
+
+  @override
+  String get guardianDenied => '已拒絕';
+
+  @override
+  String get guardianTimedOut => '已逾時';
+
+  @override
+  String get guardianStopped => '已停止';
+
+  @override
+  String guardianUpdatedStatus(String status) {
+    return '已更新（$status）';
+  }
+
+  @override
+  String get guardianDetailsUnavailable => '無法取得審查詳細資料。';
+
+  @override
+  String guardianAutoReviewTitle(String status) {
+    return '自動審查 · $status';
+  }
+
+  @override
+  String get guardianRiskLow => '低風險';
+
+  @override
+  String get guardianRiskMedium => '中風險';
+
+  @override
+  String get guardianRiskHigh => '高風險';
+
+  @override
+  String guardianRiskOther(String level) {
+    return '$level 風險';
+  }
+
+  @override
+  String guardianAuthorization(String value) {
+    return '授權：$value';
+  }
+
+  @override
+  String get guardianApprovalRecorded => '已記錄核准；重試時仍會再次審查';
+
+  @override
+  String get guardianSubmittingApproval => '正在送出重試核准…';
+
+  @override
+  String get guardianApproveOneRetry => '核准重試一次';
+
+  @override
+  String get subagentsSubagent => '子智慧體';
+
+  @override
+  String get subagentsSpawnAgent => '建立智慧體';
+
+  @override
+  String get subagentsWaitForAgents => '等待智慧體';
+
+  @override
+  String get subagentsUpdateAgent => '更新智慧體';
+
+  @override
+  String get subagentsResumeAgent => '繼續智慧體';
+
+  @override
+  String get subagentsCloseAgent => '關閉智慧體';
+
+  @override
+  String get subagentsActivity => '子智慧體活動';
+
+  @override
+  String get subagentsMetadataUnavailable => '無法取得子智慧體資訊';
+
+  @override
+  String get activityCommand => '指令';
+
+  @override
+  String get activityFileChanges => '檔案變更';
+
+  @override
+  String activityFilesChanged(int count) {
+    return '$count 個檔案有變更';
+  }
+
+  @override
+  String get activityToolActivity => '工具活動';
+
+  @override
+  String get activityReadFile => '讀取檔案';
+
+  @override
+  String activityReadValue(String value) {
+    return '讀取 $value';
+  }
+
+  @override
+  String get activitySearchFiles => '搜尋檔案';
+
+  @override
+  String activitySearchValue(String value) {
+    return '搜尋 $value';
+  }
+
+  @override
+  String get activityListFiles => '列出檔案';
+
+  @override
+  String activityListFilesValue(String value) {
+    return '列出檔案 $value';
+  }
+
+  @override
+  String get statusTaskStatus => '任務狀態';
+
+  @override
+  String get statusAllowed => '這台裝置已允許顯示任務狀態。';
+
+  @override
+  String get statusDenied => '請在裝置設定中允許顯示本機任務狀態。不開啟也能正常對話。';
+
+  @override
+  String get statusUnsupported => '這台裝置不支援任務狀態。';
+
+  @override
+  String get statusChecking => '正在檢查裝置權限…';
+
+  @override
+  String get statusEnable => '開啟';
+
+  @override
+  String get statusRefresh => '重新整理任務狀態';
+
+  @override
+  String get statusSystemSettings => '開啟「設定」';
+
+  @override
+  String pairingStateLabel(String state) {
+    String _temp0 = intl.Intl.selectLogic(state, {
+      'disconnected': '未連線',
+      'resolving': '正在尋找',
+      'connecting': '正在連線',
+      'connected': '已連線',
+      'offline': '電腦離線',
+      'suspended': '已暫停',
+      'other': '$state',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsLanguage => '語言';
+
+  @override
+  String get settingsLanguageSystem => '跟隨系統';
+
+  @override
+  String get workspaceUndoNoExactPatch => '沒有記錄到完整、精確的變更，無法復原。';
+
+  @override
+  String get workspaceUndoRenames => '重新命名無法在這裡復原。';
+
+  @override
+  String get workspaceUndoBinary => '二進位檔案、重新命名、權限或符號連結的變更無法在這裡復原。';
 }

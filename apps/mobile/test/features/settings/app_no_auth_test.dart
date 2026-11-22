@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/app/djl_app.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/features/pairing/presentation/pairing_page.dart';
 import 'package:djl_mobile/features/settings/presentation/app_lock_controller.dart';
 import 'package:djl_mobile/features/settings/presentation/settings_controller.dart';
 import 'package:djl_mobile/features/settings/presentation/settings_controls.dart';
@@ -78,6 +79,60 @@ void main() {
       lock.dispose();
     },
   );
+
+  group('builds without DJL Cloud sign-in', () {
+    Future<StreamController<Uri>> mountRemoteOnly(WidgetTester tester) async {
+      final links = StreamController<Uri>();
+      final settings = SettingsController(MemorySettingsStore());
+      final lock = AppLockController(FakeOwnerAuth());
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        await links.close();
+        settings.dispose();
+        lock.dispose();
+      });
+      await tester.pumpWidget(
+        DjlApp(
+          client: client(TestCredentials(), []),
+          settings: settings,
+          appLock: lock,
+          linkStream: links.stream,
+          initialLink: Future.value(null),
+          cloudAccounts: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+      return links;
+    }
+
+    testWidgets('pairing, the menu and Settings never offer DJL Cloud', (
+      tester,
+    ) async {
+      await mountRemoteOnly(tester);
+      expect(find.byType(PairingPage), findsOneWidget);
+      expect(find.byKey(const Key('pairing.getDesktop')), findsOneWidget);
+      expect(find.text('DJL Cloud'), findsNothing);
+      if (find.byTooltip('Settings').evaluate().isEmpty) {
+        await tester.tap(find.byTooltip('Open navigation'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cloud chat'), findsNothing);
+      }
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Appearance'), findsOneWidget);
+      expect(find.text('DJL Cloud'), findsNothing);
+      expect(find.text('Sign in to DJL Cloud'), findsNothing);
+    });
+
+    testWidgets('a Cloud chat link does not open sign-in', (tester) async {
+      final links = await mountRemoteOnly(tester);
+      links.add(Uri.parse('djl://cloud/c/conversation-1'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PairingPage), findsOneWidget);
+      expect(find.text('Welcome to DJL'), findsNothing);
+      expect(find.text('Continue with email'), findsNothing);
+    });
+  });
 
   testWidgets('settings no longer offer app-lock or biometric authentication', (
     tester,

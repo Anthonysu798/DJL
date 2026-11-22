@@ -1111,6 +1111,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatUiGroups => 'Groups';
 
   @override
+  String get homeTabChats => 'Chats';
+
+  @override
   String get chatUiExpandAll => 'Expand all';
 
   @override
@@ -5217,13 +5220,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusChecking => 'Checking device permission…';
 
   @override
-  String get statusEnable => 'Enable task status';
+  String get statusEnable => 'Turn on';
 
   @override
   String get statusRefresh => 'Refresh task status';
 
   @override
-  String get statusSystemSettings => 'System settings';
+  String get statusSystemSettings => 'Open Settings';
 
   @override
   String pairingStateLabel(String state) {
@@ -5238,4 +5241,21 @@ class AppLocalizationsEn extends AppLocalizations {
     });
     return '$_temp0';
   }
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsLanguageSystem => 'System default';
+
+  @override
+  String get workspaceUndoNoExactPatch =>
+      'No complete exact unified patch was captured.';
+
+  @override
+  String get workspaceUndoRenames => 'Renames cannot be undone here.';
+
+  @override
+  String get workspaceUndoBinary =>
+      'Binary, rename, mode or symlink changes cannot be undone here.';
 }

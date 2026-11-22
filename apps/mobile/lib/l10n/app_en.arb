@@ -599,6 +599,7 @@
     }
   },
   "chatUiGroups": "Groups",
+  "homeTabChats": "Chats",
   "chatUiExpandAll": "Expand all",
   "chatUiCollapseAll": "Collapse all",
   "chatUiCollapseChildChats": "Collapse child chats for {title}",
@@ -2609,9 +2610,9 @@
   "statusDenied": "Allow local task status in your device settings. Chat works without it.",
   "statusUnsupported": "Task status is unavailable on this device.",
   "statusChecking": "Checking device permission…",
-  "statusEnable": "Enable task status",
+  "statusEnable": "Turn on",
   "statusRefresh": "Refresh task status",
-  "statusSystemSettings": "System settings",
+  "statusSystemSettings": "Open Settings",
   "pairingStateLabel": "{state, select, disconnected{disconnected} resolving{resolving} connecting{connecting} connected{connected} offline{desktop offline} suspended{suspended} other{{state}}}",
   "@pairingStateLabel": {
     "description": "The connection state shown under the Mac's name. The English values are shown unchanged.",
@@ -2620,5 +2621,16 @@
         "type": "String"
       }
     }
-  }
+  },
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Settings row that picks the app's language."
+  },
+  "settingsLanguageSystem": "System default",
+  "@settingsLanguageSystem": {
+    "description": "Language option that follows the phone's language."
+  },
+  "workspaceUndoNoExactPatch": "No complete exact unified patch was captured.",
+  "workspaceUndoRenames": "Renames cannot be undone here.",
+  "workspaceUndoBinary": "Binary, rename, mode or symlink changes cannot be undone here."
 }

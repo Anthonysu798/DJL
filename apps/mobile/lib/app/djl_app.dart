@@ -67,8 +67,15 @@ class DjlApp extends StatefulWidget {
     this.socialIdentity,
     this.remotePushNative,
     this.remotePushStore,
+    this.cloudAccounts = true,
   });
   final CloudClient client;
+
+  /// Whether DJL Cloud sign-in, sign-up and Cloud chat are offered. When
+  /// false, nothing links to them and Cloud links are ignored; pairing, the
+  /// relay and paired-Mac notifications need no account. `main.dart` passes
+  /// the build flag.
+  final bool cloudAccounts;
   final RemotePushNative? remotePushNative;
   final RemotePushStore? remotePushStore;
   final SettingsController? settings;
@@ -172,7 +179,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       onError: (Object _) {},
     );
     unawaited(_initialLink(widget.initialLink ?? links.getInitialLink()));
-    unawaited(_auth.restore());
+    if (widget.cloudAccounts) unawaited(_auth.restore());
     unawaited(_prepareStartup());
   }
 
@@ -483,6 +490,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
       _scheduleDesktopLink();
       return;
     }
+    if (!widget.cloudAccounts) return;
     final id = cloudConversationId(uri);
     if (!mounted || id == null) return;
     setState(() => _section = AppSection.cloud);
@@ -614,7 +622,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                   controller: _desktop,
                   focusTarget: target,
                   onSettings: _desktopSettings,
-                  onCloud: _desktopCloud,
+                  onCloud: widget.cloudAccounts ? _desktopCloud : null,
                   runStatus: _runStatus,
                 ),
               ),
@@ -813,6 +821,9 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
     title: 'DJL',
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: _settingsController.language.locale,
+    localeListResolutionCallback: (locales, _) =>
+        resolveAppLocale(locales ?? const []),
     debugShowCheckedModeBanner: false,
     theme: djlTheme(
       Brightness.light,
@@ -901,7 +912,7 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
             child: PairingPage(
               controller: _desktop,
               onSettings: _desktopSettings,
-              onCloud: _desktopCloud,
+              onCloud: widget.cloudAccounts ? _desktopCloud : null,
               runStatus: _runStatus,
             ),
           ),
@@ -1044,13 +1055,15 @@ class _DjlAppState extends State<DjlApp> with WidgetsBindingObserver {
                     : null,
                 onRetry: _statusCoordinator.retryAvailability,
               ),
-              onCloud: () {
-                if (!coverContext.mounted ||
-                    ModalRoute.of(coverContext)?.isCurrent != true) {
-                  return;
-                }
-                _desktopCloud();
-              },
+              onCloud: widget.cloudAccounts
+                  ? () {
+                      if (!coverContext.mounted ||
+                          ModalRoute.of(coverContext)?.isCurrent != true) {
+                        return;
+                      }
+                      _desktopCloud();
+                    }
+                  : null,
               onMyMacs: () {
                 if (!coverContext.mounted ||
                     ModalRoute.of(coverContext)?.isCurrent != true) {
