@@ -354,6 +354,11 @@ export function clearSkillsCatalogCacheForTests(): void {
   ensuredSynaraSkillsDirs.clear();
 }
 
+/** Call after writing a skill file, so the next listing reads the folders again. */
+export function invalidateSkillsCatalogCache(): void {
+  skillsCatalogCache.clear();
+}
+
 export function synaraSkillsDir(synaraBaseDir: string): string {
   return nodePath.join(synaraBaseDir, "skills");
 }

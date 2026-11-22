@@ -36,17 +36,22 @@ const askForGroupTools: HookCallback = async (hook) =>
     ? { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "ask" } }
     : {};
 
-export const createClaudeDriver: NativeDriverFactory = (input, sink, workTools) =>
-  startClaudeDriver(input, sink, workTools, false);
+export const createClaudeDriver: NativeDriverFactory = (input, sink, workTools, plugins) =>
+  startClaudeDriver(input, sink, workTools, plugins, false);
 
 /** A Multi agents member: the group policy answers every file and shell call. */
-export const createGroupMemberClaudeDriver: NativeDriverFactory = (input, sink, workTools) =>
-  startClaudeDriver(input, sink, workTools, true);
+export const createGroupMemberClaudeDriver: NativeDriverFactory = (
+  input,
+  sink,
+  workTools,
+  plugins,
+) => startClaudeDriver(input, sink, workTools, plugins, true);
 
 const startClaudeDriver = async (
   input: Parameters<NativeDriverFactory>[0],
   sink: Parameters<NativeDriverFactory>[1],
   workTools: Parameters<NativeDriverFactory>[2],
+  plugins: Parameters<NativeDriverFactory>[3],
   groupMember: boolean,
 ): ReturnType<NativeDriverFactory> => {
   if (input.approvalPolicy)
@@ -134,10 +139,20 @@ const startClaudeDriver = async (
   const runtime = query({
     prompt,
     options: {
-      ...(workTools
+      ...(workTools || plugins
         ? {
             mcpServers: {
-              ...(workTools.multipost
+              ...Object.fromEntries(
+                (plugins?.servers ?? []).map((server) => [
+                  server.name,
+                  {
+                    type: "http" as const,
+                    url: server.url,
+                    headers: { Authorization: `Bearer ${plugins!.bearerToken}` },
+                  },
+                ]),
+              ),
+              ...(workTools?.multipost
                 ? {
                     [workTools.multipost.name]: {
                       type: "http" as const,
@@ -146,11 +161,15 @@ const startClaudeDriver = async (
                     },
                   }
                 : {}),
-              [workTools.name]: {
-                type: "http" as const,
-                url: workTools.url,
-                headers: { Authorization: `Bearer ${workTools.bearerToken}` },
-              },
+              ...(workTools
+                ? {
+                    [workTools.name]: {
+                      type: "http" as const,
+                      url: workTools.url,
+                      headers: { Authorization: `Bearer ${workTools.bearerToken}` },
+                    },
+                  }
+                : {}),
             },
           }
         : {}),
@@ -306,6 +325,9 @@ const startClaudeDriver = async (
                 },
               });
         }
+        // Subscription limits; same payload the Claude adapter emitted.
+        if (message.type === "rate_limit_event")
+          sink.emit({ type: "account.rate-limits.updated", payload: { rateLimits: message } });
         if (message.type === "result") {
           const modelUsages = Object.values(message.modelUsage ?? {});
           const usageModel =

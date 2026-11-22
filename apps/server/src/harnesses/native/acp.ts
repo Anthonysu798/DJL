@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { withDjlThreadId } from "./driverEnv";
 import { NativeRpc, object, string, type JsonObject } from "./protocol";
 import type { NativeDriverFactory } from "./types";
+import type { PluginGatewaySession } from "../../plugins/PluginGateway";
 import type { ProviderSendTurnInput, ProviderSessionStartInput } from "@synara/contracts";
 import { nonNegativeInteger, positiveInteger } from "../../provider/tokenUsage";
 
@@ -32,6 +33,22 @@ export function readAcpModels(session: JsonObject): Array<{ slug: string; name: 
   }));
 }
 
+/**
+ * The user's plugins as ACP tool servers. An agent only gets them when it says it can reach a
+ * tool server over HTTP; otherwise it starts without plugins rather than failing.
+ */
+export function acpPluginServers(init: JsonObject, plugins: PluginGatewaySession | undefined) {
+  if (!plugins) return [];
+  const capabilities = object(object(init.agentCapabilities ?? {}).mcpCapabilities ?? {});
+  if (capabilities.http !== true) return [];
+  return plugins.servers.map((server) => ({
+    type: "http",
+    name: server.name,
+    url: server.url,
+    headers: [{ name: "Authorization", value: `Bearer ${plugins.bearerToken}` }],
+  }));
+}
+
 // Fresh ACP event/permission bridge shared by official subscription runtimes.
 export function createNativeAcpDriver(config: {
   label: string;
@@ -45,7 +62,7 @@ export function createNativeAcpDriver(config: {
   modelFilter?: (modelId: string) => boolean;
   modeId: (session: JsonObject, turn: ProviderSendTurnInput) => string | undefined;
 }): NativeDriverFactory {
-  return async (input, sink) => {
+  return async (input, sink, _workTools, plugins) => {
     if (input.approvalPolicy)
       throw new Error(
         `${config.label} ACP does not expose the requested Codex approval policy; use native permission prompts`,
@@ -182,7 +199,7 @@ export function createNativeAcpDriver(config: {
         await rpc.request(resume ? "session/load" : "session/new", {
           ...(resume ? { sessionId: resume } : {}),
           cwd: input.cwd,
-          mcpServers: [],
+          mcpServers: acpPluginServers(init, plugins),
         }),
       );
       id = resume ?? string(session.sessionId);

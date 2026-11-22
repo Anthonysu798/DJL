@@ -30,7 +30,8 @@ export function createGroupDriverFactory(deps: {
   resolveAttachment: (attachment: ChatAttachment) => string | null;
   readSkill: (path: string) => Promise<string>;
 }): NativeDriverFactory {
-  return async (input, sink) => {
+  // The group's plugin access is shared by its members: they all work for the same user.
+  return async (input, sink, _workTools, plugins) => {
     const children = new Map<string, ChildSession>();
     let round: Round | null = null;
     // Set while `send` prepares the round, so a steer in that gap waits for it.
@@ -87,6 +88,7 @@ export function createGroupDriverFactory(deps: {
       const child = await openChildSession({
         provider: member.provider,
         factory: deps.childFactories[member.provider],
+        ...(plugins ? { plugins } : {}),
         start: {
           threadId: input.threadId,
           provider: member.provider,

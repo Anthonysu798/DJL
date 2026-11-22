@@ -16,6 +16,8 @@ import {
   applyDroidAcpModelSelection,
   buildDroidAcpSpawnInput,
   discoverDroidAcpModels,
+  droidPluginServers,
+  redactDroidAcpLoggers,
   resolveDroidAcpAuthMethodId,
   resolveDroidCliBinaryPath,
 } from "./DroidAcpSupport.ts";
@@ -322,5 +324,79 @@ describe("resolveDroidAcpAuthMethodId", () => {
       resolveDroidAcpAuthMethodId(initializeWithAuthMethods([])).pipe(Effect.flip),
     );
     expect(error).toBeInstanceOf(EffectAcpErrors.AcpRequestError);
+  });
+});
+
+describe("Droid plugins", () => {
+  const plugins = {
+    bearerToken: "droid-chat-token",
+    servers: [{ name: "djl_linear", url: "http://127.0.0.1:5000/mcp/linear" }],
+  };
+
+  it("offers plugins over HTTP only when Droid says it can reach HTTP tool servers", () => {
+    expect(
+      droidPluginServers(
+        { protocolVersion: 1, agentCapabilities: { mcpCapabilities: { http: true } } },
+        plugins,
+      ),
+    ).toEqual([
+      {
+        type: "http",
+        name: "djl_linear",
+        url: "http://127.0.0.1:5000/mcp/linear",
+        headers: [{ name: "Authorization", value: "Bearer droid-chat-token" }],
+      },
+    ]);
+    expect(droidPluginServers({ protocolVersion: 1, agentCapabilities: {} }, plugins)).toEqual([]);
+    expect(
+      droidPluginServers(
+        { protocolVersion: 1, agentCapabilities: { mcpCapabilities: { http: true } } },
+        undefined,
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps the chat's plugin bearer out of every ACP log", async () => {
+    const logged: unknown[] = [];
+    const loggers = redactDroidAcpLoggers(
+      {
+        requestLogger: (event) => Effect.sync(() => void logged.push(event)),
+        protocolLogging: {
+          logOutgoing: true,
+          logger: (event) => Effect.sync(() => void logged.push(event)),
+        },
+      },
+      "droid-chat-token",
+    );
+    const servers = droidPluginServers(
+      { protocolVersion: 1, agentCapabilities: { mcpCapabilities: { http: true } } },
+      plugins,
+    );
+    await Effect.runPromise(
+      loggers.requestLogger!({
+        method: "session/new",
+        payload: { cwd: "/tmp", mcpServers: servers },
+        status: "started",
+      }),
+    );
+    await Effect.runPromise(
+      loggers.protocolLogging!.logger!({
+        direction: "outgoing",
+        stage: "raw",
+        payload: new TextEncoder().encode(JSON.stringify({ params: { mcpServers: servers } })),
+      }),
+    );
+    await Effect.runPromise(
+      loggers.protocolLogging!.logger!({
+        direction: "outgoing",
+        stage: "raw",
+        payload: "nothing secret",
+      }),
+    );
+    expect(logged).toHaveLength(3);
+    expect(JSON.stringify(logged)).not.toContain("droid-chat-token");
+    expect(JSON.stringify(logged)).toContain("[redacted]");
+    expect(logged[2]).toEqual({ direction: "outgoing", stage: "raw", payload: "nothing secret" });
+    expect(loggers.protocolLogging?.logOutgoing).toBe(true);
   });
 });

@@ -29,6 +29,8 @@ import { fixPath, resolveBaseDir } from "./os-jank";
 import { Open } from "./open";
 import * as SqlitePersistence from "./persistence/Layers/Sqlite";
 import { makeServerProviderLayer, makeServerRuntimeServicesLayer } from "./serverLayers";
+import { PluginsLive } from "./plugins/PluginsService";
+import { ServerSecretStoreLive } from "./auth/Layers/ServerSecretStore";
 import { LocalModelsLive } from "./localModels/LocalModelsLive";
 import { startServerMemoryDiagnostics } from "./memoryDiagnostics";
 import { startClaudeCredentialKeepalive } from "./provider/claudeCredentialKeepalive";
@@ -341,6 +343,7 @@ const LayerLive = (input: CliInput) => {
     Layer.provideMerge(AnalyticsServiceLayerLive),
     // One bridge shared by GroupService (runtime layer) and the group harness (provider layer).
     Layer.provideMerge(GroupDriverBridgeLive),
+    Layer.provideMerge(PluginsLive.pipe(Layer.provide(ServerSecretStoreLive))),
     Layer.provideMerge(ServerConfigLive(input)),
   );
 };

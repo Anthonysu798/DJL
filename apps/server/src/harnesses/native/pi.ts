@@ -26,6 +26,111 @@ const APPROVAL_EXTENSION = `export default function (pi) {
 }
 `;
 
+// Pi has no MCP client of its own ("No MCP" in its README); its extensions can register tools.
+// This one turns each tool of the user's plugins into a Pi tool that calls DJL's plugin gateway.
+// The gateway address and the chat's bearer arrive in DJL_PI_PLUGINS, which it removes from the
+// environment at once so no command Pi runs later inherits the bearer. When the chat needs
+// approvals, every plugin tool asks the user in its own execute() before it reaches the gateway,
+// so no name lookup can let one through. Names are unique: a name that had to be shortened or
+// reshaped gets a hash suffix, and a tool whose name still collides is left out.
+const PLUGIN_EXTENSION = String.raw`import { createHash } from "node:crypto";
+
+export default async function (pi) {
+  const raw = process.env.DJL_PI_PLUGINS;
+  delete process.env.DJL_PI_PLUGINS;
+  if (!raw) return;
+  const { bearerToken, servers, askFirst } = JSON.parse(raw);
+  const toolName = (server, tool) => {
+    const exact = server + "__" + tool;
+    const safe = exact.replace(/[^a-zA-Z0-9_-]/g, "_");
+    if (safe === exact && safe.length <= 64) return safe;
+    const hash = createHash("sha256").update(server + "\u0000" + tool).digest("hex").slice(0, 8);
+    return safe.slice(0, 55) + "_" + hash;
+  };
+  const rpc = async (connection, method, params, signal, notification) => {
+    const id = crypto.randomUUID();
+    const timeout = AbortSignal.timeout(120000);
+    const response = await fetch(connection.url, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + bearerToken,
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        ...(connection.sessionId ? { "Mcp-Session-Id": connection.sessionId } : {}),
+      },
+      body: JSON.stringify(notification ? { jsonrpc: "2.0", method, params } : { jsonrpc: "2.0", id, method, params }),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+    const sessionId = response.headers.get("mcp-session-id") || connection.sessionId;
+    if (!response.ok) throw new Error("The plugin server refused " + method + " (" + response.status + ").");
+    if (notification) return { result: {}, sessionId };
+    const text = await response.text();
+    const messages = (response.headers.get("content-type") || "").includes("text/event-stream")
+      ? text.split(/\r?\n\r?\n/)
+          .map((block) => block.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n"))
+          .filter(Boolean)
+          .map((data) => JSON.parse(data))
+      : [JSON.parse(text)];
+    const reply = messages.find((message) => message.id === id);
+    if (!reply) throw new Error("The plugin server did not answer " + method + ".");
+    if (reply.error) throw new Error(String(reply.error.message || method + " failed."));
+    return { result: reply.result || {}, sessionId };
+  };
+  const connect = async (url, signal) => {
+    const initialized = await rpc({ url, sessionId: null }, "initialize", {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "DJL", version: "1.0.0" },
+    }, signal);
+    const connection = { url, sessionId: initialized.sessionId };
+    await rpc(connection, "notifications/initialized", {}, signal, true);
+    return connection;
+  };
+  const found = [];
+  for (const server of servers) {
+    try {
+      const listing = await connect(server.url, AbortSignal.timeout(10000));
+      let cursor;
+      for (let page = 0; page < 10; page++) {
+        const { result } = await rpc(listing, "tools/list", cursor ? { cursor } : {}, AbortSignal.timeout(10000));
+        for (const tool of Array.isArray(result.tools) ? result.tools : []) {
+          if (typeof tool.name === "string") found.push({ server, tool, name: toolName(server.name, tool.name) });
+        }
+        cursor = result.nextCursor;
+        if (typeof cursor !== "string" || !cursor) break;
+      }
+    } catch {
+      // A plugin that cannot be reached is left out; Pi still starts with the others.
+    }
+  }
+  for (const { server, tool, name } of found) {
+    // A name two tools still share is withheld from both: neither could be called unambiguously.
+    if (found.filter((other) => other.name === name).length !== 1) continue;
+    pi.registerTool({
+      name,
+      label: name,
+      description: typeof tool.description === "string" ? tool.description : tool.name,
+      parameters: tool.inputSchema || { type: "object", properties: {} },
+      async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+        if (askFirst) {
+          let allowed = false;
+          try {
+            allowed = await ctx.ui.confirm(${JSON.stringify(APPROVAL_TITLE_PREFIX)} + "plugin:" + name, JSON.stringify(params ?? {}));
+          } catch {}
+          if (allowed !== true) throw new Error("Denied in DJL.");
+        }
+        const connection = await connect(server.url, signal);
+        const { result } = await rpc(connection, "tools/call", { name: tool.name, arguments: params || {} }, signal);
+        const content = Array.isArray(result.content) ? result.content : [];
+        const text = content.filter((item) => item.type === "text" && typeof item.text === "string").map((item) => item.text).join("\n");
+        if (result.isError === true) throw new Error(text || "The plugin tool failed.");
+        return { content: [{ type: "text", text: text || JSON.stringify(result.structuredContent ?? content) }], details: {} };
+      },
+    });
+  }
+}
+`;
+
 export function piSubscriptionEnvironment(
   base: NodeJS.ProcessEnv = process.env,
   agentDir?: string,
@@ -41,6 +146,14 @@ export function writePiApprovalExtension(dir = join(tmpdir(), "djl-pi")) {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, "djl-approvals.ts");
   writeFileSync(file, APPROVAL_EXTENSION, { mode: 0o600 });
+  return file;
+}
+
+/** Holds no secret: the gateway and bearer reach it through the environment of one Pi process. */
+export function writePiPluginExtension(dir = join(tmpdir(), "djl-pi")) {
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, "djl-plugins.ts");
+  writeFileSync(file, PLUGIN_EXTENSION, { mode: 0o600 });
   return file;
 }
 
@@ -134,7 +247,7 @@ function splitModel(slug: string) {
   return { provider: slug.slice(0, index), modelId: slug.slice(index + 1) };
 }
 
-export const createPiDriver: NativeDriverFactory = async (input, sink) => {
+export const createPiDriver: NativeDriverFactory = async (input, sink, _workTools, plugins) => {
   if (input.approvalPolicy)
     throw new Error("Pi does not expose the requested Codex approval policy");
   if (input.sandboxMode && input.sandboxMode !== "danger-full-access")
@@ -157,6 +270,7 @@ export const createPiDriver: NativeDriverFactory = async (input, sink) => {
         ? "command"
         : undefined;
   if (approve) args.push("-e", writePiApprovalExtension());
+  if (plugins) args.push("-e", writePiPluginExtension());
   const rpc = new PiRpc(
     options?.binaryPath?.trim() || "pi",
     args,
@@ -165,6 +279,15 @@ export const createPiDriver: NativeDriverFactory = async (input, sink) => {
       {
         ...piSubscriptionEnvironment(process.env, options?.agentDir),
         ...(approve ? { DJL_PI_APPROVE: approve } : {}),
+        ...(plugins
+          ? {
+              DJL_PI_PLUGINS: JSON.stringify({
+                bearerToken: plugins.bearerToken,
+                servers: plugins.servers,
+                askFirst: approve !== undefined,
+              }),
+            }
+          : {}),
       },
       input.threadId,
     ),

@@ -97,6 +97,8 @@ export const ProviderSendTurnInput = Schema.Struct({
   ),
   skills: Schema.optional(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  /** DJL catalog plugins the user @-mentioned this turn; DJL Cloud offers only their tools. */
+  djlPluginIds: Schema.optional(Schema.Array(TrimmedNonEmptyString)),
   modelSelection: Schema.optional(ModelSelection),
   interactionMode: Schema.optional(ProviderInteractionMode),
   workTurnPolicy: Schema.optional(WorkTurnPolicy),

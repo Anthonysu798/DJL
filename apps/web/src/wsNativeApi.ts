@@ -627,6 +627,31 @@ export function createWsNativeApi(): NativeApi {
         return () => localModelEventListeners.delete(callback);
       },
     },
+    plugins: {
+      getSnapshot: () => transport.request(WS_METHODS.pluginsGetSnapshot),
+      // Adding a marketplace plugin first asks each of its servers how it signs in.
+      install: (input) =>
+        transport.request(WS_METHODS.pluginsInstall, input, { timeoutMs: 120_000 }),
+      uninstall: (input) => transport.request(WS_METHODS.pluginsUninstall, input),
+      setEnabled: (input) => transport.request(WS_METHODS.pluginsSetEnabled, input),
+      connectApp: (input) =>
+        transport.request(WS_METHODS.pluginsConnectApp, input, { timeoutMs: 45_000 }),
+      disconnectApp: (input) => transport.request(WS_METHODS.pluginsDisconnectApp, input),
+      // Adding checks the server first, which can take as long as a slow server does.
+      addCustomServer: (input) =>
+        transport.request(WS_METHODS.pluginsAddCustomServer, input, { timeoutMs: 45_000 }),
+      createSkill: (input) => transport.request(WS_METHODS.pluginsCreateSkill, input),
+      // These ask the plugin's servers or a marketplace first, which can take a while.
+      saveAppToken: (input) =>
+        transport.request(WS_METHODS.pluginsSaveAppToken, input, { timeoutMs: 45_000 }),
+      importManifest: (input) =>
+        transport.request(WS_METHODS.pluginsImportManifest, input, { timeoutMs: 120_000 }),
+      addMarketplace: (input) =>
+        transport.request(WS_METHODS.pluginsAddMarketplace, input, { timeoutMs: 45_000 }),
+      refreshMarketplace: (input) =>
+        transport.request(WS_METHODS.pluginsRefreshMarketplace, input, { timeoutMs: 45_000 }),
+      removeMarketplace: (input) => transport.request(WS_METHODS.pluginsRemoveMarketplace, input),
+    },
     projectMemory: {
       list: (input) => transport.request(WS_METHODS.projectMemoryList, input),
       save: (input) => transport.request(WS_METHODS.projectMemorySave, input),
