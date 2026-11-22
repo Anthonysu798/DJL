@@ -181,8 +181,9 @@ try {
     await writeFile(archivePath, downloaded);
     // bsdtar (macOS, Windows) reads zip and tar.gz; GNU tar does not read
     // zip, so fall back to unzip for the Windows asset on Linux hosts.
+    // Pass the archive by name from its folder: GNU tar reads "D:\..." as a remote host.
     try {
-      run("tar", ["-xf", archivePath, "-C", staged]);
+      run("tar", ["-xf", assetName, "-C", staged], temporary);
     } catch {
       run("unzip", ["-o", archivePath, "-d", staged]);
     }
@@ -221,7 +222,7 @@ try {
     run("git", ["-C", source, "archive", `--output=${archive}`, release.source, "libs/cua-driver"]);
     const build = join(temporary, "build");
     await mkdir(build);
-    run("tar", ["-xf", archive, "-C", build]);
+    run("tar", ["-xf", "source.tar", "-C", build], temporary);
     run("patch", ["--batch", "--forward", "-p1", "-i", patchPath], build);
     if (platform === "linux") {
       run("patch", ["--batch", "--forward", "-p1", "-i", linuxPatchPath], build);
@@ -374,7 +375,7 @@ try {
     provenance.codeSha256 = await signatureIndependentMachODigest(join(destination, "cua-driver"));
   await writeFile(join(destination, "provenance.json"), JSON.stringify(provenance, null, 2) + "\n");
   await copyFile(
-    fileURLToPath(new URL("../../../docs/computer-use-cua/CUA-LICENSE.txt", import.meta.url)),
+    fileURLToPath(new URL("../../../docs/licenses/CUA_LICENSE", import.meta.url)),
     join(destination, "LICENSE.txt"),
   );
   provisionSucceeded = true;
