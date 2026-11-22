@@ -8,8 +8,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { ThreadId } from "@synara/contracts";
-import { RotatingFileSink } from "@synara/shared/logging";
+import type { ThreadId } from "@djl/contracts";
+import { RotatingFileSink } from "@djl/shared/logging";
 import { Effect, Exit, Logger, Scope } from "effect";
 
 import { toSafeThreadAttachmentSegment } from "../../attachmentStore.ts";

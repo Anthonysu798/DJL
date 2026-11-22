@@ -3,7 +3,7 @@
 // Layer: Web subscription utility
 // Exports: Pure controller factory plus a React hook backed by thread-detail retention.
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { retainThreadDetailSubscription } from "./threadDetailSubscriptionRetention";
 

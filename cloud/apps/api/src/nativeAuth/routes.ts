@@ -3,7 +3,7 @@
  *   POST /v1/native-auth/codes  signed-in browser (cookie + CSRF) mints a code
  *   POST /v1/native-auth/token  the app redeems code + verifier for a session
  */
-import { CloudNativeAuthorizeRequest, CloudNativeTokenInput } from "@synara/contracts/cloud";
+import { CloudNativeAuthorizeRequest, CloudNativeTokenInput } from "@djl/contracts/cloud";
 import { Effect, Layer, Schema } from "effect";
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http";
 

@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { buildCampaignTrackingLink, type Campaign } from "@synara/contracts";
+import { buildCampaignTrackingLink, type Campaign } from "@djl/contracts";
 import { resolveAgentOwner, assertAgentCampaignAccess } from "./agentScope";
 import type { MarketingToolScope } from "./chatTools";
 import { MarketingError, readDocument } from "./store";

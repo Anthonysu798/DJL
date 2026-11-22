@@ -1,7 +1,7 @@
 import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
 import { vi } from "vitest";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { SOCIAL_TOOLS, executeSocialTool } from "./socialTools";
 import { saveDocument } from "./store";

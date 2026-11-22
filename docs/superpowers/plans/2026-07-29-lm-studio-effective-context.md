@@ -809,7 +809,7 @@ Read the file /Users/toni798/Documents/Production_DJL/package.json and tell me i
 PASS:
 
 - A Read tool call is visible.
-- The returned content includes `"name": "@synara/monorepo"`.
+- The returned content includes `"name": "@djl/monorepo"`.
 
 Record the complete assistant reply verbatim.
 
@@ -847,7 +847,7 @@ Read the file /Users/toni798/Documents/Production_DJL/package.json and tell me i
 PASS:
 
 - A Read tool call runs.
-- The returned content includes `"name": "@synara/monorepo"`.
+- The returned content includes `"name": "@djl/monorepo"`.
 - No raw function schema appears in assistant text.
 
 Record the complete assistant reply verbatim.

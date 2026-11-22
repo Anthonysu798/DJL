@@ -10,7 +10,7 @@
  *
  * @module computer/uiTreeText
  */
-import type { ComputerUiNode } from "@synara/contracts";
+import type { ComputerUiNode } from "@djl/contracts";
 
 import { clampTextToLength } from "./utf8Truncation.ts";
 

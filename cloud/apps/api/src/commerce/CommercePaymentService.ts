@@ -7,7 +7,7 @@ import type {
   CommerceExternalRefund,
   CommerceExternalRefundDetail,
   CommerceExternalRefundAllocationResult,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { ApiError } from "../http/errors.ts";
 import {
   CommerceService,

@@ -2,9 +2,9 @@
 
 ## Current strengths
 
-- CI is already meaningful, especially in [`.github/workflows/ci.yml`](/Users/emanueledipietro/Developer/Testing/synara/.github/workflows/ci.yml).
-- Release automation is documented and practical in [`docs/release.md`](/Users/emanueledipietro/Developer/Testing/synara/docs/release.md).
-- Contribution expectations are clear in [`CONTRIBUTING.md`](/Users/emanueledipietro/Developer/Testing/synara/CONTRIBUTING.md).
+- CI is already meaningful, especially in [`.github/workflows/ci.yml`](/Users/you/Developer/Testing/djl/.github/workflows/ci.yml).
+- Release automation is documented and practical in [`docs/release.md`](/Users/you/Developer/Testing/djl/docs/release.md).
+- Contribution expectations are clear in [`CONTRIBUTING.md`](/Users/you/Developer/Testing/djl/CONTRIBUTING.md).
 
 This is a better baseline than many early-stage repos.
 
@@ -67,7 +67,7 @@ For example:
 - UX polish
 - release/distribution
 
-This makes planning easier than one broad [`TODO.md`](/Users/emanueledipietro/Developer/Testing/synara/TODO.md).
+This makes planning easier than one broad [`TODO.md`](/Users/you/Developer/Testing/djl/TODO.md).
 
 ## 5. Make measurement part of the culture
 

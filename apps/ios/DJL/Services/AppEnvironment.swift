@@ -53,10 +53,10 @@ enum AppEnvironment {
     // Legal links shown in Settings.
     // Keep these pointed at a public source-of-truth until the website serves dedicated legal routes.
     static let privacyPolicyURL = URL(
-        string: "https://github.com/Emanuele-web04/djl/blob/main/Legal/PRIVACY_POLICY.md"
+        string: "https://slcor.com/privacy"
     )!
     static let termsOfUseURL = URL(
-        string: "https://github.com/Emanuele-web04/djl/blob/main/Legal/TERMS_OF_USE.md"
+        string: "https://slcor.com/terms"
     )!
 
     // Powers in-app feedback actions so every entry point targets the same inbox.

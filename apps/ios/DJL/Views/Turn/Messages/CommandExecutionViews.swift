@@ -724,7 +724,7 @@ enum CommandHumanizer {
     }
 
     /// Leading icon (an SF Symbol name resolved to a Central asset by `DJLIcon`)
-    /// for a humanized command row, following synara's command classification:
+    /// for a humanized command row, following djl's command classification:
     /// inspect-style commands → magnifying glass, source control → GitHub mark,
     /// everything else → console.
     static func iconSystemName(for raw: String) -> String {
@@ -741,7 +741,7 @@ enum CommandHumanizer {
         }
     }
 
-    // Mirrors Synara's command-row classifier for GitHub CLI calls hidden behind
+    // Mirrors DJL's command-row classifier for GitHub CLI calls hidden behind
     // simple `env` wrappers such as `env -u GH_TOKEN gh pr status`.
     private static func unwrapEnvironmentWrapper(_ raw: String) -> String {
         let tokens = raw.split(separator: " ").map(String.init)

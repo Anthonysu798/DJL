@@ -1,7 +1,7 @@
 // FILE: serverPanelModel.ts
 // Purpose: Pure helpers for the Servers settings panel: form mapping, validation, command preview, formatting, status.
 // Layer: Web settings model (no React, no i18n)
-// Depends on: @synara/contracts server types
+// Depends on: @djl/contracts server types
 
 import type {
   ServerAuthMethod,
@@ -13,7 +13,7 @@ import type {
   ServerStats,
   ServerTestOutcome,
   ServerUpdateInput,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export type ServerFormAuthType = ServerAuthMethod["type"];
 

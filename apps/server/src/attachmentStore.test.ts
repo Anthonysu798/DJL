@@ -45,7 +45,7 @@ describe("attachmentStore", () => {
   });
 
   it("resolves attachment path by id using the extension that exists on disk", () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-attachment-store-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-attachment-store-"));
     try {
       const attachmentId = "thread-1-attachment";
       const pngPath = path.join(attachmentsDir, `${attachmentId}.png`);
@@ -62,7 +62,7 @@ describe("attachmentStore", () => {
   });
 
   it("resolves immutable Office and PDF attachments without a fixed extension allowlist", () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-attachment-store-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-attachment-store-"));
     try {
       const attachmentId = "thread-1-00000000-0000-4000-8000-000000000001";
       const pdfPath = path.join(attachmentsDir, `${attachmentId}.pdf`);
@@ -75,7 +75,7 @@ describe("attachmentStore", () => {
   });
 
   it("returns null when no attachment file exists for the id", () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-attachment-store-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-attachment-store-"));
     try {
       const resolved = resolveAttachmentPathById({
         attachmentsDir,
@@ -88,8 +88,8 @@ describe("attachmentStore", () => {
   });
 
   it("rejects symlinked attachment paths that escape the attachment root", () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-attachment-store-"));
-    const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-attachment-outside-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-attachment-store-"));
+    const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-attachment-outside-"));
     try {
       const outsidePath = path.join(outsideDir, "secret.pdf");
       const linkedPath = path.join(attachmentsDir, "thread-1-linked.pdf");

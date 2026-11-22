@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import type { ComputerState, ComputerTarget } from "@synara/contracts";
+import type { ComputerState, ComputerTarget } from "@djl/contracts";
 import { ComputerTargetError, resolveComputerSemanticTarget } from "./uiTreeTargeting.ts";
 
 export interface ComputerControlReadiness {

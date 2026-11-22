@@ -11,7 +11,7 @@ import {
   type ProviderKind,
   type ResolvedKeybindingsConfig,
   type ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiGitBranch } from "react-icons/fi";

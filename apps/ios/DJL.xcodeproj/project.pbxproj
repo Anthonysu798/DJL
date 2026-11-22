@@ -631,7 +631,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C078C1A02F79000100BEEF01 /* XCRemoteSwiftPackageReference "Citadel" */,
-				C0A34C382FBA9D04007294E3 /* XCRemoteSwiftPackageReference "RemodexTextKit" */,
+				C0A34C382FBA9D04007294E3 /* XCLocalSwiftPackageReference "Packages/RemodexTextKit" */,
 				D1A000000000000000000001 /* XCRemoteSwiftPackageReference "Runestone" */,
 				D1A000000000000000000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */,
 			);
@@ -1216,6 +1216,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		C0A34C382FBA9D04007294E3 /* XCLocalSwiftPackageReference "Packages/RemodexTextKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/RemodexTextKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		C078C1A02F79000100BEEF01 /* XCRemoteSwiftPackageReference "Citadel" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1223,14 +1230,6 @@
 			requirement = {
 				branch = main;
 				kind = branch;
-			};
-		};
-		C0A34C382FBA9D04007294E3 /* XCRemoteSwiftPackageReference "RemodexTextKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Emanuele-web04/RemodexTextKit.git";
-			requirement = {
-				kind = exactVersion;
-				version = 0.4.2;
 			};
 		};
 		D1A000000000000000000001 /* XCRemoteSwiftPackageReference "Runestone" */ = {
@@ -1259,7 +1258,7 @@
 		};
 		C0A34C392FBA9D04007294E3 /* RemodexTextKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = C0A34C382FBA9D04007294E3 /* XCRemoteSwiftPackageReference "RemodexTextKit" */;
+			package = C0A34C382FBA9D04007294E3 /* XCLocalSwiftPackageReference "Packages/RemodexTextKit" */;
 			productName = RemodexTextKit;
 		};
 		D1A000000000000000000100 /* Runestone */ = {

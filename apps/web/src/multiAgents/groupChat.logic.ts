@@ -10,8 +10,8 @@ import {
   type GroupMemberId,
   type GroupMemberProvider,
   type GroupReply,
-} from "@synara/contracts";
-import { parseGroupMentions, parseGroupMessageId } from "@synara/shared/groupChat";
+} from "@djl/contracts";
+import { parseGroupMentions, parseGroupMessageId } from "@djl/shared/groupChat";
 
 export const GROUP_ALL_ALIASES = ["所有人", "全体成员", "全体"];
 

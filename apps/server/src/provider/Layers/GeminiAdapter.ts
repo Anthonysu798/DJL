@@ -32,15 +32,15 @@ import {
   ThreadId,
   type ThreadTokenUsageSnapshot,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   getModelCapabilities,
   getGeminiThinkingConfigKind,
   getGeminiThinkingModelAlias,
   hasEffortLevel,
   resolveGeminiApiModelId,
-} from "@synara/shared/model";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@djl/shared/model";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import { Effect, FileSystem, Layer, Queue, Stream } from "effect";
 
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
@@ -67,7 +67,7 @@ const GEMINI_ACP_PROMPT_TIMEOUT_MS = 30 * 60_000;
 const GEMINI_TMP_DIR = path.join(os.homedir(), ".gemini", "tmp");
 const GEMINI_CHAT_DIR_NAME = "chats";
 const GEMINI_SESSION_FILE_PREFIX = "session-";
-const SYNARA_GEMINI_SETTINGS_DIR = path.join(os.tmpdir(), "synara", "gemini");
+const DJL_GEMINI_SETTINGS_DIR = path.join(os.tmpdir(), "djl", "gemini");
 const GEMINI_3_THINKING_LEVELS: ReadonlyArray<GeminiThinkingLevel> = ["HIGH", "LOW"];
 const GEMINI_2_5_THINKING_BUDGETS: ReadonlyArray<GeminiThinkingBudget> = [-1, 512, 0];
 
@@ -743,12 +743,12 @@ const makeGeminiAdapter = Effect.fn("makeGeminiAdapter")(function* (
     }
 
     const systemSettingsPath = path.join(
-      SYNARA_GEMINI_SETTINGS_DIR,
+      DJL_GEMINI_SETTINGS_DIR,
       `${input.threadId}-${crypto.randomUUID()}.json`,
     );
     yield* Effect.tryPromise({
       try: async () => {
-        await fs.mkdir(SYNARA_GEMINI_SETTINGS_DIR, { recursive: true });
+        await fs.mkdir(DJL_GEMINI_SETTINGS_DIR, { recursive: true });
         await fs.writeFile(
           systemSettingsPath,
           JSON.stringify(
@@ -1878,7 +1878,7 @@ const makeGeminiAdapter = Effect.fn("makeGeminiAdapter")(function* (
       yield* sendRequest(context, "initialize", {
         protocolVersion: 1,
         clientInfo: {
-          name: "synara",
+          name: "djl",
           title: "DJL",
           version: "0.1.0",
         },

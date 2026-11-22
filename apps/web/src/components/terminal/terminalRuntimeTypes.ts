@@ -1,4 +1,4 @@
-import type { HarnessId, TerminalAgentProfile } from "@synara/contracts";
+import type { HarnessId, TerminalAgentProfile } from "@djl/contracts";
 // FILE: terminalRuntimeTypes.ts
 // Purpose: Shared types and stable identity helpers for persistent terminal runtimes.
 // Layer: Terminal runtime infrastructure
@@ -6,7 +6,7 @@ import type { HarnessId, TerminalAgentProfile } from "@synara/contracts";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
-import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared/terminalThreads";
+import { type TerminalActivityState, type TerminalCliKind } from "@djl/shared/terminalThreads";
 import { Terminal, type IDisposable } from "@xterm/xterm";
 import type { TerminalLinkMatch } from "../../terminal-links";
 

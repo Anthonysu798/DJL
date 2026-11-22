@@ -7,7 +7,7 @@ import { formatCredits, totalAvailable } from "@djl/domain";
 import { Effect, Layer, Schema } from "effect";
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http";
 
-import { CloudRegisterDeviceInput } from "@synara/contracts/cloud";
+import { CloudRegisterDeviceInput } from "@djl/contracts/cloud";
 
 import { registerSessionDevice, listDeviceSessions } from "./DeviceSessions.ts";
 import type { PrincipalResolver } from "../auth/guard.ts";

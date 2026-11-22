@@ -19,7 +19,7 @@ import {
   decodeComputerActivitySnapshot,
   type ComputerActivityPage,
   type ComputerActivitySummary,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { redactComputerActivityText as redact } from "./computerActivityRedaction";
 
 const MAX_SNAPSHOTS = 5_000;

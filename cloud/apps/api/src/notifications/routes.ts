@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
-import { CloudNotificationsQuery, CloudReadNotificationsInput } from "@synara/contracts/cloud";
+import { CloudNotificationsQuery, CloudReadNotificationsInput } from "@djl/contracts/cloud";
 import { requirePrincipal, type PrincipalResolver } from "../auth/guard.ts";
 import { decodeBody, decodeQuery } from "../http/decode.ts";
 import { attempt, handle } from "../http/handle.ts";

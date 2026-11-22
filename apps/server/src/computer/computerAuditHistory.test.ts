@@ -2,7 +2,7 @@ import { appendFile, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/pro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ComputerGetAuditHistoryResult } from "@synara/contracts";
+import { ComputerGetAuditHistoryResult } from "@djl/contracts";
 import { Schema } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -16,7 +16,7 @@ import { ComputerAuditLog, computerAuditGatewayRequestId } from "./computerAudit
 const directories: string[] = [];
 
 async function fixture(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "synara-computer-history-"));
+  const dir = await mkdtemp(join(tmpdir(), "djl-computer-history-"));
   directories.push(dir);
   return join(dir, "computer-audit.jsonl");
 }

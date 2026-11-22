@@ -8,7 +8,7 @@ import type {
   ServerCommandRecord,
   ServerCommandStreamEvent,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 

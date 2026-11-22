@@ -32,8 +32,8 @@ export type TerminalIconKey =
 export type TerminalActivityState = "running" | "attention" | "review";
 export type TerminalVisualState = "idle" | TerminalActivityState;
 export type TerminalAgentHookEventType = "Start" | "Stop" | "PermissionRequest";
-export const SYNARA_TERMINAL_CLI_KIND_ENV_KEY = "SYNARA_TERMINAL_CLI_KIND";
-export const SYNARA_TERMINAL_HOOK_OSC_PREFIX = "633;SYNARA_AGENT_EVENT=";
+export const DJL_TERMINAL_CLI_KIND_ENV_KEY = "DJL_TERMINAL_CLI_KIND";
+export const DJL_TERMINAL_HOOK_OSC_PREFIX = "633;DJL_AGENT_EVENT=";
 export const MANAGED_TERMINAL_COMMAND_NAME_BY_CLI_KIND: Record<TerminalCliKind, string> = {
   codex: "codex",
   claude: "claude",

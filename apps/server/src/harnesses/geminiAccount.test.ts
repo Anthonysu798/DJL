@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_SETTINGS, type ServerSettings } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS, type ServerSettings } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import { buildHarnessInvocation } from "./accounts";
 import { geminiSubscriptionEnvironment } from "./native/gemini";

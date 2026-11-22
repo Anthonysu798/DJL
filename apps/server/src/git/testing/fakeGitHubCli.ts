@@ -8,7 +8,7 @@
 import { spawnSync } from "node:child_process";
 
 import { Effect } from "effect";
-import type { GitPullRequestCheck, GitPullRequestComment } from "@synara/contracts";
+import type { GitPullRequestCheck, GitPullRequestComment } from "@djl/contracts";
 
 import { GitHubCliError } from "../Errors.ts";
 import { decodePullRequestListJson } from "../Layers/GitHubCli.ts";

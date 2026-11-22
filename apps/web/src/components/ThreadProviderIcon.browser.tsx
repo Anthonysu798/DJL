@@ -1,4 +1,4 @@
-import { PROVIDER_DISPLAY_NAMES, ThreadId } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, ThreadId } from "@djl/contracts";
 import { page } from "vitest/browser";
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";

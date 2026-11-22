@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { ComputerUseManager } from "../../src/computerUseManager";
 import { Effect, Exit, ManagedRuntime, Scope } from "effect";
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@djl/contracts";
 
 const source = dirname(new URL(import.meta.url).pathname);
 const directory = mkdtempSync("/private/tmp/djl-computer-broker-e2e-");

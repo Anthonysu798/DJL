@@ -1,5 +1,5 @@
 {
-  "name": "@synara/stats-worker",
+  "name": "@djl/stats-worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",

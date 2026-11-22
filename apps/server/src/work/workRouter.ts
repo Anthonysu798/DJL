@@ -1,4 +1,4 @@
-import type { WorkTurnPolicy } from "@synara/contracts";
+import type { WorkTurnPolicy } from "@djl/contracts";
 
 const WEB_FRESHNESS =
   /\b(prices?|stocks?|markets?|weather|news|exchange rates?|scores?|schedules?|web\s*search|web\s*fetch)\b|\b(?:analy[sz]e|research|evaluate)\b.{0,80}\b(?:compan(?:y|ies)|business|investment)\b|(?:分析|研究|评估).{0,40}(?:公司|企业|投资)|股价|股票|行情|天气|新闻|汇率|比分|赛程/i;

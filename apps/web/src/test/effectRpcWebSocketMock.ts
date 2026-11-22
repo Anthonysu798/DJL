@@ -9,7 +9,7 @@ import {
   WS_METHODS,
   type OrchestrationReadModel,
   type OrchestrationShellSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export interface EffectRpcWebSocketClient {
   readonly send: (data: string) => void;

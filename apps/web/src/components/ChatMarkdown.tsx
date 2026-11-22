@@ -4,7 +4,7 @@
 // Exports: ChatMarkdown
 
 import { CheckIcon, CopyIcon, TextWrapIcon } from "~/lib/icons";
-import type { ThreadMarker } from "@synara/contracts";
+import type { ThreadMarker } from "@djl/contracts";
 import "katex/dist/katex.min.css";
 import React, {
   Children,

@@ -634,7 +634,7 @@ describe("public desktop release preparation", () => {
     assert.match(workflow, /baseline_version:[\s\S]*required: true/);
     assert.match(workflow, /target_version:[\s\S]*required: true/);
     assert.match(workflow, /RELEASE_REPOSITORY: Anthonysu798\/DJL/);
-    assert.match(workflow, /SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798\/DJL/);
+    assert.match(workflow, /DJL_DESKTOP_UPDATE_REPOSITORY: Anthonysu798\/DJL/);
     assert.match(
       workflow,
       /DJL_DESKTOP_UPDATE_BASE_URL: https:\/\/djl-china-releases\.oss-accelerate\.aliyuncs\.com\/stable/,

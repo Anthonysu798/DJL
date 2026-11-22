@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { changeComputerChatControl } from "./useComputerChatControl";
 const broker = vi.hoisted(() => ({ setControlEnabled: vi.fn() }));
 vi.mock("~/nativeApi", () => ({ ensureNativeApi: () => ({ computer: broker }) }));

@@ -17,30 +17,26 @@ describe("desktop smoke process isolation", () => {
         HOME: "/Users/example",
         USERPROFILE: "C:\\fake-old-home",
         DJL_HOME: "/Users/example/.djl",
-        SYNARA_HOME: "/Users/example/.synara",
         DJL_DESKTOP_USER_DATA_DIR: "/Users/example/Library/DJL",
-        SYNARA_DESKTOP_USER_DATA_DIR: "/Users/example/Library/Synara",
         ELECTRON_RUN_AS_NODE: "1",
         VITE_DEV_SERVER_URL: "http://localhost:5733",
-        SYNARA_AUTH_TOKEN: "must-not-leak",
+        DJL_AUTH_TOKEN: "must-not-leak",
       },
       smokeRoot,
       "4317",
     );
 
-    expect(environment).not.toHaveProperty("SYNARA_AUTH_TOKEN");
+    expect(environment).not.toHaveProperty("DJL_AUTH_TOKEN");
     expect(environment).not.toHaveProperty("ELECTRON_RUN_AS_NODE");
     expect(environment).not.toHaveProperty("VITE_DEV_SERVER_URL");
     expect(environment).toMatchObject({
       HOME: join(smokeRoot, "home"),
       USERPROFILE: join(smokeRoot, "home"),
       DJL_HOME: join(smokeRoot, "state"),
-      SYNARA_HOME: join(smokeRoot, "state"),
       DJL_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
-      SYNARA_DESKTOP_USER_DATA_DIR: join(smokeRoot, "profile"),
-      SYNARA_PORT_OFFSET: "4317",
-      SYNARA_NO_BROWSER: "1",
-      SYNARA_DISABLE_AUTO_UPDATE: "1",
+      DJL_PORT_OFFSET: "4317",
+      DJL_NO_BROWSER: "1",
+      DJL_DISABLE_AUTO_UPDATE: "1",
     });
   });
 

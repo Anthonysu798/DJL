@@ -6,7 +6,7 @@ import {
   type ProviderKind,
   type ProviderListPluginsResult,
   type ProviderReadPluginResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { providerReadPluginQueryOptions } from "~/lib/providerDiscoveryReactQuery";
 import { isInstalledProviderPlugin } from "~/lib/providerDiscovery";
 

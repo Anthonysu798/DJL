@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { Socket } from "node:net";
 import type { Client as UndiciClient } from "undici/index.js";
 import { Schema } from "effect";
-import { ComputerActivitySummaryJob, type ComputerActivitySummaryCommand } from "@synara/contracts";
+import { ComputerActivitySummaryJob, type ComputerActivitySummaryCommand } from "@djl/contracts";
 
 const Reply = Schema.Union([
   Schema.Struct({

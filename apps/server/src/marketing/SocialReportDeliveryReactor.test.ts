@@ -1,5 +1,5 @@
-import { CommandId, ProjectId, ThreadId, createCampaign } from "@synara/contracts";
-import type { CloudSocialReportsResponse } from "@synara/contracts/cloud";
+import { CommandId, ProjectId, ThreadId, createCampaign } from "@djl/contracts";
+import type { CloudSocialReportsResponse } from "@djl/contracts/cloud";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer, ManagedRuntime, Option } from "effect";
 import { mkdtemp, rm } from "node:fs/promises";

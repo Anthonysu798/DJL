@@ -3,7 +3,7 @@ import {
   COMPUTER_SKILLS,
   SOCIAL_PLUGIN_MENTION,
   SOCIAL_SKILLS,
-} from "@synara/contracts";
+} from "@djl/contracts";
 // FILE: ProviderCommandReactor.test.ts
 // Purpose: Verifies provider intent orchestration, queueing, rollback, and transcript bootstrap flows.
 // Layer: Orchestration integration tests
@@ -20,7 +20,7 @@ import type {
   ProviderRuntimeEvent,
   ProviderSession,
   ServerRecord,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   ApprovalRequestId,
   CommandId,
@@ -32,7 +32,7 @@ import {
   ServerId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { beginComputerUseTurn } from "../../work/computerTurnLifecycle";
@@ -154,7 +154,7 @@ describe("ProviderCommandReactor", () => {
     readonly servers?: ReadonlyArray<ServerRecord>;
   }) {
     const now = new Date().toISOString();
-    const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "synara-reactor-"));
+    const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "djl-reactor-"));
     createdBaseDirs.add(baseDir);
     const { stateDir } = deriveServerPathsSync(baseDir, undefined);
     createdStateDirs.add(stateDir);
@@ -2511,7 +2511,7 @@ describe("ProviderCommandReactor", () => {
   });
 
   it("creates a managed Work task folder before first-turn title generation", async () => {
-    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "synara-work-title-"));
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-work-title-"));
     const projectWorkspaceRoot = path.join(baseDir, "managed-work");
     const harness = await createHarness({
       baseDir,
@@ -3201,11 +3201,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-thread-worktree-bootstrap"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "synara/cb661f0d",
+        branch: "djl/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "synara/cb661f0d",
-        associatedWorktreeRef: "synara/cb661f0d",
+        associatedWorktreeBranch: "djl/cb661f0d",
+        associatedWorktreeRef: "djl/cb661f0d",
       }),
     );
 
@@ -3236,20 +3236,20 @@ describe("ProviderCommandReactor", () => {
         (entry) => entry.id === ThreadId.makeUnsafe("thread-1"),
       );
       return (
-        thread?.branch === "synara/app-startup-crash" &&
-        thread.associatedWorktreeBranch === "synara/app-startup-crash" &&
-        thread.associatedWorktreeRef === "synara/app-startup-crash"
+        thread?.branch === "djl/app-startup-crash" &&
+        thread.associatedWorktreeBranch === "djl/app-startup-crash" &&
+        thread.associatedWorktreeRef === "djl/app-startup-crash"
       );
     });
 
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === ThreadId.makeUnsafe("thread-1"));
     expect(thread).toMatchObject({
-      branch: "synara/app-startup-crash",
+      branch: "djl/app-startup-crash",
       worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
       associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-      associatedWorktreeBranch: "synara/app-startup-crash",
-      associatedWorktreeRef: "synara/app-startup-crash",
+      associatedWorktreeBranch: "djl/app-startup-crash",
+      associatedWorktreeRef: "djl/app-startup-crash",
     });
   });
 
@@ -3263,11 +3263,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-thread-worktree-bootstrap-gemini"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "synara/cb661f0d",
+        branch: "djl/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "synara/cb661f0d",
-        associatedWorktreeRef: "synara/cb661f0d",
+        associatedWorktreeBranch: "djl/cb661f0d",
+        associatedWorktreeRef: "djl/cb661f0d",
       }),
     );
 
@@ -3295,8 +3295,8 @@ describe("ProviderCommandReactor", () => {
     await waitFor(() => harness.renameBranch.mock.calls.length === 1);
     expect(harness.generateBranchName).not.toHaveBeenCalled();
     expect(harness.renameBranch.mock.calls[0]?.[0]).toMatchObject({
-      oldBranch: "synara/cb661f0d",
-      newBranch: "synara/fix-provider-startup-timeouts",
+      oldBranch: "djl/cb661f0d",
+      newBranch: "djl/fix-provider-startup-timeouts",
     });
 
     await waitFor(async () => {
@@ -3304,7 +3304,7 @@ describe("ProviderCommandReactor", () => {
       const thread = readModel.threads.find(
         (entry) => entry.id === ThreadId.makeUnsafe("thread-1"),
       );
-      return thread?.branch === "synara/fix-provider-startup-timeouts";
+      return thread?.branch === "djl/fix-provider-startup-timeouts";
     });
   });
 

@@ -3,7 +3,7 @@ import {
   type ModelSelection,
   type ServerSettings,
   type ServerSettingsPatch,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
 
 function shouldReplaceTextGenerationModelSelection(

@@ -3,7 +3,7 @@
 // Layer: React hook
 // Exports: useThreadRecap for the Environment panel.
 
-import type { ProviderStartOptions, ThreadId } from "@synara/contracts";
+import type { ProviderStartOptions, ThreadId } from "@djl/contracts";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {

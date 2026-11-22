@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { CommerceSupplierStatement } from "@synara/contracts/cloud";
+import type { CommerceSupplierStatement } from "@djl/contracts/cloud";
 import { admin } from "@/lib/api";
 import { SupplierPaymentRecords } from "./SupplierPaymentRecords";
 

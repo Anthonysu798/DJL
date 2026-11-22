@@ -3,11 +3,8 @@ import {
   SOURCE_APP_LOCALE,
   type AppLocale,
   type AppLocalePreference,
-} from "@synara/contracts";
-import {
-  normalizeReleaseLocalePreference,
-  resolveAppLocalePreference,
-} from "@synara/shared/locale";
+} from "@djl/contracts";
+import { normalizeReleaseLocalePreference, resolveAppLocalePreference } from "@djl/shared/locale";
 import { createInstance, type i18n as I18nInstance, type ResourceKey } from "i18next";
 import { initReactI18next, useTranslation as useReactTranslation } from "react-i18next";
 import englishCatalog from "./locales/en.json";

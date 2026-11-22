@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { isLoopbackAddress } from "@synara/shared/loopback";
+import { isLoopbackAddress } from "@djl/shared/loopback";
 
 /** Physical Escape notices may only come from the local desktop that owns this backend. */
 export function authorizeDesktopComputerStop(input: {

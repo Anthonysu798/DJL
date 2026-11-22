@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { AiNotice } from "./AiNotice";
 import { useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
-import type { CommerceDesktopBridge } from "@synara/contracts/cloud";
+import type { CommerceDesktopBridge } from "@djl/contracts/cloud";
 
 import { DjlLogo } from "@/components/DjlLogo";
 import type { Dict } from "@/lib/i18n";

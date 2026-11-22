@@ -1,5 +1,5 @@
 "use client";
-import type { CloudNativeAuthCodeResponse } from "@synara/contracts/cloud";
+import type { CloudNativeAuthCodeResponse } from "@djl/contracts/cloud";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 

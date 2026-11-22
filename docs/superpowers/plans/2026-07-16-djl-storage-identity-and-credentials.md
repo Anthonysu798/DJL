@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - DJL is the only user-facing product name.
-- Default root is `~/.djl`; `DJL_HOME` wins over legacy `SYNARA_HOME`.
+- Default root is `~/.djl`; `DJL_HOME` wins over legacy `DJL_HOME`.
 - Development state remains under `dev`; packaged state remains under `userdata`.
 - OpenCode configuration and credentials are shared at `userdata/opencode`.
 - Newly created managed workspaces use `~/Documents/DJL`; existing workspace paths are not moved.
@@ -42,8 +42,8 @@
 
 ```ts
 expect(resolveDjlHome({}, "/Users/test")).toBe("/Users/test/.djl");
-expect(resolveDjlHome({ DJL_HOME: "/new", SYNARA_HOME: "/legacy" }, "/Users/test")).toBe("/new");
-expect(resolveDjlHome({ SYNARA_HOME: "/legacy" }, "/Users/test")).toBe("/legacy");
+expect(resolveDjlHome({ DJL_HOME: "/new", DJL_HOME: "/legacy" }, "/Users/test")).toBe("/new");
+expect(resolveDjlHome({ DJL_HOME: "/legacy" }, "/Users/test")).toBe("/legacy");
 expect(resolveDjlStatePaths("/root", true).managedOpenCodeRootDir).toBe("/root/userdata/opencode");
 ```
 
@@ -59,10 +59,10 @@ Expected: failures because the DJL helpers and `DJL_HOME` precedence do not exis
 
 ```ts
 export const DJL_HOME_ENV = "DJL_HOME";
-export const LEGACY_DJL_HOME_ENV = "SYNARA_HOME";
+export const LEGACY_DJL_HOME_ENV = "DJL_HOME";
 
 export function resolveDjlHome(env: NodeJS.ProcessEnv, homeDir: string): string {
-  return env.DJL_HOME?.trim() || env.SYNARA_HOME?.trim() || join(homeDir, ".djl");
+  return env.DJL_HOME?.trim() || env.DJL_HOME?.trim() || join(homeDir, ".djl");
 }
 
 export function resolveDjlStatePaths(baseDir: string, development: boolean) {
@@ -73,7 +73,7 @@ export function resolveDjlStatePaths(baseDir: string, development: boolean) {
 }
 ```
 
-Export the subpath from `packages/shared/package.json`. Make the dev runner read `DJL_HOME` first, retain `SYNARA_HOME` fallback, and export both variables with the canonical value. Update startup copy and logs to say DJL.
+Export the subpath from `packages/shared/package.json`. Make the dev runner read `DJL_HOME` first, retain `DJL_HOME` fallback, and export both variables with the canonical value. Update startup copy and logs to say DJL.
 
 - [ ] **Step 4: Run tests and verify GREEN**
 
@@ -161,7 +161,7 @@ Expected: failure because migration does not exist.
 
 - [ ] **Step 3: Implement migration with atomic writes**
 
-Use `mkdir`, `cp` with `force: false`, JSON record validation, a same-directory temporary file opened with mode `0o600`, `sync`, and `rename`. Never include auth values in results or logs. Only auto-import `~/.synara` when the canonical root is the default `~/.djl`; explicit custom homes remain isolated.
+Use `mkdir`, `cp` with `force: false`, JSON record validation, a same-directory temporary file opened with mode `0o600`, `sync`, and `rename`. Never include auth values in results or logs. Only auto-import `~/.djl` when the canonical root is the default `~/.djl`; explicit custom homes remain isolated.
 
 - [ ] **Step 4: Wire migration before server services initialize**
 

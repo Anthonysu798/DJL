@@ -1,4 +1,4 @@
-import type { CloudMessage } from "@synara/contracts/cloud";
+import type { CloudMessage } from "@djl/contracts/cloud";
 import { describe, expect, it } from "vitest";
 
 import { buildTree, ROOT, select, siblingsOf, visibleBranch } from "./tree";

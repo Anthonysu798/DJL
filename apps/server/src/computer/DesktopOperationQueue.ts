@@ -1,7 +1,7 @@
 import {
   DesktopOperationQueue as SharedDesktopOperationQueue,
   desktopOperationContext,
-} from "@synara/shared/desktopOperationQueue";
+} from "@djl/shared/desktopOperationQueue";
 
 import { ComputerBackendError } from "./ComputerBackend.ts";
 
@@ -14,7 +14,7 @@ export {
   withDesktopDeliveryMode,
   withDesktopOperationSignal,
   withoutDesktopCancellation,
-} from "@synara/shared/desktopOperationQueue";
+} from "@djl/shared/desktopOperationQueue";
 
 /** A detached continuation cannot turn a completed call into fresh input authority. */
 export function assertDesktopOperationAdmission(): void {
@@ -27,7 +27,7 @@ export function assertDesktopOperationAdmission(): void {
   operation?.signal?.throwIfAborted();
 }
 
-/** The Synara-bound queue: closed/full/target-switch failures stay
+/** The DJL-bound queue: closed/full/target-switch failures stay
  * `ComputerBackendError`s so gateway `instanceof` checks keep working. */
 export class DesktopOperationQueue extends SharedDesktopOperationQueue {
   constructor() {

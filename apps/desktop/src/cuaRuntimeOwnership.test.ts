@@ -27,15 +27,15 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 async function fixture() {
-  const directory = await mkdtemp(join(tmpdir(), "synara-runtime-ownership-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "djl-runtime-ownership-test-"));
   roots.push(directory);
   return directory;
 }
-async function owned(root: string, name = "synara-cua-Ab123Z") {
+async function owned(root: string, name = "djl-cua-Ab123Z") {
   const directory = join(root, name);
   await mkdir(directory, { mode: 0o700 });
   await markCuaRuntimeDirectory(directory);
-  const markerPath = join(directory, ".synara-cua-runtime.json");
+  const markerPath = join(directory, ".djl-cua-runtime.json");
   const marker = JSON.parse(await readFile(markerPath, "utf8"));
   await writeFile(markerPath, JSON.stringify({ ...marker, createdAt: old }));
   await writeFile(join(directory, "state"), "owned temporary state");
@@ -53,7 +53,7 @@ function sweep(directory: string, liveSocketDirs: ReadonlySet<string> = new Set(
 describe.skipIf(process.platform === "win32")("owned Cua runtime cleanup", () => {
   it("never removes similarly named tools/evidence or an unmarked legacy runtime", async () => {
     const root = await fixture();
-    const names = ["synara-cua-tools", "synara-cua-native-work", "synara-cua-Ab123Z"];
+    const names = ["djl-cua-tools", "djl-cua-native-work", "djl-cua-Ab123Z"];
     for (const name of names) {
       const path = join(root, name);
       await mkdir(path, { mode: 0o700 });
@@ -77,7 +77,7 @@ describe.skipIf(process.platform === "win32")("owned Cua runtime cleanup", () =>
   it("removes only a marked private stale directory whose owner is confirmed dead", async () => {
     const root = await fixture();
     const runtime = await owned(root);
-    expect(sweep(root)).toEqual(["synara-cua-Ab123Z"]);
+    expect(sweep(root)).toEqual(["djl-cua-Ab123Z"]);
     expect(existsSync(runtime.directory)).toBe(false);
   });
 
@@ -93,7 +93,7 @@ describe.skipIf(process.platform === "win32")("owned Cua runtime cleanup", () =>
     const external = join(root, "preserved-evidence");
     await mkdir(external, { mode: 0o700 });
     await writeFile(join(external, "important"), "preserve");
-    await symlink(external, join(root, "synara-cua-link99"));
+    await symlink(external, join(root, "djl-cua-link99"));
     const runtime = await owned(root);
     const marker = await readFile(runtime.markerPath, "utf8");
     const externalMarker = join(external, "marker.json");
@@ -108,7 +108,7 @@ describe.skipIf(process.platform === "win32")("owned Cua runtime cleanup", () =>
 
   it.each([
     { ownerUid: (process.getuid?.() ?? 0) + 1 },
-    { directory: "synara-cua-Other1" },
+    { directory: "djl-cua-Other1" },
     { schema: "some-other-application" },
     { hostPid: 0 },
     { hostPid: "123" },

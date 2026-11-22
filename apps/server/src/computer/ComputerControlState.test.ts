@@ -8,7 +8,7 @@ import { FakeComputerBackend } from "./FakeComputerBackend.ts";
 
 describe("durable Computer activation", () => {
   it("rejects frozen local and server queue generations after disable, re-enable and restart", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "synara-control-state-"));
+    const dir = await mkdtemp(join(tmpdir(), "djl-control-state-"));
     const file = join(dir, "control.json");
     const manager = new ComputerManager({
       backend: new FakeComputerBackend(),
@@ -58,7 +58,7 @@ describe("durable Computer activation", () => {
   });
 
   it("keeps authority closed if durable preference writes fail", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "synara-control-failure-"));
+    const dir = await mkdtemp(join(tmpdir(), "djl-control-failure-"));
     const blockedParent = join(dir, "blocked");
     const manager = new ComputerManager({
       backend: new FakeComputerBackend(),
@@ -78,7 +78,7 @@ describe("durable Computer activation", () => {
 });
 
 it("a malformed saved consent file disables Computer without breaking ordinary startup", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "synara-control-corrupt-"));
+  const dir = await mkdtemp(join(tmpdir(), "djl-control-corrupt-"));
   const file = join(dir, "control.json");
   await writeFile(file, "{broken");
   const manager = new ComputerManager({
@@ -98,7 +98,7 @@ it("a malformed saved consent file disables Computer without breaking ordinary s
 });
 
 it("persists only explicit matching-generation chat intent and clears it on background request, off and disable", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "synara-chat-intent-"));
+  const dir = await mkdtemp(join(tmpdir(), "djl-chat-intent-"));
   const file = join(dir, "control.json");
   const manager = new ComputerManager({
     backend: new FakeComputerBackend(),
@@ -128,7 +128,7 @@ it("persists only explicit matching-generation chat intent and clears it on back
 });
 
 it("one-shot requests never persist chat consent, including after a previous chat opt-in", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "synara-one-shot-"));
+  const dir = await mkdtemp(join(tmpdir(), "djl-one-shot-"));
   const file = join(dir, "control.json");
   const manager = new ComputerManager({
     backend: new FakeComputerBackend(),
@@ -151,7 +151,7 @@ it("one-shot requests never persist chat consent, including after a previous cha
 });
 
 it("ordinary off admission does not create a consent file", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "synara-off-no-io-"));
+  const dir = await mkdtemp(join(tmpdir(), "djl-off-no-io-"));
   const file = join(dir, "control.json");
   const manager = new ComputerManager({
     backend: new FakeComputerBackend(),
@@ -168,7 +168,7 @@ it("ordinary off admission does not create a consent file", async () => {
 });
 
 it("failed chat-intent persistence cannot authorize a later goal after re-enable", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "synara-chat-write-failure-"));
+  const dir = await mkdtemp(join(tmpdir(), "djl-chat-write-failure-"));
   const blocked = join(dir, "blocked");
   const manager = new ComputerManager({
     backend: new FakeComputerBackend(),

@@ -3,7 +3,7 @@
 //          middle, its settings behind a button, and the two-step setup for new groups.
 // Layer: UI screen
 
-import { type Group, type GroupId } from "@synara/contracts";
+import { type Group, type GroupId } from "@djl/contracts";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 

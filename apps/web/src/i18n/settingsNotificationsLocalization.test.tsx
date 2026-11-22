@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { createInstance, type TFunction } from "i18next";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nextProvider, initReactI18next, useTranslation } from "react-i18next";

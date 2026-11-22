@@ -25,7 +25,7 @@ export const SETTINGS_SECTION_IDS = [
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
-export type SettingsNavGroupId = "app" | "synara";
+export type SettingsNavGroupId = "app" | "djl";
 type SettingsNavCatalogItemId =
   | Exclude<SettingsSectionId, "local-models" | "providers">
   | "localModels";
@@ -63,7 +63,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   labelKey: "navigation.groups.app" | "navigation.groups.djl";
 }> = [
   { id: "app", labelKey: "navigation.groups.app" },
-  { id: "synara", labelKey: "navigation.groups.djl" },
+  { id: "djl", labelKey: "navigation.groups.djl" },
 ] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
@@ -78,7 +78,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "accounts",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.accounts.label",
     descriptionKey: "navigation.items.accounts.description",
     icon: "user",
@@ -159,7 +159,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "models",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.models.label",
     descriptionKey: "navigation.items.models.description",
     icon: "brain",
@@ -167,7 +167,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "local-models",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.localModels.label",
     descriptionKey: "navigation.items.localModels.description",
     icon: "chip",
@@ -176,7 +176,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "servers",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.servers.label",
     descriptionKey: "navigation.items.servers.description",
     icon: "server",
@@ -185,7 +185,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "skills",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.skills.label",
     descriptionKey: "navigation.items.skills.description",
     icon: "building-blocks",
@@ -193,7 +193,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "usage",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.usage.label",
     descriptionKey: "navigation.items.usage.description",
     icon: "gauge",
@@ -201,7 +201,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "advanced",
-    group: "synara",
+    group: "djl",
     labelKey: "navigation.items.advanced.label",
     descriptionKey: "navigation.items.advanced.description",
     icon: "toolbox",

@@ -1,16 +1,16 @@
 // FILE: desktopIdentity.ts
 // Purpose: Defines the canonical desktop application identity across packaging and runtime.
 
-export const SYNARA_DESKTOP_SCHEME = "synara";
-export const SYNARA_DESKTOP_ORIGIN = `${SYNARA_DESKTOP_SCHEME}://app`;
-export const SYNARA_DESKTOP_ENTRY_URL = `${SYNARA_DESKTOP_ORIGIN}/index.html`;
-// The export name is retained for source compatibility; DJL is the public channel identity.
-export const SYNARA_DESKTOP_UPDATE_CHANNEL = "djl";
-export const SYNARA_PRODUCTION_BUNDLE_ID = "com.emanueledipietro.synara";
-export const SYNARA_DEVELOPMENT_BUNDLE_ID = `${SYNARA_PRODUCTION_BUNDLE_ID}.dev`;
+// The renderer loads from its own privileged scheme, separate from the djl:// deep links.
+export const DJL_DESKTOP_SCHEME = "djl-app";
+export const DJL_DESKTOP_ORIGIN = `${DJL_DESKTOP_SCHEME}://app`;
+export const DJL_DESKTOP_ENTRY_URL = `${DJL_DESKTOP_ORIGIN}/index.html`;
+export const DJL_DESKTOP_UPDATE_CHANNEL = "djl";
+export const DJL_PRODUCTION_BUNDLE_ID = "app.djl.desktop";
+export const DJL_DEVELOPMENT_BUNDLE_ID = `${DJL_PRODUCTION_BUNDLE_ID}.dev`;
 
-export function synaraBundleId(isDevelopment: boolean): string {
-  return isDevelopment ? SYNARA_DEVELOPMENT_BUNDLE_ID : SYNARA_PRODUCTION_BUNDLE_ID;
+export function djlBundleId(isDevelopment: boolean): string {
+  return isDevelopment ? DJL_DEVELOPMENT_BUNDLE_ID : DJL_PRODUCTION_BUNDLE_ID;
 }
 
-export const SYNARA_DESKTOP_BUNDLE_ID_ENV = "SYNARA_DESKTOP_BUNDLE_ID";
+export const DJL_DESKTOP_BUNDLE_ID_ENV = "DJL_DESKTOP_BUNDLE_ID";

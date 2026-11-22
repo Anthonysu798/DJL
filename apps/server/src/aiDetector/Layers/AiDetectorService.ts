@@ -1,4 +1,4 @@
-import type { AiDetectorEvent } from "@synara/contracts";
+import type { AiDetectorEvent } from "@djl/contracts";
 import { Effect, Layer, PubSub, Stream } from "effect";
 
 import { ServerConfig } from "../../config";

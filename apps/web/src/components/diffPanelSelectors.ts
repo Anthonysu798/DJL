@@ -3,7 +3,7 @@
 //          full thread (messages/activities) when only catalog or live-refresh signals change.
 // Layer: Diff panel data
 
-import type { MessageId, ThreadId, TurnId } from "@synara/contracts";
+import type { MessageId, ThreadId, TurnId } from "@djl/contracts";
 
 import type { AppState } from "../store";
 import { collectByIds } from "../threadDerivation";

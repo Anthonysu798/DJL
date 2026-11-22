@@ -2,7 +2,7 @@ import type {
   LocalInstalledModel,
   LocalModelRecommendation,
   LocalModelsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import * as localModelsPanel from "./LocalModelsSettingsPanel";

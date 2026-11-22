@@ -1,7 +1,7 @@
 import { ensureMultiPostSchema } from "./schema";
 import { importMultiPostMedia, multiPostAttachments } from "./media";
 import { stat } from "node:fs/promises";
-import { normalizeContent } from "@synara/multipost";
+import { normalizeContent } from "@djl/multipost";
 import { createHash, randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import path from "node:path";
@@ -20,7 +20,7 @@ import type {
   MultiPostScope,
   MultiPostState,
   MultiPostWorkflow,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 type RecordKind = "account" | "draft" | "job" | "workflow" | "grant";
 type Stored = MultiPostAccount | MultiPostDraft | MultiPostJob | MultiPostWorkflow | MultiPostGrant;

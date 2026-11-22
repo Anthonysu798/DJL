@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import sharp from "sharp";
 import { inspectImage, renderImage } from "./media";
-import { defaultImageRecipe } from "@synara/contracts";
+import { defaultImageRecipe } from "@djl/contracts";
 describe("non-destructive image processing", () => {
   it("rejects a disguised file and exports a real resized PNG without changing the original", async () => {
     await expect(inspectImage(Buffer.from("not an image"))).rejects.toThrow();

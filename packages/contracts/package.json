@@ -1,5 +1,5 @@
 {
-  "name": "@synara/contracts",
+  "name": "@djl/contracts",
   "version": "0.5.0",
   "private": true,
   "files": [
@@ -34,7 +34,7 @@
     "fixtures:cloud": "bun scripts/write-cloud-fixtures.ts && oxfmt fixtures/cloud"
   },
   "dependencies": {
-    "@synara/multipost": "workspace:*",
+    "@djl/multipost": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

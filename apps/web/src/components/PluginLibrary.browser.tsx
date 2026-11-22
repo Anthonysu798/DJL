@@ -3,7 +3,7 @@ import { useState } from "react";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { SOCIAL_PLUGIN, SOCIAL_SKILLS, SOCIAL_PLUGIN_MENTION, mcpMention } from "@synara/contracts";
+import { SOCIAL_PLUGIN, SOCIAL_SKILLS, SOCIAL_PLUGIN_MENTION, mcpMention } from "@djl/contracts";
 import { PluginLibrarySurface } from "./PluginLibrary";
 
 const social = { plugin: SOCIAL_PLUGIN, marketplacePath: "builtin://djl", marketplaceName: "DJL" };

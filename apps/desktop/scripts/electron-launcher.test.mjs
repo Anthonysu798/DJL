@@ -49,13 +49,13 @@ describe("macOS Electron launcher cache metadata", () => {
     expect(
       buildMetadata({
         ...input,
-        appDisplayName: "Synara (Dev)",
+        appDisplayName: "Another App (Dev)",
       }),
     ).not.toEqual(djlMetadata);
     expect(
       buildMetadata({
         ...input,
-        appBundleId: "com.example.synara.dev",
+        appBundleId: "com.example.another.dev",
       }),
     ).not.toEqual(djlMetadata);
   });
@@ -63,7 +63,7 @@ describe("macOS Electron launcher cache metadata", () => {
   it("invalidates when icon bytes change without an mtime change", () => {
     const buildMetadata = requireMetadataBuilder();
     if (typeof buildMetadata !== "function") return;
-    const iconPath = createIconFixture("old-synara-icon");
+    const iconPath = createIconFixture("old-djl-icon");
     const input = metadataInput(iconPath);
     const originalTimes = statSync(iconPath);
 

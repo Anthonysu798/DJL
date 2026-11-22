@@ -21,7 +21,7 @@ import {
 const temporaryDirectories: string[] = [];
 
 function createMarkerPath(): string {
-  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-update-marker-"));
+  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "djl-update-marker-"));
   temporaryDirectories.push(directory);
   return Path.join(directory, "pending-update-install.json");
 }

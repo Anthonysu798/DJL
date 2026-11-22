@@ -1,4 +1,4 @@
-import { GroupId, GroupMemberId, ProjectId, ThreadId, type Group } from "@synara/contracts";
+import { GroupId, GroupMemberId, ProjectId, ThreadId, type Group } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import type { GroupChatRow, GroupMemberRow } from "./groupChat.logic";

@@ -3,7 +3,7 @@
  * `computer_browser_*`.
  *
  * These are deliberately separate from the integrated `browser_*` family:
- * the integrated surface drives a Synara-owned browser through its own host,
+ * the integrated surface drives a DJL-owned browser through its own host,
  * while this surface dispatches through the desktop driver's CDP engine —
  * the only route that reaches a driver-launched isolated Chromium or an
  * approved existing profile, and the only input route that works on a
@@ -23,13 +23,13 @@
  *   code (for example `browser_requires_setup` → call computer_browser_prepare).
  * - Upload and download paths are canonicalized and must resolve inside the
  *   caller thread's workspace — the driver checks canonicality; the workspace
- *   boundary is Synara's own filesystem policy on top of that.
+ *   boundary is DJL's own filesystem policy on top of that.
  */
 import { realpath } from "node:fs/promises";
 import { Effect } from "effect";
 
-import type { ComputerBrowserToolName } from "@synara/contracts";
-import { COMPUTER_BROWSER_DRIVER_NAMES } from "@synara/contracts";
+import type { ComputerBrowserToolName } from "@djl/contracts";
+import { COMPUTER_BROWSER_DRIVER_NAMES } from "@djl/contracts";
 
 import {
   ComputerBackendError,

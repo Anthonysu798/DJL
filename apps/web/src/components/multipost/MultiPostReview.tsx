@@ -5,7 +5,7 @@ import type {
   MultiPostAccount,
   MultiPostFile,
   MultiPostContentData,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { multiPostCommand, mediaPreviewUrl } from "./client";
 import "./multipost.css";

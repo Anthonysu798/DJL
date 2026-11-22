@@ -5,7 +5,7 @@
 // Layer: UI state store
 // Exports: useGroupStore, useGroupEvents, batchDrafts
 
-import type { Group, GroupEvent, GroupId, GroupMemberState, GroupReply } from "@synara/contracts";
+import type { Group, GroupEvent, GroupId, GroupMemberState, GroupReply } from "@djl/contracts";
 import { useEffect } from "react";
 import { create } from "zustand";
 

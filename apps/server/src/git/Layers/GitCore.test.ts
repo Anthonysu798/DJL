@@ -19,7 +19,7 @@ import { ServerConfig } from "../../config.ts";
 // ── Helpers ──
 
 const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "synara-git-core-test-",
+  prefix: "djl-git-core-test-",
 });
 const GitCoreTestLayer = GitCoreLive.pipe(
   Layer.provide(ServerConfigLayer),
@@ -804,7 +804,7 @@ it.layer(TestLayer)("git integration", (it) => {
 
         const stashList = yield* git(tmp, ["stash", "list"]);
         expect(stashList).toContain("pre-existing stash");
-        expect(stashList).not.toContain("synara: stash before switching to feature");
+        expect(stashList).not.toContain("djl: stash before switching to feature");
         expect(yield* readTextFile(path.join(tmp, "README.md"))).toBe("dirty changes\n");
       }),
     );
@@ -834,7 +834,7 @@ it.layer(TestLayer)("git integration", (it) => {
         expect(yield* readTextFile(path.join(tmp, "README.md"))).toBe("conflicting content\n");
         expect((yield* git(tmp, ["status", "--short"])).trim()).toBe("");
         expect(yield* git(tmp, ["stash", "list"])).toContain(
-          "synara: stash before switching to conflicting",
+          "djl: stash before switching to conflicting",
         );
       }),
     );
@@ -1016,26 +1016,22 @@ it.layer(TestLayer)("git integration", (it) => {
       Effect.gen(function* () {
         const tmp = yield* makeTmpDir();
         yield* initRepoWithCommit(tmp);
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "synara/feat/session" });
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "synara/tmp-working" });
-        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "synara/tmp-working" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "djl/feat/session" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "djl/tmp-working" });
+        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "djl/tmp-working" });
 
         const renamed = yield* (yield* GitCore).renameBranch({
           cwd: tmp,
-          oldBranch: "synara/tmp-working",
-          newBranch: "synara/feat/session",
+          oldBranch: "djl/tmp-working",
+          newBranch: "djl/feat/session",
         });
 
-        expect(renamed.branch).toBe("synara/feat/session-1");
+        expect(renamed.branch).toBe("djl/feat/session-1");
         const branches = yield* (yield* GitCore).listBranches({ cwd: tmp });
-        expect(branches.branches.some((branch) => branch.name === "synara/feat/session")).toBe(
-          true,
-        );
-        expect(branches.branches.some((branch) => branch.name === "synara/feat/session-1")).toBe(
-          true,
-        );
+        expect(branches.branches.some((branch) => branch.name === "djl/feat/session")).toBe(true);
+        expect(branches.branches.some((branch) => branch.name === "djl/feat/session-1")).toBe(true);
         const current = branches.branches.find((branch) => branch.current);
-        expect(current?.name).toBe("synara/feat/session-1");
+        expect(current?.name).toBe("djl/feat/session-1");
       }),
     );
 
@@ -1043,18 +1039,18 @@ it.layer(TestLayer)("git integration", (it) => {
       Effect.gen(function* () {
         const tmp = yield* makeTmpDir();
         yield* initRepoWithCommit(tmp);
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "synara/feat/session" });
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "synara/feat/session-1" });
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "synara/tmp-working" });
-        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "synara/tmp-working" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "djl/feat/session" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "djl/feat/session-1" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "djl/tmp-working" });
+        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "djl/tmp-working" });
 
         const renamed = yield* (yield* GitCore).renameBranch({
           cwd: tmp,
-          oldBranch: "synara/tmp-working",
-          newBranch: "synara/feat/session",
+          oldBranch: "djl/tmp-working",
+          newBranch: "djl/feat/session",
         });
 
-        expect(renamed.branch).toBe("synara/feat/session-2");
+        expect(renamed.branch).toBe("djl/feat/session-2");
       }),
     );
 
@@ -1455,12 +1451,12 @@ it.layer(TestLayer)("git integration", (it) => {
           yield* initRepoWithCommit(tmp);
           const core = yield* GitCore;
 
-          yield* git(tmp, ["remote", "add", "origin", "git@github.com:example-org/synara.git"]);
+          yield* git(tmp, ["remote", "add", "origin", "git@github.com:example-org/djl.git"]);
 
           const remoteName = yield* core.ensureRemote({
             cwd: tmp,
             preferredName: "origin",
-            url: "git@github.com:example-org/synara.git/",
+            url: "git@github.com:example-org/djl.git/",
           });
 
           expect(remoteName).toBe("origin");
@@ -1960,7 +1956,7 @@ it.layer(TestLayer)("git integration", (it) => {
           yield* git(tmp, [
             "checkout",
             "-b",
-            "synara/pr-488/statemachine",
+            "djl/pr-488/statemachine",
             "--track",
             "jasonLaster/statemachine",
           ]);
@@ -1982,7 +1978,7 @@ it.layer(TestLayer)("git integration", (it) => {
             yield* git(tmp, ["ls-remote", "--heads", "jasonLaster", "statemachine"]),
           ).toContain("statemachine");
           expect(
-            yield* git(tmp, ["ls-remote", "--heads", "jasonLaster", "synara/pr-488/statemachine"]),
+            yield* git(tmp, ["ls-remote", "--heads", "jasonLaster", "djl/pr-488/statemachine"]),
           ).toBe("");
         }),
     );

@@ -8,7 +8,7 @@
  * abuse counting. Prompt and response content are never persisted or logged.
  */
 import { and, desc, eq, gt, sql } from "drizzle-orm";
-import type { CloudUsageTrailer } from "@synara/contracts/cloud";
+import type { CloudUsageTrailer } from "@djl/contracts/cloud";
 import { schema, type DjlDatabase } from "@djl/db";
 import {
   costOfUsage,

@@ -3,8 +3,8 @@
 // Layer: Chat composer presentation
 // Depends on: provider availability metadata, shared menu primitives, and picker trigger styling.
 
-import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@synara/contracts";
-import { resolveSelectableModel } from "@synara/shared/model";
+import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@djl/contracts";
+import { resolveSelectableModel } from "@djl/shared/model";
 import * as Schema from "effect/Schema";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

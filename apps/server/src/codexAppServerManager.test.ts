@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ApprovalRequestId, ThreadId } from "@synara/contracts";
+import { ApprovalRequestId, ThreadId } from "@djl/contracts";
 
 import {
   buildCodexProcessEnv,
@@ -363,7 +363,7 @@ describe("classifyCodexStderrLine", () => {
 
 describe("buildCodexProcessEnv", () => {
   it("hydrates the active custom provider env_key from the effective CODEX_HOME", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
     try {
       writeFileSync(
         path.join(tempDir, "config.toml"),
@@ -426,29 +426,29 @@ describe("buildCodexProcessEnv", () => {
   it("allows the configured desktop browser-use socket in the Codex sandbox", () => {
     const env = buildCodexProcessEnv({
       env: {
-        SYNARA_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/synara.sock",
+        DJL_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/djl.sock",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/existing.sock",
       },
       platform: "darwin",
     });
 
     expect(env.NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS).toBe(
-      "/tmp/existing.sock,/tmp/codex-browser-use/synara.sock",
+      "/tmp/existing.sock,/tmp/codex-browser-use/djl.sock",
     );
   });
 
   it("resolves the browser-use pipe path from desktop env aliases", () => {
     expect(
       resolveCodexBrowserUsePipePath({
-        env: { SYNARA_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/synara.sock" },
+        env: { DJL_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/djl.sock" },
         platform: "darwin",
       }),
-    ).toBe("/tmp/codex-browser-use/synara.sock");
+    ).toBe("/tmp/codex-browser-use/djl.sock");
   });
 
-  it("applies durable section suppressions inside Synara's Codex overlay", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-runtime-home-"));
+  it("applies durable section suppressions inside DJL's Codex overlay", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "djl-runtime-home-"));
     try {
       writeFileSync(
         path.join(tempDir, "config.toml"),
@@ -465,7 +465,7 @@ describe("buildCodexProcessEnv", () => {
       const overlayHome = path.join(runtimeHome, "codex-home-overlay");
       mkdirSync(overlayHome, { recursive: true });
       writeFileSync(
-        path.join(overlayHome, "synara-config-suppressions-v1.json"),
+        path.join(overlayHome, "djl-config-suppressions-v1.json"),
         `${JSON.stringify({
           version: 1,
           sectionHeaders: ['[plugins."historical-plugin@local"]'],
@@ -474,7 +474,7 @@ describe("buildCodexProcessEnv", () => {
       );
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { DJL_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -497,8 +497,8 @@ describe("buildCodexProcessEnv", () => {
   });
 
   it("seeds markerless suppressions for conflicting local browser plugins", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-runtime-home-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "djl-runtime-home-"));
     try {
       const conflictingHeader = '[plugins."bridge-browser@local"]';
       writeFileSync(
@@ -511,7 +511,7 @@ describe("buildCodexProcessEnv", () => {
 
       const overlayHome = path.join(runtimeHome, "codex-home-overlay");
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { DJL_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -524,7 +524,7 @@ describe("buildCodexProcessEnv", () => {
         `${conflictingHeader}\nenabled = true`,
       );
       const suppressionMarker = JSON.parse(
-        readFileSync(path.join(overlayHome, "synara-config-suppressions-v1.json"), "utf8"),
+        readFileSync(path.join(overlayHome, "djl-config-suppressions-v1.json"), "utf8"),
       ) as { sectionHeaders?: string[] };
       expect(suppressionMarker.sectionHeaders).toContain(conflictingHeader);
     } finally {
@@ -534,15 +534,15 @@ describe("buildCodexProcessEnv", () => {
   });
 
   it("preserves a recorded suppression after its plugin disappears from source config", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-runtime-home-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "djl-runtime-home-"));
     try {
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
 
       const overlayHome = path.join(runtimeHome, "codex-home-overlay");
       mkdirSync(overlayHome, { recursive: true });
       writeFileSync(
-        path.join(overlayHome, "synara-config-suppressions-v1.json"),
+        path.join(overlayHome, "djl-config-suppressions-v1.json"),
         `${JSON.stringify({
           version: 1,
           sectionHeaders: ['[plugins."historical-plugin@local"]'],
@@ -551,7 +551,7 @@ describe("buildCodexProcessEnv", () => {
       );
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { DJL_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -572,9 +572,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale real files in Synara's Codex home overlay", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-runtime-home-"));
+  it("repairs stale real files in DJL's Codex home overlay", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "djl-runtime-home-"));
     try {
       const sourceMemoryPath = path.join(tempDir, "memories_1.sqlite");
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
@@ -586,7 +586,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayMemoryPath, "stale-overlay-db", "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { DJL_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -600,9 +600,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale auth.json files in Synara's Codex home overlay", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-runtime-home-"));
+  it("repairs stale auth.json files in DJL's Codex home overlay", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "djl-runtime-home-"));
     try {
       const sourceAuthPath = path.join(tempDir, "auth.json");
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
@@ -614,7 +614,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayAuthPath, '{"tokens":{"access_token":"stale"}}', "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { DJL_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -629,9 +629,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("preserves real generated image directories in Synara's Codex home overlay", () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "synara-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-runtime-home-"));
+  it("preserves real generated image directories in DJL's Codex home overlay", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "djl-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "djl-runtime-home-"));
     try {
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
       const sourceGeneratedImagesDir = path.join(tempDir, "generated_images");
@@ -645,7 +645,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayImagePath, "overlay-image", "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { DJL_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -710,7 +710,7 @@ describe("handleStdoutLine", () => {
       }
     ).handleStdoutLine.bind(manager);
 
-    for (const line of ["{", "[", '{"scripts": {', "{}", "[]", '{"name":"synara"}']) {
+    for (const line of ["{", "[", '{"scripts": {', "{}", "[]", '{"name":"djl"}']) {
       handleStdoutLine(context, line);
     }
 
@@ -836,7 +836,7 @@ describe("startSession", () => {
   it("enables Codex experimental api capabilities during initialize", () => {
     expect(buildCodexInitializeParams()).toEqual({
       clientInfo: {
-        name: "synara_desktop",
+        name: "djl_desktop",
         title: "DJL Desktop",
         version: "0.1.0",
       },
@@ -848,7 +848,7 @@ describe("startSession", () => {
 
   it("uses an isolated scratch workspace path when no cwd is provided", () => {
     const cwd = ensureIsolatedScratchWorkspace(asThreadId("thread-1"));
-    expect(cwd).toContain(`${path.sep}synara-codex-workspaces${path.sep}thread-1`);
+    expect(cwd).toContain(`${path.sep}djl-codex-workspaces${path.sep}thread-1`);
   });
 
   it("fails fast with an upgrade message when codex is below the minimum supported version", async () => {

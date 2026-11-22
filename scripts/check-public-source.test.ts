@@ -24,7 +24,7 @@ describe("public source audit", () => {
   it("rejects private runtime state, databases, logs, and signing material", () => {
     const violations = findPublicSourceViolations([
       file(".djl/history/session.json"),
-      file("tmp/.synara/auth.json"),
+      file("tmp/.djl/auth.json"),
       file(`${legacyRuntimePrefix}-cache/state`),
       file(`runtime/${legacyRuntimeDirectory}/history.json`),
       file("apps/landing/.wrangler/state.json"),
@@ -35,7 +35,7 @@ describe("public source audit", () => {
 
     expect(violations.map(({ path }) => path)).toEqual([
       ".djl/history/session.json",
-      "tmp/.synara/auth.json",
+      "tmp/.djl/auth.json",
       `${legacyRuntimePrefix}-cache/state`,
       `runtime/${legacyRuntimeDirectory}/history.json`,
       "apps/landing/.wrangler/state.json",
@@ -112,7 +112,7 @@ describe("public source audit", () => {
           "Permission is hereby granted",
         ].join("\n"),
       ),
-      file("THIRD_PARTY_NOTICES.md", "Synara Remodex OpenCode Ghostty"),
+      file("THIRD_PARTY_NOTICES.md", "DJL Remodex OpenCode Ghostty"),
       file("apps/ios/UPSTREAM_LICENSE", "Apache License Version 2.0"),
       file("apps/remote-gateway/UPSTREAM_LICENSE", "Apache License Version 2.0"),
       file("docs/licenses/OPENCODE_LICENSE", "MIT License Copyright (c) 2025 opencode"),

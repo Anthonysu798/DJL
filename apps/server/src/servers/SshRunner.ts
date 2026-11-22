@@ -2,7 +2,7 @@
 // Purpose: Runs one command on a registered server through the system OpenSSH client.
 //          Secrets reach ssh via SSH_ASKPASS reading a 0600 temp file that is always deleted.
 // Layer: Servers runtime service
-import type { ServerCapabilities, ServerRecord, ServerTestOutcome } from "@synara/contracts";
+import type { ServerCapabilities, ServerRecord, ServerTestOutcome } from "@djl/contracts";
 import * as Crypto from "node:crypto";
 import * as os from "node:os";
 import { Data, Effect, FileSystem, Layer, Path, ServiceMap } from "effect";
@@ -49,7 +49,7 @@ export interface SshRunnerShape {
 }
 
 export class SshRunner extends ServiceMap.Service<SshRunner, SshRunnerShape>()(
-  "synara/servers/SshRunner",
+  "djl/servers/SshRunner",
 ) {}
 
 const DEFAULT_TIMEOUT_MS = 20_000;

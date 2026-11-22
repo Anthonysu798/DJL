@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_SERVER_SETTINGS, type HarnessTool } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS, type HarnessTool } from "@djl/contracts";
 import { createAutomaticHarnessUpdater } from "./automaticUpdates";
 
 const tool = (

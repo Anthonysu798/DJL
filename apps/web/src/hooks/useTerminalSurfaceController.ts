@@ -8,8 +8,8 @@
 //       thread cleanup, and split-view navigation, so it shares only the lower-level
 //       terminalSession helpers instead of this controller.
 
-import { type ThreadId } from "@synara/contracts";
-import { type TerminalCliKind } from "@synara/shared/terminalThreads";
+import { type ThreadId } from "@djl/contracts";
+import { type TerminalCliKind } from "@djl/shared/terminalThreads";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 

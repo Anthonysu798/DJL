@@ -217,7 +217,7 @@ describe("browser annotation runtime", () => {
     expect(
       fake.commands.find((entry) => entry.method === "Page.addScriptToEvaluateOnNewDocument")
         ?.params?.worldName,
-    ).toBe("synara-browser-annotations");
+    ).toBe("djl-browser-annotations");
   });
 
   it("filters foreign bindings and invalidates selection when its context is destroyed", async () => {
@@ -248,7 +248,7 @@ describe("browser annotation runtime", () => {
     });
     expect(emit).not.toHaveBeenCalled();
     fake.debuggerApi.emit("message", {}, "Runtime.executionContextCreated", {
-      context: { id: 84, name: "synara-browser-annotations", auxData: { frameId: "frame-1" } },
+      context: { id: 84, name: "djl-browser-annotations", auxData: { frameId: "frame-1" } },
     });
     await runtime.command({ type: "enable" });
     expect(fake.commands.at(-1)?.params?.contextId).toBe(84);
@@ -264,7 +264,7 @@ describe("browser annotation runtime", () => {
     );
     await runtime.initialize();
     fake.debuggerApi.emit("message", {}, "Runtime.executionContextCreated", {
-      context: { id: 99, name: "synara-browser-annotations", auxData: { frameId: "child-frame" } },
+      context: { id: 99, name: "djl-browser-annotations", auxData: { frameId: "child-frame" } },
     });
     await runtime.command({ type: "enable" });
     expect(fake.commands.at(-1)?.params?.contextId).toBe(42);
@@ -283,7 +283,7 @@ describe("browser annotation runtime", () => {
       (entry) => entry.method === "Runtime.evaluate",
     ).length;
     fake.debuggerApi.emit("message", {}, "Runtime.executionContextCreated", {
-      context: { id: 84, name: "synara-browser-annotations", auxData: { frameId: "frame-1" } },
+      context: { id: 84, name: "djl-browser-annotations", auxData: { frameId: "frame-1" } },
     });
     await vi.waitFor(() =>
       expect(
@@ -308,12 +308,12 @@ describe("browser annotation runtime", () => {
     } as Record<string, unknown>;
 
     runInNewContext(annotationBootstrapSource("oldBinding"), context);
-    const firstRuntime = context.__synaraBrowserAnnotations as { bindingName?: string };
+    const firstRuntime = context.__djlBrowserAnnotations as { bindingName?: string };
     expect(firstRuntime.bindingName).toBe("oldBinding");
     expect(addEventListener).toHaveBeenCalledTimes(7);
 
     runInNewContext(annotationBootstrapSource("newBinding"), context);
-    const replacementRuntime = context.__synaraBrowserAnnotations as { bindingName?: string };
+    const replacementRuntime = context.__djlBrowserAnnotations as { bindingName?: string };
     expect(replacementRuntime).not.toBe(firstRuntime);
     expect(replacementRuntime.bindingName).toBe("newBinding");
     expect(removeEventListener).toHaveBeenCalledTimes(7);
@@ -400,7 +400,7 @@ describe("browser annotation runtime", () => {
       removeEventListener: vi.fn(),
     } as Record<string, unknown>;
     runInNewContext(annotationBootstrapSource("privateBinding"), context);
-    const runtime = context.__synaraBrowserAnnotations as {
+    const runtime = context.__djlBrowserAnnotations as {
       command: (command: { type: "enable" }) => void;
     };
     expect(() => runtime.command({ type: "enable" })).not.toThrow();
@@ -410,7 +410,7 @@ describe("browser annotation runtime", () => {
     fakeDocument.documentElement = root;
     expect(() => listeners.get("DOMContentLoaded")?.({} as Event)).not.toThrow();
     expect(root.children).toHaveLength(1);
-    expect(root.children[0]?.dataset.synaraAnnotationOverlay).toBe("true");
+    expect(root.children[0]?.dataset.djlAnnotationOverlay).toBe("true");
     const iframe = new FakeElement();
     iframe.tagName = "IFRAME";
     frames = [iframe];
@@ -418,7 +418,7 @@ describe("browser annotation runtime", () => {
     mutationState.callback?.();
     const iframeLayer = root.children[0]?.shadowRoot?.children[1];
     expect(iframeLayer?.children).toHaveLength(1);
-    expect(iframeLayer?.children[0]?.dataset.synaraAnnotationIframeShield).toBe("true");
+    expect(iframeLayer?.children[0]?.dataset.djlAnnotationIframeShield).toBe("true");
   });
 
   it("reports a failed replacement-context enable instead of leaving mode stuck", async () => {
@@ -434,7 +434,7 @@ describe("browser annotation runtime", () => {
     );
     await runtime.command({ type: "enable" });
     fake.debuggerApi.emit("message", {}, "Runtime.executionContextCreated", {
-      context: { id: 84, name: "synara-browser-annotations", auxData: { frameId: "frame-1" } },
+      context: { id: 84, name: "djl-browser-annotations", auxData: { frameId: "frame-1" } },
     });
 
     await vi.waitFor(() =>
@@ -446,7 +446,7 @@ describe("browser annotation runtime", () => {
       }),
     );
     fake.debuggerApi.emit("message", {}, "Runtime.executionContextCreated", {
-      context: { id: 85, name: "synara-browser-annotations", auxData: { frameId: "frame-1" } },
+      context: { id: 85, name: "djl-browser-annotations", auxData: { frameId: "frame-1" } },
     });
     await vi.waitFor(() =>
       expect(
@@ -685,7 +685,7 @@ describe("browser annotation runtime", () => {
 
   it("captures area drags above iframe contents and falls element selection back to iframe", () => {
     const source = annotationBootstrapSource("privateBinding");
-    expect(source).toContain("areaSurface.dataset.synaraAnnotationAreaSurface = 'true'");
+    expect(source).toContain("areaSurface.dataset.djlAnnotationAreaSurface = 'true'");
     expect(source).toContain("areaSurface.style.display = enabled && areaMode && !selected");
     expect(source).toContain("for (const frame of document.querySelectorAll('iframe'))");
     expect(source).toContain("iframeShields.set(shield, frame)");

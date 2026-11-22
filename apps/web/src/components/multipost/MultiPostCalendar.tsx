@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { MultiPostJob } from "@synara/contracts";
+import type { MultiPostJob } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { calendarWeek, localCalendarTime } from "../marketing/socialCalendar";
 export function MultiPostCalendar({ jobs, timezone }: { jobs: MultiPostJob[]; timezone: string }) {

@@ -1,4 +1,4 @@
-import { DocumentArtifactId, EventId, MessageId, ProjectId, ThreadId } from "@synara/contracts";
+import { DocumentArtifactId, EventId, MessageId, ProjectId, ThreadId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import { Effect, Layer, Option } from "effect";
 

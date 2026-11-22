@@ -1,7 +1,7 @@
 // FILE: registryAuth.ts
 // Purpose: Verifies the phone-signed request used to find a trusted computer's live relay session.
 
-import { buildTrustedSessionResolveTranscript } from "@synara/remote-protocol";
+import { buildTrustedSessionResolveTranscript } from "@djl/remote-protocol";
 
 import type { RelayRegistration } from "./policy";
 

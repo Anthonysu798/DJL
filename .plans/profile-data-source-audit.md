@@ -1,6 +1,6 @@
 # Audit (READ-ONLY): Profile stats data-source scoping — make it production-correct, no dev/prod mixing
 
-You are GPT-5.5 (xhigh) in the Synara monorepo at `/Users/emanueledipietro/Developer/synara`.
+You are GPT-5.5 (xhigh) in the DJL monorepo at `/Users/you/Developer/djl`.
 This is a **diagnosis / research task — DO NOT EDIT ANY FILES.** Produce a findings report + options.
 We (you + Claude/Opus + the user) will decide the fix together afterward.
 
@@ -15,13 +15,13 @@ the app already resolves those sources.
 
 - `config.homeDir` = `OS.homedir()` ALWAYS (`apps/server/src/main.ts:172,217`) — it is NOT affected by
   `--home-dir`.
-- `config.baseDir` = `--home-dir` / `SYNARA_HOME` (dev: `./.synara/electron-dev`; prod: `~/.synara` or
-  `~/Documents/Synara`). `config.dbPath` = `baseDir/{dev|userdata}/state.sqlite`.
+- `config.baseDir` = `--home-dir` / `DJL_HOME` (dev: `./.djl/electron-dev`; prod: `~/.djl` or
+  `~/Documents/DJL`). `config.dbPath` = `baseDir/{dev|userdata}/state.sqlite`.
 - So the **projection DB is correctly per-instance** (dev→dev 40 turns, prod→prod 437 turns). ✅
 - The **token archives** are read via `config.homeDir`: codex = `codexHomePath || process.env.CODEX_HOME
   || homeDir/.codex`; claude = `homeDir/.claude/projects` (see `apps/server/src/providerUsageSnapshot.ts`).
   Because `homeDir` is always the OS home, BOTH dev and prod read the GLOBAL `~/.codex` and `~/.claude`.
-- The dev runner sets `SYNARA_HOME/SYNARA_HOME/SYNARA_HOME=baseDir` but does NOT set `CODEX_HOME` or
+- The dev runner sets `DJL_HOME/DJL_HOME/DJL_HOME=baseDir` but does NOT set `CODEX_HOME` or
   `CLAUDE_CONFIG_DIR`; the dev baseDir has no `.codex`/`.claude` of its own. So dev's own Codex/Claude
   sessions ALSO land in the global `~/.codex`/`~/.claude`.
 - The Usage panel passes a `homePath` (the `codexHomePath` setting = `settings.providers.codex.homePath`)
@@ -54,7 +54,7 @@ the app already resolves those sources.
    the reality that the codex/claude CLIs write to a global home unless `CODEX_HOME`/`CLAUDE_CONFIG_DIR`
    are overridden per instance.
 5. **Run the checks** to back every claim:
-   - `sqlite3` on `./.synara/electron-dev/dev/state.sqlite` (dev) and `~/.synara/userdata/state.sqlite`
+   - `sqlite3` on `./.djl/electron-dev/dev/state.sqlite` (dev) and `~/.djl/userdata/state.sqlite`
      (prod) where relevant.
    - filesystem checks: existence of `~/.codex/sessions`, `~/.claude/projects`, any baseDir-local
      `.codex`/`.claude`, the `homePath` value in each `settings.json`.

@@ -3,7 +3,7 @@ import { can, ROLE_PERMISSIONS } from "./AdminAuth.ts";
 import { Schema } from "effect";
 import { COMMERCE_STAFF_ROLES, COMMERCE_ADMIN_PERMISSIONS } from "@djl/domain";
 import { schema } from "@djl/db";
-import { CommerceStaffRole, CommerceAdminPermission } from "@synara/contracts/cloud";
+import { CommerceStaffRole, CommerceAdminPermission } from "@djl/contracts/cloud";
 
 const employee = {
   adminId: "staff",

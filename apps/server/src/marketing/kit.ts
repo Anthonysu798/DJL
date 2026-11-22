@@ -9,7 +9,7 @@ import {
   type Campaign,
   type MediaAsset,
   type ImageRecipe,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { readDocument, MarketingError } from "./store";
 import { renderImage } from "./media";
 export function publishingKit(stateDir: string, id: string, revision: number) {

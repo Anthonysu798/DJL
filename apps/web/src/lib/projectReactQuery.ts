@@ -11,8 +11,8 @@ import type {
   WorkGetDocumentRenderResult,
   WorkRequestDocumentRenderResult,
   WorkPreviewDocumentResult,
-} from "@synara/contracts";
-import { isLocalAbsolutePath } from "@synara/shared/path";
+} from "@djl/contracts";
+import { isLocalAbsolutePath } from "@djl/shared/path";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 

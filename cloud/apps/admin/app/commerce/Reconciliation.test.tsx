@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommerceReconciliationReport } from "@synara/contracts/cloud";
+import type { CommerceReconciliationReport } from "@djl/contracts/cloud";
 const { admin, getToken } = vi.hoisted(() => ({ admin: vi.fn(), getToken: vi.fn() }));
 vi.mock("@/lib/api", async (original) => ({
   ...(await original<typeof import("@/lib/api")>()),

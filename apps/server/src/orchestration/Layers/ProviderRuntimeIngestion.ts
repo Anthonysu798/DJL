@@ -17,15 +17,15 @@ import {
   type OrchestrationThreadShell,
   type ProviderRuntimeEvent,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Cache, Cause, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
-import { makeDrainableWorker } from "@synara/shared/DrainableWorker";
+import { makeDrainableWorker } from "@djl/shared/DrainableWorker";
 import {
   buildSubagentIdentityDirectory,
   collectSubagentProviderThreadIds,
   extractSubagentIdentityHints,
   resolveSubagentIdentityFromDirectory,
-} from "@synara/shared/subagents";
+} from "@djl/shared/subagents";
 
 import {
   generatedImageMarkdown,
@@ -89,9 +89,9 @@ const MAX_ACTIVITY_DATA_JSON_CHARS = 16_000;
 const MAX_ACTIVITY_DATA_STRING_CHARS = 2_000;
 const MAX_ACTIVITY_DATA_ARRAY_ITEMS = 24;
 const MAX_ACTIVITY_DATA_OBJECT_KEYS = 64;
-const ACTIVITY_DATA_TRUNCATION_MARKER = "__synaraTruncated";
+const ACTIVITY_DATA_TRUNCATION_MARKER = "__djlTruncated";
 const BUFFERED_TEXT_TRUNCATION_MARKER = "... [truncated]";
-const STRICT_PROVIDER_LIFECYCLE_GUARD = process.env.SYNARA_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
+const STRICT_PROVIDER_LIFECYCLE_GUARD = process.env.DJL_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
 
 type RuntimeIngestionDomainEvent = Extract<
   OrchestrationEvent,

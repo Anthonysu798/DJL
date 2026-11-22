@@ -7,7 +7,7 @@ import type {
   CommerceSupplierPaymentDocumentMetadata,
   CommerceSupplierPaymentDocumentResponse,
   CommerceSupplierPaymentDocumentsResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { admin, AdminApiError, getToken } from "@/lib/api";
 
 type Supplier = { readonly id: string; readonly name: string };

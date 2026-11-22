@@ -9,7 +9,7 @@ import type { Socket } from "node:net";
 import path from "node:path";
 import { Schema } from "effect";
 import { parse } from "smol-toml";
-import { ComputerActivitySemanticContent, type CodexModelOptions } from "@synara/contracts";
+import { ComputerActivitySemanticContent, type CodexModelOptions } from "@djl/contracts";
 import { resolveBaseCodexHomePath } from "../codexHomePaths";
 import { resolveActivityCodexAuthentication } from "./activityProviderAuthentication";
 import { readActivityProviderTextFile } from "./activityProviderWorkspace";

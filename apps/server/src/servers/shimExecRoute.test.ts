@@ -1,4 +1,4 @@
-import { ServerCommandId, ServerId, type ServerCommandRecord } from "@synara/contracts";
+import { ServerCommandId, ServerId, type ServerCommandRecord } from "@djl/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

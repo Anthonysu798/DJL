@@ -5,7 +5,7 @@
 // Layer: Diff panel UI
 
 import type { FileDiffMetadata } from "@pierre/diffs/react";
-import type { ThreadId, TurnId } from "@synara/contracts";
+import type { ThreadId, TurnId } from "@djl/contracts";
 import { FaPlusMinus } from "react-icons/fa6";
 import { memo, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";

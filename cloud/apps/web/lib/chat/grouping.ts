@@ -1,4 +1,4 @@
-import type { CloudConversation } from "@synara/contracts/cloud";
+import type { CloudConversation } from "@djl/contracts/cloud";
 
 export interface ConversationGroups {
   readonly pinned: CloudConversation[];

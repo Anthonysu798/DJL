@@ -77,7 +77,7 @@ describe("localServerMonitor", () => {
     );
   });
 
-  it("keeps dev servers and ignores Electron/Synara-style application listeners", () => {
+  it("keeps dev servers and ignores Electron/DJL-style application listeners", () => {
     expect(
       isLikelyDevServerProcess({
         command: "node",
@@ -88,21 +88,21 @@ describe("localServerMonitor", () => {
     expect(
       isIgnoredLocalServerProcess({
         command: "Electron",
-        args: "/Applications/Synara.app/Contents/MacOS/Synara",
+        args: "/Applications/DJL.app/Contents/MacOS/DJL",
         ports: [61449],
       }),
     ).toBe(true);
     expect(
       isIgnoredLocalServerProcess({
-        command: "Synara",
-        args: "/Applications/Synara.app/Contents/MacOS/Synara",
+        command: "DJL",
+        args: "/Applications/DJL.app/Contents/MacOS/DJL",
         ports: [61449],
       }),
     ).toBe(true);
     expect(
       isLikelyDevServerProcess({
         command: "node",
-        args: "node /Users/emanueledipietro/Developer/synara/apps/web/node_modules/.bin/vite",
+        args: "node /Users/you/Developer/djl/apps/web/node_modules/.bin/vite",
         ports: [5733],
       }),
     ).toBe(true);
@@ -223,8 +223,7 @@ describe("localServerMonitor", () => {
         12094,
         {
           ppid: 12064,
-          commandLine:
-            "node /Users/emanueledipietro/Developer/synara-website/node_modules/.bin/next dev",
+          commandLine: "node /Users/you/Developer/djl-website/node_modules/.bin/next dev",
         },
       ],
       [

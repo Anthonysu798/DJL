@@ -1,7 +1,7 @@
 import { HarnessToolsPanel } from "./HarnessToolsPanel";
 import { SubscriptionPlansPanel, SUBSCRIPTION_PLANS } from "./SubscriptionPlansPanel";
 import "@xterm/xterm/css/xterm.css";
-import type { HarnessId, HarnessLoginInput, HarnessLoginResult } from "@synara/contracts";
+import type { HarnessId, HarnessLoginInput, HarnessLoginResult } from "@djl/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

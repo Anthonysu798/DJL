@@ -9,13 +9,13 @@ import {
   type MediaAsset,
   type ServerVoiceTranscriptionInput,
   type ServerVoiceTranscriptionResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type {
   AgentVideoClipInput,
   AgentVideoClipResult,
   AgentVideoJob,
   AgentVideoTranscript,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { MarketingToolScope } from "./chatTools";
 import { ProviderAdapterRegistry } from "../provider/Services/ProviderAdapterRegistry";
 import { VoiceTranscriptionError } from "../voiceTranscription";

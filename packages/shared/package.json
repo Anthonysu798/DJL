@@ -1,5 +1,5 @@
 {
-  "name": "@synara/shared",
+  "name": "@djl/shared",
   "version": "0.0.0-alpha.1",
   "private": true,
   "type": "module",
@@ -253,7 +253,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@synara/contracts": "workspace:*",
+    "@djl/contracts": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import { deriveChromeUserAgent } from "@synara/shared/browserSession";
+import { deriveChromeUserAgent } from "@djl/shared/browserSession";
 import { app } from "electron";
 import { createHash } from "node:crypto";
 import { BrowserWindow, session, net, powerMonitor } from "electron";
@@ -12,14 +12,14 @@ import type {
   MultiPostRuntimeContext,
   MultiPostEvidence,
   MultiPostContentData,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   adapters,
   getAdapter,
   helperSource,
   webhookMessage,
   identitySources,
-} from "@synara/multipost";
+} from "@djl/multipost";
 import {
   buildPreparationScript,
   buildSubmissionScript,
@@ -27,7 +27,7 @@ import {
   buildVerificationScript,
   buildNativeScheduleVerificationScript,
   buildCancelScript,
-} from "@synara/multipost/browser";
+} from "@djl/multipost/browser";
 import { multipostPartition } from "./identity";
 
 /** Social sessions are separate from both normal browsing and each other. */

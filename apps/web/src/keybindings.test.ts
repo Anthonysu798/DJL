@@ -5,7 +5,7 @@ import {
   type KeybindingShortcut,
   type KeybindingWhenNode,
   type ResolvedKeybindingsConfig,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   formatShortcutLabel,
   isBrowserToggleShortcut,

@@ -14,8 +14,8 @@ import {
   type ProviderKind,
   type StreamingAttachmentReference,
   type UploadChatAttachment,
-} from "@synara/contracts";
-import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@synara/shared/model";
+} from "@djl/contracts";
+import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@djl/shared/model";
 
 import type {
   ComposerAssistantSelectionAttachment,

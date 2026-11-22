@@ -9,9 +9,9 @@ import {
   type ModelSelection,
   type ProviderKind,
   type ThreadHandoffImportedMessage,
-} from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
-import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
+} from "@djl/contracts";
+import { getDefaultModel } from "@djl/shared/model";
+import { isProviderProtocolOnlyText } from "@djl/shared/chatThreads";
 import { type Thread } from "../types";
 import { stripEmbeddedAssistantSelections } from "./assistantSelections";
 import { randomUUID } from "./utils";

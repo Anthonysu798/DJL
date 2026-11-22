@@ -5,7 +5,7 @@ import type { Socket } from "node:net";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { parse, stringify } from "smol-toml";
-import type { CodexModelOptions } from "@synara/contracts";
+import type { CodexModelOptions } from "@djl/contracts";
 import { resolveBaseCodexHomePath } from "../codexHomePaths";
 import { ActivityCodexOutput } from "./activityCodexOutput";
 import { resolveActivityCodexRuntime } from "./activityCodexRuntime";

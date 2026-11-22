@@ -18,7 +18,7 @@ enum DJLIcon {
         "at": "central-at",
         "bell.badge": "central-bell-2",
         // Single source for the fast-mode glyph: every fast-mode affordance
-        // renders the solid Central `zap` (same artwork Synara uses).
+        // renders the solid Central `zap` (same artwork DJL uses).
         "bolt": "central-zap",
         "bolt.fill": "central-zap",
         "brain": "central-brain",

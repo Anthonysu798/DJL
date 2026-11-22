@@ -3285,23 +3285,23 @@
     "openSettings": "打開 {{value0}} 設定",
     "ghostCursor": "幽靈光標",
     "granted": "已授予",
-    "letsSynaraDetectEscapeAndPauseWhenYouTake": "讓 DJL 在電腦任務期間檢測 Escape，並在你接管時暫停。此設定不會啓用 AppSnap 快速鍵。",
+    "letsDjlDetectEscapeAndPauseWhenYouTake": "讓 DJL 在電腦任務期間檢測 Escape，並在你接管時暫停。此設定不會啓用 AppSnap 快速鍵。",
     "showGuide": "顯示指南",
     "isReadyFor": "{{value0}} 已就緒，可用於 {{value1}}。",
     "hideGuide": "隱藏指南",
     "recheckPermissions": "重新檢查權限",
     "screenRecording": "螢幕錄制",
-    "letsSynaraCaptureAnImageOfTheFrontmostWindow": "允許 DJL 捕捉前台視窗圖片；只會在你按下組合鍵的瞬間捕捉該單一視窗。",
+    "letsDjlCaptureAnImageOfTheFrontmostWindow": "允許 DJL 捕捉前台視窗圖片；只會在你按下組合鍵的瞬間捕捉該單一視窗。",
     "windowListing": "視窗列表",
     "theAgentCanActOnTheDesktopButCannot2": "智能體可以操作桌面，但無法看到桌面，因此截圖失敗。請在“系統設定 › 隱私與安全性 › 螢幕錄制”中啓用 DJL，然後點選“設定”以重新連線。",
     "fill": "填充",
     "gettingStarted": "開始使用",
     "theServerCouldNotBeReached": "無法連線到服務器。",
     "theAgentDrivesItsOwnSeatSoYourCursor": "智能體在獨立的操作環境中工作，不會影響你的光標和焦點。",
-    "letsSynaraNoticeTheDoubleOptionChordWhileAnother": "允許 DJL 在其他應用程式佔用鍵盤時識別雙 Option 組合鍵；不會記錄你輸入的任何內容。",
+    "letsDjlNoticeTheDoubleOptionChordWhileAnother": "允許 DJL 在其他應用程式佔用鍵盤時識別雙 Option 組合鍵；不會記錄你輸入的任何內容。",
     "screenCapture2": "螢幕捕獲",
     "permissionCheckFailed": "權限檢查失敗。",
-    "letsSynaraCaptureWindowsAndTheDesktopSoThe": "允許 DJL 捕獲視窗和桌面，讓智能體看到其正在操作的內容。",
+    "letsDjlCaptureWindowsAndTheDesktopSoThe": "允許 DJL 捕獲視窗和桌面，讓智能體看到其正在操作的內容。",
     "useGrantNextToAPermissionToWalkThrough": "點選權限旁的“授予”以完成設定。",
     "large": "大",
     "computerEffectBlocked": "已阻止",
@@ -3325,7 +3325,7 @@
     "permissionGuideEnableInstalledApp": "如果列表中已顯示當前 {{app}} 副本，請將其打開。否則，請將應用程式從浮動指南拖入列表，或使用 + 選擇當前安裝的副本，然後將其打開。",
     "showHistory": "顯示歷史記錄",
     "densityOptions_compact": "緊湊",
-    "letsSynaraMoveThePointerClickAndTypeOn": "允許 DJL 代您移動指針、點選和輸入。僅在您授權電腦任務後才會進行操作。",
+    "letsDjlMoveThePointerClickAndTypeOn": "允許 DJL 代您移動指針、點選和輸入。僅在您授權電腦任務後才會進行操作。",
     "couldNotLoadRecentActionsRefreshToTryAgain": "無法加載最近的操作。請刷新重試。",
     "cursorColors": "光標顏色",
     "rechecking": "正在重新檢查…",
@@ -4314,9 +4314,9 @@
           "details": "發行工作流程會驗證固定更新管道、避免乾淨版本進入相容管道、修復更新來源中繼資料，並在偵測到 app.asar 交換時強化桌面啟動。",
           "title": "桌面更新擁有更強防護"
         },
-        "synara-identity": {
+        "djl-identity": {
           "description": "從桌面安裝、命令列到套件、設定、診斷與發行成品，應用程式現在處處使用一致的識別。",
-          "details": "桌面套件現為 com.emanueledipietro.synara，CLI 為 @synara/cli 並使用 synara 指令；所有第一方執行階段識別碼皆使用 DJL 命名空間。0.4.2 橋接版本會在來源變更期間保留轉譯器狀態。",
+          "details": "桌面套件現為 app.djl.desktop，CLI 為 @djl/cli 並使用 djl 指令；所有第一方執行階段識別碼皆使用 DJL 命名空間。0.4.2 橋接版本會在來源變更期間保留轉譯器狀態。",
           "title": "全面統一為 DJL"
         }
       }

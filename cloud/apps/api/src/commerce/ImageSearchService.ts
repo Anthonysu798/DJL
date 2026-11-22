@@ -5,7 +5,7 @@ import type { ChatRequest, ProviderAdapter, ProviderId, Usage } from "@djl/provi
 import {
   type CommerceProduct,
   type CommerceImageSearchResult as CloudCommerceImageSearchResult,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import type { Redis } from "ioredis";
 
 import type { Principal } from "../auth/guard.ts";

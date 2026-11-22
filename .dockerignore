@@ -10,7 +10,7 @@
 !apps/*/package.json
 !packages/*/package.json
 !scripts/package.json
-# The public API contract the cloud apps import as @synara/contracts/cloud.
+# The public API contract the cloud apps import as @djl/contracts/cloud.
 !packages/contracts/src/**
 !packages/contracts/fixtures/cloud/**
 !packages/shared/src/fcm.ts

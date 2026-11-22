@@ -3,7 +3,7 @@
 //          and Copy, Ask again, Reply to this and Ask another agent.
 // Layer: UI component
 
-import type { Group } from "@synara/contracts";
+import type { Group } from "@djl/contracts";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 

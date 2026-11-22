@@ -7,7 +7,7 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import { taskFinished, type EmailSender, type PushSender } from "@djl/notify";
-import { cloudConversationDeepLink, type CloudRunPushData } from "@synara/contracts/cloud";
+import { cloudConversationDeepLink, type CloudRunPushData } from "@djl/contracts/cloud";
 
 import { toNotifyLocale } from "../auth/locale.ts";
 import type { RunRow } from "../runs/wire.ts";

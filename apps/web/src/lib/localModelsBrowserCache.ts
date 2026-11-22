@@ -1,7 +1,7 @@
 import {
   LocalModelsSnapshot,
   type LocalModelsSnapshot as LocalModelsSnapshotValue,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 const LOCAL_MODELS_KEY = "djl.local-models-snapshot.v1";

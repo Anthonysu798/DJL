@@ -13,12 +13,12 @@ import {
   COMPUTER_RELEASE_HOTKEY_BACKENDS,
   type ComputerCapabilities,
   type ComputerPermission,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   COMPUTER_PERMISSION_KINDS,
   computerPermissionSetupMessage,
   missingComputerAppSnapPermissions,
-} from "@synara/shared/computerGrants";
+} from "@djl/shared/computerGrants";
 import {
   computerPermissionSetupSupported,
   readLocalComputerPermissionBridge,
@@ -33,7 +33,7 @@ import {
   type AppSettingsBinding,
   type ComputerPreviewSize,
 } from "~/appSettings";
-import type { DesktopAppSnapSettingsPane, DesktopAppSnapState } from "@synara/contracts";
+import type { DesktopAppSnapSettingsPane, DesktopAppSnapState } from "@djl/contracts";
 import {
   computerReconnectsNote,
   computerStatusNeedsSetup,

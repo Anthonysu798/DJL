@@ -9,7 +9,7 @@ import {
   type ServerPermissionTier,
   type ServerRecord,
   serverIdFromMentionPath,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Option } from "effect";
 
 const TIER_TEXT: Record<ServerPermissionTier, string> = {

@@ -3,7 +3,7 @@
 // Layer: Persistence compatibility helper
 // Exports: normalizeLegacyModelSelection, normalizePersistedModelSelection
 
-import { MODEL_OPTIONS_BY_PROVIDER } from "@synara/contracts";
+import { MODEL_OPTIONS_BY_PROVIDER } from "@djl/contracts";
 
 import { canonicalizeDeprecatedDeepSeekModelSelection } from "../provider/deepSeekCompatibility.ts";
 
@@ -44,7 +44,7 @@ function readTrimmedString(record: Record<string, unknown>, key: string): string
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-// Imported instance ids may be runtime names rather than Synara provider literals.
+// Imported instance ids may be runtime names rather than DJL provider literals.
 function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
   const lowerLabel = label.toLowerCase();
   if (/(^|[^a-z0-9])pi([^a-z0-9]|$)/u.test(lowerLabel)) {
@@ -168,8 +168,8 @@ export function normalizePersistedModelSelection(input: unknown): unknown {
     return input;
   }
 
-  // Newer Synara writes provider-less selections as { instanceId, model } and
-  // option rows as [{ id, value }]; Synara stores canonical provider/options objects.
+  // Newer DJL writes provider-less selections as { instanceId, model } and
+  // option rows as [{ id, value }]; DJL stores canonical provider/options objects.
   return normalizeLegacyModelSelection({
     provider: input.provider ?? input.instanceId,
     model,

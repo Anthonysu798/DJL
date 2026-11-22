@@ -92,6 +92,6 @@ Do not report vulnerabilities in a public issue. Use
 ## Contributing and attribution
 
 Focused fixes are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) first. DJL is MIT licensed and
-retains the original Synara attribution alongside Anthony Su's copyright notice. Remodex,
+retains the upstream copyright notice alongside Anthony Su's, as the MIT license requires. Remodex,
 OpenCode SDK/compatibility code, Ghostty, and other dependencies retain their own notices and license terms in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

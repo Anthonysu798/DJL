@@ -180,13 +180,13 @@ const LAST_SHARED_LINEAGE_MIGRATION_ID = 16;
  * Imported databases can carry their own `effect_sql_migrations` rows,
  * recorded under that lineage's migration names
  * at the same numeric IDs. The migrator gates purely on max(migration_id), so
- * once the imported tracker's high-water mark reaches Synara's latest ID,
- * every Synara migration is skipped silently and startup crashes on missing
+ * once the imported tracker's high-water mark reaches DJL's latest ID,
+ * every DJL migration is skipped silently and startup crashes on missing
  * columns such as `projection_threads.env_mode`. Renumbering self-heal
  * migrations past the legacy IDs (#023, then #032) loses that race whenever
  * the legacy lineage ships more migrations.
  *
- * Instead, compare the recorded (id, name) pairs against Synara's lineage and
+ * Instead, compare the recorded (id, name) pairs against DJL's lineage and
  * delete every tracker row from the first divergence onward. The migrator
  * then re-runs those migrations in order; every migration past
  * {@link LAST_SHARED_LINEAGE_MIGRATION_ID} is idempotent, so re-running them
@@ -253,7 +253,7 @@ export const reconcileMigrationLineage = Effect.gen(function* () {
   }
 
   yield* Effect.logWarning(
-    "Migration tracker diverges from the Synara lineage (legacy import); re-running migrations from the divergence point",
+    "Migration tracker diverges from the DJL lineage (legacy import); re-running migrations from the divergence point",
   ).pipe(Effect.annotateLogs({ firstDivergedId, expectedName, recordedName, highWaterMark }));
 
   yield* sql`DELETE FROM effect_sql_migrations WHERE migration_id >= ${firstDivergedId}`;

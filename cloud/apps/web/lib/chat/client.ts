@@ -1,6 +1,6 @@
 /**
  * Typed client for the DJL Cloud chat API. Request and response types come
- * from `@synara/contracts/cloud`; paths follow the route comments in those
+ * from `@djl/contracts/cloud`; paths follow the route comments in those
  * contract modules. `fetch` is injected so the same client runs against the
  * real API, the in-browser mock (NEXT_PUBLIC_DJL_MOCK_API=true), and tests.
  *
@@ -37,7 +37,7 @@ import {
   type CloudUpdateConversationInput,
   type CloudUpdateConversationResponse,
   type CloudUsageWindowsResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import { parseSse } from "./sse";
 

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { MultiPostReview } from "./MultiPostReview";
-import type { MultiPostDraft, MultiPostAccount } from "@synara/contracts";
+import type { MultiPostDraft, MultiPostAccount } from "@djl/contracts";
 const calls = vi.hoisted(() => ({ command: vi.fn() }));
 vi.mock("./client", () => ({ multiPostCommand: calls.command, mediaPreviewUrl: () => "" }));
 const draft: MultiPostDraft = {

@@ -15,7 +15,7 @@ export interface ShimRuntimeShape {
 }
 
 export class ShimRuntime extends ServiceMap.Service<ShimRuntime, ShimRuntimeShape>()(
-  "synara/servers/ShimRuntime",
+  "djl/servers/ShimRuntime",
 ) {}
 
 export const SHIM_EXEC_ROUTE_PATH = "/api/servers/shim/exec";

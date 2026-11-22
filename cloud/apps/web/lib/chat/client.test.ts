@@ -1,4 +1,4 @@
-import type { CloudSendMessageInput } from "@synara/contracts/cloud";
+import type { CloudSendMessageInput } from "@djl/contracts/cloud";
 import { describe, expect, it } from "vitest";
 
 import { sha256Hex } from "./attachments";

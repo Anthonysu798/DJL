@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { NativeRpc, prepareNativeRpcLaunch } from "./protocol";
 import { codexPermissions } from "./codex";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 
 const temporary: string[] = [];
 function fixture(source: string) {

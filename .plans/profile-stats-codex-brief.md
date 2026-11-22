@@ -1,6 +1,6 @@
 # Brief: Fix & harden Profile-stats data layer (server + contract + query hooks)
 
-You are GPT-5.5 (xhigh) working in the Synara monorepo at `/Users/emanueledipietro/Developer/synara`.
+You are GPT-5.5 (xhigh) working in the DJL monorepo at `/Users/you/Developer/djl`.
 A "Profile / stats" feature was just built. The DATA is wrong in three places and the loading is
 slow. Your job is the DATA/LOGIC/PERF layer ONLY. A separate agent (Opus) owns all React UI.
 
@@ -22,8 +22,8 @@ DO NOT TOUCH (Opus owns these — editing them will cause merge conflicts):
 
 ## Two databases to validate against (BOTH have live data)
 
-- BRANCH dev DB (what the dev instance uses): `./.synara/electron-dev/dev/state.sqlite`  (~40 turns)
-- REAL app DB: `~/.synara/userdata/state.sqlite`  (~437 turns, 192 MB) — the important one
+- BRANCH dev DB (what the dev instance uses): `./.djl/electron-dev/dev/state.sqlite`  (~40 turns)
+- REAL app DB: `~/.djl/userdata/state.sqlite`  (~437 turns, 192 MB) — the important one
 
 Use the `sqlite3` CLI to validate every query against BOTH before and after your change.
 
@@ -183,8 +183,8 @@ Notes:
 
 1. For each fixed metric, run the OLD vs NEW SQL against BOTH DBs with `sqlite3` and paste the numbers in
    your summary, showing the per-turn vs thread-weighted difference is resolved.
-2. `npx turbo run typecheck --filter=@synara/contracts --filter=@synara/cli` must pass. DO NOT run the web
-   (`@synara/web`) typecheck — its UI is being rewritten in parallel and will be red until Opus finishes.
+2. `npx turbo run typecheck --filter=@djl/contracts --filter=@djl/cli` must pass. DO NOT run the web
+   (`@djl/web-app`) typecheck — its UI is being rewritten in parallel and will be red until Opus finishes.
 3. `bun fmt` and `bun lint` (lint must have 0 errors; warnings ok). NEVER run `bun test`.
 4. In your final summary, document: the exact final `ProfileStats` + `ProfileTokenStats` field list, the
    exact exported query-factory names in `serverReactQuery.ts`, and any contract deviation from the pin.

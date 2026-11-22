@@ -1,4 +1,4 @@
-import type { BrowserAnnotationAdjustments, BrowserAnnotationSelection } from "@synara/contracts";
+import type { BrowserAnnotationAdjustments, BrowserAnnotationSelection } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "./ui/button";

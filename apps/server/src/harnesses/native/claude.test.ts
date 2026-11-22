@@ -1,4 +1,4 @@
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   options: undefined as Record<string, unknown> | undefined,

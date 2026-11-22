@@ -1,8 +1,8 @@
-import { EDITORS, EditorId, NativeApi } from "@synara/contracts";
+import { EDITORS, EditorId, NativeApi } from "@djl/contracts";
 import { getLocalStorageItem, setLocalStorageItem, useLocalStorage } from "./hooks/useLocalStorage";
 import { useMemo } from "react";
 
-const LAST_EDITOR_KEY = "synara:last-editor";
+const LAST_EDITOR_KEY = "djl:last-editor";
 
 export function usePreferredEditor(availableEditors: ReadonlyArray<EditorId>) {
   const [lastEditor, setLastEditor] = useLocalStorage(LAST_EDITOR_KEY, null, EditorId);

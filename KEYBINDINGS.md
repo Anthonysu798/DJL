@@ -1,8 +1,8 @@
 # Keybindings
 
-Synara reads keybindings from:
+DJL reads keybindings from:
 
-- `~/.synara/userdata/keybindings.json`
+- `~/.djl/userdata/keybindings.json`
 
 The file must be a JSON array of rules:
 

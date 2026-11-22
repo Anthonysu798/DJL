@@ -14,7 +14,7 @@ import {
   type AutomationDefinition,
   type AutomationRun,
   type ProviderStartOptions,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 import { formatLocaleDateTime } from "../i18n/intl";
 import { getTimestampFormatOptions } from "../timestampFormat";

@@ -5,8 +5,8 @@ import { delimiter as pathDelimiter, join as pathJoin } from "node:path";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { NetService } from "@synara/shared/Net";
-import { resolveDjlHome } from "@synara/shared/djlStoragePaths";
+import { NetService } from "@djl/shared/Net";
+import { resolveDjlHome } from "@djl/shared/djlStoragePaths";
 import { Config, Data, Effect, Hash, Layer, Logger, Option, Path, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 import { ChildProcess } from "effect/unstable/process";
@@ -23,14 +23,14 @@ const MODE_ARGS = {
     "run",
     "dev",
     "--ui=tui",
-    "--filter=@synara/contracts",
-    "--filter=@synara/web",
-    "--filter=@synara/cli",
+    "--filter=@djl/contracts",
+    "--filter=@djl/web-app",
+    "--filter=@djl/cli",
     "--parallel",
   ],
-  "dev:server": ["run", "dev", "--filter=@synara/cli"],
-  "dev:web": ["run", "dev", "--filter=@synara/web"],
-  "dev:desktop": ["run", "dev", "--filter=@synara/desktop", "--filter=@synara/web", "--parallel"],
+  "dev:server": ["run", "dev", "--filter=@djl/cli"],
+  "dev:web": ["run", "dev", "--filter=@djl/web-app"],
+  "dev:desktop": ["run", "dev", "--filter=@djl/desktop", "--filter=@djl/web-app", "--parallel"],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 type DevMode = keyof typeof MODE_ARGS;
@@ -70,12 +70,12 @@ const optionalUrlConfig = (name: string): Config.Config<URL | undefined> =>
   );
 
 const OffsetConfig = Config.all({
-  portOffset: optionalIntegerConfig("SYNARA_PORT_OFFSET"),
-  devInstance: optionalStringConfig("SYNARA_DEV_INSTANCE"),
+  portOffset: optionalIntegerConfig("DJL_PORT_OFFSET"),
+  devInstance: optionalStringConfig("DJL_DEV_INSTANCE"),
 });
 const HomeConfig = Config.all({
   djlHome: optionalStringConfig("DJL_HOME"),
-  legacyHome: optionalStringConfig("SYNARA_HOME"),
+  legacyHome: optionalStringConfig("DJL_HOME"),
 }).pipe(Config.map(({ djlHome, legacyHome }) => djlHome ?? legacyHome));
 
 export function resolveOffset(config: {
@@ -84,11 +84,11 @@ export function resolveOffset(config: {
 }): { readonly offset: number; readonly source: string } {
   if (config.portOffset !== undefined) {
     if (config.portOffset < 0) {
-      throw new Error(`Invalid SYNARA_PORT_OFFSET: ${config.portOffset}`);
+      throw new Error(`Invalid DJL_PORT_OFFSET: ${config.portOffset}`);
     }
     return {
       offset: config.portOffset,
-      source: `SYNARA_PORT_OFFSET=${config.portOffset}`,
+      source: `DJL_PORT_OFFSET=${config.portOffset}`,
     };
   }
 
@@ -98,11 +98,11 @@ export function resolveOffset(config: {
   }
 
   if (/^\d+$/.test(seed)) {
-    return { offset: Number(seed), source: `numeric SYNARA_DEV_INSTANCE=${seed}` };
+    return { offset: Number(seed), source: `numeric DJL_DEV_INSTANCE=${seed}` };
   }
 
   const offset = ((Hash.string(seed) >>> 0) % MAX_HASH_OFFSET) + 1;
-  return { offset, source: `hashed SYNARA_DEV_INSTANCE=${seed}` };
+  return { offset, source: `hashed DJL_DEV_INSTANCE=${seed}` };
 }
 
 function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, never, Path.Path> {
@@ -123,7 +123,7 @@ interface CreateDevRunnerEnvInput {
   readonly baseEnv: NodeJS.ProcessEnv;
   readonly serverOffset: number;
   readonly webOffset: number;
-  readonly synaraHome: string | undefined;
+  readonly djlHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -138,7 +138,7 @@ export function createDevRunnerEnv({
   baseEnv,
   serverOffset,
   webOffset,
-  synaraHome,
+  djlHome,
   authToken,
   noBrowser,
   autoBootstrapProjectFromCwd,
@@ -150,17 +150,16 @@ export function createDevRunnerEnv({
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
     const webPort = BASE_WEB_PORT + webOffset;
-    const resolvedBaseDir = yield* resolveBaseDir(synaraHome);
+    const resolvedBaseDir = yield* resolveBaseDir(djlHome);
 
     const output: NodeJS.ProcessEnv = {
       ...baseEnv,
-      SYNARA_PORT: String(serverPort),
+      DJL_PORT: String(serverPort),
       PORT: String(webPort),
       ELECTRON_RENDERER_PORT: String(webPort),
       VITE_WS_URL: `ws://[::1]:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
       DJL_HOME: resolvedBaseDir,
-      SYNARA_HOME: resolvedBaseDir,
     };
 
     const pathKey = process.platform === "win32" ? "Path" : "PATH";
@@ -176,41 +175,41 @@ export function createDevRunnerEnv({
     }
 
     if (host !== undefined) {
-      output.SYNARA_HOST = host;
+      output.DJL_HOST = host;
     }
 
     if (authToken !== undefined) {
-      output.SYNARA_AUTH_TOKEN = authToken;
+      output.DJL_AUTH_TOKEN = authToken;
     } else {
-      delete output.SYNARA_AUTH_TOKEN;
+      delete output.DJL_AUTH_TOKEN;
     }
 
     if (noBrowser !== undefined) {
-      output.SYNARA_NO_BROWSER = noBrowser ? "1" : "0";
+      output.DJL_NO_BROWSER = noBrowser ? "1" : "0";
     } else {
-      delete output.SYNARA_NO_BROWSER;
+      delete output.DJL_NO_BROWSER;
     }
 
     if (autoBootstrapProjectFromCwd !== undefined) {
-      output.SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
+      output.DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
     } else {
-      delete output.SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
+      delete output.DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
     }
 
     if (logWebSocketEvents !== undefined) {
-      output.SYNARA_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
+      output.DJL_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
     } else {
-      delete output.SYNARA_LOG_WS_EVENTS;
+      delete output.DJL_LOG_WS_EVENTS;
     }
 
     if (mode === "dev") {
-      output.SYNARA_MODE = "web";
-      delete output.SYNARA_DESKTOP_WS_URL;
+      output.DJL_MODE = "web";
+      delete output.DJL_DESKTOP_WS_URL;
     }
 
     if (mode === "dev:server" || mode === "dev:web") {
-      output.SYNARA_MODE = "web";
-      delete output.SYNARA_DESKTOP_WS_URL;
+      output.DJL_MODE = "web";
+      delete output.DJL_DESKTOP_WS_URL;
     }
 
     return output;
@@ -351,7 +350,7 @@ export function resolveModePortOffsets<R = NetService>({
 
 interface DevRunnerCliInput {
   readonly mode: DevMode;
-  readonly synaraHome: string | undefined;
+  readonly djlHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -398,7 +397,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       Effect.mapError(
         (cause) =>
           new DevRunnerError({
-            message: "Failed to read SYNARA_PORT_OFFSET/SYNARA_DEV_INSTANCE configuration.",
+            message: "Failed to read DJL_PORT_OFFSET/DJL_DEV_INSTANCE configuration.",
             cause,
           }),
       ),
@@ -414,9 +413,9 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     });
 
     const envOverrides = {
-      noBrowser: readOptionalBooleanEnv("SYNARA_NO_BROWSER"),
-      autoBootstrapProjectFromCwd: readOptionalBooleanEnv("SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD"),
-      logWebSocketEvents: readOptionalBooleanEnv("SYNARA_LOG_WS_EVENTS"),
+      noBrowser: readOptionalBooleanEnv("DJL_NO_BROWSER"),
+      autoBootstrapProjectFromCwd: readOptionalBooleanEnv("DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD"),
+      logWebSocketEvents: readOptionalBooleanEnv("DJL_LOG_WS_EVENTS"),
     };
 
     const { serverOffset, webOffset } = yield* resolveModePortOffsets({
@@ -431,7 +430,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       baseEnv: process.env,
       serverOffset,
       webOffset,
-      synaraHome: input.synaraHome,
+      djlHome: input.djlHome,
       authToken: input.authToken,
       noBrowser: resolveOptionalBooleanOverride(input.noBrowser, envOverrides.noBrowser),
       autoBootstrapProjectFromCwd: resolveOptionalBooleanOverride(
@@ -453,7 +452,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
         : "";
 
     yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.SYNARA_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.DJL_HOME)}`,
+      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.DJL_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.DJL_HOME)}`,
     );
 
     if (input.dryRun) {
@@ -501,38 +500,38 @@ const devRunnerCli = Command.make("dev-runner", {
   mode: Argument.choice("mode", DEV_RUNNER_MODES).pipe(
     Argument.withDescription("Development mode to run."),
   ),
-  synaraHome: Flag.string("home-dir").pipe(
+  djlHome: Flag.string("home-dir").pipe(
     Flag.withDescription("Base directory for all DJL data (equivalent to DJL_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(
-    Flag.withDescription("Auth token (forwards to SYNARA_AUTH_TOKEN)."),
+    Flag.withDescription("Auth token (forwards to DJL_AUTH_TOKEN)."),
     Flag.withAlias("token"),
-    Flag.withFallbackConfig(optionalStringConfig("SYNARA_AUTH_TOKEN")),
+    Flag.withFallbackConfig(optionalStringConfig("DJL_AUTH_TOKEN")),
   ),
   noBrowser: Flag.boolean("no-browser").pipe(
-    Flag.withDescription("Browser auto-open toggle (equivalent to SYNARA_NO_BROWSER)."),
-    Flag.withFallbackConfig(optionalBooleanConfig("SYNARA_NO_BROWSER")),
+    Flag.withDescription("Browser auto-open toggle (equivalent to DJL_NO_BROWSER)."),
+    Flag.withFallbackConfig(optionalBooleanConfig("DJL_NO_BROWSER")),
   ),
   autoBootstrapProjectFromCwd: Flag.boolean("auto-bootstrap-project-from-cwd").pipe(
     Flag.withDescription(
-      "Auto-bootstrap toggle (equivalent to SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
+      "Auto-bootstrap toggle (equivalent to DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
     ),
-    Flag.withFallbackConfig(optionalBooleanConfig("SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD")),
+    Flag.withFallbackConfig(optionalBooleanConfig("DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD")),
   ),
   logWebSocketEvents: Flag.boolean("log-websocket-events").pipe(
-    Flag.withDescription("WebSocket event logging toggle (equivalent to SYNARA_LOG_WS_EVENTS)."),
+    Flag.withDescription("WebSocket event logging toggle (equivalent to DJL_LOG_WS_EVENTS)."),
     Flag.withAlias("log-ws-events"),
-    Flag.withFallbackConfig(optionalBooleanConfig("SYNARA_LOG_WS_EVENTS")),
+    Flag.withFallbackConfig(optionalBooleanConfig("DJL_LOG_WS_EVENTS")),
   ),
   host: Flag.string("host").pipe(
-    Flag.withDescription("Server host/interface override (forwards to SYNARA_HOST)."),
-    Flag.withFallbackConfig(optionalStringConfig("SYNARA_HOST")),
+    Flag.withDescription("Server host/interface override (forwards to DJL_HOST)."),
+    Flag.withFallbackConfig(optionalStringConfig("DJL_HOST")),
   ),
   port: Flag.integer("port").pipe(
     Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
-    Flag.withDescription("Server port override (forwards to SYNARA_PORT)."),
-    Flag.withFallbackConfig(optionalPortConfig("SYNARA_PORT")),
+    Flag.withDescription("Server port override (forwards to DJL_PORT)."),
+    Flag.withFallbackConfig(optionalPortConfig("DJL_PORT")),
   ),
   devUrl: Flag.string("dev-url").pipe(
     Flag.withSchema(Schema.URLFromString),

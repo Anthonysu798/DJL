@@ -26,7 +26,7 @@ import {
   defaultImageRecipe,
   type Campaign,
   type MediaAsset,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { readDocument, listDocuments, saveDocument, MarketingError } from "./store";
 import { inspectImage, inspectVideo, renderImage } from "./media";
 import { saveImageRecipe } from "./revisions";

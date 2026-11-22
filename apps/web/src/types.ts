@@ -29,7 +29,7 @@ import type {
   RuntimeMode,
   ThreadEnvironmentMode,
   WorkTask,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export type SessionPhase = "disconnected" | "connecting" | "ready" | "running";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";

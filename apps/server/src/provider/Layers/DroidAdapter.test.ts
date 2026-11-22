@@ -1,4 +1,4 @@
-import { TurnId } from "@synara/contracts";
+import { TurnId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

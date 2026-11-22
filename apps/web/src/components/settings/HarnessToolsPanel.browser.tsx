@@ -1,5 +1,5 @@
 import "../../index.css";
-import type { HarnessTool, ServerSettingsPatch } from "@synara/contracts";
+import type { HarnessTool, ServerSettingsPatch } from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";

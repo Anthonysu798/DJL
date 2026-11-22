@@ -9,7 +9,7 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import type { ChatMessage, ContentPart } from "@djl/providers";
-import type { CloudMessagePart, CloudRunError, CloudUsageTrailer } from "@synara/contracts/cloud";
+import type { CloudMessagePart, CloudRunError, CloudUsageTrailer } from "@djl/contracts/cloud";
 
 import { appendSearchText, textOf } from "../chat/ChatService.ts";
 import { branchTo } from "../chat/tree.ts";

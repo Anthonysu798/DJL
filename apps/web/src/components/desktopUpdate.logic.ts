@@ -3,7 +3,7 @@
 // Layer: Web UI state helper
 // Depends on: Desktop update IPC contracts.
 
-import type { DesktopUpdateActionResult, DesktopUpdateState } from "@synara/contracts";
+import type { DesktopUpdateActionResult, DesktopUpdateState } from "@djl/contracts";
 import { translateRendererCopy } from "../i18n";
 
 const updateCopy = (key: string, defaultValue: string) =>

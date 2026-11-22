@@ -5,7 +5,7 @@ import type {
   CommerceExternalRefundAllocationResult,
   CommerceExternalRefundDetail,
   CommercePaymentStatus,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 const { admin } = vi.hoisted(() => ({ admin: vi.fn() }));
 vi.mock("@/lib/api", async (original) => ({

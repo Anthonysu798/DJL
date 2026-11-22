@@ -2,13 +2,13 @@
 /**
  * Standalone Cua driver host — runs the same {@link CuaDriverHost} the macOS
  * desktop embeds, outside Electron, against a provisioned
- * `cua-driver`. This is the Windows/Linux deployment path: the Synara server
- * reaches the socket this host listens on through `SYNARA_CUA_HOST_SOCKET`
+ * `cua-driver`. This is the Windows/Linux deployment path: the DJL server
+ * reaches the socket this host listens on through `DJL_CUA_HOST_SOCKET`
  * and authenticates every request with the shared capability
- * (`SYNARA_BROWSER_HOST_CAPABILITY`).
+ * (`DJL_BROWSER_HOST_CAPABILITY`).
  *
  *   bun apps/desktop/src/cuaDriverHostStandalone.ts \
- *     --driver /opt/synara/cua-driver [--socket /run/synara-cua/host.sock]
+ *     --driver /opt/djl/cua-driver [--socket /run/djl-cua/host.sock]
  *
  * This is not a port of the macOS safety layer. `nativeRevision: null` permits
  * upstream artifacts; their transport cancellation cannot acknowledge native
@@ -43,7 +43,7 @@ function usage(message: string): never {
 }
 
 async function main(): Promise<void> {
-  const driverOption = option("--driver") ?? process.env.SYNARA_CUA_DRIVER;
+  const driverOption = option("--driver") ?? process.env.DJL_CUA_DRIVER;
   if (!driverOption) usage("--driver is required (provisioned cua-driver binary or bundle dir).");
 
   let binaryPath = driverOption;
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   // The capability is the authority boundary on this socket — it must never
   // travel through argv, which every process on the machine can read.
   const capabilityFile = option("--capability-file");
-  let capability = process.env.SYNARA_CUA_HOST_CAPABILITY?.trim() ?? "";
+  let capability = process.env.DJL_CUA_HOST_CAPABILITY?.trim() ?? "";
   let capabilitySource = "environment";
   if (!capability && capabilityFile) {
     capability = (await readFile(capabilityFile, "utf8").catch(() => "")).trim();
@@ -71,9 +71,7 @@ async function main(): Promise<void> {
     }
   }
   if (Buffer.byteLength(capability, "utf8") < 32)
-    usage(
-      "capability must be at least 32 bytes (SYNARA_CUA_HOST_CAPABILITY or --capability-file).",
-    );
+    usage("capability must be at least 32 bytes (DJL_CUA_HOST_CAPABILITY or --capability-file).");
 
   const endpoint = option("--socket");
   if (endpoint) await clearStaleCuaHostSocket(endpoint);
@@ -83,7 +81,7 @@ async function main(): Promise<void> {
     binaryPath,
     // TCC's bundle identity has no meaning off macOS; the string still labels
     // this host in permission replies that surface it.
-    bundleId: `synara-cua-standalone-${process.platform}`,
+    bundleId: `djl-cua-standalone-${process.platform}`,
     capability,
     nativeRevision: null,
     ...(process.platform === "linux"
@@ -125,15 +123,15 @@ async function main(): Promise<void> {
     console.info(`CUA_CAPABILITY=${capability}`);
     console.info(
       "[cua-driver-host] generated an ephemeral capability (above). Set it on the server as " +
-        "SYNARA_BROWSER_HOST_CAPABILITY; it dies with this host.",
+        "DJL_BROWSER_HOST_CAPABILITY; it dies with this host.",
     );
   } else {
     console.info(`[cua-driver-host] capability source: ${capabilitySource}`);
   }
   console.info(
-    "[cua-driver-host] server wiring: SYNARA_CUA_HOST_SOCKET=" +
+    "[cua-driver-host] server wiring: DJL_CUA_HOST_SOCKET=" +
       bound +
-      " SYNARA_BROWSER_HOST_CAPABILITY=<capability>",
+      " DJL_BROWSER_HOST_CAPABILITY=<capability>",
   );
   console.info(
     `[cua-driver-host] driver: ${basename(binaryPath)} (capabilities checked at handshake)`,

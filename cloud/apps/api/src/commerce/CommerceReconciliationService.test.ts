@@ -2,7 +2,7 @@
 import { eq, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { COMMERCE_RECONCILIATION_CSV_HEADER as header } from "@synara/contracts/cloud";
+import { COMMERCE_RECONCILIATION_CSV_HEADER as header } from "@djl/contracts/cloud";
 import { isolatedCommerceTestDatabase } from "../testing/isolatedDb.ts";
 import {
   CommerceService,

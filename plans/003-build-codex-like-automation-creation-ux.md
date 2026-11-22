@@ -15,7 +15,7 @@
 
 ## Why this matters
 
-Codex docs say users can create/update automations from a regular thread by describing the task, schedule, and whether it stays attached to the current thread or starts fresh runs. Synara has direct `/automation` creation, but it saves immediately when parsing succeeds and lacks a confirmation draft. A Codex-like UX should show what Synara understood before saving, especially for unattended background work, full-access runs, local checkout edits, or fast timers.
+Codex docs say users can create/update automations from a regular thread by describing the task, schedule, and whether it stays attached to the current thread or starts fresh runs. DJL has direct `/automation` creation, but it saves immediately when parsing succeeds and lacks a confirmation draft. A Codex-like UX should show what DJL understood before saving, especially for unattended background work, full-access runs, local checkout edits, or fast timers.
 
 ## Current state
 

@@ -1,7 +1,7 @@
 // FILE: MessageTrail.tsx
 // Purpose: Left-gutter message rail with macOS-Dock-style magnification. The tick
 //   nearest the pointer grows longest (Gaussian falloff on its neighbours) and a
-//   side tooltip shows that one focused message. Built on Synara's existing scroll
+//   side tooltip shows that one focused message. Built on DJL's existing scroll
 //   engine: `activeStore` carries the current + visible viewport highlights and
 //   `onSelect` jumps (shadcn's scrollToMessage). The hot path writes tick width /
 //   opacity straight to the DOM inside one coalesced rAF — no React state per move
@@ -9,7 +9,7 @@
 // Layer: Chat transcript shell (presentation)
 // Depends on: pure magnification math in messageTrail.logic.ts (unit-tested).
 
-import { type MessageId } from "@synara/contracts";
+import { type MessageId } from "@djl/contracts";
 import {
   useCallback,
   useEffect,

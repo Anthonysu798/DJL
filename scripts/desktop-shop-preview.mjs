@@ -20,10 +20,8 @@ export function previewEnvironment(base, profile, rendererUrl) {
     HOME: join(profile, "home"),
     USERPROFILE: join(profile, "home"),
     DJL_HOME: join(profile, "data"),
-    SYNARA_HOME: join(profile, "data"),
     DJL_DESKTOP_USER_DATA_DIR: join(profile, "electron"),
-    SYNARA_DESKTOP_USER_DATA_DIR: join(profile, "electron"),
-    SYNARA_DESKTOP_DISPLAY_NAME: "DJL 商城验证",
+    DJL_DESKTOP_DISPLAY_NAME: "DJL 商城验证",
     VITE_DEV_SERVER_URL: rendererUrl,
   };
 }

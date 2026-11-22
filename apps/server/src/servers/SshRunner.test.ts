@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ServerId, type ServerRecord } from "@synara/contracts";
+import { ServerId, type ServerRecord } from "@djl/contracts";
 import { Effect, Layer } from "effect";
 import * as fs from "node:fs";
 import * as os from "node:os";

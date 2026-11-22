@@ -15,11 +15,11 @@ import {
 } from "./computerCallContext.ts";
 
 const FLAGS = [
-  "SYNARA_CUA_TIMING_LOG",
-  "SYNARA_CUA_CONDITIONAL_SETTLE",
-  "SYNARA_CUA_ACTION_SETTLE_MS",
-  "SYNARA_CUA_CAPTURE_REUSE",
-  "SYNARA_CUA_PREVIEW_STILL_MS",
+  "DJL_CUA_TIMING_LOG",
+  "DJL_CUA_CONDITIONAL_SETTLE",
+  "DJL_CUA_ACTION_SETTLE_MS",
+  "DJL_CUA_CAPTURE_REUSE",
+  "DJL_CUA_PREVIEW_STILL_MS",
 ] as const;
 
 const saved = new Map<string, string | undefined>();
@@ -46,80 +46,77 @@ describe("computer call env flags", () => {
   });
 
   it.each(["1", "yes", " TRUE "])("treats %s as enabled for the boolean flags", (value) => {
-    process.env.SYNARA_CUA_TIMING_LOG = value;
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = value;
-    process.env.SYNARA_CUA_CAPTURE_REUSE = value;
+    process.env.DJL_CUA_TIMING_LOG = value;
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = value;
+    process.env.DJL_CUA_CAPTURE_REUSE = value;
     expect(cuaTimingLogEnabled()).toBe(true);
     expect(cuaConditionalSettleEnabled()).toBe(true);
     expect(cuaCaptureReuseEnabled()).toBe(true);
   });
 
   it.each(["0", "off"])("treats %s as disabled for the graduated flags' kill switch", (value) => {
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = value;
-    process.env.SYNARA_CUA_CAPTURE_REUSE = value;
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = value;
+    process.env.DJL_CUA_CAPTURE_REUSE = value;
     expect(cuaConditionalSettleEnabled()).toBe(false);
     expect(cuaCaptureReuseEnabled()).toBe(false);
   });
 
   it.each(["0", "enabled"])("treats %s as disabled for the opt-in boolean flags", (value) => {
-    process.env.SYNARA_CUA_TIMING_LOG = value;
+    process.env.DJL_CUA_TIMING_LOG = value;
     expect(cuaTimingLogEnabled()).toBe(false);
   });
 
   it.each(["enabled"])("keeps the graduated flags on for a non-off value like %s", (value) => {
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = value;
-    process.env.SYNARA_CUA_CAPTURE_REUSE = value;
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = value;
+    process.env.DJL_CUA_CAPTURE_REUSE = value;
     expect(cuaConditionalSettleEnabled()).toBe(true);
     expect(cuaCaptureReuseEnabled()).toBe(true);
   });
 
-  it("parses SYNARA_CUA_ACTION_SETTLE_MS as a non-negative number", () => {
-    process.env.SYNARA_CUA_ACTION_SETTLE_MS = "0";
+  it("parses DJL_CUA_ACTION_SETTLE_MS as a non-negative number", () => {
+    process.env.DJL_CUA_ACTION_SETTLE_MS = "0";
     expect(cuaActionSettleMsOverride()).toBe(0);
-    process.env.SYNARA_CUA_ACTION_SETTLE_MS = "175";
+    process.env.DJL_CUA_ACTION_SETTLE_MS = "175";
     expect(cuaActionSettleMsOverride()).toBe(175);
-    process.env.SYNARA_CUA_ACTION_SETTLE_MS = " 80 ";
+    process.env.DJL_CUA_ACTION_SETTLE_MS = " 80 ";
     expect(cuaActionSettleMsOverride()).toBe(80);
   });
 
   it.each(["", "abc", "-5"])(
-    "ignores the unparsable SYNARA_CUA_ACTION_SETTLE_MS value %s",
+    "ignores the unparsable DJL_CUA_ACTION_SETTLE_MS value %s",
     (value) => {
-      process.env.SYNARA_CUA_ACTION_SETTLE_MS = value;
+      process.env.DJL_CUA_ACTION_SETTLE_MS = value;
       expect(cuaActionSettleMsOverride()).toBeUndefined();
     },
   );
 
-  it("parses SYNARA_CUA_PREVIEW_STILL_MS as a positive number", () => {
-    process.env.SYNARA_CUA_PREVIEW_STILL_MS = "4000";
+  it("parses DJL_CUA_PREVIEW_STILL_MS as a positive number", () => {
+    process.env.DJL_CUA_PREVIEW_STILL_MS = "4000";
     expect(cuaPreviewStillMsOverride()).toBe(4000);
-    process.env.SYNARA_CUA_PREVIEW_STILL_MS = " 250 ";
+    process.env.DJL_CUA_PREVIEW_STILL_MS = " 250 ";
     expect(cuaPreviewStillMsOverride()).toBe(250);
   });
 
-  it.each(["", "abc", "0"])(
-    "ignores the unparsable SYNARA_CUA_PREVIEW_STILL_MS value %s",
-    (value) => {
-      process.env.SYNARA_CUA_PREVIEW_STILL_MS = value;
-      expect(cuaPreviewStillMsOverride()).toBeUndefined();
-    },
-  );
+  it.each(["", "abc", "0"])("ignores the unparsable DJL_CUA_PREVIEW_STILL_MS value %s", (value) => {
+    process.env.DJL_CUA_PREVIEW_STILL_MS = value;
+    expect(cuaPreviewStillMsOverride()).toBeUndefined();
+  });
 });
 
 describe("createComputerCallContext", () => {
   it("creates no context at all when both consumers are off", () => {
-    delete process.env.SYNARA_CUA_TIMING_LOG;
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = "0";
+    delete process.env.DJL_CUA_TIMING_LOG;
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = "0";
     expect(createComputerCallContext()).toBeUndefined();
   });
 
-  it("creates a context with a timing record under SYNARA_CUA_TIMING_LOG", () => {
-    process.env.SYNARA_CUA_TIMING_LOG = "1";
+  it("creates a context with a timing record under DJL_CUA_TIMING_LOG", () => {
+    process.env.DJL_CUA_TIMING_LOG = "1";
     expect(createComputerCallContext()?.timing).toBeInstanceOf(ComputerCallTiming);
   });
 
-  it("creates a context without a timing record under SYNARA_CUA_CONDITIONAL_SETTLE alone", () => {
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = "1";
+  it("creates a context without a timing record under DJL_CUA_CONDITIONAL_SETTLE alone", () => {
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = "1";
     const context = createComputerCallContext();
     expect(context).toBeDefined();
     expect(context?.timing).toBeUndefined();
@@ -128,7 +125,7 @@ describe("createComputerCallContext", () => {
 
 describe("ComputerCallContext", () => {
   it("hands the action proof to the post-action observer exactly once", () => {
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = "1";
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = "1";
     const context = createComputerCallContext()!;
     context.recordActionProof({ effect: "verified", verified: "confirmed" });
     expect(context.takeActionProof()).toEqual({
@@ -139,7 +136,7 @@ describe("ComputerCallContext", () => {
   });
 
   it("keeps only the latest action's verdict", () => {
-    process.env.SYNARA_CUA_CONDITIONAL_SETTLE = "1";
+    process.env.DJL_CUA_CONDITIONAL_SETTLE = "1";
     const context = createComputerCallContext()!;
     context.recordActionProof({ effect: "verified" });
     context.recordActionProof({ effect: "dispatched-unknown" });
@@ -147,7 +144,7 @@ describe("ComputerCallContext", () => {
   });
 
   it("shares one context across a whole wrapped call and finishes it once", async () => {
-    process.env.SYNARA_CUA_TIMING_LOG = "1";
+    process.env.DJL_CUA_TIMING_LOG = "1";
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const context = createComputerCallContext()!;
     let inside: unknown;
@@ -179,7 +176,7 @@ describe("ComputerCallContext", () => {
   });
 
   it("marks failures on the call's timing line", async () => {
-    process.env.SYNARA_CUA_TIMING_LOG = "1";
+    process.env.DJL_CUA_TIMING_LOG = "1";
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const context = createComputerCallContext()!;
     await expect(

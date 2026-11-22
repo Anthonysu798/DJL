@@ -1,4 +1,4 @@
-import { COMPUTER_WS_METHODS } from "@synara/contracts";
+import { COMPUTER_WS_METHODS } from "@djl/contracts";
 import { Effect, Exit, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 

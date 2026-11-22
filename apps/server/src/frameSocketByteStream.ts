@@ -16,7 +16,7 @@
 import type { Socket } from "node:net";
 
 import * as NodeHttpServerRequest from "@effect/platform-node/NodeHttpServerRequest";
-import type { FrameByteStream } from "@synara/shared/frameTransport";
+import type { FrameByteStream } from "@djl/shared/frameTransport";
 import type { HttpServerRequest } from "effect/unstable/http";
 
 export function frameSocketByteStream(

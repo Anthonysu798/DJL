@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { lstat, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { AgentVideoClipInput, AgentVideoSubtitle } from "@synara/contracts";
+import type { AgentVideoClipInput, AgentVideoSubtitle } from "@djl/contracts";
 import sharp from "sharp";
 import { resolveAuthorizedInputPath } from "../work/documentTools";
 import { inspectVideo } from "./media";

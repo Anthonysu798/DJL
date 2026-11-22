@@ -1,4 +1,4 @@
-import { commerceTestCheckoutUrl, type CommerceDesktopBridge } from "@synara/contracts/cloud";
+import { commerceTestCheckoutUrl, type CommerceDesktopBridge } from "@djl/contracts/cloud";
 
 /** A returned URL is a navigation capability, not evidence of successful payment. */
 export function stripeTestCheckoutUrl(raw: string | null, sessionId: string | null): string | null {

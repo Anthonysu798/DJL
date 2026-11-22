@@ -18,11 +18,11 @@ import type {
   DesktopAppSnapPermissionKind,
   DesktopAppSnapState,
   DesktopBridge,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   COMPUTER_PERMISSION_KINDS,
   missingComputerAppSnapPermissions,
-} from "@synara/shared/computerGrants";
+} from "@djl/shared/computerGrants";
 
 import { t } from "~/i18n";
 import { localizedComputerPermissions } from "./computerToolPresentation";
@@ -93,7 +93,7 @@ export interface ComputerProvisionToast {
 
 /**
  * Raised as the call starts, because the call's visible effect is a macOS
- * dialog appearing over Synara and the user needs to know Synara asked for it.
+ * dialog appearing over DJL and the user needs to know DJL asked for it.
  *
  * The grants are named through `listComputerPermissions` rather than written
  * out, so this cannot drift out of the one fixed ordering every other surface

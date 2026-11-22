@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MessageId, ThreadId } from "@synara/contracts";
+import { MessageId, ThreadId } from "@djl/contracts";
 import { buildHandoffBootstrapText } from "./handoff";
 
 const message = (text: string, index: number) => ({

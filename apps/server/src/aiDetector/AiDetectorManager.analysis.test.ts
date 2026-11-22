@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { AiDetectorState } from "@synara/contracts";
+import type { AiDetectorState } from "@djl/contracts";
 import JSZip from "jszip";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

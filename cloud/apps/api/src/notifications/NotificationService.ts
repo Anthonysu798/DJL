@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudNotificationsResponse } from "@synara/contracts/cloud";
+import type { CloudNotificationsResponse } from "@djl/contracts/cloud";
 import type { Principal } from "../auth/guard.ts";
 import { ApiError } from "../http/errors.ts";
 

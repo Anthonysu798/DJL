@@ -26,6 +26,7 @@
   "dependencies": {
     "@better-auth/cli": "^1.4.21",
     "@better-auth/passkey": "^1.7.4",
+    "@djl/contracts": "workspace:*",
     "@djl/db": "workspace:*",
     "@djl/domain": "workspace:*",
     "@djl/notify": "workspace:*",
@@ -41,7 +42,6 @@
     "@opentelemetry/sdk-node": "^0.222.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "@sentry/bun": "^10.74.0",
-    "@synara/contracts": "workspace:*",
     "better-auth": "^1.7.4",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",

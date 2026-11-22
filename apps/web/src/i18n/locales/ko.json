@@ -3285,23 +3285,23 @@
     "openSettings": "Open {{value0}} settings",
     "ghostCursor": "ghost cursor",
     "granted": "Granted",
-    "letsSynaraDetectEscapeAndPauseWhenYouTake": "Lets DJL detect Escape and pause when you take over during a Computer task. This does not enable the AppSnap shortcut.",
+    "letsDjlDetectEscapeAndPauseWhenYouTake": "Lets DJL detect Escape and pause when you take over during a Computer task. This does not enable the AppSnap shortcut.",
     "showGuide": "Show guide",
     "isReadyFor": "{{value0}} is ready for {{value1}}.",
     "hideGuide": "Hide guide",
     "recheckPermissions": "Recheck permissions",
     "screenRecording": "Screen Recording",
-    "letsSynaraCaptureAnImageOfTheFrontmostWindow": "Lets DJL capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord.",
+    "letsDjlCaptureAnImageOfTheFrontmostWindow": "Lets DJL capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord.",
     "windowListing": "window listing",
     "theAgentCanActOnTheDesktopButCannot2": "The agent can act on the desktop but cannot see it, so screenshots fail. Turn DJL on in System Settings › Privacy & Security › Screen Recording, then press Set up to reconnect.",
     "fill": "Fill",
     "gettingStarted": "Getting started",
     "theServerCouldNotBeReached": "The server could not be reached.",
     "theAgentDrivesItsOwnSeatSoYourCursor": "The agent drives its own seat, so your cursor and focus stay untouched.",
-    "letsSynaraNoticeTheDoubleOptionChordWhileAnother": "Lets DJL notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded.",
+    "letsDjlNoticeTheDoubleOptionChordWhileAnother": "Lets DJL notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded.",
     "screenCapture2": "screen capture",
     "permissionCheckFailed": "Permission check failed.",
-    "letsSynaraCaptureWindowsAndTheDesktopSoThe": "Lets DJL capture windows and the desktop so the agent can see what it is driving.",
+    "letsDjlCaptureWindowsAndTheDesktopSoThe": "Lets DJL capture windows and the desktop so the agent can see what it is driving.",
     "useGrantNextToAPermissionToWalkThrough": "Use Grant next to a permission to walk through setup.",
     "large": "Large",
     "computerEffectBlocked": "Blocked",
@@ -3325,7 +3325,7 @@
     "permissionGuideEnableInstalledApp": "If this copy of {{app}} is already listed, turn it on. Otherwise, drag the app from the floating guide into the list, or use + to choose this installed copy, then turn it on.",
     "showHistory": "Show history",
     "densityOptions_compact": "Compact",
-    "letsSynaraMoveThePointerClickAndTypeOn": "Lets DJL move the pointer, click, and type on your behalf. Nothing is driven unless you authorize a Computer task.",
+    "letsDjlMoveThePointerClickAndTypeOn": "Lets DJL move the pointer, click, and type on your behalf. Nothing is driven unless you authorize a Computer task.",
     "couldNotLoadRecentActionsRefreshToTryAgain": "Could not load recent actions. Refresh to try again.",
     "cursorColors": "Cursor colors",
     "rechecking": "Rechecking…",
@@ -4314,9 +4314,9 @@
           "details": "릴리스 워크플로가 고정된 업데이트 경로를 검증하고 정상 릴리스를 호환 채널에서 제외하며 피드 메타데이터를 복구하고 app.asar 교체가 감지되면 시작 절차를 강화합니다.",
           "title": "데스크톱 업데이트 보호 강화"
         },
-        "synara-identity": {
+        "djl-identity": {
           "description": "데스크톱 설치와 명령줄부터 패키지, 설정, 진단, 릴리스 결과물까지 앱 전체가 하나의 이름을 사용합니다.",
-          "details": "데스크톱 번들은 com.emanueledipietro.synara, CLI는 @synara/cli와 synara 명령을 사용하며 모든 자체 런타임 식별자는 DJL 네임스페이스를 사용합니다. 0.4.2 브리지는 출처가 바뀌는 동안 렌더러 상태를 보존합니다.",
+          "details": "데스크톱 번들은 app.djl.desktop, CLI는 @djl/cli와 djl 명령을 사용하며 모든 자체 런타임 식별자는 DJL 네임스페이스를 사용합니다. 0.4.2 브리지는 출처가 바뀌는 동안 렌더러 상태를 보존합니다.",
           "title": "모든 곳에서 DJL"
         }
       }

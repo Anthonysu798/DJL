@@ -2,7 +2,7 @@
 // Purpose: SQLite access for Multi agents groups, members, the group log and reply records.
 // Layer: Persistence
 
-import { Group, GroupMemberId, GroupReply, type GroupHandoff } from "@synara/contracts";
+import { Group, GroupMemberId, GroupReply, type GroupHandoff } from "@djl/contracts";
 import { Effect, Layer, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

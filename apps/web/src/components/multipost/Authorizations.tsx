@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { MultiPostState, MultiPostWorkflow, MultiPostKind } from "@synara/contracts";
+import type { MultiPostState, MultiPostWorkflow, MultiPostKind } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { calendarTimeToIso } from "../marketing/socialCalendar";
 import { kinds, errorMessage, type CommandRunner } from "./shared";

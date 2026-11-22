@@ -37,7 +37,7 @@ import type {
   CommerceBuyerReturnRequest,
   CommerceCaseHandling,
   CommerceBuyerAfterSalesStatus,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { ApiError } from "../http/errors.ts";
 import { parseCommerceCsv } from "./csv.ts";
 import {

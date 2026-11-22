@@ -1,4 +1,4 @@
-const ANNOTATION_GLOBAL = "__synaraBrowserAnnotations";
+const ANNOTATION_GLOBAL = "__djlBrowserAnnotations";
 
 export function annotationBootstrapSource(bindingName: string): string {
   return `(() => {
@@ -67,7 +67,7 @@ export function annotationBootstrapSource(bindingName: string): string {
       const root = document.documentElement || document.body;
       if (!root) return;
       overlay = document.createElement('div');
-      overlay.dataset.synaraAnnotationOverlay = 'true';
+      overlay.dataset.djlAnnotationOverlay = 'true';
       Object.assign(overlay.style, { position: 'fixed', inset: '0', zIndex: '2147483647', pointerEvents: 'none' });
       overlayRoot = overlay.attachShadow({ mode: 'closed' });
       outline = document.createElement('div');
@@ -76,7 +76,7 @@ export function annotationBootstrapSource(bindingName: string): string {
       marker = document.createElement('div');
       Object.assign(marker.style, { position: 'fixed', width: '24px', height: '24px', borderRadius: '999px', background: '#7c5cff', color: 'white', font: '700 12px/24px system-ui', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.35)', display: 'none' });
       areaSurface = document.createElement('div');
-      areaSurface.dataset.synaraAnnotationAreaSurface = 'true';
+      areaSurface.dataset.djlAnnotationAreaSurface = 'true';
       Object.assign(areaSurface.style, { position: 'fixed', inset: '0', cursor: 'crosshair', background: 'transparent', display: 'none', pointerEvents: 'auto' });
       iframeLayer = document.createElement('div');
       Object.assign(iframeLayer.style, { position: 'fixed', inset: '0', pointerEvents: 'none' });
@@ -93,7 +93,7 @@ export function annotationBootstrapSource(bindingName: string): string {
         const rect = rectOf(frame);
         if (rect.width <= 0 || rect.height <= 0 || rect.x >= innerWidth || rect.y >= innerHeight || rect.x + rect.width <= 0 || rect.y + rect.height <= 0) continue;
         const shield = document.createElement('div');
-        shield.dataset.synaraAnnotationIframeShield = 'true';
+        shield.dataset.djlAnnotationIframeShield = 'true';
         Object.assign(shield.style, { position: 'fixed', left: rect.x + 'px', top: rect.y + 'px', width: rect.width + 'px', height: rect.height + 'px', background: 'transparent', pointerEvents: 'auto', cursor: 'crosshair' });
         iframeShields.set(shield, frame);
         iframeLayer.append(shield);
@@ -147,7 +147,7 @@ export function annotationBootstrapSource(bindingName: string): string {
       for (const node of event.composedPath()) {
         const iframe = iframeShields.get(node);
         if (iframe) return iframe;
-        if (node === overlay || node instanceof Element && node.closest?.('[data-synara-annotation-overlay]')) { originatedFromOverlay = true; continue; }
+        if (node === overlay || node instanceof Element && node.closest?.('[data-djl-annotation-overlay]')) { originatedFromOverlay = true; continue; }
         if (!originatedFromOverlay && node instanceof Element) return node;
       }
       return iframeAtPoint(event.clientX, event.clientY);

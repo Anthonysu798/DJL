@@ -1,7 +1,7 @@
 // FILE: RemoteSettingsPanel.tsx
 // Purpose: Zero-friction desktop QR pairing and remote access controls.
 
-import type { DesktopRemoteGatewayState } from "@synara/contracts";
+import type { DesktopRemoteGatewayState } from "@djl/contracts";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 

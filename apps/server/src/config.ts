@@ -150,7 +150,7 @@ export const resolveCanonicalWorkspaceRoots = Effect.fn(function* (input: {
  * ServerConfig - Service tag for server runtime configuration.
  */
 export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigShape>()(
-  "synara/config/ServerConfig",
+  "djl/config/ServerConfig",
 ) {
   static readonly layerTest = (cwd: string, baseDirOrPrefix: string | { prefix: string }) =>
     Layer.effect(
@@ -204,7 +204,7 @@ export const resolveStaticDir = Effect.fn(function* () {
   // in-process asar header otherwise serves bytes from the wrong offsets).
   // Honored only when it actually contains the client, so a stale or bogus env
   // value degrades to the normal lookup instead of breaking serving.
-  const snapshotDir = process.env.SYNARA_STATIC_DIR?.trim();
+  const snapshotDir = process.env.DJL_STATIC_DIR?.trim();
   if (snapshotDir) {
     const snapshotClient = resolve(snapshotDir);
     const snapshotStat = yield* exists(join(snapshotClient, "index.html")).pipe(

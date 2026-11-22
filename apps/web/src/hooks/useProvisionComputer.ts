@@ -13,7 +13,7 @@
 // while the card's Set up was still running started a second provision against
 // the same helper.
 
-import type { ComputerPermission, ComputerProvisionResult } from "@synara/contracts";
+import type { ComputerPermission, ComputerProvisionResult } from "@djl/contracts";
 import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { toastManager } from "~/components/ui/toast";

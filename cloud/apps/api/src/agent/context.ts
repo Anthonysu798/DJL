@@ -11,7 +11,7 @@ import type {
   CloudMessagePart,
   CloudToolCallPart,
   CloudToolResultPart,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import { textOf } from "../chat/ChatService.ts";
 import { branchTo } from "../chat/tree.ts";

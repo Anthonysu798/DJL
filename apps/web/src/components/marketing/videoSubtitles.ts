@@ -1,4 +1,4 @@
-import type { AgentVideoSubtitle } from "@synara/contracts";
+import type { AgentVideoSubtitle } from "@djl/contracts";
 
 function timestamp(value: string) {
   const match = /^(?:(\d{2,}):)?([0-5]\d):([0-5]\d)[,.](\d{3})$/.exec(value.trim());

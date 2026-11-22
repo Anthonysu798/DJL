@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { interruptThreadTurn } from "./threadTurnInterrupt";
 const fake = vi.hoisted(() => ({ revoke: vi.fn(), interrupt: vi.fn() }));
 vi.mock("../nativeApi", () => ({

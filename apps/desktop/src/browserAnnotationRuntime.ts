@@ -9,14 +9,14 @@ import {
   type BrowserAnnotationEvent as BrowserAnnotationEventType,
   type BrowserAnnotationCaptureInput,
   type ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
-import { annotationBootstrapSource } from "@synara/shared/browserAnnotationBootstrap";
+import { annotationBootstrapSource } from "@djl/shared/browserAnnotationBootstrap";
 
-export { annotationBootstrapSource } from "@synara/shared/browserAnnotationBootstrap";
+export { annotationBootstrapSource } from "@djl/shared/browserAnnotationBootstrap";
 
-const ANNOTATION_WORLD_NAME = "synara-browser-annotations";
-const ANNOTATION_GLOBAL = "__synaraBrowserAnnotations";
+const ANNOTATION_WORLD_NAME = "djl-browser-annotations";
+const ANNOTATION_GLOBAL = "__djlBrowserAnnotations";
 
 export async function withAtomicAnnotationCleanup<T>(
   prepare: () => Promise<void>,
@@ -87,7 +87,7 @@ interface RuntimeEvaluateResult {
 }
 
 export class BrowserAnnotationRuntime {
-  private readonly bindingName = `__synara_annotation_${Crypto.randomBytes(16).toString("hex")}`;
+  private readonly bindingName = `__djl_annotation_${Crypto.randomBytes(16).toString("hex")}`;
   private contextId: number | null = null;
   private mainFrameId: string | null = null;
   private scriptIdentifier: string | null = null;

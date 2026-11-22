@@ -1,4 +1,4 @@
-import type { ServerVoiceTranscriptionInput } from "@synara/contracts";
+import type { ServerVoiceTranscriptionInput } from "@djl/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   auth: [] as Record<string, unknown>[],

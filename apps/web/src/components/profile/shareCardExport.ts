@@ -13,7 +13,7 @@ import englishCatalog from "../../i18n/locales/en.json";
 export { downloadBlob } from "~/lib/browserDownload";
 
 export const SHARE_TWEET_TEXT = englishCatalog.settings.profileShareSocial.text;
-const SHARE_URL = "https://trysynara.com";
+const SHARE_URL = "https://slcor.com";
 
 export type ShareTarget = "x" | "linkedin" | "reddit";
 

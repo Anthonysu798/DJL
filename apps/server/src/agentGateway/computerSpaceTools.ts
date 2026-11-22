@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import type { ComputerSpaceReservation } from "@synara/contracts";
+import type { ComputerSpaceReservation } from "@djl/contracts";
 import type { ComputerManager } from "../computer/ComputerManager.ts";
 import { ComputerSpaceError } from "../computer/ComputerSpaceBroker.ts";
 import { assertDesktopOperationActive } from "../computer/DesktopOperationQueue.ts";

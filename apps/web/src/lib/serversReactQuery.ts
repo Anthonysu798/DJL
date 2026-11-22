@@ -2,7 +2,7 @@
 // Purpose: React Query options for the Servers registry shared by the composer picker and settings.
 // Layer: Web data helper
 
-import type { ServerId, ServerListCommandsResult, ServerListResult } from "@synara/contracts";
+import type { ServerId, ServerListCommandsResult, ServerListResult } from "@djl/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 

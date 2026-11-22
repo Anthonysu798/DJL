@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { Effect, Fiber, Layer, Stream } from "effect";
 import { expect, it, vi } from "vitest";
 import { prepareInstalledOpenCodeFixture } from "../../../../scripts/lib/installed-opencode-fixture.ts";

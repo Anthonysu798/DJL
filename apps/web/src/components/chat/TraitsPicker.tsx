@@ -9,8 +9,8 @@ import {
   type ProviderKind,
   type ProviderModelDescriptor,
   type ThreadId,
-} from "@synara/contracts";
-import { applyClaudePromptEffortPrefix } from "@synara/shared/model";
+} from "@djl/contracts";
+import { applyClaudePromptEffortPrefix } from "@djl/shared/model";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDownIcon, FastModeIcon, SettingsIcon } from "~/lib/icons";

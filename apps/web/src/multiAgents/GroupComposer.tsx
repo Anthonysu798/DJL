@@ -10,7 +10,7 @@ import {
   type Group,
   type ProviderSkillDescriptor,
   type UploadChatAttachment,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
@@ -60,7 +60,7 @@ import {
 } from "~/lib/providerDiscovery";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
-import { parseGroupMentions } from "@synara/shared/groupChat";
+import { parseGroupMentions } from "@djl/shared/groupChat";
 
 import { GroupAgentAvatar } from "./GroupAgentAvatar";
 import type { GroupSendInput } from "./GroupChatView";

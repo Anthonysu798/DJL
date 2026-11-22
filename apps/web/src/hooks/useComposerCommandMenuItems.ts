@@ -1,4 +1,4 @@
-import { BUILT_IN_PLUGINS, BUILT_IN_SKILLS } from "@synara/contracts";
+import { BUILT_IN_PLUGINS, BUILT_IN_SKILLS } from "@djl/contracts";
 import type {
   ProjectEntry,
   ProviderNativeCommandDescriptor,
@@ -7,8 +7,8 @@ import type {
   ProviderPluginDescriptor,
   ProviderSkillDescriptor,
   ServerRecord,
-} from "@synara/contracts";
-import { getAgentMentionAutocompleteAliases, serverReference } from "@synara/contracts";
+} from "@djl/contracts";
+import { getAgentMentionAutocompleteAliases, serverReference } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

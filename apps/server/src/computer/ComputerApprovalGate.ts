@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ProviderApprovalDecision } from "@synara/contracts";
+import type { ProviderApprovalDecision } from "@djl/contracts";
 
 interface PendingApproval {
   readonly threadId: string;
@@ -61,7 +61,7 @@ export class ComputerApprovalExpiredError extends Error {
   }
 }
 
-/** Synara-owned Computer consent, scoped to one live turn. Clipboard reads use
+/** DJL-owned Computer consent, scoped to one live turn. Clipboard reads use
  * separate per-call approvals. The runtime routes user decisions here first;
  * restart, Stop and terminal events discard pending prompts.
  */

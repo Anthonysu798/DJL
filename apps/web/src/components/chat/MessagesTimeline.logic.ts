@@ -3,8 +3,8 @@
 // Layer: Web chat presentation helpers
 // Exports: row derivation, structural sharing, copy/timer helpers
 
-import { type MessageId, type TurnId } from "@synara/contracts";
-import { isProviderProtocolOnlyText } from "@synara/shared/chatThreads";
+import { type MessageId, type TurnId } from "@djl/contracts";
+import { isProviderProtocolOnlyText } from "@djl/shared/chatThreads";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {

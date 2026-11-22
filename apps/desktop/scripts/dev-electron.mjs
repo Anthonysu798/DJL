@@ -7,7 +7,7 @@ import { desktopDir, resolveElectronPath } from "./electron-launcher.mjs";
 
 const port = Number(process.env.ELECTRON_RENDERER_PORT ?? 5733);
 const devServerUrl = `http://localhost:${port}`;
-const desktopUserDataDir = process.env.SYNARA_DESKTOP_USER_DATA_DIR?.trim() || null;
+const desktopUserDataDir = process.env.DJL_DESKTOP_USER_DATA_DIR?.trim() || null;
 const requiredFiles = [
   "dist-electron/main.js",
   "dist-electron/preload.js",
@@ -52,7 +52,7 @@ function cleanupStaleDevApps() {
 
   const processMarker = desktopUserDataDir
     ? `--user-data-dir=${desktopUserDataDir}`
-    : `--synara-dev-root=${desktopDir}`;
+    : `--djl-dev-root=${desktopDir}`;
   spawnSync("pkill", ["-f", "--", processMarker], { stdio: "ignore" });
 }
 
@@ -123,7 +123,7 @@ function warnIfAlphaAppRunning() {
 
   const result = spawnSync(
     "pgrep",
-    ["-fal", "/Applications/(DJL|Synara)\\.app/Contents/MacOS/(DJL|Synara)"],
+    ["-fal", "/Applications/(DJL|DJL)\\.app/Contents/MacOS/(DJL|DJL)"],
     {
       encoding: "utf8",
     },
@@ -148,7 +148,7 @@ function startApp() {
     resolveElectronPath(),
     [
       ...(desktopUserDataDir ? [`--user-data-dir=${desktopUserDataDir}`] : []),
-      `--synara-dev-root=${desktopDir}`,
+      `--djl-dev-root=${desktopDir}`,
       "dist-electron/main.js",
     ],
     {

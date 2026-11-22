@@ -1,4 +1,4 @@
-import type { HarnessLoginInput } from "@synara/contracts";
+import type { HarnessLoginInput } from "@djl/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ensureNativeApi } from "~/nativeApi";

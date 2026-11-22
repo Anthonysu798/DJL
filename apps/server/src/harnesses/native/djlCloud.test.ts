@@ -2,8 +2,8 @@ import type { FetchLike } from "../../cloud/api";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ProviderSessionStartInput } from "@synara/contracts";
-import { ThreadId } from "@synara/contracts";
+import type { ProviderSessionStartInput } from "@djl/contracts";
+import { ThreadId } from "@djl/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { writeCloudSession } from "../../cloud/session";

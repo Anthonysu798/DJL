@@ -10,9 +10,9 @@ import {
   getDefaultEffort,
   getEffectiveClaudeCodeEffort,
   getModelCapabilities,
-} from "@synara/shared/model";
+} from "@djl/shared/model";
 import { claudeContextUsage } from "./usage";
-import { CLAUDE_CODE_EFFORT_OPTIONS, effectiveRuntimeMode } from "@synara/contracts";
+import { CLAUDE_CODE_EFFORT_OPTIONS, effectiveRuntimeMode } from "@djl/contracts";
 
 const compactTokens = (value: string | undefined) =>
   value === "200k" ? 200_000 : value === "1m" ? 1_000_000 : null;

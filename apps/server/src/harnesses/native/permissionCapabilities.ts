@@ -3,7 +3,7 @@ import {
   type ProviderComposerCapabilities,
   type ProviderStartOptions,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { probe } from "../accounts";
 import { resolveClaudeExecutable } from "./claudeExecutable";
 import { NativeRpc, object } from "./protocol";

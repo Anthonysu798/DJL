@@ -937,7 +937,7 @@ private enum NewChatDraftSheet: String, Identifiable {
         NewChatDraftView(
             route: NewChatDraftRoute(
                 id: "draft_preview",
-                preferredProjectPath: "/Users/emanueledipietro/Developer/DJL",
+                preferredProjectPath: "/Users/you/Developer/DJL",
                 source: .generalChat
             ),
             onOpenThread: { _ in }
@@ -965,7 +965,7 @@ private enum NewChatDraftSheet: String, Identifiable {
         NewChatDraftView(
             route: NewChatDraftRoute(
                 id: "draft_preview_folder_button",
-                preferredProjectPath: "/Users/emanueledipietro/Developer/DJL",
+                preferredProjectPath: "/Users/you/Developer/DJL",
                 source: .folderChat
             ),
             onOpenThread: { _ in }

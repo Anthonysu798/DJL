@@ -11,7 +11,7 @@ import {
   type DroidModelOptions,
   type ProviderListModelsResult,
   type ProviderModelDescriptor,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer, Scope, ServiceMap } from "effect";
 import type * as EffectAcpErrors from "effect-acp/errors";
 import * as EffectAcpErrorsRuntime from "effect-acp/errors";

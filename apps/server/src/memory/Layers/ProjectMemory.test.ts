@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId, TurnId } from "@synara/contracts";
+import { ProjectId, ThreadId, TurnId } from "@djl/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "vitest";
 import { Effect, Layer } from "effect";

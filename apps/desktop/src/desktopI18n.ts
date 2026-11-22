@@ -3,12 +3,12 @@ import {
   SOURCE_APP_LOCALE,
   type AppLocale,
   type AppLocalePreference,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   APP_LOCALE_REVIEW_STATUS,
   normalizeReleaseLocalePreference,
   resolveAppLocalePreference,
-} from "@synara/shared/locale";
+} from "@djl/shared/locale";
 import { createInstance, type i18n } from "i18next";
 import englishCatalog from "./locales/en.json";
 import simplifiedChineseCatalog from "./locales/zh-Hans.json";

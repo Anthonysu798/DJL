@@ -3285,23 +3285,23 @@
     "openSettings": "Abrir ajustes de {{value0}}",
     "ghostCursor": "cursor fantasma",
     "granted": "Concedido",
-    "letsSynaraDetectEscapeAndPauseWhenYouTake": "Permite que DJL detecte Escape y pause la tarea de Ordenador cuando tomes el control. Esto no activa el atajo de AppSnap.",
+    "letsDjlDetectEscapeAndPauseWhenYouTake": "Permite que DJL detecte Escape y pause la tarea de Ordenador cuando tomes el control. Esto no activa el atajo de AppSnap.",
     "showGuide": "Mostrar guía",
     "isReadyFor": "{{value0}} está listo para {{value1}}.",
     "hideGuide": "Ocultar guía",
     "recheckPermissions": "Volver a comprobar permisos",
     "screenRecording": "Grabación de pantalla",
-    "letsSynaraCaptureAnImageOfTheFrontmostWindow": "Permite que DJL capture una imagen de la ventana en primer plano. Solo se captura la ventana elegida, en el momento en que pulsas la combinación de teclas.",
+    "letsDjlCaptureAnImageOfTheFrontmostWindow": "Permite que DJL capture una imagen de la ventana en primer plano. Solo se captura la ventana elegida, en el momento en que pulsas la combinación de teclas.",
     "windowListing": "lista de ventanas",
     "theAgentCanActOnTheDesktopButCannot2": "El agente puede actuar en el escritorio, pero no puede verlo, por lo que las capturas de pantalla fallan. Activa DJL en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla y pulsa Configurar para reconectar.",
     "fill": "Relleno",
     "gettingStarted": "Primeros pasos",
     "theServerCouldNotBeReached": "No se pudo conectar con el servidor.",
     "theAgentDrivesItsOwnSeatSoYourCursor": "El agente utiliza su propia sesión, así que tu cursor y el foco permanecen intactos.",
-    "letsSynaraNoticeTheDoubleOptionChordWhileAnother": "Permite que DJL detecte la combinación de las dos teclas Option mientras otra aplicación tiene el foco del teclado. No se registra nada de lo que escribes.",
+    "letsDjlNoticeTheDoubleOptionChordWhileAnother": "Permite que DJL detecte la combinación de las dos teclas Option mientras otra aplicación tiene el foco del teclado. No se registra nada de lo que escribes.",
     "screenCapture2": "captura de pantalla",
     "permissionCheckFailed": "Falló la comprobación de permisos.",
-    "letsSynaraCaptureWindowsAndTheDesktopSoThe": "Permite que DJL capture ventanas y el escritorio para que el agente vea lo que controla.",
+    "letsDjlCaptureWindowsAndTheDesktopSoThe": "Permite que DJL capture ventanas y el escritorio para que el agente vea lo que controla.",
     "useGrantNextToAPermissionToWalkThrough": "Usa Conceder junto a un permiso para seguir los pasos de configuración.",
     "large": "Grande",
     "computerEffectBlocked": "Bloqueado",
@@ -3325,7 +3325,7 @@
     "permissionGuideEnableInstalledApp": "Si esta copia de {{app}} ya aparece en la lista, actívala. De lo contrario, arrastra la app desde la guía flotante a la lista o usa + para elegir esta copia instalada y después actívala.",
     "showHistory": "Mostrar historial",
     "densityOptions_compact": "Compacto",
-    "letsSynaraMoveThePointerClickAndTypeOn": "Permite que DJL mueva el puntero, haga clic y escriba por ti. No se controla nada hasta que autorices una tarea de Ordenador.",
+    "letsDjlMoveThePointerClickAndTypeOn": "Permite que DJL mueva el puntero, haga clic y escriba por ti. No se controla nada hasta que autorices una tarea de Ordenador.",
     "couldNotLoadRecentActionsRefreshToTryAgain": "No se pudieron cargar las acciones recientes. Actualiza para volver a intentarlo.",
     "cursorColors": "Colores del cursor",
     "rechecking": "Comprobando de nuevo…",
@@ -4314,9 +4314,9 @@
           "details": "El flujo de publicación verifica el canal fijado, mantiene las versiones limpias fuera del canal de compatibilidad, repara los metadatos y refuerza el inicio cuando detecta un intercambio de app.asar.",
           "title": "Las actualizaciones de escritorio tienen más protecciones"
         },
-        "synara-identity": {
+        "djl-identity": {
           "description": "La aplicación ahora usa una sola identidad en todas partes: instalación, línea de comandos, paquetes, configuración, diagnósticos y artefactos de versión.",
-          "details": "El paquete de escritorio ahora es com.emanueledipietro.synara, la CLI es @synara/cli con el comando synara y todos los identificadores propios usan el espacio de nombres DJL. El puente 0.4.2 conserva el estado del renderizador durante el cambio de origen.",
+          "details": "El paquete de escritorio ahora es app.djl.desktop, la CLI es @djl/cli con el comando djl y todos los identificadores propios usan el espacio de nombres DJL. El puente 0.4.2 conserva el estado del renderizador durante el cambio de origen.",
           "title": "DJL de principio a fin"
         }
       }

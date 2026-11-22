@@ -22,7 +22,7 @@ import {
   type CloudSignInPollResult,
   type CloudSignInStartResult,
   type CloudUserId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   CloudApiError,

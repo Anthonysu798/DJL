@@ -1,4 +1,4 @@
-import type { CloudRegisterDeviceResponse } from "@synara/contracts/cloud";
+import type { CloudRegisterDeviceResponse } from "@djl/contracts/cloud";
 import { api } from "./api";
 
 let registration: { sessionId: string; promise: Promise<CloudRegisterDeviceResponse> } | null =

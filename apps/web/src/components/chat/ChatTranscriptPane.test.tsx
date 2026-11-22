@@ -5,7 +5,7 @@ import {
   RouterContextProvider,
 } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MessageId, ThreadId } from "@synara/contracts";
+import { MessageId, ThreadId } from "@djl/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import { createInstance, type i18n } from "i18next";
 import { createRef, type ComponentProps } from "react";

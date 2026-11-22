@@ -13,7 +13,7 @@ import type {
   ServerLocalServerProcess,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const PROCESS_OUTPUT_MAX_BUFFER_BYTES = 2 * 1024 * 1024;
 const STOP_SIGNAL_SETTLE_MS = 450;
@@ -72,7 +72,7 @@ const EXCLUDED_PROCESS_COMMANDS = new Set([
   "electron",
   "electron helper",
   "electron helper (renderer)",
-  "synara",
+  "djl",
 ]);
 
 // Chromium/Electron spawns child processes (renderers, GPU, utility, plugin hosts) that can hold

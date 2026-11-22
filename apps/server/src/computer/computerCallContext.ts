@@ -12,13 +12,13 @@ import type { ComputerBackendActionResult } from "./ComputerBackend.ts";
  * - `timing` — a `ComputerCallTiming` the manager and backend record legs
  *   into (resolve, dispatch, settle, observe, the native calls beneath them),
  *   emitted as one `[computer-timing]` line when the outermost call ends.
- *   `SYNARA_CUA_TIMING_LOG=1` only; unset, no record exists and the leg
+ *   `DJL_CUA_TIMING_LOG=1` only; unset, no record exists and the leg
  *   helpers are passthroughs.
  * - `actionProof` — the delivery verdict of the most recent action in the
  *   call, consumed once by the post-action observer when a proven effect
  *   waives the fixed settle. Scoped to the call so a stale verdict can never
  *   waive a later call's wait. This consumer is on by default; only
- *   `SYNARA_CUA_CONDITIONAL_SETTLE=0` turns it off.
+ *   `DJL_CUA_CONDITIONAL_SETTLE=0` turns it off.
  *
  * When neither consumer is enabled no context is created at all, so a call
  * with both off still allocates nothing.
@@ -47,28 +47,28 @@ function envFlagDisabled(value: string | undefined): boolean {
   );
 }
 
-/** `SYNARA_CUA_TIMING_LOG=1` emits one `[computer-timing]` line per computer call. */
+/** `DJL_CUA_TIMING_LOG=1` emits one `[computer-timing]` line per computer call. */
 export function cuaTimingLogEnabled(): boolean {
-  return envFlagEnabled(process.env.SYNARA_CUA_TIMING_LOG);
+  return envFlagEnabled(process.env.DJL_CUA_TIMING_LOG);
 }
 
 /**
  * The post-action settle is skipped when the action's own delivery result
  * already proves its effect. Graduated to the default: the skip still needs
  * positive proof on the same call, so opting out is only a kill switch for a
- * regression — `SYNARA_CUA_CONDITIONAL_SETTLE=0` restores the always-wait.
+ * regression — `DJL_CUA_CONDITIONAL_SETTLE=0` restores the always-wait.
  */
 export function cuaConditionalSettleEnabled(): boolean {
-  return !envFlagDisabled(process.env.SYNARA_CUA_CONDITIONAL_SETTLE);
+  return !envFlagDisabled(process.env.DJL_CUA_CONDITIONAL_SETTLE);
 }
 
 /**
- * `SYNARA_CUA_ACTION_SETTLE_MS` overrides the fixed post-action settle.
+ * `DJL_CUA_ACTION_SETTLE_MS` overrides the fixed post-action settle.
  * Unset or unparsable means the compiled-in default; an explicit 0 removes
  * the wait entirely.
  */
 export function cuaActionSettleMsOverride(): number | undefined {
-  const raw = process.env.SYNARA_CUA_ACTION_SETTLE_MS;
+  const raw = process.env.DJL_CUA_ACTION_SETTLE_MS;
   if (raw === undefined || raw.trim() === "") return undefined;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
@@ -81,19 +81,19 @@ export function cuaActionSettleMsOverride(): number | undefined {
  * capture itself always happens — only identical bytes prove nothing
  * changed — so no stale picture is ever served; what is saved is the image
  * part of the tool result. Graduated to the default;
- * `SYNARA_CUA_CAPTURE_REUSE=0` is the kill switch.
+ * `DJL_CUA_CAPTURE_REUSE=0` is the kill switch.
  */
 export function cuaCaptureReuseEnabled(): boolean {
-  return !envFlagDisabled(process.env.SYNARA_CUA_CAPTURE_REUSE);
+  return !envFlagDisabled(process.env.DJL_CUA_CAPTURE_REUSE);
 }
 
 /**
- * `SYNARA_CUA_PREVIEW_STILL_MS` overrides the pane's still-capture cadence
+ * `DJL_CUA_PREVIEW_STILL_MS` overrides the pane's still-capture cadence
  * (default 2000 ms). Unset or unparsable means the compiled-in default; the
  * caller clamps the resolved value to the publisher's floor.
  */
 export function cuaPreviewStillMsOverride(): number | undefined {
-  const raw = process.env.SYNARA_CUA_PREVIEW_STILL_MS;
+  const raw = process.env.DJL_CUA_PREVIEW_STILL_MS;
   if (raw === undefined || raw.trim() === "") return undefined;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;

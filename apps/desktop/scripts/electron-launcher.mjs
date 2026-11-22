@@ -14,14 +14,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { resolveAppDisplayName } from "@synara/shared/branding";
-import { synaraBundleId } from "@synara/shared/desktopIdentity";
+import { resolveAppDisplayName } from "@djl/shared/branding";
+import { djlBundleId } from "@djl/shared/desktopIdentity";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 const APP_DISPLAY_NAME = resolveAppDisplayName(isDevelopment);
-const APP_BUNDLE_ID = synaraBundleId(isDevelopment);
+const APP_BUNDLE_ID = djlBundleId(isDevelopment);
 const LAUNCHER_VERSION = 3;
 const MICROPHONE_USAGE_DESCRIPTION =
   "DJL needs microphone access so you can record voice notes and transcribe them into the chat composer.";

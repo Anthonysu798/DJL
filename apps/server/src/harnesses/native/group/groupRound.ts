@@ -13,8 +13,8 @@ import {
   type GroupMemberId,
   type GroupMemberState,
   type GroupReply,
-} from "@synara/contracts";
-import { parseGroupMentions } from "@synara/shared/groupChat";
+} from "@djl/contracts";
+import { parseGroupMentions } from "@djl/shared/groupChat";
 
 import type { ChildReply, ChildSession } from "./childSession";
 import { createWriteLock, decideRequest } from "./groupPolicy";

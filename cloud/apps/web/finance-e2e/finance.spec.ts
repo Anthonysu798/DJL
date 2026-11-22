@@ -9,7 +9,7 @@ import type {
   CommerceConfirmWithdrawalPaymentInput,
   CommerceLedgerEntry,
   CommerceWallet,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 const ADMIN = "http://localhost:48731";
 const API = "http://localhost:48787";

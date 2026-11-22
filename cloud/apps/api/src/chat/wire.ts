@@ -1,6 +1,6 @@
-/** Database rows to the JSON shapes in @synara/contracts/cloud. */
+/** Database rows to the JSON shapes in @djl/contracts/cloud. */
 import type { schema } from "@djl/db";
-import type { CloudConversation, CloudMessage } from "@synara/contracts/cloud";
+import type { CloudConversation, CloudMessage } from "@djl/contracts/cloud";
 
 export type ConversationRow = typeof schema.conversations.$inferSelect;
 export type MessageRow = typeof schema.messages.$inferSelect;

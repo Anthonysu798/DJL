@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { MultiPostRuntimeContext } from "@synara/contracts";
+import type { MultiPostRuntimeContext } from "@djl/contracts";
 import { DesktopMultiPostRuntime } from "./runtime";
 
 const fixture = vi.hoisted(() => ({

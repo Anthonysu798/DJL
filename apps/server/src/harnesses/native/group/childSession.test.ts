@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import type { NativeDriverFactory, NativeSink } from "../types";

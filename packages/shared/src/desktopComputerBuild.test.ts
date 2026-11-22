@@ -20,7 +20,7 @@ it("keeps provider secrets and external config out of the isolated backend", () 
     OPENCODE_CONFIG: "/unrelated/config.json",
     OPENCODE_CONFIG_CONTENT: "test-only-config",
     SSH_AUTH_SOCK: "/unrelated/agent",
-    SYNARA_AUTH_TOKEN: "old-owner-token",
+    DJL_AUTH_TOKEN: "old-owner-token",
   };
   expect(computerQaBackendEnvironment(base)).toEqual({ PATH: "/owned/bin" });
   expect(base.OPENAI_API_KEY).toBe("test-only-key");

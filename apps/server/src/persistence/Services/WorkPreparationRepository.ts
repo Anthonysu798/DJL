@@ -8,7 +8,7 @@ import type {
   ProjectId,
   ThreadId,
   WorkPreparationJobStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Option, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -100,4 +100,4 @@ export interface WorkPreparationRepositoryShape {
 export class WorkPreparationRepository extends ServiceMap.Service<
   WorkPreparationRepository,
   WorkPreparationRepositoryShape
->()("synara/persistence/Services/WorkPreparationRepository") {}
+>()("djl/persistence/Services/WorkPreparationRepository") {}

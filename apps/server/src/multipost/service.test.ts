@@ -10,7 +10,7 @@ import type {
   MultiPostAccount,
   MultiPostState,
   MultiPostEvidence,
-} from "@synara/contracts";
+} from "@djl/contracts";
 const scope: MultiPostScope = { workspaceId: "a", threadId: "chat-a", authorizedRoot: "/tmp" };
 const capability = {
   id: "DYNAMIC_X",
@@ -187,7 +187,7 @@ describe("standing grants and recovery", () => {
         workflow: { name: "Publishing", accountIds: [context.account.id], kinds: ["dynamic"] },
       },
       "ui",
-    )) as import("@synara/contracts").MultiPostWorkflow;
+    )) as import("@djl/contracts").MultiPostWorkflow;
     const grantInput = {
       workflowId: workflow.id,
       workflowRevision: workflow.revision,
@@ -204,7 +204,7 @@ describe("standing grants and recovery", () => {
       scope,
       { action: "create-grant", grant: grantInput },
       "ui",
-    )) as import("@synara/contracts").MultiPostGrant;
+    )) as import("@djl/contracts").MultiPostGrant;
     const draft = (await context.service.command(
       scope,
       {

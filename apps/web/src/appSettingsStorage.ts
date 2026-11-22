@@ -1,7 +1,7 @@
-import type { AppLocalePreference } from "@synara/contracts";
-import { normalizeReleaseLocalePreference } from "@synara/shared/locale";
+import type { AppLocalePreference } from "@djl/contracts";
+import { normalizeReleaseLocalePreference } from "@djl/shared/locale";
 
-export const APP_SETTINGS_STORAGE_KEY = "synara:app-settings:v1";
+export const APP_SETTINGS_STORAGE_KEY = "djl:app-settings:v1";
 
 /** Reads only the locale field so renderer i18n can initialize before React mounts. */
 export function readStoredAppLocalePreference(

@@ -1721,7 +1721,7 @@ test("Electron adapter lists skills from the cross-provider catalog per cwd", as
   const { fake, transport, outbound } = createDiscoveryTransport({
     "provider.listSkillsCatalog": (payload) => ({
       skills: [
-        { name: "Deploy", path: `${payload.cwd}/.skills/deploy`, enabled: true, scope: "synara" },
+        { name: "Deploy", path: `${payload.cwd}/.skills/deploy`, enabled: true, scope: "djl" },
         {
           name: "Shared",
           path: "/home/.skills/shared",

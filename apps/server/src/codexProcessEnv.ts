@@ -1,5 +1,5 @@
 // FILE: codexProcessEnv.ts
-// Purpose: Builds the exact environment used when Synara launches Codex subprocesses.
+// Purpose: Builds the exact environment used when DJL launches Codex subprocesses.
 // Layer: Server runtime utility
 // Exports: Codex process env builder and browser-plugin overlay helpers.
 // Depends on: Codex home path helpers, shared Codex config parsing, login-shell env reader.
@@ -19,12 +19,12 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-import { readActiveCodexProviderEnvKey } from "@synara/shared/codexConfig";
+import { readActiveCodexProviderEnvKey } from "@djl/shared/codexConfig";
 import {
   readEnvironmentFromLoginShell,
   resolveLoginShell,
   type ShellEnvironmentReader,
-} from "@synara/shared/shell";
+} from "@djl/shared/shell";
 
 import { resolveBaseCodexHomePath, resolveDjlCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import { prependPathEntry } from "./servers/shimRuntime.ts";
@@ -32,7 +32,7 @@ import { prependPathEntry } from "./servers/shimRuntime.ts";
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS = "NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS";
 const CODEX_OVERLAY_SHARED_STATE_FILES = new Set(["auth.json"]);
-const SYNARA_CONFIG_SUPPRESSIONS_FILE = "synara-config-suppressions-v1.json";
+const DJL_CONFIG_SUPPRESSIONS_FILE = "djl-config-suppressions-v1.json";
 const MAX_CONFIG_SUPPRESSION_SECTIONS = 32;
 const MAX_CONFIG_SUPPRESSION_HEADER_LENGTH = 256;
 // Retired local browser integrations used a stable six-character namespace.
@@ -52,7 +52,7 @@ export function resolveCodexBrowserUsePipePath(
   } = {},
 ): string {
   const env = input.env ?? process.env;
-  const configured = env.SYNARA_BROWSER_USE_PIPE_PATH?.trim();
+  const configured = env.DJL_BROWSER_USE_PIPE_PATH?.trim();
   if (configured) {
     return configured;
   }
@@ -69,7 +69,7 @@ function isSafePluginSectionHeader(value: unknown): value is string {
   );
 }
 
-export function readSynaraConfigSuppressions(markerPath: string): readonly string[] {
+export function readDjlConfigSuppressions(markerPath: string): readonly string[] {
   try {
     const parsed = JSON.parse(readFileSync(markerPath, "utf8")) as unknown;
     if (typeof parsed !== "object" || parsed === null) return [];
@@ -146,10 +146,7 @@ export function disableCodexConfigSections(
   return output.join("\n");
 }
 
-function writeSynaraConfigSuppressions(
-  markerPath: string,
-  sectionHeaders: readonly string[],
-): void {
+function writeDjlConfigSuppressions(markerPath: string, sectionHeaders: readonly string[]): void {
   const normalized = [...new Set(sectionHeaders.filter(isSafePluginSectionHeader))].slice(
     0,
     MAX_CONFIG_SUPPRESSION_SECTIONS,
@@ -235,7 +232,7 @@ function ensureCodexOverlaySymlink(input: {
   linkOrCopyCodexOverlayEntry(input);
 }
 
-function prepareSynaraCodexHomeOverlay(input: {
+function prepareDjlCodexHomeOverlay(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly homePath?: string;
 }): string | undefined {
@@ -271,11 +268,11 @@ function prepareSynaraCodexHomeOverlay(input: {
 
   const sourceConfigPath = path.join(sourceHomePath, "config.toml");
   const sourceConfig = existsSync(sourceConfigPath) ? readFileSync(sourceConfigPath, "utf8") : "";
-  const suppressionMarkerPath = path.join(overlayHomePath, SYNARA_CONFIG_SUPPRESSIONS_FILE);
+  const suppressionMarkerPath = path.join(overlayHomePath, DJL_CONFIG_SUPPRESSIONS_FILE);
   const suppressedSections = [
     ...new Set([
       ...findConflictingLocalBrowserPluginSections(sourceConfig),
-      ...readSynaraConfigSuppressions(suppressionMarkerPath),
+      ...readDjlConfigSuppressions(suppressionMarkerPath),
     ]),
   ].slice(0, MAX_CONFIG_SUPPRESSION_SECTIONS);
   writeFileSync(
@@ -283,7 +280,7 @@ function prepareSynaraCodexHomeOverlay(input: {
     disableCodexConfigSections(sourceConfig, suppressedSections, true),
     "utf8",
   );
-  writeSynaraConfigSuppressions(suppressionMarkerPath, suppressedSections);
+  writeDjlConfigSuppressions(suppressionMarkerPath, suppressedSections);
 
   return overlayHomePath;
 }
@@ -297,7 +294,7 @@ export function buildCodexProcessEnv(
   } = {},
 ): NodeJS.ProcessEnv {
   const baseEnv = { ...(input.env ?? process.env) };
-  const overlayHomePath = prepareSynaraCodexHomeOverlay({
+  const overlayHomePath = prepareDjlCodexHomeOverlay({
     env: baseEnv,
     ...(input.homePath ? { homePath: input.homePath } : {}),
   });

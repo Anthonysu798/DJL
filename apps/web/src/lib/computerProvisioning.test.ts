@@ -7,9 +7,9 @@ import type {
   ComputerProvisionResult,
   ComputerStatusResult,
   DesktopAppSnapState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { COMPUTER_PERMISSION_KINDS } from "@synara/shared/computerGrants";
+import { COMPUTER_PERMISSION_KINDS } from "@djl/shared/computerGrants";
 
 import {
   computerProvisionErrorToast,
@@ -33,7 +33,7 @@ function grantState(overrides: Partial<DesktopAppSnapState> = {}): DesktopAppSna
     inputMonitoringPermission: "granted",
     screenRecordingPermission: "granted",
     message: null,
-    appDisplayName: "Synara",
+    appDisplayName: "DJL",
     ...overrides,
   };
 }

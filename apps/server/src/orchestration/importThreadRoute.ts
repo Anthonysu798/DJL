@@ -1,5 +1,5 @@
 // FILE: importThreadRoute.ts
-// Purpose: Imports provider-native sessions and binds them to Synara thread projections.
+// Purpose: Imports provider-native sessions and binds them to DJL thread projections.
 // Layer: Orchestration command handler
 // Exports: makeImportThreadHandler.
 
@@ -9,11 +9,8 @@ import {
   type ProviderKind,
   type ThreadHandoffImportedMessage,
   type ThreadId,
-} from "@synara/contracts";
-import {
-  deriveAssociatedWorktreeMetadata,
-  workspaceRootsEqual,
-} from "@synara/shared/threadWorkspace";
+} from "@djl/contracts";
+import { deriveAssociatedWorktreeMetadata, workspaceRootsEqual } from "@djl/shared/threadWorkspace";
 import type { FileSystem, Path } from "effect";
 import { Data, Effect, Option } from "effect";
 

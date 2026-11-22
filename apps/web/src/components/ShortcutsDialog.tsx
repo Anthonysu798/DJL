@@ -3,7 +3,7 @@
 // Layer: Chat shell overlay
 // Depends on: shared dialog UI, shortcut label builder, and current project script metadata.
 
-import type { ResolvedKeybindingsConfig } from "@synara/contracts";
+import type { ResolvedKeybindingsConfig } from "@djl/contracts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {

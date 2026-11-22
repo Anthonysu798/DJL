@@ -1,4 +1,4 @@
-import { EventId, RuntimeRequestId } from "@synara/contracts";
+import { EventId, RuntimeRequestId } from "@djl/contracts";
 import type { LegacyProviderRuntimeEvent } from "../TestProviderAdapter.integration.ts";
 
 const PROVIDER = "codex" as const;

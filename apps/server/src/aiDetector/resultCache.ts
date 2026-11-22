@@ -5,10 +5,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  AiDetectorReport as AiDetectorReportSchema,
-  type AiDetectorReport,
-} from "@synara/contracts";
+import { AiDetectorReport as AiDetectorReportSchema, type AiDetectorReport } from "@djl/contracts";
 import { Schema } from "effect";
 
 type CachedReport = Omit<AiDetectorReport, "normalizedText" | "cacheHit">;

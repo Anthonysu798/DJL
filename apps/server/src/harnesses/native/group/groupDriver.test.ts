@@ -9,7 +9,7 @@ import {
   type GroupMemberProvider,
   type GroupReply,
   type ProviderRuntimeEvent,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Stream } from "effect";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -4,7 +4,7 @@ import { render } from "vitest-browser-react";
 import { SocialMediaCarousel, SocialMediaOrder } from "./SocialMediaCarousel";
 import { SocialWeekCalendar } from "./SocialWeekCalendar";
 import { calendarTimeToIso, localCalendarTime } from "./socialCalendar";
-import type { SocialInboxItem } from "@synara/contracts";
+import type { SocialInboxItem } from "@djl/contracts";
 
 const image =
   "data:image/svg+xml," +

@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { ComputerActivitySemanticContent } from "@synara/contracts";
-import { CloudUsageTrailer } from "@synara/contracts/cloud";
+import { ComputerActivitySemanticContent } from "@djl/contracts";
+import { CloudUsageTrailer } from "@djl/contracts/cloud";
 import { cloudSessionPath } from "../cloud/session";
 import { readActivityProviderTextFile } from "./activityProviderWorkspace";
 import {

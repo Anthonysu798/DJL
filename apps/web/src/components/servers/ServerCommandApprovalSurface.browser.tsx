@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import type { ServerCommandRecord, ServerCommandStreamEvent } from "@synara/contracts";
+import type { ServerCommandRecord, ServerCommandStreamEvent } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";

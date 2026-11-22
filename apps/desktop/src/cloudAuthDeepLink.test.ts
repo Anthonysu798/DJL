@@ -37,7 +37,7 @@ describe("parseCloudAuthCallbackUrl", () => {
   it("rejects other schemes, hosts, paths, and malformed values", () => {
     for (const url of [
       `https://auth/callback?code=${code}&state=${state}`,
-      `synara://auth/callback?code=${code}&state=${state}`,
+      `djl-app://auth/callback?code=${code}&state=${state}`,
       `djl://evil/callback?code=${code}&state=${state}`,
       `djl://auth/other?code=${code}&state=${state}`,
       `djl://user:pw@auth/callback?code=${code}&state=${state}`,

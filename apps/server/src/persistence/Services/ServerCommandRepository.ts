@@ -1,4 +1,4 @@
-import type { ServerCommandRecord, ServerId } from "@synara/contracts";
+import type { ServerCommandRecord, ServerId } from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -22,4 +22,4 @@ export interface ServerCommandRepositoryShape {
 export class ServerCommandRepository extends ServiceMap.Service<
   ServerCommandRepository,
   ServerCommandRepositoryShape
->()("synara/persistence/Services/ServerCommandRepository") {}
+>()("djl/persistence/Services/ServerCommandRepository") {}

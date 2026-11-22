@@ -1,4 +1,4 @@
-import type { NativeApi } from "@synara/contracts";
+import type { NativeApi } from "@djl/contracts";
 import type { AgentAccountProfile } from "~/agentWorkspaceStore";
 import { randomUUID } from "~/lib/utils";
 

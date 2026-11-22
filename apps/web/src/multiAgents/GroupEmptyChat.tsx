@@ -3,7 +3,7 @@
 //          them, and a few first messages to try (each one fills the composer, it does not send).
 // Layer: UI component
 
-import type { Group } from "@synara/contracts";
+import type { Group } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { ArrowUpRightIcon } from "~/lib/icons";

@@ -2,7 +2,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-/// Masked-activation shield: a Synara-owned overlay that veils the target
+/// Masked-activation shield: a DJL-owned overlay that veils the target
 /// window's frame for the length of one approved foreground excursion.
 ///
 /// The design constraint is from the masked-activation spike: foreign window
@@ -51,7 +51,7 @@ final class ShieldContentView: NSView {
         layer?.cornerRadius = 8
         layer?.cornerCurve = .continuous
 
-        let text = label.flatMap { $0.isEmpty ? nil : $0 } ?? "Synara is activating this window"
+        let text = label.flatMap { $0.isEmpty ? nil : $0 } ?? "DJL is activating this window"
         let field = NSTextField(labelWithString: text)
         field.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
         field.textColor = .white

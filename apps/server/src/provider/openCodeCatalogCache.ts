@@ -8,7 +8,7 @@ import {
   type OpenCodeListModelProvidersResult as OpenCodeListModelProvidersResultValue,
   type ProviderListAgentsResult as ProviderListAgentsResultValue,
   type ProviderListModelsResult as ProviderListModelsResultValue,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 const CACHE_VERSION = 2;

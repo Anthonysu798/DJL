@@ -5,7 +5,7 @@ import {
   reviseCampaign,
   type Campaign,
   type ImageRecipe,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { listDocuments, readDocument, saveDocument } from "./store";
 export function saveImageRecipe(id: string, recipe: ImageRecipe, version: number | null) {
   return Effect.gen(function* () {

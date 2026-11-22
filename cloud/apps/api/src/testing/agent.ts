@@ -8,7 +8,7 @@ import { schema } from "@djl/db";
 import { creditsToMicro } from "@djl/domain";
 import { MockOutbox, MockPushSender } from "@djl/notify";
 import type { ChatRequest, ProviderAdapter } from "@djl/providers";
-import type { CloudSendMessageInput } from "@synara/contracts/cloud";
+import type { CloudSendMessageInput } from "@djl/contracts/cloud";
 import { Redis } from "ioredis";
 
 import { AgentRunner, type AgentRunnerDeps } from "../agent/AgentRunner.ts";

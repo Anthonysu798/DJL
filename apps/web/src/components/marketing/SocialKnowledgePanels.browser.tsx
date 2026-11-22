@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createCampaign, defaultBrand } from "@synara/contracts";
+import { createCampaign, defaultBrand } from "@djl/contracts";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render } from "vitest-browser-react";
 import { ProductSourcePanel, MediaLibraryPanel, BrandMemoryPanel } from "./SocialKnowledgePanels";

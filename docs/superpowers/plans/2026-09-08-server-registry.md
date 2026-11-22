@@ -19,7 +19,7 @@
 - Host and username inputs reject a leading `-`.
 - Every UI string exists in all 7 catalogs (`en, es-419, fr, ja, ko, zh-Hans, zh-Hant`) with real translations; `apps/web/src/i18n/catalogEquality.test.ts` rejects English copies.
 - All motion is CSS and collapses under `@media (prefers-reduced-motion: reduce)`.
-- Package scope is `@synara/*`; product name in UI copy is DJL.
+- Package scope is `@djl/*`; product name in UI copy is DJL.
 - Timestamps in the new contracts are epoch milliseconds (`Schema.Number`).
 - Run server tests with `bun run --cwd apps/server test -- <file>`; web unit tests with `bun run --cwd apps/web test -- <file>`; web browser tests with `bun run --cwd apps/web test:browser -- <file>`; contracts tests with `bun run --cwd packages/contracts test`.
 - Commit after every task with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` as the last line.
@@ -476,7 +476,7 @@ interface ServerRepositoryShape {
 ```ts
 // apps/server/src/persistence/Layers/ServerRepository.test.ts
 import { assert, it } from "@effect/vitest";
-import { ServerId, type ServerCreateInput } from "@synara/contracts";
+import { ServerId, type ServerCreateInput } from "@djl/contracts";
 import { Effect, Layer, Option } from "effect";
 
 import { runMigrations } from "../Migrations.ts";
@@ -610,7 +610,7 @@ In `Errors.ts` add after line 128: `export type ServerRepositoryError = Persiste
 
 ```ts
 // apps/server/src/persistence/Services/ServerRepository.ts
-import type { ServerCreateInput, ServerId, ServerRecord } from "@synara/contracts";
+import type { ServerCreateInput, ServerId, ServerRecord } from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Option } from "effect";
 
@@ -631,7 +631,7 @@ export interface ServerRepositoryShape {
 }
 
 export class ServerRepository extends ServiceMap.Service<ServerRepository, ServerRepositoryShape>()(
-  "synara/persistence/Services/ServerRepository",
+  "djl/persistence/Services/ServerRepository",
 ) {}
 ```
 
@@ -641,7 +641,7 @@ export class ServerRepository extends ServiceMap.Service<ServerRepository, Serve
 // apps/server/src/persistence/Layers/ServerRepository.ts
 import {
   ServerAuthMethod, ServerConnectionTest, ServerId, ServerRecord, ServerStats, ServerTag,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
@@ -850,7 +850,7 @@ export const ALL_SERVER_SECRET_KINDS: ReadonlyArray<ServerSecretKind>;
 ```ts
 // apps/server/src/servers/secrets.test.ts
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ServerId } from "@synara/contracts";
+import { ServerId } from "@djl/contracts";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
@@ -927,7 +927,7 @@ In `apps/server/src/auth/Layers/ServerSecretStore.ts` add `const pathOf: ServerS
 
 ```ts
 // apps/server/src/servers/secrets.ts
-import type { ServerId, ServerSecretInput, ServerSecretKind } from "@synara/contracts";
+import type { ServerId, ServerSecretInput, ServerSecretKind } from "@djl/contracts";
 import { Effect } from "effect";
 
 import type { SecretStoreError, ServerSecretStoreShape } from "../auth/Services/ServerSecretStore";
@@ -1123,7 +1123,7 @@ Expected: FAIL, module not found.
 // FILE: sshArgs.ts
 // Purpose: Pure builder for OpenSSH argv/env. No IO, no secrets on argv.
 // Layer: Servers domain helpers
-import type { ServerRecord } from "@synara/contracts";
+import type { ServerRecord } from "@djl/contracts";
 
 export interface SshInvocationPlan {
   readonly args: ReadonlyArray<string>;
@@ -1247,7 +1247,7 @@ export interface SshRunnerShape {
   readonly knownHostsFiles: ReadonlyArray<string>;    // [djlKnownHosts, userKnownHosts]
   readonly djlKnownHostsPath: string;
 }
-export class SshRunner extends ServiceMap.Service<SshRunner, SshRunnerShape>()("synara/servers/SshRunner") {}
+export class SshRunner extends ServiceMap.Service<SshRunner, SshRunnerShape>()("djl/servers/SshRunner") {}
 export class SshRunnerError extends Data.TaggedError("SshRunnerError")<{ message: string; cause?: unknown }> {}
 export const makeSshRunnerLayer: (options?: { sshCommand?: string; sshDir?: string }) => Layer<SshRunner, never, ServerConfig | FileSystem | Path | ServerSecretStore>;
 export const SshRunnerLive: Layer<SshRunner, ...>;
@@ -1305,7 +1305,7 @@ Expected: FAIL.
 
 ```ts
 // apps/server/src/servers/sshOutcome.ts
-import type { ServerTestOutcome } from "@synara/contracts";
+import type { ServerTestOutcome } from "@djl/contracts";
 
 export interface RawSshResult {
   readonly code: number | null;
@@ -1341,7 +1341,7 @@ export function sanitizeSshStderr(stderr: string, redactions: ReadonlyArray<stri
 ```ts
 // apps/server/src/servers/SshRunner.test.ts
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ServerId, type ServerRecord } from "@synara/contracts";
+import { ServerId, type ServerRecord } from "@djl/contracts";
 import { Effect, Layer } from "effect";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -1460,7 +1460,7 @@ Expected: FAIL, module not found.
 // Purpose: Runs one command on a registered server through the system OpenSSH client.
 //          Secrets reach ssh via SSH_ASKPASS reading a 0600 temp file that is always deleted.
 // Layer: Servers runtime service
-import type { ServerCapabilities, ServerRecord, ServerTestOutcome } from "@synara/contracts";
+import type { ServerCapabilities, ServerRecord, ServerTestOutcome } from "@djl/contracts";
 import * as Crypto from "node:crypto";
 import * as os from "node:os";
 import { Data, Effect, FileSystem, Layer, Path, ServiceMap } from "effect";
@@ -1499,7 +1499,7 @@ export interface SshRunnerShape {
   readonly sshCommand: string;
 }
 
-export class SshRunner extends ServiceMap.Service<SshRunner, SshRunnerShape>()("synara/servers/SshRunner") {}
+export class SshRunner extends ServiceMap.Service<SshRunner, SshRunnerShape>()("djl/servers/SshRunner") {}
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 const isWindows = process.platform === "win32";
@@ -1989,7 +1989,7 @@ Expected: FAIL.
 // FILE: stats.ts
 // Purpose: Single remote command for basic host stats plus a tolerant parser.
 // Layer: Servers domain helpers
-import type { ServerStats } from "@synara/contracts";
+import type { ServerStats } from "@djl/contracts";
 
 const section = (name: string, body: string) => `printf '@@${name}\\n'; ${body} 2>/dev/null;`;
 
@@ -2484,7 +2484,7 @@ Behavior rules (each has a test):
 ### Task 10: Section registration, i18n, CSS
 
 **Files:**
-- Modify: `apps/web/src/settingsNavigation.ts` (`"servers"` id after `"local-models"`; nav item `{ id: "servers", group: "synara", labelKey: "navigation.items.servers.label", descriptionKey: "navigation.items.servers.description", icon: "server", eyebrowKey: "navigation.items.servers.eyebrow", desktopOnly: true }`)
+- Modify: `apps/web/src/settingsNavigation.ts` (`"servers"` id after `"local-models"`; nav item `{ id: "servers", group: "djl", labelKey: "navigation.items.servers.label", descriptionKey: "navigation.items.servers.description", icon: "server", eyebrowKey: "navigation.items.servers.eyebrow", desktopOnly: true }`)
 - Modify: `apps/web/src/routes/_chat.settings.tsx` (`case "servers": return <ServersSettingsPanel />;` + import)
 - Modify: `apps/web/src/settingsSearchIndex.ts` (`panel("servers:registry", "servers")`)
 - Modify: all 7 `apps/web/src/i18n/locales/*.json`: `settings.navigation.items.servers.{label,description,eyebrow}`, `settings.search.entries.servers.registry.{title,keywords}`, and the full `settings.servers.*` namespace listed below.

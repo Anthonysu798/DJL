@@ -1,4 +1,4 @@
-import type { DesktopRemoteGatewayState } from "@synara/contracts";
+import type { DesktopRemoteGatewayState } from "@djl/contracts";
 
 // Owned by main, so closing Settings never leaves the next visitor with an old code.
 export function createRemotePairingRenewal(

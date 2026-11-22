@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import os from "node:os";
 
-import type { AiDetectorLanguagePreference } from "@synara/contracts";
+import type { AiDetectorLanguagePreference } from "@djl/contracts";
 
 import { AiDetectorManager } from "../../apps/server/src/aiDetector/AiDetectorManager";
 import {

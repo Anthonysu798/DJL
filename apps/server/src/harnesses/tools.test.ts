@@ -1,4 +1,4 @@
-import type { HarnessTool, HarnessToolId } from "@synara/contracts";
+import type { HarnessTool, HarnessToolId } from "@djl/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { createHarnessToolsController } from "./tools";
 

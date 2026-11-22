@@ -1,11 +1,11 @@
 // FILE: tsdown.config.ts
-// Purpose: Builds the Synara server CLI and controls diagnostic source maps.
+// Purpose: Builds the DJL server CLI and controls diagnostic source maps.
 // Layer: Server build config
 // Depends on: tsdown.
 
 import { defineConfig } from "tsdown";
 
-const sourcemapEnv = process.env.SYNARA_SERVER_SOURCEMAP?.trim().toLowerCase();
+const sourcemapEnv = process.env.DJL_SERVER_SOURCEMAP?.trim().toLowerCase();
 const buildSourcemap = sourcemapEnv === "1" || sourcemapEnv === "true";
 
 export default defineConfig({
@@ -17,7 +17,7 @@ export default defineConfig({
   outDir: "dist",
   sourcemap: buildSourcemap,
   clean: true,
-  noExternal: (id) => id.startsWith("@synara/"),
+  noExternal: (id) => id.startsWith("@djl/"),
   inlineOnly: false,
   banner: {
     js: "#!/usr/bin/env node\n",

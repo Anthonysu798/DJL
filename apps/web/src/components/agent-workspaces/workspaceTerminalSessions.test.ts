@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TerminalOpenInput, TerminalSessionSnapshot } from "@synara/contracts";
+import type { TerminalOpenInput, TerminalSessionSnapshot } from "@djl/contracts";
 const backend = vi.hoisted(() => ({
   open: vi.fn<(input: TerminalOpenInput) => Promise<TerminalSessionSnapshot>>(),
   close: vi.fn(async () => {}),

@@ -8,7 +8,7 @@
  */
 import { and, asc, eq, gt } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudRunEvent, CloudRunStatus } from "@synara/contracts/cloud";
+import type { CloudRunEvent, CloudRunStatus } from "@djl/contracts/cloud";
 import type { Redis } from "ioredis";
 
 export type RunEvent = typeof CloudRunEvent.Encoded;

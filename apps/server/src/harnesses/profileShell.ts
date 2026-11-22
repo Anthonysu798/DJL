@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, delimiter, dirname, join } from "node:path";
 import type { TerminalCommand } from "../terminal/Services/Manager";
-import type { HarnessId } from "@synara/contracts";
+import type { HarnessId } from "@djl/contracts";
 
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const psQuote = (value: string) => `'${value.replaceAll("'", "''")}'`;

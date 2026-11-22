@@ -1,12 +1,12 @@
 import path from "node:path";
 import { assertAgentCampaignAccess, agentOwnerFromSession } from "./agentScope";
 import { Effect, Schema } from "effect";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import type {
   CloudSocialAccountsResponse,
   CloudSocialOAuthStartResponse,
   CloudSocialOAuthStatus,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { createSocialCloudClient } from "./socialCloudClient";
 import { readCloudSession } from "../cloud/session";
 import { SOCIAL_OAUTH_WAIT_KIND, type PendingSocialOAuth } from "./SocialOAuthResumeReactor";

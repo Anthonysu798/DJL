@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import type { CommerceSupplierStatement } from "@synara/contracts/cloud";
+import type { CommerceSupplierStatement } from "@djl/contracts/cloud";
 
 const { supplierStatement } = vi.hoisted(() => ({ supplierStatement: vi.fn() }));
 vi.mock("@/lib/commerce", async (original) => ({

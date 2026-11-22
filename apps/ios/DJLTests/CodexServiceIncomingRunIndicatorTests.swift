@@ -1507,7 +1507,7 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"
         let turnID = "turn-\(UUID().uuidString)"
-        let tmpMarkdown = "![emanuele-mobile](/tmp/emanuele-mobile.png)"
+        let tmpMarkdown = "![studio-mobile](/tmp/studio-mobile.png)"
 
         service.completeAssistantMessage(
             threadId: threadID,
@@ -1548,7 +1548,7 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
             threadId: threadID,
             turnId: turnID,
             itemId: itemID,
-            text: "Before\n![mobile](/tmp/emanuele-mobile.png)\nAfter"
+            text: "Before\n![mobile](/tmp/studio-mobile.png)\nAfter"
         )
         service.completeAssistantMessage(
             threadId: threadID,
@@ -1564,7 +1564,7 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
     func testHistoryMergeLeavesTemporaryImageArtifactInOriginalOrder() {
         let threadID = "thread-\(UUID().uuidString)"
         let turnID = "turn-\(UUID().uuidString)"
-        let tmpMarkdown = "![emanuele-mobile](/tmp/emanuele-mobile.png)"
+        let tmpMarkdown = "![studio-mobile](/tmp/studio-mobile.png)"
         let messages = [
             CodexMessage(
                 threadId: threadID,

@@ -6,7 +6,7 @@ import type {
   ProviderSendTurnInput,
   ProviderSessionStartInput,
   ProviderUserInputAnswers,
-} from "@synara/contracts";
+} from "@djl/contracts";
 export type NativeProvider =
   | "codex"
   | "claudeAgent"

@@ -13,5 +13,5 @@ export interface GrokAdapterShape extends ProviderAdapterShape<ProviderAdapterEr
 }
 
 export class GrokAdapter extends ServiceMap.Service<GrokAdapter, GrokAdapterShape>()(
-  "synara/provider/Services/GrokAdapter",
+  "djl/provider/Services/GrokAdapter",
 ) {}

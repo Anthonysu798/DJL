@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { Agent, Model, OpencodeClient, Part, Provider } from "@opencode-ai/sdk/v2";
 import { Effect, Fiber, Layer, Stream } from "effect";
@@ -3328,7 +3328,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
               id: "part-default-plan",
               messageID: "assistant-message-default-plan",
               type: "text",
-              text: "<proposed_plan>\n# Not a Synara plan\n</proposed_plan>",
+              text: "<proposed_plan>\n# Not a DJL plan\n</proposed_plan>",
               time: {
                 start: 1,
                 end: 2,
@@ -3365,7 +3365,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       type: "item.completed",
       payload: {
         itemType: "assistant_message",
-        detail: "<proposed_plan>\n# Not a Synara plan\n</proposed_plan>",
+        detail: "<proposed_plan>\n# Not a DJL plan\n</proposed_plan>",
       },
     });
   });

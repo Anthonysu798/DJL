@@ -1,5 +1,5 @@
 import type { MessageBoxOptions } from "electron";
-import type { DesktopUpdateState } from "@synara/contracts";
+import type { DesktopUpdateState } from "@djl/contracts";
 import type { DesktopTranslate } from "./desktopI18n";
 
 export function buildDisabledUpdatesDialog(

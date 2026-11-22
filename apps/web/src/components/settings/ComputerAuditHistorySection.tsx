@@ -2,7 +2,7 @@ import {
   COMPUTER_AUDIT_HISTORY_MAX_LIMIT,
   type ComputerAuditHistoryEntry,
   type ComputerGetAuditHistoryResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 

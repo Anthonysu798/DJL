@@ -13,7 +13,7 @@ import {
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@djl/shared/windowsProcess";
 
 type Logger = {
   info?(message: string): void;
@@ -27,7 +27,7 @@ type UpdaterModule = {
 
 type UpdaterPrototype = {
   spawnSyncLog?: (cmd: string, args?: string[], env?: Record<string, string>) => string;
-  __synaraSpawnSyncLogPatched?: boolean;
+  __djlSpawnSyncLogPatched?: boolean;
 };
 
 type UpdaterWithSignatureVerifier = {
@@ -390,7 +390,7 @@ export function hardenElectronUpdater(
     typeof updaterModule.BaseUpdater === "function"
       ? ((updaterModule.BaseUpdater as { prototype?: UpdaterPrototype }).prototype ?? null)
       : null;
-  if (prototype && !prototype.__synaraSpawnSyncLogPatched) {
+  if (prototype && !prototype.__djlSpawnSyncLogPatched) {
     prototype.spawnSyncLog = function spawnSyncLog(
       this: { _logger?: Logger },
       cmd: string,
@@ -418,7 +418,7 @@ export function hardenElectronUpdater(
       }
       return (stdout ?? "").trim();
     };
-    prototype.__synaraSpawnSyncLogPatched = true;
+    prototype.__djlSpawnSyncLogPatched = true;
   }
 
   const nsisUpdater = updater as UpdaterWithSignatureVerifier | null;

@@ -1,5 +1,5 @@
 "use client";
-import type { CloudModel } from "@synara/contracts/cloud";
+import type { CloudModel } from "@djl/contracts/cloud";
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 

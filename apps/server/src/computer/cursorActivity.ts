@@ -1,4 +1,4 @@
-import type { ProviderRuntimeEvent } from "@synara/contracts";
+import type { ProviderRuntimeEvent } from "@djl/contracts";
 
 /** Short, factual labels. Never display arguments, typed text, or model reasoning. */
 export function cursorToolActivity(tool: string): string {

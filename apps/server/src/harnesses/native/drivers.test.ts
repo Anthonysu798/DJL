@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ThreadId, ProviderRuntimeEvent } from "@synara/contracts";
+import { ThreadId, ProviderRuntimeEvent } from "@djl/contracts";
 import { Schema } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCodexDriver } from "./codex";

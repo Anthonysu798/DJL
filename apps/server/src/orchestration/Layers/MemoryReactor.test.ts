@@ -1,4 +1,4 @@
-import type { OrchestrationProjectShell, OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationProjectShell, OrchestrationThread } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { recordInputFromCompletedWorkThread } from "./MemoryReactor.ts";

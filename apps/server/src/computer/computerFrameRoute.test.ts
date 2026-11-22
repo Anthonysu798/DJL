@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { COMPUTER_FRAME_RESYNC_MESSAGE } from "@synara/shared/computerFrame";
+import { COMPUTER_FRAME_RESYNC_MESSAGE } from "@djl/shared/computerFrame";
 
 import { decodeResyncRequest, makeComputerFrameSink } from "./computerFrameRoute.ts";
 

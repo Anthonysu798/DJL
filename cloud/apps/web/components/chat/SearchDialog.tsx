@@ -1,5 +1,5 @@
 "use client";
-import type { CloudConversationSearchHit } from "@synara/contracts/cloud";
+import type { CloudConversationSearchHit } from "@djl/contracts/cloud";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

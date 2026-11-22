@@ -12,8 +12,8 @@ import type {
   ModelSelection,
   ProviderSendTurnInput,
   ProviderStartOptions,
-} from "@synara/contracts";
-import { formatGroupItemId } from "@synara/shared/groupChat";
+} from "@djl/contracts";
+import { formatGroupItemId } from "@djl/shared/groupChat";
 import { randomUUID } from "node:crypto";
 
 import type { GroupDriverRuntime } from "../../../groups/Services/GroupDriverBridge";

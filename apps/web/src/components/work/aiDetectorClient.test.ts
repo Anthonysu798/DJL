@@ -1,4 +1,4 @@
-import type { AiDetectorReport } from "@synara/contracts";
+import type { AiDetectorReport } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const transport = vi.hoisted(() => ({

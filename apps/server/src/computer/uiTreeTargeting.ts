@@ -2,7 +2,7 @@
  * Resolving a desktop target — a coordinate or a label — to the point that acts
  * on it.
  *
- * The matching itself is `@synara/shared/uiTreeTargeting`, shared with the iOS
+ * The matching itself is `@djl/shared/uiTreeTargeting`, shared with the iOS
  * family: exact label before substring, ambiguity refused rather than guessed.
  * What lives here is what the desktop specifically needs — a window scope, a
  * role compared verbatim, and an `onScreen` flag the perception source already
@@ -17,13 +17,13 @@ import type {
   ComputerSpaceErrorCode,
   ComputerTarget,
   ComputerUiNode,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   flattenUiTree,
   resolveUiTreeTarget,
   uiTreeActivationPoint,
   type UiTreeTargetSpec,
-} from "@synara/shared/uiTreeTargeting";
+} from "@djl/shared/uiTreeTargeting";
 import { clampTextToLength } from "./utf8Truncation.ts";
 import { retainComputerElementRef } from "./computerElementIdentity.ts";
 

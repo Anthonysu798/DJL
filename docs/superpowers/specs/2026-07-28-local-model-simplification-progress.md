@@ -228,9 +228,9 @@ Two findings worth recording:
 Verification: `typecheck` 10/10 packages, `lint` 0 errors, `test` green
 (server 49, contracts 154, web 245, desktop 37, shared 35, scripts 19).
 
-Pre-existing flake, unrelated: `@synara/remote-gateway` intermittently exits 1 under turbo's parallel
+Pre-existing flake, unrelated: `@djl/remote-gateway` intermittently exits 1 under turbo's parallel
 load while reporting 666 pass / 0 fail. Two direct runs pass with exit 0. It does not depend on
-`@synara/contracts` or any changed package.
+`@djl/contracts` or any changed package.
 
 ### Phase 2 — done
 

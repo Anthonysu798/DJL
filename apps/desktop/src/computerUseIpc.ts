@@ -1,5 +1,5 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
-import { decodeComputerUseRequest, type ComputerUseRequest } from "@synara/contracts";
+import { decodeComputerUseRequest, type ComputerUseRequest } from "@djl/contracts";
 import type { ComputerUseManager } from "./computerUseManager";
 import { COMPUTER_USE_IPC_CHANNELS } from "./computerUseIpcChannels";
 

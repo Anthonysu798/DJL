@@ -11,8 +11,8 @@ import {
   type CodexGeneratedImageArtifact,
   type ProviderRuntimeEvent,
   type ThreadId,
-} from "@synara/contracts";
-import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@synara/shared/localPreviewFiles";
+} from "@djl/contracts";
+import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@djl/shared/localPreviewFiles";
 
 import {
   resolveActiveCodexHomeWritePath,
@@ -69,7 +69,7 @@ export const isSupportedLocalImagePath = isSupportedLocalImagePathShared;
 
 /**
  * Resolves the home directory the codex app-server child process actually
- * writes images under for the current process env. Synara uses its isolated
+ * writes images under for the current process env. DJL uses its isolated
  * Codex overlay, not the user's source `~/.codex` directory.
  */
 export function resolveCodexHomePath(homePath?: string): string {
@@ -84,7 +84,7 @@ export function resolveCodexGeneratedImagesRoot(homePath?: string): string {
 /**
  * All generated-images directories the local-image route should treat as
  * legitimate. Includes both the source `~/.codex/generated_images` and the
- * overlay `<SYNARA_HOME>/codex-home-overlay/generated_images` so we serve
+ * overlay `<DJL_HOME>/codex-home-overlay/generated_images` so we serve
  * images regardless of which home Codex wrote them under.
  */
 export function resolveCodexGeneratedImagesRoots(homePath?: string): readonly string[] {

@@ -3,12 +3,12 @@ import { dirname } from "node:path";
 import {
   parseCuaActionDiagnostics,
   type CuaActionDiagnostics,
-} from "@synara/shared/cuaActionDiagnostics";
+} from "@djl/shared/cuaActionDiagnostics";
 import type {
   ComputerAuditEffect,
   ComputerGetAuditHistoryInput,
   ComputerGetAuditHistoryResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { readComputerAuditHistory } from "./computerAuditHistory.ts";
 import { computerAuditTailLines, readComputerAuditFileTail } from "./computerAuditFile.ts";
 
@@ -51,7 +51,7 @@ const COMPUTER_AUDIT_COMPACT_BYTES = Math.floor(COMPUTER_AUDIT_MAX_BYTES / 2);
  * `error` is anything else that stopped the call — always with `code` naming
  * what refused or failed.
  */
-export type { ComputerAuditEffect } from "@synara/contracts";
+export type { ComputerAuditEffect } from "@djl/contracts";
 
 export interface ComputerAuditEntry {
   /** ISO timestamp; written by the log, not the caller. */

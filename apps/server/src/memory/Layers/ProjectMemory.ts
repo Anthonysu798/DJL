@@ -5,7 +5,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, open, readFile, realpath, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@djl/contracts";
 import chokidar, { type FSWatcher } from "chokidar";
 import { Effect, Layer, Semaphore } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

@@ -4,7 +4,7 @@
 // Exports: EnvironmentAutomationsSection, EnvironmentAutomationPanelItem
 // Depends on: automation shared formatters and Environment panel row primitives.
 
-import type { AutomationDefinition } from "@synara/contracts";
+import type { AutomationDefinition } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 import type { TimestampFormat } from "~/appSettings";
 import { useSelectedLocale } from "~/i18n/intl";

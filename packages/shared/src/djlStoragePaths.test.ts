@@ -8,15 +8,9 @@ describe("resolveDjlHome", () => {
     expect(resolveDjlHome({}, "/Users/tester")).toBe("/Users/tester/.djl");
   });
 
-  it("prefers DJL_HOME while retaining SYNARA_HOME as a compatibility fallback", () => {
-    expect(
-      resolveDjlHome(
-        { DJL_HOME: "/Users/tester/.custom-djl", SYNARA_HOME: "/legacy/synara" },
-        "/Users/tester",
-      ),
-    ).toBe("/Users/tester/.custom-djl");
-    expect(resolveDjlHome({ SYNARA_HOME: "/legacy/synara" }, "/Users/tester")).toBe(
-      "/legacy/synara",
+  it("uses DJL_HOME when it is set", () => {
+    expect(resolveDjlHome({ DJL_HOME: "/Users/tester/.custom-djl" }, "/Users/tester")).toBe(
+      "/Users/tester/.custom-djl",
     );
   });
 });
@@ -69,9 +63,6 @@ it("keeps an explicitly isolated QA profile out of every migration source", () =
     userHomeDir: "/Users/fixture",
     requested: ["/Users/fixture/.djl"],
   };
-  expect(resolveDjlMigrationSources(input)).toEqual([
-    "/Users/fixture/.djl",
-    "/Users/fixture/.synara",
-  ]);
+  expect(resolveDjlMigrationSources(input)).toEqual(["/Users/fixture/.djl"]);
   expect(resolveDjlMigrationSources({ ...input, disabled: true })).toEqual([]);
 });

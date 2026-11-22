@@ -30,7 +30,7 @@ function rateLimitedResponse(retryAfterSeconds?: number): Response {
 }
 
 function makeClaudeHome(creds: Record<string, unknown>) {
-  const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "synara-claude-usage-"));
+  const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "djl-claude-usage-"));
   tempDirs.push(homeDir);
   const claudeDir = nodePath.join(homeDir, ".claude");
   mkdirSync(claudeDir, { recursive: true });
@@ -40,7 +40,7 @@ function makeClaudeHome(creds: Record<string, unknown>) {
 }
 
 function makeClaudeConfigDir(creds: Record<string, unknown>) {
-  const configDir = mkdtempSync(nodePath.join(os.tmpdir(), "synara-claude-config-"));
+  const configDir = mkdtempSync(nodePath.join(os.tmpdir(), "djl-claude-config-"));
   tempDirs.push(configDir);
   const credentialsPath = nodePath.join(configDir, ".credentials.json");
   writeFileSync(credentialsPath, JSON.stringify({ claudeAiOauth: creds }), "utf8");

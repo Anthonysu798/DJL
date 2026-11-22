@@ -1,5 +1,5 @@
 import "../../index.css";
-import type { DesktopRemoteGatewayState } from "@synara/contracts";
+import type { DesktopRemoteGatewayState } from "@djl/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { RemoteSettingsPanel } from "./RemoteSettingsPanel";

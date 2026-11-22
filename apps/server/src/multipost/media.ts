@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { mkdir, stat, copyFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { MultiPostFile, MultiPostScope } from "@synara/contracts";
+import type { MultiPostFile, MultiPostScope } from "@djl/contracts";
 import { scopedAttachmentInputFiles } from "../work/scopedAttachments";
 import { resolveAuthorizedInputPath } from "../work/documentTools";
 export const multiPostMediaTypes: Record<string, string> = {

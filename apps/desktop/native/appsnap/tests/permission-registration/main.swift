@@ -8,8 +8,8 @@ struct AppSnapFailure: Error {
     let message: String
 }
 
-let appURL = URL(fileURLWithPath: "/Applications/Synara Test.app", isDirectory: true)
-let otherURL = URL(fileURLWithPath: "/tmp/Synara Test.app", isDirectory: true)
+let appURL = URL(fileURLWithPath: "/Applications/DJL Test.app", isDirectory: true)
+let otherURL = URL(fileURLWithPath: "/tmp/DJL Test.app", isDirectory: true)
 var checks = 0
 
 func check(_ condition: Bool, _ message: String) {

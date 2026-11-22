@@ -3,7 +3,7 @@
 // Layer: Provider adapter tests
 // Depends on: GrokAdapter helper exports and shared contract ids.
 
-import { TurnId } from "@synara/contracts";
+import { TurnId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

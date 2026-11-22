@@ -9,7 +9,7 @@ import Observation
 import QuartzCore
 
 enum StreamingMarkdownRevealPolicy {
-    // Rate-smoothing constants ported from Synara's smooth-stream hook: small backlogs trickle,
+    // Rate-smoothing constants ported from DJL's smooth-stream hook: small backlogs trickle,
     // large flushes catch up quickly. The frontier is advanced on the display refresh
     // (CADisplayLink) instead of a fixed Task.sleep, so the reveal is phase-locked to vsync.
     static let drainWindowSeconds = 0.16
@@ -44,7 +44,7 @@ enum StreamingMarkdownRevealPolicy {
 }
 
 // Advances a streaming reveal's fractional frontier on the display refresh so the fade is
-// vsync-locked (the native equivalent of Synara's requestAnimationFrame reveal) rather than
+// vsync-locked (the native equivalent of DJL's requestAnimationFrame reveal) rather than
 // stepping off a Task.sleep that drifts in and out of phase with the screen. Only `bucket`
 // (the quantized frontier) is observable, and it is written only when the rendered frontier
 // actually moves - so the row invalidates once per visible change, not once per display tick.

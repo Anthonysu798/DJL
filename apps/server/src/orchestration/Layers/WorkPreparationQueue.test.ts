@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { EventId, MessageId, ProjectId, ThreadId } from "@synara/contracts";
+import { EventId, MessageId, ProjectId, ThreadId } from "@djl/contracts";
 import { Effect, Layer, Option, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

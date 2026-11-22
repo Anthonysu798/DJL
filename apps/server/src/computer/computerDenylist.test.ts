@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ComputerManager } from "./ComputerManager.ts";
 import { FakeComputerBackend } from "./FakeComputerBackend.ts";
-import type { ComputerApp, ComputerWindow } from "@synara/contracts";
+import type { ComputerApp, ComputerWindow } from "@djl/contracts";
 import { computerDenylistMatch } from "./computerDenylist.ts";
 
 const DENIED_WINDOW: ComputerWindow = {

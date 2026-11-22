@@ -1,9 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type {
-  ComputerTurnControl,
-  ProviderApprovalDecision,
-  ProviderKind,
-} from "@synara/contracts";
+import type { ComputerTurnControl, ProviderApprovalDecision, ProviderKind } from "@djl/contracts";
 import { Effect } from "effect";
 import { ComputerManager } from "../computer/ComputerManager";
 import { computerApprovalGate } from "../computer/ComputerApprovalGate";

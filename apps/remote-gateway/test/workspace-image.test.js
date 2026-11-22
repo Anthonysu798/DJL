@@ -451,7 +451,7 @@ test("workspace/readImage allows generated images under CODEX_HOME", async (t) =
 
 test("workspace/readImage allows temporary screenshot images", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "djl-image-"));
-  const imagePath = path.join(tempDir, "emanuele-mobile.png");
+  const imagePath = path.join(tempDir, "studio-mobile.png");
   const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
   fs.writeFileSync(imagePath, bytes);
 
@@ -518,7 +518,7 @@ test(
   { skip: process.platform !== "darwin" },
   async () => {
     const tempDir = fs.mkdtempSync(path.join("/tmp", "djl-image-"));
-    const imagePath = path.join(tempDir, "emanuele-mobile.png");
+    const imagePath = path.join(tempDir, "studio-mobile.png");
     const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
     fs.writeFileSync(imagePath, bytes);
 

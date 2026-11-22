@@ -2,8 +2,8 @@ import type {
   OrchestrationThreadActivity,
   WorkListPreparedDocumentsResult,
   WorkTask,
-} from "@synara/contracts";
-import { DocumentArtifactId, EventId } from "@synara/contracts";
+} from "@djl/contracts";
+import { DocumentArtifactId, EventId } from "@djl/contracts";
 import { readFileSync } from "node:fs";
 import { createInstance } from "i18next";
 import type { ReactNode } from "react";

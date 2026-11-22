@@ -47,17 +47,17 @@ const upstreamAsset = {
   linux: { binary: "cua-driver", suffix: "tar.gz" },
 }[platform];
 const architectures = arch === "universal" ? ["arm64", "x64"] : [arch];
-const artifact = option("--artifact-dir") ?? process.env.SYNARA_CUA_ARTIFACT_DIR;
-const signIdentity = option("--sign-identity") ?? process.env.SYNARA_CUA_SIGN_IDENTITY;
+const artifact = option("--artifact-dir") ?? process.env.DJL_CUA_ARTIFACT_DIR;
+const signIdentity = option("--sign-identity") ?? process.env.DJL_CUA_SIGN_IDENTITY;
 /** Stable signing identifier so macOS TCC remembers the driver across rebuilds. */
-const CUA_DRIVER_SIGN_IDENTIFIER = "com.emanueledipietro.synara.cua.driver";
+const CUA_DRIVER_SIGN_IDENTIFIER = "app.djl.desktop.cua.driver";
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const patchPath = fileURLToPath(
-  new URL("../patches/cua-driver/0001-synara-native.patch", import.meta.url),
+  new URL("../patches/cua-driver/0001-djl-native.patch", import.meta.url),
 );
 const patch = await readFile(patchPath);
 const linuxPatchPath = fileURLToPath(
-  new URL("../patches/cua-driver/0002-synara-linux-browser.patch", import.meta.url),
+  new URL("../patches/cua-driver/0002-djl-linux-browser.patch", import.meta.url),
 );
 if (
   !targets[platform] ||
@@ -88,7 +88,7 @@ if (platform === "linux") {
 }
 // Check the compiler before fetching ~190 MB of upstream source: a missing or
 // mismatched toolchain is the common failure and needs no network to detect.
-if (!(option("--artifact-dir") ?? process.env.SYNARA_CUA_ARTIFACT_DIR) && platform !== "win32") {
+if (!(option("--artifact-dir") ?? process.env.DJL_CUA_ARTIFACT_DIR) && platform !== "win32") {
   let found;
   try {
     found = execFileSync("rustc", ["--version"], { encoding: "utf8" }).trim();
@@ -102,7 +102,7 @@ if (!(option("--artifact-dir") ?? process.env.SYNARA_CUA_ARTIFACT_DIR) && platfo
     process.exit(1);
   }
 }
-const temporary = await mkdtemp(join(tmpdir(), "synara-cua-package-"));
+const temporary = await mkdtemp(join(tmpdir(), "djl-cua-package-"));
 const environment = {
   ...process.env,
   CUA_DRIVER_RS_TELEMETRY_ENABLED: "0",
@@ -325,7 +325,7 @@ try {
     if (platform !== "win32") await chmod(join(destination, upstreamAsset.binary), 0o755);
   } else if (platform === "linux") {
     // A previous upstream install may have left separately loadable SDK
-    // binaries here. They are not used by Synara's direct daemon transport
+    // binaries here. They are not used by DJL's direct daemon transport
     // and must not masquerade as this newly patched runtime.
     for (const obsolete of [
       "libcua_driver_sdk.so",

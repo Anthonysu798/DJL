@@ -1,5 +1,5 @@
 import "../index.css";
-import { mcpMention, SOCIAL_PLUGIN_MENTION } from "@synara/contracts";
+import { mcpMention, SOCIAL_PLUGIN_MENTION } from "@djl/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";

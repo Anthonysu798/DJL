@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { MediaAsset } from "@synara/contracts";
+import type { MediaAsset } from "@djl/contracts";
 export function MediaGrid({
   assets,
   render,

@@ -2,7 +2,7 @@
 // Purpose: Preview and import hosts from ~/.ssh/config.
 // Layer: Settings UI components (servers)
 
-import type { ServerImportPreviewResult } from "@synara/contracts";
+import type { ServerImportPreviewResult } from "@djl/contracts";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 

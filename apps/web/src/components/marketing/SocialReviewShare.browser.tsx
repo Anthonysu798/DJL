@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createCampaign } from "@synara/contracts";
-import type { CloudSocialDraft } from "@synara/contracts/cloud";
+import { createCampaign } from "@djl/contracts";
+import type { CloudSocialDraft } from "@djl/contracts/cloud";
 import { resetSocialAccountCache } from "./accountCache";
 import { SocialReviewShare } from "./SocialReviewShare";
 const actions = vi.hoisted(() => ({ command: vi.fn() }));

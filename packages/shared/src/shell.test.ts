@@ -16,7 +16,7 @@ describe("extractPathFromShellOutput", () => {
   it("extracts the path between capture markers", () => {
     expect(
       extractPathFromShellOutput(
-        "__SYNARA_PATH_START__\n/opt/homebrew/bin:/usr/bin\n__SYNARA_PATH_END__\n",
+        "__DJL_PATH_START__\n/opt/homebrew/bin:/usr/bin\n__DJL_PATH_END__\n",
       ),
     ).toBe("/opt/homebrew/bin:/usr/bin");
   });
@@ -24,7 +24,7 @@ describe("extractPathFromShellOutput", () => {
   it("ignores shell startup noise around the capture markers", () => {
     expect(
       extractPathFromShellOutput(
-        "Welcome to fish\n__SYNARA_PATH_START__\n/opt/homebrew/bin:/usr/bin\n__SYNARA_PATH_END__\nBye\n",
+        "Welcome to fish\n__DJL_PATH_START__\n/opt/homebrew/bin:/usr/bin\n__DJL_PATH_END__\nBye\n",
       ),
     ).toBe("/opt/homebrew/bin:/usr/bin");
   });
@@ -42,7 +42,7 @@ describe("readPathFromLoginShell", () => {
         args: ReadonlyArray<string>,
         options: { encoding: "utf8"; timeout: number; env?: NodeJS.ProcessEnv },
       ) => string
-    >(() => "__SYNARA_ENV_PATH_START__\n/a:/b\n__SYNARA_ENV_PATH_END__\n");
+    >(() => "__DJL_ENV_PATH_START__\n/a:/b\n__DJL_ENV_PATH_END__\n");
 
     expect(readPathFromLoginShell("/opt/homebrew/bin/fish", execFile)).toBe("/a:/b");
     expect(execFile).toHaveBeenCalledTimes(1);
@@ -64,8 +64,8 @@ describe("readPathFromLoginShell", () => {
     expect(args).toHaveLength(2);
     expect(args?.[0]).toBe("-ilc");
     expect(args?.[1]).toContain("printenv PATH || true");
-    expect(args?.[1]).toContain("__SYNARA_ENV_PATH_START__");
-    expect(args?.[1]).toContain("__SYNARA_ENV_PATH_END__");
+    expect(args?.[1]).toContain("__DJL_ENV_PATH_START__");
+    expect(args?.[1]).toContain("__DJL_ENV_PATH_END__");
     expect(options).toMatchObject({ encoding: "utf8", timeout: 5000 });
     expect(options.env?.POWERLEVEL9K_DISABLE_GITSTATUS).toBe("true");
   });
@@ -113,12 +113,12 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__SYNARA_ENV_PATH_START__",
+        "__DJL_ENV_PATH_START__",
         "/a:/b",
-        "__SYNARA_ENV_PATH_END__",
-        "__SYNARA_ENV_SSH_AUTH_SOCK_START__",
+        "__DJL_ENV_PATH_END__",
+        "__DJL_ENV_SSH_AUTH_SOCK_START__",
         "/tmp/secretive.sock",
-        "__SYNARA_ENV_SSH_AUTH_SOCK_END__",
+        "__DJL_ENV_SSH_AUTH_SOCK_END__",
       ].join("\n"),
     );
 
@@ -138,11 +138,11 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__SYNARA_ENV_PATH_START__",
+        "__DJL_ENV_PATH_START__",
         "/a:/b",
-        "__SYNARA_ENV_PATH_END__",
-        "__SYNARA_ENV_SSH_AUTH_SOCK_START__",
-        "__SYNARA_ENV_SSH_AUTH_SOCK_END__",
+        "__DJL_ENV_PATH_END__",
+        "__DJL_ENV_SSH_AUTH_SOCK_START__",
+        "__DJL_ENV_SSH_AUTH_SOCK_END__",
       ].join("\n"),
     );
 
@@ -159,9 +159,7 @@ describe("readEnvironmentFromLoginShell", () => {
         options: { encoding: "utf8"; timeout: number },
       ) => string
     >(() =>
-      ["__SYNARA_ENV_CUSTOM_VAR_START__", "  padded value  ", "__SYNARA_ENV_CUSTOM_VAR_END__"].join(
-        "\n",
-      ),
+      ["__DJL_ENV_CUSTOM_VAR_START__", "  padded value  ", "__DJL_ENV_CUSTOM_VAR_END__"].join("\n"),
     );
 
     expect(readEnvironmentFromLoginShell("/bin/zsh", ["CUSTOM_VAR"], execFile)).toEqual({

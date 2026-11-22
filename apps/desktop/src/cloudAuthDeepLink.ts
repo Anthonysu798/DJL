@@ -7,7 +7,7 @@
  * The state is matched against the one the local server issued, single use,
  * before the code is redeemed there.
  */
-import { DJL_NATIVE_OPEN_URI } from "@synara/contracts/cloud";
+import { DJL_NATIVE_OPEN_URI } from "@djl/contracts/cloud";
 import type { CloudAuthCallback } from "./cloudAuthIpcChannels";
 export {
   CLOUD_AUTH_CALLBACK_CHANNEL,

@@ -11,9 +11,9 @@ import {
   type OrchestrationThread,
   type ServerConfig,
   type ServerProviderStatus,
-} from "@synara/contracts";
-import { isThreadDetailEventForThread } from "@synara/shared/orchestrationThreadEvents";
-import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
+} from "@djl/contracts";
+import { isThreadDetailEventForThread } from "@djl/shared/orchestrationThreadEvents";
+import { defaultTerminalTitleForCliKind } from "@djl/shared/terminalThreads";
 import {
   Outlet,
   DefaultGlobalNotFound,

@@ -7,7 +7,7 @@ import {
   approveCampaign,
   defaultImageRecipe,
   type Campaign,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { saveDocument, readDocument } from "./store";
 import { saveImageRecipe, saveVideoTimeline } from "./revisions";
 it.layer(SqlitePersistenceMemory)("media revision approvals", (it) => {

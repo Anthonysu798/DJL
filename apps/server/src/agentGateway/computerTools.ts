@@ -1,4 +1,4 @@
-import { parseCuaActionDiagnostics } from "@synara/shared/cuaActionDiagnostics";
+import { parseCuaActionDiagnostics } from "@djl/shared/cuaActionDiagnostics";
 import { ComputerProgressGuard, type ComputerProgressAction } from "./computerProgressGuard.ts";
 import { boundComputerPastePayload, readComputerPastePayload } from "./computerPasteInput.ts";
 import { beginComputerTurnCall } from "../computer/computerTurnTiming.ts";
@@ -38,7 +38,7 @@ import {
   type ComputerScreenshot,
   type ComputerTarget,
   type ComputerWindow,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import {
   actionableElements,
@@ -386,7 +386,7 @@ export interface AgentGatewayComputerToolsOptions {
   ) => Promise<boolean>;
   /**
    * Called when a tool call failed because the OS is withholding a privacy
-   * grant Synara needs. The gateway turns it into one actionable chat card;
+   * grant DJL needs. The gateway turns it into one actionable chat card;
    * the tool result is returned unchanged either way, so this must not fail.
    */
   readonly onSetupRequired?: (input: {
@@ -1650,7 +1650,7 @@ export function makeAgentGatewayComputerTools(
       throw new ToolInputError("Screenshot identity differs from the requested window.");
     }
     windowId ??= screenshot.windowId;
-    // SYNARA_CUA_CAPTURE_REUSE: when the fresh capture is byte-for-byte the
+    // DJL_CUA_CAPTURE_REUSE: when the fresh capture is byte-for-byte the
     // latest delivered frame with the same coordinate frame, name that frame
     // instead of shipping identical pixels again. The capture itself always
     // ran — byte identity is the only proof nothing moved — so this never

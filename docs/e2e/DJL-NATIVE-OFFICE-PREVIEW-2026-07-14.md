@@ -3,8 +3,8 @@
 Date: 2026-07-14  
 Platform: macOS (Apple Silicon)  
 App: isolated Electron development build (`DJL Native Preview E2E`)  
-State: `.synara/djl-work-dev`  
-Electron profile: `.synara/djl-native-preview-electron`  
+State: `.djl/djl-work-dev`  
+Electron profile: `.djl/djl-native-preview-electron`  
 Renderer: LibreOffice 26.2.4.2 through the development binary override  
 OpenCode: bundled 1.17.18 runtime
 

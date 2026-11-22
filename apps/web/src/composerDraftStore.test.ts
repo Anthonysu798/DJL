@@ -5,7 +5,7 @@ import {
   ThreadId,
   type ModelSelection,
   type ProviderModelOptions,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {

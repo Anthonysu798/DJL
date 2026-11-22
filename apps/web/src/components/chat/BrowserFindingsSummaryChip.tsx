@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { BrowserFindingDraft, BrowserFindingPromptEntry } from "@synara/contracts";
+import type { BrowserFindingDraft, BrowserFindingPromptEntry } from "@djl/contracts";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";

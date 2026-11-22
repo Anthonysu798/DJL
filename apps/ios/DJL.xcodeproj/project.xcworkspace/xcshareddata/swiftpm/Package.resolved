@@ -20,15 +20,6 @@
       }
     },
     {
-      "identity" : "remodextextkit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Emanuele-web04/RemodexTextKit.git",
-      "state" : {
-        "revision" : "57c580f0c7cb8cb4fc2e73b5a841f85303235979",
-        "version" : "0.4.2"
-      }
-    },
-    {
       "identity" : "runestone",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/simonbs/Runestone",

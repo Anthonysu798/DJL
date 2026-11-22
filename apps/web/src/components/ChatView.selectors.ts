@@ -7,7 +7,7 @@ import {
   ThreadId,
   type ThreadId as ThreadIdType,
   type TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { AppState } from "../store";
 import { collectByIds, getThreadFromState } from "../threadDerivation";

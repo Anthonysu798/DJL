@@ -30,9 +30,9 @@ describe("electronUpdaterSecurity", () => {
   });
 
   it("parses distinguished names the same way as builder-util-runtime", () => {
-    const parsed = parseDistinguishedName('CN=Synara, O="Acme, Inc.", OU=Tools\\2C Desktop');
+    const parsed = parseDistinguishedName('CN=DJL, O="Acme, Inc.", OU=Tools\\2C Desktop');
 
-    expect(parsed.get("CN")).toBe("Synara");
+    expect(parsed.get("CN")).toBe("DJL");
     expect(parsed.get("O")).toBe("Acme, Inc.");
     expect(parsed.get("OU")).toBe("Tools, Desktop");
   });
@@ -43,9 +43,9 @@ describe("electronUpdaterSecurity", () => {
         null,
         JSON.stringify({
           Status: 0,
-          Path: "C:\\Users\\test\\AppData\\Local\\Temp\\SynaraSetup.exe",
+          Path: "C:\\Users\\test\\AppData\\Local\\Temp\\DjlSetup.exe",
           SignerCertificate: {
-            Subject: "CN=Synara, O=Acme Tools",
+            Subject: "CN=DJL, O=Acme Tools",
           },
         }),
         "",
@@ -53,8 +53,8 @@ describe("electronUpdaterSecurity", () => {
     });
 
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=Synara, O=Acme Tools"],
-      "C:\\Users\\test\\AppData\\Local\\Temp\\SynaraSetup.exe",
+      ["CN=DJL, O=Acme Tools"],
+      "C:\\Users\\test\\AppData\\Local\\Temp\\DjlSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -79,8 +79,8 @@ describe("electronUpdaterSecurity", () => {
   it("keeps the upstream CN-only fallback warning", async () => {
     const logger = { info: vi.fn(), warn: vi.fn() };
     const result = await verifyWindowsUpdateCodeSignature(
-      ["Synara"],
-      "C:\\Temp\\SynaraSetup.exe",
+      ["DJL"],
+      "C:\\Temp\\DjlSetup.exe",
       logger,
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -89,8 +89,8 @@ describe("electronUpdaterSecurity", () => {
             null,
             JSON.stringify({
               Status: 0,
-              Path: "C:\\Temp\\SynaraSetup.exe",
-              SignerCertificate: { Subject: "CN=Synara, O=Acme Tools" },
+              Path: "C:\\Temp\\DjlSetup.exe",
+              SignerCertificate: { Subject: "CN=DJL, O=Acme Tools" },
             }),
             "",
           );
@@ -100,14 +100,14 @@ describe("electronUpdaterSecurity", () => {
 
     expect(result).toBeNull();
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Signature validated using only CN Synara"),
+      expect.stringContaining("Signature validated using only CN DJL"),
     );
   });
 
   it("returns a mismatch summary for an unexpected publisher", async () => {
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=Synara, O=Acme Tools"],
-      "C:\\Temp\\SynaraSetup.exe",
+      ["CN=DJL, O=Acme Tools"],
+      "C:\\Temp\\DjlSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -116,7 +116,7 @@ describe("electronUpdaterSecurity", () => {
             null,
             JSON.stringify({
               Status: 0,
-              Path: "C:\\Temp\\SynaraSetup.exe",
+              Path: "C:\\Temp\\DjlSetup.exe",
               SignerCertificate: { Subject: "CN=Someone Else, O=Acme Tools" },
             }),
             "",
@@ -125,7 +125,7 @@ describe("electronUpdaterSecurity", () => {
       },
     );
 
-    expect(result).toContain("publisherNames: CN=Synara, O=Acme Tools");
+    expect(result).toContain("publisherNames: CN=DJL, O=Acme Tools");
     expect(result).toContain("Someone Else");
   });
 
@@ -135,7 +135,7 @@ describe("electronUpdaterSecurity", () => {
     const updaterModule = { BaseUpdater: FakeBaseUpdater };
     const prototype = FakeBaseUpdater.prototype as {
       spawnSyncLog?: (cmd: string, args?: string[]) => string;
-      __synaraSpawnSyncLogPatched?: boolean;
+      __djlSpawnSyncLogPatched?: boolean;
     };
 
     hardenElectronUpdater(updaterModule, {}, "darwin");
@@ -148,7 +148,7 @@ describe("electronUpdaterSecurity", () => {
     const output = prototype.spawnSyncLog?.call(instance, process.execPath, ["--version"]);
 
     expect(output).toMatch(/^v\d+\.\d+\.\d+/);
-    expect(prototype.__synaraSpawnSyncLogPatched).toBe(true);
+    expect(prototype.__djlSpawnSyncLogPatched).toBe(true);
   });
 
   it("replaces the NSIS signature verifier on Windows", async () => {

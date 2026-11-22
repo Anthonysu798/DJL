@@ -4,7 +4,7 @@ import type {
   HarnessToolId,
   HarnessToolsResult,
   ServerSettings,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 

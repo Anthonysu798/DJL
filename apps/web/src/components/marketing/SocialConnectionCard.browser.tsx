@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SocialConnectionCard } from "./SocialConnectionCard";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 const actions = vi.hoisted(() => ({
   state: vi.fn(),
   connect: vi.fn(),

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ComputerSpaceInventory, ComputerWindow } from "@synara/contracts";
+import type { ComputerSpaceInventory, ComputerWindow } from "@djl/contracts";
 
 import { ComputerManager } from "./ComputerManager.ts";
 import { FakeComputerBackend } from "./FakeComputerBackend.ts";

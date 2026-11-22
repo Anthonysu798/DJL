@@ -30,7 +30,7 @@ vi.mock("../nativeApi", () => ({
   readNativeApi: () => undefined,
 }));
 
-const SIDEBAR_UI_STATE_STORAGE_KEY = "synara:sidebar-ui:v1";
+const SIDEBAR_UI_STATE_STORAGE_KEY = "djl:sidebar-ui:v1";
 
 describe("RestoreOrCreateChatRoute", () => {
   beforeEach(() => {

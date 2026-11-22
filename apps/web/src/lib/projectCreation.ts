@@ -3,8 +3,8 @@
 // Layer: Web orchestration helper
 // Exports: createOrRecoverProjectFromPath
 
-import { type NativeApi, type OrchestrationShellSnapshot, type ProjectId } from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
+import { type NativeApi, type OrchestrationShellSnapshot, type ProjectId } from "@djl/contracts";
+import { getDefaultModel } from "@djl/shared/model";
 import { translateRendererCopy } from "../i18n";
 
 import {

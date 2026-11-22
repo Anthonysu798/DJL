@@ -4,7 +4,7 @@ import { createPublicKey } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
-import type { DocumentRenderEvent, DocumentRendererStatus } from "@synara/contracts";
+import type { DocumentRenderEvent, DocumentRendererStatus } from "@djl/contracts";
 import { Effect, Layer, PubSub, Stream } from "effect";
 
 import { ServerConfig } from "../../config";

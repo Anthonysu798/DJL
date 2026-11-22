@@ -22,7 +22,7 @@ describe("Cua build cache identity", () => {
         CARGO_TARGET_DIR: "/tmp/random",
         CSC_KEY_PASSWORD: "secret",
         APPLE_API_KEY: "secret",
-        SYNARA_CUA_SIGN_IDENTITY: "secret",
+        DJL_CUA_SIGN_IDENTITY: "secret",
       }),
     ).toEqual({});
   });

@@ -17,7 +17,7 @@ import type {
   CloudNativeAuthorizeRequest,
   CloudNativeTokenInput,
   CloudNativeTokenResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { DjlAuth } from "../auth/auth.ts";
 import type { Principal } from "../auth/guard.ts";

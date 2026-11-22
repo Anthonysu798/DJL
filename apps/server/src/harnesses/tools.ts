@@ -5,8 +5,8 @@ import type {
   HarnessToolId,
   HarnessMaintainToolInput,
   ServerSettings,
-} from "@synara/contracts";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@djl/contracts";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import { probe } from "./accounts";
 import { inspectGrokTool, maintainGrokTool } from "./grokTools";
 import { inspectCursorTool, maintainCursorTool } from "./cursorTools";

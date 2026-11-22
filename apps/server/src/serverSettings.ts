@@ -13,9 +13,9 @@ import {
   ServerSettings,
   ServerSettingsError,
   type ServerSettingsPatch,
-} from "@synara/contracts";
-import { deepMerge, type DeepPartial } from "@synara/shared/Struct";
-import { applyServerSettingsPatch } from "@synara/shared/serverSettings";
+} from "@djl/contracts";
+import { deepMerge, type DeepPartial } from "@djl/shared/Struct";
+import { applyServerSettingsPatch } from "@djl/shared/serverSettings";
 import {
   Cause,
   Deferred,
@@ -49,7 +49,7 @@ export interface ServerSettingsShape {
 export class ServerSettingsService extends ServiceMap.Service<
   ServerSettingsService,
   ServerSettingsShape
->()("synara/serverSettings/ServerSettingsService") {
+>()("djl/serverSettings/ServerSettingsService") {
   static readonly layerTest = (overrides: DeepPartial<ServerSettings> = {}) =>
     Layer.effect(
       ServerSettingsService,

@@ -228,7 +228,7 @@ function wrapPowerShellCommand(command: string, args: ReadonlyArray<string>): Cu
   };
 }
 
-// Resolves persisted/default Cursor binary settings into the executable Synara should spawn.
+// Resolves persisted/default Cursor binary settings into the executable DJL should spawn.
 export function resolveCursorAgentBinaryPath(binaryPath: string | null | undefined): string {
   const configuredBinaryPath = binaryPath?.trim();
   return !configuredBinaryPath || configuredBinaryPath === LEGACY_CURSOR_AGENT_BINARY

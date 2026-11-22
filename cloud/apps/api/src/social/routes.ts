@@ -4,7 +4,7 @@ import {
   CloudSocialOAuthStartInput,
   CloudSocialOAuthStatusQuery,
   CloudSocialDisconnectInput,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { requirePrincipal, type PrincipalResolver } from "../auth/guard.ts";
 import { decodeBody, decodeQuery, idParam } from "../http/decode.ts";
 import { attempt, handle } from "../http/handle.ts";

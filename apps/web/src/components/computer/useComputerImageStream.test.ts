@@ -1,5 +1,5 @@
-import type { ComputerId } from "@synara/contracts";
-import type { ComputerFrame } from "@synara/shared/computerFrame";
+import type { ComputerId } from "@djl/contracts";
+import type { ComputerFrame } from "@djl/shared/computerFrame";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mergeComputerImageStreamStatus, useComputerImageStream } from "./useComputerImageStream";

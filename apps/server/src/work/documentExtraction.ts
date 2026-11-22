@@ -13,7 +13,7 @@ import {
   type DocumentBlock,
   type ProjectId,
   type ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { OcrRecognitionResult } from "./ocrSidecar.ts";
 

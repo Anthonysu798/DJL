@@ -14,7 +14,7 @@ import {
   type ThreadId,
   type WorkGetDocumentRenderResult,
   type WorkRequestDocumentRenderResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import JSZip from "jszip";
 
 import { validateOfficeArchive } from "./documentExtraction";

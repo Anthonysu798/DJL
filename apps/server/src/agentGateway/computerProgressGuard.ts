@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { ComputerAuditEffect } from "@synara/contracts";
+import type { ComputerAuditEffect } from "@djl/contracts";
 
 export interface ComputerProgressScope {
   readonly threadId: string;

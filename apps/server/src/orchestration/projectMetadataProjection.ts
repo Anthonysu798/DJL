@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@synara/contracts";
+import type { OrchestrationEvent } from "@djl/contracts";
 import { Effect, Option } from "effect";
 
 import type { ProjectionRepositoryError } from "../persistence/Errors.ts";

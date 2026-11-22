@@ -6,7 +6,7 @@ import type {
   GroupMemberId,
   GroupReply,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

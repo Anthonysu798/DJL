@@ -7,7 +7,7 @@
  *
  * @module ProviderAdapterRegistry
  */
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -37,6 +37,6 @@ export interface ProviderAdapterRegistryShape {
 export class ProviderAdapterRegistry extends ServiceMap.Service<
   ProviderAdapterRegistry,
   ProviderAdapterRegistryShape
->()("synara/provider/Services/ProviderAdapterRegistry") {}
+>()("djl/provider/Services/ProviderAdapterRegistry") {}
 
 // Dummy comment for workflow testing.

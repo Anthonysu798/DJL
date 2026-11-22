@@ -2,7 +2,7 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { translateRendererCopy } from "../i18n";
 
 export interface ProviderSendAvailability {

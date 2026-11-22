@@ -15,7 +15,7 @@
 
 ## Why this matters
 
-Codex automations are not just scheduled prompts; they produce findings that go to Triage, or archive/no-op when there is nothing to report. Synara currently shows definition lists and previous runs, but it lacks a result model, unread state, no-findings behavior, and run-level actions. Without this, automations become noisy background threads rather than a manageable inbox.
+Codex automations are not just scheduled prompts; they produce findings that go to Triage, or archive/no-op when there is nothing to report. DJL currently shows definition lists and previous runs, but it lacks a result model, unread state, no-findings behavior, and run-level actions. Without this, automations become noisy background threads rather than a manageable inbox.
 
 ## Current state
 

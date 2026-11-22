@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudMessagePart, CloudRunError } from "@synara/contracts/cloud";
+import type { CloudMessagePart, CloudRunError } from "@djl/contracts/cloud";
 import { imageBytes, saveGeneratedImage } from "../agent/imageTools.ts";
 import { textOf } from "../chat/ChatService.ts";
 import type { GatewayService, RequestFacts } from "../gateway/GatewayService.ts";

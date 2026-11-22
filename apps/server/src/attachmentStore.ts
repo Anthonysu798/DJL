@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { lstatSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 
-import type { ChatAttachment } from "@synara/contracts";
+import type { ChatAttachment } from "@djl/contracts";
 
 import {
   normalizeAttachmentRelativePath,

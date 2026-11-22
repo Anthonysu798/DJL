@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import type {
   CloudSocialDraft,
   CloudSocialReviewLink,
   CloudSocialReviewLinkCreated,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";

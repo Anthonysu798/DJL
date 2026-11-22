@@ -3,8 +3,8 @@ import type {
   BrowserAnnotationRect,
   BrowserFindingDraft,
   BrowserFindingPromptEntry,
-} from "@synara/contracts";
-import { BrowserFindingsPromptPayload } from "@synara/contracts";
+} from "@djl/contracts";
+import { BrowserFindingsPromptPayload } from "@djl/contracts";
 import { Schema } from "effect";
 
 export const BROWSER_FINDINGS_BLOCK_VERSION = 1 as const;

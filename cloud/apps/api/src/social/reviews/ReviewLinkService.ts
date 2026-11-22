@@ -4,7 +4,7 @@ import { schema, type DjlDatabase } from "@djl/db";
 import type {
   CloudSocialReviewLinkInput,
   CloudSocialReviewFeedbackInput,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import type { BlobStore } from "../../sync/BlobStore.ts";
 import { ApiError } from "../../http/errors.ts";
 

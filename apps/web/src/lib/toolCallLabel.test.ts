@@ -235,13 +235,13 @@ describe("deriveReadableCommandDisplay", () => {
   it("removes env and timeout wrappers from inline command summaries", () => {
     expect(
       deriveReadableCommandDisplay(
-        "env -u SYNARA_AUTH_TOKEN SYNARA_PORT_OFFSET=3158 timeout 180s bun run dev",
+        "env -u DJL_AUTH_TOKEN DJL_PORT_OFFSET=3158 timeout 180s bun run dev",
         true,
       ),
     ).toEqual({
       verb: "Running",
       target: "bun run dev",
-      fullCommand: "env -u SYNARA_AUTH_TOKEN SYNARA_PORT_OFFSET=3158 timeout 180s bun run dev",
+      fullCommand: "env -u DJL_AUTH_TOKEN DJL_PORT_OFFSET=3158 timeout 180s bun run dev",
     });
   });
 

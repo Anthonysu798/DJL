@@ -30,7 +30,7 @@ import {
   type ThreadTokenUsageSnapshot,
   TurnId,
   type UserInputQuestion,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect, FileSystem, Layer, Queue, Stream } from "effect";
 
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
@@ -177,7 +177,7 @@ function normalizePiThinkingLevel(value: string | null | undefined): ThinkingLev
 }
 
 // Loads the Pi SDK only when the Pi provider is actually used. The SDK brings in
-// a native clipboard module, so importing it during Synara startup can bloat the
+// a native clipboard module, so importing it during DJL startup can bloat the
 // desktop backend before any Pi session exists.
 async function loadPiCodingAgentModule(): Promise<PiCodingAgentModule> {
   piCodingAgentModulePromise ??= import("@earendil-works/pi-coding-agent");
@@ -1033,7 +1033,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       });
     };
 
-    // Bridges the common Pi extension UI primitives onto Synara's existing
+    // Bridges the common Pi extension UI primitives onto DJL's existing
     // pending user-input flow; terminal/TUI-only APIs remain no-op by design.
     const makePiExtensionUIContext = (context: PiSessionContext): ExtensionUIContext => {
       const unsupportedWarnings = new Set<string>();

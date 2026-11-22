@@ -8,7 +8,7 @@ import {
   type CommerceReconciliationReport,
   type CommerceReconciliationResponse,
   type CommerceReconciliationRowStatus,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { admin, AdminApiError, getToken } from "@/lib/api";
 
 const button = "rounded-lg border border-border bg-card px-4 py-2 text-sm disabled:opacity-40";

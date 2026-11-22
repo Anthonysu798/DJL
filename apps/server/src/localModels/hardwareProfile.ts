@@ -22,7 +22,7 @@ import type {
   LocalHardwareProfile,
   LocalModelGpu,
   LocalModelHardwareProfile,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { queryWindowsDxgiGpuInventory, type WindowsDxgiAdapter } from "./windowsDxgiQuery";
 import { queryWindowsVulkanDeviceInventory, type WindowsVulkanDevice } from "./windowsVulkanQuery";

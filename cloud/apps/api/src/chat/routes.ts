@@ -7,7 +7,7 @@ import {
   CloudRegenerateInput,
   CloudSendMessageInput,
   CloudUpdateConversationInput,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import { hashIp } from "../audit/AuditLog.ts";
 import { requirePrincipal, type PrincipalResolver } from "../auth/guard.ts";

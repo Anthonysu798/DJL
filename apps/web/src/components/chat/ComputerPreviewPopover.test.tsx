@@ -11,7 +11,7 @@
 // than seeded for the same reason: zustand serves its initial state to
 // `useSyncExternalStore`'s server snapshot.
 
-import type { ThreadComputerState, ThreadId } from "@synara/contracts";
+import type { ThreadComputerState, ThreadId } from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";

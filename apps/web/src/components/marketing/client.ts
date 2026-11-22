@@ -1,4 +1,4 @@
-import type { Campaign, MediaAsset, BrandProfile, ImageRecipe } from "@synara/contracts";
+import type { Campaign, MediaAsset, BrandProfile, ImageRecipe } from "@djl/contracts";
 import { resolveWsHttpUrl } from "~/lib/wsHttpUrl";
 export interface Stored<T> {
   value: T;

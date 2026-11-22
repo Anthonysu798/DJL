@@ -4,7 +4,7 @@ import {
   type ComputerActivitySemanticSummary,
   type NativeApi,
   type OrchestrationShellSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushComposerDraftPersistence, useComposerDraftStore } from "../composerDraftStore";
 import { useStore } from "../store";

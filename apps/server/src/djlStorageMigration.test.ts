@@ -12,7 +12,7 @@ async function makeRoots() {
   tempDirs.push(root);
   return {
     canonicalBaseDir: join(root, ".djl"),
-    legacyBaseDir: join(root, ".synara"),
+    legacyBaseDir: join(root, "previous-djl"),
   };
 }
 

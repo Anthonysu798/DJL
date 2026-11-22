@@ -13,7 +13,7 @@ import {
   IconScissors,
   IconUser,
 } from "@tabler/icons-react";
-import type { Campaign, MediaAsset } from "@synara/contracts";
+import type { Campaign, MediaAsset } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";

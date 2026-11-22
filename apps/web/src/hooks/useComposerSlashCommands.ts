@@ -7,9 +7,9 @@ import {
   type ProviderModelOptions,
   type RuntimeMode,
   type ThreadId,
-} from "@synara/contracts";
-import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
-import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
+} from "@djl/contracts";
+import { buildPromptThreadTitleFallback } from "@djl/shared/chatThreads";
+import { deriveAssociatedWorktreeMetadata } from "@djl/shared/threadWorkspace";
 import { useCallback, useEffect, useState } from "react";
 import { newCommandId, newMessageId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
@@ -637,7 +637,7 @@ export function useComposerSlashCommands(input: {
     const params = new URLSearchParams({ threadId: threadId });
     void downloadUrlAsBlob({
       url: resolveWsHttpUrl(`/api/thread-export?${params.toString()}`),
-      filename: `synara-thread-${threadId}.zip`,
+      filename: `djl-thread-${threadId}.zip`,
     }).catch((error: unknown) => {
       toastManager.add({
         type: "error",

@@ -7,7 +7,7 @@ import { Effect } from "effect";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { executeMarketingTool } from "./chatTools";
 import { readDocument } from "./store";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 const scope = {
   threadId: "thread-one",
   authorizedRoot: "/tmp",

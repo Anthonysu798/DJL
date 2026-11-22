@@ -4,7 +4,7 @@ import type {
   LocalModelRecommendation,
   LocalModelRuntimeStatus,
   LocalModelsSnapshot,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { createInstance } from "i18next";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";

@@ -1,4 +1,4 @@
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 import { useCallback } from "react";
 
 import { ensureHomeChatProject } from "../lib/chatProjects";

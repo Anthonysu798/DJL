@@ -3,7 +3,7 @@
  * inline message instead of a server rejection. The server re-checks size and
  * magic bytes; this is only the friendly first pass.
  */
-import { CLOUD_FILE_MAX_BYTES } from "@synara/contracts/cloud";
+import { CLOUD_FILE_MAX_BYTES } from "@djl/contracts/cloud";
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
 

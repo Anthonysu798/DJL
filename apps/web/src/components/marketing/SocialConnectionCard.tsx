@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import { SocialPlatformIcon } from "./SocialPlatformIcon";
 import { Button } from "~/components/ui/button";
 import { openExternalLink } from "~/lib/linkChips";

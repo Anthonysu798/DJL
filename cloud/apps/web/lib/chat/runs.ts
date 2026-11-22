@@ -3,7 +3,7 @@
  * (network, tab sleep, reload) the client reconnects with `after=<last seq>`
  * and skips anything it has already applied.
  */
-import type { CloudMessagePart, CloudRunEvent, CloudRunStatus } from "@synara/contracts/cloud";
+import type { CloudMessagePart, CloudRunEvent, CloudRunStatus } from "@djl/contracts/cloud";
 
 import { ChatApiError, type ChatClient } from "./client";
 

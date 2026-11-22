@@ -1,4 +1,4 @@
-import { buildTrustedSessionResolveTranscript } from "@synara/remote-protocol";
+import { buildTrustedSessionResolveTranscript } from "@djl/remote-protocol";
 import { describe, expect, it } from "vitest";
 
 import { type TrustedResolveRequest, verifyTrustedResolveRequest } from "./registryAuth";

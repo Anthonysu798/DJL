@@ -1,4 +1,4 @@
-import type { OrchestrationMessage } from "@synara/contracts";
+import type { OrchestrationMessage } from "@djl/contracts";
 
 /**
  * Whether one computer task may move a window in front of the user.

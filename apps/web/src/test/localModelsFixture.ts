@@ -3,7 +3,7 @@
 // Layer: Test support
 // Exports: hardware profile builder matching the server's budget rules.
 
-import type { LocalHardwareAcceleration, LocalHardwareProfile } from "@synara/contracts";
+import type { LocalHardwareAcceleration, LocalHardwareProfile } from "@djl/contracts";
 
 const BUDGET_FRACTION: Record<LocalHardwareAcceleration, number> = {
   apple_unified: 0.6,

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CuaComputerBackend } from "./CuaComputerBackend.ts";
 import { withComputerTask } from "./computerTaskContext.ts";
-import type { cuaRequest } from "@synara/shared/cuaDriverProtocol";
+import type { cuaRequest } from "@djl/shared/cuaDriverProtocol";
 
 const BOUNDS = { x: 0, y: 0, width: 200, height: 100 };
 

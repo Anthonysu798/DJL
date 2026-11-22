@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import sharp from "sharp";
-import type { MultiPostAccount, MultiPostDraft } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostDraft } from "@djl/contracts";
 import { layerMemory } from "../persistence/NodeSqliteClient";
 import { saveDocument, readDocument } from "../marketing/store";
 import { importLegacyCampaign } from "./legacy";

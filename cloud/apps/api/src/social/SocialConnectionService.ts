@@ -5,7 +5,7 @@ import type {
   CloudSocialAccountsResponse,
   CloudSocialOAuthStartInput,
   CloudSocialOAuthStatus,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import type { Principal } from "../auth/guard.ts";
 import { isMember } from "../auth/guard.ts";
 import { ApiError } from "../http/errors.ts";

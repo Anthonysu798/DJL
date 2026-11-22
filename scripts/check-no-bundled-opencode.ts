@@ -67,7 +67,6 @@ export function assertNoBundledOpenCodeSource(root: string): void {
       "output",
       "tmp",
       ".djl*",
-      ".synara*",
       ".opencode",
       ".claude",
       ".codex",

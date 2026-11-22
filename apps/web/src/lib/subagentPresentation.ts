@@ -6,8 +6,8 @@ import {
   buildSubagentIdentityDirectory,
   extractSubagentIdentityHints as extractParsedSubagentIdentityHints,
   resolveSubagentIdentityFromDirectory,
-} from "@synara/shared/subagents";
-import { formatModelDisplayName } from "@synara/shared/model";
+} from "@djl/shared/subagents";
+import { formatModelDisplayName } from "@djl/shared/model";
 import { translateRendererCopy } from "../i18n";
 
 const SUBAGENT_ACCENT_PALETTE = [

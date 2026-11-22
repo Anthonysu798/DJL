@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { MultiPostDraft, MultiPostState } from "@synara/contracts";
+import type { MultiPostDraft, MultiPostState } from "@djl/contracts";
 const adapters = (["dynamic", "article", "video", "podcast"] as const).map((kind) => ({
   id: kind === "dynamic" ? "DYNAMIC_X" : `${kind.toUpperCase()}_X`,
   platformKey: "x",

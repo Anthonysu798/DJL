@@ -7,11 +7,8 @@ import * as ChildProcess from "node:child_process";
 import * as Crypto from "node:crypto";
 
 import { app, ipcMain, net } from "electron";
-import type {
-  ServerVoiceTranscriptionInput,
-  ServerVoiceTranscriptionResult,
-} from "@synara/contracts";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import type { ServerVoiceTranscriptionInput, ServerVoiceTranscriptionResult } from "@djl/contracts";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 
 export const SERVER_TRANSCRIBE_VOICE_CHANNEL = "desktop:server-transcribe-voice";
 
@@ -184,7 +181,7 @@ async function resolveDesktopVoiceAuth(
         method: "initialize",
         params: {
           clientInfo: {
-            name: "synara-desktop",
+            name: "djl-desktop",
             title: "DJL Desktop",
             version: app.getVersion(),
           },
@@ -207,7 +204,7 @@ async function requestDesktopVoiceTranscription(input: {
   readonly token: string;
   readonly transcriptionUrl: string;
 }): Promise<{ statusCode: number; body: string }> {
-  const boundary = `SynaraVoice-${Crypto.randomUUID()}`;
+  const boundary = `DjlVoice-${Crypto.randomUUID()}`;
   const preamble = Buffer.from(
     `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="voice.wav"\r\nContent-Type: ${input.mimeType}\r\n\r\n`,
     "utf8",

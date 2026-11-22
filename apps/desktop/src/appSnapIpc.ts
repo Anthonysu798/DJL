@@ -11,7 +11,7 @@ import type {
   DesktopAppSnapPermissionKind,
   DesktopAppSnapSettingsPane,
   DesktopAppSnapState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { DesktopAppSnapManager } from "./appSnapManager";
 import { APPSNAP_IPC_CHANNELS } from "./ipcChannels";

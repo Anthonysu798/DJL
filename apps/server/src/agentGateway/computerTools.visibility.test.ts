@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@djl/contracts";
 
 import { ComputerManager } from "../computer/ComputerManager.ts";
 import { FakeComputerBackend } from "../computer/FakeComputerBackend.ts";

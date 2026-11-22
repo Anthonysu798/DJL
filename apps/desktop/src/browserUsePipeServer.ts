@@ -8,7 +8,7 @@ import * as Net from "node:net";
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-import type { BrowserExecuteCdpInput, ThreadBrowserState, ThreadId } from "@synara/contracts";
+import type { BrowserExecuteCdpInput, ThreadBrowserState, ThreadId } from "@djl/contracts";
 
 import type { DesktopBrowserManager } from "./browserManager";
 
@@ -19,8 +19,8 @@ const BROWSER_USE_PANEL_READY_TIMEOUT_MS = 2_000;
 const BROWSER_USE_PANEL_READY_POLL_MS = 50;
 const BROWSER_USE_UNIX_PIPE_DIR = "/tmp/codex-browser-use";
 const BROWSER_USE_WINDOWS_PIPE_PREFIX = String.raw`\\.\pipe\codex-browser-use-`;
-const BROWSER_USE_PIPE_NAME_PREFIX = "synara-iab";
-export const SYNARA_BROWSER_USE_PIPE_ENV = "SYNARA_BROWSER_USE_PIPE_PATH";
+const BROWSER_USE_PIPE_NAME_PREFIX = "djl-iab";
+export const DJL_BROWSER_USE_PIPE_ENV = "DJL_BROWSER_USE_PIPE_PATH";
 
 type BrowserUseRpcId = string | number;
 
@@ -62,13 +62,13 @@ export function resolveConfiguredBrowserUsePipePath(
   env: NodeJS.ProcessEnv = process.env,
   platform = process.platform,
 ): string {
-  const configured = env[SYNARA_BROWSER_USE_PIPE_ENV]?.trim();
+  const configured = env[DJL_BROWSER_USE_PIPE_ENV]?.trim();
   return configured && isDiscoverableBrowserUsePipePath(configured, platform)
     ? configured
     : resolveDefaultBrowserUsePipePath(platform);
 }
 
-export const SYNARA_BROWSER_USE_PIPE_PATH = resolveConfiguredBrowserUsePipePath();
+export const DJL_BROWSER_USE_PIPE_PATH = resolveConfiguredBrowserUsePipePath();
 
 function asObject(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -165,10 +165,10 @@ export class BrowserUsePipeServer {
 
   constructor(
     private readonly browserManager: DesktopBrowserManager,
-    options: BrowserUsePipeServerOptions | string = SYNARA_BROWSER_USE_PIPE_PATH,
+    options: BrowserUsePipeServerOptions | string = DJL_BROWSER_USE_PIPE_PATH,
   ) {
     this.pipePath =
-      typeof options === "string" ? options : (options.pipePath ?? SYNARA_BROWSER_USE_PIPE_PATH);
+      typeof options === "string" ? options : (options.pipePath ?? DJL_BROWSER_USE_PIPE_PATH);
     this.requestOpenPanel = typeof options === "string" ? undefined : options.requestOpenPanel;
     this.server = Net.createServer((socket) => this.handleSocketConnection(socket));
   }

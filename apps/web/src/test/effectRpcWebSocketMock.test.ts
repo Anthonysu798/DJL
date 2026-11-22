@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { COMPUTER_WS_METHODS, ORCHESTRATION_WS_METHODS, WS_METHODS } from "@synara/contracts";
+import { COMPUTER_WS_METHODS, ORCHESTRATION_WS_METHODS, WS_METHODS } from "@djl/contracts";
 import { isEffectRpcSubscriptionMethod } from "./effectRpcWebSocketMock";
 
 it("keeps computer event subscriptions open alongside shell and server streams", () => {

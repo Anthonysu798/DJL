@@ -12,7 +12,7 @@ import {
   type ThreadId,
   type ToolLifecycleItemType,
   type TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { AcpPermissionRequest, AcpPlanUpdate, AcpToolCallState } from "./AcpRuntimeModel.ts";
 

@@ -19,17 +19,10 @@ describe("Codex home paths", () => {
     assert.ok(resolveBaseCodexHomePath({}).endsWith(`${path.sep}.codex`));
   });
 
-  it("anchors the overlay under DJL_HOME with legacy fallback", () => {
+  it("anchors the overlay under DJL_HOME", () => {
     assert.equal(
-      resolveDjlCodexHomeOverlayPath(
-        { DJL_HOME: "/djl/runtime", SYNARA_HOME: "/synara/runtime" },
-        "/users/me/.codex",
-      ),
+      resolveDjlCodexHomeOverlayPath({ DJL_HOME: "/djl/runtime" }, "/users/me/.codex"),
       path.join("/djl/runtime", "codex-home-overlay"),
-    );
-    assert.equal(
-      resolveDjlCodexHomeOverlayPath({ SYNARA_HOME: "/legacy/runtime" }, "/users/me/.codex"),
-      path.join("/legacy/runtime", "codex-home-overlay"),
     );
   });
 
@@ -43,20 +36,20 @@ describe("Codex home paths", () => {
   it("uses the isolated overlay as Codex's write home", () => {
     assert.equal(
       resolveActiveCodexHomeWritePath({
-        env: { SYNARA_HOME: "/synara/runtime" },
+        env: { DJL_HOME: "/djl/runtime" },
         homePath: "/users/me/.codex",
       }),
-      path.join("/synara/runtime", "codex-home-overlay"),
+      path.join("/djl/runtime", "codex-home-overlay"),
     );
   });
 
   it("allowlists source and overlay homes when distinct", () => {
     assert.deepEqual(
       resolveCodexHomeAllowlistCandidates({
-        env: { SYNARA_HOME: "/synara/runtime" },
+        env: { DJL_HOME: "/djl/runtime" },
         homePath: "/users/me/.codex",
       }),
-      ["/users/me/.codex", path.join("/synara/runtime", "codex-home-overlay")],
+      ["/users/me/.codex", path.join("/djl/runtime", "codex-home-overlay")],
     );
   });
 });

@@ -2,8 +2,8 @@
 export const COMPUTER_QA_BUILD = {
   marker: "cua-qa",
   displayName: "DJL Computer QA",
-  bundleId: "com.djl.qa.computer-use.synara",
-  profileDirectory: "DJL Computer QA Synara r40",
+  bundleId: "com.djl.qa.computer-use",
+  profileDirectory: "DJL Computer QA r40",
 } as const;
 export function isComputerQaBuild(value: unknown): boolean {
   return (

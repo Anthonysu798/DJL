@@ -1,6 +1,6 @@
 import { createCloudClient } from "../cloud/api";
 import { readCloudSession } from "../cloud/session";
-import type { BrandProfile, Campaign } from "@synara/contracts";
+import type { BrandProfile, Campaign } from "@djl/contracts";
 export interface MarketingModel {
   id: string;
   displayName: string;

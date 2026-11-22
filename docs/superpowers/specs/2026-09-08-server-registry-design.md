@@ -26,7 +26,7 @@ Success criteria for this step:
 
 | Decision | Choice |
 | --- | --- |
-| Placement | Settings section `servers`, in the `synara` nav group after `local-models`. |
+| Placement | Settings section `servers`, in the `djl` nav group after `local-models`. |
 | Connection layer | The system OpenSSH client, spawned by the server process. No `ssh2`. |
 | Auth methods | ssh-agent / config default, key file path, imported key, password. |
 | Stats refresh | On panel open (if stale) and on explicit refresh. No background polling. |

@@ -34,7 +34,7 @@ import type {
   CommerceDesktopBridge,
   CommerceImageSearchResult,
   CommerceReferralSummary,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import {
   cad,
   centerCropImage,

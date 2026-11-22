@@ -8,7 +8,7 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { Effect, FileSystem, Layer, Path } from "effect";
@@ -64,7 +64,7 @@ const exists = (filePath: string) =>
     return fileInfo._tag === "Success";
   });
 
-const BaseTestLayer = makeProjectionPipelinePrefixedTestLayer("synara-projection-pipeline-test-");
+const BaseTestLayer = makeProjectionPipelinePrefixedTestLayer("djl-projection-pipeline-test-");
 
 it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
   it.effect("bootstraps all projection states and writes projection rows", () =>
@@ -418,7 +418,7 @@ it.effect("fast-forwards lagging hot projector cursors before restart replay", (
     Effect.provide(
       Layer.provideMerge(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "synara-projection-pipeline-fast-forward-",
+          prefix: "djl-projection-pipeline-fast-forward-",
         }),
         NodeServices.layer,
       ),
@@ -426,7 +426,7 @@ it.effect("fast-forwards lagging hot projector cursors before restart replay", (
   ),
 );
 
-it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-base-")))(
+it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-base-")))(
   "OrchestrationProjectionPipeline",
   (it) => {
     it.effect("stores message attachment references without mutating payloads", () =>
@@ -493,7 +493,7 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-base-")))(
 );
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-pipeline-approvals-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-pipeline-approvals-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("refreshes stored thread approval summary after approval-response-requested", () =>
     Effect.gen(function* () {
@@ -911,84 +911,85 @@ it.layer(
   );
 });
 
-it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-attachments-safe-")),
-)("OrchestrationProjectionPipeline", (it) => {
-  it.effect("preserves mixed image attachment metadata as-is", () =>
-    Effect.gen(function* () {
-      const projectionPipeline = yield* OrchestrationProjectionPipeline;
-      const eventStore = yield* OrchestrationEventStore;
-      const sql = yield* SqlClient.SqlClient;
-      const now = new Date().toISOString();
+it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-attachments-safe-")))(
+  "OrchestrationProjectionPipeline",
+  (it) => {
+    it.effect("preserves mixed image attachment metadata as-is", () =>
+      Effect.gen(function* () {
+        const projectionPipeline = yield* OrchestrationProjectionPipeline;
+        const eventStore = yield* OrchestrationEventStore;
+        const sql = yield* SqlClient.SqlClient;
+        const now = new Date().toISOString();
 
-      yield* eventStore.append({
-        type: "thread.message-sent",
-        eventId: EventId.makeUnsafe("evt-attachments-safe"),
-        aggregateKind: "thread",
-        aggregateId: ThreadId.makeUnsafe("thread-attachments-safe"),
-        occurredAt: now,
-        commandId: CommandId.makeUnsafe("cmd-attachments-safe"),
-        causationEventId: null,
-        correlationId: CommandId.makeUnsafe("cmd-attachments-safe"),
-        metadata: {},
-        payload: {
-          threadId: ThreadId.makeUnsafe("thread-attachments-safe"),
-          messageId: MessageId.makeUnsafe("message-attachments-safe"),
-          role: "user",
-          text: "Inspect this",
-          attachments: [
-            {
-              type: "image",
-              id: "thread-attachments-safe-att-1",
-              name: "untrusted.exe",
-              mimeType: "image/x-unknown",
-              sizeBytes: 5,
-            },
-            {
-              type: "image",
-              id: "thread-attachments-safe-att-2",
-              name: "not-image.png",
-              mimeType: "image/png",
-              sizeBytes: 5,
-            },
-          ],
-          turnId: null,
-          streaming: false,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
+        yield* eventStore.append({
+          type: "thread.message-sent",
+          eventId: EventId.makeUnsafe("evt-attachments-safe"),
+          aggregateKind: "thread",
+          aggregateId: ThreadId.makeUnsafe("thread-attachments-safe"),
+          occurredAt: now,
+          commandId: CommandId.makeUnsafe("cmd-attachments-safe"),
+          causationEventId: null,
+          correlationId: CommandId.makeUnsafe("cmd-attachments-safe"),
+          metadata: {},
+          payload: {
+            threadId: ThreadId.makeUnsafe("thread-attachments-safe"),
+            messageId: MessageId.makeUnsafe("message-attachments-safe"),
+            role: "user",
+            text: "Inspect this",
+            attachments: [
+              {
+                type: "image",
+                id: "thread-attachments-safe-att-1",
+                name: "untrusted.exe",
+                mimeType: "image/x-unknown",
+                sizeBytes: 5,
+              },
+              {
+                type: "image",
+                id: "thread-attachments-safe-att-2",
+                name: "not-image.png",
+                mimeType: "image/png",
+                sizeBytes: 5,
+              },
+            ],
+            turnId: null,
+            streaming: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
 
-      yield* projectionPipeline.bootstrap;
+        yield* projectionPipeline.bootstrap;
 
-      const rows = yield* sql<{
-        readonly attachmentsJson: string | null;
-      }>`
+        const rows = yield* sql<{
+          readonly attachmentsJson: string | null;
+        }>`
             SELECT
               attachments_json AS "attachmentsJson"
             FROM projection_thread_messages
             WHERE message_id = 'message-attachments-safe'
           `;
-      assert.equal(rows.length, 1);
-      assert.deepEqual(JSON.parse(rows[0]?.attachmentsJson ?? "null"), [
-        {
-          type: "image",
-          id: "thread-attachments-safe-att-1",
-          name: "untrusted.exe",
-          mimeType: "image/x-unknown",
-          sizeBytes: 5,
-        },
-        {
-          type: "image",
-          id: "thread-attachments-safe-att-2",
-          name: "not-image.png",
-          mimeType: "image/png",
-          sizeBytes: 5,
-        },
-      ]);
-    }),
-  );
-});
+        assert.equal(rows.length, 1);
+        assert.deepEqual(JSON.parse(rows[0]?.attachmentsJson ?? "null"), [
+          {
+            type: "image",
+            id: "thread-attachments-safe-att-1",
+            name: "untrusted.exe",
+            mimeType: "image/x-unknown",
+            sizeBytes: 5,
+          },
+          {
+            type: "image",
+            id: "thread-attachments-safe-att-2",
+            name: "not-image.png",
+            mimeType: "image/png",
+            sizeBytes: 5,
+          },
+        ]);
+      }),
+    );
+  },
+);
 
 it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
   it.effect(
@@ -1119,7 +1120,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
 });
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-attachments-overwrite-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-attachments-overwrite-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("overwrites stored attachment references when a message updates attachments", () =>
     Effect.gen(function* () {
@@ -1262,7 +1263,7 @@ it.layer(
 });
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-attachments-rollback-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-attachments-rollback-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("does not persist attachment files when projector transaction rolls back", () =>
     Effect.gen(function* () {
@@ -1385,7 +1386,7 @@ it.layer(
 });
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-attachments-overwrite-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-attachments-overwrite-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("removes unreferenced attachment files when a thread is reverted", () =>
     Effect.gen(function* () {
@@ -1610,7 +1611,7 @@ it.layer(
 });
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-attachments-revert-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-attachments-revert-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("removes thread attachment directory when thread is deleted", () =>
     Effect.gen(function* () {
@@ -1739,7 +1740,7 @@ it.layer(
 });
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-attachments-delete-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-attachments-delete-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("ignores unsafe thread ids for attachment cleanup paths", () =>
     Effect.gen(function* () {
@@ -2525,7 +2526,7 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
     Effect.provide(
       Layer.provideMerge(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "synara-projection-pipeline-restart-",
+          prefix: "djl-projection-pipeline-restart-",
         }),
         NodeServices.layer,
       ),
@@ -2542,7 +2543,7 @@ const engineLayer = it.layer(
     Layer.provideMerge(SqlitePersistenceMemory),
     Layer.provideMerge(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "synara-projection-pipeline-engine-dispatch-",
+        prefix: "djl-projection-pipeline-engine-dispatch-",
       }),
     ),
     Layer.provideMerge(NodeServices.layer),
@@ -2757,7 +2758,7 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
 });
 
 it.layer(
-  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-projection-pipeline-turn-finish-")),
+  Layer.fresh(makeProjectionPipelinePrefixedTestLayer("djl-projection-pipeline-turn-finish-")),
 )("OrchestrationProjectionPipeline", (it) => {
   it.effect("clears a pending turn when provider validation fails before a turn id exists", () =>
     Effect.gen(function* () {

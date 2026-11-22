@@ -1,7 +1,7 @@
 // FILE: remoteGatewayRuntime.ts
 // Purpose: Validate relay configuration and reduce sanitized gateway child messages.
 
-import type { DesktopRemoteGatewayState } from "@synara/contracts";
+import type { DesktopRemoteGatewayState } from "@djl/contracts";
 
 export interface RemoteGatewayPackageMetadata {
   readonly djlRemoteRelayUrl?: unknown;

@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { schema } from "@djl/db";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { CommerceFavoritesResponse } from "@synara/contracts/cloud";
+import type { CommerceFavoritesResponse } from "@djl/contracts/cloud";
 
 import { loadApiEnv } from "../config/env.ts";
 import { startApi, type ApiRuntime } from "../server.ts";

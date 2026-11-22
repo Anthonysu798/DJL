@@ -88,11 +88,11 @@ import {
   type ProjectDiscoveredScriptTarget,
   type ResolvedKeybindingsConfig,
   type ServerLocalServerProcess,
-} from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
-import { pluralize } from "@synara/shared/text";
-import { localServerAddressLabel, localServerMatchesRun } from "@synara/shared/localServers";
-import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+} from "@djl/contracts";
+import { getDefaultModel } from "@djl/shared/model";
+import { pluralize } from "@djl/shared/text";
+import { localServerAddressLabel, localServerMatchesRun } from "@djl/shared/localServers";
+import { resolveThreadWorkspaceCwd } from "@djl/shared/threadEnvironment";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
@@ -411,7 +411,7 @@ const EMPTY_THREAD_JUMP_LABELS = new Map<ThreadId, string>();
 const EMPTY_SHORTCUT_PARTS: readonly string[] = [];
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS = 6;
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS = 50;
-const DESKTOP_UPDATE_READY_PROMPT_SESSION_KEY = "synara:desktop-update-ready-prompt:v1";
+const DESKTOP_UPDATE_READY_PROMPT_SESSION_KEY = "djl:desktop-update-ready-prompt:v1";
 const SIDEBAR_VIEW_LABEL_KEYS: Record<SidebarView, string> = {
   threads: "sidebar.views.projects",
   studio: "sidebar.views.work",
@@ -509,8 +509,8 @@ function findTrackedProjectRunServer(
 }
 
 type DebugFeatureFlagsWindow = Window & {
-  synaraShowFeatureFlags?: () => void;
-  synaraHideFeatureFlags?: () => void;
+  djlShowFeatureFlags?: () => void;
+  djlHideFeatureFlags?: () => void;
 };
 
 function readDebugFeatureFlagsMenuVisibility(): boolean {
@@ -1623,18 +1623,18 @@ export default function Sidebar() {
       updateVisibility();
     };
 
-    debugWindow.synaraShowFeatureFlags = showFeatureFlags;
-    debugWindow.synaraHideFeatureFlags = hideFeatureFlags;
+    debugWindow.djlShowFeatureFlags = showFeatureFlags;
+    debugWindow.djlHideFeatureFlags = hideFeatureFlags;
     window.addEventListener("storage", updateVisibility);
     updateVisibility();
 
     return () => {
       window.removeEventListener("storage", updateVisibility);
-      if (debugWindow.synaraShowFeatureFlags === showFeatureFlags) {
-        delete debugWindow.synaraShowFeatureFlags;
+      if (debugWindow.djlShowFeatureFlags === showFeatureFlags) {
+        delete debugWindow.djlShowFeatureFlags;
       }
-      if (debugWindow.synaraHideFeatureFlags === hideFeatureFlags) {
-        delete debugWindow.synaraHideFeatureFlags;
+      if (debugWindow.djlHideFeatureFlags === hideFeatureFlags) {
+        delete debugWindow.djlHideFeatureFlags;
       }
     };
   }, []);
@@ -4562,7 +4562,7 @@ export default function Sidebar() {
   }, [discoveredScriptTargetsByProjectId, standardProjects]);
   projectRunCommandByProjectIdRef.current = projectRunCommandByProjectId;
   // Keep manual server attribution alive without repeating the expensive
-  // port/process scan while no Synara-owned run needs near-real-time status.
+  // port/process scan while no DJL-owned run needs near-real-time status.
   const hasActiveProjectRun = useMemo(
     () => Object.keys(projectRunsByProjectId).length > 0,
     [projectRunsByProjectId],
@@ -4576,7 +4576,7 @@ export default function Sidebar() {
   const projectRunServerByProjectId = useMemo(() => {
     const servers = projectRunLocalServersQuery.data?.servers ?? [];
     const serverByProjectId = new Map<ProjectId, ServerLocalServerProcess>();
-    // 1. Authoritative: Synara-tracked runs matched by pid/ppid.
+    // 1. Authoritative: DJL-tracked runs matched by pid/ppid.
     for (const run of Object.values(projectRunsByProjectId)) {
       const server = findTrackedProjectRunServer(run, servers);
       if (server) {
@@ -4584,7 +4584,7 @@ export default function Sidebar() {
       }
     }
     // 2. Fallback: attribute remaining servers to a project by cwd, so dev
-    //    servers started outside Synara still light up the running indicator.
+    //    servers started outside DJL still light up the running indicator.
     for (const server of servers) {
       if (!server.cwd) {
         continue;
@@ -5867,8 +5867,8 @@ export default function Sidebar() {
       : sidebarHoverRevealHideClassName("project-header");
     const projectRun = projectRunsByProjectId[project.id] ?? null;
     const projectRunServer = projectRunServerByProjectId.get(project.id) ?? null;
-    // A project reads as "running" when Synara tracks a run for it or when a
-    // local server (possibly started outside Synara) is attributed by cwd.
+    // A project reads as "running" when DJL tracks a run for it or when a
+    // local server (possibly started outside DJL) is attributed by cwd.
     const isProjectRunning = projectRun !== null || projectRunServer !== null;
     const collapsedProjectStatus = project.expanded ? null : projectStatus;
     // The "open dev server" affordance now lives in the project context menu, so

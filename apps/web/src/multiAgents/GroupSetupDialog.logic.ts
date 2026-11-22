@@ -7,7 +7,7 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type GroupMemberProvider,
   type HarnessAccount,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 /** `ready` is null when the account check failed and readiness is unknown. */
 export type MemberChoice = { provider: GroupMemberProvider; ready: boolean | null };

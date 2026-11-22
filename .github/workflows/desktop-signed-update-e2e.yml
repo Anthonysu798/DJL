@@ -139,7 +139,7 @@ jobs:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           DJL_DESKTOP_UPDATE_BASE_URL: https://djl-china-releases.oss-accelerate.aliyuncs.com/stable
           DJL_REMOTE_RELAY_URL: ${{ vars.DJL_REMOTE_RELAY_URL }}
-          SYNARA_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
+          DJL_DESKTOP_UPDATE_REPOSITORY: Anthonysu798/DJL
         run: |
           set -euo pipefail
           node scripts/update-release-package-versions.ts "$BASELINE_VERSION"

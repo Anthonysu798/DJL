@@ -1,4 +1,4 @@
-import type { CloudConversation } from "@synara/contracts/cloud";
+import type { CloudConversation } from "@djl/contracts/cloud";
 import { describe, expect, it } from "vitest";
 
 import { groupConversations } from "./grouping";

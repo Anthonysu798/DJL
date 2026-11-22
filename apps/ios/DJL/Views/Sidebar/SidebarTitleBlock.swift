@@ -26,7 +26,7 @@ struct SidebarTitleBlock: View {
 #if DEBUG
 #Preview("Connected") {
     SidebarTitleBlock(
-        computerName: "MacBook-Pro-di-Emanuele.local",
+        computerName: "MacBook-Pro-Studio.local",
         isConnected: true
     )
     .padding()
@@ -34,7 +34,7 @@ struct SidebarTitleBlock: View {
 
 #Preview("Disconnected") {
     SidebarTitleBlock(
-        computerName: "MacBook-Pro-di-Emanuele.local",
+        computerName: "MacBook-Pro-Studio.local",
         isConnected: false
     )
     .padding()

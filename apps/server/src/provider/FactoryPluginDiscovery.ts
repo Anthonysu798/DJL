@@ -1,5 +1,5 @@
 // FILE: FactoryPluginDiscovery.ts
-// Purpose: Reads Factory's local plugin marketplaces into Synara's provider discovery contracts.
+// Purpose: Reads Factory's local plugin marketplaces into DJL's provider discovery contracts.
 // Layer: Provider filesystem discovery
 // Exports: listFactoryPlugins and readFactoryPlugin.
 
@@ -12,7 +12,7 @@ import type {
   ProviderPluginMarketplaceDescriptor,
   ProviderPluginMarketplaceLoadError,
   ProviderReadPluginResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { collectSkillsFromRoots } from "./skillsCatalog.ts";
 

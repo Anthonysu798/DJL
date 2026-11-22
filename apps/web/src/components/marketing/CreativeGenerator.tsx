@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { IconSparkles } from "@tabler/icons-react";
-import type { Campaign, CampaignPatch } from "@synara/contracts";
-import { platforms } from "@synara/contracts";
+import type { Campaign, CampaignPatch } from "@djl/contracts";
+import { platforms } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { loadModels, generateCopy, type Stored } from "./client";
 export function CreativeGenerator({

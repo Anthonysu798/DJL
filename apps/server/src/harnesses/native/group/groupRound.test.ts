@@ -8,7 +8,7 @@ import {
   type GroupMember,
   type GroupMemberState,
   type GroupReply,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { ChildReply, ChildSession } from "./childSession";

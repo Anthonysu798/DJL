@@ -1,4 +1,4 @@
-import { GroupId, GroupMemberId, ProjectId, ThreadId, type Group } from "@synara/contracts";
+import { GroupId, GroupMemberId, ProjectId, ThreadId, type Group } from "@djl/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { batchDrafts, useGroupStore } from "./groupStore";

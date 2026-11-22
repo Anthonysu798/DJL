@@ -1,4 +1,4 @@
-import { ProviderInteractionMode, RuntimeMode } from "@synara/contracts";
+import { ProviderInteractionMode, RuntimeMode } from "@djl/contracts";
 import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { EllipsisIcon, ListTodoIcon } from "~/lib/icons";

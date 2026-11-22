@@ -2,7 +2,7 @@
 // Purpose: Restores the latest DJL Work task or creates a managed task when the Work route opens.
 // Layer: Web UI
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 import { getStartupSeed, startupNavigationIsCurrent } from "../../startup/session";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";

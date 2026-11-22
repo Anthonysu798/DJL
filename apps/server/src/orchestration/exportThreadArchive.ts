@@ -1,5 +1,5 @@
 // FILE: exportThreadArchive.ts
-// Purpose: Build a ZIP archive that exports a single Synara thread so a user
+// Purpose: Build a ZIP archive that exports a single DJL thread so a user
 //          can download the conversation as a portable, compressed package —
 //          mirroring the `/export` affordance of agent CLIs.
 // Layer: Orchestration utility (plain async module; HTTP composes it through
@@ -10,12 +10,12 @@
 //          string or uncompressed buffer — peak memory is bounded by the
 //          compressed bytes of one entry.
 // Exports: threadArchiveChunks, buildThreadArchiveBytes, threadArchiveFileName.
-// The export-eligibility guard lives in @synara/shared/threadExport so the
+// The export-eligibility guard lives in @djl/shared/threadExport so the
 // web composer and the HTTP route share one predicate.
 
 import zlib from "node:zlib";
 
-import type { OrchestrationMessage, OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationMessage, OrchestrationThread } from "@djl/contracts";
 
 export interface ThreadArchiveEntry {
   readonly name: string;
@@ -253,5 +253,5 @@ export function threadArchiveFileName(input: {
   readonly isoTimestamp: string;
 }): string {
   const dateBucket = input.isoTimestamp.slice(0, 10).replaceAll("-", "");
-  return `synara-thread-${slugifyTitle(input.title)}-${dateBucket}.zip`;
+  return `djl-thread-${slugifyTitle(input.title)}-${dateBucket}.zip`;
 }

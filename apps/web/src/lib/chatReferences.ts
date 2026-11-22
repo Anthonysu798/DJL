@@ -3,7 +3,7 @@
 //          thread's composer draft so panels outside ChatView can talk to the chatbox.
 // Layer: Web UI utility
 
-import { CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS, type ThreadId } from "@synara/contracts";
+import { CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS, type ThreadId } from "@djl/contracts";
 import type { TFunction } from "i18next";
 
 import { useComposerDraftStore } from "../composerDraftStore";
@@ -29,7 +29,7 @@ export interface ChatFileReference {
 
 // DataTransfer type used when dragging a file row toward the composer. The
 // payload is the already-formatted reference text (mention token).
-export const CHAT_FILE_REFERENCE_DRAG_TYPE = "application/x-synara-file-reference";
+export const CHAT_FILE_REFERENCE_DRAG_TYPE = "application/x-djl-file-reference";
 
 export function formatLineRangeLabel(
   startLine: number,

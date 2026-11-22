@@ -1,4 +1,4 @@
-import type { CloudUsageWindow } from "@synara/contracts/cloud";
+import type { CloudUsageWindow } from "@djl/contracts/cloud";
 
 import type { Locale } from "@/lib/i18n";
 

@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ComputerUseHistoryEvent } from "@synara/contracts";
+import type { ComputerUseHistoryEvent } from "@djl/contracts";
 import { ComputerUseHistory } from "./computerUseHistory";
 
 const directories: string[] = [];

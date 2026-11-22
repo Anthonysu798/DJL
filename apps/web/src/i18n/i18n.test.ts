@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AppLocale } from "@synara/contracts";
+import type { AppLocale } from "@djl/contracts";
 import {
   applyDesktopLocalePreference,
   changeRendererLocale,

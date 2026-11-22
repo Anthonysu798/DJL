@@ -4,7 +4,7 @@ import {
   SOURCE_APP_LOCALE,
   type AppLocale,
   type AppLocalePreference,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import reviewStatus from "./localeReviewStatus.json";
 
 export type LocaleReviewStatus = "approved" | "draft";

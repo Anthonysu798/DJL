@@ -6,7 +6,7 @@ import {
   OrchestrationProposedPlan,
   OrchestrationThreadActivity,
   TurnId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import { deriveThreadSummaryMetadata } from "./threadSummary";

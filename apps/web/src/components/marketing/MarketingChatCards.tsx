@@ -21,7 +21,7 @@ import {
   IconUpload,
   IconUser,
 } from "@tabler/icons-react";
-import { platforms, type Campaign, type MediaAsset } from "@synara/contracts";
+import { platforms, type Campaign, type MediaAsset } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { findCuaArtifact } from "./find-cua-artifact.mjs";
 
 const key = `cua-v1-${"a".repeat(64)}`;
-const repo = { owner: "owner", repo: "synara" };
+const repo = { owner: "owner", repo: "djl" };
 const artifact = () => ({
   id: 42,
   name: key,

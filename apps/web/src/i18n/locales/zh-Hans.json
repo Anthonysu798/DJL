@@ -3285,23 +3285,23 @@
     "openSettings": "打开 {{value0}} 设置",
     "ghostCursor": "幽灵光标",
     "granted": "已授予",
-    "letsSynaraDetectEscapeAndPauseWhenYouTake": "让 DJL 在电脑任务期间检测 Escape，并在你接管时暂停。此设置不会启用 AppSnap 快捷键。",
+    "letsDjlDetectEscapeAndPauseWhenYouTake": "让 DJL 在电脑任务期间检测 Escape，并在你接管时暂停。此设置不会启用 AppSnap 快捷键。",
     "showGuide": "显示指南",
     "isReadyFor": "{{value0}} 已就绪，可用于 {{value1}}。",
     "hideGuide": "隐藏指南",
     "recheckPermissions": "重新检查权限",
     "screenRecording": "屏幕录制",
-    "letsSynaraCaptureAnImageOfTheFrontmostWindow": "允许 DJL 捕捉前台窗口图片；只会在你按下组合键的瞬间捕捉该单一窗口。",
+    "letsDjlCaptureAnImageOfTheFrontmostWindow": "允许 DJL 捕捉前台窗口图片；只会在你按下组合键的瞬间捕捉该单一窗口。",
     "windowListing": "窗口列表",
     "theAgentCanActOnTheDesktopButCannot2": "智能体可以操作桌面，但无法看到桌面，因此截图失败。请在“系统设置 › 隐私与安全性 › 屏幕录制”中启用 DJL，然后点击“设置”以重新连接。",
     "fill": "填充",
     "gettingStarted": "开始使用",
     "theServerCouldNotBeReached": "无法连接到服务器。",
     "theAgentDrivesItsOwnSeatSoYourCursor": "智能体在独立的操作环境中工作，不会影响你的光标和焦点。",
-    "letsSynaraNoticeTheDoubleOptionChordWhileAnother": "允许 DJL 在其他应用占用键盘时识别双 Option 组合键；不会记录你输入的任何内容。",
+    "letsDjlNoticeTheDoubleOptionChordWhileAnother": "允许 DJL 在其他应用占用键盘时识别双 Option 组合键；不会记录你输入的任何内容。",
     "screenCapture2": "屏幕捕获",
     "permissionCheckFailed": "权限检查失败。",
-    "letsSynaraCaptureWindowsAndTheDesktopSoThe": "允许 DJL 捕获窗口和桌面，让智能体看到其正在操作的内容。",
+    "letsDjlCaptureWindowsAndTheDesktopSoThe": "允许 DJL 捕获窗口和桌面，让智能体看到其正在操作的内容。",
     "useGrantNextToAPermissionToWalkThrough": "点击权限旁的“授予”以完成设置。",
     "large": "大",
     "computerEffectBlocked": "已阻止",
@@ -3325,7 +3325,7 @@
     "permissionGuideEnableInstalledApp": "如果列表中已显示当前 {{app}} 副本，请将其打开。否则，请将应用从浮动指南拖入列表，或使用 + 选择当前安装的副本，然后将其打开。",
     "showHistory": "显示历史记录",
     "densityOptions_compact": "紧凑",
-    "letsSynaraMoveThePointerClickAndTypeOn": "允许 DJL 代您移动指针、点击和输入。仅在您授权计算机任务后才会进行操作。",
+    "letsDjlMoveThePointerClickAndTypeOn": "允许 DJL 代您移动指针、点击和输入。仅在您授权计算机任务后才会进行操作。",
     "couldNotLoadRecentActionsRefreshToTryAgain": "无法加载最近的操作。请刷新重试。",
     "cursorColors": "光标颜色",
     "rechecking": "正在重新检查…",
@@ -4314,9 +4314,9 @@
           "details": "发行工作流会验证固定的更新通道，避免干净发行进入兼容通道，修复更新源元数据，并在检测到 app.asar 交换时加固桌面启动。",
           "title": "桌面更新拥有更强防护"
         },
-        "synara-identity": {
+        "djl-identity": {
           "description": "从桌面安装和命令行到软件包、设置、诊断与发行产物，应用现在处处使用统一身份。",
-          "details": "桌面套件现为 com.emanueledipietro.synara，CLI 为 @synara/cli，命令为 synara；所有第一方运行时标识均使用 DJL 命名空间。0.4.2 过渡版本会在来源变更期间保留渲染器状态。",
+          "details": "桌面套件现为 app.djl.desktop，CLI 为 @djl/cli，命令为 djl；所有第一方运行时标识均使用 DJL 命名空间。0.4.2 过渡版本会在来源变更期间保留渲染器状态。",
           "title": "全面统一为 DJL"
         }
       }

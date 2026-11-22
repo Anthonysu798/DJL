@@ -2,7 +2,7 @@ import { computerToolInstructions } from "../../agentGateway/computerGuidance";
 import { computerApprovalGate } from "../../computer/ComputerApprovalGate";
 import { beginComputerUseTurn } from "../../work/computerTurnLifecycle";
 import { executeComputerTool } from "../../work/computerTools";
-import { resolveBuiltInPluginReferences } from "@synara/contracts";
+import { resolveBuiltInPluginReferences } from "@djl/contracts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { listThreadCampaigns } from "../../marketing/chatTools";
 // FILE: ProviderCommandReactor.ts
@@ -35,7 +35,7 @@ import {
   type RuntimeMode,
   TurnId,
   type WorkTurnPolicy,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   Cache,
   Cause,
@@ -48,22 +48,19 @@ import {
   Scope,
   Stream,
 } from "effect";
-import { makeDrainableWorker } from "@synara/shared/DrainableWorker";
+import { makeDrainableWorker } from "@djl/shared/DrainableWorker";
 import {
   buildPromptThreadTitleFallback,
   isGenericChatThreadTitle,
   sanitizeGeneratedThreadTitle,
-} from "@synara/shared/chatThreads";
-import {
-  collectTailTurnIds,
-  resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
-import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
-import { providerSteersLiveTurn } from "@synara/shared/groupChat";
-import { claudeSelectionRequiresRestart } from "@synara/shared/model";
-import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
-import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
-import { resolveThreadWorkspaceState } from "@synara/shared/threadEnvironment";
+} from "@djl/shared/chatThreads";
+import { collectTailTurnIds, resolveTailUserMessageEditTarget } from "@djl/shared/conversationEdit";
+import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@djl/shared/git";
+import { providerSteersLiveTurn } from "@djl/shared/groupChat";
+import { claudeSelectionRequiresRestart } from "@djl/shared/model";
+import { buildStalePendingRequestFailureDetail } from "@djl/shared/threadSummary";
+import { workspaceRootsEqual } from "@djl/shared/threadWorkspace";
+import { resolveThreadWorkspaceState } from "@djl/shared/threadEnvironment";
 
 import {
   checkpointRefForThreadMessageStart,
@@ -360,7 +357,7 @@ function buildGeneratedWorktreeBranchName(raw: string): string {
     .replace(/^refs\/heads\//, "")
     .replace(/['"`]/g, "");
 
-  const withoutPrefix = normalized.replace(/^synara\//, "");
+  const withoutPrefix = normalized.replace(/^djl\//, "");
 
   const branchFragment = withoutPrefix
     .replace(/[^a-z0-9/_-]+/g, "-")
@@ -1143,7 +1140,7 @@ const make = Effect.gen(function* () {
   const dispatchTurnForThread = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
     readonly messageId: string;
-    readonly computerControl?: import("@synara/contracts").ComputerTurnControl;
+    readonly computerControl?: import("@djl/contracts").ComputerTurnControl;
     readonly messageText: string;
     readonly attachments?: ReadonlyArray<ChatAttachment>;
     readonly skills?: ReadonlyArray<ProviderSkillReference>;

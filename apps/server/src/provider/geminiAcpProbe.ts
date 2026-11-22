@@ -6,14 +6,14 @@ import type {
   ProviderModelDescriptor,
   ServerProviderAuthStatus,
   ServerProviderStatusState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   DEFAULT_GEMINI_MODEL_CAPABILITIES,
   GEMINI_2_5_MODEL_CAPABILITIES,
   GEMINI_3_MODEL_CAPABILITIES,
   geminiCapabilitiesForModel,
-} from "@synara/shared/model";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@djl/shared/model";
+import { prepareWindowsSafeProcess } from "@djl/shared/windowsProcess";
 import { Effect } from "effect";
 import { asNumber, asRecord, trimToUndefined } from "./geminiValue.ts";
 
@@ -528,7 +528,7 @@ export const probeGeminiCapabilities = (input: {
         sendRequest(1, "initialize", {
           protocolVersion: 1,
           clientInfo: {
-            name: "synara",
+            name: "djl",
             title: "DJL",
             version: "0.1.0",
           },

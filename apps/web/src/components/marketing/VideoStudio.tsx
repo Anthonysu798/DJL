@@ -8,7 +8,7 @@ import {
   IconTrash,
   IconDownload,
 } from "@tabler/icons-react";
-import type { MediaAsset } from "@synara/contracts";
+import type { MediaAsset } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import {
   mediaUrl,

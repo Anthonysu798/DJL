@@ -3,7 +3,7 @@ import {
   SCRIPT_RUN_COMMAND_PATTERN,
   type KeybindingCommand,
   type ProjectScript,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema } from "effect";
 
 function normalizeScriptId(value: string): string {
@@ -89,10 +89,10 @@ export function projectScriptRuntimeEnv(
   input: ProjectScriptRuntimeEnvInput,
 ): Record<string, string> {
   const env: Record<string, string> = {
-    SYNARA_PROJECT_ROOT: input.project.cwd,
+    DJL_PROJECT_ROOT: input.project.cwd,
   };
   if (input.worktreePath) {
-    env.SYNARA_WORKTREE_PATH = input.worktreePath;
+    env.DJL_WORKTREE_PATH = input.worktreePath;
   }
   if (input.extraEnv) {
     return { ...env, ...input.extraEnv };

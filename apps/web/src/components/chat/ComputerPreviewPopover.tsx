@@ -12,7 +12,7 @@
 // dynamic: the card fits the space its slot offers while keeping the live
 // content's aspect, never a fixed box.
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 

@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { schema, type DjlDatabase } from "@djl/db";
-import type { CloudSocialDraftInput } from "@synara/contracts/cloud";
+import type { CloudSocialDraftInput } from "@djl/contracts/cloud";
 import type { BlobStore } from "../../sync/BlobStore.ts";
 import type { SocialConnectionService } from "../SocialConnectionService.ts";
 import { InstagramProvider, TikTokProvider, inspectTikTokJpeg } from "../providers/index.ts";

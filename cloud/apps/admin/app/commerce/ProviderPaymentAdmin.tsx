@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { CommercePaymentStatus } from "@synara/contracts/cloud";
+import type { CommercePaymentStatus } from "@djl/contracts/cloud";
 import { admin, getAdminSessionRevision } from "@/lib/api";
 import { ExternalRefundAllocation } from "./ExternalRefundAllocation";
 

@@ -2,8 +2,8 @@
 // Purpose: The group composer's @ menu and the text the reply actions put in front of the user.
 // Layer: Web logic
 
-import type { Group, GroupMember } from "@synara/contracts";
-import { GROUP_ALL_HANDLE } from "@synara/shared/groupChat";
+import type { Group, GroupMember } from "@djl/contracts";
+import { GROUP_ALL_HANDLE } from "@djl/shared/groupChat";
 
 import type { GroupChatRow, GroupMemberRow } from "./groupChat.logic";
 

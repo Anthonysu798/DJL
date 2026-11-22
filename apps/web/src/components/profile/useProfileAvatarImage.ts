@@ -7,7 +7,7 @@ import { useCallback } from "react";
 import { Schema } from "effect";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 
-const PROFILE_AVATAR_IMAGE_STORAGE_KEY = "synara:profile:avatarImage:v1";
+const PROFILE_AVATAR_IMAGE_STORAGE_KEY = "djl:profile:avatarImage:v1";
 
 // Empty string means "no photo".
 const StoredImageSchema = Schema.String;

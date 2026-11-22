@@ -4,7 +4,7 @@ import { Toast, type ToastObject } from "@base-ui/react/toast";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "@tanstack/react-router";
-import { ThreadId, type ProviderKind } from "@synara/contracts";
+import { ThreadId, type ProviderKind } from "@djl/contracts";
 import { ProviderUpdateToastSurface } from "./ProviderUpdateToastSurface";
 import {
   CircleAlertIcon,

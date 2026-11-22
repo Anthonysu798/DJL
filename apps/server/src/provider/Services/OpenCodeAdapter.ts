@@ -17,7 +17,7 @@ import type {
   RemoveCustomModelProviderInput,
   FetchCustomModelsInput,
   FetchCustomModelsResult,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { ProviderAdapterError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
@@ -45,5 +45,5 @@ export interface OpenCodeAdapterShape extends ProviderAdapterShape<ProviderAdapt
 }
 
 export class OpenCodeAdapter extends ServiceMap.Service<OpenCodeAdapter, OpenCodeAdapterShape>()(
-  "synara/provider/Services/OpenCodeAdapter",
+  "djl/provider/Services/OpenCodeAdapter",
 ) {}

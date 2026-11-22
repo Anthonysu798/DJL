@@ -3,7 +3,7 @@
 //          the exact System Settings pane and explains granting access to this installed build.
 // Layer: Settings UI component
 
-import type { DesktopAppSnapSettingsPane } from "@synara/contracts";
+import type { DesktopAppSnapSettingsPane } from "@djl/contracts";
 
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";

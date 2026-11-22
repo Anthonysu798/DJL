@@ -20,8 +20,8 @@ import {
   type GroupMember,
   type GroupMemberState,
   type OrchestrationCommand,
-} from "@synara/contracts";
-import { nextGroupHandle } from "@synara/shared/groupChat";
+} from "@djl/contracts";
+import { nextGroupHandle } from "@djl/shared/groupChat";
 import { Effect, Layer, PubSub, Stream } from "effect";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -441,7 +441,7 @@ const makeGroupService = Effect.gen(function* () {
       const settings = await run(settingsService.getSettings);
       const skills = await discoverSkillsCatalog({
         homeDir: config.homeDir,
-        synaraBaseDir: config.baseDir,
+        djlBaseDir: config.baseDir,
       });
       return filterDisabledSkills(skills, settings.skills.disabled)
         .filter((skill) => skill.enabled)
@@ -457,7 +457,7 @@ const makeGroupService = Effect.gen(function* () {
     registerLive,
     // Skills folders only: a turn's attachments are added per message, never the whole
     // attachments folder, which holds every chat's files.
-    readRoots: skillsCatalogRoots({ homeDir: config.homeDir, synaraBaseDir: config.baseDir }).map(
+    readRoots: skillsCatalogRoots({ homeDir: config.homeDir, djlBaseDir: config.baseDir }).map(
       (root) => root.path,
     ),
   });

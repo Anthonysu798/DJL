@@ -11,7 +11,7 @@ import {
   shopSessionPartition,
 } from "./shopWindowPolicy";
 
-const production = "synara://app/index.html";
+const production = "djl-app://app/index.html";
 const development = "http://localhost:5173/";
 const cloud = resolveShopDestination(
   production,
@@ -175,7 +175,7 @@ describe("shop window boundary", () => {
   it("keeps the local prototype default and requires explicit approved cloud origins", () => {
     expect(resolveShopDestination(production, {}, false)).toEqual({
       kind: "prototype",
-      entryUrl: "synara://app/shop/index.html",
+      entryUrl: "djl-app://app/shop/index.html",
     });
     expect(() =>
       resolveShopDestination(production, { DJL_COMMERCE_WEB_URL: "https://shop.test/shop" }, false),
@@ -403,7 +403,7 @@ describe("shop window boundary", () => {
   });
 
   it("uses a fixed entry independent of the active AI route", () => {
-    expect(getShopEntryUrl(production)).toBe("synara://app/shop/index.html");
+    expect(getShopEntryUrl(production)).toBe("djl-app://app/shop/index.html");
     expect(getShopEntryUrl(`${development}chat/123?token=secret`)).toBe(
       "http://localhost:5173/shop/index.html",
     );
@@ -421,21 +421,21 @@ describe("shop window boundary", () => {
   });
 
   it("accepts only the AI application as the opener", () => {
-    expect(isShopOpenerUrl("synara://app/thread/123", production)).toBe(true);
-    expect(isShopOpenerUrl("synara://other/index.html", production)).toBe(false);
-    expect(isShopOpenerUrl("synara://app/shop/index.html", production)).toBe(false);
+    expect(isShopOpenerUrl("djl-app://app/thread/123", production)).toBe(true);
+    expect(isShopOpenerUrl("djl-app://other/index.html", production)).toBe(false);
+    expect(isShopOpenerUrl("djl-app://app/shop/index.html", production)).toBe(false);
     expect(isShopOpenerUrl("https://example.com/", production)).toBe(false);
     expect(isShopOpenerUrl("http://localhost:9999/", development)).toBe(false);
   });
 
   it("permits referral and view hashes but not another page or protocol", () => {
-    expect(isShopNavigationUrl("synara://app/shop/index.html?ref=demo#cart", production)).toBe(
+    expect(isShopNavigationUrl("djl-app://app/shop/index.html?ref=demo#cart", production)).toBe(
       true,
     );
     for (const url of [
-      "synara://other/shop/index.html",
-      "synara://app/index.html",
-      "synara://app/shop/../index.html",
+      "djl-app://other/shop/index.html",
+      "djl-app://app/index.html",
+      "djl-app://app/shop/../index.html",
       "javascript:alert(1)",
       "https://example.com/shop/index.html",
     ]) {
@@ -444,7 +444,7 @@ describe("shop window boundary", () => {
   });
 
   it("allows only local shop resources and same-site upload previews", () => {
-    expect(isShopResourceUrl("synara://app/shop/app.js", production)).toBe(true);
+    expect(isShopResourceUrl("djl-app://app/shop/app.js", production)).toBe(true);
     expect(isShopResourceUrl("http://localhost:5173/shop/assets/products.png", development)).toBe(
       true,
     );

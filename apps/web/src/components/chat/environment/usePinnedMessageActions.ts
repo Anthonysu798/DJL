@@ -8,7 +8,7 @@ import {
   type MessageId,
   type PinnedMessage,
   type ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 

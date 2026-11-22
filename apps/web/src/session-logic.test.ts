@@ -4,7 +4,7 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationThreadActivity,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -1008,12 +1008,12 @@ describe("deriveWorkLogEntries", () => {
         id: "automation-created",
         createdAt: "2026-02-23T00:00:05.000Z",
         kind: "automation.created",
-        summary: "Created automation: Watch Synara PR 231 - Every 5m",
+        summary: "Created automation: Watch DJL PR 231 - Every 5m",
         tone: "info",
         payload: {
           source: "chat-composer",
           automationId: "automation-7",
-          automationName: "Watch Synara PR 231",
+          automationName: "Watch DJL PR 231",
           cadenceLabel: "Every 5m",
         },
       }),
@@ -1027,7 +1027,7 @@ describe("deriveWorkLogEntries", () => {
     expect(automationEntry).toBeDefined();
     expect(automationEntry?.automation).toEqual({
       id: "automation-7",
-      name: "Watch Synara PR 231",
+      name: "Watch DJL PR 231",
       cadenceLabel: "Every 5m",
     });
   });
@@ -1766,7 +1766,7 @@ describe("deriveWorkLogEntries", () => {
                   type: "read",
                   command: "sed -n '1,220p' README.md",
                   name: "README.md",
-                  path: "/Users/emanueledipietro/Developer/Testing/synara/README.md",
+                  path: "/Users/you/Developer/Testing/djl/README.md",
                 },
               ],
             },
@@ -1875,7 +1875,7 @@ describe("deriveWorkLogEntries", () => {
               type: "commandExecution",
               id: "call_6OII41pekq8cFCpOCF9pbeMu",
               command: "/bin/zsh -lc 'git status --short'",
-              cwd: "/Users/emanueledipietro/Developer/Testing/synara",
+              cwd: "/Users/you/Developer/Testing/djl",
               status: "completed",
               commandActions: [{ type: "unknown", command: "git status --short" }],
               aggregatedOutput: " M apps/desktop/src/main.ts\n...",
@@ -3545,7 +3545,7 @@ describe("PROVIDER_OPTIONS", () => {
               id: "call_UmQKQmLCCrj9PF82rupLIFDO",
               command:
                 "/bin/zsh -lc \"find apps packages -maxdepth 2 -name package.json -print -exec sed -n '1,120p' {} \\\\;\"",
-              cwd: "/Users/emanueledipietro/Developer/Testing/synara",
+              cwd: "/Users/you/Developer/Testing/djl",
               processId: "38005",
               source: "unifiedExecStartup",
               status: "inProgress",
@@ -3583,7 +3583,7 @@ describe("PROVIDER_OPTIONS", () => {
               id: "call_UmQKQmLCCrj9PF82rupLIFDO",
               command:
                 "/bin/zsh -lc \"find apps packages -maxdepth 2 -name package.json -print -exec sed -n '1,120p' {} \\\\;\"",
-              cwd: "/Users/emanueledipietro/Developer/Testing/synara",
+              cwd: "/Users/you/Developer/Testing/djl",
               processId: "38005",
               source: "unifiedExecStartup",
               status: "completed",

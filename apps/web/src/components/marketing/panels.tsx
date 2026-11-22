@@ -18,7 +18,7 @@ import {
   type BrandProfile,
   type Campaign,
   type CampaignPatch,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { command, mediaUrl, type Stored } from "./client";
 

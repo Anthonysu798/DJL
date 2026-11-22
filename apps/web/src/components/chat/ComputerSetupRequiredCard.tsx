@@ -14,8 +14,8 @@ import type {
   ComputerBuildSignature,
   ComputerPermission,
   ComputerStatusResult,
-} from "@synara/contracts";
-import { computerStaleGrantAdvice, listComputerPermissions } from "@synara/shared/computerGrants";
+} from "@djl/contracts";
+import { computerStaleGrantAdvice, listComputerPermissions } from "@djl/shared/computerGrants";
 
 import { ComputerActionCard } from "./ComputerActionCard";
 import { useTranslation } from "~/i18n";
@@ -35,23 +35,23 @@ export function ComputerSetupRequiredCard({
 }: {
   /**
    * The grants the OS is withholding. Naming them is most of this card's value:
-   * "a permission Synara needs" sends the user hunting through Privacy &
+   * "a permission DJL needs" sends the user hunting through Privacy &
    * Security, while "Accessibility" tells them exactly which switch to find.
    * Empty when the backend refused without naming one.
    */
   readonly missing?: readonly ComputerPermission[];
   /**
-   * How this Synara is signed. On a locally built copy the missing grant may be
+   * How this DJL is signed. On a locally built copy the missing grant may be
    * one macOS still lists as given — pinned to a binary a rebuild replaced —
    * which is the difference between "grant it" and "the switch lies to you".
    */
   readonly buildSignature?: ComputerBuildSignature;
   /**
-   * The app macOS files this Synara's grants against, as the server reported it.
+   * The app macOS files this DJL's grants against, as the server reported it.
    * The stale-grant advice names it in a `tccutil reset`, and there is no safe
    * default: the `.dev` and `.canary` flavors are separate bundle identifiers,
    * so guessing the released one hands the user a command that revokes a
-   * different Synara's working permissions. Absent means the advice omits the
+   * different DJL's working permissions. Absent means the advice omits the
    * command entirely.
    */
   readonly bundleId?: string;

@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
-import type { ServerVoiceTranscriptionInput, ProviderStartOptions } from "@synara/contracts";
+import type { ServerVoiceTranscriptionInput, ProviderStartOptions } from "@djl/contracts";
 const transcribe = vi.hoisted(() => vi.fn());
 vi.mock("./codexTranscription", () => ({ transcribeNativeCodexVoice: transcribe }));
 import { makeConfiguredNativeAdapter } from "./layer";

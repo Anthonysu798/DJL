@@ -1,6 +1,6 @@
 import { useHandleNewStudioChat } from "~/hooks/useHandleNewStudioChat";
 import { useSyncServerWorkspacePathsFromConfig } from "~/hooks/useSyncServerWorkspacePathsFromConfig";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@djl/contracts";
 // Plugin and skill discovery for the desktop Customize surface.
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import {
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
   type ProviderPluginDetail,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { useStore } from "~/store";
 import { createFirstProjectSelector } from "~/storeSelectors";
 import { useFocusedChatContext } from "~/focusedChatContext";

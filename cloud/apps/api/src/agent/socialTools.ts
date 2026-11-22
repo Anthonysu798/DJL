@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { CloudSocialDraftInput } from "@synara/contracts/cloud";
+import { CloudSocialDraftInput } from "@djl/contracts/cloud";
 import type { SocialConnectionService } from "../social/SocialConnectionService.ts";
 import type { PublishingService } from "../social/publishing/PublishingService.ts";
 import { ToolError, truncate, type AgentTool, type ToolContext } from "./tools.ts";

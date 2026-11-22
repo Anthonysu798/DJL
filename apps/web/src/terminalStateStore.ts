@@ -10,8 +10,8 @@ import {
   terminalCliKindFromValue,
   type TerminalActivityState,
   type TerminalCliKind,
-} from "@synara/shared/terminalThreads";
-import { HarnessId, type ThreadId } from "@synara/contracts";
+} from "@djl/shared/terminalThreads";
+import { HarnessId, type ThreadId } from "@djl/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
@@ -60,7 +60,7 @@ export interface ThreadTerminalState {
   activeTerminalGroupId: string;
 }
 
-const TERMINAL_STATE_STORAGE_KEY = "synara:terminal-state:v1";
+const TERMINAL_STATE_STORAGE_KEY = "djl:terminal-state:v1";
 
 function normalizeTerminalIds(terminalIds: string[]): string[] {
   const ids = [...new Set(terminalIds.map((id) => id.trim()).filter((id) => id.length > 0))];

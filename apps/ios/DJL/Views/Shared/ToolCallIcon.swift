@@ -7,7 +7,7 @@
 import Foundation
 
 /// Resolves the leading icon for a generic tool-call row, mirroring the icon
-/// logic used by the synara timeline (`workEntryIcon`): one uniform stroke icon
+/// logic used by the djl timeline (`workEntryIcon`): one uniform stroke icon
 /// per tool family, keyed off the tool rather than per-tool tinting.
 ///
 /// Returned values are SF Symbol names that `DJLIcon` maps to the bundled
@@ -94,7 +94,7 @@ enum ToolCallIcon {
     }
 
     // Leading humanized verbs emitted by extractToolCallActivityLines, mapped to the
-    // same families synara uses (file reads/inspection → search, writes/edits → pencil).
+    // same families djl uses (file reads/inspection → search, writes/edits → pencil).
     private static let verbIcons: [String: String] = [
         "read": "magnifyingglass", "reading": "magnifyingglass",
         "open": "magnifyingglass", "opened": "magnifyingglass", "opening": "magnifyingglass",
@@ -140,7 +140,7 @@ enum ToolCallIcon {
         ("find", "magnifyingglass"),
         ("view", "magnifyingglass"),
         ("list", "magnifyingglass"),
-        // Source control. Match Synara's compact work rows by using the GitHub
+        // Source control. Match DJL's compact work rows by using the GitHub
         // mark for git/gh/GitHub activity instead of the generic branch glyph.
         ("github", "djl.github"),
         ("git", "djl.github"),

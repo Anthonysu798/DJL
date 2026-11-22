@@ -8,7 +8,7 @@ import type {
   GroupMemberProvider,
   ProviderApprovalDecision,
   ProviderUserInputAnswers,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";

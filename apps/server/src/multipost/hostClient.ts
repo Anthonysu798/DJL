@@ -5,7 +5,7 @@ import type {
   MultiPostRuntimeContext,
   MultiPostEvidence,
   MultiPostIdentity,
-} from "@synara/contracts";
+} from "@djl/contracts";
 export class MultiPostHostClient implements MultiPostBrowserRuntime {
   constructor(
     private readonly endpoint = process.env.DJL_MULTIPOST_HOST_URL,

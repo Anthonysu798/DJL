@@ -6,7 +6,7 @@ import {
   type ResolvedKeybindingsConfig,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ThreadJumpKeybindingCommand,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { isMacPlatform } from "./lib/utils";
 
 export interface ShortcutEventLike {

@@ -3,7 +3,7 @@
  *
  * @module AcpAdapterSupport
  */
-import { type ProviderApprovalDecision, type ProviderKind, type ThreadId } from "@synara/contracts";
+import { type ProviderApprovalDecision, type ProviderKind, type ThreadId } from "@djl/contracts";
 import { Schema } from "effect";
 import * as EffectAcpErrors from "effect-acp/errors";
 

@@ -15,7 +15,7 @@
 
 ## Why this matters
 
-OpenAI Codex automations support custom schedules with cron syntax and can combine automations with skills. Synara should not jump straight to cron before one-shot timers and lifecycle reliability, but a complete automation system needs timezone-aware recurring schedules, admin/user policies, skill-driven prompts, and cleanup behavior for background worktrees.
+OpenAI Codex automations support custom schedules with cron syntax and can combine automations with skills. DJL should not jump straight to cron before one-shot timers and lifecycle reliability, but a complete automation system needs timezone-aware recurring schedules, admin/user policies, skill-driven prompts, and cleanup behavior for background worktrees.
 
 ## Current state
 
@@ -110,7 +110,7 @@ Keep MVP policies simple and explicit in contracts. Avoid hidden magic defaults 
 
 ### Step 4: Add skills/plugin-friendly creation
 
-Codex docs recommend combining automations with skills using `$skill-name`. Make Synara's draft UI and parser preserve skill references in prompt text and optionally surface selected skills if existing composer skill selection can be persisted.
+Codex docs recommend combining automations with skills using `$skill-name`. Make DJL's draft UI and parser preserve skill references in prompt text and optionally surface selected skills if existing composer skill selection can be persisted.
 
 Rules:
 

@@ -2,7 +2,7 @@ import "../../index.css";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { ThreadId, type TerminalEvent, type TerminalOpenInput } from "@synara/contracts";
+import { ThreadId, type TerminalEvent, type TerminalOpenInput } from "@djl/contracts";
 import ThreadTerminalDrawer from "../ThreadTerminalDrawer";
 import { selectThreadTerminalState, useTerminalStateStore } from "~/terminalStateStore";
 import { terminalRuntimeRegistry } from "./terminalRuntimeRegistry";

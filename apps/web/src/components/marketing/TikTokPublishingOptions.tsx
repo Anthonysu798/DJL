@@ -11,8 +11,8 @@ import {
 import { Switch } from "~/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { Campaign } from "@synara/contracts";
-import type { CloudSocialCreatorInfo, CloudSocialDraftInput } from "@synara/contracts/cloud";
+import type { Campaign } from "@djl/contracts";
+import type { CloudSocialCreatorInfo, CloudSocialDraftInput } from "@djl/contracts/cloud";
 import { publishingCommand } from "./socialPublishingClient";
 
 type Choices = {

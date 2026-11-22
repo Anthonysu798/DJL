@@ -1,5 +1,5 @@
 "use client";
-import type { CloudUsageWindow, CloudUsageWindowsResponse } from "@synara/contracts/cloud";
+import type { CloudUsageWindow, CloudUsageWindowsResponse } from "@djl/contracts/cloud";
 import { Gauge, Loader2, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";

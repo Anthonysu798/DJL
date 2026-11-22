@@ -1,4 +1,4 @@
-import type { TerminalEvent, TerminalOpenInput } from "@synara/contracts";
+import type { TerminalEvent, TerminalOpenInput } from "@djl/contracts";
 import type { AgentAccountProfile, AgentWorkspace } from "~/agentWorkspaceStore";
 import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import { addWsTransportStateListener } from "~/wsTransportEvents";

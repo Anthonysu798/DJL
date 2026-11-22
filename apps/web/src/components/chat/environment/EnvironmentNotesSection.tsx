@@ -2,7 +2,7 @@
 // Purpose: "Notes" section of the Environment panel — a per-thread freeform scratchpad.
 // Layer: Environment panel section
 
-import { THREAD_NOTES_MAX_CHARS, type ThreadId } from "@synara/contracts";
+import { THREAD_NOTES_MAX_CHARS, type ThreadId } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 import { Textarea } from "~/components/ui/textarea";

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_SERVER_SETTINGS } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@djl/contracts";
 const runtime = vi.hoisted(() => ({
   probe: vi.fn(),
   request: vi.fn(),

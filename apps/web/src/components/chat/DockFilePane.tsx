@@ -7,7 +7,7 @@
 
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@djl/contracts";
 
 import type { ChatFileReference } from "~/lib/chatReferences";
 import type { FileCommentSelection } from "~/lib/fileComments";

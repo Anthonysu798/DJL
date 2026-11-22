@@ -2,7 +2,7 @@
 // Purpose: One registered server: status, address, tags, stats strip, actions, expandable details.
 // Layer: Settings UI components (servers)
 
-import type { ServerCommandRecord, ServerId, ServerRecord } from "@synara/contracts";
+import type { ServerCommandRecord, ServerId, ServerRecord } from "@djl/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";

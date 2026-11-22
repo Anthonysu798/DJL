@@ -8,7 +8,7 @@ import {
   type CloudResetBanksResponse,
   type CloudUsageWindow,
   type CloudUsageWindowsResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import type { WindowUsage } from "@djl/domain";
 import { Effect, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/unstable/http";

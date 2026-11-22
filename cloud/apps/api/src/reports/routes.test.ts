@@ -1,6 +1,6 @@
 import { ServiceMap } from "effect";
 import { HttpRouter } from "effect/unstable/http";
-import type { CloudSendMessageInput } from "@synara/contracts/cloud";
+import type { CloudSendMessageInput } from "@djl/contracts/cloud";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Principal } from "../auth/guard.ts";

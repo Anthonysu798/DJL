@@ -9,7 +9,7 @@ import type {
   ProviderApprovalDecision,
   ProviderSessionStartInput,
   ProviderUserInputAnswers,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import { extractCodexGeneratedImageReference } from "../../../codexGeneratedImages";
 import { nativeApprovalDetail } from "../requests";

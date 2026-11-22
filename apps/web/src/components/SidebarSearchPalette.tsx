@@ -18,8 +18,8 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type FilesystemBrowseResult,
   type ProviderKind,
-} from "@synara/contracts";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
+} from "@djl/contracts";
+import { isGenericChatThreadTitle } from "@djl/shared/chatThreads";
 import { BsChat } from "react-icons/bs";
 import { HiOutlineFolderOpen } from "react-icons/hi2";
 import { LuArrowDownToLine, LuArrowLeft, LuCornerLeftUp, LuFolderPlus } from "react-icons/lu";

@@ -1,6 +1,6 @@
 import { Effect, Exit, Scope } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ComputerEvent } from "@synara/contracts";
+import type { ComputerEvent } from "@djl/contracts";
 
 import { LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL } from "../managedAttachmentPrincipal.ts";
 import { makeWsConnectionSessions } from "../wsConnectionSessions.ts";

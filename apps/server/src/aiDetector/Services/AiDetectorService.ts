@@ -7,7 +7,7 @@ import type {
   AiDetectorRemoveModelInput,
   AiDetectorReport,
   AiDetectorState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Schema, ServiceMap, type Effect, type Stream } from "effect";
 
 export class AiDetectorServiceError extends Schema.TaggedErrorClass<AiDetectorServiceError>()(

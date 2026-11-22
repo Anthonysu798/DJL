@@ -22,7 +22,7 @@ import {
   ThreadId,
   TurnId,
   WorkTask,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -125,4 +125,4 @@ export interface ProjectionThreadRepositoryShape {
 export class ProjectionThreadRepository extends ServiceMap.Service<
   ProjectionThreadRepository,
   ProjectionThreadRepositoryShape
->()("synara/persistence/Services/ProjectionThreads/ProjectionThreadRepository") {}
+>()("djl/persistence/Services/ProjectionThreads/ProjectionThreadRepository") {}

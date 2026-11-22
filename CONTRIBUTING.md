@@ -43,7 +43,7 @@ bun run ci:desktop:browser
 
 - Explain the problem, the chosen solution, and how you verified it.
 - Include before/after images for visual changes and a short recording for motion changes.
-- Preserve compatibility identifiers such as the existing `@synara/*` package scope unless the
+- Preserve compatibility identifiers such as the existing `@djl/*` package scope unless the
   change explicitly migrates them.
 - Do not update vendored OpenCode or Ghostty artifacts without updating provenance, licenses, and
   the relevant integrity checks.

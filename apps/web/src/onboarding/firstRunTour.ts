@@ -1,15 +1,15 @@
 import { Schema } from "effect";
 
 export const FIRST_RUN_TOUR_VERSION = 1;
-export const FIRST_RUN_TOUR_STORAGE_KEY = "synara:first-run-tour:v1";
-export const FIRST_RUN_TOUR_REPLAY_EVENT = "synara:first-run-tour:replay";
+export const FIRST_RUN_TOUR_STORAGE_KEY = "djl:first-run-tour:v1";
+export const FIRST_RUN_TOUR_REPLAY_EVENT = "djl:first-run-tour:replay";
 export const SETTINGS_TOUR_VERSION = 1;
-export const SETTINGS_TOUR_STORAGE_KEY = "synara:settings-tour:v1";
-export const SETTINGS_TOUR_REPLAY_EVENT = "synara:settings-tour:replay";
+export const SETTINGS_TOUR_STORAGE_KEY = "djl:settings-tour:v1";
+export const SETTINGS_TOUR_REPLAY_EVENT = "djl:settings-tour:replay";
 export const MODEL_GUIDE_VERSION = 1;
-export const MODEL_GUIDE_STORAGE_KEY = "synara:model-guide:v1";
-export const MODEL_GUIDE_REPLAY_EVENT = "synara:model-guide:replay";
-export const MODEL_PICKER_OPEN_EVENT = "synara:model-picker:open";
+export const MODEL_GUIDE_STORAGE_KEY = "djl:model-guide:v1";
+export const MODEL_GUIDE_REPLAY_EVENT = "djl:model-guide:replay";
+export const MODEL_PICKER_OPEN_EVENT = "djl:model-picker:open";
 
 export const FirstRunTourStorageSchema = Schema.Struct({
   seenVersion: Schema.Number,

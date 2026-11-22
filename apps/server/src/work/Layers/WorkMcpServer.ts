@@ -1,7 +1,7 @@
 import { scopedAttachmentInputFiles } from "../scopedAttachments";
 import { getMultiPost, multiPostScope } from "../../multipost/live";
 import type { SqlClient } from "effect/unstable/sql/SqlClient";
-import { COMPUTER_QA_TOOLS } from "@synara/shared/computerQaScope";
+import { COMPUTER_QA_TOOLS } from "@djl/shared/computerQaScope";
 import { CuaComputerSession } from "../cuaComputerSession";
 import { ComputerService } from "../../computer/Services/ComputerService";
 import { isComputerActivityHistoryAuthorized } from "../computerTurnLifecycle";
@@ -17,7 +17,7 @@ import http from "node:http";
 import { cpus, platform, release, totalmem } from "node:os";
 import path from "node:path";
 
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@djl/contracts";
 import { Effect, Layer, Ref, Option } from "effect";
 
 import {

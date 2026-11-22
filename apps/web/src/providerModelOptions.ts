@@ -3,7 +3,7 @@ import {
   geminiModelOptionsFromEffortValue,
   humanizeModelSlug,
   normalizeModelSlug,
-} from "@synara/shared/model";
+} from "@djl/shared/model";
 import { translateRendererCopy } from "./i18n";
 import type {
   ClaudeModelOptions,
@@ -26,7 +26,7 @@ import type {
   PiModelSelection,
   ProviderKind,
   ProviderModelOptions,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 export type ProviderOptions = ProviderModelOptions[ProviderKind];
 

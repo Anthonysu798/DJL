@@ -1,5 +1,5 @@
 import { renderImage } from "../marketing/media";
-import type { ImageRecipe } from "@synara/contracts";
+import type { ImageRecipe } from "@djl/contracts";
 import { readFile } from "node:fs/promises";
 import { Effect } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -13,7 +13,7 @@ import type {
   MultiPostContentData,
   MultiPostScope,
   MultiPostState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import type { ServerConfigShape } from "../config";
 import { assertAgentCampaignAccess, assertAgentMediaAccess } from "../marketing/agentScope";
 import { readDocument, MarketingError } from "../marketing/store";

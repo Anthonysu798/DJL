@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DjlDatabase } from "@djl/db";
-import type { CommerceAlertIncident, CommerceAlertsResponse } from "@synara/contracts/cloud";
+import type { CommerceAlertIncident, CommerceAlertsResponse } from "@djl/contracts/cloud";
 import { ApiError } from "../http/errors.ts";
 import { CommerceAlertDeliveryService } from "./CommerceAlertDeliveryService.ts";
 

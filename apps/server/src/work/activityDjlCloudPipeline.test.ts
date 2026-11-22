@@ -9,7 +9,7 @@ import {
   ServerSettings,
   decodeComputerActivitySummaryCommand,
   type ComputerActivitySemanticSummary,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 // Cross-app end-to-end composition loads desktop code at runtime; server types stay independent.
 const { ComputerActivitySummaries } = await import(

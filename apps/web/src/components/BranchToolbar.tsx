@@ -7,7 +7,7 @@ import {
   type ProviderKind,
   type ThreadId,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import {
   CheckIcon,
   ChevronDownIcon,

@@ -9,7 +9,7 @@
 // background agent work never steals the user's current chat: it only waits
 // for that thread to be viewed.
 
-import type { ThreadComputerState, ThreadId } from "@synara/contracts";
+import type { ThreadComputerState, ThreadId } from "@djl/contracts";
 import { create } from "zustand";
 
 import {

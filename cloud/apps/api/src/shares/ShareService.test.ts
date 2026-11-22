@@ -1,4 +1,4 @@
-import type { CloudSendMessageInput } from "@synara/contracts/cloud";
+import type { CloudSendMessageInput } from "@djl/contracts/cloud";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { ApiError } from "../http/errors.ts";

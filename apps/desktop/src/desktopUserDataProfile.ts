@@ -1,5 +1,5 @@
 // FILE: desktopUserDataProfile.ts
-// Purpose: Resolves DJL's Electron userData paths and completes legacy profile repair.
+// Purpose: Resolves DJL's Electron userData paths and completes bridged profile repair.
 
 import * as FS from "node:fs";
 import * as OS from "node:os";
@@ -7,12 +7,7 @@ import * as Path from "node:path";
 
 const DEV_USER_DATA_DIR_NAME = "djl-dev";
 const PROD_USER_DATA_DIR_NAME = "djl";
-const LEGACY_DEV_USER_DATA_DIR_NAME = "synara-dev";
-const LEGACY_PROD_USER_DATA_DIR_NAME = "synara";
-const BRIDGE_PROFILE_MANIFEST_FILE_NAMES = [
-  "djl-profile-seed.json",
-  "synara-profile-seed.json",
-] as const;
+const BRIDGE_PROFILE_MANIFEST_FILE_NAMES = ["djl-profile-seed.json"] as const;
 const CANONICAL_BROWSER_PARTITION_NAME = "djl-browser";
 const BROWSER_PARTITION_SEED_ENTRY_GROUPS = [
   ["Cookies", "Cookies-journal", "Cookies-wal", "Cookies-shm"],
@@ -70,18 +65,7 @@ function readBridgeProfileSourcePath(targetPath: string): string | null {
   const manifestPath = BRIDGE_PROFILE_MANIFEST_FILE_NAMES.map((fileName) =>
     Path.join(targetPath, fileName),
   ).find((candidatePath) => FS.existsSync(candidatePath));
-  if (!manifestPath) {
-    const targetName = Path.basename(targetPath);
-    const legacySiblingName =
-      targetName === DEV_USER_DATA_DIR_NAME
-        ? LEGACY_DEV_USER_DATA_DIR_NAME
-        : targetName === PROD_USER_DATA_DIR_NAME
-          ? LEGACY_PROD_USER_DATA_DIR_NAME
-          : null;
-    if (!legacySiblingName) return null;
-    const legacySiblingPath = Path.join(Path.dirname(targetPath), legacySiblingName);
-    return FS.existsSync(legacySiblingPath) ? legacySiblingPath : null;
-  }
+  if (!manifestPath) return null;
 
   let parsed: { readonly sourcePath?: unknown };
   try {
@@ -129,10 +113,9 @@ function findBridgeBrowserPartitionPaths(sourceProfilePath: string): string[] {
 /**
  * Finishes any browser-partition copy described by the compatibility bridge.
  *
- * A bridge manifest identifies the exact sibling profile that supplied the DJL profile. When no
- * manifest exists, the canonical legacy `synara` / `synara-dev` sibling is considered directly.
- * Discovering its `*-browser` partition from that trusted path avoids shipping predecessor names
- * while still repairing cookies or storage entries that were absent during the first bridge run.
+ * A bridge manifest identifies the exact sibling profile that supplied the DJL profile; without
+ * one there is nothing to repair. Discovering its `*-browser` partition from that trusted path
+ * repairs cookies or storage entries that were absent during the first bridge run.
  */
 export function repairBrowserProfileFromBridgeManifest(
   targetPath: string,

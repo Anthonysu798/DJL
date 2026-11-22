@@ -17,7 +17,7 @@ import type {
   CloudSendMessageResponse,
   CloudUsageWindowsResponse,
   CloudUserMessagePart,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import { ChatApiError, type ChatClient, sendMessageIdempotent } from "./client";
 import {

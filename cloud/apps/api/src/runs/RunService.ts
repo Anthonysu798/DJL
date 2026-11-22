@@ -9,7 +9,7 @@ import {
   CLOUD_RUN_STREAM_HEARTBEAT_SECONDS,
   type CloudRunEventsResponse,
   type CloudRunResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { Principal } from "../auth/guard.ts";
 import { ApiError } from "../http/errors.ts";

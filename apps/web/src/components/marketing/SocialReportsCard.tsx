@@ -1,10 +1,10 @@
 import { useId, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Campaign } from "@synara/contracts";
+import type { Campaign } from "@djl/contracts";
 import type {
   CloudSocialReportScheduleInput,
   CloudSocialReportsResponse,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import FadeContent from "~/components/react-bits/FadeContent";
 import { Button } from "~/components/ui/button";
 import { publishingCommand } from "./socialPublishingClient";

@@ -3,7 +3,7 @@ import { prepareProfileShell } from "./profileShell";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import type { ServerSettings, TerminalAgentProfile, TerminalOpenInput } from "@synara/contracts";
+import type { ServerSettings, TerminalAgentProfile, TerminalOpenInput } from "@djl/contracts";
 import { Effect } from "effect";
 import { buildHarnessInvocation } from "./accounts";
 import { TerminalError, type TerminalManagerShape } from "../terminal/Services/Manager";
@@ -135,7 +135,7 @@ export function openProfileTerminal(
               ? await resolveCodexTerminalBinary(invocation.binary, invocation.env)
               : invocation.binary;
           const env: Record<string, string> = {
-            SYNARA_TERMINAL_CLI_KIND: harness === "claudeAgent" ? "claude" : harness,
+            DJL_TERMINAL_CLI_KIND: harness === "claudeAgent" ? "claude" : harness,
           };
           for (const [name, value] of Object.entries(invocation.env)) {
             if (value !== undefined && value !== process.env[name]) env[name] = value;

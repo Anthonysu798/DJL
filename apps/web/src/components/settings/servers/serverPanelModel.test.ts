@@ -1,9 +1,9 @@
 // FILE: serverPanelModel.test.ts
 // Purpose: Unit tests for the pure Servers panel helpers (form mapping, validation, preview, formatting, status).
 // Layer: Web settings model tests
-// Depends on: serverPanelModel helpers and @synara/contracts server types
+// Depends on: serverPanelModel helpers and @djl/contracts server types
 
-import type { ServerId, ServerRecord, ServerTestOutcome } from "@synara/contracts";
+import type { ServerId, ServerRecord, ServerTestOutcome } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

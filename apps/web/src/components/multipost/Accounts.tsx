@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { MultiPostAccount, MultiPostState } from "@synara/contracts";
+import type { MultiPostAccount, MultiPostState } from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import type { CommandRunner } from "./shared";
 export default function Accounts({

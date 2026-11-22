@@ -2,7 +2,7 @@ import { draftSchema, workflowSchema } from "./toolSchemas";
 import { multiPostAttachments } from "./media";
 import { createServer, type Server } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
-import type { MultiPostCommand, MultiPostScope, MultiPostActor } from "@synara/contracts";
+import type { MultiPostCommand, MultiPostScope, MultiPostActor } from "@djl/contracts";
 import { inspectSocialMedia, mediaEvidenceMcpResult } from "../marketing/mediaEvidence";
 interface Service {
   command(

@@ -3,7 +3,7 @@
 
 import { createHash } from "node:crypto";
 
-import type { AiDetectorLanguage } from "@synara/contracts";
+import type { AiDetectorLanguage } from "@djl/contracts";
 
 export type DetectorModelLanguage = Exclude<AiDetectorLanguage, "unsupported">;
 

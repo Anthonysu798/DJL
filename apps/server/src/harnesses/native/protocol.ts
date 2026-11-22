@@ -1,7 +1,7 @@
 import {
   prepareWindowsSafeProcess,
   type WindowsSafeProcessInput,
-} from "@synara/shared/windowsProcess";
+} from "@djl/shared/windowsProcess";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 
 export type JsonObject = Record<string, unknown>;

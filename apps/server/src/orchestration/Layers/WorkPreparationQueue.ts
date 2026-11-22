@@ -12,8 +12,8 @@ import {
   EventId,
   type DocumentIntelligenceStatus,
   type OrchestrationThreadActivity,
-} from "@synara/contracts";
-import { makeDrainableWorker } from "@synara/shared/DrainableWorker";
+} from "@djl/contracts";
+import { makeDrainableWorker } from "@djl/shared/DrainableWorker";
 import { Cause, Effect, Layer, Option, Queue, Stream } from "effect";
 
 import { resolveAttachmentPathById } from "../../attachmentStore.ts";

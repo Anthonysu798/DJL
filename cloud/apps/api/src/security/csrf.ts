@@ -10,7 +10,7 @@
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
 
-import { CLOUD_CSRF_COOKIE, CLOUD_CSRF_HEADER } from "@synara/contracts/cloud";
+import { CLOUD_CSRF_COOKIE, CLOUD_CSRF_HEADER } from "@djl/contracts/cloud";
 
 export const CSRF_COOKIE = CLOUD_CSRF_COOKIE;
 export const CSRF_HEADER = CLOUD_CSRF_HEADER;

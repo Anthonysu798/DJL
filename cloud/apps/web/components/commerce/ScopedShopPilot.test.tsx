@@ -1,7 +1,7 @@
 // @vitest-environment-options {"url":"https://127.0.0.1:48981/shop/sign-in?next=%2Fshop%3Fref%3DTEST"}
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import type { CommerceOrder, CommerceProduct } from "@synara/contracts/cloud";
+import type { CommerceOrder, CommerceProduct } from "@djl/contracts/cloud";
 
 const { genericUseSession, genericSignOut, replace, push } = vi.hoisted(() => ({
   genericUseSession: vi.fn(),

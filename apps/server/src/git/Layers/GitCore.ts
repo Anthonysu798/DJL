@@ -35,7 +35,7 @@ import {
   type ExecuteGitResult,
 } from "../Services/GitCore.ts";
 import { ServerConfig } from "../../config.ts";
-import { decodeJsonResult } from "@synara/shared/schemaJson";
+import { decodeJsonResult } from "@djl/shared/schemaJson";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 1_000_000;
@@ -47,7 +47,7 @@ const EMPTY_TREE_OBJECT_ID = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 const WORKING_TREE_DIFF_TIMEOUT_MS = 15_000;
 const MAX_UNTRACKED_DIFF_CONCURRENCY = 4;
 const MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS = 15_000;
-const AUTO_DETACHED_WORKTREE_DIRNAME = "synara";
+const AUTO_DETACHED_WORKTREE_DIRNAME = "djl";
 const NON_REPOSITORY_STATUS_DETAILS = Object.freeze({
   isRepo: false,
   hasOriginRemote: false,
@@ -477,7 +477,7 @@ const createTrace2Monitor = Effect.fn(function* (
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const traceFilePath = yield* fs.makeTempFileScoped({
-    prefix: `synara-git-trace2-${process.pid}-`,
+    prefix: `djl-git-trace2-${process.pid}-`,
     suffix: ".json",
   });
   const hookStartByChildKey = new Map<string, { hookName: string; startedAtMs: number }>();
@@ -856,7 +856,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           }
 
           const tempIndexDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: `synara-git-status-index-${process.pid}-`,
+            prefix: `djl-git-status-index-${process.pid}-`,
           });
           const tempIndexPath = nodePath.join(tempIndexDir, "index");
           yield* Effect.tryPromise(() =>
@@ -2445,7 +2445,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         yield* executeGit(
           "GitCore.stashAndCheckout.stashPush",
           input.cwd,
-          ["stash", "push", "-u", "-m", `synara: stash before switching to ${input.branch}`],
+          ["stash", "push", "-u", "-m", `djl: stash before switching to ${input.branch}`],
           {
             timeoutMs: 30_000,
             fallbackErrorMessage: "git stash failed",

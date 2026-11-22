@@ -1,5 +1,5 @@
-import { ModelSelection, ThreadId } from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
+import { ModelSelection, ThreadId } from "@djl/contracts";
+import { getDefaultModel } from "@djl/shared/model";
 import "../../index.css";
 
 import { page } from "vitest/browser";

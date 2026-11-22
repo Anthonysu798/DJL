@@ -10,8 +10,8 @@
 // Layer: Chat/editor file-preview UI
 // Exports: WorkspaceFilePreviewHeader
 
-import type { EditorId } from "@synara/contracts";
-import { isWorkspaceRelativePathSafe, joinWorkspaceRelativePath } from "@synara/shared/path";
+import type { EditorId } from "@djl/contracts";
+import { isWorkspaceRelativePathSafe, joinWorkspaceRelativePath } from "@djl/shared/path";
 import { Fragment, memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 

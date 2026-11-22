@@ -8,7 +8,7 @@ import type {
   CommerceAdminWithdrawal,
   CommerceAdminPermission,
   CommerceStaffRole,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

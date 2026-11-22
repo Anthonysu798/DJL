@@ -1,4 +1,4 @@
-import type { DesktopBridge } from "@synara/contracts";
+import type { DesktopBridge } from "@djl/contracts";
 
 interface ShopHost {
   location: { href: string };

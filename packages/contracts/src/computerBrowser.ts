@@ -4,7 +4,7 @@ import { Schema } from "effect";
  * Contract surface for the cua-driver browser tool family — the CDP route
  * exposed as `computer_browser_*` on the agent gateway. These are NOT the
  * integrated `browser_*` automation tools (see `browserAutomation*`): the
- * integrated surface owns a Synara-managed browser home, while this family
+ * integrated surface owns a DJL-managed browser home, while this family
  * dispatches through the desktop driver's CDP engine, which is the only route
  * that reaches browsers the driver launched or an approved existing profile.
  *
@@ -89,7 +89,7 @@ export const ComputerBrowserResultStatus = Schema.String;
  * The driver returns browser state (`get_browser_state`) as structured
  * content containing at least a minted `target_id` and a `tabs` inventory.
  * Everything beyond that is engine-version data: this schema declares the
- * fields Synara itself reads and leaves the rest opaque.
+ * fields DJL itself reads and leaves the rest opaque.
  */
 export const ComputerBrowserTabInfo = Schema.Struct({
   tab_id: Schema.String,

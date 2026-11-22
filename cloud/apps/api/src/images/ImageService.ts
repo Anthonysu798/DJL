@@ -5,7 +5,7 @@ import type {
   CloudCreateImageInput,
   CloudImagesResponse,
   CloudSendMessageInput,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import type { Principal } from "../auth/guard.ts";
 import type { ChatService } from "../chat/ChatService.ts";
 import type { GatewayService, RequestFacts } from "../gateway/GatewayService.ts";

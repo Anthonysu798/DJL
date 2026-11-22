@@ -3,7 +3,7 @@
 // Layer: Web chat component tests
 // Depends on: renderToStaticMarkup and a mocked LegendList.
 
-import { CheckpointRef, MessageId, TurnId } from "@synara/contracts";
+import { CheckpointRef, MessageId, TurnId } from "@djl/contracts";
 import i18next from "i18next";
 import { renderToStaticMarkup } from "react-dom/server";
 import { initReactI18next } from "react-i18next";
@@ -2605,7 +2605,7 @@ describe("MessagesTimeline", () => {
                 turnId: TurnId.makeUnsafe("turn-diff-1"),
                 checkpointTurnCount: 1,
                 checkpointTurnCounts: [1],
-                checkpointRef: CheckpointRef.makeUnsafe("refs/synara/checkpoints/thread/turn/1"),
+                checkpointRef: CheckpointRef.makeUnsafe("refs/djl/checkpoints/thread/turn/1"),
                 status: "ready",
                 completedAt: "2026-03-17T19:12:30.000Z",
                 assistantMessageId,
@@ -2671,7 +2671,7 @@ describe("MessagesTimeline", () => {
                 turnId: TurnId.makeUnsafe("turn-wrangler-state-1"),
                 checkpointTurnCount: 1,
                 checkpointTurnCounts: [1],
-                checkpointRef: CheckpointRef.makeUnsafe("refs/synara/checkpoints/thread/turn/1"),
+                checkpointRef: CheckpointRef.makeUnsafe("refs/djl/checkpoints/thread/turn/1"),
                 status: "ready",
                 completedAt: "2026-03-17T19:12:30.000Z",
                 assistantMessageId,

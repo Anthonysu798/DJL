@@ -1,4 +1,4 @@
-import type { ComputerUseRequest } from "@synara/contracts";
+import type { ComputerUseRequest } from "@djl/contracts";
 
 export type HistoryClearRange = "all" | "10m" | "1h" | "today" | "custom";
 

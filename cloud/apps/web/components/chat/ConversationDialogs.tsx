@@ -1,5 +1,5 @@
 "use client";
-import type { CloudConversation } from "@synara/contracts/cloud";
+import type { CloudConversation } from "@djl/contracts/cloud";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 

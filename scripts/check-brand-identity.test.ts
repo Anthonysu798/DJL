@@ -17,13 +17,21 @@ const retiredProductName = characters(83, 121, 110, 97, 114, 97);
 describe("brand identity guard", () => {
   it("detects retired names in paths and text", () => {
     const violations = findBrandIdentityViolations([
-      { path: `docs/${firstName}.md`, contents: "Synara" },
+      { path: `docs/${firstName}.md`, contents: "DJL" },
       { path: "source.ts", contents: `const value = "${secondName}:state";` },
     ]);
     expect(violations).toHaveLength(2);
   });
 
-  it("does not match ordinary numeric type names or compatibility text outside prompts", () => {
+  it("does not match ordinary numeric type names", () => {
+    expect(
+      findBrandIdentityViolations([
+        { path: "source.ts", contents: "const value = new Uint32Array();" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("flags the retired product name anywhere, even in comments", () => {
     expect(
       findBrandIdentityViolations([
         {
@@ -31,10 +39,40 @@ describe("brand identity guard", () => {
           contents: `const value = new Uint32Array(); // ${retiredProductName}`,
         },
       ]),
-    ).toEqual([]);
+    ).toHaveLength(1);
   });
 
-  it("rejects the retired product name in agent instruction files", () => {
+  it("flags the upstream author's handle and account but not their copyright notice", () => {
+    const handle = characters(
+      101,
+      109,
+      97,
+      110,
+      117,
+      101,
+      108,
+      101,
+      100,
+      105,
+      112,
+      105,
+      101,
+      116,
+      114,
+      111,
+    );
+    const account = characters(69, 109, 97, 110, 117, 101, 108, 101, 45, 119, 101, 98, 48, 52);
+    const notice = `Copyright (c) 2026 ${characters(69, 109, 97, 110, 117, 101, 108, 101)} Di Pietro`;
+    expect(
+      findBrandIdentityViolations([
+        { path: "a.ts", contents: `const id = "com.${handle}.app";` },
+        { path: "b.md", contents: `https://github.com/${account}/repo` },
+        { path: "LICENSE", contents: notice },
+      ]).map(({ path }) => path),
+    ).toEqual(["a.ts", "b.md"]);
+  });
+
+  it("rejects the retired product name in instructions and code", () => {
     const violations = findBrandIdentityViolations([
       { path: "AGENTS.md", contents: `${retiredProductName} is a coding-agent GUI.` },
       { path: "CLAUDE.md", contents: `${retiredProductName} supports multiple providers.` },
@@ -44,7 +82,7 @@ describe("brand identity guard", () => {
       },
     ]);
 
-    expect(violations.map(({ path }) => path)).toEqual(["AGENTS.md", "CLAUDE.md"]);
+    expect(violations.map(({ path }) => path)).toEqual(["AGENTS.md", "CLAUDE.md", "source.ts"]);
   });
 
   it("rejects retired identity in legal notices", () => {
@@ -73,8 +111,8 @@ describe("brand identity guard", () => {
   });
 
   it("requires user-facing raster assets to match a visually approved digest", () => {
-    const approvedContents = new TextEncoder().encode("approved Synara screenshot");
-    const approvedDigest = "a553296ca5a2d3ad7b64a6bc1b36c2834da750eae6611642177482b99ba85bd8";
+    const approvedContents = new TextEncoder().encode("approved screenshot");
+    const approvedDigest = "5dcf96efdc1aeee57a624c094c538da8570b938f62df517f4e5081359dcfc17f";
     const approvedDigests = new Map([["screenshot.jpeg", approvedDigest]]);
 
     expect(

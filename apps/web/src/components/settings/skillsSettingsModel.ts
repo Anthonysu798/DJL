@@ -3,8 +3,8 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
-import type { ProviderKind, ProviderSkillDescriptor } from "@synara/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
+import type { ProviderKind, ProviderSkillDescriptor } from "@djl/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@djl/contracts";
 import type { TFunction } from "i18next";
 import englishCatalog from "../../i18n/locales/en.json";
 
@@ -38,7 +38,7 @@ export interface SettingsSkillSection {
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
 export const ORIGIN_SECTION_ORDER = [
-  "synara",
+  "djl",
   "codex",
   "claude",
   "cursor",
@@ -67,7 +67,7 @@ export function skillOriginInfo(scope: string | undefined, t?: TFunction): Skill
   const text = (key: "shared" | "project" | "personal") =>
     t?.(`skills.origins.${key}`, { ns: "settings" }) ?? englishCatalog.settings.skills.origins[key];
   switch (scope) {
-    case "synara":
+    case "djl":
       return { label: "DJL", provider: null };
     case "codex":
       return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };

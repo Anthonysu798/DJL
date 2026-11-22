@@ -1,7 +1,7 @@
 // FILE: WorkMcpServer.ts
 // Purpose: DJL-owned, session-scoped MCP endpoint contract for OpenCode Work tools.
 
-import type { ProjectId, ThreadId, ComputerTurnControl, ProviderKind } from "@synara/contracts";
+import type { ProjectId, ThreadId, ComputerTurnControl, ProviderKind } from "@djl/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -57,5 +57,5 @@ export interface WorkMcpServerShape {
 }
 
 export class WorkMcpServer extends ServiceMap.Service<WorkMcpServer, WorkMcpServerShape>()(
-  "synara/work/Services/WorkMcpServer",
+  "djl/work/Services/WorkMcpServer",
 ) {}

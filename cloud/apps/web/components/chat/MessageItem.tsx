@@ -5,7 +5,7 @@ import type {
   CloudImageRefPart,
   CloudMessage,
   CloudMessagePart,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 import {
   Check,
   ChevronLeft,

@@ -1,6 +1,6 @@
 import chineseCatalog from "../../i18n/locales/zh-Hans.json";
 import { page } from "vitest/browser";
-import { MessageId } from "@synara/contracts";
+import { MessageId } from "@djl/contracts";
 import { MessagesTimeline } from "../chat/MessagesTimeline";
 import { rendererI18n } from "../../i18n";
 import {
@@ -12,7 +12,7 @@ import "../../index.css";
 import { describe, it, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createCampaign, reviseCampaign } from "@synara/contracts";
+import { createCampaign, reviseCampaign } from "@djl/contracts";
 import { MarketingChatCard } from "./MarketingChatCards";
 
 const mediaEdits = vi.hoisted(() => ({ import: vi.fn(), command: vi.fn() }));

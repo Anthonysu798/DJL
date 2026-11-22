@@ -4,7 +4,7 @@
 import { createPublicKey } from "node:crypto";
 import path from "node:path";
 
-import type { DocumentIntelligenceStatus } from "@synara/contracts";
+import type { DocumentIntelligenceStatus } from "@djl/contracts";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";

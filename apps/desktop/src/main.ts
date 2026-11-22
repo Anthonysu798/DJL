@@ -2,12 +2,12 @@ import { DesktopMultiPostRuntime } from "./multipost/runtime";
 import { startMultiPostHost } from "./multipost/host";
 import { MultiPostTray } from "./multipost/tray";
 import { ComputerStopPresentation, computerStopWindowOptions } from "./computerStopPresentation";
-import { readComputerQaWindows, computerQaNativeCallAllowed } from "@synara/shared/computerQaScope";
+import { readComputerQaWindows, computerQaNativeCallAllowed } from "@djl/shared/computerQaScope";
 import {
   COMPUTER_QA_BUILD,
   isComputerQaBuild,
   computerQaBackendEnvironment,
-} from "@synara/shared/desktopComputerBuild";
+} from "@djl/shared/desktopComputerBuild";
 import { DesktopComputerRuntime } from "./desktopComputerRuntime";
 import { DESKTOP_IPC_CHANNELS as COMPUTER_IPC } from "./ipcChannels";
 import {
@@ -19,7 +19,7 @@ import {
   sendAppSnapError,
 } from "./appSnapIpc";
 import { notifyBackendComputerEmergencyStop } from "./computerEmergencyStopNotice";
-import { CUA_HOST_SOCKET_ENV } from "@synara/shared/cuaDriverProtocol";
+import { CUA_HOST_SOCKET_ENV } from "@djl/shared/cuaDriverProtocol";
 import { interruptComputerUseProvider } from "./computerUseProviderInterrupt";
 import { ComputerUseManager } from "./computerUseManager";
 import { registerComputerUseIpcHandlers, isTrustedComputerUseUrl } from "./computerUseIpc";
@@ -85,23 +85,23 @@ import type {
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { autoUpdater, BaseUpdater, CancellationToken } from "electron-updater";
 
-import type { ContextMenuItem } from "@synara/contracts";
-import { APP_BASE_NAME, resolveAppDisplayName } from "@synara/shared/branding";
-import { getMacTrafficLightPosition } from "@synara/shared/desktopChrome";
+import type { ContextMenuItem } from "@djl/contracts";
+import { APP_BASE_NAME, resolveAppDisplayName } from "@djl/shared/branding";
+import { getMacTrafficLightPosition } from "@djl/shared/desktopChrome";
 import {
-  SYNARA_DESKTOP_ENTRY_URL,
-  SYNARA_DESKTOP_SCHEME,
-  SYNARA_DESKTOP_UPDATE_CHANNEL,
-  synaraBundleId,
-} from "@synara/shared/desktopIdentity";
-import { resolveDesktopDjlHome, resolveDjlHome } from "@synara/shared/djlStoragePaths";
-import { NetService } from "@synara/shared/Net";
-import { RotatingFileSink } from "@synara/shared/logging";
-import { acquireSharedStateLock } from "@synara/shared/sharedStateLock";
-import { ensureStaticSnapshot, findAsarArchivePath } from "@synara/shared/staticSnapshot";
+  DJL_DESKTOP_ENTRY_URL,
+  DJL_DESKTOP_SCHEME,
+  DJL_DESKTOP_UPDATE_CHANNEL,
+  djlBundleId,
+} from "@djl/shared/desktopIdentity";
+import { resolveDesktopDjlHome, resolveDjlHome } from "@djl/shared/djlStoragePaths";
+import { NetService } from "@djl/shared/Net";
+import { RotatingFileSink } from "@djl/shared/logging";
+import { acquireSharedStateLock } from "@djl/shared/sharedStateLock";
+import { ensureStaticSnapshot, findAsarArchivePath } from "@djl/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import {
@@ -209,8 +209,8 @@ import {
 } from "./browserIpc";
 import {
   BrowserUsePipeServer,
-  SYNARA_BROWSER_USE_PIPE_ENV,
-  SYNARA_BROWSER_USE_PIPE_PATH,
+  DJL_BROWSER_USE_PIPE_ENV,
+  DJL_BROWSER_USE_PIPE_PATH,
 } from "./browserUsePipeServer";
 import {
   DESKTOP_WS_URL_CHANNEL,
@@ -235,8 +235,8 @@ import {
   type CloudAuthCallback,
 } from "./cloudAuthDeepLink";
 import {
-  acknowledgeSynaraStorageSnapshot,
-  readSynaraStorageSnapshot,
+  acknowledgeDjlStorageSnapshot,
+  readDjlStorageSnapshot,
   resolveDjlStorageSnapshotReadPath,
   STORAGE_MIGRATION_IPC_CHANNELS,
 } from "./desktopStorageMigration";
@@ -301,18 +301,16 @@ const BASE_DIR = computerQaBuild
   ? Path.join(app.getPath("appData"), COMPUTER_QA_BUILD.profileDirectory)
   : resolveDesktopDjlHome(process.env, OS.homedir(), process.env.LOCALAPPDATA, process.platform);
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
-const DESKTOP_SCHEME = SYNARA_DESKTOP_SCHEME;
+const DESKTOP_SCHEME = DJL_DESKTOP_SCHEME;
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
 const isDevelopment = !computerQaBuild && Boolean(process.env.VITE_DEV_SERVER_URL);
-const configuredDesktopDisplayName = process.env.SYNARA_DESKTOP_DISPLAY_NAME?.trim();
+const configuredDesktopDisplayName = process.env.DJL_DESKTOP_DISPLAY_NAME?.trim();
 const APP_DISPLAY_NAME = computerQaBuild
   ? COMPUTER_QA_BUILD.displayName
   : isDevelopment && configuredDesktopDisplayName && configuredDesktopDisplayName.length <= 64
     ? configuredDesktopDisplayName
     : resolveAppDisplayName(isDevelopment);
-const APP_USER_MODEL_ID = computerQaBuild
-  ? COMPUTER_QA_BUILD.bundleId
-  : synaraBundleId(isDevelopment);
+const APP_USER_MODEL_ID = computerQaBuild ? COMPUTER_QA_BUILD.bundleId : djlBundleId(isDevelopment);
 const COMMIT_HASH_PATTERN = /^[0-9a-f]{7,40}$/i;
 const COMMIT_HASH_DISPLAY_LENGTH = 12;
 const LOG_DIR = Path.join(STATE_DIR, "logs");
@@ -340,14 +338,14 @@ const AUTO_UPDATE_DIAGNOSTICS_TIMEOUT_MS = 2_800;
 const UPDATE_INSTALL_MARKER_FILE_NAME = "pending-update-install.json";
 const BACKEND_FORCE_KILL_DELAY_MS = 8_000;
 const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
-const BACKEND_MAX_OLD_SPACE_ENV_KEYS = ["SYNARA_BACKEND_MAX_OLD_SPACE_MB"] as const;
+const BACKEND_MAX_OLD_SPACE_ENV_KEYS = ["DJL_BACKEND_MAX_OLD_SPACE_MB"] as const;
 const DESKTOP_UPDATE_ALLOW_PRERELEASE = false;
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 const DESKTOP_MENU_MIN_ZOOM_FACTOR = 0.25;
 const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
-const SYNARA_BROWSER_LABEL = "Synara browser";
-const browserPerfLoggingEnabled = process.env.SYNARA_BROWSER_PERF === "1";
+const DJL_BROWSER_LABEL = "DJL browser";
+const browserPerfLoggingEnabled = process.env.DJL_BROWSER_PERF === "1";
 
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
@@ -372,7 +370,7 @@ function trustedComputerSender(
     event.senderFrame === event.sender.mainFrame &&
     isTrustedComputerUseUrl(
       event.senderFrame.url,
-      isDevelopment ? process.env.VITE_DEV_SERVER_URL! : SYNARA_DESKTOP_ENTRY_URL,
+      isDevelopment ? process.env.VITE_DEV_SERVER_URL! : DJL_DESKTOP_ENTRY_URL,
     )
   );
 }
@@ -456,8 +454,8 @@ function initializeCuaRuntime(): DesktopComputerRuntime | null {
       ? Path.join(process.resourcesPath, "cua-driver", "cua-driver")
       : Path.join(ROOT_DIR, "apps/desktop/resources/cua-driver/cua-driver"),
     helperPath: app.isPackaged
-      ? Path.resolve(process.resourcesPath, "..", "Helpers", "synara-appsnap-helper")
-      : Path.join(ROOT_DIR, "apps/desktop/.electron-runtime/appsnap/synara-appsnap-helper"),
+      ? Path.resolve(process.resourcesPath, "..", "Helpers", "djl-appsnap-helper")
+      : Path.join(ROOT_DIR, "apps/desktop/.electron-runtime/appsnap/djl-appsnap-helper"),
     bundleId: APP_USER_MODEL_ID,
     capability: cuaCapability,
     ...(computerQaBuild
@@ -606,7 +604,7 @@ function startBrowserPerformanceLogging(): void {
         name: metric.name,
       }));
 
-    console.info(`[${SYNARA_BROWSER_LABEL} perf]`, {
+    console.info(`[${DJL_BROWSER_LABEL} perf]`, {
       ...snapshot.counters,
       trackedProcessIds: snapshot.trackedProcessIds,
       processes: processMetrics,
@@ -628,7 +626,7 @@ async function ensureBrowserUsePipeServer(): Promise<void> {
   browserUsePipeServer = server;
   console.info("[DJL browser] Registered in-app browser backend", {
     type: "iab",
-    pipePath: SYNARA_BROWSER_USE_PIPE_PATH,
+    pipePath: DJL_BROWSER_USE_PIPE_PATH,
   });
 }
 
@@ -822,7 +820,7 @@ async function reserveBackendEndpoint(reason: string): Promise<void> {
   );
   backendHttpUrl = `http://127.0.0.1:${backendPort}`;
   backendWsUrl = `ws://127.0.0.1:${backendPort}/?token=${encodeURIComponent(backendAuthToken)}`;
-  process.env.SYNARA_DESKTOP_WS_URL = backendWsUrl;
+  process.env.DJL_DESKTOP_WS_URL = backendWsUrl;
   writeDesktopLogHeader(`${reason} resolved backend endpoint port=${backendPort}`);
 }
 
@@ -1191,8 +1189,8 @@ function resolveEmbeddedCommitHash(): string | null {
 
   try {
     const raw = FS.readFileSync(packageJsonPath, "utf8");
-    const parsed = JSON.parse(raw) as { synaraCommitHash?: unknown };
-    return normalizeCommitHash(parsed.synaraCommitHash);
+    const parsed = JSON.parse(raw) as { djlCommitHash?: unknown };
+    return normalizeCommitHash(parsed.djlCommitHash);
   } catch {
     return null;
   }
@@ -1203,7 +1201,7 @@ function resolveAboutCommitHash(): string | null {
     return aboutCommitHashCache;
   }
 
-  const envCommitHash = normalizeCommitHash(process.env.SYNARA_COMMIT_HASH);
+  const envCommitHash = normalizeCommitHash(process.env.DJL_COMMIT_HASH);
   if (envCommitHash) {
     aboutCommitHashCache = envCommitHash;
     return aboutCommitHashCache;
@@ -1296,7 +1294,7 @@ let servedStaticRootCache: ServedStaticRoot | null | undefined;
 // being replaced beneath the running app (Electron caches the header per process,
 // so every later read returns bytes from the wrong offsets). Extract the client
 // to a per-archive snapshot on real disk and serve that instead — both for the
-// synara:// protocol here and, via SYNARA_STATIC_DIR, for the backend's HTTP static
+// djl-app:// protocol here and, via DJL_STATIC_DIR, for the backend's HTTP static
 // route. Memoized so one app run serves one coherent asset generation.
 function resolveServedStaticRoot(): ServedStaticRoot | null {
   if (servedStaticRootCache === undefined) {
@@ -1537,7 +1535,7 @@ function adjustWindowZoomFromMenu(multiplier: number): void {
 // A configured app-update.yml (or the mock-updates flag) is the prerequisite for any
 // auto-update activity; centralized so the menu and the enable check stay in lockstep.
 function hasConfiguredUpdateFeed(): boolean {
-  return readAppUpdateYml() !== null || Boolean(process.env.SYNARA_DESKTOP_MOCK_UPDATES);
+  return readAppUpdateYml() !== null || Boolean(process.env.DJL_DESKTOP_MOCK_UPDATES);
 }
 
 function resolveAutoUpdateDisabledReason(): string | null {
@@ -1547,7 +1545,7 @@ function resolveAutoUpdateDisabledReason(): string | null {
     isPackaged: app.isPackaged,
     platform: process.platform,
     appImage: process.env.APPIMAGE,
-    disabledByEnv: process.env.SYNARA_DISABLE_AUTO_UPDATE === "1",
+    disabledByEnv: process.env.DJL_DISABLE_AUTO_UPDATE === "1",
     hasUpdateFeedConfig: hasConfiguredUpdateFeed(),
   });
 }
@@ -1744,9 +1742,7 @@ function showDesktopNotification(input: {
  */
 function resolveUserDataPath(): string {
   if (computerQaBuild) return Path.join(BASE_DIR, "electron");
-  const configuredPath =
-    process.env.DJL_DESKTOP_USER_DATA_DIR?.trim() ??
-    process.env.SYNARA_DESKTOP_USER_DATA_DIR?.trim();
+  const configuredPath = process.env.DJL_DESKTOP_USER_DATA_DIR?.trim();
   if (configuredPath) {
     if (!Path.isAbsolute(configuredPath)) {
       throw new Error("DJL_DESKTOP_USER_DATA_DIR must be an absolute path.");
@@ -1781,7 +1777,7 @@ function configureAppIdentity(): void {
     applicationName: APP_DISPLAY_NAME,
     applicationVersion: app.getVersion(),
     version: commitHash ?? "unknown",
-    copyright: `© ${new Date().getFullYear()} Emanuele Di Pietro`,
+    copyright: `© ${new Date().getFullYear()} Anthony Su`,
   });
 
   if (process.platform === "win32") {
@@ -1901,7 +1897,7 @@ function reportInstallInBackground(): void {
       version: app.getVersion(),
       platform: process.platform,
       arch: process.arch,
-      channel: SYNARA_DESKTOP_UPDATE_CHANNEL,
+      channel: DJL_DESKTOP_UPDATE_CHANNEL,
     },
     readFile: (recordPath) => {
       try {
@@ -1973,7 +1969,7 @@ function restartAfterStartupBundleSwap(error: BundleChangedDuringStartupError): 
 
 // Electron caches the asar header per process, so once app.asar changes on disk
 // (updater retry racing a relaunch, a reinstall, a build copied over the bundle)
-// every archive read in this process — the synara:// protocol, the backend's static
+// every archive read in this process — the djl-app:// protocol, the backend's static
 // files, lazily-loaded renderer chunks — resolves to stale offsets and silently
 // returns the wrong bytes. Detect the swap and offer a restart; continuing is
 // never safe.
@@ -2683,7 +2679,7 @@ function configureAutoUpdater(): void {
   autoUpdater.autoInstallOnAppQuit = false;
   // The dedicated channel keeps the permanent compatibility release on the
   // default feed while DJL versions advance independently.
-  autoUpdater.channel = SYNARA_DESKTOP_UPDATE_CHANNEL;
+  autoUpdater.channel = DJL_DESKTOP_UPDATE_CHANNEL;
   autoUpdater.allowPrerelease = DESKTOP_UPDATE_ALLOW_PRERELEASE;
   autoUpdater.allowDowngrade = false;
   // The packaged app-update.yml owns the production feed. It may use either
@@ -2827,7 +2823,7 @@ function configureAutoUpdater(): void {
 
   scheduleUpdatePoll();
 }
-// Builds process-local Node args so provider/tool children do not inherit Synara's heap guard.
+// Builds process-local Node args so provider/tool children do not inherit DJL's heap guard.
 function backendNodeArgs(): string[] {
   const configuredMaxOldSpaceMb =
     BACKEND_MAX_OLD_SPACE_ENV_KEYS.map((key) => process.env[key]).find(
@@ -2851,11 +2847,11 @@ function backendEnv(): NodeJS.ProcessEnv {
   return {
     ...(computerQaBuild ? computerQaBackendEnvironment(process.env) : process.env),
     // Point the backend's HTTP static route at the same swap-immune snapshot the
-    // synara:// protocol serves, so both surfaces survive app.asar being replaced.
-    ...(servedStaticRoot?.snapshotted ? { SYNARA_STATIC_DIR: servedStaticRoot.dir } : {}),
-    SYNARA_MODE: "desktop",
-    SYNARA_NO_BROWSER: "1",
-    SYNARA_PORT: String(backendPort),
+    // djl-app:// protocol serves, so both surfaces survive app.asar being replaced.
+    ...(servedStaticRoot?.snapshotted ? { DJL_STATIC_DIR: servedStaticRoot.dir } : {}),
+    DJL_MODE: "desktop",
+    DJL_NO_BROWSER: "1",
+    DJL_PORT: String(backendPort),
     DJL_SHARED_STATE: "1",
     DJL_SKIP_STATE_LOCK: "1",
     DJL_MIGRATION_SOURCES: migrationSources.join(Path.delimiter),
@@ -2863,18 +2859,17 @@ function backendEnv(): NodeJS.ProcessEnv {
       ? {
           DJL_DISABLE_STORAGE_MIGRATION: "true",
           DJL_COMPUTER_QA_PROFILE: "1",
-          SYNARA_COMPUTER_BACKEND: "cua",
-          SYNARA_LOG_PROVIDER_EVENTS: "false",
-          SYNARA_LOG_WS_EVENTS: "false",
+          DJL_COMPUTER_BACKEND: "cua",
+          DJL_LOG_PROVIDER_EVENTS: "false",
+          DJL_LOG_WS_EVENTS: "false",
           DJL_COMPUTER_QA_SCOPE_PATH: Path.join(BASE_DIR, "computer-qa-scope.json"),
-          SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+          DJL_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
           XDG_CONFIG_HOME: Path.join(BASE_DIR, "xdg/config"),
           XDG_DATA_HOME: Path.join(BASE_DIR, "xdg/data"),
           XDG_CACHE_HOME: Path.join(BASE_DIR, "xdg/cache"),
         }
       : {}),
     DJL_HOME: BASE_DIR,
-    SYNARA_HOME: BASE_DIR,
     // bootstrap() awaits syncShellEnvironment before spawning the backend.
     DJL_SHELL_ENV_SYNCED: "1",
     ...(useCuaComputerEngine ? { DJL_COMPUTER_ENGINE: "cua" } : {}),
@@ -2885,11 +2880,11 @@ function backendEnv(): NodeJS.ProcessEnv {
       ? { DJL_PROCESS_ARCH: localAiRuntimeInfo.appArch }
       : {}),
     DJL_RUNNING_UNDER_TRANSLATION: localAiRuntimeInfo.runningUnderArm64Translation ? "1" : "0",
-    SYNARA_AUTH_TOKEN: backendAuthToken,
+    DJL_AUTH_TOKEN: backendAuthToken,
     ...(cuaHostEndpoint
-      ? { [CUA_HOST_SOCKET_ENV]: cuaHostEndpoint, SYNARA_BROWSER_HOST_CAPABILITY: cuaCapability }
+      ? { [CUA_HOST_SOCKET_ENV]: cuaHostEndpoint, DJL_BROWSER_HOST_CAPABILITY: cuaCapability }
       : {}),
-    [SYNARA_BROWSER_USE_PIPE_ENV]: SYNARA_BROWSER_USE_PIPE_PATH,
+    [DJL_BROWSER_USE_PIPE_ENV]: DJL_BROWSER_USE_PIPE_PATH,
     ...(multiPostEndpoint
       ? {
           DJL_MULTIPOST_HOST_URL: multiPostEndpoint.url,
@@ -3490,7 +3485,7 @@ async function openShopWindow(): Promise<boolean> {
 
   const rendererEntry = isDevelopment
     ? (process.env.VITE_DEV_SERVER_URL as string)
-    : SYNARA_DESKTOP_ENTRY_URL;
+    : DJL_DESKTOP_ENTRY_URL;
   let destination: ShopDestination;
   try {
     destination = resolveShopDestination(rendererEntry, process.env, isDevelopment);
@@ -3591,7 +3586,7 @@ function registerIpcHandlers(): void {
     const owner = mainWindow;
     const rendererEntry = isDevelopment
       ? (process.env.VITE_DEV_SERVER_URL as string)
-      : SYNARA_DESKTOP_ENTRY_URL;
+      : DJL_DESKTOP_ENTRY_URL;
     if (
       !owner ||
       owner.isDestroyed() ||
@@ -3610,7 +3605,7 @@ function registerIpcHandlers(): void {
     const senderFrame = event.senderFrame;
     const rendererEntry = isDevelopment
       ? (process.env.VITE_DEV_SERVER_URL as string)
-      : SYNARA_DESKTOP_ENTRY_URL;
+      : DJL_DESKTOP_ENTRY_URL;
     if (
       !owner ||
       owner.isDestroyed() ||
@@ -3719,12 +3714,12 @@ function registerIpcHandlers(): void {
 
   ipcMain.removeAllListeners(STORAGE_MIGRATION_IPC_CHANNELS.read);
   ipcMain.on(STORAGE_MIGRATION_IPC_CHANNELS.read, (event: IpcMainEvent) => {
-    event.returnValue = computerQaBuild ? null : readSynaraStorageSnapshot(storageSnapshotPath);
+    event.returnValue = computerQaBuild ? null : readDjlStorageSnapshot(storageSnapshotPath);
   });
 
   ipcMain.removeHandler(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge);
   ipcMain.handle(STORAGE_MIGRATION_IPC_CHANNELS.acknowledge, async () => {
-    await acknowledgeSynaraStorageSnapshot(storageSnapshotPath);
+    await acknowledgeDjlStorageSnapshot(storageSnapshotPath);
   });
 
   ipcMain.removeAllListeners(DESKTOP_STARTUP_SCOPE_CHANNEL);
@@ -4130,7 +4125,7 @@ function registerIpcHandlers(): void {
   startBrowserPerformanceLogging();
   void ensureBrowserUsePipeServer().catch((error) => {
     console.warn(
-      `[DJL browser] Failed to register the in-app browser backend at ${SYNARA_BROWSER_USE_PIPE_PATH}. Codex will not be able to discover or open the browser panel.`,
+      `[DJL browser] Failed to register the in-app browser backend at ${DJL_BROWSER_USE_PIPE_PATH}. Codex will not be able to discover or open the browser panel.`,
       error,
     );
   });
@@ -4147,7 +4142,7 @@ function registerIpcHandlers(): void {
       event.senderFrame === event.sender.mainFrame &&
       isTrustedComputerUseUrl(
         event.senderFrame.url,
-        isDevelopment ? process.env.VITE_DEV_SERVER_URL! : SYNARA_DESKTOP_ENTRY_URL,
+        isDevelopment ? process.env.VITE_DEV_SERVER_URL! : DJL_DESKTOP_ENTRY_URL,
       )
     );
   });
@@ -4230,7 +4225,7 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
   }
   return {
     titleBarStyle: "hiddenInset",
-    // Derived from the shared chat-surface header geometry (@synara/shared/desktopChrome)
+    // Derived from the shared chat-surface header geometry (@djl/shared/desktopChrome)
     // so the native lights and the renderer's leading toggle/arrow controls always share
     // the same vertical center. Tune the height/radius there, never the raw px here.
     trafficLightPosition: getMacTrafficLightPosition(),
@@ -4316,7 +4311,7 @@ function createWindow(): BrowserWindow {
     emitRemoteGatewayState();
     if (
       process.env.DJL_DESKTOP_SMOKE_TEST === "1" &&
-      window.webContents.getURL() === SYNARA_DESKTOP_ENTRY_URL
+      window.webContents.getURL() === DJL_DESKTOP_ENTRY_URL
     ) {
       console.info("[desktop-smoke] renderer ready");
     }
@@ -4347,7 +4342,7 @@ function createWindow(): BrowserWindow {
   // available from the View menu and keyboard shortcut.
   const entryUrl = isDevelopment
     ? (process.env.VITE_DEV_SERVER_URL as string)
-    : SYNARA_DESKTOP_ENTRY_URL;
+    : DJL_DESKTOP_ENTRY_URL;
   void window.loadURL(entryUrl).catch((error: unknown) => {
     // Reloads can supersede an in-flight dev navigation. A real load failure
     // must surface a native error rather than leave a hidden window forever.

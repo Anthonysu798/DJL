@@ -1,7 +1,7 @@
 import "../index.css";
 
-import type { BrowserAnnotationAdjustments, BrowserAnnotationSelection } from "@synara/contracts";
-import { BrowserAnnotationAdjustments as BrowserAnnotationAdjustmentsSchema } from "@synara/contracts";
+import type { BrowserAnnotationAdjustments, BrowserAnnotationSelection } from "@djl/contracts";
+import { BrowserAnnotationAdjustments as BrowserAnnotationAdjustmentsSchema } from "@djl/contracts";
 import { Schema } from "effect";
 import { useState } from "react";
 import { page } from "vitest/browser";

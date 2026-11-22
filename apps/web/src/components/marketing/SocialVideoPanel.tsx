@@ -7,7 +7,7 @@ import type {
   AgentVideoTranscribeResult,
   Campaign,
   MediaAsset,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";

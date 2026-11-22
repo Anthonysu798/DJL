@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { CuaComputerTask } from "@synara/shared/cuaDriverProtocol";
+import type { CuaComputerTask } from "@djl/shared/cuaDriverProtocol";
 
 const tasks = new AsyncLocalStorage<{ task: CuaComputerTask; active: boolean }>();
 

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { crc32 } from "node:zlib";
 
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {

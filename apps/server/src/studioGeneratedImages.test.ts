@@ -8,7 +8,7 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationCommand,
-} from "@synara/contracts";
+} from "@djl/contracts";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -22,7 +22,7 @@ import {
 const temporaryRoots: string[] = [];
 
 async function temporaryRoot(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "synara-studio-images-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "djl-studio-images-"));
   temporaryRoots.push(root);
   return root;
 }

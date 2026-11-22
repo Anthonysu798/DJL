@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ComputerSpaceInventory, ProviderKind } from "@synara/contracts";
+import type { ComputerSpaceInventory, ProviderKind } from "@djl/contracts";
 
 import { ComputerManager } from "../computer/ComputerManager.ts";
 import { FakeComputerBackend } from "../computer/FakeComputerBackend.ts";

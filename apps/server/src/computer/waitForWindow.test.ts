@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ComputerWindow } from "@synara/contracts";
+import type { ComputerWindow } from "@djl/contracts";
 import { waitForWindow } from "./waitForWindow.ts";
 
 const window: ComputerWindow = {

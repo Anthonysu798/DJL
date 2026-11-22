@@ -7,7 +7,7 @@ import { it, assert } from "@effect/vitest";
 import { Effect } from "effect";
 import { SqlitePersistenceMemory } from "../persistence/Layers/Sqlite";
 import { writeCloudSession } from "../cloud/session";
-import { createCampaign } from "@synara/contracts";
+import { createCampaign } from "@djl/contracts";
 import { resolveAgentOwner } from "./agentScope";
 import { executeVideoTool, registerVideoTranscriber } from "./videoTools";
 import { readDocument, saveDocument } from "./store";
@@ -18,7 +18,7 @@ import {
   ProviderAdapterRegistry,
   type ProviderAdapterRegistryShape,
 } from "../provider/Services/ProviderAdapterRegistry";
-import type { ServerVoiceTranscriptionInput } from "@synara/contracts";
+import type { ServerVoiceTranscriptionInput } from "@djl/contracts";
 const exec = promisify(execFile);
 let assetId = "11111111-1111-4111-8111-111111111111";
 function fixture(duration = 3) {

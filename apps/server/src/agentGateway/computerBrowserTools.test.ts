@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { COMPUTER_BROWSER_TOOL_NAMES } from "@synara/contracts";
+import { COMPUTER_BROWSER_TOOL_NAMES } from "@djl/contracts";
 
 import type { ComputerBrowserCall } from "../computer/ComputerBackend.ts";
 import { ComputerManager } from "../computer/ComputerManager.ts";
@@ -49,7 +49,7 @@ function makeContext(threadId = THREAD, turnId: string | null = "turn-browser"):
 }
 
 async function workspace() {
-  const root = await mkdtemp(join(tmpdir(), "synara-browser-ws-"));
+  const root = await mkdtemp(join(tmpdir(), "djl-browser-ws-"));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   return root;
 }
@@ -616,7 +616,7 @@ describe("computer_browser_* gateway tools", () => {
 
   it("refuses an upload that resolves outside the workspace before it reaches the driver", async () => {
     const root = await workspace();
-    const outside = await mkdtemp(join(tmpdir(), "synara-browser-outside-"));
+    const outside = await mkdtemp(join(tmpdir(), "djl-browser-outside-"));
     cleanups.push(() => rm(outside, { recursive: true, force: true }));
     const file = join(outside, "secret.txt");
     await writeFile(file, "x");

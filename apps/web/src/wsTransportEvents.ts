@@ -5,7 +5,7 @@
 
 export type WsTransportState = "connecting" | "open" | "closed" | "disposed";
 
-export const SYNARA_WS_TRANSPORT_STATE_EVENT = "synara:ws-transport-state";
+export const DJL_WS_TRANSPORT_STATE_EVENT = "djl:ws-transport-state";
 
 export interface WsTransportStateEventDetail {
   state: WsTransportState;
@@ -25,7 +25,7 @@ export function emitWsTransportState(state: WsTransportState): void {
   }
 
   window.dispatchEvent(
-    new CustomEvent<WsTransportStateEventDetail>(SYNARA_WS_TRANSPORT_STATE_EVENT, {
+    new CustomEvent<WsTransportStateEventDetail>(DJL_WS_TRANSPORT_STATE_EVENT, {
       detail: { state },
     }),
   );
@@ -46,11 +46,11 @@ export function addWsTransportStateListener(
     listener(detail.state);
   };
 
-  window.addEventListener(SYNARA_WS_TRANSPORT_STATE_EVENT, handleStateChange);
+  window.addEventListener(DJL_WS_TRANSPORT_STATE_EVENT, handleStateChange);
   if (options?.replayCurrent && latestWsTransportState !== null) {
     listener(latestWsTransportState);
   }
   return () => {
-    window.removeEventListener(SYNARA_WS_TRANSPORT_STATE_EVENT, handleStateChange);
+    window.removeEventListener(DJL_WS_TRANSPORT_STATE_EVENT, handleStateChange);
   };
 }

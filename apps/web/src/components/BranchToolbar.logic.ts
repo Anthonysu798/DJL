@@ -1,14 +1,14 @@
-import type { GitBranch } from "@synara/contracts";
+import type { GitBranch } from "@djl/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   type AssociatedWorktreeMetadata,
-} from "@synara/shared/threadWorkspace";
+} from "@djl/shared/threadWorkspace";
 import { Schema } from "effect";
 
 export const EnvMode = Schema.Literals(["local", "worktree"]);
 export type EnvMode = typeof EnvMode.Type;
 
-export { permissionModesForProvider as runtimeModeOptionsForProvider } from "@synara/contracts";
+export { permissionModesForProvider as runtimeModeOptionsForProvider } from "@djl/contracts";
 
 export function resolveEffectiveEnvMode(input: {
   activeWorktreePath: string | null;

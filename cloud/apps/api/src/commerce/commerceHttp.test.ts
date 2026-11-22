@@ -24,7 +24,7 @@ import type {
   CommerceAdminOrder,
   CommerceAdminWithdrawal,
   CommerceSupplierMemberList,
-} from "@synara/contracts/cloud";
+} from "@djl/contracts/cloud";
 
 import type { AdminAuth, AdminPrincipal } from "../admin/AdminAuth.ts";
 import type { Principal, PrincipalResolver } from "../auth/guard.ts";

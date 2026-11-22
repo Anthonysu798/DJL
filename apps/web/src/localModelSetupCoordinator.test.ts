@@ -1,5 +1,5 @@
-import type { LocalModelSetupJob } from "@synara/contracts";
-import { ThreadId } from "@synara/contracts";
+import type { LocalModelSetupJob } from "@djl/contracts";
+import { ThreadId } from "@djl/contracts";
 import type { ComposerThreadDraftState, QueuedComposerTurn } from "./composerDraftStore";
 import { describe, expect, it, vi } from "vitest";
 

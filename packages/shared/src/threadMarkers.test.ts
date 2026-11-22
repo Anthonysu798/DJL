@@ -1,5 +1,5 @@
-import type { ThreadMarker } from "@synara/contracts";
-import { MessageId, ThreadMarkerId } from "@synara/contracts";
+import type { ThreadMarker } from "@djl/contracts";
+import { MessageId, ThreadMarkerId } from "@djl/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

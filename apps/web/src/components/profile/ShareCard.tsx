@@ -7,7 +7,7 @@
 
 import { forwardRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { ProfileStats, ProfileTokenStats } from "@synara/contracts";
+import type { ProfileStats, ProfileTokenStats } from "@djl/contracts";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { DjlLogo } from "~/components/DjlLogo";
 import { ActivityHeatmap, CARD_HEATMAP_INTENSITY_CLASSES } from "./ActivityHeatmap";

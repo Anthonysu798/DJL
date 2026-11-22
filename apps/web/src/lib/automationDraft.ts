@@ -4,7 +4,7 @@
 // Exports: AutomationCreationDraft plus pure warning/skill helpers.
 // Depends on: automation contracts shared with the native API.
 
-import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@synara/contracts";
+import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@djl/contracts";
 import type {
   AutomationMode,
   AutomationSchedule,
@@ -14,7 +14,7 @@ import type {
   ProviderInteractionMode,
   RuntimeMode,
   ThreadId,
-} from "@synara/contracts";
+} from "@djl/contracts";
 
 import type { ChatAutomationExecutionScope } from "./automationIntent";
 import { translateRendererCopy } from "../i18n";

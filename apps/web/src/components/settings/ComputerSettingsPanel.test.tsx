@@ -11,7 +11,7 @@
 // reads out is decided at render time. Interaction (pressing Set up) belongs to
 // `useProvisionComputer.test.tsx`, which owns that mutation.
 
-import type { ComputerStatusResult } from "@synara/contracts";
+import type { ComputerStatusResult } from "@djl/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";

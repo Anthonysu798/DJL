@@ -4,10 +4,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 
-import {
-  STREAMING_UPLOAD_MAX_FILE_BYTES,
-  type StreamingAttachmentReference,
-} from "@synara/contracts";
+import { STREAMING_UPLOAD_MAX_FILE_BYTES, type StreamingAttachmentReference } from "@djl/contracts";
 import { Effect, FileSystem, Path, Stream } from "effect";
 
 import { resolveAttachmentRelativePath } from "./attachmentPaths";

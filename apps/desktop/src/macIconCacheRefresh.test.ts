@@ -59,18 +59,16 @@ describe("shouldRefreshIconCache", () => {
 
 describe("resolveMacAppBundlePath", () => {
   it("resolves the .app bundle from the Electron executable on macOS", () => {
-    expect(
-      resolveMacAppBundlePath("/Applications/Synara.app/Contents/MacOS/Synara", "darwin"),
-    ).toBe("/Applications/Synara.app");
+    expect(resolveMacAppBundlePath("/Applications/DJL.app/Contents/MacOS/DJL", "darwin")).toBe(
+      "/Applications/DJL.app",
+    );
   });
 
   it("returns null off macOS", () => {
-    expect(
-      resolveMacAppBundlePath("/Applications/Synara.app/Contents/MacOS/Synara", "linux"),
-    ).toBeNull();
+    expect(resolveMacAppBundlePath("/Applications/DJL.app/Contents/MacOS/DJL", "linux")).toBeNull();
   });
 
   it("returns null when the executable is not inside a .app bundle", () => {
-    expect(resolveMacAppBundlePath("/usr/local/bin/synara", "darwin")).toBeNull();
+    expect(resolveMacAppBundlePath("/usr/local/bin/djl", "darwin")).toBeNull();
   });
 });

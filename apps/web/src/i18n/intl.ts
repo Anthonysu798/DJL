@@ -1,4 +1,4 @@
-import { SOURCE_APP_LOCALE } from "@synara/contracts";
+import { SOURCE_APP_LOCALE } from "@djl/contracts";
 import { useTranslation } from "react-i18next";
 
 type IntlFormatterKind = "date-time" | "number" | "relative-time";

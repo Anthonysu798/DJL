@@ -23,7 +23,7 @@ struct CodexWorktreeIcon: View {
     var weight: Font.Weight = .regular
 
     var body: some View {
-        // Synara uses Central's arrow-split-right for worktrees; keep DJL
+        // DJL uses Central's arrow-split-right for worktrees; keep DJL
         // on the same glyph through the shared icon resolver.
         DJLIcon.image(
             systemName: "djl.worktree",

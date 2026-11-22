@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Product name is **DJL**; legacy `@synara/*`, `.synara`, and `SYNARA_*` names remain compatibility identifiers only.
+- Product name is **DJL**; legacy `@djl/*`, `.djl`, and `DJL_*` names remain compatibility identifiers only.
 - The detector is an estimate and must never be described as proof of authorship or misconduct.
 - Document text, filenames, extracted content, and passage text must never leave the local DJL process or enter logs, analytics, persistent caches, or model-download requests.
 - Accepted inputs are paste, TXT, DOCX, and text-based PDF; encrypted, scanned/image-only, malformed, unsafe archive, macro-enabled, and over-limit inputs fail explicitly.

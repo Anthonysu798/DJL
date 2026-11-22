@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   WORKTREE_BRANCH_PREFIX,
-  buildSynaraBranchName,
+  buildDjlBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
-  resolveUniqueSynaraBranchName,
+  resolveUniqueDjlBranchName,
   resolveThreadBranchRegressionGuard,
 } from "./git";
 
@@ -70,37 +70,37 @@ describe("resolveThreadBranchRegressionGuard", () => {
   });
 });
 
-describe("buildSynaraBranchName", () => {
-  it("uses synara as the branch namespace", () => {
-    expect(buildSynaraBranchName("fix toast copy")).toBe("synara/fix-toast-copy");
+describe("buildDjlBranchName", () => {
+  it("uses djl as the branch namespace", () => {
+    expect(buildDjlBranchName("fix toast copy")).toBe("djl/fix-toast-copy");
   });
 
-  it("keeps non-Synara namespaces inside the Synara branch", () => {
-    expect(buildSynaraBranchName("feature/refine-toolbar-actions")).toBe(
-      "synara/feature/refine-toolbar-actions",
+  it("keeps non-DJL namespaces inside the DJL branch", () => {
+    expect(buildDjlBranchName("feature/refine-toolbar-actions")).toBe(
+      "djl/feature/refine-toolbar-actions",
     );
   });
 
   it("normalizes legacy prefixes before rebuilding the branch", () => {
     for (const namespace of PRE_CUTOVER_NAMESPACE_FIXTURES) {
-      expect(buildSynaraBranchName(`${namespace}/refine toolbar actions`)).toBe(
-        "synara/refine-toolbar-actions",
+      expect(buildDjlBranchName(`${namespace}/refine toolbar actions`)).toBe(
+        "djl/refine-toolbar-actions",
       );
     }
   });
 
-  it("falls back to synara/update when no preferred name is provided", () => {
-    expect(buildSynaraBranchName()).toBe("synara/update");
+  it("falls back to djl/update when no preferred name is provided", () => {
+    expect(buildDjlBranchName()).toBe("djl/update");
   });
 });
 
-describe("resolveUniqueSynaraBranchName", () => {
-  it("increments suffix when the Synara branch already exists", () => {
+describe("resolveUniqueDjlBranchName", () => {
+  it("increments suffix when the DJL branch already exists", () => {
     expect(
-      resolveUniqueSynaraBranchName(
-        ["main", "synara/fix-toast-copy", "synara/fix-toast-copy-2"],
+      resolveUniqueDjlBranchName(
+        ["main", "djl/fix-toast-copy", "djl/fix-toast-copy-2"],
         "fix toast copy",
       ),
-    ).toBe("synara/fix-toast-copy-3");
+    ).toBe("djl/fix-toast-copy-3");
   });
 });

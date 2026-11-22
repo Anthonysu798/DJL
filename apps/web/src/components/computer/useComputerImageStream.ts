@@ -1,5 +1,5 @@
-import type { ComputerId } from "@synara/contracts";
-import type { ComputerFrame } from "@synara/shared/computerFrame";
+import type { ComputerId } from "@djl/contracts";
+import type { ComputerFrame } from "@djl/shared/computerFrame";
 import { useEffect, useRef, useState } from "react";
 
 import {

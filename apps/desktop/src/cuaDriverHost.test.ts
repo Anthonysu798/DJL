@@ -13,7 +13,7 @@ import {
   CUA_NATIVE_REVISION,
   type CuaReply,
   type CuaComputerTask,
-} from "@synara/shared/cuaDriverProtocol";
+} from "@djl/shared/cuaDriverProtocol";
 const capability = "isolated-fixture-authority-00000000000000";
 const cuaRequest: typeof rawCuaRequest = (path, request, options) =>
   rawCuaRequest(path, { ...(request as object), capability }, options);
@@ -128,7 +128,7 @@ async function fixture(
   cleanups.push(async () => {
     Object.defineProperty(process, "platform", platformDescriptor);
   });
-  const directory = await mkdtemp(join(tmpdir(), "synara-cua-host-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "djl-cua-host-test-"));
   cleanups.push(() => rm(directory, { recursive: true, force: true }));
   const log = join(directory, "events.jsonl");
   const binary = join(directory, "driver");
@@ -144,7 +144,7 @@ if(!options.unpatched){
   if(!process.argv.includes('--compact-cursor')) throw new Error('Missing compact cursor profile');
   if(process.argv[process.argv.indexOf('--idle-hide-ms')+1]!=='60000') throw new Error('Missing cursor idle deadline');
 }
-if(options.unpatched&&(process.argv.includes('--compact-cursor')||process.argv.includes('--idle-hide-ms'))) throw new Error('Upstream driver cannot parse Synara cursor flags');
+if(options.unpatched&&(process.argv.includes('--compact-cursor')||process.argv.includes('--idle-hide-ms'))) throw new Error('Upstream driver cannot parse DJL cursor flags');
 const socket=process.argv[process.argv.indexOf('--socket')+1];
 let action, timer, inputEpoch=0, interruptions=0, browserCleanupPending=false, cursorEnables=0, cursorHides=0, clipboardRestores=0;
 net.createServer(s=>{
@@ -152,7 +152,7 @@ net.createServer(s=>{
   s.once('data',b=>{
     const r=JSON.parse(b.toString());
     if(options.logSessions&&r.method==='call'&&r.args&&typeof r.args.session==='string') write('session:'+r.args.session+':'+r.name);
-    if(r.method==='metadata') setTimeout(()=>reply({driver_version:${JSON.stringify(CUA_DRIVER_VERSION)},synara_native_revision:options.reportedRevision??(options.unpatched?undefined:${CUA_NATIVE_REVISION}),synara_browser_input_control:options.browserInputControl,embedded:true,pid:process.pid+(options.metadataPidOffset??0)}),options.metadataDelayMs??0);
+    if(r.method==='metadata') setTimeout(()=>reply({driver_version:${JSON.stringify(CUA_DRIVER_VERSION)},djl_native_revision:options.reportedRevision??(options.unpatched?undefined:${CUA_NATIVE_REVISION}),djl_browser_input_control:options.browserInputControl,embedded:true,pid:process.pid+(options.metadataPidOffset??0)}),options.metadataDelayMs??0);
     else if(r.method==='interrupt_input') {
       write('interrupt');
       if(r.args.expected_pid!==process.pid) throw new Error('Wrong interrupt generation');
@@ -201,7 +201,7 @@ net.createServer(s=>{
       if(r.expected_input_epoch!==inputEpoch) { reply({isError:true,structuredContent:{effect:'refused',code:'input_admission_closed'}}); return; }
       write('permitted-native:'+r.name); reply({});
     }
-    else if(r.name==='press_key') { if(!options.unpatched&&r.expected_input_epoch!==inputEpoch) { reply({isError:true,structuredContent:{effect:'refused',code:'input_admission_closed'}}); return; } write('key'); write('observation-budget-'+process.env.SYNARA_CUA_FOREGROUND_OBSERVATION_MS); reply(options.actionResult??{}); }
+    else if(r.name==='press_key') { if(!options.unpatched&&r.expected_input_epoch!==inputEpoch) { reply({isError:true,structuredContent:{effect:'refused',code:'input_admission_closed'}}); return; } write('key'); write('observation-budget-'+process.env.DJL_CUA_FOREGROUND_OBSERVATION_MS); reply(options.actionResult??{}); }
     else if(options.clipboardPreservation&&r.name==='clipboard_write') {
       write('clipboard:'+JSON.stringify(r.args));
       const restoring=typeof r.args.restore_token==='string';
@@ -358,7 +358,7 @@ describe("Cua macOS host retirement", () => {
       const reply = await cuaRequest<CuaReply>(f.endpoint, {
         method: "call",
         name: "press_key",
-        args: { key: "enter", _synara_foreground_observation_ms: 0 },
+        args: { key: "enter", _djl_foreground_observation_ms: 0 },
       });
       expect(reply.ok).toBe(true);
       expect(reply.hostPlatform).toBe("darwin");
@@ -1117,7 +1117,7 @@ describe("Cua macOS host retirement", () => {
   it("rejects an upstream binary before native input is admitted", async () => {
     const f = await fixture(capability, { unpatched: true });
     // The default host still expects the patched build, so it passes the
-    // Synara cursor flags — a faithful upstream binary exits on arguments it
+    // DJL cursor flags — a faithful upstream binary exits on arguments it
     // cannot parse, which refuses the call before any input is dispatched.
     // Even a binary that tolerated them would fail the revision handshake.
     await expect(
@@ -1134,7 +1134,7 @@ describe("Cua macOS host retirement", () => {
       unpatched: true,
       nativeRevision: null,
     });
-    // The upstream spawn omits the Synara cursor flags (the fake would exit
+    // The upstream spawn omits the DJL cursor flags (the fake would exit
     // on them), the handshake accepts the absent revision field, and replies
     // report the observed driver as unpatched — the backend's cue to narrow
     // advertised capabilities.
@@ -1189,7 +1189,7 @@ describe("agent cursor style", () => {
     cuaRequest<CuaReply>(endpoint, {
       method: "call",
       name: "press_key",
-      args: { key: "enter", _synara_foreground_observation_ms: 0 },
+      args: { key: "enter", _djl_foreground_observation_ms: 0 },
     });
 
   it("pushes the custom colors once per generation, on the session open", async () => {
@@ -1206,7 +1206,7 @@ describe("agent cursor style", () => {
     const payloads = stylePayloads(events);
     expect(payloads).toHaveLength(1);
     expect(Object.keys(payloads[0]!).toSorted()).toEqual(["fill", "rim", "session", "shadow"]);
-    expect(payloads[0]!.session).toMatch(/^synara-/);
+    expect(payloads[0]!.session).toMatch(/^djl-/);
     // Colors are normalized to lowercase before they reach the driver.
     expect(payloads[0]!.fill).toBe("#101010");
     expect(payloads[0]!.rim).toBe("#f0f0f0");
@@ -1302,7 +1302,7 @@ describe("agent cursor style", () => {
       cuaRequest<CuaReply>(f.endpoint, {
         method: "call",
         name: "press_key",
-        args: { key: "enter", _synara_foreground_observation_ms: 0 },
+        args: { key: "enter", _djl_foreground_observation_ms: 0 },
         task,
       });
     for (let i = 0; i < 2; i++) await expect(press()).resolves.toMatchObject({ ok: true });
@@ -1323,7 +1323,7 @@ describe("agent cursor style", () => {
       cuaRequest<CuaReply>(f.endpoint, {
         method: "call",
         name: "press_key",
-        args: { key: "enter", _synara_foreground_observation_ms: 0 },
+        args: { key: "enter", _djl_foreground_observation_ms: 0 },
         task,
       });
     await expect(press()).resolves.toMatchObject({ ok: true });
@@ -1349,7 +1349,7 @@ describe("agent cursor style", () => {
       cuaRequest<CuaReply>(f.endpoint, {
         method: "call",
         name: "press_key",
-        args: { key: "enter", _synara_foreground_observation_ms: 0 },
+        args: { key: "enter", _djl_foreground_observation_ms: 0 },
         task: { threadId: "thread", turnId: "turn" },
       }),
     ).resolves.toMatchObject({ ok: true });
@@ -1967,7 +1967,7 @@ describe("frame tap browser targeting", () => {
 });
 
 describe("driver warm-up on first touch", () => {
-  const FLAG = "SYNARA_CUA_WARM_ON_FIRST_TOUCH";
+  const FLAG = "DJL_CUA_WARM_ON_FIRST_TOUCH";
   let savedFlag: string | undefined;
   let captured = false;
 
@@ -2302,12 +2302,12 @@ describe("per-agent cursor identity", () => {
     expect(names).toContain("session:agent·Docs pass·t-2:press_key");
     // The shared generation session still backs unattributed calls.
     expect(
-      names.some((event) => event.startsWith("session:synara-") && event.endsWith(":press_key")),
+      names.some((event) => event.startsWith("session:djl-") && event.endsWith(":press_key")),
     ).toBe(true);
     // Task sessions mint lazily on dispatch: the only explicit start_session
     // is the generation's own bootstrap one — no extra round trip per label.
     expect(names.filter((event) => event.startsWith("open_session:start_session:"))).toEqual([
-      expect.stringMatching(/^open_session:start_session:synara-[0-9a-f-]+$/),
+      expect.stringMatching(/^open_session:start_session:djl-[0-9a-f-]+$/),
     ]);
   });
 
@@ -2395,10 +2395,10 @@ describe("browser surface", () => {
     const events = (await f.events()).map((row) => row.event);
     // The first browser call opened the persistent control connection; the
     // dispatch then rode the thread's lifecycle label under that transport id.
-    expect(events.some((event) => event.startsWith("session-begin:synara-transport-"))).toBe(true);
+    expect(events.some((event) => event.startsWith("session-begin:djl-transport-"))).toBe(true);
     expect(
       events.some((event) =>
-        event.startsWith("browser:browser_navigate:synara-browser-thread:synara-transport-"),
+        event.startsWith("browser:browser_navigate:djl-browser-thread:djl-transport-"),
       ),
     ).toBe(true);
     // A caller-supplied session can never override the minted label.
@@ -2416,9 +2416,7 @@ describe("browser surface", () => {
     ).toBe(false);
     expect(
       (await f.events()).some((row) =>
-        String(row.event).startsWith(
-          "browser:browser_click:synara-browser-thread:synara-transport-",
-        ),
+        String(row.event).startsWith("browser:browser_click:djl-browser-thread:djl-transport-"),
       ),
     ).toBe(true);
   });
@@ -2456,10 +2454,10 @@ describe("browser surface", () => {
           event.startsWith("end_session:"),
       );
     expect(lifecycle).toEqual([
-      expect.stringMatching(/^browser:browser_click:synara-browser-thread:/),
-      expect.stringMatching(/^end_session:synara-browser-thread:synara-transport-/),
-      expect.stringMatching(/^start_session:synara-browser-thread:synara-transport-/),
-      expect.stringMatching(/^browser:browser_click:synara-browser-thread:/),
+      expect.stringMatching(/^browser:browser_click:djl-browser-thread:/),
+      expect.stringMatching(/^end_session:djl-browser-thread:djl-transport-/),
+      expect.stringMatching(/^start_session:djl-browser-thread:djl-transport-/),
+      expect.stringMatching(/^browser:browser_click:djl-browser-thread:/),
     ]);
   });
   it("keeps end_browser_thread a no-op for a thread that never used the browser", async () => {
@@ -3348,7 +3346,7 @@ describe("verified Linux browser input capability", () => {
     const reply = await cuaRequest<CuaReply>(f.endpoint, {
       method: "call",
       name: "browser_navigate",
-      args: { synara_browser_input_control: 1, browserInputControlVerified: true },
+      args: { djl_browser_input_control: 1, browserInputControlVerified: true },
       browserInputControlVerified: true,
       task,
     });
@@ -3660,7 +3658,7 @@ describe("activation shield host method", () => {
     frame: { x: 100, y: 50, width: 400, height: 300 },
     window_id: 4242,
     pid: 777,
-    label: "Synara activating Calculator",
+    label: "DJL activating Calculator",
   };
   const recordingShield = () => {
     const calls: Array<{ method: string; args: unknown[] }> = [];
@@ -3709,7 +3707,7 @@ describe("activation shield host method", () => {
       frame: { x: 100, y: 50, width: 400, height: 300 },
       windowId: 4242,
       pid: 777,
-      label: "Synara activating Calculator",
+      label: "DJL activating Calculator",
     });
     expect(call.args[1]).toEqual(task);
     // A shield engage is host-local: no driver generation was ever started.
