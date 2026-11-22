@@ -75,6 +75,15 @@ regexes = [
   '''const DO_OAUTH_CLIENT_ID\s*=''',
 ]
 
+# GitHub device flow needs only the OAuth App's client id, which is public; DJL has no client secret.
+[[allowlists]]
+description = "DJL GitHub OAuth App public client identifier"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = ['''^apps/server/src/plugins/hostedPlugins\.ts$''']
+regexes = ['''const GITHUB_OAUTH_CLIENT_ID = "Ov23li[A-Za-z0-9]{14}";''']
+
 # DJL Cloud admin e2e tests use fixed throwaway passwords for test-only accounts.
 [[allowlists]]
 description = "DJL Cloud admin e2e test fixture passwords"
