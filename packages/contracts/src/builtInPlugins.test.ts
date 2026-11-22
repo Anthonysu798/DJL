@@ -14,8 +14,13 @@ describe("DJL plugin references", () => {
       mentions: [SOCIAL_PLUGIN_MENTION],
       skills: [SOCIAL_SKILLS[1]!],
     });
-    expect(input.messageText).toContain("explicit confirmation");
-    expect(input.messageText).toContain("djl_prepare_social_publish");
+    // One call posts; the chat already shows the result, so no second preview and no long reply.
+    expect(input.messageText).toContain("call djl_multipost_post once");
+    expect(input.messageText).toContain("do not also call djl_prepare_marketing");
+    expect(input.messageText).toContain("one short sentence");
+    expect(input.messageText).toContain("never ask the user to sign in to DJL Cloud");
+    expect(input.messageText).not.toContain("djl_prepare_social_publish");
+    expect(input.messageText).not.toContain("resume after OAuth");
     expect(input.messageText).toContain("OAuth authorization is not consent");
     expect(input.mentions).toEqual([]);
     expect(input.skills).toEqual([]);

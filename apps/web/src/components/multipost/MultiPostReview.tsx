@@ -8,17 +8,20 @@ import type {
 } from "@synara/contracts";
 import { Button } from "~/components/ui/button";
 import { multiPostCommand, mediaPreviewUrl } from "./client";
+import { PlatformMark } from "./PlatformMark";
 import "./multipost.css";
 export function MultiPostReview({
   threadId,
   draft,
   accounts,
   onUpdated,
+  onEdit,
 }: {
   threadId: string;
   draft: MultiPostDraft;
   accounts: MultiPostAccount[];
   onUpdated: () => void;
+  onEdit?: () => void;
 }) {
   const { t } = useTranslation("chat");
   const label = (key: string, fallback: string) =>
@@ -106,10 +109,7 @@ export function MultiPostReview({
   return (
     <section className="mp-review" aria-label={label("finalReview", "Final publishing review")}>
       <div className="mp-section-heading">
-        <h3>{draft.data.title || label("untitled", "Untitled post")}</h3>
-        <span className="mp-muted">
-          {label("revision", "Revision")} {draft.revision}
-        </span>
+        <h3>{draft.data.title || label("readyToPost", "Ready to post")}</h3>
       </div>
       <p className="mp-caption">
         {draft.data.content ||
@@ -167,6 +167,10 @@ export function MultiPostReview({
           const account = accounts.find((x) => x.id === target.accountId);
           return (
             <li key={`${target.accountId}-${target.adapterId}`}>
+              <PlatformMark
+                platformKey={account?.platformKey ?? ""}
+                name={account?.label ?? target.adapterId}
+              />
               <strong>{account?.label ?? target.accountId}</strong>
               <span>
                 {account?.identity
@@ -225,23 +229,30 @@ export function MultiPostReview({
           ? `${label("nativeSchedule", "Platform-native scheduled time")}: ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: draft.timezone }).format(new Date(draft.data.scheduledPublishTime))} · ${draft.timezone}`
           : draft.publicationMode === "scheduled" && draft.scheduledAt
             ? `${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: draft.timezone }).format(new Date(draft.scheduledAt))} · ${draft.timezone}`
-            : label("publishNow", "Publish now")}
+            : label("goesRightAway", "Goes out right away")}
       </p>
       {error && (
         <p role="alert" className="mp-error">
           {error}
         </p>
       )}
-      <Button
-        onClick={() => void approve()}
-        disabled={busy || files.some((file) => !loaded.has(file.url))}
-      >
-        {busy
-          ? label("working", "Working…")
-          : draft.publicationMode === "scheduled"
-            ? label("approveSchedule", "Approve and schedule")
-            : label("approvePublish", "Approve and publish")}
-      </Button>
+      <div className="mp-actions">
+        <Button
+          onClick={() => void approve()}
+          disabled={busy || files.some((file) => !loaded.has(file.url))}
+        >
+          {busy
+            ? label("working", "Working…")
+            : draft.publicationMode === "scheduled"
+              ? label("schedulePost", "Schedule post")
+              : label("postNow", "Post now")}
+        </Button>
+        {onEdit && (
+          <Button variant="ghost" onClick={onEdit}>
+            {label("edit", "Edit")}
+          </Button>
+        )}
+      </div>
     </section>
   );
 }

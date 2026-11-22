@@ -55,7 +55,7 @@ describe("Desktop plugin library", () => {
     await expect.element(page.getByText("DJL Work Tools", { exact: false })).toBeVisible();
     await page.getByRole("button", { name: /social-publish/ }).click();
     await expect
-      .element(page.getByText(/Require explicit confirmation of this content version/))
+      .element(page.getByText(/Queued is not published: read djl_multipost_jobs/))
       .toBeVisible();
     await screen.unmount();
   });

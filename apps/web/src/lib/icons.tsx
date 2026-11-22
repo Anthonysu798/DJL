@@ -167,6 +167,7 @@ export const TrophyIcon = adaptIcon(IconTrophy);
 // sourced from the Central icon set rather than the Tabler stroke icon.
 export const ClockIcon = centralIconWrapper("clock");
 export const UsersGroupIcon = centralIconWrapper("group-1");
+export const MegaphoneIcon = centralIconWrapper("megaphone");
 export const ChartBarIcon = adaptIcon(IconChartBar);
 export const ShareIcon = adaptIcon(IconShare3);
 export const SparklesIcon = adaptIcon(IconSparkles);

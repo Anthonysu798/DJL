@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   ClockIcon,
   UsersGroupIcon,
+  MegaphoneIcon,
   CopyIcon,
   CircleQuestionIcon,
   ExternalLinkIcon,
@@ -323,6 +324,7 @@ import {
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
   sortThreadsForSidebar,
+  resolveSocialThreadId,
 } from "./Sidebar.logic";
 import type { LastThreadRoute } from "../chatRouteRestore";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
@@ -1505,6 +1507,7 @@ export default function Sidebar() {
   const isOnPlugins = pathname.startsWith("/plugins");
   const isOnAutomations = pathname.startsWith("/automations");
   const isOnMultiAgents = pathname.startsWith("/multi-agents");
+  const isOnSocial = pathname.startsWith("/social/");
   const handleOpenShop = useCallback(() => {
     void openShop().then(
       (opened) => {
@@ -1731,6 +1734,21 @@ export default function Sidebar() {
   const routeActiveSidebarThreadId = routeThreadId;
   const activeSidebarThreadId = optimisticActiveThreadId ?? routeActiveSidebarThreadId;
   const visualActiveSidebarThreadId = optimisticActiveThreadId ?? routeThreadId;
+  const handleOpenSocial = useCallback(() => {
+    const socialThreadId = resolveSocialThreadId({
+      activeThreadId: activeSidebarThreadId,
+      threads: sidebarThreadSummaryByIdRef.current,
+    });
+    if (socialThreadId) {
+      void navigate({ to: "/social/$socialThreadId", params: { socialThreadId } });
+      return;
+    }
+    toastManager.add({
+      type: "info",
+      title: t("sidebar.actions.socialNeedsChat", { ns: "shell" }),
+    });
+    void navigate({ to: "/" });
+  }, [activeSidebarThreadId, navigate, t]);
   const selectSidebarThreads = useMemo(() => createSidebarThreadSummariesSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
   const groupProjectIdSet = useMemo(() => collectGroupProjectIds(projects), [projects]);
@@ -6791,16 +6809,21 @@ export default function Sidebar() {
                   ? t("sidebar.settings", { ns: "shell" })
                   : isOnMultiAgents
                     ? t("multiAgents.title", { ns: "shell" })
-                    : isOnAutomations
-                      ? t("sidebar.actions.automations", { ns: "shell" })
-                      : isOnKanban
-                        ? t("sidebar.actions.kanban", { ns: "shell" })
-                        : isOnWorkspace
-                          ? t("sidebar.views.workspace", { ns: "shell" })
-                          : ((activeSidebarThreadId
-                              ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
-                              : undefined) ??
-                            t("sidebar.actions.newChat", { ns: "shell", defaultValue: "New chat" }))
+                    : isOnSocial
+                      ? t("sidebar.actions.social", { ns: "shell" })
+                      : isOnAutomations
+                        ? t("sidebar.actions.automations", { ns: "shell" })
+                        : isOnKanban
+                          ? t("sidebar.actions.kanban", { ns: "shell" })
+                          : isOnWorkspace
+                            ? t("sidebar.views.workspace", { ns: "shell" })
+                            : ((activeSidebarThreadId
+                                ? sidebarThreadSummaryById[activeSidebarThreadId]?.title
+                                : undefined) ??
+                              t("sidebar.actions.newChat", {
+                                ns: "shell",
+                                defaultValue: "New chat",
+                              }))
             }
             newChatLabel={t("sidebar.actions.newThread", { ns: "shell" })}
             onNewChat={handlePrimaryNewThread}
@@ -6816,6 +6839,7 @@ export default function Sidebar() {
                   !isOnKanban &&
                   !isOnAutomations &&
                   !isOnMultiAgents &&
+                  !isOnSocial &&
                   !isOnPlugins,
                 onClick: () => {
                   if (!navigateToBackTarget(resolveBackToThreadsTarget())) {
@@ -6842,6 +6866,12 @@ export default function Sidebar() {
                 onClick: () => {
                   void navigate({ to: "/multi-agents" });
                 },
+              },
+              {
+                label: t("sidebar.actions.social", { ns: "shell" }),
+                icon: "megaphone",
+                active: isOnSocial,
+                onClick: handleOpenSocial,
               },
               {
                 label: t("sidebar.actions.shop", { ns: "shell" }),
@@ -7100,6 +7130,12 @@ export default function Sidebar() {
                         onClick={() => {
                           void navigate({ to: "/multi-agents" });
                         }}
+                      />
+                      <SidebarPrimaryAction
+                        icon={MegaphoneIcon}
+                        label={t("sidebar.actions.social", { ns: "shell" })}
+                        active={isOnSocial}
+                        onClick={handleOpenSocial}
                       />
                     </>
                   )}

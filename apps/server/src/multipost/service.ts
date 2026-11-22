@@ -1,5 +1,6 @@
 import { ensureMultiPostSchema } from "./schema";
-import { importMultiPostMedia, multiPostAttachments } from "./media";
+import { cropMedia, importMultiPostMedia, multiPostAttachments, quickPostMedia } from "./media";
+import { describeSkipped, planQuickPost, quickPostContent } from "./quickPost";
 import { stat } from "node:fs/promises";
 import { normalizeContent } from "@synara/multipost";
 import { createHash, randomUUID } from "node:crypto";
@@ -17,10 +18,14 @@ import type {
   MultiPostEvidence,
   MultiPostGrant,
   MultiPostJob,
+  MultiPostNotice,
+  MultiPostQuickPost,
+  MultiPostQuickPostResult,
   MultiPostScope,
   MultiPostState,
   MultiPostWorkflow,
 } from "@synara/contracts";
+import { MULTIPOST_CROP_RATIO } from "@synara/contracts";
 
 type RecordKind = "account" | "draft" | "job" | "workflow" | "grant";
 type Stored = MultiPostAccount | MultiPostDraft | MultiPostJob | MultiPostWorkflow | MultiPostGrant;
@@ -62,6 +67,23 @@ function assertPublicationEvidence(job: MultiPostJob, evidence: MultiPostEvidenc
 }
 
 /** One service owns consent and durable state for UI, agents and the scheduler. */
+const AUTOPILOT_UNDO_MS = 10_000;
+const RETRY_AFTER_MS = 30_000;
+/** Trouble that usually passes by itself: the internet dropped, or the desktop could not be reached. */
+const connectionLost = (message: string) =>
+  /ERR_(NETWORK|INTERNET|CONNECTION|NAME_NOT_RESOLVED|TIMED_OUT|ADDRESS_UNREACHABLE)|fetch failed|ECONN|ENOTFOUND|EAI_AGAIN/i.test(
+    message,
+  );
+const handle = (username: string) => (/^[\w.-]+$/.test(username) ? `@${username}` : username);
+const neverSignedIn = (account: MultiPostAccount) =>
+  !account.identity && account.status !== "connected" && !account.homeUrl;
+/** The moments worth interrupting someone for: it went out, it did not, or it is waiting on them. */
+function noticeKind(job: MultiPostJob): MultiPostNotice["kind"] | null {
+  if (job.state === "published" || job.state === "delivered") return "posted";
+  if (job.state === "failed") return "failed";
+  if (["needs-login", "missed", "uncertain"].includes(job.state)) return "needs-you";
+  return job.state === "prepared" && job.evidence?.requiresManual ? "needs-you" : null;
+}
 export class MultiPostService {
   private readonly aborts = new Map<string, AbortController>();
   private readonly busyAccounts = new Set<string>();
@@ -179,23 +201,8 @@ export class MultiPostService {
       unique.add(key);
     }
   }
-  private async validGrant(scope: MultiPostScope, draft: MultiPostDraft, grantId: string) {
-    const grant = await this.read<MultiPostGrant>("grant", grantId, scope.workspaceId);
-    assert(
-      !grant.revokedAt && Date.parse(grant.expiresAt) > this.now().getTime(),
-      "Publishing authorization expired or was revoked",
-    );
-    const workflow = await this.read<MultiPostWorkflow>(
-      "workflow",
-      grant.workflowId,
-      scope.workspaceId,
-    );
-    assert(
-      workflow.revision === grant.workflowRevision &&
-        draft.workflowId === workflow.id &&
-        draft.workflowRevision === workflow.revision,
-      "Workflow revision changed; request authorization again",
-    );
+  /** Unattended posts may only go where the user bound the account, never to an agent-chosen URL. */
+  private async assertBoundDestinations(scope: MultiPostScope, draft: MultiPostDraft) {
     for (const target of draft.targets) {
       const custom = [
         ...(Array.isArray(target.extraConfig?.urls) ? target.extraConfig.urls : []),
@@ -215,6 +222,55 @@ export class MultiPostService {
         );
       }
     }
+  }
+  private autopilotOn(account: MultiPostAccount) {
+    return Boolean(
+      account.autopilot &&
+      account.identity &&
+      account.status === "connected" &&
+      Date.parse(account.autopilot.expiresAt) > this.now().getTime(),
+    );
+  }
+  /** Accounts a draft targets that the user has not put on autopilot. */
+  private async autopilotGaps(scope: MultiPostScope, draft: MultiPostDraft) {
+    const gaps: MultiPostAccount[] = [];
+    for (const accountId of new Set(draft.targets.map((target) => target.accountId))) {
+      const account = await this.read<MultiPostAccount>("account", accountId, scope.workspaceId);
+      if (!this.autopilotOn(account)) gaps.push(account);
+    }
+    return gaps;
+  }
+  private async stopAutopilotJobs(scope: MultiPostScope, accountId: string) {
+    for (const job of await this.list<MultiPostJob>("job", scope.workspaceId))
+      if (job.autopilot && job.accountId === accountId) {
+        this.aborts.get(job.id)?.abort();
+        if (!job.submittedAt && !["cancelled", "failed", "missed"].includes(job.state))
+          await this.write("job", {
+            ...job,
+            state: "cancelled",
+            error: "Autopilot was switched off.",
+            updatedAt: this.time(),
+          });
+      }
+  }
+  private async validGrant(scope: MultiPostScope, draft: MultiPostDraft, grantId: string) {
+    const grant = await this.read<MultiPostGrant>("grant", grantId, scope.workspaceId);
+    assert(
+      !grant.revokedAt && Date.parse(grant.expiresAt) > this.now().getTime(),
+      "Publishing authorization expired or was revoked",
+    );
+    const workflow = await this.read<MultiPostWorkflow>(
+      "workflow",
+      grant.workflowId,
+      scope.workspaceId,
+    );
+    assert(
+      workflow.revision === grant.workflowRevision &&
+        draft.workflowId === workflow.id &&
+        draft.workflowRevision === workflow.revision,
+      "Workflow revision changed; request authorization again",
+    );
+    await this.assertBoundDestinations(scope, draft);
     assert(
       grant.kinds.includes(draft.kind) &&
         draft.targets.every((x) => grant.accountIds.includes(x.accountId)),
@@ -279,6 +335,13 @@ export class MultiPostService {
         }
         if (["webhook", "wordpress"].includes(command.platformKey))
           assert(command.homeUrl, "Configure this destination in the Accounts UI");
+        // A sign-in that was never finished is picked up again, not left behind as an empty account.
+        const unfinished = command.homeUrl
+          ? undefined
+          : (await this.list<MultiPostAccount>("account", scope.workspaceId)).find(
+              (x) => x.platformKey === command.platformKey && neverSignedIn(x),
+            );
+        if (unfinished) return unfinished;
         return this.write("account", {
           ...(command.homeUrl ? { homeUrl: command.homeUrl } : {}),
           id: randomUUID(),
@@ -311,12 +374,112 @@ export class MultiPostService {
           identity?.accountId,
           "Platform identity could not be verified; finish login in the account window",
         );
-        if (account.identity && identityKey(account.identity) !== identityKey(identity)) {
+        const changed = account.identity && identityKey(account.identity) !== identityKey(identity);
+        if (changed) {
           for (const grant of await this.list<MultiPostGrant>("grant", scope.workspaceId))
             if (grant.accountIds.includes(account.id) && !grant.revokedAt)
               await this.write("grant", { ...grant, revokedAt: this.time() });
         }
-        return this.write("account", { ...account, identity, status: "connected" });
+        if (!account.identity) {
+          const used = new Set(
+            (await this.list<MultiPostJob>("job", scope.workspaceId)).map((job) => job.accountId),
+          );
+          for (const other of await this.list<MultiPostAccount>("account", scope.workspaceId))
+            if (
+              other.id !== account.id &&
+              other.platformKey === account.platformKey &&
+              neverSignedIn(other) &&
+              !used.has(other.id)
+            )
+              await this.command(scope, { action: "remove-account", accountId: other.id }, "ui");
+        }
+        return this.write("account", {
+          ...account,
+          // People know their accounts by handle, not by "Instagram 3".
+          ...(!account.identity && identity.username ? { label: handle(identity.username) } : {}),
+          identity,
+          status: "connected",
+          checkedAt: this.time(),
+          ...(changed ? { autopilot: null } : {}),
+        });
+      }
+      case "remove-account": {
+        assert(actor === "ui", "Only the user can remove accounts");
+        await this.command(
+          scope,
+          { action: "disconnect-account", accountId: command.accountId },
+          "ui",
+        );
+        await Effect.runPromise(
+          this
+            .sql`DELETE FROM multipost_records WHERE kind='account' AND id=${command.accountId} AND workspace_id=${scope.workspaceId}`,
+        );
+        return { removed: true };
+      }
+      case "check-accounts": {
+        assert(actor === "ui", "Only the user UI checks accounts");
+        const accounts = await this.list<MultiPostAccount>("account", scope.workspaceId);
+        // Accounts from before handles were used: rename the numbered ones, drop empty leftovers.
+        const used = new Set(
+          (await this.list<MultiPostJob>("job", scope.workspaceId)).map((job) => job.accountId),
+        );
+        for (const account of accounts) {
+          const plain = account.label.replace(/ \d+$/, "").toLowerCase();
+          const numbered = this.capabilities.some(
+            (x) =>
+              x.platformKey === account.platformKey &&
+              [x.displayName.toLowerCase(), x.platformKey].includes(plain),
+          );
+          if (account.identity?.username && numbered)
+            await this.write("account", { ...account, label: handle(account.identity.username) });
+          else if (
+            neverSignedIn(account) &&
+            !used.has(account.id) &&
+            accounts.some((x) => x.platformKey === account.platformKey && x.identity)
+          )
+            await this.command(scope, { action: "remove-account", accountId: account.id }, "ui");
+        }
+        for (const account of await this.list<MultiPostAccount>("account", scope.workspaceId)) {
+          if (
+            account.status !== "connected" ||
+            !account.identity ||
+            this.busyAccounts.has(account.id) ||
+            this.now().getTime() - Date.parse(account.checkedAt ?? "1970-01-01") < 6 * 3_600_000 ||
+            !this.capabilities.some(
+              (x) => x.platformKey === account.platformKey && x.identitySupported,
+            )
+          )
+            continue;
+          // A check that cannot run says nothing about the account, so it changes nothing.
+          const identity = await this.runtime.identity(scope, account).catch(() => undefined);
+          if (identity === undefined) continue;
+          const fresh = await this.read<MultiPostAccount>("account", account.id, scope.workspaceId);
+          if (fresh.status !== "connected") continue;
+          await this.write("account", {
+            ...fresh,
+            checkedAt: this.time(),
+            ...(identity && identityKey(identity) === identityKey(account.identity)
+              ? {}
+              : { status: "needs-login" as const }),
+          });
+        }
+        // A platform can confirm a share before it shows where the post is; look again for a day.
+        if (this.runtime.postLink) {
+          const recent = (await this.list<MultiPostJob>("job", scope.workspaceId))
+            .filter(
+              (job) =>
+                job.state === "published" &&
+                job.submittedAt &&
+                job.evidence &&
+                !job.evidence.postUrl &&
+                this.now().getTime() - Date.parse(job.submittedAt) < 24 * 3_600_000 &&
+                !this.busyAccounts.has(job.accountId),
+            )
+            .toSorted((a, b) => b.submittedAt!.localeCompare(a.submittedAt!))
+            .slice(0, 2);
+          for (const job of recent) await this.findLink(scope, job);
+        }
+        return this.list<MultiPostAccount>("account", scope.workspaceId);
       }
       case "disconnect-account": {
         assert(actor === "ui", "Only the user UI can disconnect accounts");
@@ -329,6 +492,7 @@ export class MultiPostService {
         const disconnected = await this.write("account", {
           ...account,
           identity: null,
+          autopilot: null,
           status: "disconnected",
         });
         for (const grant of await this.list<MultiPostGrant>("grant", scope.workspaceId))
@@ -343,6 +507,38 @@ export class MultiPostService {
         await this.runtime.disconnect(scope, account);
         return disconnected;
       }
+      case "set-autopilot": {
+        assert(actor === "ui", "Only the user can switch Autopilot on or off");
+        const account = await this.read<MultiPostAccount>(
+          "account",
+          command.accountId,
+          scope.workspaceId,
+        );
+        if (!command.enabled) {
+          const off = await this.write("account", { ...account, autopilot: null });
+          await this.stopAutopilotJobs(scope, account.id);
+          return off;
+        }
+        assert(
+          account.identity && account.status === "connected",
+          "Sign in to this account before switching on Autopilot",
+        );
+        const dailyLimit = command.dailyLimit ?? 5;
+        assert(
+          Number.isInteger(dailyLimit) && dailyLimit >= 1 && dailyLimit <= 50,
+          "Choose between 1 and 50 posts a day",
+        );
+        return this.write("account", {
+          ...account,
+          autopilot: {
+            dailyLimit,
+            expiresAt: new Date(this.now().getTime() + 30 * 86_400_000).toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+        });
+      }
+      case "quick-post":
+        return this.quickPost(scope, command.post, actor);
       case "save-draft": {
         const input = command.draft;
         assert(
@@ -421,12 +617,16 @@ export class MultiPostService {
       }
       case "submit-draft": {
         const draft = await this.draft(scope, command.draftId, command.revision);
+        const autopilot = !command.grantId && draft.approvedRevision !== draft.revision;
         if (command.grantId) await this.validGrant(scope, draft, command.grantId);
-        else
+        else if (autopilot) {
+          const gaps = await this.autopilotGaps(scope, draft);
           assert(
-            draft.approvedRevision === draft.revision,
-            "Review and approve this content revision before publishing",
+            !gaps.length,
+            `Not approved yet: tap Post on the preview card, or switch on Autopilot for ${gaps.map((x) => x.label).join(", ")} in MultiPost Accounts`,
           );
+          await this.assertBoundDestinations(scope, draft);
+        }
         await this.validateTargets(scope, draft);
         const jobs: MultiPostJob[] = [];
         const expanded = draft.targets.flatMap((target) => {
@@ -463,9 +663,15 @@ export class MultiPostService {
             snapshot: structuredClone(draft),
             target: structuredClone(target),
             state: "queued",
-            dueAt: draft.scheduledAt ?? this.time(),
+            // Nobody pressed Post for an Autopilot job, so it waits a moment and can be cancelled.
+            dueAt:
+              draft.scheduledAt ??
+              (autopilot
+                ? new Date(this.now().getTime() + AUTOPILOT_UNDO_MS).toISOString()
+                : this.time()),
             submittedAt: null,
             grantId: command.grantId ?? null,
+            ...(autopilot ? { autopilot: true } : {}),
             evidence: null,
             error: null,
             createdAt: this.time(),
@@ -537,6 +743,28 @@ export class MultiPostService {
           });
         }
         return this.write("job", { ...job, state: "cancelled", updatedAt: this.time() });
+      }
+      case "reschedule-job": {
+        assert(actor === "ui", "Only the user can move a scheduled post");
+        const job = await this.read<MultiPostJob>("job", command.jobId, scope.workspaceId);
+        assert(
+          job.state === "queued" && !job.submittedAt && job.snapshot.scheduledAt,
+          "Only a post that is still scheduled can be moved",
+        );
+        const when = Date.parse(command.scheduledAt);
+        assert(
+          Number.isFinite(when) &&
+            when > this.now().getTime() &&
+            when < this.now().getTime() + 366 * 86_400_000,
+          "Pick a time in the future",
+        );
+        const scheduledAt = new Date(when).toISOString();
+        return this.write("job", {
+          ...job,
+          dueAt: scheduledAt,
+          snapshot: { ...job.snapshot, scheduledAt },
+          updatedAt: this.time(),
+        });
       }
       case "retry-job": {
         const job = await this.read<MultiPostJob>("job", command.jobId, scope.workspaceId);
@@ -674,6 +902,113 @@ export class MultiPostService {
         throw new Error("Unknown MultiPost command");
     }
   }
+  /** One call from "here is my post" to queued: used by the simple composer and by agents. */
+  private async quickPost(
+    scope: MultiPostScope,
+    post: MultiPostQuickPost,
+    actor: MultiPostActor,
+  ): Promise<MultiPostQuickPostResult> {
+    assert(post && typeof post.text === "string", "Write something to post");
+    const text = post.text.trim();
+    const files = await quickPostMedia(scope, post.media ?? []);
+    assert(text || files.length, "Write something or add a photo or video to post");
+    const all = (await this.list<MultiPostAccount>("account", scope.workspaceId)).toReversed();
+    const accounts = post.accountIds?.length
+      ? post.accountIds.map((id) => {
+          const account = all.find((x) => x.id === id);
+          assert(account, "That account is not in this workspace");
+          return account;
+        })
+      : all.filter(
+          (account) =>
+            account.status === "connected" ||
+            (account.status === "needs-login" &&
+              !this.capabilities.some(
+                (x) => x.platformKey === account.platformKey && x.identitySupported,
+              )),
+        );
+    assert(accounts.length, "Connect an account first: open MultiPost, then Accounts");
+    const { targets, skipped } = planQuickPost(this.capabilities, accounts, files);
+    assert(
+      targets.dynamic.length + targets.video.length,
+      `None of the chosen accounts can take this post: ${describeSkipped(skipped)}`,
+    );
+    const images = files.filter((file) => file.type?.startsWith("image/"));
+    for (const target of targets.dynamic) {
+      const platformKey = accounts.find((x) => x.id === target.accountId)?.platformKey ?? "";
+      const ratio = MULTIPOST_CROP_RATIO[platformKey];
+      if (!ratio || !images.length) continue;
+      const cropped = await Promise.all(images.map((file) => cropMedia(scope, file, ratio)));
+      if (cropped.some((file, i) => file !== images[i])) target.overrides = { images: cropped };
+    }
+    const drafts: MultiPostDraft[] = [];
+    const jobs: MultiPostJob[] = [];
+    const waiting: string[] = [];
+    for (const kind of ["dynamic", "video"] as const) {
+      if (!targets[kind].length) continue;
+      const draft = (await this.command(
+        scope,
+        {
+          action: "save-draft",
+          draft: {
+            kind,
+            data: quickPostContent(kind, text, post.title?.trim() || undefined, files),
+            targets: targets[kind],
+            publicationMode: post.scheduledAt ? "scheduled" : "now",
+            scheduledAt: post.scheduledAt ?? null,
+            timezone: post.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+        },
+        actor,
+      )) as MultiPostDraft;
+      const submit = { draftId: draft.id, revision: draft.revision };
+      const gaps = actor === "ui" ? [] : await this.autopilotGaps(scope, draft);
+      if (actor === "ui") await this.command(scope, { action: "approve-draft", ...submit }, actor);
+      if (gaps.length) waiting.push(...gaps.map((account) => account.label));
+      else
+        jobs.push(
+          ...((await this.command(
+            scope,
+            { action: "submit-draft", ...submit },
+            actor,
+          )) as MultiPostJob[]),
+        );
+      drafts.push(await this.read<MultiPostDraft>("draft", draft.id, scope.workspaceId));
+    }
+    const label = (id: string) => accounts.find((account) => account.id === id)?.label ?? id;
+    const message = [
+      jobs.length &&
+        `${post.scheduledAt ? "Scheduled" : "Queued"} for ${[...new Set(jobs.map((job) => label(job.accountId)))].join(", ")}. Queued is not published: read djl_multipost_jobs for the real result.`,
+      waiting.length &&
+        `Saved but not posted: Autopilot is off for ${[...new Set(waiting)].join(", ")}, so the user must tap Post on the preview card in this chat, or switch Autopilot on in MultiPost Accounts.`,
+      skipped.length && `Skipped: ${describeSkipped(skipped)}.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return {
+      drafts,
+      jobs,
+      posted: jobs.length > 0,
+      needsApproval: waiting.length > 0,
+      skipped,
+      message,
+    };
+  }
+  /** A platform can confirm a share without saying where the post is; the desktop goes and looks. */
+  private async findLink(scope: MultiPostScope, job: MultiPostJob) {
+    if (!this.runtime.postLink) return;
+    const account = await this.read<MultiPostAccount>(
+      "account",
+      job.accountId,
+      job.workspaceId,
+    ).catch(() => null);
+    if (account?.status !== "connected") return;
+    const postUrl = await this.runtime.postLink({ scope, account, job }).catch(() => null);
+    if (!postUrl || !URL.canParse(postUrl) || new URL(postUrl).protocol !== "https:") return;
+    const fresh = await this.read<MultiPostJob>("job", job.id, job.workspaceId);
+    if (fresh.state === "published" && fresh.evidence && !fresh.evidence.postUrl)
+      await this.write("job", { ...fresh, evidence: { ...fresh.evidence, postUrl } });
+  }
   async runDue() {
     const tick = this.now().getTime();
     if (tick - this.lastTick > 30_000)
@@ -717,12 +1052,27 @@ export class MultiPostService {
     const abort = new AbortController();
     this.aborts.set(job.id, abort);
     const save = async (patch: Partial<MultiPostJob>) => {
+      const before = noticeKind(job);
       job = { ...job, ...patch, updatedAt: this.time() };
       await this.write("job", {
         ...job,
         authorizedRoot: initial.authorizedRoot,
         ...(initial.mediaRoot ? { mediaRoot: initial.mediaRoot } : {}),
       });
+      const kind = noticeKind(job);
+      if (kind && kind !== before && this.runtime.notify) {
+        const account = (await this.list<MultiPostAccount>("account", job.workspaceId)).find(
+          (x) => x.id === job.accountId,
+        );
+        // Telling the person is a courtesy; it must never change how the post itself ended.
+        await this.runtime
+          .notify({
+            kind,
+            platformKey: account?.platformKey ?? "",
+            label: account?.label ?? "",
+          })
+          .catch(() => {});
+      }
     };
     try {
       if (
@@ -739,13 +1089,24 @@ export class MultiPostService {
         });
         return;
       }
-      const authorizedDraft = await this.draft(scope, job.draftId, job.revision);
-      if (job.grantId) await this.validGrant(scope, authorizedDraft, job.grantId);
-      else
+      /** The saved revision must still be covered by a grant, autopilot or the user's approval. */
+      const authorize = async () => {
+        const current = await this.draft(scope, job.draftId, job.revision);
+        if (job.grantId) return this.validGrant(scope, current, job.grantId);
+        if (job.autopilot) {
+          assert(
+            this.autopilotOn(await this.read("account", job.accountId, job.workspaceId)),
+            "Autopilot is off or expired for this account",
+          );
+          return null;
+        }
         assert(
-          authorizedDraft.approvedRevision === authorizedDraft.revision,
+          current.approvedRevision === current.revision,
           "Publishing approval is no longer current",
         );
+        return null;
+      };
+      await authorize();
       let account = await this.read<MultiPostAccount>("account", job.accountId, job.workspaceId);
       if (account.status === "disconnected") {
         await save({
@@ -792,14 +1153,7 @@ export class MultiPostService {
       }
       const latest = await this.read<MultiPostJob>("job", job.id, job.workspaceId);
       if (latest.state === "cancelled") return;
-      const current = await this.draft(scope, job.draftId, job.revision);
-      let grant: MultiPostGrant | null = null;
-      if (job.grantId) grant = await this.validGrant(scope, current, job.grantId);
-      else
-        assert(
-          current.approvedRevision === current.revision,
-          "Publishing approval is no longer current",
-        );
+      await authorize();
       account = await this.read<MultiPostAccount>("account", job.accountId, job.workspaceId);
       const currentIdentity = await this.runtime.identity(scope, account);
       assert(
@@ -810,13 +1164,25 @@ export class MultiPostService {
         "Platform account changed before submission",
       );
       assert(!abort.signal.aborted, "Publishing was cancelled");
-      const finalDraft = await this.draft(scope, job.draftId, job.revision);
-      if (job.grantId) grant = await this.validGrant(scope, finalDraft, job.grantId);
-      else
-        assert(
-          finalDraft.approvedRevision === finalDraft.revision,
-          "Publishing approval is no longer current",
+      const grant = await authorize();
+      if (job.autopilot) {
+        await Effect.runPromise(
+          this.sql.withTransaction(
+            Effect.gen({ self: this }, function* () {
+              const stored = yield* this.sql<{
+                body: string;
+              }>`SELECT body FROM multipost_records WHERE kind='account' AND id=${job.accountId}`;
+              const fresh = JSON.parse(stored[0]!.body) as MultiPostAccount;
+              assert(this.autopilotOn(fresh), "Autopilot is off or expired for this account");
+              const key = `autopilot:${fresh.id}`;
+              const day = clockDay(this.now(), fresh.autopilot!.timezone);
+              const rows = yield* this
+                .sql`INSERT INTO multipost_quota(job_id,grant_id,day) SELECT ${job.id},${key},${day} WHERE (SELECT COUNT(*) FROM multipost_quota WHERE grant_id=${key} AND day=${day})<${fresh.autopilot!.dailyLimit} ON CONFLICT(job_id) DO NOTHING RETURNING job_id`;
+              assert(rows.length, "Autopilot reached its daily limit for this account");
+            }),
+          ),
         );
+      }
       if (grant) {
         const authorizedGrant = grant;
         const day = clockDay(this.now(), grant.timezone);
@@ -855,13 +1221,23 @@ export class MultiPostService {
         error: null,
         ...(result.state === "missed" || result.dispatched === false ? { submittedAt: null } : {}),
       });
+      // The person already knows it is live; where it lives can follow a moment later, and
+      // looking must never change how the post itself ended.
+      if (result.state === "published" && !result.postUrl)
+        await this.findLink(scope, job).catch(() => {});
     } catch (error) {
       const latest = await this.read<MultiPostJob>("job", job.id, job.workspaceId);
-      if (latest.state !== "cancelled")
+      const message = error instanceof Error ? error.message : "Publishing failed";
+      if (latest.state === "cancelled") return;
+      // Nothing was sent yet, so one more try cannot post twice.
+      if (!job.submittedAt && !job.retriedAt && connectionLost(message))
         await save({
-          state: job.submittedAt ? "uncertain" : "failed",
-          error: error instanceof Error ? error.message : "Publishing failed",
+          state: "queued",
+          dueAt: new Date(this.now().getTime() + RETRY_AFTER_MS).toISOString(),
+          retriedAt: this.time(),
+          error: null,
         });
+      else await save({ state: job.submittedAt ? "uncertain" : "failed", error: message });
     } finally {
       this.aborts.delete(job.id);
     }

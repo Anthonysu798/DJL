@@ -1461,3 +1461,29 @@ export function resolvePrStatePresentation(pr: {
     iconKind: "merged-simple",
   };
 }
+
+const lastUsed = (thread: { createdAt: string; latestUserMessageAt?: string | null }) =>
+  thread.latestUserMessageAt ?? thread.createdAt;
+/** Social posting is kept per chat, so the nav entry needs a saved chat to open with. */
+export function resolveSocialThreadId(input: {
+  activeThreadId: string | null;
+  threads: Readonly<
+    Record<
+      string,
+      {
+        id: string;
+        createdAt: string;
+        latestUserMessageAt?: string | null;
+        archivedAt?: string | null;
+        parentThreadId?: string | null;
+      }
+    >
+  >;
+}): string | null {
+  if (input.activeThreadId && input.threads[input.activeThreadId]) return input.activeThreadId;
+  return (
+    Object.values(input.threads)
+      .filter((thread) => !thread.archivedAt && !thread.parentThreadId)
+      .toSorted((a, b) => lastUsed(b).localeCompare(lastUsed(a)))[0]?.id ?? null
+  );
+}
