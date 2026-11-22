@@ -4333,6 +4333,84 @@ describe("ProviderRuntimeIngestion", () => {
     });
   });
 
+  it("records a native Claude rate_limit_event as a rate-limited activity", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+
+    harness.emit({
+      type: "account.rate-limits.updated",
+      eventId: asEventId("evt-claude-rate-limit"),
+      provider: "claudeAgent",
+      createdAt: now,
+      threadId: asThreadId("thread-1"),
+      payload: {
+        rateLimits: {
+          type: "rate_limit_event",
+          rate_limit_info: {
+            status: "rejected",
+            rateLimitType: "five_hour",
+            utilization: 1,
+            resetsAt: 4_102_444_800,
+          },
+          uuid: "rate-limit-uuid",
+          session_id: "claude-session",
+        },
+      },
+    });
+
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) => activity.kind === "account.rate-limited",
+      ),
+    );
+    const limited = thread.activities.find(
+      (activity: ProviderRuntimeTestActivity) => activity.kind === "account.rate-limited",
+    );
+    expect(limited?.payload).toMatchObject({
+      provider: "claudeAgent",
+      status: "rejected",
+      resetsAt: "2100-01-01T00:00:00.000Z",
+      utilization: 1,
+      rate_limit_info: { rateLimitType: "five_hour" },
+    });
+  });
+
+  it("records a Codex limit that was reached as a rate-limited activity", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+
+    harness.emit({
+      type: "account.rate-limits.updated",
+      eventId: asEventId("evt-codex-rate-limit"),
+      provider: "codex",
+      createdAt: now,
+      threadId: asThreadId("thread-1"),
+      payload: {
+        rateLimits: {
+          rateLimits: {
+            primary: { usedPercent: 100, windowDurationMins: 300, resetsAt: 4_102_444_800 },
+            secondary: null,
+            rateLimitReachedType: "rate_limit_reached",
+          },
+        },
+      },
+    });
+
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) => activity.kind === "account.rate-limited",
+      ),
+    );
+    const limited = thread.activities.find(
+      (activity: ProviderRuntimeTestActivity) => activity.kind === "account.rate-limited",
+    );
+    expect(limited?.payload).toMatchObject({
+      provider: "codex",
+      status: "rejected",
+      resetsAt: "2100-01-01T00:00:00.000Z",
+    });
+  });
+
   it("projects context window updates into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();

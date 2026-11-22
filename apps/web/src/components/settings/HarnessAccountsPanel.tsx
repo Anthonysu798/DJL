@@ -1,21 +1,27 @@
-import { HarnessToolsPanel } from "./HarnessToolsPanel";
+import { HarnessToolsPanel, harnessToolsQueryOptions } from "./HarnessToolsPanel";
 import { SubscriptionPlansPanel, SUBSCRIPTION_PLANS } from "./SubscriptionPlansPanel";
-import "@xterm/xterm/css/xterm.css";
-import type { HarnessId, HarnessLoginInput, HarnessLoginResult } from "@synara/contracts";
+import type {
+  HarnessAccount,
+  HarnessId,
+  HarnessLoginInput,
+  HarnessLoginResult,
+} from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppSettings } from "~/appSettings";
+import { ProviderIcon } from "~/components/ProviderIcon";
 import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
+import { StatusChip } from "~/components/ui/status-chip";
+import { CheckIcon, ExternalLinkIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions, serverQueryKeys } from "~/lib/serverReactQuery";
-import {
-  terminalRuntimeRegistry,
-  buildTerminalRuntimeKey,
-} from "../terminal/terminalRuntimeRegistry";
 import { SettingsSection } from "./SettingsPanelPrimitives";
 import { DjlCloudAccountCard } from "./DjlCloudAccountCard";
+import { HarnessSignInDialog } from "./HarnessSignInDialog";
 import { SettingsLoadError, settingsLoadErrorDetail } from "./SettingsLoadError";
 
 const LEGACY_OPENCODE_QUERY_KEY = ["legacy-opencode-credentials"] as const;
@@ -42,39 +48,12 @@ const HARNESSES: { id: HarnessId; label: string; docs: string }[] = [
   { id: "opencode", label: "OpenCode", docs: "https://opencode.ai/docs/providers/" },
 ];
 
-function LoginTerminal({ session }: { session: HarnessLoginResult }) {
-  const container = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation("settings");
-  useEffect(() => {
-    if (!container.current) return;
-    const runtimeKey = buildTerminalRuntimeKey(session.threadId, session.terminalId);
-    terminalRuntimeRegistry.attach(
-      {
-        runtimeKey,
-        threadId: session.threadId,
-        terminalId: session.terminalId,
-        terminalLabel: session.harness,
-        cwd: session.cwd,
-        callbacks: {
-          onSessionExited: () => {},
-          onTerminalMetadataChange: () => {},
-          onTerminalActivityChange: () => {},
-        },
-      },
-      { autoFocus: true, isVisible: true },
-      container.current,
-    );
-    return () => terminalRuntimeRegistry.dispose(runtimeKey);
-  }, [session]);
-  return (
-    <div
-      ref={container}
-      role="region"
-      aria-label={t("accounts.terminalLabel")}
-      className="h-80 min-w-0 overflow-hidden rounded-lg bg-[#111111] p-2"
-    />
-  );
-}
+// The dot beside each account's status; a status without one reads as plain muted text.
+const STATUS_DOT_CLASS_NAME: Partial<Record<HarnessAccount["status"], string>> = {
+  ready: "bg-emerald-500",
+  required: "bg-amber-500",
+  incompatible: "bg-destructive",
+};
 
 export function HarnessAccountsPanel() {
   const { t } = useTranslation("settings");
@@ -92,18 +71,26 @@ export function HarnessAccountsPanel() {
     },
   });
   const [session, setSession] = useState<HarnessLoginResult | null>(null);
-  const loginSection = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (session) loginSection.current?.scrollIntoView({ block: "center" });
-  }, [session]);
+  // The sign-in the dialog is guiding; set from the click until the dialog closes.
+  const [signIn, setSignIn] = useState<{
+    request: HarnessLoginInput;
+    label: string;
+    statusAtOpen: HarnessAccount["status"] | undefined;
+    attempt: number;
+    /** Present when DJL installs the CLI before the sign-in starts. */
+    install?: { state: "running" | "failed" | "done"; error: string | null };
+  } | null>(null);
   const sessionRef = useRef<HarnessLoginResult | null>(null);
   const pendingHarness = useRef<HarnessId | null>(null);
+  // The agent whose install the open dialog is waiting on; cleared when the dialog closes.
+  const installFor = useRef<HarnessId | null>(null);
   const mounted = useRef(false);
   const accounts = useQuery({
     queryKey: ACCOUNTS_QUERY_KEY,
     queryFn: () => ensureNativeApi().harnesses.listAccounts(),
     staleTime: 15_000,
   });
+  const tools = useQuery(harnessToolsQueryOptions());
   const legacyOpenCode = useQuery({
     queryKey: LEGACY_OPENCODE_QUERY_KEY,
     queryFn: () => ensureNativeApi().harnesses.listLegacyOpenCodeCredentials(),
@@ -158,10 +145,87 @@ export function HarnessAccountsPanel() {
       if (sessionRef.current)
         await ensureNativeApi().harnesses.endLogin({ harness: sessionRef.current.harness });
       sessionRef.current = null;
+      installFor.current = null;
       setSession(null);
+      setSignIn(null);
+      connect.reset();
       await refresh();
     },
   });
+  // Installs the CLI with the same tool install the Provider tools section runs, then lets
+  // the account check decide: once it reports the CLI installed, the sign-in starts.
+  const install = useMutation({
+    mutationFn: async ({ harness, label }: { harness: HarnessId; label: string }) => {
+      const api = ensureNativeApi();
+      const failure = await api.harnesses.maintainTool({ harness }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      await Promise.allSettled([
+        refresh(),
+        queryClient.invalidateQueries({ queryKey: harnessToolsQueryOptions().queryKey }),
+      ]);
+      const latest = await queryClient.fetchQuery({
+        queryKey: ACCOUNTS_QUERY_KEY,
+        queryFn: () => api.harnesses.listAccounts(),
+      });
+      // The install can report a problem after the CLI landed (e.g. an unverified latest
+      // version); an installed CLI is all the sign-in needs.
+      if (latest.accounts.some((account) => account.id === harness && account.installed)) return;
+      throw failure ?? new Error(t("accounts.installNotDetected", { provider: label }));
+    },
+    onSuccess: (_result, { harness }) => {
+      if (!mounted.current || installFor.current !== harness) return;
+      installFor.current = null;
+      setSignIn((current) => current && { ...current, install: { state: "done", error: null } });
+      connect.mutate({ harness });
+    },
+    onError: (error, { harness, label }) => {
+      if (!mounted.current || installFor.current !== harness) return;
+      const message = settingsLoadErrorDetail(
+        error,
+        t("accounts.installNotDetected", { provider: label }),
+      );
+      setSignIn(
+        (current) => current && { ...current, install: { state: "failed", error: message } },
+      );
+    },
+  });
+  const accountStatus = (harness: HarnessId) =>
+    accounts.data?.accounts.find((account) => account.id === harness)?.status;
+  const startSignIn = (request: HarnessLoginInput, label: string) => {
+    setSignIn({ request, label, statusAtOpen: accountStatus(request.harness), attempt: 0 });
+    connect.mutate(request);
+  };
+  const runInstall = (harness: HarnessId, label: string) => {
+    installFor.current = harness;
+    install.mutate({ harness, label });
+  };
+  const startInstallAndSignIn = (harness: HarnessId, label: string) => {
+    setSignIn({
+      request: { harness },
+      label,
+      statusAtOpen: accountStatus(harness),
+      attempt: 0,
+      install: { state: "running", error: null },
+    });
+    runInstall(harness, label);
+  };
+  // Ends the attempt that stopped, then starts the same sign-in again in a fresh dialog.
+  const retry = useMutation({
+    mutationFn: async () => {
+      if (!signIn) return;
+      await ensureNativeApi()
+        .harnesses.endLogin({ harness: signIn.request.harness })
+        .catch(() => undefined);
+      sessionRef.current = null;
+      setSession(null);
+      setSignIn({ ...signIn, attempt: signIn.attempt + 1 });
+      connect.mutate(signIn.request);
+    },
+  });
+  const { refetch: refetchAccounts } = accounts;
+  const checkAccounts = useCallback(() => void refetchAccounts(), [refetchAccounts]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -198,20 +262,49 @@ export function HarnessAccountsPanel() {
       <SettingsSection title={t("accounts.title")}>
         {HARNESSES.map((harness) => {
           const account = accounts.data?.accounts.find((item) => item.id === harness.id);
+          const tool = tools.data?.tools.find((item) => item.id === harness.id);
+          const connected = account?.status === "ready";
+          const isDefault = settings.defaultProvider === harness.id;
           return (
-            <div key={harness.id} className="flex flex-wrap items-center gap-3 px-4 py-4">
+            <div key={harness.id} className="flex flex-wrap items-center gap-3 px-4 py-3.5">
+              <span
+                className={cn(
+                  "flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--color-background-elevated-secondary)]",
+                  account && !account.installed && "opacity-55",
+                )}
+              >
+                <ProviderIcon provider={harness.id} className="size-[1.125rem]" />
+              </span>
               <div className="min-w-40 flex-1">
-                <div className="text-sm font-medium">{harness.label}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {account ? t(`accounts.status.${account.status}`) : t("accounts.checking")}
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  {harness.label}
+                  {isDefault && connected ? (
+                    <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                      <CheckIcon className="size-3.5" />
+                      {t("accounts.default")}
+                    </span>
+                  ) : null}
                 </div>
+                {account ? (
+                  <StatusChip
+                    className={cn(
+                      "mt-1 text-xs",
+                      connected ? "text-foreground/80" : "text-muted-foreground",
+                    )}
+                    dotClassName={STATUS_DOT_CLASS_NAME[account.status] ?? "hidden"}
+                  >
+                    {t(`accounts.status.${account.status}`)}
+                  </StatusChip>
+                ) : (
+                  <Skeleton className="mt-1.5 h-3.5 w-24" />
+                )}
               </div>
               {harness.id === "kimi" ? (
                 <select
                   aria-label={t("subscriptions.kimiRegion")}
-                  className="max-w-44 rounded-md border bg-background px-2 py-1.5 text-xs"
+                  className="h-8 max-w-44 rounded-lg border bg-background px-2 text-xs sm:h-7"
                   value={settings.kimiRegion ?? "existing"}
-                  disabled={connect.isPending || session !== null || saveKimiRegion.isPending}
+                  disabled={connect.isPending || signIn !== null || saveKimiRegion.isPending}
                   onChange={(event) =>
                     saveKimiRegion.mutate(
                       event.target.value as "existing" | "global" | "mainland-cn",
@@ -223,47 +316,60 @@ export function HarnessAccountsPanel() {
                   <option value="mainland-cn">{t("subscriptions.china")}</option>
                 </select>
               ) : null}
-              <a
-                href={harness.docs}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-muted-foreground underline underline-offset-4"
-              >
-                {t("accounts.setup")}
-              </a>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={
-                  !account?.installed ||
-                  account.status === "incompatible" ||
-                  !account.enabled ||
-                  connect.isPending ||
-                  saveKimiRegion.isPending ||
-                  session !== null
-                }
-                onClick={() => connect.mutate({ harness: harness.id })}
-              >
-                {connect.isPending && connect.variables?.harness === harness.id
-                  ? t("accounts.checking")
-                  : t("accounts.signIn")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={
-                  !account?.installed ||
-                  account.status === "required" ||
-                  account.status === "incompatible" ||
-                  !account.enabled ||
-                  settings.defaultProvider === harness.id
-                }
-                onClick={() => updateSettings({ defaultProvider: harness.id })}
-              >
-                {settings.defaultProvider === harness.id
-                  ? t("accounts.default")
-                  : t("accounts.useForNewChats")}
-              </Button>
+              {!account || connected ? null : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  render={<a href={harness.docs} target="_blank" rel="noreferrer" />}
+                >
+                  {t("accounts.setup")}
+                  <ExternalLinkIcon />
+                </Button>
+              )}
+              {/* A disabled agent cannot sign in, so it is only offered once turned on. */}
+              {account && !account.installed && account.enabled && tool?.canInstall ? (
+                <Button
+                  size="sm"
+                  disabled={
+                    tool.maintenanceStatus === "running" ||
+                    install.isPending ||
+                    connect.isPending ||
+                    saveKimiRegion.isPending ||
+                    signIn !== null
+                  }
+                  onClick={() => startInstallAndSignIn(harness.id, harness.label)}
+                >
+                  {t("accounts.installAndSignIn")}
+                </Button>
+              ) : null}
+              {account?.installed ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant={account.status === "required" ? "default" : "outline"}
+                    disabled={
+                      account.status === "incompatible" ||
+                      !account.enabled ||
+                      connect.isPending ||
+                      saveKimiRegion.isPending ||
+                      signIn !== null
+                    }
+                    onClick={() => startSignIn({ harness: harness.id }, harness.label)}
+                  >
+                    {t(connected ? "accounts.signInAgain" : "accounts.signIn")}
+                  </Button>
+                  {(isDefault && connected) || account.status === "required" ? null : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={account.status === "incompatible" || !account.enabled || isDefault}
+                      onClick={() => updateSettings({ defaultProvider: harness.id })}
+                    >
+                      {isDefault ? t("accounts.default") : t("accounts.useForNewChats")}
+                    </Button>
+                  )}
+                </>
+              ) : null}
             </div>
           );
         })}
@@ -280,7 +386,7 @@ export function HarnessAccountsPanel() {
             <Button
               size="sm"
               variant="outline"
-              disabled={transferLegacyOpenCode.isPending || connect.isPending || session !== null}
+              disabled={transferLegacyOpenCode.isPending || connect.isPending || signIn !== null}
               onClick={() => transferLegacyOpenCode.mutate()}
             >
               {transferLegacyOpenCode.isPending
@@ -307,40 +413,40 @@ export function HarnessAccountsPanel() {
           </p>
         ) : null}
       </div>
-      {connect.isError || finish.isError || saveKimiRegion.isError ? (
+      {finish.isError || saveKimiRegion.isError ? (
         <p role="alert" className="text-sm text-destructive">
-          {settingsLoadErrorDetail(
-            connect.error ?? finish.error ?? saveKimiRegion.error,
-            t("accounts.loadError"),
-          )}
+          {settingsLoadErrorDetail(finish.error ?? saveKimiRegion.error, t("accounts.loadError"))}
         </p>
       ) : null}
-      {session ? (
-        <section ref={loginSection} className="space-y-3">
-          <h3 className="text-sm font-medium">
-            {t("accounts.loginFor", {
-              provider:
-                SUBSCRIPTION_PLANS.find((plan) => plan.id === connect.variables?.modelProviderId)
-                  ?.name ??
-                HARNESSES.find((harness) => harness.id === session.harness)?.label ??
-                session.harness,
-            })}
-          </h3>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">{t("accounts.loginInstructions")}</p>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={finish.isPending}
-              onClick={() => finish.mutate()}
-            >
-              {t("accounts.finish")}
-            </Button>
-          </div>
-          <LoginTerminal session={session} />
-        </section>
+      {signIn ? (
+        <HarnessSignInDialog
+          key={signIn.attempt}
+          harness={signIn.request.harness}
+          label={signIn.label}
+          session={session}
+          startError={
+            connect.isError ? settingsLoadErrorDetail(connect.error, t("accounts.loadError")) : null
+          }
+          statusAtOpen={signIn.statusAtOpen}
+          status={accountStatus(signIn.request.harness)}
+          checking={accounts.isFetching}
+          closing={finish.isPending || retry.isPending}
+          isDefault={settings.defaultProvider === signIn.request.harness}
+          {...(signIn.install ? { install: signIn.install } : {})}
+          onCheck={checkAccounts}
+          onRetry={() => {
+            if (signIn.install?.state !== "failed") return retry.mutate();
+            setSignIn({ ...signIn, install: { state: "running", error: null } });
+            runInstall(signIn.request.harness, signIn.label);
+          }}
+          onClose={() => finish.mutate()}
+          onUseForNewChats={() => {
+            updateSettings({ defaultProvider: signIn.request.harness });
+            finish.mutate();
+          }}
+        />
       ) : null}
-      <HarnessToolsPanel disabled={connect.isPending || session !== null} />
+      <HarnessToolsPanel disabled={connect.isPending || install.isPending || signIn !== null} />
       <SubscriptionPlansPanel
         enabled={
           accounts.data?.accounts.some(
@@ -351,8 +457,15 @@ export function HarnessAccountsPanel() {
               account.status !== "incompatible",
           ) ?? false
         }
-        disabled={connect.isPending || session !== null || finish.isPending}
-        onConnect={(request) => connect.mutate(request)}
+        disabled={connect.isPending || signIn !== null || finish.isPending}
+        onConnect={(request) =>
+          startSignIn(
+            request,
+            SUBSCRIPTION_PLANS.find((plan) => plan.id === request.modelProviderId)?.name ??
+              HARNESSES.find((harness) => harness.id === request.harness)?.label ??
+              request.harness,
+          )
+        }
       />
     </div>
   );

@@ -21,6 +21,7 @@ export function DesktopShellChrome(props: {
   onNewChat: () => void;
   newChatLabel: string;
   account: ReactNode;
+  usage: ReactNode;
   update: ReactNode;
 }) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
@@ -78,6 +79,7 @@ export function DesktopShellChrome(props: {
         </div>
         <div className="mt-auto flex flex-col items-center gap-3 pb-2">
           {props.update}
+          {props.usage}
           {props.account}
         </div>
       </nav>

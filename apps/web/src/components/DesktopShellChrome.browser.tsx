@@ -15,7 +15,7 @@ import "../index.css";
 afterEach(cleanup);
 
 describe("Desktop window chrome", () => {
-  it("stays anchored to the window outside a translucent sidebar and preserves rail actions", async () => {
+  it("stays anchored to the window outside a translucent sidebar and preserves rail actions and order", async () => {
     await page.viewport(1280, 800);
     const onHome = vi.fn();
     const root = createRootRoute({
@@ -35,8 +35,9 @@ describe("Desktop window chrome", () => {
               title="Test chat"
               newChatLabel="New chat"
               onNewChat={vi.fn()}
-              account={null}
-              update={null}
+              account={<button data-testid="rail-account">Account</button>}
+              usage={<button data-testid="rail-usage">Usage</button>}
+              update={<button data-testid="rail-update">Update</button>}
               items={[{ label: "Home", icon: "home", active: true, onClick: onHome }]}
             />
             <DesktopHeaderPortal enabled>
@@ -56,6 +57,12 @@ describe("Desktop window chrome", () => {
     expect(rail.getBoundingClientRect().x).toBe(0);
     expect(rail.getBoundingClientRect().y).toBe(46);
     expect(document.querySelector(".djl-desktop-topbar")?.getBoundingClientRect().y).toBe(0);
+    const railBottom = ["rail-update", "rail-usage", "rail-account"].map(
+      (testId) => page.getByTestId(testId).element().getBoundingClientRect().y,
+    );
+    expect(railBottom).toEqual(railBottom.toSorted((a, b) => a - b));
+    expect(new Set(railBottom).size).toBe(3);
+    expect(page.getByTestId("rail-usage").element().closest(".djl-desktop-rail")).toBe(rail);
     await expect.element(page.getByTestId("thread-controls")).toBeVisible();
     expect(
       page.getByTestId("thread-controls").element().closest("#djl-desktop-toolbar"),

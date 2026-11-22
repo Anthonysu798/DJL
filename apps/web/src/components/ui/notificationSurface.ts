@@ -16,8 +16,14 @@ const NOTIFICATION_FOREGROUND_CLASS_NAME =
 // notably the dismiss "X") clickable in the desktop app. Toasts render at the
 // top edge over Electron's draggable titlebar region; without this the OS
 // captures clicks in that band for window dragging and the X stops working.
-export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-xl border border-[color-mix(in_srgb,var(--color-text-accent)_14%,transparent)] bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-lg/10 backdrop-blur-xl before:hidden [-webkit-app-region:no-drag] dark:border-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:shadow-lg/15`;
+//
+// The surface is the shared liquid glass (`.glass-surface`, index.css) with the
+// accent mixed into its fill and hairline border, so notifications keep their
+// accent identity in both glass modes.
+const NOTIFICATION_GLASS_SURFACE_CLASS_NAME = `glass-surface border-[color-mix(in_oklab,var(--color-text-accent)_14%,var(--glass-border))] bg-[color-mix(in_oklab,var(--color-text-accent)_10%,var(--glass-fill))] ${NOTIFICATION_FOREGROUND_CLASS_NAME} [-webkit-app-region:no-drag]`;
 
-export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl border border-[color-mix(in_srgb,var(--color-text-accent)_14%,transparent)] bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-lg/10 backdrop-blur-xl before:hidden [-webkit-app-region:no-drag] dark:border-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:shadow-lg/15`;
+export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-xl ${NOTIFICATION_GLASS_SURFACE_CLASS_NAME}`;
+
+export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl ${NOTIFICATION_GLASS_SURFACE_CLASS_NAME}`;
 
 export const NOTIFICATION_ICON_CLASS_NAME = "text-[var(--notification-fg)]/92";

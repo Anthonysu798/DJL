@@ -40,6 +40,7 @@ export * from "./marketing/agentWorkflows";
 export * from "./marketing/campaignLinks";
 
 export * from "./builtInPlugins";
+export * from "./plugins";
 export * from "./computerUse";
 export * from "./computerActivity";
 export * from "./computerActivitySemantics";

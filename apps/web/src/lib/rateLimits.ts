@@ -2,7 +2,7 @@
 // Purpose: Centralizes rate-limit parsing, normalization, formatting, and row derivation
 // for provider runtime events so UI components can stay presentation-only.
 
-import type { OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationThread, OrchestrationThreadActivity } from "@synara/contracts";
 import type { TFunction } from "i18next";
 import { providerUsageLearnMoreHref } from "@synara/shared/providerUsage";
 import englishCatalog from "~/i18n/locales/en.json";
@@ -542,4 +542,47 @@ export function mergeProviderRateLimits(
   }
 
   return Array.from(merged.values());
+}
+
+type ActivityRecord = Readonly<Record<string, OrchestrationThreadActivity>>;
+
+function isRateLimitActivity(activity: OrchestrationThreadActivity): boolean {
+  return (
+    activity.kind === "account.rate-limits.updated" || activity.kind === "account.rate-limited"
+  );
+}
+
+/**
+ * A store selector for the limits agents reported during turns, across every loaded chat.
+ * It reads activities only, rescans just the chats whose activities changed, and keeps
+ * returning the same array until the derived limits differ, so subscribers do not
+ * re-render while a reply streams in.
+ */
+export function createAccountRateLimitsSelector(): (state: {
+  activityByThreadId?: Readonly<Record<string, ActivityRecord>> | undefined;
+}) => ProviderRateLimit[] {
+  const rateLimitActivitiesByRecord = new WeakMap<ActivityRecord, OrchestrationThreadActivity[]>();
+  let previousActivityByThreadId: unknown;
+  let previousKey = "[]";
+  let previous: ProviderRateLimit[] = [];
+
+  return (state) => {
+    if (state.activityByThreadId === previousActivityByThreadId) return previous;
+    previousActivityByThreadId = state.activityByThreadId;
+
+    const activities = Object.values(state.activityByThreadId ?? {}).flatMap((record) => {
+      let found = rateLimitActivitiesByRecord.get(record);
+      if (!found) {
+        found = Object.values(record).filter(isRateLimitActivity);
+        rateLimitActivitiesByRecord.set(record, found);
+      }
+      return found;
+    });
+    const next = activities.length > 0 ? deriveAccountRateLimits([{ activities }]) : [];
+    const key = JSON.stringify(next);
+    if (key === previousKey) return previous;
+    previousKey = key;
+    previous = next;
+    return next;
+  };
 }

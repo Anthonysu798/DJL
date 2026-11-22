@@ -303,6 +303,22 @@ import {
   LocalModelsSnapshot,
 } from "./localModels";
 import {
+  PluginAppInput,
+  PluginAppTokenInput,
+  PluginCreateSkillInput,
+  PluginCreateSkillResult,
+  PluginCustomServerInput,
+  PluginConnectResult,
+  PluginIdInput,
+  PluginImportInput,
+  PluginImportResult,
+  PluginMarketplaceInput,
+  PluginMarketplaceResult,
+  PluginSetEnabledInput,
+  PluginSourceInput,
+  PluginsSnapshot,
+} from "./plugins";
+import {
   AiDetectorCancelInstallInput,
   AiDetectorEvent,
   AiDetectorInstallModelInput,
@@ -677,6 +693,84 @@ export const WsSubscribeLocalModelEventsRpc = Rpc.make(WS_METHODS.subscribeLocal
   success: LocalModelEvent,
   error: WsRpcError,
   stream: true,
+});
+
+export const WsPluginsGetSnapshotRpc = Rpc.make(WS_METHODS.pluginsGetSnapshot, {
+  payload: Schema.Struct({}),
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsInstallRpc = Rpc.make(WS_METHODS.pluginsInstall, {
+  payload: PluginIdInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsUninstallRpc = Rpc.make(WS_METHODS.pluginsUninstall, {
+  payload: PluginIdInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsSetEnabledRpc = Rpc.make(WS_METHODS.pluginsSetEnabled, {
+  payload: PluginSetEnabledInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsConnectAppRpc = Rpc.make(WS_METHODS.pluginsConnectApp, {
+  payload: PluginAppInput,
+  success: PluginConnectResult,
+  error: WsRpcError,
+});
+
+export const WsPluginsDisconnectAppRpc = Rpc.make(WS_METHODS.pluginsDisconnectApp, {
+  payload: PluginAppInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsAddCustomServerRpc = Rpc.make(WS_METHODS.pluginsAddCustomServer, {
+  payload: PluginCustomServerInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsCreateSkillRpc = Rpc.make(WS_METHODS.pluginsCreateSkill, {
+  payload: PluginCreateSkillInput,
+  success: PluginCreateSkillResult,
+  error: WsRpcError,
+});
+
+export const WsPluginsSaveAppTokenRpc = Rpc.make(WS_METHODS.pluginsSaveAppToken, {
+  payload: PluginAppTokenInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
+});
+
+export const WsPluginsImportManifestRpc = Rpc.make(WS_METHODS.pluginsImportManifest, {
+  payload: PluginImportInput,
+  success: PluginImportResult,
+  error: WsRpcError,
+});
+
+export const WsPluginsAddMarketplaceRpc = Rpc.make(WS_METHODS.pluginsAddMarketplace, {
+  payload: PluginMarketplaceInput,
+  success: PluginMarketplaceResult,
+  error: WsRpcError,
+});
+
+export const WsPluginsRefreshMarketplaceRpc = Rpc.make(WS_METHODS.pluginsRefreshMarketplace, {
+  payload: PluginSourceInput,
+  success: PluginMarketplaceResult,
+  error: WsRpcError,
+});
+
+export const WsPluginsRemoveMarketplaceRpc = Rpc.make(WS_METHODS.pluginsRemoveMarketplace, {
+  payload: PluginSourceInput,
+  success: PluginsSnapshot,
+  error: WsRpcError,
 });
 
 export const WsProjectMemoryListRpc = Rpc.make(WS_METHODS.projectMemoryList, {
@@ -1649,7 +1743,7 @@ export const WsComputerRpcGroup = RpcGroup.make(
   WsComputerInputKeyRpc,
   WsSubscribeComputerEventsRpc,
 );
-export const WsRpcGroup = RpcGroup.make(
+const WsCoreRpcGroup = RpcGroup.make(
   WsComputerGetStatusRpc,
   WsComputerGetAuditHistoryRpc,
   WsComputerProvisionRpc,
@@ -1727,6 +1821,14 @@ export const WsRpcGroup = RpcGroup.make(
   WsLocalModelsRerunCapabilityCheckRpc,
   WsLocalModelsRemoveModelRpc,
   WsSubscribeLocalModelEventsRpc,
+  WsPluginsGetSnapshotRpc,
+  WsPluginsInstallRpc,
+  WsPluginsUninstallRpc,
+  WsPluginsSetEnabledRpc,
+  WsPluginsConnectAppRpc,
+  WsPluginsDisconnectAppRpc,
+  WsPluginsAddCustomServerRpc,
+  WsPluginsCreateSkillRpc,
   WsProjectMemoryListRpc,
   WsProjectMemorySaveRpc,
   WsProjectMemoryRenameRpc,
@@ -1858,3 +1960,16 @@ export const WsRpcGroup = RpcGroup.make(
   WsAutomationArchiveRunRpc,
   WsSubscribeAutomationEventsRpc,
 );
+
+// The core group's inferred type is at the size tsc can still write into a declaration
+// (TS7056), so newer calls go in their own group and the export is annotated by group.
+const WsPluginSourcesRpcGroup = RpcGroup.make(
+  WsPluginsSaveAppTokenRpc,
+  WsPluginsImportManifestRpc,
+  WsPluginsAddMarketplaceRpc,
+  WsPluginsRefreshMarketplaceRpc,
+  WsPluginsRemoveMarketplaceRpc,
+);
+export const WsRpcGroup: RpcGroup.RpcGroup<
+  RpcGroup.Rpcs<typeof WsCoreRpcGroup> | RpcGroup.Rpcs<typeof WsPluginSourcesRpcGroup>
+> = WsCoreRpcGroup.merge(WsPluginSourcesRpcGroup);

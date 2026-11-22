@@ -1,3 +1,4 @@
+import type { PluginGatewaySession } from "../../plugins/PluginGateway";
 import type { WorkMcpSessionRegistration } from "../../work/Services/WorkMcpServer";
 import type {
   CanonicalRequestType,
@@ -42,4 +43,6 @@ export type NativeDriverFactory = (
   input: ProviderSessionStartInput,
   sink: NativeSink,
   workTools?: WorkMcpSessionRegistration,
+  /** The user's connected plugins, reached through DJL's local gateway. */
+  plugins?: PluginGatewaySession,
 ) => Promise<NativeDriver>;

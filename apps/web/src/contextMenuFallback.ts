@@ -19,15 +19,12 @@ export function showContextMenuFallback<T extends string>(
 
     const menu = document.createElement("div");
     menu.className =
-      "fixed z-[10000] min-w-[180px] rounded-xl border border-white/[0.08] shadow-xl animate-in fade-in zoom-in-95";
+      "glass-surface fixed z-[10000] min-w-[180px] overflow-hidden rounded-xl animate-in fade-in zoom-in-95";
 
     const x = position?.x ?? 0;
     const y = position?.y ?? 0;
     menu.style.top = `${y}px`;
     menu.style.left = `${x}px`;
-    menu.style.backgroundColor = `color-mix(in srgb, var(--popover) 90%, transparent)`;
-    menu.style.backdropFilter = "blur(24px)";
-    (menu.style as any).webkitBackdropFilter = "blur(24px)";
 
     const inner = document.createElement("div");
     inner.className = "p-1";
