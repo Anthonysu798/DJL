@@ -1,4 +1,7 @@
 import { MultiPostChatCard } from "../multipost/MultiPostChatCard";
+import { CampaignPost } from "../multipost/CampaignPost";
+import { alreadySent } from "../multipost/chatResult";
+import { multiPostState } from "../multipost/client";
 import { useEffect, useId, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -42,7 +45,7 @@ import {
   type Stored,
 } from "./client";
 
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 gsap.registerPlugin(useGSAP);
 
 export function MarketingChatCards({
@@ -61,6 +64,21 @@ export function MarketingChatCards({
     refetchInterval: isWorking ? 1500 : 10000,
     retry: false,
   });
+  const navigate = useNavigate();
+  const open = (multipostView: "accounts" | "queue") =>
+    void navigate({
+      to: "/social/$socialThreadId",
+      params: { socialThreadId: threadId },
+      search: { multipostView },
+    });
+  // Shares the chat card's poll: a preview that already went out needs no second card.
+  const posts = useQuery({
+    queryKey: ["multipost", threadId],
+    queryFn: () => multiPostState(threadId),
+    retry: false,
+    refetchInterval: 3000,
+  });
+  const jobs = posts.data?.jobs.filter((job) => job.threadId === threadId) ?? [];
   return (
     <section
       aria-label="Marketing previews"
@@ -76,7 +94,7 @@ export function MarketingChatCards({
           {t("socialAgent.open", { defaultValue: "Social tools" })}
         </Button>
       </div>
-      <MultiPostChatCard threadId={threadId} />
+      <MultiPostChatCard threadId={threadId} onSeeAll={() => open("queue")} />
       {query.data?.campaigns.map((c) => (
         <MarketingChatCard
           key={c.value.id}
@@ -84,6 +102,8 @@ export function MarketingChatCards({
           assets={query.data!.assets.map((a) => a.value)}
           threadId={threadId}
           isWorking={isWorking}
+          sent={alreadySent(c.value.captions, jobs)}
+          onAccounts={() => open("accounts")}
           {...(onPrompt ? { onPrompt } : {})}
         />
       ))}
@@ -96,12 +116,17 @@ export function MarketingChatCard({
   threadId,
   isWorking,
   onPrompt,
+  sent = false,
+  onAccounts,
 }: {
   record: Stored<Campaign>;
   assets: MediaAsset[];
   threadId: string;
   isWorking: boolean;
   onPrompt?: (text: string) => Promise<boolean>;
+  /** Its caption already went out, so the chat shows the result line instead of this card. */
+  sent?: boolean;
+  onAccounts?: () => void;
 }) {
   const { t } = useTranslation("chat");
   const client = useQueryClient();
@@ -233,6 +258,7 @@ export function MarketingChatCard({
       className="overflow-hidden rounded-2xl border border-border bg-card text-foreground"
       data-testid="marketing-chat-card"
       id={`marketing-${campaign.id}`}
+      hidden={sent && !reviewOpen}
     >
       <Dialog
         open={reviewOpen}
@@ -638,22 +664,30 @@ export function MarketingChatCard({
                 )}
               </section>
               <aside className="publishing-destinations" data-publish-reveal>
-                {campaign.threadId && (
-                  <SocialPublishingCard
-                    mediaKind={selectedAssets[0]?.mime.startsWith("image/") ? "image" : "video"}
-                    campaign={campaign}
-                    version={record.version}
-                    disabled={editing || busy || isWorking}
-                  />
-                )}
-                {campaign.threadId && (
+                <CampaignPost
+                  threadId={threadId}
+                  campaignId={campaign.id}
+                  version={record.version}
+                  platforms={campaign.platforms}
+                  disabled={editing || busy || isWorking}
+                  onPosted={() => setReviewOpen(false)}
+                  onAccounts={onAccounts}
+                />
+                {/* Posts made through DJL Cloud before local posting keep their history here. */}
+                {campaign.threadId && Boolean(publishing.data?.drafts.length) && (
                   <details className="publishing-disclosure publishing-accounts mt-4">
                     <summary>
                       <span className="publishing-row-icon">
                         <IconUser size={19} stroke={1.5} aria-hidden="true" />
                       </span>
-                      <span className="flex-1">{t("marketing.manageAccounts")}</span>
+                      <span className="flex-1">{t("socialAgent.publishingHistory")}</span>
                     </summary>
+                    <SocialPublishingCard
+                      mediaKind={selectedAssets[0]?.mime.startsWith("image/") ? "image" : "video"}
+                      campaign={campaign}
+                      version={record.version}
+                      disabled={editing || busy || isWorking}
+                    />
                     <SocialConnectionCard campaign={campaign} version={record.version} />
                   </details>
                 )}

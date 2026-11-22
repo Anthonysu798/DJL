@@ -70,3 +70,55 @@ describe("DJL multipost mcp", () => {
     }
   });
 });
+
+describe("one-prompt posting tool", () => {
+  it("turns a single djl_multipost_post call into one post command from the agent", async () => {
+    const calls: unknown[] = [];
+    const server = new MultiPostMcpServer({
+      command: async (s, c, a) => {
+        calls.push([s, c, a]);
+        return {
+          drafts: [],
+          jobs: [],
+          posted: true,
+          needsApproval: false,
+          skipped: [],
+          message: "Queued for Personal.",
+        };
+      },
+    });
+    try {
+      const registration = await server.register(scope);
+      const rpc = (method: string, params: unknown) =>
+        fetch(registration.url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${registration.bearerToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+        }).then((response) => response.json());
+      const listed = (await rpc("tools/list", {})) as {
+        result: { tools: { name: string; inputSchema: { required?: string[] } }[] };
+      };
+      const tool = listed.result.tools.find((x) => x.name === "djl_multipost_post");
+      expect(tool?.inputSchema.required).toEqual(["text"]);
+      expect(listed.result.tools.some((x) => /autopilot/.test(x.name))).toBe(false);
+      const called = (await rpc("tools/call", {
+        name: "djl_multipost_post",
+        arguments: { text: "Hello", media: ["made.png"], accountIds: ["a"] },
+      })) as { result: { isError: boolean; structuredContent: { message: string } } };
+      expect(calls[0]).toEqual([
+        scope,
+        { action: "quick-post", post: { text: "Hello", media: ["made.png"], accountIds: ["a"] } },
+        "agent",
+      ]);
+      expect(called.result).toMatchObject({
+        isError: false,
+        structuredContent: { message: "Queued for Personal." },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+});

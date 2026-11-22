@@ -3664,7 +3664,7 @@ describe("ProviderCommandReactor", () => {
     );
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
-      input: expect.stringContaining("Require explicit confirmation"),
+      input: expect.stringContaining("Queued is not published"),
       mentions: [],
       skills: [],
     });

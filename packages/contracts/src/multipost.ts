@@ -5,7 +5,14 @@ export interface MultiPostFile {
   url: string;
   type?: string;
   size?: number;
+  /** The point of a photo to keep in view when a platform crops it, from 0 to 1 on each axis. */
+  focus?: { x: number; y: number };
 }
+/**
+ * The picture shape (width / height) a platform's own uploader crops to unless told otherwise.
+ * DJL crops first, around the person's chosen focus, so what they saw is what gets posted.
+ */
+export const MULTIPOST_CROP_RATIO: Readonly<Record<string, number>> = { instagram: 1 };
 export interface MultiPostContentData {
   title: string;
   content?: string;
@@ -34,6 +41,12 @@ export interface MultiPostIdentity {
   username: string;
   verifiedAt: string;
 }
+/** Standing permission the user switched on for one account. Never set by an agent. */
+export interface MultiPostAutopilot {
+  dailyLimit: number;
+  expiresAt: string;
+  timezone: string;
+}
 export interface MultiPostAccount {
   id: string;
   workspaceId: string;
@@ -42,7 +55,16 @@ export interface MultiPostAccount {
   homeUrl?: string;
   status: "disconnected" | "needs-login" | "connected";
   identity: MultiPostIdentity | null;
+  autopilot?: MultiPostAutopilot | null;
+  /** When DJL last confirmed by itself that this account is still signed in. */
+  checkedAt?: string;
   createdAt: string;
+}
+/** What the desktop tells the person when a post finishes while they are elsewhere. */
+export interface MultiPostNotice {
+  kind: "posted" | "failed" | "needs-you";
+  platformKey: string;
+  label: string;
 }
 export interface MultiPostTarget {
   accountId: string;
@@ -113,8 +135,12 @@ export interface MultiPostJob {
   dueAt: string;
   submittedAt: string | null;
   grantId: string | null;
+  /** Queued under the account's autopilot instead of a per-post approval. */
+  autopilot?: boolean;
   evidence: MultiPostEvidence | null;
   error: string | null;
+  /** When DJL put the post back in line by itself after the connection dropped; it does so once. */
+  retriedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -163,6 +189,29 @@ export interface MultiPostState {
   localTimezone?: string;
   attachments?: { path: string; name: string; bytes: number }[];
 }
+/** Everything a person or agent needs to say to publish one post. */
+export interface MultiPostQuickPost {
+  text: string;
+  title?: string;
+  /** Uploaded files, `Media/` references, or paths inside the workspace or chat attachments. */
+  media?: (string | MultiPostFile)[];
+  /** Defaults to every signed-in account. */
+  accountIds?: string[];
+  scheduledAt?: string | null;
+  timezone?: string;
+}
+export interface MultiPostQuickPostResult {
+  drafts: MultiPostDraft[];
+  jobs: MultiPostJob[];
+  posted: boolean;
+  needsApproval: boolean;
+  skipped: {
+    accountId: string;
+    label: string;
+    reason: "needs-video" | "needs-media" | "unsupported";
+  }[];
+  message: string;
+}
 export interface MultiPostScope {
   workspaceId: string;
   threadId: string;
@@ -178,12 +227,21 @@ export type MultiPostCommand =
       campaignId: string;
       version: number;
       accountIds?: string[];
+      /** Post it now through these accounts instead of saving a draft to review. */
+      post?: boolean;
       publicationMode?: "now" | "scheduled";
       scheduledAt?: string;
       timezone?: string;
     }
   | { action: "create-account"; platformKey: string; label: string; homeUrl?: string }
-  | { action: "connect-account" | "verify-account" | "disconnect-account"; accountId: string }
+  | {
+      action: "connect-account" | "verify-account" | "disconnect-account" | "remove-account";
+      accountId: string;
+    }
+  | { action: "check-accounts" }
+  | { action: "reschedule-job"; jobId: string; scheduledAt: string }
+  | { action: "set-autopilot"; accountId: string; enabled: boolean; dailyLimit?: number }
+  | { action: "quick-post"; post: MultiPostQuickPost }
   | {
       action: "save-draft";
       draft: Pick<
@@ -231,4 +289,7 @@ export interface MultiPostBrowserRuntime {
   verify(context: MultiPostRuntimeContext): Promise<MultiPostEvidence>;
   cancel(context: MultiPostRuntimeContext): Promise<MultiPostEvidence>;
   disconnect(scope: MultiPostScope, account: MultiPostAccount): Promise<void>;
+  notify?(notice: MultiPostNotice): Promise<void>;
+  /** The public address of a post that was shared without one, if the platform shows it now. */
+  postLink?(context: MultiPostRuntimeContext): Promise<string | null>;
 }

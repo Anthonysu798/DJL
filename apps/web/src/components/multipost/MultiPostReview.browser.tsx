@@ -46,7 +46,7 @@ describe("MultiPost human review", () => {
     await expect.element(page.getByText("The exact saved caption")).toBeVisible();
     await expect.element(page.getByText("@real-user")).toBeVisible();
     expect(calls.command).not.toHaveBeenCalled();
-    await page.getByRole("button", { name: "Approve and publish" }).click();
+    await page.getByRole("button", { name: "Post now" }).click();
     await expect
       .poll(() => calls.command.mock.calls.map((x) => x[1].action))
       .toEqual(["approve-draft", "submit-draft"]);
