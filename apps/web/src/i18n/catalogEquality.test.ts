@@ -152,6 +152,7 @@ describe("secondary locale catalog translations", () => {
                 "settings.computerUse.agentSource",
                 "settings.computerUse.events.action",
                 "settings.subscriptions.international",
+                "shell.pluginLibrary.version",
                 "workspace.agents.shell",
                 "workspace.agents.terminalCount_one",
               ]

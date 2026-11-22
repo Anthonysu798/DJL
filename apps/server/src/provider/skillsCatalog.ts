@@ -354,6 +354,11 @@ export function clearSkillsCatalogCacheForTests(): void {
   ensuredDjlSkillsDirs.clear();
 }
 
+/** Call after writing a skill file, so the next listing reads the folders again. */
+export function invalidateSkillsCatalogCache(): void {
+  skillsCatalogCache.clear();
+}
+
 export function djlSkillsDir(djlBaseDir: string): string {
   return nodePath.join(djlBaseDir, "skills");
 }

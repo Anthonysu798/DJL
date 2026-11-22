@@ -20,6 +20,7 @@ import {
   createThemeShareString,
   parseStoredThemeState,
   resetThemeVariant as resetThemeVariantState,
+  resolveGlassMode,
   resolveThemePack,
   resolveThemeVariant,
   serializeThemeState,
@@ -36,6 +37,10 @@ type ThemeSnapshot = {
 
 const STORAGE_KEY = "djl:theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
+// Set to "blur" or "tint" to force a glass mode, e.g. to preview the Windows look on macOS.
+const GLASS_DEBUG_STORAGE_KEY = "djl.debug.glass";
+const REDUCED_TRANSPARENCY_MEDIA_QUERY = "(prefers-reduced-transparency: reduce)";
+const HIGH_CONTRAST_MEDIA_QUERY = "(prefers-contrast: more)";
 
 let listeners: Array<() => void> = [];
 let lastSnapshot: ThemeSnapshot | null = null;
@@ -67,6 +72,18 @@ function readStoredThemeState(): ThemeState {
     return parseStoredThemeState(localStorage.getItem(STORAGE_KEY));
   } catch {
     return DEFAULT_THEME_STATE;
+  }
+}
+
+function readGlassDebugOverride(): string | null {
+  if (!hasThemeStorage()) {
+    return null;
+  }
+
+  try {
+    return localStorage.getItem(GLASS_DEBUG_STORAGE_KEY);
+  } catch {
+    return null;
   }
 }
 
@@ -122,13 +139,28 @@ function subscribe(listener: () => void): () => void {
     emitChange();
   };
 
+  // The glass mode follows the system transparency and contrast settings live.
+  const glassMediaQueries = [
+    window.matchMedia(REDUCED_TRANSPARENCY_MEDIA_QUERY),
+    window.matchMedia(HIGH_CONTRAST_MEDIA_QUERY),
+  ];
+  const handleGlassMediaChange = () => {
+    applyThemeState(readStoredThemeState());
+  };
+
   mediaQuery.addEventListener("change", handleMediaChange);
   window.addEventListener("storage", handleStorage);
+  for (const glassMediaQuery of glassMediaQueries) {
+    glassMediaQuery.addEventListener("change", handleGlassMediaChange);
+  }
 
   return () => {
     listeners = listeners.filter((currentListener) => currentListener !== listener);
     mediaQuery.removeEventListener("change", handleMediaChange);
     window.removeEventListener("storage", handleStorage);
+    for (const glassMediaQuery of glassMediaQueries) {
+      glassMediaQuery.removeEventListener("change", handleGlassMediaChange);
+    }
   };
 }
 
@@ -155,9 +187,10 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
 
   const variant = resolveThemeVariant(state.mode, getSystemDark());
   const activeTheme = resolveThemePack(state, variant);
+  const isMac = isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform);
   const cssVariableBuild = buildThemeCssVariables(activeTheme, variant, {
     electron: isElectron,
-    isMac: isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform),
+    isMac,
   });
 
   root.classList.toggle("dark", variant === "dark");
@@ -165,6 +198,16 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
   root.setAttribute("data-theme-mode", state.mode);
   root.setAttribute("data-theme-variant", variant);
   root.setAttribute("data-window-material", cssVariableBuild.material);
+  root.setAttribute(
+    "data-glass",
+    resolveGlassMode({
+      highContrast: window.matchMedia(HIGH_CONTRAST_MEDIA_QUERY).matches,
+      isMac,
+      opaqueWindows: activeTheme.theme.opaqueWindows,
+      override: readGlassDebugOverride(),
+      reducedTransparency: window.matchMedia(REDUCED_TRANSPARENCY_MEDIA_QUERY).matches,
+    }),
+  );
 
   for (const [name, value] of Object.entries(cssVariableBuild.variables)) {
     if (value.trim().length === 0) {

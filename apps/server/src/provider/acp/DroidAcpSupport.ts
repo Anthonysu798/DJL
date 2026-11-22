@@ -18,6 +18,8 @@ import * as EffectAcpErrorsRuntime from "effect-acp/errors";
 import type * as EffectAcpSchema from "effect-acp/schema";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
+import type { PluginGatewaySession } from "../../plugins/PluginGateway.ts";
+
 import {
   AcpSessionRuntime,
   type AcpSessionRuntimeOptions,
@@ -154,6 +156,71 @@ export const resolveDroidAcpAuthMethodId = (
       },
     });
   });
+
+/**
+ * The user's plugins as tool servers for one Droid session. Droid only gets them when it says it
+ * can reach a tool server over HTTP; otherwise the chat starts without plugins.
+ */
+export function droidPluginServers(
+  initializeResult: EffectAcpSchema.InitializeResponse,
+  plugins: PluginGatewaySession | undefined,
+): Array<EffectAcpSchema.McpServer> {
+  if (!plugins || initializeResult.agentCapabilities?.mcpCapabilities?.http !== true) return [];
+  return plugins.servers.map((server) => ({
+    type: "http",
+    name: server.name,
+    url: server.url,
+    headers: [{ name: "Authorization", value: `Bearer ${plugins.bearerToken}` }],
+  }));
+}
+
+/** The chat's plugin bearer travels in session setup; no log may keep it. */
+export function redactDroidAcpLoggers(
+  loggers: Pick<AcpSessionRuntimeOptions, "requestLogger" | "protocolLogging">,
+  secret: string | undefined,
+): Pick<AcpSessionRuntimeOptions, "requestLogger" | "protocolLogging"> {
+  if (!secret) return loggers;
+  const redact = (value: unknown): unknown => {
+    let text: string | undefined;
+    try {
+      text =
+        typeof value === "string"
+          ? value
+          : value instanceof Uint8Array
+            ? new TextDecoder().decode(value)
+            : JSON.stringify(value);
+    } catch {
+      return "[unloggable payload]";
+    }
+    return text?.includes(secret) ? text.replaceAll(secret, "[redacted]") : value;
+  };
+  const { requestLogger, protocolLogging } = loggers;
+  return {
+    ...(requestLogger
+      ? {
+          requestLogger: (event) =>
+            requestLogger({
+              ...event,
+              payload: redact(event.payload),
+              ...(event.result !== undefined ? { result: redact(event.result) } : {}),
+            }),
+        }
+      : {}),
+    ...(protocolLogging
+      ? {
+          protocolLogging: {
+            ...protocolLogging,
+            ...(protocolLogging.logger
+              ? {
+                  logger: (event: Parameters<NonNullable<typeof protocolLogging.logger>>[0]) =>
+                    protocolLogging.logger!({ ...event, payload: redact(event.payload) }),
+                }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
 
 export const makeDroidAcpRuntime = (
   input: DroidAcpRuntimeInput,

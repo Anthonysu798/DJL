@@ -509,3 +509,289 @@ describe("DJL Cloud stream cleanup", () => {
     },
   );
 });
+
+describe("DJL Cloud plugins", () => {
+  const plugins = {
+    bearerToken: "plugin-chat-token",
+    servers: [{ name: "djl_linear", url: "http://127.0.0.1:9999/mcp/linear" }],
+  };
+  // A fake plugin gateway: initialize hands out an MCP session, tools/list answers as an event
+  // stream, tools/call as JSON.
+  const fakeGateway = () => {
+    const calls: { method: string; params: unknown; session: string | null; url?: string }[] = [];
+    const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get("authorization")).toBe("Bearer plugin-chat-token");
+      const body = JSON.parse(String(init?.body)) as {
+        id?: string;
+        method: string;
+        params: unknown;
+      };
+      calls.push({
+        method: body.method,
+        params: body.params,
+        session: headers.get("mcp-session-id"),
+        ...(body.method === "initialize" ? { url: String(url) } : {}),
+      });
+      if (body.method === "initialize")
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: {} }), {
+          headers: { "content-type": "application/json", "mcp-session-id": "mcp-1" },
+        });
+      if (body.method === "notifications/initialized") return new Response(null, { status: 202 });
+      if (body.method === "tools/list")
+        return new Response(
+          `event: message\ndata: ${JSON.stringify({
+            jsonrpc: "2.0",
+            id: body.id,
+            result: {
+              tools: [
+                {
+                  name: "create_issue",
+                  description: "Create a Linear issue",
+                  inputSchema: { type: "object", properties: { title: { type: "string" } } },
+                },
+              ],
+            },
+          })}\n\n`,
+          { headers: { "content-type": "text/event-stream" } },
+        );
+      return new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: body.id,
+          result: { content: [{ type: "text", text: "Created ENG-1" }] },
+        }),
+        { headers: { "content-type": "application/json" } },
+      );
+    });
+    return { calls, network };
+  };
+  const cloud = () => {
+    const bodies: { tools?: { function: { name: string } }[]; messages: unknown[] }[] = [];
+    const fetchImpl: FetchLike = async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return bodies.length % 2 === 1
+        ? sse([
+            'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","function":{"name":"djl_linear__create_issue","arguments":"{\\"title\\":\\"Bug\\"}"}}]}}]}\n\n',
+            "data: [DONE]\n\n",
+          ])
+        : sse(['data: {"choices":[{"delta":{"content":"Done."}}]}\n\n', "data: [DONE]\n\n"]);
+    };
+    return { bodies, fetchImpl };
+  };
+
+  it("offers plugin tools in a plain chat and asks before running one in approval-required mode", async () => {
+    const gateway = fakeGateway();
+    const { bodies, fetchImpl } = cloud();
+    const requests: { type: string; args: unknown }[] = [];
+    const captured = sink();
+    captured.s.request = async (type, args) => {
+      requests.push({ type, args });
+      return "accept";
+    };
+    try {
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        start,
+        captured.s,
+        undefined,
+        plugins,
+      );
+      await driver.send({
+        threadId: start.threadId,
+        input: "File a bug",
+        djlPluginIds: ["linear"],
+      });
+      expect(bodies[0]!.tools?.map((tool) => tool.function.name)).toEqual([
+        "djl_linear__create_issue",
+      ]);
+      expect(requests).toEqual([
+        {
+          type: "command_execution_approval",
+          args: { tool: "djl_linear__create_issue", input: { title: "Bug" } },
+        },
+      ]);
+      const call = gateway.calls.find((entry) => entry.method === "tools/call");
+      expect(call).toEqual({
+        method: "tools/call",
+        params: { name: "create_issue", arguments: { title: "Bug" } },
+        session: "mcp-1",
+      });
+      expect(JSON.stringify(bodies[1]!.messages)).toContain("Created ENG-1");
+      expect(captured.events).toContainEqual(
+        expect.objectContaining({
+          type: "content.delta",
+          payload: expect.objectContaining({ delta: "Done." }),
+        }),
+      );
+    } finally {
+      gateway.network.mockRestore();
+    }
+  });
+
+  it("never runs a plugin tool the user declined", async () => {
+    const gateway = fakeGateway();
+    const { bodies, fetchImpl } = cloud();
+    const captured = sink();
+    captured.s.request = async () => "decline";
+    try {
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        start,
+        captured.s,
+        undefined,
+        plugins,
+      );
+      await driver.send({
+        threadId: start.threadId,
+        input: "File a bug",
+        djlPluginIds: ["linear"],
+      });
+      expect(gateway.calls.some((entry) => entry.method === "tools/call")).toBe(false);
+      expect(JSON.stringify(bodies[1]!.messages)).toContain("declined");
+      expect(captured.events).toContainEqual(
+        expect.objectContaining({
+          type: "item.completed",
+          payload: expect.objectContaining({ status: "failed" }),
+        }),
+      );
+    } finally {
+      gateway.network.mockRestore();
+    }
+  });
+
+  it("remembers approve-for-session and asks nothing in full-access mode", async () => {
+    const gateway = fakeGateway();
+    const { fetchImpl } = cloud();
+    let asked = 0;
+    const captured = sink();
+    captured.s.request = async () => {
+      asked++;
+      return "acceptForSession";
+    };
+    try {
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        start,
+        captured.s,
+        undefined,
+        plugins,
+      );
+      await driver.send({
+        threadId: start.threadId,
+        input: "File a bug",
+        djlPluginIds: ["linear"],
+      });
+      await driver.send({
+        threadId: start.threadId,
+        input: "File another",
+        djlPluginIds: ["linear"],
+      });
+      expect(asked).toBe(1);
+      const fullAccess = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        { ...start, runtimeMode: "full-access" },
+        captured.s,
+        undefined,
+        plugins,
+      );
+      await fullAccess.send({
+        threadId: start.threadId,
+        input: "File a bug",
+        djlPluginIds: ["linear"],
+      });
+      expect(asked).toBe(1);
+      expect(gateway.calls.filter((entry) => entry.method === "tools/call")).toHaveLength(3);
+    } finally {
+      gateway.network.mockRestore();
+    }
+  });
+
+  it("keeps a plain streaming chat when no plugin tool can be listed", async () => {
+    const network = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+    const bodies: { tools?: unknown }[] = [];
+    const fetchImpl: FetchLike = async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return sse(['data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n', "data: [DONE]\n\n"]);
+    };
+    try {
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        start,
+        sink().s,
+        undefined,
+        plugins,
+      );
+      await driver.send({ threadId: start.threadId, input: "hello", djlPluginIds: ["linear"] });
+      expect(bodies[0]!.tools).toBeUndefined();
+    } finally {
+      network.mockRestore();
+    }
+  });
+
+  it("streams a turn without a plugin mention and never lists gateway tools", async () => {
+    const gateway = fakeGateway();
+    const bodies: { tools?: unknown; stream?: boolean }[] = [];
+    const fetchImpl: FetchLike = async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return sse([
+        'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+        "data: [DONE]\n\n",
+      ]);
+    };
+    try {
+      const captured = sink();
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        start,
+        captured.s,
+        undefined,
+        plugins,
+      );
+      await driver.send({ threadId: start.threadId, input: "hello" });
+      expect(gateway.calls).toEqual([]);
+      expect(bodies[0]!.tools).toBeUndefined();
+      expect(bodies[0]!.stream).toBe(true);
+      expect(
+        captured.events
+          .filter((event) => event.type === "content.delta")
+          .map((event) => (event.payload as { delta: string }).delta),
+      ).toEqual(["Hel", "lo"]);
+    } finally {
+      gateway.network.mockRestore();
+    }
+  });
+
+  it("offers only the mentioned plugin's tools", async () => {
+    const gateway = fakeGateway();
+    const { bodies, fetchImpl } = cloud();
+    try {
+      const driver = await createDjlCloudDriverFactory({ secretsDir, fetchImpl })(
+        { ...start, runtimeMode: "full-access" },
+        sink().s,
+        undefined,
+        {
+          bearerToken: "plugin-chat-token",
+          servers: [
+            { name: "djl_linear", url: "http://127.0.0.1:9999/mcp/linear", pluginId: "linear" },
+            { name: "djl_notion", url: "http://127.0.0.1:9999/mcp/notion", pluginId: "notion" },
+            // Its id starts with "linear_", but it is a different plugin.
+            {
+              name: "djl_linear_extra",
+              url: "http://127.0.0.1:9999/mcp/linear_extra",
+              pluginId: "linear_extra",
+            },
+          ],
+        },
+      );
+      await driver.send({
+        threadId: start.threadId,
+        input: "File a bug",
+        djlPluginIds: ["linear"],
+      });
+      expect(bodies[0]!.tools?.map((tool) => tool.function.name)).toEqual([
+        "djl_linear__create_issue",
+      ]);
+      const contacted = gateway.calls.flatMap((call) => (call.url ? [call.url] : []));
+      expect(contacted.length).toBeGreaterThan(0);
+      expect(contacted.every((url) => url.endsWith("/mcp/linear"))).toBe(true);
+    } finally {
+      gateway.network.mockRestore();
+    }
+  });
+});

@@ -110,6 +110,7 @@ describe("rankSettingsSearchEntries", () => {
       "appearance:time-format": "setting-time-format",
       "notifications:activity-toasts": "setting-activity-toasts",
       "notifications:desktop-notifications": "setting-desktop-notifications",
+      "plugins:plugins": null,
       "behavior:assistant-output": "setting-assistant-output",
       "behavior:diff-line-wrapping": "setting-diff-line-wrapping",
       "behavior:delete-confirmation": "setting-delete-confirmation",

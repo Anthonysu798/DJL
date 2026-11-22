@@ -12,6 +12,7 @@ import type {
 } from "@djl/contracts";
 
 import { extractCodexGeneratedImageReference } from "../../../codexGeneratedImages";
+import type { PluginGatewaySession } from "../../../plugins/PluginGateway";
 import { nativeApprovalDetail } from "../requests";
 import type { NativeDriver, NativeDriverFactory, NativeSink } from "../types";
 import { findNewOutputs, withOutputs } from "./groupOutputs";
@@ -85,6 +86,7 @@ export async function openChildSession(input: {
   provider: GroupMemberProvider;
   factory: NativeDriverFactory;
   start: ProviderSessionStartInput;
+  plugins?: PluginGatewaySession;
 }): Promise<ChildSession> {
   const countsCodexItems = input.provider === "codex";
   let turn: Turn | null = null;
@@ -143,7 +145,12 @@ export async function openChildSession(input: {
   };
 
   const { sandboxMode: _sandbox, approvalPolicy: _approval, ...start } = input.start;
-  driver = await input.factory({ ...start, runtimeMode: "approval-required" }, sink);
+  driver = await input.factory(
+    { ...start, runtimeMode: "approval-required" },
+    sink,
+    undefined,
+    input.plugins,
+  );
   const active = driver;
 
   return {

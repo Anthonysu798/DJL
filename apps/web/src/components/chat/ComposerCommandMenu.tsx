@@ -48,6 +48,7 @@ import {
 } from "../ui/command";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { ProviderIcon } from "../ProviderIcon";
+import { SiteFavicon } from "../SiteFavicon";
 import {
   COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
   COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
@@ -520,8 +521,14 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       return <BrainIcon className={cls} />;
     case "agent":
       return <BotIcon className={cls} />;
-    case "plugin":
-      return <PluginIcon className={cls} />;
+    case "plugin": {
+      // A plugin shows its own logo; one without a site keeps the plugin mark in its colour.
+      const { websiteUrl, brandColor } = item.plugin.interface ?? {};
+      const mark = (
+        <PluginIcon className={cls} style={brandColor ? { color: brandColor } : undefined} />
+      );
+      return websiteUrl ? <SiteFavicon url={websiteUrl} size={14} fallback={mark} /> : mark;
+    }
     case "server":
       return <CentralIcon name="server" className={cls} />;
     case "skill":

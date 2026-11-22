@@ -101,7 +101,7 @@ export function codexPermissions(input: ProviderSessionStartInput) {
     approvalsReviewer: autoReview ? ("auto_review" as const) : ("user" as const),
   };
 }
-export const createCodexDriver: NativeDriverFactory = async (input, sink, workTools) => {
+export const createCodexDriver: NativeDriverFactory = async (input, sink, workTools, plugins) => {
   if (input.runtimeMode === "auto-approval") {
     const modes = await nativePermissionModes("codex", input.providerOptions ?? {});
     const automatic = modes.find((entry) => entry.mode === "auto-approval");
@@ -110,6 +110,8 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
   }
   const options = input.providerOptions?.codex;
   const computerQa = process.env.DJL_COMPUTER_QA_PROFILE === "1";
+  // The QA profile runs with DJL's own tool server only.
+  const pluginServers = computerQa ? [] : (plugins?.servers ?? []);
   const permissions = computerQa
     ? { approvalPolicy: "untrusted", sandbox: "read-only", approvalsReviewer: "user" }
     : codexPermissions(input);
@@ -142,6 +144,12 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
         : {}),
       mcp_servers: {
         ...qaMcpServers,
+        ...Object.fromEntries(
+          pluginServers.map((server) => [
+            server.name,
+            { url: server.url, bearer_token_env_var: "DJL_PLUGIN_MCP_TOKEN" },
+          ]),
+        ),
         ...(workTools?.multipost
           ? {
               [workTools.multipost.name]: {
@@ -176,6 +184,7 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
       ...(options?.homePath ? { ...process.env, CODEX_HOME: options.homePath } : process.env),
       ...(workTools ? { DJL_WORK_MCP_TOKEN: workTools.bearerToken } : {}),
       ...(workTools?.multipost ? { DJL_MULTIPOST_MCP_TOKEN: workTools.multipost.bearerToken } : {}),
+      ...(plugins && pluginServers.length > 0 ? { DJL_PLUGIN_MCP_TOKEN: plugins.bearerToken } : {}),
     },
     input.threadId,
   );
@@ -230,9 +239,13 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
     }
     if (requestId !== undefined) {
       if (method === "mcpServer/elicitation/request") {
+        // Tool-call approvals are only taken from servers DJL itself handed to this session.
+        const approvalServer = [
+          workTools?.name,
+          ...pluginServers.map((server) => server.name),
+        ].find((name) => name !== undefined && name === params.serverName);
         const ownToolApproval =
-          workTools &&
-          params.serverName === workTools.name &&
+          approvalServer &&
           params.turnId === activeTurn &&
           !!activeTurn &&
           params.mode === "form" &&
@@ -245,7 +258,7 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
           sourceRpc.respond(requestId, { action: "accept", content: {} });
         } else {
           void sink
-            .request("command_execution_approval", { ...params, tool: workTools.name })
+            .request("command_execution_approval", { ...params, tool: approvalServer })
             .then((answer) =>
               sourceRpc.respond(requestId, {
                 action:
@@ -343,6 +356,9 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
       const usage = codexContextUsage(params.tokenUsage);
       if (usage) sink.emit({ type: "thread.token-usage.updated", payload: { usage } });
     }
+    // Rolling subscription limits; same payload the Codex adapter emitted.
+    if (method === "account/rateLimits/updated")
+      sink.emit({ type: "account.rate-limits.updated", payload: { rateLimits: params } });
     if (method === "turn/completed") {
       const turn = object(params.turn);
       if (turn.status === "failed")
@@ -412,7 +428,7 @@ export const createCodexDriver: NativeDriverFactory = async (input, sink, workTo
         model: input.modelSelection?.model,
         ...(computerQa ? { modelProvider: "openai" } : {}),
         ...permissions,
-        ...(workTools || computerQa
+        ...(workTools || computerQa || pluginServers.length > 0
           ? {
               config: workConfig(),
             }

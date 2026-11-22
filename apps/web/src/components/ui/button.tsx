@@ -8,15 +8,11 @@ import * as React from "react";
 import { cn } from "~/lib/utils";
 import { extendButtonIconChildSelectors } from "~/lib/central-icons";
 
-/** Slightly softer outline border for header chrome buttons in dark mode. */
-const headerButtonDarkBorderClassName =
-  "dark:border-[color:color-mix(in_srgb,var(--color-border)_80%,transparent)]";
-
 // Variant taxonomy (visual treatment) × size axis × content (icon / text / icon+text).
 //
-//   filled      → default (primary) | secondary | destructive | prominent
-//   outlined    → outline | primary-outline | secondary-outline | destructive-outline | chrome-outline
-//   ghostly     → ghost | chrome | subtle | link
+//   filled      → default (primary) | destructive | prominent
+//   glass       → outline | secondary | subtle | primary-outline | secondary-outline | destructive-outline | chrome-outline
+//   ghostly     → ghost | chrome | link
 //
 // Sizes pair text variants (chip/xs/sm/default/lg/xl) with their square
 // icon-only counterparts (icon-chip/icon-xs/icon-sm/icon/icon-lg/icon-xl) at
@@ -24,10 +20,12 @@ const headerButtonDarkBorderClassName =
 // baseline in a toolbar row. `chip`/`icon-chip` are for inline action pills
 // inside queued-message rows, badges, etc.
 //
-// Visual style is intentionally flat — no drop shadows, no inset highlights, no
-// pseudo-element edge glints. Buttons are solid color + border + hover-bg only.
-// If you need depth, add a single new variant rather than reintroducing shadows
-// piecewise; the flat look is the project default and what most surfaces expect.
+// Glass variants share `.glass-control` (index.css): a tinted translucent fill,
+// hairline border and top highlight, with hover and pressed fills, and never a
+// backdrop filter. Filled variants keep their solid color plus the same quiet top
+// highlight and a pressed state. Ghostly variants stay flat. No drop shadows and
+// no pseudo-element edge glints; if you need more depth, add a single new variant
+// rather than reintroducing shadows piecewise.
 //
 // Adding a new variant? Mirror an existing one's border/focus treatment so the
 // family stays visually coherent. Prefer adding a variant over passing a
@@ -72,29 +70,26 @@ const buttonVariants = cva(
         chrome:
           "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-[var(--color-background-elevated-secondary)] data-pressed:text-[var(--color-text-foreground)]",
         "chrome-outline": extendButtonIconChildSelectors(
-          `border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-secondary ${headerButtonDarkBorderClassName} dark:[:hover,[data-pressed]]:bg-secondary [&_svg]:mx-0`,
+          "glass-control text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [&_svg]:mx-0",
         ),
         default:
-          "border-transparent bg-primary text-primary-foreground [:hover,[data-pressed]]:bg-primary/90",
+          "border-transparent bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.16)] [:hover,[data-pressed]]:bg-primary/90 active:bg-primary/80",
         destructive:
-          "border-destructive bg-destructive text-white [:hover,[data-pressed]]:bg-destructive/90",
+          "border-destructive bg-destructive text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.16)] [:hover,[data-pressed]]:bg-destructive/90 active:bg-destructive/80",
         "destructive-outline":
-          "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-destructive [:hover,[data-pressed]]:border-destructive/32 [:hover,[data-pressed]]:bg-destructive/4 [:hover,[data-pressed]]:text-destructive",
+          "glass-control text-destructive [:hover,[data-pressed]]:border-destructive/32 [:hover,[data-pressed]]:text-destructive",
         ghost:
           "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0 [:hover,[data-pressed]]:bg-[var(--color-background-button-secondary-hover)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-[var(--color-background-button-secondary)] data-pressed:text-[var(--color-text-foreground)]",
         link: "border-transparent underline-offset-4 [:hover,[data-pressed]]:underline",
         outline:
-          "border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] dark:[:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)]",
-        "primary-outline":
-          "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-primary [:hover,[data-pressed]]:border-primary/32 [:hover,[data-pressed]]:bg-primary/4",
+          "glass-control text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60",
+        "primary-outline": "glass-control text-primary [:hover,[data-pressed]]:border-primary/32",
         prominent:
           "rounded-full border-transparent bg-[var(--color-text-foreground)] text-[var(--color-background-surface)] transition-[transform,opacity] duration-150 hover:scale-105 disabled:opacity-20 disabled:hover:scale-100",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground [:active,[data-pressed]]:bg-secondary/80 [:hover,[data-pressed]]:bg-secondary/90",
-        "secondary-outline":
-          "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-[var(--color-text-foreground)] [:hover,[data-pressed]]:bg-secondary/12",
+        secondary: "glass-control text-[var(--color-text-foreground)]",
+        "secondary-outline": "glass-control text-[var(--color-text-foreground)]",
         subtle:
-          "border-transparent bg-[var(--color-background-button-secondary)] text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0 [:hover,[data-pressed]]:bg-[var(--color-background-button-secondary-hover)]",
+          "glass-control text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0",
       },
     },
     compoundVariants: [
@@ -144,4 +139,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 const dialogActionButtonClassName =
   "!h-auto !min-h-8 !rounded-md !px-3 !py-1 !font-normal sm:!min-h-7";
 
-export { Button, buttonVariants, dialogActionButtonClassName, headerButtonDarkBorderClassName };
+export { Button, buttonVariants, dialogActionButtonClassName };

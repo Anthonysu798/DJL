@@ -5,11 +5,15 @@
 // Layer: UI shared component/helper
 // Exports: MentionChipIcon, createMentionChipIconElement
 
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { getFileIconName, inferEntryKindFromPath } from "~/file-icons";
 import { resolveMentionChipKind, type MentionChipKind } from "~/lib/composerMentions";
 import { CentralIcon, createCentralIconElement } from "~/lib/central-icons";
 import { PluginIcon } from "~/lib/icons";
+import { pluginLogoSite, whenPluginLogosKnown } from "~/lib/pluginLogos";
+import { probeSiteFavicon, resolveSiteFaviconUrl } from "~/lib/siteFavicon";
+import { cn } from "~/lib/utils";
+import { SiteFavicon } from "../SiteFavicon";
 import { COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME } from "../composerInlineChip";
 import { FolderClosed } from "../FolderClosed";
 import type { ProviderMentionReference } from "@djl/contracts";
@@ -31,6 +35,33 @@ function composerMentionChipCentralIconName(path: string, kind: MentionChipKind 
   return getFileIconName(path);
 }
 
+// A logo is a full-colour image, so it gets a soft corner instead of the glyphs' mask.
+const PLUGIN_LOGO_CLASS_NAME = "rounded-[3px] object-contain";
+
+/** A plugin chip's icon: the plugin's own logo once the catalog is known, else the plugin mark. */
+function PluginMentionIcon(props: { name: string; className: string }) {
+  const [site, setSite] = useState(() => pluginLogoSite(props.name));
+  useEffect(() => {
+    let live = true;
+    void whenPluginLogosKnown().then(() => {
+      if (live) setSite(pluginLogoSite(props.name));
+    });
+    return () => {
+      live = false;
+    };
+  }, [props.name]);
+  const mark = <PluginIcon className={props.className} />;
+  return site ? (
+    <SiteFavicon
+      url={site}
+      className={cn(props.className, PLUGIN_LOGO_CLASS_NAME)}
+      fallback={mark}
+    />
+  ) : (
+    mark
+  );
+}
+
 // `theme` is retained for call-site compatibility but no longer affects icon
 // selection (Central icons are theme-agnostic `currentColor` glyphs).
 // `className` lets callers size the glyph per surface (composer token vs timeline
@@ -48,7 +79,7 @@ export const MentionChipIcon = memo(function MentionChipIcon(props: {
     ...(props.mentionReferences ? { mentionReferences: props.mentionReferences } : {}),
   });
   if (resolvedKind === "plugin") {
-    return <PluginIcon className={className} />;
+    return <PluginMentionIcon name={props.path} className={className} />;
   }
   if (resolvedKind === "server") {
     return <CentralIcon name={SERVER_MENTION_CHIP_ICON_NAME} className={className} />;
@@ -71,9 +102,27 @@ export function createMentionChipIconElement(
   className: string = COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME,
 ): HTMLElement {
   const iconName = composerMentionChipCentralIconName(path, kind);
-  return (
+  const icon =
     createCentralIconElement(iconName, className) ??
     createCentralIconElement("code-brackets", className) ??
-    document.createElement("span")
-  );
+    document.createElement("span");
+  if (kind === "plugin") {
+    // Starts as the plugin mark and becomes the plugin's own logo once that has loaded.
+    void whenPluginLogosKnown().then(async () => {
+      const site = pluginLogoSite(path);
+      if (!site) return;
+      const src = resolveSiteFaviconUrl(site);
+      if ((await probeSiteFavicon(src)) !== "ok") return;
+      // Repainted in place: the editor undoes elements added to a chip behind its back,
+      // but leaves style changes alone.
+      icon.style.removeProperty("-webkit-mask");
+      icon.style.removeProperty("mask");
+      icon.style.setProperty(
+        "background",
+        `url(${JSON.stringify(src)}) center / contain no-repeat`,
+      );
+      icon.style.setProperty("border-radius", "3px");
+    });
+  }
+  return icon;
 }

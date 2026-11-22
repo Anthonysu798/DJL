@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   resultError: "",
   multipleMessages: false,
   reportUsage: false,
+  rateLimit: undefined as Record<string, unknown> | undefined,
   actualMode: "",
   permissionDenied: false,
   modes: [] as string[],
@@ -32,6 +33,13 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
             decision_reason_type: "classifier",
             decision_reason: "Outside approved scope",
             message: "Tool denied",
+          };
+        if (state.rateLimit)
+          yield {
+            type: "rate_limit_event",
+            rate_limit_info: state.rateLimit,
+            uuid: "rate-limit-uuid",
+            session_id: "claude-session",
           };
         if (state.actualMode)
           yield { type: "system", subtype: "init", permissionMode: state.actualMode };
@@ -126,6 +134,31 @@ const input = {
 };
 
 describe("fresh Claude SDK bridge", () => {
+  it("hands connected plugins to Claude as http servers behind the gateway bearer", async () => {
+    const sink = { emit: () => {}, request: async () => "cancel" as const, fail: () => {} };
+    const driver = await createClaudeDriver(input, sink, undefined, {
+      bearerToken: "plugin-session-token",
+      servers: [{ name: "djl_linear", url: "http://127.0.0.1:23456/mcp/linear" }],
+    });
+    try {
+      expect(state.options?.mcpServers).toEqual({
+        djl_linear: {
+          type: "http",
+          url: "http://127.0.0.1:23456/mcp/linear",
+          headers: { Authorization: "Bearer plugin-session-token" },
+        },
+      });
+    } finally {
+      driver.close();
+    }
+    const plain = await createClaudeDriver(input, sink);
+    try {
+      expect(state.options?.mcpServers).toBeUndefined();
+    } finally {
+      plain.close();
+    }
+  });
+
   it("sends a group member's file and shell tools to approval even when settings allow them", async () => {
     type Hook = (input: { hook_event_name: string; tool_name: string }) => Promise<unknown>;
     const sink = { emit: () => {}, request: async () => "cancel" as const, fail: () => {} };
@@ -189,6 +222,40 @@ describe("fresh Claude SDK bridge", () => {
       });
     } finally {
       state.reportUsage = false;
+      driver.close();
+    }
+  });
+
+  it("forwards mid-turn subscription limits as the runtime rate-limit event", async () => {
+    const info = {
+      status: "allowed_warning",
+      rateLimitType: "five_hour",
+      utilization: 0.93,
+      resetsAt: 4_102_444_800,
+    };
+    state.rateLimit = info;
+    const events: Record<string, unknown>[] = [];
+    const driver = await createClaudeDriver(input, {
+      emit: (event) => events.push(event),
+      request: async () => "cancel",
+      fail: () => {},
+    });
+    try {
+      await driver.send({ threadId: input.threadId, input: "hello" });
+      // Same shape the old Claude adapter produced: the whole SDK message.
+      expect(events).toContainEqual({
+        type: "account.rate-limits.updated",
+        payload: {
+          rateLimits: {
+            type: "rate_limit_event",
+            rate_limit_info: info,
+            uuid: "rate-limit-uuid",
+            session_id: "claude-session",
+          },
+        },
+      });
+    } finally {
+      state.rateLimit = undefined;
       driver.close();
     }
   });

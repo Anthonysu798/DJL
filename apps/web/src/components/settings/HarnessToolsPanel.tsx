@@ -1,5 +1,5 @@
 import type { HarnessToolId } from "@djl/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ensureNativeApi } from "~/nativeApi";
@@ -11,6 +11,15 @@ import { SettingsSection } from "./SettingsPanelPrimitives";
 import { SettingsLoadError, settingsLoadErrorDetail } from "./SettingsLoadError";
 
 const TOOLS_KEY = ["harness-tools"] as const;
+// Shared with the accounts list, which offers to install the same CLIs.
+export const harnessToolsQueryOptions = () =>
+  queryOptions({
+    queryKey: TOOLS_KEY,
+    queryFn: () => ensureNativeApi().harnesses.listTools(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+  });
 const TOOLS = [
   { id: "codex", label: "Codex", docs: "https://developers.openai.com/codex/cli/" },
   { id: "claudeAgent", label: "Claude Code", docs: "https://code.claude.com/docs/en/setup" },
@@ -46,13 +55,7 @@ export function HarnessToolsPanel({ disabled = false }: { disabled?: boolean }) 
   const [results, setResults] = useState<
     Partial<Record<HarnessToolId, { ok: boolean; message: string }>>
   >({});
-  const tools = useQuery({
-    queryKey: TOOLS_KEY,
-    queryFn: () => ensureNativeApi().harnesses.listTools(),
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
-    refetchInterval: 30_000,
-  });
+  const tools = useQuery(harnessToolsQueryOptions());
   const maintain = useMutation({
     mutationFn: async (ids: HarnessToolId[]) => {
       setResults({});

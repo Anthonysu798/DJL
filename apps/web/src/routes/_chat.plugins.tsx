@@ -1,11 +1,15 @@
 // FILE: _chat.plugins.tsx
-// Purpose: Registers the plugin and skill browser under the shared chat shell.
+// Purpose: Layout-only route so the plugin directory (/plugins) and a plugin's page
+//          (/plugins/$pluginId) each render as their own full page.
 // Layer: Route
 // Exports: Route
 
-import { createFileRoute } from "@tanstack/react-router";
-import { PluginLibrary } from "~/components/PluginLibrary";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_chat/plugins")({
-  component: PluginLibrary,
+  component: PluginsLayout,
 });
+
+function PluginsLayout() {
+  return <Outlet />;
+}

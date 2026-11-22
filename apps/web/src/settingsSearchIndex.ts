@@ -72,6 +72,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   panel("local-models:runtimes", "local-models"),
   panel("local-models:recommended", "local-models"),
   panel("servers:registry", "servers"),
+  panel("plugins:plugins", "plugins"),
   panel("skills:skills", "skills"),
   panel("usage:usage", "usage"),
   row("advanced:keybindings", "advanced", "keybindings"),

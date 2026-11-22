@@ -4,6 +4,7 @@
 
 import { CentralIcon } from "~/lib/central-icons";
 import { DjlAccountEntry } from "./DjlAccountEntry";
+import { UsageRingButton } from "./UsageRingButton";
 import { SidebarModeMenu } from "./SidebarModeMenu";
 import { DesktopShellChrome } from "./DesktopShellChrome";
 import {
@@ -1004,11 +1005,7 @@ function ProjectSortMenu({
         tooltip={t("sidebar.sortProjects")}
         tooltipSide="right"
       />
-      <MenuPopup
-        align="end"
-        side="bottom"
-        className="min-w-44 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
-      >
+      <MenuPopup align="end" side="bottom" className="min-w-44">
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
             {t("sidebar.sortProjects")}
@@ -1065,12 +1062,7 @@ function TutorialReplayMenu() {
         <span>{t("onboarding.settings.title")}</span>
         <SidebarGlyph icon={ChevronDownIcon} variant="chevron" className="ml-auto" />
       </SidebarMenuButton>
-      <MenuPopup
-        align="start"
-        side="top"
-        sideOffset={6}
-        className="min-w-64 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
-      >
+      <MenuPopup align="start" side="top" sideOffset={6} className="min-w-64">
         <MenuItem
           className="min-h-12 items-start gap-2.5 px-2.5 py-2"
           onClick={requestFirstRunTourReplay}
@@ -1163,11 +1155,7 @@ function ChatSortMenu({
         tooltip={t("sidebar.sortChats")}
         tooltipSide="top"
       />
-      <MenuPopup
-        align="end"
-        side="bottom"
-        className="min-w-44 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
-      >
+      <MenuPopup align="end" side="bottom" className="min-w-44">
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
             {t("sidebar.sortChats")}
@@ -6898,6 +6886,14 @@ export default function Sidebar() {
                 }}
               />
             }
+            usage={
+              <UsageRingButton
+                rail
+                onManageUsage={() => {
+                  void navigate({ to: "/settings", search: { section: "usage" } });
+                }}
+              />
+            }
             update={
               showDesktopUpdateButton ? (
                 <DesktopUpdateSidebarButton
@@ -7565,7 +7561,18 @@ export default function Sidebar() {
       <SidebarFooter
         className={cn("gap-2 p-2 font-system-ui", isElectron && "djl-desktop-legacy-footer")}
       >
-        {!isElectron && <DjlAccountEntry />}
+        {!isElectron && (
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <DjlAccountEntry />
+            </div>
+            <UsageRingButton
+              onManageUsage={() => {
+                void navigate({ to: "/settings", search: { section: "usage" } });
+              }}
+            />
+          </div>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex flex-col gap-1">

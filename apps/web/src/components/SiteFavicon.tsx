@@ -6,7 +6,7 @@
 // Layer: Shared UI component
 // Used by: markdown source links (ChatMarkdown), InlineLinkChip (composer + user bubble).
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 
 import { GlobeIcon } from "~/lib/icons";
 import {
@@ -23,9 +23,16 @@ export interface SiteFaviconProps {
   /** Square px size for both the favicon and the globe fallback. Omit to size via `className`. */
   readonly size?: number | undefined;
   readonly className?: string | undefined;
+  /** Shown instead of the globe while the icon loads and when the site has none. */
+  readonly fallback?: ReactNode;
 }
 
-export const SiteFavicon = memo(function SiteFavicon({ url, size, className }: SiteFaviconProps) {
+export const SiteFavicon = memo(function SiteFavicon({
+  url,
+  size,
+  className,
+  fallback,
+}: SiteFaviconProps) {
   const host = extractHostname(url) ?? (url.includes(".") ? url : null);
   const faviconSrc = host ? resolveSiteFaviconUrl(host) : null;
 
@@ -68,5 +75,6 @@ export const SiteFavicon = memo(function SiteFavicon({ url, size, className }: S
     );
   }
 
+  if (fallback !== undefined) return fallback;
   return <GlobeIcon aria-hidden="true" className={className} style={sizeStyle} />;
 });

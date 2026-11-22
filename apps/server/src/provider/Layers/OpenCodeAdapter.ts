@@ -89,6 +89,7 @@ import type {
   WorkMcpServerShape,
   WorkMcpSessionRegistration,
 } from "../../work/Services/WorkMcpServer.ts";
+import { PluginsService } from "../../plugins/PluginsService.ts";
 import { recordProviderModelDocumentCapabilities } from "../../work/modelDocumentRouting.ts";
 import { isSupportedOfficialDeepSeekCatalogModel } from "../deepSeekCompatibility.ts";
 import {
@@ -2061,6 +2062,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
       const workMcpServer = options?.workMcpServer;
       const provider = adapterConfig.provider;
       const settingsService = yield* Effect.serviceOption(ServerSettingsService);
+      const pluginsService = yield* Effect.serviceOption(PluginsService);
       const resolveBinaryPath = (candidate?: string | null): Effect.Effect<string> => {
         if (candidate?.trim()) return Effect.succeed(candidate.trim());
         if (provider === "opencode" && Option.isSome(settingsService)) {
@@ -4367,6 +4369,35 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                       operation: "startSession",
                       issue: `DJL could not connect its scoped Work tools to OpenCode: ${detail}`,
                     });
+                  }
+                }
+                // The user's connected plugins. They are extras: a plugin that cannot be
+                // attached never stops the chat from starting.
+                if (Option.isSome(pluginsService) && localToolsUsable) {
+                  const plugins = pluginsService.value;
+                  const pluginSession = yield* plugins.registerSession.pipe(
+                    Effect.orElseSucceed(() => undefined),
+                  );
+                  if (pluginSession) {
+                    yield* Effect.addFinalizer(() =>
+                      plugins.unregisterSession(pluginSession.bearerToken),
+                    );
+                    for (const pluginServer of pluginSession.servers) {
+                      yield* runOpenCodeSdk("mcp.add", () =>
+                        client.mcp.add({
+                          directory,
+                          name: pluginServer.name,
+                          config: {
+                            type: "remote",
+                            url: pluginServer.url,
+                            enabled: true,
+                            headers: { Authorization: `Bearer ${pluginSession.bearerToken}` },
+                            oauth: false,
+                            timeout: 15_000,
+                          },
+                        }),
+                      ).pipe(Effect.ignore);
+                    }
                   }
                 }
                 const createSession = () =>

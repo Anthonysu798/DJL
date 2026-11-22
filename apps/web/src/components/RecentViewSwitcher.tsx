@@ -105,7 +105,7 @@ export function RecentViewSwitcher(props: {
         role="listbox"
         aria-label={t("recentViews.ariaLabel")}
         aria-activedescendant={`recent-view-switcher-${selectedIndex}`}
-        className="w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border/70 bg-popover/95 text-popover-foreground shadow-2xl shadow-black/30 backdrop-blur-xl"
+        className="glass-surface-strong w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-2xl text-popover-foreground"
       >
         <div className="flex flex-col gap-0.5 p-1.5">
           {props.entries.map((entry, index) => {

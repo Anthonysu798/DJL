@@ -88,7 +88,9 @@ import {
   applyDroidAcpInteractionMode,
   applyDroidAcpModelSelection,
   discoverDroidAcpModels,
+  droidPluginServers,
   makeDroidAcpRuntime,
+  redactDroidAcpLoggers,
   type DroidAcpRuntimeSettings,
 } from "../acp/DroidAcpSupport.ts";
 import {
@@ -97,6 +99,7 @@ import {
 } from "../acp/AcpElicitationSupport.ts";
 import { DroidAdapter, type DroidAdapterShape } from "../Services/DroidAdapter.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
+import { PluginsService } from "../../plugins/PluginsService.ts";
 
 const PROVIDER = "droid" as const;
 const DROID_RESUME_VERSION = 1 as const;
@@ -397,6 +400,7 @@ export function makeDroidAdapter(
     const fileSystem = yield* FileSystem.FileSystem;
     const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const serverConfig = yield* Effect.service(ServerConfig);
+    const pluginsService = Option.getOrUndefined(yield* Effect.serviceOption(PluginsService));
     const nativeEventLogger =
       options?.nativeEventLogger ??
       (options?.nativeEventLogPath !== undefined
@@ -666,7 +670,22 @@ export function makeDroidAdapter(
             provider: PROVIDER,
             threadId: input.threadId,
           });
-          const acpRuntimeLoggers = makeDroidAcpRuntimeLoggers(acpNativeLoggers);
+          // The user's plugins. They are extras: a plugin that cannot be attached never stops the
+          // chat from starting. The bearer lives only in this session's ACP setup, never in
+          // Droid's own MCP config.
+          const pluginSession = pluginsService
+            ? yield* pluginsService.registerSession.pipe(Effect.orElseSucceed(() => undefined))
+            : undefined;
+          if (pluginsService && pluginSession) {
+            yield* Scope.addFinalizer(
+              sessionScope,
+              pluginsService.unregisterSession(pluginSession.bearerToken),
+            );
+          }
+          const acpRuntimeLoggers = redactDroidAcpLoggers(
+            makeDroidAcpRuntimeLoggers(acpNativeLoggers),
+            pluginSession?.bearerToken,
+          );
           const providerDroidOptions = input.providerOptions?.droid;
           const effectiveDroidSettings: DroidAcpRuntimeSettings = {
             ...(droidSettings.binaryPath !== undefined
@@ -702,6 +721,7 @@ export function makeDroidAdapter(
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientCapabilities: { elicitation: { form: {} } },
             clientInfo: { name: "DJL", version: "0.0.0" },
+            mcpServers: (initializeResult) => droidPluginServers(initializeResult, pluginSession),
             ...acpRuntimeLoggers,
           }).pipe(
             Effect.provideService(Scope.Scope, sessionScope),

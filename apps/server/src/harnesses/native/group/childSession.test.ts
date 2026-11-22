@@ -66,6 +66,18 @@ describe("group child session", () => {
     });
   });
 
+  it("hands the group's plugin access to the member's driver", async () => {
+    const plugins = { bearerToken: "token", servers: [{ name: "djl_linear", url: "http://x" }] };
+    let received: unknown;
+    const base = fake(() => {});
+    const factory: NativeDriverFactory = (input, sink, workTools, given) => {
+      received = given;
+      return base(input, sink, workTools, given);
+    };
+    (await openChildSession({ provider: "codex", factory, start, plugins })).close();
+    expect(received).toBe(plugins);
+  });
+
   it("forwards each piece of text as it arrives and marks the start of a new message", async () => {
     const drafts: [string, boolean][] = [];
     const child = await open(
