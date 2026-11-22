@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -5,16 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
 import 'package:djl_mobile/main.dart' as application;
-import 'package:djl_mobile/features/activity/presentation/activity_card.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/guardian/presentation/guardian_review_card.dart';
-import 'package:djl_mobile/features/subagents/presentation/subagent_card.dart';
 import 'package:djl_mobile/features/workspace/presentation/project_picker_page.dart';
 import 'cloud_test.dart' show waitFor;
 import 'threads_test.dart'
     show securePairingEntry, macs, reveal, state, type, projectDraftPicker;
 import 'support/native_advanced_acceptance.dart';
 import 'support/native_app_ready.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 Future<void> sendComposer(WidgetTester tester, String text) async {
   final field = find.byKey(const Key('desktop_composer'));
@@ -163,11 +163,12 @@ void main() {
         .single;
     expect(action.children, hasLength(1));
     final child = action.children.single;
-    await reveal(tester, find.byType(SubagentActionCard));
     await waitFor(
       tester,
       () => desktop.resolvedSubagent(child).nickname == 'Fixture Scout',
     );
+    // Sub-agent steps stay on the desktop; the phone only keeps their data.
+    expect(find.text('Open child chat'), findsNothing);
     final passive = await state();
     // Completion can reload the parent; passive safety is scoped to the child.
     expect(
@@ -194,7 +195,7 @@ void main() {
     expect(desktop.thread!['id'], parent);
     expect(desktop.model, parentModel);
     expect(desktop.access, parentAccess);
-    await capture('advanced-child-card');
+    await capture('advanced-child-hidden');
     await reveal(tester, find.byType(GuardianReviewCard));
     await tester.tap(find.text('Auto-review · Denied'));
     await tester.pumpAndSettle();
@@ -219,39 +220,28 @@ void main() {
     );
     expect(find.text('Approve one retry'), findsNothing);
     await capture('advanced-guardian-approved');
-    final previous = find.text('2 previous messages');
-    await reveal(tester, previous);
-    await tester.tap(previous);
-    await tester.pumpAndSettle();
-    final command = find.byWidgetPredicate(
-      (widget) => widget is ActivityCard && widget.activity.kind == 'command',
+    // Command and tool rows are kept as data but never drawn on the phone.
+    final activities = desktop.activity.items.values
+        .where((activity) => activity.thread == parent)
+        .toList();
+    final command = activities.singleWhere(
+      (activity) => activity.kind == 'command',
     );
-    await reveal(tester, command);
-    await tester.tap(command);
-    await tester.pumpAndSettle();
-    expect(find.text('Command details'), findsOneWidget);
-    expect(find.text('Exit code: 0'), findsOneWidget);
-    expect(find.text('QA command output\n'), findsOneWidget);
-    await capture('advanced-command-details');
-    Navigator.of(tester.element(find.text('Command details'))).pop();
-    await tester.pumpAndSettle();
-    final toolCard = find.byWidgetPredicate(
-      (widget) => widget is ActivityCard && widget.activity.kind == 'tool',
+    expect(command.exitCode, 0);
+    expect(command.outputTail, contains('QA command output'));
+    expect(
+      activities.singleWhere((activity) => activity.kind == 'tool').outputTail,
+      contains('Structured QA tool output'),
     );
-    await reveal(tester, toolCard);
-    await tester.tap(toolCard);
-    await tester.pumpAndSettle();
-    expect(find.text('Tool details'), findsOneWidget);
-    expect(find.textContaining('Structured QA tool output'), findsOneWidget);
-    await capture('advanced-structured-tool-details');
-    Navigator.of(tester.element(find.text('Tool details'))).pop();
-    await tester.pumpAndSettle();
+    expect(find.textContaining('previous message'), findsNothing);
+    expect(find.textContaining('QA command output'), findsNothing);
+    expect(find.textContaining('Structured QA tool output'), findsNothing);
+    await capture('advanced-activity-hidden');
     await type(
       tester,
       find.byKey(const Key('desktop_composer')),
       'Unsent native parent draft',
     );
-    await reveal(tester, find.text('Open child chat'));
     final beforeOpen = await state();
     expect(
       passiveChildReadOnly(
@@ -263,7 +253,8 @@ void main() {
     );
     expect(desktop.model, parentModel);
     expect(desktop.access, parentAccess);
-    await tester.tap(find.text('Open child chat'));
+    // The child row is hidden, so open the child the way its row used to.
+    unawaited(desktop.openSubagent(action, child));
     await waitFor(tester, () => desktop.thread?['id'] == child.thread);
     expect(desktop.selectedModel?['model'], 'qa-child-model');
     expect(desktop.access, 'on-request');

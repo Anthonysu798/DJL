@@ -1,4 +1,5 @@
 import '../../pairing/data/pairing_repository.dart';
+import '../../../l10n/l10n.dart';
 
 const guardianLiveReason =
     'Retry approvals are available only during the live session.';
@@ -7,6 +8,10 @@ const guardianExpiredReason =
 const guardianDesktopReason = 'Approve this retry in Codex Desktop.';
 const guardianUnsafeReason =
     'This action cannot be retried safely here. Approve it in Codex.';
+const guardianSubmittedReason =
+    'Retry approval submitted. Check Codex before trying again.';
+const guardianUncertainReason =
+    'Retry approval may not have reached Codex. Check Codex before trying again.';
 
 RemoteJson? _object(Object? value) =>
     value is Map && value.keys.every((key) => key is String)
@@ -182,10 +187,10 @@ RemoteJson? _permissions(Object? value) {
 
 String _actionSummary(Object? value) {
   final a = _object(value);
-  if (a == null) return 'Requested action';
+  if (a == null) return appStrings.guardianRequestedAction;
   switch (a['type']) {
     case 'command':
-      return _string(a['command']) ?? 'Run command';
+      return _string(a['command']) ?? appStrings.guardianRunCommand;
     case 'execve':
       String quote(String value) =>
           RegExp(r'^[a-zA-Z0-9_./-]*$').hasMatch(value)
@@ -194,19 +199,21 @@ String _actionSummary(Object? value) {
       final argv = _strings(a['argv']);
       return argv?.isNotEmpty == true
           ? argv!.map(quote).join(' ')
-          : quote(_string(a['program']) ?? 'Run command');
+          : quote(_string(a['program']) ?? appStrings.guardianRunCommand);
     case 'applyPatch':
       final files = _strings(a['files']) ?? [];
       return files.isEmpty
-          ? 'Apply file changes'
+          ? appStrings.guardianApplyFileChanges
           : files.length == 1
-          ? 'Edit ${files.first}'
-          : 'Edit ${files.length} files: ${files.join(', ')}';
+          ? appStrings.guardianEditFile(files.first)
+          : appStrings.guardianEditFiles(files.length, files.join(', '));
     case 'networkAccess':
       final host = _string(a['host']) ?? _string(a['target']);
       return host == null
-          ? 'Access the network'
-          : 'Access $host${a['port'] is int ? ':${a['port']}' : ''}';
+          ? appStrings.guardianAccessNetwork
+          : appStrings.guardianAccessHost(
+              '$host${a['port'] is int ? ':${a['port']}' : ''}',
+            );
     case 'mcpToolCall':
       return [
         _string(a['server']),
@@ -214,16 +221,17 @@ String _actionSummary(Object? value) {
       ].whereType<String>().join('.');
     case 'requestPermissions':
       final p = _object(a['permissions']);
-      final requested = [
-        if (p?['network'] != null) 'network',
-        if (p?['fileSystem'] != null) 'file access',
-      ];
+      final network = p?['network'] != null, files = p?['fileSystem'] != null;
       return _string(a['reason']) ??
-          (requested.isEmpty
-              ? 'Request additional permissions'
-              : 'Request ${requested.join(' and ')}');
+          (network && files
+              ? appStrings.guardianRequestNetworkAndFileAccess
+              : network
+              ? appStrings.guardianRequestNetwork
+              : files
+              ? appStrings.guardianRequestFileAccess
+              : appStrings.guardianRequestPermissions);
     default:
-      return 'Requested action';
+      return appStrings.guardianRequestedAction;
   }
 }
 
@@ -258,12 +266,12 @@ class GuardianReview {
   String? retryUnavailableReason;
   bool get isTerminal => status != 'inProgress';
   String get statusLabel => switch (status) {
-    'inProgress' => 'Reviewing',
-    'approved' => 'Approved',
-    'denied' => 'Denied',
-    'timedOut' => 'Timed out',
-    'aborted' => 'Stopped',
-    _ => 'Updated ($status)',
+    'inProgress' => appStrings.guardianReviewing,
+    'approved' => appStrings.guardianApproved,
+    'denied' => appStrings.guardianDenied,
+    'timedOut' => appStrings.guardianTimedOut,
+    'aborted' => appStrings.guardianStopped,
+    _ => appStrings.guardianUpdatedStatus(status),
   };
   static GuardianReview? decode(RemoteJson params) {
     final id = _identifier(params['reviewId']),
@@ -363,7 +371,7 @@ class GuardianReview {
       reviewId: r['reviewId'],
       turnId: r['turnId'],
       status: r['status'],
-      summary: _string(r['summary']) ?? 'Requested action',
+      summary: _string(r['summary']) ?? appStrings.guardianRequestedAction,
       startedAtMs: _timestamp(r['startedAtMs']) ?? 0,
       completedAtMs: _timestamp(r['completedAtMs']),
       targetItemId: _string(r['targetItemId']),
@@ -389,7 +397,7 @@ RemoteJson sanitizedGuardianRow(RemoteJson row, String threadId) {
       {
         'type': 'automaticApprovalReview',
         'id': _string(row['id']),
-        'text': 'Review details unavailable.',
+        'text': appStrings.guardianDetailsUnavailable,
       };
 }
 

@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import QuickLook
 import UserNotifications
 import app_links
 
@@ -18,6 +19,32 @@ final class DJLSceneLinks: NSObject, FlutterSceneLifeCycleDelegate {
     options connectionOptions: UIScene.ConnectionOptions?
   ) -> Bool {
     route(connectionOptions?.urlContexts.map { $0.url } ?? [])
+  }
+}
+
+/// Shows an attachment with Quick Look, which previews PDFs, Office and iWork
+/// files, images and text without leaving the app.
+final class DJLFilePreview: NSObject, QLPreviewControllerDataSource {
+  static let shared = DJLFilePreview()
+  private var item: URL?
+
+  func present(_ url: URL) -> Bool {
+    guard QLPreviewController.canPreview(url as QLPreviewItem),
+          var top = UIApplication.shared.connectedScenes
+            .compactMap({ ($0 as? UIWindowScene)?.keyWindow })
+            .first?.rootViewController else { return false }
+    while let presented = top.presentedViewController { top = presented }
+    item = url
+    let controller = QLPreviewController()
+    controller.dataSource = self
+    top.present(controller, animated: true)
+    return true
+  }
+
+  func numberOfPreviewItems(in controller: QLPreviewController) -> Int { item == nil ? 0 : 1 }
+
+  func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+    (item ?? URL(fileURLWithPath: "/")) as QLPreviewItem
   }
 }
 
@@ -61,6 +88,18 @@ final class DJLSceneLinks: NSObject, FlutterSceneLifeCycleDelegate {
     }
     if let registrar = registry.registrar(forPlugin: "AppInfo") {
       registrar.register(DJLGlassViewFactory(), withId: "djl.mobile/glass")
+      let files = FlutterMethodChannel(name: "djl.mobile/files", binaryMessenger: registrar.messenger())
+      files.setMethodCallHandler { call, result in
+        guard call.method == "open" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        guard let path = (call.arguments as? [String: Any])?["path"] as? String else {
+          result(FlutterError(code: "invalid_file", message: "Opening a file requires its path.", details: nil))
+          return
+        }
+        result(DJLFilePreview.shared.present(URL(fileURLWithPath: path)))
+      }
       let channel = FlutterMethodChannel(name: "djl.mobile/app-info", binaryMessenger: registrar.messenger())
       channel.setMethodCallHandler { call, result in
         switch call.method {

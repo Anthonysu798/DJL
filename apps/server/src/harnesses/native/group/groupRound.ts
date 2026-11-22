@@ -44,6 +44,8 @@ export interface GroupRuntime {
   savePause(groupId: string, handoffs: GroupHandoff[]): Promise<void>;
   recordReply(reply: GroupReply): Promise<void>;
   setMemberState(groupId: string, memberId: string, state: GroupMemberState): void;
+  /** Sends the text a member is writing right now to clients; it is never stored. */
+  publishDraft(groupId: string, memberId: string, delta: string, restart: boolean): void;
   skills(): Promise<{ name: string; description: string; path: string }[]>;
 }
 
@@ -202,20 +204,25 @@ export function startRound(
       });
       const abort = aborts.get(member.id);
       if (isStopped(member.id)) return { reply: stoppedReply, child: null };
-      const reply = await child.ask(prompt, (type, args, signal) =>
-        decideRequest({
-          provider: member.provider,
-          memberId: member.id,
-          proposeOnly: wake.proposeOnly,
-          lock,
-          // A member may also read the exact files attached to the message it answers.
-          roots: [...roots, ...(wake.extras.attachments ?? [])],
-          type,
-          args,
-          signal: signal ? AbortSignal.any([signal, abort!.signal]) : abort!.signal,
-          onWaiting: (waiting) =>
-            runtime.setMemberState(group.id, member.id, waiting ? "waiting" : "working"),
-        }),
+      const reply = await child.ask(
+        prompt,
+        (type, args, signal) =>
+          decideRequest({
+            provider: member.provider,
+            memberId: member.id,
+            proposeOnly: wake.proposeOnly,
+            lock,
+            // A member may also read the exact files attached to the message it answers.
+            roots: [...roots, ...(wake.extras.attachments ?? [])],
+            type,
+            args,
+            signal: signal ? AbortSignal.any([signal, abort!.signal]) : abort!.signal,
+            onWaiting: (waiting) =>
+              runtime.setMemberState(group.id, member.id, waiting ? "waiting" : "working"),
+          }),
+        (delta, restart) => {
+          if (!isStopped(member.id)) runtime.publishDraft(group.id, member.id, delta, restart);
+        },
       );
       return { reply, child };
     } catch (error) {

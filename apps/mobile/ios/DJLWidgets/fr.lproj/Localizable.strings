@@ -1,0 +1,7 @@
+/* Lock Screen widget, Control and Live Activity text (fr). */
+"Open Codex chat" = "Ouvrir la discussion Codex";
+"Open DJL" = "Ouvrir DJL";
+"Quick access to DJL from your Lock Screen." = "Accès rapide à DJL depuis l’écran verrouillé.";
+"Launch DJL from Control Center." = "Lancez DJL depuis le Centre de contrôle.";
+"Task status" = "État des tâches";
+"%lld active/paused · %lld failed · %lld ready" = "%lld actives/en pause · %lld en échec · %lld prêtes";

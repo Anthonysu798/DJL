@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../../core/design/djl_tokens.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../../pairing/data/pairing_repository.dart';
@@ -7,6 +7,7 @@ import '../../chat/presentation/assistant_code_block.dart';
 import '../../settings/domain/appearance.dart';
 import '../domain/desktop_composer.dart';
 import 'desktop_composer_widgets.dart';
+import '../../../l10n/l10n.dart';
 export '../domain/desktop_overview.dart'
     show
         desktopConversationPath,
@@ -152,19 +153,19 @@ class DesktopConversationHero extends StatelessWidget {
       style: titleStyle,
       children: [
         if (generalDraft)
-          const TextSpan(text: 'What should we work on?')
+          TextSpan(text: context.l10n.chatUiEmptyGeneralTitle)
         else if (folder != null) ...[
-          const TextSpan(text: 'What should we do in '),
+          TextSpan(text: context.l10n.chatUiEmptyFolderPrefix),
           TextSpan(
             text: folder,
             style: TextStyle(color: secondary),
           ),
-          const TextSpan(text: '?'),
+          TextSpan(text: context.l10n.chatUiEmptyFolderSuffix),
         ] else
-          const TextSpan(text: 'Hi! How can I help you?'),
+          TextSpan(text: context.l10n.chatUiEmptyGreeting),
       ],
     );
-    const caption = 'Chats are End-to-end encrypted';
+    final caption = context.l10n.chatUiEncryptedCaption;
     final size = draft ? 50.0 : 56.0;
     final gap = generalDraft ? 8.0 : 12.0;
     return LayoutBuilder(
@@ -244,34 +245,8 @@ class DesktopConversationHero extends StatelessWidget {
 ({Color background, Color foreground}) desktopConversationPalette(
   BuildContext context,
 ) {
-  final scheme = Theme.of(context).colorScheme;
-  final bubble = DjlAppearance.of(context).bubble;
-  final dark = scheme.brightness == Brightness.dark;
-  if (bubble == UserBubbleColor.defaultColor) {
-    final fill = CupertinoColors.tertiarySystemFill.resolveFrom(context);
-    return (
-      background: fill.withValues(alpha: fill.a * .8),
-      foreground: scheme.onSurface,
-    );
-  }
-  if (bubble == UserBubbleColor.black) {
-    return (
-      background: scheme.onSurface.withValues(alpha: dark ? .9 : 1),
-      foreground: scheme.surface,
-    );
-  }
-  final color = bubble == UserBubbleColor.pink
-      ? Color.from(
-          alpha: 1,
-          red: 1,
-          green: dark ? .32 : .18,
-          blue: dark ? .70 : .62,
-        )
-      : bubble.swatch(scheme);
-  return (
-    background: color.withValues(alpha: dark ? .4 : .1),
-    foreground: dark ? Colors.white : color,
-  );
+  final colors = DjlColors.of(context);
+  return (background: colors.ink, foreground: colors.onInk);
 }
 
 // Port only MarkdownTextFormatter's heading normalization. Keep fence lines,
@@ -296,6 +271,47 @@ String desktopAssistantHeadings(String text) {
         return line.replaceFirstMapped(heading, (match) => '**${match[1]}**');
       })
       .join('\n');
+}
+
+final _orderedListLine = RegExp(r'^\s*\d+[.)]\s', multiLine: true);
+final _lastListMarkers = <String, int?>{};
+
+/// The largest number an ordered list in [markdown] counts to, used to size
+/// the list gutter. Most messages have no numbered list, so the extra parse is
+/// skipped for them, and settled messages are answered from a small cache
+/// instead of being parsed again on every rebuild.
+int? _lastListMarker(String markdown) {
+  if (!_orderedListLine.hasMatch(markdown)) return null;
+  if (_lastListMarkers.containsKey(markdown)) return _lastListMarkers[markdown];
+  int? last;
+  void inspect(md.Node node) {
+    if (node is! md.Element) return;
+    final children = node.children ?? const <md.Node>[];
+    if (node.tag == 'ol') {
+      final count = children
+          .whereType<md.Element>()
+          .where((n) => n.tag == 'li')
+          .length;
+      if (count > 0) {
+        final end =
+            (int.tryParse(node.attributes['start'] ?? '1') ?? 1) + count - 1;
+        if (last == null || end > last!) last = end;
+      }
+    }
+    for (final child in children) {
+      inspect(child);
+    }
+  }
+
+  for (final node in md.Document(
+    extensionSet: md.ExtensionSet.gitHubFlavored,
+  ).parseLines(markdown.split('\n'))) {
+    inspect(node);
+  }
+  if (_lastListMarkers.length >= 64) {
+    _lastListMarkers.remove(_lastListMarkers.keys.first);
+  }
+  return _lastListMarkers[markdown] = last;
 }
 
 class DesktopConversationMessage extends StatelessWidget {
@@ -325,31 +341,7 @@ class DesktopConversationMessage extends StatelessWidget {
     final foreground = user ? palette.foreground : theme.colorScheme.onSurface;
     final markdownText = desktopAssistantHeadings(text);
     final markdownStyle = appearance.markdown(context, foreground: foreground);
-    int? lastMarker;
-    void inspectLists(md.Node node) {
-      if (node is! md.Element) return;
-      final children = node.children ?? const <md.Node>[];
-      if (node.tag == 'ol') {
-        final count = children
-            .whereType<md.Element>()
-            .where((n) => n.tag == 'li')
-            .length;
-        if (count > 0) {
-          final end =
-              (int.tryParse(node.attributes['start'] ?? '1') ?? 1) + count - 1;
-          if (lastMarker == null || end > lastMarker!) lastMarker = end;
-        }
-      }
-      for (final child in children) {
-        inspectLists(child);
-      }
-    }
-
-    for (final node in md.Document(
-      extensionSet: md.ExtensionSet.gitHubFlavored,
-    ).parseLines(markdownText.split('\n'))) {
-      inspectLists(node);
-    }
+    final lastMarker = _lastListMarker(markdownText);
     var listIndent = markdownStyle.listIndent!;
     if (lastMarker != null) {
       final painter = TextPainter(
@@ -407,11 +399,7 @@ class DesktopConversationMessage extends StatelessWidget {
           color: foreground,
         ),
         a: TextStyle(
-          color: user
-              ? foreground
-              : appearance.bubble == UserBubbleColor.defaultColor
-              ? theme.colorScheme.onSurface
-              : appearance.bubble.swatch(theme.colorScheme),
+          color: foreground,
           decoration: TextDecoration.underline,
           decorationStyle: TextDecorationStyle.dotted,
         ),
@@ -420,7 +408,9 @@ class DesktopConversationMessage extends StatelessWidget {
     );
     return Semantics(
       container: true,
-      label: user ? 'User message' : 'Assistant message',
+      label: user
+          ? context.l10n.chatUiUserMessage
+          : context.l10n.chatUiAssistantMessage,
       child: Padding(
         padding: EdgeInsets.only(left: user ? 60 : 0),
         child: Column(

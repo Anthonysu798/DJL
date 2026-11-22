@@ -141,7 +141,7 @@ void main() {
       final beforeRemote = remote.calls.length, beforeCloud = List.of(calls);
       await tester.tap(find.byTooltip('Settings').hitTestable());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Done'));
+      await tester.tap(find.byKey(const Key('settings.back')));
       await tester.pumpAndSettle();
       expect(find.text('retained query').hitTestable(), findsOneWidget);
       expect(tester.state(find.byType(DesktopChatPage)), same(page));
@@ -161,8 +161,8 @@ void main() {
           .semanticsOwner!
           .rootSemanticsNode!
           .toStringDeep();
-      expect(tree, isNot(contains('Recent chats')));
-      expect(tree, isNot(contains('Survive Settings')));
+      // Going inactive keeps the app visible; only a required unlock covers it.
+      expect(tree, contains('Recent chats'));
       lock.lifecycle(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
       expect(find.text('retained query').hitTestable(), findsOneWidget);
@@ -380,7 +380,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Settings').hitTestable());
         await tester.pumpAndSettle();
-        expect(find.text('Done'), findsOneWidget);
+        expect(find.byKey(const Key('settings.back')), findsOneWidget);
         if (supersede) {
           links.add(Uri.parse('djl://thread/newer'));
           await tester.pumpAndSettle();
@@ -391,8 +391,8 @@ void main() {
         });
         await tester.pumpAndSettle();
         if (!supersede) {
-          expect(find.text('Done'), findsOneWidget);
-          await tester.tap(find.text('Done'));
+          expect(find.byKey(const Key('settings.back')), findsOneWidget);
+          await tester.tap(find.byKey(const Key('settings.back')));
           await tester.pumpAndSettle();
           expect(
             tester.state(find.byType(DesktopChatPage)),
@@ -412,7 +412,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(find.byTooltip('Settings').hitTestable());
           await tester.pumpAndSettle();
-          await tester.tap(find.text('Done'));
+          await tester.tap(find.byKey(const Key('settings.back')));
           await tester.pumpAndSettle();
           await tester.binding.handlePopRoute();
           await tester.pumpAndSettle();
@@ -421,7 +421,7 @@ void main() {
           expect(requests(remote, 'turn/start'), hasLength(1));
         } else {
           expect(desktop.thread?['id'], 'newer');
-          expect(find.text('Done'), findsNothing);
+          expect(find.byKey(const Key('settings.back')), findsNothing);
         }
         expect(
           desktop.threadList.data.composerDraft(owner.storageKey).text,
@@ -497,7 +497,7 @@ void main() {
         await tester.tap(find.text(destination));
         await tester.pumpAndSettle();
         expect(find.byType(DesktopChatPage), findsNothing);
-        expect(find.text('Done'), findsNothing);
+        expect(find.byKey(const Key('settings.back')), findsNothing);
         expect(
           find.byType(PairingPage),
           destination == 'My Macs' ? findsOneWidget : findsNothing,
@@ -514,7 +514,7 @@ void main() {
           await tester.tap(find.text('Chat').hitTestable());
           await tester.pumpAndSettle();
           final fresh = desktop.newChatDraft!;
-          oldCover.onCloud();
+          oldCover.onCloud!();
           oldCover.onMyMacs();
           await tester.pumpAndSettle();
           expect(desktop.newChatDraft, same(fresh));
@@ -554,8 +554,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Settings').hitTestable());
       await tester.pumpAndSettle();
-      expect(find.text('Done'), findsOneWidget);
-      await tester.tap(find.text('Done'));
+      expect(find.byKey(const Key('settings.back')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('settings.back')));
       await tester.pumpAndSettle();
       expect(desktop.newChatDraft, same(owner));
       expect(find.text('Recent chats').hitTestable(), findsOneWidget);

@@ -103,6 +103,7 @@ function makeRuntime(): GroupRuntime {
       replies.push(reply);
     },
     setMemberState: () => {},
+    publishDraft: () => {},
     skills: async () => [],
   };
 }

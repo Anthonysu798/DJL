@@ -269,7 +269,7 @@ void main() {
       expect(store.values['codex.selectedModelId'], 'keep-runtime');
       expect(store.values['unrelated'], 'keep');
       expect(store.values['djl.security.biometricLockEnabled'], isTrue);
-      expect(store.writes, 3);
+      expect(store.writes, 2);
       expect(store.reads, greaterThan(0));
     },
   );

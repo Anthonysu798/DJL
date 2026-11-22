@@ -61,6 +61,7 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             } else result.notImplemented()
         }
+        DJLFiles.register(this, flutterEngine.dartExecutor.binaryMessenger)
         runStatusBridge = RunStatusBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         remotePushBridge = RemotePushBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         voiceChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "djl.mobile/voice")

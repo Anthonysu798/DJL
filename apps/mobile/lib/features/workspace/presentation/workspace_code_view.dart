@@ -24,6 +24,9 @@ import 'package:re_highlight/languages/xml.dart';
 import 'package:re_highlight/languages/yaml.dart';
 import '../domain/workspace_models.dart';
 
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
+
 String workspaceCodeLanguage(String name) {
   if (name.toLowerCase() == 'dockerfile') return 'bash';
   final suffix = name.contains('.') ? name.split('.').last.toLowerCase() : '';
@@ -125,7 +128,7 @@ class _WorkspaceCodeViewState extends State<WorkspaceCodeView> {
               },
             ),
             ContextMenuButtonItem(
-              label: 'Find in file',
+              label: context.l10n.workspaceFindInFile,
               onPressed: () {
                 onDismiss();
                 _find.findMode();
@@ -231,7 +234,7 @@ class _WorkspaceCodeViewState extends State<WorkspaceCodeView> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Semantics(
-      label: 'File contents',
+      label: context.l10n.workspaceFileContents,
       value: widget.file.content,
       textField: true,
       readOnly: true,
@@ -288,8 +291,8 @@ class _WorkspaceCodeViewState extends State<WorkspaceCodeView> {
                           key: const Key('workspace_find_input'),
                           controller: controller.findInputController,
                           focusNode: controller.findInputFocusNode,
-                          decoration: const InputDecoration(
-                            hintText: 'Find in file',
+                          decoration: InputDecoration(
+                            hintText: context.l10n.workspaceFindInFile,
                             border: InputBorder.none,
                           ),
                           onSubmitted: (_) => controller.nextMatch(),
@@ -297,23 +300,26 @@ class _WorkspaceCodeViewState extends State<WorkspaceCodeView> {
                       ),
                       Text(
                         controller.value!.searching
-                            ? 'Searching…'
-                            : '${(controller.value!.result?.index ?? -1) + 1} of ${controller.value!.result?.matches.length ?? 0}',
+                            ? context.l10n.workspaceSearching
+                            : context.l10n.workspaceMatchPosition(
+                                (controller.value!.result?.index ?? -1) + 1,
+                                controller.value!.result?.matches.length ?? 0,
+                              ),
                         style: const TextStyle(fontSize: 11),
                       ),
                       IconButton(
-                        tooltip: 'Previous match',
-                        icon: const Icon(Icons.keyboard_arrow_up),
+                        tooltip: context.l10n.workspacePreviousMatch,
+                        icon: const Icon(DjlIcons.chevronUp),
                         onPressed: controller.previousMatch,
                       ),
                       IconButton(
-                        tooltip: 'Next match',
-                        icon: const Icon(Icons.keyboard_arrow_down),
+                        tooltip: context.l10n.workspaceNextMatch,
+                        icon: const Icon(DjlIcons.chevronDown),
                         onPressed: controller.nextMatch,
                       ),
                       IconButton(
-                        tooltip: 'Close find',
-                        icon: const Icon(Icons.close),
+                        tooltip: context.l10n.workspaceCloseFind,
+                        icon: const Icon(DjlIcons.close),
                         onPressed: () {
                           controller.findInputFocusNode.unfocus();
                           controller.close();

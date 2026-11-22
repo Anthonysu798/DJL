@@ -475,7 +475,7 @@ void main() {
     },
   );
 
-  testWidgets('one response Copy follows the actual trailing tool host', (
+  testWidgets('one response Copy stays on the reply before a hidden tool', (
     tester,
   ) async {
     final transport = ReasoningTransport()
@@ -525,13 +525,15 @@ void main() {
     await showConversation(tester, desktop);
     final copy = find.byTooltip('Copy response');
     expect(copy, findsOneWidget);
+    expect(find.byType(ExpansionTile), findsNothing);
+    expect(find.text('Tool output'), findsNothing);
     expect(
       tester.getTopLeft(copy).dy,
-      greaterThan(tester.getBottomLeft(find.byType(ExpansionTile)).dy),
+      greaterThan(tester.getBottomLeft(find.text('Second')).dy),
     );
     await tester.tap(copy);
     await tester.pump();
-    expect(copied, ['First\n\nSecond']);
+    expect(copied, ['Second']);
     expect(find.text('Copied'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1700));
     await tester.pumpAndSettle();

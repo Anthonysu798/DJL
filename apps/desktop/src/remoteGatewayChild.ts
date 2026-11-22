@@ -12,6 +12,7 @@ interface GatewayModule {
     onBridgeStatus(status: unknown): void;
     onRemoteMutationCommitted(mutation: unknown): void;
     onDesktopUpdateRequested(): Promise<unknown>;
+    onOpenThreadRequested(threadId: string): void;
   }): GatewayHandle;
   resetBridgePairing(): unknown;
 }
@@ -126,6 +127,9 @@ const bridge = gateway.startBridge({
     send({ type: "remote-mutation" });
   },
   onDesktopUpdateRequested: requestDesktopUpdate,
+  onOpenThreadRequested(threadId: string) {
+    send({ type: "open-thread", threadId });
+  },
 });
 
 process.on("message", (rawMessage: unknown) => {

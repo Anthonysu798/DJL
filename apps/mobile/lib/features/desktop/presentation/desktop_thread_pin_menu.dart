@@ -1,7 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/presentation/djl_context_menu.dart';
 import '../../../core/presentation/djl_glass.dart';
+
+import '../../../core/design/djl_icons.dart';
+import '../../../l10n/l10n.dart';
 
 Future<bool?> showDesktopThreadPinMenu(
   BuildContext context,
@@ -21,9 +23,7 @@ Future<bool?> showDesktopThreadPinMenu(
       useNativeView: false,
       child: Material(
         key: const Key('navigation.pin-menu'),
-        color: colors.brightness == Brightness.dark
-            ? const Color(0xff1c1c1e).withValues(alpha: .85)
-            : const Color(0xfff2f2f7).withValues(alpha: .70),
+        color: colors.surfaceContainerLow.withValues(alpha: .85),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(34),
@@ -55,12 +55,15 @@ Future<bool?> showDesktopThreadPinMenu(
               ),
               child: Row(
                 children: [
-                  Icon(
-                    pinned ? CupertinoIcons.pin_slash : CupertinoIcons.pin,
-                    size: 20,
-                  ),
+                  Icon(pinned ? DjlIcons.unpin : DjlIcons.pin, size: 20),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(pinned ? 'Unpin chat' : 'Pin chat')),
+                  Expanded(
+                    child: Text(
+                      pinned
+                          ? context.l10n.chatUiUnpinChat
+                          : context.l10n.chatUiPinChat,
+                    ),
+                  ),
                 ],
               ),
             ),

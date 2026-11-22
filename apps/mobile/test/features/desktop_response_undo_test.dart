@@ -4,6 +4,7 @@ import 'package:djl_mobile/features/workspace/domain/response_change_set.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'guardian_review_test.dart' show GuardianTransport, guardianDesktop;
 import 'response_change_set_test.dart' show patch;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 
 class ResponseTransport extends GuardianTransport {
   ResponseTransport() : super(PairingRepository(TestCredentials()));

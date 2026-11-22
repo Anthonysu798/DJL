@@ -42,6 +42,26 @@ Map<String, dynamic> messageRow(
 };
 
 void main() {
+  test('a link to hidden work lands on the reply that follows it', () {
+    // The phone hides commands and reasoning, and a turn usually works before
+    // it answers, so the hidden rows have no earlier visible row to borrow.
+    final rows = [
+      messageRow(0, user: true),
+      activityRow(1, kind: 'command'),
+      traceRow(2),
+      messageRow(3),
+      messageRow(4, user: true, turn: 'next'),
+      activityRow(5, turn: 'next'),
+    ];
+    final projection = projectDesktopTimeline(rows, hiddenRows: {1, 2, 5});
+    expect(projection.renderIndexFor(1), projection.renderIndexFor(3));
+    expect(projection.renderIndexFor(2), projection.renderIndexFor(3));
+    expect(projection.focusRawFor(1), 3);
+    // Work with no reply yet has nothing to land on, and must not borrow one
+    // from another turn.
+    expect(projection.renderIndexFor(5), isNull);
+  });
+
   test(
     'unlinked desktop prompts keep completed trace disclosures with their own turn',
     () {

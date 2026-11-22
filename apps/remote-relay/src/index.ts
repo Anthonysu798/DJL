@@ -496,7 +496,9 @@ export class DJLRelaySession extends DurableObject<Env> {
     const turnId = this.boundedPushField(body?.turnId, 256);
     const dedupeKey = this.boundedPushField(body?.dedupeKey, 512);
     const completionResult =
-      body?.result === "completed" || body?.result === "failed" ? body.result : null;
+      body?.result === "completed" || body?.result === "failed" || body?.result === "attention"
+        ? body.result
+        : null;
     if (!threadId || !dedupeKey || !completionResult) {
       return errorResponse(
         400,

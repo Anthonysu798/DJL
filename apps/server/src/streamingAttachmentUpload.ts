@@ -26,6 +26,67 @@ const MACRO_EXTENSIONS = new Set([
   ".sldm",
 ]);
 const ARCHIVE_EXTENSIONS = new Set([".zip", ".rar", ".7z", ".tar", ".gz"]);
+// Source and config files agents read as plain text. Markup a browser would
+// render (.html, .svg, .xml) is left out.
+const CODE_TEXT_EXTENSIONS = new Set([
+  ".py",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".jsx",
+  ".ts",
+  ".tsx",
+  ".java",
+  ".kt",
+  ".kts",
+  ".swift",
+  ".go",
+  ".rs",
+  ".rb",
+  ".php",
+  ".c",
+  ".h",
+  ".cc",
+  ".cpp",
+  ".hpp",
+  ".cs",
+  ".m",
+  ".mm",
+  ".sh",
+  ".bash",
+  ".zsh",
+  ".sql",
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".ini",
+  ".cfg",
+  ".conf",
+  ".css",
+  ".scss",
+  ".dart",
+  ".lua",
+  ".r",
+  ".log",
+  ".tsv",
+  ".gradle",
+  ".vue",
+  ".svelte",
+  ".graphql",
+  ".proto",
+  ".tex",
+]);
+
+function isUtf8Text(bytes: Uint8Array): boolean {
+  if (bytes.includes(0)) return false;
+  try {
+    // `stream` tolerates a character cut at the end of the detection header.
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes, { stream: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const OFFICE_MEDIA_BY_EXTENSION = new Map([
   [".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
@@ -154,6 +215,8 @@ export function detectUploadedMediaType(input: {
       detected = { type: "file", mediaType: "application/json", extension };
     } else if (extension === ".txt" || extension === ".md" || extension === ".markdown") {
       detected = { type: "file", mediaType: "text/plain", extension };
+    } else if (CODE_TEXT_EXTENSIONS.has(extension) && isUtf8Text(input.header)) {
+      detected = { type: "file", mediaType: "text/plain", extension };
     } else if (headerText.trimStart().startsWith("{")) {
       detected = { type: "file", mediaType: "application/json", extension: ".json" };
     }
@@ -182,7 +245,10 @@ export function detectUploadedMediaType(input: {
       `File extension '${extension}' does not match detected MIME type '${detected.mediaType}'.`,
     );
   }
-  assertDeclaredMimeMatches(declared, detected.mediaType);
+  // Text arrives with many declared types (text/markdown, text/x-python...).
+  if (!(detected.mediaType === "text/plain" && declared.startsWith("text/"))) {
+    assertDeclaredMimeMatches(declared, detected.mediaType);
+  }
   return detected;
 }
 
@@ -300,10 +366,15 @@ export function persistStreamingAttachment<E>(input: {
         );
       }
       const contentHash = hash.digest("hex");
-      const detected = detectUploadedMediaType({
-        name: input.name,
-        declaredMimeType: input.declaredMimeType,
-        header: combineChunks(headerChunks, headerLength),
+      // An unsupported type is the client's mistake: a failure, not a defect.
+      const detected = yield* Effect.try({
+        try: () =>
+          detectUploadedMediaType({
+            name: input.name,
+            declaredMimeType: input.declaredMimeType,
+            header: combineChunks(headerChunks, headerLength),
+          }),
+        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
       });
       const id = attachmentIdForContentHash(input.threadId, contentHash);
       const destinationPath = resolveAttachmentRelativePath({

@@ -28,6 +28,10 @@ void main() {
   runApp(
     DjlApp(
       client: CloudClient(baseUrl: url, credentials: PlatformCredentialStore()),
+      // DJL Cloud sign-in is off for now: the phone is a remote for the DJL
+      // desktop. Build with --dart-define=DJL_CLOUD_ACCOUNTS=true to bring
+      // back sign-in, sign-up and Cloud chat.
+      cloudAccounts: const bool.fromEnvironment('DJL_CLOUD_ACCOUNTS'),
     ),
   );
 }

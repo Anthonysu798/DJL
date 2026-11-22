@@ -4,6 +4,7 @@ import 'package:cryptography/cryptography.dart' show Sha256;
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:djl_mobile/app/djl_theme.dart';
+import 'package:djl_mobile/core/design/djl_tokens.dart';
 import 'package:djl_mobile/features/chat/presentation/assistant_code_block.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
@@ -634,7 +635,9 @@ void main() {
         );
         expect(
           actual.toARGB32(),
-          brightness == Brightness.dark ? 0xff1c1c1e : 0xfff2f2f7,
+          (brightness == Brightness.dark ? DjlColors.dark : DjlColors.light)
+              .surfaceRaised
+              .toARGB32(),
         );
         image.dispose();
       });
@@ -703,9 +706,10 @@ void main() {
                 expect((decoration.border! as Border).top.width, .5);
                 expect(
                   (decoration.border! as Border).top.color,
-                  brightness == Brightness.dark
-                      ? const Color(0xff424245)
-                      : const Color(0xffd2d2d7),
+                  (brightness == Brightness.dark
+                          ? DjlColors.dark
+                          : DjlColors.light)
+                      .hairline,
                 );
                 final body = tester.widget<SelectableText>(
                   find.descendant(

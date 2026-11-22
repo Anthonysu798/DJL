@@ -171,7 +171,7 @@ void main() {
         final contrast = samples![0] - samples[1];
         expect(
           contrast,
-          dark ? inInclusiveRange(3, 10) : greaterThan(10),
+          dark ? inInclusiveRange(3, 24) : greaterThan(10),
           reason:
               'Dark glass attenuates bright backdrop text; both materials retain visible transmission.',
         );

@@ -1,0 +1,8 @@
+/* Permission prompts shown by iOS (ko). */
+"NSCameraUsageDescription" = "데스크톱 페어링 코드를 스캔하고 메시지에 사진을 첨부할 때 사용해요.";
+"NSFaceIDUsageDescription" = "앱으로 돌아올 때 DJL 세션을 보호해요.";
+"NSLocalNetworkUsageDescription" = "페어링된 DJL 데스크톱에 안전하게 연결해요.";
+"NSMicrophoneUsageDescription" = "마이크를 탭하면 음성으로 입력할 수 있어요.";
+"NSPhotoLibraryAddUsageDescription" = "DJL에서 선택한 이미지를 사진 보관함에 저장해요.";
+"NSPhotoLibraryUsageDescription" = "메시지에 첨부할 이미지를 선택해요.";
+"NSSpeechRecognitionUsageDescription" = "음성을 편집 가능한 메시지 텍스트로 바꿔요.";

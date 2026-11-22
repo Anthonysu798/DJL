@@ -10,6 +10,7 @@ import type {
   GroupEvent,
   GroupHandoff,
   GroupId,
+  GroupLive,
   GroupMemberId,
   GroupMemberRef,
   GroupRef,
@@ -39,6 +40,8 @@ type Op<A> = Effect.Effect<A, GroupServiceError>;
 export interface GroupServiceShape {
   readonly list: () => Op<ReadonlyArray<Group>>;
   readonly listReplies: () => Op<ReadonlyArray<GroupReply>>;
+  /** Busy members and the text each has written so far; kept in memory only. */
+  readonly live: () => GroupLive;
   readonly create: (input: GroupCreateInput) => Op<Group>;
   readonly update: (input: GroupUpdateInput) => Op<Group>;
   readonly delete: (ref: GroupRef) => Op<GroupDeleteResult>;

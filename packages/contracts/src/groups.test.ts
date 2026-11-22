@@ -6,6 +6,8 @@ import {
   GROUP_MODEL_SELECTION,
   GROUP_ROLE_PRESETS,
   GroupCreateInput,
+  GroupEvent,
+  GroupListResult,
   GroupMemberProvider,
 } from "./groups";
 import { ModelSelection, NewTaskModelSelection } from "./orchestration";
@@ -45,5 +47,21 @@ describe("group contracts", () => {
         members: [{ provider: "codex", role: "reviewer" }],
       }).members[0]?.role,
     ).toBe("reviewer");
+  });
+  it("decodes a live draft, and a snapshot with or without live state", () => {
+    const decode = Schema.decodeUnknownSync(GroupEvent);
+    expect(
+      decode({ type: "reply.draft", groupId: "g1", memberId: "m1", delta: "Hi", restart: true }),
+    ).toMatchObject({ delta: "Hi", restart: true });
+    expect(() => decode({ type: "reply.draft", groupId: "g1", memberId: "m1" })).toThrow();
+    expect(decode({ type: "snapshot", groups: [], replies: [] })).not.toHaveProperty("live");
+    const live = { memberStates: { m1: "working" }, drafts: { m1: "Hi" } };
+    expect(decode({ type: "snapshot", groups: [], replies: [], live })).toMatchObject({ live });
+    expect(
+      Schema.decodeUnknownSync(GroupListResult)({ groups: [], replies: [], live }).live?.drafts,
+    ).toEqual({ m1: "Hi" });
+    expect(Schema.decodeUnknownSync(GroupListResult)({ groups: [], replies: [] }).live).toBe(
+      undefined,
+    );
   });
 });

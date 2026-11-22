@@ -1,3 +1,4 @@
+import 'package:djl_mobile/core/presentation/djl_glass_menu.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/git/presentation/git_page.dart';
@@ -124,10 +125,11 @@ void main() {
           ),
         );
         expect(git.onPressed, isNull);
-        final actions = tester.widget<PopupMenuButton<String>>(
+        final actions = tester.widget<DjlGlassMenuButton<String>>(
           find.byWidgetPredicate(
             (w) =>
-                w is PopupMenuButton<String> && w.tooltip == 'Thread actions',
+                w is DjlGlassMenuButton<String> &&
+                w.tooltip == 'Thread actions',
           ),
         );
         expect(actions.enabled, isFalse);

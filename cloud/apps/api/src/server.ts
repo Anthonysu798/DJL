@@ -78,6 +78,7 @@ import { createPgBossTaskQueue } from "./runs/RunExecutor.ts";
 import { RunLog } from "./runs/RunLog.ts";
 import { RunService } from "./runs/RunService.ts";
 import { ShareService } from "./shares/ShareService.ts";
+import { ContentReportService } from "./reports/ContentReportService.ts";
 import { PushTokenService } from "./push/PushTokenService.ts";
 import {
   createMemoryRateLimiter,
@@ -349,6 +350,7 @@ export async function startApi(
     version,
   });
   const usageAdmin = new UsageAdminService({ db, usage, alerts: senders.alerts, resumeRuns });
+  const contentReports = new ContentReportService(db, chat, limiter);
   const socialConnections = new SocialConnectionService(db, createSocialProviders(process.env), {
     enabled: process.env.SOCIAL_PUBLISHING_ENABLED === "true",
     encryptionKey: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY,
@@ -493,6 +495,7 @@ export async function startApi(
     sync,
     usage,
     usageAdmin,
+    contentReports,
     chat,
     files,
     shares,

@@ -2038,7 +2038,11 @@ export const makeWsRpcLayer = () =>
           ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server event stream failed"))),
         [WS_METHODS.groupsList]: () =>
           rpcEffect(
-            Effect.all({ groups: groupService.list(), replies: groupService.listReplies() }),
+            Effect.all({
+              groups: groupService.list(),
+              replies: groupService.listReplies(),
+              live: Effect.sync(groupService.live),
+            }),
             "Failed to list groups",
           ),
         [WS_METHODS.groupsCreate]: (input) =>
@@ -2060,11 +2064,16 @@ export const makeWsRpcLayer = () =>
         [WS_METHODS.subscribeGroupEvents]: () =>
           Stream.merge(
             Stream.fromEffect(
-              Effect.all({ groups: groupService.list(), replies: groupService.listReplies() }).pipe(
-                Effect.map(({ groups, replies }) => ({
+              Effect.all({
+                groups: groupService.list(),
+                replies: groupService.listReplies(),
+                live: Effect.sync(groupService.live),
+              }).pipe(
+                Effect.map(({ groups, replies, live }) => ({
                   type: "snapshot" as const,
                   groups,
                   replies,
+                  live,
                 })),
               ),
             ),

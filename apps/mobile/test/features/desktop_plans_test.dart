@@ -3,6 +3,7 @@ import 'desktop_plan_widgets_test.dart' show PlanActionTransport;
 import 'package:djl_mobile/features/desktop/domain/desktop_composer.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'desktop_reasoning_controller_test.dart' show ReasoningTransport;
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'desktop_history_reconciliation_test.dart'
     show historyDesktop, historyPage, refreshHistory;
 

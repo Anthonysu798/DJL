@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import '../../../l10n/l10n.dart';
 import 'voice_driver.dart';
 
 /// Dictation remains on device. Unsupported recognizers report an error rather than uploading audio.
@@ -26,8 +27,8 @@ class NativeVoiceDriver implements VoiceDriver {
       },
       onError: (error) => _error?.call(
         error.errorMsg.contains('permission')
-            ? 'Allow microphone and speech access in device settings to dictate.'
-            : 'On-device dictation is unavailable for this language or device. You can still type your message.',
+            ? appStrings.voiceAllowMicrophone
+            : appStrings.voiceDictationUnavailable,
       ),
     );
   }
@@ -51,9 +52,7 @@ class NativeVoiceDriver implements VoiceDriver {
           case 'done':
             onDone();
           case 'error':
-            onError(
-              'On-device dictation is unavailable for this language or device. You can still type your message.',
-            );
+            onError(appStrings.voiceDictationUnavailable);
         }
       });
       await _android.invokeMethod<void>('listen', {'sessionId': _sessionId});

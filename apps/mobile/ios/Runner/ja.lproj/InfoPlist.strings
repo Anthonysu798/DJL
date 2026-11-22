@@ -1,0 +1,8 @@
+/* Permission prompts shown by iOS (ja). */
+"NSCameraUsageDescription" = "パソコンのペアリングコードをスキャンしたり、メッセージに写真を添付したりするために使用します。";
+"NSFaceIDUsageDescription" = "アプリに戻ったときに DJL のセッションを保護するために使用します。";
+"NSLocalNetworkUsageDescription" = "ペアリング済みの DJL デスクトップに安全に接続するために使用します。";
+"NSMicrophoneUsageDescription" = "マイクをタップしたときの音声入力に使用します。";
+"NSPhotoLibraryAddUsageDescription" = "DJL で選んだ画像を写真ライブラリに保存するために使用します。";
+"NSPhotoLibraryUsageDescription" = "メッセージに添付する画像を選ぶために使用します。";
+"NSSpeechRecognitionUsageDescription" = "話した言葉を編集できるメッセージのテキストに変換するために使用します。";

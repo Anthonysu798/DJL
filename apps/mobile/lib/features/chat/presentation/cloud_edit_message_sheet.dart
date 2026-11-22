@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/l10n.dart';
 
 class CloudEditMessageSheet extends StatefulWidget {
   const CloudEditMessageSheet({super.key, required this.original});
@@ -46,18 +47,18 @@ class _CloudEditMessageSheetState extends State<CloudEditMessageSheet> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(fontSize: 17),
+                          child: Text(
+                            context.l10n.commonCancel,
+                            style: const TextStyle(fontSize: 17),
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Edit message',
+                            context.l10n.cloudChatEditMessage,
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w600,
                             ),
@@ -69,9 +70,9 @@ class _CloudEditMessageSheetState extends State<CloudEditMessageSheet> {
                             onPressed: value.text.trim().isEmpty
                                 ? null
                                 : () => Navigator.pop(context, value.text),
-                            child: const Text(
-                              'Send',
-                              style: TextStyle(
+                            child: Text(
+                              context.l10n.cloudChatSend,
+                              style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w600,
                               ),

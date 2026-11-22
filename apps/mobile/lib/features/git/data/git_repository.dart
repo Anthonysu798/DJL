@@ -1,6 +1,7 @@
 import '../../desktop/data/remote_transport.dart';
 import '../../pairing/data/pairing_repository.dart';
 import '../domain/git_models.dart';
+import '../../../l10n/l10n.dart';
 
 class GitRepository {
   GitRepository(this.transport, {required this.cwd, bool Function()? isCurrent})
@@ -24,12 +25,10 @@ class GitRepository {
           );
   void _checkCurrent() {
     if (!isCurrent) {
-      throw StateError(
-        'Connected desktop changed. Reopen Git from its workspace.',
-      );
+      throw StateError(appStrings.gitDesktopChanged);
     }
     if (cwd.trim().isEmpty) {
-      throw StateError('Choose a desktop workspace before using Git.');
+      throw StateError(appStrings.gitChooseWorkspace);
     }
   }
 

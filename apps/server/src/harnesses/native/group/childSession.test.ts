@@ -66,6 +66,53 @@ describe("group child session", () => {
     });
   });
 
+  it("forwards each piece of text as it arrives and marks the start of a new message", async () => {
+    const drafts: [string, boolean][] = [];
+    const child = await open(
+      fake((sink) => {
+        sink.emit(text("a1", "Let me "));
+        sink.emit(text("a1", "look."));
+        sink.emit(text("a1", ""));
+        sink.emit({
+          type: "content.delta",
+          itemId: "r1",
+          payload: { streamKind: "reasoning_text", delta: "hmm" },
+        });
+        sink.emit(text("a2", "The answer "));
+        sink.emit(text("a2", "is 4."));
+      }),
+    );
+    const reply = await child.ask("2+2?", accept, (delta, restart) =>
+      drafts.push([delta, restart]),
+    );
+    expect(drafts).toEqual([
+      ["Let me ", true],
+      ["look.", false],
+      ["The answer ", true],
+      ["is 4.", false],
+    ]);
+    expect(reply).toMatchObject({ status: "ok", text: "The answer is 4." });
+  });
+
+  it("forwards no text once the ask has been stopped", async () => {
+    const hung = Promise.withResolvers<void>();
+    const drafts: string[] = [];
+    let late: NativeSink | undefined;
+    const child = await open(
+      fake((sink) => {
+        late = sink;
+        sink.emit(text("a1", "Working"));
+        return hung.promise;
+      }),
+    );
+    const pending = child.ask("go", accept, (delta) => drafts.push(delta));
+    await child.stop();
+    late?.emit(text("a1", " on it"));
+    hung.resolve();
+    expect((await pending).status).toBe("stopped");
+    expect(drafts).toEqual(["Working"]);
+  });
+
   it("reports an empty reply", async () => {
     const child = await open(fake(() => {}));
     expect((await child.ask("go", accept)).status).toBe("empty");

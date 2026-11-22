@@ -4,13 +4,25 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../pairing/data/pairing_repository.dart';
-import '../../settings/domain/appearance.dart';
 import '../data/desktop_overview_repository.dart';
 import '../domain/desktop_overview.dart';
 import 'desktop_controller.dart';
 import 'desktop_composer_options_menu.dart';
 import 'desktop_thread_actions.dart';
 import 'desktop_thread_menu.dart';
+import '../../groups/presentation/groups_controller.dart';
+import '../../groups/presentation/groups_page.dart';
+import '../../../app/desktop_deep_link.dart';
+import '../domain/desktop_attention.dart';
+import 'desktop_attention_list.dart';
+
+import '../../../core/design/djl_icons.dart';
+
+import '../../../core/design/djl_tokens.dart';
+import '../../../core/presentation/djl_frosted.dart';
+import '../../../core/presentation/djl_glass_menu.dart';
+import '../../../core/presentation/djl_tab_bar.dart';
+import '../../../l10n/l10n.dart';
 
 class DesktopOverview extends StatefulWidget {
   const DesktopOverview({
@@ -28,6 +40,7 @@ class DesktopOverview extends StatefulWidget {
     this.onSettings,
     this.navigationNotice,
     this.switchOverlay,
+    this.groups,
   });
   final DesktopController desktop;
   final VoidCallback onNavigation,
@@ -45,6 +58,9 @@ class DesktopOverview extends StatefulWidget {
   final VoidCallback? onSettings;
   final Widget emptyPanel, feedback;
   final Widget? navigationNotice, switchOverlay;
+
+  /// Group chats on this Mac; adds the Groups tab when present.
+  final GroupsController? groups;
   @override
   State<DesktopOverview> createState() => _DesktopOverviewState();
 }
@@ -52,6 +68,8 @@ class DesktopOverview extends StatefulWidget {
 class _DesktopOverviewState extends State<DesktopOverview> {
   final _search = TextEditingController(), _searchFocus = FocusNode();
   DesktopOverviewScope _scope = DesktopOverviewScope.studio;
+  _HomeTab _tab = _HomeTab.chats;
+  bool get _groupsScope => _tab == _HomeTab.groups && widget.groups != null;
   final _expandedChildren = <String>{};
   Object? _binding;
   Object? _identity;
@@ -207,28 +225,25 @@ class _DesktopOverviewState extends State<DesktopOverview> {
   Color get _secondary => Theme.of(context).colorScheme.onSurfaceVariant;
   (Color, Color) get _accent {
     final scheme = Theme.of(context).colorScheme;
-    final bubble = DjlAppearance.of(context).bubble;
-    return bubble == UserBubbleColor.defaultColor ||
-            bubble == UserBubbleColor.black
-        ? (scheme.onSurface, scheme.surface)
-        : (bubble.swatch(scheme), Colors.white);
+    return (scheme.onSurface, scheme.surface);
   }
 
-  Widget _surface(Widget child, {Color? fill}) => DecoratedBox(
-    decoration: BoxDecoration(
-      color:
-          fill ?? Theme.of(context).colorScheme.surface.withValues(alpha: .96),
-      borderRadius: BorderRadius.circular(100),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: .055),
-          blurRadius: 22,
-          offset: const Offset(0, 7),
-        ),
-      ],
-    ),
-    child: child,
-  );
+  // Quiet controls are frosted glass; a [fill] marks the selected or primary
+  // one with solid ink.
+  Widget _surface(Widget child, {Color? fill}) => fill == null
+      ? DjlFrosted(
+          radius: DjlRadius.pill,
+          shadow: false,
+          blur: false,
+          child: child,
+        )
+      : DecoratedBox(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(DjlRadius.pill),
+          ),
+          child: child,
+        );
   Widget _button({
     required String label,
     required Widget child,
@@ -271,12 +286,113 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     child: SizedBox.square(dimension: 40, child: Icon(icon, size: size)),
   );
 
+  Future<void> _openMore(BuildContext anchor) async {
+    final box = anchor.findRenderObject()! as RenderBox;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    final ready = desktop.runtimeReady;
+    final action = await showDjlGlassMenu<String>(
+      context,
+      anchor: rect,
+      label: context.l10n.chatUiMoreActions,
+      sections: [
+        [
+          DjlMenuItem(
+            'chat',
+            context.l10n.chatUiMenuNewChat,
+            DjlIcons.compose,
+            enabled: ready,
+          ),
+          DjlMenuItem(
+            'quick-chat',
+            context.l10n.chatUiMenuQuickChat,
+            DjlIcons.quick,
+            enabled: ready,
+          ),
+          DjlMenuItem(
+            'project',
+            context.l10n.chatUiMenuNewProject,
+            DjlIcons.folderAdd,
+            enabled: ready,
+          ),
+        ],
+        [
+          DjlMenuItem(
+            'connections',
+            context.l10n.chatUiMenuConnections,
+            DjlIcons.link,
+          ),
+          DjlMenuItem(
+            'secure',
+            context.l10n.chatUiMenuSecurePairing,
+            DjlIcons.shieldCheck,
+            enabled: desktop.canEnterManualPairing,
+          ),
+          if (desktop.active != null)
+            DjlMenuItem(
+              'host',
+              context.l10n.chatUiMenuYourMac,
+              DjlIcons.laptop,
+            ),
+        ],
+        [
+          DjlMenuItem(
+            'archive',
+            desktop.threadList.showArchived
+                ? context.l10n.chatUiMenuActiveChats
+                : context.l10n.chatUiArchivedChats,
+            desktop.threadList.showArchived ? DjlIcons.chats : DjlIcons.archive,
+          ),
+          DjlMenuItem(
+            'refresh',
+            context.l10n.chatUiMenuRefresh,
+            DjlIcons.refresh,
+            enabled: desktop.connected,
+          ),
+        ],
+        if (desktop.connected)
+          [
+            DjlMenuItem(
+              'disconnect',
+              context.l10n.chatUiMenuDisconnect,
+              DjlIcons.power,
+              destructive: true,
+            ),
+          ],
+      ],
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'connections':
+        widget.onConnections();
+      case 'secure':
+        widget.onSecureDetails();
+      case 'host':
+        widget.onHost();
+      case 'project':
+        widget.onProject();
+      case 'chat':
+        widget.onChat(
+          null,
+          cwd: _defaultProjectPath,
+          source: DesktopDraftSource.generalChat,
+        );
+      case 'quick-chat':
+        widget.onQuickChat();
+      case 'disconnect':
+        desktop.disconnect();
+      case 'archive':
+        desktop.threadList.filter(archived: !desktop.threadList.showArchived);
+      case 'refresh':
+        desktop.refreshThreads();
+    }
+  }
+
   Widget _header() => Padding(
     padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
     child: Row(
       children: [
         _button(
-          label: 'Open navigation',
+          label: context.l10n.chatUiOpenNavigation,
           onTap: widget.onNavigation,
           child: SizedBox.square(
             dimension: 40,
@@ -313,102 +429,20 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           ),
         ),
         const Spacer(),
-        _surface(
-          PopupMenuButton<String>(
-            tooltip: 'More actions',
-            padding: EdgeInsets.zero,
-            style: IconButton.styleFrom(
-              minimumSize: const Size.square(40),
-              maximumSize: const Size.square(40),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            constraints: const BoxConstraints(minWidth: 220),
-            icon: const SizedBox.square(
-              dimension: 40,
-              child: Icon(CupertinoIcons.ellipsis, size: 20),
-            ),
-            onSelected: (action) {
-              switch (action) {
-                case 'connections':
-                  widget.onConnections();
-                case 'secure':
-                  widget.onSecureDetails();
-                case 'host':
-                  widget.onHost();
-                case 'project':
-                  widget.onProject();
-                case 'chat':
-                  widget.onChat(
-                    null,
-                    cwd: _defaultProjectPath,
-                    source: DesktopDraftSource.generalChat,
-                  );
-                case 'quick-chat':
-                  widget.onQuickChat();
-                case 'disconnect':
-                  desktop.disconnect();
-                case 'archive':
-                  desktop.threadList.filter(
-                    archived: !desktop.threadList.showArchived,
-                  );
-                case 'refresh':
-                  desktop.refreshThreads();
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'chat',
-                enabled: desktop.runtimeReady,
-                child: const Text('New Chat'),
-              ),
-              PopupMenuItem(
-                value: 'quick-chat',
-                enabled: desktop.runtimeReady,
-                child: const Text('Quick Chat'),
-              ),
-              PopupMenuItem(
-                value: 'project',
-                enabled: desktop.runtimeReady,
-                child: const Text('New Project'),
-              ),
-              const PopupMenuItem(
-                value: 'connections',
-                child: Text('Connections'),
-              ),
-              PopupMenuItem(
-                value: 'secure',
-                enabled: desktop.canEnterManualPairing,
-                child: const Text('Secure pairing details'),
-              ),
-              if (desktop.active != null)
-                const PopupMenuItem(
-                  value: 'host',
-                  child: Text('Paired host status and controls'),
-                ),
-              PopupMenuItem(
-                value: 'archive',
-                child: Text(
-                  desktop.threadList.showArchived
-                      ? 'Show active desktop chats'
-                      : 'Show archived desktop chats',
-                ),
-              ),
-              PopupMenuItem(
-                value: 'refresh',
-                enabled: desktop.connected,
-                child: const Text('Refresh conversations'),
-              ),
-              if (desktop.connected)
-                const PopupMenuItem(
-                  value: 'disconnect',
-                  child: Text('Disconnect desktop'),
-                ),
-            ],
+        Builder(
+          builder: (anchor) => _icon(
+            context.l10n.chatUiMoreActions,
+            DjlIcons.more,
+            () => _openMore(anchor),
           ),
         ),
         if (widget.onSettings != null) ...[
           const SizedBox(width: 10),
-          _icon('Settings', CupertinoIcons.gear, widget.onSettings),
+          _icon(
+            context.l10n.chatUiSettings,
+            DjlIcons.settings,
+            widget.onSettings,
+          ),
         ],
       ],
     ),
@@ -431,7 +465,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                   ),
                   child: Row(
                     children: [
-                      Icon(CupertinoIcons.search, size: 15, color: _secondary),
+                      Icon(DjlIcons.search, size: 15, color: _secondary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: TextField(
@@ -447,8 +481,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                           textInputAction: TextInputAction.search,
                           autocorrect: false,
                           style: Theme.of(context).textTheme.bodyMedium,
-                          decoration: const InputDecoration(
-                            hintText: 'Search conversations',
+                          decoration: InputDecoration(
+                            hintText: context.l10n.chatUiSearchConversations,
                             filled: false,
                             isDense: true,
                             border: InputBorder.none,
@@ -466,7 +500,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
           ),
           if (_searchFocus.hasFocus || _search.text.isNotEmpty) ...[
             const SizedBox(width: 8),
-            _icon('Dismiss search', CupertinoIcons.xmark, () {
+            _icon(context.l10n.chatUiDismissSearch, DjlIcons.close, () {
               _search.clear();
               _searchFocus.unfocus();
               desktop.threadList.filter(search: '');
@@ -481,16 +515,16 @@ class _DesktopOverviewState extends State<DesktopOverview> {
   Widget _connectionStatus() {
     final busy = desktop.state == 'connecting' || desktop.state == 'resolving';
     final label = busy
-        ? 'Connecting'
+        ? context.l10n.chatUiStatusConnecting
         : desktop.state == 'desktop offline'
-        ? 'Device offline'
-        : 'Offline';
+        ? context.l10n.chatUiStatusDeviceOffline
+        : context.l10n.chatUiStatusOffline;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Semantics(
-          label: 'Connection status: $label',
+          label: context.l10n.chatUiConnectionStatus(label),
           excludeSemantics: true,
           child: _surface(
             Padding(
@@ -504,17 +538,19 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: busy
-                          ? CupertinoColors.systemOrange
+                          ? Theme.of(context).colorScheme.onSurface
                           : _secondary.withValues(alpha: .45),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: _secondary,
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: _secondary,
+                      ),
                     ),
                   ),
                 ],
@@ -540,8 +576,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     const SizedBox(width: 8),
                   _button(
                     label: scope.title,
-                    selected: _scope == scope,
-                    fill: _scope == scope ? _accent.$1 : null,
+                    selected: !_groupsScope && _scope == scope,
+                    fill: !_groupsScope && _scope == scope ? _accent.$1 : null,
                     onTap: () => _chooseScope(scope),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -553,7 +589,9 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                         fontSize: 14,
                         height: 1.2,
                         fontWeight: FontWeight.w500,
-                        color: _scope == scope ? _accent.$2 : null,
+                        color: !_groupsScope && _scope == scope
+                            ? _accent.$2
+                            : null,
                       ),
                     ),
                   ),
@@ -562,7 +600,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             ),
           ),
         ),
-        if (_scope == DesktopOverviewScope.projects &&
+        if (!_groupsScope &&
+            _scope == DesktopOverviewScope.projects &&
             groups.any((g) => g.project)) ...[
           const SizedBox(width: 8),
           _icon(
@@ -572,9 +611,9 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       (g) => desktop.threadList.data.overviewCollapsedProjects
                           .contains(g.id),
                     )
-                ? 'Expand all'
-                : 'Collapse all',
-            CupertinoIcons.arrow_up_left_arrow_down_right,
+                ? context.l10n.chatUiExpandAll
+                : context.l10n.chatUiCollapseAll,
+            DjlIcons.expand,
             _owned(() => _toggleAll(groups)),
             size: 15,
           ),
@@ -658,32 +697,29 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                     excludeSemantics: true,
                     button: true,
                     label: _expandedChildren.contains(id)
-                        ? 'Collapse child chats for $title'
-                        : 'Expand child chats for $title',
+                        ? context.l10n.chatUiCollapseChildChats(title)
+                        : context.l10n.chatUiExpandChildChats(title),
                     onTap: toggleChildren,
                     child: IconButton(
                       tooltip: _expandedChildren.contains(id)
-                          ? 'Collapse child chats for $title'
-                          : 'Expand child chats for $title',
+                          ? context.l10n.chatUiCollapseChildChats(title)
+                          : context.l10n.chatUiExpandChildChats(title),
                       iconSize: 12,
                       visualDensity: VisualDensity.compact,
                       icon: Icon(
                         _expandedChildren.contains(id)
-                            ? CupertinoIcons.chevron_down
-                            : CupertinoIcons.chevron_right,
+                            ? DjlIcons.chevronDown
+                            : DjlIcons.chevronRight,
                       ),
                       onPressed: toggleChildren,
                     ),
                   ),
-                PopupMenuButton<String>(
-                  tooltip: 'Desktop chat actions',
+                DjlGlassMenuButton<String>(
+                  tooltip: context.l10n.chatUiDesktopChatActions,
                   padding: EdgeInsets.zero,
-                  icon: Icon(
-                    CupertinoIcons.ellipsis,
-                    size: 15,
-                    color: _secondary,
-                  ),
-                  itemBuilder: (_) => desktopThreadActions(desktop, thread),
+                  icon: Icon(DjlIcons.more, size: 15, color: _secondary),
+                  itemBuilder: (menuContext) =>
+                      desktopThreadActions(menuContext, desktop, thread),
                   onSelected: (action) {
                     if (_currentBinding == owner) {
                       performDesktopThreadAction(
@@ -724,22 +760,20 @@ class _DesktopOverviewState extends State<DesktopOverview> {
       context: anchor,
       allowBelow: true,
       items: [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'archive',
           child: DesktopThreadMenuLabel(
-            title: 'Archive Project',
-            icon: CupertinoIcons.archivebox,
+            title: anchor.l10n.chatUiArchiveProject,
+            icon: DjlIcons.archive,
           ),
         ),
         PopupMenuItem(
           value: 'remove',
           child: DefaultTextStyle.merge(
-            style: TextStyle(
-              color: CupertinoColors.destructiveRed.resolveFrom(anchor),
-            ),
-            child: const DesktopThreadMenuLabel(
-              title: 'Remove from Phone',
-              icon: CupertinoIcons.trash,
+            style: TextStyle(color: DjlColors.of(anchor).danger),
+            child: DesktopThreadMenuLabel(
+              title: anchor.l10n.chatUiRemoveFromPhone,
+              icon: DjlIcons.delete,
             ),
           ),
         ),
@@ -747,7 +781,9 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     );
     if (action == null || !pageContext.mounted || !current()) return;
     final archive = action == 'archive';
-    final title = archive ? 'Archive Project' : 'Remove from Phone';
+    final title = archive
+        ? pageContext.l10n.chatUiArchiveProject
+        : pageContext.l10n.chatUiRemoveFromPhone;
     if (!pageContext.mounted) return;
     final review = archive
         ? showCupertinoModalPopup<bool>(
@@ -755,10 +791,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             builder: (dialog) => Padding(
               padding: MediaQuery.viewInsetsOf(dialog),
               child: CupertinoActionSheet(
-                title: Text('Archive "${group.label}"?'),
-                message: const Text(
-                  'All active chats in this project will be archived.',
-                ),
+                title: Text(dialog.l10n.chatUiArchiveProjectTitle(group.label)),
+                message: Text(dialog.l10n.chatUiArchiveProjectBody),
                 actions: [
                   CupertinoActionSheetAction(
                     onPressed: () => Navigator.pop(dialog, true),
@@ -767,7 +801,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 ],
                 cancelButton: CupertinoActionSheetAction(
                   onPressed: () => Navigator.pop(dialog, false),
-                  child: const Text('Cancel'),
+                  child: Text(dialog.l10n.commonCancel),
                 ),
               ),
             ),
@@ -775,14 +809,12 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         : showCupertinoDialog<bool>(
             context: pageContext,
             builder: (dialog) => CupertinoAlertDialog(
-              title: Text('Remove "${group.label}" from this phone?'),
-              content: const Text(
-                'Chats for this project will be deleted only from DJL on this phone. Nothing is removed from your device or Codex observer.',
-              ),
+              title: Text(dialog.l10n.chatUiRemoveProjectTitle(group.label)),
+              content: Text(dialog.l10n.chatUiRemoveProjectBody),
               actions: [
                 CupertinoDialogAction(
                   onPressed: () => Navigator.pop(dialog, false),
-                  child: const Text('Cancel'),
+                  child: Text(dialog.l10n.commonCancel),
                 ),
                 CupertinoDialogAction(
                   isDestructiveAction: true,
@@ -840,8 +872,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       label: !group.project
                           ? label
                           : collapsed
-                          ? 'Expand project $label'
-                          : 'Collapse project $label',
+                          ? context.l10n.chatUiExpandProject(label)
+                          : context.l10n.chatUiCollapseProject(label),
                       child: InkWell(
                         onTap: toggle,
                         onLongPress: group.project
@@ -855,9 +887,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                           child: Row(
                             children: [
                               Icon(
-                                group.pinned
-                                    ? CupertinoIcons.pin
-                                    : CupertinoIcons.folder,
+                                group.pinned ? DjlIcons.pin : DjlIcons.folder,
                                 size: 17,
                               ),
                               const SizedBox(width: 8),
@@ -874,8 +904,8 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                                 const SizedBox(width: 6),
                                 Icon(
                                   collapsed
-                                      ? CupertinoIcons.chevron_right
-                                      : CupertinoIcons.chevron_down,
+                                      ? DjlIcons.chevronRight
+                                      : DjlIcons.chevronDown,
                                   size: 12,
                                   color: _secondary,
                                 ),
@@ -889,9 +919,9 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                 ),
                 if (group.project)
                   IconButton(
-                    tooltip: 'New chat in $label',
+                    tooltip: context.l10n.chatUiNewChatIn(label),
                     iconSize: 18,
-                    icon: const Icon(CupertinoIcons.square_pencil),
+                    icon: const Icon(DjlIcons.compose),
                     onPressed: desktop.runtimeReady
                         ? _owned(
                             () => widget.onChat(
@@ -910,68 +940,135 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     );
   }
 
-  Widget _bottom() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
-      child: Wrap(
-        alignment: WrapAlignment.end,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 10,
-        runSpacing: 8,
-        children: [
-          _button(
-            label: 'New chat',
-            fill: desktop.runtimeReady
-                ? _accent.$1
-                : Theme.of(context).colorScheme.surfaceContainerHigh,
-            onTap: !desktop.runtimeReady
-                ? null
-                : _owned(() {
-                    widget.onChat(
-                      null,
-                      cwd: _scope == DesktopOverviewScope.projects
-                          ? _defaultProjectPath
-                          : null,
-                      source: DesktopDraftSource.generalChat,
-                    );
-                  }),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  CupertinoIcons.square_pencil,
-                  size: 20,
-                  color: desktop.runtimeReady ? _accent.$2 : _secondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Chat',
-                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    height: 1.2,
-                    letterSpacing: 0,
-                    color: desktop.runtimeReady ? _accent.$2 : _secondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+  /// Opens the chat an attention item points at, if it still waits on the
+  /// paired Mac.
+  void _review(DesktopAttentionItem item) {
+    final pair = desktop.active;
+    final mac = pair?.macDeviceId,
+        pin = pair?.data['macIdentityPublicKey'] as String?;
+    final fingerprint = pin == null
+        ? null
+        : DesktopLinkTarget.keyFingerprint(pin);
+    final fresh = desktop.attentionItems
+        .where(
+          (value) =>
+              value.id == item.id &&
+              value.target == item.target &&
+              value.requestId == item.requestId,
+        )
+        .firstOrNull;
+    if (mac == null || fingerprint == null || fresh == null) return;
+    desktop.queueNavigation(
+      DesktopLinkTarget(
+        fresh.target.thread,
+        turn: fresh.target.turn,
+        item: fresh.target.item,
+        message: fresh.target.message,
+        request: fresh.requestId,
+        macId: mac,
+        macKeySha256: fingerprint,
       ),
+    );
+  }
+
+  Widget _attention(double reserve) => ListView(
+    key: const Key('home.attention'),
+    padding: EdgeInsets.fromLTRB(10, 4, 10, reserve),
+    children: [
+      DesktopAttentionList(
+        items: desktop.attentionItems,
+        isFiltering: false,
+        onOpen: (item) {
+          if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+            _review(item);
+          }
+        },
+      ),
+    ],
+  );
+
+  Widget _tabBar() {
+    final l10n = context.l10n;
+    final groupChats = widget.groups;
+    final tabs = [
+      _HomeTab.chats,
+      if (groupChats != null) _HomeTab.groups,
+      _HomeTab.attention,
+    ];
+    final current = tabs.contains(_tab) ? _tab : _HomeTab.chats;
+    return DjlFloatingTabBar(
+      index: tabs.indexOf(current),
+      onSelected: (index) {
+        _searchFocus.unfocus();
+        setState(() => _tab = tabs[index]);
+      },
+      tabs: [
+        for (final tab in tabs)
+          switch (tab) {
+            _HomeTab.chats => DjlTab(
+              key: const Key('home.tab.chats'),
+              icon: DjlIcons.chats,
+              selectedIcon: DjlIcons.chatsFill,
+              label: l10n.homeTabChats,
+            ),
+            _HomeTab.groups => DjlTab(
+              key: const Key('home.tab.groups'),
+              icon: DjlIcons.group,
+              selectedIcon: DjlIcons.groupFill,
+              label: l10n.chatUiGroups,
+            ),
+            _HomeTab.attention => DjlTab(
+              key: const Key('home.tab.attention'),
+              icon: DjlIcons.attention,
+              selectedIcon: DjlIcons.attentionFill,
+              label: l10n.chatUiAttentionTitle,
+              badge: desktop.attentionItems.length,
+            ),
+          },
+      ],
+      accessory: switch (current) {
+        _HomeTab.chats => DjlGlassCircleButton(
+          key: const Key('home.newChat'),
+          icon: DjlIcons.compose,
+          tooltip: l10n.chatUiNewChat,
+          onPressed: !desktop.runtimeReady
+              ? null
+              : _owned(() {
+                  widget.onChat(
+                    null,
+                    cwd: _scope == DesktopOverviewScope.projects
+                        ? _defaultProjectPath
+                        : null,
+                    source: DesktopDraftSource.generalChat,
+                  );
+                }),
+        ),
+        _HomeTab.groups => DjlGlassCircleButton(
+          key: const Key('home.newGroup'),
+          icon: DjlIcons.add,
+          tooltip: l10n.chatUiNewGroup,
+          onPressed: groupChats!.available
+              ? () => GroupsList.create(context, groupChats)
+              : null,
+        ),
+        _HomeTab.attention => null,
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: desktop,
+    listenable: Listenable.merge([desktop, widget.groups]),
     builder: (context, _) {
       final history =
           desktop.connected ||
           desktop.active != null &&
               desktop.threadList.data.snapshots.isNotEmpty;
       final groups = _groups(_scope);
+      // Read above the Scaffold, which hides the keyboard from its body.
+      final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
+      final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+      final reserve = djlTabBarReserve + bottomInset;
       Future<void> refresh() async {
         if (!desktop.connected) return;
         await desktop.refreshThreads();
@@ -997,13 +1094,13 @@ class _DesktopOverviewState extends State<DesktopOverview> {
               spacing: 8,
               children: [
                 Text(
-                  'Offline · showing saved chats',
+                  context.l10n.chatUiOfflineSavedChats,
                   style: TextStyle(color: _secondary),
                 ),
                 if (desktop.hasReconnectCandidate)
                   TextButton(
                     onPressed: desktop.busy ? null : desktop.reconnect,
-                    child: const Text('Reconnect'),
+                    child: Text(context.l10n.chatUiReconnect),
                   ),
               ],
             ),
@@ -1011,15 +1108,16 @@ class _DesktopOverviewState extends State<DesktopOverview> {
             Text(desktop.threadList.localError!),
           if (desktop.threadList.syncWarning != null)
             Text(desktop.threadList.syncWarning!),
-          if (desktop.threadList.showArchived) const Text('Archived chats'),
+          if (desktop.threadList.showArchived)
+            Text(context.l10n.chatUiArchivedChats),
           if (desktop.threadList.loading) const LinearProgressIndicator(),
           if (groups.isEmpty && !desktop.threadList.loading)
             Text(
               _search.text.isNotEmpty
-                  ? 'No matching chats.'
+                  ? context.l10n.chatUiNoMatchingChatsPeriod
                   : _scope == DesktopOverviewScope.studio
-                  ? 'No Studio threads'
-                  : 'No project chats',
+                  ? context.l10n.chatUiNoStudioThreads
+                  : context.l10n.chatUiNoProjectChats,
               style: TextStyle(fontSize: 13, color: _secondary),
             ),
           for (final group in groups) _group(group),
@@ -1045,31 +1143,27 @@ class _DesktopOverviewState extends State<DesktopOverview> {
         ),
         body: SafeArea(
           top: false,
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final scale = (MediaQuery.textScalerOf(context).scale(15) / 15)
                   .clamp(1.0, double.infinity);
               // Let all controls scroll when the keyboard or large type leaves
               // less room than the pinned chrome needs.
-              final compact = constraints.maxHeight < 260 * scale;
+              final chats = _tab != _HomeTab.attention && !_groupsScope;
+              final compact = chats && constraints.maxHeight < 260 * scale;
               final header = [
-                _searchBar(),
-                if (history)
-                  _scopes(groups)
-                else if (!desktop.connected &&
-                    !_searchFocus.hasFocus &&
-                    _search.text.trim().isEmpty)
-                  _connectionStatus(),
+                if (chats) ...[
+                  _searchBar(),
+                  if (history)
+                    _scopes(groups)
+                  else if (!desktop.connected &&
+                      !_searchFocus.hasFocus &&
+                      _search.text.trim().isEmpty)
+                    _connectionStatus(),
+                ],
               ];
-              if (widget.switchOverlay != null) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: widget.switchOverlay!),
-                    if (!compact) _bottom(),
-                  ],
-                );
-              }
+              if (widget.switchOverlay != null) return widget.switchOverlay!;
               return Stack(
                 children: [
                   if (compact)
@@ -1085,7 +1179,7 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                               children: content(0),
                             ),
                           ),
-                          _bottom(),
+                          SizedBox(height: reserve),
                         ],
                       ),
                     )
@@ -1094,24 +1188,43 @@ class _DesktopOverviewState extends State<DesktopOverview> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         ...header,
-                        Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, body) => RefreshIndicator(
-                              onRefresh: refresh,
-                              child: ListView(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  12,
+                        if (_tab == _HomeTab.attention)
+                          Expanded(child: _attention(reserve))
+                        else if (_groupsScope)
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: reserve),
+                              child: GroupsList(controller: widget.groups!),
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, body) => RefreshIndicator(
+                                onRefresh: refresh,
+                                child: ListView(
+                                  padding: EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    reserve,
+                                  ),
+                                  // Centre the empty panel above the bar.
+                                  children: content(
+                                    body.maxHeight - reserve + 12,
+                                  ),
                                 ),
-                                children: content(body.maxHeight),
                               ),
                             ),
                           ),
-                        ),
-                        _bottom(),
                       ],
+                    ),
+                  if (!keyboard)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: bottomInset > 0 ? bottomInset - 12 : 14,
+                      child: Center(child: _tabBar()),
                     ),
                 ],
               );
@@ -1122,3 +1235,5 @@ class _DesktopOverviewState extends State<DesktopOverview> {
     },
   );
 }
+
+enum _HomeTab { chats, groups, attention }

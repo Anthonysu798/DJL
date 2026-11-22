@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../pairing/data/pairing_repository.dart';
 import '../data/goal_repository.dart';
 import '../domain/thread_goal.dart';
+import '../../../l10n/l10n.dart';
 
 class GoalController extends ChangeNotifier {
   GoalController(
@@ -80,7 +81,7 @@ class GoalController extends ChangeNotifier {
       return false;
     }
     if (!connected) {
-      error = 'Reconnect to your desktop to manage this goal.';
+      error = appStrings.goalsReconnect;
       _notify();
       return false;
     }
@@ -121,7 +122,7 @@ class GoalController extends ChangeNotifier {
   }) {
     final text = objective.trim();
     if (text.isEmpty) {
-      error = 'Describe the goal first.';
+      error = appStrings.goalsDescribeFirst;
       _notify();
       return Future.value(false);
     }

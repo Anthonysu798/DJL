@@ -6,6 +6,7 @@ import 'auth_controller.dart';
 import 'auth_method_selector.dart';
 import 'auth_form_rules.dart';
 import 'auth_form_widgets.dart';
+import '../../../l10n/l10n.dart';
 
 enum AuthMethod { password, code, create }
 
@@ -42,11 +43,11 @@ class _AuthPageState extends State<AuthPage> {
                         AuthFormRules.validPassword(_password.text),
                 });
   String get _primary => _sentTo != null
-      ? 'Verify and continue'
+      ? context.l10n.authVerifyAndContinue
       : switch (_method) {
-          AuthMethod.password => 'Sign in',
-          AuthMethod.code => 'Email me a code',
-          AuthMethod.create => 'Create account',
+          AuthMethod.password => context.l10n.authSignIn,
+          AuthMethod.code => context.l10n.authEmailMeCode,
+          AuthMethod.create => context.l10n.authCreateAccount,
         };
   @override
   void initState() {
@@ -178,7 +179,7 @@ class _AuthPageState extends State<AuthPage> {
         });
         _codeFocus.requestFocus();
       } else if (!result) {
-        setState(() => _error = 'Could not complete sign-in. Try again.');
+        setState(() => _error = context.l10n.authSignInIncomplete);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -217,9 +218,9 @@ class _AuthPageState extends State<AuthPage> {
         fontSize: 13,
       );
       final labels = {
-        AuthMethod.password: 'Password',
-        AuthMethod.code: 'Email code',
-        AuthMethod.create: 'Create account',
+        AuthMethod.password: context.l10n.authPassword,
+        AuthMethod.code: context.l10n.authEmailCode,
+        AuthMethod.create: context.l10n.authCreateAccount,
       };
       final painter = TextPainter(
         textDirection: Directionality.of(context),
@@ -263,7 +264,7 @@ class _AuthPageState extends State<AuthPage> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.controller,
     builder: (context, _) => AuthFormScaffold(
-      title: 'Continue with email',
+      title: context.l10n.authContinueWithEmail,
       children: [
         _methods(context),
         const SizedBox(height: 44),
@@ -274,14 +275,14 @@ class _AuthPageState extends State<AuthPage> {
                 authTextField(
                   fieldKey: const Key('name'),
                   controller: _name,
-                  placeholder: 'Name',
+                  placeholder: context.l10n.authName,
                   enabled: !_working,
                   autofillHints: const [AutofillHints.name],
                 ),
               authTextField(
                 fieldKey: const Key('email'),
                 controller: _email,
-                placeholder: 'Email',
+                placeholder: context.l10n.authEmail,
                 focusNode: _emailFocus,
                 autofocus: true,
                 enabled: !_working && _sentTo == null,
@@ -292,7 +293,7 @@ class _AuthPageState extends State<AuthPage> {
                 authTextField(
                   fieldKey: const Key('password'),
                   controller: _password,
-                  placeholder: 'Password',
+                  placeholder: context.l10n.authPassword,
                   enabled: !_working,
                   password: true,
                   autofillHints: [
@@ -305,7 +306,7 @@ class _AuthPageState extends State<AuthPage> {
                 authTextField(
                   fieldKey: const Key('code'),
                   controller: _code,
-                  placeholder: '6-digit code',
+                  placeholder: context.l10n.authSixDigitCode,
                   focusNode: _codeFocus,
                   enabled: !_working,
                   keyboard: TextInputType.number,
@@ -321,13 +322,9 @@ class _AuthPageState extends State<AuthPage> {
         if (_error != null)
           AuthFormFooter(_error!, error: true)
         else if (_sentTo != null)
-          AuthFormFooter(
-            'We sent a code to $_sentTo. It expires in 10 minutes.',
-          )
+          AuthFormFooter(context.l10n.authCodeSent(_sentTo!))
         else if (_method == AuthMethod.create)
-          const AuthFormFooter(
-            "Use at least 10 characters. We'll email you a code to confirm your address.",
-          ),
+          AuthFormFooter(context.l10n.authCreateAccountHint),
         const SizedBox(height: 36),
         AuthFieldGroup(
           children: [
@@ -340,19 +337,19 @@ class _AuthPageState extends State<AuthPage> {
             if (_sentTo != null) ...[
               AuthFormButton(
                 title: _remaining == 0
-                    ? 'Resend code'
-                    : 'Resend in ${_remaining}s',
+                    ? context.l10n.authResendCode
+                    : context.l10n.authResendIn(_remaining),
                 onPressed: !_working && _remaining == 0
                     ? () => _submit(resend: true)
                     : null,
               ),
               AuthFormButton(
-                title: 'Use another email',
+                title: context.l10n.authUseAnotherEmail,
                 onPressed: !_working ? _anotherEmail : null,
               ),
             ] else if (_method == AuthMethod.password)
               AuthFormButton(
-                title: 'Forgot password?',
+                title: context.l10n.authForgotPassword,
                 onPressed: !_working ? _recover : null,
               ),
           ],
@@ -495,24 +492,24 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.controller,
     builder: (context, _) => AuthFormScaffold(
-      title: 'Reset password',
+      title: context.l10n.authResetPassword,
       children: [
         if (_completed)
           AuthFieldGroup(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Password updated'),
-                    SizedBox(height: 8),
-                    Text('Sign in with your new password.'),
+                    Text(context.l10n.authPasswordUpdated),
+                    const SizedBox(height: 8),
+                    Text(context.l10n.authSignInWithNewPassword),
                   ],
                 ),
               ),
               AuthFormButton(
-                title: 'Back to sign in',
+                title: context.l10n.authBackToSignIn,
                 onPressed: () => Navigator.pop(context, _sentTo),
               ),
             ],
@@ -524,7 +521,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                 authTextField(
                   fieldKey: const Key('email'),
                   controller: _email,
-                  placeholder: 'Email',
+                  placeholder: context.l10n.authEmail,
                   enabled: !_working && _sentTo == null,
                   keyboard: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
@@ -533,7 +530,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                   authTextField(
                     fieldKey: const Key('code'),
                     controller: _code,
-                    placeholder: '6-digit code',
+                    placeholder: context.l10n.authSixDigitCode,
                     enabled: !_working,
                     keyboard: TextInputType.number,
                     autofillHints: const [AutofillHints.oneTimeCode],
@@ -545,7 +542,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                   authTextField(
                     fieldKey: const Key('password'),
                     controller: _password,
-                    placeholder: 'New password',
+                    placeholder: context.l10n.authNewPassword,
                     enabled: !_working,
                     password: true,
                     autofillHints: const [AutofillHints.newPassword],
@@ -556,8 +553,8 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
           ),
           AuthFormFooter(
             _sentTo == null
-                ? "We'll send a recovery code if an account exists for this email."
-                : 'Enter your recovery code and a password with 10–256 characters.',
+                ? context.l10n.authRecoveryHint
+                : context.l10n.authRecoveryCodeHint,
           ),
           const SizedBox(height: 36),
           AuthFieldGroup(
@@ -565,22 +562,22 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
               AuthFormButton(
                 buttonKey: const Key('auth_primary'),
                 title: _sentTo == null
-                    ? 'Send recovery code'
-                    : 'Reset password',
+                    ? context.l10n.authSendRecoveryCode
+                    : context.l10n.authResetPassword,
                 busy: _busy,
                 onPressed: _valid ? () => _submit() : null,
               ),
               if (_sentTo != null) ...[
                 AuthFormButton(
                   title: _remaining == 0
-                      ? 'Resend code'
-                      : 'Resend in ${_remaining}s',
+                      ? context.l10n.authResendCode
+                      : context.l10n.authResendIn(_remaining),
                   onPressed: !_working && _remaining == 0
                       ? () => _submit(resend: true)
                       : null,
                 ),
                 AuthFormButton(
-                  title: 'Use another email',
+                  title: context.l10n.authUseAnotherEmail,
                   onPressed: !_working ? _anotherEmail : null,
                 ),
               ],

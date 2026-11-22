@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import '../desktop_reasoning_controller_test.dart'
     show ReasoningTransport, reasoningDesktop;
 

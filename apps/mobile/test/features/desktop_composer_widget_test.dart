@@ -5,6 +5,7 @@ import 'package:djl_mobile/features/desktop/domain/desktop_composer.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_chat_page.dart';
 import 'package:djl_mobile/features/desktop/presentation/desktop_controller.dart';
 import 'package:djl_mobile/features/pairing/data/pairing_repository.dart';
+import 'package:djl_mobile/core/design/djl_icons.dart';
 import '../core/cloud_client_test.dart' show TestCredentials;
 import 'desktop_composer_send_test.dart' show MixedTransport, NewChatTransport;
 import 'desktop_composer_picker_test.dart' show PendingImagePicker;
@@ -355,7 +356,7 @@ void main() {
       expect(
         tester
             .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.arrow_upward),
+              find.widgetWithIcon(IconButton, DjlIcons.arrowUp),
             )
             .onPressed,
         isNotNull,
@@ -370,7 +371,7 @@ void main() {
       expect(
         tester
             .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.arrow_upward),
+              find.widgetWithIcon(IconButton, DjlIcons.arrowUp),
             )
             .onPressed,
         isNull,
@@ -381,7 +382,7 @@ void main() {
       expect(
         tester
             .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.arrow_upward),
+              find.widgetWithIcon(IconButton, DjlIcons.arrowUp),
             )
             .onPressed,
         isNull,

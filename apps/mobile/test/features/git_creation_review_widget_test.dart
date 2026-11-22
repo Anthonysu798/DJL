@@ -1,3 +1,4 @@
+import 'package:djl_mobile/core/presentation/djl_glass_menu.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -95,7 +96,10 @@ Future<void> reviewedBranch(WidgetTester tester) async {
 }
 
 Future<void> creationAction(WidgetTester tester, String label) async {
-  await tester.tap(find.byType(PopupMenuButton<String>));
+  await tester.tap(find.byType(DjlGlassMenuButton<String>));
+  await tester.pumpAndSettle();
+  // At large text sizes the menu scrolls.
+  await tester.ensureVisible(find.text(label));
   await tester.pumpAndSettle();
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();

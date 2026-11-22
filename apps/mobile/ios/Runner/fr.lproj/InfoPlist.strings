@@ -1,0 +1,8 @@
+/* Permission prompts shown by iOS (fr). */
+"NSCameraUsageDescription" = "Scannez les codes de jumelage de l’ordinateur et joignez des photos à vos messages.";
+"NSFaceIDUsageDescription" = "Protégez vos sessions DJL quand vous revenez dans l’app.";
+"NSLocalNetworkUsageDescription" = "Connectez-vous en toute sécurité à votre ordinateur DJL jumelé.";
+"NSMicrophoneUsageDescription" = "Utilisez la saisie vocale en touchant le micro.";
+"NSPhotoLibraryAddUsageDescription" = "Enregistrez dans votre photothèque les images de DJL de votre choix.";
+"NSPhotoLibraryUsageDescription" = "Choisissez des images à joindre à vos messages.";
+"NSSpeechRecognitionUsageDescription" = "Transformez votre voix en texte de message modifiable.";

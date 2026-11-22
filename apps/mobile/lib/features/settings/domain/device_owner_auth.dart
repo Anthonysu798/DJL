@@ -1,4 +1,5 @@
 import 'package:local_auth/local_auth.dart';
+import '../../../l10n/l10n.dart';
 
 abstract interface class DeviceOwnerAuth {
   Future<bool> isSupported();
@@ -12,7 +13,7 @@ class NativeDeviceOwnerAuth implements DeviceOwnerAuth {
   Future<bool> isSupported() => _auth.isDeviceSupported();
   @override
   Future<bool> authenticate() => _auth.authenticate(
-    localizedReason: 'Unlock DJL and your remote coding sessions.',
+    localizedReason: appStrings.settingsUnlockReason,
     biometricOnly: false,
     persistAcrossBackgrounding: false,
   );

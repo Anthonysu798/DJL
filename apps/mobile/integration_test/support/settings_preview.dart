@@ -59,13 +59,11 @@ class _SettingsPreviewState extends State<_SettingsPreview> {
       theme: djlTheme(
         Brightness.light,
         font: _settings.font,
-        bubble: _settings.bubble,
         liquidGlass: _settings.liquidGlass,
       ),
       darkTheme: djlTheme(
         Brightness.dark,
         font: _settings.font,
-        bubble: _settings.bubble,
         liquidGlass: _settings.liquidGlass,
       ),
       themeMode: _settings.theme,
