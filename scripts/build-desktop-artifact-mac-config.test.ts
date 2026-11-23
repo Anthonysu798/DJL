@@ -6,6 +6,7 @@ import {
   COMPUTER_USE_SCREEN_CAPTURE_DESCRIPTION,
   createDesktopPlatformBuildConfig,
   MAC_ENTITLEMENTS_PATH,
+  macPackagedAppDirectory,
   MAC_INHERITED_ENTITLEMENTS_PATH,
   MICROPHONE_USAGE_DESCRIPTION,
   NODE_PTY_ASAR_UNPACK_GLOBS,
@@ -228,5 +229,13 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(BRAND_ASSET_PATHS.productionWindowsIconIco, "assets/prod/djl-windows.ico");
     assert.equal(BRAND_ASSET_PATHS.productionWebFaviconIco, "assets/prod/djl-web-favicon.ico");
     assert.equal(MICROPHONE_USAGE_DESCRIPTION.startsWith("DJL needs"), true);
+  });
+});
+
+describe("macPackagedAppDirectory", () => {
+  it("matches the folder names electron-builder writes", () => {
+    assert.strictEqual(macPackagedAppDirectory("x64"), "mac");
+    assert.strictEqual(macPackagedAppDirectory("arm64"), "mac-arm64");
+    assert.strictEqual(macPackagedAppDirectory("universal"), "mac-universal");
   });
 });

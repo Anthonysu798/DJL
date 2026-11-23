@@ -39,6 +39,7 @@ import {
 } from "./lib/desktop-update-config.ts";
 import {
   createDesktopPlatformBuildConfig,
+  macPackagedAppDirectory,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
 import { DJL_PRODUCTION_BUNDLE_ID } from "@djl/shared/desktopIdentity";
@@ -1033,7 +1034,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       try: async () => {
         const root = path.join(
           stageDistDir,
-          options.arch === "universal" ? "mac-universal" : `mac-${options.arch}`,
+          macPackagedAppDirectory(options.arch),
           `${computerQaBuild ? COMPUTER_QA_BUILD.displayName : "DJL"}.app`,
           "Contents",
           "Resources",
@@ -1198,7 +1199,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   if (computerQaBuild) {
     const from = path.join(
       stageDistDir,
-      `mac-${options.arch}`,
+      macPackagedAppDirectory(options.arch),
       `${COMPUTER_QA_BUILD.displayName}.app`,
     );
     const to = path.join(options.outputDir, `${COMPUTER_QA_BUILD.displayName}.app`);
