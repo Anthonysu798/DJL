@@ -89,8 +89,15 @@ private final class InertCase {
         }
     }
     func records() -> [Object] {
-        // Actual pipe writer runs asynchronously; no UI or platform observation occurs.
-        Thread.sleep(forTimeInterval: 0.04); controller.captureLane.sync {}
+        // Actual pipe writer runs asynchronously; no UI or platform observation occurs. Wait until it
+        // has drained: a fixed 40ms was too short on GitHub's slower macOS runners.
+        Thread.sleep(forTimeInterval: 0.04)
+        let deadline = Date().addingTimeInterval(5)
+        repeat {
+            controller.captureLane.sync {}
+            if writer.pendingRecords == 0 && writer.pendingBytes == 0 { break }
+            Thread.sleep(forTimeInterval: 0.01)
+        } while Date() < deadline
         var data = Data(), buffer = [UInt8](repeating: 0, count: 65536)
         while true { let n = Darwin.read(readFD, &buffer, buffer.count); if n <= 0 { break }; data.append(contentsOf: buffer.prefix(n)) }
         return data.split(separator: 10).compactMap { try? JSONSerialization.jsonObject(with: Data($0)) as? Object }.compactMap { ($0["event"] as? Object)?["record"] as? Object }
