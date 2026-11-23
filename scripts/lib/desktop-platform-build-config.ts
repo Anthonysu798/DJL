@@ -56,6 +56,11 @@ export interface DesktopNativeBuildHostInput {
   readonly platform: "linux" | "mac" | "win";
 }
 
+// electron-builder names the macOS app folder "mac" for x64, not "mac-x64".
+export function macPackagedAppDirectory(arch: string): string {
+  return arch === "x64" ? "mac" : `mac-${arch}`;
+}
+
 export function validateDesktopNativeBuildHost(input: DesktopNativeBuildHostInput): string | null {
   if (input.platform !== "linux") return null;
   if (input.arch === "universal") {
