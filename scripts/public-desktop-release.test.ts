@@ -399,6 +399,7 @@ describe("public desktop release preparation", () => {
     );
     const workflows = readdirSync(resolve(REPOSITORY_ROOT, ".github/workflows")).toSorted();
     assert.deepStrictEqual(workflows, [
+      "agent-cli-compat.yml",
       "cloud-ci.yml",
       "cloud-deploy-prod.yml",
       "cloud-deploy-staging.yml",
@@ -408,6 +409,17 @@ describe("public desktop release preparation", () => {
       "landing-deploy.yml",
       ...(workflows.includes("mobile-ci.yml") ? ["mobile-ci.yml"] : []),
     ]);
+
+    // The weekly newest-CLI check only reads: no secrets, no write access, no fork-PR target.
+    const agentCliWorkflow = readFileSync(
+      resolve(REPOSITORY_ROOT, ".github/workflows/agent-cli-compat.yml"),
+      "utf8",
+    );
+    assert.match(agentCliWorkflow, /permissions:\n  contents: read\n/);
+    assert.equal(agentCliWorkflow.includes("secrets."), false);
+    assert.equal(agentCliWorkflow.includes("pull_request_target"), false);
+    assert.match(agentCliWorkflow, /apps\/server\/scripts\/check-installed-opencode\.ts/);
+    assert.match(agentCliWorkflow, /scripts\/check-agent-cli-compat\.ts/);
 
     // The DJL Cloud backend deploys from its own `cloud-v*` tags. A desktop `v*` release tag must
     // never trigger a backend production deploy.
@@ -449,8 +461,14 @@ describe("public desktop release preparation", () => {
       ciWorkflow,
       /INSTALLED_OPENCODE_RESULT: \$\{\{ needs\.installed-opencode\.result \}\}/,
     );
-    assert.match(ciWorkflow, /probe-installed-opencode\.ts/);
-    assert.match(ciWorkflow, /--compatibility/);
+    // PR CI and the weekly newest-CLI run share one OpenCode check script.
+    assert.match(ciWorkflow, /apps\/server\/scripts\/check-installed-opencode\.ts/);
+    const openCodeCheck = readFileSync(
+      resolve(REPOSITORY_ROOT, "apps/server/scripts/check-installed-opencode.ts"),
+      "utf8",
+    );
+    assert.match(openCodeCheck, /probe-installed-opencode\.ts/);
+    assert.match(openCodeCheck, /--compatibility/);
     // PRs may skip the native OpenCode and MultiPost lanes, but main must always run all of them.
     assert.match(ciWorkflow, /else\n            opencode=true\n            multipost=true\n/);
     assert.match(

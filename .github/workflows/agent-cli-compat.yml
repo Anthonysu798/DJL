@@ -1,0 +1,128 @@
+name: Newest agent CLI compatibility
+
+# Users install OpenCode, Claude Code and Codex themselves, usually at the newest version, while
+# PR CI pins one OpenCode version. This weekly run tests DJL against the newest release of each CLI
+# so an upstream change is caught within days instead of by users. It never blocks a PR.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+  # Also prove the check itself whenever a PR changes it.
+  pull_request:
+    paths:
+      - ".github/workflows/agent-cli-compat.yml"
+      - "apps/server/scripts/check-agent-cli-compat.ts"
+      - "apps/server/scripts/check-installed-opencode.ts"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-cli-compat-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  FORCE_COLOR: "1"
+
+jobs:
+  versions:
+    name: Resolve newest CLI versions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      opencode: ${{ steps.npm.outputs.opencode }}
+      claude: ${{ steps.npm.outputs.claude }}
+      codex: ${{ steps.npm.outputs.codex }}
+    steps:
+      - name: Read latest versions from npm
+        id: npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "opencode=$(npm view opencode-linux-x64 version)"
+            echo "claude=$(npm view @anthropic-ai/claude-code version)"
+            echo "codex=$(npm view @openai/codex version)"
+          } | tee -a "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY"
+
+  opencode:
+    name: Newest OpenCode (${{ matrix.runner }})
+    needs: versions
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            package: opencode-linux-x64
+          - runner: macos-15
+            package: opencode-darwin-arm64
+          - runner: macos-15-intel
+            package: opencode-darwin-x64
+          - runner: windows-2022
+            package: opencode-windows-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install frozen dependencies
+        uses: ./.github/actions/setup-desktop
+
+      # Installed into a temporary folder only, exactly like a user's separate install.
+      - name: Install newest OpenCode
+        shell: bash
+        env:
+          VERSION: ${{ needs.versions.outputs.opencode }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/djl-installed-opencode" --ignore-scripts --no-save "$PACKAGE@$VERSION"
+          npm install --prefix "$RUNNER_TEMP/djl-opencode-config-deps" --ignore-scripts --save-exact --no-audit --no-fund "@opencode-ai/plugin@$VERSION"
+
+      - name: Verify DJL against newest OpenCode
+        shell: bash
+        env:
+          VERSION: ${{ needs.versions.outputs.opencode }}
+          PACKAGE: ${{ matrix.package }}
+          DJL_TEST_OPENCODE_DEPENDENCIES: ${{ runner.temp }}/djl-opencode-config-deps
+          OPENCODE_DISABLE_MODELS_FETCH: "true"
+        run: node apps/server/scripts/check-installed-opencode.ts "$RUNNER_TEMP/djl-installed-opencode" "$PACKAGE" "$VERSION"
+
+  claude-codex:
+    name: Newest Claude Code and Codex (${{ matrix.runner }})
+    needs: versions
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, macos-15, windows-2022]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install frozen dependencies
+        uses: ./.github/actions/setup-desktop
+
+      - name: Install newest Claude Code and Codex
+        shell: bash
+        env:
+          CLAUDE_VERSION: ${{ needs.versions.outputs.claude }}
+          CODEX_VERSION: ${{ needs.versions.outputs.codex }}
+        run: npm install --prefix "$RUNNER_TEMP/djl-agent-clis" --no-save --no-audit --no-fund "@anthropic-ai/claude-code@$CLAUDE_VERSION" "@openai/codex@$CODEX_VERSION"
+
+      # No account is used: Claude talks to a local fake model server, Codex only does the handshake.
+      - name: Verify DJL starts both CLIs the way the desktop app does
+        shell: bash
+        working-directory: apps/server
+        run: |
+          modules="$RUNNER_TEMP/djl-agent-clis/node_modules"
+          # Claude Code ships one native executable; Codex is a Node launcher (codex.cmd on Windows).
+          claude="$modules/@anthropic-ai/claude-code/bin/claude.exe"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then codex="$modules/.bin/codex.cmd"; else codex="$modules/.bin/codex"; fi
+          bun scripts/check-agent-cli-compat.ts --claude "$claude" --codex "$codex"
