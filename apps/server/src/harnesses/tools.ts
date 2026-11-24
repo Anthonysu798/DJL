@@ -31,6 +31,7 @@ const TOOL_IDS = [
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "pi",
   "cursor",

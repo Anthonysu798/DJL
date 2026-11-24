@@ -22,7 +22,7 @@ import koreanCatalog from "../i18n/locales/ko.json";
 import latinAmericanSpanishCatalog from "../i18n/locales/es-419.json";
 import frenchCatalog from "../i18n/locales/fr.json";
 import { resolveSettingsSearchEntry } from "../settingsSearchIndex";
-import { normalizeSettingsSection } from "../settingsNavigation";
+import { SETTINGS_NAV_ITEMS, normalizeSettingsSection } from "../settingsNavigation";
 
 describe("rankSettingsSearchEntries", () => {
   it("returns nothing for an empty query", () => {
@@ -52,6 +52,17 @@ describe("rankSettingsSearchEntries", () => {
       ),
     ).toBe(true);
     expect(normalizeSettingsSection("remote")).toBe("remote");
+  });
+
+  it("has no Models & API keys page and sends its old deep links to Accounts", () => {
+    expect(SETTINGS_NAV_ITEMS.some((item) => (item.id as string) === "models")).toBe(false);
+    for (const query of ["Models & API keys", "API keys", "custom API"]) {
+      const results = rankSettingsSearchEntries(query, SETTINGS_SEARCH_ENTRIES.length);
+      expect(results.some((entry) => (entry.section as string) === "models")).toBe(false);
+      expect(results.some((entry) => entry.title === "Models & API keys")).toBe(false);
+    }
+    expect(normalizeSettingsSection("models")).toBe("accounts");
+    expect(normalizeSettingsSection("providers")).toBe("accounts");
   });
 
   it("surfaces every row in a section when searching the section label", () => {
@@ -116,11 +127,10 @@ describe("rankSettingsSearchEntries", () => {
       "behavior:delete-confirmation": "setting-delete-confirmation",
       "behavior:archive-confirmation": "setting-archive-confirmation",
       "behavior:terminal-close-confirmation": "setting-terminal-close-confirmation",
+      "behavior:git-writing-model": "setting-git-writing-model",
       "shortcuts:keyboard-shortcuts": null,
       "worktrees:managed-worktrees": null,
       "archived:archived-threads": null,
-      "models:git-writing-model": "setting-git-writing-model",
-      "models:configured-models": null,
       "local-models:runtimes": null,
       "local-models:recommended": null,
       "servers:registry": null,

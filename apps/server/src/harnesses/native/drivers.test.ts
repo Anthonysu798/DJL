@@ -796,6 +796,43 @@ describe("Codex conversation-scoped marketing MCP", () => {
     }
   });
 
+  it("runs an ollama/ model on Codex's built-in ollama provider with the bare model id", async () => {
+    const binary = fixture(`
+    if(m.method==='initialize')reply(m,{});
+    if(m.method==='thread/start'){
+      if(m.params.modelProvider!=='ollama'||m.params.model!=='qwen2.5-coder:1.5b')throw Error('Ollama provider missing: '+JSON.stringify(m.params));
+      reply(m,{thread:{id:'ollama-thread'}});
+    }
+  `);
+    const driver = await createCodexDriver(
+      {
+        ...input,
+        modelSelection: { provider: "codex", model: "ollama/qwen2.5-coder:1.5b" },
+        providerOptions: { codex: { binaryPath: binary } },
+      },
+      sink([]),
+    );
+    expect(driver.id).toBe("ollama-thread");
+    driver.close();
+    const plain = fixture(`
+    if(m.method==='initialize')reply(m,{});
+    if(m.method==='thread/start'){
+      if('modelProvider' in m.params)throw Error('Default Codex session got a model provider');
+      reply(m,{thread:{id:'default-thread'}});
+    }
+  `);
+    const normal = await createCodexDriver(
+      {
+        ...input,
+        modelSelection: { provider: "codex", model: "gpt-5.5" },
+        providerOptions: { codex: { binaryPath: plain } },
+      },
+      sink([]),
+    );
+    expect(normal.id).toBe("default-thread");
+    normal.close();
+  });
+
   it("passes a per-session MCP URL and an environment-backed bearer without changing permission policy", async () => {
     const binary = fixture(`
     if(m.method==='initialize')reply(m,{});

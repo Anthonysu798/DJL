@@ -26,6 +26,7 @@ describe("providerOrdering", () => {
       "kimi",
       "iflow",
       "qwen",
+      "copilot",
       "codebuddy",
       "pi",
     ]);
@@ -50,6 +51,7 @@ describe("providerOrdering", () => {
       "kimi",
       "iflow",
       "qwen",
+      "copilot",
       "codebuddy",
       "pi",
     ]);

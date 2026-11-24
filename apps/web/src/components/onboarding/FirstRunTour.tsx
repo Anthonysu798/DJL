@@ -472,7 +472,7 @@ export function FirstRunTour() {
             to: "/settings",
             search: (previous) => ({
               ...previous,
-              section: "models",
+              section: "accounts",
               target: SETTINGS_TARGETS.modelProviders,
             }),
           });

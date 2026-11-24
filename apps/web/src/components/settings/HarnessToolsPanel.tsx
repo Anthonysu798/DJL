@@ -32,6 +32,11 @@ const TOOLS = [
   },
   { id: "iflow", label: "iFlow CLI", docs: "https://github.com/iflow-ai/iflow-cli" },
   { id: "qwen", label: "Qwen Code", docs: "https://github.com/QwenLM/qwen-code" },
+  {
+    id: "copilot",
+    label: "GitHub Copilot",
+    docs: "https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli",
+  },
   { id: "gemini", label: "Gemini CLI", docs: "https://github.com/google-gemini/gemini-cli" },
   {
     id: "codebuddy",

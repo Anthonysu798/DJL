@@ -114,6 +114,29 @@ function managedOllamaBaseEnvironment(source: NodeJS.ProcessEnv): NodeJS.Process
   );
 }
 
+/**
+ * Window for the Ollama DJL starts itself. Ollama defaults to 4k below 24 GiB of VRAM and 32k up
+ * to 48 GiB, while Claude Code's instructions alone take about 22k tokens and Ollama's Claude Code
+ * and Codex guides ask for 64k (verified 2026-11-23: https://docs.ollama.com/context-length,
+ * https://docs.ollama.com/integrations/codex). Ollama still caps each model at its own trained
+ * window, and a larger window costs memory, so machines under 16 GB get 32k. Never lowers Ollama's
+ * own default (256k from 48 GiB of VRAM; Apple Silicon gives the GPU about 3/4 of memory) and
+ * never overrides a value the user set.
+ */
+export function managedOllamaContextLength(
+  profile: LocalModelHardwareProfile,
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  if (env.OLLAMA_CONTEXT_LENGTH?.trim()) return undefined;
+  const dedicated = Math.max(0, ...profile.gpus.map((gpu) => gpu.dedicatedMemoryBytes ?? 0));
+  const gpuMemory = Math.max(
+    dedicated,
+    profile.platform === "darwin" ? profile.totalMemoryBytes * 0.75 : 0,
+  );
+  if (gpuMemory >= 48 * GIB) return undefined;
+  return profile.totalMemoryBytes < 16 * GIB ? "32768" : "65536";
+}
+
 interface RuntimeProbe {
   readonly status: LocalModelRuntimeStatus;
   readonly models: ReadonlyArray<LocalInstalledModel> | null;
@@ -150,6 +173,8 @@ export interface LocalModelCapabilityProbeResult {
 export interface LocalModelManagerOptions {
   readonly stateDir: string;
   readonly managedOpenCodeRootDir?: string;
+  /** Settings › Local Models "Use with: OpenCode"; when false the managed config lists none. */
+  readonly openCodeEnabled?: () => Promise<boolean>;
   readonly fetch?: LocalModelFetch;
   readonly totalMemoryBytes?: number;
   readonly hardwareProfile?: LocalHardwareProfile;
@@ -329,6 +354,7 @@ export class LocalModelManager {
   readonly #attemptedSpeedKeys = new Set<string>();
   #residentMeasurement: Promise<void> | null = null;
   readonly #configPath: string;
+  readonly #openCodeEnabled: (() => Promise<boolean>) | undefined;
   readonly #stateDir: string;
   readonly #installOllama: (options: OllamaInstallOptions) => Promise<OllamaInstallResult>;
   readonly #installLmStudio: (options: LmStudioInstallOptions) => Promise<LmStudioInstallResult>;
@@ -350,6 +376,7 @@ export class LocalModelManager {
 
   constructor(options: LocalModelManagerOptions) {
     this.#fetch = options.fetch ?? fetch;
+    this.#openCodeEnabled = options.openCodeEnabled;
     this.#totalMemoryBytes = options.totalMemoryBytes ?? totalmem();
     this.#hardwareProfileOverride = options.hardwareProfile;
     this.#platform = options.platform ?? process.platform;
@@ -466,6 +493,12 @@ export class LocalModelManager {
       hardwareProfile,
       recommendedModelId: recommendedModelIdsByUseCase.general,
       recommendedModelIdsByUseCase,
+      fittingRecommendationIds: LOCAL_MODEL_RECOMMENDATIONS.filter((recommendation) =>
+        localModelRecommendationFitsHardware(recommendation, {
+          ...hardwareProfile,
+          freeDiskBytes: null,
+        }),
+      ).map(({ id }) => id),
       runtimes: probes.map(({ status }) => status),
       recommendations: [...LOCAL_MODEL_RECOMMENDATIONS],
       installedModels,
@@ -1388,14 +1421,16 @@ export class LocalModelManager {
         runtime === "ollama" && command === (await this.#resolveManagedOllamaCommand());
       const managedLmStudio =
         runtime === "lmstudio" && command === (await this.#resolveManagedLmStudioCommand());
-      // Only the model directory is DJL's to decide, because DJL owns that storage. How the model
-      // runs — the context window above all — is left entirely to Ollama's own defaults. DJL is a
-      // UI over the opencode harness, not a tuner of the runtime: pinning OLLAMA_CONTEXT_LENGTH
-      // here capped the window at 8192 where Ollama would have given 32768, which measurably
-      // degraded local models.
+      // DJL owns the model directory. The window is raised only where Ollama's default is too
+      // small for coding tools: an earlier fixed 8192 pin sat below Ollama's 32768 default and
+      // measurably degraded local models, so managedOllamaContextLength never lowers it.
+      const contextLength = managedOllama
+        ? managedOllamaContextLength(await this.#getHardwareProfile(), this.#env)
+        : undefined;
       const env = managedOllama
         ? {
             ...managedOllamaBaseEnvironment(this.#env),
+            ...(contextLength ? { OLLAMA_CONTEXT_LENGTH: contextLength } : {}),
             OLLAMA_MODELS: join(this.#stateDir, "local-models", "ollama", "models"),
             // Keep implicit graphics overlays out of the private inference process. Older
             // Vulkan loaders may ignore this, which is harmless.
@@ -2456,7 +2491,8 @@ export class LocalModelManager {
   }
 
   async #synchronizeOpenCodeConfig(): Promise<void> {
-    const models = [...this.#availableModels.values()].flat();
+    const openCodeEnabled = (await this.#openCodeEnabled?.().catch(() => true)) ?? true;
+    const models = openCodeEnabled ? [...this.#availableModels.values()].flat() : [];
     this.#configWrite = this.#configWrite
       .catch(() => undefined)
       .then(async () => {

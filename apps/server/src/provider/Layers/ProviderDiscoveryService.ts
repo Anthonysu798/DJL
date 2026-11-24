@@ -12,11 +12,6 @@ import {
   type ProviderListSkillsResult,
   ProviderReadPluginInput,
   OpenCodeListModelProvidersInput,
-  OpenCodeRemoveCredentialInput,
-  OpenCodeSetApiKeyInput,
-  SaveCustomModelProviderInput,
-  RemoveCustomModelProviderInput,
-  FetchCustomModelsInput,
   type OpenCodeListModelProvidersResult,
   type ProviderSkillDescriptor,
 } from "@djl/contracts";
@@ -423,103 +418,6 @@ const make = Effect.gen(function* () {
       return yield* refreshOpenCodeProviders(adapter, true);
     });
 
-  const saveCustomProvider: ProviderDiscoveryServiceShape["saveCustomProvider"] = (input) =>
-    Effect.gen(function* () {
-      const parsed = yield* decodeInputOrValidationError({
-        operation: "ProviderDiscoveryService.saveCustomProvider",
-        schema: SaveCustomModelProviderInput,
-        payload: input,
-      });
-      const adapter = yield* registry.getByProvider("opencode");
-      if (!adapter.saveCustomProvider)
-        return yield* new ProviderValidationError({
-          operation: "ProviderDiscoveryService.saveCustomProvider",
-          issue: "Custom model APIs are unavailable.",
-        });
-      const result = yield* adapter.saveCustomProvider(parsed);
-      openCodeCatalogCache.markStale();
-      scheduleOpenCodeCatalogRefresh();
-      return result;
-    });
-
-  const removeCustomProvider: ProviderDiscoveryServiceShape["removeCustomProvider"] = (input) =>
-    Effect.gen(function* () {
-      const parsed = yield* decodeInputOrValidationError({
-        operation: "ProviderDiscoveryService.removeCustomProvider",
-        schema: RemoveCustomModelProviderInput,
-        payload: input,
-      });
-      const adapter = yield* registry.getByProvider("opencode");
-      if (!adapter.removeCustomProvider)
-        return yield* new ProviderValidationError({
-          operation: "ProviderDiscoveryService.removeCustomProvider",
-          issue: "Custom model APIs are unavailable.",
-        });
-      const result = yield* adapter.removeCustomProvider(parsed);
-      openCodeCatalogCache.markStale();
-      scheduleOpenCodeCatalogRefresh();
-      return result;
-    });
-
-  const fetchCustomModels: ProviderDiscoveryServiceShape["fetchCustomModels"] = (input) =>
-    Effect.gen(function* () {
-      const parsed = yield* decodeInputOrValidationError({
-        operation: "ProviderDiscoveryService.fetchCustomModels",
-        schema: FetchCustomModelsInput,
-        payload: input,
-      });
-      const adapter = yield* registry.getByProvider("opencode");
-      if (!adapter.fetchCustomModels)
-        return yield* new ProviderValidationError({
-          operation: "ProviderDiscoveryService.fetchCustomModels",
-          issue: "Custom model APIs are unavailable.",
-        });
-      const result = yield* adapter.fetchCustomModels(parsed);
-      return result;
-    });
-
-  const setApiKey: ProviderDiscoveryServiceShape["setApiKey"] = (input) =>
-    Effect.gen(function* () {
-      const parsed = yield* decodeInputOrValidationError({
-        operation: "ProviderDiscoveryService.setApiKey",
-        schema: OpenCodeSetApiKeyInput,
-        payload: input,
-      });
-      const adapter = yield* registry.getByProvider("opencode");
-      if (!adapter.setApiKey) {
-        return yield* new ProviderValidationError({
-          operation: "ProviderDiscoveryService.setApiKey",
-          issue: "DJL credential storage is unavailable.",
-        });
-      }
-      const { cwd: _cwd, ...globalInput } = parsed;
-      const result = yield* adapter.setApiKey(globalInput);
-      openCodeCatalogCache.markStale();
-      scheduleOpenCodeCatalogRefresh();
-      return result;
-    });
-
-  const removeCredential: ProviderDiscoveryServiceShape["removeCredential"] = (input) =>
-    Effect.gen(function* () {
-      const parsed = yield* decodeInputOrValidationError({
-        operation: "ProviderDiscoveryService.removeCredential",
-        schema: OpenCodeRemoveCredentialInput,
-        payload: input,
-      });
-      const adapter = yield* registry.getByProvider("opencode");
-      if (!adapter.removeCredential) {
-        return yield* new ProviderValidationError({
-          operation: "ProviderDiscoveryService.removeCredential",
-          issue: "DJL credential removal is unavailable.",
-        });
-      }
-      const { cwd: _cwd, ...globalInput } = parsed;
-      const result = yield* adapter.removeCredential(globalInput);
-      openCodeCatalogCache.markStale();
-      scheduleOpenCodeCatalogRefresh();
-      return result;
-    });
-
   // Warm the global DJL catalog after the server layer is ready. This never
   // delays desktop startup, and the shared semaphore lets an early UI request
   // join the same cold-start work instead of launching another OpenCode server.
@@ -534,11 +432,6 @@ const make = Effect.gen(function* () {
     listModels,
     listAgents,
     listModelProviders,
-    setApiKey,
-    saveCustomProvider,
-    removeCustomProvider,
-    fetchCustomModels,
-    removeCredential,
   } satisfies ProviderDiscoveryServiceShape;
 });
 

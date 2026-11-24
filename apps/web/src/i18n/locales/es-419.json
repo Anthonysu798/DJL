@@ -2035,30 +2035,33 @@
       "visibleLabels": "Etiquetas estáticas visibles"
     },
     "localModels": {
+      "advanced": "Avanzado",
       "agenticTools": "Herramientas autónomas",
       "assistedTools": "Herramientas asistidas",
       "chatOnly": "Solo chat",
       "checking": "Comprobando entornos de modelos locales…",
+      "codingTools": {
+        "tooShort": "Solo admite {{window}} tokens, muy pocos para Claude Code y Codex",
+        "works": "Funciona con Claude Code y Codex"
+      },
       "connectedOn": "Conectado de forma segura en {{endpoint}}",
       "contextLoaded": "Contexto cargado: {{loaded}}K / máximo del modelo: {{maximum}}K",
       "contextTooSmallForTools": "Solo chat con el contexto actual de {{loaded}}K. Vuelve a cargar el modelo con al menos {{required}}K para usar herramientas.",
       "desktopOnly": "La gestión de modelos locales está disponible en la aplicación de escritorio DJL.",
       "downloadsTitle": "Descargas",
-      "getRuntime": "Obtener {{runtime}}",
-      "hero": {
-        "alternativesTitle": "Otros modelos",
-        "detected": "Detectado: {{processor}} · {{memory}} de memoria",
-        "detectedWithGpu": "Detectado: {{processor}} · {{gpu}} · {{memory}} de memoria",
-        "fastOnYourHardware": "Rápido en tu hardware",
-        "readyTitle": "{{model}} está listo",
-        "switchToSmaller": "Cambiar a {{model}}",
-        "title": "Ejecuta IA de forma privada en esta computadora",
-        "unknownProcessor": "Esta computadora"
+      "fit": {
+        "failed": "Falló la instalación",
+        "installed": "Instalado",
+        "installing": "Instalando",
+        "lowDisk": "No hay suficiente espacio",
+        "lowFreeMemory": "Cierra algunas apps primero",
+        "runsWell": "Funciona bien aquí",
+        "tooBig": "Demasiado grande para esta computadora"
       },
+      "getRuntime": "Obtener {{runtime}}",
       "installAnotherTitle": "Instalar otro modelo",
       "installed": "Instalado",
-      "installedEmpty": "Aún no hay modelos locales. Inicia un entorno y elige una recomendación.",
-      "installedModelsTitle": "Modelos instalados",
+      "installedModelsTitle": "En esta computadora",
       "installHint": "Usa una etiqueta de Ollama, un ID de LM Studio o la URL exacta de Hugging Face.",
       "installingOllama": "Instalando Ollama…",
       "installingOllamaProgress": "Instalando Ollama {{progress}}%",
@@ -2067,46 +2070,16 @@
       "installModel": "Instalar modelo",
       "installOllama": "Instalar e iniciar Ollama",
       "installRuntime": "Instalar e iniciar {{runtime}}",
+      "list": {
+        "install": "Instalar",
+        "meta": "Descarga de {{size}} · necesita {{memory}} de memoria",
+        "title": "Otros modelos"
+      },
       "lmStudioDescription": "Instala LM Studio una vez y DJL podrá iniciar y administrar su servidor local.",
       "manageInstalledTitle": "Administrar modelos instalados",
       "manageLmStudio": "Administrar en LM Studio",
-      "moreOptions": "Mostrar otros modelos",
       "networkPrivacy": "DJL solo se conecta a direcciones de bucle fijo (127.0.0.1). No expone los entornos a la red, sube tráfico de inferencia ni cambia automáticamente el modelo elegido.",
       "ollamaDescription": "DJL instala, inicia y conecta Ollama por ti, sin terminal ni contraseña de administrador.",
-      "privacyDescription": "La inferencia permanece en esta computadora. Los prompts, el código y la salida no se envían a un proveedor alojado. Las herramientas aprobadas pueden acceder a la red por separado.",
-      "privacyTitle": "Privacidad desde el diseño",
-      "quick": {
-        "chooseAnother": "Elegir otra configuración",
-        "description": "DJL instalará {{runtime}} y descargará {{model}} (aprox. {{size}}). No necesitas una terminal ni contraseña de administrador.",
-        "download": "Descargar {{model}} (aprox. {{size}})",
-        "insufficientDisk": "Se necesitan al menos {{size}} de espacio libre.",
-        "readyDescription": "{{model}} está instalado mediante {{runtime}} y disponible en el chat.",
-        "readyTitle": "{{runtime}} está listo",
-        "retry": "Reintentar configuración",
-        "runtimeLabel": "Elegir un entorno local",
-        "setup": "Configurar IA local · {{model}} (aprox. {{size}})",
-        "title": "Configurar {{runtime}} con un clic",
-        "useCaseLabel": "Elige en qué debe destacar la IA local",
-        "useCases": {
-          "coding": {
-            "description": "Código, depuración y proyectos",
-            "label": "Campeón de programación"
-          },
-          "document": {
-            "description": "Resúmenes, extracción y documentos largos",
-            "label": "Campeón de documentos"
-          },
-          "general": {
-            "description": "Preguntas, redacción y tareas diarias",
-            "label": "Campeón integral"
-          },
-          "reasoning": {
-            "description": "Análisis, matemáticas y problemas complejos",
-            "label": "Campeón de razonamiento"
-          }
-        },
-        "useInChat": "Usar en el chat"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "Un modelo potente de uso general y razonamiento para equipos con 24 GB o más."
@@ -2130,7 +2103,6 @@
           "description": "Un modelo ligero de uso general y programación para equipos con 6 GB de memoria."
         }
       },
-      "recommendedTitle": "Recomendados para esta computadora",
       "removeAriaLabel": "Eliminar {{model}}",
       "removeButton": "Eliminar",
       "removeConfirmation": "¿Eliminar {{model}} de Ollama?",
@@ -2154,18 +2126,56 @@
       "runtimeStatusDescription": "Vuelve a comprobar los servicios localhost y sincroniza los modelos con DJL.",
       "runtimeStatusTitle": "Estado del entorno",
       "runtimesTitle": "Entornos locales",
-      "shelf": {
+      "setup": {
+        "bestMatch": "La mejor opción para esta computadora",
+        "busy": "Se está instalando otro modelo. Espera a que termine.",
+        "downloaded": "{{done}} de {{total}} descargados",
         "downloadSize": "Descarga de {{size}}",
-        "fixOllama": "Revisar Ollama",
-        "installModel": "Instalar modelo",
-        "requiresDiskAction": "Requiere {{size}} libres",
-        "requiresMemoryAction": "Requiere {{size}} de memoria",
-        "retry": "Reintentar",
-        "setupOllama": "Configurar Ollama + modelo",
+        "facts": {
+          "disk": "Espacio libre en disco",
+          "graphics": "Gráficos",
+          "label": "Esta computadora",
+          "memory": "Memoria",
+          "processor": "Procesador",
+          "thisComputer": "Esta computadora"
+        },
+        "fitReason": "Necesita unos {{need}} de memoria. Esta computadora tiene {{have}}.",
+        "fixOllama": "Solucionar Ollama",
+        "freeDisk": "Libera {{size}} de espacio en disco para instalar este modelo.",
+        "freeMemory": "Ahora no hay suficiente memoria libre. Cierra algunas apps y vuelve a esta página.",
+        "install": "Instalar {{model}}",
+        "installedLabel": "Instalado",
+        "installsOllama": "DJL también instala Ollama, la app gratuita que ejecuta modelos en tu computadora. No necesitas contraseña.",
+        "ollamaAttention": "Ollama, la app que ejecuta los modelos locales, necesita atención. Abre Avanzado abajo para solucionarlo.",
+        "privacy": "Funciona sin internet y lo que escribes nunca sale de esta computadora.",
+        "progressLabel": "Instalando {{model}}",
+        "readyDescription": "Elígelo en el menú de modelos al iniciar un chat. Se ejecuta en esta computadora.",
+        "readyTitle": "{{model}} está listo",
         "startChat": "Iniciar un chat",
-        "startOllama": "Iniciar Ollama + instalar",
-        "tooLarge": "Demasiado grande para esta computadora",
-        "waitForSetup": "Hay otra configuración en curso"
+        "startsOllama": "DJL inicia Ollama, la app que ejecuta el modelo, antes de descargar.",
+        "steps": {
+          "download": "Descargar",
+          "prepare": "Preparar",
+          "ready": "Listo",
+          "test": "Probarlo en esta computadora"
+        },
+        "switchToSmaller": "Cambiar a {{model}}",
+        "title": "Ejecuta IA de forma privada en esta computadora",
+        "tooBig": "Este modelo necesita {{size}} de memoria, más de la que tiene esta computadora.",
+        "tryAgain": "Intentar de nuevo",
+        "useCaseHints": {
+          "coding": "Código, depuración y proyectos",
+          "document": "Resúmenes, extracción y documentos largos",
+          "general": "Preguntas, redacción y tareas diarias",
+          "reasoning": "Análisis, matemáticas y problemas complejos"
+        },
+        "useCaseLegend": "¿Para qué lo usarás?",
+        "useCases": {
+          "coding": "Programación",
+          "document": "Documentos",
+          "general": "Uso diario",
+          "reasoning": "Resolver problemas"
+        }
       },
       "sizeUnavailable": "Tamaño no disponible",
       "startFirst": "Inicia {{runtime}} primero",
@@ -2181,85 +2191,15 @@
         "runtimeRejected": "El entorno local rechazó la solicitud."
       },
       "tokensPerSecond": "unos {{count}} tokens/s",
-      "updateRuntime": "Actualizar"
-    },
-    "localModelsStatusUnavailableDetail": "El entorno local no proporcionó detalles de diagnóstico.",
-    "models": {
-      "accessTitle": "Acceso a modelos",
-      "addKeyPrompt": "Agrega una clave API para elegir un modelo",
-      "chooseModel": "Elegir modelo",
-      "configuredTitle": "Modelos configurados",
-      "configureFirst": "Configura un modelo primero",
-      "custom": {
-        "add": "Agregar API personalizada",
-        "addModel": "Agregar modelo",
-        "apiKey": "Clave de API (opcional)",
-        "badge": "API personalizada",
-        "baseUrl": "URL base",
-        "create": "Crear proveedor",
-        "description": "Conecta un servicio intermediario o un servidor propio con su URL, protocolo y modelos.",
-        "displayName": "Nombre para mostrar",
-        "edit": "Editar",
-        "editTitle": "Editar API personalizada",
-        "empty": "Obtén los modelos disponibles o agrega los ID exactos que acepta el servidor.",
-        "fetch": "Obtener modelos",
-        "fetchFailed": "No se pudieron obtener los modelos. {{detail}} Puedes agregar los ID manualmente.",
-        "fetching": "Obteniendo…",
-        "idHint": "Usa un ID único que empiece con una letra minúscula. Solo letras minúsculas, números y guiones.",
-        "keepKey": "Deja en blanco para conservar la clave guardada",
-        "keyHint": "Tu clave de API se guarda localmente y no se vuelve a mostrar. Deja el campo en blanco para conservarla.",
-        "keyPlaceholder": "Deja en blanco si no se necesita una clave",
-        "modelId": "ID del modelo",
-        "modelName": "Nombre del modelo (opcional)",
-        "models": "Lista de modelos",
-        "namePlaceholder": "Mi servicio intermediario",
-        "noModels": "No se recibieron modelos. Agrega un ID de modelo manualmente.",
-        "protocol": "Protocolo de API",
-        "protocols": {
-          "anthropic": "Messages de Anthropic",
-          "openai-chat": "Chat Completions de OpenAI",
-          "openai-responses": "Responses de OpenAI"
-        },
-        "providerId": "ID del proveedor",
-        "remove": "Quitar proveedor",
-        "removeFailed": "No se pudo quitar el proveedor",
-        "removeModel": "Quitar modelo {{model}}",
-        "save": "Guardar cambios",
-        "saveFailed": "No se pudo guardar el proveedor. {{detail}}",
-        "saving": "Guardando…",
-        "title": "API de modelo personalizada",
-        "tryAgain": "Revisa los campos e inténtalo de nuevo.",
-        "tryManual": "Revisa la URL y la clave, o agrega modelos manualmente.",
-        "urlHint": "Ingresa una URL base HTTP o HTTPS sin credenciales, parámetros de consulta ni fragmentos."
-      },
-      "disconnect": "Desconectar",
-      "externalCredential": "Esta conexión se administra desde la configuración de tu CLI. Cambia el inicio de sesión o la configuración en tu CLI instalado.",
-      "generationDefaultsTitle": "Valores de generación",
-      "gitWritingAriaLabel": "Modelo de escritura Git",
-      "gitWritingDescription": "Se usa para mensajes de commit, títulos de solicitudes y nombres de ramas.",
-      "gitWritingTitle": "Modelo de escritura Git",
-      "keyAriaLabel": "Clave API de {{provider}}",
-      "keyPlaceholder": "Ingresa la clave API",
-      "keyPrivacy": "Las credenciales se comparten con tu CLI instalado. Al desconectarte aquí, también se elimina su inicio de sesión guardado.",
-      "modelCount_one": "{{count}} modelo disponible",
-      "modelCount_other": "{{count}} modelos disponibles",
-      "notConnected": "Sin conexión",
-      "providerCount_one": "{{count}} proveedor",
-      "providerCount_other": "{{count}} proveedores",
-      "replace": "Reemplazar",
-      "replacementKeyPlaceholder": "Ingresa una clave API de reemplazo",
-      "runtimeUnavailable": "DJL no pudo iniciar el entorno de modelos.",
-      "test": "Probar",
-      "toasts": {
-        "connectionRefreshed": "Conexión con {{provider}} actualizada",
-        "disconnected": "Proveedor desconectado",
-        "keyRejected": "DJL rechazó la credencial.",
-        "keySaved": "Clave API guardada",
-        "keySaveFailed": "No se pudo guardar la clave API",
-        "keySaveFailedWithDetail": "No se pudo guardar la clave API. {{detail}}"
+      "updateRuntime": "Actualizar",
+      "useWith": {
+        "description": "Los modelos de Ollama descargados aparecen en el selector de modelos dentro de cada herramienta que actives. Se ejecutan en esta computadora.",
+        "saveFailed": "No se pudo guardar este ajuste. Vuelve a intentarlo.",
+        "title": "Usar modelos locales con",
+        "toggle": "Usar modelos locales con {{harness}}"
       }
     },
-    "modelsRuntimeUnavailableDetail": "El entorno de ejecución no proporcionó detalles de diagnóstico.",
+    "localModelsStatusUnavailableDetail": "El entorno local no proporcionó detalles de diagnóstico.",
     "navigation": {
       "groups": {
         "app": "Aplicación",
@@ -2305,11 +2245,6 @@
           "description": "Ejecuta modelos privados con Ollama o LM Studio mediante DJL.",
           "eyebrow": "Inferencia privada",
           "label": "Modelos locales"
-        },
-        "models": {
-          "description": "Conecta proveedores y elige modelos autenticados de DJL.",
-          "eyebrow": "Configuración de IA",
-          "label": "Modelos y claves API"
         },
         "notifications": {
           "description": "Avisos dentro de la aplicación y en el escritorio.",
@@ -2807,6 +2742,8 @@
         },
         "gitWriting": {
           "ariaLabel": "Modelo de generación de texto para Git",
+          "chooseModel": "Elegir modelo",
+          "configureFirst": "Configura un modelo primero",
           "description": "Se usa para generar mensajes de commit, títulos de PR y nombres de rama.",
           "resetLabel": "Modelo de redacción para Git"
         },
@@ -2988,6 +2925,10 @@
             "keywords": "línea panel diferencias",
             "title": "Ajuste de líneas en diferencias"
           },
+          "git-writing-model": {
+            "keywords": "mensajes commit títulos PR ramas",
+            "title": "Modelo de redacción de Git"
+          },
           "terminal-close-confirmation": {
             "keywords": "preguntar pestaña terminal historial",
             "title": "Confirmación de cierre de terminal"
@@ -3067,16 +3008,6 @@
           "runtimes": {
             "keywords": "Ollama LM Studio privado servidor",
             "title": "Entornos locales"
-          }
-        },
-        "models": {
-          "configured-models": {
-            "keywords": "claves API proveedores DJL",
-            "title": "Modelos configurados"
-          },
-          "git-writing-model": {
-            "keywords": "mensajes commit títulos PR ramas",
-            "title": "Modelo de redacción de Git"
           }
         },
         "notifications": {
@@ -3349,19 +3280,39 @@
       "title": "Habilidades"
     },
     "subscriptions": {
+      "cancel": "Cancelar",
+      "checking": "Verificando la clave…",
       "china": "China continental",
       "connect": "Conectar",
+      "connected": "Conectado · clave terminada en {{hint}}",
+      "description": "Usa un plan de programación que ya pagas. DJL lo ejecuta con Claude Code usando la clave de tu plan, así que no necesitas instalar nada más.",
+      "disconnect": "Desconectar",
+      "errors": {
+        "invalid_key": "{{provider}} rechazó esta clave. Asegúrate de haber copiado la clave completa del plan.",
+        "network": "No se pudo conectar con {{provider}}. Revisa tu conexión y vuelve a intentarlo.",
+        "no_opencode_key": "OpenCode no tiene una clave guardada para este plan.",
+        "plan_inactive": "La clave funciona, pero el plan no está activo. Revisa tu suscripción o tu saldo en el sitio de {{provider}}.",
+        "unknown": "{{provider}} envió una respuesta inesperada. Vuelve a intentarlo en un momento."
+      },
       "existingRegion": "Usar la región actual del CLI",
+      "importFromOpenCode": "Importar clave desde OpenCode",
       "international": "Internacional",
+      "keyAriaLabel": "Clave del plan de {{provider}}",
+      "keyPlaceholder": "Pega la clave de tu plan",
       "kimiRegion": "Región de la cuenta de Kimi",
-      "modelPicker": "Después de conectarte, elige OpenCode en el selector de modelos para usar tu plan. Los demás proveedores siguen disponibles en Modelos y claves API.",
-      "models_one": "{{count}} modelo disponible",
-      "models_other": "{{count}} modelos disponibles",
+      "modelPicker": "Los planes conectados aparecen en el selector de modelos dentro de Claude Code, cada uno en su propio grupo.",
+      "notConnected": "Sin conectar",
+      "openSite": "Abrir {{provider}} de nuevo",
       "planKey": "Clave API del plan de programación",
-      "providerLogin": "Inicio de sesión del proveedor",
-      "runtimeRequired": "Activa e instala una versión compatible de OpenCode para conectarte.",
-      "title": "Suscripciones y planes de programación",
-      "unavailable": "Actualiza OpenCode para comprobar si admite este plan."
+      "replaceKey": "Reemplazar clave",
+      "save": "Verificar y guardar",
+      "saved": "Clave guardada. Elige un modelo de {{provider}} en Claude Code dentro del selector de modelos.",
+      "steps": {
+        "copyKey": "Crea o copia la clave de API de tu plan de programación.",
+        "paste": "Pégala aquí. DJL la verifica con {{provider}} antes de guardarla.",
+        "signIn": "Inicia sesión en el sitio de {{provider}}. Se acaba de abrir en tu navegador."
+      },
+      "title": "Suscripciones y planes de programación"
     },
     "title": "Configuración",
     "tools": {

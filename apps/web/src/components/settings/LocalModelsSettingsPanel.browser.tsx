@@ -18,6 +18,10 @@ const mocks = vi.hoisted(() => ({
   getSnapshot: vi.fn(),
   removeModel: vi.fn(),
   openExternal: vi.fn(),
+  refresh: vi.fn(),
+  startSetup: vi.fn(),
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
 }));
 
 vi.mock("~/env", () => ({ isElectron: true }));
@@ -27,18 +31,19 @@ vi.mock("~/nativeApi", () => ({
     dialogs: { confirm: mocks.confirm },
     localModels: {
       getSnapshot: mocks.getSnapshot,
-      refresh: vi.fn(),
+      refresh: mocks.refresh,
       installRuntime: vi.fn(),
       startRuntime: vi.fn(),
       installModel: vi.fn(),
       cancelInstall: vi.fn(),
-      startSetup: vi.fn(),
+      startSetup: mocks.startSetup,
       retrySetup: vi.fn(),
       cancelSetup: vi.fn(),
       removeModel: mocks.removeModel,
       onEvent: () => () => undefined,
     },
     shell: { openExternal: mocks.openExternal },
+    server: { getSettings: mocks.getSettings, updateSettings: mocks.updateSettings },
   }),
 }));
 
@@ -115,6 +120,15 @@ async function mount(snapshot: LocalModelsSnapshot = installedSnapshot) {
   writeLocalModelsBrowserCache(snapshot);
   mocks.getSnapshot.mockResolvedValue(snapshot);
   mocks.removeModel.mockResolvedValue(snapshot);
+  mocks.refresh.mockResolvedValue(snapshot);
+  let harnesses = { claudeAgent: true, codex: true, opencode: true };
+  mocks.getSettings.mockImplementation(async () => ({ localModels: { harnesses } }));
+  mocks.updateSettings.mockImplementation(
+    async (patch: { localModels: { harnesses: Partial<typeof harnesses> } }) => {
+      harnesses = { ...harnesses, ...patch.localModels.harnesses };
+      return { localModels: { harnesses } };
+    },
+  );
   const i18n = createInstance();
   await i18n.use(initReactI18next).init({
     defaultNS: "common",
@@ -138,10 +152,10 @@ afterEach(async () => {
 });
 
 describe("LocalModelsSettingsPanel installed models", () => {
-  it("keeps installed models and their text actions visible before More options", async () => {
+  it("keeps installed models and their text actions visible outside Advanced", async () => {
     await mount();
 
-    await expect.element(page.getByRole("heading", { name: "Installed models" })).toBeVisible();
+    await expect.element(page.getByRole("heading", { name: "On this computer" })).toBeVisible();
     await expect
       .element(page.getByRole("button", { name: "Delete Qwen3.5 2B", exact: true }))
       .toBeVisible();
@@ -212,7 +226,7 @@ describe("LocalModelsSettingsPanel installed models", () => {
     await expect
       .element(page.getByText("Loaded context: 16K / model maximum: 128K", { exact: true }))
       .toBeVisible();
-    await expect.element(page.getByText("Installed", { exact: true }).nth(1)).toBeVisible();
+    await expect.element(page.getByText("Installed", { exact: true }).first()).toBeVisible();
   });
 
   it("does not remove an Ollama model when deletion confirmation is cancelled", async () => {
@@ -285,13 +299,77 @@ describe("LocalModelsSettingsPanel installed models", () => {
     completeRemoval?.(installedSnapshot);
   });
 
-  it("does not duplicate the installed-model manager inside More options", async () => {
+  it("does not duplicate the installed-model manager inside Advanced", async () => {
     await mount();
 
-    await page.getByRole("button", { name: "Show other models" }).click();
+    await page.getByRole("button", { name: "Advanced" }).click();
 
     await expect
       .element(page.getByText("Manage installed models", { exact: true }))
       .not.toBeInTheDocument();
+  });
+
+  it("switches local models on or off for one harness at a time", async () => {
+    await mount();
+    const claude = page.getByRole("switch", { name: "Use local models with Claude Code" });
+    const codex = page.getByRole("switch", { name: "Use local models with Codex" });
+    const openCode = page.getByRole("switch", { name: "Use local models with OpenCode" });
+    await expect.element(claude).toBeChecked();
+    await expect.element(codex).toBeChecked();
+    await expect.element(openCode).toBeChecked();
+
+    await codex.click();
+    await expect
+      .poll(() => mocks.updateSettings.mock.calls[0]?.[0])
+      .toEqual({ localModels: { harnesses: { codex: false } } });
+    await expect.element(codex).not.toBeChecked();
+    await expect.element(claude).toBeChecked();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+
+    await openCode.click();
+    await expect
+      .poll(() => mocks.updateSettings.mock.calls[1]?.[0])
+      .toEqual({ localModels: { harnesses: { opencode: false } } });
+    // OpenCode reads a managed config file, so its switch also rewrites that file.
+    await expect.poll(() => mocks.refresh.mock.calls.length).toBe(1);
+  });
+});
+
+describe("LocalModelsSettingsPanel Ollama setup", () => {
+  const recommendation = {
+    id: "qwen3.5-2b",
+    name: "Qwen3.5 2B",
+    description: "Small and fast",
+    supportsToolCalls: false,
+    minimumMemoryBytes: 4 * 1024 ** 3,
+    sources: [
+      { runtime: "ollama", modelId: "qwen3.5:2b-q4_K_M", estimatedDownloadBytes: 2 * 1024 ** 3 },
+    ],
+  };
+  const withOllama = (state: "not_installed" | "stopped" | "running") =>
+    ({
+      ...installedSnapshot,
+      recommendedModelId: "qwen3.5-2b",
+      recommendations: [recommendation],
+      installedModels: [],
+      runtimes: installedSnapshot.runtimes.map((runtime) =>
+        runtime.runtime === "ollama" ? { ...runtime, state } : runtime,
+      ),
+    }) as unknown as LocalModelsSnapshot;
+
+  it.each([
+    ["not_installed", /DJL also installs Ollama/],
+    ["stopped", /DJL starts Ollama/],
+    ["running", null],
+  ] as const)("leads with one install button when Ollama is %s", async (state, hint) => {
+    await mount(withOllama(state));
+    if (hint) await expect.element(page.getByText(hint)).toBeVisible();
+    const action = page.getByRole("button", { name: "Install Qwen3.5 2B", exact: true });
+    await expect.element(action).toBeVisible();
+    await action.click();
+    // One setup job installs Ollama when needed (OllamaInstaller), starts it, and pulls the model.
+    await expect
+      .poll(() => mocks.startSetup.mock.calls[0]?.[0])
+      .toEqual({ recommendationId: "qwen3.5-2b", useCase: "general" });
   });
 });

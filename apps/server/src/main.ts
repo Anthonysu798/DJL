@@ -31,6 +31,7 @@ import { makeServerProviderLayer, makeServerRuntimeServicesLayer } from "./serve
 import { PluginsLive } from "./plugins/PluginsService";
 import { ServerSecretStoreLive } from "./auth/Layers/ServerSecretStore";
 import { LocalModelsLive } from "./localModels/LocalModelsLive";
+import { CodingPlansLive } from "./codingPlans/CodingPlans";
 import { startServerMemoryDiagnostics } from "./memoryDiagnostics";
 import { startClaudeCredentialKeepalive } from "./provider/claudeCredentialKeepalive";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
@@ -311,6 +312,8 @@ const LayerLive = (input: CliInput) => {
     // Provider turn dispatch performs the local-runtime preflight, so construct
     // the provider graph with the same local-model service exposed to Server.
     Layer.provideMerge(localModelsLayer),
+    // Claude Code sessions read connected coding-plan keys; Settings › Accounts manages them.
+    Layer.provideMerge(CodingPlansLive.pipe(Layer.provide(ServerSecretStoreLive))),
   );
   const providerHealthLayer = ProviderHealthLive.pipe(
     // Provider health reads persisted provider settings while constructing its

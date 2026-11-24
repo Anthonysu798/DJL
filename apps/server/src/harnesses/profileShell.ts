@@ -14,6 +14,7 @@ const COMMANDS = {
   grok: "grok",
   iflow: "iflow",
   qwen: "qwen",
+  copilot: "copilot",
   gemini: "gemini",
   codebuddy: "codebuddy",
   pi: "pi",

@@ -17,6 +17,7 @@ export type NativeProvider =
   | "kimi"
   | "iflow"
   | "qwen"
+  | "copilot"
   | "codebuddy"
   | "pi"
   | "djlCloud"

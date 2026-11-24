@@ -1,7 +1,8 @@
 import type { LocalModelEvent, LocalModelsSnapshot } from "@djl/contracts";
-import { Duration, Effect, Layer, PubSub, Schedule, Stream } from "effect";
+import { Duration, Effect, Layer, Option, PubSub, Schedule, Stream } from "effect";
 
 import { ServerConfig } from "../config";
+import { ServerSettingsService } from "../serverSettings";
 import { LocalModelManager, LocalModelManagerError } from "./LocalModelManager";
 import { LocalModelSnapshotCache } from "./localModelSnapshotCache";
 import {
@@ -20,6 +21,7 @@ function serviceError(operation: string, cause: unknown): LocalModelsServiceErro
 
 const make = Effect.gen(function* () {
   const config = yield* ServerConfig;
+  const settings = yield* Effect.serviceOption(ServerSettingsService);
   const events = yield* PubSub.unbounded<LocalModelEvent>();
   const snapshotCache = new LocalModelSnapshotCache(config.stateDir);
   let lastSnapshot = yield* Effect.tryPromise(() => snapshotCache.load()).pipe(
@@ -39,6 +41,9 @@ const make = Effect.gen(function* () {
   const manager = new LocalModelManager({
     stateDir: config.stateDir,
     managedOpenCodeRootDir: config.managedOpenCodeRootDir,
+    openCodeEnabled: async () =>
+      Option.isNone(settings) ||
+      (await Effect.runPromise(settings.value.getSettings)).localModels.harnesses.opencode,
     onSnapshot: publishSnapshot,
   });
   const refreshManager = () => {

@@ -24,6 +24,12 @@ import type {
   HarnessEndLoginInput,
 } from "./harnessAccounts";
 import type {
+  CodingPlanConnectInput,
+  CodingPlanConnectResult,
+  CodingPlanIdInput,
+  CodingPlansListResult,
+} from "./codingPlans";
+import type {
   CloudAccountStatus,
   CloudBrowserSignInCompleteInput,
   CloudBrowserSignInStartResult,
@@ -254,15 +260,8 @@ import type {
   ProviderListCommandsResult,
   ProviderListModelsInput,
   ProviderListModelsResult,
-  OpenCodeCredentialMutationResult,
   OpenCodeListModelProvidersInput,
   OpenCodeListModelProvidersResult,
-  OpenCodeRemoveCredentialInput,
-  OpenCodeSetApiKeyInput,
-  SaveCustomModelProviderInput,
-  RemoveCustomModelProviderInput,
-  FetchCustomModelsInput,
-  FetchCustomModelsResult,
   ProviderListPluginsInput,
   ProviderListPluginsResult,
   ProviderListSkillsInput,
@@ -909,6 +908,12 @@ export interface NativeApi {
     startLogin: (input: HarnessLoginInput) => Promise<HarnessLoginResult>;
     endLogin: (input: HarnessEndLoginInput) => Promise<void>;
   };
+  codingPlans: {
+    list: () => Promise<CodingPlansListResult>;
+    connect: (input: CodingPlanConnectInput) => Promise<CodingPlanConnectResult>;
+    disconnect: (input: CodingPlanIdInput) => Promise<CodingPlanConnectResult>;
+    importFromOpenCode: (input: CodingPlanIdInput) => Promise<CodingPlanConnectResult>;
+  };
   cloud: {
     getStatus: () => Promise<CloudAccountStatus>;
     startSignIn: () => Promise<CloudSignInStartResult>;
@@ -932,17 +937,6 @@ export interface NativeApi {
     listModelProviders: (
       input: OpenCodeListModelProvidersInput,
     ) => Promise<OpenCodeListModelProvidersResult>;
-    saveCustomProvider: (
-      input: SaveCustomModelProviderInput,
-    ) => Promise<OpenCodeCredentialMutationResult>;
-    removeCustomProvider: (
-      input: RemoveCustomModelProviderInput,
-    ) => Promise<OpenCodeCredentialMutationResult>;
-    fetchCustomModels: (input: FetchCustomModelsInput) => Promise<FetchCustomModelsResult>;
-    setApiKey: (input: OpenCodeSetApiKeyInput) => Promise<OpenCodeCredentialMutationResult>;
-    removeCredential: (
-      input: OpenCodeRemoveCredentialInput,
-    ) => Promise<OpenCodeCredentialMutationResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

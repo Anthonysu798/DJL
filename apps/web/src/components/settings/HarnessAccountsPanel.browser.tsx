@@ -281,6 +281,23 @@ describe("HarnessAccountsPanel guided sign-in", () => {
     }
   });
 
+  it("signs in to GitHub Copilot through its own CLI, never OpenCode", async () => {
+    api.harnesses.listAccounts.mockResolvedValueOnce({
+      accounts: [{ id: "copilot", installed: true, enabled: true, status: "required" }],
+    });
+    api.harnesses.startLogin.mockResolvedValue({
+      ...login,
+      harness: "copilot",
+    } as HarnessLoginResult);
+    await mount();
+    await expect.element(page.getByText("GitHub Copilot", { exact: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect
+      .element(page.getByRole("heading", { name: "Sign in to GitHub Copilot" }))
+      .toBeVisible();
+    expect(api.harnesses.startLogin.mock.calls).toEqual([[{ harness: "copilot" }]]);
+  });
+
   it("offers only the setup guide for an agent that is not installed", async () => {
     api.harnesses.listAccounts.mockResolvedValueOnce({
       accounts: [{ id: "codex", installed: false, enabled: true, status: "missing" }],

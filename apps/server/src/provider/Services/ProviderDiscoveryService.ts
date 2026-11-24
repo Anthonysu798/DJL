@@ -13,15 +13,8 @@ import type {
   ProviderListSkillsResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
-  OpenCodeCredentialMutationResult,
   OpenCodeListModelProvidersInput,
   OpenCodeListModelProvidersResult,
-  OpenCodeRemoveCredentialInput,
-  OpenCodeSetApiKeyInput,
-  SaveCustomModelProviderInput,
-  RemoveCustomModelProviderInput,
-  FetchCustomModelsInput,
-  FetchCustomModelsResult,
 } from "@djl/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -62,21 +55,6 @@ export interface ProviderDiscoveryServiceShape {
   readonly listModelProviders: (
     input: OpenCodeListModelProvidersInput,
   ) => Effect.Effect<OpenCodeListModelProvidersResult, ProviderDiscoveryError>;
-  readonly saveCustomProvider: (
-    input: SaveCustomModelProviderInput,
-  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;
-  readonly removeCustomProvider: (
-    input: RemoveCustomModelProviderInput,
-  ) => import("effect").Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;
-  readonly fetchCustomModels: (
-    input: FetchCustomModelsInput,
-  ) => import("effect").Effect.Effect<FetchCustomModelsResult, ProviderDiscoveryError>;
-  readonly setApiKey: (
-    input: OpenCodeSetApiKeyInput,
-  ) => Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;
-  readonly removeCredential: (
-    input: OpenCodeRemoveCredentialInput,
-  ) => Effect.Effect<OpenCodeCredentialMutationResult, ProviderDiscoveryError>;
 }
 
 export class ProviderDiscoveryService extends ServiceMap.Service<

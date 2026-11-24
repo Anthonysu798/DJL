@@ -2035,30 +2035,33 @@
       "visibleLabels": "可见的静态标签"
     },
     "localModels": {
+      "advanced": "高级",
       "agenticTools": "智能体工具",
       "assistedTools": "辅助工具",
       "chatOnly": "仅聊天",
       "checking": "正在检查本地模型运行时…",
+      "codingTools": {
+        "tooShort": "最多只能容纳 {{window}} 个 token，不足以运行 Claude Code 和 Codex",
+        "works": "可用于 Claude Code 和 Codex"
+      },
       "connectedOn": "已安全连接到 {{endpoint}}",
       "contextLoaded": "已加载上下文：{{loaded}}K / 模型上限：{{maximum}}K",
       "contextTooSmallForTools": "当前 {{loaded}}K 上下文仅支持聊天。请至少以 {{required}}K 重新加载模型以使用工具。",
       "desktopOnly": "本地模型管理仅在 DJL 桌面应用中可用。",
       "downloadsTitle": "下载",
-      "getRuntime": "获取 {{runtime}}",
-      "hero": {
-        "alternativesTitle": "其他模型",
-        "detected": "已检测到：{{processor}} · {{memory}} 内存",
-        "detectedWithGpu": "已检测到：{{processor}} · {{gpu}} · {{memory}} 内存",
-        "fastOnYourHardware": "在你的硬件上运行流畅",
-        "readyTitle": "{{model}} 已就绪",
-        "switchToSmaller": "改用 {{model}}",
-        "title": "在这台电脑上私密运行 AI",
-        "unknownProcessor": "这台电脑"
+      "fit": {
+        "failed": "安装失败",
+        "installed": "已安装",
+        "installing": "正在安装",
+        "lowDisk": "磁盘空间不足",
+        "lowFreeMemory": "请先关闭一些应用",
+        "runsWell": "可流畅运行",
+        "tooBig": "此计算机无法运行该模型"
       },
+      "getRuntime": "获取 {{runtime}}",
       "installAnotherTitle": "安装其他模型",
       "installed": "已安装",
-      "installedEmpty": "尚未安装本地模型。请启动运行时并选择上方推荐。",
-      "installedModelsTitle": "已安装模型",
+      "installedModelsTitle": "这台电脑上的模型",
       "installHint": "使用 Ollama 标签、LM Studio 目录 ID 或完整 Hugging Face 模型网址。",
       "installingOllama": "正在安装 Ollama…",
       "installingOllamaProgress": "正在安装 Ollama {{progress}}%",
@@ -2067,46 +2070,16 @@
       "installModel": "安装模型",
       "installOllama": "安装并启动 Ollama",
       "installRuntime": "安装并启动 {{runtime}}",
+      "list": {
+        "install": "安装",
+        "meta": "下载 {{size}} · 需要 {{memory}} 内存",
+        "title": "其他模型"
+      },
       "lmStudioDescription": "安装一次 LM Studio，之后 DJL 即可启动并管理其本地服务器。",
       "manageInstalledTitle": "管理已安装的模型",
       "manageLmStudio": "在 LM Studio 中管理",
-      "moreOptions": "显示其他模型",
       "networkPrivacy": "DJL 仅连接固定环回地址（127.0.0.1），不会向网络公开运行时、上传本地推理流量或自动切换所选模型。",
       "ollamaDescription": "DJL 会为你安装、启动并连接 Ollama，无需终端或管理员密码。",
-      "privacyDescription": "模型推理留在此计算机上。提示、代码上下文和输出不会发送给托管模型提供商；获准的工具可另行访问网络。",
-      "privacyTitle": "隐私优先设计",
-      "quick": {
-        "chooseAnother": "选择其他安装方式",
-        "description": "DJL 将安装 {{runtime}} 并下载 {{model}}（约 {{size}}）。无需终端或管理员密码。",
-        "download": "下载 {{model}}（约 {{size}}）",
-        "insufficientDisk": "至少需要 {{size}} 可用磁盘空间。",
-        "readyDescription": "{{model}} 已通过 {{runtime}} 安装，可直接在聊天中使用。",
-        "readyTitle": "{{runtime}} 已就绪",
-        "retry": "重试设置",
-        "runtimeLabel": "选择本地运行时",
-        "setup": "一键设置本地 AI · {{model}}（约 {{size}}）",
-        "title": "一键设置 {{runtime}}",
-        "useCaseLabel": "选择本地 AI 最擅长的任务",
-        "useCases": {
-          "coding": {
-            "description": "写代码、调试与项目任务",
-            "label": "编程冠军"
-          },
-          "document": {
-            "description": "总结、提取与长文处理",
-            "label": "文档冠军"
-          },
-          "general": {
-            "description": "问答、写作与日常任务",
-            "label": "综合冠军"
-          },
-          "reasoning": {
-            "description": "分析、数学与复杂问题",
-            "label": "推理冠军"
-          }
-        },
-        "useInChat": "在聊天中使用"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "适用于 24 GB 或更多内存设备的高性能综合与推理模型。"
@@ -2130,7 +2103,6 @@
           "description": "适用于 6 GB 内存设备的轻量通用与编程模型。"
         }
       },
-      "recommendedTitle": "为此计算机推荐",
       "removeAriaLabel": "删除 {{model}}",
       "removeButton": "删除",
       "removeConfirmation": "要从 Ollama 中删除 {{model}} 吗？",
@@ -2154,18 +2126,56 @@
       "runtimeStatusDescription": "重新检查本地主机服务，并与 DJL 同步已安装模型。",
       "runtimeStatusTitle": "运行时状态",
       "runtimesTitle": "本地运行时",
-      "shelf": {
+      "setup": {
+        "bestMatch": "最适合这台电脑",
+        "busy": "正在安装另一个模型，请等待完成。",
+        "downloaded": "已下载 {{done}} / {{total}}",
         "downloadSize": "下载 {{size}}",
-        "fixOllama": "检查 Ollama",
-        "installModel": "安装模型",
-        "requiresDiskAction": "需要 {{size}} 可用空间",
-        "requiresMemoryAction": "需要 {{size}} 内存",
-        "retry": "重试",
-        "setupOllama": "设置 Ollama + 模型",
+        "facts": {
+          "disk": "可用磁盘空间",
+          "graphics": "显卡",
+          "label": "这台电脑",
+          "memory": "内存",
+          "processor": "处理器",
+          "thisComputer": "这台电脑"
+        },
+        "fitReason": "需要约 {{need}} 内存。这台电脑有 {{have}}。",
+        "fixOllama": "修复 Ollama",
+        "freeDisk": "请释放 {{size}} 磁盘空间以安装此模型。",
+        "freeMemory": "当前可用内存不足。请关闭一些应用，然后回到此页面。",
+        "install": "安装 {{model}}",
+        "installedLabel": "已安装",
+        "installsOllama": "DJL 还会安装 Ollama，这是一款在你的电脑上运行模型的免费应用。无需密码。",
+        "ollamaAttention": "运行本地模型的应用 Ollama 需要处理。请打开下方的“高级”进行修复。",
+        "privacy": "无需联网即可使用，你输入的内容不会离开这台电脑。",
+        "progressLabel": "正在安装 {{model}}",
+        "readyDescription": "开始聊天时在模型菜单中选择它。它在这台电脑上运行。",
+        "readyTitle": "{{model}} 已就绪",
         "startChat": "开始聊天",
-        "startOllama": "启动 Ollama + 安装",
-        "tooLarge": "此计算机无法运行该模型",
-        "waitForSetup": "另一项设置正在进行"
+        "startsOllama": "下载前，DJL 会先启动运行模型的应用 Ollama。",
+        "steps": {
+          "download": "下载",
+          "prepare": "准备",
+          "ready": "就绪",
+          "test": "在这台电脑上测试"
+        },
+        "switchToSmaller": "改用 {{model}}",
+        "title": "在这台电脑上私密运行 AI",
+        "tooBig": "此模型需要 {{size}} 内存，超出了这台电脑的容量。",
+        "tryAgain": "重试",
+        "useCaseHints": {
+          "coding": "写代码、调试与项目任务",
+          "document": "总结、提取与长文处理",
+          "general": "问答、写作与日常任务",
+          "reasoning": "分析、数学与复杂问题"
+        },
+        "useCaseLegend": "你打算用它做什么？",
+        "useCases": {
+          "coding": "编程",
+          "document": "文档",
+          "general": "日常帮助",
+          "reasoning": "解决问题"
+        }
       },
       "sizeUnavailable": "大小不可用",
       "startFirst": "请先启动 {{runtime}}",
@@ -2181,85 +2191,15 @@
         "runtimeRejected": "本地运行时拒绝了请求。"
       },
       "tokensPerSecond": "约 {{count}} 词元/秒",
-      "updateRuntime": "更新"
-    },
-    "localModelsStatusUnavailableDetail": "本地运行时未提供诊断详情。",
-    "models": {
-      "accessTitle": "模型访问",
-      "addKeyPrompt": "添加 API 密钥以选择模型",
-      "chooseModel": "选择模型",
-      "configuredTitle": "已配置模型",
-      "configureFirst": "请先配置模型",
-      "custom": {
-        "add": "添加自定义 API",
-        "addModel": "添加模型",
-        "apiKey": "API 密钥（可选）",
-        "badge": "自定义 API",
-        "baseUrl": "API 基础地址",
-        "create": "创建提供商",
-        "description": "通过地址、协议和模型连接中转站或自部署服务。",
-        "displayName": "显示名称",
-        "edit": "编辑",
-        "editTitle": "编辑自定义 API",
-        "empty": "获取可用模型，或填写服务支持的完整模型 ID。",
-        "fetch": "获取模型",
-        "fetchFailed": "无法获取模型。{{detail}} 你也可以手动添加模型 ID。",
-        "fetching": "正在获取…",
-        "idHint": "使用以小写字母开头的唯一 ID，仅限小写字母、数字和连字符。",
-        "keepKey": "留空保留已保存的密钥",
-        "keyHint": "API 密钥保存在本机，保存后不会再次显示。留空可保留已保存的密钥。",
-        "keyPlaceholder": "无需密钥时可留空",
-        "modelId": "模型 ID",
-        "modelName": "模型名称（可选）",
-        "models": "模型",
-        "namePlaceholder": "我的中转站",
-        "noModels": "未返回模型，请手动添加模型 ID。",
-        "protocol": "API 协议",
-        "protocols": {
-          "anthropic": "Anthropic 消息",
-          "openai-chat": "OpenAI 聊天补全",
-          "openai-responses": "OpenAI 响应"
-        },
-        "providerId": "提供商 ID",
-        "remove": "移除提供商",
-        "removeFailed": "无法移除提供商",
-        "removeModel": "移除模型 {{model}}",
-        "save": "保存更改",
-        "saveFailed": "无法保存提供商。{{detail}}",
-        "saving": "正在保存…",
-        "title": "自定义模型 API",
-        "tryAgain": "检查填写内容后重试。",
-        "tryManual": "检查地址和密钥，或手动添加模型。",
-        "urlHint": "填写 HTTP 或 HTTPS 基础地址，不要包含凭据、查询参数或片段。"
-      },
-      "disconnect": "断开连接",
-      "externalCredential": "此连接由 CLI 配置管理。请在已安装的 CLI 中更改登录信息或配置。",
-      "generationDefaultsTitle": "生成默认值",
-      "gitWritingAriaLabel": "Git 写作模型",
-      "gitWritingDescription": "用于提交消息、拉取请求标题和分支名称。",
-      "gitWritingTitle": "Git 写作模型",
-      "keyAriaLabel": "{{provider}} API 密钥",
-      "keyPlaceholder": "输入 API 密钥",
-      "keyPrivacy": "凭据与已安装的 CLI 共享。在此断开连接也会移除 CLI 保存的登录信息。",
-      "modelCount_one": "{{count}} 个模型可用",
-      "modelCount_other": "{{count}} 个模型可用",
-      "notConnected": "未连接",
-      "providerCount_one": "{{count}} 个提供商",
-      "providerCount_other": "{{count}} 个提供商",
-      "replace": "替换",
-      "replacementKeyPlaceholder": "输入替换 API 密钥",
-      "runtimeUnavailable": "DJL 无法启动模型运行时。",
-      "test": "测试",
-      "toasts": {
-        "connectionRefreshed": "{{provider}} 连接已刷新",
-        "disconnected": "提供商已断开",
-        "keyRejected": "DJL 拒绝了该凭据。",
-        "keySaved": "API 密钥已保存",
-        "keySaveFailed": "无法保存 API 密钥",
-        "keySaveFailedWithDetail": "无法保存 API 密钥。{{detail}}"
+      "updateRuntime": "更新",
+      "useWith": {
+        "description": "已下载的 Ollama 模型会出现在你开启的各个工具的模型选择器中，并在这台电脑上运行。",
+        "saveFailed": "无法保存此设置，请重试。",
+        "title": "在以下工具中使用本地模型",
+        "toggle": "在 {{harness}} 中使用本地模型"
       }
     },
-    "modelsRuntimeUnavailableDetail": "运行时未提供诊断详情。",
+    "localModelsStatusUnavailableDetail": "本地运行时未提供诊断详情。",
     "navigation": {
       "groups": {
         "app": "应用",
@@ -2305,11 +2245,6 @@
           "description": "通过 DJL 使用 Ollama 或 LM Studio 运行私有模型。",
           "eyebrow": "私有推理",
           "label": "本地模型"
-        },
-        "models": {
-          "description": "连接模型提供商并选择已认证的 DJL 模型。",
-          "eyebrow": "AI 配置",
-          "label": "模型和 API 密钥"
         },
         "notifications": {
           "description": "应用内提示和桌面提醒。",
@@ -2807,6 +2742,8 @@
         },
         "gitWriting": {
           "ariaLabel": "Git 文本生成模型",
+          "chooseModel": "选择模型",
+          "configureFirst": "请先配置模型",
           "description": "用于生成提交消息、PR 标题和分支名称。",
           "resetLabel": "Git 写作模型"
         },
@@ -2988,6 +2925,10 @@
             "keywords": "自动换行 差异面板",
             "title": "差异行换行"
           },
+          "git-writing-model": {
+            "keywords": "提交消息 PR 标题 分支",
+            "title": "Git 写作模型"
+          },
           "terminal-close-confirmation": {
             "keywords": "询问 终端 标签 历史",
             "title": "终端关闭确认"
@@ -3067,16 +3008,6 @@
           "runtimes": {
             "keywords": "Ollama LM Studio 私有 服务器",
             "title": "本地运行时"
-          }
-        },
-        "models": {
-          "configured-models": {
-            "keywords": "API 密钥 提供商 DJL",
-            "title": "已配置模型"
-          },
-          "git-writing-model": {
-            "keywords": "提交消息 PR 标题 分支",
-            "title": "Git 写作模型"
           }
         },
         "notifications": {
@@ -3349,19 +3280,39 @@
       "title": "技能"
     },
     "subscriptions": {
+      "cancel": "取消",
+      "checking": "正在验证密钥…",
       "china": "中国大陆版",
       "connect": "连接",
+      "connected": "已连接 · 密钥尾号 {{hint}}",
+      "description": "直接使用你已购买的编程套餐。DJL 会用套餐密钥通过 Claude Code 运行，无需另外安装任何工具。",
+      "disconnect": "断开连接",
+      "errors": {
+        "invalid_key": "{{provider}} 拒绝了这个密钥。请确认复制了完整的编程套餐密钥。",
+        "network": "无法连接 {{provider}}。请检查网络后重试。",
+        "no_opencode_key": "OpenCode 中没有保存这个套餐的密钥。",
+        "plan_inactive": "密钥有效，但套餐未生效。请到 {{provider}} 网站检查订阅或余额。",
+        "unknown": "{{provider}} 返回了意外的响应，请稍后重试。"
+      },
       "existingRegion": "使用 CLI 当前地区",
+      "importFromOpenCode": "从 OpenCode 导入密钥",
       "international": "国际版",
+      "keyAriaLabel": "{{provider}} 套餐密钥",
+      "keyPlaceholder": "粘贴套餐密钥",
       "kimiRegion": "Kimi 账号地区",
-      "modelPicker": "连接后，在模型选择器中选择 OpenCode，即可使用套餐。其他服务商仍可在“模型与 API 密钥”中配置。",
-      "models_one": "{{count}} 个可用模型",
-      "models_other": "{{count}} 个可用模型",
+      "modelPicker": "已连接的套餐会出现在模型选择器的 Claude Code 下，每个套餐单独成组。",
+      "notConnected": "未连接",
+      "openSite": "重新打开 {{provider}}",
       "planKey": "编程套餐 API 密钥",
-      "providerLogin": "服务商登录",
-      "runtimeRequired": "请启用并安装兼容的 OpenCode 后再连接。",
-      "title": "订阅与编程套餐",
-      "unavailable": "请更新 OpenCode，检查是否支持此套餐。"
+      "replaceKey": "更换密钥",
+      "save": "验证并保存",
+      "saved": "密钥已保存。在模型选择器的 Claude Code 下选择 {{provider}} 模型即可。",
+      "steps": {
+        "copyKey": "创建或复制你的编程套餐 API 密钥。",
+        "paste": "粘贴到这里。DJL 会先向 {{provider}} 验证，再保存。",
+        "signIn": "在刚刚打开的浏览器页面登录 {{provider}}。"
+      },
+      "title": "订阅与编程套餐"
     },
     "title": "设置",
     "tools": {

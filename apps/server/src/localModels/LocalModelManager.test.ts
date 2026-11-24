@@ -7,7 +7,7 @@ import type { LocalModelsSnapshot } from "@djl/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { usableModelBytes } from "./hardwareProfile";
-import { LocalModelManager } from "./LocalModelManager";
+import { LocalModelManager, managedOllamaContextLength } from "./LocalModelManager";
 
 const roots: string[] = [];
 
@@ -1563,7 +1563,7 @@ describe("LocalModelManager", () => {
       general: "gpt-oss-20b",
       document: "granite-4.1-3b",
       reasoning: "gpt-oss-20b",
-      coding: "qwen2.5-coder-14b",
+      coding: "gpt-oss-20b",
     });
     expect(snapshot.hardwareProfile?.availableMemoryBytes).toBe(24 * 1024 ** 3);
     expect(snapshot.hardwareProfile?.gpus[0]).toEqual({
@@ -1836,16 +1836,16 @@ describe("LocalModelManager", () => {
       const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
       expect(job?.state).toBe("ready");
       expect(job?.useCase).toBe("coding");
-      expect(job?.recommendationId).toBe("qwen2.5-coder-14b");
-      expect(job?.modelId).toBe("qwen2.5-coder:14b");
+      expect(job?.recommendationId).toBe("gpt-oss-20b");
+      expect(job?.modelId).toBe("gpt-oss:20b");
     });
 
     expect(runInferenceCanary.mock.calls.map(([input]) => input.modelId)).toEqual([
       "qwen3-coder:30b",
-      "qwen2.5-coder:14b",
+      "gpt-oss:20b",
     ]);
     expect(removed).toEqual(["qwen3-coder:30b"]);
-    expect(installed).toEqual(new Set(["qwen2.5-coder:14b"]));
+    expect(installed).toEqual(new Set(["gpt-oss:20b"]));
     expect(setupMessages.some((message) => message.includes("more compatible"))).toBe(true);
     expect(
       setupMessages.every((message) => !/Ollama|LM Studio|qwen|gpt-oss|:14b|:20b/.test(message)),
@@ -1890,7 +1890,7 @@ describe("LocalModelManager", () => {
         }
         if (url.endsWith("/api/pull")) {
           const body = JSON.parse(String(init?.body)) as { model: string };
-          expect(body.model).toBe("qwen2.5-coder:14b");
+          expect(body.model).toBe("gpt-oss:20b");
           return new Response(
             new ReadableStream<Uint8Array>({
               start(controller) {
@@ -1914,12 +1914,12 @@ describe("LocalModelManager", () => {
       const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
       expect(job?.state).toBe("downloading_model");
       expect(job?.useCase).toBe("coding");
-      expect(job?.modelId).toBe("qwen2.5-coder:14b");
+      expect(job?.modelId).toBe("gpt-oss:20b");
     });
 
     const reused = await manager.startSetup({ runtime: "ollama", useCase: "coding" });
     expect(reused.id).toBe(started.id);
-    expect(reused.modelId).toBe("qwen2.5-coder:14b");
+    expect(reused.modelId).toBe("gpt-oss:20b");
     await expect(manager.startSetup({ runtime: "ollama", useCase: "document" })).rejects.toThrow(
       "Another local AI is already being prepared",
     );
@@ -2083,7 +2083,7 @@ describe("LocalModelManager", () => {
         return json({
           models: [
             { name: "qwen3-coder:30b", size: 100 },
-            { name: "qwen2.5-coder:14b", size: 100 },
+            { name: "gpt-oss:20b", size: 100 },
           ],
         });
       }
@@ -2122,11 +2122,11 @@ describe("LocalModelManager", () => {
       const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
       expect(job).toMatchObject({
         state: "ready",
-        recommendationId: "qwen2.5-coder-14b",
-        modelId: "qwen2.5-coder:14b",
+        recommendationId: "gpt-oss-20b",
+        modelId: "gpt-oss:20b",
       });
     });
-    expect(canaryModels).toEqual(["qwen3-coder:30b", "qwen2.5-coder:14b"]);
+    expect(canaryModels).toEqual(["qwen3-coder:30b", "gpt-oss:20b"]);
   });
 
   it("falls back when the local inference canary reaches its hard timeout", async () => {
@@ -2139,7 +2139,7 @@ describe("LocalModelManager", () => {
         return json({
           models: [
             { name: "qwen3-coder:30b", size: 100 },
-            { name: "qwen2.5-coder:14b", size: 100 },
+            { name: "gpt-oss:20b", size: 100 },
           ],
         });
       }
@@ -2184,11 +2184,11 @@ describe("LocalModelManager", () => {
       const job = (await manager.getSnapshot()).setupJobs.find(({ id }) => id === started.id);
       expect(job).toMatchObject({
         state: "ready",
-        recommendationId: "qwen2.5-coder-14b",
-        modelId: "qwen2.5-coder:14b",
+        recommendationId: "gpt-oss-20b",
+        modelId: "gpt-oss:20b",
       });
     });
-    expect(canaryModels).toEqual(["qwen3-coder:30b", "qwen2.5-coder:14b"]);
+    expect(canaryModels).toEqual(["qwen3-coder:30b", "gpt-oss:20b"]);
   });
 
   it("fails safely when the smallest model returns an empty canary response", async () => {
@@ -2403,18 +2403,12 @@ describe("LocalModelManager", () => {
       expect.stringMatching(/local-models[\\/]runtimes[\\/]ollama[\\/]current[\\/]ollama$/u),
       ["serve"],
       expect.objectContaining({
-        // Keep Ollama's own context default while applying only DJL-owned safety settings.
+        // A 16 GB Mac gets Ollama's 4k default, which Claude Code's instructions alone overflow.
         env: expect.objectContaining({
           OLLAMA_MODELS: expect.any(String),
+          OLLAMA_CONTEXT_LENGTH: "65536",
           VK_LOADER_LAYERS_DISABLE: "~implicit~",
         }),
-      }),
-    );
-    expect(spawnRuntime).toHaveBeenCalledWith(
-      expect.any(String),
-      ["serve"],
-      expect.objectContaining({
-        env: expect.not.objectContaining({ OLLAMA_CONTEXT_LENGTH: expect.anything() }),
       }),
     );
     const managedEnvironment = spawnRuntime.mock.calls[0]?.[2]?.env;
@@ -2770,7 +2764,7 @@ describe("LocalModelManager", () => {
       general: "granite-4.1-3b",
       document: "granite-4.1-3b",
       reasoning: "qwen3.5-2b",
-      coding: "qwen2.5-coder-7b",
+      coding: "granite-4.1-3b",
     });
     expect(snapshot.installedModels).toHaveLength(2);
     expect(
@@ -2783,6 +2777,40 @@ describe("LocalModelManager", () => {
     // Both are sub-3B curated tiers: measured incapable, so reported incapable.
     expect(config.provider.ollama.models["qwen3:1.7b"]?.tool_call).toBe(false);
     expect(config.provider.lmstudio.models["qwen/qwen3.5-2b"]?.tool_call).toBe(false);
+  });
+
+  it("lists Ollama models for OpenCode only while its Use with toggle is on", async () => {
+    const stateDir = await temporaryRoot();
+    let openCode = true;
+    const manager = new LocalModelManager({
+      stateDir,
+      openCodeEnabled: async () => openCode,
+      fetch: vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.endsWith("/api/version")) return json({ version: "0.11.0" });
+        if (url.endsWith("/api/tags"))
+          return json({ models: [{ name: "qwen2.5-coder:1.5b", size: 100 }] });
+        throw new Error(`offline: ${url}`);
+      }),
+      totalMemoryBytes: 16 * 1024 ** 3,
+      freeDiskBytes: 200 * 1024 ** 3,
+      env: { PATH: "" },
+    });
+    const configPath = join(stateDir, "opencode", "config", "opencode", "opencode.json");
+    const readConfig = async () => JSON.parse(await readFile(configPath, "utf8"));
+
+    await manager.getSnapshot();
+    const enabled = await readConfig();
+    expect(enabled.provider.ollama.options.baseURL).toBe("http://127.0.0.1:11434/v1");
+    expect(Object.keys(enabled.provider.ollama.models)).toEqual(["qwen2.5-coder:1.5b"]);
+
+    openCode = false;
+    await manager.getSnapshot();
+    expect((await readConfig()).provider?.ollama).toBeUndefined();
+
+    openCode = true;
+    await manager.getSnapshot();
+    expect((await readConfig()).provider.ollama).toEqual(enabled.provider.ollama);
   });
 
   it("tracks an Ollama pull stream through completion", async () => {
@@ -2923,5 +2951,35 @@ describe("LocalModelManager", () => {
       { timeout: 5_000 },
     );
     expect(statusRequestCount).toBe(3);
+  });
+});
+
+const profile = (totalGiB: number, gpus: Array<{ dedicatedGiB: number }> = []) => ({
+  platform: "darwin",
+  totalMemoryBytes: totalGiB * 1024 ** 3,
+  availableMemoryBytes: totalGiB * 1024 ** 3,
+  cpuLogicalCores: 8,
+  cpuArchitecture: "arm64",
+  gpus: gpus.map(({ dedicatedGiB }) => ({
+    name: "GPU",
+    dedicatedMemoryBytes: dedicatedGiB * 1024 ** 3,
+    memoryType: "dedicated" as const,
+  })),
+  freeDiskBytes: null,
+});
+
+describe("managedOllamaContextLength", () => {
+  it("raises Ollama's small default to what coding tools need, sized to memory", () => {
+    expect(managedOllamaContextLength(profile(8), {})).toBe("32768");
+    expect(managedOllamaContextLength(profile(16), {})).toBe("65536");
+    expect(managedOllamaContextLength(profile(32), {})).toBe("65536");
+  });
+
+  it("never lowers a larger Ollama default or overrides the user's own setting", () => {
+    expect(managedOllamaContextLength(profile(64), {})).toBeUndefined();
+    expect(managedOllamaContextLength(profile(32, [{ dedicatedGiB: 48 }]), {})).toBeUndefined();
+    expect(
+      managedOllamaContextLength(profile(16), { OLLAMA_CONTEXT_LENGTH: "8192" }),
+    ).toBeUndefined();
   });
 });

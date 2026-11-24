@@ -9,7 +9,21 @@ import type { NativeDriverFactory, NativeProvider } from "./types";
 import { makeNativeAdapter } from "./adapter";
 import { createCodexDriver } from "./codex";
 import { transcribeNativeCodexVoice } from "./codexTranscription";
-import { createClaudeDriver, createGroupMemberClaudeDriver } from "./claude";
+import { createClaudeDriverWithBackends, createGroupMemberClaudeDriver } from "./claude";
+import type { ProviderModelDescriptor } from "@djl/contracts";
+import { CodingPlans } from "../../codingPlans/CodingPlans";
+import {
+  buildClaudeBackendEnv,
+  OLLAMA_SLUG_PREFIX,
+  ollamaContextWindow,
+  ollamaModelMaxContext,
+  ollamaPickerModels,
+  parseModelBackend,
+} from "../../codingPlans/backend";
+import {
+  LocalModelsService,
+  type LocalModelsServiceShape,
+} from "../../localModels/LocalModelsService";
 import { createCursorDriver } from "./cursor";
 import { createGeminiDriver } from "./gemini";
 import { createGroupDriverFactory } from "./group/groupDriver";
@@ -20,6 +34,7 @@ import { createGrokDriver } from "./grok";
 import { createKimiDriver } from "./kimi";
 import { createIFlowDriver } from "./iflow";
 import { createQwenDriver } from "./qwen";
+import { createCopilotDriver } from "./copilot";
 import { createPiDriver } from "./pi";
 import { createCodeBuddyDriver } from "./codebuddy";
 import { createDjlCloudDriverFactory } from "./djlCloud";
@@ -59,6 +74,10 @@ export class NativeQwenAdapter extends ServiceMap.Service<
   NativeQwenAdapter,
   ProviderAdapterShape<ProviderAdapterError>
 >()("djl/native/QwenAdapter") {}
+export class NativeCopilotAdapter extends ServiceMap.Service<
+  NativeCopilotAdapter,
+  ProviderAdapterShape<ProviderAdapterError>
+>()("djl/native/CopilotAdapter") {}
 export class NativeCodeBuddyAdapter extends ServiceMap.Service<
   NativeCodeBuddyAdapter,
   ProviderAdapterShape<ProviderAdapterError>
@@ -87,6 +106,7 @@ const PLUGIN_PROVIDERS: ReadonlyArray<NativeProvider> = [
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "pi",
   "djlCloud",
@@ -96,6 +116,7 @@ const PLUGIN_PROVIDERS: ReadonlyArray<NativeProvider> = [
 export const makeConfiguredNativeAdapter = (
   provider: NativeProvider,
   baseFactory: NativeDriverFactory,
+  extraModels?: () => Promise<ReadonlyArray<ProviderModelDescriptor>>,
 ) =>
   Effect.gen(function* () {
     const settings = yield* ServerSettingsService;
@@ -196,8 +217,11 @@ export const makeConfiguredNativeAdapter = (
         throw error;
       }
     };
-    const adapter = yield* makeNativeAdapter(provider, scopedFactory, async () =>
-      nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
+    const adapter = yield* makeNativeAdapter(
+      provider,
+      scopedFactory,
+      async () => nativeProfileOptions(provider, await Effect.runPromise(settings.getSettings)),
+      extraModels,
     );
     if (provider !== "codex") return adapter;
     return {
@@ -219,6 +243,82 @@ export const makeConfiguredNativeAdapter = (
         }),
     } satisfies ProviderAdapterShape<ProviderAdapterError>;
   });
+
+/**
+ * Downloaded Ollama models, listed under a harness when Settings › Local Models has
+ * "Use with" switched on for it. Empty outside the desktop app or when Ollama is absent.
+ */
+const localOllamaModels = (harness: "claudeAgent" | "codex") =>
+  Effect.gen(function* () {
+    const settings = yield* ServerSettingsService;
+    const localModels = yield* Effect.serviceOption(LocalModelsService);
+    return async (): Promise<ProviderModelDescriptor[]> => {
+      if (Option.isNone(localModels)) return [];
+      const current = await Effect.runPromise(settings.getSettings);
+      if (!current.localModels.harnesses[harness]) return [];
+      const snapshot = await Effect.runPromise(localModels.value.getSnapshot).catch(() => null);
+      return ollamaPickerModels(snapshot?.installedModels ?? []);
+    };
+  });
+
+/** Starts a stopped Ollama before a local-model session, like OpenCode's preflight does. */
+const ensureOllamaFor =
+  (localModels: Option.Option<LocalModelsServiceShape>) => async (model: string) => {
+    if (Option.isNone(localModels))
+      throw new Error("Local models are only available in the desktop app");
+    await Effect.runPromise(
+      localModels.value.ensureRuntimeForModel(`${OLLAMA_SLUG_PREFIX}${model}`),
+    );
+  };
+
+const NativeClaudeAdapterLive = Layer.effect(
+  NativeClaudeAdapter,
+  Effect.gen(function* () {
+    const plans = yield* Effect.serviceOption(CodingPlans);
+    const ensureOllama = ensureOllamaFor(yield* Effect.serviceOption(LocalModelsService));
+    const listLocal = yield* localOllamaModels("claudeAgent");
+    return yield* makeConfiguredNativeAdapter(
+      "claudeAgent",
+      createClaudeDriverWithBackends(async (backend) => {
+        if (backend.kind === "default") return undefined;
+        if (backend.kind === "ollama") {
+          await ensureOllama(backend.model);
+          const [served, modelMax] = await Promise.all([
+            ollamaContextWindow(backend.model),
+            ollamaModelMaxContext(backend.model),
+          ]);
+          return buildClaudeBackendEnv(process.env, backend, undefined, {
+            contextTokens: served,
+            ollamaWindow: { served, modelMax },
+          });
+        }
+        const key = Option.isSome(plans) ? await plans.value.readKey(backend.plan.id) : null;
+        return buildClaudeBackendEnv(process.env, backend, key ?? undefined);
+      }),
+      async () => [
+        ...(Option.isSome(plans) ? await plans.value.connectedModels() : []),
+        ...(await listLocal()),
+      ],
+    );
+  }),
+);
+
+const NativeCodexAdapterLive = Layer.effect(
+  NativeCodexAdapter,
+  Effect.gen(function* () {
+    const ensureOllama = ensureOllamaFor(yield* Effect.serviceOption(LocalModelsService));
+    const listLocal = yield* localOllamaModels("codex");
+    return yield* makeConfiguredNativeAdapter(
+      "codex",
+      async (input, sink, workTools, plugins) => {
+        const backend = parseModelBackend(input.modelSelection?.model);
+        if (backend.kind === "ollama") await ensureOllama(backend.model);
+        return createCodexDriver(input, sink, workTools, plugins);
+      },
+      listLocal,
+    );
+  }),
+);
 
 const MAX_PASTED_SKILL_CHARS = 24_000;
 
@@ -259,14 +359,15 @@ const NativeGroupAdapterLive = Layer.effect(
 
 export const NativeHarnessesLive = Layer.mergeAll(
   NativeGroupAdapterLive,
-  Layer.effect(NativeCodexAdapter, makeConfiguredNativeAdapter("codex", createCodexDriver)),
-  Layer.effect(NativeClaudeAdapter, makeConfiguredNativeAdapter("claudeAgent", createClaudeDriver)),
+  NativeCodexAdapterLive,
+  NativeClaudeAdapterLive,
   Layer.effect(NativeCursorAdapter, makeConfiguredNativeAdapter("cursor", createCursorDriver)),
   Layer.effect(NativeGeminiAdapter, makeConfiguredNativeAdapter("gemini", createGeminiDriver)),
   Layer.effect(NativeGrokAdapter, makeConfiguredNativeAdapter("grok", createGrokDriver)),
   Layer.effect(NativeKimiAdapter, makeConfiguredNativeAdapter("kimi", createKimiDriver)),
   Layer.effect(NativeIFlowAdapter, makeConfiguredNativeAdapter("iflow", createIFlowDriver)),
   Layer.effect(NativeQwenAdapter, makeConfiguredNativeAdapter("qwen", createQwenDriver)),
+  Layer.effect(NativeCopilotAdapter, makeConfiguredNativeAdapter("copilot", createCopilotDriver)),
   Layer.effect(
     NativeCodeBuddyAdapter,
     makeConfiguredNativeAdapter("codebuddy", createCodeBuddyDriver),

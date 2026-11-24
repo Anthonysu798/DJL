@@ -13,7 +13,15 @@ import {
   type ProviderSession,
   type ProviderUserInputAnswers,
   type ProviderApprovalDecision,
+  type ProviderListModelsResult,
+  type ProviderModelDescriptor,
 } from "@djl/contracts";
+import {
+  backendKeyLabel,
+  modelBackendKey,
+  modelBackendLabel,
+  parseModelBackend,
+} from "../../codingPlans/backend";
 import { Effect, Queue, Schema, Stream } from "effect";
 import { ProviderAdapterRequestError, type ProviderAdapterError } from "../../provider/Errors";
 import type { ProviderAdapterShape } from "../../provider/Services/ProviderAdapter";
@@ -28,7 +36,25 @@ const NativeResumeCursor = Schema.Struct({
   approvalPolicy: Schema.optional(ProviderApprovalPolicy),
   sandboxMode: Schema.optional(ProviderSandboxMode),
   providerOptions: Schema.optional(ProviderStartOptions),
+  /** Coding plan / Ollama backend the native session was started on (absent = default). */
+  modelBackend: Schema.optional(Schema.String),
 });
+
+// Only Claude Code and Codex route plan or local models through a model-slug prefix.
+const backendOf = (provider: NativeProvider, model: string | undefined) =>
+  provider === "claudeAgent" || provider === "codex" ? parseModelBackend(model) : undefined;
+
+const assertSameBackend = (
+  provider: NativeProvider,
+  current: string,
+  model: string | undefined,
+) => {
+  const next = backendOf(provider, model);
+  if (next && modelBackendKey(next) !== current)
+    throw new Error(
+      `This chat runs on ${backendKeyLabel(current)}. Start a new chat to use ${modelBackendLabel(next)}.`,
+    );
+};
 
 // Waits briefly for a finishing turn to clear, so a late steer can start the next turn.
 const settled = async (state: SessionState, turnId: string) => {
@@ -38,6 +64,7 @@ const settled = async (state: SessionState, turnId: string) => {
 
 interface SessionState {
   session: ProviderSession;
+  modelBackend: string;
   profileOptions: ProviderStartOptions;
   driver?: NativeDriver;
   stopped: boolean;
@@ -55,6 +82,8 @@ export const makeNativeAdapter = (
   provider: NativeProvider,
   factory: NativeDriverFactory,
   readProfile: () => Promise<ProviderStartOptions> = async () => ({}),
+  /** Extra picker models (connected coding plans, local Ollama) appended to the live list. */
+  extraModels: () => Promise<ReadonlyArray<ProviderModelDescriptor>> = async () => [],
 ) =>
   Effect.gen(function* () {
     const queue = yield* Queue.unbounded<ProviderRuntimeEvent>();
@@ -123,7 +152,7 @@ export const makeNativeAdapter = (
             detail: cause instanceof Error ? cause.message : "Native runtime operation failed",
           }),
       });
-    const validateTurn = (input: ProviderSendTurnInput) => {
+    const validateTurn = (input: ProviderSendTurnInput, state: SessionState) => {
       if (!input.input?.trim()) throw new Error("A text prompt is required");
       // Groups pass attachment paths and skills to members as text; other bridges cannot.
       const acceptsFiles = provider === "group";
@@ -135,11 +164,13 @@ export const makeNativeAdapter = (
         throw new Error("This native bridge currently accepts text prompts only");
       if (input.modelSelection && input.modelSelection.provider !== provider)
         throw new Error("Model provider does not match runtime");
+      if (input.modelSelection)
+        assertSameBackend(provider, state.modelBackend, input.modelSelection.model);
       if (input.interactionMode === "plan" && provider === "codex")
         throw new Error("Native Codex plan mode is not implemented");
     };
     const beginTurn = (state: SessionState, input: ProviderSendTurnInput) => {
-      validateTurn(input);
+      validateTurn(input, state);
       const turnId = TurnId.makeUnsafe(randomUUID());
       state.completed = false;
       state.session = {
@@ -224,6 +255,14 @@ export const makeNativeAdapter = (
             input.resumeCursor === undefined
               ? undefined
               : Schema.decodeUnknownSync(NativeResumeCursor)(input.resumeCursor);
+          const startBackend = backendOf(provider, input.modelSelection?.model);
+          const modelBackend = startBackend ? modelBackendKey(startBackend) : "default";
+          if (saved && startBackend)
+            assertSameBackend(
+              provider,
+              saved.modelBackend ?? "default",
+              input.modelSelection?.model,
+            );
           const approvalPolicy = input.approvalPolicy ?? saved?.approvalPolicy;
           const sandboxMode = input.sandboxMode ?? saved?.sandboxMode;
           const providerOptions = mergeNativeProfile(
@@ -239,6 +278,7 @@ export const makeNativeAdapter = (
           };
           const now = new Date().toISOString();
           const state: SessionState = {
+            modelBackend,
             profileOptions: providerOptions,
             session: {
               provider,
@@ -335,6 +375,7 @@ export const makeNativeAdapter = (
                 ...(Object.keys(providerOptions[provider] ?? {}).length ? { providerOptions } : {}),
                 ...(approvalPolicy !== undefined ? { approvalPolicy } : {}),
                 ...(sandboxMode !== undefined ? { sandboxMode } : {}),
+                ...(modelBackend !== "default" ? { modelBackend } : {}),
               },
             };
             emit(state, {
@@ -389,7 +430,7 @@ export const makeNativeAdapter = (
                 const turnId = state.session.activeTurnId;
                 if (!turnId || state.completed)
                   throw new Error("No active native turn available to steer");
-                validateTurn(input);
+                validateTurn(input, state);
                 if (!state.driver?.steer)
                   throw new Error("The native driver does not support steering");
                 await state.driver.steer(input);
@@ -459,22 +500,37 @@ export const makeNativeAdapter = (
               JSON.stringify(saved?.providerOptions) === JSON.stringify(providerOptions)
             );
           });
-          if (existing?.driver) return existing.driver.models();
-          // Discovery uses the current configured profile, never another active account/profile.
-          const driver = await factory(
-            {
-              threadId: ThreadId.makeUnsafe(randomUUID()),
-              provider,
-              cwd: input.cwd ?? process.cwd(),
-              runtimeMode: "approval-required",
-              providerOptions,
-            },
-            { emit: () => {}, request: async () => "cancel", fail: () => {} },
-          );
+          const withExtras = async (result: ProviderListModelsResult) => {
+            const extras = await extraModels().catch(() => []);
+            return extras.length ? { ...result, models: [...result.models, ...extras] } : result;
+          };
+          const nativeModels = async (): Promise<ProviderListModelsResult> => {
+            if (existing?.driver) return existing.driver.models();
+            // Discovery uses the current configured profile, never another active account/profile.
+            const driver = await factory(
+              {
+                threadId: ThreadId.makeUnsafe(randomUUID()),
+                provider,
+                cwd: input.cwd ?? process.cwd(),
+                runtimeMode: "approval-required",
+                providerOptions,
+              },
+              { emit: () => {}, request: async () => "cancel", fail: () => {} },
+            );
+            try {
+              return await driver.models();
+            } finally {
+              driver.close();
+            }
+          };
           try {
-            return await driver.models();
-          } finally {
-            driver.close();
+            return await withExtras(await nativeModels());
+          } catch (error) {
+            // A signed-out harness cannot list its own models, but coding-plan and local models
+            // need no harness login, so they stay selectable.
+            const extras = await extraModels().catch(() => []);
+            if (extras.length) return { models: [...extras] };
+            throw error;
           }
         }),
       streamEvents: Stream.fromQueue(queue),

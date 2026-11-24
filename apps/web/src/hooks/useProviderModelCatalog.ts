@@ -129,6 +129,14 @@ export function useProviderModelCatalog(input: {
       enabled: selectedProvider === "qwen" || discoveryEnabled,
     }),
   );
+  const copilotDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "copilot",
+      binaryPath: settings.copilotBinaryPath || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "copilot" || discoveryEnabled,
+    }),
+  );
   const codebuddyDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "codebuddy",
@@ -276,6 +284,11 @@ export function useProviderModelCatalog(input: {
       kimi: getAppModelOptions("kimi", customModelsByProvider.kimi, modelHintByProvider?.kimi),
       iflow: getAppModelOptions("iflow", customModelsByProvider.iflow, modelHintByProvider?.iflow),
       qwen: getAppModelOptions("qwen", customModelsByProvider.qwen, modelHintByProvider?.qwen),
+      copilot: getAppModelOptions(
+        "copilot",
+        customModelsByProvider.copilot,
+        modelHintByProvider?.copilot,
+      ),
       codebuddy: getAppModelOptions(
         "codebuddy",
         customModelsByProvider.codebuddy,
@@ -309,6 +322,7 @@ export function useProviderModelCatalog(input: {
       kimi: kimiDynamicModelsQuery.data,
       iflow: iflowDynamicModelsQuery.data,
       qwen: qwenDynamicModelsQuery.data,
+      copilot: copilotDynamicModelsQuery.data,
       codebuddy: codebuddyDynamicModelsQuery.data,
       droid: droidDynamicModelsQuery.data,
       kilo: kiloDynamicModelsQuery.data,
@@ -327,6 +341,7 @@ export function useProviderModelCatalog(input: {
       "kimi",
       "iflow",
       "qwen",
+      "copilot",
       "codebuddy",
       "droid",
       "kilo",
@@ -360,6 +375,7 @@ export function useProviderModelCatalog(input: {
     kimiDynamicModelsQuery.data,
     iflowDynamicModelsQuery.data,
     qwenDynamicModelsQuery.data,
+    copilotDynamicModelsQuery.data,
     codebuddyDynamicModelsQuery.data,
     kiloDynamicModelsQuery.data,
     modelHintByProvider,
@@ -397,6 +413,7 @@ export function useProviderModelCatalog(input: {
       kimi: kimiDynamicModelsQuery.data?.models ?? [],
       iflow: iflowDynamicModelsQuery.data?.models ?? [],
       qwen: qwenDynamicModelsQuery.data?.models ?? [],
+      copilot: copilotDynamicModelsQuery.data?.models ?? [],
       codebuddy: codebuddyDynamicModelsQuery.data?.models ?? [],
       droid: droidDynamicModelsQuery.data?.models ?? [],
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
@@ -415,6 +432,7 @@ export function useProviderModelCatalog(input: {
       kimiDynamicModelsQuery.data?.models,
       iflowDynamicModelsQuery.data?.models,
       qwenDynamicModelsQuery.data?.models,
+      copilotDynamicModelsQuery.data?.models,
       codebuddyDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,

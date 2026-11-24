@@ -8,6 +8,7 @@ import {
   NativeKimiAdapter,
   NativeIFlowAdapter,
   NativeQwenAdapter,
+  NativeCopilotAdapter,
   NativeCodeBuddyAdapter,
   NativePiAdapter,
   NativeDjlCloudAdapter,
@@ -47,8 +48,6 @@ const fakeCodexAdapter: CodexAdapterShape = {
   rollbackThread: vi.fn(),
   stopAll: vi.fn(),
   listModelProviders: vi.fn(),
-  setApiKey: vi.fn(),
-  removeCredential: vi.fn(),
   streamEvents: Stream.empty,
 };
 
@@ -155,8 +154,6 @@ const fakeOpenCodeAdapter: OpenCodeAdapterShape = {
   rollbackThread: vi.fn(),
   stopAll: vi.fn(),
   listModelProviders: vi.fn(),
-  setApiKey: vi.fn(),
-  removeCredential: vi.fn(),
   streamEvents: Stream.empty,
 };
 
@@ -208,6 +205,7 @@ const layer = it.layer(
         Layer.succeed(NativeKimiAdapter, { ...fakeGrokAdapter, provider: "kimi" }),
         Layer.succeed(NativeIFlowAdapter, { ...fakeGrokAdapter, provider: "iflow" }),
         Layer.succeed(NativeQwenAdapter, { ...fakeGrokAdapter, provider: "qwen" }),
+        Layer.succeed(NativeCopilotAdapter, { ...fakeGrokAdapter, provider: "copilot" }),
         Layer.succeed(NativeCodeBuddyAdapter, { ...fakeGrokAdapter, provider: "codebuddy" }),
         Layer.succeed(NativePiAdapter, { ...fakeGrokAdapter, provider: "pi" }),
         Layer.succeed(NativeDjlCloudAdapter, { ...fakeGrokAdapter, provider: "djlCloud" }),
@@ -241,6 +239,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "kimi",
         "iflow",
         "qwen",
+        "copilot",
         "codebuddy",
         "pi",
         "djlCloud",

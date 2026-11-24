@@ -2035,30 +2035,33 @@
       "visibleLabels": "表示中の静的ラベル"
     },
     "localModels": {
+      "advanced": "詳細設定",
       "agenticTools": "エージェントツール",
       "assistedTools": "アシストツール",
       "chatOnly": "チャットのみ",
       "checking": "ローカルモデルランタイムを確認中…",
+      "codingTools": {
+        "tooShort": "{{window}} トークンまでしか扱えず、Claude Code と Codex には足りません",
+        "works": "Claude Code と Codex で使えます"
+      },
       "connectedOn": "{{endpoint}} に安全に接続",
       "contextLoaded": "読み込み済みコンテキスト：{{loaded}}K / モデル上限：{{maximum}}K",
       "contextTooSmallForTools": "現在の {{loaded}}K コンテキストではチャット専用です。ツールを使うには、少なくとも {{required}}K でモデルを再読み込みしてください。",
       "desktopOnly": "ローカルモデル管理は DJL デスクトップアプリで利用できます。",
       "downloadsTitle": "ダウンロード",
-      "getRuntime": "{{runtime}} を入手",
-      "hero": {
-        "alternativesTitle": "その他のモデル",
-        "detected": "検出: {{processor}} · メモリ {{memory}}",
-        "detectedWithGpu": "検出: {{processor}} · {{gpu}} · メモリ {{memory}}",
-        "fastOnYourHardware": "このハードウェアで高速",
-        "readyTitle": "{{model}} の準備ができました",
-        "switchToSmaller": "{{model}} に切り替える",
-        "title": "このコンピュータで AI をプライベートに実行",
-        "unknownProcessor": "このコンピュータ"
+      "fit": {
+        "failed": "インストール失敗",
+        "installed": "インストール済み",
+        "installing": "インストール中",
+        "lowDisk": "ディスク容量不足",
+        "lowFreeMemory": "先にアプリを閉じてください",
+        "runsWell": "快適に動作",
+        "tooBig": "このコンピューターには大きすぎます"
       },
+      "getRuntime": "{{runtime}} を入手",
       "installAnotherTitle": "別のモデルをインストール",
       "installed": "インストール済み",
-      "installedEmpty": "ローカルモデルはまだありません。ランタイムを起動して推奨モデルを選んでください。",
-      "installedModelsTitle": "インストール済みモデル",
+      "installedModelsTitle": "このコンピュータにあるモデル",
       "installHint": "Ollama タグ、LM Studio カタログ ID、または正確な Hugging Face URL を使用します。",
       "installingOllama": "Ollama をインストール中…",
       "installingOllamaProgress": "Ollama をインストール中 {{progress}}%",
@@ -2067,46 +2070,16 @@
       "installModel": "モデルをインストール",
       "installOllama": "Ollama をインストールして起動",
       "installRuntime": "{{runtime}} をインストールして起動",
+      "list": {
+        "install": "インストール",
+        "meta": "ダウンロード {{size}}・必要メモリ {{memory}}",
+        "title": "その他のモデル"
+      },
       "lmStudioDescription": "LM Studio を一度インストールすると、DJL がローカルサーバーを起動・管理できます。",
       "manageInstalledTitle": "インストール済みモデルを管理",
       "manageLmStudio": "LM Studio で管理",
-      "moreOptions": "その他のモデルを表示",
       "networkPrivacy": "DJL は固定ループバックアドレス（127.0.0.1）のみに接続します。ランタイムをネットワークへ公開したり、推論通信をアップロードしたり、選択モデルを自動変更したりしません。",
       "ollamaDescription": "DJL が Ollama をインストール、起動、接続します。ターミナルや管理者パスワードは不要です。",
-      "privacyDescription": "モデル推論はこのコンピューター内で行われます。プロンプト、コード、出力はホスト型モデルへ送信されません。許可したツールは別途ネットワークへアクセスできます。",
-      "privacyTitle": "プライバシーを重視",
-      "quick": {
-        "chooseAnother": "別のセットアップを選ぶ",
-        "description": "DJL が {{runtime}} をインストールし、{{model}}（約 {{size}}）をダウンロードします。ターミナルや管理者パスワードは不要です。",
-        "download": "{{model}} をダウンロード（約 {{size}}）",
-        "insufficientDisk": "{{size}} 以上の空き容量が必要です。",
-        "readyDescription": "{{model}} は {{runtime}} 経由でインストールされ、チャットで使用できます。",
-        "readyTitle": "{{runtime}} の準備ができました",
-        "retry": "セットアップを再試行",
-        "runtimeLabel": "ローカルランタイムを選択",
-        "setup": "ローカル AI をセットアップ · {{model}}（約 {{size}}）",
-        "title": "{{runtime}} をワンクリックでセットアップ",
-        "useCaseLabel": "ローカル AI の得意分野を選択",
-        "useCases": {
-          "coding": {
-            "description": "コード、デバッグ、プロジェクト作業",
-            "label": "コーディングチャンピオン"
-          },
-          "document": {
-            "description": "要約、抽出、長文処理",
-            "label": "文書チャンピオン"
-          },
-          "general": {
-            "description": "質問、文章作成、日常タスク",
-            "label": "総合チャンピオン"
-          },
-          "reasoning": {
-            "description": "分析、数学、複雑な問題",
-            "label": "推論チャンピオン"
-          }
-        },
-        "useInChat": "チャットで使用"
-      },
       "recommendations": {
         "gpt-oss-20b": {
           "description": "24 GB 以上のメモリを搭載したシステム向けの高性能な総合・推論モデルです。"
@@ -2130,7 +2103,6 @@
           "description": "6 GB のメモリを搭載したデバイス向けの、軽量な汎用・コーディングモデルです。"
         }
       },
-      "recommendedTitle": "このコンピューターへの推奨",
       "removeAriaLabel": "{{model}} を削除",
       "removeButton": "削除",
       "removeConfirmation": "{{model}} を Ollama から削除しますか？",
@@ -2154,18 +2126,56 @@
       "runtimeStatusDescription": "localhost サービスを再確認し、インストール済みモデルを DJL と同期します。",
       "runtimeStatusTitle": "ランタイムの状態",
       "runtimesTitle": "ローカルランタイム",
-      "shelf": {
+      "setup": {
+        "bestMatch": "このコンピュータに最適",
+        "busy": "別のモデルをインストール中です。完了するまでお待ちください。",
+        "downloaded": "{{total}} 中 {{done}} をダウンロード済み",
         "downloadSize": "{{size}} のダウンロード",
-        "fixOllama": "Ollama を確認",
-        "installModel": "モデルをインストール",
-        "requiresDiskAction": "{{size}} の空き容量が必要",
-        "requiresMemoryAction": "{{size}} のメモリが必要",
-        "retry": "再試行",
-        "setupOllama": "Ollama + モデルをセットアップ",
+        "facts": {
+          "disk": "ディスクの空き容量",
+          "graphics": "グラフィックス",
+          "label": "このコンピュータ",
+          "memory": "メモリ",
+          "processor": "プロセッサ",
+          "thisComputer": "このコンピュータ"
+        },
+        "fitReason": "約 {{need}} のメモリが必要です。このコンピュータには {{have}} あります。",
+        "fixOllama": "Ollama を修正",
+        "freeDisk": "このモデルをインストールするには、ディスクの空き容量を {{size}} 確保してください。",
+        "freeMemory": "現在、空きメモリが不足しています。いくつかのアプリを閉じてから、このページに戻ってください。",
+        "install": "{{model}} をインストール",
+        "installedLabel": "インストール済み",
+        "installsOllama": "DJL は、モデルをこのコンピュータで動かす無料アプリ Ollama もインストールします。パスワードは不要です。",
+        "ollamaAttention": "ローカルモデルを動かすアプリ Ollama に対応が必要です。下の「詳細設定」を開いて修正してください。",
+        "privacy": "インターネットなしで動作し、入力した内容がこのコンピュータの外に出ることはありません。",
+        "progressLabel": "{{model}} をインストール中",
+        "readyDescription": "チャットを始めるときにモデルメニューから選んでください。このコンピュータ上で動作します。",
+        "readyTitle": "{{model}} の準備ができました",
         "startChat": "チャットを開始",
-        "startOllama": "Ollama を起動 + インストール",
-        "tooLarge": "このコンピューターには大きすぎます",
-        "waitForSetup": "別のセットアップが実行中です"
+        "startsOllama": "ダウンロードの前に、モデルを動かすアプリ Ollama を DJL が起動します。",
+        "steps": {
+          "download": "ダウンロード",
+          "prepare": "準備",
+          "ready": "準備完了",
+          "test": "このコンピュータでテスト"
+        },
+        "switchToSmaller": "{{model}} に切り替える",
+        "title": "このコンピュータで AI をプライベートに実行",
+        "tooBig": "このモデルには {{size}} のメモリが必要で、このコンピュータの容量を超えています。",
+        "tryAgain": "もう一度試す",
+        "useCaseHints": {
+          "coding": "コード、デバッグ、プロジェクト作業",
+          "document": "要約、抽出、長文処理",
+          "general": "質問、文章作成、日常タスク",
+          "reasoning": "分析、数学、複雑な問題"
+        },
+        "useCaseLegend": "何に使いますか？",
+        "useCases": {
+          "coding": "コーディング",
+          "document": "ドキュメント",
+          "general": "日常のサポート",
+          "reasoning": "問題解決"
+        }
       },
       "sizeUnavailable": "サイズ不明",
       "startFirst": "先に {{runtime}} を起動",
@@ -2181,85 +2191,15 @@
         "runtimeRejected": "ローカルランタイムが要求を拒否しました。"
       },
       "tokensPerSecond": "毎秒約 {{count}} トークン",
-      "updateRuntime": "更新"
-    },
-    "localModelsStatusUnavailableDetail": "ローカルランタイムから診断の詳細が提供されませんでした。",
-    "models": {
-      "accessTitle": "モデルアクセス",
-      "addKeyPrompt": "API キーを追加してモデルを選択",
-      "chooseModel": "モデルを選択",
-      "configuredTitle": "設定済みモデル",
-      "configureFirst": "先にモデルを設定",
-      "custom": {
-        "add": "カスタム API を追加",
-        "addModel": "モデルを追加",
-        "apiKey": "API キー（任意）",
-        "badge": "カスタム API",
-        "baseUrl": "ベース URL",
-        "create": "プロバイダーを作成",
-        "description": "URL、プロトコル、モデルを指定して中継サービスやセルフホストの接続先に接続します。",
-        "displayName": "表示名",
-        "edit": "編集",
-        "editTitle": "カスタム API を編集",
-        "empty": "利用可能なモデルを取得するか、接続先が受け付ける正確なモデル ID を追加してください。",
-        "fetch": "モデルを取得",
-        "fetchFailed": "モデルを取得できませんでした。{{detail}} モデル ID を手動で追加できます。",
-        "fetching": "取得中…",
-        "idHint": "小文字で始まる一意の ID を指定します。小文字、数字、ハイフンが使えます。",
-        "keepKey": "空欄で保存済みのキーを保持",
-        "keyHint": "API キーはこの端末に保存され、再表示されません。空欄で保存済みのキーを保持します。",
-        "keyPlaceholder": "キーが不要な場合は空欄",
-        "modelId": "モデル ID",
-        "modelName": "モデル名（任意）",
-        "models": "モデル一覧",
-        "namePlaceholder": "自分の中継サービス",
-        "noModels": "モデルが返されませんでした。モデル ID を手動で追加してください。",
-        "protocol": "API プロトコル",
-        "protocols": {
-          "anthropic": "Anthropic メッセージ",
-          "openai-chat": "OpenAI チャット補完",
-          "openai-responses": "OpenAI レスポンス"
-        },
-        "providerId": "プロバイダー ID",
-        "remove": "プロバイダーを削除",
-        "removeFailed": "プロバイダーを削除できませんでした",
-        "removeModel": "モデル {{model}} を削除",
-        "save": "変更を保存",
-        "saveFailed": "プロバイダーを保存できませんでした。{{detail}}",
-        "saving": "保存中…",
-        "title": "カスタムモデル API",
-        "tryAgain": "入力内容を確認して再試行してください。",
-        "tryManual": "URL とキーを確認するか、モデルを手動で追加してください。",
-        "urlHint": "認証情報、クエリ、フラグメントを含まない HTTP または HTTPS のベース URL を入力してください。"
-      },
-      "disconnect": "切断",
-      "externalCredential": "この接続は CLI の設定で管理されています。ログイン情報や設定は、インストール済みの CLI で変更してください。",
-      "generationDefaultsTitle": "生成の既定値",
-      "gitWritingAriaLabel": "Git 文書モデル",
-      "gitWritingDescription": "コミットメッセージ、プルリクエストのタイトル、ブランチ名に使用します。",
-      "gitWritingTitle": "Git 文書モデル",
-      "keyAriaLabel": "{{provider}} API キー",
-      "keyPlaceholder": "API キーを入力",
-      "keyPrivacy": "認証情報はインストール済みの CLI と共有されます。ここで接続を解除すると、CLI に保存されたログイン情報も削除されます。",
-      "modelCount_one": "{{count}} モデル利用可能",
-      "modelCount_other": "{{count}} モデル利用可能",
-      "notConnected": "未接続",
-      "providerCount_one": "{{count}} プロバイダー",
-      "providerCount_other": "{{count}} プロバイダー",
-      "replace": "交換",
-      "replacementKeyPlaceholder": "交換用 API キーを入力",
-      "runtimeUnavailable": "DJL はモデルランタイムを起動できませんでした。",
-      "test": "テスト",
-      "toasts": {
-        "connectionRefreshed": "{{provider}} の接続を更新しました",
-        "disconnected": "プロバイダーを切断しました",
-        "keyRejected": "DJL が認証情報を拒否しました。",
-        "keySaved": "API キーを保存しました",
-        "keySaveFailed": "API キーを保存できませんでした",
-        "keySaveFailedWithDetail": "API キーを保存できませんでした。{{detail}}"
+      "updateRuntime": "更新",
+      "useWith": {
+        "description": "ダウンロードした Ollama モデルが、オンにしたツールごとにモデル選択に表示されます。モデルはこのコンピューター上で動作します。",
+        "saveFailed": "この設定を保存できませんでした。もう一度お試しください。",
+        "title": "ローカルモデルを使うツール",
+        "toggle": "{{harness}} でローカルモデルを使う"
       }
     },
-    "modelsRuntimeUnavailableDetail": "ランタイムから診断の詳細が提供されませんでした。",
+    "localModelsStatusUnavailableDetail": "ローカルランタイムから診断の詳細が提供されませんでした。",
     "navigation": {
       "groups": {
         "app": "アプリ",
@@ -2305,11 +2245,6 @@
           "description": "DJL 経由で Ollama または LM Studio のプライベートモデルを実行します。",
           "eyebrow": "プライベート推論",
           "label": "ローカルモデル"
-        },
-        "models": {
-          "description": "プロバイダーを接続し、認証済みの DJL モデルを選びます。",
-          "eyebrow": "AI 設定",
-          "label": "モデルと API キー"
         },
         "notifications": {
           "description": "アプリ内通知とデスクトップ通知。",
@@ -2807,6 +2742,8 @@
         },
         "gitWriting": {
           "ariaLabel": "Git テキスト生成モデル",
+          "chooseModel": "モデルを選択",
+          "configureFirst": "先にモデルを設定",
           "description": "コミットメッセージ、PR タイトル、ブランチ名の生成に使用します。",
           "resetLabel": "Git 文章モデル"
         },
@@ -2988,6 +2925,10 @@
             "keywords": "折り返し 差分 パネル",
             "title": "差分行の折り返し"
           },
+          "git-writing-model": {
+            "keywords": "コミット メッセージ PR タイトル ブランチ",
+            "title": "Git 文書作成モデル"
+          },
           "terminal-close-confirmation": {
             "keywords": "ターミナル タブ 履歴",
             "title": "ターミナルを閉じるときに確認"
@@ -3067,16 +3008,6 @@
           "runtimes": {
             "keywords": "Ollama LM Studio プライベート サーバー",
             "title": "ローカルランタイム"
-          }
-        },
-        "models": {
-          "configured-models": {
-            "keywords": "API キー プロバイダー DJL",
-            "title": "設定済みモデル"
-          },
-          "git-writing-model": {
-            "keywords": "コミット メッセージ PR タイトル ブランチ",
-            "title": "Git 文書作成モデル"
           }
         },
         "notifications": {
@@ -3349,19 +3280,39 @@
       "title": "スキル"
     },
     "subscriptions": {
+      "cancel": "キャンセル",
+      "checking": "キーを確認中…",
       "china": "中国本土版",
       "connect": "接続",
+      "connected": "接続済み · 末尾 {{hint}} のキー",
+      "description": "契約中のコーディングプランをそのまま使えます。DJL がプランのキーで Claude Code を動かすので、ほかに何もインストールする必要はありません。",
+      "disconnect": "接続を解除",
+      "errors": {
+        "invalid_key": "{{provider}} がこのキーを受け付けませんでした。コーディングプランのキーを最後までコピーしたか確認してください。",
+        "network": "{{provider}} に接続できませんでした。接続を確認して、もう一度お試しください。",
+        "no_opencode_key": "OpenCode にはこのプランのキーが保存されていません。",
+        "plan_inactive": "キーは有効ですが、プランが有効になっていません。{{provider}} のサイトで契約内容や残高を確認してください。",
+        "unknown": "{{provider}} から予期しない応答がありました。少し待ってからもう一度お試しください。"
+      },
       "existingRegion": "CLI の現在の地域を使用",
+      "importFromOpenCode": "OpenCode からキーを読み込む",
       "international": "国際版",
+      "keyAriaLabel": "{{provider}} のプランキー",
+      "keyPlaceholder": "プランキーを貼り付け",
       "kimiRegion": "Kimi アカウントの地域",
-      "modelPicker": "接続後、モデル選択で OpenCode を選ぶとプランを利用できます。他のプロバイダーは「モデルと API キー」で設定できます。",
-      "models_one": "利用可能なモデル：{{count}}",
-      "models_other": "利用可能なモデル：{{count}}",
+      "modelPicker": "接続したプランは、モデル選択の Claude Code にプランごとのグループで表示されます。",
+      "notConnected": "未接続",
+      "openSite": "{{provider}} をもう一度開く",
       "planKey": "コーディングプランの API キー",
-      "providerLogin": "プロバイダーにログイン",
-      "runtimeRequired": "対応する OpenCode をインストールして有効にしてください。",
-      "title": "サブスクリプションとコーディングプラン",
-      "unavailable": "OpenCode を更新して、このプランへの対応を確認してください。"
+      "replaceKey": "キーを置き換える",
+      "save": "確認して保存",
+      "saved": "キーを保存しました。モデル選択の Claude Code から {{provider}} のモデルを選んでください。",
+      "steps": {
+        "copyKey": "コーディングプランの API キーを作成するか、コピーします。",
+        "paste": "ここに貼り付けます。DJL が {{provider}} で確認してから保存します。",
+        "signIn": "ブラウザで開いた {{provider}} のサイトにログインします。"
+      },
+      "title": "サブスクリプションとコーディングプラン"
     },
     "title": "設定",
     "tools": {

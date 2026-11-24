@@ -4,9 +4,8 @@ import { describe, expect, it } from "vitest";
 
 // OpenCode names the external CLI/provider in these flows; DJL remains the product name.
 const OPENCODE_PROVIDER_COPY = new Set([
-  "settings.subscriptions.runtimeRequired",
-  "settings.subscriptions.unavailable",
-  "settings.subscriptions.modelPicker",
+  "settings.subscriptions.importFromOpenCode",
+  "settings.subscriptions.errors.no_opencode_key",
   "settings.tools.bundledNote",
   "settings.tools.incompatible",
   "settings.accounts.openCodeSharedLogin",

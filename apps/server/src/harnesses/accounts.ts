@@ -5,6 +5,7 @@ import { resolveKimiBinaryPath } from "./kimiExecutable";
 import { kimiSubscriptionEnvironment, probeKimiSubscriptionAccount } from "./native/kimi";
 import { iflowSubscriptionEnvironment, probeIFlowSubscriptionAccount } from "./native/iflow";
 import { qwenSubscriptionEnvironment, probeQwenSubscriptionAccount } from "./native/qwen";
+import { copilotSubscriptionEnvironment, probeCopilotSubscriptionAccount } from "./native/copilot";
 import { probeGeminiSubscriptionAccount } from "./native/gemini";
 import { piSubscriptionEnvironment, probePiSubscriptionAccount } from "./native/pi";
 import {
@@ -37,6 +38,7 @@ export const NATIVE_HARNESS_IDS = [
   "kimi",
   "iflow",
   "qwen",
+  "copilot",
   "codebuddy",
   "pi",
 ] as const;
@@ -74,6 +76,16 @@ export function buildHarnessInvocation(
       loginArgs: [] as string[],
       statusArgs: ["--version"],
       env: qwenSubscriptionEnvironment(env),
+    };
+  // https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference
+  // `copilot login` runs GitHub's web or device-code flow and stores the token.
+  if (harness === "copilot")
+    return {
+      binary: settings.providers.copilot.binaryPath.trim() || "copilot",
+      prefixArgs: [] as string[],
+      loginArgs: ["login"],
+      statusArgs: ["--version"],
+      env: copilotSubscriptionEnvironment(env),
     };
   // Gemini CLI signs in from its interactive TUI, which opens the browser itself.
   if (harness === "gemini")
@@ -258,6 +270,14 @@ export async function probeHarnessAccount(
       installed: true,
       enabled: true,
       status: await probeQwenSubscriptionAccount(invocation.binary, process.cwd()),
+      version: version.stdout.trim().slice(0, 100),
+    };
+  if (harness === "copilot")
+    return {
+      id: harness,
+      installed: true,
+      enabled: true,
+      status: await probeCopilotSubscriptionAccount(invocation.binary, process.cwd()),
       version: version.stdout.trim().slice(0, 100),
     };
   if (harness === "codebuddy")

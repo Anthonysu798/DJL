@@ -122,6 +122,7 @@ import { previewWorkDocument, toDocumentArtifactPreview } from "./work/workDocum
 import { shouldRejectUntrustedRequestOrigin } from "./trustedOrigins";
 import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
 import { LocalModelsService } from "./localModels/LocalModelsService";
+import { CodingPlans } from "./codingPlans/CodingPlans";
 import { PluginsService } from "./plugins/PluginsService";
 import { AiDetectorService } from "./aiDetector/Services/AiDetectorService";
 import { ProjectMemory } from "./memory/Services/ProjectMemory";
@@ -410,6 +411,7 @@ export const makeWsRpcLayer = () =>
       const gitStatusBroadcaster = yield* GitStatusBroadcaster;
       const keybindings = yield* Keybindings;
       const localModels = yield* LocalModelsService;
+      const codingPlans = yield* CodingPlans;
       const plugins = yield* PluginsService;
       const projectMemory = yield* ProjectMemory;
       const aiDetector = yield* AiDetectorService;
@@ -1990,6 +1992,14 @@ export const makeWsRpcLayer = () =>
             ),
             "Failed to transfer legacy OpenCode credentials",
           ),
+        [WS_METHODS.codingPlansList]: () =>
+          rpcEffect(codingPlans.list, "Failed to load coding plans"),
+        [WS_METHODS.codingPlansConnect]: (input) =>
+          rpcEffect(codingPlans.connect(input), "Failed to connect the coding plan"),
+        [WS_METHODS.codingPlansDisconnect]: (input) =>
+          rpcEffect(codingPlans.disconnect(input), "Failed to disconnect the coding plan"),
+        [WS_METHODS.codingPlansImportFromOpenCode]: (input) =>
+          rpcEffect(codingPlans.importFromOpenCode(input), "Failed to import the coding plan key"),
         [WS_METHODS.harnessStartLogin]: (input) =>
           rpcEffect(
             Effect.tryPromise((signal) =>
@@ -2007,28 +2017,6 @@ export const makeWsRpcLayer = () =>
               Effect.tap(() => providerHealth.refresh),
             ),
             "Failed to close sign-in",
-          ),
-        [WS_METHODS.openCodeSaveCustomProvider]: (input) =>
-          rpcEffect(
-            providerDiscoveryService.saveCustomProvider(input),
-            "Failed to saveCustomProvider",
-          ),
-        [WS_METHODS.openCodeRemoveCustomProvider]: (input) =>
-          rpcEffect(
-            providerDiscoveryService.removeCustomProvider(input),
-            "Failed to removeCustomProvider",
-          ),
-        [WS_METHODS.openCodeFetchCustomModels]: (input) =>
-          rpcEffect(
-            providerDiscoveryService.fetchCustomModels(input),
-            "Failed to fetchCustomModels",
-          ),
-        [WS_METHODS.openCodeSetApiKey]: (input) =>
-          rpcEffect(providerDiscoveryService.setApiKey(input), "Failed to save API key"),
-        [WS_METHODS.openCodeRemoveCredential]: (input) =>
-          rpcEffect(
-            providerDiscoveryService.removeCredential(input),
-            "Failed to disconnect model provider",
           ),
         [WS_METHODS.serversList]: () => rpcEffect(serverService.list(), "Failed to list servers"),
         [WS_METHODS.serversCreate]: (input) =>

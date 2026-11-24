@@ -17,6 +17,7 @@ describe("fresh harness command contracts", () => {
     "kimi",
     "iflow",
     "qwen",
+    "copilot",
     "codebuddy",
     "pi",
     "gemini",

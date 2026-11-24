@@ -75,7 +75,7 @@ import { RemoteSettingsPanel } from "../components/settings/RemoteSettingsPanel"
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
 import { PluginsSettingsPanel } from "../components/plugins/PluginsSettingsPanel";
 import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel";
-import { OpenCodeModelsSettingsPanel } from "../components/settings/OpenCodeModelsSettingsPanel";
+import { GitWritingModelSetting } from "../components/settings/GitWritingModelSetting";
 import { HarnessAccountsPanel } from "../components/settings/HarnessAccountsPanel";
 import { LocalModelsSettingsPanel } from "../components/settings/LocalModelsSettingsPanel";
 import { ServersSettingsPanel } from "../components/settings/ServersSettingsPanel";
@@ -434,6 +434,7 @@ function SettingsRouteView() {
     kimi: Boolean(settings.kimiBinaryPath),
     iflow: Boolean(settings.iflowBinaryPath),
     qwen: Boolean(settings.qwenBinaryPath),
+    copilot: Boolean(settings.copilotBinaryPath),
     codebuddy: Boolean(settings.codebuddyBinaryPath),
     droid: Boolean(settings.droidBinaryPath),
     kilo: Boolean(settings.kiloBinaryPath || settings.kiloServerUrl || settings.kiloServerPassword),
@@ -460,6 +461,7 @@ function SettingsRouteView() {
     kimi: "",
     iflow: "",
     qwen: "",
+    copilot: "",
     codebuddy: "",
     droid: "",
     kilo: "",
@@ -579,7 +581,7 @@ function SettingsRouteView() {
     return groups;
   }, [managedWorktrees, threadShells]);
 
-  // Builds provider model-option arrays; only the Models panel reads it. Memoize on the
+  // Builds provider model-option arrays; only the Behavior panel's Git writing row reads it. Memoize on the
   // narrow inputs the helper actually uses (destructured so exhaustive-deps stays exact) so
   // typing in any other settings field — every keystroke re-renders this monolithic route —
   // doesn't rebuild these lists.
@@ -597,7 +599,7 @@ function SettingsRouteView() {
   });
   useProviderModelCatalog({
     selectedProvider: currentGitTextGenerationProvider,
-    discoveryEnabled: activeSection === "models",
+    discoveryEnabled: activeSection === "behavior",
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: gitWritingModelHintByProvider,
   });
@@ -701,7 +703,9 @@ function SettingsRouteView() {
     ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose
       ? [t("search.entries.behavior.terminal-close-confirmation.title")]
       : []),
-    ...(isGitTextGenerationModelDirty ? [t("search.entries.models.git-writing-model.title")] : []),
+    ...(isGitTextGenerationModelDirty
+      ? [t("search.entries.behavior.git-writing-model.title")]
+      : []),
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
     settings.customCursorModels.length > 0 ||
@@ -834,6 +838,7 @@ function SettingsRouteView() {
       kimi: false,
       iflow: false,
       qwen: false,
+      copilot: false,
       codebuddy: false,
       droid: false,
       kilo: false,
@@ -852,6 +857,7 @@ function SettingsRouteView() {
       kimi: "",
       iflow: "",
       qwen: "",
+      copilot: "",
       codebuddy: "",
       droid: "",
       kilo: "",
@@ -1945,6 +1951,7 @@ function SettingsRouteView() {
           }),
         })}
       </SettingsSection>
+      <GitWritingModelSetting cwd={providerModelDiscoveryCwd} />
     </div>
   );
 
@@ -2457,27 +2464,15 @@ function SettingsRouteView() {
             {settingsTarget === SETTINGS_TARGETS.providerUpdates
               ? renderProviderUpdatesSection()
               : null}
-            <HarnessAccountsPanel />
+            <HarnessAccountsPanel
+              revealPlans={settingsTarget === SETTINGS_TARGETS.modelProviders}
+            />
           </div>
-        );
-      case "models":
-        return (
-          <OpenCodeModelsSettingsPanel
-            cwd={providerModelDiscoveryCwd}
-            revealProviderAccess={settingsTarget === SETTINGS_TARGETS.modelProviders}
-          />
         );
       case "local-models":
         return <LocalModelsSettingsPanel />;
       case "servers":
         return <ServersSettingsPanel />;
-      case "providers":
-        return (
-          <OpenCodeModelsSettingsPanel
-            cwd={providerModelDiscoveryCwd}
-            revealProviderAccess={settingsTarget === SETTINGS_TARGETS.modelProviders}
-          />
-        );
       case "profile":
         return <ProfileSettingsPanel />;
       case "plugins":

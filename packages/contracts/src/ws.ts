@@ -7,6 +7,7 @@ import {
   HarnessMaintainToolInput,
 } from "./harnessAccounts";
 import { CloudBrowserSignInCompleteInput, CloudEmptyInput, CloudSignInPollInput } from "./cloud";
+import { CodingPlanConnectInput, CodingPlanIdInput } from "./codingPlans";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 import {
@@ -142,12 +143,6 @@ import {
   ProviderListSkillsInput,
   ProviderSkillsCatalogInput,
   OpenCodeListModelProvidersInput,
-  OpenCodeSetApiKeyInput,
-  SaveCustomModelProviderInput,
-  RemoveCustomModelProviderInput,
-  FetchCustomModelsInput,
-  FetchCustomModelsResult,
-  OpenCodeRemoveCredentialInput,
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
 import {
@@ -307,6 +302,10 @@ export const WS_METHODS = {
   harnessTransferLegacyOpenCodeCredentials: "harnesses.transferLegacyOpenCodeCredentials",
   harnessStartLogin: "harnesses.startLogin",
   harnessEndLogin: "harnesses.endLogin",
+  codingPlansList: "codingPlans.list",
+  codingPlansConnect: "codingPlans.connect",
+  codingPlansDisconnect: "codingPlans.disconnect",
+  codingPlansImportFromOpenCode: "codingPlans.importFromOpenCode",
   cloudGetStatus: "cloud.getStatus",
   cloudStartSignIn: "cloud.startSignIn",
   cloudPollSignIn: "cloud.pollSignIn",
@@ -323,12 +322,6 @@ export const WS_METHODS = {
   providerListModels: "provider.listModels",
   providerListAgents: "provider.listAgents",
   openCodeListModelProviders: "opencode.listModelProviders",
-  openCodeSetApiKey: "opencode.setApiKey",
-  openCodeSaveCustomProvider: "opencode.saveCustomProvider",
-  openCodeRemoveCustomProvider: "opencode.removeCustomProvider",
-  openCodeFetchCustomModels: "opencode.fetchCustomModels",
-
-  openCodeRemoveCredential: "opencode.removeCredential",
 
   // Desktop local-model runtimes
   localModelsGetSnapshot: "localModels.getSnapshot",
@@ -566,10 +559,6 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerListModels, ProviderListModelsInput),
   tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
   tagRequestBody(WS_METHODS.openCodeListModelProviders, OpenCodeListModelProvidersInput),
-  tagRequestBody(WS_METHODS.openCodeSetApiKey, OpenCodeSetApiKeyInput),
-  tagRequestBody(WS_METHODS.openCodeSaveCustomProvider, SaveCustomModelProviderInput),
-  tagRequestBody(WS_METHODS.openCodeRemoveCustomProvider, RemoveCustomModelProviderInput),
-  tagRequestBody(WS_METHODS.openCodeFetchCustomModels, FetchCustomModelsInput),
 
   tagRequestBody(WS_METHODS.harnessProfileAccount, HarnessProfileAccountInput),
   tagRequestBody(WS_METHODS.harnessListAccounts, Schema.Struct({})),
@@ -579,13 +568,16 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.harnessMaintainTool, HarnessMaintainToolInput),
   tagRequestBody(WS_METHODS.harnessStartLogin, HarnessLoginInput),
   tagRequestBody(WS_METHODS.harnessEndLogin, HarnessEndLoginInput),
+  tagRequestBody(WS_METHODS.codingPlansList, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.codingPlansConnect, CodingPlanConnectInput),
+  tagRequestBody(WS_METHODS.codingPlansDisconnect, CodingPlanIdInput),
+  tagRequestBody(WS_METHODS.codingPlansImportFromOpenCode, CodingPlanIdInput),
   tagRequestBody(WS_METHODS.cloudGetStatus, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudStartSignIn, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudPollSignIn, CloudSignInPollInput),
   tagRequestBody(WS_METHODS.cloudSignOut, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudStartBrowserSignIn, CloudEmptyInput),
   tagRequestBody(WS_METHODS.cloudCompleteBrowserSignIn, CloudBrowserSignInCompleteInput),
-  tagRequestBody(WS_METHODS.openCodeRemoveCredential, OpenCodeRemoveCredentialInput),
 
   // Desktop local-model runtimes
   tagRequestBody(WS_METHODS.localModelsGetSnapshot, Schema.Struct({})),
